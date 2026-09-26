@@ -148,6 +148,21 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
     Includes nested sections (filtered by is_enabled for client, all for admin),
     nested requirement groups with items, and computed properties.
     """
+
+    # The public payload is readable by anyone holding the proposal link, and
+    # the public page reads none of these. contract_params alone carries the
+    # client's cédula and email and the contractor's NIT and bank account.
+    PUBLIC_HIDDEN_FIELDS = (
+        'contract_params', 'change_logs', 'client', 'client_email', 'client_phone',
+        'automations_paused', 'reminder_days', 'urgency_reminder_days',
+        'reminder_sent_at', 'urgency_email_sent_at',
+        'email_intro', 'email_features', 'email_method_phases', 'email_signed_by',
+        'view_count', 'first_viewed_at', 'last_activity_at', 'responded_at',
+        'available_transitions', 'proposal_documents',
+        'platform_onboarding_completed_at', 'platform_onboarding_status',
+        'first_view_notification',
+    )
+
     sections = serializers.SerializerMethodField()
     # project_stages is internal-only execution tracking; the model docstring
     # explicitly says it must never be rendered to the client. Gate by is_admin.
@@ -197,11 +212,14 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'client',
         )
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
+    def get_fields(self):
+        # Dropping the fields here, not in to_representation, also skips
+        # computing them (change logs, documents, transitions) for the public.
+        fields = super().get_fields()
         if not self.context.get('is_admin', False):
-            data.pop('first_view_notification', None)
-        return data
+            for name in self.PUBLIC_HIDDEN_FIELDS:
+                fields.pop(name, None)
+        return fields
 
     def get_project_stages(self, obj):
         """Return project_stages only for admin requests; empty for public."""
