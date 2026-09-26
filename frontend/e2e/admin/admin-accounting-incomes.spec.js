@@ -693,6 +693,10 @@ test.describe('Admin Accounting Incomes CRUD', () => {
       { testId: null, label: null, text: 'Concepto', hasCheckbox: false },
     ]);
     await expect(actionsHeader).toHaveCSS('width', '56px');
+    // The kebab keeps the same 44px target as every other accounting table.
+    const kebab = await page.getByTestId('income-actions-1').boundingBox();
+    expect(Math.round(kebab.width)).toBe(44);
+    expect(Math.round(kebab.height)).toBe(44);
   });
 
   test('the classic income table fits the compact viewport', {

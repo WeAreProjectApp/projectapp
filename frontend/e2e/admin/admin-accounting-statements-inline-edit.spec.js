@@ -11,6 +11,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
 import { ADMIN_ACCOUNTING_STATEMENTS } from '../helpers/flow-tags.js';
 
 test.setTimeout(60_000);
@@ -202,6 +203,12 @@ function buildHandler({
       );
       return json(updated);
     }
+    const aliasDelete = apiPath.match(/^accounting\/merchant-aliases\/(\d+)\/delete\/$/);
+    if (aliasDelete && method === 'DELETE') {
+      calls.push({ apiPath, method });
+      state.aliases = state.aliases.filter((alias) => alias.id !== Number(aliasDelete[1]));
+      return { status: 204, contentType: 'application/json', body: '' };
+    }
     if (apiPath.startsWith('accounting/merchant-aliases')) {
       return json({ results: state.aliases, meta: {} });
     }
@@ -230,6 +237,54 @@ test.describe('Admin Accounting Statements: inline row editing', () => {
       token: 'e2e-token',
       userAuth: { id: 9001, role: 'admin', is_staff: true },
     });
+  });
+
+  // Bug caught: Detalle e historial, Editar and Eliminar were loose text
+  // buttons in a trailing column without a header.
+  test('a transaction opens its full editor from its row menu', {
+    tag: [...ADMIN_ACCOUNTING_STATEMENTS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; this test pins the
+    // transaction row menu, driven through the kebab below)
+    await mockApi(page, buildHandler({ calls: [] }));
+    await gotoStatements(page);
+    await openDraft(page);
+
+    const row = page.getByTestId('statement-tx-10');
+    await expect(row.locator('[data-field="actions"]').getByRole('button')).toHaveCount(1);
+
+    await openRowMenu(page, { kebab: 'statement-tx-actions-10', menu: 'statement-tx-actions-modal' });
+    await expect(page.getByTestId('statement-tx-action-history-10')).toBeVisible();
+    await expect(page.getByTestId('statement-tx-action-delete-10')).toBeVisible();
+    await page.getByTestId('statement-tx-action-edit-10').click();
+
+    await expect(page.getByRole('heading', { name: 'Editar transacción' })).toBeVisible();
+  });
+
+  // Bug caught: in the phone card the amount's inline editor laid out 8px
+  // narrower than it measured and broke "$450.000" across two lines.
+  test('a transaction card on a phone keeps its amount on one line', {
+    tag: [...ADMIN_ACCOUNTING_STATEMENTS, '@role:admin', '@outcome:display', '@responsive:accounting'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; this test pins the
+    // phone card of a transaction, whose menu is opened below)
+    await page.setViewportSize({ width: 412, height: 915 });
+    await mockApi(page, buildHandler({ calls: [] }));
+    await gotoStatements(page);
+    await openDraft(page);
+
+    const amount = page.getByTestId('tx-cell-amount-10');
+    await expect(amount).toContainText('$450.000');
+    const lines = await amount.getByTestId('inline-cell-display').evaluate((display) => {
+      const value = display.querySelector('span');
+      return Math.round(
+        value.getBoundingClientRect().height / parseFloat(getComputedStyle(value).lineHeight),
+      );
+    });
+    expect(lines).toBe(1);
+
+    await page.getByTestId('statement-tx-actions-10').click();
+    await expect(page.getByTestId('statement-tx-actions-modal')).toContainText('Hetzner');
   });
 
   test('a single click edits the merchant of a draft row and PATCHes it', {
@@ -486,6 +541,29 @@ test.describe('Admin Accounting Statements: learned merchants inline editing', (
     await setAuthLocalStorage(page, {
       token: 'e2e-token',
       userAuth: { id: 9001, role: 'admin', is_staff: true },
+    });
+  });
+
+  test('a learned merchant is deleted from its row menu after confirming', {
+    tag: [...ADMIN_ACCOUNTING_STATEMENTS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ calls, aliases: [LEARNED_ALIAS] }));
+    await gotoStatements(page);
+    await openLearnedMerchants(page);
+
+    await chooseRowAction(page, {
+      kebab: 'statement-alias-actions-3',
+      menu: 'statement-alias-actions-modal',
+      action: 'statement-alias-action-delete-3',
+    });
+    await expect(page.getByRole('heading', { name: 'Eliminar alias' })).toBeVisible();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('Alias eliminado.')).toBeVisible();
+    expect(calls).toContainEqual({
+      apiPath: 'accounting/merchant-aliases/3/delete/',
+      method: 'DELETE',
     });
   });
 

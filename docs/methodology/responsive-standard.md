@@ -105,7 +105,9 @@ alineación. El DOM siempre mantiene el orden de lectura.
 
 ### Acciones y táctil
 
-- Acciones de fila: `BaseActionMenu`.
+- Acciones de fila: `BaseActionMenu`. En Contabilidad, un kebab inicial
+  (`AccountingRowActionsButton`) que abre un modal (`AccountingRowActionsModal`)
+  con «Detalle e historial» y «Ver nota» primero; nada más va junto al kebab.
 - Selección múltiple: `BaseBulkActionBar`, con conteo, elementos fuera del
   filtro, selección total, cancelación y un único menú de acciones.
 - `BaseButton` y los ítems de `BaseDropdown` garantizan 44 px cuando

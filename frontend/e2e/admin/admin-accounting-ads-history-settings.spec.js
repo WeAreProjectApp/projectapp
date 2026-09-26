@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
 import {
   ADMIN_ACCOUNTING_ADS,
   ADMIN_ACCOUNTING_HISTORY,
@@ -117,8 +118,9 @@ function recipientRow(overrides = {}) {
  * @param {Array} options.calls        collected requests, for payload assertions
  * @param {Array} [options.recipients] rows served by the recipients list
  * @param {object} [options.createError] serializer error the create call returns
+ * @param {object} [options.adsUpdateError] serializer error the ads edit returns
  */
-function buildHandler({ calls, recipients, createError }) {
+function buildHandler({ calls, recipients, createError, adsUpdateError }) {
   const recipientRows = recipients ?? [recipientRow()];
   return async ({ route, apiPath, method }) => {
     const url = new URL(route.request().url());
@@ -200,6 +202,22 @@ function buildHandler({ calls, recipients, createError }) {
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ ...ADS_ROWS[0], id: 99, ...body }),
+      };
+    }
+    if (/^accounting\/ads\/\d+\/update\/$/.test(apiPath) && method === 'PATCH') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      if (adsUpdateError) {
+        return {
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify(adsUpdateError),
+        };
+      }
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...ADS_ROWS[0], ...body }),
       };
     }
     if (apiPath === 'accounting/change-logs/' && method === 'GET') {
@@ -299,6 +317,57 @@ test.describe('Admin Accounting Ads, History & Settings', () => {
     await expect(page.getByText('Gasto en Ads creado')).toContainText('Gasto en Ads creado');
     const create = calls.find((call) => call.method === 'POST');
     expect(create.body.spend_date).toBe('2026-07-01');
+  });
+
+  // Bug caught: Ads kept a trailing «Acciones» column with a loose history
+  // button beside the edit and delete icons.
+  test('an ads spend is edited from its row menu', {
+    tag: [...ADMIN_ACCOUNTING_ADS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; the edit starts at
+    // the row's kebab, which IS driven below)
+    const calls = [];
+    await mockApi(page, buildHandler({ calls }));
+    await page.goto('/panel/accounting/ads', { waitUntil: 'domcontentloaded' });
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toBeVisible({ timeout: 25_000 });
+    await expect(row.getByTestId('accounting-actions-cell-1').getByRole('button')).toHaveCount(1);
+
+    await openRowMenu(page, { kebab: 'ads-actions-1', menu: 'ads-actions-modal' });
+    await expect(page.getByTestId('ads-action-history-1')).toBeVisible();
+    await page.getByTestId('ads-action-edit-1').click();
+    await expect(page.getByRole('heading', { name: 'Editar Gasto en Ads' })).toBeVisible();
+    await page.getByTestId('ad-spend-form-submit').click();
+
+    await expect(page.getByText('Gasto en Ads actualizado')).toBeVisible();
+    const update = calls.find((call) => call.method === 'PATCH');
+    expect(update.apiPath).toBe('accounting/ads/1/update/');
+  });
+
+  test('a rejected ads edit keeps the form open and says why', {
+    tag: [...ADMIN_ACCOUNTING_ADS, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; the edit starts at
+    // the row's kebab, which IS driven below)
+    const calls = [];
+    await mockApi(page, buildHandler({
+      calls,
+      adsUpdateError: { amount: ['El valor debe ser mayor a cero.'] },
+    }));
+    await page.goto('/panel/accounting/ads', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('accounting-row-1')).toBeVisible({ timeout: 25_000 });
+
+    await chooseRowAction(page, {
+      kebab: 'ads-actions-1',
+      menu: 'ads-actions-modal',
+      action: 'ads-action-edit-1',
+    });
+    await page.getByTestId('ad-spend-form-submit').click();
+
+    await expect(page.getByText('No se pudo actualizar el gasto en Ads')).toBeVisible();
+    // Nothing was lost: the form is still there to correct and retry.
+    await expect(page.getByRole('heading', { name: 'Editar Gasto en Ads' })).toBeVisible();
+    expect(calls.filter((call) => call.method === 'PATCH')).toHaveLength(1);
   });
 
   test('history renders audit rows and expands the field diff', {
@@ -439,9 +508,12 @@ test.describe('Admin Accounting Ads, History & Settings', () => {
     const calls = [];
     await mockApi(page, buildHandler({ calls }));
     await page.goto('/panel/accounting/settings', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByTestId('recipients-remove-1')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('recipients-actions-1')).toBeVisible({ timeout: 25_000 });
 
-    await page.getByTestId('recipients-remove-1').click();
+    // Quitar lives in the row's menu, after the recipient's history.
+    await openRowMenu(page, { kebab: 'recipients-actions-1', menu: 'recipients-actions-modal' });
+    await expect(page.getByTestId('recipients-action-history-1')).toBeVisible();
+    await page.getByTestId('recipients-action-remove-1').click();
 
     // The confirmation spells out what stops arriving before anything is lost.
     await expect(page.getByText('Dejará de recibir los avisos')).toBeVisible();

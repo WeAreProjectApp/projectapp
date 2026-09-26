@@ -1,5 +1,7 @@
 # Task Plan — ProjectApp
 
+> **2026-09-26 — acciones de fila contables:** todas las tablas y listas de Contabilidad abren sus acciones desde un único kebab inicial; «Detalle e historial» y «Ver nota» son las primeras entradas del menú. Las tablas `menu-start` ya no dejan una franja en blanco en celular ni en tableta vertical. PR #420; sólo frontend.
+
 > **2026-09-26 — enlaces seguros de un solo uso:** implementados módulo
 > `/panel/secure-links`, páginas públicas de creación y revelado, tools MCP en
 > Comunicaciones y aviso interno por correo. Cobertura: 42 tests backend,

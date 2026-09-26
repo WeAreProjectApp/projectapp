@@ -1,3 +1,19 @@
+# Acciones de fila y notas en Contabilidad — PR #420 (2026-09-26)
+
+Todo el módulo contable usa un solo estándar de acciones de fila: tres puntos
+al inicio (track fijo de 56 px, sin rótulo visible) que abren un modal cuya
+primera entrada es «Detalle e historial», seguida de «Ver nota» cuando el
+registro tiene nota. Se migraron Gastos, Ads, Hostings, Extractos (movimientos
+y alias), Configuración (destinatarios y catálogo de tarjetas) y el log de
+correos de Historial, que también se usa en el modal de correos de Clientes.
+Tarjetas abre su columna Notas con «Ver nota». Las piezas compartidas son
+`AccountingRowActionsModal` y `AccountingRowActionsButton`, y se retiró
+`EntityHistoryRecordButton`. `BaseResponsiveTable` corrige las tablas
+`menu-start` en anchos angostos: layout auto con columnas de datos sin ancho
+por debajo de 1024 px y reparto del 100 % por perfil desde 1024 px, sin franja
+en blanco. Entrega mediante PR #420 a main; sin cambios de backend ni
+migraciones.
+
 # Datos privados fuera del JSON público de propuestas — en verificación (2026-09-26)
 
 `GET /api/proposals/<uuid>/`, `/by-slug/<slug>/` y `/shared/<uuid>/` (sin

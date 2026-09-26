@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Superuser registers hosting cycle payments from the clock action at /panel/accounting/hostings: the modal shows immutable historical modality/amount snapshots and a register form offering quarterly, semiannual and every-9-month cycles. It is prefilled from the current contract (amount = payment_per_cycle, modality, paid_at = today) with an 'Extender vigencia' toggle. total_paid/cycles_count recompute from history; deleting a cycle recalculates but never rolls back valid_to.",
+  "description": "Superuser registers hosting cycle payments from the row menu's 'Ciclos de pago' entry at /panel/accounting/hostings: the modal shows immutable historical modality/amount snapshots and a register form offering quarterly, semiannual and every-9-month cycles. It is prefilled from the current contract (amount = payment_per_cycle, modality, paid_at = today) with an 'Extender vigencia' toggle. total_paid/cycles_count recompute from history; deleting a cycle recalculates but never rolls back valid_to.",
   "expectedSpecs": 3,
   "outcomes": [
     "display",

@@ -118,17 +118,35 @@
         :highlight-query="currentFilters.search"
         :sort-key="sortKey"
         :sort-dir="sortDir"
-        @edit="openEditModal"
-        @delete="confirmDeleteRecord"
+        :show-default-actions="false"
+        row-actions-layout="menu-start"
         @sort="toggleSort"
       >
+        <template #row-actions="{ row }">
+          <AccountingRowActionsButton
+            :label="`Acciones de ${snapshotLabel(row)}`"
+            :test-id="`cards-actions-${row.id}`"
+            @open="actionsRow = row"
+          />
+        </template>
         <template #cell-debt_amount="{ row }">
           <span class="tabular-nums text-danger-strong">
             {{ formatMoney(Number(row.debt_amount)) }}
           </span>
         </template>
-        <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="card_snapshot" :record="row" />
+        <template #cell-notes="{ row }">
+          <BaseButton
+            v-if="row.notes?.trim()"
+            variant="ghost"
+            size="sm"
+            :aria-label="`Ver nota de ${snapshotLabel(row)}`"
+            :data-testid="`cards-notes-${row.id}`"
+            @click="noteRow = row"
+          >
+            <BaseActionIcon action="notes" />
+            <span>Ver nota</span>
+          </BaseButton>
+          <span v-else class="text-text-subtle">—</span>
         </template>
       </AccountingTable>
 
@@ -156,6 +174,32 @@
       @submit="handleSubmit"
     />
 
+    <AccountingRowActionsModal
+      :open="actionsRow !== null"
+      :record="actionsRow"
+      :title="actionsRow?.card_name || `Registro de tarjeta #${actionsRow?.id}`"
+      :subtitle="actionsSubtitle"
+      :actions="SNAPSHOT_ROW_ACTIONS"
+      test-id-prefix="cards"
+      @close="actionsRow = null"
+      @select="runSnapshotAction"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="card_snapshot"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteSubtitle"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
+    />
+
     <!-- Confirm modal for delete -->
     <ConfirmModal
       v-model="confirmState.open"
@@ -173,11 +217,14 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
-import { computed, onMounted } from 'vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { computed, onMounted, ref } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingTable from '~/components/accounting/AccountingTable.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import AccountingErrorState from '~/components/accounting/AccountingErrorState.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import AccountingFilterPanel from '~/components/accounting/AccountingFilterPanel.vue';
@@ -195,7 +242,9 @@ import {
 } from '~/composables/useAccountingFilters';
 import { useAccountingStore } from '~/stores/accounting';
 import { buildExportParams } from '~/utils/accountingExportParams';
+import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
+import { HISTORY_ROW_ACTION } from '~/utils/accountingRowActions';
 import { percentOf } from '~/utils/percent';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
@@ -397,10 +446,49 @@ const columns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   {
+    // The cell renders a "Ver nota" button: a long note used to stretch the
+    // whole row, so the text itself lives in AccountingNoteModal.
     key: 'notes', label: 'Notas',
     responsive: { compact: 'group', portrait: 'group', landscape: 'group' },
   },
 ];
+
+// ── Row actions, detail/history and notes ──
+// One kebab per row in the leading track, which fits nothing else; its modal
+// owns Detalle e historial, Editar and Eliminar. The note has its own column
+// here (the operator asked for it), so the menu does not repeat it.
+
+const SNAPSHOT_ROW_ACTIONS = [
+  HISTORY_ROW_ACTION,
+  { id: 'edit', action: 'edit', label: 'Editar' },
+  { id: 'delete', action: 'delete', label: 'Eliminar', danger: true },
+];
+
+const actionsRow = ref(null);
+const historyRow = ref(null);
+const noteRow = ref(null);
+
+function snapshotLabel(row) {
+  return `${row.card_name} del ${formatDate(row.snapshot_date)}`;
+}
+
+const actionsSubtitle = computed(() => (actionsRow.value
+  ? `${formatDate(actionsRow.value.snapshot_date)} · Deuda ${formatMoney(Number(actionsRow.value.debt_amount ?? 0))}`
+  : ''));
+
+const snapshotActionHandlers = {
+  history: (row) => { historyRow.value = row; },
+  edit: (row) => openEditModal(row),
+  delete: (row) => confirmDeleteRecord(row),
+};
+
+function runSnapshotAction(id, row) {
+  snapshotActionHandlers[id]?.(row);
+}
+
+const noteSubtitle = computed(() => (noteRow.value
+  ? `${noteRow.value.card_name} · ${formatDate(noteRow.value.snapshot_date)}`
+  : ''));
 
 async function loadRecords() {
   await Promise.all([

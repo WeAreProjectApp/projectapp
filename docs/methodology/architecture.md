@@ -870,7 +870,11 @@ places a fixed 3.5 rem control track after selection and before data, removes it
 from proportional width allocation, and keeps the visual header empty while
 retaining the accessible name. The default `inline-end` layout deliberately
 preserves legacy loose-icon rows until those actions are consolidated into a
-single menu.
+single menu; every accounting table and list was consolidated on 2026-09-26
+(`AccountingRowActionsModal`, «Detalle e historial» first). A policy-driven
+`menu-start` table emits `<col>` only for its control tracks, uses auto layout
+with auto-width data columns below 1024 px and, from there, a fixed layout whose
+header percentages are re-shared per profile among the visible columns.
 Intrinsic text sizing is owned by the same layer. `tableLayout.js` resolves a
 semantic `wrap`/`truncate`/`atomic` policy per column;
 `BaseResponsiveTable` applies it to retained and grouped values, while

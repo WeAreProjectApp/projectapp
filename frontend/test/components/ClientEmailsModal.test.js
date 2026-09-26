@@ -55,15 +55,16 @@ const stubs = {
     template: '<button @click="$emit(\'click\')"><slot /></button>',
   },
   EmailLogTable: {
-    props: ['entries', 'retryingId'],
-    emits: ['view-body', 'retry'],
-    template: `<div data-testid="table">
+    props: { entries: Array, retryingId: [Number, String], nested: Boolean },
+    emits: ['view-body', 'retry', 'menu-open-change'],
+    template: `<div data-testid="table" :data-nested="String(nested)">
       <button v-for="e in entries" :key="e.id"
         :data-testid="'view-' + e.id"
         @click="$emit('view-body', e)">{{ e.subject }}</button>
       <button v-for="e in entries" :key="'r' + e.id"
         :data-testid="'retry-' + e.id"
         @click="$emit('retry', e)">Reintentar</button>
+      <button data-testid="open-row-menu" @click="$emit('menu-open-change', true)">Menú</button>
     </div>`,
   },
 };
@@ -132,6 +133,20 @@ describe('ClientEmailsModal', () => {
       global: { stubs },
     });
     await flushPromises();
+
+    const shell = wrapper.get('[data-testid="modal-shell"]');
+    expect(shell.attributes('data-close-on-esc')).toBe('false');
+    expect(shell.attributes('data-close-on-backdrop')).toBe('false');
+  });
+
+  it('stops answering Esc while a row menu is open above it', async () => {
+    // The row menu is another BaseModal with the same global Esc listener.
+    store.fetchClientEmails = jest.fn(() => Promise.resolve(page([row()])));
+    const wrapper = mountModal(store);
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="table"]').attributes('data-nested')).toBe('true');
+    await wrapper.get('[data-testid="open-row-menu"]').trigger('click');
 
     const shell = wrapper.get('[data-testid="modal-shell"]');
     expect(shell.attributes('data-close-on-esc')).toBe('false');

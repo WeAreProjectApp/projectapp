@@ -6,8 +6,8 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "Superuser tracks advertising spend at /panel/accounting/ads: chronological list with a computed running accumulated column (calculated over the full history), origin-card and platform filters, saved filter tabs (accounting_ads view with seeded defaults) and modal CRUD.",
-  "expectedSpecs": 2,
+  "description": "Superuser tracks advertising spend at /panel/accounting/ads: chronological list with a computed running accumulated column (calculated over the full history), origin-card and platform filters, saved filter tabs (accounting_ads view with seeded defaults) and modal CRUD; the leading three-dots menu of each row offers Detalle e historial, Ver nota when the record has a note, Editar and Eliminar with confirmation.",
+  "expectedSpecs": 4,
   "outcomes": [
     "display",
     "success",

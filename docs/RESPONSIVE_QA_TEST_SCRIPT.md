@@ -77,15 +77,15 @@ de compatibilidad y nunca acreditan layout, tablas o modales.
 | Resumen | Utilidad líquida prioritaria; detalle de indicadores alcanzable; Mes y Utilidad se conservan. |
 | Bolsillo | En `compact` usa tarjetas con Concepto, Valor y **Saldo después**; en `portrait` vuelve la tabla priorizada y desde `landscape` existe columna independiente de Saldo. Con filtros se lee **Acumulado filtrado**. |
 | Ingresos | Concepto y Total permanecen; cliente, tipo, cobro, mes, origen y proyecto se agrupan. Lista/Agrupada conservan una sola acción inicial. |
-| Gastos | Concepto y Total permanecen; período, categoría, contabilidad y repartos se agrupan. |
-| Hostings | Cliente, Valor/mes y Estado permanecen; dominio y vigencia vuelven desde `landscape`; el menú conserva ciclos, cobro, correos, editar y eliminar. |
-| Cuentas de cobro | Número, Total y Estado permanecen; cliente y vencimiento vuelven desde `landscape`; Lista/Agrupada comparten el menú completo. |
-| Recurrentes | Nombre y equivalente COP mensual permanecen; encabezado de categoría, subtotal y participación se leen completos. |
-| Ads | Plataforma y Valor permanecen; fecha, tarjeta, participación y acumulado se agrupan. |
-| Tarjetas | Tarjeta y Deuda permanecen; fecha, disponible, uso y notas se agrupan. |
-| Extractos | Cuadrícula mensual 2/3/4 columnas; Comercio y Valor identifican la transacción angosta y el menú móvil conserva todas las acciones. |
-| Historial | Cambios y Correos siguen alcanzables; Registro/Acción y Destinatario/Estado mantienen la identidad al expandir. |
-| Configuración | Destinatarios, plantillas y tarjetas apilan formularios; las acciones son ancho completo sólo en `compact`. |
+| Gastos | Concepto y Total permanecen; período, categoría, contabilidad y repartos se agrupan. Una sola acción inicial abre Detalle e historial, Ver nota, Editar y Eliminar. |
+| Hostings | Cliente y Estado permanecen; Valor/mes se agrupa en `compact` y vuelve desde `portrait`; dominio y vigencia vuelven desde `landscape`; en todos los perfiles una sola acción inicial abre Detalle e historial, Ver nota, ciclos, cobro, correos, editar y eliminar. |
+| Cuentas de cobro | Número, Total y Estado permanecen; cliente y vencimiento vuelven desde `landscape`; Lista/Agrupada comparten el menú completo, que abre con Detalle e historial. |
+| Recurrentes | Nombre y equivalente COP mensual permanecen; encabezado de categoría, subtotal y participación se leen completos. El menú inicial abre con Detalle e historial y Ver nota. |
+| Ads | Plataforma y Valor permanecen; fecha, tarjeta, participación y acumulado se agrupan. Una sola acción inicial abre Detalle e historial, Ver nota, Editar y Eliminar. |
+| Tarjetas | Tarjeta y Deuda permanecen; fecha, disponible, uso y notas se agrupan; la nota se abre con «Ver nota». Las columnas visibles llegan al borde de la tabla, sin franja en blanco. |
+| Extractos | Cuadrícula mensual 2/3/4 columnas; la acción inicial, Comercio y Valor identifican la transacción angosta; su menú y el menú móvil del encabezado conservan todas las acciones. |
+| Historial | Cambios y Correos siguen alcanzables; Registro/Acción y Destinatario/Estado mantienen la identidad al expandir; en Correos la acción inicial abre ver correo y reintentar sin expandir la fila. |
+| Configuración | Destinatarios, plantillas y tarjetas apilan formularios; las acciones son ancho completo sólo en `compact`. Destinatarios y tarjetas guardadas empiezan con su acción inicial; el interruptor del destinatario sigue en la fila. |
 
 Los seis recorridos de formularios largos se abren en los cinco perfiles como
 escenarios especiales: nueva cuenta de cobro en dos pasos, liquidar ingreso,

@@ -410,7 +410,9 @@ test.describe('Admin Accounting Card Catalog', () => {
     await mockApi(page, buildHandler({ calls }));
     await gotoSettings(page);
 
-    await page.getByTestId('card-catalog-delete-card-1').click();
+    // A saved card's delete lives in its menu; only drafts discard inline.
+    await page.getByTestId('card-catalog-actions-card-1').click();
+    await page.getByTestId('card-catalog-action-delete-card-1').click();
     await page.getByTestId('confirm-modal-confirm').click();
 
     await expect(page.getByText('No se pudo eliminar la tarjeta')).toContainText('No se pudo eliminar la tarjeta');

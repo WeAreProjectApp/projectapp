@@ -49,10 +49,25 @@ function mountRecipients({
     props: { notificationsEnabled },
     global: {
       components: { BaseAlert, BaseButton, BaseFormField, BaseInput, BaseToggle },
-      stubs: { ConfirmModal: ConfirmModalStub },
+      stubs: {
+        ConfirmModal: ConfirmModalStub,
+        NuxtLink: { template: '<a><slot /></a>' },
+        // The row menu is a BaseModal; inline so its entries can be clicked.
+        BaseModal: {
+          props: ['modelValue'],
+          emits: ['close'],
+          template: '<div v-if="modelValue"><slot /></div>',
+        },
+      },
     },
   })
   return { wrapper, store, notify: usePanelNotify() }
+}
+
+async function chooseRemove(wrapper, id = 1) {
+  await wrapper.get(`[data-testid="recipients-actions-${id}"]`).trigger('click')
+  await wrapper.get(`[data-testid="recipients-action-remove-${id}"]`).trigger('click')
+  await flushPromises()
 }
 
 describe('NotificationRecipients', () => {
@@ -164,8 +179,7 @@ describe('NotificationRecipients', () => {
       const { wrapper, store } = mountRecipients()
       await flushPromises()
 
-      await wrapper.get('[data-testid="recipients-remove-1"]').trigger('click')
-      await flushPromises()
+      await chooseRemove(wrapper)
 
       // Nothing is deleted until the modal is confirmed.
       expect(store.deleteRecord).not.toHaveBeenCalled()
@@ -189,8 +203,7 @@ describe('NotificationRecipients', () => {
       const { wrapper } = mountRecipients()
       await flushPromises()
 
-      await wrapper.get('[data-testid="recipients-remove-1"]').trigger('click')
-      await flushPromises()
+      await chooseRemove(wrapper)
 
       // The neighbouring item proves the enumeration rendered, so the absence
       // below is a surgical removal and not an empty modal.
@@ -237,6 +250,24 @@ describe('NotificationRecipients', () => {
 
       expect(wrapper.get('[data-testid="recipients-empty"]').text())
         .toBe('Sin destinatarios registrados.')
+    })
+  })
+
+  describe('row menu', () => {
+    // Bug caught: the history was a loose text button squeezed between the
+    // switch and the remove icon.
+    it('leads each recipient with a kebab whose menu opens with its history', async () => {
+      const { wrapper } = mountRecipients()
+      await flushPromises()
+
+      await wrapper.get('[data-testid="recipients-actions-1"]').trigger('click')
+
+      expect(wrapper.findAll('[data-testid="recipients-actions-modal"] li button')
+        .map((button) => button.attributes('data-testid')))
+        .toEqual(['recipients-action-history-1', 'recipients-action-remove-1'])
+      // The switch is the recipient's state, so it stays in the row.
+      expect(wrapper.get('[data-testid="recipients-row-1"]')
+        .find('[data-testid="recipients-toggle-1"]').exists()).toBe(true)
     })
   })
 })

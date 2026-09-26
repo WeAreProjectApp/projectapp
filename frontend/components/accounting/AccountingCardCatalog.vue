@@ -1,10 +1,15 @@
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
-import { onMounted, ref } from 'vue'
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { computed, onMounted, ref } from 'vue'
 import ConfirmModal from '~/components/ConfirmModal.vue'
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue'
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue'
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue'
 import { useConfirmModal } from '~/composables/useConfirmModal'
 import { usePanelNotify } from '~/composables/usePanelNotify'
 import { useAccountingStore } from '~/stores/accounting'
+import { leadingRowActions } from '~/utils/accountingRowActions'
+import { formatMoney } from '~/utils/formatMoney'
 
 const store = useAccountingStore()
 const notify = usePanelNotify()
@@ -85,6 +90,35 @@ async function saveRow(row) {
   }
 }
 
+// ── Row menu ──
+// The editable copy (toRow) drops notes and trims statements_since, so the
+// menu, the history and the note are fed with the stored card instead: the
+// history must show what was saved, not what is being typed.
+const actionsRecord = ref(null)
+const historyRecord = ref(null)
+const noteRecord = ref(null)
+
+function cardRecord(row) {
+  return store.creditCards.find((card) => card.id === row.id) || null
+}
+
+const cardActions = computed(() => (actionsRecord.value
+  ? [
+    ...leadingRowActions(actionsRecord.value),
+    { id: 'delete', action: 'delete', label: 'Eliminar', danger: true },
+  ]
+  : []))
+
+const cardActionHandlers = {
+  history: (card) => { historyRecord.value = card },
+  notes: (card) => { noteRecord.value = card },
+  delete: (card) => requestDelete(card),
+}
+
+function runCardAction(id, card) {
+  cardActionHandlers[id]?.(card)
+}
+
 function requestDelete(row) {
   if (!row.id) {
     removeDraft(row)
@@ -134,7 +168,18 @@ function requestDelete(row) {
         class="rounded-lg border border-border-muted p-3 space-y-3"
         :data-testid="`card-catalog-row-${row.key}`"
       >
-        <EntityHistoryRecordButton v-if="row.id" entity-type="credit_card" :record="row" />
+        <!-- A saved card leads with its kebab (history, note, Eliminar). An
+             unsaved draft has no record yet: it only offers to discard. -->
+        <div v-if="row.id" class="flex items-center gap-2">
+          <AccountingRowActionsButton
+            :label="`Acciones de ${cardRecord(row)?.name || row.name}`"
+            :test-id="`card-catalog-actions-${row.key}`"
+            @open="actionsRecord = cardRecord(row)"
+          />
+          <p class="min-w-0 truncate text-sm font-medium text-text-default">
+            {{ cardRecord(row)?.name || row.name }}
+          </p>
+        </div>
         <BaseFormRow :cols="3" :gap="3">
           <BaseFormField label="Nombre" required>
             <BaseInput
@@ -167,12 +212,13 @@ function requestDelete(row) {
           </label>
           <div class="flex flex-wrap items-center justify-end gap-2">
             <BaseActionButton
+              v-if="!row.id"
               action="delete"
               variant="danger-ghost"
               size="sm"
-              :label="`Eliminar tarjeta ${row.name || 'nueva'}`"
+              label="Descartar tarjeta nueva"
               :data-testid="`card-catalog-delete-${row.key}`"
-              @click="requestDelete(row)"
+              @click="removeDraft(row)"
             />
             <BaseButton
               variant="primary"
@@ -198,5 +244,31 @@ function requestDelete(row) {
       <BaseActionIcon action="create" />
       <span>Agregar tarjeta</span>
     </BaseButton>
+
+    <AccountingRowActionsModal
+      :open="actionsRecord !== null"
+      :record="actionsRecord"
+      :title="actionsRecord?.name || ''"
+      :subtitle="actionsRecord ? `Cupo ${formatMoney(Number(actionsRecord.credit_limit ?? 0))}` : ''"
+      :actions="cardActions"
+      test-id-prefix="card-catalog"
+      :test-id-suffix="actionsRecord ? `card-${actionsRecord.id}` : undefined"
+      @close="actionsRecord = null"
+      @select="runCardAction"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyRecord !== null"
+      entity-type="credit_card"
+      :record="historyRecord"
+      @close="historyRecord = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRecord !== null"
+      :subtitle="noteRecord?.name || ''"
+      :notes="noteRecord?.notes ?? ''"
+      @close="noteRecord = null"
+    />
   </div>
 </template>

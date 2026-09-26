@@ -168,10 +168,17 @@
         :highlight-query="currentFilters.search"
         :sort-key="sortKey"
         :sort-dir="sortDir"
-        @edit="openEditModal"
-        @delete="confirmDeleteRecord"
+        :show-default-actions="false"
+        row-actions-layout="menu-start"
         @sort="toggleSort"
       >
+        <template #row-actions="{ row }">
+          <AccountingRowActionsButton
+            :label="`Acciones de ${expenseLabel(row)}`"
+            :test-id="`expense-actions-${row.id}`"
+            @open="actionsRow = row"
+          />
+        </template>
         <template #cell-concept="{ row }">
           <span class="text-text-default">{{ row.concept }}</span>
           <!-- Deductions reduce utility like any expense; the pill keeps
@@ -205,9 +212,6 @@
             {{ row.ledger === 'company' ? 'Empresa' : row.ledger_label }}
           </span>
         </template>
-        <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="expense" :record="row" />
-        </template>
       </AccountingTable>
 
       <BasePagination
@@ -224,6 +228,17 @@
       />
     </template>
 
+    <AccountingRowActionsModal
+      :open="actionsRow !== null"
+      :record="actionsRow"
+      :title="actionsRow ? expenseLabel(actionsRow) : ''"
+      :subtitle="expenseSummary(actionsRow)"
+      :actions="expenseActions"
+      test-id-prefix="expense"
+      @close="actionsRow = null"
+      @select="runExpenseAction"
+    />
+
     <!-- Create/edit modal -->
     <ExpenseFormModal
       :open="isModalOpen"
@@ -231,6 +246,21 @@
       :saving="store.isUpdating"
       @close="closeModal"
       @submit="handleSubmit"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="expense"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="expenseSummary(noteRow)"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <!-- Confirm modal for delete -->
@@ -250,9 +280,12 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
-import { computed, onMounted } from 'vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { computed, onMounted, ref } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingTable from '~/components/accounting/AccountingTable.vue';
 import AccountingErrorState from '~/components/accounting/AccountingErrorState.vue';
@@ -276,6 +309,7 @@ import {
 import { useAccountingStore } from '~/stores/accounting';
 import { DEDUCTION_TYPE_OPTIONS } from '~/utils/accountingDeductions';
 import { buildExportParams } from '~/utils/accountingExportParams';
+import { leadingRowActions } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
@@ -463,6 +497,41 @@ const {
     store.pocketMovements = [];
   },
 });
+
+// ── Row actions ──
+// One kebab per row in the leading track; its menu owns Detalle e historial,
+// Ver nota (when the expense has one), Editar and Eliminar.
+
+const actionsRow = ref(null);
+const historyRow = ref(null);
+const noteRow = ref(null);
+
+function expenseLabel(row) {
+  return row.concept || `Gasto #${row.id}`;
+}
+
+function expenseSummary(row) {
+  return row ? `${row.period_label} · ${money(row.total_amount)}` : '';
+}
+
+const expenseActions = computed(() => (actionsRow.value
+  ? [
+    ...leadingRowActions(actionsRow.value),
+    { id: 'edit', action: 'edit', label: 'Editar' },
+    { id: 'delete', action: 'delete', label: 'Eliminar', danger: true },
+  ]
+  : []));
+
+const expenseActionHandlers = {
+  history: (row) => { historyRow.value = row; },
+  notes: (row) => { noteRow.value = row; },
+  edit: (row) => openEditModal(row),
+  delete: (row) => confirmDeleteRecord(row),
+};
+
+function runExpenseAction(id, row) {
+  expenseActionHandlers[id]?.(row);
+}
 
 const totalFiltered = computed(() =>
   filteredRecords.value.reduce((sum, r) => sum + (Number(r.total_amount) || 0), 0),

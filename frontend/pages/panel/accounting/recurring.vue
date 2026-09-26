@@ -225,7 +225,6 @@
         @toggle-weight-sort="toggleGroupedWeightSort"
       >
         <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="recurring" :record="row" />
           <RecurringRowActionsButton
             :row="row"
             :busy="duplicatingId === row.id"
@@ -287,7 +286,6 @@
           @sort="toggleSort"
         >
           <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="recurring" :record="row" />
             <RecurringRowActionsButton
               :row="row"
               :busy="duplicatingId === row.id"
@@ -364,6 +362,24 @@
       @submit="applyBulkRecurringAction"
     />
 
+    <!-- First modal on purpose: its close must patch before the dialog it
+         opens (form, history, note, mute, confirmation), or the two trade
+         focus traps and the page loses its scroll lock. -->
+    <RecurringActionsModal
+      :open="actionsOpen"
+      :record="actionsRow"
+      @close="actionsOpen = false"
+      @history="historyRow = $event"
+      @notes="noteRow = $event"
+      @edit="openEditModal"
+      @duplicate="duplicateRecurring"
+      @toggle-state="toggleRecurringState"
+      @toggle-mute="toggleRecurringMute"
+      @archive="confirmArchiveRecurring"
+      @restore="restoreRecurring"
+      @delete="confirmPermanentDelete"
+    />
+
     <!-- Create / edit modal -->
     <RecurringPaymentFormModal
       :open="showFormModal"
@@ -399,17 +415,19 @@
       @reorder="reorderCategories"
     />
 
-    <RecurringActionsModal
-      :open="actionsOpen"
-      :record="actionsRow"
-      @close="actionsOpen = false"
-      @edit="openEditModal"
-      @duplicate="duplicateRecurring"
-      @toggle-state="toggleRecurringState"
-      @toggle-mute="toggleRecurringMute"
-      @archive="confirmArchiveRecurring"
-      @restore="restoreRecurring"
-      @delete="confirmPermanentDelete"
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="recurring"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteRow?.name || ''"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <RecurringMuteModal
@@ -437,9 +455,10 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingTable from '~/components/accounting/AccountingTable.vue';
 import RecurringGroupedTable from '~/components/accounting/RecurringGroupedTable.vue';
@@ -953,6 +972,10 @@ function money(value) {
 
 const actionsOpen = ref(false);
 const actionsRow = ref(null);
+// Opened from the row menu: the leading track only fits the kebab.
+const historyRow = ref(null);
+// «Ver nota» is a menu entry only when the payment has one.
+const noteRow = ref(null);
 const duplicatingId = ref(null);
 const muteModalOpen = ref(false);
 const mutingRecord = ref(null);

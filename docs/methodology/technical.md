@@ -576,7 +576,10 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
   proportional data split, expose an accessible but visually empty header and
   stop click/auxclick propagation from the action cell. The default
   `inline-end` mode is only for legacy loose-icon action rows; do not migrate
-  those implicitly while adopting the kebab contract.
+  those implicitly while adopting the kebab contract. Accounting pages pass
+  `:show-default-actions="false"` and render `AccountingRowActionsButton`, which
+  opens `AccountingRowActionsModal` (close first, then `select(id, record)` on
+  the next tick) or the entity's own actions modal.
 - KPI cards use `BaseIndicatorCard`. The default `stacked` layout reserves one
   support line; `compact-horizontal` is opt-in for bounded 72–80 px cards, omits
   the row when support is absent and clamps supplied support to one line. In both
@@ -1193,7 +1196,10 @@ description and preserves its credentials, active state and last-use timestamp.
   fixed 56 px actions track with an empty visual header, then identity/content.
   The control cell stops row-navigation clicks but leaves touch/pointer movement
   unhandled so the table wrapper can still pan horizontally. Loose icon rows are
-  a separate migration decision and remain `inline-end` until consolidated.
+  a separate migration decision and remain `inline-end` until consolidated
+  (accounting already is). With a responsive policy the data headers take
+  `--col-w-landscape|desktop` from `profileWidthVars` and the table switches to
+  auto layout below 1024 px, so hidden columns never keep a share.
 - **Measured overflow, intrinsic containment and table widths** — use
   `BaseOverflowText` for one clipped-only floating `BaseTooltip` plus in-place
   touch disclosure; consumer classes may style typography but must not override

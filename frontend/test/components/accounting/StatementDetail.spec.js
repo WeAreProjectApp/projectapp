@@ -6,7 +6,7 @@
  * on save), negative amounts edit inline, the merchant cell forwards the picked
  * category, and an in-flight save disables its cell.
  */
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import StatementDetail from '../../../components/accounting/StatementDetail.vue';
 
 const CATEGORY_OPTIONS = [
@@ -172,5 +172,75 @@ describe('StatementDetail inline editing', () => {
     await td.find('[data-testid="inline-cell-display"]').trigger('click');
 
     expect(td.find('input').exists()).toBe(false);
+  });
+});
+
+const MenuModalStub = {
+  props: ['modelValue', 'kind', 'titleId', 'lockScroll'],
+  emits: ['close'],
+  template: '<div v-if="modelValue"><slot /></div>',
+};
+
+function mountWithMenu(statementOverrides = {}) {
+  return mount(StatementDetail, {
+    props: { statement: makeStatement(statementOverrides), categoryOptions: CATEGORY_OPTIONS },
+    global: { stubs: { BaseModal: MenuModalStub, NuxtLink: { template: '<a><slot /></a>' } } },
+  });
+}
+
+function menuIds(wrapper) {
+  return wrapper.findAll('[data-testid="statement-tx-actions-modal"] li button')
+    .map((button) => button.attributes('data-testid'));
+}
+
+// Bug caught: Detalle e historial, Editar and Eliminar were loose text buttons
+// in a trailing column without a header.
+describe('StatementDetail row menu', () => {
+  it('leads each transaction with a kebab that opens its menu', async () => {
+    const wrapper = mountWithMenu();
+
+    expect(wrapper.get('[data-testid="statement-tx-5"] td').attributes('data-field')).toBe('actions');
+    await wrapper.get('[data-testid="statement-tx-actions-5"]').trigger('click');
+
+    expect(menuIds(wrapper)).toEqual([
+      'statement-tx-action-history-5',
+      'statement-tx-action-edit-5',
+      'statement-tx-action-delete-5',
+    ]);
+  });
+
+  it('hands Editar to the page as edit-tx', async () => {
+    const wrapper = mountWithMenu();
+
+    await wrapper.get('[data-testid="statement-tx-actions-5"]').trigger('click');
+    await wrapper.get('[data-testid="statement-tx-action-edit-5"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.emitted('edit-tx')[0]).toEqual([makeTx()]);
+  });
+
+  it('offers Eliminar only while the statement is a draft', async () => {
+    const wrapper = mountWithMenu({ status: 'processed', status_label: 'Finalizado' });
+
+    await wrapper.get('[data-testid="statement-tx-actions-5"]').trigger('click');
+
+    // A finalized statement keeps its detail and edit entries, never delete.
+    expect(menuIds(wrapper)).toEqual([
+      'statement-tx-action-history-5',
+      'statement-tx-action-edit-5',
+    ]);
+  });
+
+  it('opens the note of a transaction that has one', async () => {
+    const wrapper = mountWithMenu({
+      transactions: [makeTx({ notes: 'Cargo duplicado, reclamar al banco' })],
+    });
+
+    await wrapper.get('[data-testid="statement-tx-actions-5"]').trigger('click');
+    await wrapper.get('[data-testid="statement-tx-action-notes-5"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="accounting-note-body"]').text())
+      .toBe('Cargo duplicado, reclamar al banco');
   });
 });

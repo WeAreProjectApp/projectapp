@@ -526,6 +526,27 @@
       @submit-settle="openBulkSettle"
     />
 
+    <!-- Row actions: one list for both view modes, opened from the kebab.
+         First modal on purpose: its close must patch before the dialog it
+         opens, or the two trade focus traps and the page loses its scroll
+         lock. -->
+    <IncomeActionsModal
+      :open="actionsOpen"
+      :record="actionsRow"
+      @close="actionsOpen = false"
+      @detail="openIncomeDetail"
+      @notes="noteRow = $event"
+      @edit="openEditModal"
+      @duplicate="duplicateIncome"
+      @liquidate="openLiquidateModal"
+      @generate-collection="openCollectionModal"
+      @view-collection="goToCollectionAccount"
+      @view-emails="goToIncomeEmails"
+      @toggle-mute="toggleMute"
+      @write-off="confirmWriteOff"
+      @delete="confirmDeleteRecord"
+    />
+
     <!-- Create/edit modal (also the duplicate form, seeded and creating) -->
     <IncomeFormModal
       :open="isModalOpen"
@@ -546,21 +567,13 @@
       @assigned="onUnlinkedAssigned"
     />
 
-    <!-- Row actions: one list for both view modes, opened from the kebab -->
-    <IncomeActionsModal
-      :open="actionsOpen"
-      :record="actionsRow"
-      @close="actionsOpen = false"
-      @detail="openIncomeDetail"
-      @edit="openEditModal"
-      @duplicate="duplicateIncome"
-      @liquidate="openLiquidateModal"
-      @generate-collection="openCollectionModal"
-      @view-collection="goToCollectionAccount"
-      @view-emails="goToIncomeEmails"
-      @toggle-mute="toggleMute"
-      @write-off="confirmWriteOff"
-      @delete="confirmDeleteRecord"
+    <!-- The note is searched but has no column: the menu opens it here. -->
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteRow?.concept || ''"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <!-- Detalle del ingreso, reutilizando el modal de cuentas de cobro -->
@@ -633,6 +646,7 @@
 <script setup>
 import { computed, nextTick, onMounted, ref, watch } from 'vue';
 import IncomeActionsModal from '~/components/accounting/IncomeActionsModal.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import IncomeRowActionsButton from '~/components/accounting/IncomeRowActionsButton.vue';
 import IncomeDetailModal from '~/components/accounting/IncomeDetailModal.vue';
 import IncomeMuteModal from '~/components/accounting/IncomeMuteModal.vue';
@@ -1644,6 +1658,8 @@ function goToIncomeEmails(row) {
 
 const actionsOpen = ref(false);
 const actionsRow = ref(null);
+// «Ver nota» is a menu entry only when the income has one.
+const noteRow = ref(null);
 
 function openActions(row) {
   actionsRow.value = row;

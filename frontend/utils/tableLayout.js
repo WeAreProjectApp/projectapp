@@ -77,8 +77,11 @@ export const PAGE_MAX_WIDTH = 'max-w-[87.5rem] mx-auto';
  * the leftover width out in proportion to `weight`. `width` is the same intent
  * for the <col>-less table, resolved in resolveColumns() to a percentage of the
  * total weight — auto layout honours that proportion but still grows a column
- * whose content overflows, which is why we do not use table-fixed: a clipped
- * "$1.200.000…" defeats the point of the table.
+ * whose content overflows, which is why tables default to auto layout: a
+ * clipped "$1.200.000…" defeats the point of the table. `menu-start` is the
+ * exception from landscape up: with percentage data columns, auto layout hands
+ * the slack to the fixed 56px kebab track, so those profiles go fixed and
+ * re-share the width among the columns they show (profileWidthVars).
  *
  * `weight` doubles as `rem`, the floor minWidthFor() sums before the wrapper
  * starts scrolling: a column's share of the slack tracks how much room its
@@ -251,6 +254,58 @@ export function resolveColumns(
       hideGridClass: hideClass(col, 'grid'),
     };
   });
+}
+
+/**
+ * Which cells a viewport profile shows: desktop shows every column, and the
+ * narrower profiles follow each column's `responsive` policy — the same chain
+ * BaseResponsiveTable uses to hide the cells.
+ */
+export function responsivePolicyFor(column, profile) {
+  if (profile === 'desktop' || !column.responsive) return 'keep';
+  if (column.responsive[profile]) return column.responsive[profile];
+  if (profile === 'portrait') return column.responsive.compact || 'keep';
+  return 'keep';
+}
+
+/**
+ * Profiles where a `menu-start` table keeps its fixed layout. Below landscape
+ * it switches to auto layout with auto-width data columns, so atomic values
+ * keep their content width and the wrapping primary column takes the rest (the
+ * grid tables' `minmax(max-content, …)` contract). Auto layout there is safe for
+ * the kebab: with unconstrained data columns the slack goes to them, never to
+ * the fixed control tracks.
+ */
+export const FIXED_LAYOUT_PROFILES = Object.freeze(['landscape', 'desktop']);
+
+/**
+ * Per-profile widths for the fixed-layout profiles of a `menu-start` table.
+ *
+ * `width` shares 100% among EVERY data column, which only holds where every
+ * column shows. At landscape the hidden cells drop out of the layout but their
+ * share did not: the visible columns kept their desktop percentages and the
+ * rest of the row became a blank band. Each profile therefore re-shares 100%
+ * among the columns it keeps, and a column the profile hides gets 0%. The
+ * values feed `--col-w-<profile>` custom properties that a media query picks
+ * from, as the grid tables do with their track lists.
+ */
+export function profileWidthVars(resolved = []) {
+  const totals = Object.fromEntries(FIXED_LAYOUT_PROFILES.map((profile) => [
+    profile,
+    resolved
+      .filter((col) => responsivePolicyFor(col, profile) === 'keep')
+      .reduce((sum, col) => sum + SIZES[col.size].weight, 0),
+  ]));
+  return Object.fromEntries(resolved.map((col) => [
+    col.key,
+    Object.fromEntries(FIXED_LAYOUT_PROFILES.map((profile) => {
+      const kept = responsivePolicyFor(col, profile) === 'keep';
+      const share = kept && totals[profile]
+        ? (SIZES[col.size].weight / totals[profile]) * 100
+        : 0;
+      return [`--col-w-${profile}`, `${share.toFixed(2)}%`];
+    })),
+  ]));
 }
 
 /**

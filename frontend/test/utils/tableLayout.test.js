@@ -7,7 +7,9 @@ import {
   hideClass,
   isVisibleAt,
   minWidthFor,
+  profileWidthVars,
   resolveColumns,
+  responsivePolicyFor,
   textPolicyClass,
   textPolicyFor,
   trackListFor,
@@ -301,5 +303,60 @@ describe('tableLayout — track list and min width', () => {
     const without = minWidthFor(resolved, { hasHandle: false });
 
     expect(parseFloat(withHandle)).toBeGreaterThan(parseFloat(without));
+  });
+});
+
+describe('tableLayout — per-profile widths', () => {
+  // From landscape up a menu-start table is fixed-layout: each profile must
+  // share 100% among the columns it shows, or the hidden ones leave a blank
+  // band behind. Below landscape it is auto-layout and takes no shares.
+  const menuStart = resolveColumns([
+    {
+      key: 'name',
+      size: 'name',
+      responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    },
+    { key: 'date', format: 'date', responsive: { compact: 'group' } },
+    {
+      key: 'total',
+      format: 'money',
+      responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    },
+    { key: 'notes', responsive: { compact: 'group', portrait: 'group', landscape: 'group' } },
+  ], { hasActions: true, rowActionsLayout: 'menu-start' });
+
+  it('follows the compact policy at portrait when portrait is undeclared', () => {
+    expect(responsivePolicyFor(menuStart[1], 'portrait')).toBe('group');
+    expect(responsivePolicyFor(menuStart[1], 'landscape')).toBe('keep');
+    expect(responsivePolicyFor(menuStart[3], 'desktop')).toBe('keep');
+  });
+
+  it('shares each profile among the columns it keeps', () => {
+    const vars = profileWidthVars(menuStart);
+
+    expect(vars.name['--col-w-landscape']).toBe('43.48%');
+    expect(vars.date['--col-w-landscape']).toBe('26.09%');
+    expect(vars.total['--col-w-landscape']).toBe('30.43%');
+  });
+
+  it('gives a column hidden in a profile no share there', () => {
+    const vars = profileWidthVars(menuStart);
+
+    expect(vars.notes['--col-w-landscape']).toBe('0.00%');
+    expect(vars.notes['--col-w-desktop']).toBe('17.86%');
+  });
+
+  it('leaves the auto-layout profiles without a share', () => {
+    const vars = profileWidthVars(menuStart);
+
+    expect(vars.name['--col-w-compact']).toBeUndefined();
+    expect(vars.name['--col-w-portrait']).toBeUndefined();
+  });
+
+  it('matches the proportional desktop width', () => {
+    const vars = profileWidthVars(menuStart);
+
+    expect(menuStart.map((col) => vars[col.key]['--col-w-desktop']))
+      .toEqual(menuStart.map((col) => col.width));
   });
 });

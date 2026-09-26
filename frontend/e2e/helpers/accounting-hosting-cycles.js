@@ -1,4 +1,5 @@
 import { expect } from './test.js';
+import { chooseRowAction, openRowMenu } from './row-actions.js';
 
 export function hostingRows({ billingSent }) {
   return [
@@ -186,4 +187,17 @@ export async function gotoHostings(page) {
     page.getByRole('heading', { name: 'Hostings', exact: true }),
   ).toBeVisible({ timeout: 25_000 });
   await expect(page.getByTestId('accounting-row-1')).toBeVisible();
+}
+
+/** Every hosting action lives in the row's three-dot menu, at every width. */
+export function openHostingMenu(page, id) {
+  return openRowMenu(page, { kebab: `hosting-actions-${id}`, menu: 'hosting-actions-modal' });
+}
+
+export function chooseHostingAction(page, id, action) {
+  return chooseRowAction(page, {
+    kebab: `hosting-actions-${id}`,
+    menu: 'hosting-actions-modal',
+    action: `hosting-${action}-${id}`,
+  });
 }

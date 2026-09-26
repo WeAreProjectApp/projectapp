@@ -7,10 +7,14 @@
       <table class="statement-alias-table w-full">
         <thead>
           <tr class="border-b border-border-muted text-left">
+            <th
+              class="px-1.5 py-2 panel-landscape:w-14"
+              aria-label="Acciones"
+              data-testid="statement-alias-actions-header"
+            />
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Texto a mapear</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Comercio</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Categoría</th>
-            <th class="px-2.5 py-2 last:pr-4 text-center" />
           </tr>
         </thead>
         <tbody class="divide-y divide-border-muted">
@@ -21,6 +25,18 @@
             :data-testid="`statement-alias-${alias.id}`"
           >
             <td
+              data-field="actions"
+              class="px-1.5 py-1.5 text-center panel-landscape:w-14"
+              @click.stop
+            >
+              <AccountingRowActionsButton
+                :label="`Acciones de ${alias.match_text}`"
+                :test-id="`statement-alias-actions-${alias.id}`"
+                @open="actionsAlias = alias"
+              />
+            </td>
+            <td
+              data-field="match_text"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-xs text-text-subtle font-mono max-w-[240px]"
               :title="alias.match_text"
               :data-testid="`alias-cell-match_text-${alias.id}`"
@@ -35,6 +51,7 @@
               </AccountingInlineCell>
             </td>
             <td
+              data-field="merchant_name"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-default"
               :data-testid="`alias-cell-merchant_name-${alias.id}`"
             >
@@ -50,6 +67,7 @@
               </AccountingInlineCell>
             </td>
             <td
+              data-field="default_category"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted"
               :data-testid="`alias-cell-default_category-${alias.id}`"
             >
@@ -64,27 +82,46 @@
                 {{ alias.default_category_label }}
               </AccountingInlineCell>
             </td>
-            <td class="px-2.5 py-1.5 last:pr-4 text-center whitespace-nowrap">
-              <EntityHistoryRecordButton entity-type="merchant_alias" :record="alias" />
-              <BaseButton
-                variant="danger-ghost"
-                size="sm"
-                :data-testid="`statement-alias-delete-${alias.id}`"
-                @click="$emit('delete', alias)"
-              >
-                Eliminar
-              </BaseButton>
-            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <AccountingRowActionsModal
+      :open="actionsAlias !== null"
+      :record="actionsAlias"
+      :title="actionsAlias?.match_text || ''"
+      :subtitle="actionsAlias?.merchant_name || ''"
+      :actions="aliasActions"
+      test-id-prefix="statement-alias"
+      @close="actionsAlias = null"
+      @select="runAliasAction"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyAlias !== null"
+      entity-type="merchant_alias"
+      :record="historyAlias"
+      @close="historyAlias = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteAlias !== null"
+      :subtitle="noteAlias?.match_text || ''"
+      :notes="noteAlias?.notes ?? ''"
+      @close="noteAlias = null"
+    />
   </div>
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import { computed, ref } from 'vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
+import { leadingRowActions } from '~/utils/accountingRowActions';
 
 /**
  * Learned merchants (aliases) mapped from an statement descriptor to a merchant
@@ -108,7 +145,32 @@ defineProps({
   inlineSavingKey: { type: String, default: null },
 });
 
-defineEmits(['inline-save', 'delete']);
+const emit = defineEmits(['inline-save', 'delete']);
+
+// ── Alias row menu ──
+// No Editar entry: every column is click-to-edit. The page still receives
+// `delete` and asks for confirmation.
+
+const actionsAlias = ref(null);
+const historyAlias = ref(null);
+const noteAlias = ref(null);
+
+const aliasActions = computed(() => (actionsAlias.value
+  ? [
+    ...leadingRowActions(actionsAlias.value),
+    { id: 'delete', action: 'delete', label: 'Eliminar', danger: true },
+  ]
+  : []));
+
+const aliasActionHandlers = {
+  history: (alias) => { historyAlias.value = alias; },
+  notes: (alias) => { noteAlias.value = alias; },
+  delete: (alias) => emit('delete', alias),
+};
+
+function runAliasAction(id, alias) {
+  aliasActionHandlers[id]?.(alias);
+}
 </script>
 
 <style scoped>
@@ -134,10 +196,12 @@ defineEmits(['inline-save', 'delete']);
     display: none;
   }
 
+  /* Cells are placed by field: the kebab leads the card and the three
+   * editable values stack beside it. */
   .statement-alias-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.625rem 1rem;
+    grid-template-columns: 2.75rem minmax(0, 1fr);
+    gap: 0.625rem 0.75rem;
     height: auto;
     padding: 0.875rem 1rem;
   }
@@ -148,19 +212,20 @@ defineEmits(['inline-save', 'delete']);
     padding: 0;
   }
 
-  .statement-alias-row > td:first-child {
+  .statement-alias-row > [data-field="actions"] {
     grid-column: 1;
     grid-row: 1;
+    align-self: start;
   }
 
-  .statement-alias-row > td:nth-child(4) {
+  .statement-alias-row > [data-field="match_text"] {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .statement-alias-row > td:nth-child(2),
-  .statement-alias-row > td:nth-child(3) {
-    grid-column: 1 / -1;
+  .statement-alias-row > [data-field="merchant_name"],
+  .statement-alias-row > [data-field="default_category"] {
+    grid-column: 2;
   }
 }
 </style>
