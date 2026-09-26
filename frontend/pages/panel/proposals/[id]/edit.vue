@@ -22,6 +22,7 @@
       :proposal="proposal"
       :initial-params="proposal?.contract_params || {}"
       :is-editing="contractModalEditing"
+      :variant="contractModalVariant"
       @confirm="handleContractConfirm"
       @cancel="showContractModal = false"
     />
@@ -158,8 +159,8 @@
           :proposal="proposal"
           :documents="proposal.proposal_documents || []"
           @refresh="refreshData"
-          @edit-contract="openContractModal(true)"
-          @generate-contract="openContractModal(false)"
+          @edit-contract="(variant) => openContractModal(true, variant)"
+          @generate-contract="(variant) => openContractModal(false, variant)"
         />
       </div>
 
@@ -674,22 +675,28 @@ function handleNextAction() {
 // ── Contract modal state ──
 const showContractModal = ref(false);
 const contractModalEditing = ref(false);
+// Which document the modal generates or edits: the single contract, or the
+// product or service contract of a split closing.
+const contractModalVariant = ref('combined');
+// Past the negotiation entry a save only (re)generates documents; a proposal
+// the client moved to negotiation has no contract yet and generates it here.
+const CONTRACT_UPDATE_STATUSES = ['negotiating', 'accepted', 'rejected'];
 
-function openContractModal(editing = false) {
+function openContractModal(editing = false, variant = 'combined') {
   contractModalEditing.value = editing;
+  contractModalVariant.value = variant;
   showContractModal.value = true;
 }
 
 async function handleContractConfirm(params) {
   showContractModal.value = false;
-  let result;
-  if (contractModalEditing.value) {
-    result = await proposalStore.updateContractParams(proposal.value.id, params);
-  } else {
-    result = await proposalStore.saveContractAndNegotiate(proposal.value.id, params);
-  }
-  if (result.success) {
-    proposal.value = result.data;
+  const updatesOnly = contractModalEditing.value
+    || CONTRACT_UPDATE_STATUSES.includes(proposal.value.status);
+  const result = updatesOnly
+    ? await proposalStore.updateContractParams(proposal.value.id, params, contractModalVariant.value)
+    : await proposalStore.saveContractAndNegotiate(proposal.value.id, params);
+  if (!result.success) {
+    notify.error(result.message || 'No se pudo guardar el contrato.');
   }
 }
 

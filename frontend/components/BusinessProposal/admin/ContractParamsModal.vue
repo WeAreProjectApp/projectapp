@@ -7,10 +7,12 @@
     <div>
       <div class="sticky top-0 bg-surface border-b border-border-muted px-6 py-4 rounded-t-2xl z-10">
             <h2 class="text-lg font-semibold text-text-default">
-              {{ isEditing ? 'Editar contrato de desarrollo' : 'Generar contrato de desarrollo' }}
+              {{ isEditing ? 'Editar' : 'Generar' }} {{ variantSpec.label.toLowerCase() }}
             </h2>
             <p class="text-xs text-text-muted mt-1">
+              <template v-if="variantSpec.subtitle">{{ variantSpec.subtitle }}. </template>
               Usa el contrato por defecto con datos del cliente, o sube un contrato personalizado en Markdown.
+              <template v-if="variant !== 'combined'"> Los datos de las partes son comunes a los dos contratos.</template>
             </p>
           </div>
 
@@ -144,6 +146,24 @@
                     <BaseInput v-model="form.contract_date" type="date" size="sm" />
                 </BaseFormField>
               </fieldset>
+
+              <!-- Service terms: only the standalone service contract uses them -->
+              <fieldset v-if="variant === 'service'" data-testid="contract-service-terms">
+                <legend class="text-sm font-semibold text-text-brand mb-1">Datos del servicio</legend>
+                <p class="text-xs text-text-muted mb-3">Escríbelos como deben leerse en el contrato: en letras y con el número entre paréntesis.</p>
+                <div class="space-y-4">
+                  <BaseFormField
+                    v-for="field in SERVICE_CONTRACT_FIELDS"
+                    :key="field.key"
+                    :label="field.label"
+                    required
+                    size="sm"
+                    :error="formErrors[field.key]"
+                  >
+                    <BaseInput v-model="form[field.key]" type="text" size="sm" :placeholder="field.placeholder" />
+                  </BaseFormField>
+                </div>
+              </fieldset>
             </template>
 
             <!-- CUSTOM MODE: markdown editor -->
@@ -226,7 +246,7 @@
                 :loading="saving"
                 :disabled="saving || (contractSource === 'custom' && !customMarkdown.trim())"
               >
-                {{ saving ? 'Generando...' : (isEditing ? 'Actualizar contrato' : 'Generar contrato y negociar') }}
+                {{ saving ? 'Generando...' : submitLabel }}
               </BaseButton>
             </div>
           </form>
@@ -237,6 +257,7 @@
 <script setup>
 import { ref, watch, computed, onBeforeUnmount } from 'vue';
 import DOMPurify from 'dompurify';
+import { CONTRACT_LOCKED_STATUSES, CONTRACT_VARIANTS, SERVICE_CONTRACT_FIELDS } from '~/stores/proposals_constants';
 
 const { parseMarkdown } = useMarkdownPreview();
 
@@ -246,9 +267,20 @@ const props = defineProps({
   initialParams: { type: Object, default: () => ({}) },
   isEditing: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
+  // Document being generated or edited: 'combined', 'product' or 'service'.
+  variant: { type: String, default: 'combined' },
 });
 
 const emit = defineEmits(['confirm', 'cancel']);
+
+const variantSpec = computed(() => CONTRACT_VARIANTS[props.variant] || CONTRACT_VARIANTS.combined);
+// Only a sent or viewed proposal enters negotiation from this modal.
+const submitLabel = computed(() => {
+  if (props.isEditing) return 'Actualizar contrato';
+  return CONTRACT_LOCKED_STATUSES.includes(props.proposal?.status)
+    ? 'Generar contrato y negociar'
+    : 'Generar contrato';
+});
 
 const proposalStore = useProposalStore();
 const companyDefaults = ref({});
@@ -280,6 +312,9 @@ const form = ref({
   client_cedula: '',
   client_email: '',
   contract_date: new Date().toISOString().slice(0, 10),
+  service_initial_term: '',
+  service_renewal_notice_days: '',
+  service_termination_notice_days: '',
 });
 
 async function loadDefaults() {
@@ -295,8 +330,8 @@ function resetForm() {
   const existing = props.initialParams || {};
   const p = props.proposal || {};
 
-  contractSource.value = existing.contract_source || 'default';
-  customMarkdown.value = existing.custom_contract_markdown || '';
+  contractSource.value = existing[variantSpec.value.sourceKey] || 'default';
+  customMarkdown.value = existing[variantSpec.value.customKey] || '';
 
   form.value = {
     contractor_full_name: existing.contractor_full_name || defaults.contractor_full_name || '',
@@ -311,6 +346,7 @@ function resetForm() {
     client_cedula: existing.client_cedula || '',
     client_email: existing.client_email || p.client_email || '',
     contract_date: existing.contract_date || new Date().toISOString().slice(0, 10),
+    ...Object.fromEntries(SERVICE_CONTRACT_FIELDS.map(({ key }) => [key, existing[key] || ''])),
   };
 }
 
@@ -359,6 +395,13 @@ function validate() {
     if (!nit && !cedula) {
       errors.contractor_identity = 'Indica el NIT o la cédula del contratista';
     }
+    if (props.variant === 'service') {
+      for (const { key, label } of SERVICE_CONTRACT_FIELDS) {
+        if (!form.value[key]?.toString().trim()) {
+          errors[key] = `${label} es obligatorio`;
+        }
+      }
+    }
   } else {
     if (!customMarkdown.value.trim()) {
       errors.customMarkdown = 'El contenido del contrato es obligatorio';
@@ -371,19 +414,24 @@ function validate() {
   return Object.keys(errors).length === 0;
 }
 
+// The backend merges these keys over the saved parameters, so each document
+// only sends its own source and text; the service terms travel with the
+// service contract only.
 function handleSubmit() {
   if (!validate()) return;
+  const { sourceKey, customKey } = variantSpec.value;
   if (contractSource.value === 'custom') {
     emit('confirm', {
-      contract_source: 'custom',
-      custom_contract_markdown: customMarkdown.value,
+      [sourceKey]: 'custom',
+      [customKey]: customMarkdown.value,
       contract_date: form.value.contract_date,
     });
-  } else {
-    emit('confirm', {
-      contract_source: 'default',
-      ...form.value,
-    });
+    return;
   }
+  const serviceKeys = SERVICE_CONTRACT_FIELDS.map(({ key }) => key);
+  const params = Object.fromEntries(
+    Object.entries(form.value).filter(([key]) => props.variant === 'service' || !serviceKeys.includes(key)),
+  );
+  emit('confirm', { [sourceKey]: 'default', ...params });
 }
 </script>

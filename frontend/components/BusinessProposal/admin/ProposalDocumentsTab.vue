@@ -13,43 +13,44 @@
         <p class="text-xs text-text-muted">Versiones formales con alcance y condiciones del proyecto.</p>
         <BaseButton variant="primary" size="sm" data-testid="proposal-formalization-open" @click="formalizationOpen = true">Preparar correo de formalización</BaseButton>
       </div>
-      <ul class="divide-y divide-border-muted">
-        <!-- Contrato de desarrollo -->
-        <li class="py-3 flex items-start justify-between gap-3 flex-wrap">
+
+      <!-- Modalidad de cierre: un contrato, o producto y servicio por separado -->
+      <div v-if="showModality" class="mb-4 rounded-lg border border-border-muted bg-surface-raised p-4" data-testid="proposal-contract-modality">
+        <div class="flex flex-wrap items-center justify-between gap-3">
           <div class="min-w-0">
-            <div class="text-sm font-medium text-text-default dark:text-white">Contrato de desarrollo</div>
-            <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">
-              <template v-if="contractDoc">PDF · Generado el {{ formatDate(contractDoc.created_at) }}</template>
-              <template v-else>PDF · No generado</template>
-            </div>
+            <p class="text-sm font-medium text-text-default dark:text-white">Modalidad de cierre</p>
+            <p class="text-xs text-text-muted mt-0.5">
+              Un solo contrato, o el producto (desarrollo e implementación) y el servicio (hosting, mantenimiento y soporte) por separado.
+            </p>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <template v-if="contractDoc">
-              <ProposalDocumentCopyButton
-                :key="`contract-${proposal.id}-${contractDoc.updated_at || contractDoc.file}`"
-                :endpoint="`proposals/${proposal.id}/contract/markdown/`"
-                title="Contrato de desarrollo" data-testid="proposal-copy-contract" />
-              <BaseActionButton action="view" label="Vista previa del contrato"
-                @click="openPdfPreview('Contrato de desarrollo', contractPdfUrl)"
-                class="bg-surface-raised text-text-muted hover:bg-surface-raised" />
-              <a :href="contractPdfUrl" target="_blank"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft text-text-brand rounded-lg text-xs font-medium hover:bg-primary-soft transition-colors">
-                <BaseActionIcon action="download" />
-                Descargar PDF
-              </a>
-              <a :href="draftContractPdfUrl" target="_blank"
-                class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
-                Borrador
-              </a>
-              <BaseButton variant="secondary" size="sm" :disabled="contractActionsDisabled" disabled-reason="El contrato ya no se puede editar en el estado actual de la propuesta." @click="$emit('editContract')">
-                Editar parámetros
-              </BaseButton>
-            </template>
-            <BaseButton variant="secondary" size="sm" v-else-if="!contractActionsDisabled" @click="$emit('generateContract')">
-              Generar contrato
-            </BaseButton>
-          </div>
-        </li>
+          <BaseSegmented
+            :model-value="modality"
+            size="sm"
+            :options="modalityOptions"
+            :disabled="modalityDisabled"
+            :disabled-reason="modalityDisabledReason"
+            aria-label="Modalidad de cierre"
+            @update:model-value="changeModality"
+          />
+        </div>
+        <p v-if="customSplitNotice" class="mt-3 text-xs text-text-muted" role="note" data-testid="proposal-contract-modality-custom-notice">
+          El contrato único de esta propuesta es personalizado. Los contratos de producto y servicio parten del texto estándar; personalízalos desde «Editar parámetros» si hace falta.
+        </p>
+      </div>
+
+      <ul class="divide-y divide-border-muted">
+        <!-- Contrato(s) de la modalidad de cierre -->
+        <ProposalContractRow
+          v-for="variant in contractVariants"
+          :key="variant.key"
+          :proposal="proposal"
+          :variant="variant"
+          :doc="contractDocFor(variant)"
+          :actions-disabled="contractActionsDisabled"
+          @preview="openPdfPreview"
+          @edit="$emit('editContract', variant.key)"
+          @generate="$emit('generateContract', variant.key)"
+        />
 
         <!-- Propuesta comercial -->
         <li class="py-3 flex items-start justify-between gap-3 flex-wrap">
@@ -203,15 +204,23 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import ProposalDocumentCopyButton from './ProposalDocumentCopyButton.vue';
+import ProposalContractRow from './ProposalContractRow.vue';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
 import { get_request } from '~/stores/services/request_http';
 import { downloadBlob, filenameFromDisposition } from '~/utils/downloadFile';
 import ProposalFormalizationModal from './ProposalFormalizationModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
-import { CONTRACT_LOCKED_STATUSES } from '~/stores/proposals_constants';
+import {
+  CONTRACT_DOC_TYPES,
+  CONTRACT_LOCKED_STATUSES,
+  CONTRACT_MODALITY,
+  CONTRACT_MODALITY_EDITABLE_STATUSES,
+  CONTRACT_MODALITY_VISIBLE_STATUSES,
+  CONTRACT_VARIANTS,
+  contractVariantsFor,
+} from '~/stores/proposals_constants';
 import { isPdfUrl, isImageUrl, canPreviewFile } from '~/utils/filePreview';
 import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewModal.vue';
-import { formatDateTime } from '~/utils/formatDate';
 
 const notify = usePanelNotify();
 
@@ -239,20 +248,54 @@ const uploadType = ref('other');
 const uploadCustomLabel = ref('');
 const fileInput = ref(null);
 
-const contractDoc = computed(() =>
-  props.documents.find(d => d.document_type === 'contract'),
+const contractVariants = computed(() =>
+  contractVariantsFor(props.proposal).map((key) => CONTRACT_VARIANTS[key]),
 );
+
+function contractDocFor(variant) {
+  return props.documents.find(d => d.document_type === variant.docType) || null;
+}
 
 const contractActionsDisabled = computed(() =>
   CONTRACT_LOCKED_STATUSES.includes(props.proposal?.status),
 );
 
-const contractPdfUrl = computed(() =>
-  `/api/proposals/${props.proposal.id}/contract/pdf/`,
+// ── Modalidad de cierre ──
+const modality = computed(() => props.proposal?.contract_modality || CONTRACT_MODALITY.SINGLE);
+const showModality = computed(() => CONTRACT_MODALITY_VISIBLE_STATUSES.includes(props.proposal?.status));
+const savingModality = ref(false);
+const modalityDisabled = computed(() =>
+  savingModality.value || !CONTRACT_MODALITY_EDITABLE_STATUSES.includes(props.proposal?.status),
 );
-const draftContractPdfUrl = computed(() =>
-  `/api/proposals/${props.proposal.id}/contract/draft-pdf/`,
-);
+const modalityDisabledReason = computed(() => (
+  savingModality.value
+    ? 'Guardando la modalidad de cierre…'
+    : 'La modalidad de cierre se elige durante la negociación.'
+));
+const modalityOptions = [
+  { value: CONTRACT_MODALITY.SINGLE, label: 'Contrato único', testId: 'proposal-contract-modality-single' },
+  { value: CONTRACT_MODALITY.SPLIT, label: 'Producto y servicio', testId: 'proposal-contract-modality-split' },
+];
+const customSplitNotice = computed(() => {
+  const params = props.proposal?.contract_params || {};
+  return modality.value === CONTRACT_MODALITY.SPLIT && params.contract_source === 'custom';
+});
+
+async function changeModality(value) {
+  // BaseSegmented also emits when the selected option is clicked again.
+  if (value === modality.value || savingModality.value) return;
+  savingModality.value = true;
+  const result = await proposalStore.updateContractModality(props.proposal.id, value);
+  savingModality.value = false;
+  if (result.success) {
+    notify.success(value === CONTRACT_MODALITY.SPLIT
+      ? 'El negocio se cierra con contrato de producto y contrato de servicio.'
+      : 'El negocio se cierra con un contrato único.');
+  } else {
+    notify.error(result.message || 'No se pudo cambiar la modalidad de cierre.');
+  }
+}
+
 const commercialPdfUrl = computed(() =>
   `/api/proposals/${props.proposal.id}/formalization/pdf/commercial/`,
 );
@@ -261,7 +304,7 @@ const technicalPdfUrl = computed(() =>
 );
 
 const additionalDocs = computed(() =>
-  props.documents.filter(d => d.document_type !== 'contract'),
+  props.documents.filter(d => !CONTRACT_DOC_TYPES.includes(d.document_type)),
 );
 
 const previewOpen = ref(false);
@@ -402,10 +445,6 @@ onBeforeUnmount(() => {
   abortInflightPreview();
   releasePreviewObjectUrl();
 });
-
-function formatDate(isoString) {
-  return formatDateTime(isoString, { fallback: '' });
-}
 
 async function handleUpload() {
   const file = fileInput.value?.files?.[0];

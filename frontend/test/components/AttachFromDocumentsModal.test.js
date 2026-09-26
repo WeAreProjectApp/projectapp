@@ -114,6 +114,29 @@ describe('AttachFromDocumentsModal', () => {
       const wrapper = mountModal({ entity: proposalWithContract, source: 'proposal' });
       expect(wrapper.text()).toContain('Otrosí #1');
     });
+
+    it('offers the product and service contracts of a split closing by name', async () => {
+      // Falla si un cierre separado adjunta el contrato único o un contrato sin nombrar.
+      const entity = {
+        ...proposalWithContract,
+        contract_modality: 'split',
+        proposal_documents: [
+          ...proposalWithContract.proposal_documents,
+          { id: 12, document_type: 'contract_product', title: 'Contrato de producto', is_generated: true },
+          { id: 13, document_type: 'contract_service', title: 'Contrato de servicio', is_generated: true },
+        ],
+      };
+      const wrapper = mountModal({ entity, source: 'proposal', preselected: ['contract_pdf:service'] });
+      await wrapper.vm.$nextTick();
+      const confirmBtn = wrapper.findAll('button').find(b => b.text().includes('Adjuntar'));
+      await confirmBtn.trigger('click');
+
+      expect(wrapper.text()).not.toContain('Contrato de desarrollo (PDF)');
+      expect(wrapper.text()).toContain('Contrato de producto (borrador)');
+      expect(wrapper.emitted('attach')[0][0].map(item => item.ref)).toEqual([
+        { source: 'contract_pdf', variant: 'service' },
+      ]);
+    });
   });
 
   describe('diagnostic source', () => {
