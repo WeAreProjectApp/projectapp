@@ -1,7 +1,11 @@
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref } from 'vue'
 import ConfirmModal from '~/components/ConfirmModal.vue'
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue'
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue'
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue'
+import { leadingRowActions } from '~/utils/accountingRowActions'
 import { useConfirmModal } from '~/composables/useConfirmModal'
 import { usePanelNotify } from '~/composables/usePanelNotify'
 import { useAccountingStore } from '~/stores/accounting'
@@ -70,6 +74,28 @@ async function toggleRecipient(row) {
       detail: result.message,
     })
   }
+}
+
+// ── Row menu ──
+const actionsRow = ref(null)
+const historyRow = ref(null)
+const noteRow = ref(null)
+
+const recipientActions = computed(() => (actionsRow.value
+  ? [
+    ...leadingRowActions(actionsRow.value),
+    { id: 'remove', action: 'remove', label: 'Quitar', danger: true },
+  ]
+  : []))
+
+const recipientActionHandlers = {
+  history: (row) => { historyRow.value = row },
+  notes: (row) => { noteRow.value = row },
+  remove: (row) => requestDelete(row),
+}
+
+function runRecipientAction(id, row) {
+  recipientActionHandlers[id]?.(row)
 }
 
 function requestDelete(row) {
@@ -144,13 +170,21 @@ function requestDelete(row) {
       Sin destinatarios registrados.
     </p>
     <ul v-else class="space-y-2 mb-4">
+      <!-- Kebab first, like every accounting row: history, the note and
+           Quitar live in its menu. The switch stays in the row because it is
+           the recipient's state, read at a glance, not an action on it. -->
       <li
         v-for="row in recipients"
         :key="row.id"
-        class="flex items-center justify-between gap-3 rounded-lg border border-border-muted px-3 py-2"
+        class="flex items-center gap-3 rounded-lg border border-border-muted px-3 py-2"
         :data-testid="`recipients-row-${row.id}`"
       >
-        <div class="min-w-0">
+        <AccountingRowActionsButton
+          :label="`Acciones de ${row.email}`"
+          :test-id="`recipients-actions-${row.id}`"
+          @open="actionsRow = row"
+        />
+        <div class="min-w-0 flex-1">
           <p
             class="text-sm text-text-default truncate"
             :class="{ 'opacity-60': !row.is_active }"
@@ -165,26 +199,41 @@ function requestDelete(row) {
             · Alta {{ formatDate(row.created_at) }}
           </p>
         </div>
-        <div class="flex items-center gap-2 shrink-0">
-          <EntityHistoryRecordButton entity-type="notification_recipient" :record="row" />
-          <BaseToggle
-            :model-value="row.is_active"
-            :disabled="togglingId === row.id"
-            :aria-label="`Enviar avisos a ${row.email}`"
-            :data-testid="`recipients-toggle-${row.id}`"
-            @update:model-value="toggleRecipient(row)"
-          />
-          <BaseActionButton
-            action="remove"
-            variant="danger-ghost"
-            size="sm"
-            :label="`Quitar ${row.email}`"
-            :data-testid="`recipients-remove-${row.id}`"
-            @click="requestDelete(row)"
-          />
-        </div>
+        <BaseToggle
+          class="shrink-0"
+          :model-value="row.is_active"
+          :disabled="togglingId === row.id"
+          :aria-label="`Enviar avisos a ${row.email}`"
+          :data-testid="`recipients-toggle-${row.id}`"
+          @update:model-value="toggleRecipient(row)"
+        />
       </li>
     </ul>
+
+    <AccountingRowActionsModal
+      :open="actionsRow !== null"
+      :record="actionsRow"
+      :title="actionsRow?.email || ''"
+      :subtitle="actionsRow ? (actionsRow.is_active ? 'Activo' : 'Pausado') : ''"
+      :actions="recipientActions"
+      test-id-prefix="recipients"
+      @close="actionsRow = null"
+      @select="runRecipientAction"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="notification_recipient"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteRow?.email || ''"
+      :notes="noteRow?.notes ?? ''"
+      @close="noteRow = null"
+    />
 
     <BaseFormField label="Agregar correo" :error="newEmailError">
       <div class="flex flex-col items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-start">

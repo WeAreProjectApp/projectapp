@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Superuser manages the CreditCard catalog from the 'Catálogo de tarjetas' section at /panel/accounting/settings: per-row name, cupo (credit_limit), 'extractos desde' month and active toggle, with per-row save (POST /api/accounting/credit-cards/create/ or PATCH .../update/) and delete with confirm (DELETE .../delete/ returns credit_card_referenced when snapshots/statements reference the name — deactivate instead). The catalog feeds the Tarjetas form dropdown, the server-side debt computation (cupo − disponible) and the Extractos year/month range; changes are audited as the credit_card entity.",
+  "description": "Superuser manages the CreditCard catalog from the 'Catálogo de tarjetas' section at /panel/accounting/settings: per-row name, cupo (credit_limit), 'extractos desde' month and active toggle, with per-row save (POST /api/accounting/credit-cards/create/ or PATCH .../update/) and delete with confirm (DELETE .../delete/ returns credit_card_referenced when snapshots/statements reference the name — deactivate instead). Saved cards lead with a three-dots menu (Detalle e historial fed with the stored card, Ver nota, Eliminar); unsaved drafts only discard inline. The catalog feeds the Tarjetas form dropdown, the server-side debt computation (cupo − disponible) and the Extractos year/month range; changes are audited as the credit_card entity.",
   "expectedSpecs": 4,
   "outcomes": [
     "display",

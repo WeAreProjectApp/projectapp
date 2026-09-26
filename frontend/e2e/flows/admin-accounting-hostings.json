@@ -6,8 +6,8 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Superuser manages the client hosting registry at /panel/accounting/hostings: list with an inline estado select, validity, 4 KPI cards and modal CRUD. New records offer exactly quarterly, semiannual and every-9-month payment modalities, with payment_per_cycle derived from the monthly value. Legacy monthly/annual rows remain readable as historical values but cannot be selected for new records. Ciclos/total pagado are read-only in the form. Cliente renders the linked relation and Proyecto is a column of its own.",
-  "expectedSpecs": 3,
+  "description": "Superuser manages the client hosting registry at /panel/accounting/hostings: list with an inline estado select, validity, 4 KPI cards and modal CRUD. New records offer exactly quarterly, semiannual and every-9-month payment modalities, with payment_per_cycle derived from the monthly value. Legacy monthly/annual rows remain readable as historical values but cannot be selected for new records. Ciclos/total pagado are read-only in the form. Cliente renders the linked relation and Proyecto is a column of its own. Every row leads with a single three-dots control at every width (after the selection checkbox): its menu opens with Detalle e historial and Ver nota (when present), then cycles, cuenta de cobro, emails, edit and delete, and the estado cell wraps so the billing chip never pushes the row past a phone's edge. On a phone Valor/mes groups under Cliente so the row fits without a horizontal scroll.",
+  "expectedSpecs": 4,
   "outcomes": [
     "display",
     "success",

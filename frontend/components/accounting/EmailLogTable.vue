@@ -4,12 +4,16 @@
       <thead>
         <tr class="bg-surface-raised text-left text-xs text-text-muted uppercase tracking-wider">
           <th
+            class="px-1.5 py-2 panel-landscape:w-14"
+            aria-label="Acciones"
+            data-testid="email-log-actions-header"
+          />
+          <th
             v-for="col in resolved"
             :key="col.key"
             :style="{ width: col.width }"
             :class="[col.headerPadClass, col.alignClass, col.nowrapClass, visibilityClass(col.key)]"
           >{{ col.label }}</th>
-          <th class="px-3 py-2 text-right">Acciones</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-border-muted">
@@ -25,6 +29,21 @@
             :class="canExpand(entry) ? 'cursor-pointer' : ''"
             @click="toggleEntry(entry)"
           >
+            <!-- Stops the click: opening the menu must not also expand the row. -->
+            <td
+              data-field="actions"
+              class="px-1.5 py-1 text-center panel-landscape:w-14"
+              @click.stop
+            >
+              <AccountingRowActionsButton
+                v-if="entryActions(entry).length"
+                :label="`Acciones del envío a ${entry.recipient}`"
+                :test-id="`email-log-actions-${entry.id}`"
+                :busy="retryingId === entry.id"
+                busy-label="Reintentando el envío"
+                @open="actionsEntry = entry"
+              />
+            </td>
             <td data-field="date" :class="[cell(0), 'text-text-muted text-xs tabular-nums']">
               <span class="history-mobile-label panel-landscape:hidden">Fecha</span>
               {{ formatDateTime(entry.sent_at) }}
@@ -47,35 +66,6 @@
               >
                 {{ entry.status_label }}
               </span>
-            </td>
-            <td data-field="actions" class="px-3 py-1">
-              <div class="flex items-center justify-end gap-1">
-                <BaseActionButton
-                  v-if="entry.has_body"
-                  action="view"
-                  variant="ghost"
-                  size="sm"
-                  label="Ver el correo como salió"
-                  :data-testid="`email-log-view-body-${entry.id}`"
-                  @click.stop="emit('view-body', entry)"
-                />
-                <BaseActionButton
-                  v-if="entry.status === 'failed'"
-                  action="retry"
-                  variant="ghost"
-                  size="sm"
-                  label="Reintentar el envío"
-                  :tooltip="entry.is_retryable
-                    ? `Reenviar solo a ${entry.recipient}`
-                    : entry.retry_blocked_reason"
-                  :disabled="!entry.is_retryable || retryingId === entry.id"
-                  :disabled-reason="!entry.is_retryable
-                    ? (entry.retry_blocked_reason || 'Este envío no admite reintento.')
-                    : 'El reintento ya está en curso. Espera a que termine.'"
-                  :data-testid="`email-log-retry-${entry.id}`"
-                  @click.stop="emit('retry', entry)"
-                />
-              </div>
             </td>
           </tr>
           <!-- What turns "no me llegó" into a diagnosis: why it failed, what
@@ -117,14 +107,28 @@
         </template>
       </tbody>
     </table>
+
+    <AccountingRowActionsModal
+      :open="actionsEntry !== null"
+      :record="actionsEntry"
+      :title="actionsEntry ? (actionsEntry.subject || actionsEntry.template_label) : ''"
+      :subtitle="actionsEntry ? `${actionsEntry.recipient} · ${formatDateTime(actionsEntry.sent_at)}` : ''"
+      :actions="actionsEntry ? entryActions(actionsEntry) : []"
+      test-id-prefix="email-log"
+      :lock-scroll="!nested"
+      @close="actionsEntry = null"
+      @select="runEntryAction"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import { formatDateTime } from '~/utils/formatDate';
-import { minWidthFor, resolveColumns } from '~/utils/tableLayout';
+import { ROW_ACTION_LAYOUTS, minWidthFor, resolveColumns } from '~/utils/tableLayout';
 
 // Destinatario is the identifying column here — the whole point of the view
 // is answering who a notice reached — so it gets the widest floor.
@@ -136,8 +140,10 @@ const COLUMNS = [
   { key: 'status_label', label: 'Estado', size: 'badge' },
 ];
 
-const resolved = resolveColumns(COLUMNS, { hasActions: true });
-const tableMinWidth = minWidthFor(resolved, { hasActions: true });
+// The actions track leads the row and holds one kebab, outside the data split.
+const LAYOUT = { hasActions: true, rowActionsLayout: ROW_ACTION_LAYOUTS.MENU_START };
+const resolved = resolveColumns(COLUMNS, LAYOUT);
+const tableMinWidth = minWidthFor(resolved, LAYOUT);
 
 function visibilityClass() {
   return '';
@@ -149,7 +155,7 @@ function cell(index) {
   return [col.padClass, col.alignClass, col.nowrapClass];
 }
 
-defineProps({
+const props = defineProps({
   /**
    * Rows: { id, template_key, template_label, recipient, subject, status,
    * status_label, error_message, sent_at, targets, has_body, is_retryable,
@@ -158,9 +164,56 @@ defineProps({
   entries: { type: Array, default: () => [] },
   /** Row whose retry is in flight, so its button cannot be double-fired. */
   retryingId: { type: [Number, String], default: null },
+  /** Rendered inside another modal (the client's emails): the row menu then
+   *  leaves the page scroll lock to that modal. */
+  nested: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['view-body', 'retry']);
+const emit = defineEmits(['view-body', 'retry', 'menu-open-change']);
+
+// ── Row menu ──
+// A send offers at most two actions (see it as it left, retry a failure), so
+// the kebab only appears on a row that has one.
+const actionsEntry = ref(null);
+
+function entryActions(entry) {
+  const list = [];
+  if (entry.has_body) {
+    list.push({
+      id: 'view-body',
+      action: 'view',
+      label: 'Ver el correo como salió',
+      testId: `email-log-view-body-${entry.id}`,
+    });
+  }
+  if (entry.status === 'failed') {
+    const retrying = props.retryingId === entry.id;
+    let description = `Reenviar solo a ${entry.recipient}.`;
+    if (!entry.is_retryable) {
+      description = entry.retry_blocked_reason || 'Este envío no admite reintento.';
+    } else if (retrying) {
+      description = 'El reintento ya está en curso. Espera a que termine.';
+    }
+    list.push({
+      id: 'retry',
+      action: 'retry',
+      label: 'Reintentar el envío',
+      testId: `email-log-retry-${entry.id}`,
+      disabled: !entry.is_retryable || retrying,
+      description,
+    });
+  }
+  return list;
+}
+
+// The entry ids are the events the hosts already listen to.
+function runEntryAction(id, entry) {
+  emit(id, entry);
+}
+
+// A host modal must stop answering Esc and backdrop clicks while this menu is
+// open above it: BaseModal's keydown listener is global.
+watch(() => actionsEntry.value !== null, (open) => emit('menu-open-change', open));
 
 const STATUS_CLASSES = {
   sent: 'bg-primary-soft text-text-brand',
@@ -206,10 +259,12 @@ function statusClass(status) {
     display: none;
   }
 
+  /* The kebab leads the card, as in every accounting row; a send without
+   * actions keeps the empty track so the cards stay aligned. */
   .accounting-history-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.35rem 1rem;
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    gap: 0.35rem 0.75rem;
     height: auto;
     padding: 0.85rem 1rem;
   }
@@ -219,25 +274,26 @@ function statusClass(status) {
     white-space: normal;
   }
 
-  .accounting-history-row > [data-field="recipient"] {
+  .accounting-history-row > [data-field="actions"] {
     grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .accounting-history-row > [data-field="recipient"] {
+    grid-column: 2;
     grid-row: 1;
   }
 
   .accounting-history-row > [data-field="status"] {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
   }
 
   .accounting-history-row > [data-field="date"],
   .accounting-history-row > [data-field="notice"],
-  .accounting-history-row > [data-field="subject"],
-  .accounting-history-row > [data-field="actions"] {
-    grid-column: 1 / -1;
-  }
-
-  .accounting-history-row > [data-field="actions"] > div {
-    justify-content: flex-start;
+  .accounting-history-row > [data-field="subject"] {
+    grid-column: 2 / -1;
   }
 
   .history-mobile-label {

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
+import { HISTORY_ROW_ACTION } from '~/utils/accountingRowActions'
 import { formatMoney } from '~/utils/formatMoney'
 
 const props = defineProps({
@@ -19,8 +20,10 @@ const actions = computed(() => {
   const row = props.record
   if (!row) return []
 
+  // The collection detail modal carries the record history too, hence the
+  // shared label; the id stays `view-detail` because it opens that modal.
   const list = [
-    { id: 'view-detail', action: 'view', label: 'Ver detalle', event: 'detail' },
+    { ...HISTORY_ROW_ACTION, id: 'view-detail', event: 'detail' },
   ]
 
   if (row.notes) {

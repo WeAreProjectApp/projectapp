@@ -3,12 +3,14 @@
  *
  * FLOW: admin-accounting-cards
  * Covers: list rendering with debt chip, create via modal (date defaults
- *         to today), edit prefill and delete with confirmation.
+ *         to today), the leading three-dot menu (detail/history, edit
+ *         prefill, delete with confirmation) and notes opened in a modal.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_ACCOUNTING_CARDS } from '../helpers/flow-tags.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 test.setTimeout(60_000);
 
@@ -262,7 +264,8 @@ test.describe('Admin Accounting Cards', () => {
     await mockApi(page, buildHandler({ rows: [snapshotRow()], calls }));
     await gotoCards(page);
 
-    await page.getByTestId('accounting-edit-1').click();
+    await page.getByTestId('cards-actions-1').click();
+    await page.getByTestId('cards-action-edit-1').click();
     await expect(
       page.getByRole('heading', { name: 'Editar Registro de Tarjeta' }),
     ).toBeVisible();
@@ -272,10 +275,141 @@ test.describe('Admin Accounting Cards', () => {
     await expect(page.getByText('Registro de tarjeta actualizado')).toBeVisible();
     expect(calls[0].method).toBe('PATCH');
 
-    await page.getByTestId('accounting-delete-1').click();
+    await page.getByTestId('cards-actions-1').click();
+    await page.getByTestId('cards-action-delete-1').click();
     await expect(page.getByText('Eliminar registro de tarjeta')).toBeVisible();
     await page.getByTestId('confirm-modal-confirm').click();
     await expect(page.getByText('Registro de tarjeta eliminado')).toBeVisible();
     expect(calls.some((call) => call.method === 'DELETE')).toBe(true);
+  });
+
+  // The cupo caps the disponible: an edit that exceeds it is refused before
+  // anything is sent, with the reason beside the field.
+  test('an edit whose disponible exceeds the cupo is refused with its reason', {
+    tag: [...ADMIN_ACCOUNTING_CARDS, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [snapshotRow()], calls }));
+    await gotoCards(page);
+
+    await page.getByTestId('cards-actions-1').click();
+    await page.getByTestId('cards-action-edit-1').click();
+    await expect(
+      page.getByRole('heading', { name: 'Editar Registro de Tarjeta' }),
+    ).toBeVisible();
+    await page.locator('form input[inputmode="numeric"]').fill('9000000');
+
+    await expect(page.getByTestId('card-snapshot-debt-preview'))
+      .toHaveText('El disponible no puede superar el cupo de la tarjeta.');
+    await expect(page.getByTestId('card-snapshot-form-submit')).toBeDisabled();
+    expect(calls).toHaveLength(0);
+  });
+
+  // Bug caught: the snapshot actions lived in a trailing "Acciones" column,
+  // with a loose history button, instead of the panel's leading three-dot menu.
+  test('the leading three-dot menu owns every snapshot action', {
+    tag: [...ADMIN_ACCOUNTING_CARDS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (navigation into Tarjetas is covered by the
+    // display specs above; this one pins the row action contract)
+    await mockApi(page, buildHandler({ rows: [snapshotRow()], calls: [] }));
+    await gotoCards(page);
+
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toContainText('T.C 0064');
+    // The actions track leads the table and names itself only for assistive tech.
+    const actionsHeader = page.getByRole('columnheader', { name: 'Acciones' });
+    await expect(actionsHeader).toHaveText('');
+    const actionsBox = await actionsHeader.boundingBox();
+    const cardBox = await page.getByRole('columnheader', { name: 'Tarjeta' }).boundingBox();
+    expect(actionsBox.x).toBeLessThan(cardBox.x);
+    await expect(row.getByTestId('accounting-actions-cell-1').getByRole('button')).toHaveCount(1);
+    await expect(page.getByTestId('accounting-edit-1')).toHaveCount(0);
+
+    await page.getByTestId('cards-actions-1').click();
+    const menu = page.getByTestId('cards-actions-modal');
+    await expect(menu).toContainText('T.C 0064');
+    await expect(menu.getByRole('button', { name: 'Detalle e historial' })).toBeVisible();
+    await expect(menu.getByRole('button', { name: 'Editar' })).toBeVisible();
+    await expect(menu.getByRole('button', { name: 'Eliminar' })).toBeVisible();
+
+    await menu.getByRole('button', { name: 'Detalle e historial' }).click();
+    await expect(page.getByRole('heading', { name: 'Detalle del registro' })).toBeVisible();
+    await expect(page.getByTestId('history-record-modal')).toContainText('7586774');
+  });
+
+  // Bug caught: a long note was printed inside its cell and stretched the row.
+  test('a long note opens in a modal from its Ver nota button', {
+    tag: [...ADMIN_ACCOUNTING_CARDS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (navigation into Tarjetas is covered by the
+    // display specs above; this one pins how the notes column renders)
+    await mockApi(page, buildHandler({
+      rows: [
+        snapshotRow({
+          notes: 'Pago mínimo cubierto el viernes.\nFalta conciliar la cuota de octubre con el extracto.',
+        }),
+        snapshotRow({ id: 2, snapshot_date: '2026-07-01', debt_amount: '4150954.00' }),
+      ],
+      calls: [],
+    }));
+    await gotoCards(page);
+
+    const withNote = page.getByTestId('accounting-row-1');
+    const withoutNote = page.getByTestId('accounting-row-2');
+    await expect(withNote).toContainText('T.C 0064');
+    await expect(withNote).not.toContainText('Falta conciliar');
+    await expect(withoutNote.getByRole('button', { name: /^Ver nota/ })).toHaveCount(0);
+
+    await withNote.getByRole('button', { name: /^Ver nota/ }).click();
+    const note = page.getByTestId('accounting-note-body');
+    await expect(note).toContainText('Pago mínimo cubierto el viernes.');
+    await expect(note).toContainText('Falta conciliar la cuota de octubre con el extracto.');
+    await expect(page.getByTestId('accounting-note-modal')).toContainText('T.C 0064');
+
+    await page.getByTestId('accounting-note-modal').getByRole('button', { name: 'Cerrar' }).click();
+    await expect(page.getByTestId('accounting-note-modal')).toHaveCount(0);
+  });
+
+  // Bug caught: the fixed layout kept the share of the columns a phone hides,
+  // so Tarjeta and Deuda stopped short of a blank band on the right.
+  test('the cards table leaves no blank band on a phone', {
+    tag: [...ADMIN_ACCOUNTING_CARDS, '@role:admin', '@outcome:display', '@responsive:accounting'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (navigation into Tarjetas is covered by the
+    // display specs above; this one pins the compact table geometry)
+    await page.setViewportSize({ width: 412, height: 915 });
+    await mockApi(page, buildHandler({ rows: [snapshotRow()], calls: [] }));
+    await gotoCards(page);
+
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toContainText('T.C 0064');
+    const table = row.locator('xpath=ancestor::table');
+    await expectNoBlankBand(table);
+    expect(await table.locator('..').evaluate((element) => element.scrollWidth <= element.clientWidth))
+      .toBe(true);
+    const kebab = await page.getByTestId('cards-actions-1').boundingBox();
+    expect(Math.round(kebab.width)).toBe(44);
+    expect(Math.round(kebab.height)).toBe(44);
+
+    await page.getByTestId('cards-actions-1').click();
+    await expect(page.getByTestId('cards-actions-modal')).toContainText('T.C 0064');
+  });
+
+  test('the cards table leaves no blank band on a portrait tablet', {
+    tag: [...ADMIN_ACCOUNTING_CARDS, '@role:admin', '@outcome:display', '@responsive:accounting'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (navigation into Tarjetas is covered by the
+    // display specs above; this one pins the portrait table geometry)
+    await page.setViewportSize({ width: 835, height: 1195 });
+    await mockApi(page, buildHandler({ rows: [snapshotRow()], calls: [] }));
+    await gotoCards(page);
+
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toContainText('T.C 0064');
+    await expectNoBlankBand(row.locator('xpath=ancestor::table'));
+
+    await page.getByTestId('cards-actions-1').click();
+    await expect(page.getByTestId('cards-actions-modal')).toContainText('T.C 0064');
   });
 });

@@ -187,7 +187,7 @@ prefer the bare class without `/N`.
 | `BaseBulkActionBar` | `selectedCount`, `outsideCount`, `filteredCount`, `allFilteredSelected`, `actions`, `busy`, `testidPrefix`, `testid`; emits `clear`/`select-all` |
 | `BaseResizeHandle` | Accessible, natively hinted vertical separator shared by panels and tables: pointer capture, Arrow/Home/End keyboard control and double-click reset |
 | `BaseOverflowText` | `text`, `to`, `lines` (1/2), `stretch`, `expandable`, `testId`, `contentClasses`; measures real clipping (including after web-font readiness), adds one floating `BaseTooltip` only on overflow and exposes an in-place touch disclosure |
-| `BaseResponsiveTable` | `columns`, `rows` plus legacy accounting-table props. Comparative tables declare explicit `responsive` `keep`/`group`/`hide` policy and exactly one `primary`; `textPolicy` is `wrap`/`truncate`/`atomic`; opt-in resizing uses `columnWidth` on every column plus `columnWidthsKey`; `rowActionsLayout="menu-start"` reserves a fixed leading kebab track (after selection), while `inline-end` preserves loose-icon rows; supports `caption`, `testIdPrefix`, `rowClass` and custom-only actions |
+| `BaseResponsiveTable` | `columns`, `rows` plus legacy accounting-table props. Comparative tables declare explicit `responsive` `keep`/`group`/`hide` policy and exactly one `primary`; `textPolicy` is `wrap`/`truncate`/`atomic`; opt-in resizing uses `columnWidth` on every column plus `columnWidthsKey`; `rowActionsLayout="menu-start"` reserves a fixed leading kebab track (after selection) and sizes the data columns per viewport profile (auto layout below 1024 px, re-shared percentages from there up), while `inline-end` preserves loose-icon rows; supports `caption`, `testIdPrefix`, `rowClass` and custom-only actions |
 | `BaseExploratoryList` | Exploratory CRUD list: one table from 1024 px and one stacked-card representation below it. Every column declares `mobile` as `primary`/`secondary`/`meta`/`hidden` and may opt into the same `textPolicy` contract |
 | `BasePageShell` | `width` (`narrow`/`content`/`panel`/`full`), `as` — `panel` caps general content at 1400 px; the admin layout applies it globally |
 | `BaseAlert`     | `variant` (`info`/`success`/`warning`/`danger`), `title`, `dismissible`. Icon via `#icon` slot, body via default slot |
@@ -354,19 +354,40 @@ the preference. Donors reach their declared minima before the wrapper scrolls.
     },
   ]"
   :rows="rows"
+  :show-default-actions="false"
   row-actions-layout="menu-start"
   column-widths-key="projectapp-table-widths:example"
 >
   <template #row-actions="{ row }">
-    <BaseActionButton action="more" :label="`Acciones de ${row.name}`" />
+    <BaseActionButton
+      action="more"
+      class="h-11 w-11 shrink-0"
+      :label="`Acciones de ${row.name}`"
+      @click.stop="actionsRow = row"
+    />
   </template>
 </BaseResponsiveTable>
 ```
 
 `menu-start` is only for one overflow menu. It renders an accessible, visually
 empty 56 px header/cell after the checkbox and before data, outside the
-proportional width split. A row of independent edit/delete/etc. icons keeps the
-default `inline-end` layout until the product decision consolidates it.
+proportional width split. Pass `:show-default-actions="false"`: otherwise the
+default Editar/Eliminar icons land next to the kebab and overflow the track.
+
+Since 2026-09-26 this is the panel's row-actions standard, applied to every
+accounting table and list: the kebab alone leads the row and opens an actions
+modal (accounting uses `AccountingRowActionsModal` and
+`AccountingRowActionsButton`) whose first entry is «Detalle e historial»,
+followed by «Ver nota» when the record has a note. Nothing else sits beside the
+kebab — a second button in the fixed 56 px track overflows onto the data. The
+remaining `inline-end` tables outside accounting are pending migration.
+
+A `<col>` is a column even when every cell under it is hidden, so a
+`menu-start` table with a responsive policy emits `<col>` only for its control
+tracks. Below 1024 px it uses auto layout with auto-width data columns (atomic
+values keep their content width and the primary column takes the rest); from
+1024 px it is fixed and each profile re-shares 100 % among the columns it
+shows, with a landscape scroll floor that counts only those columns.
 
 Exploratory CRUD lists use a different primitive because their mobile task is
 scanning entities, not comparing columns. `BaseExploratoryList` renders only
@@ -423,7 +444,9 @@ document order.
 ```
 
 Use `BaseActionMenu` for row overflow and `BaseBulkActionBar` for selections;
-do not lay an unbounded number of actions side by side. `BaseButton` and
+do not lay an unbounded number of actions side by side. Accounting tables open
+their row kebab into a modal instead (`AccountingRowActionsModal`): their
+wrappers scroll horizontally and would clip a dropdown on the last rows. `BaseButton` and
 `BaseDropdown` enforce a 44px target for coarse pointers.
 
 Hover may enhance an action, never be the only way to discover it. A control

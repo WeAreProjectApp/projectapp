@@ -13,6 +13,7 @@ const emit = defineEmits(['open']);
       action="more"
       variant="ghost"
       size="sm"
+      class="h-11 w-11 shrink-0"
       :label="`Acciones de ${row.name || `pago recurrente ${row.id}`}`"
       :status-label="busy ? 'Preparando duplicado' : ''"
       :loading="busy"

@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
+import { leadingRowActions } from '~/utils/accountingRowActions'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -9,12 +10,16 @@ const props = defineProps({
   billingBusy: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['close', 'cycles', 'send-billing', 'emails', 'edit', 'delete'])
+const emit = defineEmits([
+  'close', 'history', 'notes', 'cycles', 'send-billing', 'emails', 'edit', 'delete',
+])
 
 const actions = computed(() => {
   const row = props.record
   if (!row) return []
   return [
+    // Detail/history and the note come first, as in every accounting menu.
+    ...leadingRowActions(row).map((entry) => ({ ...entry, event: entry.id })),
     {
       id: 'cycles', action: 'billing-cycles', label: 'Ciclos de pago', event: 'cycles',
       description: 'Registrar un pago o revisar el histórico.',

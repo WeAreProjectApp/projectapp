@@ -181,7 +181,6 @@
         @sort="toggleSort"
       >
         <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="pocket" :record="row" />
           <PocketMovementRowActionsButton :row="row" @open="openActions" />
         </template>
         <template #cell-concept="{ row }">
@@ -254,6 +253,19 @@
       />
     </template>
 
+    <!-- First modal on purpose: its close must patch before the dialog it
+         opens (form, history, note, confirmation), or the two trade focus
+         traps and the page loses its scroll lock. -->
+    <PocketMovementActionsModal
+      :open="actionsRow !== null"
+      :record="actionsRow"
+      @close="closeActions"
+      @history="openHistory"
+      @notes="openNote"
+      @edit="handleEdit"
+      @delete="handleDelete"
+    />
+
     <!-- Create/edit modal -->
     <PocketMovementFormModal
       :open="isModalOpen"
@@ -270,12 +282,19 @@
       @close="closeAllocations"
     />
 
-    <PocketMovementActionsModal
-      :open="actionsRow !== null"
-      :record="actionsRow"
-      @close="closeActions"
-      @edit="handleEdit"
-      @delete="handleDelete"
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="pocket"
+      :record="historyRow"
+      @close="closeHistory"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteSubtitle"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <!-- Confirm modal for delete -->
@@ -295,7 +314,7 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
@@ -325,7 +344,9 @@ import {
   matchBooleanIncludes,
 } from '~/composables/useAccountingFilters';
 import { useAccountingStore } from '~/stores/accounting';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import { buildExportParams } from '~/utils/accountingExportParams';
+import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
 import { withRunningBalance } from '~/utils/pocketRunningBalance';
 
@@ -577,6 +598,30 @@ function openActions(row) {
 function closeActions() {
   actionsRow.value = null;
 }
+
+// Detalle e historial is a menu entry, never a sibling of the kebab: the
+// leading track is 56 px wide and anything else overflows onto the ledger.
+const historyRow = ref(null);
+
+function openHistory(row) {
+  historyRow.value = row;
+}
+
+function closeHistory() {
+  historyRow.value = null;
+}
+
+// «Ver nota» is offered by the menu only when the movement has one; the ledger
+// has no notes column, but the search does match them.
+const noteRow = ref(null);
+
+function openNote(row) {
+  noteRow.value = row;
+}
+
+const noteSubtitle = computed(() => (noteRow.value
+  ? `${noteRow.value.concept || `Movimiento #${noteRow.value.id}`} · ${formatDate(noteRow.value.movement_date)}`
+  : ''));
 
 function openAllocations(row) {
   allocationsMovement.value = row;

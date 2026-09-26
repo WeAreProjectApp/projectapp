@@ -45,6 +45,7 @@
 <script setup>
 import { computed } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
+import { HISTORY_ROW_ACTION, NOTE_ROW_ACTION, hasNote } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
 
 const props = defineProps({
@@ -53,7 +54,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  'close', 'edit', 'duplicate', 'toggle-state', 'toggle-mute',
+  'close', 'history', 'notes', 'edit', 'duplicate', 'toggle-state', 'toggle-mute',
   'archive', 'restore', 'delete',
 ]);
 
@@ -65,6 +66,8 @@ const actions = computed(() => {
   const row = props.record;
   if (!row) return [];
   const list = [
+    { ...HISTORY_ROW_ACTION, event: 'history' },
+    ...(hasNote(row) ? [{ ...NOTE_ROW_ACTION, event: 'notes' }] : []),
     { id: 'edit', action: 'edit', label: 'Editar', event: 'edit' },
     { id: 'duplicate', action: 'duplicate', label: 'Duplicar', event: 'duplicate' },
   ];

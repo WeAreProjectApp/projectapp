@@ -31,9 +31,9 @@ function mountCards(props = {}) {
   })
 }
 
-function mountActions() {
+function mountActions(record = MOVEMENT) {
   return mount(PocketMovementActionsModal, {
-    props: { open: true, record: MOVEMENT },
+    props: { open: true, record },
     global: {
       stubs: {
         NuxtLink: { template: '<a><slot /></a>' },
@@ -124,6 +124,27 @@ describe('PocketMovementActionsModal', () => {
     await wrapper.get('[data-testid="pocket-action-delete-7"]').trigger('click')
 
     expect(wrapper.emitted('delete')[0]).toEqual([MOVEMENT])
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  // Bug caught: Detalle e historial overflowed the kebab track onto the ledger.
+  it('emits history for the selected movement', async () => {
+    const wrapper = mountActions()
+
+    await wrapper.get('[data-testid="pocket-action-history-7"]').trigger('click')
+
+    expect(wrapper.emitted('history')[0]).toEqual([MOVEMENT])
+    expect(wrapper.emitted('close')).toHaveLength(1)
+  })
+
+  it('offers the note only for a movement that has one', async () => {
+    expect(mountActions().find('[data-testid="pocket-action-notes-7"]').exists()).toBe(false)
+
+    const withNote = { ...MOVEMENT, notes: 'Pagado con la tarjeta de la empresa' }
+    const wrapper = mountActions(withNote)
+    await wrapper.get('[data-testid="pocket-action-notes-7"]').trigger('click')
+
+    expect(wrapper.emitted('notes')[0]).toEqual([withNote])
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
 })

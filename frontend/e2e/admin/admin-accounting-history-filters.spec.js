@@ -401,7 +401,7 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     expect(saved.body.filters.status).toEqual(['failed']);
   });
 
-  test('the row opens the message that was delivered', {
+  test('the row menu opens the message that was delivered', {
     tag: [...ADMIN_ACCOUNTING_HISTORY_DIAGNOSIS, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -412,6 +412,8 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     });
     await expect(page.getByTestId('email-log-row-1')).toBeVisible({ timeout: 25_000 });
 
+    // The kebab leads the row; the message is an entry of its menu.
+    await page.getByTestId('email-log-actions-1').click();
     await page.getByTestId('email-log-view-body-1').click();
 
     await expect(page.getByTestId('email-body-modal')).toBeVisible();
@@ -431,6 +433,7 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     });
     await expect(page.getByTestId('email-log-row-2')).toBeVisible({ timeout: 25_000 });
 
+    await page.getByTestId('email-log-actions-2').click();
     await page.getByTestId('email-log-retry-2').click();
 
     await expect
@@ -457,6 +460,7 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     });
     await expect(page.getByTestId('email-log-row-2')).toBeVisible({ timeout: 25_000 });
 
+    await page.getByTestId('email-log-actions-2').click();
     await page.getByTestId('email-log-retry-2').click();
 
     await expect(page.getByText('No se pudo reintentar el envío')).toBeVisible();
@@ -475,17 +479,19 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     });
     await expect(page.getByTestId('email-log-row-3')).toBeVisible({ timeout: 25_000 });
 
-    // Disabled and explained rather than absent: a missing button reads as
+    // Disabled and explained rather than absent: a missing entry reads as
     // "this failure cannot be acted on" without saying why.
-    const button = page.getByTestId('email-log-retry-3');
-    const proxy = page.locator('[data-disabled-action-proxy]').filter({ has: button });
-    await expect(button).toBeDisabled();
-    await expect(button).not.toHaveAttribute('title', /.+/);
-    await expect(proxy).toHaveAttribute('aria-label', /resume varios registros/);
-    await proxy.click();
-    await expect(page.getByRole('tooltip')).toHaveCount(1);
-    await expect(page.getByRole('tooltip')).toContainText('resume varios registros');
-    // A send that worked offers no retry at all.
+    await page.getByTestId('email-log-actions-3').click();
+    const menu = page.getByTestId('email-log-actions-modal');
+    const retry = menu.getByTestId('email-log-retry-3');
+    await expect(retry).toBeDisabled();
+    await expect(retry).toContainText('resume varios registros');
+    await menu.getByRole('button', { name: 'Cerrar' }).click();
+    await expect(menu).toHaveCount(0);
+
+    // A send that worked offers no retry at all, only its message.
+    await page.getByTestId('email-log-actions-1').click();
+    await expect(page.getByTestId('email-log-view-body-1')).toBeVisible();
     await expect(page.getByTestId('email-log-retry-1')).toHaveCount(0);
   });
 });

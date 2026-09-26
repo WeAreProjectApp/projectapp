@@ -45,7 +45,7 @@ describe('RecurringActionsModal', () => {
     const wrapper = mountModal();
 
     expect(actionIds(wrapper)).toEqual([
-      'edit', 'duplicate', 'deactivate', 'mute', 'archive',
+      'history', 'edit', 'duplicate', 'deactivate', 'mute', 'archive',
     ]);
   });
 
@@ -70,7 +70,9 @@ describe('RecurringActionsModal', () => {
       is_archived: true,
     });
 
-    expect(actionIds(wrapper)).toEqual(['edit', 'duplicate', 'restore', 'delete']);
+    expect(actionIds(wrapper)).toEqual([
+      'history', 'edit', 'duplicate', 'restore', 'delete',
+    ]);
   });
 
   it('routes the chosen action to the page', async () => {
@@ -80,5 +82,26 @@ describe('RecurringActionsModal', () => {
 
     expect(wrapper.emitted('duplicate')[0]).toEqual([RECORD]);
     expect(wrapper.emitted('close')).toHaveLength(1);
+  });
+
+  // Bug caught: the history button sat next to the kebab in its 56 px track
+  // and spilled over the first data column.
+  it('hands the payment to the page to open its record history', async () => {
+    const wrapper = mountModal();
+
+    await wrapper.get('[data-testid="recurring-action-history-42"]').trigger('click');
+
+    expect(wrapper.emitted('history')[0]).toEqual([RECORD]);
+    expect(wrapper.emitted('close')).toHaveLength(1);
+  });
+
+  it('offers the note right after the history when the payment has one', async () => {
+    const withNote = { ...RECORD, notes: 'Renovar con el plan anual' };
+    const wrapper = mountModal(withNote);
+
+    expect(actionIds(wrapper).slice(0, 3)).toEqual(['history', 'notes', 'edit']);
+    await wrapper.get('[data-testid="recurring-action-notes-42"]').trigger('click');
+
+    expect(wrapper.emitted('notes')[0]).toEqual([withNote]);
   });
 });

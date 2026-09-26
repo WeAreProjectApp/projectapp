@@ -1,6 +1,7 @@
 <script setup>
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseModal from '~/components/base/BaseModal.vue'
+import { hasNote } from '~/utils/accountingRowActions'
 import { formatDate } from '~/utils/formatDate'
 import { formatMoney } from '~/utils/formatMoney'
 
@@ -9,7 +10,7 @@ const props = defineProps({
   record: { type: Object, default: null },
 })
 
-const emit = defineEmits(['close', 'edit', 'delete'])
+const emit = defineEmits(['close', 'history', 'notes', 'edit', 'delete'])
 
 function signedAmount(row) {
   if (!row) return formatMoney(0)
@@ -46,6 +47,30 @@ function run(event) {
       </header>
 
       <ul class="py-2">
+        <li>
+          <!-- design-tokens: allow-raw-button -- menu row, not a standalone CTA -->
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center gap-3 px-6 py-3 text-left text-sm text-text-default transition-colors hover:bg-surface-raised"
+            :data-testid="`pocket-action-history-${record?.id}`"
+            @click="run('history')"
+          >
+            <BaseActionIcon action="view" class="h-5 w-5" />
+            <span>Detalle e historial</span>
+          </button>
+        </li>
+        <li v-if="hasNote(record)">
+          <!-- design-tokens: allow-raw-button -- menu row, not a standalone CTA -->
+          <button
+            type="button"
+            class="flex min-h-11 w-full items-center gap-3 px-6 py-3 text-left text-sm text-text-default transition-colors hover:bg-surface-raised"
+            :data-testid="`pocket-action-notes-${record?.id}`"
+            @click="run('notes')"
+          >
+            <BaseActionIcon action="notes" class="h-5 w-5" />
+            <span>Ver nota</span>
+          </button>
+        </li>
         <li>
           <!-- design-tokens: allow-raw-button -- menu row, not a standalone CTA -->
           <button

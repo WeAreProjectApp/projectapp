@@ -46,10 +46,30 @@ function mountCatalog({ cards = [card()], results = {} } = {}) {
   const wrapper = mount(AccountingCardCatalog, {
     global: {
       components: { BaseButton, BaseFormField, BaseInput, BaseToggle },
-      stubs: { ConfirmModal: ConfirmModalStub, BaseCurrencyInput: BaseCurrencyInputStub },
+      stubs: {
+        ConfirmModal: ConfirmModalStub,
+        BaseCurrencyInput: BaseCurrencyInputStub,
+        NuxtLink: { template: '<a><slot /></a>' },
+        // The row menu and the history dialog are BaseModals; inline here.
+        BaseModal: {
+          props: ['modelValue'],
+          emits: ['close'],
+          template: '<div v-if="modelValue"><slot /></div>',
+        },
+        EntityHistoryTabs: {
+          props: ['entityType', 'objectId'],
+          template: '<section data-testid="history-tabs"><slot /></section>',
+        },
+      },
     },
   })
   return { wrapper, store }
+}
+
+async function chooseCardAction(wrapper, action) {
+  await wrapper.get('[data-testid="card-catalog-actions-card-1"]').trigger('click')
+  await wrapper.get(`[data-testid="card-catalog-action-${action}-card-1"]`).trigger('click')
+  await flushPromises()
 }
 
 describe('AccountingCardCatalog', () => {
@@ -154,14 +174,28 @@ describe('AccountingCardCatalog', () => {
     expect(wrapper.find('[data-testid="confirm-stub"]').exists()).toBe(false)
   })
 
-  it('asks for confirmation before deleting a persisted card', async () => {
+  it('asks for confirmation before deleting a persisted card from its menu', async () => {
     const { wrapper, store } = mountCatalog()
     await flushPromises()
 
-    await wrapper.get('[data-testid="card-catalog-delete-card-1"]').trigger('click')
-    await flushPromises()
+    await chooseCardAction(wrapper, 'delete')
 
     expect(wrapper.find('[data-testid="confirm-stub"]').exists()).toBe(true)
     expect(store.deleteRecord).not.toHaveBeenCalled()
+  })
+
+  // Bug caught: the history button received the editable copy, which drops the
+  // notes and trims statements_since, so it showed unsaved values.
+  it('feeds the history with the stored card, not the form being edited', async () => {
+    const { wrapper } = mountCatalog({ cards: [card({ notes: 'Tarjeta de la empresa' })] })
+    await flushPromises()
+    await wrapper.get('[data-testid="card-catalog-name-card-1"]').setValue('Nombre sin guardar')
+
+    await chooseCardAction(wrapper, 'history')
+
+    const history = wrapper.get('[data-testid="history-tabs"]')
+    expect(history.text()).toContain('T.C 0655')
+    expect(history.text()).toContain('Tarjeta de la empresa')
+    expect(history.text()).not.toContain('Nombre sin guardar')
   })
 })

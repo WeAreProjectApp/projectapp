@@ -74,4 +74,13 @@ describe('CollectionActionsModal', () => {
     expect(wrapper.emitted('download')[0]).toEqual([RECORD])
     expect(wrapper.emitted('close')).toHaveLength(1)
   })
+
+  // The detail modal carries the account's history, like every accounting
+  // menu's first entry, so it reads the same as on the other tabs.
+  it('names the detail entry as the account history', () => {
+    const wrapper = mountModal()
+
+    expect(wrapper.get('[data-testid="collection-view-detail-14"]').text())
+      .toBe('Detalle e historial')
+  })
 })
