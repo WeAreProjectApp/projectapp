@@ -1,0 +1,9 @@
+{
+  "id": "admin-secure-link-manage",
+  "name": "Admin Secure Link Management",
+  "module": "admin",
+  "roles": ["admin"],
+  "priority": "P1",
+  "description": "Admin filters secure links by status or received-from-clients, opens a link detail with its audit history, views the encrypted content without consuming it, revokes an active link and reactivates a used link (optionally generating a new URL).",
+  "outcomes": ["success", "display"]
+}

@@ -1,0 +1,9 @@
+{
+  "id": "admin-secure-link-create",
+  "name": "Admin Secure Link Create",
+  "module": "admin",
+  "roles": ["admin"],
+  "priority": "P1",
+  "description": "Admin creates a one-time secure link choosing a catalog type, internal title, validity and recipient language; required secret fields are validated server-side and the created URL is shown once with copy actions for the link and a suggested message.",
+  "outcomes": ["success", "error"]
+}

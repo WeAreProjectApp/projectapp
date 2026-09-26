@@ -106,6 +106,8 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/communications/',
     'frontend/composables/useCommunicationFilters.js',
     'frontend/pages/panel/communications/',
+    'frontend/pages/panel/secure-links/',
+    'frontend/components/secureLinks/',
   ], [
     'Identificar varios hilos compactos sin desplazamiento horizontal.',
     'Cambiar el orden, volver al listado y conservar el criterio activo.',
@@ -261,7 +263,7 @@ export function responsiveOwnerForView(sectionId, view) {
   if (url === '/panel/clients') return 'clients';
   if (url === '/panel/projects' || url === '/panel/projects/statuses' || url === '/panel/monitoring') return 'projects';
   if (url === '/panel/documents' || url === '/panel/documents/statuses') return 'documents';
-  if (url === '/panel/communications') return 'communications';
+  if (url === '/panel/communications' || url === '/panel/secure-links') return 'communications';
   if (file === 'frontend/pages/panel/documents/create.vue' || file === 'frontend/pages/panel/documents/[id]/edit.vue') return 'canvas';
   if (url === '/panel/emails' || url.includes('/email-')) return 'emails';
   if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url === '/panel/defaults') return 'commercial';

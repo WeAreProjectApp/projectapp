@@ -12,7 +12,7 @@ claves registradas aquí; por eso una salida nueva no puede pasar a producción
 sin declarar su familia y queda cubierta por la regla de copia por
 construcción.
 
-## Inventario completo (56 canales)
+## Inventario completo (58 canales)
 
 | # | Familia configurable | Clave de plantilla | Salida / disparador |
 |---:|---|---|---|
@@ -50,6 +50,7 @@ construcción.
 | 32 | Documentos y comunicaciones | `proposal_documents_sent` | Envío de documentos adjuntos de una propuesta. |
 | 33 | Documentos y comunicaciones | `branded_email` | Correo manual con marca desde Emails. |
 | 34 | Documentos y comunicaciones | `proposal_email` | Correo manual asociado a una propuesta. |
+| 58 | Documentos y comunicaciones | `secure_link_received_team` | Aviso interno de enlace seguro creado por un cliente; no incluye el enlace ni el contenido. |
 | 35 | Cuentas de cobro | `collection_account_sent` | Emisión, reenvío o retry manual de una cuenta de cobro. |
 | 36 | Contabilidad | `accounting_change` | Aviso interno de cambio contable. |
 | 37 | Contabilidad | `accounting_card_reminder` | Recordatorio interno de tarjeta. |
