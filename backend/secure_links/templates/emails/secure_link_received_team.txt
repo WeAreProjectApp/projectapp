@@ -1,0 +1,12 @@
+Enlace seguro recibido — ProjectApp
+
+Enviado por: {{ creator_name }}{% if creator_email %} <{{ creator_email }}>{% endif %}
+Tipo: {{ type_label }}
+Título: {{ title }}
+Creado: {{ created_at }}
+Vence: {{ expires_at }}
+
+Ábrelo desde el panel (requiere sesión): {{ panel_url }}
+
+Por seguridad este correo no incluye el enlace ni el contenido.
+Notificación automática de Enlaces seguros · ProjectApp.

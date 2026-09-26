@@ -72,6 +72,7 @@ describe('viewCapabilityCatalog', () => {
       'Programa de Alianza',
       'Propuesta comercial',
       'Diagnóstico',
+      'Enlaces seguros',
     ])
   })
 

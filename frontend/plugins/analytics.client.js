@@ -23,6 +23,7 @@ const PRIVATE_SEGMENTS = [
   '/proposal',
   '/diagnostic',
   '/additional-modules/share',
+  '/secure-link',
 ]
 
 const isPublicRoute = (path) =>

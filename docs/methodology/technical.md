@@ -1,5 +1,17 @@
 # Technical Documentation — ProjectApp
 
+> **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
+> `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
+> error. `create_secure_link` es la única tool MCP que acepta secretos en claro:
+> riesgo `write` (un intent sensible persistiría argumentos), ninguna clave de
+> contenido termina en `_id` y la URL sólo se devuelve al crear;
+> `reactivate_secure_link` es `sensitive` y su resultado no incluye URL.
+> Throttles fijos 10/h (creación pública) y 30/min (status/reveal), reCAPTCHA
+> `verify_captcha` + honeypot, `Cache-Control: no-store`. Correo
+> `secure_link_received_team` por el gateway. Migraciones
+> `secure_links.0001` y `content.0259` (descripción del conector). Tests en
+> `backend/secure_links/tests/`.
+
 > **2026-09-25 — producción audiovisual v2:** el pipeline de `explainers/`
 > acepta `--edition brag-v2` y mantiene v1 como default. La narración Kokoro
 > usa cache por contenido y rechaza desbordes; un fingerprint liga voz, guion

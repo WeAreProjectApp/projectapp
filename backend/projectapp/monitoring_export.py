@@ -13,7 +13,7 @@ def should_profile(request):
     path = request.path.lower()
     if not path.startswith('/api/'):
         return False
-    if any(part in path for part in ('/auth', '/login', '/token', '/credential', '/access', '/monitoring', '/health', '/mcp')):
+    if any(part in path for part in ('/auth', '/login', '/token', '/credential', '/access', '/monitoring', '/health', '/mcp', '/secure-links')):
         return False
     return random.random() < getattr(settings, 'MONITORING_SILK_SAMPLE_PERCENT', 5) / 100
 

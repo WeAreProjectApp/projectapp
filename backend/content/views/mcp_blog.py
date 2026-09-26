@@ -54,6 +54,7 @@ from content.mcp.registry import infer_risk, normalize_tools
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
 from content.mcp.client_tools import CLIENT_TOOLS
 from content.mcp.communication_tools import COMMUNICATION_TOOLS
+from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.diagnostic_tools import DIAGNOSTIC_TOOLS
 from content.mcp.document_thread_tools import DOCUMENT_THREAD_TOOLS
 from content.mcp.document_tools import DOCUMENT_TOOLS
@@ -116,7 +117,7 @@ RAW_TOOLS_BY_SLUG = {
         DOCUMENT_TOOLS + DOCUMENT_THREAD_TOOLS + DOCUMENT_PARITY_TOOLS
     ),
     'communications': _canonical_tools(
-        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS
+        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS
     ),
     'tasks': _canonical_tools(TASK_TOOLS),
     'operations': OPERATIONS_TOOLS,

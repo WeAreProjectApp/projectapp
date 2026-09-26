@@ -150,6 +150,10 @@ const panelCapabilities = [
         'Centraliza composición con varios destinatarios y copias, configuración e historial de correo.',
         'Da continuidad a los mensajes enviados desde distintos módulos.', ['/panel/emails'],
         { icon: 'send', stage: 'Comunicación' }),
+      feature('panel-secure-links', 'Compartir información sensible',
+        'Genera enlaces de un solo uso para contraseñas, llaves, datos bancarios o comunicados, con contenido cifrado, reactivación y recepción de lo que envían los clientes.',
+        'Evita pegar secretos en correos o WhatsApp sin perder el control de quién los abrió.', ['/panel/secure-links'],
+        { icon: 'key', stage: 'Comunicación' }),
     ],
     { icon: 'file', stage: 'Relación' },
   ),
@@ -482,6 +486,19 @@ const publicCapabilities = [
     ],
     { icon: 'file', actors: ['prospect'], stage: 'Diagnóstico' },
   ),
+  capability(
+    'public-secure-link-experience', 'Enlaces seguros',
+    'Intercambio de información sensible entre clientes y equipo mediante enlaces de un solo uso.',
+    'Protege credenciales y datos confidenciales fuera del correo y del chat.',
+    [
+      feature('public-secure-links', 'Enviar y abrir información sensible',
+        'El cliente crea un enlace que sólo el equipo puede abrir, y abre una sola vez los enlaces que recibe de ProjectApp.',
+        'Da un canal seguro y simple para compartir accesos durante el proyecto.',
+        ['/secure-link', '/secure-link/view'],
+        { icon: 'key', actors: ['client'], stage: 'Colaboración' }),
+    ],
+    { icon: 'key', actors: ['client'], stage: 'Colaboración' },
+  ),
 ]
 
 export const viewCapabilityCatalog = {
@@ -527,7 +544,7 @@ export const viewCapabilityCatalog = {
     space('public-experiences', 'Experiencias públicas',
       'Presencia digital, contenido y experiencias comerciales compartidas con visitantes y prospectos.',
       'Atrae oportunidades, demuestra experiencia y acompaña la decisión antes del proyecto.',
-      ['public-site', 'public-additional-modules', 'public-financing', 'public-proposals', 'public-diagnostics'], publicCapabilities,
+      ['public-site', 'public-additional-modules', 'public-financing', 'public-proposals', 'public-diagnostics', 'public-secure-links'], publicCapabilities,
       [
         { from: 'public-brand-acquisition', to: 'public-content-proof', label: 'construye confianza' },
         { from: 'public-brand-acquisition', to: 'public-additional-modules-experience', label: 'descubre posibilidades' },

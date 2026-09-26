@@ -78,19 +78,19 @@ const { trackWhatsAppClick } = useGtagConversions()
 
 const showNavbar = computed(() => {
   const path = route.path
-  return !path.includes('/panel') && !path.includes('/proposal') && !path.includes('/platform') && !path.includes('/diagnostic') && !path.includes('/additional-modules') && !path.includes('/partnership-program') && !path.includes('/lk/')
+  return !path.includes('/panel') && !path.includes('/proposal') && !path.includes('/platform') && !path.includes('/diagnostic') && !path.includes('/additional-modules') && !path.includes('/partnership-program') && !path.includes('/lk/') && !path.includes('/secure-link')
 })
 
 // Public marketing routes only — gates the GTM noscript fallback to match the
 // analytics loader (plugins/analytics.client.js).
 const isPublicRoute = computed(() => {
   const path = route.path
-  return !path.includes('/panel') && !path.includes('/platform') && !path.includes('/proposal') && !path.includes('/diagnostic') && !path.includes('/lk/')
+  return !path.includes('/panel') && !path.includes('/platform') && !path.includes('/proposal') && !path.includes('/diagnostic') && !path.includes('/lk/') && !path.includes('/secure-link')
 })
 
 const showWhatsApp = computed(() => {
   const path = route.path
-  return !path.includes('/panel') && !path.includes('/platform') && !path.includes('/lk/')
+  return !path.includes('/panel') && !path.includes('/platform') && !path.includes('/lk/') && !path.includes('/secure-link')
 })
 
 const isCommercialDocument = computed(() => (
