@@ -17,6 +17,28 @@ const createdDocument = {
   id: 10, title: 'Nuevo Doc', status: 'draft', client_name: null, created_at: '2026-03-30T10:00:00Z',
 };
 
+const PORTRAIT_VIEWPORT = { width: 835, height: 1195 };
+
+async function expectInlineControlError(page, control, message) {
+  await expect(control).toHaveAttribute('aria-invalid', 'true');
+  const errorId = await control.getAttribute('aria-describedby');
+  expect(errorId).toBeTruthy();
+  await expect(page.locator(`[id="${errorId}"]`)).toHaveText(message);
+}
+
+// Cancelar antes que Crear Documento, centrados en la misma línea, pegados al
+// borde derecho y sin avisos en la fila: lo que falta se dice bajo cada campo.
+async function expectActionRowAligned(actions) {
+  await expect(actions.getByRole('alert')).toHaveCount(0);
+  const row = await actions.boundingBox();
+  const cancel = await actions.getByRole('link', { name: 'Cancelar' }).boundingBox();
+  const create = await actions.getByRole('button', { name: /Crear Documento/i }).boundingBox();
+  expect(cancel.x + cancel.width).toBeLessThan(create.x);
+  expect(Math.abs((cancel.y + cancel.height / 2) - (create.y + create.height / 2)))
+    .toBeLessThanOrEqual(1);
+  expect(Math.abs((row.x + row.width) - (create.x + create.width))).toBeLessThanOrEqual(1);
+}
+
 test.describe('Admin Document Create', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true } });
@@ -417,5 +439,87 @@ test.describe('Admin Document Create', () => {
 
     await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('');
     await expect(page.getByTestId('doc-client-suggested-hint')).toHaveCount(0);
+  });
+
+  test('keeps create validation beside the incomplete fields', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const posts = [];
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/create-from-markdown/' && method === 'POST') {
+        posts.push(apiPath);
+        return { status: 201, contentType: 'application/json', body: JSON.stringify(createdDocument) };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/create');
+
+    await page.getByRole('button', { name: /Crear Documento/i }).click();
+
+    const title = page.locator('#doc-title');
+    await expectInlineControlError(page, title, 'Escribe el título del documento.');
+    await expectInlineControlError(
+      page,
+      page.locator('#doc-markdown'),
+      'Pega, escribe o carga el contenido Markdown.',
+    );
+    expect(posts).toHaveLength(0);
+
+    // Completar un campo retira sólo su aviso; el del contenido acompaña al
+    // modo de carga porque sigue faltando.
+    await title.fill('Informe mensual');
+    await expect(title).not.toHaveAttribute('aria-invalid', 'true');
+    await page.getByRole('button', { name: /Cargar Archivo/i }).click();
+    await expect(page.getByText('Pega, escribe o carga el contenido Markdown.', { exact: true }))
+      .toBeVisible();
+  });
+
+  test('keeps Cancelar and Crear Documento aligned after a failed attempt', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await mockApi(page, async ({ apiPath }) => (apiPath === 'auth/check/' ? authCheck : null));
+    await page.goto('/panel/documents/create');
+
+    const actions = page.getByTestId('doc-create-actions');
+    await actions.getByRole('button', { name: /Crear Documento/i }).click();
+    await expect(page.locator('#doc-title')).toHaveAttribute('aria-invalid', 'true');
+    await expectActionRowAligned(actions);
+
+    // Por debajo de landscape las acciones bajan al pie con el mismo orden.
+    await page.setViewportSize(PORTRAIT_VIEWPORT);
+    await expectActionRowAligned(page.getByTestId('doc-create-actions-compact'));
+  });
+
+  test('a rejected title stays under its field instead of a notification', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const rejection = 'Asegúrate de que este campo no tenga más de 255 caracteres.';
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/create-from-markdown/' && method === 'POST') {
+        return {
+          status: 400,
+          contentType: 'application/json',
+          body: JSON.stringify({ title: [rejection] }),
+        };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/create');
+
+    const title = page.locator('#doc-title');
+    await title.fill('Informe con un título demasiado largo');
+    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Informe');
+    const responsePromise = page.waitForResponse(
+      (response) => response.url().includes('/api/documents/create-from-markdown/'),
+    );
+    await page.getByRole('button', { name: /Crear Documento/i }).click();
+    await responsePromise;
+
+    await expectInlineControlError(page, title, rejection);
+    await expect(title).toBeFocused();
+    await expect(page.getByText(/^title:/)).toHaveCount(0);
+    await expect(page).toHaveURL(/\/panel\/documents\/create$/);
   });
 });

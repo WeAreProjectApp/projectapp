@@ -63,6 +63,22 @@ describe('DocumentEditorContent', () => {
     expect(previewPane(wrapper).exists()).toBe(false);
   });
 
+  it('marks the content as required only when the form asks for it', () => {
+    const wrapper = mount(DocumentEditorContent, {
+      props: {
+        modelValue: '',
+        textareaId: 'doc-markdown',
+        label: 'Contenido Markdown',
+        required: true,
+      },
+      global: { components: { BaseSegmented } },
+    });
+    mountedWrappers.push(wrapper);
+
+    expect(wrapper.get('label[for="doc-markdown"] .text-danger-strong').text()).toBe('*');
+    expect(wrapper.get('label[for="doc-markdown"]').text()).toBe('Contenido Markdown *');
+  });
+
   it('shows the preview in the place of the editor', async () => {
     const wrapper = mountEditor();
 
