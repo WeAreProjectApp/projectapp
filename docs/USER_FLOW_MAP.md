@@ -6293,6 +6293,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-contract-download` | admin | P2 | display | 1 |
 | `admin-proposal-contract-edit` | admin | P2 | success | 1 |
 | `admin-proposal-contract-generate` | admin | P1 | success | 1 |
+| `admin-proposal-contract-modality` | admin | P1 | success,error,display | — |
 | `admin-proposal-contract-terms-visibility` | admin | P2 | success,failure | 1 |
 | `admin-proposal-create` | admin | P1 | success,error | 1 |
 | `admin-proposal-create-and-send` | admin | P2 | success,error | 1 |
@@ -7983,6 +7984,18 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Error outcome:** n/a — los controles emiten sólo identificadores y opciones válidas. Permisos, pertenencia y validación del contrato se prueban en backend.
 - **Failure outcome:** Fallos de API muestran una recuperación explícita y no revelan valores protegidos ni comparaciones obsoletas.
 - **Coverage:** Display, success y failure validados en `admin/admin-entity-history.spec.js`.
+
+### FLOW: `admin-proposal-contract-modality`
+
+- **Módulo:** admin
+- **Rol:** admin
+- **Prioridad:** P1
+- **Ruta:** `/panel/proposals/:id/edit` → Documentos
+- **Recorrido:** abrir una propuesta en negociación; en Documentos, elegir la modalidad de cierre (`Contrato único` o `Producto y servicio`); con la separación aparecen el contrato de producto y el de servicio; generar el de servicio con su duración inicial y sus dos preavisos; volver al contrato único cuando haga falta.
+- **Display:** interruptor editable sólo en negociación y bloqueado con su motivo en aceptada o rechazada; oculto en enviada o vista. Cada contrato de la modalidad muestra copia, vista previa, descarga, borrador y parámetros propios.
+- **Success:** el cambio se guarda al instante, confirma la modalidad y muestra sus documentos; generar el contrato de servicio envía sus tres datos y el documento queda disponible.
+- **Error:** un rechazo del backend (fuera de negociación, plantilla sin texto de servicio) deja la modalidad anterior y explica el motivo; sin los tres datos del servicio el formulario no se envía.
+- **Límites:** cambiar de modalidad no borra documentos; los de la otra modalidad no se sirven ni se sincronizan a la plataforma. La vista pública "Contrato y condiciones" sigue mostrando el contrato único.
 
 ### FLOW: `admin-proposal-document-markdown`
 

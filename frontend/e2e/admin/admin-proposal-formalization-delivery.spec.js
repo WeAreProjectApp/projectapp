@@ -112,13 +112,13 @@ async function openDocumentsFromProposalList(page, { compact = false } = {}) {
   await expect(page.getByTestId('proposal-formalization-open')).toBeVisible();
 }
 
-function proposalPageHandler({ options = baseOptions, prepare, send, detail, requests }) {
+function proposalPageHandler({ options = baseOptions, prepare, send, detail, requests, proposalData = proposal }) {
   return async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
     if (apiPath === 'proposals/dashboard/') return json({ total: 1, conversion_rate: 100 });
     if (apiPath === 'proposals/alerts/') return json([]);
-    if (apiPath === 'proposals/' && method === 'GET') return json([proposal]);
-    if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) return json(proposal);
+    if (apiPath === 'proposals/' && method === 'GET') return json([proposalData]);
+    if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) return json(proposalData);
     if (apiPath === `proposals/${PROPOSAL_ID}/formalization/` && method === 'GET') return json(options);
     if (apiPath === `proposals/${PROPOSAL_ID}/formalization/prepare/` && method === 'POST') {
       requests.prepare += 1;
@@ -196,6 +196,50 @@ test.describe('Admin proposal formalization delivery', () => {
     await expect.poll(() => requests.send).toBe(1);
     await expect(modal.getByRole('status')).toHaveText(/Correo enviado/);
     await expect(modal.getByTestId('formalization-send')).toHaveCount(0);
+  });
+
+  test('prepares both separate contracts when the deal closes with two documents', {
+    tag: ['@outcome:success', ...ADMIN_PROPOSAL_FORMALIZATION_DELIVERY, '@role:admin'],
+  }, async ({ page }) => {
+    const requests = { prepare: 0, send: 0, detail: 0, payload: null };
+    const splitProposal = {
+      ...proposal,
+      contract_modality: 'split',
+      proposal_documents: [
+        { id: 702, title: 'Contrato de producto', document_type: 'contract_product', created_at: '2026-09-18T10:00:00Z', file: '/media/contracts/producto.pdf', is_generated: true },
+        { id: 703, title: 'Contrato de servicio', document_type: 'contract_service', created_at: '2026-09-18T10:00:00Z', file: '/media/contracts/servicio.pdf', is_generated: true },
+        proposal.proposal_documents[1],
+      ],
+    };
+    const options = {
+      ...baseOptions,
+      documents: [
+        { key: 'contract_product', label: 'Contrato de producto (desarrollo de software)', description: 'Desarrollo e implementación.', available: true, error: '' },
+        { key: 'contract_service', label: 'Contrato de servicio (hosting, mantenimiento y soporte)', description: 'Hosting, mantenimiento y soporte.', available: true, error: '' },
+        ...baseOptions.documents.slice(1),
+      ],
+    };
+    await mockApi(page, proposalPageHandler({
+      options,
+      requests,
+      proposalData: splitProposal,
+      prepare: () => json(preparedPackage()),
+      send: () => json(preparedPackage('sent')),
+      detail: () => json(preparedPackage()),
+    }));
+
+    await openDocumentsFromProposalList(page);
+    await expect(page.getByTestId('proposal-contract-row-product')).toBeVisible();
+    await expect(page.getByTestId('proposal-contract-row-service')).toBeVisible();
+
+    await page.getByTestId('proposal-formalization-open').click();
+    const modal = page.getByTestId('formalization-modal');
+    await expect(modal.getByTestId('formalization-select-contract_service')).toBeChecked();
+    await modal.getByTestId('formalization-prepare').click();
+
+    await expect.poll(() => requests.prepare).toBe(1);
+    expect(requests.payload.documents).toEqual(['contract_product', 'contract_service', 'commercial', 'technical']);
+    expect(requests.payload.additional_doc_ids).toEqual([]);
   });
 
   test('blocks a selected unavailable document until the operator deselects it', {

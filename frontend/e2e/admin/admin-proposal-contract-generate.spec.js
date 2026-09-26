@@ -172,14 +172,57 @@ test.describe('Admin Proposal Contract Generate', () => {
     await expect(page.getByRole('dialog').getByRole('button', { name: /Vista previa/i })).toBeVisible();
   });
 
-  test('submit button calls save-and-negotiate API', {
+  test('generating the first contract during negotiation calls the contract update API', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_GENERATE, '@role:admin'],
   }, async ({ page }) => {
-    let apiCalled = false;
-    await mockApi(page, async ({ apiPath, method }) => {
+    // A client-started negotiation has no contract yet; generating it must not
+    // retry the negotiating transition, which the backend refuses.
+    let updatePayload = null;
+    await mockApi(page, async ({ route, apiPath, method }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProposal) };
+      }
+      if (apiPath === 'proposals/company-settings/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(companySettings) };
+      }
+      if (apiPath === `proposals/${PROPOSAL_ID}/contract/update/` && method === 'PATCH') {
+        updatePayload = route.request().postDataJSON();
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProposal) };
+      }
+      return null;
+    });
+
+    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`);
+    await page.waitForLoadState('domcontentloaded');
+
+    await page.getByRole('button', { name: /Generar contrato/i }).click();
+    await page.getByRole('tab', { name: /Contrato personalizado/i }).click();
+    await page.getByPlaceholder(/Pega o escribe tu contrato/i).fill('# Mi contrato\n\nContenido del contrato.');
+    await page
+      .getByRole('group', { name: 'Datos del contrato' })
+      .locator('input[type="date"]')
+      .fill('2026-04-15');
+
+    await page.getByRole('dialog').getByRole('button', { name: 'Generar contrato', exact: true }).click();
+    await expect(() => expect(updatePayload).not.toBeNull()).toPass({ timeout: 5000 });
+    expect(updatePayload.variant).toBe('combined');
+    expect(updatePayload.contract_params).toEqual({
+      contract_source: 'custom',
+      custom_contract_markdown: '# Mi contrato\n\nContenido del contrato.',
+      contract_date: '2026-04-15',
+    });
+  });
+
+  test('moving a sent proposal to negotiation calls save-and-negotiate API', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_GENERATE, '@role:admin'],
+  }, async ({ page }) => {
+    let apiCalled = false;
+    const sentProposal = { ...mockProposal, status: 'sent', available_transitions: ['negotiating', 'rejected'] };
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(sentProposal) };
       }
       if (apiPath === 'proposals/company-settings/') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(companySettings) };
@@ -206,11 +249,12 @@ test.describe('Admin Proposal Contract Generate', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`);
+    // The next-action button lives on the General tab, the default one.
+    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
 
     // Toggle to custom mode and type Markdown (simpler than filling all default fields)
-    await page.getByRole('button', { name: /Generar contrato/i }).click();
+    await page.getByTestId('proposal-next-action-negotiate').click();
     await page.getByRole('tab', { name: /Contrato personalizado/i }).click();
     await page.getByPlaceholder(/Pega o escribe tu contrato/i).fill('# Mi contrato\n\nContenido del contrato.');
 

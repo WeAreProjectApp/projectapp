@@ -1,0 +1,15 @@
+{
+  "id": "admin-proposal-contract-modality",
+  "name": "Admin Proposal Contract Modality",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "During negotiation the admin chooses in Documents whether the deal closes with one contract or with a product contract (software development) and a service contract (hosting, maintenance and support). The tab shows the documents of the chosen modality, the service contract asks for its three terms, and the switch stays read-only once the proposal is accepted or rejected.",
+  "outcomes": [
+    "success",
+    "error",
+    "display"
+  ]
+}
