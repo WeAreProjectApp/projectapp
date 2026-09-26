@@ -1,6 +1,6 @@
 # Task Plan — ProjectApp
 
-> **2026-09-26 — Protección de propiedad intelectual:** el catálogo de módulos adicionales suma su módulo 25 en Identidad y acceso. Promesa acordada: dificulta, detecta y deja registro; capas de código del navegador, APIs y datos, y bots y agentes de IA; alcance cotizado en la propuesta. Migración de datos `content.0259`; la merge con las 0259 de #417/#418 la suma quien integre después.
+> **2026-09-26 — Protección de propiedad intelectual:** el catálogo de módulos adicionales suma su módulo 25 en Identidad y acceso. Promesa acordada: dificulta, detecta y deja registro; capas de código del navegador, APIs y datos, y bots y agentes de IA; alcance cotizado en la propuesta. Migración de datos `content.0259`; la merge con las 0259 de #417/#418 la suma quien integre después. El video brag v2 del catálogo lo destaca en la escena 4 sin cambiar sus 45 s.
 
 > **2026-09-25 — organización y lectura de comunicaciones:** Implementadas carpetas por cliente/proyecto para hilos completos, búsqueda por ID y referencias visibles en Comunicaciones y Documentos. El modal permite plegar el formulario y sus detalles, saltar al inicio/final y copiar mediante un icono directo; marcar enviado pasa a Más. PR #416; migración aditiva 0258 para el despliegue.
 

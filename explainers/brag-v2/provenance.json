@@ -10,5 +10,13 @@
   },
   "musicSha256": "364a546834db4c0c2e3b3240eb6df03e98b7362230154b04c5c614442f6660d7",
   "sourceProjectCommit": "a292b253",
-  "contentNote": "API pública capturada el 2026-09-25; exclusividad conceptual contrastada con financing_program_service.py en la base a292b253, todavía no desplegada en la API."
+  "contentNote": "API pública capturada el 2026-09-25; exclusividad conceptual contrastada con financing_program_service.py en la base a292b253, todavía no desplegada en la API.",
+  "revisions": [
+    {
+      "date": "2026-09-26",
+      "video": "additional-modules",
+      "sourceProjectCommit": "a749234e",
+      "contentNote": "La ficha de Protección de propiedad intelectual (escenas 2 y 4) se toma de la migración content.0259, todavía no desplegada; el snapshot de content/ no se refrescó porque la API de producción aún no tiene el módulo."
+    }
+  ]
 }

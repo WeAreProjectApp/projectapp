@@ -37,10 +37,25 @@ export default {
       ]
     },
     "scene-4": {
-      "narration": "Abre una ficha y descubre qué resuelve, cómo se integra y qué necesita tu proyecto para implementarlo.",
+      "narration": "Nuevo en el catálogo: Protección de propiedad intelectual. Dificulta que bots y agentes de inteligencia artificial copien lo que hace único a tu negocio.",
       "captions": [
-        "Abre una ficha y descubre qué resuelve, cómo se integra",
-        "y qué necesita tu proyecto para implementarlo."
+        "Nuevo en el catálogo: Protección de propiedad intelectual.",
+        "Dificulta que bots y agentes de inteligencia artificial",
+        "copien lo que hace único a tu negocio."
+      ],
+      "voiceSegments": [
+        {
+          "at": 0,
+          "text": "Nuevo en el catálogo: Protección de propiedad intelectual."
+        },
+        {
+          "at": 3.6,
+          "text": "Dificulta que bots y agentes de inteligencia artificial copien lo que hace único a tu negocio.",
+          "captions": [
+            "Dificulta que bots y agentes de inteligencia artificial",
+            "copien lo que hace único a tu negocio."
+          ]
+        }
       ]
     },
     "scene-5": {
