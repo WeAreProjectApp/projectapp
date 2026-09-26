@@ -257,9 +257,12 @@ describe('ProposalDocumentsTab closing modality', () => {
   it('ignores a click on the modality already selected', async () => {
     // Falla si repetir la opción actual regenera documentos en el backend.
     const wrapper = mountProposalDocumentsTab({ proposal: negotiating });
+    const single = wrapper.get('[data-testid="proposal-contract-modality-single"]');
 
-    await wrapper.get('[data-testid="proposal-contract-modality-single"]').trigger('click');
+    await single.trigger('click');
 
+    expect(single.attributes('aria-selected')).toBe('true');
+    expect(single.element.disabled).toBe(false);
     expect(mockUpdateContractModality).not.toHaveBeenCalled();
   });
 

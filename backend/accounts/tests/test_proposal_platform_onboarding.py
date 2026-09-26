@@ -451,10 +451,10 @@ def test_sync_documents_copies_only_the_contracts_of_the_chosen_modality(
     _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
 ):
     """Fails if a split closing hands the client the stale single contract as well."""
+    from content.models import ProposalDocument
     from django.core.files.base import ContentFile
 
     from accounts.models import DeliverableFile
-    from content.models import ProposalDocument
 
     proposal_with_deliverable.contract_modality = 'split'
     proposal_with_deliverable.save(update_fields=['contract_modality'])

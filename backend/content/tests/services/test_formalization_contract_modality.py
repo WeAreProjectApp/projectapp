@@ -6,7 +6,11 @@ from django.core.files.base import ContentFile
 
 from content.models import ProposalDocument
 from content.services.formalization_content import FormalContent, FormalizationError
-from content.services.proposal_formalization_service import availability, prepare, send_preparation
+from content.services.proposal_formalization_service import (
+    availability,
+    prepare,
+    send_preparation,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -63,7 +67,8 @@ def test_availability_offers_both_separate_contracts(split_proposal):
     assert [option['key'] for option in options] == [
         'contract_product', 'contract_service', 'commercial', 'technical',
     ]
-    assert options[0]['available'] and options[1]['available']
+    assert options[0]['available']
+    assert options[1]['available']
     assert options[1]['label'] == 'Contrato de servicio (hosting, mantenimiento y soporte)'
 
 
