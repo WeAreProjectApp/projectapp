@@ -129,6 +129,11 @@ class Command(BaseCommand):
             f'Deleted document threads ({deleted} rows)'
         ))
 
+        # The contract template is catalog data and survives, but it protects
+        # its Document-manager window: release the link before the wipe.
+        from content.models import ContractTemplate
+        ContractTemplate.objects.exclude(mirror_document=None).update(mirror_document=None)
+
         # Documents cascade to items, collection account, payment methods.
         deleted, _ = Document.objects.all().delete()
         self.stdout.write(self.style.SUCCESS(f'Deleted documents ({deleted} rows)'))

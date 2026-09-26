@@ -178,6 +178,26 @@ const BASE_ACTIONS = [
   },
 ];
 
+// The window onto the one contract is rendered live and never edited, moved,
+// duplicated, archived or deleted here: only consulted, shared and exported.
+const CONTRACT_MIRROR_ACTIONS = [
+  {
+    event: 'edit',
+    action: 'view',
+    label: 'Ver contrato vigente',
+    description: 'Consultar el contrato y descargarlo en PDF o Markdown',
+  },
+  BASE_ACTIONS.find((action) => action.event === 'open-new-tab'),
+  THREAD_ACTION,
+  BASE_ACTIONS.find((action) => action.event === 'send-email'),
+  {
+    event: 'download-pdf',
+    action: 'download',
+    label: 'Descargar PDF',
+  },
+  BASE_ACTIONS.find((action) => action.event === 'copy-markdown'),
+].filter(Boolean);
+
 const isArchived = computed(() => props.archived || !!props.document?.is_archived);
 
 // Un documento archivado está fuera de circulación: editarlo, renombrarlo,
@@ -225,6 +245,9 @@ const isIssuedAccount = computed(() => (
 ));
 
 const actions = computed(() => {
+  if (props.document?.is_contract_mirror) {
+    return CONTRACT_MIRROR_ACTIONS.filter((action) => !action.newTab || props.editTo);
+  }
   if (isIssuedAccount.value || props.document?.is_generated_snapshot) {
     // A stored account is both an issued account and a generated snapshot;
     // its accounting identity wins over the generic proposal-version copy.

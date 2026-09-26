@@ -39,6 +39,12 @@ from content.services.collection_account_service import (
     delete_collection_account,
     is_collection_account,
 )
+from content.services.contract_mirror_service import (
+    CONTRACT_MIRROR_CODE,
+    CONTRACT_MIRROR_MESSAGE,
+    is_contract_mirror,
+    mirror_pdf,
+)
 from content.services.document_content import build_content_json, resolve_blocks
 from content.services.document_navigation_service import build_document_navigation
 from content.services.document_query_service import (
@@ -428,7 +434,7 @@ def retrieve_document(request, document_id):
             ),
         ).select_related(
             'document_type', 'folder', 'project', 'client_user__profile',
-            'thread_item__thread', 'collection_account',
+            'thread_item__thread', 'collection_account', 'contract_template',
         ).prefetch_related(
             Prefetch(
                 'document_notes',
@@ -481,11 +487,29 @@ def _generated_snapshot_read_only_error(document):
     )
 
 
+def _contract_mirror_read_only_error(document):
+    """409 for the Document-manager window onto the one contract."""
+    if not is_contract_mirror(document):
+        return None
+    response = error_response(
+        CONTRACT_MIRROR_MESSAGE,
+        code=CONTRACT_MIRROR_CODE,
+        hint='Descárgalo en PDF o en Markdown desde este documento.',
+        status=status.HTTP_409_CONFLICT,
+    )
+    # The MCP panel bridge only relays `detail`.
+    response.data['detail'] = CONTRACT_MIRROR_MESSAGE
+    return response
+
+
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
 def update_document(request, document_id):
     """Update a document."""
     document = get_object_or_404(Document, pk=document_id)
+    mirror = _contract_mirror_read_only_error(document)
+    if mirror:
+        return mirror
     generated = _generated_snapshot_read_only_error(document)
     if generated:
         return generated
@@ -521,6 +545,9 @@ def delete_document(request, document_id):
     eliminar sigue disponible para la limpieza final.
     """
     document = get_object_or_404(Document, pk=document_id)
+    mirror = _contract_mirror_read_only_error(document)
+    if mirror:
+        return mirror
     generated = _generated_snapshot_read_only_error(document)
     if generated:
         return generated
@@ -632,6 +659,9 @@ def document_email_usage(request, document_id):
 def archive_document(request, document_id):
     """Saca un documento de la vista principal sin destruirlo."""
     document = get_object_or_404(Document, pk=document_id)
+    mirror = _contract_mirror_read_only_error(document)
+    if mirror:
+        return mirror
     document_archive_service.archive_document(document)
     return Response(DocumentListSerializer(document).data)
 
@@ -684,6 +714,9 @@ def duplicate_document(request, document_id):
     en las dos vistas del panel.
     """
     document = get_object_or_404(Document, pk=document_id)
+    mirror = _contract_mirror_read_only_error(document)
+    if mirror:
+        return mirror
     generated = _generated_snapshot_read_only_error(document)
     if generated:
         return generated
@@ -742,6 +775,22 @@ def download_document_pdf(request, document_id):
     antes de llegar acá.
     """
     document = get_object_or_404(Document, pk=document_id)
+
+    if is_contract_mirror(document):
+        # Rendered live from the one contract: the same draft the client
+        # downloads from the proposal's legal view.
+        pdf_bytes = mirror_pdf()
+        if not pdf_bytes:
+            return Response(
+                {'detail': 'El contrato vigente no está disponible en este momento.'},
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        response['Content-Disposition'] = content_disposition_header(
+            not request.query_params.get('inline'),
+            f'{safe_slug(document.title)}.pdf',
+        )
+        return response
 
     if is_collection_account(document):
         from content.services.collection_account_snapshot_service import (
