@@ -48,6 +48,7 @@ from content.services.pdf_utils import (
     _font,
     _register_fonts,
     _strip_emoji,
+    _wrap_by_width,
 )
 
 logger = logging.getLogger(__name__)
@@ -186,19 +187,24 @@ def _render_block(c, y, block, ps):
         text = _strip_emoji(block.get('text', ''))
         if level == 1:
             y = _check_y(c, y, ps, need=50)
-            c.setFont(_font('bold'), 14)
-            c.setFillColor(ESMERALD)
+            size = 14
         elif level == 2:
             y = _check_y(c, y, ps, need=40)
             y -= 16
-            c.setFont(_font('bold'), 12)
-            c.setFillColor(ESMERALD)
+            size = 12
         else:
             y = _check_y(c, y, ps, need=30)
             y -= 8
-            c.setFont(_font('bold'), 10)
+            size = 10
+        # Clause titles such as VIGÉSIMA SEGUNDA are wider than the page;
+        # drawn on one line they ran off the paper edge.
+        lines = _wrap_by_width(text, _font('bold'), size, CONTENT_W)
+        for index, line in enumerate(lines):
+            if index:
+                y -= size + 4
+            c.setFont(_font('bold'), size)
             c.setFillColor(ESMERALD)
-        c.drawString(MARGIN_L, y, text)
+            c.drawString(MARGIN_L, y, line)
         y -= 18
 
     elif block_type == 'paragraph':
@@ -258,7 +264,7 @@ def _draw_title_page(c, y, params, ps):
     """Draw the contract title section on the first page."""
     c.setFont(_font('light'), 22)
     c.setFillColor(ESMERALD)
-    c.drawString(MARGIN_L, y, 'CONTRATO DE PRESTACION')
+    c.drawString(MARGIN_L, y, 'CONTRATO DE PRESTACIÓN')
     y -= 28
     c.drawString(MARGIN_L, y, 'DE SERVICIOS')
     y -= 36
@@ -365,7 +371,7 @@ def resolve_contract_content(proposal, draft=False, *, force_default=False):
         contractor = literal(params.get('contractor_full_name', ''))
         date = literal(params.get('contract_date', ''))
         snapshot = (
-            '# CONTRATO DE PRESTACION DE SERVICIOS\n\n'
+            '# CONTRATO DE PRESTACIÓN DE SERVICIOS\n\n'
             f'ENTRE: {client} (EL CONTRATANTE)\n\n'
             f'Y: {contractor} (EL CONTRATISTA)\n\n'
             + (f'Fecha: {date}\n\n' if date else '')

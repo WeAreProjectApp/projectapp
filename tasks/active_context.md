@@ -2,6 +2,32 @@
 
 Implementado en `feat/25092026-communication-folders-reading`: carpetas independientes por cliente/proyecto, IDs visibles y buscables, lectura del hilo con formulario y detalles plegables, accesos al inicio/final y copia directa. REST y MCP comparten las reglas de contexto, jerarquía y borrado protegido. La navegación de proyecto incluye las carpetas generales de su cliente y conserva la ubicación al crear desde móvil. Migración aditiva `content.0258`; entrega mediante PR #416 a main, sin despliegue ni cambios en datos reales.
 
+# Contrato v8: confidencialidad, propiedad intelectual y literales — en verificación (2026-09-26)
+
+La migración `content.0259` reescribe la cláusula décima (DESARROLLO
+ESPECÍFICO del cliente; know-how y componentes reutilizables y estándares de
+la industria en parágrafos propios, de ProjectApp aunque se escriban durante
+el proyecto; licencia temporal pasa a Parágrafo Quinto) y la décima primera
+(confidencialidad recíproca, no uso, sin productos derivados de la oportunidad
+revelada, no circunvención de 2 años que incluye equipo y subcontratistas;
+sin excepción de portafolio). Todas las enumeraciones pasan a literales en
+negrilla, uno por párrafo, y las referencias a "literal": el parser del PDF
+unía los `a)` consecutivos y ambos renderizadores renumeraban las listas
+`N.`. Un solo grupo atómico: una sección personalizada deja la plantilla
+intacta con aviso. Los títulos largos de cláusula ya no se salen del PDF.
+
+**Un solo contrato.** Producción servía la v7 (sin #410/#412 desplegados) y
+el Gestor guardaba una copia manual v6 (doc #104). Ahora la plantilla default
+es el único texto, de solo lectura en el admin y cambiada sólo por migración.
+`ContractTemplate.mirror_document` (0260) enlaza un documento del Gestor que
+no guarda copia: panel, PDF, correos y MCP lo sirven en vivo, igual al
+borrador público, con descarga PDF/Markdown y sin edición, duplicado,
+archivado ni borrado. La 0261 convierte el #104 en esa ventana. La 0262
+alinea el párrafo de alcance de las propuestas (otrosí + no renuncia) y el
+texto de financiación dice que la cesión opera con el acta tras el pago.
+Pendiente del operador tras el despliegue: confirmar en el lector público y
+en el #104, y decidir si regenera los PDFs de contratos en negociación.
+
 # Propiedad intelectual y terminación del contrato — en verificación (2026-09-25)
 
 La migración `content.0257` perfecciona la cesión de desarrollos específicos y

@@ -291,7 +291,14 @@ def archive_document_folder(request, folder_id):
     )
     if managed:
         return managed
-    counts = document_archive_service.archive_folder(folder)
+    try:
+        counts = document_archive_service.archive_folder(folder)
+    except document_archive_service.DocumentArchiveError as exc:
+        # `detail` too: the MCP panel bridge only relays that key.
+        return Response(
+            {'error': str(exc), 'detail': str(exc), 'code': 'folder_archive_refused'},
+            status=status.HTTP_409_CONFLICT,
+        )
     return Response({
         'folder': _folder_payload(folder, scope='archived'),
         'archived_folders': counts['folders'],

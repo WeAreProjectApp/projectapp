@@ -2094,14 +2094,18 @@ DEFAULT_SECTIONS = [
                 'parte del trabajo contratado.',
                 'Lo anterior no limita la comunicación: podemos conversar y explorar ideas libremente. '
                 'Sin embargo, para que una funcionalidad, cambio o entregable pase a formar parte del '
-                'trabajo aprobado, debe quedar documentado y cotizado como parte del alcance o como un '
-                'requerimiento independiente. Esto protege a ambas partes: evita malentendidos sobre lo '
+                'trabajo aprobado, debe quedar documentado y cotizado como parte del alcance, y '
+                'formalizarse mediante un otrosí al contrato o mediante un contrato independiente. Esto '
+                'protege a ambas partes: evita malentendidos sobre lo '
                 'que está incluido, mantiene el proyecto enfocado y asegura que cada esfuerzo adicional '
                 'se planifique y se remunere de forma justa.',
                 'En consecuencia, los tiempos, costos y garantías de esta propuesta aplican solamente '
                 'sobre el alcance descrito. Todo lo que lo exceda se gestionará mediante los paquetes '
                 'de horas anteriores (para esfuerzos bajos o medio-bajos) o como una cotización '
                 'independiente (para esfuerzos medios o superiores).',
+                'La ejecución de cualquier actividad no comprendida en el alcance no lo modifica, no '
+                'genera derecho a exigir prestaciones similares en el futuro ni implica renuncia a lo '
+                'aquí establecido.',
             ],
         },
     },
@@ -3452,12 +3456,15 @@ DEFAULT_SECTIONS_EN = [
                 'itself, constitute a commitment to implement it, nor is it part of the contracted work.',
                 'This does not limit communication: we can talk and explore ideas freely. However, for '
                 'a feature, change or deliverable to become part of the approved work, it must be '
-                'documented and quoted as part of the scope or as an independent requirement. This '
-                'protects both parties: it avoids misunderstandings about what is included, keeps the '
+                'documented and quoted as part of the scope, and formalized through an amendment to the '
+                'contract or through an independent contract. This protects both parties: it avoids '
+                'misunderstandings about what is included, keeps the '
                 'project focused, and ensures every additional effort is planned and fairly paid.',
                 'Consequently, the timelines, costs and warranties of this proposal apply only to the '
                 'described scope. Anything beyond it will be handled via the hour packages above (for '
                 'low or medium-low efforts) or as an independent quote (for medium or higher efforts).',
+                'Carrying out any activity outside the scope does not modify it, does not create a right '
+                'to demand similar work in the future, and does not waive anything stated here.',
             ],
         },
     },
