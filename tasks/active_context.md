@@ -1,3 +1,19 @@
+# Validación de Documentos bajo su campo — lista para integrar (2026-09-26)
+
+Nuevo documento (`/panel/documents/create`) deja de pintar la lista roja de
+`BaseControlGate` bajo **Crear Documento**, que subía el botón y desalineaba
+Cancelar. El botón sigue disponible: al intentarlo sin título o sin contenido,
+cada aviso aparece bajo su campo —también en **Cargar Archivo**—, marca el
+control y lleva el foco al primero, sin llamar al servidor. Un 400 de `title` o
+`markdown` vive en el mismo lugar; el resto de rechazos sigue en la
+notificación. Cabecera y pie muestran sólo **Cancelar → Crear Documento**, a la
+derecha y centrados. El catálogo `/panel/documents/statuses` adopta la receta
+que ya tenía la mitad Proyectos de `StateCatalogManager`: crear estado, crear
+grupo, guardar y fusionar validan tras el intento con `BaseFormField`, con
+listas de campos por catálogo (documentos no valida descripción ni efecto
+operativo), y la semilla que no se fusiona queda como ayuda del botón. Sólo
+frontend: sin cambios de backend ni de esquema.
+
 # Acciones de fila y notas en Contabilidad — PR #420 (2026-09-26)
 
 Todo el módulo contable usa un solo estándar de acciones de fila: tres puntos
@@ -780,6 +796,9 @@ mismo comportamiento a creación de Clientes, Tareas, Documentos, Contabilidad
 y contenido. No hay cambios backend ni de esquema. Las slices unitarias y cuatro
 escenarios Playwright pasan; `admin-panel-projects` cubre display/success/error,
 el mapa está fresco y la auditoría global informa 0 missing y 0 junk-only.
+(Corrección 2026-09-26: en Documentos el barrido cubrió los modales de carpeta,
+no la página Nuevo documento ni el catálogo de estados; ambos se alinearon ese
+día.)
 
 **2026-08-29 — Filtros prediseñados de Comunicaciones listos para integrar:**
 la tira compartida incorpora seis recortes de fábrica, encabezados por

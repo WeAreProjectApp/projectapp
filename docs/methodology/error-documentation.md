@@ -220,6 +220,31 @@ _Reviewed 2026-07-22 during the QA-campaign methodology refresh (fase 1): no new
 
 ## Resolved Issues
 
+### [ERR-058] Nuevo documento listaba en rojo lo que faltaba bajo su botón
+
+- **Date**: 2026-09-26
+- **Context**: `/panel/documents/create` mostraba «Escribe el título del
+  documento.» y «Pega, escribe o carga el contenido Markdown.» como lista roja
+  bajo **Crear Documento**, en cabecera y pie. La lista subía el botón y dejaba
+  Cancelar centrado contra el bloque. El catálogo `/panel/documents/statuses`
+  repetía el patrón en crear estado, crear grupo, guardar y fusionar.
+- **Root Cause**: El barrido del 2026-08-29 (#315) aplicó el contrato de
+  formularios a los modales de creación, pero la página Nuevo documento no es
+  un modal. #330 dejó a propósito la mitad Documentos de `StateCatalogManager`
+  con sus gates visibles. Las guías que aún recomendaban `BaseControlGate` para
+  formularios corregibles sostenían la omisión.
+- **Resolution**: Crear, guardar y fusionar siguen disponibles; tras el intento,
+  `BaseFormField` muestra cada aviso bajo su campo, marca el control y se limpia
+  al corregirlo, y el foco va al primer campo pendiente. En el catálogo, cada
+  modo valida sólo los campos que pinta: documentos no exige descripción ni
+  efecto operativo. `BaseControlGate` queda para la semilla que no se fusiona.
+- **Files Affected**: `pages/panel/documents/create.vue`,
+  `DocumentEditorContent.vue`, `StateCatalogManager.vue`, sus unitarias, los
+  E2E de `admin-document-create` y `admin-document-states-manage`, los flows y
+  las guías de `BaseButton`/`BaseControlGate`.
+- **Verification**: unitarias focales de catálogo y editor; E2E de ambos flows,
+  incluida la alineación de Cancelar/Crear en landscape y portrait.
+
 ### [ERR-056] La vista previa pública de una propuesta devolvía 500
 
 - **Date**: 2026-09-04

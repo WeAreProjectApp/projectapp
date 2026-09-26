@@ -807,6 +807,10 @@ disabled control, deduplicates and exposes every reason through adjacent live
 copy plus hover/focus/touch help, and connects it with `aria-describedby`.
 Busy-only states use `loading`; lifecycle, permission and ordering boundaries
 use the same reason contract without pretending they are form errors. The
+converse also holds: a field the operator still has to fill is not a blocker
+for the gate. Submit stays available and `BaseFormField` names the requirement
+beside its field after the attempt. The Documents create page and document
+state catalog were aligned with this on 2026-09-26. The
 strict `check-disabled-controls.mjs` scan protects all panel routes and reachable
 module components in CI.
 

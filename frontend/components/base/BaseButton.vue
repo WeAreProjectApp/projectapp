@@ -19,8 +19,9 @@ const props = defineProps({
   type: { type: String, default: 'button' },
   loading: { type: Boolean, default: false },
   disabled: { type: Boolean, default: false },
-  /** Why a non-loading action is unavailable. Resolvable forms should also
-   *  render the same copy visibly through BaseControlGate. */
+  /** Why a non-loading action is unavailable. A resolvable prerequisite that no
+   *  field owns should also render visibly through BaseControlGate; a missing
+   *  form field is not a reason to disable submit (BaseFormField names it). */
   disabledReason: { type: String, default: '' },
   /** Keep the browser-native title unless an owning primitive already exposes
    * the same help through an application tooltip. */
