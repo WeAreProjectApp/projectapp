@@ -106,6 +106,12 @@ async function openDocuments(page) {
   await expect(page.getByTestId('proposal-contract-modality')).toBeVisible({ timeout: 20_000 });
 }
 
+// Display outcomes arrive the way an admin does: from the editor, through the tab.
+async function openDocumentsFromEditor(page) {
+  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('tab', { name: 'Documentos' }).click({ timeout: 20_000 });
+}
+
 test.describe('Admin proposal contract modality', () => {
   test.beforeEach(async ({ page }) => {
     test.setTimeout(60_000);
@@ -180,12 +186,14 @@ test.describe('Admin proposal contract modality', () => {
   }, async ({ page }) => {
     const state = { proposal: buildProposal({ status: 'accepted', contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT, SERVICE] }) };
     await mockApi(page, buildHandler(state));
-    await openDocuments(page);
+    await openDocumentsFromEditor(page);
 
-    await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 });
     await expect(page.getByTestId('proposal-contract-modality-single')).toBeDisabled();
-    await expect(page.getByTestId('proposal-contract-row-product')).toBeVisible();
-    await expect(page.getByTestId('proposal-contract-row-service')).toBeVisible();
+    await expect(page.getByTestId('proposal-contract-row-product')).toContainText('Desarrollo e implementación del software');
+    await expect(page.getByTestId('proposal-contract-row-service').getByRole('link', { name: 'Descargar PDF' }))
+      .toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=service`);
+    await expect(page.getByTestId('proposal-contract-row-combined')).toHaveCount(0);
   });
 
   test('the switch stays hidden before the negotiation', {
@@ -193,9 +201,10 @@ test.describe('Admin proposal contract modality', () => {
   }, async ({ page }) => {
     const state = { proposal: buildProposal({ status: 'sent', proposal_documents: [] }) };
     await mockApi(page, buildHandler(state));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
+    await openDocumentsFromEditor(page);
 
-    await expect(page.getByTestId('proposal-contract-row-combined')).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByTestId('proposal-contract-row-combined')).toContainText('PDF · No generado', { timeout: 20_000 });
     await expect(page.getByTestId('proposal-contract-modality')).toHaveCount(0);
+    await expect(page.getByTestId('proposal-generate-contract-combined')).toHaveCount(0);
   });
 });
