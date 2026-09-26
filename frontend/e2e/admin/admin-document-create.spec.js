@@ -30,13 +30,24 @@ async function expectInlineControlError(page, control, message) {
 // borde derecho y sin avisos en la fila: lo que falta se dice bajo cada campo.
 async function expectActionRowAligned(actions) {
   await expect(actions.getByRole('alert')).toHaveCount(0);
-  const row = await actions.boundingBox();
-  const cancel = await actions.getByRole('link', { name: 'Cancelar' }).boundingBox();
-  const create = await actions.getByRole('button', { name: /Crear Documento/i }).boundingBox();
-  expect(cancel.x + cancel.width).toBeLessThan(create.x);
-  expect(Math.abs((cancel.y + cancel.height / 2) - (create.y + create.height / 2)))
-    .toBeLessThanOrEqual(1);
-  expect(Math.abs((row.x + row.width) - (create.x + create.width))).toBeLessThanOrEqual(1);
+  await expect.poll(() => actions.evaluate((row) => {
+    const link = row.querySelector('a');
+    const button = row.querySelector('button');
+    const rowBox = row.getBoundingClientRect();
+    const cancel = link.getBoundingClientRect();
+    const create = button.getBoundingClientRect();
+    return {
+      labels: [link.textContent.trim(), button.textContent.trim()],
+      cancelFirst: cancel.right < create.left,
+      centered: Math.abs((cancel.top + cancel.height / 2) - (create.top + create.height / 2)) <= 1,
+      flushRight: Math.abs(rowBox.right - create.right) <= 1,
+    };
+  })).toEqual({
+    labels: ['Cancelar', 'Crear Documento'],
+    cancelFirst: true,
+    centered: true,
+    flushRight: true,
+  });
 }
 
 test.describe('Admin Document Create', () => {
