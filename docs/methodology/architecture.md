@@ -1616,10 +1616,18 @@ same modal context registers open floating layers so the panel stays fixed while
 the list owns any result overflow. The dialog-level focus trap includes the
 teleported options, while Escape closes the list before it can close the modal.
 
-`ClientAutocomplete`, `ProjectSelect`, `ProjectCatalogSelect` and the linked-
-income selector in `CollectionAccountFormModal` consume that primitive. This
-keeps accounting and Documents modals on one clipping, focus and scroll contract
-instead of repeating per-screen absolute dropdown workarounds.
+`ClientAutocomplete`, `ProjectSelect`, `ProjectCatalogSelect`,
+`DocumentFolderSelect` and the linked-income selector in
+`CollectionAccountFormModal` consume that primitive. This keeps accounting and
+Documents modals on one clipping, focus and scroll contract instead of
+repeating per-screen absolute dropdown workarounds.
+
+`DocumentFolderSelect` (document create and edit) filters the folder tree the
+page already loaded: each row shows location · owner · non-active project
+state because folder names repeat by design, and system-managed folders are
+never offered since `create_document_from_markdown` rejects them with 409. Its
+pure helpers live in `utils/folderOptions.js` and read the store's raw list, so
+a row without `parent` or a non-list payload cannot break the form.
 
 The same selector can expose two rendering surfaces without duplicating its data
 state. `ClientAutocompleteResults` owns client identity, loading, retry, empty
