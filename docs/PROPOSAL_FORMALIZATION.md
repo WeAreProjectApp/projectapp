@@ -13,6 +13,8 @@ conservando la identidad visual del documento que ya conoce el cliente.
 | Propuesta comercial formal | Cliente, proyecto, referencia y emisión; alcance y entregables incluidos con sus IDs; prestaciones concretas de diseño y acompañamiento; cronograma, etapas y aportes del cliente; inversión efectiva y moneda; hitos y medios de pago; condiciones guardadas de hosting, mantenimiento y soporte; condiciones de módulos incluidos; límites y cambios de alcance. | ROI y proyecciones de retorno, argumentos de venta, diagnósticos persuasivos, paquetes de ampliación, precios de alcance no seleccionado, urgencia, testimonios, badges de garantías, próximos pasos comerciales y llamadas a comprar. |
 | Detalle técnico formal | Propósito, stack, arquitectura y modelo de datos; preparación técnica actual; épicas y requerimientos del alcance seleccionado, IDs, configuración, flujo de uso y referencias comerciales; API, integraciones incluidas y excluidas; ambientes y roles; seguridad, rendimiento, respaldos, calidad, pruebas y decisiones técnicas. | Evoluciones futuras ofrecidas como posibilidad, ampliaciones no seleccionadas, venta o ROI, URLs y nombres de bases de datos de ambientes y campos arbitrarios de credenciales. |
 | Contrato de desarrollo | El PDF final ya generado desde los parámetros de contrato de la propuesta, con el tratamiento de firma existente. | La variante de contrato borrador. |
+| Contrato de producto | En cierre separado: el PDF final del desarrollo e implementación del software (el contrato único sin las cláusulas 21–24). | El borrador y el contrato único, que ya no corresponde a la modalidad. |
+| Contrato de servicio | En cierre separado: el PDF final del contrato autónomo de hosting, mantenimiento y soporte, con su duración inicial y sus preavisos. | El borrador y el contrato único. |
 
 Los campos estructurados son la fuente. Una sección necesaria en modo de texto
 pegado requiere completar sus campos antes de preparar ese anexo. No se extraen
@@ -48,12 +50,37 @@ por las dos migraciones `0255`.
   anteriores conservan la versión original de esa huella y sus bytes revisados;
   el cambio visual no regenera adjuntos existentes.
 
+## Modalidad de cierre
+
+Durante la negociación, Documentos muestra **Modalidad de cierre**:
+
+- **Contrato único** (valor por defecto y el de toda propuesta existente): el
+  contrato de desarrollo con el servicio de hosting incluido en sus cláusulas
+  21 a 24.
+- **Producto y servicio**: dos documentos. El contrato de **producto** es el
+  mismo contrato sin las cláusulas 21 a 24. Hay tres ajustes en las remisiones
+  que las mencionaban: el protocolo de reporte en la garantía, el literal h) de
+  hosting y la definición de día hábil. El contrato de **servicio** es autónomo,
+  con esas cláusulas renumeradas y las generales que necesita. Sus tres datos
+  propios (duración inicial, preaviso de no renovación y preaviso de terminación
+  del cliente) se piden al generarlo.
+
+El interruptor se usa sólo en negociación y queda visible, bloqueado, en
+aceptada o rechazada. Cambiar de modalidad no borra documentos: los de la
+modalidad elegida se regeneran con los datos vigentes, y los de la otra no se
+sirven, no se adjuntan y no pasan a la plataforma. Cada documento puede usar el
+texto estándar o uno personalizado, por separado. Una preparación de correo
+hecha en la otra modalidad queda obsoleta.
+
 ## Preparar y enviar
 
-1. Generar el contrato final desde Documentos y completar los datos de la propuesta.
-2. Elegir **Preparar correo de formalización**. Los tres documentos empiezan
-   seleccionados; se puede desmarcar cualquiera y agregar otros adjuntos de esa
-   propuesta. Una selección incompleta indica qué corregir o desmarcar.
+1. Generar el contrato final (o los contratos de producto y servicio) desde
+   Documentos y completar los datos de la propuesta.
+2. Elegir **Preparar correo de formalización**. Todos los documentos de la
+   modalidad empiezan seleccionados: el contrato único, o los contratos de
+   producto y servicio, más los dos anexos. Se puede desmarcar cualquiera y
+   agregar otros adjuntos de esa propuesta. Una selección incompleta indica qué
+   corregir o desmarcar.
 3. Revisar destinatarios y CC, asunto, introducción y cierre de la plantilla
    `proposal_formalization`. Agregar, reordenar o quitar secciones de texto o Markdown.
 4. Elegir **Preparar vista previa**. Revisar el correo final y descargar o

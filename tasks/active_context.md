@@ -1,3 +1,28 @@
+# Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
+
+En negociación, Documentos permite cerrar el negocio con el contrato único o con
+dos documentos: contrato de producto y contrato de servicio (hosting,
+mantenimiento y soporte). La modalidad vive en `BusinessProposal.contract_modality`:
+- `single` por defecto, sin backfill;
+- se cambia sólo en negociación y queda de lectura en aceptada o rechazada;
+- cambiarla no borra documentos.
+
+Los textos vienen de la plantilla única:
+- Producto se deriva en ejecución: se quitan las cláusulas 21–24 y se aplican tres ajustes anclados.
+- Servicio vive en `service_content_markdown`, sembrado por `0266`.
+
+Ambos textos se verificaron contra los que entregó el operador. Cada documento
+tiene su modo estándar o personalizado, y el servicio pide duración inicial y
+dos preavisos. Descargas, copia Markdown, adjuntos de Correos, envío legado,
+formalización (llave por documento, huella v3), regeneración y plataforma usan
+sólo la modalidad activa. De paso, "Generar contrato" en negociación usa la
+actualización del contrato, en lugar de repetir la transición.
+
+Migraciones: `0265`, esquema, y `0266`, texto del servicio; las aplica el
+deploy. Rama `feat/26092026-contract-modality-split`. Sigue una fase 2 en el
+mismo PR: el parágrafo de dependencia de proveedores tecnológicos en ambos
+contratos.
+
 # Acciones de fila y notas en Contabilidad — PR #420 (2026-09-26)
 
 Todo el módulo contable usa un solo estándar de acciones de fila: tres puntos

@@ -1,5 +1,14 @@
 # Task Plan — ProjectApp
 
+> **2026-09-26 — modalidad de cierre de contratos:** Documentos elige en
+> negociación entre contrato único y contratos de producto + servicio, con
+> parámetros y texto personalizado por documento. El correo de formalización,
+> los adjuntos, las descargas y la plataforma siguen la modalidad. Cobertura:
+> backend (invariante de cláusulas, migración, vistas, formalización,
+> plataforma, comando), unitarias de tab/fila/modal/store y E2E P1
+> `admin-proposal-contract-modality`. Fase 2 en el mismo PR: el parágrafo de
+> proveedores tecnológicos en ambos contratos.
+
 > **2026-09-26 — acciones de fila contables:** todas las tablas y listas de Contabilidad abren sus acciones desde un único kebab inicial; «Detalle e historial» y «Ver nota» son las primeras entradas del menú. Las tablas `menu-start` ya no dejan una franja en blanco en celular ni en tableta vertical. PR #420; sólo frontend.
 
 > **2026-09-26 — enlaces seguros de un solo uso:** implementados módulo
