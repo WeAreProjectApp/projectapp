@@ -897,8 +897,8 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
   - [Branch C — Seguir editando] Cancelar: misma URL, cambios y aviso intactos.
   - [Branch D — Refresh guardado] "Actualizar datos" con cambios pendientes pregunta antes de recargar por encima.
   - [Branch E — Cuenta emitida] Con una cuenta de cobro emitida (`collection_account_locked`) no se ofrece la salida de guardar: quedan dos, porque el backend rechazaría el PATCH.
-  - [Branch F — Crear] En `/panel/documents/create` no hay versión guardada a la que volver: el aviso no ofrece guardar ni descartar, y crear con éxito desarma el guard para que la redirección al editor no interrumpa. Llegar con `?folder=` no ensucia el formulario pese a la sugerencia de cliente por carpeta.
-  - [Branch G — Buscar no es editar] Escribir en el selector de cliente sin elegir nada no levanta aviso: la selección enlazada se restaura al cerrar.
+  - [Branch F — Crear] En `/panel/documents/create` no hay versión guardada a la que volver: el aviso no ofrece guardar ni descartar, y crear con éxito desarma el guard para que la redirección al editor no interrumpa. Llegar con `?folder=` no ensucia el formulario pese a la sugerencia de cliente por carpeta, aunque el selector de carpeta ya muestre su ruta.
+  - [Branch G — Buscar no es editar] Escribir en el selector de cliente o en el de carpeta sin elegir nada no levanta aviso: la selección enlazada se restaura al cerrar.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-document-unsaved-guard.spec.js`
 

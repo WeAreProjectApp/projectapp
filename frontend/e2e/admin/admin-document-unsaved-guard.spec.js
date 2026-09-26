@@ -7,7 +7,8 @@
  *         leaving with pending changes (guardar / descartar / seguir
  *         editando), the panel refresh button asking before it overwrites, a
  *         create form arriving from a folder not being born dirty, and the
- *         client picker not manufacturing a warning while it is only searching.
+ *         client and folder pickers not manufacturing a warning while they are
+ *         only searching.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -196,6 +197,23 @@ test.describe('Admin Document — Unsaved Changes Guard', () => {
       await expect(notice(page)).toBeHidden();
       await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('Kore SAS');
     });
+
+    test('searching in the folder picker raises no warning on its own', {
+      tag: [...ADMIN_DOCUMENT_UNSAVED_GUARD, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (el editor se alcanza por URL en todo el spec)
+      await mockApi(page, baseHandler(async ({ apiPath }) => (
+        apiPath === 'documents/1/detail/' ? json({ ...mockDocument, folder: 3 }) : null
+      )));
+      await page.goto('/panel/documents/1/edit');
+      await expect(page.getByTestId('doc-folder-select')).toHaveValue('Contratos');
+
+      await page.getByTestId('doc-folder-select').fill('otra');
+      await titleField(page).click();
+
+      await expect(notice(page)).toBeHidden();
+      await expect(page.getByTestId('doc-folder-select')).toHaveValue('Contratos');
+    });
   });
 
   test.describe('Crear', () => {
@@ -213,6 +231,7 @@ test.describe('Admin Document — Unsaved Changes Guard', () => {
 
       // La carpeta llegó del ?folder= y arrastró su cliente sugerido: con todo
       // eso puesto, el formulario sigue sin considerarse tocado.
+      await expect(page.getByTestId('doc-folder-select')).toHaveValue('Contratos');
       await expect(page.getByTestId('doc-create-unsaved-notice')).toBeHidden();
       await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('Kore SAS');
 

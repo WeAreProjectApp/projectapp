@@ -7,7 +7,8 @@
  *         back link navigation, download PDF action, copy/paste markdown content
  *         toolbar buttons, the Editar/Vista previa switch, template style switch
  *         (Amigable/Profesional) toggling the preview theme, the fixed notes save
- *         bar, and the dual-style PDF download dropdown.
+ *         bar, the dual-style PDF download dropdown, and moving the document
+ *         with the searchable folder picker.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -771,6 +772,37 @@ test.describe('Admin Document Edit', () => {
 
     expect(request.postDataJSON().title).toBe('Contrato Actualizado');
     await expect(page.getByText('Documento guardado', { exact: true })).toBeVisible();
+  });
+
+  test('picking another folder in the picker saves its id', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const filedDocument = { ...mockDocument, folder: 30, folder_name: '08 - Agosto' };
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/1/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(filedDocument) };
+      if (apiPath === 'document-folders/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(documentFolderTree) };
+      }
+      if (apiPath === 'documents/1/update/' && method === 'PATCH') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...filedDocument, folder: 20 }) };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/1/edit');
+
+    const folderPicker = page.getByTestId('doc-folder-select');
+    await expect(folderPicker).toHaveValue('Acme / Portal / 08 - Agosto');
+    await folderPicker.fill('portal');
+    await page.getByTestId('doc-folder-select-option-20').click();
+    await expect(folderPicker).toHaveValue('Acme / Portal');
+    const requestPromise = page.waitForRequest(
+      (request) => request.url().includes('/api/documents/1/update/')
+        && request.method() === 'PATCH',
+    );
+    await page.getByTestId('doc-save').click();
+
+    expect((await requestPromise).postDataJSON().folder_id).toBe(20);
   });
 
   test('edits a saved observation', {
