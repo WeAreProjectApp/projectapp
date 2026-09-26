@@ -43,10 +43,10 @@ def test_full_payment_after_termination_only_releases_existing_work():
 def test_unilateral_termination_uses_three_letters():
     text = clause_content(16).split('### Parágrafo Segundo')[1].split('### Parágrafo Tercero')[0]
 
-    assert re.findall(r'^([a-z])\)', text, re.MULTILINE) == ['a', 'b', 'c']
+    assert re.findall(r'^\*\*([a-z])\)\*\*', text, re.MULTILINE) == ['a', 'b', 'c']
     assert 'treinta por ciento (30%) del valor de las fases restantes' in text
     assert 'reservando capacidad de trabajo, asignando personal' in text
-    assert 'b) EL CONTRATISTA entregará' not in text
+    assert 'EL CONTRATISTA entregará a EL CONTRATANTE el código fuente' not in text
 
 
 def test_ownership_preserves_reusable_assets_without_claiming_third_party_code():
@@ -60,11 +60,13 @@ def test_ownership_preserves_reusable_assets_without_claiming_third_party_code()
     assert 'licencia de uso perpetua, irrevocable, no exclusiva y sin costo adicional' in text
 
 
-def test_ownership_retains_specific_implementations_with_the_client():
+def test_ownership_keeps_client_logic_but_not_generic_components():
     text = clause_content(10)
 
     assert 'los desarrollos originales realizados específicamente para su proyecto' in text
-    assert 'no excluye de la cesión las implementaciones originales desarrolladas específicamente' in text
+    assert 'Hacen parte del DESARROLLO ESPECÍFICO la lógica, las reglas de negocio' in text
+    assert 'o que se desarrollen, adapten o perfeccionen durante su ejecución' in text
+    assert 'no excluye de la cesión las implementaciones originales' not in text
     assert 'no confiere exclusividad sobre ideas, métodos, funcionalidades' in text
     assert 'incluidas las aplicables a la terminación unilateral por EL CONTRATANTE' in text
 
@@ -73,9 +75,11 @@ def test_hosting_cross_references_are_renumbered():
     hosting = clause_content(2).split('### Parágrafo Séptimo')[1].split('### Parágrafo Octavo')[0]
     execution = clause_content(9).split('### Parágrafo Cuarto')[1].split('### Parágrafo Quinto')[0]
 
-    assert re.findall(r'^(\d+)\.', hosting, re.MULTILINE) == ['1', '2', '3', '4', '5', '6', '7', '8']
-    assert '8. Cuando EL CONTRATANTE contrate' in hosting
-    assert re.findall(r'^(\d+)\.', execution, re.MULTILINE) == ['1', '2', '3', '4']
+    letters = re.compile(r'^\*\*([a-z]+)\)\*\*', re.MULTILINE)
+    # f) carries the two external-hosting conditions as roman sub-items.
+    assert letters.findall(hosting) == ['a', 'b', 'c', 'd', 'e', 'f', 'i', 'ii', 'g', 'h']
+    assert '**h)** Cuando EL CONTRATANTE contrate' in hosting
+    assert letters.findall(execution) == ['a', 'b', 'c', 'd']
     assert 'solo lectura' not in hosting + execution
 
 

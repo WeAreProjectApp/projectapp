@@ -5,8 +5,9 @@
  * Covers: edit form pre-filled with existing document data, save updates document,
  *         client messages and normalized observations (including read-only copy), responsive header,
  *         back link navigation, download PDF action, copy/paste markdown content
- *         toolbar buttons, template style switch (Amigable/Profesional) toggling
- *         the preview theme, and the dual-style PDF download dropdown.
+ *         toolbar buttons, the Editar/Vista previa switch, template style switch
+ *         (Amigable/Profesional) toggling the preview theme, the fixed notes save
+ *         bar, and the dual-style PDF download dropdown.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -267,27 +268,32 @@ test.describe('Admin Document Edit', () => {
         expect(layout.actions.right).toBeGreaterThan(layout.actions.x);
       });
 
-      test('wide editor constrains short previews to document proportions', {
+      test('wide editor previews a short document in its own box at document proportions', {
         tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display', '@responsive:canvas'],
       }, async ({ page }) => {
         // quality: allow-duplicate (wide-only geometry contract for preview surfaces)
         // quality: allow-deep-link (the editor preview is the documented display surface)
         await mockResponsiveHeaderApi(page);
         await page.goto('/en-us/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
-        await expect(page.getByTestId('doc-markdown-preview-pane')).toBeVisible();
+        const markdown = page.getByRole('textbox', { name: 'Contenido Markdown' });
+        await expect(markdown).toHaveValue(mockDocument.content_markdown);
+        const editorBox = await markdown.boundingBox();
 
-        const inlineLayout = await page.evaluate(() => {
-          const preview = document.querySelector('[data-testid="doc-markdown-preview-pane"]')
-            .getBoundingClientRect();
-          const textarea = document.querySelector('#edit-markdown').getBoundingClientRect();
-          return {
-            previewWidth: preview.width,
-            previewHeight: preview.height,
-            textareaHeight: textarea.height,
-          };
+        await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+        const preview = page.getByTestId('doc-markdown-preview-pane');
+        await expect(preview.getByRole('heading', { name: 'Contrato', level: 1 })).toHaveText('Contrato');
+        await expect(markdown).toBeHidden();
+
+        const inlineLayout = await preview.evaluate((pane) => {
+          const paneBox = pane.getBoundingClientRect();
+          const contentBox = pane.querySelector('.markdown-preview').getBoundingClientRect();
+          return { paneWidth: paneBox.width, paneHeight: paneBox.height, contentWidth: contentBox.width };
         });
-        expect(inlineLayout.previewWidth).toBeLessThanOrEqual(896);
-        expect(inlineLayout.previewHeight).toBeLessThan(inlineLayout.textareaHeight);
+        // The preview takes the editor's own box, so switching never moves the
+        // page, while the document keeps its reading width inside it.
+        expect(inlineLayout.paneWidth).toBeCloseTo(editorBox.width, 0);
+        expect(inlineLayout.paneHeight).toBeCloseTo(editorBox.height, 0);
+        expect(inlineLayout.contentWidth).toBeLessThanOrEqual(768);
 
         await page.getByRole('button', { name: 'Vista completa' }).click();
         const modalLayout = await page.getByTestId('markdown-preview-modal-panel')
@@ -451,6 +457,57 @@ test.describe('Admin Document Edit', () => {
     await expect(page).toHaveURL(/\/panel\/emails\?.*email=41/);
     await expect(page.getByTestId('email-history-attachments-41'))
       .toContainText('contrato.pdf');
+  });
+
+  test('the live contract window previews it and exports Markdown without editing', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (/panel/documents is the module entry; from
+    // there this test follows the real list → contract window interaction)
+    const contractWindow = {
+      ...mockDocument,
+      title: 'Contrato de prestación de servicios — borrador vigente',
+      slug: 'contrato-vigente',
+      is_contract_mirror: true,
+      content_markdown: '# CONTRATO DE PRESTACIÓN DE SERVICIOS\n\n## CLÁUSULA PRIMERA — OBJETO DEL CONTRATO\n',
+      active_states: [],
+      notes: [],
+    };
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([contractWindow]) };
+      }
+      if (
+        apiPath === 'document-folders/'
+        || apiPath === 'document-tags/'
+        || apiPath === 'document-states/'
+        || apiPath === 'document-state-groups/'
+      ) {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
+      }
+      if (apiPath === 'documents/1/detail/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(contractWindow) };
+      }
+      if (apiPath === 'documents/1/pdf/') {
+        return { status: 200, contentType: 'application/pdf', body: '%PDF-1.4 live contract' };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(contractWindow.title, { exact: true }).first())
+      .toBeVisible({ timeout: 30000 });
+    await page.getByTestId('document-open-1').click();
+
+    await expect(page.getByTestId('doc-contract-mirror-alert'))
+      .toContainText('Contrato vigente, en solo lectura');
+    await expect(page.getByTestId('doc-generated-pdf-frame')).toBeVisible();
+    await expect(page.getByTestId('doc-markdown-editor-panel')).toHaveCount(0);
+    await expect(page.getByTestId('doc-save')).toBeDisabled();
+
+    const download = page.waitForEvent('download');
+    await page.getByTestId('doc-contract-markdown-download').click();
+    expect((await download).suggestedFilename()).toBe('contrato-vigente.md');
   });
 
   test('a stored collection account previews its PDF with editable observations', {
@@ -802,6 +859,68 @@ test.describe('Admin Document Edit', () => {
     await expect(page.getByTestId('doc-save')).toBeEnabled();
   });
 
+  test('saves notes from the fixed bar without scrolling past a long email', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const longEmail = Array.from(
+      { length: 24 },
+      (_, index) => `Párrafo ${index + 1} del correo con el detalle de la entrega.`,
+    ).join('\n\n');
+    const documentWithLongEmail = {
+      ...mockDocument,
+      client_email_subject: 'Contrato listo',
+      client_email_body: longEmail,
+      client_whatsapp_message: 'Hola Ana, revisa tu correo.',
+      notes: [],
+    };
+    await mockApi(page, async ({ route, apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/1/detail/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(documentWithLongEmail) };
+      }
+      if (apiPath === 'documents/1/update/' && method === 'PATCH') {
+        const body = route.request().postDataJSON();
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ ...documentWithLongEmail, ...body }),
+        };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/1/edit');
+    await page.getByTestId('doc-client-note-open').click();
+
+    // The whole email reads without scrolling inside its own field.
+    const email = page.getByTestId('client-note-email');
+    await expect(email).toHaveValue(longEmail);
+    const hiddenEmailHeight = await email.evaluate((field) => field.scrollHeight - field.clientHeight);
+    expect(hiddenEmailHeight).toBeLessThanOrEqual(1);
+
+    const save = page.getByTestId('client-note-submit');
+    await expect(save).toBeDisabled();
+    await expect(save).toHaveAttribute('title', 'No hay cambios por guardar.');
+
+    await page.getByTestId('client-note-subject').fill('Contrato listo para firma');
+
+    // The subject sits at the top of a long modal: the save must be reachable
+    // right there, without scrolling past the email.
+    await expect(save).toBeEnabled();
+    await expect(save).toBeInViewport();
+    await expect(page.getByTestId('client-note-unsaved')).toHaveText('Cambios sin guardar');
+    const requestPromise = page.waitForRequest(
+      (request) => request.url().includes('/api/documents/1/update/') && request.method() === 'PATCH',
+    );
+    await save.click();
+    const request = await requestPromise;
+
+    expect(request.postDataJSON()).toMatchObject({
+      client_email_subject: 'Contrato listo para firma',
+      client_email_body: longEmail,
+    });
+    await expect(page.getByText('Notas guardadas', { exact: true })).toBeVisible();
+  });
+
   test('deletes an observation from the saved document', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
@@ -949,6 +1068,7 @@ test.describe('Admin Document Edit', () => {
     });
     await page.goto('/panel/documents/1/edit');
 
+    await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
     const previewHeading = page.getByRole('heading', { name: 'Contrato', level: 1, exact: true });
     await expect(previewHeading).toBeVisible();
     await page.getByTestId('doc-style-professional').click();

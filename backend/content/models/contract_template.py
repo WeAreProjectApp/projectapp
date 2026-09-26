@@ -9,7 +9,10 @@ class ContractTemplate(models.Model):
     from the ContractParamsModal. Placeholders like {client_full_name} are
     substituted with values from proposal.contract_params at PDF generation time.
 
-    Admin can edit the default template via Django admin.
+    It is the one contract: the public legal view, the draft download,
+    generated contracts and the Document-manager window (``mirror_document``)
+    all read it. Its text changes only through versioned data migrations;
+    Django admin shows it read-only.
     """
 
     name = models.CharField(max_length=255)
@@ -23,6 +26,17 @@ class ContractTemplate(models.Model):
         ),
     )
     is_default = models.BooleanField(default=False)
+    mirror_document = models.OneToOneField(
+        'content.Document',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='contract_template',
+        help_text=(
+            'Documento del Gestor que muestra este contrato en vivo y en solo '
+            'lectura (PDF y Markdown). No guarda una copia del texto.'
+        ),
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

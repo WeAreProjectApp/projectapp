@@ -95,8 +95,17 @@ def ensure_active_target(folder, *, moving_archived=False):
     )
 
 
+def _refuse_contract_mirror(documents):
+    """The window onto the one contract never leaves the panel's main view."""
+    from content.services.contract_mirror_service import CONTRACT_MIRROR_MESSAGE
+
+    if documents.filter(contract_template__isnull=False).exists():
+        raise DocumentArchiveError(CONTRACT_MIRROR_MESSAGE)
+
+
 def archive_document(document):
     """Archiva un documento suelto. Devuelve True si cambió algo."""
+    _refuse_contract_mirror(Document.objects.filter(pk=document.pk))
     if document.is_archived:
         return False
     document.is_archived = True
@@ -156,6 +165,8 @@ def archive_folder(folder):
     now = timezone.now()
     descendant_ids = folder.get_descendant_ids()
     scope_ids = {folder.pk} | descendant_ids
+    # The bulk update below skips save(), so the check has to happen first.
+    _refuse_contract_mirror(Document.objects.filter(folder_id__in=scope_ids))
 
     folders_count = DocumentFolder.objects.filter(
         pk__in=descendant_ids, is_archived=False,

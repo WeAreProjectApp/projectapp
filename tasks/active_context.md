@@ -1,6 +1,46 @@
+# Protección de propiedad intelectual en el catálogo — lista para integrar (2026-09-26)
+
+El catálogo comercial suma su módulo 25 en *Identidad y acceso*: un sistema por capas que se instala dentro de la plataforma del cliente para dificultar la ingeniería inversa y la copia de secretos empresariales por bots y agentes de IA. Decisiones del operador del 2026-09-26 que cierran las preguntas abiertas de la ficha: la promesa es dificultar, detectar y dejar registro de los intentos —nunca «impedir»—; las capas ofrecidas son código del navegador (build ofuscado, sin mapas de código, lógica sensible en el servidor), APIs y datos (límites de consulta, permisos por recurso, respuestas mínimas) y bots y agentes de IA (reglas para rastreadores, detección y bloqueo, sin sacar las páginas públicas de los buscadores, en coherencia con los metadatos para asistentes de IA que vende la identidad corporativa); el rastreo forense y el respaldo legal quedan fuera. Se ofrece como módulo único: capas y alcance se cotizan en la propuesta, y los requisitos del cliente —inventario de lo valioso, accesos, tráfico legítimo, diagnóstico previo si la plataforma no es nuestra y un responsable de los reportes— cierran la ficha. Entra como migración de datos `content.0259`, sin cambio de esquema, serializer, contrato MCP ni frontend; los tests blindan el copy bilingüe, la promesa sin absolutos, las capas acordadas, la posición libre, el respeto a un módulo creado desde el panel y el reverse. El contrato v8 (#417) se integró primero con su propia `content.0259`: esta rama suma la merge vacía `content.0263_merge_contract_v8_intellectual_property`. #418 sigue abierta con otra `0259` y, si llega después, suma la suya. El video brag v2 del catálogo lo destaca sin cambiar su duración de 45 s: la escena 4 pasa a «Nuevo en el catálogo» con la ficha del módulo y la escena 2 muestra su tarjeta con la etiqueta Nuevo; música, clics, portada, nombre del asset y frontend no cambian. Revisión y mediciones en `explainers/brag-v2/verification.md`.
+
+# Datos privados fuera del JSON público de propuestas — en verificación (2026-09-26)
+
+`GET /api/proposals/<uuid>/`, `/by-slug/<slug>/` y `/shared/<uuid>/` (sin
+login) devolvían `contract_params` con cédula, correo, NIT y cuenta bancaria
+reales, además de contacto del cliente y ajustes internos. Verificado en
+producción en solo lectura (nombres de campos, sin valores).
+`ProposalDetailSerializer.PUBLIC_HIDDEN_FIELDS` los retira en `get_fields()`
+cuando `is_admin` es falso; la página pública no leía ninguno y los endpoints
+admin siguen completos. Sin migraciones; aplica con el despliegue.
+
 # Carpetas y lectura de Comunicaciones — PR #416 (2026-09-25)
 
 Implementado en `feat/25092026-communication-folders-reading`: carpetas independientes por cliente/proyecto, IDs visibles y buscables, lectura del hilo con formulario y detalles plegables, accesos al inicio/final y copia directa. REST y MCP comparten las reglas de contexto, jerarquía y borrado protegido. La navegación de proyecto incluye las carpetas generales de su cliente y conserva la ubicación al crear desde móvil. Migración aditiva `content.0258`; entrega mediante PR #416 a main, sin despliegue ni cambios en datos reales.
+
+# Contrato v8: confidencialidad, propiedad intelectual y literales — en verificación (2026-09-26)
+
+La migración `content.0259` reescribe la cláusula décima (DESARROLLO
+ESPECÍFICO del cliente; know-how y componentes reutilizables y estándares de
+la industria en parágrafos propios, de ProjectApp aunque se escriban durante
+el proyecto; licencia temporal pasa a Parágrafo Quinto) y la décima primera
+(confidencialidad recíproca, no uso, sin productos derivados de la oportunidad
+revelada, no circunvención de 2 años que incluye equipo y subcontratistas;
+sin excepción de portafolio). Todas las enumeraciones pasan a literales en
+negrilla, uno por párrafo, y las referencias a "literal": el parser del PDF
+unía los `a)` consecutivos y ambos renderizadores renumeraban las listas
+`N.`. Un solo grupo atómico: una sección personalizada deja la plantilla
+intacta con aviso. Los títulos largos de cláusula ya no se salen del PDF.
+
+**Un solo contrato.** Producción servía la v7 (sin #410/#412 desplegados) y
+el Gestor guardaba una copia manual v6 (doc #104). Ahora la plantilla default
+es el único texto, de solo lectura en el admin y cambiada sólo por migración.
+`ContractTemplate.mirror_document` (0260) enlaza un documento del Gestor que
+no guarda copia: panel, PDF, correos y MCP lo sirven en vivo, igual al
+borrador público, con descarga PDF/Markdown y sin edición, duplicado,
+archivado ni borrado. La 0261 convierte el #104 en esa ventana. La 0262
+alinea el párrafo de alcance de las propuestas (otrosí + no renuncia) y el
+texto de financiación dice que la cesión opera con el acta tras el pago.
+Pendiente del operador tras el despliegue: confirmar en el lector público y
+en el #104, y decidir si regenera los PDFs de contratos en negociación.
 
 # Propiedad intelectual y terminación del contrato — en verificación (2026-09-25)
 

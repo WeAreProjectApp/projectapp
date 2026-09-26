@@ -211,6 +211,9 @@ class GeneratedDocumentReadMixin:
     def get_is_generated_snapshot(self, obj):
         return obj.is_generated_snapshot
 
+    def get_is_contract_mirror(self, obj):
+        return obj.is_contract_mirror
+
 
 class DocumentThreadSummaryMixin:
     """Compact thread context shared by document list and detail payloads."""
@@ -252,6 +255,7 @@ class DocumentListSerializer(
     active_states = serializers.SerializerMethodField()
     display_state = serializers.SerializerMethodField()
     is_generated_snapshot = serializers.SerializerMethodField()
+    is_contract_mirror = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     thread_summary = serializers.SerializerMethodField()
 
@@ -264,7 +268,7 @@ class DocumentListSerializer(
             'client_name', 'client', 'client_display_name',
             'project', 'project_name',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
             'source_proposal_id', 'source_version',
             'issue_date',
             'language', 'cover_type', 'template_style',
@@ -365,6 +369,7 @@ class DocumentDetailSerializer(
     notes = serializers.SerializerMethodField()
     display_state = serializers.SerializerMethodField()
     is_generated_snapshot = serializers.SerializerMethodField()
+    is_contract_mirror = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     billing_notes = serializers.CharField(source='notes', read_only=True)
     collection_account_observations = serializers.CharField(
@@ -382,7 +387,7 @@ class DocumentDetailSerializer(
             'client_whatsapp_message', 'client_custom_notes',
             'project', 'project_name',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
             'source_proposal_id', 'source_version',
             'public_number', 'issue_date', 'due_date', 'currency', 'total',
             'billing_notes', 'collection_account_observations',
@@ -407,6 +412,14 @@ class DocumentDetailSerializer(
 
     def get_active_states(self, obj):
         return DocumentListSerializer().get_active_states(obj)
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if data.get('is_contract_mirror'):
+            # The row stores a pointer; readers get the contract itself.
+            from content.services.contract_mirror_service import mirror_markdown
+            data['content_markdown'] = mirror_markdown() or ''
+        return data
 
 
 class DocumentCreateUpdateSerializer(serializers.ModelSerializer):

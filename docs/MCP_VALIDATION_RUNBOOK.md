@@ -239,6 +239,10 @@ ejecutarse ante un replay.
 1. Invocar `list_documents` y luego `read_document` con el ID elegido.
 2. Exigir `editable=true`, guardar `etag` y leer `edit_blockers`. Un documento
    archivado o un artefacto generado no se fuerza: responde `NOT_EDITABLE`.
+   El contrato vigente (`is_contract_mirror=true`, blocker `contract_mirror`)
+   tampoco: `read_document` devuelve el borrador completo en vivo, y
+   `update_document`, `append_document` y `delete_document` responden
+   `NOT_EDITABLE`. El contrato sólo cambia por migración de su plantilla.
 3. Editar con el nombre canónico `markdown` y el ETag leído:
 
 ```json

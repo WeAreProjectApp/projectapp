@@ -2,8 +2,9 @@
  * E2E tests for admin document create flow.
  *
  * @flow:admin-document-create
- * Covers: page renders with mode tabs, paste Markdown mode, file upload mode,
- *         private fixed/custom notes, form submission, and error handling.
+ * Covers: page renders with mode tabs, paste Markdown mode with its
+ *         Editar/Vista previa switch, file upload mode, private fixed/custom
+ *         notes, form submission, and error handling.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -72,6 +73,27 @@ test.describe('Admin Document Create', () => {
     await page.getByRole('button', { name: /Crear|Guardar/i }).click();
     await page.waitForURL(/\/panel\/documents/, { timeout: 15000 });
     expect(postBody.markdown).toContain('Contenido de prueba');
+  });
+
+  test('paste mode shows the preview in place of the editor', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the create form is the surface under test; its entry from the list is covered by the canvas catalog spec)
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      return null;
+    });
+    await page.goto('/panel/documents/create');
+    const markdown = page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i);
+    await markdown.fill('# Propuesta de servicios\n\nAlcance y entregables.');
+
+    await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: 'Propuesta de servicios', level: 1 }))
+      .toHaveText('Propuesta de servicios');
+    await expect(markdown).toBeHidden();
+    await page.getByRole('tab', { name: 'Editar', exact: true }).click();
+    await expect(markdown).toHaveValue('# Propuesta de servicios\n\nAlcance y entregables.');
   });
 
   test('stores the client messages in the create payload', {

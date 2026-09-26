@@ -7,6 +7,7 @@ from unittest.mock import patch
 
 import pytest
 from reportlab.lib.pagesizes import A4
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.pdfgen import canvas as rl_canvas
 
 from content.services.contract_pdf_service import (
@@ -17,7 +18,7 @@ from content.services.contract_pdf_service import (
     _substitute_placeholders,
     generate_contract_pdf,
 )
-from content.services.pdf_utils import MARGIN_T, PAGE_H
+from content.services.pdf_utils import CONTENT_W, MARGIN_T, PAGE_H, _font
 
 pytestmark = pytest.mark.django_db
 
@@ -407,7 +408,7 @@ class TestDefaultTemplateIntegrity:
         assert 'se transfieren de manera permanente desde el momento de la entrega' not in md
         assert 'una vez cumplidas las condiciones establecidas en la CLÁUSULA NOVENA' in md
         assert 'incluidas las aplicables a la terminación unilateral por EL CONTRATANTE' in md
-        assert '### Parágrafo Tercero — Licencia Temporal de Uso' in md
+        assert '### Parágrafo Quinto — Licencia Temporal de Uso' in md
 
     def test_contractor_is_identified_by_the_resolved_document(self):
         """A NIT must never print under the word "cédula" — that was the v7 fix."""
@@ -481,6 +482,83 @@ class TestClauseNumbering:
 
 
 # ---------------------------------------------------------------------------
+# Enumeration standard — guards the v8 lettered lists
+# ---------------------------------------------------------------------------
+
+_ITEM_RE = re.compile(r'^\*\*([a-z]+)\)', re.MULTILINE)
+_LITERAL_REF_RE = re.compile(
+    r'literal(?:es)? ([a-z])\)(?: y ([a-z])\))?'
+    r'(?: (?:del PARÁGRAFO ([A-ZÉÍÓÚ]+)'
+    r'(?: de la CLÁUSULA ((?:DÉCIMA |VIGÉSIMA )?[A-ZÁÉÍÓÚ]+))?'
+    r'|(de dicho parágrafo)))?'
+)
+
+
+def _literal_index(markdown):
+    """Map (clause ordinal, paragraph ordinal) to the item letters it declares."""
+    index = {}
+    clause = paragraph = None
+    for line in markdown.split('\n'):
+        heading = _HEADING_RE.match(line)
+        if heading:
+            clause, paragraph = heading.group(1), None
+        elif line.startswith('### Parágrafo '):
+            paragraph = line.split()[2].upper()
+        index.setdefault((clause, paragraph), set()).update(_ITEM_RE.findall(line))
+    return index
+
+
+class TestEnumerationStandard:
+    """Both renderers renumber 'N.' lists and the PDF merges consecutive 'a)' lines."""
+
+    @pytest.fixture(autouse=True)
+    def _load_default_template(self):
+        from content.models import ContractTemplate
+        tpl = ContractTemplate.get_default()
+        assert tpl is not None, 'No default ContractTemplate in DB'
+        self.markdown = tpl.content_markdown
+
+    def test_has_no_numbered_or_bulleted_lists(self):
+        assert not re.findall(r'^\s*(?:\d+\.|[-*]) ', self.markdown, re.MULTILINE)
+
+    def test_every_enumeration_marker_is_bold(self):
+        assert not re.findall(r'^\s*[a-z]{1,4}\) ', self.markdown, re.MULTILINE)
+        assert not re.findall(r'\((?:i|ii|iii|iv|v|vi|vii|viii)\)', self.markdown)
+
+    def test_each_item_is_its_own_paragraph(self):
+        lines = self.markdown.split('\n')
+        for number, line in enumerate(lines):
+            if _ITEM_RE.match(line):
+                assert number == 0 or lines[number - 1] == '', line[:60]
+                assert number + 1 == len(lines) or lines[number + 1] == '', line[:60]
+
+    def test_references_say_literal_not_numeral(self):
+        assert 'numeral' not in self.markdown.lower()
+
+    def test_every_literal_reference_points_at_an_existing_item(self):
+        index = _literal_index(self.markdown)
+        clause = paragraph = None
+        for line in self.markdown.split('\n'):
+            heading = _HEADING_RE.match(line)
+            if heading:
+                clause, paragraph = heading.group(1), None
+            elif line.startswith('### Parágrafo '):
+                paragraph = line.split()[2].upper()
+            for ref in _LITERAL_REF_RE.finditer(line):
+                first, second, ref_paragraph, ref_clause, dicho = ref.groups()
+                target = (clause, paragraph)
+                if ref_paragraph:
+                    target = (ref_clause or clause, ref_paragraph)
+                elif dicho:
+                    earlier = re.findall(r'PARÁGRAFO ([A-ZÉÍÓÚ]+)', line[:ref.start()])
+                    target = (clause, earlier[-1])
+                for letter in filter(None, (first, second)):
+                    assert letter in index.get(target, set()), (
+                        f'{ref.group(0)!r} in {target} points at no item'
+                    )
+
+
+# ---------------------------------------------------------------------------
 # _render_block — all block types
 # ---------------------------------------------------------------------------
 
@@ -507,6 +585,20 @@ class TestRenderBlock:
         c, y, ps = _make_canvas()
         new_y = _render_block(c, y, {'type': 'heading', 'level': 3, 'text': 'Heading 3'}, ps)
         assert isinstance(new_y, (int, float))
+
+    def test_long_clause_title_wraps_inside_the_content_width(self):
+        """The VIGÉSIMA SEGUNDA title used to run off the paper edge."""
+        c, y, ps = _make_canvas()
+        title = (
+            'CLÁUSULA VIGÉSIMA SEGUNDA — ATENCIÓN DE INCIDENTES, NIVELES DE '
+            'SERVICIO Y CONTINUIDAD OPERATIVA'
+        )
+        with patch.object(c, 'drawString', wraps=c.drawString) as draw:
+            _render_block(c, y, {'type': 'heading', 'level': 2, 'text': title}, ps)
+        drawn = [call.args[2] for call in draw.call_args_list]
+        assert len(drawn) > 1
+        assert ' '.join(drawn) == title
+        assert all(stringWidth(line, _font('bold'), 12) <= CONTENT_W for line in drawn)
 
     def test_paragraph_renders_without_error(self):
         c, y, ps = _make_canvas()

@@ -271,6 +271,18 @@
       </BaseAlert>
 
       <BaseAlert
+        v-if="contractMirror"
+        variant="info"
+        class="panel-landscape:col-span-2"
+        data-testid="doc-contract-mirror-alert"
+      >
+        Contrato vigente, en solo lectura. Este documento muestra en vivo el
+        mismo contrato que ven los clientes en la sección legal de su propuesta.
+        Se consulta y se descarga en PDF o en Markdown; se modifica únicamente
+        por migración de la plantilla del contrato.
+      </BaseAlert>
+
+      <BaseAlert
         v-if="generatedSnapshot"
         variant="info"
         class="panel-landscape:col-span-2"
@@ -574,25 +586,51 @@
         <div class="mb-4 flex flex-wrap items-start justify-between gap-3">
           <div>
             <p class="text-sm font-semibold text-text-default">
-              {{ isCollectionAccount ? 'Cuenta de cobro en PDF' : 'PDF inmutable archivado' }}
+              {{ contractMirror
+                ? 'Contrato vigente'
+                : isCollectionAccount ? 'Cuenta de cobro en PDF' : 'PDF inmutable archivado' }}
             </p>
             <p class="mt-1 text-sm text-text-muted">
-              {{ isCollectionAccount
-                ? generatedSnapshot
-                  ? 'Es el archivo definitivo creado al emitir la cuenta; no se vuelve a generar ni se puede reemplazar.'
-                  : 'Esta cuenta histórica se consulta como PDF mientras se completa su archivado definitivo.'
-                : 'Esta vista conserva la versión exacta que se adjuntó al correo; no se vuelve a generar desde la propuesta actual.' }}
+              {{ contractMirror
+                ? 'Se genera en vivo desde el contrato único: es el mismo borrador que el cliente descarga desde la sección legal de su propuesta.'
+                : isCollectionAccount
+                  ? generatedSnapshot
+                    ? 'Es el archivo definitivo creado al emitir la cuenta; no se vuelve a generar ni se puede reemplazar.'
+                    : 'Esta cuenta histórica se consulta como PDF mientras se completa su archivado definitivo.'
+                  : 'Esta vista conserva la versión exacta que se adjuntó al correo; no se vuelve a generar desde la propuesta actual.' }}
             </p>
           </div>
-          <BaseButton
-            variant="secondary"
-            size="sm"
-            data-testid="doc-generated-download"
-            @click="handleDownloadPdf()"
-          >
-            <BaseActionIcon action="download" />
-            Descargar PDF
-          </BaseButton>
+          <div class="flex flex-wrap items-center gap-2">
+            <BaseButton
+              variant="secondary"
+              size="sm"
+              data-testid="doc-generated-download"
+              @click="handleDownloadPdf()"
+            >
+              <BaseActionIcon action="download" />
+              Descargar PDF
+            </BaseButton>
+            <template v-if="contractMirror">
+              <BaseButton
+                variant="secondary"
+                size="sm"
+                data-testid="doc-contract-markdown-download"
+                @click="handleDownloadMarkdown"
+              >
+                <BaseActionIcon action="download" />
+                Descargar Markdown
+              </BaseButton>
+              <BaseButton
+                variant="ghost"
+                size="sm"
+                data-testid="doc-contract-markdown-copy"
+                @click="handleCopyContent"
+              >
+                <BaseActionIcon action="copy" />
+                {{ copiedMarkdown ? 'Copiado' : 'Copiar Markdown' }}
+              </BaseButton>
+            </template>
+          </div>
         </div>
         <dl
           v-if="isCollectionAccount"
@@ -647,12 +685,15 @@
                flex flex-col min-w-0"
         data-testid="doc-markdown-editor-panel"
       >
-        <div class="flex items-center justify-between mb-3 gap-3 flex-wrap">
-          <label for="edit-markdown" class="block text-sm font-medium text-text-default">Contenido Markdown</label>
-          <div class="flex items-center gap-2 flex-wrap">
-            <span v-if="form.content_markdown" class="text-xs text-text-subtle tabular-nums">
-              {{ form.content_markdown.length.toLocaleString() }} caracteres
-            </span>
+        <DocumentEditorContent
+          ref="markdownEditorRef"
+          v-model="form.content_markdown"
+          textarea-id="edit-markdown"
+          label="Contenido Markdown"
+          placeholder="# Contenido del documento..."
+          :theme="form.template_style"
+        >
+          <template #tools>
             <BaseButton
               type="button"
               variant="ghost"
@@ -683,51 +724,8 @@
               <BaseActionIcon action="enter-fullscreen" />
               Vista completa
             </BaseButton>
-            <BaseButton
-              type="button"
-              variant="ghost"
-              size="sm"
-              @click="showPreview = !showPreview"
-            >
-              <BaseActionIcon :action="showPreview ? 'hide' : 'view'" />
-              {{ showPreview ? 'Ocultar vista previa' : 'Vista previa' }}
-            </BaseButton>
-          </div>
-        </div>
-        <div :class="showPreview ? 'grid grid-cols-1 panel-desktop:grid-cols-2 gap-4 flex-1 min-h-0' : 'flex-1 min-h-0 flex'">
-          <textarea
-            id="edit-markdown"
-            ref="markdownTextareaRef"
-            v-model="form.content_markdown"
-            placeholder="# Contenido del documento..."
-            class="w-full px-4 py-3 border border-border-default rounded-xl text-sm font-mono leading-relaxed bg-surface text-text-default placeholder:text-text-subtle
-                   focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-none
-                   min-h-[24rem] panel-desktop:h-[calc(100vh-18rem)]"
-          ></textarea>
-          <div
-            v-if="showPreview"
-            class="w-full max-w-4xl justify-self-center self-start overflow-y-auto rounded-xl border border-border-default bg-surface
-                   min-h-64 max-h-[calc(100vh-16rem)]"
-            data-testid="doc-markdown-preview-pane"
-          >
-            <div class="sticky top-0 px-3 py-2 border-b border-border-default bg-surface-raised rounded-t-xl z-10">
-              <span class="text-xs font-medium text-text-muted uppercase tracking-wide">Vista previa</span>
-            </div>
-            <DocumentMarkdownBody
-              v-if="form.content_markdown.trim()"
-              :markdown="form.content_markdown"
-              :theme="form.template_style"
-              class="mx-auto w-full max-w-3xl px-5 py-4"
-            />
-            <div
-              v-else
-              class="flex items-center justify-center h-64 text-sm text-text-subtle"
-            >
-              Escribe markdown para ver la vista previa...
-            </div>
-          </div>
-        </div>
-
+          </template>
+        </DocumentEditorContent>
       </section>
     </form>
     </EntityHistoryTabs>
@@ -813,11 +811,12 @@
 
 <script setup>
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
-import { reactive, ref, computed, onMounted, nextTick } from 'vue';
+import { reactive, ref, computed, onMounted } from 'vue';
 import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewModal.vue';
 import DocumentPdfPreviewModal from '~/components/panel/documents/DocumentPdfPreviewModal.vue';
 import PdfPreviewPane from '~/components/base/PdfPreviewPane.vue';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
+import DocumentEditorContent from '~/components/panel/documents/DocumentEditorContent.vue';
 import DocumentClientNoteModal from '~/components/panel/documents/DocumentClientNoteModal.vue';
 import DocumentStateHistoryModal from '~/components/panel/documents/DocumentStateHistoryModal.vue';
 import DocumentStateList from '~/components/panel/documents/DocumentStateList.vue';
@@ -838,6 +837,7 @@ import { describeIncludedPages } from '~/utils/documentCoverPages';
 import { documentReturnLabel, resolveDocumentReturn } from '~/utils/documentReturnNavigation';
 import { formatDate as formatBusinessDate, formatDateTime } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
+import { downloadBlob } from '~/utils/downloadFile';
 
 const localePath = useLocalePath();
 const route = useRoute();
@@ -864,11 +864,18 @@ const loadError = ref(false);
 // Requisito 6: an issued cuenta is a fact — read-only here, forever.
 const lockedCuenta = ref(false);
 const generatedSnapshot = ref(false);
-const readOnlyDocument = computed(() => lockedCuenta.value || generatedSnapshot.value);
+// The window onto the one contract: rendered live, never edited here.
+const contractMirror = ref(false);
+const readOnlyDocument = computed(
+  () => lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
+);
 const pdfPreviewDocument = computed(
-  () => generatedSnapshot.value || lockedCuenta.value,
+  () => generatedSnapshot.value || lockedCuenta.value || contractMirror.value,
 );
 const readOnlyReason = computed(() => {
+  if (contractMirror.value) {
+    return 'Este es el contrato vigente: se consulta y se descarga aquí; se modifica únicamente por migración de la plantilla.';
+  }
   if (generatedSnapshot.value) {
     if (lockedCuenta.value) {
       return 'Esta cuenta de cobro conserva el PDF emitido y sólo permite gestionar observaciones privadas.';
@@ -893,7 +900,6 @@ const savedClientLabel = ref('');
 const savedProjectId = ref(null);
 const savedProjectName = ref('');
 const isDownloading = ref(false);
-const showPreview = ref(true);
 const showFullPreview = ref(false);
 const showPdfPreview = ref(false);
 const showClientNote = ref(false);
@@ -905,7 +911,7 @@ const copiedMarkdown = ref(false);
 const documentCommunications = ref({ count: 0, results: [] });
 const documentEmailUsage = ref({ count: 0, results: [] });
 const pastedMarkdown = ref(false);
-const markdownTextareaRef = ref(null);
+const markdownEditorRef = ref(null);
 
 const form = reactive({
   title: '',
@@ -990,6 +996,9 @@ const saveBlockReasons = computed(() => [
     : '',
   generatedSnapshot.value
     ? 'Esta versión conserva el PDF exacto enviado y no se puede modificar.'
+    : '',
+  contractMirror.value
+    ? 'Este es el contrato vigente y no se edita desde el Gestor.'
     : '',
   !hasChanges.value ? 'No hay cambios por guardar.' : '',
 ].filter(Boolean));
@@ -1193,17 +1202,7 @@ async function handlePasteContent() {
   try {
     const pasted = await navigator.clipboard.readText();
     if (!pasted) return;
-    const textarea = markdownTextareaRef.value;
-    const start = textarea ? textarea.selectionStart : form.content_markdown.length;
-    const end = textarea ? textarea.selectionEnd : form.content_markdown.length;
-    form.content_markdown = form.content_markdown.slice(0, start) + pasted + form.content_markdown.slice(end);
-    const cursor = start + pasted.length;
-    if (textarea) {
-      nextTick(() => {
-        textarea.focus();
-        textarea.setSelectionRange(cursor, cursor);
-      });
-    }
+    markdownEditorRef.value.insertAtCursor(pasted);
     pastedMarkdown.value = true;
     setTimeout(() => { pastedMarkdown.value = false; }, 2000);
   } catch {
@@ -1285,6 +1284,7 @@ async function reloadDocument() {
       && result.data.commercial_status !== 'draft'
     );
     generatedSnapshot.value = Boolean(result.data.is_generated_snapshot);
+    contractMirror.value = Boolean(result.data.is_contract_mirror);
     commitBaseline();
   } else {
     loadError.value = true;
@@ -1344,6 +1344,13 @@ async function handleSave() {
 }
 
 const downloadItems = computed(() => {
+  if (contractMirror.value) {
+    return [
+      { action: 'download', label: 'Descargar PDF', onClick: () => handleDownloadPdf() },
+      { action: 'download', label: 'Descargar Markdown', onClick: () => handleDownloadMarkdown() },
+      { action: 'copy', label: 'Copiar Markdown', onClick: () => handleCopyContent() },
+    ];
+  }
   if (lockedCuenta.value) {
     return [{ action: 'download', label: 'Descargar cuenta de cobro', onClick: () => handleDownloadPdf() }];
   }
@@ -1372,5 +1379,11 @@ async function handleDownloadPdf(template = null) {
 async function handlePreviewPdf() {
   if (!(await guardedExport('preview'))) return;
   showPdfPreview.value = true;
+}
+
+function handleDownloadMarkdown() {
+  // The contract window's Markdown is the live draft the server sent.
+  const blob = new Blob([form.content_markdown || ''], { type: 'text/markdown;charset=utf-8' });
+  downloadBlob(blob, `${documentStore.currentDocument?.slug || 'contrato-vigente'}.md`);
 }
 </script>
