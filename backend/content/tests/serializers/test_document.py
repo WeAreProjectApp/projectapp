@@ -41,7 +41,7 @@ class TestDocumentListSerializer:
             'client_name',
             'client', 'client_display_name', 'project', 'project_name',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
             'source_proposal_id', 'source_version',
             'issue_date',
             'language', 'cover_type', 'template_style',
@@ -53,6 +53,10 @@ class TestDocumentListSerializer:
             'thread_summary',
         }
         assert set(data.keys()) == expected
+
+    def test_ordinary_document_is_not_the_contract_window(self, document):
+        data = DocumentListSerializer(document).data
+        assert data['is_contract_mirror'] is False
 
     def test_excludes_content_markdown(self, document):
         data = DocumentListSerializer(document).data
@@ -110,7 +114,7 @@ class TestDocumentDetailSerializer:
             'client_email_subject', 'client_email_body',
             'client_whatsapp_message', 'client_custom_notes',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
             'source_proposal_id', 'source_version',
             'public_number', 'issue_date', 'due_date', 'currency', 'total',
             'billing_notes', 'collection_account_observations',

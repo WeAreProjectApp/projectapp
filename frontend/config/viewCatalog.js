@@ -576,7 +576,7 @@ export const viewCatalogSections = [
         reference: 'vista de edición de documento',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; el contrato vigente se abre en solo lectura con PDF y Markdown en vivo; acceso interno.',
       },
       {
         label: 'Estados de documentos',

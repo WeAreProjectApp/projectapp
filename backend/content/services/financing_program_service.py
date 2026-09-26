@@ -326,7 +326,7 @@ PROGRAM_CONTENT = {
                 'items': [
                     'La custodia abarca repositorios, control de versiones, respaldos, accesos e integridad del código.',
                     'No implica transferencia de propiedad intelectual ni autorización de explotación comercial por Project App.',
-                    'La cesión de derechos patrimoniales acordada se hace efectiva con el pago íntegro; la custodia sólo difiere la entrega material.',
+                    'La cesión de derechos patrimoniales acordada opera cuando se completa el pago íntegro y se formaliza la entrega con el acta correspondiente, conforme al contrato; la custodia sólo difiere la entrega material.',
                     'La entrega del código y los repositorios ocurre al finalizar la custodia y cumplir las obligaciones pactadas, mediante acta de entrega.',
                 ],
             },
@@ -688,7 +688,7 @@ PROGRAM_CONTENT = {
                 'items': [
                     'Custody covers repositories, version control, backups, access, and code integrity.',
                     'It does not transfer intellectual property or authorize commercial exploitation by Project App.',
-                    'The agreed assignment of economic rights takes effect upon full payment; custody only defers physical delivery.',
+                    'The agreed assignment of economic rights takes effect once full payment is completed and delivery is formalized with the corresponding delivery record, as set out in the contract; custody only defers physical delivery.',
                     'Code and repositories are delivered through a delivery record after custody ends and the agreed obligations are fulfilled.',
                 ],
             },

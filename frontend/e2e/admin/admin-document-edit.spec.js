@@ -453,6 +453,57 @@ test.describe('Admin Document Edit', () => {
       .toContainText('contrato.pdf');
   });
 
+  test('the live contract window previews it and exports Markdown without editing', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (/panel/documents is the module entry; from
+    // there this test follows the real list → contract window interaction)
+    const contractWindow = {
+      ...mockDocument,
+      title: 'Contrato de prestación de servicios — borrador vigente',
+      slug: 'contrato-vigente',
+      is_contract_mirror: true,
+      content_markdown: '# CONTRATO DE PRESTACIÓN DE SERVICIOS\n\n## CLÁUSULA PRIMERA — OBJETO DEL CONTRATO\n',
+      active_states: [],
+      notes: [],
+    };
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([contractWindow]) };
+      }
+      if (
+        apiPath === 'document-folders/'
+        || apiPath === 'document-tags/'
+        || apiPath === 'document-states/'
+        || apiPath === 'document-state-groups/'
+      ) {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
+      }
+      if (apiPath === 'documents/1/detail/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(contractWindow) };
+      }
+      if (apiPath === 'documents/1/pdf/') {
+        return { status: 200, contentType: 'application/pdf', body: '%PDF-1.4 live contract' };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText(contractWindow.title, { exact: true }).first())
+      .toBeVisible({ timeout: 30000 });
+    await page.getByTestId('document-open-1').click();
+
+    await expect(page.getByTestId('doc-contract-mirror-alert'))
+      .toContainText('Contrato vigente, en solo lectura');
+    await expect(page.getByTestId('doc-generated-pdf-frame')).toBeVisible();
+    await expect(page.getByTestId('doc-markdown-editor-panel')).toHaveCount(0);
+    await expect(page.getByTestId('doc-save')).toBeDisabled();
+
+    const download = page.waitForEvent('download');
+    await page.getByTestId('doc-contract-markdown-download').click();
+    expect((await download).suggestedFilename()).toBe('contrato-vigente.md');
+  });
+
   test('a stored collection account previews its PDF with editable observations', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
