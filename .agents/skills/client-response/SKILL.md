@@ -224,6 +224,29 @@ abre otro alcance y no incluye firma formal.
 Correo y WhatsApp se conservan idénticos entre el output, las notas privadas del
 documento y los borradores del Gestor de Comunicaciones.
 
+### Información sensible → enlace seguro de un solo uso
+
+Contraseñas, credenciales, llaves API/tokens, accesos a servidor o base de datos,
+`.env`, datos bancarios, códigos 2FA o un comunicado confidencial **nunca** se
+pegan en el correo, el WhatsApp, el documento formal ni las notas privadas. Van en
+un enlace seguro de ProjectApp (se abre una sola vez, vence y el equipo puede
+reactivarlo):
+
+- Si la respuesta debe **entregar** un secreto y el operador ya lo dio en la
+  conversación, propón en el lote de Fase 7 un `create_secure_link` con ese
+  contenido exacto (tipo del catálogo `list_secure_link_types`). Nunca inventes,
+  completes ni deduzcas un valor secreto.
+- Si el secreto **no** está en la conversación, pídeselo al operador antes de
+  cerrar la propuesta de mutación; no crees el enlace vacío ni con marcadores.
+- Si el **cliente** debe enviarnos algo sensible, incluye la página pública
+  `https://projectapp.co/es-co/secure-link` (en inglés: `/en-us/secure-link`) y
+  pídele que nos mande el enlace que genere; sólo el equipo podrá abrirlo.
+- El texto al cliente dice que el enlace se abre **una sola vez**, que copie la
+  información al abrirlo y que, si lo abre por error, nos avise para
+  reactivarlo. En los textos del output el enlace aparece como
+  `[ENLACE SEGURO: <título>]` hasta que el lote confirmado devuelva la URL real;
+  los borradores persistidos llevan la URL real.
+
 ## Fase 7 — persistencia en ProjectApp
 
 Primero ejecuta **todo el descubrimiento read-only**. Después muestra una única
@@ -235,8 +258,9 @@ incluye IDs/nombres resueltos y cada operación que se hará:
 3. crear el hilo del contexto si no existe;
 4. registrar el mensaje entrante si todavía no está en el hilo;
 5. crear o actualizar el documento formal, si aplica;
-6. crear un borrador saliente de email;
-7. crear un borrador saliente de WhatsApp.
+6. crear los enlaces seguros necesarios (`create_secure_link`), si aplica;
+7. crear un borrador saliente de email;
+8. crear un borrador saliente de WhatsApp.
 
 Una confirmación cubre ese lote exacto. Si cambia el destino, cliente, documento o
 contenido después de confirmarlo, vuelve a mostrar el delta y pide nueva confirmación.
@@ -277,6 +301,21 @@ contenido después de confirmarlo, vuelve a mostrar el delta y pide nueva confir
   un turno posterior si el operador afirma expresamente que ese mensaje exacto ya se
   envió por fuera de ProjectApp; registra el hecho, no envía nada.
 
+### Enlaces seguros
+
+- `create_secure_link` recibe `secret_type`, `title` (etiqueta interna, sin el
+  secreto), `fields` con el contenido exacto que dio el operador, `client_id`,
+  `project_id` si pertenece al cliente, `language` del cliente y
+  `validity_days` (7 por defecto; 1, 3, 7 o 30).
+- La URL se entrega **una sola vez** en esa respuesta: reemplaza el marcador
+  `[ENLACE SEGURO: <título>]` por esa URL en ambos borradores antes de crearlos.
+  `list_secure_links`/`get_secure_link` nunca la devuelven; si se pierde, el
+  equipo la copia desde `/panel/secure-links`.
+- El contenido del secreto no se repite en el output, el documento, las notas
+  privadas ni el resumen final: sólo título, tipo, id y vencimiento.
+- Reactivar un enlace es una decisión del equipo desde el panel; esta skill sólo
+  la recomienda cuando el cliente dice que lo abrió por error.
+
 ### Degradación segura
 
 - Sin Gestor de Documentos: devuelve el markdown formal, pero declara que no quedó
@@ -285,6 +324,9 @@ contenido después de confirmarlo, vuelve a mostrar el delta y pide nueva confir
   declara qué registros no se crearon.
 - Sin IMAP: para correo pide que el operador pegue el mensaje/hilo; para WhatsApp
   sigue normalmente.
+- Sin `create_secure_link`: deja `[ENLACE SEGURO: <título>]` en los textos, indica
+  que el equipo debe crearlo en `/panel/secure-links` y el veredicto es 🟡. Nunca
+  pega el secreto como alternativa.
 - Nunca afirma «creado», «actualizado», «guardado» o «enviado» sin resultado MCP.
 
 ## Guardrails
@@ -299,6 +341,8 @@ contenido después de confirmarlo, vuelve a mostrar el delta y pide nueva confir
 8. No exponer al cliente la trastienda técnica ni datos privados del expediente.
 9. No crear ni actualizar nada por MCP antes de la confirmación del lote.
 10. No duplicar mensajes, clientes, hilos o documentos existentes.
+11. No escribir secretos en correos, WhatsApp, documentos ni notas: van sólo en un
+    enlace seguro creado con el contenido que dio el operador.
 
 ## Output final
 
@@ -312,7 +356,8 @@ Orden:
 2. `### Correo` en bloque de texto plano, incluido `Asunto:`.
 3. `### WhatsApp` en bloque de texto plano.
 4. `### Inventario de estado` con hecho/aprobado y pendiente.
-5. Tabla breve: entrada, cliente/hilo, documento, borrador email, borrador WhatsApp.
+5. Tabla breve: entrada, cliente/hilo, documento, enlaces seguros (id, tipo,
+   vence; nunca el contenido), borrador email, borrador WhatsApp.
 6. Veredicto:
    - `🟢 client-response OK — respuesta y borradores registrados` cuando todo el
      lote aprobado quedó persistido;

@@ -42,6 +42,12 @@ from content.models import (
 )
 from content.serializers.document import apply_client_project_association
 from content.serializers.document_folder import DocumentFolderSerializer
+from content.services.contract_mirror_service import (
+    CONTRACT_MIRROR_BLOCKER,
+    CONTRACT_MIRROR_MESSAGE,
+    is_contract_mirror,
+    mirror_markdown,
+)
 from content.services.document_content import build_content_json
 from content.services.document_notes import (
     DocumentNotesValidationError, normalize_client_custom_notes,
@@ -78,9 +84,19 @@ def _markdown_qs():
     return (
         Document.objects
         .filter(document_type__code=MARKDOWN, is_archived=False)
-        .select_related('folder', 'project', 'client_user__profile')
+        .select_related('folder', 'project', 'client_user__profile', 'contract_template')
         .prefetch_related('tags')
     )
+
+
+def _refuse_contract_mirror(doc):
+    """The window onto the one contract is read-only for every caller."""
+    if is_contract_mirror(doc):
+        raise ToolError(
+            CONTRACT_MIRROR_MESSAGE,
+            code='NOT_EDITABLE',
+            details={'edit_blockers': [CONTRACT_MIRROR_BLOCKER]},
+        )
 
 
 def _get_markdown_doc_or_error(document_id):
@@ -280,8 +296,13 @@ def _doc_summary(doc):
         'updated_at': doc.updated_at.isoformat() if doc.updated_at else None,
         'created_at': doc.created_at.isoformat() if doc.created_at else None,
         'etag': _document_etag(doc),
-        'editable': not doc.is_archived and doc.document_type.code == MARKDOWN,
-        'edit_blockers': [],
+        'editable': (
+            not doc.is_archived
+            and doc.document_type.code == MARKDOWN
+            and not is_contract_mirror(doc)
+        ),
+        'edit_blockers': [CONTRACT_MIRROR_BLOCKER] if is_contract_mirror(doc) else [],
+        'is_contract_mirror': is_contract_mirror(doc),
     }
 
 
@@ -291,10 +312,12 @@ def _doc_detail(doc):
         .select_related('episode')
         .order_by('order', 'id')
     )
+    # The contract window stores a pointer; callers read the contract itself.
+    markdown = (mirror_markdown() or '') if is_contract_mirror(doc) else doc.content_markdown
     return {
         **_doc_summary(doc),
-        'markdown': doc.content_markdown,
-        'content_markdown': doc.content_markdown,
+        'markdown': markdown,
+        'content_markdown': markdown,
         'client_email_subject': doc.client_email_subject,
         'client_email_body': doc.client_email_body,
         'client_whatsapp_message': doc.client_whatsapp_message,
@@ -559,6 +582,7 @@ def create_document(arguments):
 
 def update_document(arguments):
     doc = _get_markdown_doc_or_error(arguments.get('document_id'))
+    _refuse_contract_mirror(doc)
     _check_document_etag(doc, arguments)
 
     if 'markdown' in arguments and 'content_markdown' in arguments:
@@ -655,6 +679,7 @@ def append_document(arguments):
     the full markdown.
     """
     doc = _get_markdown_doc_or_error(arguments.get('document_id'))
+    _refuse_contract_mirror(doc)
     _check_document_etag(doc, arguments)
 
     markdown_text = arguments.get('markdown')
@@ -677,6 +702,7 @@ def append_document(arguments):
 
 def delete_document(arguments):
     doc = _get_markdown_doc_or_error(arguments.get('document_id'))
+    _refuse_contract_mirror(doc)
     if doc.is_client_visible:
         raise ToolError(
             'Este documento está visible en el portal. Desactiva '
@@ -1004,7 +1030,9 @@ DOCUMENT_TOOLS = [
         'name': 'read_document',
         'description': (
             'Devuelve un documento markdown completo, incluida su asociación a '
-            'cliente/proyecto, content_markdown, estados y notas privadas.'
+            'cliente/proyecto, content_markdown, estados y notas privadas. El '
+            'contrato vigente (is_contract_mirror) devuelve el borrador '
+            'completo en vivo y es de solo lectura.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1048,7 +1076,9 @@ DOCUMENT_TOOLS = [
             'include_portada, include_subportada, include_contraportada, '
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
-            'cambiar el markdown se reprocesa el contenido para el PDF.'
+            'cambiar el markdown se reprocesa el contenido para el PDF. El '
+            'contrato vigente (is_contract_mirror) no se edita: responde '
+            'NOT_EDITABLE con edit_blockers ["contract_mirror"].'
         ),
         'input_schema': {
             'type': 'object',
@@ -1089,7 +1119,8 @@ DOCUMENT_TOOLS = [
             'existente, sin reenviar el contenido previo. Úsala para subir '
             'documentos largos por partes: create_document con el primer '
             'tramo y append_document con los siguientes. El contenido se '
-            'reprocesa completo para el PDF en cada llamada.'
+            'reprocesa completo para el PDF en cada llamada. No aplica al '
+            'contrato vigente (is_contract_mirror), que es de solo lectura.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1119,7 +1150,8 @@ DOCUMENT_TOOLS = [
         'name': 'delete_document',
         'description': (
             'Elimina un documento markdown que no esté visible en el portal. '
-            'Los visibles deben ocultarse primero o eliminarse desde el panel.'
+            'Los visibles deben ocultarse primero o eliminarse desde el panel. '
+            'El contrato vigente (is_contract_mirror) no se elimina.'
         ),
         'input_schema': {
             'type': 'object',

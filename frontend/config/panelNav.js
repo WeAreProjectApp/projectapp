@@ -76,6 +76,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
       items: [
         { label: 'Hilos con clientes', href: lp('/panel/communications'), icon: 'mail' },
         { label: 'Enviar emails', href: lp('/panel/emails'), icon: 'send' },
+        { label: 'Enlaces seguros', href: lp('/panel/secure-links'), icon: 'key' },
       ],
     },
     {

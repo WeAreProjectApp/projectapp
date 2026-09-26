@@ -1,0 +1,9 @@
+{
+  "id": "public-secure-link-create",
+  "name": "Public Secure Link Create",
+  "module": "public",
+  "roles": ["guest"],
+  "priority": "P1",
+  "description": "Client creates a secure link addressed to the ProjectApp team from the public page (type, fields, name, validity up to 7 days, captcha); receives the one-time URL to copy or email, and sees field errors when required values are missing.",
+  "outcomes": ["success", "error"]
+}

@@ -275,6 +275,8 @@ export const ADMIN_PROPOSALS_CONFIG_TAB = ['@flow:admin-proposals-config-tab', '
 export const ADMIN_PWA_INSTALL = ['@flow:admin-pwa-install', '@module:admin', '@priority:P2'];
 export const ADMIN_PWA_OFFLINE = ['@flow:admin-pwa-offline', '@module:admin', '@priority:P2'];
 export const ADMIN_QR_CARDS = ['@flow:admin-qr-cards', '@module:admin', '@priority:P2'];
+export const ADMIN_SECURE_LINK_CREATE = ['@flow:admin-secure-link-create', '@module:admin', '@priority:P1'];
+export const ADMIN_SECURE_LINK_MANAGE = ['@flow:admin-secure-link-manage', '@module:admin', '@priority:P1'];
 export const ADMIN_SELLER_INACTIVITY_ESCALATION = ['@flow:admin-seller-inactivity-escalation', '@module:admin', '@priority:P2'];
 export const ADMIN_SEND_BRANDED_EMAIL = ['@flow:admin-send-branded-email', '@module:admin', '@priority:P2'];
 export const ADMIN_SEND_PROPOSAL_EMAIL = ['@flow:admin-send-proposal-email', '@module:admin', '@priority:P2'];
@@ -438,6 +440,8 @@ export const PUBLIC_PORTFOLIO = ['@flow:public-portfolio', '@module:public', '@p
 export const PUBLIC_PORTFOLIO_DETAIL = ['@flow:public-portfolio-detail', '@module:public', '@priority:P2'];
 export const PUBLIC_PRIVACY_POLICY = ['@flow:public-privacy-policy', '@module:public', '@priority:P4'];
 export const PUBLIC_ROUTE_NOT_FOUND = ['@flow:public-route-not-found', '@module:public', '@priority:P3'];
+export const PUBLIC_SECURE_LINK_CREATE = ['@flow:public-secure-link-create', '@module:public', '@priority:P1'];
+export const PUBLIC_SECURE_LINK_REVEAL = ['@flow:public-secure-link-reveal', '@module:public', '@priority:P1'];
 export const PUBLIC_TERMS_CONDITIONS = ['@flow:public-terms-conditions', '@module:public', '@priority:P4'];
 
 // ── authored extras (flow-tags.extra.js, appended verbatim) ──

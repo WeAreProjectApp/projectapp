@@ -5730,14 +5730,14 @@ Two transitions that were previously bundled into other flows now have their own
 - **Role:** admin
 - **Priority:** P2
 - **Routes:** `/panel/documents/create`
-- **Description:** Crea un documento desde Markdown pegado (con preview vivo) o cargado desde archivo. El bloque Identificación conserva la asociación opcional `ClientAutocomplete` (`doc-client-autocomplete`, con creación inline) + `ProjectSelect` (`doc-project-select`, `allowNoClient`): elegir primero el proyecto completa su cliente, elegir primero el cliente filtra los proyectos y limpiar el cliente limpia el proyecto. Una carpeta puede aportar su cliente/proyecto como valor heredado; sólo cuando no los declara se usa la sugerencia por mayoría estricta de documentos, siempre editable. El acceso compacto `doc-client-note-open` abre **Notas**: como todavía no existe un documento, la acción **Aplicar al borrador** y sus avisos explican que falta crearlo para guardar la colección privada.
+- **Description:** Crea un documento desde Markdown pegado (en un editor a todo el ancho con switch **Editar / Vista previa**) o cargado desde archivo. El bloque Identificación conserva la asociación opcional `ClientAutocomplete` (`doc-client-autocomplete`, con creación inline) + `ProjectSelect` (`doc-project-select`, `allowNoClient`): elegir primero el proyecto completa su cliente, elegir primero el cliente filtra los proyectos y limpiar el cliente limpia el proyecto. Una carpeta puede aportar su cliente/proyecto como valor heredado; sólo cuando no los declara se usa la sugerencia por mayoría estricta de documentos, siempre editable. El acceso compacto `doc-client-note-open` abre **Notas**: como todavía no existe un documento, la acción **Aplicar al borrador** y sus avisos explican que falta crearlo para guardar la colección privada.
 - **Steps:**
   1. Admin navega a `/panel/documents/create`.
   2. La vista ofrece **Pegar Markdown** y **Cargar Archivo**.
   3. Admin completa el título y, opcionalmente, cliente/proyecto en cualquier orden.
-  4. Admin puede abrir **Agregar notas**, completar los mensajes y agregar notas personalizadas. El modal advierte que aún no se guardan.
+  4. Admin puede abrir **Agregar notas**, completar los mensajes y agregar notas personalizadas. El modal advierte que aún no se guardan; sus textos crecen con el contenido y el pie fijo habilita **Aplicar al borrador** sólo cuando algo cambió.
   5. Admin pulsa **Aplicar al borrador**; la vista confirma que todavía falta crear el documento y muestra el estado compacto de la colección.
-  6. En **Pegar Markdown**, escribe o pega contenido y revisa el preview vivo; en **Cargar Archivo**, selecciona un `.md` y revisa el contenido cargado.
+  6. En **Pegar Markdown**, escribe o pega contenido y cambia a **Vista previa** para revisarlo en el mismo espacio; en **Cargar Archivo**, selecciona un `.md` y revisa el contenido cargado.
   7. Admin pulsa **Crear Documento**.
   8. `POST /api/documents/create-from-markdown/` recibe markdown, asociaciones, presentación, los tres mensajes privados y `client_custom_notes` (lista vacía si se omitió).
   9. Al guardar, admin navega al Gestor Documental.
@@ -5745,7 +5745,7 @@ Two transitions that were previously bundled into other flows now have their own
   - [Display — notas] Cancelar cierra el modal sin aplicar el borrador; cada asunto, mensaje, título y contenido se puede copiar por separado con `📋`.
   - [Display — persistencia] El modal y la notificación posterior nombran el documento pendiente; aplicar al borrador no llama al servidor.
   - [Error — nota incompleta] Una nota personalizada sin título o contenido no se puede aplicar y muestra validación inline.
-  - [Display — preview] Admin puede mostrar u ocultar el panel de preview sin perder el markdown.
+  - [Display — preview] **Vista previa** reemplaza al editor en su misma caja y **Editar** vuelve al texto sin perder el markdown.
   - [Success — asociación] El payload siempre lleva `client`/`project`, incluido `null`; una asociación heredada o sugerida nunca bloquea la edición manual.
   - [Error — validación] Campos obligatorios faltantes o un rechazo 400 muestran errores y conservan al admin en la página de creación.
   - [Failure — servidor] Un fallo 5xx conserva todas las notas en el formulario para reintentar sin volver a redactarlas.
@@ -5758,26 +5758,27 @@ Two transitions that were previously bundled into other flows now have their own
 - **Role:** admin
 - **Priority:** P2
 - **Routes:** `/panel/documents/:id/edit`
-- **Description:** Edita contenido, asociación cliente/proyecto, visibilidad en el portal y presentación de un documento manual. La entrada desde el gestor conserva carpeta, filtros, búsqueda, archivo, vista y página en un `from` interno validado; las salidas explícitas restauran ese contexto, mientras una entrada directa o no confiable vuelve a la raíz. Debajo del título, la ruta discreta `Documentos / …` muestra la jerarquía real y cada tramo enlaza al contenido de esa carpeta con hover y foco visibles. La cabecera reserva el ancho de las acciones, limita el título a dos líneas y mantiene visibilidad/cliente sin empujar los controles; debajo muestra los estados concurrentes con su duración. **Acciones** contiene las salidas PDF y queda separado de **Cancelar/Guardar**. La asociación guardada ofrece backlinks y conserva el `client_name` heredado cuando no existe relación. La barra de Markdown permite copiar o pegar contenido; su preview inline y su vista completa se centran sobre un ancho de página y acotan el alto con scroll interno. `doc-client-note-open` conserva los mensajes para el cliente, guarda esa metadata directamente y administra observaciones normalizadas enlazables con **Solucionar bug**. Una propuesta enviada o una cuenta de cobro emitida abre en esta misma ruta como registro PDF inmutable: identidad, asociación, carpeta, mensajes y workflow no se editan; se previsualiza y descarga exactamente el archivo guardado, mientras las observaciones privadas sí siguen disponibles. Nada de esta metadata aparece en el PDF ni en el portal del cliente.
+- **Description:** Edita contenido, asociación cliente/proyecto, visibilidad en el portal y presentación de un documento manual. La entrada desde el gestor conserva carpeta, filtros, búsqueda, archivo, vista y página en un `from` interno validado; las salidas explícitas restauran ese contexto, mientras una entrada directa o no confiable vuelve a la raíz. Debajo del título, la ruta discreta `Documentos / …` muestra la jerarquía real y cada tramo enlaza al contenido de esa carpeta con hover y foco visibles. La cabecera reserva el ancho de las acciones, limita el título a dos líneas y mantiene visibilidad/cliente sin empujar los controles; debajo muestra los estados concurrentes con su duración. **Acciones** contiene las salidas PDF y queda separado de **Cancelar/Guardar**. La asociación guardada ofrece backlinks y conserva el `client_name` heredado cuando no existe relación. El editor Markdown ocupa todo el ancho de la zona de contenido y el switch **Editar / Vista previa** muestra la preview en esa misma caja; la barra permite copiar o pegar contenido, y la preview y la vista completa se centran sobre un ancho de página con scroll interno. `doc-client-note-open` abre un modal ancho que conserva los mensajes para el cliente (los textos crecen con su contenido y el pie fijo habilita **Guardar cambios** sólo cuando algo cambió), guarda esa metadata directamente y administra observaciones normalizadas enlazables con **Solucionar bug**. Una propuesta enviada o una cuenta de cobro emitida abre en esta misma ruta como registro PDF inmutable: identidad, asociación, carpeta, mensajes y workflow no se editan; se previsualiza y descarga exactamente el archivo guardado, mientras las observaciones privadas sí siguen disponibles. Nada de esta metadata aparece en el PDF ni en el portal del cliente.
 - **Steps:**
   1. Admin llega desde el gestor a `/panel/documents/:id/edit` con su origen canónico en `from`; `GET /api/documents/:id/detail/` carga el documento.
   2. El formulario aparece precargado con título, ruta navegable de carpetas, contenido, visibilidad, asociación, configuración visual, episodios vigentes y notas privadas.
   3. Admin puede abrir **Ver notas**, **Editar notas** o **Agregar notas**, según el estado guardado.
-  4. Revisa o modifica los mensajes, crea/edita/elimina notas personalizadas y pulsa **Guardar cambios**.
+  4. Revisa o modifica los mensajes, crea/edita/elimina notas personalizadas y pulsa **Guardar cambios** en el pie fijo, que se habilita (junto al aviso **Cambios sin guardar**) sólo cuando algo cambió.
   5. `PATCH /api/documents/:id/update/` persiste sólo los tres mensajes y la lista completa `client_custom_notes`.
   6. El modal se cierra y la vista confirma **Notas guardadas**; cualquier otro cambio del editor continúa marcado como pendiente.
   7. Admin modifica o guarda por separado cualquier otro dato necesario.
 - **Branches:**
   - [Display — cuenta emitida] Una cuenta de cobro emitida reemplaza el editor Markdown por un visor acotado del PDF archivado y muestra consecutivo, total, fechas, notas y observaciones de emisión. El PDF y los mensajes quedan bloqueados; las observaciones privadas normalizadas se pueden crear, editar, resolver o eliminar.
   - [Display — versión generada] Una propuesta archivada muestra el aviso de inmutabilidad, reemplaza el editor Markdown por el panel acotado del PDF guardado y deja una sola descarga. Sus mensajes quedan bloqueados, pero las observaciones privadas se pueden crear, editar, resolver o eliminar.
-  - [Display — preview proporcional] El preview Markdown inline toma el alto de contenido corto, limita ancho y alto en pantallas amplias y activa scroll interno cuando el contenido crece; la vista completa conserva el mismo ancho de página.
+  - [Display — preview proporcional] **Vista previa** ocupa la misma caja que el editor, así alternar no mueve la página, y mantiene el documento en un ancho de lectura con scroll interno cuando el contenido crece; la vista completa conserva el mismo ancho de página.
+  - [Success — barra de notas] Con un correo largo, el correo se lee completo sin scroll interno y **Guardar cambios** sigue a la vista en el pie fijo: sin cambios queda deshabilitado con su motivo y, al cambiar un mensaje, se habilita y guarda sin desplazarse.
   - [Success — ruta de carpetas] **Documentos**, **Sin carpeta** y cada ancestro del path son enlaces reales; un clic abre el gestor en ese nivel y conserva el ámbito archivado cuando corresponde.
   - [Display — volver] **Volver a documentos** y las demás salidas explícitas restauran la lista con su contexto y foco; el guard interviene si hay cambios sin guardar. Back del navegador conserva su semántica nativa y un `from` directo, externo o de otro módulo cae a la raíz localizada.
   - [Success — PDF] Preview y descarga usan la configuración guardada; **Acciones** permite descargar PDF Amigable o Profesional.
   - [Success — visibilidad] El interruptor persiste `is_client_visible` sin modificar el ciclo de trabajo.
   - [Success — estados] La administración de episodios y su historial se cubre en `admin-document-state-workflow`.
   - [Success — copiar Markdown] **Copiar** escribe todo `content_markdown` al portapapeles y muestra **Copiado** temporalmente.
-  - [Success — pegar Markdown] **Pegar** inserta el texto en el cursor (o al final si no hay foco) y muestra **Pegado** temporalmente.
+  - [Success — pegar Markdown] **Pegar** inserta el texto en el cursor (o al final si no hay foco) y muestra **Pegado** temporalmente; desde **Vista previa** vuelve primero al editor para mostrar lo pegado.
   - [Error — validación] Un rechazo 400 mantiene el modal abierto, conserva el borrador y muestra el error del campo.
   - [Failure — servidor] Un fallo 5xx mantiene el modal abierto con toda la colección editada para reintentar.
 - **Coverage:** ✅ Covered (las notas privadas satisfacen display/success/error/failure; el retorno cubre salida explícita, Back nativo y fallback no confiable; el breadcrumb ejecuta navegación real; asociaciones, Markdown, previews proporcionales, PDF archivado y guard tienen cobertura propia o compartida en los specs).
@@ -6354,6 +6355,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-pwa-install` | admin | P2 | success,display,failure | — |
 | `admin-pwa-offline` | admin | P2 | success,failure | — |
 | `admin-qr-cards` | admin | P2 | success | 1 |
+| `admin-secure-link-create` | admin | P1 | success,error | — |
+| `admin-secure-link-manage` | admin | P1 | success,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
 | `admin-send-proposal-email` | admin | P2 | display,success,failure | 1 |
@@ -6495,6 +6498,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-portfolio-detail` | public | P2 | display,failure | 1 |
 | `public-privacy-policy` | public | P4 | display | 1 |
 | `public-route-not-found` | public | P3 | failure | 1 |
+| `public-secure-link-create` | public | P1 | success,error | — |
+| `public-secure-link-reveal` | public | P1 | success,display,failure | — |
 | `public-terms-conditions` | public | P4 | display | 1 |
 
 
@@ -8054,6 +8059,24 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   no guarda respuestas privadas y no encola operaciones. Las exclusiones de
   rutas y métodos se verifican en los tests del worker.
 
+### FLOW: `admin-secure-link-create`
+
+- **Módulo / rol:** enlaces seguros / administrador del panel.
+- **Ruta:** `/panel/secure-links` → **Nuevo enlace**.
+- **Success:** elegir tipo, título, campos, vigencia e idioma crea el enlace y muestra una única vez la URL con copiar enlace y copiar mensaje sugerido.
+- **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario muestra el error del servidor en ese campo y no crea nada.
+- **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/create/`.
+- **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
+
+### FLOW: `admin-secure-link-manage`
+
+- **Módulo / rol:** enlaces seguros / administrador del panel.
+- **Ruta:** `/panel/secure-links`; `?link=<id>` abre el detalle (destino del correo de aviso).
+- **Display:** pestañas por estado con conteos y **Recibidos** con los enlaces sin abrir que envían los clientes.
+- **Success:** el detalle muestra historial, **Ver contenido** descifra sin gastar el enlace, **Revocar** lo desactiva y **Reactivar** lo vuelve a habilitar (opcionalmente con un enlace nuevo).
+- **API:** `GET /api/secure-links/`, `GET /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`.
+- **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
+
 ### FLOW: `proposal-closing-contact`
 
 - **Module:** proposal
@@ -8268,3 +8291,22 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   no disponible no impide usar el tema durante la visita.
 - **Display:** no se registra una interacción adicional; se valida como parte
   del cambio de tema.
+
+### FLOW: `public-secure-link-create`
+
+- **Módulo / rol:** enlaces seguros / cliente sin sesión.
+- **Ruta:** `/{locale}/secure-link`, compartida desde el panel con **Enlace para clientes**.
+- **Success:** tipo, campos, nombre, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o enviar por correo; sólo el equipo puede abrirla y el equipo recibe un aviso sin el enlace ni el contenido.
+- **Error:** los campos obligatorios faltantes o un captcha fallido se muestran en el formulario sin crear el enlace.
+- **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/public/create/`.
+- **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.
+
+### FLOW: `public-secure-link-reveal`
+
+- **Módulo / rol:** enlaces seguros / destinatario sin sesión.
+- **Ruta:** `/{locale}/secure-link/view#<token>` (el token viaja en el fragmento).
+- **Display:** tipo, remitente, vencimiento y advertencia de un solo uso; cargar la página no gasta el enlace.
+- **Success:** **Ver contenido** revela los campos una vez, con mostrar/ocultar y copiar.
+- **Failure:** enlaces usados, vencidos, revocados o inválidos muestran su estado sin contenido; los creados por clientes piden iniciar sesión del equipo.
+- **API:** `POST /api/secure-links/public/status/`, `POST /api/secure-links/public/reveal/`.
+- **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.

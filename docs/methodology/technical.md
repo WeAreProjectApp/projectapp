@@ -1,5 +1,17 @@
 # Technical Documentation — ProjectApp
 
+> **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
+> `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
+> error. `create_secure_link` es la única tool MCP que acepta secretos en claro:
+> riesgo `write` (un intent sensible persistiría argumentos), ninguna clave de
+> contenido termina en `_id` y la URL sólo se devuelve al crear;
+> `reactivate_secure_link` es `sensitive` y su resultado no incluye URL.
+> Throttles fijos 10/h (creación pública) y 30/min (status/reveal), reCAPTCHA
+> `verify_captcha` + honeypot, `Cache-Control: no-store`. Correo
+> `secure_link_received_team` por el gateway. Migraciones
+> `secure_links.0001` y `content.0259` (descripción del conector). Tests en
+> `backend/secure_links/tests/`.
+
 > **2026-09-25 — producción audiovisual v2:** el pipeline de `explainers/`
 > acepta `--edition brag-v2` y mantiene v1 como default. La narración Kokoro
 > usa cache por contenido y rechaza desbordes; un fingerprint liga voz, guion
@@ -1009,6 +1021,7 @@ description and preserves its credentials, active state and last-use timestamp.
 - `ContractTermsDocument` groups its header, states, preamble and clauses under one `role="document"` paper surface. Border, front sheet, decorative back sheet and shadows use semantic theme tokens; anchors and lazy-loading behavior stay unchanged.
 - `GET /api/proposals/<uuid>/contract-terms/` parses the current default contract Markdown into stable `clause-NN` anchors. `GET /api/proposals/<uuid>/contract/draft-pdf/` forces that same default template even if the proposal has custom contract Markdown.
 - Both public endpoints use draft masking; the PDF omits the contractor signature image and carries the `BORRADOR` watermark. Responses are `no-store` because the global template can change independently from the proposal.
+- **One contract.** The default `ContractTemplate` is the only contract text. It changes only through versioned data migrations (Django admin shows it read-only), so every later contract migration still finds its anchors. `ContractTemplate.mirror_document` links a Document-manager document that stores no copy: panel detail, PDF download, document emails and the Documents MCP render the same masked draft live (`content/services/contract_mirror_service.py`), and every edit, duplicate, archive or delete path refuses it with `contract_mirror_read_only` / `edit_blockers: ['contract_mirror']`. Migration `0261` links production's former manual copy; `manage.py link_contract_document --document-id <id> [--apply]` links any other document.
 
 ### API Proxy in Development
 - Nuxt dev server proxies `/api`, `/admin`, `/static`, `/media` to Django at `127.0.0.1:8000`

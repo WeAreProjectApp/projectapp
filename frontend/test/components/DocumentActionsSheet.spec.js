@@ -265,6 +265,27 @@ describe('DocumentActionsSheet — abrir en pestaña nueva', () => {
   });
 });
 
+describe('DocumentActionsSheet — contract window', () => {
+  it('offers only consulting, sharing and export for the live contract', () => {
+    const wrapper = mountSheet({
+      document: { ...baseDocument, is_contract_mirror: true },
+      editTo: '/es-co/panel/documents/7/edit',
+    });
+    const labels = wrapper.findAll('[data-testid="document-actions-list"] > *')
+      .map((element) => element.text().replace(/\s+/g, ' ').trim());
+
+    expect(labels).toEqual([
+      expect.stringContaining('Ver contrato vigente'),
+      expect.stringContaining('Abrir en pestaña nueva'),
+      expect.stringContaining('Hilo de documentos'),
+      expect.stringContaining('Enviar por correo'),
+      expect.stringContaining('Descargar PDF'),
+      expect.stringContaining('Copiar markdown'),
+    ]);
+    expect(labels.join(' | ')).not.toMatch(/Renombrar|Mover|Duplicar|Archivar|Eliminar|Editar contenido/);
+  });
+});
+
 describe('DocumentActionsSheet — generated snapshots', () => {
   it('offers only read-only navigation, one stored download and archive', () => {
     const wrapper = mountSheet({

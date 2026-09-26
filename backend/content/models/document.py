@@ -256,6 +256,12 @@ class Document(HistoryTrackedModel):
         # archived PDF back into an editable markdown document.
         return bool(self.generated_file)
 
+    @property
+    def is_contract_mirror(self):
+        # The read-only window onto the one contract; it stores no text.
+        from content.services.contract_mirror_service import is_contract_mirror
+        return is_contract_mirror(self)
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = safe_slug(self.title)

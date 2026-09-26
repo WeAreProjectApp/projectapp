@@ -1,5 +1,15 @@
 # Product Requirements Document — ProjectApp
 
+> **Enlaces seguros de un solo uso — 2026-09-26:** el equipo comparte
+> contraseñas, llaves, accesos, datos bancarios o comunicados confidenciales con
+> enlaces que se abren una sola vez, se pueden revocar y reactivar (mismo
+> enlace o uno nuevo) y conservan el contenido cifrado en ProjectApp. La skill
+> `client-response` los crea vía MCP con el contenido que dio el operador. Los
+> clientes envían información al equipo desde `/secure-link`; esos enlaces sólo
+> los abre el equipo y generan un aviso interno sin enlace ni contenido.
+> Vigencia 1/3/7/30 días (7 por defecto; públicos hasta 7). Detalle:
+> `docs/secure-links.md`.
+
 > **CAPTCHA transversal — 2026-09-23:** el panel y la plataforma exigen
 > reCAPTCHA v2 desde el primer intento de login. Si la verificación falla,
 > se bloquea el acceso y se permite reintentar. Incluye la contraseña temporal

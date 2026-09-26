@@ -277,6 +277,36 @@ class DocumentAdmin(admin.ModelAdmin):
         }),
     )
 
+    def get_readonly_fields(self, request, obj=None):
+        fields = super().get_readonly_fields(request, obj)
+        if obj is not None and obj.is_contract_mirror:
+            # The contract window stores no text of its own; see ContractTemplate.
+            return (*fields, 'title', 'content_markdown', 'content_json')
+        return fields
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.is_contract_mirror:
+            return False
+        return super().has_delete_permission(request, obj)
+
+
+class ContractTemplateAdmin(admin.ModelAdmin):
+    """The one contract. Its text changes only through versioned migrations.
+
+    An edit here used to be the way the default template drifted away from the
+    migration chain, after which every later contract migration skipped it.
+    """
+
+    list_display = ('name', 'is_default', 'mirror_document', 'updated_at')
+    raw_id_fields = ('mirror_document',)
+    readonly_fields = ('content_markdown', 'created_at', 'updated_at')
+    fields = ('name', 'is_default', 'mirror_document', 'content_markdown', 'created_at', 'updated_at')
+
+    def has_delete_permission(self, request, obj=None):
+        if obj is not None and obj.is_default:
+            return False
+        return super().has_delete_permission(request, obj)
+
 
 class DocumentFolderAdmin(admin.ModelAdmin):
     """
@@ -438,7 +468,7 @@ admin_site.register(DocumentType)
 admin_site.register(IssuerProfile)
 admin_site.register(CompanySettings, CompanySettingsAdmin)
 admin_site.register(ProposalDocument)
-admin_site.register(ContractTemplate)
+admin_site.register(ContractTemplate, ContractTemplateAdmin)
 admin_site.register(ConfidentialityTemplate)
 @admin.register(FinancingAgreement, site=admin_site)
 class FinancingAgreementAdmin(admin.ModelAdmin):

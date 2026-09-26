@@ -193,8 +193,8 @@ if (batches.length > 1) {
   if (new Set(matrixKeys).size !== aggregateRows.length) {
     throw new Error('La ejecución responsive agregada contiene celdas duplicadas');
   }
-  if ((args.has('--all') || process.env.RESPONSIVE_ALL === '1') && aggregateRows.length !== 575) {
-    throw new Error(`La ejecución completa debe producir 575 celdas; recibidas ${aggregateRows.length}`);
+  if ((args.has('--all') || process.env.RESPONSIVE_ALL === '1') && aggregateRows.length !== 590) {
+    throw new Error(`La ejecución completa debe producir 590 celdas; recibidas ${aggregateRows.length}`);
   }
   const report = {
     timestamp: new Date().toISOString(),

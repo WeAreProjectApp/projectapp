@@ -236,62 +236,24 @@
           </button>
         </div>
 
-        <div v-if="mode === 'paste'" class="flex-1 flex flex-col min-h-0">
-          <div class="flex items-center justify-between mb-2 gap-3 flex-wrap">
-            <label for="doc-markdown" class="block text-sm font-medium text-text-default">Contenido Markdown *</label>
-            <div class="flex items-center gap-3">
-              <span v-if="form.content_markdown" class="text-xs text-text-subtle tabular-nums">
-                {{ form.content_markdown.length.toLocaleString() }} caracteres
-              </span>
-              <BaseSegmented
-                v-model="form.template_style"
-                size="sm"
-                :options="templateStyleOptions"
-                aria-label="Estilo de plantilla"
-              />
-              <BaseButton
-                type="button"
-                variant="ghost"
-                size="sm"
-                @click="showPreview = !showPreview"
-              >
-                <BaseActionIcon :action="showPreview ? 'hide' : 'view'" />
-                {{ showPreview ? 'Ocultar vista previa' : 'Vista previa' }}
-              </BaseButton>
-            </div>
-          </div>
-          <div :class="showPreview ? 'grid grid-cols-1 panel-desktop:grid-cols-2 gap-4 flex-1 min-h-0' : 'flex-1 min-h-0 flex'">
-            <textarea
-              id="doc-markdown"
-              v-model="form.content_markdown"
-              placeholder="# Mi Documento&#10;&#10;Escribe o pega tu contenido en formato Markdown..."
-              class="w-full px-4 py-3 border border-border-default rounded-xl text-sm font-mono leading-relaxed bg-surface text-text-default placeholder:text-text-subtle
-                     focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none resize-none
-                     min-h-[24rem] panel-desktop:h-[calc(100vh-20rem)]"
-            ></textarea>
-            <div
-              v-if="showPreview"
-              class="border border-border-default rounded-xl bg-surface overflow-y-auto
-                     min-h-[24rem] panel-desktop:h-[calc(100vh-20rem)]"
-            >
-              <div class="sticky top-0 px-3 py-2 border-b border-border-default bg-surface-raised rounded-t-xl z-10">
-                <span class="text-xs font-medium text-text-muted uppercase tracking-wide">Vista previa</span>
-              </div>
-              <DocumentMarkdownBody
-                v-if="form.content_markdown.trim()"
-                :markdown="form.content_markdown"
-                :theme="form.template_style"
-                class="px-5 py-4"
-              />
-              <div
-                v-else
-                class="flex items-center justify-center h-64 text-sm text-text-subtle"
-              >
-                Escribe markdown para ver la vista previa...
-              </div>
-            </div>
-          </div>
-        </div>
+        <DocumentEditorContent
+          v-if="mode === 'paste'"
+          v-model="form.content_markdown"
+          textarea-id="doc-markdown"
+          label="Contenido Markdown *"
+          placeholder="# Mi Documento&#10;&#10;Escribe o pega tu contenido en formato Markdown..."
+          :theme="form.template_style"
+          pane-class="min-h-[24rem] panel-desktop:h-[calc(100vh-20rem)]"
+        >
+          <template #tools>
+            <BaseSegmented
+              v-model="form.template_style"
+              size="sm"
+              :options="templateStyleOptions"
+              aria-label="Estilo de plantilla"
+            />
+          </template>
+        </DocumentEditorContent>
 
         <div v-if="mode === 'upload'" class="flex-1 flex flex-col">
           <label class="block text-sm font-medium text-text-default mb-2">Archivo Markdown (.md)</label>
@@ -392,7 +354,7 @@
 
 <script setup>
 import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue';
-import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
+import DocumentEditorContent from '~/components/panel/documents/DocumentEditorContent.vue';
 import DocumentClientNoteModal from '~/components/panel/documents/DocumentClientNoteModal.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
@@ -415,7 +377,6 @@ const clientsStore = useProposalClientsStore();
 const notify = usePanelNotify();
 const mode = ref('paste');
 const uploadedFileName = ref('');
-const showPreview = ref(true);
 const showClientNote = ref(false);
 const isDragging = ref(false);
 const route = useRoute();

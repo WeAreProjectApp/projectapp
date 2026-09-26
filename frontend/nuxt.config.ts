@@ -65,6 +65,8 @@ export default defineNuxtConfig({
     '/es-co/partnership-program': { ssr: true },
     '/en-us/additional-modules/share/**': { ssr: false },
     '/es-co/additional-modules/share/**': { ssr: false },
+    '/en-us/secure-link/**': { ssr: false },
+    '/es-co/secure-link/**': { ssr: false },
     '/en-us/portfolio-works': { ssr: true },
     '/en-us/portfolio-works/**': { ssr: true },
     '/es-co/portfolio-works': { ssr: true },
@@ -132,7 +134,7 @@ export default defineNuxtConfig({
     },
     hooks: {
       'prerender:generate'(route) {
-        const privateRoute = /^\/(?:(?:en-us|es-co)\/)?(?:(?:panel|platform|proposal|auth)(?:\/|$)|additional-modules\/share(?:\/|$))/
+        const privateRoute = /^\/(?:(?:en-us|es-co)\/)?(?:(?:panel|platform|proposal|auth|secure-link)(?:\/|$)|additional-modules\/share(?:\/|$))/
         if (privateRoute.test(route.route ?? '')) route.skip = true
       },
     },

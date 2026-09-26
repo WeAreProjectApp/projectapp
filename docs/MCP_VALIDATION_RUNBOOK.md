@@ -155,7 +155,7 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 | `commercial` | 135 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos y correos comerciales |
 | `projects` | 21 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
 | `documents` | 64 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
-| `communications` | 33 | Hilos, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates y entregabilidad |
+| `communications` | 43 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 43 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
 | `accounting-ledger` | 56 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
@@ -239,6 +239,10 @@ ejecutarse ante un replay.
 1. Invocar `list_documents` y luego `read_document` con el ID elegido.
 2. Exigir `editable=true`, guardar `etag` y leer `edit_blockers`. Un documento
    archivado o un artefacto generado no se fuerza: responde `NOT_EDITABLE`.
+   El contrato vigente (`is_contract_mirror=true`, blocker `contract_mirror`)
+   tampoco: `read_document` devuelve el borrador completo en vivo, y
+   `update_document`, `append_document` y `delete_document` responden
+   `NOT_EDITABLE`. El contrato sólo cambia por migración de su plantilla.
 3. Editar con el nombre canónico `markdown` y el ETag leído:
 
 ```json
@@ -514,6 +518,29 @@ Verificar la nueva fecha y una corrección append-only con valor anterior, valor
 nuevo, motivo y actor. Sólo aplica a mensajes históricos no anulados; borradores,
 fecha idéntica, formato inválido o motivo vacío deben fallar sin crear auditoría.
 
+## Comunicaciones: enlaces seguros de un solo uso
+
+Seis herramientas del conector `communications` delegan en
+`secure_links/services.py`, la misma frontera del panel. Es la **única**
+superficie MCP que recibe secretos en claro, y sólo al crear: el contenido se
+cifra de inmediato y ninguna lectura lo devuelve. La URL (token en el
+fragmento `#`) se entrega una sola vez en `create_secure_link`; las lecturas
+nunca la devuelven, para que una credencial filtrada no pueda recolectar enlaces
+vivos. Ninguna clave de argumento con contenido termina en `_id` (el log sólo
+copia `*_id`), y `create_secure_link` es `write`, no `sensitive`, porque un
+intent sensible persistiría sus argumentos.
+
+| Herramienta | Riesgo | Verificación |
+|---|---|---|
+| `list_secure_link_types` | read | devuelve los 8 tipos y sus campos obligatorios |
+| `create_secure_link` | write | exige `fields`; devuelve `id`, `url` y vencimiento; sin `fields` responde error y no crea nada |
+| `list_secure_links` / `get_secure_link` | read | estado, vencimiento e historial por `kind`; nunca `url` ni contenido |
+| `revoke_secure_link` | write | el enlace pasa a `revoked` y la página pública muestra "desactivado" |
+| `reactivate_secure_link` | sensitive | primero `confirmation_id`, luego `confirm_action`; el resultado confirmado no incluye la URL |
+
+Rechazos a verificar: tipo inexistente, campo obligatorio vacío, campo ajeno al
+tipo, proyecto de otro cliente y vigencia fuera de 1/3/7/30.
+
 ## Documentos: eliminación recuperable de observaciones
 
 Usar un documento markdown con dos observaciones, una pendiente enlazada a un
@@ -711,7 +738,7 @@ qué queda fuera del MCP.
 - Los 16 conectores aparecen en el registro y `tools/list` coincide con este
   inventario; los diez canónicos cubren las áreas operativas y los seis
   históricos permanecen compatibles.
-- Comunicaciones expone 33 operaciones, incluidos preview, envío confirmado,
+- Comunicaciones expone 43 operaciones, incluidos preview, envío confirmado, enlaces seguros,
   adjuntos, templates y entregabilidad; sus rechazos dejan la base consistente.
 - Los MCP existentes devuelven y aceptan los campos descritos en su contrato;
   Documentos expone 64 herramientas y conserva edición Markdown con ETag,

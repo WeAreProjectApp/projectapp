@@ -46,3 +46,27 @@ introduce AAC; música atenuada durante la voz y fade final sin cortar palabras.
   se repitió por un elemento del footer desmontado durante la carga y pasó.
 - Resultado del CI de la entrega: consultar el PR #415; usa los tests y el build
   para Django de la configuración versionada, sin los ajustes locales.
+
+## Revisión 2026-09-26 — Protección de propiedad intelectual (catálogo)
+
+- Cambio: la escena 4 pasa a «Nuevo en el catálogo» con la ficha del módulo 25 y
+  una fila por capa; la escena 2 muestra su tarjeta con la etiqueta Nuevo. El
+  Programa de Alianza no se re-renderizó.
+- Narración ef_dora a 1.1 con lead 0.2: las escenas intactas salieron del caché
+  con las mismas duraciones; la escena 4 va en dos frases, 3.03 s de 3.10 s y
+  5.27 s de 5.90 s disponibles. Sólo cambian sus tres cues en `captions.es.json`.
+- Hyperframes check: lint, runtime y layout sin errores ni advertencias;
+  contraste 44/44. Stills revisados a 7.5, 25.5, 28, 29 y 30.5 s: tarjeta Nuevo,
+  ficha legible, subtítulos en una línea y titular alineado.
+- MP4 exportado: 45.000 s, H.264 High 1920×1080 a 30 fps, AAC LC estéreo a
+  48 kHz, `moov` antes de `mdat` (faststart); decodificación completa sin errores.
+  La portada WebP salió idéntica a la anterior, porque la escena 1 no cambió.
+- Reproducción real en Chromium: carga, avance, salto a la escena 4 (28 s) y
+  final natural desde 43.5 s aprobados (209 frames decodificados).
+- Node: ocho pruebas de narración aprobadas. Sin cambios de frontend: mismo
+  nombre de asset y misma duración, así que Jest, E2E y el Mapa de vistas no se
+  tocan; el CI del PR los corre sobre el asset nuevo.
+
+| Video | Tamaño | Sonoridad integrada | Pico real tras AAC |
+|---|---:|---:|---:|
+| Módulos adicionales (revisión 2026-09-26) | 2.09 MiB | -16.6 LUFS | -2.1 dBTP |

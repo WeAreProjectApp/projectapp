@@ -4,6 +4,7 @@ import { mockApi } from '../helpers/api.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 import { financingProgramFixture } from '../helpers/financing-fixture.js';
+import { SECURE_LINK_TOKEN, publicStatus, revealedContent, secureLinkTypes } from '../helpers/secure-links.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 const uuid = '11111111-1111-4111-8111-111111111111';
@@ -15,7 +16,7 @@ const tree = { handle: 'responsive-fixture', kind: 'personal', display_name: 'Pe
 const proposal = { id: 1, uuid, title: 'Propuesta responsive', client_name: 'Cliente fixture', status: 'sent', language: 'es', total_investment: '5000000', currency: 'COP', requirement_groups: [], sections: [{ id: 1, section_type: 'greeting', title: 'Bienvenida', order: 0, is_enabled: true, content_json: { proposalTitle: 'Propuesta responsive', clientName: 'Cliente fixture' } }, { id: 2, section_type: 'executive_summary', title: 'Resumen', order: 1, is_enabled: true, content_json: { title: 'Propuesta responsive', paragraphs: ['Resultado concreto'] } }] };
 const diagnostic = { uuid, title: 'Diagnóstico responsive', client_name: 'Cliente fixture', status: 'sent', language: 'es', sections: [{ id: 1, section_type: 'purpose', title: 'Propósito', order: 0, is_enabled: true, visibility: 'both', content_json: { title: 'Propósito', paragraphs: ['Resultado concreto'] } }], render_context: { client_name: 'Cliente fixture', currency: 'COP' } };
 const visualKeys = [
-  'frontend/pages/index.vue', 'frontend/pages/landing-apps.vue', 'frontend/pages/landing-software.vue', 'frontend/pages/landing-web-design.vue', 'frontend/pages/about-us.vue', 'frontend/pages/contact.vue', 'frontend/pages/contact-success.vue', 'frontend/pages/portfolio-works/index.vue', 'frontend/pages/portfolio-works/[slug].vue', 'frontend/pages/blog/index.vue', 'frontend/pages/blog/[slug].vue', 'frontend/pages/lk/[handle].vue', 'frontend/pages/privacy-policy.vue', 'frontend/pages/terms-and-conditions.vue', 'frontend/pages/auth/linkedin/callback.vue', 'frontend/pages/[...slug].vue', 'frontend/pages/additional-modules/index.vue', 'frontend/pages/additional-modules/share/[uuid].vue', 'frontend/pages/partnership-program/index.vue', 'frontend/pages/proposal/[uuid]/index.vue', 'frontend/pages/diagnostic/[uuid]/index.vue',
+  'frontend/pages/index.vue', 'frontend/pages/landing-apps.vue', 'frontend/pages/landing-software.vue', 'frontend/pages/landing-web-design.vue', 'frontend/pages/about-us.vue', 'frontend/pages/contact.vue', 'frontend/pages/contact-success.vue', 'frontend/pages/portfolio-works/index.vue', 'frontend/pages/portfolio-works/[slug].vue', 'frontend/pages/blog/index.vue', 'frontend/pages/blog/[slug].vue', 'frontend/pages/lk/[handle].vue', 'frontend/pages/privacy-policy.vue', 'frontend/pages/terms-and-conditions.vue', 'frontend/pages/auth/linkedin/callback.vue', 'frontend/pages/[...slug].vue', 'frontend/pages/additional-modules/index.vue', 'frontend/pages/additional-modules/share/[uuid].vue', 'frontend/pages/partnership-program/index.vue', 'frontend/pages/proposal/[uuid]/index.vue', 'frontend/pages/diagnostic/[uuid]/index.vue', 'frontend/pages/secure-link/index.vue', 'frontend/pages/secure-link/view.vue',
 ].map(getResponsiveScenario);
 const linkedInCallbackScenario = getResponsiveScenario('frontend/pages/auth/linkedin/callback.vue');
 const fallbackScenario = getResponsiveScenario('frontend/pages/[...slug].vue');
@@ -24,7 +25,7 @@ const interactiveVisualKeys = visualKeys.filter((scenario) => (
   && scenario.catalogKey !== fallbackScenario.catalogKey
 ));
 const flows = {
-  'frontend/pages/index.vue': 'public-home', 'frontend/pages/landing-apps.vue': 'public-landing-apps', 'frontend/pages/landing-software.vue': 'public-landing-software', 'frontend/pages/landing-web-design.vue': 'public-landing-web-design', 'frontend/pages/about-us.vue': 'public-about-us', 'frontend/pages/contact.vue': 'public-contact-submit', 'frontend/pages/contact-success.vue': 'public-contact-submit', 'frontend/pages/portfolio-works/index.vue': 'public-portfolio', 'frontend/pages/portfolio-works/[slug].vue': 'public-portfolio-detail', 'frontend/pages/blog/index.vue': 'blog-list', 'frontend/pages/blog/[slug].vue': 'blog-detail', 'frontend/pages/lk/[handle].vue': 'public-linktree-view', 'frontend/pages/privacy-policy.vue': 'public-privacy-policy', 'frontend/pages/terms-and-conditions.vue': 'public-terms-conditions', 'frontend/pages/auth/linkedin/callback.vue': 'admin-blog-linkedin-connect', 'frontend/pages/[...slug].vue': 'public-route-not-found', 'frontend/pages/additional-modules/index.vue': 'public-additional-modules-detail', 'frontend/pages/additional-modules/share/[uuid].vue': 'public-additional-modules-share', 'frontend/pages/partnership-program/index.vue': 'public-financing-terms', 'frontend/pages/proposal/[uuid]/index.vue': 'proposal-view-navigation', 'frontend/pages/diagnostic/[uuid]/index.vue': 'diagnostic-public-view',
+  'frontend/pages/index.vue': 'public-home', 'frontend/pages/landing-apps.vue': 'public-landing-apps', 'frontend/pages/landing-software.vue': 'public-landing-software', 'frontend/pages/landing-web-design.vue': 'public-landing-web-design', 'frontend/pages/about-us.vue': 'public-about-us', 'frontend/pages/contact.vue': 'public-contact-submit', 'frontend/pages/contact-success.vue': 'public-contact-submit', 'frontend/pages/portfolio-works/index.vue': 'public-portfolio', 'frontend/pages/portfolio-works/[slug].vue': 'public-portfolio-detail', 'frontend/pages/blog/index.vue': 'blog-list', 'frontend/pages/blog/[slug].vue': 'blog-detail', 'frontend/pages/lk/[handle].vue': 'public-linktree-view', 'frontend/pages/privacy-policy.vue': 'public-privacy-policy', 'frontend/pages/terms-and-conditions.vue': 'public-terms-conditions', 'frontend/pages/auth/linkedin/callback.vue': 'admin-blog-linkedin-connect', 'frontend/pages/[...slug].vue': 'public-route-not-found', 'frontend/pages/additional-modules/index.vue': 'public-additional-modules-detail', 'frontend/pages/additional-modules/share/[uuid].vue': 'public-additional-modules-share', 'frontend/pages/partnership-program/index.vue': 'public-financing-terms', 'frontend/pages/proposal/[uuid]/index.vue': 'proposal-view-navigation', 'frontend/pages/diagnostic/[uuid]/index.vue': 'diagnostic-public-view', 'frontend/pages/secure-link/index.vue': 'public-secure-link-create', 'frontend/pages/secure-link/view.vue': 'public-secure-link-reveal',
 };
 const outcomes = {
   'frontend/pages/auth/linkedin/callback.vue': 'error',
@@ -39,6 +40,8 @@ const resolvedRoutes = {
   'frontend/pages/proposal/[uuid]/index.vue': `/en-us/proposal/${uuid}`,
   'frontend/pages/diagnostic/[uuid]/index.vue': `/en-us/diagnostic/${uuid}`,
   'frontend/pages/partnership-program/index.vue': '/es-co/partnership-program',
+  'frontend/pages/secure-link/index.vue': '/es-co/secure-link',
+  'frontend/pages/secure-link/view.vue': `/es-co/secure-link/view#${SECURE_LINK_TOKEN}`,
   'frontend/pages/[...slug].vue': '/responsive-e2e-not-found',
 };
 
@@ -63,6 +66,9 @@ async function setupPublic(page) {
     if (apiPath.includes('/track')) return json({ ok: true, view_count: 1 });
     if (apiPath.endsWith('/respond/') && method === 'POST') return json({ ...diagnostic, status: 'accepted' });
     if (apiPath === 'new-contact/' && method === 'POST') return json({ id: 1, subject: 'Contacto responsive' });
+    if (apiPath === 'secure-links/public/types/' && method === 'GET') return json({ types: secureLinkTypes });
+    if (apiPath === 'secure-links/public/status/' && method === 'POST') return json(publicStatus());
+    if (apiPath === 'secure-links/public/reveal/' && method === 'POST') return json(revealedContent);
     return null;
   });
 }
@@ -124,6 +130,8 @@ async function exercise(page, scenario) {
     'frontend/pages/partnership-program/index.vue': { action: async () => { await page.getByTestId('financing-term-trigger-code-custody').click(); return page.getByTestId('financing-term-code-custody'); }, assert: (locator) => expect(locator).toContainText('La custodia no transfiere la propiedad intelectual.') },
     'frontend/pages/proposal/[uuid]/index.vue': { action: async () => { await openProposalExecutiveView(page); const next = page.getByTestId('nav-next'); await expect(next).toBeVisible({ timeout: 35_000 }); return next; }, assert: (locator) => expect(locator).toContainText('Siguiente') },
     'frontend/pages/diagnostic/[uuid]/index.vue': { action: async () => { await page.getByTestId('diagnostic-start-journey').click(); return page.getByText('Propósito', { exact: true }); }, assert: (locator) => expect(locator).toHaveText('Propósito') },
+    'frontend/pages/secure-link/index.vue': { action: async () => { const name = page.getByTestId('secure-link-public-name'); await name.fill('Cliente responsive'); return name; }, assert: (locator) => expect(locator).toHaveValue('Cliente responsive') },
+    'frontend/pages/secure-link/view.vue': { action: async () => { await page.getByTestId('secure-link-reveal').click(); return page.getByTestId('secure-link-text-service'); }, assert: (locator) => expect(locator).toHaveText('Django admin') },
   }[scenario.catalogKey];
   const priorityLocator = await entries.action();
   await entries.assert(priorityLocator);
