@@ -74,8 +74,8 @@ async function openCatalog(page) {
   await expect(page.getByTestId('document-state-catalog')).toBeVisible();
 }
 
-async function expectInlineControlError(page, control, message) {
-  await expect(control).toHaveAttribute('aria-invalid', 'true');
+// The control must point at the message that explains it, not merely sit near it.
+async function expectDescribedBy(page, control, message) {
   const errorId = await control.getAttribute('aria-describedby');
   expect(errorId).toBeTruthy();
   await expect(page.locator(`[id="${errorId}"]`)).toHaveText(message);
@@ -120,16 +120,12 @@ test.describe('Admin Document States Manage', () => {
     await page.getByTestId('catalog-create-state').click();
     await page.getByTestId('catalog-create-group').click();
 
-    await expectInlineControlError(
-      page,
-      page.getByTestId('catalog-new-state-name'),
-      'Escribe el nombre del estado.',
-    );
-    await expectInlineControlError(
-      page,
-      page.getByTestId('catalog-new-group-name'),
-      'Escribe el nombre del grupo.',
-    );
+    const stateName = page.getByTestId('catalog-new-state-name');
+    const groupName = page.getByTestId('catalog-new-group-name');
+    await expect(stateName).toHaveAttribute('aria-invalid', 'true');
+    await expect(groupName).toHaveAttribute('aria-invalid', 'true');
+    await expectDescribedBy(page, stateName, 'Escribe el nombre del estado.');
+    await expectDescribedBy(page, groupName, 'Escribe el nombre del grupo.');
     expect(writes).toHaveLength(0);
   });
 
