@@ -27,18 +27,35 @@ function mountModal(record = RECORD, props = {}) {
   })
 }
 
+function entryIds(wrapper) {
+  return wrapper.findAll('li button').map((node) => node.attributes('data-testid'))
+}
+
 describe('HostingActionsModal', () => {
-  it('keeps the five row actions in one touch menu', () => {
+  // Bug caught: below 1024px the history of a hosting could not be opened at
+  // all, and above it the history sat as a loose button beside five icons.
+  it('opens with the record history, then the hosting actions', () => {
     const wrapper = mountModal()
 
-    expect(wrapper.findAll('[data-testid^="hosting-"]')
-      .map((node) => node.attributes('data-testid'))).toEqual(expect.arrayContaining([
+    expect(entryIds(wrapper)).toEqual([
+      'hosting-history-8',
       'hosting-cycles-8',
       'hosting-send-billing-8',
       'hosting-emails-8',
       'hosting-edit-8',
       'hosting-delete-8',
-    ]))
+    ])
+  })
+
+  it('offers the note right after the history when the hosting has one', async () => {
+    const withNote = { ...RECORD, notes: 'Renueva el dominio en marzo' }
+    const wrapper = mountModal(withNote)
+
+    expect(entryIds(wrapper).slice(0, 2)).toEqual(['hosting-history-8', 'hosting-notes-8'])
+    await wrapper.get('[data-testid="hosting-notes-8"]').trigger('click')
+
+    expect(wrapper.emitted('notes')[0]).toEqual([withNote])
+    expect(wrapper.emitted('close')).toHaveLength(1)
   })
 
   it('explains why billing is unavailable when the hosting has no email', () => {

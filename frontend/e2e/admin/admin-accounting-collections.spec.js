@@ -12,6 +12,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 import {
   ADMIN_ACCOUNTING_COLLECTIONS,
   ADMIN_ACCOUNTING_COLLECTION_GROUPING,
@@ -633,6 +634,8 @@ test.describe('Admin Accounting Collections', () => {
 
     expect(await scroller.evaluate((element) => element.scrollWidth <= element.clientWidth))
       .toBe(true);
+    // Fitting is not enough: the visible columns must also reach the edge.
+    await expectNoBlankBand(table);
     await expect(page.getByTestId('accounting-actions-header')).toBeVisible();
     await expect(action).toBeVisible();
     await expect(status).toHaveCSS('white-space', 'nowrap');
@@ -1403,11 +1406,14 @@ test.describe('Admin Accounting Collections', () => {
     // browser test follows the positive path all the way to the saved copy.
     await chooseCollectionAction(page, 1, 'notes');
 
-    const body = page.getByTestId('collection-notes-body');
+    // The shared note dialog of the accounting menus, plus who can read it.
+    const body = page.getByTestId('accounting-note-body');
     await expect(body).toBeVisible();
     await expect(body).toContainText('Acordado por WhatsApp');
     // The line break the operator typed survives the round trip.
     await expect(body).toContainText('Pagan el 15, no antes.');
+    await expect(page.getByTestId('accounting-note-hint'))
+      .toContainText('no se muestran al cliente');
   });
 
   test('the preview swaps email and PDF behind tabs when the window is too narrow', {

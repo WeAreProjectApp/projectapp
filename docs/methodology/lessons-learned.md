@@ -1831,3 +1831,32 @@ artifact path, REST/MCP path and editor path explicit, then render from that
 field without fallback copy. When a future edit is valid but history matters,
 snapshot the rendered output at send time: the live aggregate owns the next
 delivery, and the snapshot owns the previous one.
+
+## 67. A `<col>` is a column even when its cells are hidden
+
+Hiding cells with CSS removes them from the layout, but a `<col>` in the
+`<colgroup>` still creates a track, and percentages computed over every column
+still promise space to the hidden ones. In a `table-layout: fixed` table that
+promise becomes a blank band beside the visible columns — and content quietly
+overlapped inside it, so "no horizontal scroll" checks kept passing. Share the
+width per viewport profile among the columns that profile shows, emit `<col>`
+only for control tracks, and assert geometry (the visible headers add up to
+the table width) rather than overflow alone.
+
+Fixed layout also cannot respect content. Where a table must fit a phone,
+prefer auto layout with unconstrained data columns: atomic values keep their
+width and the wrapping primary column takes the rest. Percentage widths on
+every data column turn the fixed control tracks into the only place auto layout
+can put the slack, which is why a kebab track once grew in auto layout.
+
+## 68. Close the menu before opening what it chose
+
+BaseModal's focus trap and scroll lock react to their own `modelValue`, and
+Vue patches sibling components in template order. A menu that emits its action
+and its close in the same tick lets the next dialog open first when it sits
+earlier in the template (or in the parent): it saves the menu item as its focus
+return target and then the menu's close unlocks the page underneath it. Emit
+`close`, await `nextTick`, then hand the choice over — or keep the menu as the
+first modal of the page. Nested menus (a row menu inside the client emails
+modal) must also leave the scroll lock to the outer modal and tell it to stop
+answering the global Esc listener while they are open.

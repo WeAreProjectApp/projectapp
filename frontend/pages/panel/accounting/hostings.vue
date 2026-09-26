@@ -146,12 +146,11 @@
         :highlight-id="lastMutatedId"
         :columns="columns"
         :rows="pagedRecords"
-        :show-actions="!isNarrowActions"
         :highlight-query="currentFilters.search"
         :sort-key="sortKey"
         :sort-dir="sortDir"
-        @edit="openEditModal"
-        @delete="confirmDeleteRecord"
+        :show-default-actions="false"
+        row-actions-layout="menu-start"
         @sort="toggleSort"
       >
         <!-- The relation, not the free-text label. `client_name` held the
@@ -159,7 +158,9 @@
              different facts into one editable cell; it is now the billing
              snapshot and lives in the form. -->
         <template #cell-client_display_name="{ row }">
-          <span class="inline-flex items-center gap-1.5">
+          <!-- Wraps so a narrow column drops the badge to its own line instead
+               of breaking the client name letter by letter. -->
+          <span class="inline-flex flex-wrap items-center gap-1.5">
             <HighlightText
               v-if="row.client_display_name"
               :text="row.client_display_name"
@@ -197,7 +198,7 @@
           >—</span>
         </template>
         <!-- El conteo de ciclos es la dirección del histórico: un enlace de
-             verdad, no sólo el botón de la columna de acciones. -->
+             verdad, no sólo la entrada «Ciclos de pago» del menú de la fila. -->
         <template #cell-cycles_count="{ row }">
           <BaseRowLink
             :to="hostingCyclesTo(row.id)"
@@ -252,7 +253,9 @@
           </span>
         </template>
         <template #cell-is_active="{ row }">
-          <div class="flex items-center gap-2">
+          <!-- Wraps so the «Cobro enviado» chip drops below the status select
+               instead of pushing the last column past a phone's edge. -->
+          <div class="flex flex-wrap items-center gap-2">
             <AccountingStatusSelect
               :value="row.is_active"
               :updating="statusUpdatingId === row.id"
@@ -268,52 +271,15 @@
             </span>
           </div>
         </template>
-        <template #cell-row_actions="{ row }">
-          <div class="flex items-center justify-end">
-            <BaseActionButton
-              action="more"
-              variant="ghost"
-              size="sm"
-              label="Acciones del hosting"
-              :data-testid="`hosting-actions-${row.id}`"
-              @click="hostingActionsRow = row"
-            />
-          </div>
-        </template>
+        <!-- One kebab at every width: the cycles, billing, emails, edit and
+             delete actions, and the record history, all live in its menu. -->
         <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="hosting" :record="row" />
-          <BaseActionButton
-            action="billing-cycles"
-            variant="ghost"
-            size="sm"
-            label="Ciclos de pago"
-            tooltip="Registrar pago de ciclo / ver histórico"
-            :data-testid="`hosting-cycles-${row.id}`"
-            @click.stop="openCyclesModal(row)"
-          />
-          <BaseActionButton
-            action="send"
-            variant="ghost"
-            size="sm"
-            label="Enviar cuenta de cobro"
-            :tooltip="row.billing_email
-              ? `Enviar cuenta de cobro a ${row.billing_email}`
-              : 'Vincula un cliente con correo o escribe un email de facturación'"
-            :disabled="!row.billing_email || billingId === row.id"
-            :disabled-reason="!row.billing_email
-              ? 'Vincula un cliente con correo o escribe un email de facturación.'
-              : 'Ya se está enviando la cuenta de cobro. Espera a que termine.'"
-            :data-testid="`hosting-send-billing-${row.id}`"
-            @click.stop="askSendBilling(row)"
-          />
-          <BaseActionButton
-            action="email-history"
-            variant="ghost"
-            size="sm"
-            label="Ver correos de este hosting"
-            tooltip="Ver qué correos salieron por este hosting"
-            :data-testid="`hosting-emails-${row.id}`"
-            @click.stop="goToHostingEmails(row)"
+          <AccountingRowActionsButton
+            :label="`Acciones de ${hostingLabel(row)}`"
+            :test-id="`hosting-actions-${row.id}`"
+            :busy="billingId === row.id"
+            busy-label="Enviando cuenta de cobro"
+            @open="hostingActionsRow = row"
           />
         </template>
       </AccountingTable>
@@ -349,6 +315,23 @@
       project-enabled
       @submit="applyClientToSelection"
       @submit-project="applyProjectToSelection"
+    />
+
+    <!-- First modal on purpose: its close must patch before the dialog it
+         opens (form, cycles, history, note, confirmation), or the two trade
+         focus traps and the page loses its scroll lock. -->
+    <HostingActionsModal
+      :open="hostingActionsRow !== null"
+      :record="hostingActionsRow"
+      :billing-busy="billingId === hostingActionsRow?.id"
+      @close="hostingActionsRow = null"
+      @history="historyRow = $event"
+      @notes="noteRow = $event"
+      @cycles="openCyclesModal"
+      @send-billing="askSendBilling"
+      @emails="goToHostingEmails"
+      @edit="openEditModal"
+      @delete="confirmDeleteRecord"
     />
 
     <!-- Create/edit modal -->
@@ -391,16 +374,19 @@
       @changed="onCyclesChanged"
     />
 
-    <HostingActionsModal
-      :open="hostingActionsRow !== null"
-      :record="hostingActionsRow"
-      :billing-busy="billingId === hostingActionsRow?.id"
-      @close="hostingActionsRow = null"
-      @cycles="openCyclesModal"
-      @send-billing="askSendBilling"
-      @emails="goToHostingEmails"
-      @edit="openEditModal"
-      @delete="confirmDeleteRecord"
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="hosting"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="noteRow ? hostingLabel(noteRow) : ''"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <ConfirmModal
@@ -417,9 +403,11 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref, watch } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingTable from '~/components/accounting/AccountingTable.vue';
 import AccountingErrorState from '~/components/accounting/AccountingErrorState.vue';
@@ -439,8 +427,6 @@ import ProjectAssignUnlinkedModal from '~/components/panel/projects/ProjectAssig
 import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue';
 import ProposalFilterTabs from '~/components/proposals/ProposalFilterTabs.vue';
 import BasePagination from '~/components/base/BasePagination.vue';
-import { PANEL_BREAKPOINTS } from '~/config/responsive';
-import { useIsMobile } from '~/composables/useIsMobile';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { useAccountingCrudPage } from '~/composables/useAccountingCrudPage';
@@ -468,8 +454,11 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] }
 const store = useAccountingStore();
 const projectsStore = usePanelProjectsStore();
 const notify = usePanelNotify();
-const { isMobile: isNarrowActions } = useIsMobile(PANEL_BREAKPOINTS.landscape - 1);
+// Row menu and the dialogs it opens: history and note live in the menu too,
+// since the leading track holds nothing but the kebab.
 const hostingActionsRow = ref(null);
+const historyRow = ref(null);
+const noteRow = ref(null);
 
 /** Noun the bulk client bar uses in its confirmation and result copy. */
 const HOSTING_ENTITY = { singular: 'hosting', plural: 'hostings' };
@@ -742,7 +731,7 @@ const {
   sortDefaults: { monthly_value: 'desc', total_paid: 'desc' },
 });
 
-const baseColumns = [
+const columns = [
   {
     key: 'client_display_name', label: 'Cliente', size: 'name', sortable: true,
     responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
@@ -756,8 +745,11 @@ const baseColumns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   {
+    // Grouped on a phone: checkbox, kebab, Cliente, Valor/mes and the Estado
+    // select did not fit 412px, and the client name was squeezed to one
+    // letter per line. It keeps its column from the portrait tablet up.
     key: 'monthly_value', label: 'Valor/mes', format: 'money', sortable: true,
-    responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    responsive: { compact: 'group', portrait: 'keep', landscape: 'keep' },
   },
   {
     key: 'payment_modality_label', label: 'Modalidad',
@@ -783,18 +775,6 @@ const baseColumns = [
   },
 ];
 
-const columns = computed(() => (
-  isNarrowActions.value
-    ? [
-      ...baseColumns,
-      {
-        key: 'row_actions', label: '', align: 'right', size: 'icons',
-        responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
-      },
-    ]
-    : baseColumns
-));
-
 // Fed the FULL store list, not the filtered rows: the selection is meant to
 // survive a filter change, so only "this hosting no longer exists" may drop an
 // id from it.
@@ -802,7 +782,7 @@ const { selectedIds, clearSelection, dropIds } = useRowSelection(() => store.hos
 
 const filteredIds = computed(() => filteredRecords.value.map((row) => row.id));
 
-/** What identifies a hosting in the bulk confirmation list. */
+/** What identifies a hosting: in the bulk confirmation list and the row menu. */
 const hostingLabel = (row) =>
   row.domain_url || row.display_label || `Hosting #${row.id}`;
 

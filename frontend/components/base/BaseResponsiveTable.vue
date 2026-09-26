@@ -15,14 +15,21 @@
       :class="[
         hasResponsivePolicy ? 'base-responsive-table--priority' : '',
         hasColumnResize ? 'base-responsive-table--resizable' : '',
+        hasFluidMenuStart ? 'base-responsive-table--fluid-menu' : '',
       ]"
       :style="tableStyle"
     >
       <caption v-if="caption" class="sr-only">{{ caption }}</caption>
+      <!-- Data <col>s only where the headers keep their declared width: a <col>
+           is a column even when every cell under it is hidden, so a fluid
+           menu-start table would hand those tracks the width of the columns a
+           narrow profile drops. -->
       <colgroup v-if="hasMenuStart">
         <col v-if="selectable" :style="{ width: SELECT_TRACK }">
         <col :style="{ width: ROW_ACTION_MENU_TRACK }">
-        <col v-for="col in resolved" :key="col.key">
+        <template v-if="!hasFluidMenuStart">
+          <col v-for="col in resolved" :key="col.key">
+        </template>
       </colgroup>
       <thead>
         <tr class="bg-surface-raised text-left text-xs text-text-muted uppercase tracking-wider">
@@ -51,6 +58,7 @@
             :class="[
               col.headerPadClass, col.alignClass, col.nowrapClass,
               responsiveCellClass(col), col.columnWidth?.resizable ? 'relative' : '',
+              hasFluidMenuStart ? 'base-responsive-table__fluid-th' : '',
             ]"
             :aria-sort="ariaSort(col)"
           >
@@ -220,6 +228,9 @@
                 </template>
               </slot>
 
+              <!-- The label floor is the primary column's min-content on a phone:
+                   at 5.5rem it alone pushed a three-value row past 412px. Longer
+                   labels still grow the track through `auto`. -->
               <dl
                 v-if="col.responsive?.primary && groupedColumns.compact.length"
                 class="mt-2 space-y-1 panel-portrait:hidden"
@@ -228,7 +239,7 @@
                 <div
                   v-for="detail in groupedColumns.compact"
                   :key="detail.key"
-                  class="grid grid-cols-[minmax(5.5rem,auto)_1fr] gap-2 text-left text-xs"
+                  class="grid grid-cols-[minmax(4.5rem,auto)_1fr] gap-2 text-left text-xs"
                 >
                   <dt class="font-medium text-text-subtle">{{ detail.label }}</dt>
                   <dd
@@ -353,7 +364,9 @@ import {
   TABLE_DENSITY,
   actionsWidthFor,
   minWidthFor,
+  profileWidthVars,
   resolveColumns,
+  responsivePolicyFor,
 } from '~/utils/tableLayout';
 
 const props = defineProps({
@@ -504,18 +517,52 @@ const hasResponsivePolicy = computed(() =>
   props.columns.some((column) => Boolean(column.responsive)),
 );
 
+/**
+ * A menu-start table with a responsive policy switches layout per profile (see
+ * FIXED_LAYOUT_PROFILES): auto with content-sized data columns below landscape,
+ * fixed with re-shared percentages from landscape up. Either way no hidden
+ * column keeps a share. Resizable tables already own their widths.
+ */
+const hasFluidMenuStart = computed(() => (
+  hasMenuStart.value && hasResponsivePolicy.value && !hasColumnResize.value
+));
+
+const headerWidthVars = computed(() => (
+  hasFluidMenuStart.value ? profileWidthVars(resolved.value) : {}
+));
+
+// Landscape still hides columns, so its scroll floor counts only the ones it keeps.
+const tableMinWidthLandscape = computed(() => (
+  hasFluidMenuStart.value
+    ? minWidthFor(
+      resolved.value.filter((column) => responsivePolicyFor(column, 'landscape') === 'keep'),
+      { hasActions: props.showActions, rowActionsLayout: props.rowActionsLayout },
+    )
+    : null
+));
+
 const tableStyle = computed(() => {
   if (hasColumnResize.value) return resize.tableStyle.value;
   const widthStyle = hasResponsivePolicy.value
-    ? { '--table-min-width': tableMinWidth.value }
+    ? {
+      '--table-min-width': tableMinWidth.value,
+      ...(tableMinWidthLandscape.value
+        ? { '--table-min-width-landscape': tableMinWidthLandscape.value }
+        : {}),
+    }
     : { minWidth: tableMinWidth.value };
-  return hasMenuStart.value
+  // A fluid menu-start table sets its layout from CSS: an inline value would
+  // beat the media query that keeps small screens on auto layout.
+  return hasMenuStart.value && !hasFluidMenuStart.value
     ? { ...widthStyle, tableLayout: 'fixed' }
     : widthStyle;
 });
 
 function columnHeaderStyle(column) {
-  return hasColumnResize.value ? resize.columnStyle(column.key) : { width: column.width };
+  if (hasColumnResize.value) return resize.columnStyle(column.key);
+  // Custom properties only: an inline width would beat the profile media queries.
+  if (hasFluidMenuStart.value) return headerWidthVars.value[column.key];
+  return { width: column.width };
 }
 
 const actionsHeaderStyle = computed(() => (
@@ -558,10 +605,7 @@ const POLICY_CLASSES = {
 };
 
 function policyFor(column, profile) {
-  if (!column.responsive) return 'keep';
-  if (column.responsive[profile]) return column.responsive[profile];
-  if (profile === 'portrait') return column.responsive.compact || 'keep';
-  return 'keep';
+  return responsivePolicyFor(column, profile);
 }
 
 function responsiveCellClass(column) {
@@ -744,7 +788,37 @@ function formatGroupedValue(col, value) {
 
 @media (min-width: 1024px) {
   .base-responsive-table--priority {
+    min-width: var(--table-min-width-landscape, var(--table-min-width));
+  }
+}
+@media (min-width: 1280px) {
+  .base-responsive-table--priority {
     min-width: var(--table-min-width);
+  }
+}
+
+/* Fluid menu-start tables. Below panel-landscape (1024) the layout is auto and
+ * the data headers carry no width, so atomic values keep their content width,
+ * the wrapping primary column takes the rest and the fixed control tracks get
+ * no slack. From panel-landscape up the layout is fixed and the columns each
+ * profile shows share 100% of what the tracks leave (panel-desktop at 1280). */
+.base-responsive-table--fluid-menu {
+  table-layout: auto;
+}
+.base-responsive-table__fluid-th {
+  width: auto;
+}
+@media (min-width: 1024px) {
+  .base-responsive-table--fluid-menu {
+    table-layout: fixed;
+  }
+  .base-responsive-table__fluid-th {
+    width: var(--col-w-landscape);
+  }
+}
+@media (min-width: 1280px) {
+  .base-responsive-table__fluid-th {
+    width: var(--col-w-desktop);
   }
 }
 </style>

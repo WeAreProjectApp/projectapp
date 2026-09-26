@@ -9,6 +9,8 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.js';
+import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 import {
   ADMIN_ACCOUNTING_EXPENSES_CRUD,
   ADMIN_ACCOUNTING_HOSTINGS,
@@ -165,6 +167,15 @@ function buildHandler({
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({ ...EXPENSE_ROW, id: 99, ...body }),
+      };
+    }
+    if (/^accounting\/expenses\/\d+\/update\/$/.test(apiPath) && method === 'PATCH') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ ...expenses[0], ...body }),
       };
     }
     if (apiPath === 'accounting/hostings/' && method === 'GET') {
@@ -338,6 +349,63 @@ test.describe('Admin Accounting Expenses & Hostings', () => {
     await expect(page.getByRole('heading', { name: 'Nuevo gasto' })).toBeVisible();
   });
 
+  // Bug caught: Gastos kept a trailing «Acciones» column with a loose
+  // Detalle e historial button squeezed beside the edit and delete icons.
+  test('the expense row menu owns every expense action', {
+    tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; this test pins the
+    // row action contract, driven through the kebab below)
+    await mockApi(page, buildHandler({
+      calls: [],
+      expenses: [{ ...EXPENSE_ROW, notes: 'Plan anual pagado con la tarjeta de la empresa.' }],
+    }));
+    await page.goto('/panel/accounting/expenses', { waitUntil: 'domcontentloaded' });
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toContainText('Claude Code 20x', { timeout: 25_000 });
+
+    await expect(page.getByRole('columnheader', { name: 'Acciones' })).toHaveText('');
+    await expect(row.getByTestId('accounting-actions-cell-1').getByRole('button')).toHaveCount(1);
+    await expect(page.getByTestId('accounting-edit-1')).toHaveCount(0);
+
+    await openRowMenu(page, { kebab: 'expense-actions-1', menu: 'expense-actions-modal' });
+    const menu = page.getByTestId('expense-actions-modal');
+    await expect(menu).toContainText('Claude Code 20x');
+    await expect(menu.getByRole('button', { name: 'Detalle e historial' })).toBeVisible();
+    await expect(menu.getByRole('button', { name: 'Editar' })).toBeVisible();
+    await expect(menu.getByRole('button', { name: 'Eliminar' })).toBeVisible();
+
+    await menu.getByRole('button', { name: 'Ver nota' }).click();
+    await expect(page.getByTestId('accounting-note-body'))
+      .toContainText('Plan anual pagado con la tarjeta de la empresa.');
+  });
+
+  test('an expense is edited from its row menu', {
+    tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; the edit starts at
+    // the row's kebab, which IS driven below)
+    const calls = [];
+    await mockApi(page, buildHandler({ calls }));
+    await page.goto('/panel/accounting/expenses', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('accounting-row-1'))
+      .toContainText('Claude Code 20x', { timeout: 25_000 });
+
+    await chooseRowAction(page, {
+      kebab: 'expense-actions-1',
+      menu: 'expense-actions-modal',
+      action: 'expense-action-edit-1',
+    });
+    await expect(page.getByRole('heading', { name: 'Editar Gasto' })).toBeVisible();
+    await page.getByTestId('expense-form-submit').click();
+
+    await expect(page.getByText('Gasto actualizado')).toBeVisible();
+    // The form arrived prefilled with the row the menu was opened from.
+    const update = calls.find((call) => call.method === 'PATCH');
+    expect(update.apiPath).toBe('accounting/expenses/1/update/');
+    expect(update.body.concept).toBe('Claude Code 20x');
+  });
+
   test('hostings list renders meta stat cards', {
     tag: [...ADMIN_ACCOUNTING_HOSTINGS, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
@@ -350,7 +418,8 @@ test.describe('Admin Accounting Expenses & Hostings', () => {
     ).toBeVisible({ timeout: 25_000 });
     await expect(page.getByText('Hostings activos', { exact: true })).toBeVisible();
     await expect(page.getByText('Ingreso mensual', { exact: true })).toBeVisible();
-    await expect(page.getByText('$91.667 COP').first()).toBeVisible();
+    // Valor/mes also renders in the phone's grouped details, hidden here.
+    await expect(page.getByText('$91.667 COP').filter({ visible: true }).first()).toBeVisible();
   });
 
   test('hostings table shows domain and estado badge per row', {
@@ -368,6 +437,38 @@ test.describe('Admin Accounting Expenses & Hostings', () => {
     await expect(statusSelects.nth(0)).toHaveValue('true');
     // quality: allow-fragile-selector (asserts each row's status by its position in the table order)
     await expect(statusSelects.nth(1)).toHaveValue('false');
+  });
+
+  // Bug caught: below 1024px a hosting's history could not be opened at all
+  // (its narrow menu lacked it), and above it the history was a loose button
+  // among five icons in a trailing «Acciones» column.
+  test('the hosting row menu starts with its record history on a phone', {
+    tag: [...ADMIN_ACCOUNTING_HOSTINGS, '@role:admin', '@outcome:display', '@responsive:accounting'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; this test pins the
+    // row menu at phone width, driven through the kebab below)
+    await page.setViewportSize({ width: 412, height: 915 });
+    await mockApi(page, buildHandler({ calls: [] }));
+    await page.goto('/panel/accounting/hostings', { waitUntil: 'domcontentloaded' });
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toBeVisible({ timeout: 25_000 });
+
+    const table = row.locator('xpath=ancestor::table');
+    await expectNoBlankBand(table);
+    // Valor/mes groups under Cliente on a phone, so the row fits without a
+    // horizontal scroll and the Estado select stays whole.
+    expect(await table.locator('..').evaluate((element) => element.scrollWidth <= element.clientWidth))
+      .toBe(true);
+    await expect(row.getByTestId('accounting-actions-cell-1').getByRole('button')).toHaveCount(1);
+
+    await openRowMenu(page, { kebab: 'hosting-actions-1', menu: 'hosting-actions-modal' });
+    const history = page.getByTestId('hosting-history-1');
+    const cycles = page.getByTestId('hosting-cycles-1');
+    expect((await history.boundingBox()).y).toBeLessThan((await cycles.boundingBox()).y);
+
+    await history.click();
+    await expect(page.getByRole('heading', { name: 'Detalle del registro' })).toBeVisible();
+    await expect(page.getByTestId('history-record-modal')).toContainText('korehealths.com');
   });
 
   test('creates a hosting through the modal', {
@@ -584,7 +685,11 @@ test.describe('Admin Accounting Hostings — cliente del hosting', () => {
     await page.getByTestId('accounting-select-2').check();
     await expect(page.getByTestId('hostings-bulk-bar')).toContainText('2 seleccionados');
 
-    await page.getByTestId('accounting-delete-2').click();
+    await chooseRowAction(page, {
+      kebab: 'hosting-actions-2',
+      menu: 'hosting-actions-modal',
+      action: 'hosting-delete-2',
+    });
     await page.getByTestId('confirm-modal-confirm').click();
 
     await expect(page.getByTestId('accounting-row-2')).toHaveCount(0);

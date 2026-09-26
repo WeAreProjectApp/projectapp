@@ -181,12 +181,71 @@ describe('BaseResponsiveTable', () => {
       showDefaultActions: false,
       rowActionsLayout: 'menu-start',
     })
+    const table = wrapper.get('table')
     const controlTracks = wrapper.findAll('colgroup col')
 
-    expect(wrapper.get('table').element.style.tableLayout).toBe('fixed')
-    expect(controlTracks).toHaveLength(columns.length + 2)
+    // The layout comes from CSS: fixed from landscape up, auto below it.
+    expect(table.classes()).toContain('base-responsive-table--fluid-menu')
+    expect(table.element.style.tableLayout).toBe('')
+    // Only the control tracks: a data <col> would keep a hidden column's share.
+    expect(controlTracks).toHaveLength(2)
     expect(controlTracks[0].element.style.width).toBe('2.5rem')
     expect(controlTracks[1].element.style.width).toBe('3.5rem')
+  })
+
+  it('keeps the inline fixed layout on a menu-start table without a policy', () => {
+    const wrapper = mountTable({
+      columns: [{ key: 'name', label: 'Proyecto' }, { key: 'status', label: 'Estado' }],
+      showActions: true,
+      showDefaultActions: false,
+      rowActionsLayout: 'menu-start',
+    })
+    const table = wrapper.get('table')
+
+    expect(table.element.style.tableLayout).toBe('fixed')
+    expect(table.classes()).not.toContain('base-responsive-table--fluid-menu')
+    // Kebab track plus one <col> per data column, exactly as before.
+    expect(wrapper.findAll('colgroup col')).toHaveLength(3)
+  })
+
+  // Bug caught: hidden columns kept their desktop share in the fixed layout and
+  // left a blank band beside the visible ones.
+  it('renormalizes menu-start header widths per profile', () => {
+    const wrapper = mountTable({
+      showActions: true,
+      showDefaultActions: false,
+      rowActionsLayout: 'menu-start',
+    })
+    const [name, owner, , internal] = wrapper.get('thead tr').findAll('th').slice(1)
+    const share = (header, profile) => header.element.style.getPropertyValue(`--col-w-${profile}`)
+
+    expect(share(name, 'landscape')).toBe('37.04%')
+    expect(share(owner, 'landscape')).toBe('18.52%')
+    expect(share(internal, 'landscape')).toBe('0.00%')
+    expect(share(name, 'desktop')).toBe('31.25%')
+    // Below landscape the layout is auto and the headers take no share at all.
+    expect(share(name, 'compact')).toBe('')
+    expect(name.element.style.width).toBe('')
+    expect(name.classes()).toContain('base-responsive-table__fluid-th')
+  })
+
+  it('keeps inline-end headers on their declared width', () => {
+    const wrapper = mountTable({ showActions: true, showDefaultActions: false })
+    const name = wrapper.get('thead tr').findAll('th')[0]
+
+    expect(name.element.style.width).toBe('26.85%')
+    expect(name.element.style.getPropertyValue('--col-w-compact')).toBe('')
+  })
+
+  it('floors the landscape scroll width on the columns landscape keeps', () => {
+    const table = mountTable({
+      showActions: true,
+      showDefaultActions: false,
+      rowActionsLayout: 'menu-start',
+    }).get('table')
+
+    expect(table.element.style.getPropertyValue('--table-min-width-landscape')).toBe('30.50rem')
+    expect(table.element.style.getPropertyValue('--table-min-width')).toBe('35.50rem')
   })
 
   it('keeps custom menu activation out of interactive row navigation', async () => {

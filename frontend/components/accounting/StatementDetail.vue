@@ -177,13 +177,17 @@
       <table class="statement-transactions-table w-full">
         <thead>
           <tr class="border-b border-border-muted text-left">
+            <th
+              class="px-1.5 py-2 panel-landscape:w-14"
+              aria-label="Acciones"
+              data-testid="statement-tx-actions-header"
+            />
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Fecha</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Descripción</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Comercio</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Categoría</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider">Cuota</th>
             <th class="px-2.5 py-2 first:pl-4 last:pr-4 text-xs font-medium text-text-muted uppercase tracking-wider text-right">Valor</th>
-            <th class="px-2.5 py-2 last:pr-4 text-center" />
           </tr>
         </thead>
         <tbody class="divide-y divide-border-muted">
@@ -193,7 +197,22 @@
             class="statement-transaction-row h-9 transition-colors hover:bg-surface-raised"
             :data-testid="`statement-tx-${tx.id}`"
           >
+            <!-- The kebab is the row's only control besides the click-to-edit
+                 cells: detail/history, the note, Editar and Eliminar live in
+                 its menu. -->
             <td
+              data-field="actions"
+              class="px-1.5 py-1.5 text-center panel-landscape:w-14"
+              @click.stop
+            >
+              <AccountingRowActionsButton
+                :label="`Acciones de ${txLabel(tx)}`"
+                :test-id="`statement-tx-actions-${tx.id}`"
+                @open="actionsTx = tx"
+              />
+            </td>
+            <td
+              data-field="transaction_date"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted whitespace-nowrap"
               :data-testid="`tx-cell-transaction_date-${tx.id}`"
             >
@@ -208,6 +227,7 @@
               </AccountingInlineCell>
             </td>
             <td
+              data-field="raw_description"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-xs text-text-subtle max-w-[220px]"
               :title="tx.raw_description"
               :data-testid="`tx-cell-raw_description-${tx.id}`"
@@ -221,7 +241,11 @@
                 <span class="block truncate">{{ tx.raw_description }}</span>
               </AccountingInlineCell>
             </td>
-            <td class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm" :data-testid="`tx-cell-merchant_name-${tx.id}`">
+            <td
+              data-field="merchant_name"
+              class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm"
+              :data-testid="`tx-cell-merchant_name-${tx.id}`"
+            >
               <span class="statement-mobile-label panel-landscape:hidden">Comercio</span>
               <AccountingInlineCell
                 type="merchant"
@@ -239,7 +263,11 @@
                 </span>
               </AccountingInlineCell>
             </td>
-            <td class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted" :data-testid="`tx-cell-category-${tx.id}`">
+            <td
+              data-field="category"
+              class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted"
+              :data-testid="`tx-cell-category-${tx.id}`"
+            >
               <span class="statement-mobile-label panel-landscape:hidden">Categoría</span>
               <AccountingInlineCell
                 type="select"
@@ -251,7 +279,11 @@
                 {{ tx.category_label }}
               </AccountingInlineCell>
             </td>
-            <td class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted" :data-testid="`tx-cell-installment_label-${tx.id}`">
+            <td
+              data-field="installment_label"
+              class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm text-text-muted"
+              :data-testid="`tx-cell-installment_label-${tx.id}`"
+            >
               <span class="statement-mobile-label panel-landscape:hidden">Cuota</span>
               <AccountingInlineCell
                 type="installments"
@@ -263,6 +295,7 @@
               </AccountingInlineCell>
             </td>
             <td
+              data-field="amount"
               class="px-2.5 py-1.5 first:pl-4 last:pr-4 text-sm font-medium text-right whitespace-nowrap"
               :class="Number(tx.amount) < 0 ? 'text-success-strong' : 'text-text-default'"
               :data-testid="`tx-cell-amount-${tx.id}`"
@@ -283,37 +316,53 @@
                 {{ tx.original_amount }} {{ tx.original_currency }}
               </span>
             </td>
-            <td class="px-2.5 py-1.5 last:pr-4 text-center whitespace-nowrap">
-              <EntityHistoryRecordButton entity-type="statement_tx" :record="tx" />
-              <BaseButton
-                variant="ghost"
-                size="sm"
-                @click="$emit('edit-tx', tx)"
-              >
-                Editar
-              </BaseButton>
-              <BaseButton variant="danger-ghost" size="sm" v-if="!isProcessed" @click="$emit('delete-tx', tx)">
-                Eliminar
-              </BaseButton>
-            </td>
           </tr>
         </tbody>
       </table>
     </div>
+
+    <AccountingRowActionsModal
+      :open="actionsTx !== null"
+      :record="actionsTx"
+      :title="actionsTx ? txLabel(actionsTx) : ''"
+      :subtitle="txSummary(actionsTx)"
+      :actions="txActions"
+      test-id-prefix="statement-tx"
+      @close="actionsTx = null"
+      @select="runTxAction"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyTx !== null"
+      entity-type="statement_tx"
+      :record="historyTx"
+      @close="historyTx = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteTx !== null"
+      :subtitle="txSummary(noteTx)"
+      :notes="noteTx?.notes ?? ''"
+      @close="noteTx = null"
+    />
   </section>
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
 import { computed, ref } from 'vue';
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingIndicatorGroup from '~/components/accounting/AccountingIndicatorGroup.vue';
 import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import { PANEL_BREAKPOINTS } from '~/config/responsive';
 import { useIsMobile } from '~/composables/useIsMobile';
+import { leadingRowActions } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
 import { formatDate as formatDateBase } from '~/utils/formatDate';
 
@@ -375,6 +424,43 @@ function money(value) {
 function formatDate(iso) {
   return formatDateBase(iso, { fallback: '' });
 }
+
+// ── Transaction row menu ──
+// Owned here, like the table: the page keeps receiving edit-tx / delete-tx.
+// Eliminar exists only while the statement is still a draft.
+
+const actionsTx = ref(null);
+const historyTx = ref(null);
+const noteTx = ref(null);
+
+function txLabel(tx) {
+  return tx.merchant_name || tx.raw_description || `Transacción #${tx.id}`;
+}
+
+function txSummary(tx) {
+  return tx ? `${formatDate(tx.transaction_date)} · ${money(tx.amount)}` : '';
+}
+
+const txActions = computed(() => (actionsTx.value
+  ? [
+    ...leadingRowActions(actionsTx.value),
+    { id: 'edit', action: 'edit', label: 'Editar' },
+    ...(isProcessed.value
+      ? []
+      : [{ id: 'delete', action: 'delete', label: 'Eliminar', danger: true }]),
+  ]
+  : []));
+
+const txActionHandlers = {
+  history: (tx) => { historyTx.value = tx; },
+  notes: (tx) => { noteTx.value = tx; },
+  edit: (tx) => emit('edit-tx', tx),
+  delete: (tx) => emit('delete-tx', tx),
+};
+
+function runTxAction(id, tx) {
+  txActionHandlers[id]?.(tx);
+}
 </script>
 
 <style scoped>
@@ -399,10 +485,12 @@ function formatDate(iso) {
     display: none;
   }
 
+  /* Cells are placed by field, not position: the kebab leads the card like
+   * in the Bolsillo cards, then comercio and valor share its first line. */
   .statement-transaction-row {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 0.5rem 1rem;
+    grid-template-columns: 2.75rem minmax(0, 1fr) auto;
+    gap: 0.5rem 0.75rem;
     height: auto;
     padding: 0.875rem 1rem;
   }
@@ -412,30 +500,37 @@ function formatDate(iso) {
     padding: 0;
   }
 
-  .statement-transaction-row > td:nth-child(3) {
+  .statement-transaction-row > [data-field="actions"] {
     grid-column: 1;
+    grid-row: 1;
+    align-self: start;
+  }
+
+  .statement-transaction-row > [data-field="merchant_name"] {
+    grid-column: 2;
     grid-row: 1;
     font-weight: 600;
   }
 
-  .statement-transaction-row > td:nth-child(6) {
-    grid-column: 2;
+  .statement-transaction-row > [data-field="amount"] {
+    grid-column: 3;
     grid-row: 1;
   }
 
-  .statement-transaction-row > td:nth-child(2),
-  .statement-transaction-row > td:nth-child(1),
-  .statement-transaction-row > td:nth-child(4),
-  .statement-transaction-row > td:nth-child(5),
-  .statement-transaction-row > td:nth-child(7) {
-    grid-column: 1 / -1;
+  /* The inline cell's editable area is `w-full max-w-full` with a negative
+   * inline margin, so in this auto-sized track it laid out 8px narrower than it
+   * measured and the amount broke across two lines. Auto width, uncapped, keeps
+   * both the same. */
+  .statement-transaction-row > [data-field="amount"] :deep(.touch-target) {
+    width: auto;
+    max-width: none;
   }
 
-  .statement-transaction-row > td:nth-child(7) {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    padding-top: 0.25rem;
+  .statement-transaction-row > [data-field="transaction_date"],
+  .statement-transaction-row > [data-field="raw_description"],
+  .statement-transaction-row > [data-field="category"],
+  .statement-transaction-row > [data-field="installment_label"] {
+    grid-column: 2 / -1;
   }
 }
 </style>

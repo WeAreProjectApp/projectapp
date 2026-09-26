@@ -542,6 +542,33 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
     ).toHaveAttribute('aria-selected', 'true');
   });
 
+  // Bug caught: "Detalle e historial" sat beside the kebab in the fixed 56 px
+  // actions track and spilled over the ledger columns.
+  test('the leading three-dots menu owns the record history', {
+    tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (reaching pocket through the subnav is covered by
+    // the display specs above; this one pins the row action track)
+    await mockApi(page, buildHandler({ calls: [] }));
+    await page.goto('/panel/accounting/pocket', { waitUntil: 'domcontentloaded' });
+    const row = page.getByTestId('accounting-row-1');
+    await expect(row).toContainText('Vastago (Fase 1) - Inicio 40%', { timeout: 25_000 });
+
+    const actionsCell = row.getByTestId('accounting-actions-cell-1');
+    await expect(actionsCell.getByRole('button')).toHaveCount(1);
+    const spill = await actionsCell.evaluate((cell) => cell.scrollWidth - cell.clientWidth);
+    expect(spill).toBeLessThanOrEqual(0);
+
+    await page.getByTestId('pocket-actions-1').click();
+    await expect(page.getByTestId('pocket-actions-modal')).toContainText('Detalle e historial');
+    await page.getByTestId('pocket-action-history-1').click();
+
+    await expect(page.getByRole('heading', { name: 'Detalle del registro' })).toBeVisible();
+    await expect(page.getByTestId('history-record-modal'))
+      .toContainText('Vastago (Fase 1) - Inicio 40%');
+    await expect(page.getByTestId('pocket-actions-modal')).toHaveCount(0);
+  });
+
   test('new movement modal opens on Egreso with the attribution selector ready', {
     tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
@@ -936,6 +963,7 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
       await page.getByTestId('recurring-actions-1').click();
 
       const modal = page.getByTestId('recurring-actions-modal');
+      await expect(modal).toContainText('Detalle e historial');
       await expect(modal).toContainText('Editar');
       await expect(modal).toContainText('Duplicar');
       await expect(modal).toContainText('Desactivar');
@@ -943,6 +971,8 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
       await expect(modal).toContainText('Archivar');
       await expect(page.getByTestId('accounting-edit-1')).toHaveCount(0);
       await expect(page.getByTestId('accounting-delete-1')).toHaveCount(0);
+      // The history button used to sit beside the kebab and overflow its track.
+      await expect(page.getByTestId('accounting-actions-cell-1').getByRole('button')).toHaveCount(1);
     });
 
     test('duplicate opens a recalculated draft and creates only after review', {

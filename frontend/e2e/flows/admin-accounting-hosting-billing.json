@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Superuser sends a client the cuenta de cobro from a hosting row at /panel/accounting/hostings: the paper-plane action (disabled without client email) opens a ConfirmModal previewing amount/recipient, POSTs /api/accounting/hostings/:id/send-collection-account/ which issues the Document (public number, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the PDF attached and stamps billing_requested_at (pauses the expiry notices; a 'Cobro enviado' badge appears). Partial failure (email down) keeps the document issued and warns to re-send from Cobros.",
+  "description": "Superuser sends a client the cuenta de cobro from a hosting row at /panel/accounting/hostings: the row menu's 'Enviar cuenta de cobro' entry (disabled with its reason without client email) opens a ConfirmModal previewing amount/recipient, POSTs /api/accounting/hostings/:id/send-collection-account/ which issues the Document (public number, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the PDF attached and stamps billing_requested_at (pauses the expiry notices; a 'Cobro enviado' badge appears). Partial failure (email down) keeps the document issued and warns to re-send from Cobros.",
   "expectedSpecs": 3,
   "outcomes": [
     "display",

@@ -51,6 +51,7 @@
 <script setup>
 import { computed } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
+import { HISTORY_ROW_ACTION, NOTE_ROW_ACTION, hasNote } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
 
 /**
@@ -69,7 +70,7 @@ const props = defineProps({
 });
 
 const emit = defineEmits([
-  'close', 'detail', 'edit', 'duplicate', 'liquidate', 'generate-collection',
+  'close', 'detail', 'notes', 'edit', 'duplicate', 'liquidate', 'generate-collection',
   'view-collection', 'view-emails', 'toggle-mute', 'write-off', 'delete',
 ]);
 
@@ -81,7 +82,10 @@ const actions = computed(() => {
   const row = props.record;
   if (!row) return [];
   const list = [
-    { id: 'detail', action: 'view', label: 'Ver detalle', event: 'detail' },
+    // The income detail modal carries the record history too, hence the shared
+    // label; the id stays `detail` because it opens that richer modal.
+    { ...HISTORY_ROW_ACTION, id: 'detail', event: 'detail' },
+    ...(hasNote(row) ? [{ ...NOTE_ROW_ACTION, event: 'notes' }] : []),
     { id: 'edit', action: 'edit', label: 'Editar', event: 'edit' },
     // Offered whatever the state is: the frequent case is duplicating an
     // already collected income to open its next period.

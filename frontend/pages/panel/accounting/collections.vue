@@ -282,26 +282,15 @@
       </dl>
     </ConfirmModal>
 
-    <!-- Internal notes, read-only: written in the create form, never sent. -->
-    <BaseModal v-model="notesOpen" kind="detail" @close="notesRow = null">
-      <div class="p-6 space-y-3">
-        <h3 class="text-lg font-bold text-text-default">
-          Notas internas · {{ notesRow?.public_number || `#${notesRow?.id}` }}
-        </h3>
-        <p class="text-xs text-text-subtle">
-          Sólo para ti: no se muestran al cliente ni viajan en el PDF o el correo.
-        </p>
-        <p
-          class="text-sm text-text-default whitespace-pre-line"
-          data-testid="collection-notes-body"
-        >
-          {{ notesRow?.notes }}
-        </p>
-        <div class="flex justify-end pt-2">
-          <BaseButton variant="secondary" @click="notesRow = null">Cerrar</BaseButton>
-        </div>
-      </div>
-    </BaseModal>
+    <!-- Internal notes, read-only: written in the create form, never sent.
+         Same note dialog as every accounting menu, plus who can read it. -->
+    <AccountingNoteModal
+      :open="notesRow !== null"
+      :title="`Notas internas · ${notesRow?.public_number || `#${notesRow?.id}`}`"
+      hint="Sólo para ti: no se muestran al cliente ni viajan en el PDF o el correo."
+      :notes="notesRow?.notes ?? ''"
+      @close="notesRow = null"
+    />
 
     <!-- Create modal: form → preview del correo/PDF → confirmar y enviar -->
     <CollectionAccountFormModal
@@ -347,7 +336,7 @@ import CollectionActionsModal from '~/components/accounting/CollectionActionsMod
 import IncomeLiquidateModal from '~/components/accounting/IncomeLiquidateModal.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import BaseBadge from '~/components/base/BaseBadge.vue';
-import BaseModal from '~/components/base/BaseModal.vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseSegmentedMulti from '~/components/base/BaseSegmentedMulti.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
@@ -781,10 +770,6 @@ async function loadRecords() {
 // is `overflow-x-auto`, which clips anything positioned absolutely inside a row.
 
 const notesRow = ref(null);
-const notesOpen = computed({
-  get: () => notesRow.value !== null,
-  set: (open) => { if (!open) notesRow.value = null; },
-});
 
 // ── Row actions ──
 

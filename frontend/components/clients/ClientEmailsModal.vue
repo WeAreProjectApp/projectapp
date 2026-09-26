@@ -3,8 +3,8 @@
     :model-value="open"
     kind="detail"
     full-height
-    :close-on-esc="!previewOpen"
-    :close-on-backdrop="!previewOpen"
+    :close-on-esc="!previewOpen && !rowMenuOpen"
+    :close-on-backdrop="!previewOpen && !rowMenuOpen"
     @update:model-value="emit('close')"
   >
     <div class="flex flex-col h-full" data-testid="client-emails-modal">
@@ -43,8 +43,10 @@
           <EmailLogTable
             :entries="entries"
             :retrying-id="retryingId"
+            nested
             @view-body="emit('view-body', $event)"
             @retry="retrySend"
+            @menu-open-change="rowMenuOpen = $event"
           />
           <div v-if="numPages > 1" class="flex items-center justify-between text-sm">
             <BaseButton
@@ -122,6 +124,9 @@ const numPages = ref(1);
 const counts = ref({ client: 0, internal: 0 });
 const audience = ref('client');
 const retryingId = ref(null);
+// A row's actions menu opens above this modal; like the preview, it must be
+// the only dialog answering Esc and backdrop clicks while it is open.
+const rowMenuOpen = ref(false);
 
 const clientName = computed(() => props.client?.name || 'este cliente');
 

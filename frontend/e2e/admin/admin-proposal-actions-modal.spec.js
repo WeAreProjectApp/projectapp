@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_ACTIONS_MODAL } from '../helpers/flow-tags.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 const mockDraftProposal = {
   id: 1,
@@ -104,6 +105,24 @@ test.describe('Admin Proposal Actions Modal', () => {
       { testId: null, label: null, text: 'Cliente', hasCheckbox: false },
     ]);
     await expect(actionsHeader).toHaveCSS('width', '56px');
+  });
+
+  // Bug caught: the fixed layout kept the share of the columns a phone hides
+  // and the visible ones stopped short of a blank band.
+  test('the proposal table leaves no blank band on a phone', {
+    tag: ['@outcome:display', ...ADMIN_PROPOSAL_ACTIONS_MODAL, '@role:admin', '@responsive:commercial'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the list navigation path is covered by its flow; this test isolates table layout)
+    await page.setViewportSize({ width: 412, height: 915 });
+    await mockApi(page, buildMockHandler([mockDraftProposal]));
+    await page.goto('/panel/proposals', { waitUntil: 'domcontentloaded' });
+
+    const actionsBtn = page.getByTestId('proposal-actions-1');
+    await expect(actionsBtn).toBeVisible({ timeout: 15000 });
+    await expectNoBlankBand(page.getByTestId('proposal-actions-cell-1').locator('xpath=ancestor::table'));
+
+    await actionsBtn.click();
+    await expect(page.getByText('Editar propuesta')).toBeVisible({ timeout: 3000 });
   });
 
   test('keeps horizontal pan available from the action control', {

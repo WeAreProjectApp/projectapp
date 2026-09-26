@@ -1,9 +1,15 @@
 <script setup>
-import { computed, ref } from 'vue';
+import { computed } from 'vue';
 import EntityHistoryTabs from './EntityHistoryTabs.vue';
 import HistoryValue from './HistoryValue.vue';
-const props = defineProps({ entityType: { type: String, required: true }, record: { type: Object, required: true } });
-const open = ref(false);
+// Controlled so a row-actions menu can open it: a three-dot track has room for
+// the kebab only, so «Detalle e historial» is always a menu entry.
+const props = defineProps({
+  open: { type: Boolean, default: false },
+  entityType: { type: String, required: true },
+  record: { type: Object, default: null },
+});
+const emit = defineEmits(['close']);
 const fields = {
   expense: ['concept', 'period_date', 'category', 'total_amount', 'gustavo_amount', 'carlos_amount', 'notes'],
   hosting: ['client_name', 'client_email', 'domain_url', 'payment_modality', 'valid_from', 'valid_to', 'total_paid', 'notes'],
@@ -30,16 +36,15 @@ const labels = {
   installment_number: 'Cuota', installments_total: 'Total de cuotas', match_text: 'Texto de coincidencia',
   default_category: 'Categoría por defecto', is_gateway: 'Intermediario de pago',
 };
-const recordDetails = computed(() => Object.fromEntries(
+const recordDetails = computed(() => (props.record ? Object.fromEntries(
   (fields[props.entityType] || ['name', 'notes'])
     .filter((field) => field in props.record).map((field) => [field, props.record[field]]),
-));
+) : {}));
 </script>
 <template>
-  <BaseButton variant="secondary" size="sm" data-testid="history-record-open" @click.stop="open = true">Detalle e historial</BaseButton>
-  <BaseModal v-model="open" kind="detail">
-    <div v-if="open" class="space-y-4 p-5">
-      <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold text-text-default">Detalle del registro</h2><BaseButton variant="ghost" @click="open = false">Cerrar</BaseButton></div>
+  <BaseModal :model-value="open && Boolean(record)" kind="detail" @close="emit('close')">
+    <div v-if="open && record" class="space-y-4 p-5" data-testid="history-record-modal">
+      <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold text-text-default">Detalle del registro</h2><BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton></div>
       <EntityHistoryTabs :entity-type="entityType" :object-id="record.id">
         <HistoryValue :value="recordDetails" :labels="labels" />
       </EntityHistoryTabs>

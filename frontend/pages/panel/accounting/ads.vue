@@ -108,10 +108,17 @@
         :highlight-query="currentFilters.search"
         :sort-key="sortKey"
         :sort-dir="sortDir"
-        @edit="openEditModal"
-        @delete="confirmDelete"
+        :show-default-actions="false"
+        row-actions-layout="menu-start"
         @sort="toggleSort"
       >
+        <template #row-actions="{ row }">
+          <AccountingRowActionsButton
+            :label="`Acciones de ${adSpendLabel(row)}`"
+            :test-id="`ads-actions-${row.id}`"
+            @open="actionsRow = row"
+          />
+        </template>
         <template #cell-origin_card="{ row }">
           {{ row.origin_card || '—' }}
         </template>
@@ -121,9 +128,6 @@
               ? money(row.accumulated)
               : '—' }}
           </span>
-        </template>
-        <template #row-actions="{ row }">
-          <EntityHistoryRecordButton entity-type="ads" :record="row" />
         </template>
       </AccountingTable>
 
@@ -145,6 +149,17 @@
       />
     </template>
 
+    <AccountingRowActionsModal
+      :open="actionsRow !== null"
+      :record="actionsRow"
+      :title="actionsRow ? adSpendLabel(actionsRow) : ''"
+      :subtitle="adSpendSummary(actionsRow)"
+      :actions="adSpendActions"
+      test-id-prefix="ads"
+      @close="actionsRow = null"
+      @select="runAdSpendAction"
+    />
+
     <!-- Create / edit modal -->
     <AdSpendFormModal
       :open="showFormModal"
@@ -152,6 +167,21 @@
       :saving="store.isUpdating"
       @close="closeFormModal"
       @submit="submitForm"
+    />
+
+    <EntityHistoryRecordModal
+      :open="historyRow !== null"
+      entity-type="ads"
+      :record="historyRow"
+      @close="historyRow = null"
+    />
+
+    <AccountingNoteModal
+      :open="noteRow !== null"
+      :subtitle="adSpendSummary(noteRow)"
+      :notes="noteRow?.notes ?? ''"
+      :highlight-query="currentFilters.search"
+      @close="noteRow = null"
     />
 
     <!-- Confirm delete -->
@@ -171,8 +201,11 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordButton from '~/components/history/EntityHistoryRecordButton.vue';
-import { computed, onMounted } from 'vue';
+import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { computed, onMounted, ref } from 'vue';
+import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
+import AccountingRowActionsButton from '~/components/accounting/AccountingRowActionsButton.vue';
+import AccountingRowActionsModal from '~/components/accounting/AccountingRowActionsModal.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
 import AccountingStatCard from '~/components/accounting/AccountingStatCard.vue';
 import AccountingTable from '~/components/accounting/AccountingTable.vue';
@@ -197,6 +230,8 @@ import {
 } from '~/composables/useAccountingFilters';
 import { useAccountingStore } from '~/stores/accounting';
 import { buildExportParams } from '~/utils/accountingExportParams';
+import { leadingRowActions } from '~/utils/accountingRowActions';
+import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
 import { addWeightPct } from '~/utils/percent';
 
@@ -381,6 +416,41 @@ const {
   // Refetch: the accumulated column depends on the full history order.
   onAfterMutation: loadRecords,
 });
+
+// ── Row actions ──
+// One kebab per row in the leading track; its menu owns Detalle e historial,
+// Ver nota (when the spend has one), Editar and Eliminar.
+
+const actionsRow = ref(null);
+const historyRow = ref(null);
+const noteRow = ref(null);
+
+function adSpendLabel(row) {
+  return `${row.platform_label || row.platform || 'Ads'} del ${formatDate(row.spend_date)}`;
+}
+
+function adSpendSummary(row) {
+  return row ? `${formatDate(row.spend_date)} · ${money(row.amount)}` : '';
+}
+
+const adSpendActions = computed(() => (actionsRow.value
+  ? [
+    ...leadingRowActions(actionsRow.value),
+    { id: 'edit', action: 'edit', label: 'Editar' },
+    { id: 'delete', action: 'delete', label: 'Eliminar', danger: true },
+  ]
+  : []));
+
+const adSpendActionHandlers = {
+  history: (row) => { historyRow.value = row; },
+  notes: (row) => { noteRow.value = row; },
+  edit: (row) => openEditModal(row),
+  delete: (row) => confirmDelete(row),
+};
+
+function runAdSpendAction(id, row) {
+  adSpendActionHandlers[id]?.(row);
+}
 
 async function loadRecords() {
   const result = await store.fetchRecords('ads');

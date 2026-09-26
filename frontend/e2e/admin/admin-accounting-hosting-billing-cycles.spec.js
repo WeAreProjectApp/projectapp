@@ -2,7 +2,7 @@
  * E2E tests for the hosting row actions on /panel/accounting/hostings.
  *
  * FLOWS: admin-accounting-hosting-billing, admin-accounting-hosting-cycles
- * Covers: paper-plane cuenta de cobro send (email gate, confirm preview,
+ * Covers: the row menu's cuenta de cobro send (email gate, confirm preview,
  *         success + email-failure toasts, "Cobro enviado" badge) and the
  *         cycles modal (history with backfill badge, register payment,
  *         delete cycle with confirm).
@@ -17,7 +17,9 @@ import {
 import {
   BACKFILL_CYCLE,
   buildHandler,
+  chooseHostingAction,
   gotoHostings,
+  openHostingMenu,
 } from '../helpers/accounting-hosting-cycles.js';
 
 test.setTimeout(60_000);
@@ -39,9 +41,14 @@ test.describe('Admin Accounting Hosting Billing', () => {
     await gotoHostings(page);
 
     // Row 2 has neither its own email nor a linked client: nothing to send to.
-    await expect(page.getByTestId('hosting-send-billing-2')).toBeDisabled();
+    await openHostingMenu(page, 2);
+    const unavailable = page.getByTestId('hosting-send-billing-2');
+    await expect(unavailable).toBeDisabled();
+    await expect(unavailable).toContainText('Vincula un cliente con correo');
+    await page.getByTestId('hosting-actions-modal').getByRole('button', { name: 'Cerrar' }).click();
+    await expect(page.getByTestId('hosting-actions-modal')).toHaveCount(0);
 
-    await page.getByTestId('hosting-send-billing-1').click();
+    await chooseHostingAction(page, 1, 'send-billing');
 
     // The confirm previews exactly where it is going before anything is sent.
     await expect(
@@ -60,7 +67,7 @@ test.describe('Admin Accounting Hosting Billing', () => {
     await mockApi(page, buildHandler({ calls }));
     await gotoHostings(page);
 
-    await page.getByTestId('hosting-send-billing-1').click();
+    await chooseHostingAction(page, 1, 'send-billing');
     await expect(
       page.getByRole('heading', { name: 'Enviar cuenta de cobro' }),
     ).toBeVisible();
@@ -81,7 +88,7 @@ test.describe('Admin Accounting Hosting Billing', () => {
     await mockApi(page, buildHandler({ calls: [], emailSent: false }));
     await gotoHostings(page);
 
-    await page.getByTestId('hosting-send-billing-1').click();
+    await chooseHostingAction(page, 1, 'send-billing');
     await page.getByRole('button', { name: 'Enviar al cliente' }).click();
 
     await expect(
@@ -107,6 +114,7 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     );
     await gotoHostings(page);
 
+    await openHostingMenu(page, 1);
     await page.getByTestId('hosting-cycles-1').click();
 
     await expect(
@@ -123,7 +131,7 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     await mockApi(page, buildHandler({ calls, cycles: [BACKFILL_CYCLE] }));
     await gotoHostings(page);
 
-    await page.getByTestId('hosting-cycles-1').click();
+    await chooseHostingAction(page, 1, 'cycles');
     await expect(page.getByTestId('cycle-modality')).toHaveValue('semiannual');
     await expect(page.getByTestId('cycle-modality').locator('option')).toHaveText([
       'Trimestral', 'Semestral', 'Cada 9 meses',
@@ -146,7 +154,7 @@ test.describe('Admin Accounting Hosting Cycles', () => {
     await mockApi(page, buildHandler({ calls, cycles: [BACKFILL_CYCLE] }));
     await gotoHostings(page);
 
-    await page.getByTestId('hosting-cycles-1').click();
+    await chooseHostingAction(page, 1, 'cycles');
     await page.getByLabel('Eliminar ciclo').click();
     await expect(
       page.getByRole('heading', { name: 'Eliminar ciclo' }),

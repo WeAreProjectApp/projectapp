@@ -155,4 +155,23 @@ describe('IncomeActionsModal', () => {
     expect(wrapper.emitted('liquidate')[0]).toEqual([EXPECTED]);
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
+
+  // The detail modal carries the income's history, like every accounting menu's
+  // first entry, so it reads the same as on the other tabs.
+  it('names the detail entry as the income history', () => {
+    const wrapper = mountModal(EXPECTED);
+
+    expect(wrapper.get('[data-testid="income-action-detail-42"]').text())
+      .toBe('Detalle e historial');
+  });
+
+  it('offers the note right after the detail when the income has one', async () => {
+    const withNote = { ...EXPECTED, notes: 'Cobrar junto con el dominio' };
+    const wrapper = mountModal(withNote);
+
+    expect(actionIds(wrapper).slice(0, 3)).toEqual(['detail', 'notes', 'edit']);
+    await wrapper.get('[data-testid="income-action-notes-42"]').trigger('click');
+
+    expect(wrapper.emitted('notes')[0]).toEqual([withNote]);
+  });
 });

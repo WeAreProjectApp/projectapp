@@ -1,5 +1,12 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import EmailLogTable from '~/components/accounting/EmailLogTable.vue';
+
+// The row menu is a BaseModal; rendered inline so its entries can be queried.
+const MenuModalStub = {
+  props: ['modelValue', 'kind', 'titleId', 'lockScroll'],
+  emits: ['close'],
+  template: '<div v-if="modelValue" :data-lock-scroll="String(lockScroll)"><slot /></div>',
+};
 
 const SENT = {
   id: 1,
@@ -49,9 +56,17 @@ const DIGEST_FAILED = {
 const wrappers = [];
 
 function mountTable(entries, props = {}) {
-  const wrapper = mount(EmailLogTable, { props: { entries, ...props } });
+  const wrapper = mount(EmailLogTable, {
+    props: { entries, ...props },
+    global: { stubs: { BaseModal: MenuModalStub } },
+  });
   wrappers.push(wrapper);
   return wrapper;
+}
+
+async function openMenu(wrapper, id) {
+  await wrapper.get(`[data-testid="email-log-actions-${id}"]`).trigger('click');
+  return wrapper.get('[data-testid="email-log-actions-modal"]');
 }
 
 describe('EmailLogTable', () => {
@@ -75,49 +90,78 @@ describe('EmailLogTable', () => {
     }
   });
 
-  it('offers the message only for the sends that kept one', () => {
+  it('offers the message only for the sends that kept one', async () => {
     const wrapper = mountTable([SENT, FAILED]);
 
-    expect(wrapper.find('[data-testid="email-log-view-body-1"]').exists()).toBe(true);
-    expect(wrapper.find('[data-testid="email-log-view-body-2"]').exists()).toBe(false);
+    expect((await openMenu(wrapper, 1)).find('[data-testid="email-log-view-body-1"]').exists())
+      .toBe(true);
+    expect((await openMenu(wrapper, 2)).find('[data-testid="email-log-view-body-2"]').exists())
+      .toBe(false);
   });
 
-  it('emits the row when the message is opened', async () => {
+  it('emits the row when the message is opened from its menu', async () => {
     const wrapper = mountTable([SENT]);
 
-    await wrapper.get('[data-testid="email-log-view-body-1"]').trigger('click');
+    const menu = await openMenu(wrapper, 1);
+    await menu.get('[data-testid="email-log-view-body-1"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.emitted('view-body')[0]).toEqual([SENT]);
   });
 
-  it('offers a retry only on a failure', () => {
+  it('offers a retry only on a failure', async () => {
     const wrapper = mountTable([SENT, FAILED]);
 
-    expect(wrapper.find('[data-testid="email-log-retry-1"]').exists()).toBe(false);
-    expect(wrapper.find('[data-testid="email-log-retry-2"]').exists()).toBe(true);
+    expect((await openMenu(wrapper, 1)).find('[data-testid="email-log-retry-1"]').exists())
+      .toBe(false);
+    expect((await openMenu(wrapper, 2)).find('[data-testid="email-log-retry-2"]').exists())
+      .toBe(true);
   });
 
-  it('shows the digest button disabled, carrying its reason', async () => {
+  it('shows the digest retry disabled, carrying its visible reason', async () => {
     const wrapper = mountTable([DIGEST_FAILED]);
-    const button = wrapper.get('[data-testid="email-log-retry-3"]');
-    const proxy = wrapper.get('[data-disabled-action-proxy]');
 
-    // Disabled and explained, rather than absent: a missing button reads as
+    const menu = await openMenu(wrapper, 3);
+    const retry = menu.get('[data-testid="email-log-retry-3"]');
+
+    // Disabled and explained, rather than absent: a missing entry reads as
     // "this failure cannot be acted on" without saying why.
-    expect(button.attributes('disabled')).toBe('');
-    expect(button.attributes('title')).toBeUndefined();
-    expect(proxy.attributes('aria-label')).toContain('resume varios registros');
-    await proxy.trigger('click');
-    expect(document.body.querySelector('[role="tooltip"]').textContent)
+    expect(retry.attributes('disabled')).toBe('');
+    expect(menu.get(`#${retry.attributes('aria-describedby')}`).text())
       .toContain('resume varios registros');
   });
 
-  it('blocks a second click while a retry is in flight', () => {
+  it('blocks a second retry while one is in flight', () => {
     const wrapper = mountTable([FAILED], { retryingId: 2 });
 
-    expect(
-      wrapper.get('[data-testid="email-log-retry-2"]').attributes('disabled'),
-    ).toBe('');
+    expect(wrapper.get('[data-testid="email-log-actions-2"]').attributes('disabled')).toBe('');
+  });
+
+  // Bug caught: the menu cell sits inside a row that expands on click.
+  it('keeps the row collapsed when its menu opens', async () => {
+    const wrapper = mountTable([FAILED]);
+
+    await openMenu(wrapper, 2);
+
+    expect(wrapper.find('[data-testid="email-log-detail-2"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="email-log-actions-modal"]').text()).toContain('zoe@test.com');
+  });
+
+  it('shows no kebab on a send with nothing to do', () => {
+    const wrapper = mountTable([SENT, { ...SENT, id: 4, has_body: false }]);
+
+    expect(wrapper.find('[data-testid="email-log-actions-1"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="email-log-actions-4"]').exists()).toBe(false);
+  });
+
+  it('tells its host while the row menu is open', async () => {
+    const wrapper = mountTable([SENT], { nested: true });
+
+    const menu = await openMenu(wrapper, 1);
+    expect(wrapper.get('[data-lock-scroll]').attributes('data-lock-scroll')).toBe('false');
+    await menu.get('[data-testid="base-modal-actions"] button').trigger('click');
+
+    expect(wrapper.emitted('menu-open-change')).toEqual([[true], [false]]);
   });
 
   it('names the records the email was about when the row is expanded', async () => {

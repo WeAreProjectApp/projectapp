@@ -5,7 +5,7 @@
  * merchant, category), picking a merchant from the catalog, deleting, and an
  * in-flight save locking its own cell.
  */
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import StatementAliasTable from '../../../components/accounting/StatementAliasTable.vue';
 
 const CATEGORY_OPTIONS = [
@@ -30,6 +30,16 @@ function mountTable(props = {}) {
       aliases: [makeAlias()],
       categoryOptions: CATEGORY_OPTIONS,
       ...props,
+    },
+    global: {
+      stubs: {
+        NuxtLink: { template: '<a><slot /></a>' },
+        BaseModal: {
+          props: ['modelValue', 'kind', 'titleId', 'lockScroll'],
+          emits: ['close'],
+          template: '<div v-if="modelValue"><slot /></div>',
+        },
+      },
     },
   });
 }
@@ -102,10 +112,26 @@ describe('StatementAliasTable', () => {
     expect(value).toBe('Terpel');
   });
 
-  it('emits delete with the alias of the clicked row', async () => {
+  // Bug caught: the history was a loose text button beside Eliminar in a
+  // trailing column without a header.
+  it('leads the row with a kebab whose menu opens with the alias history', async () => {
     const wrapper = mountTable();
 
-    await wrapper.find('[data-testid="statement-alias-delete-7"]').trigger('click');
+    expect(wrapper.get('[data-testid="statement-alias-7"] td').attributes('data-field'))
+      .toBe('actions');
+    await wrapper.get('[data-testid="statement-alias-actions-7"]').trigger('click');
+
+    expect(wrapper.findAll('[data-testid="statement-alias-actions-modal"] li button')
+      .map((button) => button.attributes('data-testid')))
+      .toEqual(['statement-alias-action-history-7', 'statement-alias-action-delete-7']);
+  });
+
+  it('emits delete with the alias chosen from its row menu', async () => {
+    const wrapper = mountTable();
+
+    await wrapper.get('[data-testid="statement-alias-actions-7"]').trigger('click');
+    await wrapper.get('[data-testid="statement-alias-action-delete-7"]').trigger('click');
+    await flushPromises();
 
     expect(wrapper.emitted('delete')[0][0].id).toBe(7);
   });

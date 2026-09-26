@@ -205,7 +205,9 @@ async function openClientHistory(page) {
 async function openCardHistory(page) {
   await navigateFromPanel(page, 'Tarjetas');
   await expect(page.getByTestId('accounting-row-7')).toContainText('T.C E2E');
-  await page.getByTestId('accounting-row-7').getByTestId('history-record-open').click();
+  // Detail and history live in the row's three-dot menu, not beside it.
+  await page.getByTestId('cards-actions-7').click();
+  await page.getByTestId('cards-action-history-7').click();
   await expect(page.getByRole('heading', { name: 'Detalle del registro' })).toBeVisible();
   await page.getByTestId('entity-history-tabs').getByLabel('Secciones').selectOption('history');
   await expect(page.getByTestId('entity-history')).toBeVisible();
