@@ -2,6 +2,13 @@ from rest_framework import serializers
 
 from accounts.models import UserProfile
 from accounts.services import proposal_client_service
+from content.services.contract_variants import (
+    COMBINED,
+    MODALITY_VARIANTS,
+    SERVICE,
+    SERVICE_PARAM_KEYS,
+    VARIANTS,
+)
 from content.services.proposal_module_links import (
     ensure_functional_requirements_item_ids,
     normalize_technical_document_module_links,
@@ -160,7 +167,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
         'view_count', 'first_viewed_at', 'last_activity_at', 'responded_at',
         'available_transitions', 'proposal_documents',
         'platform_onboarding_completed_at', 'platform_onboarding_status',
-        'first_view_notification',
+        'first_view_notification', 'contract_modality',
     )
 
     sections = serializers.SerializerMethodField()
@@ -205,7 +212,8 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'days_remaining', 'is_expired', 'validity_text', 'public_url',
             'discounted_investment', 'effective_total_investment',
             'selected_modules', 'has_confirmed_module_selection',
-            'contract_params', 'available_transitions', 'proposal_documents',
+            'contract_params', 'contract_modality',
+            'available_transitions', 'proposal_documents',
             'platform_onboarding_completed_at',
             'platform_onboarding_status',
             'first_view_notification',
@@ -349,7 +357,12 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
 
 
 class ContractParamsSerializer(serializers.Serializer):
-    """Validate contract_params before saving to the JSONField."""
+    """Validate contract_params before saving to the JSONField.
+
+    ``context['modality']`` scopes the rules to the documents the deal closes
+    with (the single contract, or the product and service contracts), and
+    ``context['variant']`` names the document being generated or edited.
+    """
 
     CONTRACT_SOURCE_CHOICES = ('default', 'custom')
 
@@ -375,22 +388,55 @@ class ContractParamsSerializer(serializers.Serializer):
     contract_city = serializers.CharField(max_length=100, required=False, default='Medellín')
     contract_date = serializers.CharField(max_length=20, required=False, default='')
     custom_contract_markdown = serializers.CharField(required=False, default='')
+    product_contract_source = serializers.ChoiceField(
+        choices=CONTRACT_SOURCE_CHOICES, default='default',
+    )
+    product_custom_contract_markdown = serializers.CharField(
+        required=False, default='', allow_blank=True,
+    )
+    service_contract_source = serializers.ChoiceField(
+        choices=CONTRACT_SOURCE_CHOICES, default='default',
+    )
+    service_custom_contract_markdown = serializers.CharField(
+        required=False, default='', allow_blank=True,
+    )
+    service_initial_term = serializers.CharField(
+        max_length=100, required=False, default='', allow_blank=True,
+    )
+    service_renewal_notice_days = serializers.CharField(
+        max_length=60, required=False, default='', allow_blank=True,
+    )
+    service_termination_notice_days = serializers.CharField(
+        max_length=60, required=False, default='', allow_blank=True,
+    )
 
     def validate(self, data):
-        if data.get('contract_source') == 'custom' and not data.get('custom_contract_markdown'):
-            raise serializers.ValidationError(
-                {'custom_contract_markdown': 'Required when contract_source is "custom".'}
-            )
+        active = MODALITY_VARIANTS.get(self.context.get('modality'), (COMBINED,))
+        for key in active:
+            spec = VARIANTS[key]
+            if data.get(spec.source_key) == 'custom' and not (data.get(spec.custom_key) or '').strip():
+                raise serializers.ValidationError(
+                    {spec.custom_key: f'Required when {spec.source_key} is "custom".'}
+                )
         # The contract names EL CONTRATISTA by whichever document is on file,
         # so exactly one of the two has to be there. Scoped to the default
         # template, matching where the other required fields are enforced.
-        if data.get('contract_source', 'default') == 'default' and not (
+        uses_template = any(data.get(VARIANTS[key].source_key, 'default') == 'default' for key in active)
+        if uses_template and not (
             (data.get('contractor_nit') or '').strip()
             or (data.get('contractor_cedula') or '').strip()
         ):
             raise serializers.ValidationError(
                 {'contractor_nit': 'Indica el NIT o la cédula del contratista (al menos uno).'}
             )
+        # The standalone service contract fills three terms of its own.
+        if self.context.get('variant') == SERVICE and data.get('service_contract_source', 'default') == 'default':
+            missing = {
+                key: 'Indica este dato del contrato de servicio.'
+                for key in SERVICE_PARAM_KEYS if not (data.get(key) or '').strip()
+            }
+            if missing:
+                raise serializers.ValidationError(missing)
         return data
 
 

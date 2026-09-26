@@ -14,13 +14,22 @@ class ProposalDocument(models.Model):
     """
 
     DOC_TYPE_CONTRACT = 'contract'
+    DOC_TYPE_CONTRACT_PRODUCT = 'contract_product'
+    DOC_TYPE_CONTRACT_SERVICE = 'contract_service'
     DOC_TYPE_AMENDMENT = 'amendment'
     DOC_TYPE_LEGAL_ANNEX = 'legal_annex'
     DOC_TYPE_CLIENT_DOCUMENT = 'client_document'
     DOC_TYPE_OTHER = 'other'
 
+    # Generated contracts: the single contract and the two separate documents.
+    CONTRACT_DOC_TYPES = frozenset({
+        DOC_TYPE_CONTRACT, DOC_TYPE_CONTRACT_PRODUCT, DOC_TYPE_CONTRACT_SERVICE,
+    })
+
     DOC_TYPE_CHOICES = [
         (DOC_TYPE_CONTRACT, 'Contrato'),
+        (DOC_TYPE_CONTRACT_PRODUCT, 'Contrato de producto'),
+        (DOC_TYPE_CONTRACT_SERVICE, 'Contrato de servicio'),
         (DOC_TYPE_AMENDMENT, 'Otrosí'),
         (DOC_TYPE_LEGAL_ANNEX, 'Anexo legal'),
         (DOC_TYPE_CLIENT_DOCUMENT, 'Documento del cliente'),

@@ -444,6 +444,34 @@ def test_sync_documents_does_not_raise_when_technical_pdf_generation_fails(
     assert DeliverableFile.objects.filter(deliverable=d).count() == before
 
 
+@pytest.mark.django_db
+@patch('content.services.proposal_pdf_service.ProposalPdfService.generate', return_value=None)
+@patch('content.services.technical_document_pdf.generate_technical_document_pdf', return_value=None)
+def test_sync_documents_copies_only_the_contracts_of_the_chosen_modality(
+    _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
+):
+    """Fails if a split closing hands the client the stale single contract as well."""
+    from django.core.files.base import ContentFile
+
+    from accounts.models import DeliverableFile
+    from content.models import ProposalDocument
+
+    proposal_with_deliverable.contract_modality = 'split'
+    proposal_with_deliverable.save(update_fields=['contract_modality'])
+    for doc_type in ('contract', 'contract_product', 'contract_service'):
+        doc = ProposalDocument.objects.create(
+            proposal=proposal_with_deliverable, document_type=doc_type, title=doc_type, is_generated=True,
+        )
+        doc.file.save(f'{doc_type}.pdf', ContentFile(b'%PDF-1.4'), save=True)
+    d = proposal_with_deliverable.deliverable
+
+    _sync_proposal_documents_to_deliverable(proposal_with_deliverable, d, admin_user)
+
+    copied = DeliverableFile.objects.filter(deliverable=d)
+    assert sorted(copied.values_list('title', flat=True)) == ['contract_product', 'contract_service']
+    assert set(copied.values_list('category', flat=True)) == {Deliverable.CATEGORY_CONTRACT}
+
+
 # -- ensure_deliverable edge cases -------------------------------------------
 
 

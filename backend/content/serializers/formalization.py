@@ -10,7 +10,14 @@ class FormalizationSectionSerializer(serializers.Serializer):
 
 
 class FormalizationPrepareSerializer(serializers.Serializer):
-    documents = serializers.ListField(child=serializers.ChoiceField(choices=['contract', 'commercial', 'technical']), max_length=3, default=list)
+    # One contract, or the product and service contracts of a split closing,
+    # plus the two annexes. The service layer checks them against the modality.
+    documents = serializers.ListField(
+        child=serializers.ChoiceField(choices=[
+            'contract', 'contract_product', 'contract_service', 'commercial', 'technical',
+        ]),
+        max_length=4, default=list,
+    )
     additional_doc_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=20, default=list)
     subject = serializers.CharField(max_length=500)
     greeting = serializers.CharField(max_length=1000)

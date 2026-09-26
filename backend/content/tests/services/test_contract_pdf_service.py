@@ -18,10 +18,12 @@ from content.services.contract_pdf_service import (
     _substitute_placeholders,
     generate_contract_pdf,
 )
+from content.services.contract_variants import SERVICE_PARAM_KEYS, template_markdown
 from content.services.pdf_utils import CONTENT_W, MARGIN_T, PAGE_H, _font
 
 pytestmark = pytest.mark.django_db
 
+CONTRACT_TEXTS = ('combined', 'product', 'service')
 
 # Keys that _build_params() returns but are NOT used inside the markdown
 # template (e.g. consumed only by _draw_title_page).
@@ -30,6 +32,21 @@ pytestmark = pytest.mark.django_db
 # documents are superseded by the computed {contractor_id_type}/
 # {contractor_id_number} pair but stay available for hand-edited templates.
 _TEMPLATE_EXEMPT_KEYS = {'contract_date', 'contractor_nit', 'contractor_cedula'}
+# Only the standalone service contract fills the three service terms.
+_EXEMPT_KEYS_BY_TEXT = {
+    'combined': _TEMPLATE_EXEMPT_KEYS | set(SERVICE_PARAM_KEYS),
+    'product': _TEMPLATE_EXEMPT_KEYS | set(SERVICE_PARAM_KEYS),
+    'service': _TEMPLATE_EXEMPT_KEYS,
+}
+
+
+def _default_text(variant):
+    from content.models import ContractTemplate
+    tpl = ContractTemplate.get_default()
+    assert tpl is not None, 'No default ContractTemplate in DB'
+    markdown = template_markdown(tpl, variant)
+    assert markdown, f'The default template has no {variant} text'
+    return markdown
 
 
 class TestBuildParams:
@@ -349,27 +366,31 @@ class TestDefaultTemplateIntegrity:
         assert tpl is not None, 'No default ContractTemplate in DB'
         self.template = tpl
 
-    def test_contains_all_build_params_keys(self):
-        expected_keys = set(_build_params({}).keys()) - _TEMPLATE_EXEMPT_KEYS
-        found = set(re.findall(r'\{(\w+)\}', self.template.content_markdown))
+    @pytest.mark.parametrize('variant', CONTRACT_TEXTS)
+    def test_contains_all_build_params_keys(self, variant):
+        expected_keys = set(_build_params({}).keys()) - _EXEMPT_KEYS_BY_TEXT[variant]
+        found = set(re.findall(r'\{(\w+)\}', _default_text(variant)))
         missing = expected_keys - found
-        assert not missing, f'Placeholders missing from default template: {missing}'
+        assert not missing, f'Placeholders missing from the {variant} text: {missing}'
 
-    def test_has_no_unknown_placeholders(self):
+    @pytest.mark.parametrize('variant', CONTRACT_TEXTS)
+    def test_has_no_unknown_placeholders(self, variant):
         known_keys = set(_build_params({}).keys())
-        found = set(re.findall(r'\{(\w+)\}', self.template.content_markdown))
+        found = set(re.findall(r'\{(\w+)\}', _default_text(variant)))
         unknown = found - known_keys
-        assert not unknown, f'Unknown placeholders in template (not in _build_params): {unknown}'
+        assert not unknown, f'Unknown placeholders in the {variant} text (not in _build_params): {unknown}'
 
-    def test_format_succeeds_with_all_params(self):
+    @pytest.mark.parametrize('variant', CONTRACT_TEXTS)
+    def test_format_succeeds_with_all_params(self, variant):
+        markdown = _default_text(variant)
         params = _build_params({
             'client_full_name': 'Test Client',
             'client_cedula': '123',
             'contractor_full_name': 'Test Contractor',
             'contractor_nit': '456',
         })
-        result = self.template.content_markdown.format(**params)
-        assert '{' not in result or '{{' in self.template.content_markdown
+        result = markdown.format(**params)
+        assert '{' not in result or '{{' in markdown
 
     def test_has_source_code_delivery_clause(self):
         """Source code and repository access are withheld until the contract is fully paid."""
@@ -455,12 +476,9 @@ _REFERENCE_RE = re.compile(r'CLÁUSULA ((?:DÉCIMA |VIGÉSIMA )?[A-ZÁÉÍÓÚ]+
 class TestClauseNumbering:
     """A half-applied renumbering only shows up when a human reads the PDF; catch it here."""
 
-    @pytest.fixture(autouse=True)
-    def _load_default_template(self):
-        from content.models import ContractTemplate
-        tpl = ContractTemplate.get_default()
-        assert tpl is not None, 'No default ContractTemplate in DB'
-        self.markdown = tpl.content_markdown
+    @pytest.fixture(autouse=True, params=CONTRACT_TEXTS)
+    def _load_default_template(self, request):
+        self.markdown = _default_text(request.param)
 
     def test_clause_ordinals_run_from_one_without_gaps(self):
         ordinals = _HEADING_RE.findall(self.markdown)
@@ -511,12 +529,9 @@ def _literal_index(markdown):
 class TestEnumerationStandard:
     """Both renderers renumber 'N.' lists and the PDF merges consecutive 'a)' lines."""
 
-    @pytest.fixture(autouse=True)
-    def _load_default_template(self):
-        from content.models import ContractTemplate
-        tpl = ContractTemplate.get_default()
-        assert tpl is not None, 'No default ContractTemplate in DB'
-        self.markdown = tpl.content_markdown
+    @pytest.fixture(autouse=True, params=CONTRACT_TEXTS)
+    def _load_default_template(self, request):
+        self.markdown = _default_text(request.param)
 
     def test_has_no_numbered_or_bulleted_lists(self):
         assert not re.findall(r'^\s*(?:\d+\.|[-*]) ', self.markdown, re.MULTILINE)

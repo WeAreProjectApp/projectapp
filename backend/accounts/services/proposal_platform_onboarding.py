@@ -200,19 +200,27 @@ def _sync_proposal_documents_to_deliverable(proposal, deliverable, acting_user):
     """
     from accounts.models import Deliverable, DeliverableFile
     from content.models import ProposalDocument
+    from content.services.contract_variants import active_doc_types
     from content.services.pdf_utils import safe_pdf_filename
     from django.core.files.base import ContentFile
 
     TYPE_TO_CATEGORY = {
         ProposalDocument.DOC_TYPE_CONTRACT: Deliverable.CATEGORY_CONTRACT,
+        ProposalDocument.DOC_TYPE_CONTRACT_PRODUCT: Deliverable.CATEGORY_CONTRACT,
+        ProposalDocument.DOC_TYPE_CONTRACT_SERVICE: Deliverable.CATEGORY_CONTRACT,
         ProposalDocument.DOC_TYPE_AMENDMENT: Deliverable.CATEGORY_AMENDMENT,
         ProposalDocument.DOC_TYPE_LEGAL_ANNEX: Deliverable.CATEGORY_LEGAL_ANNEX,
         ProposalDocument.DOC_TYPE_CLIENT_DOCUMENT: Deliverable.CATEGORY_OTHER,
         ProposalDocument.DOC_TYPE_OTHER: Deliverable.CATEGORY_OTHER,
     }
+    # Only the contracts of the chosen closing modality belong to the project;
+    # the other modality's documents are kept on the proposal but not current.
+    inactive_contracts = ProposalDocument.CONTRACT_DOC_TYPES - active_doc_types(proposal)
 
     # 1. Sync existing proposal documents (contract PDF, uploaded files)
     for doc in proposal.proposal_documents.all():
+        if doc.document_type in inactive_contracts:
+            continue
         if doc.file:
             DeliverableFile.objects.create(
                 deliverable=deliverable,

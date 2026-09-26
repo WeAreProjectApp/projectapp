@@ -13,6 +13,10 @@ class ContractTemplate(models.Model):
     generated contracts and the Document-manager window (``mirror_document``)
     all read it. Its text changes only through versioned data migrations;
     Django admin shows it read-only.
+
+    A deal can also close with two documents. The product contract is derived
+    from ``content_markdown`` (``contract_variants.derive_product_markdown``);
+    the standalone service contract lives in ``service_content_markdown``.
     """
 
     name = models.CharField(max_length=255)
@@ -23,6 +27,16 @@ class ContractTemplate(models.Model):
             '{contractor_id_*} pair over {contractor_nit}: it resolves to the '
             'NIT when there is one and to the cédula otherwise, and carries '
             'the matching label.'
+        ),
+    )
+    service_content_markdown = models.TextField(
+        blank=True,
+        default='',
+        help_text=(
+            'Standalone hosting, maintenance and support contract used when the '
+            'deal closes with two documents. Same placeholders as the main text '
+            'plus {service_initial_term}, {service_renewal_notice_days} and '
+            '{service_termination_notice_days}.'
         ),
     )
     is_default = models.BooleanField(default=False)
