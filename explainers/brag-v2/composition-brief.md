@@ -30,3 +30,10 @@ Los WAV se invalidan al cambiar texto/voz/velocidad; desbordes detienen producci
 Hyperframes lint/check; stills por escena/transición; control de desborde;
 ffprobe y decodificación completa; comparación copy; pruebas del reproductor
 real y flujos públicos/panel. No confundir E2E con API mockeada con revisión del MP4.
+
+## Revisión 2026-09-26
+La escena 4 del catálogo recrea la ficha de Protección de propiedad intelectual con
+el copy de la migración `content.0259`, todavía sin publicar en la API al producir;
+la escena 2 la muestra como tarjeta con la etiqueta Nuevo. Sin cambios de CSS: se
+reutilizan las clases `pill lemon label`. El titular de la escena 4 va sin `em`,
+porque sobre fondo lima el resaltado no se ve y su padding desalineaba la línea.

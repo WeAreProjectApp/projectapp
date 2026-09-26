@@ -72,3 +72,15 @@ Para volver a v1, restaurar imports de MP4/WebP sin `-brag-v2` y duraciones 70/7
 Los assets originales siguen versionados; no se necesita regenerarlos.
 
 La verificación de esta entrega se registra en `verification.md`.
+
+## Revisiones
+
+- **2026-09-26 — Protección de propiedad intelectual.** El video del catálogo
+  destaca el módulo nuevo: la escena 4 pasa a «Nuevo en el catálogo» con su
+  ficha y la escena 2 muestra su tarjeta con la etiqueta Nuevo. Mismo nombre de
+  asset, duración, música, clics y portada; sin cambios en el frontend. La voz de
+  la escena 4 va en dos `voiceSegments` (0 y 3.6 s) para alinear los subtítulos.
+  Para reproducirla sin re-sintetizar las escenas intactas, copiar antes el caché
+  `tts/additional-modules/es/` de un worktree que ya lo tenga. El copy sale de la
+  migración `content.0259`: el snapshot de `content/` no se refrescó porque la
+  API de producción todavía no tiene el módulo (ver `provenance.json`).
