@@ -308,7 +308,8 @@ class TestProposalDetailSerializerComputedFields:
 
         serializer = ProposalDetailSerializer(proposal, context={'is_admin': False})
 
-        assert serializer.data['proposal_documents'] == []
+        # Not even an empty list: the public payload does not carry the key.
+        assert 'proposal_documents' not in serializer.data
 
     def test_proposal_documents_is_included_for_admin_context(self, proposal):
         document = ProposalDocument.objects.create(

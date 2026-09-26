@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Create a new admin document via Markdown paste mode or file upload mode, with title, live preview, and optional private notes opened from doc-client-note-open. Because no document exists yet, the modal labels its action Aplicar al borrador and explains before and after submission that creation is still required; the later create request persists every note without adding it to the PDF. The optional client/project association remains available through ClientAutocomplete plus ProjectSelect, including inverse project-to-client cascade and folder suggestions.",
+  "description": "Create a new admin document via Markdown paste mode or file upload mode, with title, a full-width Markdown editor whose Editar/Vista previa switch renders the preview in the editor's own box, and optional private notes opened from doc-client-note-open. Because no document exists yet, the modal labels its action Aplicar al borrador, keeps it in a fixed bar that enables only once a note changes, and explains before and after submission that creation is still required; the later create request persists every note without adding it to the PDF. The optional client/project association remains available through ClientAutocomplete plus ProjectSelect, including inverse project-to-client cascade and folder suggestions.",
   "expectedSpecs": 1,
   "knownGaps": "Cover toggles and template-style selection are carried by the same payload but are not asserted independently in this flow.",
   "outcomes": [

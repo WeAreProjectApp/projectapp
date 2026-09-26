@@ -36,13 +36,14 @@ test.describe('canvas responsive special', () => {
       await setupCanvas(page);
       // quality: allow-deep-link (the catalog edit scenario reaches this canvas from its row action)
       await page.goto('/en-us/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
-      await expect(page.getByRole('textbox', { name: 'Contenido Markdown' })).toHaveValue(/Contrato/);
+      const markdown = page.getByRole('textbox', { name: 'Contenido Markdown' });
+      await expect(markdown).toHaveValue(/Contrato/);
       // Regression: the responsive editor previously left the preview toggle
-      // unreachable and the split preview without rendered content.
-      await page.getByRole('button', { name: 'Ocultar vista previa', exact: true }).click();
-      await expect(page.getByRole('button', { name: 'Vista previa', exact: true })).toHaveText('Vista previa');
-      await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
+      // unreachable and the preview without rendered content.
+      await page.getByRole('tab', { name: 'Vista previa', exact: true }).click();
       await expect(page.getByRole('heading', { name: 'Contrato', level: 1, exact: true })).toHaveText('Contrato');
+      await page.getByRole('tab', { name: 'Editar', exact: true }).click();
+      await expect(markdown).toHaveValue(/Contrato/);
     });
   });
 

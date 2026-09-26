@@ -2,6 +2,16 @@
 
 El catálogo comercial suma su módulo 25 en *Identidad y acceso*: un sistema por capas que se instala dentro de la plataforma del cliente para dificultar la ingeniería inversa y la copia de secretos empresariales por bots y agentes de IA. Decisiones del operador del 2026-09-26 que cierran las preguntas abiertas de la ficha: la promesa es dificultar, detectar y dejar registro de los intentos —nunca «impedir»—; las capas ofrecidas son código del navegador (build ofuscado, sin mapas de código, lógica sensible en el servidor), APIs y datos (límites de consulta, permisos por recurso, respuestas mínimas) y bots y agentes de IA (reglas para rastreadores, detección y bloqueo, sin sacar las páginas públicas de los buscadores, en coherencia con los metadatos para asistentes de IA que vende la identidad corporativa); el rastreo forense y el respaldo legal quedan fuera. Se ofrece como módulo único: capas y alcance se cotizan en la propuesta, y los requisitos del cliente —inventario de lo valioso, accesos, tráfico legítimo, diagnóstico previo si la plataforma no es nuestra y un responsable de los reportes— cierran la ficha. Entra como migración de datos `content.0259`, sin cambio de esquema, serializer, contrato MCP ni frontend; los tests blindan el copy bilingüe, la promesa sin absolutos, las capas acordadas, la posición libre, el respeto a un módulo creado desde el panel y el reverse. El contrato v8 (#417) se integró primero con su propia `content.0259`: esta rama suma la merge vacía `content.0263_merge_contract_v8_intellectual_property`. #418 sigue abierta con otra `0259` y, si llega después, suma la suya. El video brag v2 del catálogo lo destaca sin cambiar su duración de 45 s: la escena 4 pasa a «Nuevo en el catálogo» con la ficha del módulo y la escena 2 muestra su tarjeta con la etiqueta Nuevo; música, clics, portada, nombre del asset y frontend no cambian. Revisión y mediciones en `explainers/brag-v2/verification.md`.
 
+# Datos privados fuera del JSON público de propuestas — en verificación (2026-09-26)
+
+`GET /api/proposals/<uuid>/`, `/by-slug/<slug>/` y `/shared/<uuid>/` (sin
+login) devolvían `contract_params` con cédula, correo, NIT y cuenta bancaria
+reales, además de contacto del cliente y ajustes internos. Verificado en
+producción en solo lectura (nombres de campos, sin valores).
+`ProposalDetailSerializer.PUBLIC_HIDDEN_FIELDS` los retira en `get_fields()`
+cuando `is_admin` es falso; la página pública no leía ninguno y los endpoints
+admin siguen completos. Sin migraciones; aplica con el despliegue.
+
 # Carpetas y lectura de Comunicaciones — PR #416 (2026-09-25)
 
 Implementado en `feat/25092026-communication-folders-reading`: carpetas independientes por cliente/proyecto, IDs visibles y buscables, lectura del hilo con formulario y detalles plegables, accesos al inicio/final y copia directa. REST y MCP comparten las reglas de contexto, jerarquía y borrado protegido. La navegación de proyecto incluye las carpetas generales de su cliente y conserva la ubicación al crear desde móvil. Migración aditiva `content.0258`; entrega mediante PR #416 a main, sin despliegue ni cambios en datos reales.
