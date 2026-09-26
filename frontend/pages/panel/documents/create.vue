@@ -161,20 +161,7 @@
 
           <div class="space-y-4">
             <h2 class="text-xs uppercase tracking-wide font-semibold text-text-muted">Organización</h2>
-            <div>
-              <label class="block text-sm font-medium text-text-default mb-1">Carpeta</label>
-              <select
-                v-model="form.folder_id"
-                data-testid="doc-folder-select"
-                class="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm bg-surface text-text-default
-                       focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
-              >
-                <option :value="null">Sin carpeta</option>
-                <option v-for="folder in folderStore.activeFolders" :key="folder.id" :value="folder.id">
-                  {{ folder.name }}
-                </option>
-              </select>
-            </div>
+            <DocumentFolderSelect v-model="form.folder_id" testid="doc-folder-select" />
             <p class="text-xs text-text-subtle">
               El documento iniciará en Borrador. Podrás agregar estados y señales al terminar de crearlo.
             </p>
@@ -356,6 +343,7 @@
 import { reactive, ref, computed, onMounted, watch, nextTick } from 'vue';
 import DocumentEditorContent from '~/components/panel/documents/DocumentEditorContent.vue';
 import DocumentClientNoteModal from '~/components/panel/documents/DocumentClientNoteModal.vue';
+import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
@@ -367,6 +355,7 @@ import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useUnsavedGuard } from '~/composables/useUnsavedGuard';
 import { describeIncludedPages } from '~/utils/documentCoverPages';
+import { folderPathLabel, resolveFolderPreselection } from '~/utils/folderOptions';
 
 const localePath = useLocalePath();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
@@ -447,13 +436,35 @@ const {
 // que no necesita el guard.
 usePanelRefresh(() => folderStore.fetchFolders());
 
-onMounted(async () => {
-  await folderStore.fetchFolders();
-  const preselectFolder = route.query.folder;
-  if (preselectFolder && preselectFolder !== 'all' && preselectFolder !== 'none') {
-    const numeric = Number(preselectFolder);
-    if (!Number.isNaN(numeric)) form.folder_id = numeric;
+// «Nuevo documento» trae la carpeta abierta en `?folder=`, y puede ser una del
+// archivado automático (o una archivada) que el backend rechaza como destino.
+// Se propone la elegible más cercana hacia arriba y se dice por qué: se fija
+// antes de que corra el watcher, así nunca se sugiere un cliente desde la otra.
+function applyFolderPreselection(raw, listLoaded) {
+  if (!listLoaded) {
+    // Sin la lista no hay cómo validarla: queda la pedida y decide el backend.
+    const numeric = Number(raw);
+    if (raw != null && raw !== '' && Number.isInteger(numeric)) form.folder_id = numeric;
+    return;
   }
+  const { folderId, requested } = resolveFolderPreselection(folderStore.folders, raw);
+  if (folderId != null) form.folder_id = folderId;
+  if (!requested || folderId === Number(requested.id)) return;
+  const reason = requested.is_archived
+    ? `«${requested.name}» está archivada.`
+    : `«${requested.name}» sólo recibe documentos generados por el sistema.`;
+  notify.info({
+    title: 'Carpeta ajustada',
+    detail: folderId != null
+      ? `${reason} Se propone «${folderPathLabel(folderStore.folders, folderId)}»; puedes cambiarla.`
+      : `${reason} El documento queda sin carpeta; puedes elegir una.`,
+    duration: 7000,
+  });
+}
+
+onMounted(async () => {
+  const loaded = await folderStore.fetchFolders();
+  applyFolderPreselection(route.query.folder, Boolean(loaded?.success));
   // Deja correr el watcher de carpeta y espera su sugerencia: recién con todo
   // lo que puso el arranque en su sitio, la baseline representa "sin tocar".
   await nextTick();
