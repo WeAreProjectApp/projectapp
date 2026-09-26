@@ -59,6 +59,23 @@
           Cargando carpetas...
         </div>
 
+        <div
+          v-else-if="loadFailed"
+          class="px-4 py-3 text-sm text-text-muted"
+          :data-testid="`${testid}-error`"
+        >
+          <p class="mb-2">No se pudieron cargar las carpetas.</p>
+          <BaseButton
+            type="button"
+            variant="secondary"
+            size="sm"
+            :data-testid="`${testid}-retry`"
+            @click="retryLoad"
+          >
+            Reintentar
+          </BaseButton>
+        </div>
+
         <!-- Filtrado local: el árbol entero ya está en el store. -->
         <ul v-else-if="visibleOptions.length > 0" role="presentation" class="divide-y divide-border-muted">
           <li
@@ -116,9 +133,10 @@ import {
  * no es el operativo, porque los nombres se repiten por diseño. Las carpetas
  * del archivado automático no se ofrecen: el backend las rechaza como destino.
  *
- * Sólo lee el store; cargarlo es de la página. Emite únicamente cuando el
- * operador elige o quita una carpeta: resolver el rótulo nunca escribe el
- * modelo, así un formulario abierto dentro de una carpeta no nace modificado.
+ * Lee el store; cargarlo es de la página, salvo el reintento explícito cuando
+ * la lectura falló. Emite únicamente cuando el operador elige o quita una
+ * carpeta: resolver el rótulo nunca escribe el modelo, así un formulario
+ * abierto dentro de una carpeta no nace modificado.
  */
 const props = defineProps({
   modelValue: { type: [Number, String], default: null },
@@ -152,6 +170,11 @@ const options = computed(() => buildFolderPickerOptions(list.value));
 const term = computed(() => (filtering.value ? inputText.value.trim() : ''));
 const visibleOptions = computed(() => filterFolderPickerOptions(options.value, term.value));
 const isLoading = computed(() => Boolean(store.isLoading) && list.value.length === 0);
+// Una lectura fallida se dice y se puede reintentar, como en ClientAutocomplete:
+// «no hay carpetas» sería falso.
+const loadFailed = computed(() => (
+  store.error === 'fetch_folders_failed' && !store.isLoading && list.value.length === 0
+));
 
 const committedId = computed(() => {
   if (props.modelValue == null || props.modelValue === '') return null;
@@ -194,6 +217,10 @@ watch([committedId, options, () => store.isLoading], syncLabel, { immediate: tru
 watch(() => props.disabled, (disabled) => {
   if (disabled && isOpen.value) closeDropdown();
 });
+
+function retryLoad() {
+  store.fetchFolders();
+}
 
 function scrollHighlightedIntoView() {
   const option = visibleOptions.value[highlightIndex.value];

@@ -4,9 +4,10 @@
  * Cubre el catálogo completo al enfocar, el filtrado local por ruta y dueño,
  * que sólo elegir o quitar escribe el modelo (resolver el rótulo nunca: un
  * formulario abierto dentro de una carpeta no puede nacer modificado), la
- * carpeta comprometida que no se ofrece y el modo deshabilitado.
+ * carpeta comprometida que no se ofrece, el reintento cuando la lectura falla
+ * y el modo deshabilitado.
  */
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import DocumentFolderSelect from '../../../../components/panel/documents/DocumentFolderSelect.vue';
 import { useDocumentFolderStore } from '../../../../stores/document_folders';
@@ -17,6 +18,8 @@ jest.mock('../../../../stores/services/request_http', () => ({
   patch_request: jest.fn(),
   delete_request: jest.fn(),
 }));
+
+const { get_request } = require('../../../../stores/services/request_http');
 
 const VASTAGO = { project: 21, project_name: 'Vástago', client: 7, client_display_name: 'Vástago SAS' };
 
@@ -184,6 +187,21 @@ describe('DocumentFolderSelect', () => {
 
     expect(wrapper.find('[data-testid="folder-empty"]').text())
       .toBe('Sin carpetas que coincidan con "zzz".');
+  });
+
+  it('says the folders failed to load and retries from the picker', async () => {
+    get_request.mockResolvedValueOnce({ data: FOLDERS });
+    const { wrapper, store, input } = mountSelect({ folders: [] });
+    store.error = 'fetch_folders_failed';
+    await input.trigger('focus');
+    expect(wrapper.find('[data-testid="folder-error"]').text())
+      .toContain('No se pudieron cargar las carpetas.');
+
+    await wrapper.find('[data-testid="folder-retry"]').trigger('click');
+    await flushPromises();
+
+    expect(get_request).toHaveBeenCalledWith('document-folders/?scope=all');
+    expect(optionIds(wrapper)).toHaveLength(9);
   });
 
   it('tolerates a folders payload that is not a list', async () => {

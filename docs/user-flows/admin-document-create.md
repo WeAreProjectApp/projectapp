@@ -25,6 +25,7 @@
   - [Display — selector de carpeta] Cada resultado muestra ubicación · dueño · estado del proyecto (p. ej. «Kore · Kore SAS · Suspendido»); las carpetas automáticas (Cuentas de cobro, Propuestas y sus niveles) no aparecen.
   - [Success — búsqueda por ruta] Buscar «vastago entre» separa la «Entregables» de Vástago de la de Kore y el payload lleva su `folder_id`. La ✕ del selector quita la carpeta y retira el cliente que había heredado.
   - [Success — enlace desde carpeta automática] Un `?folder=` que apunta a una carpeta automática o archivada propone la carpeta manual más cercana hacia arriba y lo avisa con **Carpeta ajustada**; así el guardado no termina en 409.
+  - [Failure — carpetas sin cargar] Si la lista de carpetas no llega, el selector dice **No se pudieron cargar las carpetas.** en lugar de fingir que no hay ninguna, y **Reintentar** la vuelve a pedir sin salir del formulario.
   - [Error — validación] Campos obligatorios faltantes o un rechazo 400 muestran errores y conservan al admin en la página de creación.
   - [Failure — servidor] Un fallo 5xx conserva todas las notas en el formulario para reintentar sin volver a redactarlas.
 - **Coverage:** ✅ Covered (paste, carga de archivo, asociaciones, selector de carpeta y notas privadas en display/success/error/failure; las casillas de portada y el estilo viajan en el mismo payload, pero se auditan en sus flows específicos).

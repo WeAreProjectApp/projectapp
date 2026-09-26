@@ -6,7 +6,8 @@
  *         Editar/Vista previa switch, file upload mode, private fixed/custom
  *         notes, form submission, error handling, and the searchable folder
  *         picker (rows with location/owner/state, search by path, ✕ retracts
- *         the inherited client, links from automatic folders adjusted).
+ *         the inherited client, links from automatic folders adjusted, a
+ *         failed folder read retried from the picker).
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -522,5 +523,34 @@ test.describe('Admin Document Create', () => {
     await expect(page).toHaveURL(/\/panel\/documents\/10\/edit/);
     expect(postBody.folder_id).toBe(5);
     expect(postBody.client).toBe(7);
+  });
+
+  test('a folder list that fails to load can be retried from the picker', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    let foldersDown = true;
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'document-folders/') {
+        return foldersDown
+          ? { status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'Error' }) }
+          : { status: 200, contentType: 'application/json', body: JSON.stringify(folderTree) };
+      }
+      if (apiPath === 'accounting/projects/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/create');
+
+    // «No hay carpetas» sería falso: el selector dice que falló y deja reintentar.
+    await page.getByTestId('doc-folder-select').click();
+    await expect(page.getByTestId('doc-folder-select-error'))
+      .toContainText('No se pudieron cargar las carpetas.');
+    foldersDown = false;
+    await page.getByTestId('doc-folder-select-retry').click();
+
+    await expect(page.getByTestId('doc-folder-select-option-7')).toBeVisible();
+    await expect(page.getByTestId('doc-folder-select-error')).toHaveCount(0);
   });
 });
