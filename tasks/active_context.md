@@ -1,3 +1,13 @@
+# Datos privados fuera del JSON público de propuestas — en verificación (2026-09-26)
+
+`GET /api/proposals/<uuid>/`, `/by-slug/<slug>/` y `/shared/<uuid>/` (sin
+login) devolvían `contract_params` con cédula, correo, NIT y cuenta bancaria
+reales, además de contacto del cliente y ajustes internos. Verificado en
+producción en solo lectura (nombres de campos, sin valores).
+`ProposalDetailSerializer.PUBLIC_HIDDEN_FIELDS` los retira en `get_fields()`
+cuando `is_admin` es falso; la página pública no leía ninguno y los endpoints
+admin siguen completos. Sin migraciones; aplica con el despliegue.
+
 # Carpetas y lectura de Comunicaciones — PR #416 (2026-09-25)
 
 Implementado en `feat/25092026-communication-folders-reading`: carpetas independientes por cliente/proyecto, IDs visibles y buscables, lectura del hilo con formulario y detalles plegables, accesos al inicio/final y copia directa. REST y MCP comparten las reglas de contexto, jerarquía y borrado protegido. La navegación de proyecto incluye las carpetas generales de su cliente y conserva la ubicación al crear desde móvil. Migración aditiva `content.0258`; entrega mediante PR #416 a main, sin despliegue ni cambios en datos reales.

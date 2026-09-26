@@ -94,6 +94,61 @@ class TestProposalDetailSerializerBranches:
         assert resp.json()['discounted_investment'] is None
 
 
+_PRIVATE_CONTRACT_PARAMS = {
+    'client_full_name': 'Acme Corp',
+    'client_cedula': '9988776655',
+    'contractor_nit': '900111222',
+    'bank_account_number': '44556677889900',
+    'contract_source': 'default',
+}
+
+
+@pytest.fixture
+def published_proposal(proposal):
+    proposal.is_active = True
+    proposal.status = 'sent'
+    proposal.contract_params = dict(_PRIVATE_CONTRACT_PARAMS)
+    proposal.save(update_fields=['is_active', 'status', 'contract_params'])
+    return proposal
+
+
+class TestPublicDetailHidesPrivateFields:
+    """Anyone with the proposal link can read the public payload."""
+
+    @pytest.mark.parametrize('route,kwarg,attr', [
+        ('retrieve-public-proposal', 'proposal_uuid', 'uuid'),
+        ('retrieve-public-proposal-by-slug', 'proposal_slug', 'slug'),
+    ])
+    def test_public_payload_omits_contract_params_and_internal_fields(
+        self, api_client, published_proposal, route, kwarg, attr,
+    ):
+        from content.serializers.proposal import ProposalDetailSerializer
+
+        url = reverse(route, kwargs={kwarg: getattr(published_proposal, attr)})
+        resp = api_client.get(url)
+
+        assert resp.status_code == 200
+        leaked = set(ProposalDetailSerializer.PUBLIC_HIDDEN_FIELDS) & set(resp.json())
+        assert not leaked
+        body = resp.content.decode()
+        for secret in ('9988776655', '900111222', '44556677889900', 'contact@acme.com', '+573001234567'):
+            assert secret not in body
+
+    def test_public_payload_keeps_what_the_client_page_reads(self, api_client, published_proposal):
+        url = reverse('retrieve-public-proposal', kwargs={'proposal_uuid': published_proposal.uuid})
+        data = api_client.get(url).json()
+
+        for field in ('uuid', 'title', 'client_name', 'sections', 'sent_at', 'show_contract_terms', 'expires_at'):
+            assert field in data
+
+    def test_admin_detail_keeps_contract_params_and_client_contact(self, admin_client, published_proposal):
+        url = reverse('retrieve-proposal', kwargs={'proposal_id': published_proposal.id})
+        data = admin_client.get(url).json()
+
+        assert data['contract_params']['bank_account_number'] == '44556677889900'
+        assert data['client_email'] == 'contact@acme.com'
+
+
 class TestContractParamsSerializerValidation:
     _base_contract_params = {
         'client_cedula': '1234567890',
