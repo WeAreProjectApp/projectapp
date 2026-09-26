@@ -1,11 +1,12 @@
 <template>
   <BaseModal
     :model-value="modelValue"
-    kind="form"
+    kind="form-wide"
+    full-height
     initial-focus="#document-client-note-subject"
     @update:model-value="updateOpenState"
   >
-    <div class="space-y-6 p-6" data-testid="document-client-note-modal">
+    <div class="min-h-0 flex-1 space-y-6 overflow-y-auto p-6" data-testid="document-client-note-modal">
       <div>
         <h3 class="text-base font-semibold text-text-default">Notas</h3>
         <p class="mt-1 text-xs text-text-muted">
@@ -71,9 +72,12 @@
               @click="copyText('email', draft.emailBody, 'correo')"
             />
           </div>
+          <!-- Los textos crecen con su contenido: el correo se lee completo
+               sin scroll interno y lo que desplaza es el cuerpo del modal. -->
           <BaseTextarea
             id="document-client-note-email"
             v-model="draft.emailBody"
+            v-auto-resize
             :disabled="readonly || immutableContent || isBusy"
             :disabled-reason="fieldDisabledReason"
             rows="9"
@@ -102,6 +106,7 @@
           <BaseTextarea
             id="document-client-note-whatsapp"
             v-model="draft.whatsappMessage"
+            v-auto-resize
             :disabled="readonly || immutableContent || isBusy"
             :disabled-reason="fieldDisabledReason"
             rows="5"
@@ -214,6 +219,7 @@
             <BaseTextarea
               :id="`document-custom-note-content-${index}`"
               v-model="note.content"
+              v-auto-resize
               :disabled="readonly || immutableContent || isBusy"
               :disabled-reason="fieldDisabledReason"
               :error="validationAttempted && !note.content.trim()"
@@ -248,16 +254,30 @@
       >
         Estas notas se aplicarán al borrador. Quedarán guardadas cuando crees el documento.
       </p>
-
-      <div class="flex justify-end gap-2 pt-1">
-        <BaseButton type="button" variant="ghost" :disabled="isBusy" :disabled-reason="busyDisabledReason" data-testid="client-note-cancel" @click="close">
-          {{ readonly || immutableContent ? 'Cerrar' : 'Cancelar' }}
-        </BaseButton>
-        <BaseButton v-if="!readonly && !immutableContent" type="button" variant="primary" :disabled="isBusy" :disabled-reason="busyDisabledReason" :loading="saving" data-testid="client-note-submit" @click="submit">
-          {{ mode === 'draft' ? 'Aplicar al borrador' : 'Guardar cambios' }}
-        </BaseButton>
-      </div>
     </div>
+
+    <!-- Fuera del área que desplaza: con correos y observaciones largas el
+         guardado quedaba fuera de la vista, y un pie superpuesto escondía la
+         línea que se escribe al final del correo. -->
+    <BaseModalActions class="flex-shrink-0" data-testid="client-note-actions">
+      <!-- En móvil las acciones se apilan en orden inverso: order-last lo deja
+           encima de los botones; desde portrait vuelve a la izquierda. -->
+      <BaseBadge
+        v-if="hasChanges"
+        variant="warning"
+        size="sm"
+        class="order-last self-center panel-portrait:order-none panel-portrait:mr-auto"
+        data-testid="client-note-unsaved"
+      >
+        {{ mode === 'draft' ? 'Cambios sin aplicar' : 'Cambios sin guardar' }}
+      </BaseBadge>
+      <BaseButton type="button" variant="ghost" :disabled="isBusy" :disabled-reason="busyDisabledReason" data-testid="client-note-cancel" @click="close">
+        {{ readonly || immutableContent ? 'Cerrar' : 'Cancelar' }}
+      </BaseButton>
+      <BaseButton v-if="!readonly && !immutableContent" type="button" variant="primary" :disabled="isBusy || !hasChanges" :disabled-reason="submitDisabledReason" :loading="saving" data-testid="client-note-submit" @click="submit">
+        {{ mode === 'draft' ? 'Aplicar al borrador' : 'Guardar cambios' }}
+      </BaseButton>
+    </BaseModalActions>
   </BaseModal>
 </template>
 
@@ -266,6 +286,7 @@ import { computed, reactive, ref, watch } from 'vue';
 import DocumentObservationManager from '~/components/panel/documents/DocumentObservationManager.vue';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { usePanelNotify } from '~/composables/usePanelNotify';
+import { vAutoResize } from '~/utils/autoResizeDirective';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -307,6 +328,17 @@ const fieldDisabledReason = computed(() => {
   return busyDisabledReason.value || undefined;
 });
 const draft = reactive({ subject: '', emailBody: '', whatsappMessage: '', customNotes: [] });
+// Lo que había al abrir, con la misma forma que se envía: el botón se habilita
+// sólo cuando guardar cambiaría algo.
+const openedSnapshot = ref('');
+const hasChanges = computed(() => JSON.stringify(normalizedDraft()) !== openedSnapshot.value);
+const submitDisabledReason = computed(() => {
+  if (isBusy.value) return busyDisabledReason.value;
+  if (!hasChanges.value) {
+    return props.mode === 'draft' ? 'No hay cambios para aplicar.' : 'No hay cambios por guardar.';
+  }
+  return '';
+});
 let nextCustomNoteKey = 0;
 
 function makeDraftNote(note = {}) {
@@ -326,6 +358,7 @@ watch(
     draft.emailBody = props.emailBody;
     draft.whatsappMessage = props.whatsappMessage;
     draft.customNotes = props.customNotes.map(makeDraftNote);
+    openedSnapshot.value = JSON.stringify(normalizedDraft());
     localNotes.value = props.notes.map((note) => ({ ...note }));
     clipboardFeedback.clearAllFeedback();
     validationAttempted.value = false;
@@ -358,10 +391,8 @@ function removeCustomNote(index) {
   draft.customNotes.splice(index, 1);
 }
 
-function submit() {
-  validationAttempted.value = true;
-  if (draft.customNotes.some((note) => !note.title.trim() || !note.content.trim())) return;
-  emit('submit', {
+function normalizedDraft() {
+  return {
     subject: draft.subject.trim(),
     emailBody: draft.emailBody.trim(),
     whatsappMessage: draft.whatsappMessage.trim(),
@@ -369,7 +400,13 @@ function submit() {
       title: note.title.trim(),
       content: note.content.trim(),
     })),
-  });
+  };
+}
+
+function submit() {
+  validationAttempted.value = true;
+  if (draft.customNotes.some((note) => !note.title.trim() || !note.content.trim())) return;
+  emit('submit', normalizedDraft());
 }
 
 function copyLabel(field, label) {
