@@ -9,6 +9,7 @@ import BaseButton from '../../components/base/BaseButton.vue';
 import BaseBadge from '../../components/base/BaseBadge.vue';
 import BaseInput from '../../components/base/BaseInput.vue';
 import BaseModal from '../../components/base/BaseModal.vue';
+import BaseModalActions from '../../components/base/BaseModalActions.vue';
 import BaseTextarea from '../../components/base/BaseTextarea.vue';
 import BaseToggle from '../../components/base/BaseToggle.vue';
 import { useDocumentStateStore } from '../../stores/document_states';
@@ -23,7 +24,9 @@ function mountModal(props = {}) {
   return mount(DocumentClientNoteModal, {
     props: { modelValue: true, ...props },
     global: {
-      components: { BaseAlert, BaseBadge, BaseButton, BaseInput, BaseModal, BaseTextarea, BaseToggle },
+      components: {
+        BaseAlert, BaseBadge, BaseButton, BaseInput, BaseModal, BaseModalActions, BaseTextarea, BaseToggle,
+      },
       stubs: {
         Teleport: true,
         Transition: false,
@@ -202,6 +205,59 @@ describe('DocumentClientNoteModal', () => {
     expect(wrapper.find('[data-testid="client-note-submit"]').text()).toBe('Aplicar al borrador');
     expect(wrapper.find('[data-testid="client-note-draft-hint"]').text())
       .toContain('Quedarán guardadas cuando crees el documento');
+  });
+
+  it('keeps Guardar cambios disabled until a message changes', async () => {
+    const wrapper = mountModal({ subject: 'Entrega lista', emailBody: 'Hola Ana.' });
+    const submit = wrapper.get('[data-testid="client-note-submit"]');
+    expect(submit.attributes('disabled')).toBe('');
+    expect(submit.attributes('title')).toBe('No hay cambios por guardar.');
+
+    await emailField(wrapper).setValue('Hola Ana, el documento está listo.');
+
+    expect(submit.attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('[data-testid="client-note-unsaved"]').text()).toBe('Cambios sin guardar');
+  });
+
+  it('disables the save again when the change is undone', async () => {
+    const wrapper = mountModal({ whatsappMessage: 'Hola Ana, revisa tu correo.' });
+    await whatsappField(wrapper).setValue('Hola Ana, revisa tu correo hoy.');
+
+    await whatsappField(wrapper).setValue('Hola Ana, revisa tu correo.');
+
+    expect(wrapper.get('[data-testid="client-note-submit"]').attributes('disabled')).toBe('');
+    expect(wrapper.find('[data-testid="client-note-unsaved"]').exists()).toBe(false);
+  });
+
+  it('treats whitespace the save would trim as no change', async () => {
+    const wrapper = mountModal({ subject: 'Entrega lista' });
+
+    await subjectField(wrapper).setValue('Entrega lista  ');
+
+    expect(wrapper.get('[data-testid="client-note-submit"]').attributes('title'))
+      .toBe('No hay cambios por guardar.');
+  });
+
+  it('measures changes against the notes present when the modal opens', async () => {
+    const wrapper = mountModal({ subject: 'Entrega lista' });
+    await subjectField(wrapper).setValue('Entrega corregida');
+    await wrapper.setProps({ modelValue: false });
+
+    await wrapper.setProps({ subject: 'Entrega corregida', modelValue: true });
+
+    expect(subjectField(wrapper).element.value).toBe('Entrega corregida');
+    expect(wrapper.get('[data-testid="client-note-submit"]').attributes('disabled')).toBe('');
+  });
+
+  it('lets a new custom note be applied to the draft', async () => {
+    const wrapper = mountModal({ mode: 'draft' });
+    const submit = wrapper.get('[data-testid="client-note-submit"]');
+    expect(submit.attributes('title')).toBe('No hay cambios para aplicar.');
+
+    await wrapper.get('[data-testid="client-note-add-custom"]').trigger('click');
+
+    expect(submit.attributes('disabled')).toBeUndefined();
+    expect(wrapper.get('[data-testid="client-note-unsaved"]').text()).toBe('Cambios sin aplicar');
   });
 
   it('blocks dismissal while the save is running', async () => {
