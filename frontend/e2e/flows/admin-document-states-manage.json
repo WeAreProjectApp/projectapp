@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin opens /panel/documents/statuses from the document list to manage the shared state catalog: inspect active-document and historical-episode counts, create reusable states and groups, rename/recolor/reorder them, define incompatibilities, merge duplicates, and retire unused values without deleting history. Similar-name, merge and retirement decisions use contextual in-panel confirmation modals.",
+  "description": "Admin opens /panel/documents/statuses from the document list to manage the shared state catalog: inspect active-document and historical-episode counts, create reusable states and groups, rename/recolor/reorder them, define incompatibilities, merge duplicates, and retire unused values without deleting history. Similar-name, merge and retirement decisions use contextual in-panel confirmation modals. Create state, create group, save and merge stay available: an attempt without a name or merge target shows the requirement under its field and marks it invalid, serializer field errors land on their field, and a seed state keeps a disabled merge with accessible help.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",
