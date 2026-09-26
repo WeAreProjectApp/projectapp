@@ -527,6 +527,37 @@ MCP_MODEL_CONTRACTS = {
                 'corrected_by corrected_at'
             ),
         ),
+        _contract(
+            'secure_links.SecureLink',
+            read_only='id origin expires_at consumed_at revoked_at activation_count created_at',
+            read_write='secret_type title language client project validity_days',
+            excluded=(
+                _excluded(
+                    'Contenido cifrado: el MCP sólo lo recibe al crear y nunca lo devuelve.',
+                    'payload_encrypted',
+                )
+                | _excluded(
+                    'Capacidad del enlace: la URL sólo se entrega una vez al crear.',
+                    'token_hash token_encrypted',
+                )
+                | _excluded(
+                    'Datos de red y de contacto del creador o destinatario; sólo en el panel.',
+                    'creator_name creator_email creator_ip consumed_ip consumed_user_agent',
+                )
+                | _excluded(_AUDIT_INTERNAL, 'created_by updated_at')
+            ),
+        ),
+        _contract(
+            'secure_links.SecureLinkEvent',
+            read_only='kind created_at',
+            excluded=(
+                _excluded(
+                    'Auditoría del panel: IP, navegador y actor se revisan sólo allí.',
+                    'actor ip_address user_agent details',
+                )
+                | _excluded('Relación implícita en get_secure_link.', 'id link')
+            ),
+        ),
     ),
 }
 

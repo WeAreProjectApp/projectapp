@@ -54,6 +54,7 @@ INSTALLED_APPS = [
     'content',
     'accounts',
     'monitoring',
+    'secure_links',
     'corsheaders',
     # Third-party (operations)
     'dbbackup',

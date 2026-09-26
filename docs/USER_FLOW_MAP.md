@@ -6354,6 +6354,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-pwa-install` | admin | P2 | success,display,failure | — |
 | `admin-pwa-offline` | admin | P2 | success,failure | — |
 | `admin-qr-cards` | admin | P2 | success | 1 |
+| `admin-secure-link-create` | admin | P1 | success,error | — |
+| `admin-secure-link-manage` | admin | P1 | success,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
 | `admin-send-proposal-email` | admin | P2 | display,success,failure | 1 |
@@ -6495,6 +6497,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-portfolio-detail` | public | P2 | display,failure | 1 |
 | `public-privacy-policy` | public | P4 | display | 1 |
 | `public-route-not-found` | public | P3 | failure | 1 |
+| `public-secure-link-create` | public | P1 | success,error | — |
+| `public-secure-link-reveal` | public | P1 | success,display,failure | — |
 | `public-terms-conditions` | public | P4 | display | 1 |
 
 
@@ -8052,6 +8056,24 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   no guarda respuestas privadas y no encola operaciones. Las exclusiones de
   rutas y métodos se verifican en los tests del worker.
 
+### FLOW: `admin-secure-link-create`
+
+- **Módulo / rol:** enlaces seguros / administrador del panel.
+- **Ruta:** `/panel/secure-links` → **Nuevo enlace**.
+- **Success:** elegir tipo, título, campos, vigencia e idioma crea el enlace y muestra una única vez la URL con copiar enlace y copiar mensaje sugerido.
+- **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario muestra el error del servidor en ese campo y no crea nada.
+- **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/create/`.
+- **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
+
+### FLOW: `admin-secure-link-manage`
+
+- **Módulo / rol:** enlaces seguros / administrador del panel.
+- **Ruta:** `/panel/secure-links`; `?link=<id>` abre el detalle (destino del correo de aviso).
+- **Display:** pestañas por estado con conteos y **Recibidos** con los enlaces sin abrir que envían los clientes.
+- **Success:** el detalle muestra historial, **Ver contenido** descifra sin gastar el enlace, **Revocar** lo desactiva y **Reactivar** lo vuelve a habilitar (opcionalmente con un enlace nuevo).
+- **API:** `GET /api/secure-links/`, `GET /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`.
+- **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
+
 ### FLOW: `proposal-closing-contact`
 
 - **Module:** proposal
@@ -8266,3 +8288,22 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
   no disponible no impide usar el tema durante la visita.
 - **Display:** no se registra una interacción adicional; se valida como parte
   del cambio de tema.
+
+### FLOW: `public-secure-link-create`
+
+- **Módulo / rol:** enlaces seguros / cliente sin sesión.
+- **Ruta:** `/{locale}/secure-link`, compartida desde el panel con **Enlace para clientes**.
+- **Success:** tipo, campos, nombre, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o enviar por correo; sólo el equipo puede abrirla y el equipo recibe un aviso sin el enlace ni el contenido.
+- **Error:** los campos obligatorios faltantes o un captcha fallido se muestran en el formulario sin crear el enlace.
+- **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/public/create/`.
+- **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.
+
+### FLOW: `public-secure-link-reveal`
+
+- **Módulo / rol:** enlaces seguros / destinatario sin sesión.
+- **Ruta:** `/{locale}/secure-link/view#<token>` (el token viaja en el fragmento).
+- **Display:** tipo, remitente, vencimiento y advertencia de un solo uso; cargar la página no gasta el enlace.
+- **Success:** **Ver contenido** revela los campos una vez, con mostrar/ocultar y copiar.
+- **Failure:** enlaces usados, vencidos, revocados o inválidos muestran su estado sin contenido; los creados por clientes piden iniciar sesión del equipo.
+- **API:** `POST /api/secure-links/public/status/`, `POST /api/secure-links/public/reveal/`.
+- **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.

@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="x-apple-disable-message-reformatting">
+<meta name="color-scheme" content="dark">
+<meta name="supported-color-schemes" content="dark">
+<title>Enlace seguro recibido · {{ creator_name }} · ProjectApp.</title>
+<style>
+body,table,td,a{-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%}
+table,td{mso-table-lspace:0;mso-table-rspace:0;border-collapse:collapse}
+body{margin:0;padding:0;width:100%!important;background:#0a0f0d}
+a{text-decoration:none}
+@media only screen and (max-width:520px){
+  .container{width:100%!important}
+  .px-40{padding-left:24px!important;padding-right:24px!important}
+}
+:root{color-scheme:dark;supported-color-schemes:dark}
+</style>
+</head>
+<body style="margin:0;padding:0;background:#0a0f0d;font-family:Ubuntu,Helvetica,Arial,sans-serif;">
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#0a0f0d;opacity:0;">Enlace seguro recibido — {{ creator_name }}.</div>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#0a0f0d;">
+<tr><td align="center" style="padding:32px 16px 48px 16px;">
+<table role="presentation" class="container" width="600" cellpadding="0" cellspacing="0" border="0" style="width:600px;max-width:600px;background:#0d1411;border:1px solid #18221e;border-radius:20px;overflow:hidden;">
+
+<tr><td class="px-40" style="padding:28px 40px 24px 40px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td align="left" valign="middle" style="font-weight:700;font-size:18px;line-height:20px;color:#ffffff;letter-spacing:-0.2px;">Project<br>App.</td>
+<td align="right" valign="middle" style="font-weight:500;font-size:11px;line-height:14px;letter-spacing:2px;color:#809490;text-transform:uppercase;">Enlaces · Seguros</td>
+</tr></table>
+</td></tr>
+<tr><td style="padding:0 40px;"><div style="height:1px;background:#18221e;line-height:1px;font-size:1px;">&nbsp;</div></td></tr>
+
+<tr><td class="px-40" style="padding:40px 40px 8px 40px;">
+<div style="font-weight:500;font-size:11px;line-height:14px;letter-spacing:2.5px;text-transform:uppercase;margin-bottom:20px;color:#F0FF3D;">◆ &nbsp;Enlace seguro recibido</div>
+<div style="font-weight:300;font-size:34px;line-height:40px;letter-spacing:-0.6px;color:#ffffff;">{{ creator_name }}<span style="color:#F0FF3D;">.</span></div>
+</td></tr>
+
+<tr><td class="px-40" style="padding:28px 40px 8px 40px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#001713;border:1px solid #18221e;border-radius:14px;">
+<tr><td style="padding:18px 22px;font-size:14px;line-height:22px;color:#a8b8b4;">
+<strong style="color:#e6efef;font-weight:500;">Enviado por:</strong> {{ creator_name }}{% if creator_email %} &lt;{{ creator_email }}&gt;{% endif %}<br>
+<strong style="color:#e6efef;font-weight:500;">Tipo:</strong> {{ type_label }}<br>
+<strong style="color:#e6efef;font-weight:500;">Título:</strong> {{ title }}<br>
+<strong style="color:#e6efef;font-weight:500;">Creado:</strong> {{ created_at }}<br>
+<strong style="color:#e6efef;font-weight:500;">Vence:</strong> {{ expires_at }}
+</td></tr></table>
+</td></tr>
+
+<tr><td class="px-40" style="padding:28px 40px 8px 40px;">
+<a href="{{ panel_url }}" style="display:inline-block;background:#F0FF3D;color:#0a0f0d;font-weight:600;font-size:14px;line-height:20px;padding:12px 22px;border-radius:999px;">Abrir en el panel</a>
+</td></tr>
+
+<tr><td class="px-40" style="padding:28px 40px 36px 40px;">
+<p style="margin:0;font-size:12px;line-height:18px;color:#5c6b67;">Por seguridad este correo no incluye el enlace ni el contenido. Notificación automática de Enlaces seguros · ProjectApp.</p>
+</td></tr>
+
+</table>
+</td></tr></table>
+</body>
+</html>

@@ -114,6 +114,15 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+# Enlaces seguros de un solo uso (2026-09-26)
+
+Implementado en `feat/26092026-secure-one-time-links`: enlaces de un solo uso
+para información sensible, con contenido cifrado guardado, revocación y
+reactivación (mismo enlace o nuevo). Tres orígenes: panel, skill
+`client-response` vía MCP (siempre con contenido) y página pública para
+clientes, cuyos enlaces sólo abre el equipo. Contrato y seguridad:
+`docs/secure-links.md`. Sin despliegue ni migraciones aplicadas desde la sesión.
+
 **2026-09-25 — videos brag v2:** dos piezas de 45 segundos con voz,
 música cálida e identidad ProjectApp para catálogo y Programa de Alianza.
 Fuentes v1 conservadas; alcance y validación en `explainers/brag-v2/`.

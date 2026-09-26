@@ -42,6 +42,7 @@ urlpatterns = [
     path('manifest.webmanifest', serve_pwa_file, {'filename': 'manifest.webmanifest'}, name='pwa-manifest'),
     path('sw.js', serve_pwa_file, {'filename': 'sw.js'}, name='pwa-worker'),
     path('api/monitoring/', include('monitoring.urls')),
+    path('api/secure-links/', include('secure_links.urls')),
     path('api/health/', health_check, name='health-check'),
     # /admin without the trailing slash would fall through to the SPA
     # catch-all and 404 — APPEND_SLASH never kicks in because the URL
