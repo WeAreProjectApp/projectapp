@@ -78,7 +78,7 @@ function mountModal() {
       stubs: {
         BaseModal: {
           props: ['modelValue'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseAlert: {
           props: ['variant'],

@@ -178,7 +178,7 @@ test.describe('Admin proposal formalization delivery', () => {
     );
 
     await page.getByTestId('proposal-formalization-open').click();
-    const modal = page.getByTestId('formalization-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('formalization-modal') });
     await expect(modal.getByTestId('formalization-subject')).toHaveValue('Documentación para formalizar Portal de formalización');
     await modal.getByTestId('formalization-select-technical').uncheck();
     await modal.getByLabel('Anexo de seguridad').check();
@@ -220,7 +220,7 @@ test.describe('Admin proposal formalization delivery', () => {
 
     await openDocumentsFromProposalList(page);
     await page.getByTestId('proposal-formalization-open').click();
-    const modal = page.getByTestId('formalization-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('formalization-modal') });
     const prepareButton = modal.getByTestId('formalization-prepare');
     await expect(modal.getByText('Falta definir los requerimientos técnicos.')).toHaveText('Falta definir los requerimientos técnicos. Puedes corregirlo en la propuesta o desmarcar este adjunto.');
     await expect(prepareButton).toBeDisabled();
@@ -243,7 +243,7 @@ test.describe('Admin proposal formalization delivery', () => {
 
     await openDocumentsFromProposalList(page);
     await page.getByTestId('proposal-formalization-open').click();
-    const modal = page.getByTestId('formalization-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('formalization-modal') });
     await modal.getByTestId('formalization-subject').fill('Versión renovada para firma');
     await modal.getByTestId('formalization-prepare').click();
     await expect(modal.getByTestId('formalization-send')).toBeEnabled();
@@ -269,7 +269,7 @@ test.describe('Admin proposal formalization delivery', () => {
 
     await openDocumentsFromProposalList(page, { compact: true });
     await page.getByTestId('proposal-formalization-open').click();
-    const modal = page.getByTestId('formalization-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('formalization-modal') });
     await modal.getByTestId('formalization-prepare').click();
     await expect(modal.getByTestId('formalization-email-preview')).toHaveAttribute('title', 'Correo de formalización');
 

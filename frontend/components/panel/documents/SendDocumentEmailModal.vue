@@ -6,7 +6,7 @@
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/40 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
-        <div class="flex h-[100dvh] w-full max-w-2xl flex-col bg-surface shadow-2xl panel-portrait:h-auto panel-portrait:max-h-[90vh] panel-portrait:rounded-2xl">
+        <div class="flex h-[100dvh] w-full max-w-2xl flex-col bg-surface shadow-2xl panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:rounded-2xl">
 
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted flex-shrink-0">
@@ -21,17 +21,17 @@
                 <p class="text-xs text-text-muted truncate">{{ document.title }}</p>
               </div>
             </div>
-          <BaseButton
+            <BaseButton
               variant="ghost"
               icon-only
               size="md"
               class="flex-shrink-0 ml-2"
-            aria-label="Cerrar"
-            title="Cerrar"
+              aria-label="Cerrar"
+              title="Cerrar"
               :disabled="isSending || isTransitioning"
               @click="close"
             >
-            <BaseActionIcon action="close" />
+              <BaseActionIcon action="close" />
             </BaseButton>
           </div>
 
@@ -41,8 +41,8 @@
               type="button"
               class="pb-3 pt-2 text-sm transition-colors border-b-2"
               :class="activeTab === 'edit'
-                ? 'border-emerald-600 text-text-brand font-semibold'
-                : 'border-transparent text-text-muted hover:text-text-default'"
+              ? 'border-emerald-600 text-text-brand font-semibold'
+              : 'border-transparent text-text-muted hover:text-text-default'"
               @click="activeTab = 'edit'"
             >
               Editar
@@ -51,8 +51,8 @@
               type="button"
               class="pb-3 pt-2 text-sm transition-colors border-b-2"
               :class="activeTab === 'preview'
-                ? 'border-emerald-600 text-text-brand font-semibold'
-                : 'border-transparent text-text-muted hover:text-text-default'"
+              ? 'border-emerald-600 text-text-brand font-semibold'
+              : 'border-transparent text-text-muted hover:text-text-default'"
               @click="activeTab = 'preview'"
             >
               Vista previa
@@ -60,7 +60,7 @@
           </div>
 
           <!-- Body -->
-          <div class="flex-1 overflow-y-auto px-6 py-5">
+          <div class="min-h-0 flex-1 overflow-y-auto px-6 py-5">
 
             <div v-if="postSendData" class="space-y-4" data-testid="document-email-post-send">
               <BaseAlert variant="success" title="Correo enviado">
@@ -128,7 +128,7 @@
                           aria-label="Subir sección"
                           @click="moveSection(idx, -1)"
                         >
-                    <BaseActionIcon action="move-up" />
+                          <BaseActionIcon action="move-up" />
                         </BaseButton>
                         <BaseButton
                           variant="ghost"
@@ -139,7 +139,7 @@
                           aria-label="Bajar sección"
                           @click="moveSection(idx, 1)"
                         >
-                    <BaseActionIcon action="move-down" />
+                          <BaseActionIcon action="move-down" />
                         </BaseButton>
                         <BaseButton
                           v-if="sections.length > 1"
@@ -150,7 +150,7 @@
                           aria-label="Eliminar sección"
                           @click="removeSection(idx)"
                         >
-                    <BaseActionIcon action="delete" />
+                          <BaseActionIcon action="delete" />
                         </BaseButton>
                       </div>
                     </div>
@@ -163,7 +163,7 @@
                   </div>
                 </div>
                 <BaseButton variant="secondary" size="sm" class="mt-3" @click="addSection">
-                <BaseActionIcon action="create" />
+                  <BaseActionIcon action="create" />
                   Agregar sección
                 </BaseButton>
               </div>
@@ -201,13 +201,13 @@
                       aria-label="Quitar adjunto"
                       @click="removeAttachment(docId)"
                     >
-                  <BaseActionIcon action="remove" />
+                      <BaseActionIcon action="remove" />
                     </BaseButton>
                     <span v-else class="text-2xs uppercase tracking-wide text-text-subtle">Principal</span>
                   </div>
                 </div>
                 <BaseButton variant="secondary" size="sm" class="mt-2" @click="showPicker = true">
-                <BaseActionIcon action="attach" />
+                  <BaseActionIcon action="attach" />
                   Adjuntar otro documento
                 </BaseButton>
 
@@ -220,11 +220,11 @@
                   <div class="bg-surface rounded-xl shadow-xl max-w-md w-full max-h-[70vh] flex flex-col border border-border-default">
                     <header class="flex items-center justify-between px-5 py-3 border-b border-border-muted">
                       <h4 class="text-sm font-semibold text-text-default">Seleccionar documentos</h4>
-                  <BaseButton variant="ghost" icon-only size="sm" aria-label="Cerrar" title="Cerrar" @click="showPicker = false">
-                    <BaseActionIcon action="close" />
+                      <BaseButton variant="ghost" icon-only size="sm" aria-label="Cerrar" title="Cerrar" @click="showPicker = false">
+                        <BaseActionIcon action="close" />
                       </BaseButton>
                     </header>
-                    <div class="flex-1 overflow-y-auto px-5 py-3">
+                    <div class="min-h-0 flex-1 overflow-y-auto px-5 py-3">
                       <p v-if="!availableDocs.length" class="text-xs text-text-subtle py-6 text-center">
                         No hay otros documentos disponibles para adjuntar.
                       </p>
@@ -244,11 +244,11 @@
                         </li>
                       </ul>
                     </div>
-                    <footer class="px-5 py-3 border-t border-border-muted flex justify-end">
+                    <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
                       <BaseButton variant="primary" size="sm" @click="showPicker = false">
                         Listo
                       </BaseButton>
-                    </footer>
+                    </BaseModalActions>
                   </div>
                 </div>
               </div>
@@ -291,8 +291,8 @@
               v-if="errorMsg"
               class="text-xs px-3 py-2 rounded-lg"
               :class="rateLimited
-                ? 'text-warning-strong bg-warning-soft'
-                : 'text-danger-strong bg-danger-soft'"
+              ? 'text-warning-strong bg-warning-soft'
+              : 'text-danger-strong bg-danger-soft'"
             >
               {{ errorMsg }}
             </p>
@@ -302,7 +302,7 @@
           </div>
 
           <!-- Footer buttons -->
-          <div class="px-6 py-4 border-t border-border-muted flex justify-end gap-2 flex-shrink-0">
+          <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
             <template v-if="postSendData">
               <BaseButton
                 variant="ghost"
@@ -325,7 +325,7 @@
                 Enviar
               </BaseButton>
             </template>
-          </div>
+          </BaseModalActions>
 
         </div>
       </div>

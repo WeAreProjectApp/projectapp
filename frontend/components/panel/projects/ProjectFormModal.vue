@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { useId, computed, ref, watch } from 'vue'
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue'
 import ClientFormFields from '~/components/clients/ClientFormFields.vue'
 import { clientFormPayload, emptyClientForm } from '~/utils/billingCode'
@@ -175,6 +175,8 @@ function onSubmit() {
   }
   emit('submit', payload)
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -182,7 +184,7 @@ function onSubmit() {
     <div class="px-6 pt-6 pb-2">
       <h3 id="project-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>
-    <form novalidate @submit.prevent="onSubmit">
+    <form :id="modalFormId" novalidate @submit.prevent="onSubmit">
       <div class="space-y-4 px-6 py-4">
       <BaseFormField
         v-slot="{ invalid, errorId }"
@@ -318,12 +320,14 @@ function onSubmit() {
 
       </div>
 
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="secondary" @click="emit('close')">
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :loading="saving"
           data-testid="project-form-submit"
@@ -331,6 +335,6 @@ function onSubmit() {
           {{ saving ? 'Guardando...' : 'Guardar' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>

@@ -998,3 +998,14 @@ Slice focal:
 ### Carpetas de Comunicaciones
 
 Validar `list_folders`, `create_folder`, `update_folder`, `delete_folder` con un perfil de cliente y proyecto opcional. Rechazar ciclos, cambio de contexto y eliminación con hilos archivados. `create_thread`/`update_thread` reciben `folder_id`; null retira la ubicación, una comunicación madre lo rechaza. `list_threads` admite `folder=<id>|none`; con `q`, busca todas las carpetas del contexto. Una actualización exclusivamente organizativa funciona con hilo cerrado. Los contratos incluyen `CommunicationFolder` y `CommunicationThread.folder`; los servicios son los mismos del panel.
+
+
+### Regresión de enlaces seguros: personalizado y disponibilidad
+
+`list_secure_link_types` incluye `custom` con `custom_name` y `content`
+obligatorios. `create_secure_link` acepta esos campos sin cliente ni proyecto;
+los listados y `get_secure_link` conservan sólo metadatos, nunca el nombre
+personalizado ni contenido cifrado. Un nombre vacío falla sin crear registros.
+Si el cifrado no está disponible, el mismo servicio usado por el panel retorna
+un error amigable al conector, sin registrar secretos. No cambian campos de
+modelos ni su clasificación en `content/mcp/contracts.py`.

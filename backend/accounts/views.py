@@ -1228,15 +1228,20 @@ def _pick_default_deliverable_for_requirements(proj):
 
 def _recalculate_project_progress(project):
     """Auto-sync project.progress from done/total requirements."""
-    scope = Requirement.objects.filter(
+    from django.db.models import Count, Q
+
+    counts = Requirement.objects.filter(
         phase__project=project,
         is_archived=False,
+    ).aggregate(
+        total=Count('pk'),
+        done=Count('pk', filter=Q(status=Requirement.STATUS_DONE)),
     )
-    total = scope.count()
+    total = counts['total']
     if total == 0:
         project.progress = 0
     else:
-        done = scope.filter(status=Requirement.STATUS_DONE).count()
+        done = counts['done']
         project.progress = round((done / total) * 100)
     project.save(update_fields=['progress', 'updated_at'])
 
@@ -1504,12 +1509,19 @@ def requirement_move_view(request, project_id, req_id):
     Move a card to a new column/order.
     Admin can move to any column. Client can only approve (approval→done).
     """
+    from django.db.models import Count
+
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
 
     try:
-        req = Requirement.objects.get(id=req_id, phase__project=proj)
+        req = (
+            Requirement.objects
+            .select_related('phase__business_proposal', 'scope_item')
+            .annotate(_comments_count=Count('comments'))
+            .get(id=req_id, phase__project=proj)
+        )
     except Requirement.DoesNotExist:
         return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -1835,7 +1847,11 @@ def change_request_evaluate_view(request, project_id, cr_id):
         )
 
     try:
-        cr = ChangeRequest.objects.get(id=cr_id, project=proj)
+        cr = (
+            ChangeRequest.objects
+            .select_related('created_by', 'source_requirement__phase__business_proposal')
+            .get(id=cr_id, project=proj)
+        )
     except ChangeRequest.DoesNotExist:
         return Response(
             {'detail': 'Solicitud de cambio no encontrada.'},
@@ -2337,7 +2353,11 @@ def bug_report_evaluate_view(request, project_id, bug_id):
         )
 
     try:
-        bug = BugReport.objects.get(id=bug_id, project=proj)
+        bug = (
+            BugReport.objects
+            .select_related('reported_by', 'source_requirement__phase__business_proposal')
+            .get(id=bug_id, project=proj)
+        )
     except BugReport.DoesNotExist:
         return Response(
             {'detail': 'Bug no encontrado.'},
@@ -2710,6 +2730,9 @@ def deliverable_detail_view(request, project_id, deliverable_id):
     if len(upd_fields) > 1:
         deliverable.save(update_fields=upd_fields)
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
     )
@@ -2772,6 +2795,9 @@ def deliverable_upload_version_view(request, project_id, deliverable_id):
         deliverable=deliverable,
     )
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
         status=status.HTTP_201_CREATED,

@@ -1,74 +1,70 @@
 export default {
   "language": "es",
+  "narrationConfig": {
+    "provider": "edge",
+    "voice": "es-CO-SalomeNeural",
+    "locale": "es-CO",
+    "speed": 1,
+    "lead": 0.2
+  },
   "scenes": {
     "scene-1": {
-      "narration": "Tu negocio crece. Tu plataforma también.",
+      "narration": "Tu negocio crece. Tu plataforma también. Hazlo realidad.",
       "captions": [
-        "Tu negocio crece. Tu plataforma también."
+        "Tu negocio crece. Tu plataforma también.",
+        "Hazlo realidad."
       ]
     },
     "scene-2": {
-      "narration": "Con Project App, incorpora nuevas capacidades a tu sistema cuando tu negocio las necesita.",
+      "narration": "Landing page e identidad visual, aplicación móvil, seguimiento de comportamiento y producto, y sistema de agenda y reservas.",
       "captions": [
-        "Con Project App, incorpora nuevas capacidades a tu sistema cuando",
-        "tu negocio las necesita."
+        "Landing page e identidad visual, aplicación móvil,",
+        "seguimiento de comportamiento y producto,",
+        "y sistema de agenda y reservas."
       ]
     },
     "scene-3": {
-      "narration": "Facilita los pagos, con opciones para tus clientes. Organiza tu disponibilidad, tus reservas y los cambios. Automatiza tareas con inteligencia artificial.",
+      "narration": "Facilita los pagos y la facturación electrónica. Organiza tu agenda, tus reservas y los cambios. Automatiza tareas con inteligencia artificial.",
       "captions": [
-        "Facilita los pagos, con opciones para tus clientes. Organiza tu",
-        "disponibilidad, tus reservas y los cambios. Automatiza tareas con inteligencia",
-        "artificial."
+        "Facilita los pagos y la facturación electrónica.",
+        "Organiza tu agenda, tus reservas y los cambios.",
+        "Automatiza tareas con inteligencia artificial."
       ],
       "voiceSegments": [
         {
           "at": 0,
-          "text": "Facilita los pagos, con opciones para tus clientes."
+          "text": "Facilita los pagos y la facturación electrónica."
         },
         {
-          "at": 4,
-          "text": "Organiza tu disponibilidad, tus reservas y los cambios."
+          "at": 5,
+          "text": "Organiza tu agenda, tus reservas y los cambios."
         },
         {
-          "at": 8,
+          "at": 10,
           "text": "Automatiza tareas con inteligencia artificial."
         }
       ]
     },
     "scene-4": {
-      "narration": "Nuevo en el catálogo: Protección de propiedad intelectual. Dificulta que bots y agentes de inteligencia artificial copien lo que hace único a tu negocio.",
+      "narration": "Protege lo que hace único a tu negocio. Dificulta que bots y agentes de inteligencia artificial copien tu código, datos y contenidos.",
       "captions": [
-        "Nuevo en el catálogo: Protección de propiedad intelectual.",
+        "Protege lo que hace único a tu negocio.",
         "Dificulta que bots y agentes de inteligencia artificial",
-        "copien lo que hace único a tu negocio."
-      ],
-      "voiceSegments": [
-        {
-          "at": 0,
-          "text": "Nuevo en el catálogo: Protección de propiedad intelectual."
-        },
-        {
-          "at": 3.6,
-          "text": "Dificulta que bots y agentes de inteligencia artificial copien lo que hace único a tu negocio.",
-          "captions": [
-            "Dificulta que bots y agentes de inteligencia artificial",
-            "copien lo que hace único a tu negocio."
-          ]
-        }
+        "copien tu código, datos y contenidos."
       ]
     },
     "scene-5": {
-      "narration": "Descarga el catálogo. El alcance de tu proyecto se define en una propuesta a tu medida.",
+      "narration": "Del diseño a la implementación y luego a los resultados. Descarga el catálogo y definamos tu proyecto.",
       "captions": [
-        "Descarga el catálogo. El alcance de tu proyecto se define",
-        "en una propuesta a tu medida."
+        "Del diseño a la implementación y luego a los resultados.",
+        "Descarga el catálogo y definamos tu proyecto."
       ]
     },
     "scene-6": {
-      "narration": "Explora el catálogo y conversemos sobre el siguiente paso.",
+      "narration": "De un sueño a una realidad en treinta días. Construye con nosotros.",
       "captions": [
-        "Explora el catálogo y conversemos sobre el siguiente paso."
+        "De un sueño a una realidad en treinta días.",
+        "Construye con nosotros."
       ]
     }
   }

@@ -29,12 +29,14 @@
         <slot v-else :active-tab="modelValue" />
       </div>
 
-      <div class="flex items-center justify-end px-4 pb-6 panel-portrait:px-6">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="secondary" @click="emit('close')">
           Cerrar
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

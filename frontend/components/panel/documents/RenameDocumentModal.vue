@@ -6,7 +6,7 @@
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/40 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
-        <div class="h-[100dvh] w-full max-w-sm overflow-y-auto bg-surface shadow-2xl panel-portrait:h-auto panel-portrait:max-h-[90vh] panel-portrait:rounded-2xl">
+        <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface shadow-overlay panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:max-w-sm panel-portrait:rounded-2xl">
 
           <!-- Header -->
           <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
@@ -22,25 +22,27 @@
           </div>
 
           <!-- Body -->
-          <form class="p-6 space-y-4" @submit.prevent="submit">
-            <div>
-              <label class="block text-xs text-text-muted mb-1.5">Nuevo nombre</label>
-              <input
-                ref="inputRef"
-                v-model="editingTitle"
-                type="text"
-                placeholder="Nombre del documento"
-                class="bg-input-bg w-full px-3 py-2 border border-border-default rounded-lg text-sm text-text-default focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
-                :disabled="isSaving"
-                @keyup.esc="close"
-              />
+          <form class="flex min-h-0 flex-1 flex-col" @submit.prevent="submit">
+            <div class="min-h-0 flex-1 space-y-4 overflow-y-auto p-6" data-modal-body>
+              <div>
+                <label class="block text-xs text-text-muted mb-1.5">Nuevo nombre</label>
+                <input
+                  ref="inputRef"
+                  v-model="editingTitle"
+                  type="text"
+                  placeholder="Nombre del documento"
+                  class="bg-input-bg w-full px-3 py-2 border border-border-default rounded-lg text-sm text-text-default focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
+                  :disabled="isSaving"
+                  @keyup.esc="close"
+                />
+              </div>
+
+              <p v-if="errorMsg" class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">
+                {{ errorMsg }}
+              </p>
+
             </div>
-
-            <p v-if="errorMsg" class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">
-              {{ errorMsg }}
-            </p>
-
-            <div class="flex justify-end gap-2 pt-2">
+            <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
               <BaseButton variant="ghost" @click="close">
                 Cancelar
               </BaseButton>
@@ -52,7 +54,7 @@
               >
                 Guardar cambios
               </BaseButton>
-            </div>
+            </BaseModalActions>
           </form>
 
         </div>

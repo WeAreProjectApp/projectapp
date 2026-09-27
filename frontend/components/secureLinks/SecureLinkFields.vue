@@ -12,6 +12,9 @@
       <BaseTextarea
         v-if="isMultiline(field)"
         :id="`${idPrefix}-${field.key}`"
+        :name="`${idPrefix}-${field.key}`"
+        :maxlength="field.max_length"
+        :required="field.required"
         :model-value="modelValue[field.key] || ''"
         :rows="field.kind === 'secret' ? 5 : 4"
         :class="{ 'font-mono': field.kind === 'secret' }"
@@ -26,6 +29,9 @@
       <div v-else class="flex min-w-0 items-center gap-2">
         <BaseInput
           :id="`${idPrefix}-${field.key}`"
+          :name="`${idPrefix}-${field.key}`"
+          :maxlength="field.max_length"
+          :required="field.required"
           class="min-w-0 flex-1"
           :type="inputType(field)"
           :model-value="modelValue[field.key] || ''"
@@ -33,7 +39,7 @@
           :aria-describedby="errorId"
           :disabled="disabled"
           :data-testid="`secure-link-field-${field.key}`"
-          autocomplete="off"
+          :autocomplete="field.kind === 'secret' ? 'new-password' : 'off'"
           @update:model-value="update(field.key, $event)"
         />
         <BaseActionButton
@@ -50,7 +56,7 @@
 </template>
 
 <script setup>
-import { computed, reactive } from 'vue';
+import { computed, reactive, watch } from 'vue';
 import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
@@ -70,6 +76,10 @@ const { t } = useI18n();
 const visible = reactive({});
 
 const fields = computed(() => props.type?.fields || []);
+
+watch(() => props.type?.key, () => {
+  Object.keys(visible).forEach((key) => delete visible[key]);
+});
 
 function labelFor(field) {
   return props.language === 'en' ? field.label_en : field.label_es;

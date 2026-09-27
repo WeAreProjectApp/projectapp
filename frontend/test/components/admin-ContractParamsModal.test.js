@@ -50,7 +50,7 @@ function mountContractParamsModal(props = {}, components = {}) {
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
           props: ['modelValue', 'size'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseSegmented: {
           props: ['modelValue', 'options', 'fullWidth'],

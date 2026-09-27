@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { useId, computed, ref, watch } from 'vue'
 import PartnerSplitInput from './PartnerSplitInput.vue'
 import PeriodDateField from './PeriodDateField.vue'
 import { useHostingPeriod } from '~/composables/useHostingPeriod'
@@ -351,6 +351,8 @@ function onSubmit() {
   payload.notes = form.value.notes
   emit('submit', payload)
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -372,7 +374,7 @@ function onSubmit() {
       </p>
     </div>
 
-    <form class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+    <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
       <div
         v-if="record"
         class="rounded-lg bg-surface-raised px-4 py-3 text-sm text-text-muted"
@@ -680,7 +682,9 @@ function onSubmit() {
         <BaseTextarea v-model="form.notes" :rows="2" />
       </BaseFormField>
 
-      <div class="flex flex-col items-end gap-1 pt-2">
+    </form>
+    <template #footer>
+      <div class="space-y-2 border-t border-border-muted px-4 py-4 panel-portrait:px-6">
         <!-- Always rendered: a live region created on demand never announces. -->
         <p
           id="income-liquidate-submit-reason"
@@ -695,7 +699,7 @@ function onSubmit() {
             Cancelar
           </BaseButton>
           <BaseButton
-            type="submit"
+            type="submit" :form="modalFormId"
             variant="primary"
             :loading="saving"
             :disabled="!canSubmit"
@@ -707,6 +711,6 @@ function onSubmit() {
           </BaseButton>
         </div>
       </div>
-    </form>
+    </template>
   </BaseModal>
 </template>

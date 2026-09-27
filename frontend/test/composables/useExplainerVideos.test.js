@@ -1,21 +1,21 @@
 import { ref } from 'vue'
 
 import {
-  EXPLAINER_IDS,
   explainerVideoFor,
   formatExplainerDuration,
   useExplainerVideo,
 } from '../../composables/useExplainerVideos'
 
 describe('useExplainerVideos', () => {
-  it('describes both Spanish explainers with their assets and dimensions', () => {
-    EXPLAINER_IDS.forEach((id) => {
-      const descriptor = explainerVideoFor(id, 'es')
-      expect(descriptor).toMatchObject({ id, language: 'es', width: 1920, height: 1080 })
-      expect(descriptor.src).toBeTruthy()
-      expect(descriptor.poster).toBeTruthy()
-      expect(descriptor.durationSeconds).toBe(45)
-    })
+  it.each([
+    ['additional-modules', 60],
+    ['financing', 60],
+  ])('describes the published %s video', (id, durationSeconds) => {
+    const descriptor = explainerVideoFor(id, 'es')
+    expect(descriptor).toMatchObject({ id, language: 'es', width: 1920, height: 1080 })
+    expect(descriptor.src).toBeTruthy()
+    expect(descriptor.poster).toBeTruthy()
+    expect(descriptor.durationSeconds).toBe(durationSeconds)
   })
 
   it('only resolves languages that have a render and ids from the registry', () => {

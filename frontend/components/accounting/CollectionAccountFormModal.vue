@@ -943,6 +943,8 @@ function downloadPdf() {
   const number = preview.value?.public_number || 'cuenta-de-cobro';
   downloadUrl(pdfUrl.value, `${number}.pdf`);
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -963,7 +965,7 @@ function downloadPdf() {
     </div>
 
     <!-- ── Step 1: form ── -->
-    <form
+    <form :id="modalFormId"
       v-if="step === 'form'"
       class="px-6 py-4 space-y-4"
       novalidate
@@ -1426,19 +1428,6 @@ function downloadPdf() {
         />
       </BaseFormField>
 
-      <BaseModalActions class="-mx-6 -mb-4 mt-6">
-        <BaseButton type="button" variant="secondary" @click="close">
-          Cancelar
-        </BaseButton>
-        <BaseButton
-          type="submit"
-          variant="primary"
-          :loading="previewing"
-          data-testid="collection-form-preview"
-        >
-          {{ previewing ? 'Generando...' : 'Previsualizar' }}
-        </BaseButton>
-      </BaseModalActions>
     </form>
 
     <!-- ── Step 2: preview ── -->
@@ -1581,7 +1570,22 @@ function downloadPdf() {
       </div>
 
       <!-- Fixed: the send decision never needs scrolling to reach. -->
-      <BaseModalActions class="mt-4 shrink-0">
+    </div>
+    <template #footer>
+      <BaseModalActions v-if="step === 'form'">
+        <BaseButton type="button" variant="secondary" @click="close">
+          Cancelar
+        </BaseButton>
+        <BaseButton
+          type="submit" :form="modalFormId"
+          variant="primary"
+          :loading="previewing"
+          data-testid="collection-form-preview"
+        >
+          {{ previewing ? 'Generando...' : 'Previsualizar' }}
+        </BaseButton>
+      </BaseModalActions>
+      <BaseModalActions v-else>
         <BaseButton
           type="button"
           variant="secondary"
@@ -1600,7 +1604,7 @@ function downloadPdf() {
           {{ saving ? 'Enviando...' : 'Confirmar y enviar' }}
         </BaseButton>
       </BaseModalActions>
-    </div>
+    </template>
   </BaseModal>
 
   <!-- Stacked: create the expected income without leaving the flow -->

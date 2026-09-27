@@ -6,112 +6,114 @@
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/50 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
-        <div class="flex h-[100dvh] w-full max-w-xl flex-col bg-surface shadow-2xl panel-portrait:h-auto panel-portrait:max-h-[88vh] panel-portrait:rounded-2xl">
+        <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface shadow-overlay panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:rounded-2xl panel-portrait:max-w-xl">
 
-          <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-5 border-b border-border-muted flex-shrink-0">
-            <div class="flex items-center gap-3">
-              <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                </svg>
+          <div class="min-h-0 flex-1 overflow-y-auto" data-modal-body>
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-5 border-b border-border-muted flex-shrink-0">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center">
+                  <svg class="w-5 h-5 text-amber-500 dark:text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                    <path d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
+                  <p class="text-xs text-text-muted mt-0.5">Las raíces de proyecto son automáticas; sus subcarpetas y las propias se gestionan aquí</p>
+                </div>
               </div>
-              <div>
-                <h3 class="text-base font-semibold text-text-default">Gestionar carpetas</h3>
-                <p class="text-xs text-text-muted mt-0.5">Las raíces de proyecto son automáticas; sus subcarpetas y las propias se gestionan aquí</p>
-              </div>
-            </div>
-        <BaseButton variant="ghost" icon-only size="md" aria-label="Cerrar" title="Cerrar" @click="close">
-          <BaseActionIcon action="close" />
-            </BaseButton>
-          </div>
-
-          <!-- New folder form -->
-          <div class="px-6 pt-5 pb-4 flex-shrink-0 space-y-3">
-            <form class="space-y-3" novalidate @submit.prevent="handleCreate">
-              <BaseFormField label="Nombre" required :error="newNameError">
-                <BaseInput
-                  v-model="newName"
-                  type="text"
-                  placeholder="Nombre de la nueva carpeta"
-                  :error="!!newNameError"
-                  data-testid="folder-manager-new-name"
-                  @update:model-value="newNameError = ''"
-                />
-              </BaseFormField>
-              <BaseFormField label="Dentro de">
-                <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
-                  <option value="">Ninguna (carpeta raíz)</option>
-                  <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
-                    {{ opt.label }}
-                  </option>
-                </BaseSelect>
-              </BaseFormField>
-              <div class="flex justify-end">
-              <BaseButton
-                type="submit"
-                variant="primary"
-                :loading="folderStore.isUpdating"
-              >
-                Crear
+              <BaseButton variant="ghost" icon-only size="md" aria-label="Cerrar" title="Cerrar" @click="close">
+                <BaseActionIcon action="close" />
               </BaseButton>
-              </div>
-            </form>
-          </div>
-
-          <div v-if="folderStore.activeFolders.length" class="px-6 pb-2 flex-shrink-0">
-            <div class="flex items-center gap-2">
-              <span class="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">
-                {{ folderStore.activeFolders.length }} carpeta{{ folderStore.activeFolders.length !== 1 ? 's' : '' }}
-              </span>
-              <div class="flex-1 h-px bg-surface-raised"></div>
-              <span class="text-2xs text-text-subtle flex items-center gap-1">
-                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
-                </svg>
-                Arrastra para reordenar (por nivel)
-              </span>
-            </div>
-          </div>
-
-          <!-- Folder tree -->
-          <div class="flex-1 overflow-y-auto px-6 pb-2">
-            <div v-if="!folderStore.activeFolders.length" class="flex flex-col items-center justify-center py-12 text-center">
-              <div class="w-14 h-14 rounded-2xl bg-surface-raised flex items-center justify-center mb-3">
-                <svg class="w-7 h-7 text-text-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
-                </svg>
-              </div>
-              <p class="text-sm font-medium text-text-muted">Sin carpetas todavía</p>
-              <p class="text-xs text-text-subtle mt-1">Usa el campo de arriba para crear la primera.</p>
             </div>
 
-            <FolderManagerTree
-              v-else
-              :siblings="folderStore.rootFolders"
-              :parent-id="null"
-              :depth="0"
-              :editing-id="editingFolder?.id ?? null"
-              :deleting-id="deletingFolder?.id ?? null"
-              class="py-1"
-              @edit="startEdit"
-              @archive="askArchive"
-              @delete="askDelete"
-              @reorder="handleReorder"
-            />
+            <!-- New folder form -->
+            <div class="px-6 pt-5 pb-4 flex-shrink-0 space-y-3">
+              <form class="space-y-3" novalidate @submit.prevent="handleCreate">
+                <BaseFormField label="Nombre" required :error="newNameError">
+                  <BaseInput
+                    v-model="newName"
+                    type="text"
+                    placeholder="Nombre de la nueva carpeta"
+                    :error="!!newNameError"
+                    data-testid="folder-manager-new-name"
+                    @update:model-value="newNameError = ''"
+                  />
+                </BaseFormField>
+                <BaseFormField label="Dentro de">
+                  <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
+                    <option value="">Ninguna (carpeta raíz)</option>
+                    <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
+                      {{ opt.label }}
+                    </option>
+                  </BaseSelect>
+                </BaseFormField>
+                <div class="flex justify-end">
+                  <BaseButton
+                    type="submit"
+                    variant="primary"
+                    :loading="folderStore.isUpdating"
+                  >
+                    Crear
+                  </BaseButton>
+                </div>
+              </form>
+            </div>
+
+            <div v-if="folderStore.activeFolders.length" class="px-6 pb-2 flex-shrink-0">
+              <div class="flex items-center gap-2">
+                <span class="text-[11px] font-semibold text-text-subtle uppercase tracking-wider">
+                  {{ folderStore.activeFolders.length }} carpeta{{ folderStore.activeFolders.length !== 1 ? 's' : '' }}
+                </span>
+                <div class="flex-1 h-px bg-surface-raised"></div>
+                <span class="text-2xs text-text-subtle flex items-center gap-1">
+                  <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+                  </svg>
+                  Arrastra para reordenar (por nivel)
+                </span>
+              </div>
+            </div>
+
+            <!-- Folder tree -->
+            <div class="flex-1 overflow-y-auto px-6 pb-2">
+              <div v-if="!folderStore.activeFolders.length" class="flex flex-col items-center justify-center py-12 text-center">
+                <div class="w-14 h-14 rounded-2xl bg-surface-raised flex items-center justify-center mb-3">
+                  <svg class="w-7 h-7 text-text-subtle" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 7a2 2 0 012-2h4l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z" />
+                  </svg>
+                </div>
+                <p class="text-sm font-medium text-text-muted">Sin carpetas todavía</p>
+                <p class="text-xs text-text-subtle mt-1">Usa el campo de arriba para crear la primera.</p>
+              </div>
+
+              <FolderManagerTree
+                v-else
+                :siblings="folderStore.rootFolders"
+                :parent-id="null"
+                :depth="0"
+                :editing-id="editingFolder?.id ?? null"
+                :deleting-id="deletingFolder?.id ?? null"
+                class="py-1"
+                @edit="startEdit"
+                @archive="askArchive"
+                @delete="askDelete"
+                @reorder="handleReorder"
+              />
+            </div>
+
+            <div v-if="errorMsg" class="px-6 pb-2 flex-shrink-0">
+              <p class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">{{ errorMsg }}</p>
+            </div>
+
+
+            <!-- Footer -->
           </div>
-
-          <div v-if="errorMsg" class="px-6 pb-2 flex-shrink-0">
-            <p class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">{{ errorMsg }}</p>
-          </div>
-
-
-          <!-- Footer -->
-          <div class="px-6 py-4 border-t border-border-muted flex justify-end flex-shrink-0">
+          <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
             <BaseButton variant="ghost" @click="close">
               Cerrar
             </BaseButton>
-          </div>
+          </BaseModalActions>
 
         </div>
       </div>

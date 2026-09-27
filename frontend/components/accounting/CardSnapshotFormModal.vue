@@ -1,6 +1,6 @@
 <script setup>
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
-import { computed, ref, watch } from 'vue'
+import { useId, computed, ref, watch } from 'vue'
 import { formatMoney } from '~/utils/formatMoney'
 
 const props = defineProps({
@@ -100,6 +100,8 @@ function onSubmit() {
     notes: form.value.notes,
   })
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -108,7 +110,7 @@ function onSubmit() {
       <h3 id="card-snapshot-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>
     <EntityHistorySection v-if="open && record?.id" entity-type="card_snapshot" :object-id="record.id" class="mx-5" />
-    <form class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+    <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
       <BaseFormRow :cols="2" :gap="4">
         <BaseFormField label="Tarjeta" required>
           <BaseSelect
@@ -143,12 +145,14 @@ function onSubmit() {
         <BaseTextarea v-model="form.notes" :rows="3" />
       </BaseFormField>
 
-      <BaseModalActions class="-mx-6 -mb-4 mt-6">
+    </form>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="secondary" @click="emit('close')">
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :loading="saving"
           :disabled="availableExceedsLimit"
@@ -159,6 +163,6 @@ function onSubmit() {
           {{ saving ? 'Guardando...' : 'Guardar' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>

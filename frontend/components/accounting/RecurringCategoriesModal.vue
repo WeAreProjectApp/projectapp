@@ -145,11 +145,13 @@ function onDragEnd() {
         </div>
       </form>
 
-      <div class="flex items-center justify-end pt-2">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="primary" @click="emit('close')">
           Listo
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

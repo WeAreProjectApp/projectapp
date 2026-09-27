@@ -61,41 +61,43 @@
     </div>
 
     <!-- Actions -->
-    <div class="flex items-center justify-end gap-3 px-6 py-4">
-      <BaseButton
-        v-if="!hideCancel"
-        variant="ghost"
-        size="md"
-        :disabled="loading"
-        @click="handleCancel"
-      >
-        {{ cancelText }}
-      </BaseButton>
-      <!--
-        Entre Cancelar y Confirmar: el destructivo se queda a la derecha.
-        Nunca se deshabilita con `canConfirm` — es una salida, no un paso más.
-      -->
-      <BaseButton
-        v-if="secondaryText"
-        :variant="secondaryVariant"
-        size="md"
-        :disabled="loading"
-        data-testid="confirm-modal-secondary"
-        @click="handleSecondary"
-      >
-        {{ secondaryText }}
-      </BaseButton>
-      <BaseButton
-        :variant="variant === 'danger' ? 'danger' : 'primary'"
-        size="md"
-        data-testid="confirm-modal-confirm"
-        :disabled="!canConfirm || loading"
-        :loading="loading"
-        @click="handleConfirm"
-      >
-        {{ confirmText }}
-      </BaseButton>
-    </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton
+          v-if="!hideCancel"
+          variant="ghost"
+          size="md"
+          :disabled="loading"
+          @click="handleCancel"
+        >
+          {{ cancelText }}
+        </BaseButton>
+        <!--
+          Entre Cancelar y Confirmar: el destructivo se queda a la derecha.
+          Nunca se deshabilita con `canConfirm` — es una salida, no un paso más.
+        -->
+        <BaseButton
+          v-if="secondaryText"
+          :variant="secondaryVariant"
+          size="md"
+          :disabled="loading"
+          data-testid="confirm-modal-secondary"
+          @click="handleSecondary"
+        >
+          {{ secondaryText }}
+        </BaseButton>
+        <BaseButton
+          :variant="variant === 'danger' ? 'danger' : 'primary'"
+          size="md"
+          data-testid="confirm-modal-confirm"
+          :disabled="!canConfirm || loading"
+          :loading="loading"
+          @click="handleConfirm"
+        >
+          {{ confirmText }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

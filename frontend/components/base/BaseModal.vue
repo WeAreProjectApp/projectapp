@@ -36,10 +36,10 @@ const props = defineProps({
   },
   /** Optional palette scope carried onto the teleported dialog. */
   themeClass: { type: String, default: '' },
-  /** Pins the panel to a fixed 90vh column that never scrolls itself, so the
+  /** Pins the panel to a fixed 90dvh column that never scrolls itself, so the
    * slot can own its scroll regions (fixed header/footer + independently
    * scrolling panes). Off by default: the panel grows to its content and
-   * scrolls as a whole, which is what every form modal wants. */
+   * scrolls as a whole unless a footer slot separates the actions. */
   fullHeight: { type: Boolean, default: false },
   /** id of the element that labels the dialog; when empty, the first
    * h1/h2/h3 found in the slot is auto-detected and used instead. */
@@ -76,6 +76,9 @@ const sizeClass = computed(() => (
 ))
 const paddingClass = computed(() => (props.padding === 'md' ? 'p-6' : ''))
 const floatingLayerCount = ref(0)
+const footerHeightClass = computed(() => props.fullHeight
+  ? 'h-dvh overflow-hidden flex flex-col panel-portrait:h-[90dvh]'
+  : 'h-dvh overflow-hidden flex flex-col panel-portrait:h-auto panel-portrait:max-h-[90dvh]')
 const heightClass = computed(() => {
   if (props.fullHeight) {
     return 'h-dvh overflow-hidden flex flex-col panel-portrait:h-[90vh]'
@@ -180,11 +183,23 @@ watch(
           ref="panelRef"
           tabindex="-1"
           class="base-modal-panel relative w-full rounded-none border-0 border-border-default bg-surface shadow-overlay focus:outline-none panel-portrait:rounded-2xl panel-portrait:border"
-          :class="[sizeClass, paddingClass, heightClass]"
+          :class="[sizeClass, $slots.footer ? footerHeightClass : [paddingClass, heightClass]]"
           :data-modal-kind="kind || size"
           :data-floating-layer-open="floatingLayerCount > 0 ? 'true' : undefined"
         >
-          <slot />
+          <template v-if="$slots.footer">
+            <div
+              class="min-h-0 flex-1 overscroll-contain"
+              :class="[paddingClass, fullHeight ? 'flex flex-col overflow-hidden' : floatingLayerCount > 0 ? 'overflow-hidden' : 'overflow-y-auto']"
+              data-modal-body
+            >
+              <slot />
+            </div>
+            <div class="shrink-0 bg-surface" data-modal-footer>
+              <slot name="footer" />
+            </div>
+          </template>
+          <slot v-else />
         </div>
         <div
           ref="floatingRootRef"
