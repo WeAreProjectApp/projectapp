@@ -220,7 +220,7 @@ test.describe('Admin secure links', () => {
     await page.getByTestId('secure-link-field-username').fill('previous-user');
     await page.getByTestId('secure-link-field-password').fill('previous-password');
     await page.getByTestId('secure-link-field-toggle-password').click();
-    await page.getByTestId('secure-link-form').getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByRole('dialog').filter({ has: page.getByTestId('secure-link-form') }).getByRole('button', { name: 'Cancelar', exact: true }).click();
     await page.getByTestId('secure-links-new').click();
 
     await expect(page.getByTestId('secure-link-field-username')).toHaveValue('');
