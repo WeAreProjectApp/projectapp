@@ -635,7 +635,7 @@ branch before removing its now-empty parallel wrappers.
 
 | Model | Purpose | Key Fields |
 |-------|---------|------------|
-| **BusinessProposal** | Core proposal entity | uuid, title, **client (FK→accounts.UserProfile, PROTECT)**, client_name (snapshot), client_email (snapshot), client_phone (snapshot), status, total_investment, currency, language, show_contract_terms, expires_at, view_count, cached_heat_score, durable first-view notification status/attempts/timestamps/error. Snapshots are write-through, kept in sync via `proposal_client_service.sync_snapshot()`. |
+| **BusinessProposal** | Core proposal entity | uuid, title, **client (FK→accounts.UserProfile, PROTECT)**, client_name (snapshot), client_email (snapshot), client_phone (snapshot), status, total_investment, currency, language, show_contract_terms, contract_modality (`single` \| `split`), contract_params, expires_at, view_count, cached_heat_score, durable first-view notification status/attempts/timestamps/error. Snapshots are write-through, kept in sync via `proposal_client_service.sync_snapshot()`. |
 | **ProposalSection** | Individual section within a proposal | proposal_fk, section_type (18 types — incl. `roi_projection`, web-only), title, order, is_enabled, content_json, is_wide_panel |
 | **ProposalRequirementGroup** | Functional requirements group | proposal_fk, group_id, title, description, order |
 | **ProposalRequirementItem** | Individual requirement item | group_fk, name, description, icon |
@@ -666,8 +666,8 @@ branch before removing its now-empty parallel wrappers.
 | **CommunicationAttachment** | Bidirectional reference to an existing document | message (CASCADE), document (PROTECT), unique message/document pair |
 | **CommunicationMessageRevision** | Append-only draft-edit audit | message, supplied field diffs, edited_by/at |
 | **CommunicationMessageDateCorrection** | Append-only business-date correction | message, previous/corrected occurred_at, reason, corrected_by/at |
-| **ContractTemplate** | Reusable contract template | title, sections_json, parameters_json, created_at |
-| **ProposalDocument** | Links a proposal to a generated contract | proposal_fk, contract_template_fk, title, pdf_file, is_draft, signed_at, contractor_signature |
+| **ContractTemplate** | The one contract (default row), versioned by data migrations | name, content_markdown (single contract; the product contract is derived from it), service_content_markdown (standalone hosting, maintenance and support contract), is_default, mirror_document, timestamps |
+| **ProposalDocument** | Generated contracts and uploaded annexes of a proposal | proposal, document_type (`contract`, `contract_product`, `contract_service`, amendment, legal_annex, client_document, other), title, file, custom_type_label, is_generated, content_markdown (snapshot), timestamps |
 | **CompanySettings** | Company-level branding and info used in PDFs | name, logo, address, tax_id, email, phone, website |
 | **UserProfile** | Platform user (extends Django User) | user_fk, role (admin/client), company_name, phone, avatar, is_onboarded, profile_completed, **email_verified, email_verified_at**, document_navigation_mode (project/client panel preference), is_active |
 | **VerificationCode** | OTP codes (login + email validation) | user_fk, code, purpose, expires_at, is_used |
@@ -1715,6 +1715,16 @@ historical record.
 ## Formalización de propuestas
 
 Los endpoints administrativos `proposals/{id}/formalization/` delegan en un servicio independiente. `FormalContent` proyecta campos permitidos e importes resueltos; `formalization_pdf` delega en los generadores públicos comercial/técnico con un contexto formal. Comparten composición y assets sin refrescar catálogos ni añadir valores predeterminados del canal público. Las preparaciones nuevas incluyen títulos de sección en una huella versionada; las anteriores conservan su validación y sus adjuntos originales. Una preparación privada conserva payload, HTML/texto, huella de origen y bytes de adjuntos por 24 horas. El envío reclama la preparación mediante actualización condicional de estado y entrega esos mismos bytes al gateway existente, que conserva snapshots e historial. El envío no cambia el estado comercial. Los archivos temporales se eliminan por tarea diaria y también al borrar su propuesta.
+
+### Modalidad de cierre
+
+`BusinessProposal.contract_modality` decide si el negocio cierra con el contrato único o con dos documentos:
+- el contrato de producto, derivado del texto por defecto;
+- el contrato de servicio, `service_content_markdown`.
+
+`content/services/contract_variants.py` registra las tres variantes, sus claves de `contract_params`, portadas y tipos de documento. `PATCH proposals/{id}/contract/modality/` cambia la modalidad sólo en negociación, sin borrar documentos, y regenera los de la modalidad elegida.
+
+Descargas, copia Markdown, adjuntos del compositor, envío legado, formalización, regeneración y sincronización con la plataforma usan sólo los documentos de la modalidad activa.
 
 ### Carpetas independientes de comunicaciones
 

@@ -388,7 +388,7 @@ MCP_MODEL_CONTRACTS = {
                 'is_active show_contract_terms project_type market_type '
                 'project_type_custom market_type_custom client_phone email_intro '
                 'email_features email_method_phases email_signed_by selected_modules '
-                'contract_params'
+                'contract_params contract_modality'
             ),
             excluded=(
                 _excluded(

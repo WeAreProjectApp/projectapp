@@ -10,7 +10,8 @@ from django.db import transaction
 from django.template.loader import get_template
 from django.utils import timezone
 
-from content.models import BusinessProposal, ProposalDocument, ProposalFormalization, ProposalFormalizationFile
+from content.models import BusinessProposal, ProposalFormalization, ProposalFormalizationFile
+from content.services import contract_variants
 from content.services.email_delivery_service import EmailDeliveryGateway, EmailMultiAlternatives
 from content.services.email_recipient_service import recipient_log_contexts
 from content.services.email_snapshot_service import EmailSnapshotCaptureError
@@ -22,16 +23,41 @@ from content.services.proposal_email_service import ProposalEmailService, _build
 logger = logging.getLogger(__name__)
 TEMPLATE_KEY = 'proposal_formalization'
 MAX_ATTACHMENT_BYTES = 18 * 1024 * 1024
+# A contract key is the stored document type of its variant; the deal's
+# closing modality decides which ones a package may carry.
+CONTRACT_KEYS = contract_variants.DOC_TYPE_VARIANTS
 DOCUMENTS = {
-    'contract': ('Contrato de desarrollo de software', 'Datos y condiciones del contrato para revisión y firma.'),
+    **{
+        spec.doc_type: (spec.label, spec.description)
+        for spec in contract_variants.VARIANTS.values()
+    },
     'commercial': ('Propuesta comercial formal', 'Alcance, entregables y condiciones económicas del proyecto.'),
     'technical': ('Detalle técnico formal', 'Especificaciones y criterios verificables del alcance incluido.'),
+}
+MISSING_CONTRACT_NAMES = {
+    contract_variants.COMBINED: 'el contrato final',
+    contract_variants.PRODUCT: 'el contrato de producto',
+    contract_variants.SERVICE: 'el contrato de servicio',
 }
 SOURCE_FIELDS = (
     'title', 'client_name', 'client_email', 'client_id', 'language', 'currency',
     'total_investment', 'selected_modules', 'contract_params',
     'hosting_percent', 'email_signed_by',
 )
+# Fingerprint version 3 also covers the closing modality.
+SOURCE_VERSION = 3
+# A switch of modality leaves a prepared package pointing at documents that
+# are no longer the deal's contracts; that is a stale preparation.
+STALE_CONTRACT_CODES = ('contract_missing', 'modality_mismatch')
+
+
+def document_keys(proposal):
+    """Attachable documents for the proposal's closing modality, in order."""
+    contracts = [
+        contract_variants.VARIANTS[variant].doc_type
+        for variant in contract_variants.active_variants(proposal)
+    ]
+    return [*contracts, 'commercial', 'technical']
 
 
 def load_proposal(pk):
@@ -58,30 +84,39 @@ def read_document(doc):
     return data
 
 
+def contract_attachments(proposal, keys):
+    """The stored contract documents behind *keys*, in order, validated for sending."""
+    active_keys = document_keys(proposal)
+    result = []
+    for key in keys:
+        variant = CONTRACT_KEYS.get(key)
+        if variant is None:
+            continue
+        if key not in active_keys:
+            raise FormalizationError(
+                'Ese contrato no corresponde a la modalidad de cierre elegida. Prepara nuevamente el correo.',
+                'modality_mismatch',
+            )
+        contract = contract_variants.contract_document(proposal, variant)
+        if not contract:
+            raise FormalizationError(f'Genera {MISSING_CONTRACT_NAMES[variant]} desde Documentos.', 'contract_missing')
+        missing = contract_variants.missing_final_params(proposal.contract_params, variant)
+        if missing:
+            raise FormalizationError('Completa los parámetros del contrato final: ' + ', '.join(missing) + '.', 'contract_incomplete')
+        result.append((key, contract))
+    return result
+
+
 def related_documents(proposal, payload):
     requested = payload.get('additional_doc_ids', [])
     found = {doc.pk: doc for doc in proposal.proposal_documents.filter(pk__in=requested)}
     if set(requested) != set(found):
         raise FormalizationError('Uno de los adjuntos no pertenece a esta propuesta o fue eliminado.', 'invalid_attachment')
-    result = [(f'additional-{pk}', found[pk]) for pk in requested]
-    if 'contract' in payload.get('documents', []):
-        contract = proposal.proposal_documents.filter(document_type=ProposalDocument.DOC_TYPE_CONTRACT, is_generated=True).first()
-        if not contract:
-            raise FormalizationError('Genera el contrato final desde Documentos.', 'contract_missing')
-        params = proposal.contract_params or {}
-        required = ['contract_date', 'custom_contract_markdown'] if params.get('contract_source') == 'custom' else [
-            'contractor_full_name', 'contractor_email', 'contract_city', 'bank_name',
-            'bank_account_number', 'client_full_name', 'client_cedula', 'client_email', 'contract_date',
-        ]
-        missing = [key for key in required if not str(params.get(key) or '').strip()]
-        if params.get('contract_source') != 'custom' and not (params.get('contractor_nit') or params.get('contractor_cedula')):
-            missing.append('contractor_identity')
-        if missing:
-            raise FormalizationError('Completa los parámetros del contrato final: ' + ', '.join(missing) + '.', 'contract_incomplete')
-        result.insert(0, ('contract', contract))
-    if any(doc.document_type == ProposalDocument.DOC_TYPE_CONTRACT for key, doc in result if key != 'contract'):
+    extras = [(f'additional-{pk}', found[pk]) for pk in requested]
+    contracts = contract_attachments(proposal, payload.get('documents', []))
+    if any(doc.document_type in contract_variants.CONTRACT_DOC_TYPES for _key, doc in extras):
         raise FormalizationError('Selecciona el contrato mediante su casilla principal.', 'duplicate_contract')
-    return result
+    return contracts + extras
 
 
 def source_hash(proposal, payload):
@@ -90,11 +125,14 @@ def source_hash(proposal, payload):
     section_fields = ('section_type', 'content_json', 'is_enabled', 'order')
     if payload.get('_source_version', 1) >= 2:
         section_fields += ('title',)
+    proposal_fields = SOURCE_FIELDS
+    if payload.get('_source_version', 1) >= 3:
+        proposal_fields += ('contract_modality',)
     document_sources = []
     for key, doc in related_documents(proposal, payload):
         document_sources.append([key, doc.pk, doc.title, doc.file.name, hashlib.sha256(read_document(doc)).hexdigest()])
     sources = {
-        'proposal': {field: getattr(proposal, field) for field in SOURCE_FIELDS},
+        'proposal': {field: getattr(proposal, field) for field in proposal_fields},
         'confirmed_selection': proposal.has_confirmed_module_selection,
         'sections': [
             {field: getattr(section, field) for field in section_fields}
@@ -112,8 +150,8 @@ def document_bytes(proposal, kind, *, issued_at=None, reference=None, content=No
     issued_at = issued_at or timezone.now()
     if kind not in DOCUMENTS:
         raise FormalizationError('Tipo de documento inválido.', 'invalid_document')
-    if kind == 'contract':
-        doc = related_documents(proposal, {'documents': ['contract']})[0][1]
+    if kind in CONTRACT_KEYS:
+        doc = contract_attachments(proposal, [kind])[0][1]
         data = read_document(doc)
         if not data.startswith(b'%PDF-'):
             raise FormalizationError('El contrato guardado no es un PDF válido.', 'invalid_contract')
@@ -124,11 +162,12 @@ def document_bytes(proposal, kind, *, issued_at=None, reference=None, content=No
 def availability(proposal):
     content = FormalContent(proposal)
     result = []
-    for key, (label, description) in DOCUMENTS.items():
+    for key in document_keys(proposal):
+        label, description = DOCUMENTS[key]
         error = ''
         try:
-            if key == 'contract':
-                document_bytes(proposal, 'contract')
+            if key in CONTRACT_KEYS:
+                document_bytes(proposal, key)
             elif key == 'commercial':
                 content.commercial()
             else:
@@ -142,7 +181,7 @@ def availability(proposal):
 def prepare(proposal, user, payload):
     if not ProposalEmailService._is_template_active(TEMPLATE_KEY):
         raise FormalizationError('La plantilla de formalización está desactivada.', 'template_disabled')
-    payload = {**payload, '_source_version': 2}
+    payload = {**payload, '_source_version': SOURCE_VERSION}
     captured_hash = source_hash(proposal, payload)
     now = timezone.now()
     preparation = ProposalFormalization(proposal=proposal, created_by=user, payload=payload, source_hash=captured_hash, expires_at=now + timedelta(hours=24))
@@ -162,7 +201,7 @@ def prepare(proposal, user, payload):
         name = safe_pdf_filename(label, proposal.title, now.strftime('%Y-%m-%d'))
         append_attachment(key, name, description, 'application/pdf', data)
     for key, doc in related_documents(proposal, payload):
-        if key == 'contract':
+        if key in CONTRACT_KEYS:
             continue
         name = doc.file.name.rsplit('/', 1)[-1]
         append_attachment(key, name, doc.title, mimetypes.guess_type(name)[0] or 'application/octet-stream', read_document(doc))
@@ -193,8 +232,15 @@ def prepare(proposal, user, payload):
 def check_current(preparation):
     if preparation.expires_at <= timezone.now():
         raise FormalizationError('La preparación venció. Prepara nuevamente el correo.', 'expired_preparation', 410)
-    if preparation.source_hash != source_hash(load_proposal(preparation.proposal_id), preparation.payload):
-        raise FormalizationError('Los datos de origen cambiaron. Prepara y revisa nuevamente el correo.', 'stale_preparation', 409)
+    stale = FormalizationError('Los datos de origen cambiaron. Prepara y revisa nuevamente el correo.', 'stale_preparation', 409)
+    try:
+        current = source_hash(load_proposal(preparation.proposal_id), preparation.payload)
+    except FormalizationError as exc:
+        if exc.code in STALE_CONTRACT_CODES:
+            raise stale from exc
+        raise
+    if preparation.source_hash != current:
+        raise stale
 
 
 def send_preparation(preparation):

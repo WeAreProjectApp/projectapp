@@ -142,6 +142,50 @@ describe('ProposalFormalizationModal', () => {
     });
   });
 
+  it('preselects both separate contracts when the deal closes with two documents', async () => {
+    // Falla si el correo de un cierre separado omite el contrato de producto o el de servicio.
+    mockFormalizationStore.options.mockResolvedValue({
+      documents: [
+        { key: 'contract_product', label: 'Contrato de producto', description: 'Producto', available: true },
+        { key: 'contract_service', label: 'Contrato de servicio', description: 'Servicio', available: true },
+        { key: 'commercial', label: 'Comercial', description: 'Alcance comercial', available: true },
+        { key: 'technical', label: 'Técnico', description: 'Alcance técnico', available: true },
+      ],
+      defaults,
+    });
+    mockFormalizationStore.prepare.mockResolvedValue(preparedPackage);
+    const wrapper = mountModal();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="formalization-select-contract_service"]').element.checked).toBe(true);
+
+    await wrapper.get('[data-testid="formalization-prepare"]').trigger('click');
+    await flushPromises();
+
+    expect(mockFormalizationStore.prepare.mock.calls[0][1].documents).toEqual([
+      'contract_product', 'contract_service', 'commercial', 'technical',
+    ]);
+  });
+
+  it('keeps generated contracts out of the extra attachments', async () => {
+    // Falla si un contrato generado se ofrece además como adjunto adicional.
+    mockFormalizationStore.options.mockResolvedValue({ documents: availableDocuments(), defaults });
+    const wrapper = mount(ProposalFormalizationModal, {
+      props: {
+        proposal,
+        documents: [
+          { id: 7, document_type: 'contract_service', title: 'Contrato de servicio' },
+          { id: 8, document_type: 'legal_annex', title: 'Anexo de confidencialidad' },
+        ],
+      },
+      global: { stubs: { BaseModal: { template: '<div><slot /></div>' }, EmailRecipientFields: EmailRecipientFieldsStub } },
+    });
+    await flushPromises();
+
+    expect(wrapper.text()).toContain('Anexo de confidencialidad');
+    expect(wrapper.text()).not.toContain('Contrato de servicio');
+  });
+
   it('renders the frozen email preview and each prepared file with its download URL', async () => {
     // Catches a regression that presents a different email or attachment manifest than the frozen preparation.
     const wrapper = await renderPreparedModal();

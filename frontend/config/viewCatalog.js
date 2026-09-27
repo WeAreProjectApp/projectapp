@@ -389,7 +389,7 @@ export const viewCatalogSections = [
         group: 'Propuestas',
         file: 'frontend/pages/panel/proposals/[id]/edit.vue',
         reference: 'vista de edicion/detalle de propuesta del panel',
-        notes: 'Usa el id interno de la propuesta. Documentos permite copiar en Markdown el contrato y los anexos formales curados, visualizar y descargar adjuntos, copiar PDF con texto/DOCX/XLSX y preparar un correo con contrato final, adjuntos seleccionables y revisión previa de los archivos exactos. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Usa el id interno de la propuesta. En negociación, Documentos elige la modalidad de cierre (contrato único, o contratos de producto y de servicio con sus parámetros y texto personalizado por documento), que queda de lectura al aceptar o rechazar. Permite copiar en Markdown los contratos y los anexos formales curados, visualizar y descargar adjuntos, copiar PDF con texto/DOCX/XLSX y preparar un correo con los contratos de la modalidad, adjuntos seleccionables y revisión previa de los archivos exactos. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
         audience: 'admin',
         viewType: 'edit',
       },

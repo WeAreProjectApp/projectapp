@@ -194,6 +194,47 @@ class TestResolveProposalDocRefsViaEndpoint:
         response = admin_client.post(_send_url(proposal.id), payload)
         assert response.status_code == 400
 
+    def test_split_contract_ref_must_name_the_document(self, admin_client, proposal):
+        """Fails if a split closing attaches an unnamed contract, which could be the stale single one."""
+        proposal.contract_modality = 'split'
+        proposal.save(update_fields=['contract_modality'])
+
+        payload = _base_payload(doc_refs=json.dumps([{'source': 'contract_pdf'}]))
+        response = admin_client.post(_send_url(proposal.id), payload)
+
+        assert response.status_code == 400
+        assert 'producto o servicio' in response.data['error']
+
+    @patch('content.services.proposal_email_service.EmailMultiAlternatives')
+    @patch('content.services.proposal_email_service.render_to_string')
+    @patch('content.services.contract_pdf_service.generate_contract_pdf', return_value=b'%PDF-1.4 service')
+    def test_split_contract_ref_attaches_the_named_document(
+        self, mock_contract, mock_render, mock_email_cls, admin_client, proposal,
+    ):
+        """Fails if the composer attaches another document than the service contract it names."""
+        mock_render.return_value = '<html>OK</html>'
+        mock_email_cls.return_value = stub_email_message()
+        proposal.contract_modality = 'split'
+        proposal.save(update_fields=['contract_modality'])
+
+        payload = _base_payload(doc_refs=json.dumps([{'source': 'contract_pdf', 'variant': 'service'}]))
+        response = admin_client.post(_send_url(proposal.id), payload)
+
+        assert response.status_code == 200
+        assert mock_contract.call_args.kwargs == {'draft': False, 'variant': 'service'}
+        attached_name, attached_bytes, _mime = mock_email_cls.return_value.attach.call_args.args
+        assert attached_name.startswith('Contrato_Servicio_Hosting')
+        assert attached_bytes == b'%PDF-1.4 service'
+
+    def test_contract_ref_variant_outside_the_proposal_modality_returns_400(self, admin_client, proposal):
+        """Fails if a single-modality proposal can be made to attach a split-only contract."""
+        payload = _base_payload(doc_refs=json.dumps([{'source': 'contract_pdf', 'variant': 'product'}]))
+
+        response = admin_client.post(_send_url(proposal.id), payload)
+
+        assert response.status_code == 400
+        assert 'no corresponde a la modalidad' in response.data['error']
+
 
 # ── _resolve_diagnostic_doc_refs via endpoint ─────────────────────────────────
 

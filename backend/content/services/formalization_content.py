@@ -148,6 +148,18 @@ class FormalContent:
             raise FormalizationError('Completa y habilita el alcance funcional de la propuesta.', 'commercial_scope_missing')
         return included
 
+    def contract_note(self):
+        """Point the annex at the contract(s) the deal closes with."""
+        if getattr(self.proposal, 'contract_modality', '') == 'split':
+            return self.label(
+                'Las garantías y obligaciones se rigen por el contrato de producto (desarrollo e implementación del software) y el contrato de servicio (hosting, mantenimiento y soporte) asociados a esta propuesta.',
+                'Warranties and obligations are governed by the product contract (software development and implementation) and the service contract (hosting, maintenance and support) associated with this proposal.',
+            )
+        return self.label(
+            'Las garantías y obligaciones se rigen por el contrato de desarrollo de software asociado a esta propuesta.',
+            'Warranties and obligations are governed by the software development contract associated with this proposal.',
+        )
+
     def commercial(self):
         inv = self.structured('investment')
         if not inv or self.total <= 0:
@@ -207,7 +219,7 @@ class FormalContent:
             'commercial_conditions': {
                 'hourPackagesEnabled': False,
                 'scopeParagraphs': [text(p) for p in conditions.get('scopeParagraphs') or []],
-                'contractNote': l('Las garantías y obligaciones se rigen por el contrato de desarrollo de software asociado a esta propuesta.', 'Warranties and obligations are governed by the software development contract associated with this proposal.'),
+                'contractNote': self.contract_note(),
             },
         }
         labels = {

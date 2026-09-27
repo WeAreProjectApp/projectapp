@@ -8,6 +8,7 @@ from rest_framework.response import Response
 
 from content.models import BusinessProposal, ProposalDocument
 from content.services.attachment_markdown import extract_attachment_markdown
+from content.services.contract_variants import contract_document
 from content.services.formalization_content import FormalContent, FormalizationError
 from content.services.formalization_markdown import generate_formal_markdown
 from content.services.markdown_export import MarkdownExportError, export_payload
@@ -30,7 +31,15 @@ def markdown_response(operation):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def contract_markdown(request, proposal_id):
-    document = get_object_or_404(ProposalDocument, proposal_id=proposal_id, document_type='contract')
+    from content.views.proposal import _requested_variant
+
+    proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
+    variant, error = _requested_variant(proposal, request.query_params.get('variant'))
+    if error:
+        return private_response(error.data, error.status_code)
+    document = contract_document(proposal, variant)
+    if document is None:
+        return private_response({'error': 'Genera el contrato primero.', 'code': 'contract_missing'}, 404)
     if not document.file or not document.file.storage.exists(document.file.name):
         return private_response({'error': 'El archivo ya no está disponible.', 'code': 'file_missing'}, 404)
     if document.content_markdown:
