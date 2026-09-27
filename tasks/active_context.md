@@ -9,6 +9,15 @@ HTML ya no se exponen y la configuración de cifrado inválida se maneja como
 como `new-password`. Sin migraciones de esquema. La causa del incidente real
 sigue pendiente de los registros de producción (Tailscale requiere identidad).
 
+# Video de bienvenida de propuestas (2026-09-27)
+
+Pieza genérica
+en español, voz colombiana, 58,2 s y subtítulos. Entrada pública sobre las cuatro
+opciones; se oculta si falta técnico, contrato, idioma ES o alguno de los
+controles. Configuraciones contiene control general y previsualización; General
+contiene la preferencia individual. Migración 0268, solo aplicada por deploy.
+Producción y evidencia: `explainers/brag-v2/proposal/README.md`.
+
 # Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
 
 **2026-09-27 — pies visibles en modales del panel:** el patrón de PA-150 se

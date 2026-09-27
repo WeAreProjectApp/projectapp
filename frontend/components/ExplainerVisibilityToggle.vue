@@ -10,13 +10,13 @@ const props = defineProps({
   module: {
     type: String,
     required: true,
-    validator: (value) => ['additional-modules', 'financing'].includes(value),
+    validator: (value) => ['additional-modules', 'financing', 'proposal'].includes(value),
   },
   /** Locale namespace that holds the explainerVisibility* keys. */
   i18nNamespace: {
     type: String,
     required: true,
-    validator: (value) => ['additionalModules', 'financing'].includes(value),
+    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer'].includes(value),
   },
   testId: { type: String, default: 'explainer' },
 })
@@ -56,6 +56,7 @@ async function changeVisibility(value) {
     <BaseToggle
       :model-value="visible"
       :disabled="disabled"
+      disabled-reason="Espera a que termine de cargar o guardar la configuración."
       :aria-label="t(`${ns}.explainerVisibilityLabel`)"
       :data-testid="`${testId}-visibility-toggle`"
       @update:model-value="changeVisibility"

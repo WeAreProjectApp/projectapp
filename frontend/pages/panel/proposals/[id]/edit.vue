@@ -134,6 +134,7 @@
           @open-email-preview="openEmailPreview"
           @toggle-active="handleToggleActive"
           @toggle-contract-terms="toggleContractTerms"
+          @toggle-explainer-video="toggleExplainerVideo"
           @next-action="handleNextAction"
           @open-actions="showActionsModal = true"
           @client-selected="onClientSelected"
@@ -886,6 +887,7 @@ const form = reactive({
   discount_percent: 0,
   automations_paused: false,
   show_contract_terms: true,
+  show_explainer_video: true,
   email_intro: '',
   email_features: [],
   email_method_phases: [],
@@ -1176,6 +1178,7 @@ function hydrateFormFromProposal() {
     // Backend default is False (automations enabled) — keep the fallback aligned.
     automations_paused: proposal.value.automations_paused ?? false,
     show_contract_terms: proposal.value.show_contract_terms ?? true,
+    show_explainer_video: proposal.value.show_explainer_video ?? true,
     email_intro: proposal.value.email_intro || '',
     email_features: Array.isArray(proposal.value.email_features) ? [...proposal.value.email_features] : [],
     email_method_phases: Array.isArray(proposal.value.email_method_phases) && proposal.value.email_method_phases.length
@@ -1268,6 +1271,19 @@ async function toggleAutomationsPaused() {
   } else {
     form.automations_paused = !form.automations_paused;
     notify.error({ title: 'Error al cambiar automatizaciones.' });
+  }
+}
+
+async function toggleExplainerVideo(value) {
+  if (proposalStore.isUpdating) return;
+  const previous = form.show_explainer_video;
+  form.show_explainer_video = value;
+  const result = await proposalStore.updateProposal(proposal.value.id, { show_explainer_video: value });
+  if (result.success) {
+    notify.success({ title: 'Preferencia del video guardada.' });
+  } else {
+    form.show_explainer_video = previous;
+    notify.error({ title: 'No se pudo guardar la visibilidad del video. Intenta de nuevo.' });
   }
 }
 

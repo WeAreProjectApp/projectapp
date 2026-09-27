@@ -1,0 +1,16 @@
+{
+  "id": "admin-proposal-explainer-visibility",
+  "name": "Admin Proposal Welcome Video Visibility",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Admin opens Propuestas → Configuraciones, previews the compact welcome video and changes global visibility. A failed save restores the previous switch and reports the failure.",
+  "expectedSpecs": 4,
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

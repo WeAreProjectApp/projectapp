@@ -104,7 +104,7 @@ if (hasMusic && hasNarration) {
     '[ducked][2:a]amix=inputs=2:duration=first:normalize=0[mix]',
     `[mix]loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=${fadeStart}:d=4[aout]`,
   )
-  if (EDITION === 'brag-v2') {
+  if (EDITION === 'brag-v2' && video !== 'proposal') {
     inputs.push('-i', assertExists(resolve(EDITION_ROOT, 'shared', 'sfx', 'click.ogg')))
     filters.pop()
     const cueOffsets = video === 'additional-modules' ? [['scene-2', 2], ['scene-4', 2], ['scene-5', 2.2]] : [['scene-2', 2], ['scene-3', 2.2], ['scene-5', 1.2]]
@@ -114,6 +114,10 @@ if (hasMusic && hasNarration) {
     filters.push('[mix][fx0][fx1][fx2]amix=inputs=4:duration=first:normalize=0[scored]')
     // Leave headroom for inter-sample peaks introduced by AAC encoding.
     filters.push(`[scored]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
+  }
+  if (EDITION === 'brag-v2' && video === 'proposal') {
+    filters.pop()
+    filters.push(`[mix]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
   }
   audioLabel = '[aout]'
 } else if (hasMusic) {

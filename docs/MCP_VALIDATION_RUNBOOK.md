@@ -1009,3 +1009,14 @@ personalizado ni contenido cifrado. Un nombre vacío falla sin crear registros.
 Si el cifrado no está disponible, el mismo servicio usado por el panel retorna
 un error amigable al conector, sin registrar secretos. No cambian campos de
 modelos ni su clasificación en `content/mcp/contracts.py`.
+
+## Video de bienvenida de propuestas
+
+`BusinessProposal.show_explainer_video` es booleano editable en creación y
+actualización, también por JSON/MCP. La duplicación conserva la preferencia.
+`ExplainerVideoSettings.show_proposal_video` es el control general editable por
+las herramientas genéricas del modelo. Ambos nacen activos. La respuesta admin
+conserva la preferencia; la pública calcula la visibilidad efectiva con ambos
+controles, idioma español y las cuatro opciones disponibles. Verificar PATCH
+válido, rechazo de valor no booleano y conservación de la preferencia al apagar
+el control general; no ejecutar envíos ni migraciones reales.

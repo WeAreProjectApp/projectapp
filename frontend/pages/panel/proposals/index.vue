@@ -238,6 +238,20 @@
       :filter-views="[{ value: 'proposal', label: 'Propuestas' }]"
       @reset="reloadFilterTabs"
     >
+      <section class="space-y-4" aria-label="Video de bienvenida">
+        <ExplainerVideoCard
+          v-if="proposalExplainer"
+          :video="proposalExplainer"
+          i18n-namespace="proposalExplainer"
+          variant="compact"
+          test-id="admin-proposal-explainer"
+        />
+        <ExplainerVisibilityToggle
+          module="proposal"
+          i18n-namespace="proposalExplainer"
+          test-id="admin-proposal-explainer"
+        />
+      </section>
       <section class="bg-surface border border-border-muted rounded-xl shadow-sm p-5 sm:p-6">
         <h2 class="text-lg font-bold text-text-default mb-1">Defaults de propuestas</h2>
         <p class="text-sm text-text-muted mb-4">
@@ -544,6 +558,9 @@ import ContractParamsModal from '~/components/BusinessProposal/admin/ContractPar
 import ServiceContractSettings from '~/components/BusinessProposal/admin/ServiceContractSettings.vue';
 import ProposalResendModal from '~/components/BusinessProposal/admin/ProposalResendModal.vue';
 import ProposalFilterTabs from '~/components/proposals/ProposalFilterTabs.vue';
+import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';
+import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vue';
+import { useExplainerVideo } from '~/composables/useExplainerVideos';
 import ViewSettingsPanel from '~/components/panel/ViewSettingsPanel.vue';
 import ProposalFilterPanel from '~/components/proposals/ProposalFilterPanel.vue';
 import BasePagination from '~/components/base/BasePagination.vue';
@@ -586,6 +603,8 @@ const {
   reorderTabs,
   reloadTabs: reloadFilterTabs,
 } = useProposalFilters();
+
+const proposalExplainer = useExplainerVideo('proposal', 'es');
 
 // Fixed trailing "Configuraciones" tab: swaps the list for the settings panel.
 const showConfigTab = ref(false);

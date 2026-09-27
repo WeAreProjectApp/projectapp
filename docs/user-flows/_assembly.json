@@ -39,7 +39,8 @@
         "proposal-respond",
         "proposal-download-pdf",
         "proposal-share",
-        "proposal-engagement-tracking"
+        "proposal-engagement-tracking",
+        "public-proposal-explainer"
       ]
     },
     {
@@ -176,7 +177,9 @@
         "admin-diagnostic-documents",
         "admin-proposal-diagnostic-templates",
         "admin-diagnostic-markdown-attachment",
-        "diagnostic-public-view"
+        "diagnostic-public-view",
+        "admin-proposal-explainer-visibility",
+        "admin-proposal-explainer-preference"
       ]
     },
     {

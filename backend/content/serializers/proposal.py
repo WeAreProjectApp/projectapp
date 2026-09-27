@@ -129,7 +129,7 @@ class ProposalListSerializer(serializers.ModelSerializer):
             'id', 'uuid', 'title', 'client_name', 'client_email', 'status',
             'total_investment', 'currency', 'nationality', 'expires_at',
             'view_count', 'created_at', 'days_remaining', 'is_expired',
-            'is_active', 'show_contract_terms', 'automations_paused',
+            'is_active', 'show_contract_terms', 'show_explainer_video', 'automations_paused',
             'responded_at', 'last_activity_at',
             'project_type', 'market_type', 'client_phone',
             'project_type_custom', 'market_type_custom',
@@ -201,7 +201,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'hosting_discount_semiannual', 'hosting_discount_quarterly',
             'status', 'expires_at',
             'reminder_days', 'urgency_reminder_days', 'discount_percent',
-            'is_active', 'show_contract_terms', 'automations_paused',
+            'is_active', 'show_contract_terms', 'show_explainer_video', 'automations_paused',
             'reminder_sent_at', 'urgency_email_sent_at',
             'project_type', 'market_type', 'client_phone',
             'project_type_custom', 'market_type_custom',
@@ -229,6 +229,15 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             for name in self.PUBLIC_HIDDEN_FIELDS:
                 fields.pop(name, None)
         return fields
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if not self.context.get('is_admin', False):
+            from content.services.explainer_video_service import proposal_explainer_video_visible
+            data['show_explainer_video'] = proposal_explainer_video_visible(
+                instance, data['sections'],
+            )
+        return data
 
     def get_project_stages(self, obj):
         """Return project_stages only for admin requests; empty for public."""
@@ -510,7 +519,7 @@ class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
             'hosting_discount_nine_month',
             'hosting_discount_semiannual', 'hosting_discount_quarterly',
             'status', 'expires_at', 'reminder_days', 'urgency_reminder_days',
-            'discount_percent', 'is_active', 'show_contract_terms',
+            'discount_percent', 'is_active', 'show_contract_terms', 'show_explainer_video',
             'automations_paused',
             'project_type', 'market_type', 'client_phone',
             'project_type_custom', 'market_type_custom',
@@ -750,6 +759,8 @@ class ProposalFromJSONSerializer(serializers.Serializer):
     urgency_reminder_days = serializers.IntegerField(required=False, default=15)
     discount_percent = serializers.IntegerField(required=False, default=0)
     show_contract_terms = serializers.BooleanField(required=False, default=True)
+    # Creation supplies the model default; omission during JSON updates preserves the preference.
+    show_explainer_video = serializers.BooleanField(required=False)
     email_intro = serializers.CharField(required=False, default='', allow_blank=True)
     sections = serializers.DictField(child=serializers.DictField(), required=True)
 

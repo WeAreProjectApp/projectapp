@@ -5,6 +5,7 @@ import { get_request, patch_request } from './services/request_http'
 export const EXPLAINER_VIDEO_SWITCHES = Object.freeze({
   'additional-modules': 'show_additional_modules_video',
   financing: 'show_financing_video',
+  proposal: 'show_proposal_video',
 })
 
 export const useExplainerVideosStore = defineStore('explainer_videos', {
