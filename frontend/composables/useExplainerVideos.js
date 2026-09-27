@@ -17,7 +17,7 @@ const EXPLAINERS = Object.freeze({
     es: {
       src: additionalModulesEs,
       poster: additionalModulesEsPoster,
-      durationSeconds: 45,
+      durationSeconds: 60,
       width: 1920,
       height: 1080,
     },
@@ -26,7 +26,7 @@ const EXPLAINERS = Object.freeze({
     es: {
       src: financingEs,
       poster: financingEsPoster,
-      durationSeconds: 45,
+      durationSeconds: 60,
       width: 1920,
       height: 1080,
     },
