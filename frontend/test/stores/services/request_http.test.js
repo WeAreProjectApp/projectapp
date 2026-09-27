@@ -102,6 +102,23 @@ describe('delete_request', () => {
 });
 
 describe('error handling', () => {
+  it.each([
+    'secure-links/create/',
+    'secure-links/public/create/',
+    'secure-links/public/reveal/',
+  ])('does not log sensitive request failures for %s', async (url) => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    const error = Object.assign(new Error('Request failed'), {
+      config: { data: { fields: { password: 'private-value' }, token: 'private-token' } },
+      response: { status: 500, data: '<html>private traceback</html>' },
+    });
+    mockAxios.post.mockRejectedValue(error);
+
+    await expect(create_request(url, error.config.data)).rejects.toBe(error);
+
+    expect(log).not.toHaveBeenCalled();
+  });
+
   it('propagates axios errors', async () => {
     jest.spyOn(console, 'error').mockImplementation(() => {});
     const error = new Error('Network error');
@@ -194,7 +211,9 @@ describe('getCookie (via CSRF header)', () => {
 
     await mod.get_request('test/');
 
-    expect(mockAxios.get).toHaveBeenCalled();
+    expect(mockAxios.get).toHaveBeenCalledWith('/api/test/', expect.objectContaining({
+      headers: expect.objectContaining({ 'X-CSRFToken': null }),
+    }));
   });
 
   it('returns null when typeof document is undefined (SSR context)', async () => {

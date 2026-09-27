@@ -4,6 +4,13 @@ export const SECURE_LINK_TOKEN = 'e2eTokenAbCdEfGhIjKlMnOpQrStUvWxYz0123456789';
 
 export const secureLinkTypes = [
   {
+    key: 'custom', label_es: 'Personalizado', label_en: 'Custom',
+    fields: [
+      { key: 'custom_name', label_es: 'Nombre del tipo', label_en: 'Type name', kind: 'text', required: true, max_length: 200 },
+      { key: 'content', label_es: 'Contenido', label_en: 'Content', kind: 'textarea', required: true, max_length: 15000 },
+    ],
+  },
+  {
     key: 'credentials',
     label_es: 'Credenciales de acceso',
     label_en: 'Access credentials',

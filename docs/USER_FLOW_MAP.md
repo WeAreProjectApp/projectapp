@@ -6362,7 +6362,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-pwa-install` | admin | P2 | success,display,failure | — |
 | `admin-pwa-offline` | admin | P2 | success,failure | — |
 | `admin-qr-cards` | admin | P2 | success | 1 |
-| `admin-secure-link-create` | admin | P1 | success,error | — |
+| `admin-secure-link-create` | admin | P1 | success,error,failure,display | — |
 | `admin-secure-link-manage` | admin | P1 | success,display | — |
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
@@ -6505,7 +6505,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-portfolio-detail` | public | P2 | display,failure | 1 |
 | `public-privacy-policy` | public | P4 | display | 1 |
 | `public-route-not-found` | public | P3 | failure | 1 |
-| `public-secure-link-create` | public | P1 | success,error | — |
+| `public-secure-link-create` | public | P1 | success,error,failure,display | — |
 | `public-secure-link-reveal` | public | P1 | success,display,failure | — |
 | `public-terms-conditions` | public | P4 | display | 1 |
 
@@ -8083,8 +8083,10 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 
 - **Módulo / rol:** enlaces seguros / administrador del panel.
 - **Ruta:** `/panel/secure-links` → **Nuevo enlace**.
-- **Success:** elegir tipo, título, campos, vigencia e idioma crea el enlace y muestra una única vez la URL con copiar enlace y copiar mensaje sugerido.
-- **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario muestra el error del servidor en ese campo y no crea nada.
+- **Success:** elegir tipo predefinido o Personalizado (nombre y contenido), título, campos, vigencia e idioma, sin exigir cliente ni proyecto, crea el enlace y muestra una única vez la URL con copiar enlace y copiar mensaje sugerido.
+- **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario valida antes de enviar y muestra los errores del servidor junto a sus campos y no crea nada.
+- **Failure:** catálogo no disponible bloquea el envío y permite reintentar; errores HTML/servidor se convierten en avisos breves, conservando el contenido para reintentar.
+- **Display:** al cancelar y volver a Nuevo enlace, las credenciales aparecen vacías y la contraseña vuelve a estar oculta.
 - **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/create/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
 
@@ -8316,8 +8318,10 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 
 - **Módulo / rol:** enlaces seguros / cliente sin sesión.
 - **Ruta:** `/{locale}/secure-link`, compartida desde el panel con **Enlace para clientes**.
-- **Success:** tipo, campos, nombre, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o enviar por correo; sólo el equipo puede abrirla y el equipo recibe un aviso sin el enlace ni el contenido.
+- **Success:** tipo predefinido o Personalizado (nombre y contenido), campos, nombre del remitente, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o enviar por correo; sólo el equipo puede abrirla y el equipo recibe un aviso sin el enlace ni el contenido.
 - **Error:** los campos obligatorios faltantes o un captcha fallido se muestran en el formulario sin crear el enlace.
+- **Failure:** catálogo no disponible ofrece reintento con envío bloqueado; HTML del servidor se reemplaza por un aviso y se preservan los campos.
+- **Display:** Crear otro enlace vuelve al formulario con credenciales vacías.
 - **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/public/create/`.
 - **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.
 

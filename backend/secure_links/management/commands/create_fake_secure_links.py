@@ -15,6 +15,7 @@ SAMPLES = [
     ('env_vars', 'Variables .env — demo', {'content': 'DEBUG=False\nSECRET_KEY=demo-no-real'}),
     ('bank_account', 'Cuenta para pagos — demo', {'bank': 'Banco Demo', 'account_type': 'Ahorros', 'account_number': '000-000000-00', 'holder': 'Project App SAS'}),
     ('recovery_codes', 'Códigos 2FA GoDaddy — demo', {'service': 'GoDaddy', 'codes': 'AAAA-1111\nBBBB-2222'}),
+    ('custom', 'Instrucciones de entrega — demo', {'custom_name': 'Instrucciones privadas', 'content': 'Ejemplo ficticio de información personalizada.'}),
     ('confidential_message', 'Comunicado confidencial — demo', {'subject': 'Cambio de dominio', 'message': 'Texto de ejemplo sin información real.'}),
 ]
 

@@ -1,3 +1,14 @@
+# Creación de enlaces seguros (2026-09-27)
+
+**2026-09-27 — corrección de creación de enlaces seguros, en validación:**
+trabajo en `fix/27092026-secure-link-creation`. Se agregó Personalizado con
+nombre/contenido cifrados, validación compartida de panel/público y reintento
+ante fallos de catálogo; cliente/proyecto siguen opcionales. Las respuestas
+HTML ya no se exponen y la configuración de cifrado inválida se maneja como
+503 sin persistencia parcial. Credenciales nuevas vacías y contraseñas marcadas
+como `new-password`. Sin migraciones de esquema. La causa del incidente real
+sigue pendiente de los registros de producción (Tailscale requiere identidad).
+
 # Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
 
 En negociación, Documentos permite cerrar el negocio con el contrato único o con

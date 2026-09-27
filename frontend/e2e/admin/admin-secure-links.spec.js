@@ -6,6 +6,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import { ADMIN_SECURE_LINK_CREATE, ADMIN_SECURE_LINK_MANAGE } from '../helpers/flow-tags.js';
 import {
   SECURE_LINK_TOKEN, json, revealedContent, secureLinkRow, secureLinkTypes,
@@ -27,7 +28,7 @@ function listPayload(rows) {
   };
 }
 
-async function setupPanel(page, { rows = [secureLinkRow()], create } = {}) {
+async function setupPanel(page, { rows = [secureLinkRow()], create, types } = {}) {
   let store = [...rows];
   const calls = { create: [], content: 0, revoke: 0, reactivate: [] };
   await mockApi(page, async ({ apiPath, method, route }) => {
@@ -35,11 +36,11 @@ async function setupPanel(page, { rows = [secureLinkRow()], create } = {}) {
     if (apiPath === 'panel/dashboard/' && method === 'GET') {
       return json({ finance: null, proposals: { total_proposals: 0, by_status: {}, recent: [] }, additional_modules: {}, operations: {}, attention: [] });
     }
-    if (apiPath === 'secure-links/public/types/') return json({ types: secureLinkTypes });
+    if (apiPath === 'secure-links/public/types/') return types ? types() : json({ types: secureLinkTypes });
     if (apiPath === 'secure-links/' && method === 'GET') return json(listPayload(store));
     if (apiPath === 'secure-links/create/' && method === 'POST') {
       calls.create.push(route.request().postDataJSON());
-      if (create) return create;
+      if (create) return typeof create === 'function' ? create() : create;
       const row = secureLinkRow({ id: 9, title: 'Llaves Wompi' });
       store = [row, ...store];
       return json({ ...row, url: CREATED_URL }, 201);
@@ -74,7 +75,7 @@ test.describe('Admin secure links', () => {
     tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = await setupPanel(page, { rows: [] });
-    await page.goto('/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
 
     await page.getByTestId('secure-links-new').click();
     await page.getByTestId('secure-link-title').fill('Llaves Wompi');
@@ -86,7 +87,7 @@ test.describe('Admin secure links', () => {
     await expect(page.getByTestId('secure-link-copy-message')).toBeVisible();
     expect(calls.create[0]).toMatchObject({
       secret_type: 'credentials', title: 'Llaves Wompi', fields: { password: 'prv_test_123' },
-      validity_days: 3, language: 'es',
+      validity_days: 3, language: 'es', client: null, project: null,
     });
   });
 
@@ -97,10 +98,11 @@ test.describe('Admin secure links', () => {
       rows: [],
       create: json({ error: 'Revisa los datos del formulario.', code: 'invalid', password: ['Este campo es obligatorio.'] }, 400),
     });
-    await page.goto('/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
 
     await page.getByTestId('secure-links-new').click();
     await page.getByTestId('secure-link-title').fill('Sin clave');
+    await page.getByTestId('secure-link-field-password').fill('server-rejected');
     await page.getByTestId('secure-link-save').click();
 
     await expect(page.getByTestId('secure-link-form').getByText('Este campo es obligatorio.')).toBeVisible();
@@ -111,7 +113,8 @@ test.describe('Admin secure links', () => {
     tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = await setupPanel(page);
-    await page.goto('/panel/secure-links?link=7', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/secure-links?link=7', { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
 
     const detail = page.getByTestId('secure-link-detail');
     await expect(detail.getByTestId('secure-link-events')).toContainText('Creado');
@@ -131,7 +134,8 @@ test.describe('Admin secure links', () => {
     const calls = await setupPanel(page, {
       rows: [secureLinkRow({ status: 'consumed', consumed_at: '2026-09-26T15:30:00Z' })],
     });
-    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    // quality: allow-deep-link (the panel home is the shell entry; its visible navigation opens the secure-links module)
+    await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
     await page.getByRole('link', { name: 'Enlaces seguros', exact: true }).click();
 
     await expect(page.getByTestId('secure-links-tabs')).toContainText('Usados (1)');
@@ -144,4 +148,85 @@ test.describe('Admin secure links', () => {
     await expect(page.getByTestId('secure-link-detail').getByTestId('secure-link-status-active')).toBeVisible();
     expect(calls.reactivate[0]).toEqual({ validity_days: 1, rotate: false });
   });
+  test('creates custom content without a client or project', {
+    tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const calls = await setupPanel(page, { rows: [] });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-links-new').click();
+    await page.getByTestId('secure-link-type').selectOption('custom');
+    await page.getByTestId('secure-link-title').fill('Referencia');
+    await page.getByTestId('secure-link-field-custom_name').fill('Instrucciones');
+    await page.getByTestId('secure-link-field-content').fill('  Texto privado\ncon espacios  ');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(page.getByTestId('secure-link-created-url')).toHaveText(CREATED_URL);
+    await page.getByTestId('secure-link-copy-created').click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(CREATED_URL);
+    expect(calls.create[0]).toMatchObject({
+      secret_type: 'custom', client: null, project: null,
+      fields: { custom_name: 'Instrucciones', content: '  Texto privado\ncon espacios  ' },
+    });
+  });
+
+  test('keeps the content ready to retry after an HTML failure', {
+    tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    const responses = [
+      { status: 502, contentType: 'text/html', body: '<html>private server traceback</html>' },
+      json({ ...secureLinkRow(), url: CREATED_URL }, 201),
+    ];
+    await setupPanel(page, { rows: [], create: () => responses.shift() });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-links-new').click();
+    await page.getByTestId('secure-link-title').fill('Acceso');
+    await page.getByTestId('secure-link-field-password').fill('retry-value');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(page.getByTestId('secure-link-general-error')).toHaveText('No se pudo crear el enlace.');
+    await expect(page.getByTestId('secure-link-form')).not.toContainText('traceback');
+    await expect(page.getByTestId('secure-link-field-password')).toHaveValue('retry-value');
+    await page.getByTestId('secure-link-save').click();
+    await expect(page.getByTestId('secure-link-created-url')).toHaveText(CREATED_URL);
+  });
+
+  test('recovers the type catalog before submitting', {
+    tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    let unavailable = true;
+    await setupPanel(page, { types: () => unavailable ? json({ error: 'unavailable' }, 503) : json({ types: secureLinkTypes }) });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-links-new').click();
+
+    await expect(page.getByTestId('secure-link-types-error')).toContainText('No pudimos cargar');
+    await expect(page.getByTestId('secure-link-save')).toBeDisabled();
+    unavailable = false;
+    await page.getByTestId('secure-link-types-retry').click();
+    await page.getByTestId('secure-link-title').fill('Recuperado');
+    await page.getByTestId('secure-link-field-password').fill('test-value');
+    await page.getByTestId('secure-link-save').click();
+    await expect(page.getByTestId('secure-link-created-url')).toHaveText(CREATED_URL);
+  });
+
+  test('opens a fresh modal with empty masked credentials', {
+    tag: [...ADMIN_SECURE_LINK_CREATE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    await setupPanel(page);
+    // quality: allow-deep-link (the panel home is the shell entry; its visible navigation opens the secure-links module)
+    await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Enlaces seguros', exact: true }).click();
+    await page.getByTestId('secure-links-new').click();
+    await page.getByTestId('secure-link-field-username').fill('previous-user');
+    await page.getByTestId('secure-link-field-password').fill('previous-password');
+    await page.getByTestId('secure-link-field-toggle-password').click();
+    await page.getByTestId('secure-link-form').getByRole('button', { name: 'Cancelar' }).click();
+    await page.getByTestId('secure-links-new').click();
+
+    await expect(page.getByTestId('secure-link-field-username')).toHaveValue('');
+    await expect(page.getByTestId('secure-link-field-password')).toHaveValue('');
+    await expect(page.getByTestId('secure-link-field-password')).toHaveAttribute('type', 'password');
+    await expect(page.getByTestId('secure-link-field-password')).toHaveAttribute('autocomplete', 'new-password');
+  });
+
 });

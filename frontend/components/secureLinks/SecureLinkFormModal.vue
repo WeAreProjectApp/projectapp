@@ -1,13 +1,20 @@
 <template>
   <BaseModal :model-value="modelValue" kind="form" padding="md" @update:model-value="emit('update:modelValue', $event)">
-    <form novalidate data-testid="secure-link-form" @submit.prevent="submit">
+    <form ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
       <div class="space-y-4 px-6 py-5">
-        <h3 class="text-lg font-bold text-text-default">{{ link ? 'Editar enlace seguro' : 'Nuevo enlace seguro' }}</h3>
+        <h3 class="text-lg font-bold text-text-default">{{ t(link ? 'secureLinks.panel.editTitle' : 'secureLinks.panel.newTitle') }}</h3>
 
-        <BaseFormField v-slot="{ invalid, errorId }" label="Tipo de información" for="secure-link-type" required :error="errors.secret_type">
+        <BaseAlert v-if="typesError" variant="danger" data-testid="secure-link-types-error">
+          {{ t('secureLinks.typesError') }}
+          <BaseButton type="button" variant="ghost" size="sm" :loading="loadingTypes" data-testid="secure-link-types-retry" @click="loadTypes">{{ t('secureLinks.retry') }}</BaseButton>
+        </BaseAlert>
+
+        <BaseFormField v-if="editingContent" v-slot="{ invalid, errorId }" :label="t('secureLinks.type')" for="secure-link-type" required :error="errors.secret_type">
           <BaseSelect
             id="secure-link-type"
             v-model="form.secretType"
+            :disabled="!catalogReady || store.isUpdating"
+            :disabled-reason="t('secureLinks.typesPending')"
             :options="typeOptions"
             :error="invalid"
             :aria-describedby="errorId"
@@ -17,9 +24,9 @@
 
         <BaseFormField
           v-slot="{ invalid, errorId }"
-          label="Título interno"
+          :label="t('secureLinks.panel.title')"
           for="secure-link-title"
-          hint="Para reconocerlo en el panel. El destinatario lo ve sólo después de abrirlo; no escribas el secreto aquí."
+          :hint="t('secureLinks.panel.titleHint')"
           required
           :error="errors.title"
         >
@@ -34,17 +41,21 @@
         </BaseFormField>
 
         <SecureLinkFields
+          v-if="editingContent && catalogReady"
+          :key="fieldsVersion"
+          :language="uiLanguage"
+          :disabled="store.isUpdating"
           v-model="form.fields"
           :type="selectedType"
           :errors="errors"
           id-prefix="secure-link-panel"
         />
 
-        <BaseFormField label="Cliente" hint="Opcional: asocia el enlace a un cliente y proyecto.">
+        <BaseFormField :label="t('secureLinks.panel.client')" :hint="t('secureLinks.panel.associationHint')" :error="errors.client">
           <ClientAutocomplete
             v-model="form.client"
             :initial-label="form.clientLabel"
-            placeholder="Buscar cliente..."
+            :placeholder="t('secureLinks.panel.clientPlaceholder')"
             test-id="secure-link-client"
             @select="onClientSelect"
           />
@@ -54,13 +65,13 @@
           :client-profile-id="form.client"
           :client-label="form.clientLabel"
           :allow-create="false"
-          label="Proyecto"
+          :label="t('secureLinks.panel.project')"
           testid="secure-link-project"
         />
-        <BaseAlert v-if="errors.project" variant="danger">{{ errors.project }}</BaseAlert>
+        <BaseAlert v-if="errors.project" variant="danger" tabindex="-1">{{ errors.project }}</BaseAlert>
 
         <template v-if="!link">
-          <BaseFormField label="Idioma de la página que verá el destinatario" for="secure-link-language">
+          <BaseFormField label-policy="wrap" :label="t('secureLinks.panel.language')" for="secure-link-language" :error="errors.language">
             <BaseSegmented
               id="secure-link-language"
               v-model="form.language"
@@ -68,7 +79,7 @@
               data-testid="secure-link-language"
             />
           </BaseFormField>
-          <BaseFormField label="Vigencia" for="secure-link-validity" :error="errors.validity_days">
+          <BaseFormField :label="t('secureLinks.validity')" for="secure-link-validity" :error="errors.validity_days">
             <BaseSegmented
               id="secure-link-validity"
               v-model="form.validityDays"
@@ -78,13 +89,13 @@
           </BaseFormField>
         </template>
 
-        <BaseAlert v-if="generalError" variant="danger">{{ generalError }}</BaseAlert>
+        <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-general-error">{{ generalError }}</BaseAlert>
       </div>
 
       <BaseModalActions>
-        <BaseButton type="button" variant="ghost" size="sm" @click="emit('update:modelValue', false)">Cancelar</BaseButton>
-        <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" data-testid="secure-link-save">
-          {{ link ? 'Guardar cambios' : 'Crear enlace' }}
+        <BaseButton type="button" variant="ghost" size="sm" @click="emit('update:modelValue', false)">{{ t('secureLinks.panel.cancel') }}</BaseButton>
+        <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" :disabled="editingContent && !catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
+          {{ t(link ? 'secureLinks.panel.save' : 'secureLinks.panel.create') }}
         </BaseButton>
       </BaseModalActions>
     </form>
@@ -105,6 +116,7 @@ import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue';
 import { useSecureLinksStore } from '~/stores/secure_links';
+import { useSecureLinkForm } from '~/composables/useSecureLinkForm';
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -115,26 +127,31 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
 const store = useSecureLinksStore();
+const { t, locale } = useI18n();
+const uiLanguage = computed(() => locale.value.startsWith('en') ? 'en' : 'es');
+const formElement = ref(null);
+const fieldsVersion = ref(0);
+const editingContent = computed(() => !props.link || Boolean(props.initialFields));
 
 const form = reactive({
   secretType: 'credentials', title: '', fields: {}, client: null, clientLabel: '',
   project: null, language: 'es', validityDays: 7,
 });
-const errors = ref({});
-const generalError = ref('');
 
-const typeOptions = computed(() => store.types.map((type) => ({ value: type.key, label: type.label_es })));
+const typeOptions = computed(() => store.types.map((type) => ({ value: type.key, label: uiLanguage.value === 'en' ? type.label_en : type.label_es })));
 const selectedType = computed(() => store.typeByKey(form.secretType));
-const validityOptions = [1, 3, 7, 30].map((days) => ({ value: days, label: days === 1 ? '1 día' : `${days} días` }));
+const validityOptions = computed(() => [1, 3, 7, 30].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
+const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
 
 watch(() => props.modelValue, (open) => {
   if (!open) {
     form.fields = {};
     return;
   }
-  store.fetchTypes();
-  errors.value = {};
-  generalError.value = '';
+  fieldsVersion.value += 1;
+  resetErrors();
+  typesError.value = false;
+  if (editingContent.value) loadTypes();
   Object.assign(form, {
     secretType: props.link?.secret_type || 'credentials',
     title: props.link?.title || '',
@@ -148,28 +165,27 @@ watch(() => props.modelValue, (open) => {
 });
 
 watch(() => form.secretType, (next, previous) => {
-  if (previous && next !== previous && !props.initialFields) form.fields = {};
+  if (previous && next !== previous) {
+    // Preserve only the values explicitly loaded for the edited link.
+    form.fields = props.modelValue && props.initialFields && next === props.link?.secret_type
+      ? { ...props.initialFields } : {};
+    resetErrors();
+  }
 });
 
 function onClientSelect(client) {
   form.clientLabel = client?.name || client?.email || '';
-  if (!client) form.project = null;
-}
-
-function mapErrors(error) {
-  const fieldErrors = error?.fieldErrors || {};
-  errors.value = Object.fromEntries(
-    Object.entries(fieldErrors).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
-  );
-  const handled = Object.keys(errors.value).some((key) => key !== 'fields');
-  generalError.value = errors.value.fields || (handled ? '' : error?.message || '');
+  form.project = null;
 }
 
 async function submit() {
-  errors.value = {};
-  generalError.value = '';
-  if (!form.title.trim()) {
-    errors.value = { title: 'Escribe un título para reconocer el enlace.' };
+  if (store.isUpdating || (editingContent.value && !catalogReady.value)) return;
+  resetErrors();
+  if (!form.title.trim()) errors.value.title = t('secureLinks.panel.titleRequired');
+  else if ([...form.title.trim()].length > 160) errors.value.title = t('secureLinks.validation.maxLength', { max: 160 });
+  if (editingContent.value) validateFields(form.fields);
+  if (Object.keys(errors.value).length || generalError.value) {
+    await focusError();
     return;
   }
   const payload = {
@@ -179,8 +195,7 @@ async function submit() {
     client: form.client || null,
     project: form.project || null,
   };
-  const editingContent = !props.link || props.initialFields;
-  if (!editingContent) {
+  if (!editingContent.value) {
     delete payload.secret_type;
     delete payload.fields;
   }
@@ -188,7 +203,10 @@ async function submit() {
     ? await store.updateLink(props.link.id, payload)
     : await store.createLink({ ...payload, language: form.language, validity_days: form.validityDays });
   if (!result.success) {
-    mapErrors(result.error);
+    mapErrors(result.error, [
+      'title', 'client', 'project', ...(!props.link ? ['language', 'validity_days'] : []),
+      ...(editingContent.value ? ['secret_type', ...(selectedType.value?.fields || []).map((field) => field.key)] : []),
+    ]);
     return;
   }
   form.fields = {};
