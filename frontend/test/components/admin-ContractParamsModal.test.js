@@ -11,8 +11,10 @@ global.useMarkdownPreview = jest.fn(() => ({
 jest.mock('dompurify', () => ({ sanitize: jest.fn((val) => val) }));
 
 import ContractParamsModal from '../../components/BusinessProposal/admin/ContractParamsModal.vue';
+import BaseFormField from '../../components/base/BaseFormField.vue';
 
-function mountContractParamsModal(props = {}) {
+// BaseFormField is not global in jest.setup; tests that read field errors pass it in.
+function mountContractParamsModal(props = {}, components = {}) {
   return mount(ContractParamsModal, {
     props: {
       visible: true,
@@ -23,6 +25,7 @@ function mountContractParamsModal(props = {}) {
       ...props,
     },
     global: {
+      components,
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
@@ -152,5 +155,98 @@ describe('ContractParamsModal — identificación del contratista', () => {
     const payload = wrapper.emitted('confirm')[0][0];
     expect(payload.contractor_cedula).toBe('1037635428');
     expect(payload.contractor_nit).toBe('');
+  });
+});
+
+describe('ContractParamsModal — contratos separados', () => {
+  const PARTIES = {
+    contractor_full_name: 'GUSTAVO ADOLFO PEREZ PEREZ',
+    contractor_nit: '900.123.456-7',
+    contractor_email: 'team@projectapp.co',
+    contract_city: 'Medellín',
+    bank_name: 'Bancolombia',
+    bank_account_number: '123456789',
+    client_full_name: 'Acme Corp',
+    client_cedula: '123456',
+    client_email: 'client@acme.com',
+    contract_date: '2026-09-26',
+  };
+  const SERVICE_TERMS = {
+    service_initial_term: 'doce (12) meses',
+    service_renewal_notice_days: 'treinta (30)',
+    service_termination_notice_days: 'treinta (30)',
+  };
+
+  async function openFor(variant, params, proposal, components) {
+    const wrapper = mountContractParamsModal(
+      { visible: false, initialParams: params, variant, ...(proposal ? { proposal } : {}) },
+      components,
+    );
+    await wrapper.setProps({ visible: true });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await wrapper.vm.$nextTick();
+    return wrapper;
+  }
+
+  it('asks for the service terms before generating the service contract', async () => {
+    // Falla si el contrato de servicio se genera sin duración ni preavisos.
+    const wrapper = await openFor('service', PARTIES, undefined, { BaseFormField });
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.text()).toContain('Generar contrato de servicio');
+    const terms = wrapper.get('[data-testid="contract-service-terms"]');
+    expect(terms.text()).toContain('Duración inicial es obligatorio');
+    expect(wrapper.emitted('confirm')).toBeFalsy();
+  });
+
+  it('sends the service terms with the service contract', async () => {
+    // Falla si los tres datos del servicio no viajan al generar su contrato.
+    const wrapper = await openFor('service', { ...PARTIES, ...SERVICE_TERMS });
+
+    await wrapper.find('form').trigger('submit');
+
+    const payload = wrapper.emitted('confirm')[0][0];
+    expect(payload).toMatchObject({ service_contract_source: 'default', ...SERVICE_TERMS });
+    expect(payload.contract_source).toBeUndefined();
+  });
+
+  it('keeps the service terms out of the single contract payload', async () => {
+    // Falla si editar el contrato único borra los datos guardados del servicio.
+    const wrapper = await openFor('combined', { ...PARTIES, ...SERVICE_TERMS });
+
+    await wrapper.find('form').trigger('submit');
+
+    const payload = wrapper.emitted('confirm')[0][0];
+    expect(payload.contract_source).toBe('default');
+    expect(payload).not.toHaveProperty('service_initial_term');
+    expect(wrapper.find('[data-testid="contract-service-terms"]').exists()).toBe(false);
+  });
+
+  it('edits the custom text of the product contract only', async () => {
+    // Falla si el texto personalizado del producto se guarda como el del contrato único.
+    const wrapper = await openFor('product', {
+      ...PARTIES, product_contract_source: 'custom', product_custom_contract_markdown: '# Producto negociado',
+      custom_contract_markdown: '# Contrato único',
+    });
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')[0][0]).toEqual({
+      product_contract_source: 'custom',
+      product_custom_contract_markdown: '# Producto negociado',
+      contract_date: '2026-09-26',
+    });
+  });
+
+  test.each([
+    ['sent', 'Generar contrato y negociar'],
+    ['negotiating', 'Generar contrato'],
+  ])('labels the submit of a %s proposal "%s"', async (status, label) => {
+    // Falla si generar un contrato en negociación promete mover la propuesta de estado.
+    const wrapper = await openFor('combined', PARTIES, { client_name: 'Acme Corp', status });
+    const submitButton = wrapper.findAll('button').find((button) => button.attributes('type') === 'submit');
+
+    expect(submitButton.text()).toBe(label);
   });
 });

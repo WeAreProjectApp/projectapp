@@ -10,7 +10,7 @@ import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
-from content.models import ProposalChangeLog
+from content.models import ProposalChangeLog, ProposalDocument
 
 pytestmark = pytest.mark.django_db
 
@@ -108,12 +108,16 @@ class TestUploadProposalDocument:
         })
         assert response.status_code == 400
 
-    def test_returns_400_for_contract_type(self, admin_client, negotiating_proposal):
+    @pytest.mark.parametrize('doc_type', ['contract', 'contract_product', 'contract_service'])
+    def test_returns_400_for_contract_type(self, admin_client, negotiating_proposal, doc_type):
+        """Fails if any of the three generated contract types can be impersonated by an upload."""
         file = SimpleUploadedFile('c.pdf', b'%PDF-1.4', content_type='application/pdf')
         response = admin_client.post(self._url(negotiating_proposal), {
-            'file': file, 'document_type': 'contract',
+            'file': file, 'document_type': doc_type,
         })
         assert response.status_code == 400
+        assert response.data['error'] == f'Invalid document_type: {doc_type}'
+        assert not ProposalDocument.objects.filter(proposal=negotiating_proposal, document_type=doc_type).exists()
 
     def test_stores_custom_type_label_for_other(self, admin_client, negotiating_proposal):
         file = SimpleUploadedFile('x.pdf', b'%PDF-1.4', content_type='application/pdf')
@@ -221,6 +225,41 @@ class TestDownloadDraftContractPdf:
     def test_returns_500_when_generation_fails(self, mock_gen, admin_client, negotiating_proposal):
         response = admin_client.get(self._url(negotiating_proposal))
         assert response.status_code == 500
+
+    def test_returns_400_when_split_proposal_omits_variant(self, admin_client, negotiating_proposal):
+        """Fails if a split closing's draft endpoint stops requiring which document to name."""
+        negotiating_proposal.contract_modality = 'split'
+        negotiating_proposal.save(update_fields=['contract_modality'])
+
+        response = admin_client.get(self._url(negotiating_proposal))
+
+        assert response.status_code == 400
+        assert response.data['code'] == 'variant_required'
+
+    def test_returns_409_for_a_variant_outside_the_split_modality(self, admin_client, negotiating_proposal):
+        """Fails if a split closing's draft endpoint still serves the retired single contract."""
+        negotiating_proposal.contract_modality = 'split'
+        negotiating_proposal.save(update_fields=['contract_modality'])
+
+        response = admin_client.get(self._url(negotiating_proposal), {'variant': 'combined'})
+
+        assert response.status_code == 409
+        assert response.data['code'] == 'inactive_variant'
+
+    @patch('content.services.contract_pdf_service.generate_contract_pdf', return_value=b'%PDF-1.4 fake-service-draft')
+    @patch('content.services.pdf_utils.add_watermark_to_pdf', return_value=b'watermarked-service-draft')
+    def test_serves_the_named_variant_of_a_split_proposal(
+        self, mock_wm, mock_gen, admin_client, negotiating_proposal,
+    ):
+        """Fails if a split closing's service draft is served under the product's or combined's filename."""
+        negotiating_proposal.contract_modality = 'split'
+        negotiating_proposal.save(update_fields=['contract_modality'])
+
+        response = admin_client.get(self._url(negotiating_proposal), {'variant': 'service'})
+
+        assert response.status_code == 200
+        assert 'Borrador_Contrato_Servicio_Hosting' in response['Content-Disposition']
+        mock_gen.assert_called_once_with(negotiating_proposal, draft=True, variant='service')
 
 
 # ---------------------------------------------------------------------------
@@ -343,6 +382,23 @@ class TestSendDocumentsToClient:
         response = admin_client.post(self._url(negotiating_proposal), payload, format='json')
         assert response.status_code == 400  # no attachments generated
 
+    @patch('content.services.proposal_email_service.ProposalEmailService.send_documents_to_client', return_value=True)
+    @patch('content.services.pdf_utils.add_watermark_to_pdf', return_value=b'watermarked')
+    @patch('content.services.contract_pdf_service.generate_contract_pdf', return_value=b'%PDF-1.4 draft')
+    def test_split_proposal_attaches_a_draft_per_active_variant(
+        self, mock_gen, mock_wm, mock_email, admin_client, negotiating_proposal,
+    ):
+        """Fails if a split closing's client email attaches only one of its two contracts."""
+        negotiating_proposal.contract_modality = 'split'
+        negotiating_proposal.save(update_fields=['contract_modality'])
+        payload = self._base_payload()
+        payload['documents'] = ['draft_contract']
+
+        response = admin_client.post(self._url(negotiating_proposal), payload, format='json')
+
+        assert response.status_code == 200
+        assert mock_wm.call_count == 2
+        assert [call.kwargs.get('variant') for call in mock_gen.call_args_list] == ['product', 'service']
 
 
 class TestUpdateContractParams:

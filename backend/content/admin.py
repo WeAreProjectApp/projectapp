@@ -299,8 +299,11 @@ class ContractTemplateAdmin(admin.ModelAdmin):
 
     list_display = ('name', 'is_default', 'mirror_document', 'updated_at')
     raw_id_fields = ('mirror_document',)
-    readonly_fields = ('content_markdown', 'created_at', 'updated_at')
-    fields = ('name', 'is_default', 'mirror_document', 'content_markdown', 'created_at', 'updated_at')
+    readonly_fields = ('content_markdown', 'service_content_markdown', 'created_at', 'updated_at')
+    fields = (
+        'name', 'is_default', 'mirror_document', 'content_markdown',
+        'service_content_markdown', 'created_at', 'updated_at',
+    )
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.is_default:

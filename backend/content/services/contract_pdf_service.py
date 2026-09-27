@@ -10,6 +10,9 @@ Two modes:
   placeholder substitution).
 
 Both modes share the same markdown → blocks → ReportLab rendering pipeline.
+Every public function takes an explicit ``variant`` (see ``contract_variants``):
+the single contract, or the product or service document of a split closing.
+Each variant has its own source/custom keys in ``contract_params``.
 """
 
 import io
@@ -21,6 +24,12 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen import canvas
 
+from content.services.contract_variants import (
+    COMBINED,
+    SERVICE_PARAM_KEYS,
+    VARIANTS,
+    template_markdown,
+)
 from content.services.contractor_identity import (
     UNKNOWN_LABEL,
     resolve_contractor_identity,
@@ -77,10 +86,19 @@ def _build_params(raw_params: dict, draft: bool = False) -> dict:
     finds, so a drifted copy can still hold ``{contractor_nit}``; dropping the
     key would make format() raise and leak a literal ``{contractor_nit}`` into
     a signed PDF. It also keeps a rollback of v7 working with no code change.
+
+    The service terms (initial term and notice periods) are commercial
+    conditions, not personal data, so a draft shows them once they are set.
     """
+    raw_params = raw_params or {}
     if draft:
         blank = _PLACEHOLDER_DRAFT
+        service_terms = {
+            key: str(raw_params.get(key) or '').strip() or blank
+            for key in SERVICE_PARAM_KEYS
+        }
         return {
+            **service_terms,
             'contractor_full_name': blank,
             'contractor_nit': blank,
             'contractor_cedula': blank,
@@ -105,6 +123,7 @@ def _build_params(raw_params: dict, draft: bool = False) -> dict:
         blank=blank,
     )
     return {
+        **{key: raw_params.get(key) or blank for key in SERVICE_PARAM_KEYS},
         'contractor_full_name': raw_params.get('contractor_full_name', blank),
         'contractor_nit': raw_params.get('contractor_nit', blank),
         'contractor_cedula': raw_params.get('contractor_cedula', blank),
@@ -139,12 +158,14 @@ def _get_contract_markdown(
     params: dict,
     *,
     force_default: bool = False,
+    variant: str = COMBINED,
 ) -> str:
-    """Return the final markdown text for the contract PDF."""
-    source = 'default' if force_default else raw_params.get('contract_source', 'default')
+    """Return the final markdown text for the contract PDF of *variant*."""
+    spec = VARIANTS[variant]
+    source = 'default' if force_default else raw_params.get(spec.source_key, 'default')
 
     if source == 'custom':
-        markdown = raw_params.get('custom_contract_markdown', '')
+        markdown = raw_params.get(spec.custom_key, '')
     else:
         # Default: load template from DB and substitute placeholders
         from content.models import ContractTemplate
@@ -152,7 +173,11 @@ def _get_contract_markdown(
         if not template:
             logger.error('No default ContractTemplate found in DB')
             return ''
-        markdown = _substitute_placeholders(template.content_markdown, params)
+        text = template_markdown(template, variant)
+        if not text:
+            logger.error('The default ContractTemplate has no %s contract text', variant)
+            return ''
+        markdown = _substitute_placeholders(text, params)
 
     return re.sub(r' -- ', ' - ', markdown)
 
@@ -260,13 +285,20 @@ def _render_block(c, y, block, ps):
     return y
 
 
-def _draw_title_page(c, y, params, ps):
+def _draw_title_page(c, y, params, ps, title_lines=None):
     """Draw the contract title section on the first page."""
+    title_lines = title_lines or VARIANTS[COMBINED].title_lines
     c.setFont(_font('light'), 22)
     c.setFillColor(ESMERALD)
-    c.drawString(MARGIN_L, y, 'CONTRATO DE PRESTACIÓN')
-    y -= 28
-    c.drawString(MARGIN_L, y, 'DE SERVICIOS')
+    lines = [
+        wrapped
+        for line in title_lines
+        for wrapped in _wrap_by_width(line, _font('light'), 22, CONTENT_W)
+    ]
+    for index, line in enumerate(lines):
+        if index:
+            y -= 28
+        c.drawString(MARGIN_L, y, line)
     y -= 36
 
     # Accent line
@@ -357,21 +389,24 @@ def _draw_signature_block(c, y, params, ps, signature_path=None):
 # Public API
 # ---------------------------------------------------------------------------
 
-def resolve_contract_content(proposal, draft=False, *, force_default=False):
+def resolve_contract_content(proposal, draft=False, *, force_default=False, variant=COMBINED):
     """Resolve once so the saved PDF and its text snapshot cannot drift."""
     from content.services.markdown_export import literal
 
+    spec = VARIANTS[variant]
     raw_params = getattr(proposal, 'contract_params', None) or {}
-    source = 'default' if force_default else raw_params.get('contract_source', 'default')
+    source = 'default' if force_default else raw_params.get(spec.source_key, 'default')
     params = _build_params(raw_params, draft=draft)
-    markdown = _get_contract_markdown(raw_params, params, force_default=force_default)
+    markdown = _get_contract_markdown(
+        raw_params, params, force_default=force_default, variant=variant,
+    )
     snapshot = markdown
     if source != 'custom' and markdown:
         client = literal(params.get('client_full_name', ''))
         contractor = literal(params.get('contractor_full_name', ''))
         date = literal(params.get('contract_date', ''))
         snapshot = (
-            '# CONTRATO DE PRESTACIÓN DE SERVICIOS\n\n'
+            f'# {spec.heading}\n\n'
             f'ENTRE: {client} (EL CONTRATANTE)\n\n'
             f'Y: {contractor} (EL CONTRATISTA)\n\n'
             + (f'Fecha: {date}\n\n' if date else '')
@@ -382,7 +417,10 @@ def resolve_contract_content(proposal, draft=False, *, force_default=False):
             f'**EL CONTRATISTA**\n\n{contractor}\n\n'
             f'{literal(params.get("contractor_id_type", ""))} {literal(params.get("contractor_id_number", ""))}\n'
         )
-    return {'params': params, 'source': source, 'markdown': markdown, 'snapshot': snapshot}
+    return {
+        'params': params, 'source': source, 'markdown': markdown,
+        'snapshot': snapshot, 'variant': variant,
+    }
 
 
 def generate_contract_pdf(
@@ -391,15 +429,19 @@ def generate_contract_pdf(
     *,
     force_default=False,
     resolved_content=None,
+    variant=COMBINED,
 ) -> bytes | None:
     """Generate a contract PDF and return raw bytes, or None on failure.
 
     When *draft* is True the contractor signature is omitted.
     """
     try:
-        content = resolved_content if resolved_content is not None else resolve_contract_content(proposal, draft, force_default=force_default)
+        content = resolved_content if resolved_content is not None else resolve_contract_content(
+            proposal, draft, force_default=force_default, variant=variant,
+        )
         source = content['source']
         params = content['params']
+        spec = VARIANTS[content.get('variant', variant)]
 
         sig_path = None
         if not draft:
@@ -424,7 +466,7 @@ def generate_contract_pdf(
 
         # Title page (only for default contracts with param data)
         if source != 'custom':
-            y = _draw_title_page(c, y, params, ps)
+            y = _draw_title_page(c, y, params, ps, title_lines=spec.title_lines)
 
         # Render markdown blocks
         for block in blocks:

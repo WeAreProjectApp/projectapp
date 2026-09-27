@@ -974,6 +974,27 @@ La exportación no agrega herramientas MCP ni permite editar la evidencia del
 contrato a través de `contract_params`. Revisar el contrato de campos al añadir
 cualquier campo nuevo a este modelo.
 
+### Modalidad de cierre — 2026-09-26
+
+`BusinessProposal.contract_modality` se clasifica como lectura/escritura en el
+conector de propuestas. Se escribe sólo mediante la operación
+`update_proposal_contract_modality`, que invoca `PATCH contract/modality/`:
+- sólo en negociación; en otro estado responde `409 modality_locked`;
+- `409 split_unavailable` si la plantilla no tiene texto de servicio;
+- sin borrar documentos.
+
+`update_proposal_contract` acepta `variant` (`combined`, `product`, `service`).
+Las operaciones de render reenvían `variant` como parámetro de consulta: en
+cierre separado exigen `product` o `service` (`variant_required`) y rechazan la
+variante de la otra modalidad (`inactive_variant`).
+
+Los nuevos tipos de `ProposalDocument` (`contract_product` y `contract_service`)
+no agregan campos, así que el modelo sigue excluido del MCP.
+
+Slice focal:
+- `test_mcp_contracts.py -k "proposals or commercial or operations"`;
+- `test_proposal_contract_modality_views.py`.
+
 ### Carpetas de Comunicaciones
 
 Validar `list_folders`, `create_folder`, `update_folder`, `delete_folder` con un perfil de cliente y proyecto opcional. Rechazar ciclos, cambio de contexto y eliminación con hilos archivados. `create_thread`/`update_thread` reciben `folder_id`; null retira la ubicación, una comunicación madre lo rechaza. `list_threads` admite `folder=<id>|none`; con `q`, busca todas las carpetas del contexto. Una actualización exclusivamente organizativa funciona con hilo cerrado. Los contratos incluyen `CommunicationFolder` y `CommunicationThread.folder`; los servicios son los mismos del panel.

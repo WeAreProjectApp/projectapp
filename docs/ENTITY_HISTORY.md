@@ -11,7 +11,7 @@ No permite restaurar, editar ni eliminar versiones.
 | Módulo | Información conservada | Entrada |
 |---|---|---|
 | Documentos | Contenido, título, carpeta, etiquetas, cliente, proyecto, estados, notas, datos de cobro, ítems, medios de pago y archivos emitidos | Pestaña Historial del editor |
-| Propuestas | Precio, descuento, alcance/secciones, condiciones, módulos y mensaje preparado; marca y PDF exactos del último envío confirmado | Pestaña Historial del editor |
+| Propuestas | Precio, descuento, alcance/secciones, condiciones, módulos, modalidad de cierre y mensaje preparado; marca y PDF exactos del último envío confirmado | Pestaña Historial del editor |
 | Proyectos | Datos generales, URLs, usuarios de administración, contraseñas por ambiente, notas y estados | Historial del detalle de accesos |
 | Clientes | Nombre, correo, teléfono, empresa, documento de identidad y datos de facturación | Tarjeta expandida del cliente |
 | Contable | Ingresos, gastos, hostings/ciclos, bolsillo, recurrentes, publicidad, saldos de tarjetas, tarjetas, extractos, transacciones, aliases, destinatarios y configuración | Entrada «Detalle e historial» del menú de tres puntos de cada fila (en Ingresos y Cuentas de cobro abre su modal de detalle, que incluye el historial) |

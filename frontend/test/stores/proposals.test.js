@@ -2255,6 +2255,63 @@ describe('useProposalStore', () => {
       expect(result.success).toBe(false);
       expect(store.isUpdating).toBe(false);
     });
+
+    it('names the separate document being generated', async () => {
+      // Falla si generar el contrato de servicio no le dice al backend qué documento es.
+      patch_request.mockResolvedValueOnce({ data: { id: 1 } });
+
+      await store.updateContractParams(1, { service_initial_term: 'doce (12) meses' }, 'service');
+
+      expect(patch_request).toHaveBeenCalledWith('proposals/1/contract/update/', {
+        contract_params: { service_initial_term: 'doce (12) meses' },
+        variant: 'service',
+      });
+    });
+
+    it('surfaces the service terms the backend still needs', async () => {
+      // Falla si un 400 del contrato de servicio se pierde sin explicar qué falta.
+      patch_request.mockRejectedValueOnce({
+        response: { status: 400, data: { service_initial_term: ['Indica este dato del contrato de servicio.'] } },
+      });
+
+      const result = await store.updateContractParams(1, {}, 'service');
+
+      expect(result.success).toBe(false);
+      expect(result.message).toBe('Indica este dato del contrato de servicio.');
+    });
+  });
+
+  describe('updateContractModality', () => {
+    it('persists the modality and refreshes the open proposal', async () => {
+      // Falla si el cambio de modalidad no actualiza la propuesta que muestra el tab.
+      store.currentProposal = { id: 1, contract_modality: 'single' };
+      const data = { id: 1, contract_modality: 'split', proposal_documents: [] };
+      patch_request.mockResolvedValueOnce({ data });
+
+      const result = await store.updateContractModality(1, 'split');
+
+      expect(patch_request).toHaveBeenCalledWith('proposals/1/contract/modality/', { contract_modality: 'split' });
+      expect(result.success).toBe(true);
+      expect(store.currentProposal).toEqual(data);
+      expect(store.isUpdating).toBe(false);
+    });
+
+    it('returns the backend reason when the modality is locked', async () => {
+      // Falla si el panel no puede explicar por qué no cambió la modalidad.
+      store.currentProposal = { id: 1, contract_modality: 'single' };
+      patch_request.mockRejectedValueOnce({
+        response: {
+          status: 409,
+          data: { error: 'La modalidad de cierre sólo se cambia durante la negociación.', code: 'modality_locked' },
+        },
+      });
+
+      const result = await store.updateContractModality(1, 'split');
+
+      expect(result).toMatchObject({ success: false, code: 'modality_locked' });
+      expect(result.message).toBe('La modalidad de cierre sólo se cambia durante la negociación.');
+      expect(store.currentProposal.contract_modality).toBe('single');
+    });
   });
 
   describe('uploadProposalDocument (currentProposal refresh)', () => {

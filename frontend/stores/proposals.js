@@ -1308,16 +1308,22 @@ export const useProposalStore = defineStore('proposals', {
     },
 
     /**
-     * updateContractParams: Update contract params and regenerate PDF.
+     * updateContractParams: Update contract params and regenerate the
+     * contracts of the proposal's closing modality.
      * @param {number} proposalId
-     * @param {Object} contractParams
+     * @param {Object} contractParams - Only the keys being edited; the backend
+     *   merges them over the saved parameters.
+     * @param {string} [variant] - Document being generated or edited
+     *   ('combined', 'product' or 'service').
      */
-    async updateContractParams(proposalId, contractParams) {
+    async updateContractParams(proposalId, contractParams, variant) {
       this.isUpdating = true;
       try {
+        const payload = { contract_params: contractParams };
+        if (variant) payload.variant = variant;
         const response = await patch_request(
           `proposals/${proposalId}/contract/update/`,
-          { contract_params: contractParams },
+          payload,
         );
         if (this.currentProposal?.id === proposalId) {
           this.currentProposal = response.data;
@@ -1325,7 +1331,33 @@ export const useProposalStore = defineStore('proposals', {
         return { success: true, data: response.data };
       } catch (error) {
         console.error('Error updating contract params:', error);
-        return { success: false };
+        return { success: false, ...normalizeApiError(error, 'No se pudo guardar el contrato.') };
+      /* c8 ignore next 3 */
+      } finally {
+        this.isUpdating = false;
+      }
+    },
+
+    /**
+     * updateContractModality: Choose whether a negotiated deal closes with one
+     * contract ('single') or with product and service contracts ('split').
+     * @param {number} proposalId
+     * @param {string} modality
+     */
+    async updateContractModality(proposalId, modality) {
+      this.isUpdating = true;
+      try {
+        const response = await patch_request(
+          `proposals/${proposalId}/contract/modality/`,
+          { contract_modality: modality },
+        );
+        if (this.currentProposal?.id === proposalId) {
+          this.currentProposal = response.data;
+        }
+        return { success: true, data: response.data };
+      } catch (error) {
+        console.error('Error updating contract modality:', error);
+        return { success: false, ...normalizeApiError(error, 'No se pudo cambiar la modalidad de cierre.') };
       /* c8 ignore next 3 */
       } finally {
         this.isUpdating = false;

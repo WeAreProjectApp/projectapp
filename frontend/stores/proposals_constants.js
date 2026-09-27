@@ -31,6 +31,72 @@ export const CONTRACT_LOCKED_STATUSES = Object.freeze([
   PROPOSAL_STATUS.VIEWED,
 ]);
 
+// How a negotiated deal closes: one contract, or a product contract plus a
+// separate hosting, maintenance and support contract. Mirrors
+// BusinessProposal.ContractModality and backend content/services/contract_variants.py.
+export const CONTRACT_MODALITY = Object.freeze({
+  SINGLE: 'single',
+  SPLIT: 'split',
+});
+
+// The modality is chosen during negotiation and stays visible afterwards.
+export const CONTRACT_MODALITY_EDITABLE_STATUSES = Object.freeze([
+  PROPOSAL_STATUS.NEGOTIATING,
+]);
+export const CONTRACT_MODALITY_VISIBLE_STATUSES = Object.freeze([
+  PROPOSAL_STATUS.NEGOTIATING,
+  PROPOSAL_STATUS.ACCEPTED,
+  PROPOSAL_STATUS.REJECTED,
+]);
+
+export const CONTRACT_VARIANTS = Object.freeze({
+  combined: Object.freeze({
+    key: 'combined',
+    docType: 'contract',
+    label: 'Contrato de desarrollo',
+    subtitle: '',
+    sourceKey: 'contract_source',
+    customKey: 'custom_contract_markdown',
+  }),
+  product: Object.freeze({
+    key: 'product',
+    docType: 'contract_product',
+    label: 'Contrato de producto',
+    subtitle: 'Desarrollo e implementación del software',
+    sourceKey: 'product_contract_source',
+    customKey: 'product_custom_contract_markdown',
+  }),
+  service: Object.freeze({
+    key: 'service',
+    docType: 'contract_service',
+    label: 'Contrato de servicio',
+    subtitle: 'Hosting, mantenimiento y soporte',
+    sourceKey: 'service_contract_source',
+    customKey: 'service_custom_contract_markdown',
+  }),
+});
+
+export const CONTRACT_MODALITY_VARIANTS = Object.freeze({
+  [CONTRACT_MODALITY.SINGLE]: Object.freeze(['combined']),
+  [CONTRACT_MODALITY.SPLIT]: Object.freeze(['product', 'service']),
+});
+
+// Generated contract documents are never ordinary attachments.
+export const CONTRACT_DOC_TYPES = Object.freeze(
+  Object.values(CONTRACT_VARIANTS).map((variant) => variant.docType),
+);
+
+// The three terms the standalone service contract fills per proposal.
+export const SERVICE_CONTRACT_FIELDS = Object.freeze([
+  Object.freeze({ key: 'service_initial_term', label: 'Duración inicial', placeholder: 'Ej.: doce (12) meses' }),
+  Object.freeze({ key: 'service_renewal_notice_days', label: 'Preaviso para no renovar (días calendario)', placeholder: 'Ej.: treinta (30)' }),
+  Object.freeze({ key: 'service_termination_notice_days', label: 'Preaviso de terminación del cliente (días calendario)', placeholder: 'Ej.: treinta (30)' }),
+]);
+
+export function contractVariantsFor(proposal) {
+  return CONTRACT_MODALITY_VARIANTS[proposal?.contract_modality] || CONTRACT_MODALITY_VARIANTS.single;
+}
+
 // Statuses where the client's decision is already settled. Time-sensitive /
 // urgency notices on the public view (expiration countdown, limited-time
 // discount banner, hosting tier discount badges) must be hidden for these.

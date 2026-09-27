@@ -136,7 +136,7 @@ from content.views.proposal import (
     email_deliverability_dashboard,
     request_magic_link,
     preview_sync_section, apply_sync_section,
-    save_contract_and_negotiate, update_contract_params,
+    save_contract_and_negotiate, update_contract_params, update_contract_modality,
     download_contract_pdf, download_draft_contract_pdf,
     send_documents_to_client,
     send_discount_offer,
@@ -693,6 +693,7 @@ urlpatterns = [
     # Contract & documents — admin
     path('proposals/<int:proposal_id>/contract/save-and-negotiate/', save_contract_and_negotiate, name='save-contract-and-negotiate'),
     path('proposals/<int:proposal_id>/contract/update/', update_contract_params, name='update-contract-params'),
+    path('proposals/<int:proposal_id>/contract/modality/', update_contract_modality, name='update-contract-modality'),
     path('proposals/<int:proposal_id>/contract/markdown/', contract_markdown, name='contract-markdown'),
     path('proposals/<int:proposal_id>/formalization/markdown/<str:kind>/', formalization_markdown, name='formalization-markdown'),
     path('proposals/<int:proposal_id>/documents/<int:doc_id>/markdown/', attachment_markdown, name='proposal-attachment-markdown'),

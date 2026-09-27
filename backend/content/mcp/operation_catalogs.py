@@ -158,9 +158,10 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('preview_email_template', 'Renderiza un template sin enviarlo.', 'email-template-preview', path=('template_key',)),
     _op('reset_email_template', 'Restaura un template de correo.', 'email-template-reset', 'POST', ('template_key',), 'sensitive', True),
     _op('get_email_deliverability', 'Obtiene salud y métricas de entregabilidad.', 'email-deliverability-dashboard'),
-    _op('update_proposal_contract', 'Actualiza parámetros contractuales editables.', 'update-contract-params', 'PATCH', ('proposal_id',), 'write'),
-    _op('render_proposal_contract_pdf', 'Genera el contrato vigente como asset temporal.', 'download-contract-pdf', path=('proposal_id',)),
-    _op('render_proposal_draft_contract_pdf', 'Genera el borrador contractual como asset temporal.', 'download-draft-contract-pdf', path=('proposal_id',)),
+    _op('update_proposal_contract', 'Actualiza parámetros contractuales editables; variant (combined, product o service) indica el contrato que se genera o edita.', 'update-contract-params', 'PATCH', ('proposal_id',), 'write'),
+    _op('update_proposal_contract_modality', 'Elige, sólo en negociación, si el negocio cierra con contrato único (single) o con contrato de producto y de servicio (split).', 'update-contract-modality', 'PATCH', ('proposal_id',), 'write'),
+    _op('render_proposal_contract_pdf', 'Genera el contrato vigente como asset temporal; en cierre separado exige variant=product o variant=service.', 'download-contract-pdf', path=('proposal_id',)),
+    _op('render_proposal_draft_contract_pdf', 'Genera el borrador contractual como asset temporal; en cierre separado exige variant=product o variant=service.', 'download-draft-contract-pdf', path=('proposal_id',)),
     _op('save_proposal_contract_negotiation', 'Guarda condiciones y pasa la propuesta a negociación.', 'save-contract-and-negotiate', 'POST', ('proposal_id',), 'sensitive', True),
     _op('list_proposal_documents', 'Lista documentos adjuntos a una propuesta.', 'list-proposal-documents', path=('proposal_id',)),
     _op('upload_proposal_document', 'Adjunta un asset validado a una propuesta.', 'upload-proposal-document', 'POST', ('proposal_id',), 'write', assets={

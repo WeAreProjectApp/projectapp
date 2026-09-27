@@ -5,6 +5,7 @@
  * (NDA + templates + attachments), selection, confirm emit, cancel emit, preselected keys.
  */
 import { mount } from '@vue/test-utils';
+import { nextTick } from 'vue';
 import AttachFromDocumentsModal from '../../components/AttachFromDocumentsModal.vue';
 
 const baseProposal = {
@@ -113,6 +114,45 @@ describe('AttachFromDocumentsModal', () => {
     it('shows non-contract uploaded proposal documents', () => {
       const wrapper = mountModal({ entity: proposalWithContract, source: 'proposal' });
       expect(wrapper.text()).toContain('Otrosí #1');
+    });
+
+    it('offers the product and service contracts of a split closing by name', async () => {
+      // Falla si un cierre separado adjunta el contrato único o un contrato sin nombrar.
+      const entity = {
+        ...proposalWithContract,
+        contract_modality: 'split',
+        proposal_documents: [
+          ...proposalWithContract.proposal_documents,
+          { id: 12, document_type: 'contract_product', title: 'Contrato de producto', is_generated: true },
+          { id: 13, document_type: 'contract_service', title: 'Contrato de servicio', is_generated: true },
+        ],
+      };
+      const wrapper = mountModal({ entity, source: 'proposal', preselected: ['contract_pdf:service'] });
+      await nextTick();
+      const confirmBtn = wrapper.findAll('button').find(b => b.text().includes('Adjuntar'));
+      await confirmBtn.trigger('click');
+
+      expect(wrapper.text()).not.toContain('Contrato de desarrollo (PDF)');
+      expect(wrapper.text()).toContain('Contrato de producto (borrador)');
+      expect(wrapper.emitted('attach')[0][0].map(item => item.ref)).toEqual([
+        { source: 'contract_pdf', variant: 'service' },
+      ]);
+    });
+
+    it('shows only the generated variant when a split closing has one contract still pending', () => {
+      // Falla si el chequeo de existencia por variante se pierde: ofrece o esconde el contrato equivocado.
+      const entity = {
+        ...baseProposal,
+        contract_modality: 'split',
+        proposal_documents: [
+          { id: 12, document_type: 'contract_product', document_type_display: 'Contrato de producto', title: 'Contrato de producto', is_generated: true },
+        ],
+      };
+      const wrapper = mountModal({ entity, source: 'proposal' });
+
+      expect(wrapper.text()).toContain('Contrato de producto (PDF)');
+      expect(wrapper.text()).toContain('Contrato de producto (borrador)');
+      expect(wrapper.text()).not.toContain('Contrato de servicio');
     });
   });
 

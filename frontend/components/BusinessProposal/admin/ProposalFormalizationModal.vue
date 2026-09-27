@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import EmailRecipientFields from '~/components/emails/EmailRecipientFields.vue';
 import { emailRecipient, recipientEmails } from '~/utils/emailRecipients';
 import { useProposalFormalizationStore } from '~/stores/proposal_formalization';
+import { CONTRACT_DOC_TYPES } from '~/stores/proposals_constants';
 
 const props = defineProps({
   proposal: { type: Object, required: true },
@@ -14,7 +15,9 @@ const loading = ref(true);
 const busy = ref(false);
 const error = ref('');
 const options = ref([]);
-const selected = ref(['contract', 'commercial', 'technical']);
+// Every document of the closing modality starts selected: one contract, or
+// the product and service contracts, plus the two annexes.
+const selected = ref([]);
 const extraIds = ref([]);
 const toRecipients = ref(props.proposal.client_email ? [emailRecipient(props.proposal.client_email)] : []);
 const ccRecipients = ref([]);
@@ -28,7 +31,7 @@ let previewSeq = 0;
 let sectionSeq = 0;
 let alive = true;
 
-const additionalDocs = computed(() => props.documents.filter(doc => doc.document_type !== 'contract'));
+const additionalDocs = computed(() => props.documents.filter(doc => !CONTRACT_DOC_TYPES.includes(doc.document_type)));
 const unavailable = computed(() => options.value.filter(doc => selected.value.includes(doc.key) && !doc.available));
 const canPrepare = computed(() => !loading.value && !busy.value && !unavailable.value.length
   && (selected.value.length || extraIds.value.length) && toRecipients.value.length
@@ -47,6 +50,7 @@ async function loadOptions() {
     const result = await store.options(props.proposal.id);
     if (!alive) return;
     options.value = result.documents;
+    selected.value = [...new Set(result.documents.map(doc => doc.key))];
     fields.value = result.defaults;
   } catch (err) {
     error.value = errorMessage(err);
