@@ -476,7 +476,7 @@ test.describe('Admin Accounting Dashboard', () => {
     await expect(card).toBeVisible({ timeout: 25_000 });
     await card.click();
 
-    const modal = page.getByTestId('stats-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('stats-modal') });
     await expect(modal).toBeVisible();
     await expect(
       modal.getByRole('heading', { name: 'Estadísticas de ingresos 2026' }),

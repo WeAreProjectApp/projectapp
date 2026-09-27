@@ -41,8 +41,7 @@ async function verifyLongModal(page) {
   await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(dialog.getByRole('textbox', { name: 'Observación 16', exact: true })).toBeInViewport();
   const after = await expectVisibleFooter(page, dialog);
-  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
-  await dialog.getByRole('button', { name: 'Aceptar' }).click();
+  return { dialog, before, after };
 }
 
 for (const profile of RESPONSIVE_PROFILES) {
@@ -90,8 +89,10 @@ for (const profile of RESPONSIVE_PROFILES) {
       tag: ['@flow:admin-styleguide', '@outcome:display', `@viewport:${profile}`],
     }, async ({ page }) => {
       // quality: allow-deep-link (the styleguide is the foundation acceptance surface)
-      await verifyLongModal(page);
-      await expect(page.getByRole('dialog')).toHaveCount(0);
+      const { dialog, before, after } = await verifyLongModal(page);
+      expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+      await dialog.getByRole('button', { name: 'Aceptar' }).click();
+      await expect(dialog).toHaveCount(0);
     });
   });
 }
@@ -101,6 +102,8 @@ test('styleguide keeps long modal actions reachable on a low screen', {
 }, async ({ page }) => {
   // quality: allow-deep-link (the styleguide is the foundation acceptance surface)
   await page.setViewportSize({ width: 844, height: 390 });
-  await verifyLongModal(page);
-  await expect(page.getByRole('dialog')).toHaveCount(0);
+  const { dialog, before, after } = await verifyLongModal(page);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+  await dialog.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(dialog).toHaveCount(0);
 });
