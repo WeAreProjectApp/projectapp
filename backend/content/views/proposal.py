@@ -3567,12 +3567,19 @@ def download_draft_contract_pdf(request, proposal_id):
     return _contract_pdf_response(draft_bytes, proposal, _draft_prefix(variant))
 
 
-@api_view(['GET'])
+@api_view(['GET', 'PATCH'])
 @permission_classes([IsAdminUser])
 def get_company_settings(request):
-    """Return company settings defaults for contract modal pre-fill."""
+    """Read contract defaults or update the service-term catalogs as an admin."""
     from content.models import CompanySettings
+    from content.serializers.service_contract_settings import CompanyServiceSettingsSerializer
+
     settings = CompanySettings.load()
+    if request.method == 'PATCH':
+        serializer = CompanyServiceSettingsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        settings.service_contract_settings = serializer.validated_data['service_contract_settings']
+        settings.save(update_fields=['service_contract_settings', 'updated_at'])
     return Response(settings.to_dict(), status=status.HTTP_200_OK)
 
 

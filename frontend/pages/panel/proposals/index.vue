@@ -262,6 +262,7 @@
           Abrir defaults de propuestas
         </BaseButton>
       </section>
+      <ServiceContractSettings />
     </ViewSettingsPanel>
 
     <template v-if="!showConfigTab">
@@ -550,6 +551,7 @@ import { computed, onMounted, reactive, ref, resolveComponent } from 'vue';
 import ProposalDashboard from '~/components/BusinessProposal/admin/ProposalDashboard.vue';
 import MetricsManual from '~/components/BusinessProposal/admin/MetricsManual.vue';
 import ContractParamsModal from '~/components/BusinessProposal/admin/ContractParamsModal.vue';
+import ServiceContractSettings from '~/components/BusinessProposal/admin/ServiceContractSettings.vue';
 import ProposalResendModal from '~/components/BusinessProposal/admin/ProposalResendModal.vue';
 import ProposalFilterTabs from '~/components/proposals/ProposalFilterTabs.vue';
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';

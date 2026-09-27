@@ -283,6 +283,7 @@ export const ADMIN_SECURE_LINK_MANAGE = ['@flow:admin-secure-link-manage', '@mod
 export const ADMIN_SELLER_INACTIVITY_ESCALATION = ['@flow:admin-seller-inactivity-escalation', '@module:admin', '@priority:P2'];
 export const ADMIN_SEND_BRANDED_EMAIL = ['@flow:admin-send-branded-email', '@module:admin', '@priority:P2'];
 export const ADMIN_SEND_PROPOSAL_EMAIL = ['@flow:admin-send-proposal-email', '@module:admin', '@priority:P2'];
+export const ADMIN_SERVICE_CONTRACT_SETTINGS = ['@flow:admin-service-contract-settings', '@module:admin', '@priority:P2'];
 export const ADMIN_STANDALONE_EMAIL_ATTACHMENTS = ['@flow:admin-standalone-email-attachments', '@module:admin', '@priority:P2'];
 export const ADMIN_STANDALONE_EMAIL_COMPOSER = ['@flow:admin-standalone-email-composer', '@module:admin', '@priority:P2'];
 export const ADMIN_STANDALONE_EMAIL_DEFAULTS = ['@flow:admin-standalone-email-defaults', '@module:admin', '@priority:P2'];

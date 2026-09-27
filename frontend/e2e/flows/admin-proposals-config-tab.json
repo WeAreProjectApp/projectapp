@@ -1,11 +1,11 @@
 {
   "id": "admin-proposals-config-tab",
-  "name": "Admin Proposals — Configuraciones Tab",
+  "name": "Admin Proposals \u2014 Configuraciones Tab",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P3",
-  "description": "Admin activates the fixed trailing 'Configuraciones' tab of the proposals filter-tab bar (right-aligned on desktop, select option on mobile): the list swaps to the shared ViewSettingsPanel with the proposal saved-filter-tabs reset (view=proposal) and a link to /panel/proposals/defaults. Selecting any filter tab closes the panel.",
+  "description": "Admin activates the fixed trailing 'Configuraciones' tab of the proposals filter-tab bar (right-aligned on desktop, select option on mobile): the list swaps to the shared ViewSettingsPanel with the proposal saved-filter-tabs reset (view=proposal) and a link to /panel/proposals/defaults. Selecting any filter tab closes the panel. The settings panel also manages service-contract option catalogs and defaults; that interaction is covered by admin-service-contract-settings.",
   "expectedSpecs": 0
 }

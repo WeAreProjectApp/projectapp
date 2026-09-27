@@ -28,6 +28,7 @@ export default defineI18nLocale(async () => {
     captcha,
     communicationFiling,
     secureLinks,
+    serviceContract,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
     import('~/locales/home/en.js'),
@@ -57,6 +58,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/captcha/en.js'),
     import('~/locales/communicationFiling/en.js'),
     import('~/locales/secureLinks/en.js'),
+    import('~/locales/serviceContract/en.js'),
   ])
 
   return {
@@ -88,5 +90,6 @@ export default defineI18nLocale(async () => {
     captcha: captcha.default,
     communicationFiling: communicationFiling.default,
     secureLinks: secureLinks.default,
+    serviceContract: serviceContract.default,
   }
 })
