@@ -32,7 +32,7 @@
         </p>
       </div>
 
-      <form class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+      <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
         <BaseFormField label="Valor recibido" required>
           <BaseCurrencyInput
             v-model="form.total"
@@ -178,38 +178,40 @@
           />
         </BaseFormField>
 
-        <div class="space-y-1 pt-2">
-          <p
-            id="income-bulk-settle-submit-reason"
-            class="text-xs text-danger-strong text-right min-h-4"
-            aria-live="polite"
-            data-testid="income-bulk-settle-submit-reason"
-          >
-            {{ saving ? '' : submitBlockReason }}
-          </p>
-          <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
-            <BaseButton type="button" variant="secondary" @click="emit('close')">
-              Cancelar
-            </BaseButton>
-            <BaseButton
-              type="submit"
-              :loading="saving"
-              :disabled="!canSubmit"
-              :disabled-reason="submitBlockReason"
-              aria-describedby="income-bulk-settle-submit-reason"
-              data-testid="income-bulk-settle-submit"
-            >
-              {{ saving ? 'Guardando...' : 'Registrar abono' }}
-            </BaseButton>
-          </div>
-        </div>
       </form>
     </div>
+    <template #footer>
+      <div class="space-y-2 border-t border-border-muted px-4 py-4 panel-portrait:px-6">
+        <p
+          id="income-bulk-settle-submit-reason"
+          class="text-xs text-danger-strong text-right min-h-4"
+          aria-live="polite"
+          data-testid="income-bulk-settle-submit-reason"
+        >
+          {{ saving ? '' : submitBlockReason }}
+        </p>
+        <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
+          <BaseButton type="button" variant="secondary" @click="emit('close')">
+            Cancelar
+          </BaseButton>
+          <BaseButton
+            type="submit" :form="modalFormId"
+            :loading="saving"
+            :disabled="!canSubmit"
+            :disabled-reason="submitBlockReason"
+            aria-describedby="income-bulk-settle-submit-reason"
+            data-testid="income-bulk-settle-submit"
+          >
+            {{ saving ? 'Guardando...' : 'Registrar abono' }}
+          </BaseButton>
+        </div>
+      </div>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { useId, computed, ref, watch } from 'vue';
 
 import BaseBadge from '~/components/base/BaseBadge.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
@@ -426,4 +428,6 @@ function onSubmit() {
       .filter((entry) => entry.amount > 0),
   });
 }
+
+const modalFormId = useId();
 </script>

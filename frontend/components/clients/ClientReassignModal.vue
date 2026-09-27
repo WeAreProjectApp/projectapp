@@ -81,28 +81,30 @@ const confirm = () => {
       </BaseAlert>
     </div>
 
-    <div class="sticky bottom-0 flex items-center justify-end gap-2 border-t border-border-muted bg-surface px-6 pb-6 pt-4">
-      <BaseButton variant="secondary" size="md" @click="close">Cancelar</BaseButton>
-      <BaseControlGate
-        :reasons="confirmBlockReason ? [confirmBlockReason] : []"
-        label="Mover no disponible"
-        align="end"
-      >
-        <template #default="{ describedBy }">
-          <BaseButton
-            variant="primary"
-            size="md"
-            :loading="busy"
-            :disabled="Boolean(confirmBlockReason)"
-            :disabled-reason="confirmBlockReason"
-            :aria-describedby="describedBy"
-            data-testid="client-reassign-confirm"
-            @click="confirm"
-          >
-            {{ busy ? 'Moviendo...' : 'Mover a otro cliente' }}
-          </BaseButton>
-        </template>
-      </BaseControlGate>
-    </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="secondary" size="md" @click="close">Cancelar</BaseButton>
+        <BaseControlGate
+          :reasons="confirmBlockReason ? [confirmBlockReason] : []"
+          label="Mover no disponible"
+          align="end"
+        >
+          <template #default="{ describedBy }">
+            <BaseButton
+              variant="primary"
+              size="md"
+              :loading="busy"
+              :disabled="Boolean(confirmBlockReason)"
+              :disabled-reason="confirmBlockReason"
+              :aria-describedby="describedBy"
+              data-testid="client-reassign-confirm"
+              @click="confirm"
+            >
+              {{ busy ? 'Moviendo...' : 'Mover a otro cliente' }}
+            </BaseButton>
+          </template>
+        </BaseControlGate>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

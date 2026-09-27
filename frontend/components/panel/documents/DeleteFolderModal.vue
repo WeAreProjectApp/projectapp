@@ -120,35 +120,37 @@
       </div>
     </div>
 
-    <div class="flex items-center justify-end gap-3 px-6 py-4">
-      <BaseButton variant="ghost" size="md" :disabled="isBusy" @click="close">Cancelar</BaseButton>
-      <!--
-        Con contenido, archivar es la acción principal: un botón destructivo
-        permanentemente deshabilitado ES el callejón sin salida, así que ahí
-        directamente no se renderiza.
-      -->
-      <BaseButton
-        :variant="isEmpty ? 'secondary' : 'primary'"
-        size="md"
-        data-testid="delete-folder-archive"
-        :disabled="isDeleting"
-        :loading="isArchiving"
-        @click="confirmArchive"
-      >
-        {{ isEmpty ? 'Archivar en su lugar' : 'Archivar carpeta' }}
-      </BaseButton>
-      <BaseButton
-        v-if="isEmpty"
-        variant="danger"
-        size="md"
-        data-testid="delete-folder-confirm"
-        :disabled="!canConfirm"
-        :loading="isDeleting"
-        @click="confirmDelete"
-      >
-        Eliminar carpeta
-      </BaseButton>
-    </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="ghost" size="md" :disabled="isBusy" @click="close">Cancelar</BaseButton>
+        <!--
+          Con contenido, archivar es la acción principal: un botón destructivo
+          permanentemente deshabilitado ES el callejón sin salida, así que ahí
+          directamente no se renderiza.
+        -->
+        <BaseButton
+          :variant="isEmpty ? 'secondary' : 'primary'"
+          size="md"
+          data-testid="delete-folder-archive"
+          :disabled="isDeleting"
+          :loading="isArchiving"
+          @click="confirmArchive"
+        >
+          {{ isEmpty ? 'Archivar en su lugar' : 'Archivar carpeta' }}
+        </BaseButton>
+        <BaseButton
+          v-if="isEmpty"
+          variant="danger"
+          size="md"
+          data-testid="delete-folder-confirm"
+          :disabled="!canConfirm"
+          :loading="isDeleting"
+          @click="confirmDelete"
+        >
+          Eliminar carpeta
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

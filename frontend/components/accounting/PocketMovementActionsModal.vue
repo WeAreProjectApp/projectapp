@@ -97,11 +97,14 @@ function run(event) {
         </li>
       </ul>
 
-      <div class="border-t border-border-muted px-6 py-4">
+
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton class="w-full" variant="secondary" @click="emit('close')">
           Cerrar
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

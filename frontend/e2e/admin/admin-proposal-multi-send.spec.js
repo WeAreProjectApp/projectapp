@@ -64,6 +64,15 @@ const mockSecondProposal = {
   days_remaining: 30,
 };
 
+const mockAdditionalProposals = Array.from({ length: 10 }, (_, index) => ({
+  ...mockSecondProposal,
+  id: index + 3,
+  uuid: `33333333-3333-4333-8333-${String(index + 3).padStart(12, '0')}`,
+  title: `Fase adicional ${index + 3} — Seguimiento`,
+  status: 'draft',
+  sent_at: null,
+}));
+
 const mockSentResponse = {
   ...mockPrimaryProposal,
   status: 'sent',
@@ -82,7 +91,8 @@ test.describe('Admin Proposal Multi Send', () => {
     });
   });
 
-  test('lightning menu opens multi-send modal, selects another proposal, posts ids and shows success toast', {
+  /** Regression: scrolling a long proposal list could hide or stale the fixed confirmation action. */
+  test('lightning menu keeps multi-send confirmation actionable after scrolling a long list', {
     tag: [...ADMIN_PROPOSAL_MULTI_SEND, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     let capturedBody = null;
@@ -99,6 +109,7 @@ test.describe('Admin Proposal Multi Send', () => {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([
           { ...mockPrimaryProposal, sections: undefined, requirement_groups: undefined },
           mockSecondProposal,
+          ...mockAdditionalProposals,
         ]) };
       }
       // Analytics returns null so ProposalAnalytics renders safely (shows "No data" state).
@@ -147,6 +158,20 @@ test.describe('Admin Proposal Multi Send', () => {
     // Select the second proposal
     await page.getByTestId(`proposal-multi-send-option-${SECOND_ID}`).check();
     await expect(confirm).toBeEnabled();
+
+    const modalBody = page.locator('[data-modal-body]');
+    const footer = page.locator('[data-modal-footer]');
+    await modalBody.hover();
+    await page.mouse.wheel(0, 10_000);
+    await expect.poll(() => modalBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+    const viewport = page.viewportSize();
+    const [footerBox, confirmBox] = await Promise.all([footer.boundingBox(), confirm.boundingBox()]);
+    expect(footerBox, 'No se pudo medir el pie de envío múltiple').not.toBeNull();
+    expect(confirmBox, 'No se pudo medir la confirmación de envío múltiple').not.toBeNull();
+    expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(viewport.height + 1);
+    expect(confirmBox.y + confirmBox.height).toBeLessThanOrEqual(viewport.height + 1);
+    await expect(footer.getByTestId('proposal-multi-send-confirm')).toHaveText('Enviar 2 propuestas');
 
     await confirm.click();
 

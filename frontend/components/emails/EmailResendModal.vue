@@ -4,7 +4,7 @@
     kind="form"
     @update:model-value="handleVisibility"
   >
-    <form class="space-y-5 p-5 sm:p-6" data-testid="email-resend-modal" @submit.prevent="submit">
+    <form :id="modalFormId" class="space-y-5 p-5 sm:p-6" data-testid="email-resend-modal" @submit.prevent="submit">
       <div>
         <h3 class="text-lg font-semibold text-text-default">Reenviar correo exacto</h3>
         <p class="mt-1 text-sm text-text-subtle">
@@ -44,25 +44,27 @@
         {{ errorMessage }}
       </BaseAlert>
 
-      <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+    </form>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="ghost" :disabled="emailStore.isResending" @click="emit('close')">
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           :loading="emailStore.isResending"
           :disabled="!toRecipients.length || emailStore.isResending"
           data-testid="email-resend-confirm"
         >
           Reenviar sin cambios
         </BaseButton>
-      </div>
-    </form>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { useId, ref, watch } from 'vue';
 import { useEmailStore } from '~/stores/emails';
 import EmailRecipientFields from '~/components/emails/EmailRecipientFields.vue';
 import { emailRecipient } from '~/utils/emailRecipients';
@@ -118,4 +120,6 @@ async function submit() {
   if (result.success) emit('resent', result.data);
   else errorMessage.value = result.message;
 }
+
+const modalFormId = useId();
 </script>

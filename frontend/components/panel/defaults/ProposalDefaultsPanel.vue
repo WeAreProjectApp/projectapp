@@ -686,51 +686,43 @@
     </Teleport>
 
     <!-- Email reset confirmation modal -->
-    <Teleport to="body">
-      <Transition name="fade-modal">
-        <div v-if="emailShowResetConfirm" class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4" @click.self="emailShowResetConfirm = false">
-          <div class="bg-surface rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-            <div class="text-4xl mb-3">⚠️</div>
-            <h3 class="text-lg font-bold text-text-default mb-2">¿Restaurar valores originales?</h3>
-            <p class="text-sm text-text-muted mb-6">Esto eliminará las personalizaciones de esta plantilla y volverá al contenido por defecto del sistema.</p>
-            <div class="flex gap-3 justify-center">
-              <BaseButton variant="danger" size="md" :disabled="isSaving" @click="confirmResetEmailTemplate">
-                {{ isSaving ? 'Restaurando...' : 'Sí, restaurar' }}
-              </BaseButton>
-              <BaseButton variant="ghost" size="md" @click="emailShowResetConfirm = false">Cancelar</BaseButton>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <BaseModal v-model="emailShowResetConfirm" kind="confirm">
+      <div class="p-6 text-center">
+        <div class="text-4xl mb-3">⚠️</div>
+        <h3 class="text-lg font-bold text-text-default mb-2">¿Restaurar valores originales?</h3>
+        <p class="text-sm text-text-muted mb-6">Esto eliminará las personalizaciones de esta plantilla y volverá al contenido por defecto del sistema.</p>
+      </div>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="danger" size="md" :disabled="isSaving" @click="confirmResetEmailTemplate">
+            {{ isSaving ? 'Restaurando...' : 'Sí, restaurar' }}
+          </BaseButton>
+          <BaseButton variant="ghost" size="md" @click="emailShowResetConfirm = false">Cancelar</BaseButton>
+        </BaseModalActions>
+      </template>
+    </BaseModal>
 
     <!-- Section reset confirmation modal -->
-    <Teleport to="body">
-      <Transition name="fade-modal">
-        <div
-          v-if="showResetConfirm"
-          class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4"
-          @click.self="showResetConfirm = false"
-        >
-          <div class="bg-surface rounded-2xl shadow-2xl max-w-sm w-full p-6 text-center">
-            <div class="text-4xl mb-3">⚠️</div>
-            <h3 class="text-lg font-bold text-text-default mb-2">¿Restaurar valores originales?</h3>
-            <p class="text-sm text-text-muted mb-6">
-              Esto eliminará toda la configuración personalizada para <strong>{{ selectedLang === 'es' ? 'Español' : 'English' }}</strong>
-              y volverá a los valores del sistema. Las propuestas existentes no se verán afectadas.
-            </p>
-            <div class="flex gap-3 justify-center">
-              <BaseButton variant="danger" size="md" :disabled="isSaving" @click="confirmReset">
-                {{ isSaving ? 'Restaurando...' : 'Sí, restaurar' }}
-              </BaseButton>
-              <BaseButton variant="ghost" size="md" @click="showResetConfirm = false">
-                Cancelar
-              </BaseButton>
-            </div>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <BaseModal v-model="showResetConfirm" kind="confirm">
+      <div class="p-6 text-center">
+        <div class="text-4xl mb-3">⚠️</div>
+        <h3 class="text-lg font-bold text-text-default mb-2">¿Restaurar valores originales?</h3>
+        <p class="text-sm text-text-muted mb-6">
+          Esto eliminará toda la configuración personalizada para <strong>{{ selectedLang === 'es' ? 'Español' : 'English' }}</strong>
+          y volverá a los valores del sistema. Las propuestas existentes no se verán afectadas.
+        </p>
+      </div>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="danger" size="md" :disabled="isSaving" @click="confirmReset">
+            {{ isSaving ? 'Restaurando...' : 'Sí, restaurar' }}
+          </BaseButton>
+          <BaseButton variant="ghost" size="md" @click="showResetConfirm = false">
+            Cancelar
+          </BaseButton>
+        </BaseModalActions>
+      </template>
+    </BaseModal>
 
     <!-- Section preview modal -->
     <SectionPreviewModal

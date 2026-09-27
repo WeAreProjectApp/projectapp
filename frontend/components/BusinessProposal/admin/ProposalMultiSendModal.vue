@@ -135,35 +135,37 @@
       </div>
     </div>
 
-    <div
-      v-if="hasAnyProposals"
-      class="sticky bottom-0 z-10 bg-surface border-t border-border-muted px-6 py-4 rounded-b-2xl flex items-center justify-between gap-3"
-    >
-      <p class="text-sm text-text-muted">
-        <strong class="text-text-default">{{ selectedCount }}</strong>
-        propuesta{{ selectedCount === 1 ? '' : 's' }} seleccionada{{ selectedCount === 1 ? '' : 's' }}
-      </p>
-      <div class="flex items-center gap-2">
-        <BaseButton
-          variant="secondary"
-          size="md"
-          data-testid="proposal-multi-send-cancel"
-          @click="handleClose"
-        >
-          Cancelar
-        </BaseButton>
-        <BaseButton
-          variant="primary"
-          size="md"
-          :disabled="!canSend || sending"
-          :loading="sending"
-          data-testid="proposal-multi-send-confirm"
-          @click="handleSend"
-        >
-          {{ sending ? 'Enviando…' : `Enviar ${selectedCount} propuesta${selectedCount === 1 ? '' : 's'}` }}
-        </BaseButton>
-      </div>
-    </div>
+    <template #footer>
+      <BaseModalActions v-if="(hasAnyProposals)"
+
+
+      >
+        <p class="text-sm text-text-muted">
+          <strong class="text-text-default">{{ selectedCount }}</strong>
+          propuesta{{ selectedCount === 1 ? '' : 's' }} seleccionada{{ selectedCount === 1 ? '' : 's' }}
+        </p>
+        <div class="flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:items-center">
+          <BaseButton
+            variant="secondary"
+            size="md"
+            data-testid="proposal-multi-send-cancel"
+            @click="handleClose"
+          >
+            Cancelar
+          </BaseButton>
+          <BaseButton
+            variant="primary"
+            size="md"
+            :disabled="!canSend || sending"
+            :loading="sending"
+            data-testid="proposal-multi-send-confirm"
+            @click="handleSend"
+          >
+            {{ sending ? 'Enviando…' : `Enviar ${selectedCount} propuesta${selectedCount === 1 ? '' : 's'}` }}
+          </BaseButton>
+        </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

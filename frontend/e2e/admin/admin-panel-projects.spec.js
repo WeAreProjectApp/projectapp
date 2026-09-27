@@ -156,6 +156,7 @@ const HOSTING_ROWS = [
 ];
 
 function buildHandler({ calls, createStatus = 201, projects = PROJECT_ROWS, meta = META }) {
+  let projectRows = [...projects];
   return async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -191,7 +192,7 @@ function buildHandler({ calls, createStatus = 201, projects = PROJECT_ROWS, meta
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ results: projects, meta }),
+        body: JSON.stringify({ results: projectRows, meta }),
       };
     }
     if (apiPath === 'projects/create/' && method === 'POST') {
@@ -206,19 +207,21 @@ function buildHandler({ calls, createStatus = 201, projects = PROJECT_ROWS, meta
           }),
         };
       }
+      const createdProject = {
+        ...PROJECT_ROWS[0],
+        id: 99,
+        name: body.name,
+        status: 'development',
+        status_label: 'En desarrollo',
+        current_state: PROJECT_STATES[0],
+        hostings_count: 0,
+        incomes_count: 0,
+      };
+      projectRows = [...projectRows, createdProject];
       return {
         status: 201,
         contentType: 'application/json',
-        body: JSON.stringify({
-          ...PROJECT_ROWS[0],
-          id: 99,
-          name: body.name,
-          status: 'development',
-          status_label: 'En desarrollo',
-          current_state: PROJECT_STATES[0],
-          hostings_count: 0,
-          incomes_count: 0,
-        }),
+        body: JSON.stringify(createdProject),
       };
     }
     if (/^projects\/\d+\/update\/$/.test(apiPath) && method === 'PATCH') {
@@ -448,9 +451,16 @@ test.describe('Admin Panel Projects', () => {
     await page.getByTestId('project-form-name').fill('Crushme');
     await page.getByTestId('project-form-client').fill('Germán');
     await page.getByTestId('client-autocomplete-option-5').click();
-    await page.getByTestId('project-form-submit').click();
+    const footer = page.locator('[data-modal-footer]');
+    const save = footer.getByTestId('project-form-submit');
+    await expect(footer.getByRole('button')).toHaveCount(2);
+    await expect(footer.getByRole('button', { name: 'Cancelar', exact: true })).toHaveText('Cancelar');
+    await expect(save).toHaveText('Guardar');
+    await expect(footer.getByRole('alert')).toHaveCount(0);
+    await save.click();
 
     await expect(page.getByText('Proyecto creado')).toBeVisible();
+    await expect(getProjectResult(page, 99)).toContainText('Crushme');
     expect(calls[0].body).toEqual({
       name: 'Crushme',
       client_profile_id: 5,

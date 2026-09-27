@@ -36,7 +36,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await expect(card).toHaveCount(1);
       await card.click();
 
-      const modal = page.getByTestId('monitoring-detail');
+      const modal = page.getByRole('dialog').filter({ has: page.getByTestId('monitoring-detail') });
       await expect(modal.getByRole('heading', { name: monitoringCaseTitle, exact: true })).toHaveCount(1);
       await assertResponsiveScenario(page, testInfo, monitoringScenario, {
         profile,

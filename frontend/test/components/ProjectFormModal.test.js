@@ -49,10 +49,11 @@ const RECORD = {
   client: { profile_id: 7, name: 'Deivis Ríos', company: 'Vástago' },
 };
 
-function mountModal(props = {}) {
+function mountModal(props = {}, attachToBody = false) {
   setActivePinia(createPinia());
   return mount(ProjectFormModal, {
     props: { open: true, saving: false, ...props },
+    attachTo: attachToBody ? document.body : undefined,
     global: {
       plugins: [createPinia()],
       stubs: {
@@ -63,7 +64,7 @@ function mountModal(props = {}) {
         BaseModal: {
           props: ['modelValue', 'size'],
           emits: ['close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseFormField: {
           props: ['label', 'hint', 'required', 'error'],
@@ -173,6 +174,26 @@ describe('ProjectFormModal', () => {
       description: '',
       state_id: 10,
     });
+  });
+
+  it('submits the preselected client from the footer save action', async () => {
+    // Falla si mover Guardar fuera del form deja de disparar el submit nativo.
+    const wrapper = mountModal({ seedClient: CLIENT }, true);
+    await flushPromises();
+
+    await wrapper.get('[data-testid="project-form-name"]').setValue('Portal de aliados');
+
+    const submit = wrapper.get('[data-testid="project-form-submit"]');
+    submit.element.click();
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0]).toEqual({
+      name: 'Portal de aliados',
+      client_profile_id: 7,
+      description: '',
+      state_id: 10,
+    });
+    wrapper.unmount();
   });
 
   it('renders En desarrollo as the initial state selection', async () => {

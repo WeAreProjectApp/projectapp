@@ -74,7 +74,7 @@
 
     <!-- Create / edit modal -->
     <BaseModal v-model="formModal.open" kind="form" padding="md">
-      <form novalidate data-testid="qr-card-form" @submit.prevent="onSubmit">
+      <form :id="modalFormId" novalidate data-testid="qr-card-form" @submit.prevent="onSubmit">
         <div class="space-y-4 px-6 py-5">
           <h3 class="text-lg font-bold text-text-default">
             {{ formModal.editingId ? 'Editar tarjeta' : 'Nueva tarjeta' }}
@@ -133,13 +133,15 @@
           </BaseFormField>
         </div>
 
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton type="button" variant="ghost" size="sm" @click="formModal.open = false">Cancelar</BaseButton>
-          <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" data-testid="qr-card-save">
+          <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" data-testid="qr-card-save">
             Guardar
           </BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
 
     <DownloadQrModal v-model="downloadModal.open" :card="downloadModal.card" />
@@ -158,7 +160,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive } from 'vue';
+import { useId, computed, onMounted, reactive } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
@@ -338,4 +340,6 @@ async function onDelete(card) {
     notify.error({ title: 'No se pudo eliminar la tarjeta' });
   }
 }
+
+const modalFormId = useId();
 </script>

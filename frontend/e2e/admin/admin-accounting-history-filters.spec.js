@@ -482,7 +482,7 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     // Disabled and explained rather than absent: a missing entry reads as
     // "this failure cannot be acted on" without saying why.
     await page.getByTestId('email-log-actions-3').click();
-    const menu = page.getByTestId('email-log-actions-modal');
+    const menu = page.getByRole('dialog').filter({ has: page.getByTestId('email-log-actions-modal') });
     const retry = menu.getByTestId('email-log-retry-3');
     await expect(retry).toBeDisabled();
     await expect(retry).toContainText('resume varios registros');

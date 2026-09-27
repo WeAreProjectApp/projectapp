@@ -50,12 +50,13 @@ const baseTask = {
   is_archived: false,
 };
 
-function mountModal(props = {}) {
+function mountModal(props = {}, attachToBody = false) {
   return mount(TaskFormModal, {
     props: {
       modelValue: true,
       ...props,
     },
+    attachTo: attachToBody ? document.body : undefined,
     global: {
       // Nuxt auto-imports base components in the app; jest does not.
       components: {
@@ -168,12 +169,17 @@ describe('TaskFormModal', () => {
   // ── handleSubmit ──────────────────────────────────────────────────────────
 
   describe('handleSubmit', () => {
-    it('emits submit with a trimmed title when the form is submitted', async () => {
-      const wrapper = mountModal();
+    it('emits submit with a trimmed title from the footer save action', async () => {
+      // Falla si el botón fijo pierde la asociación con el formulario de tarea.
+      const wrapper = mountModal({}, true);
       await wrapper.find('[data-testid="task-title-input"]').setValue('  My new task  ');
-      await wrapper.find('form').trigger('submit');
+      const submit = wrapper.get('[data-testid="task-submit-btn"]');
+
+      submit.element.click();
+      await flushPromises();
 
       expect(wrapper.emitted('submit')[0][0].title).toBe('My new task');
+      wrapper.unmount();
     });
 
     it('includes status, priority, and board_type in the submit payload', async () => {

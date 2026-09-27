@@ -30,7 +30,7 @@ async function blogPrerenderRoutes(): Promise<string[]> {
 }
 
 export default defineNuxtConfig({
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NUXT_DEVTOOLS_ENABLED !== 'false' },
 
   // Keep the existing Nuxt 3-era root layout while adopting Nuxt 4. Nuxt 4
   // otherwise defaults application sources to app/.

@@ -1,6 +1,6 @@
 <template>
   <BaseModal :model-value="modelValue" kind="form" padding="md" @update:model-value="emit('update:modelValue', $event)">
-    <form novalidate data-testid="secure-link-form" @submit.prevent="submit">
+    <form :id="modalFormId" novalidate data-testid="secure-link-form" @submit.prevent="submit">
       <div class="space-y-4 px-6 py-5">
         <h3 class="text-lg font-bold text-text-default">{{ link ? 'Editar enlace seguro' : 'Nuevo enlace seguro' }}</h3>
 
@@ -81,18 +81,20 @@
         <BaseAlert v-if="generalError" variant="danger">{{ generalError }}</BaseAlert>
       </div>
 
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="ghost" size="sm" @click="emit('update:modelValue', false)">Cancelar</BaseButton>
-        <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" data-testid="secure-link-save">
+        <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" data-testid="secure-link-save">
           {{ link ? 'Guardar cambios' : 'Crear enlace' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { useId, computed, reactive, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -195,4 +197,6 @@ async function submit() {
   emit('saved', result.data);
   emit('update:modelValue', false);
 }
+
+const modalFormId = useId();
 </script>

@@ -951,7 +951,7 @@
             automatizaciones quedarán pausadas para este cliente.
           </p>
         </div>
-        <form novalidate @submit.prevent="submitCreate">
+        <form :id="modalFormId" novalidate @submit.prevent="submitCreate">
           <div class="space-y-4 px-6 py-4">
           <ClientFormFields
             :model-value="createForm"
@@ -963,15 +963,17 @@
           />
           <BaseAlert v-if="createError" variant="danger">{{ createError }}</BaseAlert>
           </div>
-          <BaseModalActions>
-            <BaseButton variant="ghost" size="md" @click="closeCreateModal">
-              Cancelar
-            </BaseButton>
-            <BaseButton variant="primary" size="md" type="submit" :loading="clientsStore.isUpdating" data-testid="clients-new-submit">
-              Crear cliente
-            </BaseButton>
-          </BaseModalActions>
         </form>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="ghost" size="md" @click="closeCreateModal">
+            Cancelar
+          </BaseButton>
+          <BaseButton variant="primary" size="md" type="submit" :form="modalFormId" :loading="clientsStore.isUpdating" data-testid="clients-new-submit">
+            Crear cliente
+          </BaseButton>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <!-- Edit client modal -->
@@ -987,7 +989,7 @@
             Los cambios se propagarán a todas las propuestas vinculadas a este cliente.
           </p>
         </div>
-        <form novalidate @submit.prevent="submitEdit">
+        <form :id="modalFormId2" novalidate @submit.prevent="submitEdit">
           <div class="space-y-4 px-6 py-4">
           <ClientFormFields
             :model-value="editForm"
@@ -1001,15 +1003,17 @@
           />
           <BaseAlert v-if="editError" variant="danger">{{ editError }}</BaseAlert>
           </div>
-          <BaseModalActions>
-            <BaseButton variant="ghost" size="md" @click="closeEditModal">
-              Cancelar
-            </BaseButton>
-            <BaseButton variant="primary" size="md" type="submit" :loading="clientsStore.isUpdating" data-testid="clients-edit-submit">
-              Guardar cambios
-            </BaseButton>
-          </BaseModalActions>
         </form>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="ghost" size="md" @click="closeEditModal">
+            Cancelar
+          </BaseButton>
+          <BaseButton variant="primary" size="md" type="submit" :form="modalFormId2" :loading="clientsStore.isUpdating" data-testid="clients-edit-submit">
+            Guardar cambios
+          </BaseButton>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <!-- Archive, with the project cascade shown before it happens. Reached
@@ -1057,7 +1061,7 @@
 
 <script setup>
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
-import { ref, reactive, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
+import { useId, ref, reactive, computed, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { formatDate } from '~/utils/formatDate';
 import { documentStatusLabel } from '~/utils/documentStatus';
@@ -2025,6 +2029,9 @@ function statusClass(s) {
   };
   return map[s] || 'bg-surface-raised text-text-muted';
 }
+
+const modalFormId = useId();
+const modalFormId2 = useId();
 </script>
 
 <style scoped>
