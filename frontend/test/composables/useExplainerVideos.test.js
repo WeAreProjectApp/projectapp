@@ -18,10 +18,27 @@ describe('useExplainerVideos', () => {
     expect(descriptor.durationSeconds).toBe(durationSeconds)
   })
 
-  it('only resolves languages that have a render and ids from the registry', () => {
-    expect(explainerVideoFor('financing', 'es')).toMatchObject({ id: 'financing', language: 'es' })
+  it('describes the Spanish proposal render with its production duration', () => {
+    // Fails if the public proposal card points to a missing, malformed, or wrongly timed render.
+    const descriptor = explainerVideoFor('proposal', 'es')
+
+    expect(descriptor).toMatchObject({
+      id: 'proposal',
+      language: 'es',
+      durationSeconds: 58.2,
+      width: 1920,
+      height: 1080,
+    })
+    expect(descriptor.src).not.toBe('')
+    expect(descriptor.poster).not.toBe('')
+  })
+
+  it('resolves only the known Spanish proposal video', () => {
+    // Fails if the Spanish-only proposal video is offered in English or an unregistered surface.
+    expect(explainerVideoFor('proposal', 'es')).toMatchObject({ id: 'proposal', language: 'es' })
+    expect(explainerVideoFor('proposal', 'en')).toBeNull()
+    expect(explainerVideoFor('unknown', 'es')).toBeNull()
     expect(explainerVideoFor('financing', 'en')).toBeNull()
-    expect(explainerVideoFor('proposal', 'es')).toBeNull()
   })
 
   it('reacts to language changes through the composable', () => {

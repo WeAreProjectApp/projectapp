@@ -77,7 +77,7 @@ def get_proposal_template(arguments):
                 'email_intro',
                 'total_investment', 'currency', 'nationality',
                 'project_type', 'project_type_custom', 'market_type',
-                'market_type_custom', 'show_contract_terms',
+                'market_type_custom', 'show_contract_terms', 'show_explainer_video',
             ],
         },
         'notes': (
@@ -242,6 +242,11 @@ _FROM_JSON_PROPS = {
     'reminder_days': {'type': 'integer', 'default': 10},
     'urgency_reminder_days': {'type': 'integer', 'default': 15},
     'discount_percent': {'type': ['number', 'string'], 'default': 0},
+    'show_explainer_video': {
+        'type': 'boolean',
+        'default': True,
+        'description': 'Permite el video de bienvenida si el control global y las cuatro opciones públicas están disponibles.',
+    },
     'show_contract_terms': {
         'type': 'boolean',
         'default': True,

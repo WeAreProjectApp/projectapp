@@ -17,6 +17,7 @@ class ExplainerVideoSettings(models.Model):
 
     show_additional_modules_video = models.BooleanField(default=True)
     show_financing_video = models.BooleanField(default=True)
+    show_proposal_video = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -29,7 +30,8 @@ class ExplainerVideoSettings(models.Model):
         return (
             'ExplainerVideoSettings — '
             f'catálogo {"visible" if self.show_additional_modules_video else "oculto"}, '
-            f'alianza {"visible" if self.show_financing_video else "oculto"}'
+            f'alianza {"visible" if self.show_financing_video else "oculto"}, '
+            f'propuestas {"visible" if self.show_proposal_video else "oculto"}'
         )
 
     def save(self, *args, **kwargs):

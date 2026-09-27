@@ -15,6 +15,15 @@
 > texto/proveedor/voz/locale/velocidad; mezcla validada contra guion, agenda y
 > configuración. La agenda HTML gobierna también animaciones, clics y progreso.
 
+> **Video de propuestas — 2026-09-27:** tercera composición HyperFrames en
+> `explainers/brag-v2/proposal/`, 58,2 s en español con Edge TTS colombiano
+> (`es-CO-SalomeNeural`), música y subtítulos integrados. Las utilidades de voz
+> reproducen el soporte de proveedor/locale y fingerprint del PR #432; los dos
+> MP4 comerciales no se modifican. Producción: un worker, codificación final
+> con dos threads, H.264/AAC y faststart. El nuevo control global se administra
+> en Propuestas → Configuraciones y la preferencia individual en General.
+> Migración `content.0268_proposal_explainer_video`; la aplica el deploy.
+
 > **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
 > `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
 > error. `create_secure_link` es la única tool MCP que acepta secretos en claro:

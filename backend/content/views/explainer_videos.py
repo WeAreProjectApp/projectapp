@@ -7,6 +7,7 @@ from content.models import ExplainerVideoSettings
 from content.serializers.explainer_videos import ExplainerVideoSettingsSerializer
 from content.services.frontend_build import schedule_rebuild_after_publish
 
+# Only these public surfaces are prerendered; proposals read settings at runtime.
 VISIBILITY_FIELDS = ('show_additional_modules_video', 'show_financing_video')
 
 

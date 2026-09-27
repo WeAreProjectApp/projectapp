@@ -385,7 +385,7 @@ MCP_MODEL_CONTRACTS = {
                 'nationality hosting_percent hosting_discount_nine_month '
                 'hosting_discount_semiannual hosting_discount_quarterly status '
                 'expires_at reminder_days urgency_reminder_days discount_percent '
-                'is_active show_contract_terms project_type market_type '
+                'is_active show_contract_terms show_explainer_video project_type market_type '
                 'project_type_custom market_type_custom client_phone email_intro '
                 'email_features email_method_phases email_signed_by selected_modules '
                 'contract_params contract_modality'
@@ -666,7 +666,7 @@ COMMERCIAL_CATALOG_CONTRACTS = (
     _contract(
         'content.ExplainerVideoSettings',
         read_only='id created_at updated_at',
-        read_write='show_additional_modules_video show_financing_video',
+        read_write='show_additional_modules_video show_financing_video show_proposal_video',
     ),
     _contract(
         'content.HourPackage',

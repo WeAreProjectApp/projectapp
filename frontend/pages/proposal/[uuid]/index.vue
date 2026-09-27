@@ -68,6 +68,7 @@
           :clientName="proposal.client_name || ''"
           :show-technical="hasTechnicalDocument"
           :show-legal="hasContractTerms"
+          :show-explainer-video="proposal.show_explainer_video === true"
           @select="handleViewModeSelect"
         />
       </Transition>

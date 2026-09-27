@@ -18,7 +18,7 @@ const LOGO_SOURCE = resolve(FRONTEND_ROOT, 'assets', 'images', 'preloadingAnimat
 const GSAP_SOURCE = resolve(EXPLAINERS_ROOT, 'node_modules', 'gsap', 'dist', 'gsap.min.js')
 
 const options = parseArgs(process.argv.slice(2))
-const targets = options.video ? [options.video] : [...VIDEOS]
+const targets = options.video ? [options.video] : VIDEOS.filter(video => EDITION === 'brag-v2' || video !== 'proposal')
 
 for (const video of targets) {
   const assetsDir = resolve(videoDir(video), 'assets')
@@ -38,6 +38,11 @@ for (const video of targets) {
     for (const file of ['motion.js', 'layout.css']) {
       copyFileSync(resolve(EDITION_ROOT, 'shared', file), resolve(assetsDir, file))
     }
+  }
+
+  if (video === 'proposal') {
+    copyFileSync(resolve(videoDir(video), 'layout.css'), resolve(assetsDir, 'proposal-layout.css'))
+    copyFileSync(resolve(videoDir(video), 'motion.js'), resolve(assetsDir, 'motion.js'))
   }
 
   console.log(`${video}/assets/ sincronizado (${SHARED_FILES.length} hojas, ${FONT_FILES.length} fuentes, gsap, logo)`)

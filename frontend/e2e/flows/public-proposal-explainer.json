@@ -1,0 +1,16 @@
+{
+  "id": "public-proposal-explainer",
+  "name": "Public Proposal Welcome Video",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Client plays the Spanish welcome video above all four proposal options, opens the media fallback after an error, or enters an option with playback stopped. Both visibility switches, Spanish language, active proposal, technical detail and contract option are required.",
+  "expectedSpecs": 4,
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}
