@@ -19,7 +19,7 @@ const proposal = {
 
 const BaseModalStub = {
   props: ['modelValue'],
-  template: '<div v-if="modelValue"><slot /></div>',
+  template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
 };
 
 const BaseTextareaStub = {

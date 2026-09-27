@@ -92,7 +92,7 @@ function mountModal(props = {}) {
           // readable back out as a prop.
           props: ['modelValue', 'size', 'titleId', 'closeOnEsc', 'closeOnBackdrop'],
           emits: ['update:modelValue', 'close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           props: ['variant', 'size', 'type', 'disabled'],
