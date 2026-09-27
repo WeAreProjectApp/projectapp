@@ -1228,15 +1228,20 @@ def _pick_default_deliverable_for_requirements(proj):
 
 def _recalculate_project_progress(project):
     """Auto-sync project.progress from done/total requirements."""
-    scope = Requirement.objects.filter(
+    from django.db.models import Count, Q
+
+    counts = Requirement.objects.filter(
         phase__project=project,
         is_archived=False,
+    ).aggregate(
+        total=Count('pk'),
+        done=Count('pk', filter=Q(status=Requirement.STATUS_DONE)),
     )
-    total = scope.count()
+    total = counts['total']
     if total == 0:
         project.progress = 0
     else:
-        done = scope.filter(status=Requirement.STATUS_DONE).count()
+        done = counts['done']
         project.progress = round((done / total) * 100)
     project.save(update_fields=['progress', 'updated_at'])
 
@@ -2710,6 +2715,9 @@ def deliverable_detail_view(request, project_id, deliverable_id):
     if len(upd_fields) > 1:
         deliverable.save(update_fields=upd_fields)
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
     )
@@ -2772,6 +2780,9 @@ def deliverable_upload_version_view(request, project_id, deliverable_id):
         deliverable=deliverable,
     )
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
         status=status.HTTP_201_CREATED,
