@@ -9,6 +9,8 @@
 > `admin-proposal-contract-modality`. Fase 2 en el mismo PR: el parágrafo de
 > proveedores tecnológicos en ambos contratos.
 
+> **2026-09-26 — validación de Documentos bajo su campo:** Nuevo documento y el catálogo `/panel/documents/statuses` dejan de pintar listas rojas de `BaseControlGate` bajo sus botones. Crear, guardar y fusionar siguen disponibles y cada aviso aparece bajo su campo tras el intento, como en Proyectos; Cancelar → Crear Documento quedan solos, a la derecha y centrados. Sólo frontend; unitarias focales y E2E de `admin-document-create` y `admin-document-states-manage`.
+
 > **2026-09-26 — acciones de fila contables:** todas las tablas y listas de Contabilidad abren sus acciones desde un único kebab inicial; «Detalle e historial» y «Ver nota» son las primeras entradas del menú. Las tablas `menu-start` ya no dejan una franja en blanco en celular ni en tableta vertical. PR #420; sólo frontend.
 
 > **2026-09-26 — enlaces seguros de un solo uso:** implementados módulo

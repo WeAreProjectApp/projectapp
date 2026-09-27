@@ -13,26 +13,21 @@
         <h1 class="text-2xl font-light text-text-default mt-2">Nuevo Documento</h1>
         <p class="text-sm text-text-muted mt-1">Crea un documento a partir de Markdown (pegado o subido).</p>
       </div>
-      <div class="hidden items-center gap-3 panel-landscape:flex">
+      <!-- Sólo acciones: lo que falta para crear se dice bajo cada campo al
+           intentarlo, así la fila no cambia de alto ni desalinea Cancelar. -->
+      <div class="hidden items-center gap-3 panel-landscape:flex" data-testid="doc-create-actions">
         <NuxtLink :to="localePath('/panel/documents')" class="text-sm text-text-muted hover:text-text-default">
           Cancelar
         </NuxtLink>
-        <BaseControlGate :reasons="createBlockReasons" label="Crear documento no disponible" align="end">
-          <template #default="{ describedBy }">
-            <BaseButton
-              variant="primary"
-              size="md"
-              type="submit"
-              form="doc-create-form"
-              :loading="documentStore.isUpdating"
-              :disabled="Boolean(createBlockReasons.length)"
-              :disabled-reason="createBlockReasons.join(' ')"
-              :aria-describedby="describedBy"
-            >
-              {{ documentStore.isUpdating ? 'Creando...' : 'Crear Documento' }}
-            </BaseButton>
-          </template>
-        </BaseControlGate>
+        <BaseButton
+          variant="primary"
+          size="md"
+          type="submit"
+          form="doc-create-form"
+          :loading="documentStore.isUpdating"
+        >
+          {{ documentStore.isUpdating ? 'Creando...' : 'Crear Documento' }}
+        </BaseButton>
       </div>
     </div>
 
@@ -62,18 +57,26 @@
         <div class="space-y-6">
           <div class="space-y-4">
             <h2 class="text-xs uppercase tracking-wide font-semibold text-text-muted">Identificación</h2>
-            <div>
-              <label for="doc-title" class="block text-sm font-medium text-text-default mb-1">Título *</label>
+            <!-- aria-required y no `required`: la validación nativa cortaría el
+                 envío en el título y el aviso del contenido no llegaría a verse. -->
+            <BaseFormField
+              v-slot="{ errorId }"
+              label="Título"
+              for="doc-title"
+              required
+              :error="titleError"
+            >
               <input
                 id="doc-title"
                 v-model="form.title"
                 type="text"
-                required
+                aria-required="true"
                 placeholder="Mi Documento"
+                :aria-describedby="errorId"
                 class="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm bg-surface text-text-default placeholder:text-text-subtle
                        focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
               />
-            </div>
+            </BaseFormField>
             <div class="rounded-xl border border-border-default bg-surface-raised p-3">
               <div class="flex items-start justify-between gap-3">
                 <div class="min-w-0">
@@ -122,6 +125,7 @@
               v-if="inlineClientOpen"
               class="rounded-xl border border-border-default bg-surface-raised p-4 space-y-3"
               data-testid="doc-inline-client"
+              @keydown.enter="keepInlineClientEnter"
             >
               <p class="text-sm font-medium text-text-default">Crear cliente nuevo</p>
               <ClientFormFields
@@ -223,27 +227,43 @@
           </button>
         </div>
 
-        <DocumentEditorContent
+        <!-- Un campo por modo: cada uno se monta con su control, así el aviso
+             queda enlazado al editor o al archivo que se está mostrando. -->
+        <BaseFormField
           v-if="mode === 'paste'"
-          v-model="form.content_markdown"
-          textarea-id="doc-markdown"
-          label="Contenido Markdown *"
-          placeholder="# Mi Documento&#10;&#10;Escribe o pega tu contenido en formato Markdown..."
-          :theme="form.template_style"
-          pane-class="min-h-[24rem] panel-desktop:h-[calc(100vh-20rem)]"
+          ref="contentField"
+          :error="contentError"
+          class="flex min-h-0 flex-1 flex-col"
         >
-          <template #tools>
-            <BaseSegmented
-              v-model="form.template_style"
-              size="sm"
-              :options="templateStyleOptions"
-              aria-label="Estilo de plantilla"
-            />
-          </template>
-        </DocumentEditorContent>
+          <DocumentEditorContent
+            v-model="form.content_markdown"
+            textarea-id="doc-markdown"
+            label="Contenido Markdown"
+            required
+            placeholder="# Mi Documento&#10;&#10;Escribe o pega tu contenido en formato Markdown..."
+            :theme="form.template_style"
+            pane-class="min-h-[24rem] panel-desktop:h-[calc(100vh-20rem)]"
+          >
+            <template #tools>
+              <BaseSegmented
+                v-model="form.template_style"
+                size="sm"
+                :options="templateStyleOptions"
+                aria-label="Estilo de plantilla"
+              />
+            </template>
+          </DocumentEditorContent>
+        </BaseFormField>
 
-        <div v-if="mode === 'upload'" class="flex-1 flex flex-col">
-          <label class="block text-sm font-medium text-text-default mb-2">Archivo Markdown (.md)</label>
+        <BaseFormField
+          v-if="mode === 'upload'"
+          v-slot="{ errorId, invalid }"
+          ref="contentField"
+          label="Archivo Markdown (.md)"
+          required
+          :error="contentError"
+          class="flex flex-1 flex-col"
+        >
           <div
             :class="[
               'border-2 border-dashed rounded-xl p-8 sm:p-10 text-center transition-colors',
@@ -273,36 +293,36 @@
               <span class="font-medium">Archivo:</span> {{ uploadedFileName }}
             </p>
           </div>
+          <!-- El campo enlaza su aviso al primer control, que aquí es el input
+               de archivo oculto: el contenido cargado lleva su propio enlace. -->
           <textarea
             v-model="form.content_markdown"
             rows="12"
             readonly
             placeholder="El contenido del archivo aparecerá aquí..."
+            :aria-invalid="invalid || undefined"
+            :aria-describedby="errorId"
             class="w-full mt-4 px-4 py-3 border border-border-default rounded-xl text-sm font-mono leading-relaxed
                    bg-surface-raised text-text-muted placeholder:text-text-subtle outline-none resize-y"
           ></textarea>
-        </div>
+        </BaseFormField>
 
-        <div class="mt-5 flex flex-wrap items-center gap-4 panel-landscape:hidden">
-          <BaseControlGate :reasons="createBlockReasons" label="Crear documento no disponible" align="start">
-            <template #default="{ describedBy }">
-              <BaseButton
-                variant="primary"
-                size="md"
-                type="submit"
-                class="sm:px-6"
-                :loading="documentStore.isUpdating"
-                :disabled="Boolean(createBlockReasons.length)"
-                :disabled-reason="createBlockReasons.join(' ')"
-                :aria-describedby="describedBy"
-              >
-                {{ documentStore.isUpdating ? 'Creando...' : 'Crear Documento' }}
-              </BaseButton>
-            </template>
-          </BaseControlGate>
+        <div
+          class="mt-5 flex flex-wrap items-center justify-end gap-4 panel-landscape:hidden"
+          data-testid="doc-create-actions-compact"
+        >
           <NuxtLink :to="localePath('/panel/documents')" class="text-sm text-text-muted hover:text-text-default">
             Cancelar
           </NuxtLink>
+          <BaseButton
+            variant="primary"
+            size="md"
+            type="submit"
+            class="sm:px-6"
+            :loading="documentStore.isUpdating"
+          >
+            {{ documentStore.isUpdating ? 'Creando...' : 'Crear Documento' }}
+          </BaseButton>
         </div>
       </section>
     </form>
@@ -472,14 +492,45 @@ onMounted(async () => {
   commitBaseline();
 });
 
-const canSubmit = computed(
-  () => !documentStore.isUpdating && form.title.trim() && form.content_markdown.trim(),
-);
+// Crear Documento sigue disponible: lo que falta se dice bajo cada campo
+// recién al intentarlo, y el rechazo del API por campo vive en el mismo lugar.
+const validationAttempted = ref(false);
+const apiFieldErrors = reactive({ title: '', markdown: '' });
+const contentField = ref(null);
 
-const createBlockReasons = computed(() => [
-  !form.title.trim() ? 'Escribe el título del documento.' : '',
-  !form.content_markdown.trim() ? 'Pega, escribe o carga el contenido Markdown.' : '',
-].filter(Boolean));
+const titleError = computed(() => (
+  apiFieldErrors.title
+  || (validationAttempted.value && !form.title.trim()
+    ? 'Escribe el título del documento.'
+    : '')
+));
+
+const contentError = computed(() => (
+  apiFieldErrors.markdown
+  || (validationAttempted.value && !form.content_markdown.trim()
+    ? 'Pega, escribe o carga el contenido Markdown.'
+    : '')
+));
+
+// Corregir el valor retira el rechazo del API; un watch cubre tipear, pegar y
+// cargar un archivo por igual.
+watch(() => form.title, () => { apiFieldErrors.title = ''; });
+watch(() => form.content_markdown, () => { apiFieldErrors.markdown = ''; });
+
+// Bajo landscape el botón queda al pie y el título arriba, fuera de vista: sin
+// llevar al operador al campo, el intento parecería no haber hecho nada.
+async function revealFirstInvalidField() {
+  await nextTick();
+  if (titleError.value) {
+    document.getElementById('doc-title')?.focus();
+    return;
+  }
+  if (!contentError.value) return;
+  contentField.value?.$el?.scrollIntoView?.({ block: 'center' });
+  if (mode.value === 'paste') {
+    document.getElementById('doc-markdown')?.focus({ preventScroll: true });
+  }
+}
 
 const hasNotes = computed(() => [
   form.client_email_subject,
@@ -530,6 +581,13 @@ async function createInlineClient() {
     inlineClientOpen.value = false;
     onClientSelect(result.data);
   }
+}
+
+// La caja de cliente nuevo vive dentro del formulario del documento: Enter en
+// uno de sus campos lo enviaría y crearía el documento sin ese cliente. Sus
+// botones conservan Enter.
+function keepInlineClientEnter(event) {
+  if (event.target?.tagName === 'INPUT') event.preventDefault();
 }
 
 function clearSuggestedClient() {
@@ -629,6 +687,12 @@ function handleDrop(event) {
 }
 
 async function handleSubmit() {
+  validationAttempted.value = true;
+  if (titleError.value || contentError.value) {
+    await revealFirstInvalidField();
+    return;
+  }
+
   const payload = {
     title: form.title.trim(),
     // Siempre presentes, null incluido: es lo que permite guardar sin dueño.
@@ -655,13 +719,21 @@ async function handleSubmit() {
     commitBaseline();
     navigateTo(localePath(`/panel/documents/${result.data.id}/edit`));
   } else {
-    const fieldDetail = result.fieldErrors
-      ? Object.entries(result.fieldErrors).map(([k, v]) => `${k}: ${v}`).join(' · ')
-      : '';
-    notify.error({
-      title: 'No se pudo crear el documento',
-      detail: fieldDetail || result.message,
-    });
+    // Título y contenido tienen campo propio; el resto de rechazos sigue en la
+    // notificación con el formato de siempre.
+    const { title = '', markdown = '', ...otherFieldErrors } = result.fieldErrors || {};
+    apiFieldErrors.title = title;
+    apiFieldErrors.markdown = markdown;
+    const fieldDetail = Object.entries(otherFieldErrors)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(' · ');
+    if (title || markdown) await revealFirstInvalidField();
+    if (fieldDetail || !(title || markdown)) {
+      notify.error({
+        title: 'No se pudo crear el documento',
+        detail: fieldDetail || result.message,
+      });
+    }
   }
 }
 </script>

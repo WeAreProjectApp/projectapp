@@ -13,9 +13,9 @@
   5. Admin puede abrir **Agregar notas**, completar los mensajes y agregar notas personalizadas. El modal advierte que aún no se guardan; sus textos crecen con el contenido y el pie fijo habilita **Aplicar al borrador** sólo cuando algo cambió.
   6. Admin pulsa **Aplicar al borrador**; la vista confirma que todavía falta crear el documento y muestra el estado compacto de la colección.
   7. En **Pegar Markdown**, escribe o pega contenido y cambia a **Vista previa** para revisarlo en el mismo espacio; en **Cargar Archivo**, selecciona un `.md` y revisa el contenido cargado.
-  8. Admin pulsa **Crear Documento**.
+  8. Admin pulsa **Crear Documento**. La fila de acciones sólo contiene **Cancelar → Crear Documento**, a la derecha y centrados, en la cabecera desde landscape y al pie por debajo.
   9. `POST /api/documents/create-from-markdown/` recibe markdown, asociaciones, `folder_id`, presentación, los tres mensajes privados y `client_custom_notes` (lista vacía si se omitió).
-  10. Al guardar, admin llega al editor del documento nuevo.
+  10. Al guardar, admin navega al editor del documento creado (`/panel/documents/:id/edit`).
 - **Branches:**
   - [Display — notas] Cancelar cierra el modal sin aplicar el borrador; cada asunto, mensaje, título y contenido se puede copiar por separado con `📋`.
   - [Display — persistencia] El modal y la notificación posterior nombran el documento pendiente; aplicar al borrador no llama al servidor.
@@ -26,7 +26,7 @@
   - [Success — búsqueda por ruta] Buscar «vastago entre» separa la «Entregables» de Vástago de la de Kore y el payload lleva su `folder_id`. La ✕ del selector quita la carpeta y retira el cliente que había heredado.
   - [Success — enlace desde carpeta automática] Un `?folder=` que apunta a una carpeta automática o archivada propone la carpeta manual más cercana hacia arriba y lo avisa con **Carpeta ajustada**; así el guardado no termina en 409.
   - [Failure — carpetas sin cargar] Si la lista de carpetas no llega, el selector dice **No se pudieron cargar las carpetas.** en lugar de fingir que no hay ninguna, y **Reintentar** la vuelve a pedir sin salir del formulario.
-  - [Error — validación] Campos obligatorios faltantes o un rechazo 400 muestran errores y conservan al admin en la página de creación.
+  - [Error — validación] **Crear Documento** sigue disponible. Al pulsarlo sin título o sin contenido, cada aviso aparece bajo su campo (también en **Cargar Archivo**), lo marca inválido y lleva el foco al primero; no se llama al servidor y el aviso se retira al completar el campo. Un rechazo 400 de `title` o `markdown` se muestra bajo su campo; el resto de rechazos sigue en la notificación, y el admin permanece en la página de creación.
   - [Failure — servidor] Un fallo 5xx conserva todas las notas en el formulario para reintentar sin volver a redactarlas.
 - **Coverage:** ✅ Covered (paste, carga de archivo, asociaciones, selector de carpeta y notas privadas en display/success/error/failure; las casillas de portada y el estilo viajan en el mismo payload, pero se auditan en sus flows específicos).
 - **E2E Spec:** `e2e/admin/admin-document-create.spec.js`

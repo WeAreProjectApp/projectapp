@@ -8,7 +8,9 @@ const props = defineProps({
   reasons: { type: Array, default: () => [] },
   /** Human name used by the focusable wrapper around a native disabled control. */
   label: { type: String, default: 'Control no disponible' },
-  /** Resolvable blockers must stay visible because touch has no hover. */
+  /** Resolvable blockers must stay visible because touch has no hover. Missing
+   *  form fields are not gate reasons: BaseFormField names them beside the
+   *  field after the attempt. */
   visible: { type: Boolean, default: true },
   /** Keep footer height stable while reasons appear and disappear. */
   reserveSpace: { type: Boolean, default: false },

@@ -74,6 +74,13 @@ async function openCatalog(page) {
   await expect(page.getByTestId('document-state-catalog')).toBeVisible();
 }
 
+// The control must point at the message that explains it, not merely sit near it.
+async function expectDescribedBy(page, control, message) {
+  const errorId = await control.getAttribute('aria-describedby');
+  expect(errorId).toBeTruthy();
+  await expect(page.locator(`[id="${errorId}"]`)).toHaveText(message);
+}
+
 test.describe('Admin Document States Manage', () => {
   test.setTimeout(60_000);
 
@@ -97,6 +104,29 @@ test.describe('Admin Document States Manage', () => {
     await expect(page.getByTestId('catalog-group-1')).toContainText('Borrador');
     await expect(page.getByTestId('catalog-group-2')).toContainText('Solucionar bug');
     await expect(page.getByTestId('catalog-state-22')).toContainText('2 documentos activos · 4 episodios');
+  });
+
+  test('keeps catalog validation beside the incomplete fields', {
+    tag: [...ADMIN_DOCUMENT_STATES_MANAGE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const catalog = initialStates();
+    const writes = [];
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (method === 'POST' && apiPath.startsWith('document-state')) writes.push(apiPath);
+      return baseRoutes(apiPath, catalog);
+    });
+    await openCatalog(page);
+
+    await page.getByTestId('catalog-create-state').click();
+    await page.getByTestId('catalog-create-group').click();
+
+    const stateName = page.getByTestId('catalog-new-state-name');
+    const groupName = page.getByTestId('catalog-new-group-name');
+    await expect(stateName).toHaveAttribute('aria-invalid', 'true');
+    await expect(groupName).toHaveAttribute('aria-invalid', 'true');
+    await expectDescribedBy(page, stateName, 'Escribe el nombre del estado.');
+    await expectDescribedBy(page, groupName, 'Escribe el nombre del grupo.');
+    expect(writes).toHaveLength(0);
   });
 
   test('creates a globally reusable state', {

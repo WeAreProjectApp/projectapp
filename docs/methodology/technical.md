@@ -724,13 +724,16 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
   `ProjectStateHelpBadge` pairs the editable `description` with the derived,
   read-only `operational_effect_help` in counts, filters, rows, cards, catalog and
   transition context, with pointer, keyboard and touch access.
-- `StateCatalogManager` keeps project-catalog validation local to each action.
+- `StateCatalogManager` keeps catalog validation local to each action, in both
+  the project and the document catalog (2026-09-26).
   `BaseFormField` owns the label, required marker, `aria-describedby` relation and
   inline message for create/edit fields and the merge destination. Submit remains
   available until the user attempts the action; local requirements and normalized
   API `fieldErrors` then share the same surface and clear per field on input.
-  Permanent seed restrictions still use `BaseControlGate` as accessible disabled
-  help. The Documents branch of the shared component retains its existing gate.
+  Each catalog validates only the fields it renders: documents have no
+  description or operational effect. Serializer errors without a field are
+  still notified. Permanent seed restrictions still use `BaseControlGate` as
+  accessible disabled help.
 - Migrations `accounts.0055_project_lifecycle_state` and
   `content.0213/0214_project_lifecycle_states` add the relations and map known
   legacy statuses. `content.0218_project_state_help` adds state descriptions,
@@ -1169,9 +1172,12 @@ description and preserves its credentials, active state and last-use timestamp.
   short catalog label into `whitespace-nowrap`; the floating positioner still
   clamps the bounded bubble to the viewport.
 - **Disabled-control contract** — pass `disabledReason` for semantic locks and
-  `loading` for transient work. If the operator can satisfy prerequisites, wrap
-  the control in `BaseControlGate` with the complete reasons array so the same
-  explanation is visible, keyboard/touch reachable and linked by
+  `loading` for transient work. A form field the operator still has to fill is
+  not a disabled-control case: keep submit available and let `BaseFormField`
+  show the requirement beside its field after the attempt (see the form
+  contract above). If the operator can satisfy a prerequisite that no field
+  owns, wrap the control in `BaseControlGate` with the complete reasons array so
+  the same explanation is visible, keyboard/touch reachable and linked by
   `aria-describedby`. `frontend/scripts/check-disabled-controls.mjs --strict`
   scans panel pages and reachable shared components in CI; do not suppress it
   unless equivalent adjacent copy owns the explanation.
