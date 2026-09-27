@@ -84,7 +84,10 @@ def _observe_case(source, data, receipt):
 
 @transaction.atomic
 def change_state(case_id, actor, data):
-    case = get_object_or_404(Case.objects.select_for_update(), pk=case_id)
+    case = get_object_or_404(
+        Case.objects.select_related('source__resource').select_for_update(of=('self',)),
+        pk=case_id,
+    )
     if case.version != data['version']:
         raise Conflict()
     if case.state != data['state']:
