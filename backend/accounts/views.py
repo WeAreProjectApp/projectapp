@@ -1842,7 +1842,11 @@ def change_request_evaluate_view(request, project_id, cr_id):
         )
 
     try:
-        cr = ChangeRequest.objects.get(id=cr_id, project=proj)
+        cr = (
+            ChangeRequest.objects
+            .select_related('created_by', 'source_requirement__phase__business_proposal')
+            .get(id=cr_id, project=proj)
+        )
     except ChangeRequest.DoesNotExist:
         return Response(
             {'detail': 'Solicitud de cambio no encontrada.'},
@@ -2344,7 +2348,11 @@ def bug_report_evaluate_view(request, project_id, bug_id):
         )
 
     try:
-        bug = BugReport.objects.get(id=bug_id, project=proj)
+        bug = (
+            BugReport.objects
+            .select_related('reported_by', 'source_requirement__phase__business_proposal')
+            .get(id=bug_id, project=proj)
+        )
     except BugReport.DoesNotExist:
         return Response(
             {'detail': 'Bug no encontrado.'},
