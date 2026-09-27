@@ -2710,6 +2710,9 @@ def deliverable_detail_view(request, project_id, deliverable_id):
     if len(upd_fields) > 1:
         deliverable.save(update_fields=upd_fields)
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
     )
@@ -2772,6 +2775,9 @@ def deliverable_upload_version_view(request, project_id, deliverable_id):
         deliverable=deliverable,
     )
 
+    deliverable._detail_versions = list(
+        deliverable.versions.select_related('uploaded_by').all(),
+    )
     return Response(
         DeliverableDetailSerializer(deliverable, context={'request': request}).data,
         status=status.HTTP_201_CREATED,
