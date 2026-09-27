@@ -7,6 +7,13 @@ description: Project intelligence and lessons learned. Reference for project-spe
 
 This file captures important patterns, preferences, and project intelligence that help work more effectively with this codebase. Updated as new insights are discovered.
 
+> **Lección 2026-09-26 — un contrato de formularios se barre por superficie:**
+> aplicar «el error pertenece al campo» a los *modales* de creación dejó fuera
+> la página Nuevo documento y la mitad Documentos de un catálogo compartido. El
+> inventario tiene que listar toda superficie que crea o guarda —modal, página
+> o fila editable— y cada componente con dos modos debe validar sólo los campos
+> que su modo pinta: exigir uno invisible bloquea el envío sin decir por qué.
+
 > **Lección verificada 2026-09-04 — una capa flotante pertenece al overlay que
 > la abre:** un tooltip con `position: fixed` y un número de `z-index` mayor no
 > puede superar por sí solo un modal que vive en otro stacking context. La

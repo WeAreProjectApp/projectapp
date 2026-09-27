@@ -90,11 +90,48 @@ function makeStore(overrides = {}) {
     updateState: jest.fn(async () => ({ success: true })),
     mergeState: jest.fn(async () => ({ success: true })),
     retireState: jest.fn(async () => ({ success: true })),
+    createGroup: jest.fn(async () => ({ success: true })),
     ...overrides,
   };
 }
 
-function mountManager({ store = makeStore(), projectCatalog = true } = {}) {
+// Document states carry neither description nor operational effect.
+function documentStates() {
+  return [
+    {
+      id: 21,
+      name: 'Borrador',
+      color: 'gray',
+      group: 4,
+      order: 1,
+      system_key: 'draft',
+      is_active: true,
+      merged_into: null,
+      incompatibility_ids: [],
+      active_project_count: 2,
+      historical_episode_count: 4,
+    },
+    {
+      id: 22,
+      name: 'Urgente',
+      color: 'red',
+      group: 4,
+      order: 2,
+      system_key: '',
+      is_active: true,
+      merged_into: null,
+      incompatibility_ids: [],
+      active_project_count: 0,
+      historical_episode_count: 1,
+    },
+  ];
+}
+
+function mountManager({
+  store = makeStore(),
+  projectCatalog = true,
+  manageGroups = false,
+} = {}) {
   return mount(StateCatalogManager, {
     props: {
       stateStore: store,
@@ -104,7 +141,7 @@ function mountManager({ store = makeStore(), projectCatalog = true } = {}) {
       backLabel: 'Volver',
       activeCountField: 'active_project_count',
       activeCountLabel: 'proyectos',
-      manageGroups: false,
+      manageGroups,
       operationalEffects: projectCatalog ? OPERATIONAL_EFFECTS : [],
     },
     global: {
@@ -234,22 +271,148 @@ describe('StateCatalogManager project field validation', () => {
       .toBeDefined();
   });
 
-  it('preserves the document catalog blocking list', async () => {
-    const wrapper = mountManager({ projectCatalog: false });
-    await flushPromises();
+});
 
-    expect(wrapper.get('[data-testid="catalog-create-state"]').attributes('disabled'))
-      .toBeDefined();
-    expect(wrapper.find('form').text()).toContain('Escribe el nombre del estado.');
+describe('StateCatalogManager document field validation', () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
   });
 
-  it('keeps project action bands out of the document catalog', async () => {
-    const wrapper = mountManager({ projectCatalog: false });
+  it('places a missing state name below its field after submit', async () => {
+    const store = makeStore({ states: documentStates() });
+    const wrapper = mountManager({ store, projectCatalog: false });
+    await flushPromises();
+    const form = wrapper.find('form');
+
+    expect(wrapper.get('[data-testid="catalog-create-state"]').attributes('disabled'))
+      .toBeUndefined();
+    expect(form.text()).not.toContain('Escribe el nombre del estado.');
+
+    await form.trigger('submit');
     await flushPromises();
 
-    expect(wrapper.find('[data-testid="catalog-state-edit-actions-2"]').exists())
-      .toBe(false);
-    expect(wrapper.find('[data-testid="catalog-state-maintenance-actions-2"]').exists())
-      .toBe(false);
+    expect(form.findAll('[role="alert"]').map((alert) => alert.text()))
+      .toEqual(['Escribe el nombre del estado.']);
+    expect(wrapper.get('[data-testid="catalog-new-state-name"]').attributes('aria-invalid'))
+      .toBe('true');
+    expect(store.createState).not.toHaveBeenCalled();
+  });
+
+  it('creates a document state without asking for project-only fields', async () => {
+    const store = makeStore({ states: documentStates() });
+    const wrapper = mountManager({ store, projectCatalog: false });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="catalog-new-state-name"]').setValue('Esperando cliente');
+    await wrapper.find('form').trigger('submit');
+    await flushPromises();
+
+    expect(store.createState).toHaveBeenCalledTimes(1);
+    const payload = store.createState.mock.calls[0][0];
+    expect(payload).toEqual(expect.objectContaining({ name: 'Esperando cliente', group: 4 }));
+    expect(payload).not.toHaveProperty('operational_effect');
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(0);
+  });
+
+  it('saves a document state that has no description', async () => {
+    const store = makeStore({ states: documentStates() });
+    const wrapper = mountManager({ store, projectCatalog: false });
+    await flushPromises();
+    const row = wrapper.get('[data-testid="catalog-state-22"]');
+
+    await row.get('[aria-label="Nombre del estado"]').setValue('Urgencia crítica');
+    await row.get('[data-testid="catalog-save-state-22"]').trigger('click');
+    await flushPromises();
+
+    expect(store.updateState).toHaveBeenCalledWith(
+      22,
+      expect.objectContaining({ name: 'Urgencia crítica', description: '' }),
+    );
+    expect(store.updateState.mock.calls[0][1]).not.toHaveProperty('operational_effect');
+  });
+
+  it('places missing edit and merge requirements inside the document state', async () => {
+    const store = makeStore({ states: documentStates() });
+    const wrapper = mountManager({ store, projectCatalog: false });
+    await flushPromises();
+    const row = wrapper.get('[data-testid="catalog-state-22"]');
+
+    await row.get('[aria-label="Nombre del estado"]').setValue('');
+    await row.get('[data-testid="catalog-save-state-22"]').trigger('click');
+    await row.get('[data-testid="catalog-merge-state-22"]').trigger('click');
+    await flushPromises();
+
+    expect(row.findAll('[role="alert"]').map((alert) => alert.text())).toEqual([
+      'Escribe el nombre del estado.',
+      'Elige el estado de destino.',
+    ]);
+    expect(store.updateState).not.toHaveBeenCalled();
+    expect(store.mergeState).not.toHaveBeenCalled();
+  });
+
+  it('keeps the document seed merge restriction in accessible help', async () => {
+    const wrapper = mountManager({
+      store: makeStore({ states: documentStates() }),
+      projectCatalog: false,
+    });
+    await flushPromises();
+    const row = wrapper.get('[data-testid="catalog-state-21"]');
+    const gate = row.findComponent(BaseControlGate);
+
+    expect(gate.props('visible')).toBe(false);
+    expect(gate.props('reasons')).toEqual([
+      'Los estados semilla del sistema no se pueden fusionar.',
+    ]);
+    expect(row.get('[data-testid="catalog-merge-state-21"]').attributes('disabled'))
+      .toBeDefined();
+  });
+
+  it('places a missing group name below its field and clears it once created', async () => {
+    const store = makeStore({ states: documentStates() });
+    const wrapper = mountManager({ store, projectCatalog: false, manageGroups: true });
+    await flushPromises();
+    const groupForm = wrapper.findAll('form')[1];
+    const groupName = groupForm.get('[data-testid="catalog-new-group-name"]');
+
+    await groupForm.trigger('submit');
+    await flushPromises();
+
+    expect(groupForm.get('[role="alert"]').text()).toBe('Escribe el nombre del grupo.');
+    expect(groupName.attributes('aria-invalid')).toBe('true');
+    expect(store.createGroup).not.toHaveBeenCalled();
+
+    await groupName.setValue('Señales de pago');
+    await groupForm.trigger('submit');
+    await flushPromises();
+
+    expect(store.createGroup)
+      .toHaveBeenCalledWith(expect.objectContaining({ name: 'Señales de pago' }));
+    expect(groupForm.find('[role="alert"]').exists()).toBe(false);
+  });
+
+  it('keeps a serializer rejection below its field and reports what has no field', async () => {
+    const store = makeStore({
+      states: documentStates(),
+      updateState: jest.fn(async () => ({
+        success: false,
+        message: 'Ya existe un estado con ese nombre.',
+        fieldErrors: {
+          name: 'Ya existe un estado con ese nombre.',
+          incompatibility_ids: 'Un estado no puede excluirse a sí mismo.',
+        },
+      })),
+    });
+    const wrapper = mountManager({ store, projectCatalog: false });
+    await flushPromises();
+    const row = wrapper.get('[data-testid="catalog-state-22"]');
+
+    await row.get('[aria-label="Nombre del estado"]').setValue('Borrador');
+    await row.get('[data-testid="catalog-save-state-22"]').trigger('click');
+    await flushPromises();
+
+    expect(row.get('[role="alert"]').text()).toBe('Ya existe un estado con ese nombre.');
+    expect(notify.error).toHaveBeenCalledWith(expect.objectContaining({
+      detail: 'Un estado no puede excluirse a sí mismo.',
+    }));
   });
 });

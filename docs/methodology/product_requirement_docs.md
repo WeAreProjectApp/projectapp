@@ -1,5 +1,12 @@
 # Product Requirements Document — ProjectApp
 
+> **Corrección 2026-09-26 — validación en Documentos:** Nuevo documento ya no
+> lista bajo **Crear Documento** lo que falta. El botón sigue disponible y, al
+> intentarlo, cada aviso aparece bajo su campo y lo marca incompleto. Cancelar
+> y Crear Documento quedan solos, a la derecha y centrados. El catálogo de
+> estados de documentos sigue el mismo contrato que el de proyectos. Otras
+> vistas del panel con el mismo patrón quedan listadas para fichas aparte.
+
 > **Enlaces seguros de un solo uso — 2026-09-26:** el equipo comparte
 > contraseñas, llaves, accesos, datos bancarios o comunicados confidenciales con
 > enlaces que se abren una sola vez, se pueden revocar y reactivar (mismo

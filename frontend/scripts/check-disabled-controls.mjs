@@ -6,7 +6,9 @@
  * is deliberately syntactic: callers declare the contract with one of
  * `disabled-reason`, `aria-describedby`, `title`, `loading`, or the explicit
  * `data-disabled-explained` marker when adjacent copy owns the explanation.
- * BaseControlGate is the preferred visible pattern for resolvable blockers.
+ * BaseControlGate is the preferred visible pattern for resolvable blockers
+ * that no field owns; a missing form field keeps submit enabled and is named
+ * beside its field by BaseFormField after the attempt.
  */
 import fs from 'node:fs'
 import path from 'node:path'

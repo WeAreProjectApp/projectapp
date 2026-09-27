@@ -11,6 +11,7 @@
   - [Display] Ciclo y Señales muestran sus semillas y conteos.
   - [Success] Crear, editar y fusionar refresca el catálogo global.
   - [Error] Un estado con episodios abiertos no se puede retirar hasta cerrarlo o fusionarlo.
+  - [Error — validación] **Crear estado**, **Crear grupo**, **Guardar** y **Fusionar** siguen disponibles. Al intentarlos sin nombre o sin destino, el aviso aparece bajo su campo y lo marca inválido, sin llamar al servidor; un rechazo del API por nombre o grupo se muestra en el mismo lugar. Que una semilla no se pueda fusionar es una restricción permanente y queda como ayuda del botón deshabilitado.
   - [Failure] Un fallo del servidor conserva el borrador de edición para reintentar.
 - **Cobertura:** ✅ display/success/error/failure.
 - **E2E:** `e2e/admin/admin-document-states-manage.spec.js`

@@ -2,7 +2,10 @@
   <div class="flex min-h-0 flex-1 flex-col" data-testid="doc-markdown-editor">
     <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
       <div class="flex flex-wrap items-center gap-3">
-        <label :for="textareaId" class="block text-sm font-medium text-text-default">{{ label }}</label>
+        <label :for="textareaId" class="block text-sm font-medium text-text-default">
+          {{ label }}
+          <span v-if="required" class="text-danger-strong">*</span>
+        </label>
         <BaseSegmented
           v-model="view"
           size="sm"
@@ -69,6 +72,8 @@ const props = defineProps({
   modelValue: { type: String, default: '' },
   textareaId: { type: String, required: true },
   label: { type: String, required: true },
+  /** Same required marker as BaseFormField, for forms that demand content. */
+  required: { type: Boolean, default: false },
   placeholder: { type: String, default: '' },
   theme: { type: String, default: 'friendly', validator: oneOf(['friendly', 'professional']) },
   /** Size of the editor box, shared by the textarea and the preview. */

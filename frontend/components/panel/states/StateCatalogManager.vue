@@ -37,6 +37,8 @@ const createApiErrors = reactive({});
 const editValidationAttempted = reactive({});
 const editApiErrors = reactive({});
 const mergeValidationAttempted = reactive({});
+const createGroupValidationAttempted = ref(false);
+const createGroupApiErrors = reactive({});
 const {
   confirmState,
   requestConfirm,
@@ -50,48 +52,49 @@ const groups = computed(() => props.stateStore.groups.map((group) => ({
 })));
 
 const hasOperationalEffects = computed(() => props.operationalEffects.length > 0);
-const createStateBlockReasons = computed(() => [
-  !newState.name.trim() ? 'Escribe el nombre del estado.' : '',
-  hasOperationalEffects.value && !newState.description.trim()
-    ? 'Explica qué significa el estado.'
-    : '',
-  !newState.group ? 'Elige el grupo del estado.' : '',
-].filter(Boolean));
-const createGroupBlockReasons = computed(() => [
-  !newGroup.name.trim() ? 'Escribe el nombre del grupo.' : '',
-].filter(Boolean));
 
-const projectStateFieldNames = new Set([
-  'name',
-  'description',
-  'group',
-  'operational_effect',
-]);
-const editableProjectStateFieldNames = new Set(['name', 'description']);
+// Cada catálogo valida sólo los campos que pinta: el de documentos no tiene
+// descripción ni efecto operativo, y exigirlos bloquearía el envío con un
+// error que nadie ve.
+const createStateFields = computed(() => (hasOperationalEffects.value
+  ? ['name', 'description', 'group', 'operational_effect']
+  : ['name', 'group']));
+const editStateFields = computed(() => (hasOperationalEffects.value
+  ? ['name', 'description']
+  : ['name']));
+const editApiFields = computed(() => (hasOperationalEffects.value
+  ? ['name', 'description']
+  : ['name', 'group']));
 
 function clearErrors(target) {
   Object.keys(target).forEach((field) => delete target[field]);
 }
 
-function captureProjectFieldErrors(
-  target,
-  fieldErrors,
-  allowedFields = projectStateFieldNames,
-) {
+/**
+ * Copies the serializer errors the form shows beside a field into `target`.
+ * Anything without a field comes back in `rest`, so the caller still reports
+ * it instead of dropping it.
+ */
+function captureFieldErrors(target, fieldErrors, allowedFields) {
   clearErrors(target);
-  if (!fieldErrors || typeof fieldErrors !== 'object') return false;
+  if (!fieldErrors || typeof fieldErrors !== 'object') return { captured: false, rest: '' };
   let captured = false;
+  const rest = [];
   Object.entries(fieldErrors).forEach(([field, message]) => {
-    if (!allowedFields.has(field) || !message) return;
+    if (!message) return;
+    if (!allowedFields.includes(field)) {
+      rest.push(String(message));
+      return;
+    }
     target[field] = String(message);
     captured = true;
   });
-  return captured;
+  return { captured, rest: rest.join(' · ') };
 }
 
 function createFieldError(field) {
   if (createApiErrors[field]) return createApiErrors[field];
-  if (!createValidationAttempted.value) return '';
+  if (!createValidationAttempted.value || !createStateFields.value.includes(field)) return '';
   if (field === 'name' && !newState.name.trim()) {
     return 'Escribe el nombre del estado.';
   }
@@ -113,7 +116,7 @@ function clearCreateFieldError(field) {
 
 function editFieldError(state, field) {
   if (editApiErrors[state.id]?.[field]) return editApiErrors[state.id][field];
-  if (!editValidationAttempted[state.id]) return '';
+  if (!editValidationAttempted[state.id] || !editStateFields.value.includes(field)) return '';
   const draft = editDraft(state);
   if (field === 'name' && !draft.name.trim()) {
     return 'Escribe el nombre del estado.';
@@ -131,12 +134,32 @@ function clearEditFieldError(stateId, field) {
 
 function mergeFieldError(state) {
   if (
-    !hasOperationalEffects.value
-    || state.system_key
+    state.system_key
     || !mergeValidationAttempted[state.id]
     || mergeTargets[state.id]
   ) return '';
   return 'Elige el estado de destino.';
+}
+
+// Fusionar sólo junta estados del mismo grupo; en proyectos, además, del mismo
+// efecto operativo, porque el efecto decide cobros, avisos y cierre.
+function mergeCandidates(state) {
+  return props.stateStore.activeStates.filter((item) => (
+    item.id !== state.id
+    && item.group === state.group
+    && (!hasOperationalEffects.value || item.operational_effect === state.operational_effect)
+  ));
+}
+
+const createGroupNameError = computed(() => (
+  createGroupApiErrors.name
+  || (createGroupValidationAttempted.value && !newGroup.name.trim()
+    ? 'Escribe el nombre del grupo.'
+    : '')
+));
+
+function clearCreateGroupError() {
+  delete createGroupApiErrors.name;
 }
 
 onMounted(async () => {
@@ -149,17 +172,9 @@ onMounted(async () => {
 });
 
 async function createState(confirmSimilar = false) {
-  if (hasOperationalEffects.value) {
-    createValidationAttempted.value = true;
-    if ([
-      'name',
-      'description',
-      'group',
-      'operational_effect',
-    ].some((field) => createFieldError(field))) return;
-  }
+  createValidationAttempted.value = true;
+  if (createStateFields.value.some((field) => createFieldError(field))) return;
   const name = newState.name.trim();
-  if (!name) return;
   const payload = {
     ...newState,
     name,
@@ -183,11 +198,14 @@ async function createState(confirmSimilar = false) {
     return;
   }
   if (!result.success) {
-    if (
-      hasOperationalEffects.value
-      && captureProjectFieldErrors(createApiErrors, result.fieldErrors)
-    ) return;
-    notify.error({ title: 'No se pudo crear', detail: result.message });
+    const { captured, rest } = captureFieldErrors(
+      createApiErrors,
+      result.fieldErrors,
+      createStateFields.value,
+    );
+    if (!captured || rest) {
+      notify.error({ title: 'No se pudo crear', detail: captured ? rest : result.message });
+    }
     return;
   }
   newState.name = '';
@@ -237,10 +255,8 @@ async function saveGroup(group) {
 }
 
 async function saveState(state) {
-  if (hasOperationalEffects.value) {
-    editValidationAttempted[state.id] = true;
-    if (['name', 'description'].some((field) => editFieldError(state, field))) return;
-  }
+  editValidationAttempted[state.id] = true;
+  if (editStateFields.value.some((field) => editFieldError(state, field))) return;
   const payload = { ...editDraft(state) };
   if (!hasOperationalEffects.value) {
     delete payload.operational_effect;
@@ -252,29 +268,17 @@ async function saveState(state) {
     delete editApiErrors[state.id];
     notify.success({ title: 'Estado actualizado' });
   } else {
-    if (hasOperationalEffects.value) {
-      const errors = {};
-      if (captureProjectFieldErrors(
-        errors,
-        result.fieldErrors,
-        editableProjectStateFieldNames,
-      )) {
-        editApiErrors[state.id] = errors;
-        return;
-      }
+    const errors = {};
+    const { captured, rest } = captureFieldErrors(
+      errors,
+      result.fieldErrors,
+      editApiFields.value,
+    );
+    if (captured) editApiErrors[state.id] = errors;
+    if (!captured || rest) {
+      notify.error({ title: 'No se pudo actualizar', detail: captured ? rest : result.message });
     }
-    notify.error({ title: 'No se pudo actualizar', detail: result.message });
   }
-}
-
-function saveStateBlockReasons(state) {
-  const draft = editDraft(state);
-  return [
-    !draft.name.trim() ? 'Escribe el nombre del estado.' : '',
-    hasOperationalEffects.value && !draft.description.trim()
-      ? 'Explica qué significa el estado.'
-      : '',
-  ].filter(Boolean);
 }
 
 async function retire(state) {
@@ -291,9 +295,7 @@ async function retire(state) {
 }
 
 async function merge(state) {
-  if (hasOperationalEffects.value) {
-    mergeValidationAttempted[state.id] = true;
-  }
+  mergeValidationAttempted[state.id] = true;
   const target = mergeTargets[state.id];
   if (!target) return;
   const targetState = props.stateStore.states.find(
@@ -318,21 +320,17 @@ async function merge(state) {
   }
 }
 
+// Sólo la restricción permanente: el destino que falta se dice bajo su selector.
 function mergeBlockReasons(state) {
-  if (hasOperationalEffects.value) {
-    return [
-      state.system_key ? 'Los estados semilla del sistema no se pueden fusionar.' : '',
-    ].filter(Boolean);
-  }
   return [
-    !mergeTargets[state.id] ? 'Elige el estado de destino.' : '',
     state.system_key ? 'Los estados semilla del sistema no se pueden fusionar.' : '',
   ].filter(Boolean);
 }
 
 async function createGroup() {
+  createGroupValidationAttempted.value = true;
+  if (createGroupNameError.value) return;
   const name = newGroup.name.trim();
-  if (!name) return;
   const result = await props.stateStore.createGroup({
     ...newGroup,
     name,
@@ -340,9 +338,18 @@ async function createGroup() {
   });
   if (result.success) {
     newGroup.name = '';
+    createGroupValidationAttempted.value = false;
+    clearErrors(createGroupApiErrors);
     notify.success({ title: 'Grupo creado' });
-  } else {
-    notify.error({ title: 'No se pudo crear el grupo', detail: result.message });
+    return;
+  }
+  const { captured, rest } = captureFieldErrors(
+    createGroupApiErrors,
+    result.fieldErrors,
+    ['name'],
+  );
+  if (!captured || rest) {
+    notify.error({ title: 'No se pudo crear el grupo', detail: captured ? rest : result.message });
   }
 }
 
@@ -368,69 +375,59 @@ function activeCount(state) {
       <form class="space-y-3" @submit.prevent="createState()">
         <h2 class="text-sm font-semibold text-text-default">Crear estado</h2>
         <div class="grid gap-2" :class="hasOperationalEffects ? 'sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_auto_auto_auto]' : 'sm:grid-cols-[minmax(0,1fr)_auto_auto]'">
-          <template v-if="hasOperationalEffects">
-            <BaseFormField
-              v-slot="{ invalid, errorId }"
-              label="Nombre del estado"
-              required
-              :error="createFieldError('name')"
+          <BaseFormField
+            v-slot="{ invalid, errorId }"
+            label="Nombre del estado"
+            required
+            :error="createFieldError('name')"
+          >
+            <BaseInput
+              v-model="newState.name"
+              placeholder="Nombre"
+              aria-label="Nombre del nuevo estado"
+              data-testid="catalog-new-state-name"
+              :error="invalid"
+              :aria-describedby="errorId"
+              @update:model-value="clearCreateFieldError('name')"
+            />
+          </BaseFormField>
+          <BaseFormField
+            v-slot="{ errorId }"
+            label="Grupo"
+            :error="createFieldError('group')"
+          >
+            <select
+              v-model="newState.group"
+              aria-label="Grupo del nuevo estado"
+              :aria-describedby="errorId"
+              class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
+              @change="clearCreateFieldError('group')"
             >
-              <BaseInput
-                v-model="newState.name"
-                placeholder="Nombre"
-                aria-label="Nombre del nuevo estado"
-                data-testid="catalog-new-state-name"
-                :error="invalid"
-                :aria-describedby="errorId"
-                @update:model-value="clearCreateFieldError('name')"
-              />
-            </BaseFormField>
-            <BaseFormField
-              v-slot="{ errorId }"
-              label="Grupo"
-              :error="createFieldError('group')"
-            >
-              <select
-                v-model="newState.group"
-                aria-label="Grupo del nuevo estado"
-                :aria-describedby="errorId"
-                class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
-                @change="clearCreateFieldError('group')"
-              >
-                <option v-for="group in stateStore.groups.filter((item) => item.is_active)" :key="group.id" :value="group.id">{{ group.name }}</option>
-              </select>
-            </BaseFormField>
-            <BaseFormField
-              v-slot="{ errorId }"
-              label="Efecto operativo"
-              required
-              :error="createFieldError('operational_effect')"
-            >
-              <select
-                v-model="newState.operational_effect"
-                aria-label="Efecto operativo del nuevo estado"
-                :aria-describedby="errorId"
-                class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
-                @change="clearCreateFieldError('operational_effect')"
-              >
-                <option v-for="effect in operationalEffects" :key="effect.value" :value="effect.value">{{ effect.label }}</option>
-              </select>
-            </BaseFormField>
-            <BaseFormField label="Color">
-              <select v-model="newState.color" aria-label="Color del nuevo estado" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
-                <option v-for="color in DOCUMENT_STATE_COLORS" :key="color.value" :value="color.value">{{ color.label }}</option>
-              </select>
-            </BaseFormField>
-          </template>
-          <template v-else>
-            <BaseInput v-model="newState.name" placeholder="Nombre" data-testid="catalog-new-state-name" />
-            <select v-model="newState.group" aria-label="Grupo del nuevo estado" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
               <option v-for="group in stateStore.groups.filter((item) => item.is_active)" :key="group.id" :value="group.id">{{ group.name }}</option>
             </select>
+          </BaseFormField>
+          <BaseFormField
+            v-if="hasOperationalEffects"
+            v-slot="{ errorId }"
+            label="Efecto operativo"
+            required
+            :error="createFieldError('operational_effect')"
+          >
+            <select
+              v-model="newState.operational_effect"
+              aria-label="Efecto operativo del nuevo estado"
+              :aria-describedby="errorId"
+              class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
+              @change="clearCreateFieldError('operational_effect')"
+            >
+              <option v-for="effect in operationalEffects" :key="effect.value" :value="effect.value">{{ effect.label }}</option>
+            </select>
+          </BaseFormField>
+          <BaseFormField label="Color">
             <select v-model="newState.color" aria-label="Color del nuevo estado" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
               <option v-for="color in DOCUMENT_STATE_COLORS" :key="color.value" :value="color.value">{{ color.label }}</option>
             </select>
-          </template>
+          </BaseFormField>
         </div>
         <BaseFormField
           v-if="hasOperationalEffects"
@@ -455,7 +452,6 @@ function activeCount(state) {
           El nombre se puede cambiar; el efecto define cobros, avisos y cierre.
         </p>
         <BaseButton
-          v-if="hasOperationalEffects"
           type="submit"
           variant="primary"
           size="sm"
@@ -463,55 +459,41 @@ function activeCount(state) {
         >
           Crear estado
         </BaseButton>
-        <BaseControlGate
-          v-else
-          :reasons="createStateBlockReasons"
-          label="Crear estado no disponible"
-          align="start"
-        >
-          <template #default="{ describedBy }">
-            <BaseButton
-              type="submit"
-              variant="primary"
-              size="sm"
-              data-testid="catalog-create-state"
-              :disabled="Boolean(createStateBlockReasons.length)"
-              :disabled-reason="createStateBlockReasons.join(' ')"
-              :aria-describedby="describedBy"
-            >
-              Crear estado
-            </BaseButton>
-          </template>
-        </BaseControlGate>
       </form>
       <form v-if="manageGroups" class="space-y-3 border-t border-border-muted pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0" @submit.prevent="createGroup">
         <h2 class="text-sm font-semibold text-text-default">Crear grupo</h2>
-        <div class="flex gap-2">
-          <BaseInput v-model="newGroup.name" placeholder="Nombre del grupo" />
-          <select v-model="newGroup.selection_mode" aria-label="Modo del nuevo grupo" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
-            <option value="exclusive">Uno activo</option>
-            <option value="additive">Varios activos</option>
-          </select>
+        <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto]">
+          <BaseFormField
+            v-slot="{ invalid, errorId }"
+            label="Nombre del grupo"
+            required
+            :error="createGroupNameError"
+          >
+            <BaseInput
+              v-model="newGroup.name"
+              placeholder="Nombre del grupo"
+              aria-label="Nombre del nuevo grupo"
+              data-testid="catalog-new-group-name"
+              :error="invalid"
+              :aria-describedby="errorId"
+              @update:model-value="clearCreateGroupError"
+            />
+          </BaseFormField>
+          <BaseFormField label="Modo">
+            <select v-model="newGroup.selection_mode" aria-label="Modo del nuevo grupo" class="rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm">
+              <option value="exclusive">Uno activo</option>
+              <option value="additive">Varios activos</option>
+            </select>
+          </BaseFormField>
         </div>
-        <BaseControlGate
-          :reasons="createGroupBlockReasons"
-          label="Crear grupo no disponible"
-          align="start"
+        <BaseButton
+          type="submit"
+          variant="secondary"
+          size="sm"
+          data-testid="catalog-create-group"
         >
-          <template #default="{ describedBy }">
-            <BaseButton
-              type="submit"
-              variant="secondary"
-              size="sm"
-              data-testid="catalog-create-group"
-              :disabled="Boolean(createGroupBlockReasons.length)"
-              :disabled-reason="createGroupBlockReasons.join(' ')"
-              :aria-describedby="describedBy"
-            >
-              Crear grupo
-            </BaseButton>
-          </template>
-        </BaseControlGate>
+          Crear grupo
+        </BaseButton>
       </form>
     </section>
 
@@ -534,11 +516,8 @@ function activeCount(state) {
         <article
           v-for="state in group.states"
           :key="state.id"
-          class="p-4 sm:p-5"
-          :class="[
-            hasOperationalEffects ? 'space-y-4' : 'space-y-3',
-            !state.is_active ? 'opacity-60' : '',
-          ]"
+          class="space-y-4 p-4 sm:p-5"
+          :class="!state.is_active ? 'opacity-60' : ''"
           :data-testid="`catalog-state-${state.id}`"
         >
           <div class="flex flex-wrap items-center gap-2">
@@ -553,127 +532,110 @@ function activeCount(state) {
             <BaseBadge v-if="!state.is_active" variant="neutral" size="sm">Retirado</BaseBadge>
             <span class="text-xs text-text-muted">{{ activeCount(state) }} {{ activeCountLabel }} activos · {{ state.historical_episode_count }} episodios</span>
           </div>
-          <div v-if="state.is_active" :class="hasOperationalEffects ? 'space-y-3' : 'space-y-2'">
-            <template v-if="hasOperationalEffects">
-              <BaseFormRow
-                :cols="2"
-                :gap="3"
-                at="portrait"
-                class="panel-landscape:grid-cols-12"
-                :data-testid="`catalog-state-edit-actions-${state.id}`"
-              >
-                <BaseFormField
-                  v-slot="{ invalid, errorId }"
-                  label="Nombre del estado"
-                  required
-                  class="panel-landscape:col-span-3"
-                  :error="editFieldError(state, 'name')"
-                >
-                  <BaseInput
-                    v-model="editDraft(state).name"
-                    aria-label="Nombre del estado"
-                    :error="invalid"
-                    :aria-describedby="errorId"
-                    @update:model-value="clearEditFieldError(state.id, 'name')"
-                  />
-                </BaseFormField>
-                <BaseFormField label="Color" class="panel-landscape:col-span-2">
-                  <select v-model="editDraft(state).color" aria-label="Color del estado" class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm">
-                    <option v-for="color in DOCUMENT_STATE_COLORS" :key="color.value" :value="color.value">{{ color.label }}</option>
-                  </select>
-                </BaseFormField>
-                <BaseFormField
-                  v-slot="{ errorId }"
-                  label="Efecto operativo"
-                  required
-                  class="panel-landscape:col-span-3"
-                  :error="editFieldError(state, 'operational_effect')"
-                >
-                  <select
-                    v-model="editDraft(state).operational_effect"
-                    aria-label="Efecto operativo del estado"
-                    :aria-describedby="errorId"
-                    class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm"
-                    disabled
-                    title="El efecto operativo es inmutable"
-                  >
-                    <option v-for="effect in operationalEffects" :key="effect.value" :value="effect.value">{{ effect.label }}</option>
-                  </select>
-                </BaseFormField>
-                <BaseFormField label="Orden" class="panel-landscape:col-span-2">
-                  <BaseInput v-model.number="editDraft(state).order" type="number" min="0" aria-label="Orden" />
-                </BaseFormField>
-                <BaseFormRowAction class="panel-portrait:col-span-2 panel-landscape:col-span-2">
-                  <BaseButton
-                    class="w-full"
-                    variant="secondary"
-                    size="sm"
-                    :data-testid="`catalog-save-state-${state.id}`"
-                    @click="saveState(state)"
-                  >
-                    Guardar
-                  </BaseButton>
-                </BaseFormRowAction>
-              </BaseFormRow>
+          <div v-if="state.is_active" class="space-y-3">
+            <BaseFormRow
+              :cols="2"
+              :gap="3"
+              at="portrait"
+              class="panel-landscape:grid-cols-12"
+              :data-testid="`catalog-state-edit-actions-${state.id}`"
+            >
               <BaseFormField
                 v-slot="{ invalid, errorId }"
-                label="Descripción"
+                label="Nombre del estado"
                 required
-                :error="editFieldError(state, 'description')"
+                class="panel-landscape:col-span-3"
+                :error="editFieldError(state, 'name')"
               >
-                <BaseTextarea
-                  v-model="editDraft(state).description"
-                  :rows="2"
-                  maxlength="300"
-                  :aria-label="`Descripción de ${state.name}`"
-                  :data-testid="`catalog-state-description-${state.id}`"
+                <BaseInput
+                  v-model="editDraft(state).name"
+                  aria-label="Nombre del estado"
                   :error="invalid"
                   :aria-describedby="errorId"
-                  @update:model-value="clearEditFieldError(state.id, 'description')"
+                  @update:model-value="clearEditFieldError(state.id, 'name')"
                 />
               </BaseFormField>
-            </template>
-            <template v-else>
-              <div class="grid gap-2 lg:grid-cols-[minmax(0,1fr)_8rem_10rem_6rem_auto]">
-                <BaseInput v-model="editDraft(state).name" aria-label="Nombre del estado" />
-                <select v-model="editDraft(state).color" aria-label="Color del estado" class="rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm">
+              <BaseFormField label="Color" class="panel-landscape:col-span-2">
+                <select v-model="editDraft(state).color" aria-label="Color del estado" class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm">
                   <option v-for="color in DOCUMENT_STATE_COLORS" :key="color.value" :value="color.value">{{ color.label }}</option>
                 </select>
-                <select v-model="editDraft(state).group" aria-label="Grupo del estado" class="rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm">
+              </BaseFormField>
+              <BaseFormField
+                v-if="hasOperationalEffects"
+                v-slot="{ errorId }"
+                label="Efecto operativo"
+                required
+                class="panel-landscape:col-span-3"
+                :error="editFieldError(state, 'operational_effect')"
+              >
+                <select
+                  v-model="editDraft(state).operational_effect"
+                  aria-label="Efecto operativo del estado"
+                  :aria-describedby="errorId"
+                  class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm"
+                  disabled
+                  title="El efecto operativo es inmutable"
+                >
+                  <option v-for="effect in operationalEffects" :key="effect.value" :value="effect.value">{{ effect.label }}</option>
+                </select>
+              </BaseFormField>
+              <BaseFormField
+                v-else
+                v-slot="{ errorId }"
+                label="Grupo"
+                class="panel-landscape:col-span-3"
+                :error="editFieldError(state, 'group')"
+              >
+                <select
+                  v-model="editDraft(state).group"
+                  aria-label="Grupo del estado"
+                  :aria-describedby="errorId"
+                  class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-2 text-sm"
+                  @change="clearEditFieldError(state.id, 'group')"
+                >
                   <option v-for="item in stateStore.groups" :key="item.id" :value="item.id">{{ item.name }}</option>
                 </select>
+              </BaseFormField>
+              <BaseFormField label="Orden" class="panel-landscape:col-span-2">
                 <BaseInput v-model.number="editDraft(state).order" type="number" min="0" aria-label="Orden" />
-                <BaseControlGate
-                  :reasons="saveStateBlockReasons(state)"
-                  label="Guardar estado no disponible"
-                  align="end"
+              </BaseFormField>
+              <BaseFormRowAction class="panel-portrait:col-span-2 panel-landscape:col-span-2">
+                <BaseButton
+                  class="w-full"
+                  variant="secondary"
+                  size="sm"
+                  :data-testid="`catalog-save-state-${state.id}`"
+                  @click="saveState(state)"
                 >
-                  <template #default="{ describedBy }">
-                    <BaseButton
-                      variant="secondary"
-                      size="sm"
-                      :data-testid="`catalog-save-state-${state.id}`"
-                      :disabled="Boolean(saveStateBlockReasons(state).length)"
-                      :disabled-reason="saveStateBlockReasons(state).join(' ')"
-                      :aria-describedby="describedBy"
-                      @click="saveState(state)"
-                    >
-                      Guardar
-                    </BaseButton>
-                  </template>
-                </BaseControlGate>
-              </div>
-            </template>
+                  Guardar
+                </BaseButton>
+              </BaseFormRowAction>
+            </BaseFormRow>
+            <BaseFormField
+              v-if="hasOperationalEffects"
+              v-slot="{ invalid, errorId }"
+              label="Descripción"
+              required
+              :error="editFieldError(state, 'description')"
+            >
+              <BaseTextarea
+                v-model="editDraft(state).description"
+                :rows="2"
+                maxlength="300"
+                :aria-label="`Descripción de ${state.name}`"
+                :data-testid="`catalog-state-description-${state.id}`"
+                :error="invalid"
+                :aria-describedby="errorId"
+                @update:model-value="clearEditFieldError(state.id, 'description')"
+              />
+            </BaseFormField>
           </div>
           <div
             v-if="state.is_active"
-            :class="hasOperationalEffects
-              ? 'grid grid-cols-1 items-start gap-3 border-t border-border-muted pt-4 panel-portrait:grid-cols-12'
-              : 'flex flex-wrap items-center gap-2'"
-            :data-testid="hasOperationalEffects ? `catalog-state-maintenance-actions-${state.id}` : undefined"
+            class="grid grid-cols-1 items-start gap-3 border-t border-border-muted pt-4 panel-portrait:grid-cols-12"
+            :data-testid="`catalog-state-maintenance-actions-${state.id}`"
           >
             <BaseFormField
-              v-if="hasOperationalEffects"
               v-slot="{ errorId }"
               size="sm"
               class="min-w-0 panel-portrait:col-span-6 panel-landscape:col-span-8"
@@ -681,27 +643,23 @@ function activeCount(state) {
             >
               <select v-model="mergeTargets[state.id]" :aria-label="`Destino para fusionar ${state.name}`" :aria-describedby="errorId" class="w-full rounded-lg border border-input-border bg-input-bg px-2 py-1.5 text-xs">
                 <option value="">Fusionar con…</option>
-                <option v-for="target in stateStore.activeStates.filter((item) => item.id !== state.id && item.group === state.group && item.operational_effect === state.operational_effect)" :key="target.id" :value="target.id">{{ target.name }}</option>
+                <option v-for="target in mergeCandidates(state)" :key="target.id" :value="target.id">{{ target.name }}</option>
               </select>
             </BaseFormField>
-            <select v-else v-model="mergeTargets[state.id]" :aria-label="`Destino para fusionar ${state.name}`" class="rounded-lg border border-input-border bg-input-bg px-2 py-1.5 text-xs">
-              <option value="">Fusionar con…</option>
-              <option v-for="target in stateStore.activeStates.filter((item) => item.id !== state.id && item.group === state.group)" :key="target.id" :value="target.id">{{ target.name }}</option>
-            </select>
+            <!-- La semilla es una restricción permanente, no un campo por
+                 completar: queda como ayuda accesible del botón deshabilitado. -->
             <BaseControlGate
               :reasons="mergeBlockReasons(state)"
               label="Fusionar no disponible"
-              :align="hasOperationalEffects ? 'stretch' : 'start'"
-              :class="hasOperationalEffects
-                ? 'w-full panel-portrait:col-span-3 panel-landscape:col-span-2'
-                : ''"
-              :visible="!hasOperationalEffects"
+              align="stretch"
+              class="w-full panel-portrait:col-span-3 panel-landscape:col-span-2"
+              :visible="false"
             >
               <template #default="{ describedBy }">
                 <BaseButton
                   variant="ghost"
                   size="sm"
-                  :class="hasOperationalEffects ? 'w-full' : ''"
+                  class="w-full"
                   :data-testid="`catalog-merge-state-${state.id}`"
                   :disabled="Boolean(mergeBlockReasons(state).length)"
                   :disabled-reason="mergeBlockReasons(state).join(' ')"
@@ -715,9 +673,7 @@ function activeCount(state) {
             <BaseButton
               variant="danger-ghost"
               size="sm"
-              :class="hasOperationalEffects
-                ? 'w-full panel-portrait:col-span-3 panel-landscape:col-span-2'
-                : ''"
+              class="w-full panel-portrait:col-span-3 panel-landscape:col-span-2"
               :data-testid="`catalog-retire-state-${state.id}`"
               @click="retire(state)"
             >
