@@ -279,12 +279,17 @@ describe('ProposalDocumentsTab closing modality', () => {
     expect(mockNotify.error).toHaveBeenCalledWith('La modalidad de cierre sólo se cambia durante la negociación.');
   });
 
-  it('warns that a custom single contract does not carry over to the split documents', () => {
-    // Falla si al separar se oculta que el texto personalizado no pasa a producto y servicio.
+  test.each([
+    ['split', 'custom', true],
+    ['split', 'default', false],
+    ['single', 'custom', false],
+  ])('shows the custom-single notice only for a split closing with a custom source (modality=%s, source=%s): %s', (contract_modality, contract_source, shown) => {
+    // Falla si al separar se oculta el aviso de texto personalizado, o si aparece cuando no corresponde.
     const wrapper = mountProposalDocumentsTab({
-      proposal: { ...split, contract_params: { contract_source: 'custom' } },
+      proposal: { ...negotiating, contract_modality, contract_params: { contract_source } },
     });
 
-    expect(wrapper.find('[data-testid="proposal-contract-modality-custom-notice"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="proposal-contract-modality-custom-notice"]').exists()).toBe(shown);
+    expect(wrapper.text().includes('personalizado')).toBe(shown);
   });
 });

@@ -11,8 +11,10 @@ global.useMarkdownPreview = jest.fn(() => ({
 jest.mock('dompurify', () => ({ sanitize: jest.fn((val) => val) }));
 
 import ContractParamsModal from '../../components/BusinessProposal/admin/ContractParamsModal.vue';
+import BaseFormField from '../../components/base/BaseFormField.vue';
 
-function mountContractParamsModal(props = {}) {
+// BaseFormField is not global in jest.setup; tests that read field errors pass it in.
+function mountContractParamsModal(props = {}, components = {}) {
   return mount(ContractParamsModal, {
     props: {
       visible: true,
@@ -23,6 +25,7 @@ function mountContractParamsModal(props = {}) {
       ...props,
     },
     global: {
+      components,
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
@@ -174,8 +177,11 @@ describe('ContractParamsModal — contratos separados', () => {
     service_termination_notice_days: 'treinta (30)',
   };
 
-  async function openFor(variant, params, proposal) {
-    const wrapper = mountContractParamsModal({ visible: false, initialParams: params, variant, ...(proposal ? { proposal } : {}) });
+  async function openFor(variant, params, proposal, components) {
+    const wrapper = mountContractParamsModal(
+      { visible: false, initialParams: params, variant, ...(proposal ? { proposal } : {}) },
+      components,
+    );
     await wrapper.setProps({ visible: true });
     await new Promise((resolve) => setTimeout(resolve, 0));
     await wrapper.vm.$nextTick();
@@ -184,12 +190,13 @@ describe('ContractParamsModal — contratos separados', () => {
 
   it('asks for the service terms before generating the service contract', async () => {
     // Falla si el contrato de servicio se genera sin duración ni preavisos.
-    const wrapper = await openFor('service', PARTIES);
+    const wrapper = await openFor('service', PARTIES, undefined, { BaseFormField });
 
     await wrapper.find('form').trigger('submit');
 
     expect(wrapper.text()).toContain('Generar contrato de servicio');
-    expect(wrapper.find('[data-testid="contract-service-terms"]').exists()).toBe(true);
+    const terms = wrapper.get('[data-testid="contract-service-terms"]');
+    expect(terms.text()).toContain('Duración inicial es obligatorio');
     expect(wrapper.emitted('confirm')).toBeFalsy();
   });
 
@@ -200,8 +207,7 @@ describe('ContractParamsModal — contratos separados', () => {
     await wrapper.find('form').trigger('submit');
 
     const payload = wrapper.emitted('confirm')[0][0];
-    expect(payload.service_contract_source).toBe('default');
-    expect(payload.service_initial_term).toBe('doce (12) meses');
+    expect(payload).toMatchObject({ service_contract_source: 'default', ...SERVICE_TERMS });
     expect(payload.contract_source).toBeUndefined();
   });
 

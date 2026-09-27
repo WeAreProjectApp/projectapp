@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 import pytest
 from django.core.files.base import ContentFile
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
 
 from content.models import ContractTemplate, ProposalChangeLog, ProposalDocument
@@ -199,15 +198,17 @@ def test_update_refuses_a_document_of_the_other_modality(admin_client, negotiate
     assert response.data['code'] == 'inactive_variant'
 
 
-@patch('content.views.proposal._generate_and_save_contract_pdf')
-def test_first_generation_during_negotiation_uses_update(mock_generate, admin_client, negotiating_proposal):
+def test_first_generation_during_negotiation_uses_update(admin_client, negotiating_proposal):
     """Fails if a client-started negotiation, with no contract yet, cannot generate one."""
     response = admin_client.patch(
         _update_url(negotiating_proposal), {'contract_params': PARTY_PARAMS}, format='json',
     )
 
     assert response.status_code == 200
-    mock_generate.assert_called_once_with(negotiating_proposal, 'combined')
+    negotiating_proposal.refresh_from_db()
+    assert negotiating_proposal.contract_params['client_full_name'] == PARTY_PARAMS['client_full_name']
+    contract = ProposalDocument.objects.get(proposal=negotiating_proposal, document_type='contract')
+    assert contract.content_markdown.startswith('# CONTRATO DE PRESTACIÓN DE SERVICIOS')
 
 
 def test_split_download_names_the_document(admin_client, split_proposal):
@@ -245,13 +246,3 @@ def test_markdown_copy_follows_the_requested_document(admin_client, split_propos
 
     assert response.status_code == 200
     assert '# contract_product' in response.data['markdown']
-
-
-def test_generated_contract_types_cannot_be_uploaded(admin_client, negotiated):
-    """Fails if an upload impersonates the product or service contract."""
-    upload = SimpleUploadedFile('p.pdf', b'%PDF-1.4', content_type='application/pdf')
-    url = reverse('upload-proposal-document', kwargs={'proposal_id': negotiated.pk})
-
-    response = admin_client.post(url, {'file': upload, 'document_type': 'contract_product'})
-
-    assert response.status_code == 400

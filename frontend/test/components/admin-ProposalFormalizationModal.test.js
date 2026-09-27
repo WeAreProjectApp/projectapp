@@ -157,6 +157,8 @@ describe('ProposalFormalizationModal', () => {
     const wrapper = mountModal();
     await flushPromises();
 
+    expect(wrapper.get('[data-testid="formalization-select-contract_service"]').element.checked).toBe(true);
+
     await wrapper.get('[data-testid="formalization-prepare"]').trigger('click');
     await flushPromises();
 

@@ -137,3 +137,13 @@ def test_commercial_annex_points_at_both_contracts_when_split(split_proposal):
 
     assert 'contrato de producto' in note
     assert 'contrato de servicio (hosting, mantenimiento y soporte)' in note
+
+
+def test_commercial_annex_points_at_the_single_contract_by_default(proposal):
+    """Fails if a non-split proposal's annex note describes the two-contract split instead."""
+    note = FormalContent(proposal).contract_note()
+
+    assert note == (
+        'Las garantías y obligaciones se rigen por el contrato de desarrollo de '
+        'software asociado a esta propuesta.'
+    )

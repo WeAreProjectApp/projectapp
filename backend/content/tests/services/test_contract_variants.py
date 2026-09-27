@@ -30,9 +30,9 @@ def test_product_is_the_combined_text_without_clauses_21_to_24(default_template)
     product = variants.derive_product_markdown(combined)
     assert product is not None, 'An anchor of the product derivation is missing from the default text'
 
+    assert [product.count(new) for _, new in variants.PRODUCT_ADJUSTMENTS] == [1, 1, 1]
     restored = product
     for old, new in variants.PRODUCT_ADJUSTMENTS:
-        assert product.count(new) == 1
         restored = restored.replace(new, old, 1)
     assert restored == combined[:combined.index(variants.PRODUCT_CUT)]
 
@@ -72,7 +72,7 @@ def test_service_contract_carries_every_service_paragraph(default_template):
     }
 
     expected = {title.lower() for title in _PARAGRAPH_TITLE_RE.findall(service_block)}
-    assert expected
+    assert len(expected) == 23
     assert expected <= service_titles
     assert len(_headings(service)) == 17
 

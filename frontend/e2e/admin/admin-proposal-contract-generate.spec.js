@@ -217,9 +217,20 @@ test.describe('Admin Proposal Contract Generate', () => {
   test('moving a sent proposal to negotiation calls save-and-negotiate API', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_GENERATE, '@role:admin'],
   }, async ({ page }) => {
-    let apiCalled = false;
+    // The endpoint answers with the proposal detail, which the store adopts.
+    let negotiatePayload = null;
     const sentProposal = { ...mockProposal, status: 'sent', available_transitions: ['negotiating', 'rejected'] };
-    await mockApi(page, async ({ apiPath, method }) => {
+    const negotiatingProposal = {
+      ...sentProposal,
+      status: 'negotiating',
+      available_transitions: ['accepted', 'rejected'],
+      contract_params: {
+        contract_source: 'custom',
+        custom_contract_markdown: '# Mi contrato\n\nContenido del contrato.',
+        contract_date: '2026-04-15',
+      },
+    };
+    await mockApi(page, async ({ apiPath, method, route }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(sentProposal) };
@@ -231,17 +242,8 @@ test.describe('Admin Proposal Contract Generate', () => {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(defaultContractTemplate) };
       }
       if (apiPath === `proposals/${PROPOSAL_ID}/contract/save-and-negotiate/` && method === 'POST') {
-        apiCalled = true;
-        return {
-          status: 201,
-          contentType: 'application/json',
-          body: JSON.stringify({
-            id: 10,
-            document_type: 'contract',
-            title: 'Contrato de desarrollo',
-            created_at: '2026-04-02T10:00:00Z',
-          }),
-        };
+        negotiatePayload = route.request().postDataJSON();
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(negotiatingProposal) };
       }
       if (apiPath === `proposals/${PROPOSAL_ID}/documents/`) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
@@ -252,6 +254,7 @@ test.describe('Admin Proposal Contract Generate', () => {
     // The next-action button lives on the General tab, the default one.
     await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
+    await expect(page.getByTestId('proposal-next-action-negotiate')).toBeVisible();
 
     // Toggle to custom mode and type Markdown (simpler than filling all default fields)
     await page.getByTestId('proposal-next-action-negotiate').click();
@@ -265,6 +268,15 @@ test.describe('Admin Proposal Contract Generate', () => {
     await dateInput.fill('2026-04-15');
 
     await page.getByRole('button', { name: /Generar contrato y negociar/i }).click();
-    await expect(() => expect(apiCalled).toBe(true)).toPass({ timeout: 5000 });
+    await expect(() => expect(negotiatePayload).not.toBeNull()).toPass({ timeout: 5000 });
+    expect(negotiatePayload.contract_params).toEqual({
+      contract_source: 'custom',
+      custom_contract_markdown: '# Mi contrato\n\nContenido del contrato.',
+      contract_date: '2026-04-15',
+    });
+
+    // The next action follows the new status.
+    await expect(page.getByTestId('proposal-next-action-launch')).toHaveText('Lanzar a Plataforma');
+    await expect(page.getByTestId('proposal-next-action-negotiate')).toHaveCount(0);
   });
 });

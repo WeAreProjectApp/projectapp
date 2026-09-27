@@ -47,3 +47,16 @@ def test_custom_document_text_is_never_regenerated(mock_generate, negotiating_pr
     call_command('regenerate_contract_pdfs', stdout=StringIO())
 
     assert [call.args[1] for call in mock_generate.call_args_list] == ['service']
+
+
+@patch('content.management.commands.regenerate_contract_pdfs._generate_and_save_contract_pdf')
+def test_default_modality_regenerates_its_single_contract(mock_generate, negotiating_proposal):
+    """Fails if the command stops regenerating the single contract every non-split proposal has."""
+    _store(negotiating_proposal, 'contract')
+    out = StringIO()
+
+    call_command('regenerate_contract_pdfs', stdout=out)
+
+    mock_generate.assert_called_once_with(negotiating_proposal, 'combined')
+    assert '[regenerated]' in out.getvalue()
+    assert '[skip inactive]' not in out.getvalue()

@@ -4,6 +4,7 @@ jest.mock('~/stores/services/request_http', () => ({ get_request: jest.fn() }));
 
 import ProposalContractRow from '../../components/BusinessProposal/admin/ProposalContractRow.vue';
 import { CONTRACT_VARIANTS } from '~/stores/proposals_constants';
+import { get_request } from '~/stores/services/request_http';
 
 const proposal = { id: 7 };
 const doc = {
@@ -27,8 +28,9 @@ describe('ProposalContractRow', () => {
     expect(wrapper.find('[data-testid="proposal-copy-contract"]').exists()).toBe(true);
   });
 
-  it('names the separate document in every URL it serves', () => {
-    // Falla si el contrato de servicio descarga el PDF de otro documento.
+  it('names the separate document in every URL it serves', async () => {
+    // Falla si el contrato de servicio descarga o copia el documento equivocado.
+    get_request.mockResolvedValueOnce({ data: { markdown: 'contenido del contrato' } });
     const wrapper = mountRow({ variant: CONTRACT_VARIANTS.service, doc });
     const links = wrapper.findAll('a').map(link => link.attributes('href'));
 
@@ -37,7 +39,10 @@ describe('ProposalContractRow', () => {
       '/api/proposals/7/contract/pdf/?variant=service',
       '/api/proposals/7/contract/draft-pdf/?variant=service',
     ]);
-    expect(wrapper.find('[data-testid="proposal-copy-contract-service"]').exists()).toBe(true);
+
+    await wrapper.get('[data-testid="proposal-copy-contract-service"]').trigger('click');
+
+    expect(get_request).toHaveBeenCalledWith('proposals/7/contract/markdown/?variant=service', expect.anything());
   });
 
   it('asks the tab to preview and edit its own document', async () => {

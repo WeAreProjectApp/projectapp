@@ -222,6 +222,18 @@ class TestResolveProposalDocRefsViaEndpoint:
 
         assert response.status_code == 200
         assert mock_contract.call_args.kwargs == {'draft': False, 'variant': 'service'}
+        attached_name, attached_bytes, _mime = mock_email_cls.return_value.attach.call_args.args
+        assert attached_name.startswith('Contrato_Servicio_Hosting')
+        assert attached_bytes == b'%PDF-1.4 service'
+
+    def test_contract_ref_variant_outside_the_proposal_modality_returns_400(self, admin_client, proposal):
+        """Fails if a single-modality proposal can be made to attach a split-only contract."""
+        payload = _base_payload(doc_refs=json.dumps([{'source': 'contract_pdf', 'variant': 'product'}]))
+
+        response = admin_client.post(_send_url(proposal.id), payload)
+
+        assert response.status_code == 400
+        assert 'no corresponde a la modalidad' in response.data['error']
 
 
 # ── _resolve_diagnostic_doc_refs via endpoint ─────────────────────────────────
