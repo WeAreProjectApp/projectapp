@@ -18,10 +18,11 @@ formalización (llave por documento, huella v3), regeneración y plataforma usan
 sólo la modalidad activa. De paso, "Generar contrato" en negociación usa la
 actualización del contrato, en lugar de repetir la transición.
 
-Migraciones: `0265`, esquema, y `0266`, texto del servicio; las aplica el
-deploy. Rama `feat/26092026-contract-modality-split`. Sigue una fase 2 en el
-mismo PR: el parágrafo de dependencia de proveedores tecnológicos en ambos
-contratos.
+Migraciones: `0265`, esquema; `0266`, texto del servicio, y `0267`, el
+Parágrafo Décimo — Dependencia de Proveedores Tecnológicos y de Inteligencia
+Artificial (Cl. 22 del contrato completo y Cl. 5 del de servicio, con sus tres
+cambios; el de producto no lo lleva). Las aplica el deploy; los contratos ya
+generados no cambian. Rama `feat/26092026-contract-modality-split`, PR #427.
 
 # Acciones de fila y notas en Contabilidad — PR #420 (2026-09-26)
 

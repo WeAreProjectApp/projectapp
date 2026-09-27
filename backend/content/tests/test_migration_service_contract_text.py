@@ -11,6 +11,7 @@ from content.models import ContractTemplate
 
 pytestmark = pytest.mark.django_db
 migration = import_module('content.migrations.0266_seed_service_contract_text')
+paragraph_ten = import_module('content.migrations.0267_add_provider_dependency_paragraph')
 
 
 @pytest.fixture
@@ -28,8 +29,11 @@ def unseeded_template():
 def test_migrated_default_holds_the_standalone_service_contract():
     """Fails if a fresh database cannot close a deal with two documents."""
     service = ContractTemplate.get_default().service_content_markdown
+    # 0267 only adds Paragraph Ten; without it the text is exactly the seed.
+    seeded = service.replace(f'\n\n{paragraph_ten.SERVICE_CONTRACT_PARAGRAPH}', '', 1)
 
-    assert service == migration.SERVICE_CONTRACT_MARKDOWN
+    assert seeded == migration.SERVICE_CONTRACT_MARKDOWN
+    assert seeded != service
     assert service.startswith('Entre las partes, por un lado **{client_full_name}**')
     assert '## CLÁUSULA DÉCIMA SÉPTIMA — MÉRITO EJECUTIVO' in service
     assert 'duración inicial de {service_initial_term}' in service

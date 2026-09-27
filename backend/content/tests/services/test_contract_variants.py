@@ -72,7 +72,7 @@ def test_service_contract_carries_every_service_paragraph(default_template):
     }
 
     expected = {title.lower() for title in _PARAGRAPH_TITLE_RE.findall(service_block)}
-    assert len(expected) == 23
+    assert len(expected) == 24
     assert expected <= service_titles
     assert len(_headings(service)) == 17
 
