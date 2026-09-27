@@ -43,7 +43,8 @@ export default defineConfig({
   webServer: {
     command: `npm run dev -- --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: baseURL,
-    env: { NUXT_PUBLIC_RECAPTCHA_ENABLED: 'false' },
+    // The devtools launcher sits over full-screen modal footers on mobile.
+    env: { NUXT_PUBLIC_RECAPTCHA_ENABLED: 'false', NUXT_DEVTOOLS_ENABLED: 'false' },
     reuseExistingServer,
     timeout: 120_000,
   },

@@ -21,6 +21,7 @@ const sampleRowB = ref('')
 const sampleRowC = ref('')
 const sampleRowD = ref('')
 const modalOpen = ref(false)
+const modalLongContent = ref(false)
 const workspaceModalOpen = ref(false)
 const fieldError = ref(false)
 
@@ -621,7 +622,8 @@ const canonicalActionEntries = Object.entries(PANEL_ACTIONS).map(([key, definiti
       <h2 class="text-lg font-semibold text-text-default">12. BaseModal</h2>
       <BaseCard padding="md">
         <div class="flex flex-wrap items-center gap-3">
-          <BaseButton variant="primary" @click="modalOpen = true">Abrir modal</BaseButton>
+          <BaseButton variant="primary" @click="modalLongContent = false; modalOpen = true">Abrir modal</BaseButton>
+          <BaseButton variant="secondary" @click="modalLongContent = true; modalOpen = true">Abrir modal largo</BaseButton>
           <BaseButton variant="secondary" @click="workspaceModalOpen = true">
             Abrir modal full-height
           </BaseButton>
@@ -637,11 +639,18 @@ const canonicalActionEntries = Object.entries(PANEL_ACTIONS).map(([key, definiti
           <BaseFormField label="Campo dentro del modal">
             <BaseInput v-model="sampleText" />
           </BaseFormField>
+          <div v-if="modalLongContent" class="space-y-4">
+            <BaseFormField v-for="index in 16" :key="index" :label="`Observación ${index}`">
+              <BaseTextarea :rows="3" :aria-label="`Observación ${index}`" />
+            </BaseFormField>
+          </div>
         </div>
-        <BaseModalActions>
-          <BaseButton variant="ghost" @click="modalOpen = false">Cancelar</BaseButton>
-          <BaseButton variant="primary" @click="modalOpen = false">Aceptar</BaseButton>
-        </BaseModalActions>
+        <template #footer>
+          <BaseModalActions>
+            <BaseButton variant="ghost" @click="modalOpen = false">Cancelar</BaseButton>
+            <BaseButton variant="primary" @click="modalOpen = false">Aceptar</BaseButton>
+          </BaseModalActions>
+        </template>
       </BaseModal>
 
       <!-- size="full" + full-height: para modales que sostienen documentos
@@ -666,9 +675,11 @@ const canonicalActionEntries = Object.entries(PANEL_ACTIONS).map(([key, definiti
             </p>
           </div>
         </div>
-        <div class="shrink-0 flex justify-end gap-2 px-6 py-4 mt-4 border-t border-border-muted">
-          <BaseButton variant="primary" @click="workspaceModalOpen = false">Cerrar</BaseButton>
-        </div>
+        <template #footer>
+          <BaseModalActions>
+            <BaseButton variant="primary" @click="workspaceModalOpen = false">Cerrar</BaseButton>
+          </BaseModalActions>
+        </template>
       </BaseModal>
     </section>
 

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch } from 'vue'
+import { useId, ref, watch } from 'vue'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -58,6 +58,8 @@ function onSubmit() {
     notes: form.value.notes,
   })
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -71,7 +73,7 @@ function onSubmit() {
         — la tarjeta y el período no se pueden cambiar.
       </p>
     </div>
-    <form class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+    <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
       <BaseFormRow :cols="2" :gap="4">
         <BaseFormField label="Total compras" required>
           <BaseCurrencyInput v-model="form.purchases_total" required data-testid="statement-header-purchases" />
@@ -100,12 +102,14 @@ function onSubmit() {
         <BaseTextarea v-model="form.notes" :rows="2" />
       </BaseFormField>
 
-      <BaseModalActions class="-mx-6 -mb-4 mt-6">
+    </form>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="secondary" @click="emit('close')">
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :disabled="saving"
           data-testid="statement-header-form-submit"
@@ -113,6 +117,6 @@ function onSubmit() {
           {{ saving ? 'Guardando...' : 'Guardar' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>

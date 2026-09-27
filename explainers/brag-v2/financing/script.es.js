@@ -1,5 +1,12 @@
 export default {
   "language": "es",
+  "narrationConfig": {
+    "provider": "edge",
+    "voice": "es-CO-SalomeNeural",
+    "locale": "es-CO",
+    "speed": 1,
+    "lead": 0.2
+  },
   "scenes": {
     "scene-1": {
       "narration": "Tu próximo producto necesita un equipo aliado.",
@@ -8,10 +15,10 @@ export default {
       ]
     },
     "scene-2": {
-      "narration": "Conoce el Programa de Alianza de Project App: desarrollo, financiación y continuidad técnica para tu producto.",
+      "narration": "Conoce nuestro Programa de Alianza: desarrollo, financiación y continuidad técnica para tu producto.",
       "captions": [
-        "Conoce el Programa de Alianza de Project App: desarrollo, financiación",
-        "y continuidad técnica para tu producto."
+        "Conoce nuestro Programa de Alianza:",
+        "desarrollo, financiación y continuidad técnica para tu producto."
       ]
     },
     "scene-3": {
@@ -22,11 +29,19 @@ export default {
         "al tiempo de la alianza."
       ]
     },
-    "scene-4": {
-      "narration": "La opción de cinco años incluye capacidad mensual y exclusividad conceptual para el sector y nicho acordados, delimitada por contrato.",
+    "scene-package": {
+      "narration": "La opción de cinco años incluye un paquete de sesenta horas mensuales para requerimientos aprobados, desde la salida a producción.",
       "captions": [
-        "La opción de cinco años incluye capacidad mensual y exclusividad",
-        "conceptual para el sector y nicho acordados, delimitada por contrato."
+        "La opción de cinco años incluye un paquete",
+        "de sesenta horas mensuales para requerimientos aprobados,",
+        "desde la salida a producción."
+      ]
+    },
+    "scene-4": {
+      "narration": "También incluye exclusividad conceptual para el sector y nicho acordados, delimitada por contrato.",
+      "captions": [
+        "También incluye exclusividad conceptual para el sector y nicho acordados,",
+        "delimitada por contrato."
       ]
     },
     "scene-5": {

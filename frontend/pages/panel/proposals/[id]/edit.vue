@@ -311,27 +311,29 @@
       <div v-else class="flex items-center justify-center py-8">
         <span class="text-sm text-text-subtle">Cargando scorecard...</span>
       </div>
-      <div class="flex gap-3 justify-end">
-        <BaseButton variant="ghost" size="lg" @click="showSendChecklist = false">
-          Cancelar
-        </BaseButton>
-        <BaseControlGate :reasons="sendBlockReasons" label="Enviar no disponible" align="end">
-          <template #default="{ describedBy }">
-            <BaseButton
-              variant="primary"
-              size="lg"
-              class="!bg-info-strong hover:!bg-info-strong/90"
-              :loading="scorecardLoading"
-              :disabled="Boolean(sendBlockReasons.length)"
-              :disabled-reason="sendBlockReasons.join(' ')"
-              :aria-describedby="describedBy"
-              @click="confirmSend"
-            >
-              Enviar al Cliente
-            </BaseButton>
-          </template>
-        </BaseControlGate>
-      </div>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="ghost" size="lg" @click="showSendChecklist = false">
+            Cancelar
+          </BaseButton>
+          <BaseControlGate :reasons="sendBlockReasons" label="Enviar no disponible" align="end">
+            <template #default="{ describedBy }">
+              <BaseButton
+                variant="primary"
+                size="lg"
+                class="!bg-info-strong hover:!bg-info-strong/90"
+                :loading="scorecardLoading"
+                :disabled="Boolean(sendBlockReasons.length)"
+                :disabled-reason="sendBlockReasons.join(' ')"
+                :aria-describedby="describedBy"
+                @click="confirmSend"
+              >
+                Enviar al Cliente
+              </BaseButton>
+            </template>
+          </BaseControlGate>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <BaseModal v-model="isPreviewOpen" kind="workspace" padding="none">

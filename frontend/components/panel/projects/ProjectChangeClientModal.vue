@@ -143,36 +143,38 @@
       </div>
     </div>
 
-    <div class="sticky bottom-0 flex flex-wrap items-center justify-end gap-2 border-t border-border-muted bg-surface px-6 pb-6 pt-4">
-      <BaseButton
-        variant="secondary"
-        size="sm"
-        data-testid="project-change-client-cancel"
-        @click="emit('close')"
-      >
-        Cancelar
-      </BaseButton>
-      <BaseControlGate
-        :reasons="confirmBlockReasons"
-        label="Cambiar cliente no disponible"
-        align="end"
-      >
-        <template #default="{ describedBy }">
-          <BaseButton
-            variant="primary"
-            size="sm"
-            :loading="store.isUpdating || isLoadingPreview"
-            :disabled="Boolean(confirmBlockReasons.length)"
-            :disabled-reason="confirmBlockReasons.join(' ')"
-            :aria-describedby="describedBy"
-            data-testid="project-change-client-confirm"
-            @click="confirmChange"
-          >
-            {{ store.isUpdating ? 'Aplicando...' : 'Cambiar cliente del proyecto' }}
-          </BaseButton>
-        </template>
-      </BaseControlGate>
-    </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton
+          variant="secondary"
+          size="sm"
+          data-testid="project-change-client-cancel"
+          @click="emit('close')"
+        >
+          Cancelar
+        </BaseButton>
+        <BaseControlGate
+          :reasons="confirmBlockReasons"
+          label="Cambiar cliente no disponible"
+          align="end"
+        >
+          <template #default="{ describedBy }">
+            <BaseButton
+              variant="primary"
+              size="sm"
+              :loading="store.isUpdating || isLoadingPreview"
+              :disabled="Boolean(confirmBlockReasons.length)"
+              :disabled-reason="confirmBlockReasons.join(' ')"
+              :aria-describedby="describedBy"
+              data-testid="project-change-client-confirm"
+              @click="confirmChange"
+            >
+              {{ store.isUpdating ? 'Aplicando...' : 'Cambiar cliente del proyecto' }}
+            </BaseButton>
+          </template>
+        </BaseControlGate>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

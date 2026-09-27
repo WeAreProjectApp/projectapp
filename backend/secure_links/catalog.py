@@ -112,6 +112,14 @@ SECRET_TYPES = {
             _field('message', 'Mensaje', 'Message', TEXTAREA, required=True, max_length=15_000),
         ],
     },
+    'custom': {
+        'label_es': 'Personalizado',
+        'label_en': 'Custom',
+        'fields': [
+            _field('custom_name', 'Nombre del tipo', 'Type name', required=True),
+            _field('content', 'Contenido', 'Content', TEXTAREA, required=True, max_length=15_000),
+        ],
+    },
 }
 
 

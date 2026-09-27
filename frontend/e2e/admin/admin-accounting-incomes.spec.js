@@ -1973,7 +1973,7 @@ test.describe('Admin Accounting Incomes — cliente del ingreso', () => {
     await openBulkClientAssignment(page);
 
     const modal = page.getByTestId('incomes-bulk-assign-modal');
-    const panel = modal.locator('..');
+    const panel = page.getByRole('dialog').filter({ has: modal }).locator('[data-modal-kind]');
     const panelBounds = await panel.boundingBox();
     expect(panelBounds).toMatchObject({ x: 0, y: 0, width: 412, height: 915 });
 

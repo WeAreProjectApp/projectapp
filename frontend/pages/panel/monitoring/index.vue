@@ -166,11 +166,13 @@ onBeforeUnmount(() => { clearInterval(timer); store.requestId += 1; store.close(
           </template>
         </template>
         </div>
-        <BaseModalActions class="shrink-0">
+      </div>
+      <template #footer>
+        <BaseModalActions>
           <BaseButton v-if="store.detail" variant="secondary" :disabled="store.saving" :disabled-reason="tr('busy')" @click="openRecord(store.detail.id, detailPage, detailReports)">{{ tr('refreshDetail') }}</BaseButton>
           <BaseButton variant="secondary" :disabled="store.saving" :disabled-reason="tr('busy')" @click="closeDetail">{{ tr('close') }}</BaseButton>
         </BaseModalActions>
-      </div>
+      </template>
     </BaseModal>
   </div>
 </template>

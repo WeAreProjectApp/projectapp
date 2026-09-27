@@ -4,6 +4,6 @@
   "module": "admin",
   "roles": ["admin"],
   "priority": "P1",
-  "description": "Admin creates a one-time secure link choosing a catalog type, internal title, validity and recipient language; required secret fields are validated server-side and the created URL is shown once with copy actions for the link and a suggested message.",
-  "outcomes": ["success", "error"]
+  "description": "Admin creates a one-time secure link choosing a catalog type, internal title, validity and recipient language; required secret fields are validated server-side and the created URL is shown once with copy actions for the link and a suggested message. Supports Custom with an encrypted name and free text, validates required fields before sending, handles HTML failures without discarding content, retries catalog loading, and clears credentials for a new link. Client and project remain optional in the panel.",
+  "outcomes": ["success", "error", "failure", "display"]
 }

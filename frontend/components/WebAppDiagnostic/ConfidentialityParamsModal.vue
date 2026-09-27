@@ -1,6 +1,6 @@
 <template>
   <BaseModal :model-value="visible" kind="form-wide" @update:model-value="(open) => { if (!open) $emit('cancel') }">
-    <div class="flex flex-col max-h-[90vh]">
+    <div class="flex flex-col">
           <div class="sticky top-0 bg-surface border-b border-border-muted px-6 py-4 rounded-t-2xl z-10">
             <h2 class="text-lg font-semibold text-text-default">Acuerdo de Confidencialidad</h2>
             <p class="text-xs text-text-muted mt-0.5">
@@ -9,7 +9,7 @@
             </p>
           </div>
 
-          <form class="overflow-y-auto flex-1 px-6 py-5 space-y-6" @submit.prevent="handleSave">
+          <form class="px-6 py-5 space-y-6" @submit.prevent="handleSave">
             <section>
               <h3 class="text-xs font-semibold uppercase tracking-wide text-text-brand mb-3">
                 Cliente
@@ -119,16 +119,18 @@
             <p v-if="error" class="text-xs text-danger-strong">{{ error }}</p>
           </form>
 
-          <div class="border-t border-border-muted px-6 py-4 rounded-b-2xl bg-surface">
-            <div class="flex items-center justify-end gap-3">
-              <BaseButton variant="ghost" size="md" @click="$emit('cancel')">Cancelar</BaseButton>
-              <BaseButton variant="primary" size="md" :loading="saving" @click="handleSave">
-                <BaseActionIcon v-if="!saving" action="generate" />
-                {{ saving ? 'Generando…' : 'Guardar y generar PDF' }}
-              </BaseButton>
-            </div>
-          </div>
     </div>
+    <template #footer>
+      <BaseModalActions>
+        <div class="flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:items-center">
+          <BaseButton variant="ghost" size="md" @click="$emit('cancel')">Cancelar</BaseButton>
+          <BaseButton variant="primary" size="md" :loading="saving" @click="handleSave">
+            <BaseActionIcon v-if="!saving" action="generate" />
+            {{ saving ? 'Generando…' : 'Guardar y generar PDF' }}
+          </BaseButton>
+        </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

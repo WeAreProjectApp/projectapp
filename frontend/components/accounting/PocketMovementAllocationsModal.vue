@@ -49,12 +49,14 @@
         </table>
       </div>
 
-      <div class="flex items-center justify-end pt-4">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="secondary" @click="emit('close')">
           Cerrar
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

@@ -26,6 +26,8 @@
 
       <form
         v-else
+        ref="formElement"
+        autocomplete="off"
         novalidate
         class="space-y-5 rounded-2xl border border-border-default bg-surface p-6 shadow-sm panel-portrait:p-8"
         data-testid="secure-link-create-form"
@@ -36,10 +38,17 @@
           <p class="text-sm text-text-muted">{{ t('secureLinks.createSubtitle') }}</p>
         </div>
 
+        <BaseAlert v-if="typesError" variant="danger" data-testid="secure-link-types-error">
+          {{ t('secureLinks.typesError') }}
+          <BaseButton type="button" variant="ghost" size="sm" :loading="loadingTypes" data-testid="secure-link-types-retry" @click="loadTypes">{{ t('secureLinks.retry') }}</BaseButton>
+        </BaseAlert>
+
         <BaseFormField v-slot="{ invalid, errorId }" :label="t('secureLinks.type')" for="secure-link-public-type" required :error="errors.secret_type">
           <BaseSelect
             id="secure-link-public-type"
             v-model="form.secretType"
+            :disabled="!catalogReady || submitting"
+            :disabled-reason="t('secureLinks.typesPending')"
             :options="typeOptions"
             :error="invalid"
             :aria-describedby="errorId"
@@ -48,6 +57,8 @@
         </BaseFormField>
 
         <SecureLinkFields
+          v-if="catalogReady"
+          :disabled="submitting"
           v-model="form.fields"
           :type="selectedType"
           :language="language"
@@ -61,8 +72,8 @@
         <BaseFormField v-slot="{ invalid, errorId }" :label="t('secureLinks.yourEmail')" for="secure-link-public-email" :error="errors.creator_email">
           <BaseInput id="secure-link-public-email" v-model="form.creatorEmail" type="email" :error="invalid" :aria-describedby="errorId" data-testid="secure-link-public-email" />
         </BaseFormField>
-        <BaseFormField :label="t('secureLinks.titleLabel')" :hint="t('secureLinks.titleHint')" for="secure-link-public-title">
-          <BaseInput id="secure-link-public-title" v-model="form.title" maxlength="160" data-testid="secure-link-public-title" />
+        <BaseFormField v-slot="{ invalid, errorId }" :error="errors.title" :label="t('secureLinks.titleLabel')" :hint="t('secureLinks.titleHint')" for="secure-link-public-title">
+          <BaseInput id="secure-link-public-title" v-model="form.title" :error="invalid" :aria-describedby="errorId" maxlength="160" data-testid="secure-link-public-title" />
         </BaseFormField>
         <BaseFormField :label="t('secureLinks.validity')" for="secure-link-public-validity" :error="errors.validity_days">
           <BaseSegmented id="secure-link-public-validity" v-model="form.validityDays" :options="validityOptions" data-testid="secure-link-public-validity" />
@@ -82,15 +93,15 @@
           @update:token="recaptchaToken = $event"
         />
 
-        <BaseAlert v-if="generalError" variant="danger" data-testid="secure-link-public-error">{{ generalError }}</BaseAlert>
+        <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-public-error">{{ generalError }}</BaseAlert>
 
         <BaseButton
           type="submit"
           variant="primary"
           class="w-full"
           :loading="submitting"
-          :disabled="recaptchaEnabled && !recaptchaToken"
-          :disabled-reason="recaptchaEnabled && !recaptchaToken ? t('secureLinks.captchaRequired') : ''"
+          :disabled="!catalogReady || (recaptchaEnabled && !recaptchaToken)"
+          :disabled-reason="!catalogReady ? t('secureLinks.typesPending') : t('secureLinks.captchaRequired')"
           data-testid="secure-link-public-submit"
         >
           {{ submitting ? t('secureLinks.submitting') : t('secureLinks.submit') }}
@@ -113,6 +124,7 @@ import BaseSelect from '~/components/base/BaseSelect.vue';
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { useSecureLinksStore } from '~/stores/secure_links';
+import { useSecureLinkForm } from '~/composables/useSecureLinkForm';
 import { formatDateTime } from '~/utils/formatDate';
 
 definePageMeta({ layout: false });
@@ -130,8 +142,7 @@ const form = reactive({
   secretType: 'credentials', fields: {}, creatorName: '', creatorEmail: '', title: '',
   validityDays: 7, website: '',
 });
-const errors = ref({});
-const generalError = ref('');
+const formElement = ref(null);
 const submitting = ref(false);
 const created = ref(null);
 const recaptchaToken = ref('');
@@ -143,6 +154,7 @@ const typeOptions = computed(() => store.types.map((type) => ({
   label: language.value === 'en' ? type.label_en : type.label_es,
 })));
 const selectedType = computed(() => store.typeByKey(form.secretType));
+const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
 const validityOptions = computed(() => [1, 3, 7].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
 const copyFeedback = computed(() => clipboard.feedbackFor('secure-link-public-url'));
 const mailtoHref = computed(() => (
@@ -159,22 +171,23 @@ useHead(() => ({
   ],
 }));
 
-watch(() => form.secretType, () => { form.fields = {}; });
+watch(() => form.secretType, () => { form.fields = {}; resetErrors(); });
 
-onMounted(() => store.fetchTypes());
-
-function mapErrors(error) {
-  const fieldErrors = error?.fieldErrors || {};
-  errors.value = Object.fromEntries(
-    Object.entries(fieldErrors).map(([key, value]) => [key, Array.isArray(value) ? value[0] : value]),
-  );
-  const handled = Object.keys(errors.value).some((key) => key !== 'fields');
-  generalError.value = errors.value.fields || (handled ? '' : (error?.message || t('secureLinks.genericError')));
-}
+onMounted(loadTypes);
 
 async function submit() {
-  errors.value = {};
-  generalError.value = '';
+  if (submitting.value || !catalogReady.value) return;
+  resetErrors();
+  if (!form.creatorName.trim()) errors.value.creator_name = t('secureLinks.validation.required');
+  else if ([...form.creatorName.trim()].length > 120) errors.value.creator_name = t('secureLinks.validation.maxLength', { max: 120 });
+  if ([...form.title.trim()].length > 160) errors.value.title = t('secureLinks.validation.maxLength', { max: 160 });
+  if (form.creatorEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.creatorEmail.trim())) errors.value.creator_email = t('secureLinks.validation.email');
+  validateFields(form.fields);
+  if (recaptchaEnabled && !recaptchaToken.value) generalError.value = t('secureLinks.captchaRequired');
+  if (Object.keys(errors.value).length || generalError.value) {
+    await focusError();
+    return;
+  }
   submitting.value = true;
   const result = await store.publicCreate({
     secret_type: form.secretType,
@@ -189,8 +202,9 @@ async function submit() {
   });
   submitting.value = false;
   if (!result.success) {
-    mapErrors(result.error);
+    mapErrors(result.error, ['secret_type', 'title', 'creator_name', 'creator_email', 'validity_days', ...(selectedType.value?.fields || []).map((field) => field.key)]);
     captchaUnavailable.value = result.error?.code === 'captcha_unavailable';
+    recaptchaToken.value = '';
     captchaResetKey.value += 1;
     return;
   }
@@ -210,6 +224,9 @@ function copyLink() {
 function reset() {
   created.value = null;
   form.title = '';
+  form.fields = {};
+  recaptchaToken.value = '';
+  resetErrors();
   captchaResetKey.value += 1;
 }
 </script>

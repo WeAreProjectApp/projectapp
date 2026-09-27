@@ -39,7 +39,7 @@ function mountModal(props = {}) {
         BaseModal: {
           props: ['modelValue', 'kind', 'lockScroll'],
           emits: ['close'],
-          template: '<div v-if="modelValue" :data-lock-scroll="String(lockScroll)"><slot /></div>',
+          template: '<div v-if="modelValue" :data-lock-scroll="String(lockScroll)"><slot /><slot name="footer" /></div>',
         },
       },
     },

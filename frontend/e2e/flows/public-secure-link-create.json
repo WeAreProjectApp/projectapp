@@ -4,6 +4,6 @@
   "module": "public",
   "roles": ["guest"],
   "priority": "P1",
-  "description": "Client creates a secure link addressed to the ProjectApp team from the public page (type, fields, name, validity up to 7 days, captcha); receives the one-time URL to copy or email, and sees field errors when required values are missing.",
-  "outcomes": ["success", "error"]
+  "description": "Client creates a secure link addressed to the ProjectApp team from the public page (type, fields, name, validity up to 7 days, captcha); receives the one-time URL to copy or email, and sees field errors when required values are missing. Supports Custom with an encrypted name and free text, validates required fields before sending, handles HTML failures without discarding content, retries catalog loading, and clears credentials for a new link.",
+  "outcomes": ["success", "error", "failure", "display"]
 }

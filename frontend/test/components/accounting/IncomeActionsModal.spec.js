@@ -23,7 +23,7 @@ function mountModal(record) {
         BaseModal: {
           props: ['modelValue', 'size'],
           emits: ['close'],
-          template: '<div><slot /></div>',
+          template: '<div><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           emits: ['click'],

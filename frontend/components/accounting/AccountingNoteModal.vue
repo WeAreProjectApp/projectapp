@@ -45,9 +45,11 @@ const emit = defineEmits(['close']);
       >
         <HighlightText :text="notes" :query="highlightQuery" />
       </p>
-      <div class="flex justify-end pt-2">
-        <BaseButton variant="secondary" @click="emit('close')">Cerrar</BaseButton>
-      </div>
     </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="secondary" @click="emit('close')">Cerrar</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

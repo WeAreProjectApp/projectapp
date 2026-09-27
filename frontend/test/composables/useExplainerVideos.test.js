@@ -7,15 +7,15 @@ import {
 } from '../../composables/useExplainerVideos'
 
 describe('useExplainerVideos', () => {
-  it.each(['additional-modules', 'financing'])('keeps the Spanish %s render at 45 seconds', (id) => {
-    // Fails if an existing explainer render is accidentally replaced by the proposal timing.
-    expect(explainerVideoFor(id, 'es')).toMatchObject({
-      id,
-      language: 'es',
-      durationSeconds: 45,
-      width: 1920,
-      height: 1080,
-    })
+  it.each([
+    ['additional-modules', 60],
+    ['financing', 60],
+  ])('describes the published %s video', (id, durationSeconds) => {
+    const descriptor = explainerVideoFor(id, 'es')
+    expect(descriptor).toMatchObject({ id, language: 'es', width: 1920, height: 1080 })
+    expect(descriptor.src).toBeTruthy()
+    expect(descriptor.poster).toBeTruthy()
+    expect(descriptor.durationSeconds).toBe(durationSeconds)
   })
 
   it('describes the Spanish proposal render with its production duration', () => {

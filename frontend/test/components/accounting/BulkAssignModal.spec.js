@@ -85,7 +85,7 @@ function mountModal(props = {}) {
           name: 'BaseModal',
           props: ['modelValue', 'kind', 'size', 'titleId', 'initialFocus'],
           emits: ['update:modelValue', 'close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
       },
     },

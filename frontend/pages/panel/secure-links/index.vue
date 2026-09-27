@@ -106,7 +106,9 @@
           Se abre una sola vez y vence el {{ formatDateTime(createdModal.expiresAt) }}. Puedes volver a copiarlo desde el detalle del enlace.
         </p>
         <code class="block break-all rounded bg-surface-muted p-3 text-xs" data-testid="secure-link-created-url">{{ createdModal.url }}</code>
-        <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
+      </div>
+      <template #footer>
+        <BaseModalActions>
           <BaseButton variant="secondary" size="sm" data-testid="secure-link-copy-message" @click="copyCreated('message')">
             <BaseActionIcon action="copy" />
             {{ createdFeedback('message').label || 'Copiar mensaje sugerido' }}
@@ -116,8 +118,8 @@
             {{ createdFeedback('url').label || 'Copiar enlace' }}
           </BaseButton>
           <BaseButton variant="primary" size="sm" data-testid="secure-link-created-close" @click="createdModal.open = false">Listo</BaseButton>
-        </div>
-      </div>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <ConfirmModal

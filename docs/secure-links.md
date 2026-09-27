@@ -24,6 +24,33 @@ revoca o se reactiva.
 - **Recibidos:** pestaña con lo que envían los clientes y el conteo de enlaces
   sin abrir. El correo de aviso enlaza a `/panel/secure-links?link=<id>`.
 
+## Formulario y errores
+
+Cliente y proyecto son opcionales. El panel pide título interno y los campos
+obligatorios del tipo elegido; la página pública pide el nombre del remitente,
+contenido y CAPTCHA cuando está habilitado. Idioma y vigencia conservan sus defaults.
+
+**Personalizado** pide `fields.custom_name` (nombre, hasta 200 caracteres) y
+`fields.content` (texto libre, hasta 15 000). Ambos se cifran; las listas, MCP y
+el estado público previo a revelar sólo muestran «Personalizado». El nombre no
+se agrega a un catálogo global. API y MCP mantienen los endpoints y argumentos
+existentes, sin migración de esquema.
+
+Los formularios validan antes de enviar, muestran errores junto al campo y
+conservan el contenido mientras se reintenta. Si el catálogo falla, ofrecen
+reintento y bloquean el envío. Las respuestas HTML del servidor o del proxy se
+reemplazan por un mensaje breve; nunca se extrae texto de un traceback para
+mostrarlo. Un fallo de configuración de cifrado devuelve JSON 503 con código
+`secure_links_unavailable`, sin guardar enlace ni evento parcial.
+El cliente HTTP no registra errores Axios de enlaces seguros: pueden contener
+el secreto enviado o el token de apertura dentro del cuerpo de la petición.
+
+Las credenciales nuevas empiezan vacías; cerrar el modal borra su contenido y
+reabrir restablece el ocultamiento. Los campos de contraseña usan
+`autocomplete="new-password"` y el formulario `autocomplete="off"`. Los gestores
+externos pueden ignorar estas indicaciones: su comportamiento requiere prueba
+con credenciales ficticias guardadas en el navegador afectado.
+
 ## Seguridad
 
 - **Cifrado:** carga útil JSON cifrada con Fernet (`PROJECT_ACCESS_CIPHER_KEY`,
@@ -55,7 +82,7 @@ revoca o se reactiva.
 ## Contrato técnico
 
 - App Django `secure_links`: `SecureLink`, `SecureLinkEvent` (append-only),
-  `catalog.py` (8 tipos; tarjetas de pago excluidas a propósito),
+  `catalog.py` (8 tipos predefinidos y Personalizado; tarjetas de pago excluidas a propósito),
   `services.py` (única capa de escritura para panel, página pública y MCP).
 - API panel (sesión + CSRF, staff): `GET /api/secure-links/`,
   `POST create/`, `GET|PATCH|DELETE <id>/`, `POST <id>/content|link|reactivate|revoke/`.
@@ -76,3 +103,15 @@ conector Comunicaciones sin reemitir credenciales, salvo credenciales con
 Compartir directo desde el modal de accesos del proyecto, solicitudes
 personalizadas por cliente, varias aperturas por enlace, aviso por WhatsApp y
 purga automática.
+
+
+## Diagnóstico de creación en producción (2026-09-27)
+
+Se reprodujo en tests la excepción no controlada ante una clave de cifrado
+faltante o inválida y se agregó su manejo. Esto no confirma la causa del
+incidente reportado en projectapp.co: la consulta de registros quedó pendiente
+de la verificación adicional de Tailscale SSH. Antes de declarar resuelto el
+incidente, correlacionar el traceback del POST `/api/secure-links/create/` con
+la versión desplegada, comprobar migraciones y validar la configuración sin
+imprimir la clave. No reemplazar una clave existente: protege datos anteriores.
+Después del despliegue, verificar una creación con contenido ficticio.

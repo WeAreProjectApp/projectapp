@@ -104,3 +104,42 @@ def test_revoke_tool_blocks_link(api_client, mcp_token, make_link):
     response = call_tool(api_client, mcp_token, 'revoke_secure_link', {'link_id': link.pk})
 
     assert json.loads(text(response))['status'] == 'revoked'
+
+
+def test_custom_type_is_discoverable(api_client, mcp_token):
+    """El asistente descubre los campos de Personalizado desde el catálogo."""
+    response = call_tool(api_client, mcp_token, 'list_secure_link_types', {})
+
+    types = {entry['key']: entry for entry in json.loads(text(response))['types']}
+    assert types['custom']['label_es'] == 'Personalizado'
+    assert [field['key'] for field in types['custom']['fields']] == ['custom_name', 'content']
+
+
+def test_mcp_custom_creation_keeps_content_private(api_client, mcp_token):
+    """El contenido personalizado no aparece en lecturas ni logs de MCP."""
+    from secure_links import services
+
+    fields = {'custom_name': 'Private instructions', 'content': '  secret details  '}
+    created = call_tool(api_client, mcp_token, 'create_secure_link', {
+        'secret_type': 'custom', 'title': 'Reference', 'fields': fields,
+    })
+    data = json.loads(text(created))
+
+    detail = call_tool(api_client, mcp_token, 'get_secure_link', {'link_id': data['id']})
+
+    assert data['type_label'] == 'Personalizado'
+    assert fields['custom_name'] not in text(detail)
+    assert fields['content'] not in str(list(McpRequestLog.objects.values()))
+    link = SecureLink.objects.get(pk=data['id'])
+    assert services.content_for(link)['fields'][1]['value'] == fields['content']
+
+
+def test_mcp_custom_creation_rejects_missing_name(api_client, mcp_token):
+    """Un personalizado sin nombre no se guarda desde el asistente."""
+    response = call_tool(api_client, mcp_token, 'create_secure_link', {
+        'secret_type': 'custom', 'title': 'Reference', 'fields': {'content': 'secret'},
+    })
+
+    assert result(response)['isError'] is True
+    assert 'custom_name' in text(response)
+    assert not SecureLink.objects.exists()

@@ -63,6 +63,26 @@ describe('normalizeApiError', () => {
     expect(r.message).toBe('Internal Server Error');
   });
 
+  it.each([500, 502, 403])('hides HTML bodies for HTTP %s', (status) => {
+    const result = normalizeApiError(axiosError(status, '<!doctype html><html>private traceback</html>'), 'Inténtalo de nuevo.');
+
+    expect(result.message).toBe('Inténtalo de nuevo.');
+    expect(result.fieldErrors).toBeNull();
+  });
+
+  it('hides non-markup text served as HTML', () => {
+    const result = normalizeApiError({ response: { status: 500, data: 'private diagnostics', headers: { 'content-type': 'text/html; charset=utf-8' } } }, 'Inténtalo de nuevo.');
+
+    expect(result.message).toBe('Inténtalo de nuevo.');
+  });
+
+  it('hides HTML embedded in JSON messages', () => {
+    const result = normalizeApiError(axiosError(500, { error: '<h1>traceback</h1>', hint: '<p>private</p>' }), 'Inténtalo de nuevo.');
+
+    expect(result.message).toBe('Inténtalo de nuevo.');
+    expect(result.hint).toBeNull();
+  });
+
   it('uses the fallback when there is no response', () => {
     const r = normalizeApiError(new Error('network down'), 'Sin conexión.');
     expect(r.message).toBe('Sin conexión.');

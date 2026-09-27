@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { useId, computed, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
@@ -64,11 +64,13 @@ function onSubmit() {
     until: mode.value === 'until' ? resumeDate.value : null,
   });
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
   <BaseModal :model-value="open" kind="confirm" title-id="income-mute-title" @close="emit('close')">
-    <form data-testid="income-mute-modal" @submit.prevent="onSubmit">
+    <form :id="modalFormId" data-testid="income-mute-modal" @submit.prevent="onSubmit">
       <div class="px-6 pt-5">
         <h3 id="income-mute-title" class="text-lg font-bold text-text-default">
           Silenciar avisos
@@ -106,7 +108,9 @@ function onSubmit() {
         </p>
       </div>
 
-      <div class="px-6 py-4 flex justify-end gap-2 border-t border-border-muted">
+    </form>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton
           type="button"
           variant="ghost"
@@ -116,7 +120,7 @@ function onSubmit() {
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :loading="saving"
           :disabled="!!dateError"
@@ -125,7 +129,7 @@ function onSubmit() {
         >
           {{ saving ? 'Guardando...' : 'Silenciar' }}
         </BaseButton>
-      </div>
-    </form>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

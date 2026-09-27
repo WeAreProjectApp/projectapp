@@ -1,6 +1,6 @@
 # Videos explicativos (brag + HyperFrames)
 
-La edición activa es **brag v2**: dos piezas de 45 segundos en español, con
+La edición activa es **brag v2**: dos piezas de 60 segundos en español latinoamericano, con
 voz Kokoro, música rítmica cálida, subtítulos y recursos de marca. Abren las
 vistas públicas de Módulos adicionales y Programa de Alianza, y el panel
 reutiliza el mismo reproductor. Los interruptores globales y por enlace se mantienen.
