@@ -30,7 +30,7 @@ function mountModal() {
     global: {
       components: { BaseFormField, BaseInput },
       stubs: {
-        BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /></div>' },
+        BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>' },
         BaseButton: { template: '<button v-bind="$attrs" :type="$attrs.type || \'button\'"><slot /></button>' },
         BaseModalActions: { template: '<div><slot /></div>' },
         BaseAlert: { template: '<div><slot /></div>' },

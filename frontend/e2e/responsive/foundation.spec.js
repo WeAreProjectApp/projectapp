@@ -16,6 +16,34 @@ async function adminSession(page) {
     : null);
 }
 
+async function expectVisibleFooter(page, dialog) {
+  const footer = dialog.locator('[data-modal-footer]');
+  const box = await footer.boundingBox();
+  expect(box).not.toBeNull();
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(page.viewportSize().height + 1);
+  await expect(footer.getByRole('button', { name: 'Cancelar' })).toBeInViewport();
+  await expect(footer.getByRole('button', { name: 'Aceptar' })).toBeInViewport();
+  expect(await dialog.evaluate((element) => element.scrollWidth - element.clientWidth)).toBeLessThanOrEqual(1);
+  return box;
+}
+
+async function verifyLongModal(page) {
+  await adminSession(page);
+  // quality: allow-deep-link (the styleguide is the foundation acceptance surface)
+  await page.goto('/panel/styleguide', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('button', { name: 'Abrir modal largo', exact: true }).click();
+  const dialog = page.getByRole('dialog');
+  const before = await expectVisibleFooter(page, dialog);
+  const body = dialog.locator('[data-modal-body]');
+  await body.hover();
+  await page.mouse.wheel(0, 10000);
+  await expect.poll(() => body.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect(dialog.getByRole('textbox', { name: 'Observación 16', exact: true })).toBeInViewport();
+  const after = await expectVisibleFooter(page, dialog);
+  return { dialog, before, after };
+}
+
 for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`foundation catalog · ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
     test.use(viewportUse(profile));
@@ -51,9 +79,31 @@ for (const profile of RESPONSIVE_PROFILES) {
       await page.getByRole('button', { name: 'Abrir modal', exact: true }).click();
       const dialog = page.getByRole('dialog');
       await expect(dialog.getByRole('heading', { name: 'Demo modal' })).toHaveText('Demo modal');
+      await expectVisibleFooter(page, dialog);
       await dialog.getByRole('button', { name: 'Cancelar' }).click();
       await expect(page.getByRole('heading', { name: 'Demo modal' })).toHaveCount(0);
       await assertResponsiveScenario(page, testInfo, styleguideScenario, { profile });
     });
+
+    test('styleguide keeps the long modal footer visible while reading its last field', {
+      tag: ['@flow:admin-styleguide', '@outcome:display', `@viewport:${profile}`],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the styleguide is the foundation acceptance surface)
+      const { dialog, before, after } = await verifyLongModal(page);
+      expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+      await dialog.getByRole('button', { name: 'Aceptar' }).click();
+      await expect(dialog).toHaveCount(0);
+    });
   });
 }
+
+test('styleguide keeps long modal actions reachable on a low screen', {
+  tag: ['@flow:admin-styleguide', '@outcome:display'],
+}, async ({ page }) => {
+  // quality: allow-deep-link (the styleguide is the foundation acceptance surface)
+  await page.setViewportSize({ width: 844, height: 390 });
+  const { dialog, before, after } = await verifyLongModal(page);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+  await dialog.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(dialog).toHaveCount(0);
+});

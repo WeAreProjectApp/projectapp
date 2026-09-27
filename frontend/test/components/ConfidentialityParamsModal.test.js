@@ -26,7 +26,7 @@ function mountModal(storedParams = {}) {
         Teleport: { template: '<div><slot /></div>' },
         BaseModal: {
           props: ['modelValue', 'size'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           props: ['variant', 'size', 'loading', 'disabled', 'type'],

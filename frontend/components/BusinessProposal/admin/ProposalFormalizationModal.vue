@@ -200,10 +200,6 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
         <label class="block text-sm text-text-default">Cierre
           <textarea v-model="fields.footer" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" />
         </label>
-        <div class="flex flex-wrap justify-end gap-2">
-          <BaseButton v-if="!options.length" variant="secondary" @click="loadOptions">Reintentar</BaseButton>
-          <BaseButton variant="primary" :loading="busy" :disabled="!canPrepare" disabled-reason="Completa los destinatarios y el mensaje, y corrige o desmarca los documentos no disponibles." data-testid="formalization-prepare" @click="prepare">Preparar vista previa</BaseButton>
-        </div>
       </template>
       <template v-else>
         <div class="space-y-1 rounded-lg bg-surface-raised p-3 text-sm text-text-default">
@@ -230,11 +226,17 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
         </div>
         <iframe v-else :srcdoc="preparation.html_preview" sandbox="" title="Correo de formalización" class="h-[65vh] w-full rounded-lg border border-border-muted bg-surface" data-testid="formalization-email-preview" />
         <p class="text-xs text-text-muted">Esta revisión vence en 24 horas. Si cambian los datos de origen, tendrás que preparar y revisar el envío nuevamente.</p>
-        <div v-if="!consumed" class="flex flex-wrap justify-end gap-2">
-          <BaseButton variant="secondary" :disabled="busy" disabled-reason="Espera a que termine la operación." @click="edit">Volver a editar</BaseButton>
-          <BaseButton variant="primary" :loading="busy" :disabled="busy" data-testid="formalization-send" @click="send">Enviar documentación</BaseButton>
-        </div>
       </template>
     </div>
+    <template #footer>
+      <BaseModalActions v-if="!loading && !preparation">
+        <BaseButton v-if="!options.length" variant="secondary" @click="loadOptions">Reintentar</BaseButton>
+        <BaseButton variant="primary" :loading="busy" :disabled="!canPrepare" disabled-reason="Completa los destinatarios y el mensaje, y corrige o desmarca los documentos no disponibles." data-testid="formalization-prepare" @click="prepare">Preparar vista previa</BaseButton>
+      </BaseModalActions>
+      <BaseModalActions v-if="!loading && preparation && !consumed">
+        <BaseButton variant="secondary" :disabled="busy" disabled-reason="Espera a que termine la operación." @click="edit">Volver a editar</BaseButton>
+        <BaseButton variant="primary" :loading="busy" :disabled="busy" data-testid="formalization-send" @click="send">Enviar documentación</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

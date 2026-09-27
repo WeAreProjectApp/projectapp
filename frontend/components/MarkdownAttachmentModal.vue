@@ -1,9 +1,9 @@
 <template>
   <Teleport to="body">
     <div v-if="open"
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 backdrop-blur-sm p-0 panel-portrait:p-4"
       @click.self="onClose">
-      <div class="bg-surface dark:bg-primary rounded-2xl shadow-2xl w-full max-w-7xl h-[90vh] flex flex-col overflow-hidden">
+      <div class="bg-surface dark:bg-primary panel-portrait:rounded-2xl shadow-overlay w-full max-w-7xl h-dvh panel-portrait:h-[90dvh] flex flex-col overflow-hidden">
 
         <!-- Header -->
         <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted dark:border-white/[0.06]">
@@ -93,7 +93,7 @@
         </div>
 
         <!-- Footer -->
-        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-border-muted dark:border-white/[0.06]">
+        <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
           <BaseButton variant="ghost" size="sm" @click="onClose">
             Cancelar
           </BaseButton>
@@ -102,7 +102,7 @@
             <BaseActionIcon action="attach" />
             {{ loading ? 'Procesando…' : 'Adjuntar al correo' }}
           </BaseButton>
-        </div>
+        </BaseModalActions>
 
       </div>
     </div>

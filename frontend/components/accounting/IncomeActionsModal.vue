@@ -41,10 +41,12 @@
         </li>
       </ul>
 
-      <div class="px-6 py-4 border-t border-border-muted flex justify-end">
-        <BaseButton variant="secondary" @click="emit('close')">Cerrar</BaseButton>
-      </div>
     </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="secondary" @click="emit('close')">Cerrar</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

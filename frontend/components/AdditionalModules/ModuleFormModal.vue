@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { useId, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -130,6 +130,8 @@ function submit() {
     implementation_requirements_en: parseLines(form.implementation_requirements_en),
   })
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -140,7 +142,7 @@ function submit() {
     @update:model-value="emit('update:modelValue', $event)"
     @close="close"
   >
-    <form class="flex min-h-0 flex-col" data-testid="additional-module-form" @submit.prevent="submit">
+    <form :id="modalFormId" class="flex min-h-0 flex-col" data-testid="additional-module-form" @submit.prevent="submit">
       <header class="border-b border-border-default px-5 py-5 sm:px-7">
         <div class="flex items-start justify-between gap-4">
           <div>
@@ -155,7 +157,7 @@ function submit() {
         </div>
       </header>
 
-      <div class="space-y-5 overflow-y-auto px-5 py-5 sm:px-7">
+      <div class="space-y-5 px-5 py-5 sm:px-7">
         <div class="grid gap-4 sm:grid-cols-[1fr_1fr_7rem]">
           <BaseFormField :label="t('additionalModules.category')" for="additional-module-category" required :error="fieldErrors.category">
             <BaseSelect
@@ -241,12 +243,14 @@ function submit() {
         </BaseAlert>
       </div>
 
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="ghost" @click="close">{{ t('additionalModules.cancel') }}</BaseButton>
-        <BaseButton type="submit" :loading="saving" data-testid="additional-module-save">
+        <BaseButton type="submit" :form="modalFormId" :loading="saving" data-testid="additional-module-save">
           {{ t('additionalModules.save') }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>

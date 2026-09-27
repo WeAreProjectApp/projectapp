@@ -42,7 +42,7 @@ function mountModal(props = {}) {
     props: { open: true, entry, ...props },
     global: {
       stubs: {
-        BaseModal: { template: '<div><slot /></div>' },
+        BaseModal: { template: '<div><slot /><slot name="footer" /></div>' },
         EmailRecipientFields: EmailRecipientFieldsStub,
         BaseButton: {
           template: '<button><slot /></button>',

@@ -892,7 +892,8 @@ test.describe('Admin Accounting Collections', () => {
     await page.getByTestId('collection-actions-1').click();
     await expect(page.getByTestId('collection-delete-1')).toHaveCount(0);
     await expect(page.getByTestId('collection-cancel-1')).toBeVisible();
-    await page.getByTestId('collection-actions-modal').getByRole('button', { name: 'Cerrar' }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByTestId('collection-actions-modal') });
+    await dialog.getByRole('button', { name: 'Cerrar' }).click();
     // Pagada: callejón cerrado, ni anular ni eliminar.
     await page.getByTestId('collection-actions-3').click();
     await expect(page.getByTestId('collection-delete-3')).toHaveCount(0);

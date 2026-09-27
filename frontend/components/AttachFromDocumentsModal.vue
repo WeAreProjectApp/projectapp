@@ -1,7 +1,7 @@
 <template>
-  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"
+  <div v-if="open" class="fixed inset-0 z-50 flex items-center justify-center p-0 panel-portrait:p-4 bg-black/40"
     @click.self="$emit('close')">
-    <div class="bg-surface rounded-xl shadow-xl max-w-lg w-full max-h-[85vh] flex flex-col border border-border-default dark:border-white/[0.08]">
+    <div class="bg-surface shadow-overlay w-full h-dvh flex flex-col overflow-hidden panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:max-w-lg panel-portrait:rounded-xl border border-border-default">
       <header class="flex items-center justify-between px-5 py-4 border-b border-border-muted">
         <h3 class="text-sm font-semibold text-text-default">
           Adjuntar desde Documentos
@@ -9,7 +9,7 @@
         <BaseActionButton action="close" label="Cerrar selector de documentos" @click="$emit('close')" />
       </header>
 
-      <div class="flex-1 overflow-y-auto px-5 py-3">
+      <div class="min-h-0 flex-1 overflow-y-auto px-5 py-3">
         <p v-if="!availableDocs.length" class="text-xs text-text-subtle dark:text-white/40 py-6 text-center">
           No hay documentos disponibles para adjuntar.
         </p>
@@ -25,7 +25,7 @@
         </ul>
       </div>
 
-      <footer class="flex items-center justify-end gap-2 px-5 py-3 border-t border-border-muted">
+      <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
         <BaseButton variant="ghost" size="sm" @click="$emit('close')">
           Cancelar
         </BaseButton>
@@ -47,7 +47,7 @@
             </BaseButton>
           </template>
         </BaseControlGate>
-      </footer>
+      </BaseModalActions>
     </div>
   </div>
 </template>

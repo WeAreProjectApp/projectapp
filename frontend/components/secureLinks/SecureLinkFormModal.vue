@@ -1,6 +1,6 @@
 <template>
   <BaseModal :model-value="modelValue" kind="form" padding="md" @update:model-value="emit('update:modelValue', $event)">
-    <form ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
+    <form :id="modalFormId" ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
       <div class="space-y-4 px-6 py-5">
         <h3 class="text-lg font-bold text-text-default">{{ t(link ? 'secureLinks.panel.editTitle' : 'secureLinks.panel.newTitle') }}</h3>
 
@@ -92,18 +92,20 @@
         <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-general-error">{{ generalError }}</BaseAlert>
       </div>
 
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="ghost" size="sm" @click="emit('update:modelValue', false)">{{ t('secureLinks.panel.cancel') }}</BaseButton>
-        <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" :disabled="editingContent && !catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
+        <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" :disabled="editingContent && !catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
           {{ t(link ? 'secureLinks.panel.save' : 'secureLinks.panel.create') }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { useId, computed, reactive, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -213,4 +215,6 @@ async function submit() {
   emit('saved', result.data);
   emit('update:modelValue', false);
 }
+
+const modalFormId = useId();
 </script>

@@ -67,7 +67,7 @@
 
     <!-- Create modal -->
     <BaseModal v-model="formModal.open" kind="form" padding="md">
-      <form novalidate data-testid="linktree-form" @submit.prevent="onSubmit">
+      <form :id="modalFormId" novalidate data-testid="linktree-form" @submit.prevent="onSubmit">
         <div class="space-y-4 px-6 py-5">
           <h3 class="text-lg font-bold text-text-default">Nuevo linktree</h3>
 
@@ -113,13 +113,15 @@
           </BaseFormField>
         </div>
 
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton type="button" variant="ghost" size="sm" @click="formModal.open = false">Cancelar</BaseButton>
-          <BaseButton type="submit" variant="primary" size="sm" :loading="store.isUpdating" data-testid="linktree-save">
+          <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" data-testid="linktree-save">
             Crear y editar
           </BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
 
     <ConfirmModal
@@ -136,7 +138,7 @@
 </template>
 
 <script setup>
-import { onMounted, reactive } from 'vue';
+import { useId, onMounted, reactive } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
@@ -270,4 +272,6 @@ async function onDelete(tree) {
     notify.error({ title: 'No se pudo eliminar el linktree' });
   }
 }
+
+const modalFormId = useId();
 </script>

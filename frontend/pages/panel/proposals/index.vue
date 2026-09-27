@@ -461,10 +461,12 @@
           <h3 class="mb-2 text-lg font-bold text-text-default">¿Enviar esta propuesta?</h3>
           <p class="text-sm text-text-muted">Se enviará un email al cliente con el enlace de la propuesta.</p>
         </div>
-        <BaseModalActions>
-          <BaseButton variant="secondary" size="md" @click="sendConfirmId = null">Cancelar</BaseButton>
-          <BaseButton variant="primary" size="md" :disabled="isSending" @click="confirmSend">{{ isSending ? 'Enviando...' : 'Sí, enviar' }}</BaseButton>
-        </BaseModalActions>
+        <template #footer>
+          <BaseModalActions>
+            <BaseButton variant="secondary" size="md" @click="sendConfirmId = null">Cancelar</BaseButton>
+            <BaseButton variant="primary" size="md" :disabled="isSending" @click="confirmSend">{{ isSending ? 'Enviando...' : 'Sí, enviar' }}</BaseButton>
+          </BaseModalActions>
+        </template>
       </BaseModal>
 
       <BaseModal v-model="quickLogOpen" kind="form">
@@ -496,7 +498,9 @@
               </BaseFormField>
             </div>
           </div>
-          <BaseModalActions>
+        </template>
+        <template #footer>
+          <BaseModalActions v-if="(quickLogProposal)">
             <BaseButton variant="secondary" size="md" @click="quickLogProposal = null">Cancelar</BaseButton>
             <BaseButton
               variant="primary"

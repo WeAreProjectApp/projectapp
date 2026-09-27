@@ -537,7 +537,7 @@ test.describe('Admin project lifecycle states', () => {
     await page.getByTestId('project-state-target').selectOption('6');
     await page.getByTestId('project-state-preview').click();
 
-    const modal = page.getByTestId('project-state-transition-modal');
+    const modal = page.getByRole('dialog').filter({ has: page.getByTestId('project-state-transition-modal') });
     const orderedTestIds = await modal.evaluate((root) => [
       'project-state-target',
       'project-state-review-step',

@@ -17,7 +17,7 @@ jest.mock('~/stores/proposal_clients', () => ({
 const BaseModalStub = {
   props: ['modelValue'],
   emits: ['close'],
-  template: '<div v-if="modelValue"><slot /></div>',
+  template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
 };
 const BaseButtonStub = {
   props: ['loading', 'disabled'],
