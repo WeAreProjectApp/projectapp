@@ -1,0 +1,16 @@
+{
+  "id": "admin-service-contract-settings",
+  "name": "Admin Service Contract Settings",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "An admin opens Configuraciones in Propuestas to manage global duration and shared notice options and their three independent defaults. Saving applies to future modal openings without rewriting existing contracts. Validation, load retry and failed-save preservation are visible.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

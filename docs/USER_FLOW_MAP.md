@@ -6299,7 +6299,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-contract-download` | admin | P2 | display | 1 |
 | `admin-proposal-contract-edit` | admin | P2 | success | 1 |
 | `admin-proposal-contract-generate` | admin | P1 | success | 1 |
-| `admin-proposal-contract-modality` | admin | P1 | success,error,display | — |
+| `admin-proposal-contract-modality` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-contract-terms-visibility` | admin | P2 | success,failure | 1 |
 | `admin-proposal-create` | admin | P1 | success,error | 1 |
 | `admin-proposal-create-and-send` | admin | P2 | success,error | 1 |
@@ -6367,6 +6367,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-seller-inactivity-escalation` | admin | P2 | — | 0 |
 | `admin-send-branded-email` | admin | P2 | display,success,failure | 1 |
 | `admin-send-proposal-email` | admin | P2 | display,success,failure | 1 |
+| `admin-service-contract-settings` | admin | P2 | success,error,failure,display | — |
 | `admin-standalone-email-attachments` | admin | P2 | success,error | 1 |
 | `admin-standalone-email-composer` | admin | P2 | display,success,failure | 1 |
 | `admin-standalone-email-defaults` | admin | P2 | display,success,error | 1 |
@@ -8004,6 +8005,17 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Error:** un rechazo del backend (fuera de negociación, plantilla sin texto de servicio) deja la modalidad anterior y explica el motivo; sin los tres datos del servicio el formulario no se envía.
 - **Límites:** cambiar de modalidad no borra documentos; los de la otra modalidad no se sirven ni se sincronizan a la plataforma. La vista pública "Contrato y condiciones" sigue mostrando el contrato único.
 
+#### Datos del servicio configurables
+
+Duración y ambos preavisos ofrecen opciones globales y Personalizado (enteros de
+1–999). Las preselecciones iniciales son 9 meses / 60 / 60 días. Se envían números
+nuevos y el servidor guarda letras con el número entre paréntesis. La duración
+incluye mes/meses; la plantilla añade días calendario a los preavisos.
+Los contratos previos mantienen sus valores: los textos no reconocibles muestran
+Valor guardado hasta que se elija reemplazarlos. Carga fallida o configuración
+inválida bloquea la generación por plantilla y ofrece Reintentar. Vacíos o números
+inválidos no se envían; los errores aparecen junto a cada campo.
+
 ### FLOW: `admin-proposal-document-markdown`
 
 - **Módulo:** admin
@@ -8096,6 +8108,18 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Success:** el detalle muestra historial, **Ver contenido** descifra sin gastar el enlace, **Revocar** lo desactiva y **Reactivar** lo vuelve a habilitar (opcionalmente con un enlace nuevo).
 - **API:** `GET /api/secure-links/`, `GET /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
+
+### FLOW: `admin-service-contract-settings`
+
+- **Módulo:** admin
+- **Rol:** admin
+- **Prioridad:** P2
+- **Ruta:** `/panel/proposals` → Configuraciones
+- **Recorrido:** abrir Configuraciones, editar catálogos de duración y preavisos, elegir las tres preselecciones y guardar.
+- **Display:** muestra duración en meses, lista compartida de preavisos en días y tres preselecciones independientes; explica la conservación de contratos existentes.
+- **Success:** guarda mediante PATCH de company-settings y las siguientes aperturas del modal reciben la configuración.
+- **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
+- **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
 
 ### FLOW: `proposal-closing-contact`
 

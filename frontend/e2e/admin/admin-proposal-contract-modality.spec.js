@@ -41,6 +41,13 @@ function contractDoc(id, documentType, title) {
 const COMBINED = contractDoc(501, 'contract', 'Contrato de desarrollo de software');
 const PRODUCT = contractDoc(502, 'contract_product', 'Contrato de producto');
 const SERVICE = contractDoc(503, 'contract_service', 'Contrato de servicio');
+const SERVICE_SETTINGS = {
+  duration_options: [3, 6, 9, 12],
+  notice_options: [30, 60, 90],
+  default_duration: 9,
+  default_renewal_notice: 60,
+  default_termination_notice: 60,
+};
 
 function buildProposal(overrides = {}) {
   return {
@@ -66,14 +73,27 @@ function json(status, body) {
   return { status, contentType: 'application/json', body: JSON.stringify(body) };
 }
 
-function buildHandler(state, { modalityStatus = 200, onModality = () => {}, onUpdate = () => {} } = {}) {
+function buildHandler(state, {
+  modalityStatus = 200,
+  onModality = () => {},
+  onUpdate = () => {},
+  companySettings = SERVICE_SETTINGS,
+  companySettingsStatuses = [],
+} = {}) {
+  let companySettingsRequests = 0;
   return async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') return json(200, { user: { username: 'admin', is_staff: true } });
     if (apiPath === 'proposals/dashboard/') return json(200, { total: 1, conversion_rate: 100 });
     if (apiPath === 'proposals/alerts/') return json(200, []);
     if (apiPath === 'proposals/' && method === 'GET') return json(200, [state.proposal]);
     if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) return json(200, state.proposal);
-    if (apiPath === 'proposals/company-settings/') return json(200, {});
+    if (apiPath === 'proposals/company-settings/' && method === 'GET') {
+      const status = companySettingsStatuses[companySettingsRequests] ?? 200;
+      companySettingsRequests += 1;
+      return status === 200
+        ? json(200, { service_contract_settings: companySettings })
+        : json(status, { detail: 'Configuración no disponible.' });
+    }
     if (apiPath === `proposals/${PROPOSAL_ID}/contract/modality/` && method === 'PATCH') {
       const payload = route.request().postDataJSON();
       onModality(payload);
@@ -105,17 +125,17 @@ function buildHandler(state, { modalityStatus = 200, onModality = () => {}, onUp
 }
 
 async function openDocuments(page) {
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
   await expect(page.getByTestId('proposal-contract-modality')).toBeVisible({ timeout: 20_000 });
 }
 
 // Display outcomes arrive the way an admin does: panel → Propuestas → proposal → Documentos.
 async function openDocumentsFromPanel(page) {
-  await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+  await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'Propuestas', exact: true }).click({ timeout: 20_000 });
-  await expect(page).toHaveURL(/\/panel\/proposals$/);
+  await expect(page).toHaveURL(/\/es-co\/panel\/proposals$/);
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click({ timeout: 15_000 });
-  await expect(page).toHaveURL(new RegExp(`/panel/proposals/${PROPOSAL_ID}/edit`));
+  await expect(page).toHaveURL(new RegExp(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`));
   await page.getByRole('tab', { name: 'Documentos' }).click();
 }
 
@@ -148,7 +168,7 @@ test.describe('Admin proposal contract modality', () => {
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('PDF · No generado');
   });
 
-  test('the service contract is generated with its three terms', {
+  test('configured defaults generate numeric service terms', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const state = { proposal: buildProposal({ contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT] }) };
@@ -159,19 +179,92 @@ test.describe('Admin proposal contract modality', () => {
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: 'Generar contrato de servicio' })).toBeVisible();
-    await dialog.getByPlaceholder('Ej.: doce (12) meses').fill('doce (12) meses');
-    await dialog.getByPlaceholder('Ej.: treinta (30)').first().fill('treinta (30)');
-    await dialog.getByPlaceholder('Ej.: treinta (30)').last().fill('quince (15)');
+    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('9');
+    await expect(dialog.getByLabel('Preaviso para no renovar (días calendario)')).toHaveValue('60');
+    await expect(dialog.getByLabel('Preaviso de terminación del cliente (días calendario)')).toHaveValue('60');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
 
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el', { timeout: 10_000 });
     expect(updatePayload.variant).toBe('service');
     expect(updatePayload.contract_params).toMatchObject({
       service_contract_source: 'default',
-      service_initial_term: 'doce (12) meses',
-      service_renewal_notice_days: 'treinta (30)',
-      service_termination_notice_days: 'quince (15)',
+      service_initial_term: 9,
+      service_renewal_notice_days: 60,
+      service_termination_notice_days: 60,
     });
+  });
+
+  test('a custom service duration submits its numeric value', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Falla si Personalizado emite texto contractual en lugar del entero elegido.
+    const state = { proposal: buildProposal({ contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT] }) };
+    let updatePayload = null;
+    await mockApi(page, buildHandler(state, { onUpdate: payload => { updatePayload = payload; } }));
+    await openDocuments(page);
+
+    await page.getByTestId('proposal-generate-contract-service').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByLabel('Duración inicial').selectOption('custom');
+    await dialog.getByLabel('Duración inicial: valor personalizado').fill('21');
+
+    await expect(dialog.getByText('veintiún (21) meses', { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
+
+    await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el', { timeout: 10_000 });
+    expect(updatePayload.contract_params.service_initial_term).toBe(21);
+  });
+
+  test('editing a historical service term preserves its literal wording', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Falla si abrir un contrato antiguo reemplaza una condición negociada que el catálogo no reconoce.
+    const historicalTerm = 'plazo comercial especial acordado';
+    const state = {
+      proposal: buildProposal({
+        contract_modality: 'split',
+        proposal_documents: [COMBINED, PRODUCT, SERVICE],
+        contract_params: {
+          ...CONTRACT_PARAMS,
+          service_contract_source: 'default',
+          service_initial_term: historicalTerm,
+          service_renewal_notice_days: 'sesenta (60)',
+          service_termination_notice_days: 'sesenta (60)',
+        },
+      }),
+    };
+    let updatePayload = null;
+    await mockApi(page, buildHandler(state, { onUpdate: payload => { updatePayload = payload; } }));
+    await openDocuments(page);
+
+    await page.getByTestId('proposal-contract-row-service').getByRole('button', { name: 'Editar parámetros' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('saved');
+    await expect(dialog.getByText(historicalTerm, { exact: true })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Actualizar contrato', exact: true }).click();
+
+    await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el', { timeout: 10_000 });
+    expect(updatePayload.contract_params.service_initial_term).toBe(historicalTerm);
+  });
+
+  test('a settings load failure blocks service generation until retry succeeds', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Falla si el contrato se puede generar sin una configuración de términos validada.
+    const state = { proposal: buildProposal({ contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT] }) };
+    await mockApi(page, buildHandler(state, { companySettingsStatuses: [503] }));
+    await openDocuments(page);
+
+    await page.getByTestId('proposal-generate-contract-service').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('alert')).toHaveText('No se pudo cargar la configuración del servicio. Reintenta para continuar.');
+    await expect(dialog.getByRole('button', { name: 'Generar contrato', exact: true })).toBeDisabled();
+
+    await dialog.getByRole('button', { name: 'Reintentar', exact: true }).click();
+
+    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('9');
+    await expect(dialog.getByLabel('Preaviso para no renovar (días calendario)')).toHaveValue('60');
+    await expect(dialog.getByRole('button', { name: 'Generar contrato', exact: true })).toBeEnabled();
   });
 
   test('a refused separation keeps the single contract and explains why', {
@@ -191,6 +284,7 @@ test.describe('Admin proposal contract modality', () => {
   test('an accepted proposal shows its modality without letting it change', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (localized panel entry is followed by visible Propuestas, proposal, and Documentos navigation)
     const state = { proposal: buildProposal({ status: 'accepted', contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT, SERVICE] }) };
     await mockApi(page, buildHandler(state));
     await openDocumentsFromPanel(page);
@@ -206,6 +300,7 @@ test.describe('Admin proposal contract modality', () => {
   test('the switch stays hidden before the negotiation', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (localized panel entry is followed by visible Propuestas, proposal, and Documentos navigation)
     const state = { proposal: buildProposal({ status: 'sent', proposal_documents: [] }) };
     await mockApi(page, buildHandler(state));
     await openDocumentsFromPanel(page);

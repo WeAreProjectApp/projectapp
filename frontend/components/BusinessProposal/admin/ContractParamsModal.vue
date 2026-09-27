@@ -150,18 +150,22 @@
               <!-- Service terms: only the standalone service contract uses them -->
               <fieldset v-if="variant === 'service'" data-testid="contract-service-terms">
                 <legend class="text-sm font-semibold text-text-brand mb-1">Datos del servicio</legend>
-                <p class="text-xs text-text-muted mb-3">Escríbelos como deben leerse en el contrato: en letras y con el número entre paréntesis.</p>
-                <div class="space-y-4">
-                  <BaseFormField
+                <p class="text-xs text-text-muted mb-3">{{ t('serviceContract.formHint') }}</p>
+                <p v-if="loadingDefaults" role="status" class="text-sm text-text-muted">{{ t('serviceContract.loading') }}</p>
+                <div v-else-if="!serviceSettingsReady" class="space-y-2">
+                  <p role="alert" class="text-sm text-danger-strong">{{ t('serviceContract.loadError') }}</p>
+                  <BaseButton size="sm" variant="secondary" @click="retryDefaults">{{ t('serviceContract.retry') }}</BaseButton>
+                </div>
+                <div v-else class="space-y-4">
+                  <ServiceContractTermField
                     v-for="field in SERVICE_CONTRACT_FIELDS"
-                    :key="field.key"
-                    :label="field.label"
-                    required
-                    size="sm"
+                    :key="`${formRevision}-${field.key}`"
+                    v-model="form[field.key]"
+                    :label="t(`serviceContract.fields.${field.key}`)"
+                    :options="companyDefaults.service_contract_settings[field.optionsKey]"
+                    :duration="Boolean(field.duration)"
                     :error="formErrors[field.key]"
-                  >
-                    <BaseInput v-model="form[field.key]" type="text" size="sm" :placeholder="field.placeholder" />
-                  </BaseFormField>
+                  />
                 </div>
               </fieldset>
             </template>
@@ -244,7 +248,8 @@
                 variant="primary"
                 size="md"
                 :loading="saving"
-                :disabled="saving || (contractSource === 'custom' && !customMarkdown.trim())"
+                :disabled="saving || serviceSettingsBlocked || (contractSource === 'custom' && !customMarkdown.trim())"
+                :disabled-reason="serviceSettingsBlocked ? t('serviceContract.loadError') : ''"
               >
                 {{ saving ? 'Generando...' : submitLabel }}
               </BaseButton>
@@ -258,8 +263,11 @@
 import { ref, watch, computed, onBeforeUnmount } from 'vue';
 import DOMPurify from 'dompurify';
 import { CONTRACT_LOCKED_STATUSES, CONTRACT_VARIANTS, SERVICE_CONTRACT_FIELDS } from '~/stores/proposals_constants';
+import ServiceContractTermField from './ServiceContractTermField.vue';
+import { serviceTermNumber, validServiceContractSettings } from '~/utils/serviceContractTerms';
 
 const { parseMarkdown } = useMarkdownPreview();
+const { t } = useI18n();
 
 const props = defineProps({
   visible: { type: Boolean, default: false },
@@ -288,6 +296,11 @@ const contractSource = ref('default');
 const customMarkdown = ref('');
 const showPreview = ref(false);
 const formErrors = ref({});
+const loadingDefaults = ref(false);
+const formRevision = ref(0);
+const serviceSettingsReady = computed(() => validServiceContractSettings(companyDefaults.value.service_contract_settings));
+const serviceSettingsBlocked = computed(() => props.variant === 'service' && contractSource.value === 'default'
+  && (loadingDefaults.value || !serviceSettingsReady.value));
 
 const debouncedMarkdown = ref('');
 let debounceTimer = null;
@@ -318,13 +331,36 @@ const form = ref({
 });
 
 async function loadDefaults() {
-  const result = await proposalStore.fetchCompanySettings();
-  if (result.success) {
-    companyDefaults.value = result.data;
+  loadingDefaults.value = true;
+  try {
+    const result = await proposalStore.fetchCompanySettings();
+    companyDefaults.value = result.success ? result.data : {};
+  } catch {
+    companyDefaults.value = {};
+  } finally {
+    loadingDefaults.value = false;
   }
 }
 
+function fillServiceDefaults() {
+  if (!serviceSettingsReady.value) return;
+  for (const { key, defaultKey } of SERVICE_CONTRACT_FIELDS) {
+    if (form.value[key] === '' || form.value[key] == null) {
+      form.value[key] = companyDefaults.value.service_contract_settings[defaultKey];
+    }
+  }
+}
+
+async function retryDefaults() {
+  await loadDefaults();
+  for (const key of Object.keys(form.value)) {
+    if (!form.value[key] && companyDefaults.value[key]) form.value[key] = companyDefaults.value[key];
+  }
+  fillServiceDefaults();
+}
+
 function resetForm() {
+  formRevision.value += 1;
   formErrors.value = {};
   const defaults = companyDefaults.value;
   const existing = props.initialParams || {};
@@ -348,11 +384,12 @@ function resetForm() {
     contract_date: existing.contract_date || new Date().toISOString().slice(0, 10),
     ...Object.fromEntries(SERVICE_CONTRACT_FIELDS.map(({ key }) => [key, existing[key] || ''])),
   };
+  fillServiceDefaults();
 }
 
 watch(() => props.visible, async (val) => {
   if (val) {
-    if (!companyDefaults.value.contractor_full_name) {
+    if (props.variant === 'service' || !companyDefaults.value.contractor_full_name) {
       await loadDefaults();
     }
     resetForm();
@@ -370,6 +407,7 @@ function handleFileUpload(event) {
 }
 
 function validate() {
+  if (serviceSettingsBlocked.value) return false;
   const errors = {};
   if (contractSource.value === 'default') {
     const required = [
@@ -396,9 +434,10 @@ function validate() {
       errors.contractor_identity = 'Indica el NIT o la cédula del contratista';
     }
     if (props.variant === 'service') {
-      for (const { key, label } of SERVICE_CONTRACT_FIELDS) {
-        if (!form.value[key]?.toString().trim()) {
-          errors[key] = `${label} es obligatorio`;
+      for (const { key } of SERVICE_CONTRACT_FIELDS) {
+        const value = form.value[key];
+        if (!value?.toString().trim() || (typeof value === 'number' && serviceTermNumber(value) === null)) {
+          errors[key] = t('serviceContract.invalidNumber');
         }
       }
     }
