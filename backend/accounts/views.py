@@ -1504,12 +1504,19 @@ def requirement_move_view(request, project_id, req_id):
     Move a card to a new column/order.
     Admin can move to any column. Client can only approve (approval→done).
     """
+    from django.db.models import Count
+
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
 
     try:
-        req = Requirement.objects.get(id=req_id, phase__project=proj)
+        req = (
+            Requirement.objects
+            .select_related('phase__business_proposal', 'scope_item')
+            .annotate(_comments_count=Count('comments'))
+            .get(id=req_id, phase__project=proj)
+        )
     except Requirement.DoesNotExist:
         return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
