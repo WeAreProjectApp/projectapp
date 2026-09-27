@@ -293,7 +293,9 @@
       </div>
 
       <!-- Footer -->
-      <div class="px-6 py-4 border-t border-border-muted flex flex-wrap items-center justify-between gap-3">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <!-- The optional exit, not the default: the point of this modal is
              that consulting the income no longer costs you your place. -->
         <BaseButton
@@ -302,10 +304,10 @@
           data-testid="collection-detail-go-to-income"
           @click="emit('go-to-income', record.income_record_id)"
         >
-        <BaseActionIcon action="forward" /> Ver en Ingresos
+          <BaseActionIcon action="forward" /> Ver en Ingresos
         </BaseButton>
         <span v-else></span>
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:items-center">
           <BaseButton
             variant="secondary"
             data-testid="collection-detail-pdf-download"
@@ -315,8 +317,8 @@
           </BaseButton>
           <BaseButton variant="primary" @click="emit('close')">Cerrar</BaseButton>
         </div>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

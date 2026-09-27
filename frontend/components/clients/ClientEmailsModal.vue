@@ -74,12 +74,14 @@
         </template>
       </div>
 
-      <footer class="px-5 py-3 border-t border-border-muted flex justify-end">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton variant="secondary" size="sm" @click="emit('close')">
           Cerrar
         </BaseButton>
-      </footer>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

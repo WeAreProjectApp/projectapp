@@ -159,6 +159,10 @@ function defaultStubs() {
     NuxtLink: { template: '<a><slot /></a>' },
     Teleport: { template: '<div><slot /></div>' },
     Transition: { template: '<div><slot /></div>' },
+    BaseModal: {
+      props: ['modelValue'],
+      template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
+    },
     BaseInput: BaseInputStub,
     BaseSelect: BaseSelectStub,
     BaseTextarea: BaseTextareaStub,

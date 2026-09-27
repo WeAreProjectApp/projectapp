@@ -1,5 +1,14 @@
 # Technical Documentation — ProjectApp
 
+> **Pies de modales — 2026-09-27:** los modales con acciones inferiores usan
+> `BaseModal` con slot `footer` y `BaseModalActions`. El cuerpo desplaza; el pie
+> permanece fuera del scroll. Altura natural hasta `90dvh` en escritorio y
+> pantalla completa en compacto. `fullHeight` conserva paneles independientes;
+> `useId()` + atributo `form` mantienen el envío nativo fuera del formulario.
+> Sin slot se conserva el comportamiento previo. Inventario:
+> `docs/PANEL_MODAL_FOOTERS.md`. No cambia API ni persistencia.
+
+
 > **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
 > `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
 > error. `create_secure_link` es la única tool MCP que acepta secretos en claro:

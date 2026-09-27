@@ -69,7 +69,7 @@ function mountBar(props = {}) {
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
           props: ['modelValue', 'size'],
-          template: '<div v-if="modelValue" data-testid="modal"><slot /></div>',
+          template: '<div v-if="modelValue" data-testid="modal"><slot /><slot name="footer" /></div>',
         },
       },
     },

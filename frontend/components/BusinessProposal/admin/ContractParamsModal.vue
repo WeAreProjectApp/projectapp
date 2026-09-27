@@ -16,7 +16,7 @@
             </p>
           </div>
 
-          <form class="px-6 py-5 space-y-6" @submit.prevent="handleSubmit">
+          <form :id="modalFormId" class="px-6 py-5 space-y-6" @submit.prevent="handleSubmit">
             <!-- Source toggle -->
             <BaseSegmented
               v-model="contractSource"
@@ -235,27 +235,29 @@
             </template>
 
             <!-- Actions -->
-            <div class="flex items-center justify-end gap-3 pt-4 border-t border-border-muted">
-              <BaseButton variant="ghost" size="md" @click="$emit('cancel')">
-                Cancelar
-              </BaseButton>
-              <BaseButton
-                type="submit"
-                variant="primary"
-                size="md"
-                :loading="saving"
-                :disabled="saving || (contractSource === 'custom' && !customMarkdown.trim())"
-              >
-                {{ saving ? 'Generando...' : submitLabel }}
-              </BaseButton>
-            </div>
           </form>
     </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="ghost" size="md" @click="$emit('cancel')">
+          Cancelar
+        </BaseButton>
+        <BaseButton
+          type="submit" :form="modalFormId"
+          variant="primary"
+          size="md"
+          :loading="saving"
+          :disabled="saving || (contractSource === 'custom' && !customMarkdown.trim())"
+        >
+          {{ saving ? 'Generando...' : submitLabel }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { ref, watch, computed, onBeforeUnmount } from 'vue';
+import { useId, ref, watch, computed, onBeforeUnmount } from 'vue';
 import DOMPurify from 'dompurify';
 import { CONTRACT_LOCKED_STATUSES, CONTRACT_VARIANTS, SERVICE_CONTRACT_FIELDS } from '~/stores/proposals_constants';
 
@@ -434,4 +436,6 @@ function handleSubmit() {
   );
   emit('confirm', { [sourceKey]: 'default', ...params });
 }
+
+const modalFormId = useId();
 </script>

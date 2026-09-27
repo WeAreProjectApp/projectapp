@@ -43,7 +43,7 @@ function mountModal({ mode = 'pdf', catalogVideoVisible = true } = {}) {
         BaseButton: { template: '<button v-bind="$attrs" type="button"><slot /></button>' },
         BaseModal: {
           props: ['modelValue'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
       },
     },

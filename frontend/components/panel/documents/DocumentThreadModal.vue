@@ -227,7 +227,10 @@
         </section>
       </div>
 
-      <div class="flex flex-shrink-0 flex-wrap items-center justify-between gap-3 border-t border-border-muted px-4 py-3 sm:px-6">
+
+    </template>
+    <template #footer>
+      <BaseModalActions v-if="!threadStore.isLoadingThread">
         <BaseButton
           v-if="thread && activeTab === 'relate'"
           variant="danger"
@@ -239,7 +242,7 @@
           Disolver hilo
         </BaseButton>
         <span v-else />
-        <div class="flex items-center gap-2">
+        <div class="flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:items-center">
           <BaseButton variant="secondary" size="md" :disabled="threadStore.isSaving" @click="requestClose">Cerrar</BaseButton>
           <BaseButton
             v-if="activeTab === 'relate'"
@@ -254,7 +257,7 @@
             Guardar hilo
           </BaseButton>
         </div>
-      </div>
+      </BaseModalActions>
     </template>
   </BaseModal>
 

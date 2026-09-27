@@ -25,7 +25,7 @@ const types = [{
 }];
 
 const stubs = {
-  BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /></div>' },
+  BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>' },
   ClientAutocomplete: {
     name: 'ClientAutocomplete',
     props: ['modelValue'],

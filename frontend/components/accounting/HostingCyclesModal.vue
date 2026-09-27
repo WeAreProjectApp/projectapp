@@ -108,9 +108,6 @@
         </div>
       </div>
 
-      <div class="flex items-center justify-end pt-2">
-        <BaseButton type="button" variant="secondary" @click="emit('close')">Cerrar</BaseButton>
-      </div>
     </div>
 
     <ConfirmModal
@@ -123,6 +120,11 @@
       @confirm="confirmDelete"
       @cancel="cycleToDelete = null"
     />
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton type="button" variant="secondary" @click="emit('close')">Cerrar</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

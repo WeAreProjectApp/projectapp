@@ -133,7 +133,9 @@
         barra antes del menú — un botón apagado sin razón visible es un
         callejón sin salida — sólo que ahora vive pegada al botón que gobierna.
       -->
-      <div class="flex shrink-0 items-center justify-between gap-3 px-6 pb-6 pt-2">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <p
           :id="`${testidPrefix}-bulk-hint`"
           class="flex items-center gap-1.5 text-xs text-text-muted min-w-0"
@@ -144,7 +146,7 @@
           <component :is="statusLine.icon" class="w-4 h-4 flex-shrink-0" />
           <span class="truncate">{{ statusLine.text }}</span>
         </p>
-        <div class="flex items-center gap-2 flex-shrink-0">
+        <div class="flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:items-center">
           <BaseButton
             variant="secondary"
             size="sm"
@@ -161,15 +163,15 @@
             :disabled-reason="blockedReason"
             :aria-describedby="`${testidPrefix}-bulk-hint`"
             :data-testid="isClient
-              ? `${testidPrefix}-bulk-assign`
-              : `${testidPrefix}-bulk-assign-project`"
+            ? `${testidPrefix}-bulk-assign`
+            : `${testidPrefix}-bulk-assign-project`"
             @click="confirm"
           >
             {{ isClient ? 'Asignar cliente' : 'Asignar proyecto' }}
           </BaseButton>
         </div>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

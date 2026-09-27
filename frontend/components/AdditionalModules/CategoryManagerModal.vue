@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { useId, reactive, ref, watch } from 'vue'
 
 const props = defineProps({
   modelValue: { type: Boolean, default: false },
@@ -69,6 +69,7 @@ function closeForm() {
 }
 
 defineExpose({ closeForm })
+const modalFormId = useId()
 </script>
 
 <template>
@@ -89,14 +90,14 @@ defineExpose({ closeForm })
         </BaseButton>
       </header>
 
-      <div class="space-y-4 overflow-y-auto px-5 py-5 sm:px-7">
+      <div class="space-y-4 px-5 py-5 sm:px-7">
         <div class="flex justify-end">
           <BaseButton variant="secondary" size="sm" data-testid="additional-category-add" @click="openCreate">
             {{ t('additionalModules.addCategory') }}
           </BaseButton>
         </div>
 
-        <form v-if="formOpen" class="rounded-xl border border-border-default bg-surface-raised p-4" @submit.prevent="submit">
+        <form :id="modalFormId" v-if="formOpen" class="rounded-xl border border-border-default bg-surface-raised p-4" @submit.prevent="submit">
           <h3 class="mb-4 font-medium text-text-brand">
             {{ editingId ? t('additionalModules.editCategory') : t('additionalModules.addCategory') }}
           </h3>
@@ -114,10 +115,7 @@ defineExpose({ closeForm })
           <BaseAlert v-if="errorMessage" class="mt-4" variant="danger">
             {{ errorMessage }}
           </BaseAlert>
-          <BaseModalActions class="-mx-4 -mb-4 mt-4">
-            <BaseButton type="button" variant="ghost" size="sm" @click="closeForm">{{ t('additionalModules.cancel') }}</BaseButton>
-            <BaseButton type="submit" size="sm" :loading="saving">{{ t('additionalModules.save') }}</BaseButton>
-          </BaseModalActions>
+
         </form>
 
         <ul class="space-y-3" data-testid="additional-category-list">
@@ -163,5 +161,11 @@ defineExpose({ closeForm })
         </ul>
       </div>
     </div>
+    <template #footer>
+      <BaseModalActions v-if="formOpen">
+        <BaseButton type="button" variant="ghost" size="sm" @click="closeForm">{{ t('additionalModules.cancel') }}</BaseButton>
+        <BaseButton type="submit" :form="modalFormId" size="sm" :loading="saving">{{ t('additionalModules.save') }}</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

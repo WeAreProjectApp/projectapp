@@ -130,7 +130,7 @@ async function copyGeneratedUrl() {
         </BaseButton>
       </header>
 
-      <div v-if="generatedUrl" class="space-y-5 overflow-y-auto px-5 py-8 sm:px-7">
+      <div v-if="generatedUrl" class="space-y-5 px-5 py-8 sm:px-7">
         <BaseAlert variant="success" :title="t('additionalModules.linkReady')">
           {{ generatedUrl }}
         </BaseAlert>
@@ -145,7 +145,7 @@ async function copyGeneratedUrl() {
       </div>
 
       <template v-else>
-        <div class="grid min-h-0 overflow-y-auto lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div class="grid min-h-0 lg:grid-cols-[minmax(0,1fr)_22rem]">
           <div class="space-y-4 px-5 py-5 sm:px-7">
             <div class="flex flex-wrap items-center justify-between gap-3">
               <span class="text-sm font-medium text-text-muted">
@@ -236,13 +236,15 @@ async function copyGeneratedUrl() {
           </aside>
         </div>
 
-        <footer class="flex justify-end gap-2 border-t border-border-default px-5 py-4 sm:px-7">
-          <BaseButton variant="ghost" @click="emit('update:modelValue', false)">{{ t('additionalModules.cancel') }}</BaseButton>
-          <BaseButton :loading="saving" data-testid="additional-selection-submit" @click="submit">
-            {{ mode === 'share' ? t('additionalModules.generate') : t('additionalModules.download') }}
-          </BaseButton>
-        </footer>
       </template>
     </div>
+    <template #footer>
+      <BaseModalActions v-if="(!(generatedUrl))">
+        <BaseButton variant="ghost" @click="emit('update:modelValue', false)">{{ t('additionalModules.cancel') }}</BaseButton>
+        <BaseButton :loading="saving" data-testid="additional-selection-submit" @click="submit">
+          {{ mode === 'share' ? t('additionalModules.generate') : t('additionalModules.download') }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { useId, computed, reactive, ref, watch } from 'vue';
 import { useCommunicationsStore } from '~/stores/communications';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { folderOptions, folderPath } from '~/utils/communicationFolders';
@@ -90,6 +90,8 @@ async function save() {
   emit('changed');
   notify.success({ title: t(deleting.value ? 'communicationFiling.folderDeleted' : 'communicationFiling.folderSaved') });
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -123,7 +125,7 @@ async function save() {
       </ul>
     </template>
     <BaseModal v-model="modalOpen" kind="form">
-      <form @submit.prevent="save">
+      <form :id="modalFormId" @submit.prevent="save">
         <h2 class="text-lg font-semibold text-text-default">{{ t(deleting ? 'communicationFiling.delete' : (form.id ? 'communicationFiling.edit' : 'communicationFiling.create')) }}</h2>
         <BaseAlert v-if="error" variant="danger" class="mt-3">{{ error }}</BaseAlert>
         <p v-if="deleting" class="my-4 text-sm text-text-muted">{{ t('communicationFiling.confirmDelete') }}</p>
@@ -131,12 +133,14 @@ async function save() {
           <BaseFormField :label="t('communicationFiling.name')"><BaseInput v-model="form.name" required maxlength="120" data-testid="communication-folder-name" /></BaseFormField>
           <BaseFormField :label="t('communicationFiling.parent')"><BaseSelect v-model="form.parent" :options="parentOptions" data-testid="communication-folder-parent" /></BaseFormField>
         </div>
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton v-if="form.id && !deleting" variant="danger" @click="deleting = true">{{ t('communicationFiling.delete') }}</BaseButton>
           <BaseButton variant="secondary" @click="modalOpen = false">{{ t('communicationFiling.cancel') }}</BaseButton>
-          <BaseButton type="submit" :variant="deleting ? 'danger' : 'primary'" :loading="saving" data-testid="communication-folder-save">{{ t(deleting ? 'communicationFiling.delete' : 'communicationFiling.save') }}</BaseButton>
+          <BaseButton type="submit" :form="modalFormId" :variant="deleting ? 'danger' : 'primary'" :loading="saving" data-testid="communication-folder-save">{{ t(deleting ? 'communicationFiling.delete' : 'communicationFiling.save') }}</BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
   </section>
 </template>

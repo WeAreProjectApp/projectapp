@@ -98,7 +98,9 @@
         {{ errorMessage }}
       </BaseAlert>
 
-      <div class="flex justify-end gap-2">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton
           variant="ghost"
           data-testid="folder-change-client-cancel"
@@ -115,8 +117,8 @@
         >
           Cambiar cliente
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

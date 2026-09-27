@@ -117,7 +117,7 @@
         </p>
       </div>
 
-      <form novalidate @submit.prevent="handleCreate">
+      <form :id="modalFormId" novalidate @submit.prevent="handleCreate">
         <div class="space-y-4 px-6 py-4">
           <BaseFormField
             v-slot="{ invalid, errorId }"
@@ -167,21 +167,23 @@
           <BaseAlert v-if="createError" variant="danger">{{ createError }}</BaseAlert>
         </div>
 
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton variant="ghost" size="md" type="button" @click="closeModal">
             Cancelar
           </BaseButton>
-          <BaseButton type="submit" variant="primary" size="md" :loading="creating">
+          <BaseButton type="submit" :form="modalFormId" variant="primary" size="md" :loading="creating">
             {{ creating ? 'Creando...' : 'Crear administrador' }}
           </BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { useId, ref, computed, onMounted } from 'vue';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 
@@ -322,4 +324,6 @@ async function handleReactivate(userId) {
     notify.error(result.error);
   }
 }
+
+const modalFormId = useId();
 </script>
