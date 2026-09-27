@@ -6,10 +6,11 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "During negotiation the admin chooses in Documents whether the deal closes with one contract or with a product contract (software development) and a service contract (hosting, maintenance and support). The tab shows the documents of the chosen modality, the service contract asks for its three terms, and the switch stays read-only once the proposal is accepted or rejected.",
+  "description": "During negotiation the admin chooses one contract or separate product and service contracts. Service terms load global presets or accept custom whole numbers from 1 to 999, persisted as Spanish words with the number in parentheses. Historical saved values remain visible and are preserved. Loading failures block template generation until retry.",
   "outcomes": [
     "success",
     "error",
+    "failure",
     "display"
   ]
 }

@@ -1263,9 +1263,17 @@ export const useProposalStore = defineStore('proposals', {
       }
     },
 
-    /**
-     * fetchDefaultContractTemplate: Get the default contract template markdown.
-     */
+    /** Save the complete global service-term configuration. */
+    async saveServiceContractSettings(settings) {
+      try {
+        const response = await patch_request('proposals/company-settings/', { service_contract_settings: settings });
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, errors: error.response?.data?.service_contract_settings || {} };
+      }
+    },
+
+    /** Get the default contract template markdown. */
     async fetchDefaultContractTemplate() {
       try {
         const response = await get_request('proposals/contract-template/default/');

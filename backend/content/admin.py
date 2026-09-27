@@ -202,7 +202,7 @@ class CompanySettingsForm(forms.ModelForm):
 
     class Meta:
         model = CompanySettings
-        fields = '__all__'
+        exclude = ('service_contract_settings',)
 
     def clean(self):
         cleaned = super().clean()
