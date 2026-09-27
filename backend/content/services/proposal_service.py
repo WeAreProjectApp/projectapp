@@ -76,6 +76,7 @@ def duplicate_proposal(source, *, via_mcp=False):
         urgency_reminder_days=source.urgency_reminder_days,
         discount_percent=source.discount_percent,
         show_contract_terms=source.show_contract_terms,
+        show_explainer_video=source.show_explainer_video,
         is_active=True,
         view_count=0,
         first_viewed_at=None,
@@ -4444,6 +4445,7 @@ def build_proposal_from_json(validated_data):
         urgency_reminder_days=data.get('urgency_reminder_days', 15),
         discount_percent=data.get('discount_percent', 0),
         show_contract_terms=data.get('show_contract_terms', True),
+        show_explainer_video=data.get('show_explainer_video', True),
         email_intro=data.get('email_intro', ''),
         client=client_profile,
     )
@@ -4639,7 +4641,7 @@ def apply_proposal_json_update(proposal, validated_data):
         'market_type_custom', 'language', 'total_investment', 'currency',
         'nationality',
         'reminder_days', 'urgency_reminder_days', 'discount_percent',
-        'show_contract_terms', 'email_intro',
+        'show_contract_terms', 'show_explainer_video', 'email_intro',
     ]
     tracked_old = {}
     for field in metadata_fields:

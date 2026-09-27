@@ -140,6 +140,10 @@ class BusinessProposal(HistoryTrackedModel):
     urgency_reminder_days = models.PositiveIntegerField(default=15)
     discount_percent = models.PositiveIntegerField(default=0)
     is_active = models.BooleanField(default=True)
+    show_explainer_video = models.BooleanField(
+        default=True,
+        help_text="Show the welcome video when the four public options are available.",
+    )
     show_contract_terms = models.BooleanField(
         default=True,
         help_text=(

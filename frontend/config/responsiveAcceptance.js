@@ -87,6 +87,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Buscar, filtrar y operar propuestas y diagnósticos.',
     'Usar selección múltiple y acciones por fila.',
     'Crear, editar y previsualizar una pieza comercial.',
+    'Previsualizar el video de propuestas y controlar su visibilidad global e individual sin desbordar el panel.',
     'Crear o editar un paquete de horas.',
     'Administrar, reordenar, seleccionar y compartir módulos adicionales.',
     'Copiar, abrir, descargar y previsualizar el Programa de Alianza, y mostrar u ocultar su video.',
@@ -193,6 +194,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Explorar el catálogo de módulos, abrir detalles y descargar la selección.',
     'Comparar las dos opciones de alianza, expandir condiciones y descargar el booklet.',
     'Reproducir el video explicativo y recorrer el tour guiado sin desbordar el hero.',
+    'Reproducir el video de bienvenida de propuestas sobre sus cuatro opciones y detenerlo al elegir una.',
     'Confirmar que controles flotantes no cubren el contenido.',
   ]),
 });

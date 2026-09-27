@@ -998,3 +998,14 @@ Slice focal:
 ### Carpetas de Comunicaciones
 
 Validar `list_folders`, `create_folder`, `update_folder`, `delete_folder` con un perfil de cliente y proyecto opcional. Rechazar ciclos, cambio de contexto y eliminación con hilos archivados. `create_thread`/`update_thread` reciben `folder_id`; null retira la ubicación, una comunicación madre lo rechaza. `list_threads` admite `folder=<id>|none`; con `q`, busca todas las carpetas del contexto. Una actualización exclusivamente organizativa funciona con hilo cerrado. Los contratos incluyen `CommunicationFolder` y `CommunicationThread.folder`; los servicios son los mismos del panel.
+
+## Video de bienvenida de propuestas
+
+`BusinessProposal.show_explainer_video` es booleano editable en creación y
+actualización, también por JSON/MCP. La duplicación conserva la preferencia.
+`ExplainerVideoSettings.show_proposal_video` es el control general editable por
+las herramientas genéricas del modelo. Ambos nacen activos. La respuesta admin
+conserva la preferencia; la pública calcula la visibilidad efectiva con ambos
+controles, idioma español y las cuatro opciones disponibles. Verificar PATCH
+válido, rechazo de valor no booleano y conservación de la preferencia al apagar
+el control general; no ejecutar envíos ni migraciones reales.

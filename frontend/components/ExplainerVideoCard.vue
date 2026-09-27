@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
 
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
@@ -13,7 +13,7 @@ const props = defineProps({
   i18nNamespace: {
     type: String,
     required: true,
-    validator: (value) => ['additionalModules', 'financing'].includes(value),
+    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer'].includes(value),
   },
   /** hero = protagonist card on a public view; compact = panel media object. */
   variant: { type: String, default: 'hero', validator: (value) => ['hero', 'compact'].includes(value) },
@@ -25,6 +25,10 @@ const { t } = useI18n()
 
 const state = ref('idle')
 const videoRef = ref(null)
+
+function pause() { videoRef.value?.pause() }
+onBeforeUnmount(pause)
+defineExpose({ pause })
 
 const ns = computed(() => props.i18nNamespace)
 const isCompact = computed(() => props.variant === 'compact')

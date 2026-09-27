@@ -11,6 +11,15 @@
         </p>
       </div>
 
+      <ExplainerVideoCard
+        v-if="showExplainerVideo && showTechnical && showLegal && explainerVideo"
+        ref="explainerCard"
+        :video="explainerVideo"
+        i18n-namespace="proposalExplainer"
+        test-id="proposal-explainer"
+        class="mx-auto mb-8 max-w-3xl sm:mb-10"
+      />
+
       <!-- Cards -->
       <div
         class="grid grid-cols-1 gap-5 sm:gap-6"
@@ -22,7 +31,7 @@
           class="gateway-card group relative bg-primary rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-transparent hover:border-lemon transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer"
-          @click="$emit('select', 'executive')"
+          @click="selectMode('executive')"
         >
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 bg-accent rounded-xl flex items-center justify-center flex-shrink-0">
@@ -50,7 +59,7 @@
           class="gateway-card group relative bg-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-esmerald/15 hover:border-border-default transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer"
-          @click="$emit('select', 'detailed')"
+          @click="selectMode('detailed')"
         >
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 bg-esmerald/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -80,7 +89,7 @@
           class="gateway-card group relative bg-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-teal-500/25 hover:border-teal-600 transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer sm:col-span-2 lg:col-span-1"
-          @click="$emit('select', 'technical')"
+          @click="selectMode('technical')"
         >
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 bg-teal-500/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -110,7 +119,7 @@
           class="gateway-card group relative bg-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-warning-strong/30 hover:border-warning-strong transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer"
-          @click="$emit('select', 'legal')"
+          @click="selectMode('legal')"
         >
           <div class="flex items-center gap-3 mb-4">
             <div class="w-12 h-12 bg-warning-soft rounded-xl flex items-center justify-center flex-shrink-0">
@@ -137,10 +146,13 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';
+import { useExplainerVideo } from '~/composables/useExplainerVideos';
 import { TECH_READING_TIME } from '~/utils/technicalProposalPanels';
 
 const props = defineProps({
+  showExplainerVideo: { type: Boolean, default: false },
   language: {
     type: String,
     default: 'es',
@@ -159,7 +171,13 @@ const props = defineProps({
   },
 });
 
-defineEmits(['select']);
+const emit = defineEmits(['select']);
+const explainerCard = ref(null);
+const explainerVideo = useExplainerVideo('proposal', computed(() => props.language));
+function selectMode(mode) {
+  explainerCard.value?.pause();
+  emit('select', mode);
+}
 
 const i18n = {
   es: {

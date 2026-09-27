@@ -194,6 +194,14 @@
             </div>
             <p class="text-[10px] text-text-subtle mt-1">No modifica el prompt ni las secciones JSON de la propuesta.</p>
           </div>
+          <ProposalExplainerToggle
+            :proposal="proposal"
+            :model-value="form.show_explainer_video"
+            :language="form.language"
+            :show-legal="form.show_contract_terms"
+            :saving="proposalStore.isUpdating"
+            @update:model-value="emit('toggle-explainer-video', $event)"
+          />
         </div>
       </div>
     </div>
@@ -762,6 +770,7 @@ import { computed, ref, watch } from 'vue';
 import {
   QuestionMarkCircleIcon,
 } from '@heroicons/vue/24/outline';
+import ProposalExplainerToggle from '~/components/panel/proposal/ProposalExplainerToggle.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import TabSplitLayout from '~/components/panel/TabSplitLayout.vue';
 import { DEFAULT_METHOD_PHASES } from '~/stores/proposals_constants';
@@ -792,6 +801,7 @@ const emit = defineEmits([
   'open-email-preview',
   'toggle-active',
   'toggle-contract-terms',
+  'toggle-explainer-video',
   'next-action',
   'open-actions',
   'client-selected',

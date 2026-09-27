@@ -10,7 +10,7 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, statSync, readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
-import { narrationFingerprint } from './lib/narration.mjs'
+import { narrationFingerprint, narrationSettings } from './lib/narration.mjs'
 import { resolve } from 'node:path'
 
 import { EDITION, EDITION_ROOT, AUDIO_DIR, HYPERFRAMES_BIN, SHARED_DIR, assertExists, parseArgs, requireLanguage, requireVideo, videoDir } from './lib/paths.mjs'
@@ -42,7 +42,8 @@ if (EDITION === 'brag-v2') {
   assertExists(resolve(rendersDir, 'poster.png'), 'Run poster before rendering brag-v2.')
   const { default: script } = await import(pathToFileURL(resolve(projectDir, `script.${language}.js`)).href)
   const metadata = JSON.parse(readFileSync(assertExists(resolve(AUDIO_DIR, `${video}-narration-${language}.json`), 'Generate narration first.'), 'utf8'))
-  if (metadata.fingerprint !== narrationFingerprint(script, schedule)) throw new Error('Narration is stale: regenerate it after script or timing changes.')
+  const settings = narrationSettings(options, script.narrationConfig || metadata, language)
+  if (metadata.fingerprint !== narrationFingerprint(script, schedule, settings)) throw new Error('Narration is stale: regenerate it after script, timing or voice changes.')
 }
 
 function run(command, args, extra = {}) {
@@ -103,15 +104,20 @@ if (hasMusic && hasNarration) {
     '[ducked][2:a]amix=inputs=2:duration=first:normalize=0[mix]',
     `[mix]loudnorm=I=-16:TP=-1.5:LRA=11,afade=t=out:st=${fadeStart}:d=4[aout]`,
   )
-  if (EDITION === 'brag-v2') {
+  if (EDITION === 'brag-v2' && video !== 'proposal') {
     inputs.push('-i', assertExists(resolve(EDITION_ROOT, 'shared', 'sfx', 'click.ogg')))
     filters.pop()
-    const cues = video === 'additional-modules' ? [6000, 25000, 35200] : [6000, 13200, 34200]
+    const cueOffsets = video === 'additional-modules' ? [['scene-2', 2], ['scene-4', 2], ['scene-5', 2.2]] : [['scene-2', 2], ['scene-3', 2.2], ['scene-5', 1.2]]
+    const cues = cueOffsets.map(([id, offset]) => Math.round((schedule.scenes.find((scene) => scene.id === id).start + offset) * 1000))
     filters.push('[3:a]aformat=sample_rates=48000:channel_layouts=stereo,volume=0.1,lowpass=f=4500,asplit=3[s0][s1][s2]')
     cues.forEach((cue, index) => filters.push(`[s${index}]adelay=${cue}|${cue}[fx${index}]`))
     filters.push('[mix][fx0][fx1][fx2]amix=inputs=4:duration=first:normalize=0[scored]')
     // Leave headroom for inter-sample peaks introduced by AAC encoding.
     filters.push(`[scored]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
+  }
+  if (EDITION === 'brag-v2' && video === 'proposal') {
+    filters.pop()
+    filters.push(`[mix]loudnorm=I=-16:TP=-2.5:LRA=11,afade=t=out:st=${totalDuration - 0.5}:d=0.5[aout]`)
   }
   audioLabel = '[aout]'
 } else if (hasMusic) {

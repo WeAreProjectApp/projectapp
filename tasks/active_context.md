@@ -1,5 +1,12 @@
 # Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
 
+**2026-09-27 — Video de bienvenida de propuestas (en verificación):** pieza genérica
+en español, voz colombiana, 58,2 s y subtítulos. Entrada pública sobre las cuatro
+opciones; se oculta si falta técnico, contrato, idioma ES o alguno de los
+controles. Configuraciones contiene control general y previsualización; General
+contiene la preferencia individual. Migración 0268, solo aplicada por deploy.
+Producción y evidencia: `explainers/brag-v2/proposal/README.md`.
+
 En negociación, Documentos permite cerrar el negocio con el contrato único o con
 dos documentos: contrato de producto y contrato de servicio (hosting,
 mantenimiento y soporte). La modalidad vive en `BusinessProposal.contract_modality`:

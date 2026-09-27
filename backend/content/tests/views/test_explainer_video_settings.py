@@ -111,4 +111,4 @@ class TestExplainerVideoVisibilityRule:
 
     def test_unknown_module_is_rejected(self):
         with pytest.raises(ValueError):
-            explainer_video_visible('proposal')
+            explainer_video_visible('unknown')

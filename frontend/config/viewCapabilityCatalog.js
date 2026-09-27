@@ -75,7 +75,7 @@ const panelCapabilities = [
     'Conecta la oportunidad inicial con una propuesta medible y lista para cerrar.',
     [
       feature('panel-proposals', 'Gestionar propuestas',
-        'Crea, edita y sigue propuestas; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Crea, edita y sigue propuestas; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Conecta la venta con la documentación formal y conserva evidencia del correo y los archivos enviados.',
         ['/panel/proposals', '/panel/proposals/create', '/panel/proposals/:id/edit'],
         { icon: 'send', stage: 'Venta' }),
@@ -468,7 +468,7 @@ const publicCapabilities = [
     'Convierte un documento estático en una conversación comercial medible.',
     [
       feature('public-proposal', 'Revisar una propuesta',
-        'Presenta alcance, inversión, condiciones y acciones de respuesta.',
+        'Presenta alcance, inversión, condiciones y acciones de respuesta. Un video de bienvenida en español explica las cuatro opciones cuando todas están disponibles y los controles global e individual lo permiten.',
         'Ayuda al prospecto a decidir con contexto y permite medir su interés.', ['/proposal/:uuid'],
         { icon: 'send', actors: ['prospect'], stage: 'Decisión' }),
     ],

@@ -14,7 +14,7 @@ export const AUDIO_DIR = resolve(EDITION_ROOT, 'audio')
 export const TTS_DIR = resolve(EDITION_ROOT, 'tts')
 export const HYPERFRAMES_BIN = resolve(EXPLAINERS_ROOT, 'node_modules', '.bin', 'hyperframes')
 
-export const VIDEOS = Object.freeze(['additional-modules', 'financing'])
+export const VIDEOS = Object.freeze(['additional-modules', 'financing', 'proposal'])
 export const LANGUAGES = Object.freeze(['es', 'en'])
 
 export function parseArgs(argv, { defaults = {}, flags = [] } = {}) {
@@ -46,6 +46,7 @@ export function requireVideo(options) {
   if (!VIDEOS.includes(video)) {
     throw new Error(`--video debe ser uno de: ${VIDEOS.join(', ')} (recibido: ${video ?? 'nada'})`)
   }
+  if (video === 'proposal' && EDITION !== 'brag-v2') throw new Error('proposal requires --edition brag-v2')
   return video
 }
 

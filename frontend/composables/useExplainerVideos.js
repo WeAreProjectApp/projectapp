@@ -2,6 +2,8 @@ import { computed, unref } from 'vue'
 
 import additionalModulesEs from '~/assets/videos/explainers/additional-modules-brag-v2-es.mp4'
 import additionalModulesEsPoster from '~/assets/images/explainers/additional-modules-brag-v2-es.webp'
+import proposalEs from '~/assets/videos/explainers/proposal-brag-v2-es.mp4'
+import proposalEsPoster from '~/assets/images/explainers/proposal-brag-v2-es.webp'
 import financingEs from '~/assets/videos/explainers/financing-brag-v2-es.mp4'
 import financingEsPoster from '~/assets/images/explainers/financing-brag-v2-es.webp'
 
@@ -10,9 +12,12 @@ import financingEsPoster from '~/assets/images/explainers/financing-brag-v2-es.w
  * Each entry is keyed by module id and language; a missing language means the
  * surface hides the card until that render exists.
  */
-export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing'])
+export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing', 'proposal'])
 
 const EXPLAINERS = Object.freeze({
+  proposal: {
+    es: { src: proposalEs, poster: proposalEsPoster, durationSeconds: 58.2, width: 1920, height: 1080 },
+  },
   'additional-modules': {
     es: {
       src: additionalModulesEs,
