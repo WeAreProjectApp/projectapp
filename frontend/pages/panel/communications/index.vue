@@ -263,7 +263,7 @@
     />
 
     <BaseModal v-model="threadFormOpen" kind="form" padding="none">
-      <form novalidate @submit.prevent="createThread">
+      <form :id="modalFormId" novalidate @submit.prevent="createThread">
         <div class="border-b border-border-muted px-5 py-4 panel-portrait:px-6">
           <h2 class="text-lg font-semibold text-text-default">Nuevo hilo de comunicación</h2>
           <p class="mt-1 text-sm text-text-subtle">Un cliente puede mantener varios hilos abiertos a la vez.</p>
@@ -311,10 +311,12 @@
             />
           </BaseFormField>
         </div>
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton type="button" variant="secondary" size="md" @click="threadFormOpen = false">Cancelar</BaseButton>
           <BaseButton
-            type="submit"
+            type="submit" :form="modalFormId"
             variant="primary"
             size="md"
             :loading="store.isMutating"
@@ -323,13 +325,13 @@
             Crear hilo
           </BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { useId, computed, reactive, ref, watch } from 'vue';
 import CommunicationFolderPanel from '~/components/communications/CommunicationFolderPanel.vue';
 import CommunicationFolderPicker from '~/components/communications/CommunicationFolderPicker.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
@@ -718,4 +720,6 @@ function selectFolder(id) {
   page.value = 1;
   navigationDrawerOpen.value = false;
 }
+
+const modalFormId = useId();
 </script>

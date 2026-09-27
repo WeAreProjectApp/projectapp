@@ -127,7 +127,7 @@ async function submit() {
     </div>
 
     <div
-      class="max-h-[calc(100dvh-8rem)] space-y-5 overflow-y-auto px-6 py-5"
+      class="space-y-5 px-6 py-5"
       data-testid="client-archive-modal"
     >
       <template v-if="isArchived">
@@ -197,7 +197,9 @@ async function submit() {
         {{ errorMessage }}
       </BaseAlert>
 
-      <div class="sticky bottom-0 -mx-6 flex items-center justify-end gap-3 border-t border-border-muted bg-surface px-6 pb-2 pt-4">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton variant="secondary" @click="emit('close')">Cancelar</BaseButton>
         <BaseControlGate
           :reasons="applyBlockReasons"
@@ -218,7 +220,7 @@ async function submit() {
             </BaseButton>
           </template>
         </BaseControlGate>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

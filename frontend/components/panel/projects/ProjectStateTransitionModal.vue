@@ -170,7 +170,7 @@ async function applyState() {
       </p>
     </div>
 
-    <div class="max-h-[calc(100dvh-8rem)] space-y-5 overflow-y-auto px-6 py-5" data-testid="project-state-transition-modal">
+    <div class="space-y-5 px-6 py-5" data-testid="project-state-transition-modal">
       <BaseAlert v-if="project?.state_review_required" variant="warning">
         Este proyecto viene del catálogo anterior. Revisa y confirma su estado real.
       </BaseAlert>
@@ -325,7 +325,9 @@ async function applyState() {
         </BaseAlert>
       </section>
 
-      <BaseModalActions class="sticky bottom-0 z-10 -mx-6 -mb-5 bg-surface">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton variant="secondary" @click="emit('close')">Cancelar</BaseButton>
         <BaseButton
           variant="primary"
@@ -339,6 +341,6 @@ async function applyState() {
           {{ stateStore.isUpdating && preview ? 'Aplicando…' : 'Confirmar cambio' }}
         </BaseButton>
       </BaseModalActions>
-    </div>
+    </template>
   </BaseModal>
 </template>

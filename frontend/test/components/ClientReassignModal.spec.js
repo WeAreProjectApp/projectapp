@@ -26,7 +26,7 @@ function mountModal() {
         BaseModal: {
           props: ['modelValue'],
           emits: ['close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseFormField: { template: '<div><slot /></div>' },
         BaseAlert: { template: '<div role="alert"><slot /></div>' },

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { useId, computed, ref, watch } from 'vue';
 import { formatMoney } from '~/utils/formatMoney';
 import { todayISO } from '~/utils/periodDates';
 
@@ -45,11 +45,13 @@ function submit() {
     until: mode.value === 'until' ? resumeDate.value : null,
   });
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
   <BaseModal :model-value="open" kind="confirm" size="sm" title-id="recurring-mute-title" @close="emit('close')">
-    <form data-testid="recurring-mute-modal" @submit.prevent="submit">
+    <form :id="modalFormId" data-testid="recurring-mute-modal" @submit.prevent="submit">
       <div class="px-6 pt-5">
         <h3 id="recurring-mute-title" class="text-lg font-bold text-text-default">Silenciar avisos</h3>
         <p v-if="record" class="mt-1 text-sm text-text-muted">
@@ -77,17 +79,19 @@ function submit() {
           No se enviarán avisos hasta que los reactives a mano.
         </p>
       </div>
-      <div class="flex justify-end gap-2 border-t border-border-muted px-6 py-4">
+    </form>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton type="button" variant="ghost" @click="emit('close')">Cancelar</BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :loading="saving"
           :disabled="!!dateError"
           :disabled-reason="dateError"
           data-testid="recurring-mute-submit"
-        >Silenciar</BaseButton>
-      </div>
-    </form>
+          >Silenciar</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>

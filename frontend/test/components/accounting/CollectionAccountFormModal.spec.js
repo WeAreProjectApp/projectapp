@@ -161,6 +161,7 @@ function mockRequests() {
 function mountModal(props = {}) {
   const wrapper = mount(CollectionAccountFormModal, {
     props: { open: true, ...props },
+    attachTo: document.body,
     global: {
       plugins: [createPinia()],
       stubs: {
@@ -170,7 +171,7 @@ function mountModal(props = {}) {
           name: 'BaseModal',
           props: ['modelValue', 'kind', 'fullHeight'],
           emits: ['close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseFormField: {
           props: ['label', 'hint', 'error', 'required', 'for', 'size'],
@@ -266,7 +267,7 @@ function paneHidden(wrapper, testId) {
 
 async function goToPreview(wrapper) {
   await selectClient(wrapper);
-  await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+  await wrapper.find('[data-testid="collection-form-preview"]').element.click();
   await flushPromises();
 }
 
@@ -663,7 +664,7 @@ describe('CollectionAccountFormModal', () => {
         .toContain('Este ingreso es de Torrios SAS, no de Acme Soluciones');
       expect(wrapper.find('[data-testid="collection-form-preview"]').element.disabled)
         .toBe(false);
-      await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+      await wrapper.find('[data-testid="collection-form-preview"]').element.click();
       expect(wrapper.text()).toContain('Resuelve el conflicto con el cliente del ingreso.');
       expect(create_request).not.toHaveBeenCalledWith(
         'accounting/collection-accounts/preview/',
@@ -708,7 +709,7 @@ describe('CollectionAccountFormModal', () => {
     expect(wrapper.find('[role="alert"]').exists()).toBe(false);
     expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled).toBe(false);
 
-    await wrapper.get('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.get('[data-testid="collection-form-preview"]').element.click();
 
     expect(wrapper.text()).toContain('Elige o crea un cliente.');
     expect(wrapper.text()).toContain('Selecciona un ingreso vinculado.');
@@ -727,7 +728,7 @@ describe('CollectionAccountFormModal', () => {
 
     expect(wrapper.get('[data-testid="collection-form-client-email-warning"]').text())
       .toContain('Este cliente no tiene correo.');
-    await wrapper.get('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.get('[data-testid="collection-form-preview"]').element.click();
     expect(wrapper.text()).toContain('Agrega y guarda el correo del cliente.');
     expect(wrapper.get('[data-testid="collection-form-customer-email"]').element.disabled)
       .toBe(true);
@@ -797,7 +798,7 @@ describe('CollectionAccountFormModal', () => {
       .find(button => button.text().includes('Fecha fija'));
     await fixed.trigger('click');
 
-    await wrapper.get('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.get('[data-testid="collection-form-preview"]').element.click();
     expect(wrapper.text()).toContain('Selecciona la fecha fija de pago.');
     expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled)
       .toBe(false);
@@ -808,7 +809,7 @@ describe('CollectionAccountFormModal', () => {
     await flushPromises();
     await selectClient(wrapper);
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     const [url, payload] = create_request.mock.calls.at(-1);
@@ -825,7 +826,7 @@ describe('CollectionAccountFormModal', () => {
     await selectClient(wrapper);
 
     await wrapper.find('[data-testid="collection-form-term-days"]').setValue('0');
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     // `Number(...) || 8` used to read the deliberate 0 as "empty" and bill the
@@ -841,7 +842,7 @@ describe('CollectionAccountFormModal', () => {
     await selectClient(wrapper);
 
     await wrapper.find('[data-testid="collection-form-term-days"]').setValue('');
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     expect(create_request.mock.calls.at(-1)[1].payment_term_days).toBe(8);
@@ -855,7 +856,7 @@ describe('CollectionAccountFormModal', () => {
     // min="0" stops the spinner but not the keyboard; the serializer would
     // reject -5 with a 400, so the payload builder keeps it inside the bounds.
     await wrapper.find('[data-testid="collection-form-term-days"]').setValue('-5');
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     expect(create_request.mock.calls.at(-1)[1].payment_term_days).toBe(0);
@@ -885,7 +886,7 @@ describe('CollectionAccountFormModal', () => {
 
     const description = 'Requerimientos atendidos:\n\n- Formulario\n- Reporte';
     await wrapper.find('[data-testid="collection-form-description"]').setValue(description);
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     const payload = create_request.mock.calls.at(-1)[1];
@@ -900,7 +901,7 @@ describe('CollectionAccountFormModal', () => {
     await flushPromises();
     await selectClient(wrapper);
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     // Not the concept copied client-side: the fallback lives in one place.
@@ -929,7 +930,7 @@ describe('CollectionAccountFormModal', () => {
     await numberInput.setValue('PA-ACME-044');
     await numberInput.trigger('input');
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     const payload = create_request.mock.calls.at(-1)[1];
@@ -941,7 +942,7 @@ describe('CollectionAccountFormModal', () => {
     await flushPromises();
     await selectClient(wrapper);
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     expect(wrapper.find('[data-testid="collection-preview-subject"]').text())
@@ -971,7 +972,7 @@ describe('CollectionAccountFormModal', () => {
       });
     });
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     // Falls if goPreview() ever moves `step.value = 'preview'` before the
@@ -986,7 +987,7 @@ describe('CollectionAccountFormModal', () => {
     await flushPromises();
     await selectClient(wrapper);
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
     await wrapper.find('[data-testid="collection-form-back"]').trigger('click');
 
@@ -1017,7 +1018,7 @@ describe('CollectionAccountFormModal', () => {
       wrapper.find('[data-testid="collection-form-number"]').element.value,
     ).toBe('PA-ACME-003');
 
-    await wrapper.find('[data-testid="collection-form-preview"]').trigger('submit');
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
     await flushPromises();
 
     expect(create_request.mock.calls.at(-1)[1].client_profile_id).toBe(5);

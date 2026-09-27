@@ -190,7 +190,9 @@
         </template>
       </div>
 
-      <div class="px-6 py-4 border-t border-border-muted flex justify-end gap-3">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton
           v-if="income"
           variant="secondary"
@@ -200,8 +202,8 @@
           Duplicar
         </BaseButton>
         <BaseButton variant="primary" @click="emit('close')">Cerrar</BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 
   <!--

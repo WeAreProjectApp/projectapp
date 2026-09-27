@@ -259,25 +259,27 @@
     <!-- Fuera del área que desplaza: con correos y observaciones largas el
          guardado quedaba fuera de la vista, y un pie superpuesto escondía la
          línea que se escribe al final del correo. -->
-    <BaseModalActions class="flex-shrink-0" data-testid="client-note-actions">
-      <!-- En móvil las acciones se apilan en orden inverso: order-last lo deja
-           encima de los botones; desde portrait vuelve a la izquierda. -->
-      <BaseBadge
-        v-if="hasChanges"
-        variant="warning"
-        size="sm"
-        class="order-last self-center panel-portrait:order-none panel-portrait:mr-auto"
-        data-testid="client-note-unsaved"
-      >
-        {{ mode === 'draft' ? 'Cambios sin aplicar' : 'Cambios sin guardar' }}
-      </BaseBadge>
-      <BaseButton type="button" variant="ghost" :disabled="isBusy" :disabled-reason="busyDisabledReason" data-testid="client-note-cancel" @click="close">
-        {{ readonly || immutableContent ? 'Cerrar' : 'Cancelar' }}
-      </BaseButton>
-      <BaseButton v-if="!readonly && !immutableContent" type="button" variant="primary" :disabled="isBusy || !hasChanges" :disabled-reason="submitDisabledReason" :loading="saving" data-testid="client-note-submit" @click="submit">
-        {{ mode === 'draft' ? 'Aplicar al borrador' : 'Guardar cambios' }}
-      </BaseButton>
-    </BaseModalActions>
+    <template #footer>
+      <BaseModalActions data-testid="client-note-actions">
+        <!-- En móvil las acciones se apilan en orden inverso: order-last lo deja
+             encima de los botones; desde portrait vuelve a la izquierda. -->
+        <BaseBadge
+          v-if="hasChanges"
+          variant="warning"
+          size="sm"
+          class="order-last self-center panel-portrait:order-none panel-portrait:mr-auto"
+          data-testid="client-note-unsaved"
+        >
+          {{ mode === 'draft' ? 'Cambios sin aplicar' : 'Cambios sin guardar' }}
+        </BaseBadge>
+        <BaseButton type="button" variant="ghost" :disabled="isBusy" :disabled-reason="busyDisabledReason" data-testid="client-note-cancel" @click="close">
+          {{ readonly || immutableContent ? 'Cerrar' : 'Cancelar' }}
+        </BaseButton>
+        <BaseButton v-if="!readonly && !immutableContent" type="button" variant="primary" :disabled="isBusy || !hasChanges" :disabled-reason="submitDisabledReason" :loading="saving" data-testid="client-note-submit" @click="submit">
+          {{ mode === 'draft' ? 'Aplicar al borrador' : 'Guardar cambios' }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

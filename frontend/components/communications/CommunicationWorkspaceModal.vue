@@ -333,22 +333,24 @@
         </section>
       </template>
       <BaseModal v-model="moveFolderOpen" kind="form">
-        <form v-if="currentThread" @submit.prevent="moveThread">
+        <form :id="modalFormId" v-if="currentThread" @submit.prevent="moveThread">
           <h2 class="mb-4 text-lg font-semibold">{{ t('communicationFiling.move') }}</h2>
           <CommunicationFolderPicker v-model="targetFolder" :client-id="currentThread.client_id" :project-id="currentThread.project_id" />
           <BaseAlert v-if="moveError" variant="danger" class="mt-3">{{ moveError }}</BaseAlert>
-          <BaseModalActions>
-            <BaseButton variant="secondary" @click="moveFolderOpen = false">{{ t('communicationFiling.cancel') }}</BaseButton>
-            <BaseButton type="submit" variant="primary" :loading="store.isMutating" data-testid="communication-move-save">{{ t('communicationFiling.save') }}</BaseButton>
-          </BaseModalActions>
         </form>
+        <template #footer>
+          <BaseModalActions v-if="(currentThread)">
+            <BaseButton variant="secondary" @click="moveFolderOpen = false">{{ t('communicationFiling.cancel') }}</BaseButton>
+            <BaseButton type="submit" :form="modalFormId" variant="primary" :loading="store.isMutating" data-testid="communication-move-save">{{ t('communicationFiling.save') }}</BaseButton>
+          </BaseModalActions>
+        </template>
       </BaseModal>
     </div>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, nextTick, reactive, ref, watch } from 'vue';
+import { useId, computed, nextTick, reactive, ref, watch } from 'vue';
 import CommunicationFolderPicker from '~/components/communications/CommunicationFolderPicker.vue';
 import BaseCollapse from '~/components/base/BaseCollapse.vue';
 import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
@@ -731,4 +733,6 @@ async function moveThread() {
   emit('changed');
   notify.success({ title: t('communicationFiling.threadMoved') });
 }
+
+const modalFormId = useId();
 </script>

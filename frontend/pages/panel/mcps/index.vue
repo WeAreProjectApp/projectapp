@@ -363,7 +363,7 @@
       padding="md"
       :close-on-backdrop="false"
     >
-      <form data-testid="mcp-credential-modal" @submit.prevent="saveCredential">
+      <form :id="modalFormId" data-testid="mcp-credential-modal" @submit.prevent="saveCredential">
         <h3 class="text-lg font-bold text-text-default mb-1">
           {{ credentialModal.credentialId ? 'Editar credencial' : 'Nueva credencial' }}
         </h3>
@@ -437,12 +437,14 @@
         <p v-if="credentialModal.error" class="mt-3 text-sm text-danger-strong">
           {{ credentialModal.error }}
         </p>
-        <div class="mt-5 flex flex-col-reverse gap-2 panel-portrait:flex-row panel-portrait:justify-end">
+      </form>
+      <template #footer>
+        <BaseModalActions>
           <BaseButton variant="secondary" size="sm" @click="closeCredentialModal">
             Cancelar
           </BaseButton>
           <BaseButton
-            type="submit"
+            type="submit" :form="modalFormId"
             variant="primary"
             size="sm"
             :loading="credentialModal.saving"
@@ -450,8 +452,8 @@
           >
             {{ credentialModal.credentialId ? 'Guardar alcance' : 'Crear credencial' }}
           </BaseButton>
-        </div>
-      </form>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <!-- One-time token modal -->
@@ -466,7 +468,9 @@
           data-testid="mcp-token-url"
           class="block text-xs bg-surface-muted rounded p-3 break-all mb-4"
         >{{ tokenModal.url }}</code>
-        <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
+      </div>
+      <template #footer>
+        <BaseModalActions>
           <BaseButton variant="secondary" size="sm" data-testid="mcp-token-copy" @click="copyTokenUrl">
             <BaseActionIcon action="copy" />
             {{ tokenModal.copied ? 'Copiada' : 'Copiar URL' }}
@@ -474,14 +478,14 @@
           <BaseButton variant="primary" size="sm" data-testid="mcp-token-close" @click="closeTokenModal">
             Listo, la guardé
           </BaseButton>
-        </div>
-      </div>
+        </BaseModalActions>
+      </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue';
+import { useId, computed, onMounted, reactive, ref } from 'vue';
 import { KeyIcon } from '@heroicons/vue/24/outline';
 import BaseBadge from '~/components/base/BaseBadge.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
@@ -771,4 +775,6 @@ function closeTokenModal() {
   tokenModal.url = '';
   tokenModal.label = 'la credencial';
 }
+
+const modalFormId = useId();
 </script>

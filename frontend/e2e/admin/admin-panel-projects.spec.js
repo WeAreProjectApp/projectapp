@@ -448,9 +448,16 @@ test.describe('Admin Panel Projects', () => {
     await page.getByTestId('project-form-name').fill('Crushme');
     await page.getByTestId('project-form-client').fill('Germán');
     await page.getByTestId('client-autocomplete-option-5').click();
-    await page.getByTestId('project-form-submit').click();
+    const footer = page.locator('[data-modal-footer]');
+    const save = footer.getByTestId('project-form-submit');
+    await expect(footer.getByRole('button')).toHaveCount(2);
+    await expect(footer.getByRole('button', { name: 'Cancelar', exact: true })).toHaveText('Cancelar');
+    await expect(save).toHaveText('Guardar');
+    await expect(footer.getByRole('alert')).toHaveCount(0);
+    await save.click();
 
     await expect(page.getByText('Proyecto creado')).toBeVisible();
+    await expect(getProjectResult(page, 99)).toContainText('Crushme');
     expect(calls[0].body).toEqual({
       name: 'Crushme',
       client_profile_id: 5,

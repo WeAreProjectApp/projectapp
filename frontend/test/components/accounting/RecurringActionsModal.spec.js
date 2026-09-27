@@ -22,7 +22,7 @@ function mountModal(record = RECORD) {
         BaseModal: {
           props: ['modelValue', 'kind', 'size'],
           emits: ['close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           emits: ['click'],

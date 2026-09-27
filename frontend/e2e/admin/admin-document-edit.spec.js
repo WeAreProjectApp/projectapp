@@ -891,67 +891,93 @@ test.describe('Admin Document Edit', () => {
     await expect(page.getByTestId('doc-save')).toBeEnabled();
   });
 
-  test('saves notes from the fixed bar without scrolling past a long email', {
-    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    const longEmail = Array.from(
-      { length: 24 },
-      (_, index) => `Párrafo ${index + 1} del correo con el detalle de la entrega.`,
-    ).join('\n\n');
-    const documentWithLongEmail = {
-      ...mockDocument,
-      client_email_subject: 'Contrato listo',
-      client_email_body: longEmail,
-      client_whatsapp_message: 'Hola Ana, revisa tu correo.',
-      notes: [],
-    };
-    await mockApi(page, async ({ route, apiPath, method }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath === 'documents/1/detail/') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(documentWithLongEmail) };
-      }
-      if (apiPath === 'documents/1/update/' && method === 'PATCH') {
-        const body = route.request().postDataJSON();
-        return {
-          status: 200,
-          contentType: 'application/json',
-          body: JSON.stringify({ ...documentWithLongEmail, ...body }),
+  /**
+   * Regression: a long note could leave the save bar below the viewport, or
+   * visually fixed while disconnected from the document update action.
+   */
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    test.describe(`fixed notes bar · ${profile}`, () => {
+      test.use(viewportUse(profile));
+
+      test('saves a long client note from the visible footer after scrolling', {
+        tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success', `@viewport:${profile}`],
+      }, async ({ page }) => {
+        const longEmail = Array.from(
+          { length: 24 },
+          (_, index) => `Párrafo ${index + 1} del correo con el detalle de la entrega.`,
+        ).join('\n\n');
+        const documentWithLongEmail = {
+          ...mockDocument,
+          client_email_subject: 'Contrato listo',
+          client_email_body: longEmail,
+          client_whatsapp_message: 'Hola Ana, revisa tu correo.',
+          notes: [],
         };
-      }
-      return null;
+        await mockApi(page, async ({ route, apiPath, method }) => {
+          if (apiPath === 'auth/check/') return authCheck;
+          if (apiPath === 'documents/1/detail/') {
+            return { status: 200, contentType: 'application/json', body: JSON.stringify(documentWithLongEmail) };
+          }
+          if (apiPath === 'documents/1/update/' && method === 'PATCH') {
+            const body = route.request().postDataJSON();
+            return {
+              status: 200,
+              contentType: 'application/json',
+              body: JSON.stringify({ ...documentWithLongEmail, ...body }),
+            };
+          }
+          return null;
+        });
+        await page.goto('/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
+        await page.getByTestId('doc-client-note-open').click();
+
+        // The whole email reads without scrolling inside its own field.
+        const email = page.getByTestId('client-note-email');
+        await expect(email).toHaveValue(longEmail);
+        const hiddenEmailHeight = await email.evaluate((field) => field.scrollHeight - field.clientHeight);
+        expect(hiddenEmailHeight).toBeLessThanOrEqual(1);
+
+        const modalBody = page.getByTestId('document-client-note-modal');
+        const footer = page.locator('[data-modal-footer]');
+        const save = footer.getByTestId('client-note-submit');
+        await expect(save).toBeDisabled();
+        await expect(save).toHaveAttribute('title', 'No hay cambios por guardar.');
+
+        await page.getByTestId('client-note-subject').fill('Contrato listo para firma');
+
+        // Scroll the actual document-note body. Measuring before clicking is
+        // essential: Playwright would otherwise scroll the action into view.
+        await modalBody.hover();
+        await page.mouse.wheel(0, 10_000);
+        await expect.poll(() => modalBody.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+
+        const viewport = page.viewportSize();
+        const dialog = page.getByRole('dialog');
+        const [footerBox, saveBox] = await Promise.all([footer.boundingBox(), save.boundingBox()]);
+        expect(footerBox, `No se pudo medir el pie fijo en ${profile}`).not.toBeNull();
+        expect(saveBox, `No se pudo medir Guardar cambios en ${profile}`).not.toBeNull();
+        expect(footerBox.y).toBeGreaterThanOrEqual(0);
+        expect(footerBox.y + footerBox.height).toBeLessThanOrEqual(viewport.height + 1);
+        expect(saveBox.y + saveBox.height).toBeLessThanOrEqual(viewport.height + 1);
+        expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+        await expect(save).toHaveText('Guardar cambios');
+        await expect(save).toBeEnabled();
+        await expect(page.getByTestId('client-note-unsaved')).toHaveText('Cambios sin guardar');
+
+        const requestPromise = page.waitForRequest(
+          (request) => request.url().includes('/api/documents/1/update/') && request.method() === 'PATCH',
+        );
+        await save.click();
+        const request = await requestPromise;
+
+        expect(request.postDataJSON()).toMatchObject({
+          client_email_subject: 'Contrato listo para firma',
+          client_email_body: longEmail,
+        });
+        await expect(page.getByText('Notas guardadas', { exact: true })).toBeVisible();
+      });
     });
-    await page.goto('/panel/documents/1/edit');
-    await page.getByTestId('doc-client-note-open').click();
-
-    // The whole email reads without scrolling inside its own field.
-    const email = page.getByTestId('client-note-email');
-    await expect(email).toHaveValue(longEmail);
-    const hiddenEmailHeight = await email.evaluate((field) => field.scrollHeight - field.clientHeight);
-    expect(hiddenEmailHeight).toBeLessThanOrEqual(1);
-
-    const save = page.getByTestId('client-note-submit');
-    await expect(save).toBeDisabled();
-    await expect(save).toHaveAttribute('title', 'No hay cambios por guardar.');
-
-    await page.getByTestId('client-note-subject').fill('Contrato listo para firma');
-
-    // The subject sits at the top of a long modal: the save must be reachable
-    // right there, without scrolling past the email.
-    await expect(save).toBeEnabled();
-    await expect(save).toBeInViewport();
-    await expect(page.getByTestId('client-note-unsaved')).toHaveText('Cambios sin guardar');
-    const requestPromise = page.waitForRequest(
-      (request) => request.url().includes('/api/documents/1/update/') && request.method() === 'PATCH',
-    );
-    await save.click();
-    const request = await requestPromise;
-
-    expect(request.postDataJSON()).toMatchObject({
-      client_email_subject: 'Contrato listo para firma',
-      client_email_body: longEmail,
-    });
-    await expect(page.getByText('Notas guardadas', { exact: true })).toBeVisible();
-  });
+  }
 
   test('deletes an observation from the saved document', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],

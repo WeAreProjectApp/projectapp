@@ -13,8 +13,8 @@
             <BaseActionButton action="close" label="Cerrar formulario de tarea" @click="close" />
           </div>
 
-          <form class="flex flex-col flex-1 min-h-0" novalidate @submit.prevent="handleSubmit">
-            <div class="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+          <form :id="modalFormId" class="flex flex-col flex-1 min-h-0" novalidate @submit.prevent="handleSubmit">
+            <div class="px-6 py-4 space-y-4">
             <BaseFormField
               label="Title"
               required
@@ -248,26 +248,28 @@
 
             </div>
 
-            <BaseModalActions>
-                <BaseButton type="button" variant="ghost" @click="close">
-                  Cancelar
-                </BaseButton>
-                <BaseButton
-                  type="submit"
-                  variant="primary"
-                  :loading="busy"
-                  data-testid="task-submit-btn"
-                >
-                  {{ isEditing ? 'Guardar' : 'Crear' }}
-                </BaseButton>
-            </BaseModalActions>
           </form>
         </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton type="button" variant="ghost" @click="close">
+          Cancelar
+        </BaseButton>
+        <BaseButton
+          type="submit" :form="modalFormId"
+          variant="primary"
+          :loading="busy"
+          data-testid="task-submit-btn"
+        >
+          {{ isEditing ? 'Guardar' : 'Crear' }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { useId, computed, ref, watch } from 'vue';
 import { useTaskStore } from '~/stores/tasks';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 
@@ -452,4 +454,6 @@ async function handleDeleteAlert(alertId) {
   await store.deleteTaskAlert(props.task.id, alertId);
   deletingAlertId.value = null;
 }
+
+const modalFormId = useId();
 </script>

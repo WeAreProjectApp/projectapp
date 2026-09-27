@@ -185,10 +185,12 @@
         </template>
       </main>
 
-      <footer class="flex items-center justify-end border-t border-border-muted px-4 py-4 panel-portrait:px-6">
-        <BaseButton type="button" variant="secondary" @click="emit('close')">Cerrar</BaseButton>
-      </footer>
     </div>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton type="button" variant="secondary" @click="emit('close')">Cerrar</BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

@@ -63,7 +63,7 @@ function save() {
         </BaseButton>
       </header>
 
-      <div class="overflow-y-auto px-5 py-5 sm:px-7">
+      <div class="px-5 py-5 sm:px-7">
         <draggable
           v-model="groups"
           item-key="id"
@@ -153,12 +153,14 @@ function save() {
         <BaseAlert v-if="errorMessage" class="mt-4" variant="danger">{{ errorMessage }}</BaseAlert>
       </div>
 
-      <footer class="flex justify-end gap-2 border-t border-border-default px-5 py-4 sm:px-7">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton variant="ghost" @click="emit('update:modelValue', false)">{{ t('additionalModules.cancel') }}</BaseButton>
         <BaseButton :loading="saving" data-testid="additional-catalog-order-save" @click="save">
           {{ t('additionalModules.saveOrder') }}
         </BaseButton>
-      </footer>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
