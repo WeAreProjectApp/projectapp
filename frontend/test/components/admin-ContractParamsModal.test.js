@@ -1,8 +1,27 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
+import ServiceContractTermField from '../../components/BusinessProposal/admin/ServiceContractTermField.vue';
 
-global.useProposalStore = jest.fn(() => ({
-  fetchCompanySettings: jest.fn().mockResolvedValue({ success: true, data: {} }),
-}));
+const proposalStore = { fetchCompanySettings: jest.fn() };
+
+global.useProposalStore = jest.fn(() => proposalStore);
+
+global.useI18n = () => ({
+  t: (key, values = {}) => ({
+    'serviceContract.custom': 'Personalizado',
+    'serviceContract.savedValue': 'Valor guardado',
+    'serviceContract.customLabel': `${values.field}: valor personalizado`,
+    'serviceContract.monthsHint': 'Meses enteros, de 1 a 999.',
+    'serviceContract.daysHint': 'Días calendario enteros, de 1 a 999.',
+    'serviceContract.formHint': 'Elige una opción o un número personalizado.',
+    'serviceContract.loading': 'Cargando configuración…',
+    'serviceContract.loadError': 'No se pudo cargar la configuración del servicio. Reintenta para continuar.',
+    'serviceContract.retry': 'Reintentar',
+    'serviceContract.invalidNumber': 'Escribe un entero entre 1 y 999.',
+    'serviceContract.fields.service_initial_term': 'Duración inicial',
+    'serviceContract.fields.service_renewal_notice_days': 'Preaviso para no renovar (días calendario)',
+    'serviceContract.fields.service_termination_notice_days': 'Preaviso de terminación del cliente (días calendario)',
+  }[key] || key),
+});
 
 global.useMarkdownPreview = jest.fn(() => ({
   parseMarkdown: jest.fn((val) => val),
@@ -40,15 +59,20 @@ function mountContractParamsModal(props = {}, components = {}) {
         },
         BaseButton: {
           props: ['variant', 'size', 'loading', 'disabled', 'type'],
-          template: '<button :type="type || \'button\'" @click="$emit(\'click\', $event)"><slot /></button>',
+          emits: ['click'],
+          template: '<button v-bind="$attrs" :type="type || \'button\'" :disabled="disabled || loading" @click="$emit(\'click\', $event)"><slot /></button>',
         },
         BaseInput: {
           props: ['modelValue', 'type', 'size', 'placeholder'],
-          template: '<input :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+          template: '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
         },
         BaseSelect: {
           props: ['modelValue', 'options', 'size'],
-          template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>',
+          template: '<select v-bind="$attrs" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>',
+        },
+        BaseFormField: {
+          props: ['error'],
+          template: '<label><slot /><span v-if="error">{{ error }}</span></label>',
         },
       },
     },
@@ -80,7 +104,7 @@ describe('ContractParamsModal', () => {
     const cancelBtn = wrapper.findAll('button').find(b => b.text() === 'Cancelar');
     await cancelBtn.trigger('click');
 
-    expect(wrapper.emitted('cancel')).toBeTruthy();
+    expect(wrapper.emitted('cancel')).toEqual([[]]);
   });
 
   it('switches to custom contract mode when custom button is clicked', async () => {
@@ -171,11 +195,17 @@ describe('ContractParamsModal — contratos separados', () => {
     client_email: 'client@acme.com',
     contract_date: '2026-09-26',
   };
-  const SERVICE_TERMS = {
-    service_initial_term: 'doce (12) meses',
-    service_renewal_notice_days: 'treinta (30)',
-    service_termination_notice_days: 'treinta (30)',
+  const SERVICE_SETTINGS = {
+    duration_options: [3, 6, 9, 12],
+    notice_options: [30, 60, 90],
+    default_duration: 9,
+    default_renewal_notice: 60,
+    default_termination_notice: 60,
   };
+
+  beforeEach(() => {
+    proposalStore.fetchCompanySettings.mockReset().mockResolvedValue({ success: true, data: {} });
+  });
 
   async function openFor(variant, params, proposal, components) {
     const wrapper = mountContractParamsModal(
@@ -188,32 +218,153 @@ describe('ContractParamsModal — contratos separados', () => {
     return wrapper;
   }
 
-  it('asks for the service terms before generating the service contract', async () => {
-    // Falla si el contrato de servicio se genera sin duración ni preavisos.
-    const wrapper = await openFor('service', PARTIES, undefined, { BaseFormField });
+  it('preselects the configured service terms', async () => {
+    // Falla si el contrato abre con campos de texto o ignora las preselecciones administrativas.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true,
+      data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const fields = wrapper.findAllComponents(ServiceContractTermField);
 
-    await wrapper.find('form').trigger('submit');
+    expect(fields.map((field) => field.get('select').element.value)).toEqual(['9', '60', '60']);
 
-    expect(wrapper.text()).toContain('Generar contrato de servicio');
-    const terms = wrapper.get('[data-testid="contract-service-terms"]');
-    expect(terms.text()).toContain('Duración inicial es obligatorio');
-    expect(wrapper.emitted('confirm')).toBeFalsy();
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')[0][0]).toMatchObject({
+      service_contract_source: 'default',
+      service_initial_term: 9,
+      service_renewal_notice_days: 60,
+      service_termination_notice_days: 60,
+    });
   });
 
-  it('sends the service terms with the service contract', async () => {
-    // Falla si los tres datos del servicio no viajan al generar su contrato.
-    const wrapper = await openFor('service', { ...PARTIES, ...SERVICE_TERMS });
+  it('serializes a custom service duration as an integer', async () => {
+    // Falla si un valor personalizado viaja como etiqueta de presentación en vez del número del API.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true,
+      data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const duration = wrapper.findAllComponents(ServiceContractTermField)[0];
 
-    await wrapper.find('form').trigger('submit');
+    await duration.get('select').setValue('custom');
+    await duration.get('input').setValue('21');
+    await wrapper.get('form').trigger('submit');
 
-    const payload = wrapper.emitted('confirm')[0][0];
-    expect(payload).toMatchObject({ service_contract_source: 'default', ...SERVICE_TERMS });
-    expect(payload.contract_source).toBeUndefined();
+    expect(wrapper.emitted('confirm')[0][0].service_initial_term).toBe(21);
+  });
+
+  test.each(['', '1000'])('blocks custom service duration %p', async (customValue) => {
+    // Falla si un número vacío o fuera del límite habilita una cláusula que el contrato no puede representar.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true,
+      data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const duration = wrapper.findAllComponents(ServiceContractTermField)[0];
+
+    await duration.get('select').setValue('custom');
+    await duration.get('input').setValue(customValue);
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')).toBeFalsy();
+    expect(wrapper.text()).toContain('Escribe un entero entre 1 y 999.');
+  });
+
+  it('preserves a legacy service duration during submission', async () => {
+    // Falla si editar un contrato previo normaliza o elimina una cláusula histórica no canónica.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true,
+      data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', {
+      ...PARTIES,
+      service_initial_term: 'doce (12) meses iniciales',
+    });
+
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')[0][0].service_initial_term).toBe('doce (12) meses iniciales');
+  });
+
+  it('requires a successful service-settings retry', async () => {
+    // Falla si se permite generar con valores vacíos después de que la configuración no cargó.
+    proposalStore.fetchCompanySettings
+      .mockResolvedValueOnce({ success: false })
+      .mockResolvedValueOnce({ success: true, data: { service_contract_settings: SERVICE_SETTINGS } });
+    const wrapper = await openFor('service', PARTIES);
+
+    expect(wrapper.text()).toContain('No se pudo cargar la configuración del servicio. Reintenta para continuar.');
+    await wrapper.get('form').trigger('submit');
+    expect(wrapper.emitted('confirm')).toBeFalsy();
+
+    const retry = wrapper.findAll('button').find((button) => button.text() === 'Reintentar');
+    await retry.trigger('click');
+    await flushPromises();
+    expect(wrapper.findAllComponents(ServiceContractTermField)).toHaveLength(3);
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')[0][0]).toMatchObject({
+      service_initial_term: 9,
+      service_renewal_notice_days: 60,
+      service_termination_notice_days: 60,
+    });
+  });
+
+  it('uses refreshed defaults when the service modal reopens', async () => {
+    // Falla si una nueva apertura reutiliza valores predeterminados que el administrador ya cambió.
+    proposalStore.fetchCompanySettings
+      .mockResolvedValueOnce({ success: true, data: { service_contract_settings: SERVICE_SETTINGS } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          service_contract_settings: {
+            ...SERVICE_SETTINGS,
+            default_duration: 12,
+            default_renewal_notice: 90,
+            default_termination_notice: 30,
+          },
+        },
+      });
+    const wrapper = mountContractParamsModal({ visible: false, initialParams: PARTIES, variant: 'service' });
+
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await wrapper.setProps({ visible: false });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+
+    const fields = wrapper.findAllComponents(ServiceContractTermField);
+    expect(fields.map((field) => field.get('select').element.value)).toEqual(['12', '90', '30']);
+  });
+
+  it('keeps a saved service term when the service modal reopens', async () => {
+    // Falla si recargar los valores globales sobrescribe una condición ya negociada con el cliente.
+    proposalStore.fetchCompanySettings
+      .mockResolvedValueOnce({ success: true, data: { service_contract_settings: SERVICE_SETTINGS } })
+      .mockResolvedValueOnce({
+        success: true,
+        data: { service_contract_settings: { ...SERVICE_SETTINGS, default_duration: 12 } },
+      });
+    const wrapper = mountContractParamsModal({
+      visible: false,
+      initialParams: { ...PARTIES, service_initial_term: 6 },
+      variant: 'service',
+    });
+
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+    await wrapper.setProps({ visible: false });
+    await wrapper.setProps({ visible: true });
+    await flushPromises();
+
+    expect(wrapper.findAllComponents(ServiceContractTermField)[0].get('select').element.value).toBe('6');
   });
 
   it('keeps the service terms out of the single contract payload', async () => {
     // Falla si editar el contrato único borra los datos guardados del servicio.
-    const wrapper = await openFor('combined', { ...PARTIES, ...SERVICE_TERMS });
+    const wrapper = await openFor('combined', PARTIES);
 
     await wrapper.find('form').trigger('submit');
 

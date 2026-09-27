@@ -72,6 +72,24 @@ sirven, no se adjuntan y no pasan a la plataforma. Cada documento puede usar el
 texto estándar o uno personalizado, por separado. Una preparación de correo
 hecha en la otra modalidad queda obsoleta.
 
+### Opciones de los datos del servicio
+
+La duración inicial ofrece 3, 6, 9 y 12 meses; ambos preavisos ofrecen 30, 60 y
+90 días. Las preselecciones iniciales son **9 meses / 60 días / 60 días**.
+Cada selector admite **Personalizado**: un entero de 1 a 999, con vista previa
+del texto contractual. El servidor guarda `nueve (9) meses` o `sesenta (60)`;
+la plantilla agrega «días calendario» a los preavisos.
+
+En **Propuestas → Configuraciones → Datos del contrato de servicio** se
+administran las dos listas y las tres preselecciones. Cada lista requiere
+valores únicos y al menos una opción; sus preselecciones deben pertenecer a
+ella. Guardar aplica el conjunto completo. Las nuevas aperturas consultan la
+configuración vigente, mientras los contratos existentes conservan sus valores.
+Un texto histórico que no corresponda al formato numérico aparece como
+**Valor guardado** hasta que se elija reemplazarlo. Si falla la carga de
+configuración, la generación mediante plantilla queda bloqueada y ofrece
+**Reintentar**; el contenido Markdown personalizado mantiene su flujo habitual.
+
 ## Preparar y enviar
 
 1. Generar el contrato final (o los contratos de producto y servicio) desde

@@ -196,6 +196,15 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+**2026-09-27 — datos del contrato de servicio:** implementación en el worktree
+`service-contract-options`. Los tres campos pasan a desplegables con números
+personalizados (1–999); preselecciones iniciales 9 meses / 60 / 60 días.
+Propuestas → Configuraciones administra listas globales y preselecciones.
+La API convierte enteros a texto contractual español y conserva textos históricos.
+Migración `0268_company_service_contract_settings` para aplicar con el despliegue.
+Pruebas focales de persistencia, formato contractual, textos históricos,
+permisos, CSRF, validación, reintentos y configuración desde el navegador.
+
 # Enlaces seguros de un solo uso (2026-09-26)
 
 Implementado en `feat/26092026-secure-one-time-links`: enlaces de un solo uso

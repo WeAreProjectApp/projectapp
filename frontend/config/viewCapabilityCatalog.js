@@ -75,7 +75,7 @@ const panelCapabilities = [
     'Conecta la oportunidad inicial con una propuesta medible y lista para cerrar.',
     [
       feature('panel-proposals', 'Gestionar propuestas',
-        'Crea, edita y sigue propuestas; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Crea, edita y sigue propuestas; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Configura las opciones y preselecciones de duración y preavisos del servicio, con valores personalizados convertidos a letras y conservación de contratos existentes. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Conecta la venta con la documentación formal y conserva evidencia del correo y los archivos enviados.',
         ['/panel/proposals', '/panel/proposals/create', '/panel/proposals/:id/edit'],
         { icon: 'send', stage: 'Venta' }),

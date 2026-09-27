@@ -88,9 +88,9 @@ export const CONTRACT_DOC_TYPES = Object.freeze(
 
 // The three terms the standalone service contract fills per proposal.
 export const SERVICE_CONTRACT_FIELDS = Object.freeze([
-  Object.freeze({ key: 'service_initial_term', label: 'Duración inicial', placeholder: 'Ej.: doce (12) meses' }),
-  Object.freeze({ key: 'service_renewal_notice_days', label: 'Preaviso para no renovar (días calendario)', placeholder: 'Ej.: treinta (30)' }),
-  Object.freeze({ key: 'service_termination_notice_days', label: 'Preaviso de terminación del cliente (días calendario)', placeholder: 'Ej.: treinta (30)' }),
+  Object.freeze({ key: 'service_initial_term', label: 'Duración inicial', optionsKey: 'duration_options', defaultKey: 'default_duration', duration: true }),
+  Object.freeze({ key: 'service_renewal_notice_days', label: 'Preaviso para no renovar (días calendario)', optionsKey: 'notice_options', defaultKey: 'default_renewal_notice' }),
+  Object.freeze({ key: 'service_termination_notice_days', label: 'Preaviso de terminación del cliente (días calendario)', optionsKey: 'notice_options', defaultKey: 'default_termination_notice' }),
 ]);
 
 export function contractVariantsFor(proposal) {

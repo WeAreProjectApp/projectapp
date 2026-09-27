@@ -1,5 +1,17 @@
 # Architecture — ProjectApp
 
+## Datos configurables del contrato de servicio (2026-09-27)
+
+`CompanySettings.service_contract_settings` almacena dos listas numéricas
+(duración y preavisos) y tres preselecciones. El GET existente de
+`proposals/company-settings/` expone el objeto; PATCH, reservado a administradores,
+valida y reemplaza únicamente ese objeto completo mediante un solo UPDATE.
+Propuestas → Configuraciones lo administra y el modal lo consulta en cada apertura.
+Los parámetros contractuales siguen siendo texto: `ServiceTermField` convierte
+enteros de 1–999 con `num2words` y preserva cadenas históricas. La duración lleva
+mes/meses; las plantillas agregan días calendario a los preavisos. La configuración
+no cambia contratos existentes ni agrega una superficie MCP.
+
 > **2026-09-26 — enlaces seguros:** app Django `secure_links` (`SecureLink`,
 > `SecureLinkEvent` append-only) con `services.py` como única frontera de
 > escritura para panel (sesión/CSRF + `IsAdminUser`), página pública (sin

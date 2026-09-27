@@ -1,6 +1,16 @@
 from django.db import models
 
 
+def default_service_contract_settings():
+    return {
+        'duration_options': [3, 6, 9, 12],
+        'notice_options': [30, 60, 90],
+        'default_duration': 9,
+        'default_renewal_notice': 60,
+        'default_termination_notice': 60,
+    }
+
+
 class CompanySettings(models.Model):
     """
     Singleton model storing seller company defaults for contract generation.
@@ -64,6 +74,8 @@ class CompanySettings(models.Model):
         help_text='Signature image for the contractor (displayed on contract PDFs). PNG with transparent background recommended.',
     )
 
+    service_contract_settings = models.JSONField(default=default_service_contract_settings)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -102,4 +114,5 @@ class CompanySettings(models.Model):
             'bank_account_type': self.bank_account_type,
             'bank_account_number': self.bank_account_number,
             'contract_city': self.contract_city,
+            'service_contract_settings': self.service_contract_settings,
         }

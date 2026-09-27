@@ -2,6 +2,7 @@ from rest_framework import serializers
 
 from accounts.models import UserProfile
 from accounts.services import proposal_client_service
+from content.serializers.service_contract_settings import ServiceTermField
 from content.services.contract_variants import (
     COMBINED,
     MODALITY_VARIANTS,
@@ -400,13 +401,13 @@ class ContractParamsSerializer(serializers.Serializer):
     service_custom_contract_markdown = serializers.CharField(
         required=False, default='', allow_blank=True,
     )
-    service_initial_term = serializers.CharField(
-        max_length=100, required=False, default='', allow_blank=True,
+    service_initial_term = ServiceTermField(
+        duration=True, max_length=100, required=False, default='', allow_blank=True,
     )
-    service_renewal_notice_days = serializers.CharField(
+    service_renewal_notice_days = ServiceTermField(
         max_length=60, required=False, default='', allow_blank=True,
     )
-    service_termination_notice_days = serializers.CharField(
+    service_termination_notice_days = ServiceTermField(
         max_length=60, required=False, default='', allow_blank=True,
     )
 
