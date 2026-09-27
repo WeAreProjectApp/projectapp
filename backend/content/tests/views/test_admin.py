@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.test import RequestFactory
 
 from content.admin import CompanySettingsForm, admin_site
-from content.models import Document, DocumentFolder
+from content.models import CompanySettings, Document, DocumentFolder
 
 User = get_user_model()
 
@@ -16,9 +16,12 @@ pytestmark = pytest.mark.django_db
 
 
 class TestArchiveFieldsSealedInAdmin:
-    """El admin no puede mover el estado de archivado a mano: editar
+    """El admin no puede mover el estado de archivado a mano.
+
+    Editar
     `is_archived` suelto se salta la cascada del servicio y es el vector que
-    recrea filas activas bajo carpetas archivadas (ERR-016)."""
+    recrea filas activas bajo carpetas archivadas (ERR-016).
+    """
 
     ARCHIVE_FIELDS = ('is_archived', 'archived_at', 'archived_via_folder')
 
@@ -62,8 +65,10 @@ class TestProjectAppAdminSiteGetAppList:
 
 
 class TestCompanySettingsFormContractorIdentity:
-    """The contract names EL CONTRATISTA by one of two documents; the admin
-    form is the only place a human sets them, so the rule is enforced there."""
+    """The contract names EL CONTRATISTA by one of two documents.
+
+    The admin form is the only place a human sets them, so the rule is enforced there.
+    """
 
     def _payload(self, **overrides):
         data = {
@@ -96,3 +101,26 @@ class TestCompanySettingsFormContractorIdentity:
         form = CompanySettingsForm(data=self._payload(contractor_nit='   '))
         assert not form.is_valid()
         assert 'contractor_nit' in form.errors
+
+    def test_identity_edit_preserves_configured_service_terms(self, db):
+        company_settings = CompanySettings.load()
+        configured_terms = {
+            'duration_options': [6, 18],
+            'notice_options': [30, 90],
+            'default_duration': 18,
+            'default_renewal_notice': 30,
+            'default_termination_notice': 90,
+        }
+        company_settings.service_contract_settings = configured_terms
+        company_settings.save()
+        form = CompanySettingsForm(
+            instance=company_settings,
+            data=self._payload(contractor_nit='900.123.456-7', contractor_full_name='Updated Contractor'),
+        )
+
+        assert form.is_valid(), form.errors
+        form.save()
+        company_settings.refresh_from_db()
+
+        assert company_settings.contractor_full_name == 'Updated Contractor'
+        assert company_settings.service_contract_settings == configured_terms
