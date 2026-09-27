@@ -1228,15 +1228,20 @@ def _pick_default_deliverable_for_requirements(proj):
 
 def _recalculate_project_progress(project):
     """Auto-sync project.progress from done/total requirements."""
-    scope = Requirement.objects.filter(
+    from django.db.models import Count, Q
+
+    counts = Requirement.objects.filter(
         phase__project=project,
         is_archived=False,
+    ).aggregate(
+        total=Count('pk'),
+        done=Count('pk', filter=Q(status=Requirement.STATUS_DONE)),
     )
-    total = scope.count()
+    total = counts['total']
     if total == 0:
         project.progress = 0
     else:
-        done = scope.filter(status=Requirement.STATUS_DONE).count()
+        done = counts['done']
         project.progress = round((done / total) * 100)
     project.save(update_fields=['progress', 'updated_at'])
 
