@@ -24,7 +24,7 @@ from content.api_errors import (
     error_response,
     error_response_from_exc,
 )
-from content.services import proposal_status_service
+from content.services import contract_variants, proposal_status_service
 from content.services.proposal_audit import log_proposal_change
 from content.services.proposal_status_service import (
     enqueue_onboarding_on_accept as _enqueue_onboarding_on_accept,
@@ -3292,11 +3292,12 @@ def email_deliverability_dashboard(request):
 # Contract & document management endpoints
 # ---------------------------------------------------------------------------
 
-def _generate_and_save_contract_pdf(proposal):
-    """Generate contract PDF from proposal.contract_params and save as ProposalDocument."""
+def _generate_and_save_contract_pdf(proposal, variant=contract_variants.COMBINED):
+    """Generate one contract PDF of *variant* from contract_params and store it."""
     from content.services.contract_pdf_service import generate_contract_pdf, resolve_contract_content
 
-    content = resolve_contract_content(proposal)
+    spec = contract_variants.VARIANTS[variant]
+    content = resolve_contract_content(proposal, variant=variant)
     pdf_bytes = generate_contract_pdf(proposal, resolved_content=content)
     if not pdf_bytes:
         return
@@ -3305,17 +3306,38 @@ def _generate_and_save_contract_pdf(proposal):
     from content.services.pdf_utils import safe_pdf_filename
 
     filename = safe_pdf_filename(
-        'Contrato_Desarrollo_Software',
+        spec.file_prefix,
         proposal.title or proposal.client_name,
         (proposal.created_at or timezone.now()).strftime('%Y-%m-%d'),
     )
-    doc, _created = ProposalDocument.objects.get_or_create(
-        proposal=proposal,
-        document_type=ProposalDocument.DOC_TYPE_CONTRACT,
-        defaults={'title': 'Contrato de desarrollo de software', 'is_generated': True},
+    # No unique constraint backs "one document per variant", so reuse the newest.
+    doc = contract_variants.contract_document(proposal, variant) or ProposalDocument(
+        proposal=proposal, document_type=spec.doc_type,
+        title=spec.document_title, is_generated=True,
     )
     doc.content_markdown = content['snapshot']
     doc.file.save(filename, ContentFile(pdf_bytes), save=True)
+
+
+def _sync_active_contracts(proposal):
+    """(Re)generate every contract of the active modality that has what it needs.
+
+    Documents of the inactive modality are neither regenerated nor served, so
+    they can never be sent stale; switching back regenerates them.
+    """
+    params = proposal.contract_params or {}
+    for variant in contract_variants.active_variants(proposal):
+        if contract_variants.can_generate(params, variant):
+            _generate_and_save_contract_pdf(proposal, variant)
+
+
+def _merged_contract_params(proposal, incoming):
+    """Saved parameters overlaid with the request, so no edit drops another document's data."""
+    saved = {
+        key: value for key, value in (proposal.contract_params or {}).items()
+        if value not in ('', None)
+    }
+    return {**saved, **(incoming if isinstance(incoming, dict) else {})}
 
 
 @api_view(['POST'])
@@ -3331,7 +3353,10 @@ def save_contract_and_negotiate(request, proposal_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    serializer = ContractParamsSerializer(data=request.data.get('contract_params', {}))
+    serializer = ContractParamsSerializer(
+        data=_merged_contract_params(proposal, request.data.get('contract_params', {})),
+        context={'modality': contract_variants.modality(proposal)},
+    )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -3340,7 +3365,7 @@ def save_contract_and_negotiate(request, proposal_id):
     proposal.status = BusinessProposal.Status.NEGOTIATING
     proposal.save(update_fields=['contract_params', 'status', 'updated_at'])
 
-    _generate_and_save_contract_pdf(proposal)
+    _sync_active_contracts(proposal)
 
     ProposalChangeLog.objects.create(
         proposal=proposal,
@@ -3356,32 +3381,129 @@ def save_contract_and_negotiate(request, proposal_id):
     return Response(detail.data, status=status.HTTP_200_OK)
 
 
+def _requested_variant(proposal, requested):
+    """Resolve which contract a request is about: ``(variant, None)`` or ``(None, error)``.
+
+    Without a name the single contract is implied; a split closing has two
+    documents, so the caller must say which one. A document of the modality
+    that was not chosen is never served, because it is not kept up to date.
+    """
+    active = contract_variants.active_variants(proposal)
+    if not requested:
+        if len(active) == 1:
+            return active[0], None
+        return None, Response(
+            {'error': 'Indica qué contrato quieres: producto o servicio.', 'code': 'variant_required'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if requested not in contract_variants.VARIANTS:
+        return None, Response(
+            {'error': f'Contrato desconocido: {requested}.', 'code': 'invalid_variant'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+    if requested not in active:
+        return None, Response(
+            {
+                'error': 'Ese contrato no corresponde a la modalidad de cierre elegida.',
+                'code': 'inactive_variant',
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+    return requested, None
+
+
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
 def update_contract_params(request, proposal_id):
-    """Update contract params and regenerate contract PDF."""
-    proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
+    """Update contract params and regenerate the contracts of the active modality.
 
-    serializer = ContractParamsSerializer(data=request.data.get('contract_params', {}))
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    ``variant`` optionally names the document being generated or edited. It must
+    belong to the chosen modality and adds its own rules: the service contract
+    needs its three terms unless it uses a custom text.
+    """
+    with transaction.atomic():
+        proposal = get_object_or_404(BusinessProposal.objects.select_for_update(), pk=proposal_id)
+        requested = request.data.get('variant') or None
+        if requested:
+            _variant, error = _requested_variant(proposal, requested)
+            if error:
+                return error
 
-    proposal.contract_params = serializer.validated_data
-    proposal.save(update_fields=['contract_params', 'updated_at'])
+        serializer = ContractParamsSerializer(
+            data=_merged_contract_params(proposal, request.data.get('contract_params', {})),
+            context={'modality': contract_variants.modality(proposal), 'variant': requested},
+        )
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    _generate_and_save_contract_pdf(proposal)
+        proposal.contract_params = serializer.validated_data
+        proposal.save(update_fields=['contract_params', 'updated_at'])
+
+        _sync_active_contracts(proposal)
 
     detail = ProposalDetailSerializer(proposal, context={'request': request, 'is_admin': True})
     return Response(detail.data, status=status.HTTP_200_OK)
 
 
-def _get_contract_doc(proposal):
-    """Return the contract ProposalDocument for *proposal*, or None."""
-    from content.models import ProposalDocument
-    return ProposalDocument.objects.filter(
-        proposal=proposal,
-        document_type=ProposalDocument.DOC_TYPE_CONTRACT,
-    ).first()
+@api_view(['PATCH'])
+@permission_classes([IsAdminUser])
+def update_contract_modality(request, proposal_id):
+    """Choose whether the deal closes with one contract or with two documents.
+
+    Only while negotiating. Nothing is deleted: each modality keeps its
+    documents, and the chosen modality's contracts are regenerated from the
+    current parameters so the tab never shows a stale document.
+    """
+    new_value = request.data.get('contract_modality')
+    if new_value not in BusinessProposal.ContractModality.values:
+        return Response(
+            {'error': 'Modalidad de cierre inválida.', 'code': 'invalid_modality'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    with transaction.atomic():
+        proposal = get_object_or_404(BusinessProposal.objects.select_for_update(), pk=proposal_id)
+        if proposal.status != BusinessProposal.Status.NEGOTIATING:
+            return Response(
+                {
+                    'error': 'La modalidad de cierre sólo se cambia durante la negociación.',
+                    'code': 'modality_locked',
+                },
+                status=status.HTTP_409_CONFLICT,
+            )
+        old_value = proposal.contract_modality
+        if new_value != old_value:
+            if new_value == BusinessProposal.ContractModality.SPLIT and not contract_variants.split_available():
+                return Response(
+                    {
+                        'error': (
+                            'El contrato por defecto no se puede separar en producto y servicio. '
+                            'Revisa el texto de la plantilla del contrato.'
+                        ),
+                        'code': 'split_unavailable',
+                    },
+                    status=status.HTTP_409_CONFLICT,
+                )
+            proposal.contract_modality = new_value
+            proposal.save(update_fields=['contract_modality', 'updated_at'])
+            log_proposal_change(
+                proposal,
+                'updated',
+                field_name='contract_modality',
+                old_value=old_value,
+                new_value=new_value,
+                actor_type='seller',
+                description=f'contract_modality: {old_value} → {new_value}',
+            )
+            _sync_active_contracts(proposal)
+
+    detail = ProposalDetailSerializer(proposal, context={'request': request, 'is_admin': True})
+    return Response(detail.data, status=status.HTTP_200_OK)
+
+
+def _get_contract_doc(proposal, variant=contract_variants.COMBINED):
+    """Return the stored contract of *variant* for *proposal*, or None."""
+    return contract_variants.contract_document(proposal, variant)
 
 
 def _contract_pdf_response(pdf_bytes, proposal, prefix):
@@ -3402,15 +3524,26 @@ def _contract_pdf_response(pdf_bytes, proposal, prefix):
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def download_contract_pdf(request, proposal_id):
-    """Download the generated contract PDF for a proposal."""
+    """Download a generated contract PDF (``?variant=`` for a split closing)."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
-    doc = _get_contract_doc(proposal)
+    variant, error = _requested_variant(proposal, request.query_params.get('variant'))
+    if error:
+        return error
+    doc = _get_contract_doc(proposal, variant)
     if not doc or not doc.file:
         return Response(
             {'error': 'Contract PDF not found. Generate it first.'},
             status=status.HTTP_404_NOT_FOUND,
         )
-    return _contract_pdf_response(doc.file.read(), proposal, 'Contrato_Desarrollo_Software')
+    return _contract_pdf_response(
+        doc.file.read(), proposal, contract_variants.VARIANTS[variant].file_prefix,
+    )
+
+
+def _draft_prefix(variant):
+    if variant == contract_variants.COMBINED:
+        return 'Borrador_Contrato'
+    return f'Borrador_{contract_variants.VARIANTS[variant].file_prefix}'
 
 
 @api_view(['GET'])
@@ -3418,17 +3551,20 @@ def download_contract_pdf(request, proposal_id):
 def download_draft_contract_pdf(request, proposal_id):
     """Download the contract PDF with a diagonal BORRADOR watermark and no signature."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
+    variant, error = _requested_variant(proposal, request.query_params.get('variant'))
+    if error:
+        return error
     from content.services.contract_pdf_service import generate_contract_pdf
     from content.services.pdf_utils import add_watermark_to_pdf
 
-    pdf_bytes = generate_contract_pdf(proposal, draft=True)
+    pdf_bytes = generate_contract_pdf(proposal, draft=True, variant=variant)
     if not pdf_bytes:
         return Response(
             {'error': 'Could not generate draft contract PDF.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
     draft_bytes = add_watermark_to_pdf(pdf_bytes)
-    return _contract_pdf_response(draft_bytes, proposal, 'Borrador_Contrato')
+    return _contract_pdf_response(draft_bytes, proposal, _draft_prefix(variant))
 
 
 @api_view(['GET'])
@@ -3498,7 +3634,7 @@ def upload_proposal_document(request, proposal_id):
     document_type = request.data.get('document_type', ProposalDocument.DOC_TYPE_OTHER)
 
     valid_types = {c[0] for c in ProposalDocument.DOC_TYPE_CHOICES}
-    if document_type not in valid_types or document_type == ProposalDocument.DOC_TYPE_CONTRACT:
+    if document_type not in valid_types or document_type in ProposalDocument.CONTRACT_DOC_TYPES:
         return Response(
             {'error': f'Invalid document_type: {document_type}'},
             status=status.HTTP_400_BAD_REQUEST,
@@ -3589,14 +3725,16 @@ def send_documents_to_client(request, proposal_id):
 
     if 'draft_contract' in doc_keys:
         from content.services.contract_pdf_service import generate_contract_pdf
-        contract_bytes = generate_contract_pdf(proposal, draft=True)
-        if contract_bytes:
-            draft_bytes = add_watermark_to_pdf(contract_bytes)
-            attachments.append((
-                safe_pdf_filename('Borrador_Contrato', client_title, date_str),
-                draft_bytes,
-                'application/pdf',
-            ))
+        # One draft per document of the chosen closing modality.
+        for variant in contract_variants.active_variants(proposal):
+            contract_bytes = generate_contract_pdf(proposal, draft=True, variant=variant)
+            if contract_bytes:
+                draft_bytes = add_watermark_to_pdf(contract_bytes)
+                attachments.append((
+                    safe_pdf_filename(_draft_prefix(variant), client_title, date_str),
+                    draft_bytes,
+                    'application/pdf',
+                ))
 
     if 'commercial' in doc_keys:
         from content.services.proposal_pdf_service import ProposalPdfService
@@ -3716,13 +3854,29 @@ _COMPOSED_EMAIL_ALLOWED_EXT = {'.pdf', '.doc', '.docx', '.xls', '.xlsx', '.png',
 _COMPOSED_EMAIL_MAX_FILE = 15 * 1024 * 1024  # 15 MB
 
 
+def _doc_ref_variant(proposal, ref):
+    """The contract a doc_ref points at; the single contract when none is named."""
+    from content.views._doc_refs import DocRefError
+
+    requested = ref.get('variant')
+    active = contract_variants.active_variants(proposal)
+    if not requested:
+        if len(active) == 1:
+            return active[0]
+        raise DocRefError('Indica qué contrato adjuntar: producto o servicio.')
+    if requested not in active:
+        raise DocRefError('Ese contrato no corresponde a la modalidad de cierre elegida.')
+    return requested
+
+
 def _resolve_proposal_doc_refs(proposal, doc_refs):
     """
     Resolve a list of doc_refs into email attachment tuples.
 
-    Each ref is ``{'source': str, 'id'?: int}``. Supported sources:
-      - ``contract_pdf``    → generated contract (final PDF)
-      - ``contract_draft``  → freshly generated draft with watermark
+    Each ref is ``{'source': str, 'id'?: int, 'variant'?: str}``. Supported sources:
+      - ``contract_pdf``    → generated contract (final PDF); ``variant``
+        names the product or service document of a split closing
+      - ``contract_draft``  → freshly generated draft with watermark (same ``variant``)
       - ``commercial_pdf``  → commercial proposal PDF (ProposalPdfService)
       - ``technical_pdf``   → technical document PDF
       - ``proposal_document`` (with ``id``) → uploaded ProposalDocument file
@@ -3752,22 +3906,24 @@ def _resolve_proposal_doc_refs(proposal, doc_refs):
             raise DocRefError('Cada doc_ref debe ser un objeto.')
         source = ref.get('source')
 
-        if source == 'contract_pdf':
-            pdf_bytes = generate_contract_pdf(proposal, draft=False)
+        if source in ('contract_pdf', 'contract_draft'):
+            variant = _doc_ref_variant(proposal, ref)
+            draft = source == 'contract_draft'
+            pdf_bytes = generate_contract_pdf(proposal, draft=draft, variant=variant)
             if not pdf_bytes:
-                raise DocRefError('El contrato aún no ha sido generado.')
+                raise DocRefError(
+                    'No se pudo generar el borrador del contrato.' if draft
+                    else 'El contrato aún no ha sido generado.'
+                )
+            if draft:
+                name, pdf_bytes = _draft_prefix(variant), add_watermark_to_pdf(pdf_bytes)
+            else:
+                name = 'Contrato' if variant == contract_variants.COMBINED else (
+                    contract_variants.VARIANTS[variant].file_prefix
+                )
             out.append((
-                safe_pdf_filename('Contrato', client_title, date_str),
+                safe_pdf_filename(name, client_title, date_str),
                 pdf_bytes,
-                'application/pdf',
-            ))
-        elif source == 'contract_draft':
-            pdf_bytes = generate_contract_pdf(proposal, draft=True)
-            if not pdf_bytes:
-                raise DocRefError('No se pudo generar el borrador del contrato.')
-            out.append((
-                safe_pdf_filename('Borrador_Contrato', client_title, date_str),
-                add_watermark_to_pdf(pdf_bytes),
                 'application/pdf',
             ))
         elif source == 'commercial_pdf':

@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin generates a development contract from the proposal edit Documents tab. Two modes: 'Contrato por defecto' (fill contractor/client params form with auto-populated company settings) or 'Contrato personalizado' (paste/upload custom Markdown). Submit calls save-and-negotiate API. Visible only when proposal status is negotiating/accepted/rejected.",
+  "description": "Admin generates a development contract with ContractParamsModal. Two modes: 'Contrato por defecto' (fill contractor/client params form with auto-populated company settings) or 'Contrato personalizado' (paste/upload custom Markdown). Moving a sent or viewed proposal to negotiation calls save-and-negotiate; generating from the Documents tab of a negotiating proposal calls the contract update API. The Documents tab shows for sent/viewed/negotiating/accepted/rejected; generation is available from negotiating on.",
   "expectedSpecs": 1,
   "outcomes": [
     "success"

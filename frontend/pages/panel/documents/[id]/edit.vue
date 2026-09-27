@@ -506,26 +506,14 @@
                 :disabled-reason="readOnlyReason"
               />
             </label>
-            <div>
-              <label class="block text-sm font-medium text-text-default mb-1">Carpeta</label>
-              <select
-                v-model="form.folder_id"
-                :disabled="readOnlyDocument"
-                :title="readOnlyDocument ? readOnlyReason : undefined"
-                class="w-full px-4 py-2.5 border border-border-default rounded-xl text-sm bg-surface text-text-default
-                       focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring outline-none"
-              >
-                <option :value="null">Sin carpeta</option>
-                <option
-                  v-for="folder in folderStore.activeFolders"
-                  :key="folder.id"
-                  :value="folder.id"
-                  :disabled="folder.is_system_managed && folder.id !== form.folder_id"
-                >
-                  {{ folder.name }}
-                </option>
-              </select>
-            </div>
+            <!-- Una carpeta automática actual se sigue mostrando aunque ya no se
+                 ofrezca como destino. -->
+            <DocumentFolderSelect
+              v-model="form.folder_id"
+              testid="doc-folder-select"
+              :disabled="readOnlyDocument"
+              :disabled-reason="readOnlyReason"
+            />
           </div>
 
           <hr class="border-border-muted" />
@@ -818,6 +806,7 @@ import PdfPreviewPane from '~/components/base/PdfPreviewPane.vue';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
 import DocumentEditorContent from '~/components/panel/documents/DocumentEditorContent.vue';
 import DocumentClientNoteModal from '~/components/panel/documents/DocumentClientNoteModal.vue';
+import DocumentFolderSelect from '~/components/panel/documents/DocumentFolderSelect.vue';
 import DocumentStateHistoryModal from '~/components/panel/documents/DocumentStateHistoryModal.vue';
 import DocumentStateList from '~/components/panel/documents/DocumentStateList.vue';
 import DocumentStateSelector from '~/components/panel/documents/DocumentStateSelector.vue';

@@ -374,7 +374,7 @@ the configurable copies above remain independent BCC-only attempts.
 - **Edit** (`/panel/proposals/{id}/edit`): Tabs depending on proposal status:
   - **General** — metadata + same `<ClientAutocomplete>` picker + write-through snapshot fields + propagate-changes-to-profile checkbox + send button + immediate contract-mode visibility switch
   - **Correos** — personalized initial-message editor from draft onward; sent+ statuses also expose the branded follow-up composer and delivery history
-  - **Documentos** (negotiating/accepted/rejected) — contracts + uploaded annexes
+  - **Documentos** (sent/viewed/negotiating/accepted/rejected) — closing-modality switch (negotiating; read-only once accepted/rejected), the contract(s) of the chosen modality (single, or product + service) with per-document parameters, formal annexes, formalization email and uploaded annexes
   - **Cronograma** (accepted/finished) — project stage scheduling (design + development dates, mark-as-completed, status badges)
   - **Secciones** — section editor (expand/edit JSON per section)
   - **Det. técnico**, **Prompt Proposal**, **JSON**, **Actividad**, **Analytics**
@@ -743,6 +743,7 @@ A new internal-only sub-system that tracks the **execution** of an accepted prop
 - Font: Helvetica throughout for consistent cross-platform rendering
 - Clickable Table of Contents with anchor links to contract sections
 - `ProposalDocument` links a generated contract to a specific proposal
+- **Closing modality**: during negotiation a deal closes with the single contract or with two documents — the product contract (software development and implementation: the single contract without clauses 21–24) and the standalone hosting, maintenance and support contract. Both come from the same default template; the service contract asks for its initial term and two notice periods per proposal, and each document can use the standard or a custom text
 - `CompanySettings` provides company branding data (name, logo, address, tax ID) used in PDF headers
 
 ### 3.7 Data Model Entities
@@ -1088,11 +1089,19 @@ The canonical counts, commands and exceptions are maintained in
     the message immediately afterward and before commercial blocks, and stores
     the rendered delivery as immutable history. A resend starts from the latest
     saved message and may persist an edit without changing prior deliveries.
+29. **Closing modality follows the negotiation**: `contract_modality` is `single`
+    for every existing and new proposal and changes only while negotiating,
+    from Documentos. Switching never deletes documents; the chosen modality's
+    contracts are regenerated from the current parameters and the other
+    modality's documents are neither served, attached, sent nor synced to the
+    platform. The clauses do not change: the product contract is derived from
+    the default text and the service contract repeats clauses 21–24, so a
+    contract migration keeps both presentations aligned.
 
 
 ## Documentación para formalización
 
-En Documentos de cada propuesta se descargan el contrato final y los anexos comercial/técnico curados. El correo de formalización precarga tres adjuntos seleccionables, admite documentos de la propuesta, Para/CC y secciones ordenables con Markdown seguro. La revisión muestra los archivos que se enviarán. Las secciones de venta, ROI, CTA y evolución futura quedan fuera de los anexos; la curaduría no inventa obligaciones ni criterios. Si falta información estructurada indispensable, se corrige en la propuesta o se desmarca el documento. Una preparación obsoleta o vencida no se puede enviar.
+En Documentos de cada propuesta se descargan el contrato final (o los contratos de producto y servicio, según la modalidad de cierre) y los anexos comercial/técnico curados. El correo de formalización precarga los documentos de la modalidad (contrato único, o producto y servicio, más los dos anexos) como adjuntos seleccionables, admite documentos de la propuesta, Para/CC y secciones ordenables con Markdown seguro. La revisión muestra los archivos que se enviarán. Las secciones de venta, ROI, CTA y evolución futura quedan fuera de los anexos; la curaduría no inventa obligaciones ni criterios. Si falta información estructurada indispensable, se corrige en la propuesta o se desmarca el documento. Una preparación obsoleta o vencida no se puede enviar.
 
 ## Programa de Alianza: exclusividad conceptual (2026-09-25)
 

@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.98.1
+// Registry version: 2.99.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -213,6 +213,7 @@ export const ADMIN_PROPOSAL_COMMENT = ['@flow:admin-proposal-comment', '@module:
 export const ADMIN_PROPOSAL_CONTRACT_DOWNLOAD = ['@flow:admin-proposal-contract-download', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_CONTRACT_EDIT = ['@flow:admin-proposal-contract-edit', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_CONTRACT_GENERATE = ['@flow:admin-proposal-contract-generate', '@module:admin', '@priority:P1'];
+export const ADMIN_PROPOSAL_CONTRACT_MODALITY = ['@flow:admin-proposal-contract-modality', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_CONTRACT_TERMS_VISIBILITY = ['@flow:admin-proposal-contract-terms-visibility', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_CREATE = ['@flow:admin-proposal-create', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_CREATE_AND_SEND = ['@flow:admin-proposal-create-and-send', '@module:admin', '@priority:P2'];

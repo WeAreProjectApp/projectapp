@@ -415,6 +415,10 @@ def contract_template(db):
             '{contractor_full_name}, NIT {contractor_nit}.\n\n'
             'Ciudad: {contract_city}. Fecha: {contract_date}.'
         ),
+        service_content_markdown=(
+            'Servicio de hosting entre {client_full_name} y {contractor_full_name} '
+            'por {service_initial_term}.'
+        ),
         is_default=True,
     )
 

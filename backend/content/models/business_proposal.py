@@ -147,6 +147,20 @@ class BusinessProposal(HistoryTrackedModel):
             'terms module and its masked draft download.'
         ),
     )
+    class ContractModality(models.TextChoices):
+        SINGLE = 'single', 'Contrato único'
+        SPLIT = 'split', 'Producto y servicio'
+
+    contract_modality = models.CharField(
+        max_length=10,
+        choices=ContractModality.choices,
+        default=ContractModality.SINGLE,
+        help_text=(
+            'How the deal closes: one contract, or a product contract plus a '
+            'separate hosting, maintenance and support contract. Chosen during '
+            'negotiation from the Documents tab.'
+        ),
+    )
     automations_paused = models.BooleanField(
         default=False,
         help_text='When true, no automatic emails (reminder, urgency, inactivity) are sent for this proposal. '

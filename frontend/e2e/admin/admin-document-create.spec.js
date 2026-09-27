@@ -4,7 +4,10 @@
  * @flow:admin-document-create
  * Covers: page renders with mode tabs, paste Markdown mode with its
  *         Editar/Vista previa switch, file upload mode, private fixed/custom
- *         notes, form submission, and error handling.
+ *         notes, form submission, error handling, and the searchable folder
+ *         picker (rows with location/owner/state, search by path, ✕ retracts
+ *         the inherited client, links from automatic folders adjusted, a
+ *         failed folder read retried from the picker).
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -16,6 +19,45 @@ const authCheck = { status: 200, contentType: 'application/json', body: JSON.str
 const createdDocument = {
   id: 10, title: 'Nuevo Doc', status: 'draft', client_name: null, created_at: '2026-03-30T10:00:00Z',
 };
+
+// Dos proyectos con la misma subcarpeta «Entregables» y una automática que el
+// backend rechaza como destino de un documento hecho a mano.
+const VASTAGO_OWNER = { project: 11, project_name: 'Vástago', client: 7, client_display_name: 'Vástago SAS' };
+const KORE_OWNER = { project: 12, project_name: 'Kore', client: 9, client_display_name: 'Kore SAS' };
+const folderTree = [
+  {
+    id: 5, name: 'Vástago', parent: null, order: 0, is_archived: false, folder_kind: 'project',
+    managed_project_state: { name: 'Activo', system_key: 'active' }, ...VASTAGO_OWNER,
+  },
+  {
+    id: 6, name: 'Cuentas de cobro', parent: 5, order: 0, is_archived: false,
+    is_system_managed: true, ...VASTAGO_OWNER,
+  },
+  { id: 7, name: 'Entregables', parent: 5, order: 1, is_archived: false, ...VASTAGO_OWNER },
+  {
+    id: 8, name: 'Kore', parent: null, order: 1, is_archived: false, folder_kind: 'project',
+    managed_project_state: { name: 'Suspendido', system_key: 'suspended' }, ...KORE_OWNER,
+  },
+  { id: 9, name: 'Entregables', parent: 8, order: 0, is_archived: false, ...KORE_OWNER },
+];
+
+/** Mocks del formulario con `folderTree`; `capture` recibe el POST de creación. */
+function mockFolderTreeApi(page, capture) {
+  return mockApi(page, async ({ route, apiPath, method }) => {
+    if (apiPath === 'auth/check/') return authCheck;
+    if (apiPath === 'document-folders/') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify(folderTree) };
+    }
+    if (apiPath === 'accounting/projects/') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) };
+    }
+    if (apiPath === 'documents/create-from-markdown/' && method === 'POST') {
+      capture(route.request().postDataJSON());
+      return { status: 201, contentType: 'application/json', body: JSON.stringify(createdDocument) };
+    }
+    return null;
+  });
+}
 
 const PORTRAIT_VIEWPORT = { width: 835, height: 1195 };
 
@@ -404,6 +446,7 @@ test.describe('Admin Document Create', () => {
     });
     await page.goto('/panel/documents/create?folder=9');
 
+    await expect(page.getByTestId('doc-folder-select')).toHaveValue('Kore - Diseño');
     // Sólo prellenado, nunca lock: el hint lo dice y el selector queda vivo.
     await expect(page.getByTestId('doc-client-suggested-hint')).toBeVisible();
     await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('Kore SAS');
@@ -446,10 +489,102 @@ test.describe('Admin Document Create', () => {
 
     // Y es un default, no una atadura: sacar el documento de la carpeta retira
     // lo heredado en vez de dejarlo pegado.
-    await page.getByTestId('doc-folder-select').selectOption({ label: 'Sin carpeta' });
+    await page.getByTestId('doc-folder-select-clear').click();
 
+    await expect(page.getByTestId('doc-folder-select')).toHaveValue('');
     await expect(page.getByTestId('doc-client-autocomplete')).toHaveValue('');
     await expect(page.getByTestId('doc-client-suggested-hint')).toHaveCount(0);
+  });
+
+  test('searching by path files the new document in that sub-folder', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    let postBody = null;
+    await mockFolderTreeApi(page, (body) => { postBody = body; });
+    await page.goto('/panel/documents/create');
+
+    // Dos «Entregables»: la ruta es la que dice cuál es cuál.
+    const folderPicker = page.getByRole('combobox', { name: 'Carpeta' });
+    await folderPicker.click();
+    await expect(page.getByTestId('doc-folder-select-option-5')).toBeVisible();
+    await folderPicker.fill('vastago entre');
+    await expect(page.getByTestId('doc-folder-select-option-9')).toHaveCount(0);
+    await page.getByTestId('doc-folder-select-option-7').click();
+    await expect(folderPicker).toHaveValue('Vástago / Entregables');
+
+    await page.getByLabel(/T[ií]tulo/i).fill('Acta de entrega');
+    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Acta');
+    await page.getByRole('button', { name: /Crear|Guardar/i }).click();
+
+    await expect(page).toHaveURL(/\/panel\/documents\/10\/edit/);
+    expect(postBody.folder_id).toBe(7);
+  });
+
+  test('the folder picker shows each destination with its location, owner and project state', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the create form is the surface under test; its entry from the list is covered by the canvas catalog spec)
+    await mockFolderTreeApi(page, () => {});
+    await page.goto('/panel/documents/create');
+
+    await page.getByTestId('doc-folder-select').click();
+
+    await expect(page.getByTestId('doc-folder-select-detail-5'))
+      .toHaveText('Carpeta del proyecto · Vástago SAS');
+    await expect(page.getByTestId('doc-folder-select-detail-7')).toHaveText('Vástago · Vástago SAS');
+    await expect(page.getByTestId('doc-folder-select-detail-9'))
+      .toHaveText('Kore · Kore SAS · Suspendido');
+    // Las automáticas no se ofrecen: el backend las rechaza como destino.
+    await expect(page.getByTestId('doc-folder-select-option-6')).toHaveCount(0);
+  });
+
+  test('a link from an automatic folder proposes its nearest manual folder', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    let postBody = null;
+    await mockFolderTreeApi(page, (body) => { postBody = body; });
+    // «Nuevo documento» lleva la carpeta abierta aunque sea del archivado
+    // automático; guardar ahí terminaría en un 409.
+    await page.goto('/panel/documents/create?folder=6');
+
+    await expect(page.getByText('Carpeta ajustada', { exact: true })).toBeVisible();
+    await expect(page.getByTestId('doc-folder-select')).toHaveValue('Vástago');
+    await page.getByLabel(/T[ií]tulo/i).fill('Informe de avance');
+    await page.getByPlaceholder(/Escribe o pega tu contenido en formato Markdown/i).fill('# Informe');
+    await page.getByRole('button', { name: /Crear|Guardar/i }).click();
+
+    await expect(page).toHaveURL(/\/panel\/documents\/10\/edit/);
+    expect(postBody.folder_id).toBe(5);
+    expect(postBody.client).toBe(7);
+  });
+
+  test('a folder list that fails to load can be retried from the picker', {
+    tag: [...ADMIN_DOCUMENT_CREATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    let foldersDown = true;
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'document-folders/') {
+        return foldersDown
+          ? { status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'Error' }) }
+          : { status: 200, contentType: 'application/json', body: JSON.stringify(folderTree) };
+      }
+      if (apiPath === 'accounting/projects/') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: [] }) };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents/create');
+
+    // «No hay carpetas» sería falso: el selector dice que falló y deja reintentar.
+    await page.getByTestId('doc-folder-select').click();
+    await expect(page.getByTestId('doc-folder-select-error'))
+      .toContainText('No se pudieron cargar las carpetas.');
+    foldersDown = false;
+    await page.getByTestId('doc-folder-select-retry').click();
+
+    await expect(page.getByTestId('doc-folder-select-option-7')).toBeVisible();
+    await expect(page.getByTestId('doc-folder-select-error')).toHaveCount(0);
   });
 
   test('keeps create validation beside the incomplete fields', {

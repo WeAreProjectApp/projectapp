@@ -54,6 +54,7 @@
 
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { CONTRACT_DOC_TYPES, CONTRACT_VARIANTS, contractVariantsFor } from '~/stores/proposals_constants';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -81,22 +82,31 @@ const availableDocs = computed(() => {
   return [];
 });
 
+function contractRef(source, variantKey) {
+  return variantKey === 'combined' ? { source } : { source, variant: variantKey };
+}
+
 function proposalDocs() {
   const proposal = props.entity || {};
+  const documents = proposal.proposal_documents || [];
   const list = [];
-  const contract = (proposal.proposal_documents || []).find(d => d.document_type === 'contract');
-  if (contract) {
+  // Contracts of the closing modality: the single contract, or the product and
+  // service contracts. A split closing names the document it attaches.
+  for (const variantKey of contractVariantsFor(proposal)) {
+    const variant = CONTRACT_VARIANTS[variantKey];
+    if (!documents.some(d => d.document_type === variant.docType)) continue;
+    const suffix = variantKey === 'combined' ? '' : `:${variantKey}`;
     list.push({
-      key: 'contract_pdf',
-      label: 'Contrato de desarrollo (PDF)',
+      key: `contract_pdf${suffix}`,
+      label: `${variant.label} (PDF)`,
       description: 'Versión final generada',
-      ref: { source: 'contract_pdf' },
+      ref: contractRef('contract_pdf', variantKey),
     });
     list.push({
-      key: 'contract_draft',
-      label: 'Contrato de desarrollo (borrador)',
+      key: `contract_draft${suffix}`,
+      label: `${variant.label} (borrador)`,
       description: 'PDF con marca de agua',
-      ref: { source: 'contract_draft' },
+      ref: contractRef('contract_draft', variantKey),
     });
   }
   list.push({
@@ -111,8 +121,8 @@ function proposalDocs() {
     description: 'PDF con branding',
     ref: { source: 'technical_pdf' },
   });
-  for (const doc of (proposal.proposal_documents || [])) {
-    if (doc.document_type === 'contract') continue;
+  for (const doc of documents) {
+    if (CONTRACT_DOC_TYPES.includes(doc.document_type)) continue;
     list.push({
       key: `proposal_document:${doc.id}`,
       label: doc.title,

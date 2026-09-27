@@ -77,7 +77,7 @@ Los valores son objetivos mínimos o perfiles deliberados, no repartos uniformes
 | Bugs del proyecto de carga | 60 | ocho estados, cuatro severidades y tres ambientes |
 | Notificaciones | 60 | seis tipos y mezcla leídas/no leídas |
 | Contactos | 60 | contenido Faker determinista |
-| Propuestas | ≥60 | todos los estados, clientes reales y una propuesta de título extremo |
+| Propuestas | ≥60 | todos los estados, clientes reales y una propuesta de título extremo; las negociadas y aceptadas traen datos de contrato completos (incluidos los tres del servicio) y alternan cierre con contrato único o con producto y servicio |
 | Blog | 60 | publicadas/borrador, categorías, JSON y fechas escalonadas |
 | Portafolio | 60 | bilingüe y mezcla publicado/borrador |
 | Tareas | 60 | tableros, prioridades, estados, alertas y comentarios |

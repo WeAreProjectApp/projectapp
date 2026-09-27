@@ -1,3 +1,29 @@
+# Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
+
+En negociación, Documentos permite cerrar el negocio con el contrato único o con
+dos documentos: contrato de producto y contrato de servicio (hosting,
+mantenimiento y soporte). La modalidad vive en `BusinessProposal.contract_modality`:
+- `single` por defecto, sin backfill;
+- se cambia sólo en negociación y queda de lectura en aceptada o rechazada;
+- cambiarla no borra documentos.
+
+Los textos vienen de la plantilla única:
+- Producto se deriva en ejecución: se quitan las cláusulas 21–24 y se aplican tres ajustes anclados.
+- Servicio vive en `service_content_markdown`, sembrado por `0266`.
+
+Ambos textos se verificaron contra los que entregó el operador. Cada documento
+tiene su modo estándar o personalizado, y el servicio pide duración inicial y
+dos preavisos. Descargas, copia Markdown, adjuntos de Correos, envío legado,
+formalización (llave por documento, huella v3), regeneración y plataforma usan
+sólo la modalidad activa. De paso, "Generar contrato" en negociación usa la
+actualización del contrato, en lugar de repetir la transición.
+
+Migraciones: `0265`, esquema; `0266`, texto del servicio, y `0267`, el
+Parágrafo Décimo — Dependencia de Proveedores Tecnológicos y de Inteligencia
+Artificial (Cl. 22 del contrato completo y Cl. 5 del de servicio, con sus tres
+cambios; el de producto no lo lleva). Las aplica el deploy; los contratos ya
+generados no cambian. Rama `feat/26092026-contract-modality-split`, PR #427.
+
 # Validación de Documentos bajo su campo — lista para integrar (2026-09-26)
 
 Nuevo documento (`/panel/documents/create`) deja de pintar la lista roja de

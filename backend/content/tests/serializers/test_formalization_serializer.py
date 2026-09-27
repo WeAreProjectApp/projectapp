@@ -79,3 +79,18 @@ def test_request_rejects_a_recipient_duplicated_across_to_cc(formalization_paylo
     assert serializer.errors['non_field_errors'] == [
         'El correo contact@acme.com no puede estar en Para y CC al mismo tiempo.',
     ]
+
+
+def test_documents_field_accepts_the_split_closing_document_keys(formalization_payload):
+    """Fails if the split closing's product/service contract keys are rejected by the field."""
+    serializer = FormalizationPrepareSerializer(data={
+        **formalization_payload,
+        'documents': ['contract_product', 'contract_service', 'commercial', 'technical'],
+    })
+
+    valid = serializer.is_valid()
+
+    assert valid is True
+    assert serializer.validated_data['documents'] == [
+        'contract_product', 'contract_service', 'commercial', 'technical',
+    ]

@@ -70,7 +70,7 @@ class TestResolveDocRefsContractPdf:
         )
         response = admin_client.post(_send_url(proposal.id), payload, format='json')
         assert response.status_code == 200
-        mock_contract.assert_called_once_with(proposal, draft=False)
+        mock_contract.assert_called_once_with(proposal, draft=False, variant='combined')
 
     @patch('content.services.contract_pdf_service.generate_contract_pdf', return_value=None)
     def test_contract_pdf_ref_returns_400_when_pdf_fails(self, mock_contract, admin_client, proposal):
@@ -96,7 +96,7 @@ class TestResolveDocRefsContractDraft:
         )
         response = admin_client.post(_send_url(proposal.id), payload, format='json')
         assert response.status_code == 200
-        mock_contract.assert_called_once_with(proposal, draft=True)
+        mock_contract.assert_called_once_with(proposal, draft=True, variant='combined')
         mock_wm.assert_called_once()
 
     @patch('content.services.contract_pdf_service.generate_contract_pdf', return_value=None)

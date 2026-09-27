@@ -33,7 +33,7 @@ FIELDS = {
         hosting_discount_nine_month hosting_discount_semiannual hosting_discount_quarterly
         is_active automations_paused project_type_custom market_type_custom email_features
         email_method_phases email_signed_by rejection_reason rejection_comment deliverable
-        selected_modules contract_params'''.split(),
+        selected_modules contract_params contract_modality'''.split(),
     'project': '''name description status current_state client production_url staging_url repository_url
         admin_url admin_username'''.split(),
     'client': '''company_name phone cedula nit billing_code archived_at'''.split(),
@@ -58,6 +58,7 @@ LABELS = {
     'payment_methods': 'Medios de pago', 'thread': 'Hilo', 'name': 'Nombre',
     'description': 'Descripción', 'document_type': 'Tipo de documento',
     'archived_pdf': 'PDF enviado', 'current_state': 'Estado actual',
+    'contract_modality': 'Modalidad de cierre',
 }
 
 

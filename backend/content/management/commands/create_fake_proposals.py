@@ -136,6 +136,22 @@ ALERT_TYPES = [
 
 STATUSES = list(BusinessProposal.Status.values)
 
+# Contract data for proposals in negotiation or accepted, so the Documents tab
+# can generate the single contract or the product and service contracts.
+FAKE_CONTRACTOR_PARAMS = {
+    'contract_source': 'default',
+    'contractor_full_name': 'Project App S.A.S.',
+    'contractor_nit': '900.000.000-0',
+    'contractor_email': 'contratos@example.com',
+    'bank_name': 'Banco de Pruebas',
+    'bank_account_type': 'Ahorros',
+    'bank_account_number': '000-000000-00',
+    'contract_city': 'Medellín',
+    'service_initial_term': 'doce (12) meses',
+    'service_renewal_notice_days': 'treinta (30)',
+    'service_termination_notice_days': 'treinta (30)',
+}
+
 
 class Command(BaseCommand):
     help = (
@@ -231,6 +247,19 @@ class Command(BaseCommand):
             # ~20% of non-draft proposals have automations paused
             if status != 'draft' and random.random() < 0.2:
                 data['automations_paused'] = True
+
+            # Negotiated deals carry contract data; every other cycle of
+            # statuses closes with two documents (product + service).
+            if status in ('negotiating', 'accepted'):
+                data['contract_params'] = {
+                    **FAKE_CONTRACTOR_PARAMS,
+                    'client_full_name': client_name,
+                    'client_cedula': f'1.000.{i:03d}.000',
+                    'client_email': data['client_email'],
+                    'contract_date': now.date().isoformat(),
+                }
+                if (i // len(STATUSES)) % 2:
+                    data['contract_modality'] = BusinessProposal.ContractModality.SPLIT
 
             # Set realistic lifecycle fields per status
             if status == 'sent':
@@ -395,6 +424,11 @@ class Command(BaseCommand):
                 '**Correo contratista:** {contractor_email}\n\n'
                 '**Ciudad:** {contract_city}\n\n'
                 '**Banco:** {bank_name} — {bank_account_type} {bank_account_number}\n'
+            ),
+            service_content_markdown=(
+                'Entre **{client_full_name}** (C.C. {client_cedula}) y '
+                '**{contractor_full_name}** (NIT {contractor_nit}), servicio de hosting, '
+                'mantenimiento y soporte por {service_initial_term}.\n'
             ),
             is_default=True,
         )
