@@ -226,6 +226,7 @@ def test_update_diagnostic_accepts_current_identity_fields(api_client, superuser
 
 
 def test_create_proposal_persists_current_commercial_metadata(api_client):
+    """Fails if MCP creation ignores an explicit welcome-video preference."""
     token = activate_connector('proposals')
 
     response = call_tool(api_client, 'proposals', token, 'create_proposal', {
@@ -237,6 +238,7 @@ def test_create_proposal_persists_current_commercial_metadata(api_client):
         'market_type_custom': 'B2B2C',
         'nationality': 'USA',
         'show_contract_terms': False,
+        'show_explainer_video': False,
         'sections': {'general': {'clientName': 'Acme Inc.'}},
     })
 
@@ -246,9 +248,28 @@ def test_create_proposal_persists_current_commercial_metadata(api_client):
     assert proposal.market_type_custom == 'B2B2C'
     assert proposal.nationality == 'USA'
     assert proposal.show_contract_terms is False
+    assert proposal.show_explainer_video is False
+
+
+def test_create_proposal_defaults_welcome_video_visible(api_client):
+    """Fails if MCP creation hides the welcome video when the preference is omitted."""
+    token = activate_connector('proposals')
+
+    response = call_tool(api_client, 'proposals', token, 'create_proposal', {
+        'title': 'Propuesta con video predeterminado',
+        'client_name': 'Cliente predeterminado',
+        'sections': {'general': {'clientName': 'Cliente predeterminado'}},
+    })
+
+    assert response.data['result']['isError'] is False
+    proposal = BusinessProposal.objects.get(
+        title='Propuesta con video predeterminado',
+    )
+    assert proposal.show_explainer_video is True
 
 
 def test_update_proposal_persists_current_commercial_metadata(api_client):
+    """Fails if MCP updates discard an explicit welcome-video preference."""
     proposal = BusinessProposal.objects.create(
         title='Propuesta local',
         client_name='Acme',
@@ -264,6 +285,7 @@ def test_update_proposal_persists_current_commercial_metadata(api_client):
         'market_type_custom': 'Exportación',
         'nationality': 'EXT',
         'show_contract_terms': False,
+        'show_explainer_video': False,
         'sections': {'general': {'clientName': proposal.client_name}},
     })
 
@@ -273,6 +295,28 @@ def test_update_proposal_persists_current_commercial_metadata(api_client):
     assert proposal.market_type_custom == 'Exportación'
     assert proposal.nationality == 'EXT'
     assert proposal.show_contract_terms is False
+    assert proposal.show_explainer_video is False
+
+
+def test_update_proposal_keeps_welcome_video_preference_when_omitted(api_client):
+    """Fails if an MCP update resets a hidden welcome video that its payload omits."""
+    proposal = BusinessProposal.objects.create(
+        title='Propuesta sin video',
+        client_name='Acme',
+        show_explainer_video=False,
+    )
+    token = activate_connector('proposals')
+
+    response = call_tool(api_client, 'proposals', token, 'update_proposal', {
+        'proposal_id': proposal.id,
+        'title': proposal.title,
+        'client_name': proposal.client_name,
+        'sections': {'general': {'clientName': proposal.client_name}},
+    })
+
+    assert response.data['result']['isError'] is False
+    proposal.refresh_from_db()
+    assert proposal.show_explainer_video is False
 
 
 def test_update_proposal_honors_an_explicit_client_reference(api_client):
@@ -301,6 +345,7 @@ def test_update_proposal_honors_an_explicit_client_reference(api_client):
 
 
 def test_duplicate_proposal_copies_current_commercial_metadata(api_client):
+    """Fails if MCP duplication resets a source proposal's welcome-video preference."""
     original = BusinessProposal.objects.create(
         title='Propuesta base',
         client_name='Acme',
@@ -309,6 +354,7 @@ def test_duplicate_proposal_copies_current_commercial_metadata(api_client):
         market_type='other',
         market_type_custom='Gobierno',
         show_contract_terms=False,
+        show_explainer_video=False,
     )
     token = activate_connector('proposals')
 
@@ -321,6 +367,7 @@ def test_duplicate_proposal_copies_current_commercial_metadata(api_client):
     assert duplicate.project_type_custom == original.project_type_custom
     assert duplicate.market_type_custom == original.market_type_custom
     assert duplicate.show_contract_terms is False
+    assert duplicate.show_explainer_video is False
 
 
 def test_create_hosting_income_returns_its_covered_period(

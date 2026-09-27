@@ -3647,6 +3647,16 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-engagement-tracking.spec.js`
 
+### FLOW: `public-proposal-explainer`
+
+- **Módulo:** public
+- **Rol:** invitado
+- **Prioridad:** P2
+- **Ruta:** `/:locale/proposal/:uuid`
+- **Interacción:** Reproducir el video de bienvenida sobre las cuatro opciones. La selección de una opción detiene el audio y abre su contenido. Si falla el archivo, el enlace de respaldo permite abrirlo aparte. Se oculta sin ambos controles, español, propuesta activa, detalle técnico activo o Contrato y condiciones.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidencia:** `ProposalViewGateway.vue`, `ExplainerVideoCard.vue`, `proposal_explainer_video_visible()`.
+
 
 ## 6. Admin Flows
 
@@ -6090,6 +6100,26 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/public/diagnostic-public-view.spec.js` + `e2e/admin/admin-diagnostic-sections.spec.js` (initial-phase visibility filter)
 
+### FLOW: `admin-proposal-explainer-visibility`
+
+- **Módulo:** admin
+- **Rol:** admin
+- **Prioridad:** P2
+- **Ruta:** `/:locale/panel/proposals` → `Configuraciones`
+- **Interacción:** Previsualizar el video y activar o desactivar su visibilidad general. El guardado exitoso confirma el cambio; ante un fallo, el interruptor vuelve al valor anterior y se informa el error. Se conservan las preferencias individuales.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidencia:** `pages/panel/proposals/index.vue`, `ExplainerVisibilityToggle.vue`, `stores/explainer_videos.js`.
+
+### FLOW: `admin-proposal-explainer-preference`
+
+- **Módulo:** admin
+- **Rol:** admin
+- **Prioridad:** P2
+- **Ruta:** `/:locale/panel/proposals/:id/edit` → `General`
+- **Interacción:** Consultar la disponibilidad y cambiar la preferencia individual. El estado explica si falta el control general, idioma español, contrato, detalle técnico o propuesta activa. Un fallo de guardado restaura el valor anterior y muestra un error.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidencia:** `ProposalGeneralTab.vue`, `ProposalExplainerToggle.vue`, `pages/panel/proposals/[id]/edit.vue`.
+
 
 ## 7. E2E Coverage Index
 
@@ -6322,6 +6352,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-edit` | admin | P1 | success,error | 1 |
 | `admin-proposal-engagement-decay-alert` | admin | P2 | — | 0 |
 | `admin-proposal-engagement-score` | admin | P2 | display | 1 |
+| `admin-proposal-explainer-preference` | admin | P2 | display,success,failure | 3 |
+| `admin-proposal-explainer-visibility` | admin | P2 | display,success,failure | 4 |
 | `admin-proposal-first-view-retry` | admin | P1 | success,failure | 2 |
 | `admin-proposal-formalization-delivery` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-functional-requirements-form` | admin | P1 | success,error | 1 |
@@ -6504,6 +6536,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-portfolio` | public | P2 | display | 1 |
 | `public-portfolio-detail` | public | P2 | display,failure | 1 |
 | `public-privacy-policy` | public | P4 | display | 1 |
+| `public-proposal-explainer` | public | P2 | display,success,failure | 4 |
 | `public-route-not-found` | public | P3 | failure | 1 |
 | `public-secure-link-create` | public | P1 | success,error | — |
 | `public-secure-link-reveal` | public | P1 | success,display,failure | — |

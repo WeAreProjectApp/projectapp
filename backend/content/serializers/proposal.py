@@ -758,7 +758,8 @@ class ProposalFromJSONSerializer(serializers.Serializer):
     urgency_reminder_days = serializers.IntegerField(required=False, default=15)
     discount_percent = serializers.IntegerField(required=False, default=0)
     show_contract_terms = serializers.BooleanField(required=False, default=True)
-    show_explainer_video = serializers.BooleanField(required=False, default=True)
+    # Creation supplies the model default; omission during JSON updates preserves the preference.
+    show_explainer_video = serializers.BooleanField(required=False)
     email_intro = serializers.CharField(required=False, default='', allow_blank=True)
     sections = serializers.DictField(child=serializers.DictField(), required=True)
 

@@ -1,27 +1,44 @@
 import { ref } from 'vue'
 
 import {
-  EXPLAINER_IDS,
   explainerVideoFor,
   formatExplainerDuration,
   useExplainerVideo,
 } from '../../composables/useExplainerVideos'
 
 describe('useExplainerVideos', () => {
-  it('describes both Spanish explainers with their assets and dimensions', () => {
-    EXPLAINER_IDS.forEach((id) => {
-      const descriptor = explainerVideoFor(id, 'es')
-      expect(descriptor).toMatchObject({ id, language: 'es', width: 1920, height: 1080 })
-      expect(descriptor.src).toBeTruthy()
-      expect(descriptor.poster).toBeTruthy()
-      expect(descriptor.durationSeconds).toBe(45)
+  it.each(['additional-modules', 'financing'])('keeps the Spanish %s render at 45 seconds', (id) => {
+    // Fails if an existing explainer render is accidentally replaced by the proposal timing.
+    expect(explainerVideoFor(id, 'es')).toMatchObject({
+      id,
+      language: 'es',
+      durationSeconds: 45,
+      width: 1920,
+      height: 1080,
     })
   })
 
-  it('only resolves languages that have a render and ids from the registry', () => {
-    expect(explainerVideoFor('financing', 'es')).toMatchObject({ id: 'financing', language: 'es' })
+  it('describes the Spanish proposal render with its production duration', () => {
+    // Fails if the public proposal card points to a missing, malformed, or wrongly timed render.
+    const descriptor = explainerVideoFor('proposal', 'es')
+
+    expect(descriptor).toMatchObject({
+      id: 'proposal',
+      language: 'es',
+      durationSeconds: 58.2,
+      width: 1920,
+      height: 1080,
+    })
+    expect(descriptor.src).not.toBe('')
+    expect(descriptor.poster).not.toBe('')
+  })
+
+  it('resolves only the known Spanish proposal video', () => {
+    // Fails if the Spanish-only proposal video is offered in English or an unregistered surface.
+    expect(explainerVideoFor('proposal', 'es')).toMatchObject({ id: 'proposal', language: 'es' })
+    expect(explainerVideoFor('proposal', 'en')).toBeNull()
+    expect(explainerVideoFor('unknown', 'es')).toBeNull()
     expect(explainerVideoFor('financing', 'en')).toBeNull()
-    expect(explainerVideoFor('proposal', 'es')).toBeNull()
   })
 
   it('reacts to language changes through the composable', () => {

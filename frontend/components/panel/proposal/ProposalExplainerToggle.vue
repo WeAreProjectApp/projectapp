@@ -54,7 +54,7 @@ const status = computed(() => unavailableReason.value || (props.modelValue
       <span class="text-xs text-text-muted">Mostrar video de bienvenida</span>
     </div>
     <p class="mt-1 text-xs leading-5 text-text-muted" role="status" data-testid="proposal-explainer-status">{{ status }}</p>
-    <BaseButton v-if="loadFailed" variant="secondary" size="sm" :loading="store.isLoading" @click="loadSettings">
+    <BaseButton v-if="loadFailed" data-testid="proposal-explainer-retry" variant="secondary" size="sm" :loading="store.isLoading" @click="loadSettings">
       Reintentar
     </BaseButton>
   </div>

@@ -90,3 +90,9 @@ Cambiar el audio nunca vuelve a renderizar el video.
 Ubuntu (Ubuntu Font Licence) y Noto Emoji (OFL) se copian desde
 `frontend/assets/fonts/`. GSAP se vendoriza desde `node_modules` (licencia estándar
 de GSAP para uso en render offline). HyperFrames es Apache 2.0.
+
+## Bienvenida de propuestas
+
+La tercera pieza, **Tu propuesta, paso a paso**, dura 58,2 segundos y explica
+las cuatro opciones del acceso público. Fuentes, narración colombiana,
+reproducción y reglas de visibilidad: [brag-v2/proposal/README.md](brag-v2/proposal/README.md).

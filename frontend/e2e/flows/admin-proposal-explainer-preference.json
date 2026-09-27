@@ -1,0 +1,16 @@
+{
+  "id": "admin-proposal-explainer-preference",
+  "name": "Admin Proposal Welcome Video Preference",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Admin changes one proposal’s welcome-video preference in General and sees why it cannot currently appear. A successful save persists the preference; a failed update restores the previous value and reports the failure.",
+  "expectedSpecs": 3,
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

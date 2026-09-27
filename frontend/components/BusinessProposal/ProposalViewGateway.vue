@@ -16,6 +16,8 @@
         ref="explainerCard"
         :video="explainerVideo"
         i18n-namespace="proposalExplainer"
+        content-locale="es-co"
+        :content-messages="explainerMessages"
         test-id="proposal-explainer"
         class="mx-auto mb-8 max-w-3xl sm:mb-10"
       />
@@ -28,6 +30,7 @@
         <!-- Executive card -->
         <button
           type="button"
+          data-testid="gateway-executive-card"
           class="gateway-card group relative bg-primary rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-transparent hover:border-lemon transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer"
@@ -56,6 +59,7 @@
         <!-- Complete card -->
         <button
           type="button"
+          data-testid="gateway-detailed-card"
           class="gateway-card group relative bg-surface rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-left
                  border-2 border-esmerald/15 hover:border-border-default transition-all duration-300
                  shadow-lg hover:shadow-2xl cursor-pointer"
@@ -150,6 +154,7 @@ import { computed, ref } from 'vue';
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';
 import { useExplainerVideo } from '~/composables/useExplainerVideos';
 import { TECH_READING_TIME } from '~/utils/technicalProposalPanels';
+import proposalExplainerEs from '~/locales/proposalExplainer/es';
 
 const props = defineProps({
   showExplainerVideo: { type: Boolean, default: false },
@@ -171,6 +176,8 @@ const props = defineProps({
   },
 });
 
+// The Spanish document must not depend on the browser locale loading first.
+const explainerMessages = { 'es-co': { proposalExplainer: proposalExplainerEs } };
 const emit = defineEmits(['select']);
 const explainerCard = ref(null);
 const explainerVideo = useExplainerVideo('proposal', computed(() => props.language));

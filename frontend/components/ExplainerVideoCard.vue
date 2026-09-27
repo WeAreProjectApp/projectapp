@@ -18,10 +18,21 @@ const props = defineProps({
   /** hero = protagonist card on a public view; compact = panel media object. */
   variant: { type: String, default: 'hero', validator: (value) => ['hero', 'compact'].includes(value) },
   testId: { type: String, default: 'explainer-video' },
+  /** Public documents may choose a language independently of the browser locale. */
+  contentLocale: { type: String, default: undefined },
+  contentMessages: { type: Object, default: undefined },
 })
 
 const emit = defineEmits(['play', 'error'])
-const { t } = useI18n()
+const { t } = useI18n(props.contentMessages ? {
+  useScope: 'local',
+  locale: props.contentLocale,
+  inheritLocale: false,
+  messages: props.contentMessages,
+} : {})
+function translate(key, params = {}) {
+  return props.contentLocale ? t(key, params, { locale: props.contentLocale }) : t(key, params)
+}
 
 const state = ref('idle')
 const videoRef = ref(null)
@@ -33,9 +44,9 @@ defineExpose({ pause })
 const ns = computed(() => props.i18nNamespace)
 const isCompact = computed(() => props.variant === 'compact')
 const titleId = computed(() => `${props.testId}-title`)
-const title = computed(() => t(`${ns.value}.${isCompact.value ? 'explainerPanelTitle' : 'explainerTitle'}`))
-const description = computed(() => t(`${ns.value}.${isCompact.value ? 'explainerPanelDescription' : 'explainerDescription'}`))
-const durationLabel = computed(() => t(`${ns.value}.explainerDuration`, { time: formatExplainerDuration(props.video.durationSeconds) }))
+const title = computed(() => translate(`${ns.value}.${isCompact.value ? 'explainerPanelTitle' : 'explainerTitle'}`))
+const description = computed(() => translate(`${ns.value}.${isCompact.value ? 'explainerPanelDescription' : 'explainerDescription'}`))
+const durationLabel = computed(() => translate(`${ns.value}.explainerDuration`, { time: formatExplainerDuration(props.video.durationSeconds) }))
 
 async function start() {
   state.value = 'playing'
@@ -80,7 +91,7 @@ function onEnded() {
         unstyled
         icon-only
         type="button"
-        :aria-label="t(`${ns}.explainerPlayAria`, { title })"
+        :aria-label="translate(`${ns}.explainerPlayAria`, { title })"
         :data-testid="`${testId}-play`"
         class="group relative aspect-video w-full overflow-hidden bg-primary-strong"
         :class="isCompact ? 'rounded-2xl' : ''"
@@ -110,7 +121,7 @@ function onEnded() {
           aria-hidden="true"
           class="absolute right-3 top-3 rounded-full bg-primary-strong/80 px-3 py-1 text-xs font-medium text-on-primary"
         >
-          {{ t(`${ns}.explainerPlay`) }} · {{ durationLabel }}
+          {{ translate(`${ns}.explainerPlay`) }} · {{ durationLabel }}
         </span>
       </BaseButton>
       <template v-else>
@@ -130,14 +141,14 @@ function onEnded() {
           @ended="onEnded"
         />
         <BaseAlert v-if="state === 'error'" variant="warning" class="mt-3" :data-testid="`${testId}-error`">
-          {{ t(`${ns}.explainerError`) }}
+          {{ translate(`${ns}.explainerError`) }}
           <a
             :href="video.src"
             target="_blank"
             rel="noopener"
             :data-testid="`${testId}-open`"
             class="ml-1 font-medium underline"
-          >{{ t(`${ns}.explainerOpenFile`) }}</a>
+          >{{ translate(`${ns}.explainerOpenFile`) }}</a>
         </BaseAlert>
       </template>
     </div>
@@ -147,7 +158,7 @@ function onEnded() {
       <p class="mt-1 text-sm leading-6 text-text-muted">{{ description }}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
         <BaseBadge variant="neutral" size="sm">{{ durationLabel }}</BaseBadge>
-        <span class="text-xs text-text-subtle">{{ t(`${ns}.explainerNoAudioNote`) }}</span>
+        <span class="text-xs text-text-subtle">{{ translate(`${ns}.explainerNoAudioNote`) }}</span>
       </div>
     </div>
   </section>

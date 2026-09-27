@@ -1,5 +1,17 @@
 # Architecture — ProjectApp
 
+> **Video de bienvenida de propuestas — 2026-09-27:** el acceso público muestra
+> una pieza genérica en español antes de elegir modo, solo si están disponibles
+> las cuatro opciones. `BusinessProposal.show_explainer_video` conserva la
+> preferencia individual y `ExplainerVideoSettings.show_proposal_video` controla
+> todo el módulo. El serializer admin devuelve la preferencia; el público
+> calcula la visibilidad con ambos controles, idioma ES, propuesta activa,
+> contrato y detalle técnico habilitados. Reutiliza las secciones ya serializadas
+> y consulta el singleton solo cuando la propuesta reúne esas condiciones.
+> UUID, slug, enlaces compartidos y preview usan el mismo serializer público.
+> El control nuevo no agenda rebuild: la propuesta obtiene sus datos al abrirse.
+> El reproductor compartido se pausa antes de elegir modo y al desmontarse.
+
 > **2026-09-26 — enlaces seguros:** app Django `secure_links` (`SecureLink`,
 > `SecureLinkEvent` append-only) con `services.py` como única frontera de
 > escritura para panel (sesión/CSRF + `IsAdminUser`), página pública (sin
