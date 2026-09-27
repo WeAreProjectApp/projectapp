@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { narrationKey, assertNarrationFits, captionSchedule, narrationFingerprint } from '../scripts/lib/narration.mjs'
+import { narrationKey, narrationSettings, assertNarrationFits, captionSchedule, narrationFingerprint } from '../scripts/lib/narration.mjs'
 
 const recording = { text: 'Construimos hoy.', voice: 'ef_dora', language: 'es', speed: 1.1 }
 
@@ -32,4 +32,42 @@ test('captions cover the measured voice interval without a gap', () => {
 test('retiming a scene invalidates the mixed narration', () => {
   const script = { scenes: { intro: { narration: 'Construimos hoy.' } } }
   assert.notEqual(narrationFingerprint(script, { start: 0 }), narrationFingerprint(script, { start: 4 }))
+})
+
+test('a provider change selects a new cached recording', () => {
+  assert.notEqual(narrationKey(recording), narrationKey({ ...recording, provider: 'edge' }))
+})
+
+test('a locale change selects a new cached recording', () => {
+  assert.notEqual(narrationKey(recording), narrationKey({ ...recording, locale: 'es-CO' }))
+})
+
+test('a revised voice setting invalidates the mixed narration', () => {
+  const script = { scenes: { intro: { narration: 'Construimos hoy.' } } }
+  const settings = { provider: 'edge', voice: 'es-CO-SalomeNeural', speed: 1, lead: 0.2 }
+  assert.notEqual(narrationFingerprint(script, {}, settings), narrationFingerprint(script, {}, { ...settings, voice: 'es-CO-GonzaloNeural' }))
+})
+
+test('legacy narration retains the local provider', () => {
+  assert.deepEqual(narrationSettings({ voice: 'ef_dora' }), {
+    provider: 'kokoro', voice: 'ef_dora', locale: 'es', speed: 1, lead: 0.6,
+  })
+})
+
+test('the authored voice config supplies the production defaults', () => {
+  const config = { provider: 'edge', voice: 'es-CO-SalomeNeural', locale: 'es-CO', speed: 1, lead: 0.2 }
+  assert.deepEqual(narrationSettings({}, config), config)
+})
+
+test('an unsupported provider cannot silently select a fallback', () => {
+  assert.throws(() => narrationSettings({ provider: 'unknown', voice: 'ef_dora' }), /Unknown narration provider/)
+})
+
+test('a voice from another locale is rejected', () => {
+  assert.throws(() => narrationSettings({ provider: 'edge', voice: 'es-ES-ElviraNeural', locale: 'es-CO' }), /must match/)
+})
+
+test('moving the voice lead invalidates the mixed narration', () => {
+  const script = { scenes: { intro: { narration: 'Construimos hoy.' } } }
+  assert.notEqual(narrationFingerprint(script, {}, { lead: 0.2 }), narrationFingerprint(script, {}, { lead: 0.6 }))
 })

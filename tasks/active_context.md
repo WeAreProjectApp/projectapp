@@ -1,5 +1,7 @@
 # Modalidad de cierre: contrato único o producto y servicio (2026-09-26)
 
+**2026-09-27 — revisión editorial de videos implementada y validada:** catálogo y Programa de Alianza pasan a 60 segundos con voz colombiana, sin nombre de marca en la narración. El catálogo cambia sus dos selecciones de tarjetas e incorpora los eslóganes; Alianza destaca en una escena propia el paquete de 60 horas mensuales de la opción a cinco años. La producción conserva HyperFrames y añade Edge TTS aislado, con caché por proveedor/voz/locale y control de duración. Verificación y reproducción en `explainers/brag-v2/`.
+
 En negociación, Documentos permite cerrar el negocio con el contrato único o con
 dos documentos: contrato de producto y contrato de servicio (hosting,
 mantenimiento y soporte). La modalidad vive en `BusinessProposal.contract_modality`:

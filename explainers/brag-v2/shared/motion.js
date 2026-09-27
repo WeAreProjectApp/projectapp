@@ -47,15 +47,17 @@
     if (detailRows.length) timeline.fromTo(detailRows, { x: 24, opacity: 0 }, { x: 0, opacity: 1, duration: 0.5, stagger: 0.55, ease: 'power2.out' }, start + 1.8) // beat-locked: scene 2 reveal at 5.8s
   })
 
-  // Three distinct product moments, each held for four seconds.
+  // Product moments inherit the scene's timing, including editorial retiming.
   document.querySelectorAll('[data-feature]').forEach((feature, index) => {
-    const start = 11 + index * 4
+    const scene = feature.closest('.scene')
+    const duration = Number(scene.dataset.duration) / scene.querySelectorAll('[data-feature]').length
+    const start = Number(scene.dataset.start) + index * duration
     timeline.set(feature, { autoAlpha: 0 }, 0)
     timeline.set(feature, { autoAlpha: 1 }, start)
     timeline.fromTo(feature.querySelector('.copy'), { y: 28, opacity: 0 }, { y: 0, opacity: 1, duration: 0.55, ease: 'power3.out' }, start)
     timeline.fromTo(feature.querySelector('.demo'), { x: 50, opacity: 0 }, { x: 0, opacity: 1, duration: 0.6, ease: 'power3.out' }, start + 0.1)
     timeline.fromTo(feature.querySelectorAll('.demo-line, .day, .cta'), { y: 16, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4, stagger: 0.18, ease: 'power2.out' }, start + 0.8)
-    timeline.to(feature, { autoAlpha: 0, duration: 0.2 }, start + 3.8)
+    timeline.to(feature, { autoAlpha: 0, duration: 0.2 }, start + duration - 0.2)
   })
 
   const captionRoot = document.getElementById('captions')
@@ -75,6 +77,6 @@
     timeline.set(node, { autoAlpha: 1 }, cue.start)
     timeline.set(node, { autoAlpha: 0 }, cue.end)
   }
-  timeline.fromTo('.progress-fill', { scaleX: 0 }, { scaleX: 1, duration: 45, ease: 'none' }, 0)
+  timeline.fromTo('.progress-fill', { scaleX: 0 }, { scaleX: 1, duration: Number(document.getElementById('root').dataset.duration), ease: 'none' }, 0)
   window.BRAG_TIMELINE = timeline
 })()

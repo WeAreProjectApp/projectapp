@@ -1,5 +1,12 @@
 # Technical Documentation — ProjectApp
 
+> **Videos comerciales — revisión 2026-09-27:** los dos assets activos duran
+> 60 s. `narrationConfig` fija Edge TTS (`edge-tts==7.2.8`, venv separado),
+> `es-CO-SalomeNeural`, locale `es-CO`, velocidad natural y lead 0.2 s. Sólo la
+> producción de voz requiere red; Nuxt sigue sirviendo MP4 estático. Caché por
+> texto/proveedor/voz/locale/velocidad; mezcla validada contra guion, agenda y
+> configuración. La agenda HTML gobierna también animaciones, clics y progreso.
+
 > **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
 > `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
 > error. `create_secure_link` es la única tool MCP que acepta secretos en claro:

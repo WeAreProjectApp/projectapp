@@ -4,9 +4,17 @@
   "skill": "skills/brag/SKILL.md",
   "options": {
     "voice": true,
-    "duration": 45,
+    "duration": 60,
     "format": "landscape",
-    "tone": "app-store, moderno y cercano"
+    "tone": "app-store, moderno y cercano",
+    "narration": {
+      "provider": "edge",
+      "version": "7.2.8",
+      "voice": "es-CO-SalomeNeural",
+      "locale": "es-CO",
+      "speed": 1,
+      "lead": 0.2
+    }
   },
   "musicSha256": "364a546834db4c0c2e3b3240eb6df03e98b7362230154b04c5c614442f6660d7",
   "sourceProjectCommit": "a292b253",
@@ -17,6 +25,15 @@
       "video": "additional-modules",
       "sourceProjectCommit": "a749234e",
       "contentNote": "La ficha de Protección de propiedad intelectual (escenas 2 y 4) se toma de la migración content.0259, todavía no desplegada; el snapshot de content/ no se refrescó porque la API de producción aún no tiene el módulo."
+    },
+    {
+      "date": "2026-09-27",
+      "videos": [
+        "additional-modules",
+        "financing"
+      ],
+      "sourceProjectCommit": "7bb78e29",
+      "contentNote": "Revisión editorial del operador: tarjetas distintas y compactas, eslóganes, voz colombiana sin nombre de marca y escena dedicada al paquete mensual de 60 horas en la alianza a cinco años. Paquete contrastado con financing_program_service.py (INCLUDED_PACKAGE_HOURS y términos de renovación/producción). Ambos videos pasan a 60 segundos."
     }
   ]
 }
