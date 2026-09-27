@@ -70,3 +70,56 @@ introduce AAC; música atenuada durante la voz y fade final sin cortar palabras.
 | Video | Tamaño | Sonoridad integrada | Pico real tras AAC |
 |---|---:|---:|---:|
 | Módulos adicionales (revisión 2026-09-26) | 2.09 MiB | -16.6 LUFS | -2.1 dBTP |
+
+
+## Revisión editorial 2026-09-27 — tarjetas, voz latina y paquete mensual
+
+- Alcance: dos videos de 60 s con voz colombiana `es-CO-SalomeNeural`, Edge TTS
+  7.2.8, velocidad 1 y lead 0.2 s; sin nombre de marca en narración/subtítulos.
+  El catálogo muestra dos selecciones distintas de cuatro tarjetas compactas y
+  los tres eslóganes. Alianza suma una escena 24–35 s para las 60 horas mensuales
+  incluidas a cinco años, con condiciones verificadas contra el servicio del programa.
+- Narración: todos los segmentos caben antes del cambio de escena con margen de
+  0.3 s; ningún audio se acelera, recorta ni mezcla con voz de otra región.
+  Los primeros ensayos rechazaron frases largas; se resumió el catálogo y se
+  redistribuyeron los tiempos de Alianza dentro de los 60 s. Los subtítulos se
+  regeneraron a partir de la duración medida de cada frase.
+- HyperFrames: ambos checks sin errores ni advertencias de lint, runtime, layout
+  o contraste; 48/48 muestras de contraste en catálogo y 47/47 en Alianza.
+- Revisión visual de 15 fotogramas: dos cuadrículas, tres demostraciones,
+  propiedad intelectual, eslóganes, comparativa, paquete mensual, exclusividad,
+  evaluación y cierre. La escena del paquete usa acento de color sin fondo para
+  mantener el contraste del titular y evitar una lectura ambigua del auditor.
+- Node: 16 pruebas de configuración, caché, desfases, desbordes y subtítulos.
+  Jest: 10 pruebas del descriptor/reproductor y 20 del mapa de vistas.
+  Catálogo de vistas, contrato responsive y sincronización/freshness de flows
+  aprobados; no hay interacción nueva ni cambio de rutas o permisos.
+- La escucha humana del audio no se ha realizado en esta sesión. Se verifican
+  la voz/locale solicitados, texto de entrada, tiempos, pista de audio y mezcla;
+  el MP4 exportado queda disponible para revisión auditiva.
+- El intento E2E sobre Nuxt dev encontró timeouts de hidratación en la portada
+  antes de alcanzar el catálogo (selector de idioma todavía deshabilitado).
+  Se detuvo la corrida local y se repitió el alcance sobre el build de producción.
+  Los seis casos del catálogo pasaron. Los cuatro casos de Alianza encontraron
+  un elemento del footer desmontado durante la hidratación; se añadió la misma
+  espera de readiness que ya usa el catálogo, sin cambiar assertions del video
+  ni timeouts. La repetición pasó los cuatro casos y una regresión del programa
+  (cinco aprobados): once casos públicos distintos aprobados en total.
+
+- MP4 finales: 60.000 s, H.264 1920×1080 a 30 fps, AAC estéreo a 48 kHz;
+  faststart confirmado (`moov` antes de `mdat`) y decodificación completa sin errores.
+- Chromium sobre los archivos exportados: inicio y avance, audio AAC decodificado,
+  salto al segundo 28, ajuste del reproductor a 375 px y final natural desde
+  el segundo 58 aprobados en ambos. El servidor temporal de Python no soportaba
+  saltos HTTP Range; la comprobación de seeking se repitió con acceso directo al
+  archivo, sin cambiar el MP4 ni las assertions de reproducción.
+
+| Video | Tamaño | Sonoridad integrada | Pico real tras AAC |
+|---|---:|---:|---:|
+| Módulos adicionales (2026-09-27) | 2.48 MiB | -16.0 LUFS | -2.5 dBTP |
+| Programa de Alianza (2026-09-27) | 2.33 MiB | -16.4 LUFS | -3.3 dBTP |
+
+Ambas piezas quedan bajo el presupuesto de 12 MiB y el límite de -1.5 dBTP.
+
+- Build de producción Nuxt completo: cliente, SSR, 24 rutas y Nitro aprobados.
+  Se mantienen los avisos previos de tamaño de chunks y `eval` de dependencias.

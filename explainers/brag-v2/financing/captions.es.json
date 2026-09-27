@@ -2,56 +2,71 @@
   {
     "text": "Tu próximo producto necesita un equipo aliado.",
     "start": 0.2,
-    "end": 2.930667
+    "end": 3.632
   },
   {
-    "text": "Conoce el Programa de Alianza de Project App: desarrollo, financiación",
+    "text": "Conoce nuestro Programa de Alianza:",
     "start": 4.2,
-    "end": 8.013333125
+    "end": 6.996923076923077
   },
   {
-    "text": "y continuidad técnica para tu producto.",
-    "start": 8.013333125,
-    "end": 10.301333000000001
+    "text": "desarrollo, financiación y continuidad técnica para tu producto.",
+    "start": 6.996923076923077,
+    "end": 11.472
   },
   {
     "text": "Elige una alianza de tres o cinco años. Ambas contemplan",
-    "start": 11.2,
-    "end": 14.3658668
+    "start": 12.2,
+    "end": 16.567999999999998
   },
   {
     "text": "financiación del saldo aprobado. El plazo de pago es distinto",
-    "start": 14.3658668,
-    "end": 17.5317336
+    "start": 16.567999999999998,
+    "end": 20.936
   },
   {
     "text": "al tiempo de la alianza.",
-    "start": 17.5317336,
-    "end": 19.114666999999997
+    "start": 20.936,
+    "end": 23.12
   },
   {
-    "text": "La opción de cinco años incluye capacidad mensual y exclusividad",
-    "start": 23.2,
-    "end": 26.9653335
+    "text": "La opción de cinco años incluye un paquete",
+    "start": 24.2,
+    "end": 27.5312
   },
   {
-    "text": "conceptual para el sector y nicho acordados, delimitada por contrato.",
-    "start": 26.9653335,
-    "end": 30.730667
+    "text": "de sesenta horas mensuales para requerimientos aprobados,",
+    "start": 27.5312,
+    "end": 30.445999999999998
+  },
+  {
+    "text": "desde la salida a producción.",
+    "start": 30.445999999999998,
+    "end": 32.528
+  },
+  {
+    "text": "También incluye exclusividad conceptual para el sector y nicho acordados,",
+    "start": 35.2,
+    "end": 40.35076923076923
+  },
+  {
+    "text": "delimitada por contrato.",
+    "start": 40.35076923076923,
+    "end": 41.896
   },
   {
     "text": "Evaluamos viabilidad técnica, comercial y de riesgo. El acuerdo define",
-    "start": 33.2,
-    "end": 37.28380928571429
+    "start": 44.2,
+    "end": 49.87428571428572
   },
   {
     "text": "aporte inicial y condiciones.",
-    "start": 37.28380928571429,
-    "end": 38.917333000000006
+    "start": 49.87428571428572,
+    "end": 52.144000000000005
   },
   {
     "text": "Construimos hoy. Crecemos contigo. Solicita tu evaluación.",
-    "start": 40.2,
-    "end": 43.592000000000006
+    "start": 53.2,
+    "end": 59.368
   }
 ]

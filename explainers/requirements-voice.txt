@@ -1,0 +1,2 @@
+# Producción offline de los videos brag-v2; instalar en un venv separado.
+edge-tts==7.2.8

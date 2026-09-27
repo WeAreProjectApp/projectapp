@@ -50,6 +50,7 @@ async function setupApi(page, scenario = {}) {
 
 async function openFromFooter(page) {
   await page.goto('/es-co', { waitUntil: 'domcontentloaded' })
+  await expect(page.getByRole('button', { name: 'Switch to English' })).toBeEnabled()
   const link = page.getByRole('link', { name: 'Programa de Alianza', exact: true }).first()
   await link.scrollIntoViewIfNeeded()
   await link.click()
