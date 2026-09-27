@@ -104,9 +104,11 @@ async function choose(action) {
         </li>
       </ul>
 
+    </div>
+    <template #footer>
       <BaseModalActions>
         <BaseButton variant="secondary" @click="emit('close')">Cerrar</BaseButton>
       </BaseModalActions>
-    </div>
+    </template>
   </BaseModal>
 </template>

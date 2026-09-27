@@ -53,16 +53,17 @@ def ingest(credential, data):
 
 def _observe_case(source, data, receipt):
     fingerprint_hash = hashlib.sha256(data['fingerprint'].encode()).hexdigest()
-    case = Case.objects.filter(source=source, fingerprint_hash=fingerprint_hash).first()
+    case = Case.objects.select_for_update().filter(source=source, fingerprint_hash=fingerprint_hash).first()
     if case is None and data['kind'] == 'recovery':
         return  # An orphan recovery is auditable, but is not an open problem.
     if case is None:
         case = Case.objects.create(source=source, fingerprint=data['fingerprint'], fingerprint_hash=fingerprint_hash, title=data['title'], severity=data['severity'], first_seen_at=data['observed_at'], last_seen_at=data['observed_at'], resource_snapshot=snapshot(source.resource))
-    else:
-        case = Case.objects.select_for_update().get(pk=case.pk)
     receipt.case = case
     if data.get('report_id'):
-        receipt.report = get_object_or_404(Delivery, source=source, external_id=data['report_id'], kind='report').report
+        receipt.report_id = get_object_or_404(
+            Delivery.objects.only('report_id'),
+            source=source, external_id=data['report_id'], kind='report',
+        ).report_id
     observed = data['observed_at']
     case.first_seen_at = min(case.first_seen_at, observed)
     if data['kind'] == 'detection':
@@ -84,7 +85,10 @@ def _observe_case(source, data, receipt):
 
 @transaction.atomic
 def change_state(case_id, actor, data):
-    case = get_object_or_404(Case.objects.select_for_update(), pk=case_id)
+    case = get_object_or_404(
+        Case.objects.select_related('source__resource').select_for_update(of=('self',)),
+        pk=case_id,
+    )
     if case.version != data['version']:
         raise Conflict()
     if case.state != data['state']:

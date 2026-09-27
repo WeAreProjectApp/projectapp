@@ -64,6 +64,10 @@ const EmailRecipientFieldsStub = {
   `,
 };
 
+const BaseModalStub = {
+  template: '<div><slot /><slot name="footer" /></div>',
+};
+
 function availableDocuments(overrides = {}) {
   return [
     { key: 'contract', label: 'Contrato', description: 'Contrato final', available: true },
@@ -78,7 +82,7 @@ function mountModal() {
     props: { proposal, documents: [] },
     global: {
       stubs: {
-        BaseModal: { template: '<div><slot /></div>' },
+        BaseModal: BaseModalStub,
         BaseButton: {
           props: ['disabled', 'loading', 'type'],
           emits: ['click'],
@@ -178,7 +182,7 @@ describe('ProposalFormalizationModal', () => {
           { id: 8, document_type: 'legal_annex', title: 'Anexo de confidencialidad' },
         ],
       },
-      global: { stubs: { BaseModal: { template: '<div><slot /></div>' }, EmailRecipientFields: EmailRecipientFieldsStub } },
+      global: { stubs: { BaseModal: BaseModalStub, EmailRecipientFields: EmailRecipientFieldsStub } },
     });
     await flushPromises();
 
@@ -197,6 +201,22 @@ describe('ProposalFormalizationModal', () => {
     ]);
     expect(wrapper.text()).toContain('Contrato Acme.pdf');
     expect(wrapper.text()).toContain('Propuesta comercial Acme.pdf');
+  });
+
+  it('restores the prepare action after returning from the prepared review', async () => {
+    // Falla si el pie conserva Enviar documentación al volver a editar el borrador.
+    const wrapper = await renderEditableModal();
+    mockFormalizationStore.prepare.mockResolvedValue(structuredClone(preparedPackage));
+
+    await wrapper.get('[data-testid="formalization-prepare"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="formalization-send"]').text()).toBe('Enviar documentación');
+
+    const editButton = wrapper.findAll('button').find((button) => button.text() === 'Volver a editar');
+    await editButton.trigger('click');
+
+    expect(wrapper.get('[data-testid="formalization-prepare"]').text()).toBe('Preparar vista previa');
+    expect(wrapper.findAll('[data-testid="formalization-send"]')).toHaveLength(0);
   });
 
   it('returns a stale preparation to the editable draft while retaining its subject', async () => {

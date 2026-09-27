@@ -10,12 +10,14 @@ Security contract:
 """
 
 import json
+import logging
 import secrets
 from dataclasses import dataclass
 from datetime import timedelta
 
 from accounts.services.credential_cipher import decrypt_secret, encrypt_secret
 from django.conf import settings
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils import timezone
 
@@ -26,6 +28,7 @@ VALIDITY_CHOICES = (1, 3, 7, 30)
 PUBLIC_VALIDITY_CHOICES = (1, 3, 7)
 DEFAULT_VALIDITY_DAYS = 7
 USER_AGENT_MAX = 300
+logger = logging.getLogger(__name__)
 
 
 class SecureLinkError(Exception):
@@ -78,8 +81,20 @@ def panel_url(link):
     return f'{_base_url()}/panel/secure-links?link={link.pk}'
 
 
+def _cipher_operation(operation, value):
+    try:
+        return operation(value)
+    except ImproperlyConfigured as exc:
+        # Do not log arguments, tokens, key material or exception locals.
+        logger.error('Secure links cipher unavailable: check PROJECT_ACCESS_CIPHER_KEY.')
+        raise SecureLinkError(
+            'El servicio de enlaces seguros no está disponible. Contacta al administrador.',
+            code='secure_links_unavailable', status=503,
+        ) from exc
+
+
 def _decrypt_strict(ciphertext):
-    plain = decrypt_secret(ciphertext)
+    plain = _cipher_operation(decrypt_secret, ciphertext)
     if ciphertext and not plain:
         # decrypt_secret hides key/ciphertext problems as ''. For a secret link
         # that would show an empty secret, so fail loudly instead.
@@ -91,7 +106,7 @@ def _decrypt_strict(ciphertext):
 
 
 def _encrypt_payload(payload):
-    return encrypt_secret(json.dumps(payload, ensure_ascii=False))
+    return _cipher_operation(encrypt_secret, json.dumps(payload, ensure_ascii=False))
 
 
 def _decrypt_payload(link):
@@ -100,7 +115,7 @@ def _decrypt_payload(link):
 
 def _new_token():
     token = secrets.token_urlsafe(32)
-    return token, SecureLink.hash_token(token), encrypt_secret(token)
+    return token, SecureLink.hash_token(token), _cipher_operation(encrypt_secret, token)
 
 
 def _validity(days, *, allowed=VALIDITY_CHOICES):

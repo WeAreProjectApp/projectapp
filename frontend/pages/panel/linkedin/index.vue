@@ -90,7 +90,7 @@
 
     <!-- Create / edit modal -->
     <BaseModal v-model="showModal" kind="form" padding="md">
-      <form novalidate @submit.prevent="savePost">
+      <form :id="modalFormId" novalidate @submit.prevent="savePost">
         <div class="space-y-4 px-6 py-5">
           <h2 class="text-lg font-semibold text-text-default">
             {{ editingPost ? 'Editar post' : 'Nuevo post' }}
@@ -142,6 +142,8 @@
           <BaseAlert v-if="formGeneralError" variant="danger">{{ formGeneralError }}</BaseAlert>
         </div>
 
+      </form>
+      <template #footer>
         <BaseModalActions>
           <BaseButton type="button" variant="ghost" @click="showModal = false">Cancelar</BaseButton>
           <BaseButton
@@ -153,17 +155,17 @@
           >
             Publicar ahora
           </BaseButton>
-          <BaseButton type="submit" variant="primary" :loading="saving">
+          <BaseButton type="submit" :form="modalFormId" variant="primary" :loading="saving">
             {{ form.scheduledLocal ? 'Programar' : 'Guardar' }}
           </BaseButton>
         </BaseModalActions>
-      </form>
+      </template>
     </BaseModal>
   </div>
 </template>
 
 <script setup>
-import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { useId, computed, onMounted, onUnmounted, reactive, ref } from 'vue';
 import { useLinkedInStore } from '~/stores/linkedin';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
@@ -432,4 +434,6 @@ function statusClass(status) {
 function linkedinPostUrl(post) {
   return `https://www.linkedin.com/feed/update/${post.linkedin_post_id}/`;
 }
+
+const modalFormId = useId();
 </script>

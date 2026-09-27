@@ -45,7 +45,8 @@ test.describe('Admin Accounting Hosting Billing', () => {
     const unavailable = page.getByTestId('hosting-send-billing-2');
     await expect(unavailable).toBeDisabled();
     await expect(unavailable).toContainText('Vincula un cliente con correo');
-    await page.getByTestId('hosting-actions-modal').getByRole('button', { name: 'Cerrar' }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByTestId('hosting-actions-modal') });
+    await dialog.getByRole('button', { name: 'Cerrar' }).click();
     await expect(page.getByTestId('hosting-actions-modal')).toHaveCount(0);
 
     await chooseHostingAction(page, 1, 'send-billing');

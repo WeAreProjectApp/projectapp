@@ -5,7 +5,7 @@ import EmailLogTable from '~/components/accounting/EmailLogTable.vue';
 const MenuModalStub = {
   props: ['modelValue', 'kind', 'titleId', 'lockScroll'],
   emits: ['close'],
-  template: '<div v-if="modelValue" :data-lock-scroll="String(lockScroll)"><slot /></div>',
+  template: '<div v-if="modelValue" :data-lock-scroll="String(lockScroll)"><slot /><slot name="footer" /></div>',
 };
 
 const SENT = {
@@ -66,7 +66,7 @@ function mountTable(entries, props = {}) {
 
 async function openMenu(wrapper, id) {
   await wrapper.get(`[data-testid="email-log-actions-${id}"]`).trigger('click');
-  return wrapper.get('[data-testid="email-log-actions-modal"]');
+  return wrapper.getComponent(MenuModalStub);
 }
 
 describe('EmailLogTable', () => {

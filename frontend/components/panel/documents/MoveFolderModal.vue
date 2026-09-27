@@ -6,134 +6,136 @@
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/40 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
         @click.self="close"
       >
-        <div class="h-[100dvh] w-full max-w-sm overflow-y-auto bg-surface shadow-2xl panel-portrait:h-auto panel-portrait:max-h-[90vh] panel-portrait:rounded-2xl">
+        <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface shadow-overlay panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:rounded-2xl panel-portrait:max-w-sm">
 
-          <!-- Header -->
-          <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-info-soft flex items-center justify-center">
-                <BaseActionIcon action="move" class="text-info-strong" />
+          <div class="min-h-0 flex-1 overflow-y-auto" data-modal-body>
+            <!-- Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-border-muted">
+              <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-info-soft flex items-center justify-center">
+                  <BaseActionIcon action="move" class="text-info-strong" />
+                </div>
+                <div class="min-w-0">
+                  <h3 class="text-base font-semibold text-text-default">Mover documento</h3>
+                  <p class="text-xs text-text-muted truncate max-w-[200px]">{{ document.title }}</p>
+                </div>
               </div>
-              <div class="min-w-0">
-                <h3 class="text-base font-semibold text-text-default">Mover documento</h3>
-                <p class="text-xs text-text-muted truncate max-w-[200px]">{{ document.title }}</p>
-              </div>
+              <BaseButton variant="ghost" icon-only size="md" aria-label="Cerrar" title="Cerrar" @click="close">
+                <BaseActionIcon action="close" />
+              </BaseButton>
             </div>
-            <BaseButton variant="ghost" icon-only size="md" aria-label="Cerrar" title="Cerrar" @click="close">
-              <BaseActionIcon action="close" />
-            </BaseButton>
-          </div>
 
-          <!-- Folder options -->
-          <div class="p-4 space-y-1.5 max-h-72 overflow-y-auto">
-            <!-- No folder option -->
-            <!-- design-tokens: allow-raw-button — selectable list row, not an action -->
-            <button
-              type="button"
-              :disabled="isMoving"
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left disabled:opacity-50"
-              :class="document.folder === null
+            <!-- Folder options -->
+            <div class="p-4 space-y-1.5 max-h-72 overflow-y-auto">
+              <!-- No folder option -->
+              <!-- design-tokens: allow-raw-button — selectable list row, not an action -->
+              <button
+                type="button"
+                :disabled="isMoving"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left disabled:opacity-50"
+                :class="document.folder === null
                 ? 'border-info-strong/30 bg-info-soft'
                 : 'border-border-muted hover:border-border-default hover:bg-surface-muted'"
-              @click="moveToFolder(null)"
-            >
-              <div class="w-7 h-7 rounded-lg bg-surface-raised flex items-center justify-center flex-shrink-0">
-                <BaseActionIcon action="unlink" class="text-text-subtle" />
-              </div>
-              <span class="flex-1 text-sm font-medium text-text-default">Sin carpeta</span>
-              <!-- panel-action-icons: allow-status-glyph — marks the currently selected destination. -->
-              <CheckIcon
-                v-if="document.folder === null"
-                class="w-4 h-4 text-info-strong flex-shrink-0"
-                aria-hidden="true"
-              />
-            </button>
+                @click="moveToFolder(null)"
+              >
+                <div class="w-7 h-7 rounded-lg bg-surface-raised flex items-center justify-center flex-shrink-0">
+                  <BaseActionIcon action="unlink" class="text-text-subtle" />
+                </div>
+                <span class="flex-1 text-sm font-medium text-text-default">Sin carpeta</span>
+                <!-- panel-action-icons: allow-status-glyph — marks the currently selected destination. -->
+                <CheckIcon
+                  v-if="document.folder === null"
+                  class="w-4 h-4 text-info-strong flex-shrink-0"
+                  aria-hidden="true"
+                />
+              </button>
 
-            <!-- Folder entries -->
-            <!-- design-tokens: allow-raw-button — selectable list row, not an action -->
-            <button
-              v-for="folder in orderedFolders"
-              :key="folder.id"
-              type="button"
-              :disabled="isMoving"
-              class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left disabled:opacity-50"
-              :class="document.folder === folder.id
+              <!-- Folder entries -->
+              <!-- design-tokens: allow-raw-button — selectable list row, not an action -->
+              <button
+                v-for="folder in orderedFolders"
+                :key="folder.id"
+                type="button"
+                :disabled="isMoving"
+                class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left disabled:opacity-50"
+                :class="document.folder === folder.id
                 ? 'border-info-strong/30 bg-info-soft'
                 : 'border-border-muted hover:border-border-default hover:bg-surface-muted'"
-              :style="{ paddingLeft: `${12 + folder.depth * 18}px` }"
-              @click="moveToFolder(folder.id)"
-            >
-              <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
-                <BaseActionIcon action="folders" class="text-amber-500 dark:text-amber-400" />
-              </div>
-              <span class="flex-1 min-w-0 text-sm font-medium text-text-default truncate">{{ folder.name }}</span>
-              <!-- Directo: el selector lista muchos niveles a la vez e indentados
+                :style="{ paddingLeft: `${12 + folder.depth * 18}px` }"
+                @click="moveToFolder(folder.id)"
+              >
+                <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
+                  <BaseActionIcon action="folders" class="text-amber-500 dark:text-amber-400" />
+                </div>
+                <span class="flex-1 min-w-0 text-sm font-medium text-text-default truncate">{{ folder.name }}</span>
+                <!-- Directo: el selector lista muchos niveles a la vez e indentados
                    (igual que el gestor), y para elegir destino «cuánto hay acá»
                    significa esta carpeta, no su rama entera. -->
-              <span class="flex-shrink-0 text-xs text-text-subtle">{{ folder.document_count }}</span>
-              <!-- panel-action-icons: allow-status-glyph — marks the currently selected destination. -->
-              <CheckIcon
-                v-if="document.folder === folder.id"
-                class="w-4 h-4 text-info-strong flex-shrink-0"
-                aria-hidden="true"
-              />
-            </button>
+                <span class="flex-shrink-0 text-xs text-text-subtle">{{ folder.document_count }}</span>
+                <!-- panel-action-icons: allow-status-glyph — marks the currently selected destination. -->
+                <CheckIcon
+                  v-if="document.folder === folder.id"
+                  class="w-4 h-4 text-info-strong flex-shrink-0"
+                  aria-hidden="true"
+                />
+              </button>
 
-            <div v-if="!folderStore.activeFolders.length" class="text-center py-4">
-              <p class="text-sm text-text-muted">No hay carpetas creadas.</p>
+              <div v-if="!folderStore.activeFolders.length" class="text-center py-4">
+                <p class="text-sm text-text-muted">No hay carpetas creadas.</p>
+              </div>
             </div>
-          </div>
 
-          <!--
+            <!--
             La carpeta destino es de otro cliente. No se decide por el
             operador: un documento PUEDE pertenecer a un cliente distinto al de
             su carpeta (una cuenta de cobro emitida no puede cambiar de dueño y
             aun así tiene que poder guardarse donde corresponda), así que
             conservar es el default y adoptar es una respuesta explícita.
           -->
-          <div
-            v-if="pendingMove"
-            class="px-4 pb-3 space-y-2"
-            data-testid="move-folder-client-choice"
-          >
-            <p class="text-xs text-text-muted">
-              "{{ pendingMove.folderName }}" es de
-              <strong>{{ pendingMove.folderClientName }}</strong>, y este
-              documento es de otro cliente. ¿Qué hacemos?
-            </p>
-            <div class="flex flex-wrap gap-2">
-              <BaseButton
-                variant="primary"
-                size="sm"
-                :loading="isMoving"
-                data-testid="move-folder-keep-client"
-                @click="commitPendingMove(false)"
-              >
-                Conservar su cliente
-              </BaseButton>
-              <BaseButton
-                variant="secondary"
-                size="sm"
-                :loading="isMoving"
-                data-testid="move-folder-adopt-client"
-                @click="commitPendingMove(true)"
-              >
-                Adoptar el de la carpeta
-              </BaseButton>
+            <div
+              v-if="pendingMove"
+              class="px-4 pb-3 space-y-2"
+              data-testid="move-folder-client-choice"
+            >
+              <p class="text-xs text-text-muted">
+                "{{ pendingMove.folderName }}" es de
+                <strong>{{ pendingMove.folderClientName }}</strong>, y este
+                documento es de otro cliente. ¿Qué hacemos?
+              </p>
+              <div class="flex flex-wrap gap-2">
+                <BaseButton
+                  variant="primary"
+                  size="sm"
+                  :loading="isMoving"
+                  data-testid="move-folder-keep-client"
+                  @click="commitPendingMove(false)"
+                >
+                  Conservar su cliente
+                </BaseButton>
+                <BaseButton
+                  variant="secondary"
+                  size="sm"
+                  :loading="isMoving"
+                  data-testid="move-folder-adopt-client"
+                  @click="commitPendingMove(true)"
+                >
+                  Adoptar el de la carpeta
+                </BaseButton>
+              </div>
             </div>
-          </div>
 
-          <!-- Error -->
-          <div v-if="errorMsg" class="px-4 pb-2">
-            <p class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">{{ errorMsg }}</p>
-          </div>
+            <!-- Error -->
+            <div v-if="errorMsg" class="px-4 pb-2">
+              <p class="text-xs text-danger-strong bg-danger-soft px-3 py-2 rounded-lg">{{ errorMsg }}</p>
+            </div>
 
-          <!-- Footer -->
-          <div class="px-6 py-4 border-t border-border-muted flex justify-end">
+            <!-- Footer -->
+          </div>
+          <BaseModalActions class="pb-[max(1rem,env(safe-area-inset-bottom))]">
             <BaseButton variant="ghost" @click="close">
               Cancelar
             </BaseButton>
-          </div>
+          </BaseModalActions>
 
         </div>
       </div>

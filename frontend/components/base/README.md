@@ -420,9 +420,12 @@ that exist in the DOM but cannot be reached.
 
 ### Modal and action adoption
 
-Pick modal width by purpose, not a one-off pixel value. Put actions in
-`BaseModalActions`; compact screens become fullscreen and stack the buttons in
-document order.
+Pick modal width by purpose, not a one-off pixel value. Put bottom actions in
+the `footer` slot, inside `BaseModalActions`. The body scrolls independently;
+the footer never overlays the last field. Compact screens become fullscreen
+and stack actions with the primary action first, preserving the existing
+`flex-col-reverse` convention. Desktop modals grow only to their content,
+up to `90dvh`; short confirmations do not become tall workspaces.
 
 | Kind | Maximum from 640 px | Purpose |
 |---|---:|---|
@@ -434,14 +437,27 @@ document order.
 | `workspace` | `min(90vw, 100rem)` | Preview or working surface |
 
 ```vue
+<script setup>
+import { useId } from 'vue'
+const formId = useId()
+</script>
+
 <BaseModal v-model="open" kind="form">
-  <div class="p-4 panel-portrait:p-6">…</div>
-  <BaseModalActions>
-    <BaseButton variant="ghost" @click="open = false">Cancelar</BaseButton>
-    <BaseButton variant="primary" type="submit">Guardar</BaseButton>
-  </BaseModalActions>
+  <form :id="formId" class="p-4 panel-portrait:p-6" @submit.prevent="save">…</form>
+  <template #footer>
+    <BaseModalActions>
+      <BaseButton variant="ghost" @click="open = false">Cancelar</BaseButton>
+      <BaseButton variant="primary" type="submit" :form="formId">Guardar</BaseButton>
+    </BaseModalActions>
+  </template>
 </BaseModal>
 ```
+
+Keep all existing footer actions, disabled/loading states and validation.
+Use a unique form ID per component instance when a submit button lives outside
+its form, so clicking it and pressing Enter submit the same form. The named
+slot is optional: consumers without a footer retain the legacy layout.
+See [the panel inventory](../../../docs/PANEL_MODAL_FOOTERS.md) for the sweep.
 
 Use `BaseActionMenu` for row overflow and `BaseBulkActionBar` for selections;
 do not lay an unbounded number of actions side by side. Accounting tables open
@@ -508,11 +524,13 @@ Live demo: `/panel/styleguide`, section 4.
 
 ### Modals that hold a workspace, not a form
 
-By default the `BaseModal` panel is fullscreen below 640 px, then grows to its
-content and scrolls as a whole (`panel-portrait:max-h-[90vh] overflow-y-auto`) — right for every form modal. A modal that
-embeds documents (an email preview, a PDF, a diff) needs the opposite: pass
-`full-height` and the panel becomes a fixed non-scrolling 90vh flex column, so
-the slot can pin its own header/footer and let each pane scroll independently.
+Without a footer slot, `BaseModal` retains its legacy whole-panel scroll.
+Forms with bottom actions use `#footer`, which owns the fixed action region
+and lets the body scroll. A modal that embeds documents (an email preview, a
+PDF, a diff) additionally passes `full-height`: its body becomes a flex column
+with `min-h-0` and hidden overflow, so each pane can scroll independently.
+The footer stays outside that column. Its height is `100dvh` on compact screens
+and `90dvh` from 640 px when the footer slot is used.
 Nesting a panel scrollbar around scrollbars the embedded documents already
 bring is what makes neither of them readable. Pair it with `size="full"`
 only for legacy consumers; new work uses `kind="workspace"` (~90vw, capped at

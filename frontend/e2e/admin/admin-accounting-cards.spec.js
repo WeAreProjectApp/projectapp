@@ -367,7 +367,8 @@ test.describe('Admin Accounting Cards', () => {
     await expect(note).toContainText('Falta conciliar la cuota de octubre con el extracto.');
     await expect(page.getByTestId('accounting-note-modal')).toContainText('T.C 0064');
 
-    await page.getByTestId('accounting-note-modal').getByRole('button', { name: 'Cerrar' }).click();
+    const dialog = page.getByRole('dialog').filter({ has: page.getByTestId('accounting-note-modal') });
+    await dialog.getByRole('button', { name: 'Cerrar' }).click();
     await expect(page.getByTestId('accounting-note-modal')).toHaveCount(0);
   });
 

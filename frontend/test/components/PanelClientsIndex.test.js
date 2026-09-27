@@ -236,7 +236,7 @@ describe('panel/clients index page', () => {
     await wrapper.get('[data-testid="clients-new-name"]').setValue('  Laura Gómez  ');
     await wrapper.get('[data-testid="clients-new-email"]').setValue('  laura@example.com  ');
     await wrapper.get('[data-testid="clients-new-company"]').setValue('  LauraCo  ');
-    await wrapper.get('[data-testid="clients-new-submit"]').trigger('submit');
+    await wrapper.get('form').trigger('submit');
     await flushPromises();
 
     expect(mockStore.createClient).toHaveBeenCalledWith({
@@ -260,7 +260,7 @@ describe('panel/clients index page', () => {
     await wrapper.get('[data-testid="clients-new-name"]').setValue('G&M');
     await wrapper.get('[data-testid="clients-new-nit"]').setValue('901234567-1');
     await wrapper.get('[data-testid="clients-new-billing-code"]').setValue('  g&m  ');
-    await wrapper.get('[data-testid="clients-new-submit"]').trigger('submit');
+    await wrapper.get('form').trigger('submit');
     await flushPromises();
 
     expect(mockStore.createClient).toHaveBeenCalledWith(
@@ -279,7 +279,7 @@ describe('panel/clients index page', () => {
 
     await wrapper.get('[data-testid="clients-new-button"]').trigger('click');
     await wrapper.get('[data-testid="clients-new-name"]').setValue('Solo Nombre');
-    await wrapper.get('[data-testid="clients-new-submit"]').trigger('submit');
+    await wrapper.get('form').trigger('submit');
     await flushPromises();
 
     expect(mockStore.createClient).toHaveBeenCalledWith({
@@ -305,7 +305,7 @@ describe('panel/clients index page', () => {
     await wrapper.get('[data-testid="clients-new-button"]').trigger('click');
     await wrapper.get('[data-testid="clients-new-name"]').setValue('G&M');
     await wrapper.get('[data-testid="clients-new-billing-code"]').setValue('G/M');
-    await wrapper.get('[data-testid="clients-new-submit"]').trigger('submit');
+    await wrapper.get('form').trigger('submit');
     await flushPromises();
 
     expect(wrapper.text()).toContain('El código debe tener entre 2 y 12 caracteres.');

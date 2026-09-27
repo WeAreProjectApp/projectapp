@@ -4,7 +4,7 @@
     kind="form"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <form class="space-y-5" novalidate data-testid="folder-form-modal" @submit.prevent="submit">
+    <form :id="modalFormId" class="space-y-5" novalidate data-testid="folder-form-modal" @submit.prevent="submit">
       <div class="space-y-5 p-6">
       <div>
         <h3 class="text-base font-semibold text-text-default">
@@ -72,12 +72,14 @@
       </BaseAlert>
       </div>
 
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="ghost" data-testid="folder-form-cancel" @click="close">
           Cancelar
         </BaseButton>
         <BaseButton
-          type="submit"
+          type="submit" :form="modalFormId"
           variant="primary"
           :loading="folderStore.isUpdating"
           data-testid="folder-form-save"
@@ -85,7 +87,7 @@
           {{ isEdit ? 'Guardar cambios' : 'Crear carpeta' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 </template>
 
@@ -107,7 +109,7 @@
  * backend responde 409 `folder_has_content` y este modal lo eleva como
  * `change-client` para que decida la cascada, que sí sabe decir a qué afecta.
  */
-import { computed, reactive, ref, watch } from 'vue';
+import { useId, computed, reactive, ref, watch } from 'vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import { useClientProjectCascade } from '~/composables/useClientProjectCascade';
@@ -224,4 +226,6 @@ async function submit() {
   errorMsg.value = nameError.value ? '' : formatErr(result.errors)
     || (isEdit.value ? 'No se pudo guardar.' : 'No se pudo crear la carpeta.');
 }
+
+const modalFormId = useId();
 </script>

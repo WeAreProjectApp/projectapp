@@ -1066,9 +1066,9 @@
     </div>
 
     <!-- Post-creation interstitial modal -->
-    <teleport to="body">
-      <div v-if="showPostCreateModal && createdProposal" class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-        <div class="bg-surface rounded-2xl shadow-2xl max-w-md w-full mx-4 p-6 sm:p-8 text-center">
+    <BaseModal :model-value="showPostCreateModal && Boolean(createdProposal)" kind="confirm" :close-on-backdrop="false" :close-on-esc="false">
+      <template v-if="createdProposal">
+        <div class="p-6 panel-portrait:p-8 text-center">
           <div class="text-5xl mb-4">✅</div>
           <h3 class="text-xl font-bold text-text-default mb-2">Propuesta creada</h3>
           <p class="text-sm text-text-muted mb-4">{{ createdProposal.title }}</p>
@@ -1076,25 +1076,28 @@
             <p class="text-xs font-semibold text-warning-strong mb-1">⚠️ Advertencias del JSON</p>
             <p v-for="(warn, i) in jsonWarnings" :key="i" class="text-xs text-warning-strong">{{ warn }}</p>
           </div>
-          <div class="flex flex-col gap-3">
-            <a
-              :href="'/proposal/' + createdProposal.uuid + '?preview=1'"
-              target="_blank"
-              class="w-full px-5 py-2.5 bg-surface-raised text-text-default rounded-xl font-medium text-sm hover:bg-surface-raised transition-colors inline-flex items-center justify-center gap-2"
-            >
-            <BaseActionIcon action="view" />
-              Ver Preview
-            </a>
-            <BaseButton variant="ghost" size="md" class="w-full" v-if="canSendDirectly" :disabled="proposalStore.isUpdating" @click="handleSendCreated">
-              {{ proposalStore.isUpdating ? 'Enviando...' : 'Enviar al Cliente' }}
-            </BaseButton>
-            <BaseButton variant="primary" size="md" class="w-full" @click="router.push(localePath(`/panel/proposals/${createdProposal.id}/edit`))">
-              Ir a Editar
-            </BaseButton>
-          </div>
+
         </div>
-      </div>
-    </teleport>
+      </template>
+      <template #footer>
+        <BaseModalActions v-if="createdProposal">
+          <a
+            :href="'/proposal/' + createdProposal.uuid + '?preview=1'"
+            target="_blank"
+            class="w-full px-5 py-2.5 bg-surface-raised text-text-default rounded-xl font-medium text-sm hover:bg-surface-raised transition-colors inline-flex items-center justify-center gap-2"
+          >
+            <BaseActionIcon action="view" />
+            Ver Preview
+          </a>
+          <BaseButton variant="ghost" size="md" class="w-full" v-if="canSendDirectly" :disabled="proposalStore.isUpdating" @click="handleSendCreated">
+            {{ proposalStore.isUpdating ? 'Enviando...' : 'Enviar al Cliente' }}
+          </BaseButton>
+          <BaseButton variant="primary" size="md" class="w-full" @click="router.push(localePath(`/panel/proposals/${createdProposal.id}/edit`))">
+            Ir a Editar
+          </BaseButton>
+        </BaseModalActions>
+      </template>
+    </BaseModal>
   </div>
 </template>
 

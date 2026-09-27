@@ -135,11 +135,12 @@ def test_public_links_cannot_exceed_seven_days(make_link):
 def test_fake_data_covers_every_state_and_type(settings):
     """Falla si los datos de desarrollo no permiten revisar todos los estados."""
     from django.core.management import call_command
+    from secure_links.catalog import SECRET_TYPES
 
     call_command('create_fake_secure_links', stdout=None)
 
     assert {link.status for link in SecureLink.objects.all()} == set(SecureLink.STATUSES)
-    assert SecureLink.objects.values('secret_type').distinct().count() == 8
+    assert set(SecureLink.objects.values_list('secret_type', flat=True)) == set(SECRET_TYPES)
 
 
 def test_corrupted_ciphertext_fails_loudly(make_link):

@@ -163,18 +163,20 @@
           <BaseTextarea v-model="txForm.notes" :rows="2" />
         </BaseFormField>
       </div>
-      <div class="flex justify-end gap-2 mt-5">
-        <BaseButton variant="ghost" size="sm" @click="txModalOpen = false">Cancelar</BaseButton>
-        <BaseButton
-          variant="primary"
-          size="sm"
-          :disabled="store.isUpdating"
-          data-testid="tx-save"
-          @click="saveTx"
-        >
-          Guardar
-        </BaseButton>
-      </div>
+      <template #footer>
+        <BaseModalActions>
+          <BaseButton variant="ghost" size="sm" @click="txModalOpen = false">Cancelar</BaseButton>
+          <BaseButton
+            variant="primary"
+            size="sm"
+            :disabled="store.isUpdating"
+            data-testid="tx-save"
+            @click="saveTx"
+          >
+            Guardar
+          </BaseButton>
+        </BaseModalActions>
+      </template>
     </BaseModal>
   </BasePageShell>
 </template>

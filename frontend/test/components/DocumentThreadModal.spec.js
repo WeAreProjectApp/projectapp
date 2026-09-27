@@ -56,7 +56,7 @@ function mountModal(document = sourceDocument) {
         NuxtLink: { template: '<a><slot /></a>' },
         BaseModal: {
           props: ['modelValue'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseAlert: { template: '<div><slot /></div>' },
         BaseBadge: { template: '<span><slot /></span>' },

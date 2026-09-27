@@ -68,7 +68,7 @@ function mountModal(props = {}) {
         BaseModal: {
           props: ['modelValue', 'size'],
           emits: ['update:modelValue', 'close'],
-          template: '<div v-if="modelValue"><slot /></div>',
+          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           props: ['variant', 'type'],

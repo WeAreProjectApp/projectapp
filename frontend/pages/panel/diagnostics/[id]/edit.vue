@@ -73,7 +73,9 @@
           Completa los ítems bloqueantes antes de enviar al cliente.
         </BaseAlert>
 
-        <div class="mt-6 flex justify-end gap-2">
+      </div>
+      <template #footer>
+        <BaseModalActions>
           <BaseButton variant="ghost" size="md" @click="scorecardKind = null">Cancelar</BaseButton>
           <BaseButton
             variant="primary"
@@ -85,8 +87,8 @@
           >
             {{ scorecardKind === 'final' ? 'Enviar diagnóstico final' : 'Enviar envío inicial' }}
           </BaseButton>
-        </div>
-      </div>
+        </BaseModalActions>
+      </template>
     </BaseModal>
 
     <div v-if="store.isLoading && !store.current" class="py-16 text-center text-text-subtle text-sm">

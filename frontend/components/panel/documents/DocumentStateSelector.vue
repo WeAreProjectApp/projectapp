@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onMounted, reactive, ref, watch } from 'vue';
+import { useId, computed, onMounted, reactive, ref, watch } from 'vue';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { useDocumentStateStore } from '~/stores/document_states';
 import { formatStateDuration, stateBadgeVariant } from '~/utils/documentState';
@@ -121,6 +121,8 @@ async function createInline(confirmSimilar = false) {
   selectedStateId.value = result.data.id;
   await addState();
 }
+
+const modalFormId = useId();
 </script>
 
 <template>
@@ -210,7 +212,7 @@ async function createInline(confirmSimilar = false) {
     :close-on-esc="!stateStore.isUpdating"
     @update:model-value="updateFinishOpen"
   >
-    <form @submit.prevent="submitFinish">
+    <form :id="modalFormId" @submit.prevent="submitFinish">
       <div class="border-b border-border-muted px-5 py-4 sm:px-6">
         <h2 class="text-lg font-semibold text-text-default">
           {{ finishDialog.outcome === 'removed' ? 'Quitar estado' : 'Cerrar estado' }}
@@ -230,13 +232,15 @@ async function createInline(confirmSimilar = false) {
         </BaseFormField>
         <BaseAlert v-if="errorMessage" variant="danger">{{ errorMessage }}</BaseAlert>
       </div>
+    </form>
+    <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="secondary" :disabled="stateStore.isUpdating" @click="updateFinishOpen(false)">Cancelar</BaseButton>
-        <BaseButton type="submit" :variant="finishDialog.outcome === 'removed' ? 'danger' : 'primary'" :loading="stateStore.isUpdating" data-testid="document-state-finish-confirm">
+        <BaseButton type="submit" :form="modalFormId" :variant="finishDialog.outcome === 'removed' ? 'danger' : 'primary'" :loading="stateStore.isUpdating" data-testid="document-state-finish-confirm">
           {{ finishDialog.outcome === 'removed' ? 'Quitar estado' : 'Cerrar estado' }}
         </BaseButton>
       </BaseModalActions>
-    </form>
+    </template>
   </BaseModal>
 
   <ConfirmModal

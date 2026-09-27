@@ -49,13 +49,15 @@
         </BaseFormField>
       </div>
 
-      <div class="flex items-center justify-end gap-2">
+    </div>
+    <template #footer>
+      <BaseModalActions>
         <BaseButton variant="ghost" size="sm" @click="open = false">Cerrar</BaseButton>
         <BaseButton variant="primary" size="sm" data-testid="qr-download-button" @click="download">
           Descargar {{ downloadFormat.toUpperCase() }}
         </BaseButton>
-      </div>
-    </div>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 

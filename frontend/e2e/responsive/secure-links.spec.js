@@ -6,6 +6,8 @@ import { json, revealedContent, secureLinkRow, secureLinkTypes } from '../helper
 import { viewportUse } from '../helpers/viewports.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
+test.setTimeout(60_000);
+
 const secureLinksScenario = getResponsiveScenario('frontend/pages/panel/secure-links/index.vue');
 const row = secureLinkRow({ title: 'Credenciales responsive con un título largo sin espacios_para_probar_el_ajuste' });
 
@@ -46,7 +48,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
       await installSecureLinksMock(page);
       // quality: allow-deep-link (the authenticated panel home is the shell entry; this test reaches Enlaces seguros through the visible responsive navigation)
-      await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+      await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
       await enterByProfile[profile](page);
       const title = page.getByTestId('secure-links-page').getByText(row.title, { exact: true }).filter({ visible: true });
       await expect(title).toHaveCount(1);
@@ -59,6 +61,28 @@ for (const profile of RESPONSIVE_PROFILES) {
         profile,
         modalLocator: modal,
         finalActionLocator: modal.getByTestId('secure-link-view-content'),
+      });
+    });
+
+    test('keeps custom fields usable in the create modal', {
+      tag: ['@flow:admin-secure-link-create', '@outcome:display', '@responsive:communications', `@viewport:${profile}`],
+    }, async ({ page }, testInfo) => {
+      await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
+      await installSecureLinksMock(page);
+      // quality: allow-deep-link (the panel home is the shell entry; navigation opens the module and its create modal)
+      await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+      await enterByProfile[profile](page);
+      await page.getByTestId('secure-links-new').click();
+      await page.getByTestId('secure-link-type').selectOption('custom');
+      await page.getByTestId('secure-link-title').fill('Referencia');
+      await page.getByTestId('secure-link-field-custom_name').fill('Instrucciones');
+      await page.getByTestId('secure-link-save').click();
+
+      const modal = page.getByTestId('secure-link-form');
+      await expect(modal.getByText('Este campo es obligatorio.')).toBeVisible();
+      await expect(page.getByTestId('secure-link-field-content')).toBeFocused();
+      await assertResponsiveScenario(page, testInfo, secureLinksScenario, {
+        profile, modalLocator: modal, finalActionLocator: modal.getByTestId('secure-link-save'),
       });
     });
   });

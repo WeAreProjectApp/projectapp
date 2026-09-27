@@ -15,17 +15,19 @@
 export function normalizeApiError(error, fallback = 'Ocurrió un error. Inténtalo de nuevo.') {
   const data = error?.response?.data;
   const status = error?.response?.status ?? null;
+  const headers = error?.response?.headers;
+  const contentType = headers?.get?.('content-type') || headers?.['content-type'] || '';
 
-  if (data == null) {
+  if (data == null || /\btext\/html\b|\bapplication\/xhtml\+xml\b/i.test(contentType)) {
     return { message: fallback, code: null, hint: null, fieldErrors: null, status };
   }
 
   if (typeof data === 'string') {
-    return { message: data || fallback, code: null, hint: null, fieldErrors: null, status };
+    return { message: firstString(data) || fallback, code: null, hint: null, fieldErrors: null, status };
   }
 
   const code = typeof data.code === 'string' ? data.code : null;
-  const hint = typeof data.hint === 'string' ? data.hint : null;
+  const hint = firstString(data.hint);
 
   // Explicit human message keys, in priority order.
   const direct = firstString(data.error) || firstString(data.detail) || firstString(data.message);
@@ -115,7 +117,11 @@ export function numericIdsFromError(error, key = 'missing_ids') {
 
 /** Return `value` as a trimmed string if it's a non-empty string, else null. */
 function firstString(value) {
-  return typeof value === 'string' && value.trim() ? value.trim() : null;
+  if (typeof value !== 'string' || !value.trim()) return null;
+  // Django/proxy/login HTML is never a user-facing API explanation. Do not
+  // strip tags: the remaining text could still expose a server traceback.
+  if (/<!doctype\b|<\/?[a-z][^>]*>/i.test(value)) return null;
+  return value.trim();
 }
 
 /**

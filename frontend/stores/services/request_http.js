@@ -65,7 +65,9 @@ async function makeRequest(method, url, params = {}, config = {}) {
 
     return response;
   } catch (error) {
-    console.error(error);
+    // Axios errors contain request bodies (secrets and reveal tokens). The
+    // secure-links caller renders a safe message; never log its raw error.
+    if (!url.startsWith('secure-links/')) console.error(error);
     throw error;
   }
 }

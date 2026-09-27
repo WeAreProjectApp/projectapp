@@ -44,22 +44,24 @@
       </div>
     </div>
 
-    <BaseModalActions>
-      <BaseButton variant="secondary" size="md" :disabled="sending" @click="handleClose">
-        Cancelar
-      </BaseButton>
-      <BaseButton
-        variant="primary"
-        size="md"
-        :loading="sending"
-        :disabled="!normalizedMessage || sending"
-        disabled-reason="Escribe el mensaje personalizado antes de reenviar."
-        data-testid="proposal-resend-confirm"
-        @click="handleResend"
-      >
-        {{ sending ? 'Re-enviando…' : 'Guardar y re-enviar' }}
-      </BaseButton>
-    </BaseModalActions>
+    <template #footer>
+      <BaseModalActions>
+        <BaseButton variant="secondary" size="md" :disabled="sending" @click="handleClose">
+          Cancelar
+        </BaseButton>
+        <BaseButton
+          variant="primary"
+          size="md"
+          :loading="sending"
+          :disabled="!normalizedMessage || sending"
+          disabled-reason="Escribe el mensaje personalizado antes de reenviar."
+          data-testid="proposal-resend-confirm"
+          @click="handleResend"
+        >
+          {{ sending ? 'Re-enviando…' : 'Guardar y re-enviar' }}
+        </BaseButton>
+      </BaseModalActions>
+    </template>
   </BaseModal>
 </template>
 
