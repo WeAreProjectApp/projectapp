@@ -88,6 +88,7 @@ test.describe('Admin Proposal Contract Generate', () => {
     let requests = 0;
     await mockApi(page, async ({ apiPath, method, route }) => {
       if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'proposals/alerts/') return { status: 200, contentType: 'application/json', body: '[]' };
       if (apiPath === 'proposals/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([proposal]) };
       }

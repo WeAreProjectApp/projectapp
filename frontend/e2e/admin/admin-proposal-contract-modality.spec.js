@@ -185,9 +185,9 @@ test.describe('Admin proposal contract modality', () => {
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
     await expect(dialog.getByRole('heading', { name: 'Generar contrato de servicio' })).toBeVisible();
-    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('9');
-    await expect(dialog.getByLabel('Preaviso para no renovar (días calendario)')).toHaveValue('60');
-    await expect(dialog.getByLabel('Preaviso de terminación del cliente (días calendario)')).toHaveValue('60');
+    await expect(dialog.getByRole('combobox', { name: 'Duración inicial' })).toHaveValue('9');
+    await expect(dialog.getByRole('combobox', { name: 'Preaviso para no renovar (días calendario)' })).toHaveValue('60');
+    await expect(dialog.getByRole('combobox', { name: 'Preaviso de terminación del cliente (días calendario)' })).toHaveValue('60');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
 
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el', { timeout: 10_000 });
@@ -211,11 +211,11 @@ test.describe('Admin proposal contract modality', () => {
 
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Duración inicial').selectOption('custom');
+    await dialog.getByRole('combobox', { name: 'Duración inicial' }).selectOption('custom');
     await dialog.getByLabel('Duración inicial: valor personalizado').fill('dieciocho meses iniciales');
-    await dialog.getByLabel('Preaviso para no renovar (días calendario)', { exact: true }).selectOption('custom');
+    await dialog.getByRole('combobox', { name: 'Preaviso para no renovar (días calendario)' }).selectOption('custom');
     await dialog.getByLabel('Preaviso para no renovar (días calendario): valor personalizado').fill('cuarenta y cinco (45)');
-    await dialog.getByLabel('Preaviso de terminación del cliente (días calendario)', { exact: true }).selectOption('custom');
+    await dialog.getByRole('combobox', { name: 'Preaviso de terminación del cliente (días calendario)' }).selectOption('custom');
     await dialog.getByLabel('Preaviso de terminación del cliente (días calendario): valor personalizado').fill('setenta y cinco (75)');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
 
@@ -256,9 +256,10 @@ test.describe('Admin proposal contract modality', () => {
 
     await page.getByTestId('proposal-contract-row-service').getByRole('button', { name: 'Editar parámetros' }).click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByLabel('Duración inicial', { exact: true })).toHaveValue('custom');
+    await expect(dialog.getByRole('combobox', { name: 'Duración inicial' })).toHaveValue('custom');
     await expect(dialog.getByLabel('Duración inicial: valor personalizado')).toHaveValue(historicalTerm);
     await dialog.getByRole('button', { name: 'Actualizar contrato', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
 
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el', { timeout: 10_000 });
     expect(updatePayload.contract_params.service_initial_term).toBe(historicalTerm);
@@ -275,7 +276,7 @@ test.describe('Admin proposal contract modality', () => {
     await openDocuments(page);
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Duración inicial', { exact: true }).selectOption('custom');
+    await dialog.getByRole('combobox', { name: 'Duración inicial' }).selectOption('custom');
     const input = dialog.getByLabel('Duración inicial: valor personalizado');
     await input.fill('un año inicial');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
@@ -300,7 +301,7 @@ test.describe('Admin proposal contract modality', () => {
     await openDocuments(page);
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
-    await dialog.getByLabel('Duración inicial', { exact: true }).selectOption('custom');
+    await dialog.getByRole('combobox', { name: 'Duración inicial' }).selectOption('custom');
     await dialog.getByLabel('Duración inicial: valor personalizado').fill('plazo anual renovable');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
 
@@ -347,7 +348,7 @@ test.describe('Admin proposal contract modality', () => {
     await openDocuments(page);
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
-    const dropdown = dialog.getByLabel('Duración inicial', { exact: true });
+    const dropdown = dialog.getByRole('combobox', { name: 'Duración inicial' });
     await dropdown.focus();
     await dropdown.press('End');
     await dropdown.press('Tab');
@@ -376,8 +377,8 @@ test.describe('Admin proposal contract modality', () => {
 
     await dialog.getByRole('button', { name: 'Reintentar', exact: true }).click();
 
-    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('9');
-    await expect(dialog.getByLabel('Preaviso para no renovar (días calendario)')).toHaveValue('60');
+    await expect(dialog.getByRole('combobox', { name: 'Duración inicial' })).toHaveValue('9');
+    await expect(dialog.getByRole('combobox', { name: 'Preaviso para no renovar (días calendario)' })).toHaveValue('60');
     await expect(dialog.getByRole('button', { name: 'Generar contrato', exact: true })).toBeEnabled();
   });
 
