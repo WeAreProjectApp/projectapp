@@ -1,5 +1,7 @@
 # Technical Documentation — ProjectApp
 
+> **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
+
 > **Pies de modales — 2026-09-27:** los modales con acciones inferiores usan
 > `BaseModal` con slot `footer` y `BaseModalActions`. El cuerpo desplaza; el pie
 > permanece fuera del scroll. Altura natural hasta `90dvh` en escritorio y

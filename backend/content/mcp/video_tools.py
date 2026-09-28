@@ -1,5 +1,6 @@
 """Video tools consume completed binary uploads without copying them into RAM."""
 from django.db import transaction
+from django.core.files import File
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
@@ -39,7 +40,7 @@ def _execute(arguments, module, personalized, action):
             with upload.file.open('rb') as source:
                 result = update_resource(
                     module, language, proposal=proposal, actor=mcp_actor(),
-                    revision=arguments.get('revision'), action=action, uploaded_file=source,
+                    revision=arguments.get('revision'), action=action, uploaded_file=File(source, name=upload.filename),
                 )
             upload.status = McpUpload.STATUS_CONSUMED
             upload.consumed_at = timezone.now()

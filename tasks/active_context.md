@@ -1,6 +1,6 @@
-# Recursos de video y MCPs comerciales — en implementación (2026-09-28)
+# Recursos de video y MCPs comerciales — implementados en PR (2026-09-28)
 
-Plan aprobado: conectores independientes para Alianza y Módulos adicionales; carga MP4 hasta 250 MB desde panel/MCP; genérico de propuestas y personalizado dentro de ambas vistas comerciales. Rama `feat/28092026-commercial-video-mcps`; migraciones y despliegue pendientes.
+Plan aprobado: conectores independientes para Alianza y Módulos adicionales; carga MP4 hasta 250 MB desde panel/MCP; genérico de propuestas y personalizado dentro de ambas vistas comerciales. Rama `feat/28092026-commercial-video-mcps`; PR #440 abierto. Pruebas focales de carga/reemplazo, permisos y operaciones comerciales aprobadas, incluida transferencia de 250 MiB por HTTP real y carga mediante herramientas MCP por bloques. Once recorridos de navegador verificados. El estado de integración se consulta en el PR; migración y despliegue corresponden al deploy.
 
 # Creación de enlaces seguros (2026-09-27)
 

@@ -1,4 +1,5 @@
 """Commercial videos travel through the real upload and serving boundaries."""
+import base64
 import hashlib
 from pathlib import Path
 import subprocess
@@ -85,6 +86,59 @@ def test_inactive_proposal_blocks_its_video(staff_client, client, mp4_bytes):
     assert response.status_code == 404
 
 
+def test_deleting_proposal_removes_private_video_files(staff_client, mp4_bytes, django_capture_on_commit_callbacks):
+    proposal = BusinessProposal.objects.create(title='Video to delete', client_name='Client')
+    upload(staff_client, f'/api/video-resources/admin/proposals/{proposal.pk}/', mp4_bytes)
+    resource = VideoResource.objects.get(proposal=proposal)
+    paths = [Path(resource.file.path), Path(resource.poster.path)]
+    assert all(path.exists() for path in paths)
+
+    with django_capture_on_commit_callbacks(execute=True):
+        proposal.delete()
+
+    assert not VideoResource.objects.filter(pk=resource.pk).exists()
+    assert all(not path.exists() for path in paths)
+
+
+def test_mcp_chunks_publish_a_playable_personalized_video(api_client, client, mp4_bytes):
+    connector, _ = McpConnector.objects.get_or_create(slug='proposals', defaults={'name': 'Propuestas'})
+    connector.is_active = True
+    connector.save()
+    endpoint = f'/api/mcp/proposals/{connector.generate_token()}/'
+    proposal = BusinessProposal.objects.create(title='Video in chunks', client_name='Client')
+
+    def call(name, arguments):
+        response = api_client.post(endpoint, {
+            'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+            'params': {'name': name, 'arguments': arguments},
+        }, format='json')
+        result = response.data['result']
+        assert result['isError'] is False, result
+        return result['structuredContent']
+
+    temporary = call('begin_upload', {
+        'filename': 'personalized.mp4', 'content_type': 'video/mp4',
+        'size': len(mp4_bytes), 'sha256': hashlib.sha256(mp4_bytes).hexdigest(),
+    })
+    first, second = mp4_bytes[:600], mp4_bytes[600:]
+    call('upload_asset_chunk', {
+        'asset_id': temporary['asset_id'], 'index': 0,
+        'base64': base64.b64encode(first).decode(), 'chunk_sha256': hashlib.sha256(first).hexdigest(),
+    })
+    call('upload_asset_chunk', {
+        'asset_id': temporary['asset_id'], 'index': 1,
+        'base64': base64.b64encode(second).decode(), 'chunk_sha256': hashlib.sha256(second).hexdigest(),
+    })
+    call('complete_upload', {'asset_id': temporary['asset_id']})
+    assigned = call('set_proposal_personalized_video', {
+        'proposal_id': proposal.pk, 'asset_id': temporary['asset_id'], 'revision': 0,
+    })
+
+    response = client.get(assigned['video']['src'])
+    assert response.status_code == 200
+    assert b''.join(response.streaming_content) == mp4_bytes
+
+
 @pytest.mark.parametrize('slug,tool,target', [
     ('partnership-program', 'set_partnership_program_video', 'language'),
     ('additional-modules', 'set_additional_modules_video', 'language'),
@@ -119,6 +173,7 @@ def test_mcp_can_upload_new_video_then_replace_it(api_client, client, mp4_bytes,
     original = assign(0)
     replaced = assign(1)
     assert replaced['revision'] == 2
+    assert replaced['filename'] == 'clip.mp4'
     assert replaced['video']['src'] != original['video']['src']
     assert client.get(original['video']['src']).status_code == 404
     current = client.get(replaced['video']['src'])

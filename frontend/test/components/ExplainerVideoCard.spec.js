@@ -103,4 +103,15 @@ describe('ExplainerVideoCard', () => {
     expect(wrapper.get('h2').text()).toBe('additionalModules.explainerPanelTitle')
     expect(wrapper.text()).toContain('additionalModules.explainerPanelDescription')
   })
+
+  it('hides the subtitle assurance for an uploaded video', () => {
+    // Fails if a third-party upload is advertised as having the bundled video's guaranteed subtitles.
+    const wrapper = mountCard({
+      video: { ...video, source: 'uploaded', src: '/api/video-resources/id/11/video/' },
+    })
+
+    expect(wrapper.text()).not.toContain('financing.explainerNoAudioNote')
+    expect(wrapper.get('[data-testid="financing-explainer-play"]').attributes('aria-label'))
+      .toBe('financing.explainerPlayAria:financing.explainerTitle')
+  })
 })

@@ -1,5 +1,7 @@
 # Task Plan — ProjectApp
 
+> **Recursos comerciales y MCPs — 2026-09-28:** implementación en PR #440: conectores Alianza/Módulos adicionales; videos generales y personalizado de propuesta cargables desde panel/MCP. Validación focal y recorridos de navegador aprobados; estado de integración consultable en el PR. Activación de servidor posterior por deploy.
+
 > **2026-09-26 — modalidad de cierre de contratos:** Documentos elige en
 > negociación entre contrato único y contratos de producto + servicio, con
 > parámetros y texto personalizado por documento. El correo de formalización,

@@ -184,7 +184,7 @@ CATALOG_MODELS = {
     'content.ContractTemplate', 'content.DiagnosticDefaultConfig',
     'content.DocumentType', 'content.ExplainerVideoSettings',
     'content.FinancingAgreementTemplate', 'content.FinancingPolicyRevision',
-    'content.HourPackageSettings',
+    'content.HourPackageSettings', 'content.VideoResource',
 }
 
 EXEMPT_MODELS = {

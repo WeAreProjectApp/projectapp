@@ -44,6 +44,7 @@ def video_descriptor(resource):
         return None
     base = f'/api/video-resources/{resource.id}/{resource.revision}'
     return {
+        'source': 'uploaded',
         'src': f'{base}/video/', 'poster': f'{base}/poster/',
         'durationSeconds': resource.duration_seconds,
         'width': resource.width, 'height': resource.height,

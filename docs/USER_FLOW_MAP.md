@@ -3657,6 +3657,17 @@ Two transitions that were previously bundled into other flows now have their own
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidencia:** `ProposalViewGateway.vue`, `ExplainerVideoCard.vue`, `proposal_explainer_video_visible()`.
 
+### FLOW: `public-proposal-personalized-video`
+
+- **Módulo:** proposal
+- **Rol:** invitado mediante enlace público
+- **Prioridad:** P2
+- **Ruta:** `/:locale/proposal/:uuid`.
+- **Interacción:** elegir Vista Ejecutiva o Propuesta Completa, navegar después de la bienvenida y reproducir el video de la propuesta. Sin archivo no hay panel ni entrada en el índice; técnico, contrato y PDF no incorporan este recurso.
+- **Outcomes:** display (sección opcional y título localizado tras navegación), success (reproducción dentro de ambas vistas), failure (error de carga con Reintentar). Error de validación no aplica: no hay formulario; enlaces desconocidos/expirados pertenecen a sus flujos existentes.
+- **Evidencia:** `pages/proposal/[uuid]/index.vue` y `components/BusinessProposal/PersonalizedVideo.vue`.
+- **E2E Spec:** `e2e/public/proposal-personalized-video.spec.js`.
+
 
 ## 6. Admin Flows
 
@@ -6198,6 +6209,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-clients-config-tab` | admin | P3 | — | 0 |
 | `admin-clients-documents-section` | admin | P2 | display,success | 2 |
 | `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
+| `admin-commercial-video-resources` | admin | P1 | display,success,error,failure | 4 |
 | `admin-communication-folders` | admin | P1 | display,success,error,failure | — |
 | `admin-daily-pipeline-digest` | admin | P2 | — | 0 |
 | `admin-dashboard` | admin | P2 | display | 1 |
@@ -6538,6 +6550,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-portfolio-detail` | public | P2 | display,failure | 1 |
 | `public-privacy-policy` | public | P4 | display | 1 |
 | `public-proposal-explainer` | public | P2 | display,success,failure | 4 |
+| `public-proposal-personalized-video` | proposal | P2 | display,success,failure | 3 |
 | `public-route-not-found` | public | P3 | failure | 1 |
 | `public-secure-link-create` | public | P1 | success,error,failure,display | — |
 | `public-secure-link-reveal` | public | P1 | success,display,failure | — |
@@ -7574,6 +7587,17 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Evidencia:** `ExplainerVisibilityToggle.vue`, `stores/explainer_videos.js`,
   `PATCH explainer-videos/admin/settings/update/` y
   `e2e/admin/admin-financing.spec.js`.
+
+### FLOW: `admin-commercial-video-resources`
+
+- **Módulo:** admin / comercial
+- **Rol:** admin
+- **Prioridad:** P1
+- **Rutas:** Alianza → Configuración; Módulos adicionales → Recursos; Propuestas → Configuraciones; editor de propuesta → Recursos.
+- **Interacción:** consultar el archivo vigente, elegir idioma ES/EN para genéricos, cargar/sustituir un MP4, quitar con confirmación o restaurar el predeterminado. Progreso y errores junto al archivo. Personalizados sin predeterminado.
+- **Outcomes:** display (recurso o ausencia al entrar por UI), success (carga/sustitución/baja/restauración), error (archivo ausente, inválido o mayor de 250 MiB), failure (consulta/carga fallida, cancelación o revisión desactualizada con consulta posterior).
+- **Evidencia:** `components/resources/VideoResourceManager.vue` y sus cuatro páginas huésped; `views/video_resources.py` y `services/video_resource_service.py`.
+- **E2E Spec:** `e2e/admin/admin-video-resources.spec.js`.
 
 
 ## Unsectioned flows

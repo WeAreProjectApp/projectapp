@@ -898,8 +898,8 @@ MCP_MODEL_CONTRACTS.update({
 # Each connector owns the same service contract as its Panel surface.
 VIDEO_RESOURCE_CONTRACT = _contract(
     'content.VideoResource',
-    read_only='id key module language proposal filename size sha256 duration_seconds width height revision updated_by created_at updated_at',
-    read_write='mode file poster',
+    read_only='id key module language proposal poster filename size sha256 duration_seconds width height revision updated_by created_at updated_at',
+    read_write='mode file',
 )
 PARTNERSHIP_CONTRACTS = (
     _contract(
