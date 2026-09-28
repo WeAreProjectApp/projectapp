@@ -137,6 +137,7 @@ async function changeLanguage(nextLanguage) {
       :download-url="pdfUrl"
       :language="language"
       :show-explainer="catalog?.show_explainer_video !== false"
+      :explainer-resource="catalog?.explainer_video"
       @change-language="changeLanguage"
     />
   </section>

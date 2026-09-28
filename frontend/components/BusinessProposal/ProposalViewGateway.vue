@@ -157,6 +157,7 @@ import { TECH_READING_TIME } from '~/utils/technicalProposalPanels';
 import proposalExplainerEs from '~/locales/proposalExplainer/es';
 
 const props = defineProps({
+  explainerResource: { type: Object, default: null },
   showExplainerVideo: { type: Boolean, default: false },
   language: {
     type: String,
@@ -180,7 +181,7 @@ const props = defineProps({
 const explainerMessages = { 'es-co': { proposalExplainer: proposalExplainerEs } };
 const emit = defineEmits(['select']);
 const explainerCard = ref(null);
-const explainerVideo = useExplainerVideo('proposal', computed(() => props.language));
+const explainerVideo = useExplainerVideo('proposal', computed(() => props.language), computed(() => props.explainerResource));
 function selectMode(mode) {
   explainerCard.value?.pause();
   emit('select', mode);

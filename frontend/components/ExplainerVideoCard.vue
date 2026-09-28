@@ -198,7 +198,7 @@ function onEnded() {
       <p class="mt-1 text-sm leading-6 text-text-muted">{{ description }}</p>
       <div class="mt-3 flex flex-wrap items-center gap-2">
         <BaseBadge variant="neutral" size="sm">{{ durationLabel }}</BaseBadge>
-        <span class="text-xs text-text-subtle">{{ translate(`${ns}.explainerNoAudioNote`) }}</span>
+        <span v-if="video.source !== 'uploaded'" class="text-xs text-text-subtle">{{ translate(`${ns}.explainerNoAudioNote`) }}</span>
       </div>
     </div>
   </section>

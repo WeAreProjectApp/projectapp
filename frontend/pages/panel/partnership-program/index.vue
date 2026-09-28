@@ -1,6 +1,8 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 
+import VideoResourceManager from '~/components/resources/VideoResourceManager.vue'
+import { useExplainerVideosStore } from '~/stores/explainer_videos'
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue'
 import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vue'
 import { useExplainerVideo } from '~/composables/useExplainerVideos'
@@ -22,7 +24,8 @@ const allowedTabs = new Set(['program', 'agreements', 'settings'])
 const activeSection = ref(allowedTabs.has(route.query.tab) ? route.query.tab : 'program')
 const isEnglish = computed(() => locale.value.startsWith('en'))
 const language = computed(() => (isEnglish.value ? 'en' : 'es'))
-const explainer = useExplainerVideo('financing', language)
+const videoSettings = useExplainerVideosStore()
+const explainer = useExplainerVideo('financing', language, computed(() => videoSettings.settings?.resources?.[`financing:${language.value}`]))
 const program = ref(null)
 const isLoadingProgram = ref(false)
 const programLoadError = ref(false)
@@ -193,6 +196,7 @@ function modalityLabel(value, fallback = '') {
     </template>
 
     <template v-else-if="activeSection === 'settings'">
+      <VideoResourceManager module="financing" :language="language" />
       <BaseAlert
         v-if="agreementsStore.settingsError && !agreementsStore.financingSettings"
         class="mt-6"

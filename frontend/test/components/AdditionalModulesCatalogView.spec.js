@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils'
+import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import AdditionalModulesCatalogView from '../../components/AdditionalModules/CatalogView.vue'
 
@@ -37,7 +37,7 @@ const OnboardingStub = {
   template: '<div data-testid="additional-modules-onboarding-stub" />',
 }
 
-function mountCatalog(props = {}) {
+function mountCatalog(props = {}, { renderExplainer = false } = {}) {
   document.body.innerHTML = ''
   return mount(AdditionalModulesCatalogView, {
     props: {
@@ -56,10 +56,12 @@ function mountCatalog(props = {}) {
         AdditionalModulesShareButton: {
           template: '<button data-testid="additional-modules-share-floating" />',
         },
-        ExplainerVideoCard: {
-          props: ['video', 'variant', 'testId'],
-          template: '<div :data-testid="`${testId}-card`" :data-variant="variant" :data-video-id="video.id" :data-language="video.language" />',
-        },
+        ...(renderExplainer ? {} : {
+          ExplainerVideoCard: {
+            props: ['video', 'variant', 'testId'],
+            template: '<div :data-testid="`${testId}-card`" :data-variant="variant" :data-video-id="video.id" :data-language="video.language" />',
+          },
+        }),
       },
     },
     attachTo: document.body,
@@ -189,6 +191,10 @@ describe('AdditionalModulesCatalogView explainer video', () => {
     window.localStorage.clear()
   })
 
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
   it('places the Spanish explainer between the title and the first module', () => {
     const wrapper = mountCatalog({ language: 'es' })
 
@@ -224,5 +230,48 @@ describe('AdditionalModulesCatalogView explainer video', () => {
     expect(wrapper.find('[data-testid="additional-modules-explainer-card"]').exists()).toBe(false)
     expect(wrapper.get('h1').text()).toContain('additionalModules.title')
     expect(wrapper.find('[data-testid="additional-module-card-electronic-invoicing"]').exists()).toBe(true)
+  })
+
+  it('renders the uploaded video source in English', async () => {
+    // Fails if an uploaded English resource is discarded because no bundled English render exists.
+    jest.spyOn(document, 'hasFocus').mockReturnValue(true)
+    jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
+    const playSpy = jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
+    const wrapper = mountCatalog({
+      language: 'en',
+      showExplainer: true,
+      explainerResource: {
+        mode: 'uploaded',
+        video: {
+          id: 'additional-modules',
+          source: 'uploaded',
+          src: '/api/video-resources/id/22/video/',
+          poster: '/api/video-resources/id/22/poster/',
+          durationSeconds: 42,
+          width: 1920,
+          height: 1080,
+        },
+      },
+    }, { renderExplainer: true })
+
+    await wrapper.get('[data-testid="additional-modules-explainer-play"]').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[data-testid="additional-modules-explainer-player"]').attributes('src'))
+      .toBe('/api/video-resources/id/22/video/')
+    expect(playSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides a removed explainer resource in Spanish', () => {
+    // Fails if a resource removed in the panel or MCP revives the bundled card.
+    const wrapper = mountCatalog({
+      language: 'es',
+      showExplainer: true,
+      explainerResource: { mode: 'none' },
+    }, { renderExplainer: true })
+
+    expect(wrapper.find('[data-testid="additional-modules-explainer-card"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="additional-modules-catalog"]').text())
+      .toContain('additionalModules.title')
   })
 })

@@ -88,6 +88,7 @@ export const ADMIN_CLIENT_FIRST_LOGIN_NOTIFICATION = ['@flow:admin-client-first-
 export const ADMIN_CLIENTS_CONFIG_TAB = ['@flow:admin-clients-config-tab', '@module:admin', '@priority:P3'];
 export const ADMIN_CLIENTS_DOCUMENTS_SECTION = ['@flow:admin-clients-documents-section', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENTS_FILTER_PRESETS = ['@flow:admin-clients-filter-presets', '@module:admin', '@priority:P2'];
+export const ADMIN_COMMERCIAL_VIDEO_RESOURCES = ['@flow:admin-commercial-video-resources', '@module:admin', '@priority:P1'];
 export const ADMIN_COMMUNICATION_FOLDERS = ['@flow:admin-communication-folders', '@module:admin', '@priority:P1'];
 export const ADMIN_DAILY_PIPELINE_DIGEST = ['@flow:admin-daily-pipeline-digest', '@module:admin', '@priority:P2'];
 export const ADMIN_DASHBOARD = ['@flow:admin-dashboard', '@module:admin', '@priority:P2'];
@@ -415,6 +416,7 @@ export const PROPOSAL_VIEW_NAVIGATION = ['@flow:proposal-view-navigation', '@mod
 export const PROPOSAL_VIEW_ONBOARDING = ['@flow:proposal-view-onboarding', '@module:proposal', '@priority:P3'];
 export const PROPOSAL_VIEW_PASTE_RENDERING = ['@flow:proposal-view-paste-rendering', '@module:proposal', '@priority:P2'];
 export const PROPOSAL_WELCOME_BACK = ['@flow:proposal-welcome-back', '@module:proposal', '@priority:P2'];
+export const PUBLIC_PROPOSAL_PERSONALIZED_VIDEO = ['@flow:public-proposal-personalized-video', '@module:proposal', '@priority:P2'];
 
 // ── public ──
 export const PUBLIC_ABOUT_US = ['@flow:public-about-us', '@module:public', '@priority:P3'];

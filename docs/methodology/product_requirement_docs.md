@@ -1,5 +1,7 @@
 # Product Requirements Document — ProjectApp
 
+> **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
+
 > **Corrección 2026-09-26 — validación en Documentos:** Nuevo documento ya no
 > lista bajo **Crear Documento** lo que falta. El botón sigue disponible y, al
 > intentarlo, cada aviso aparece bajo su campo y lo marca incompleto. Cancelar

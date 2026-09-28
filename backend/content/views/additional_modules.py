@@ -1,3 +1,4 @@
+from content.services.video_resource_service import public_resource
 from django.db import transaction
 from django.db.models import Count, Q
 from django.http import HttpResponse
@@ -352,6 +353,7 @@ def public_catalog(request):
     payload = serialize_public_catalog(language=language)
     payload.update({
         'is_shared': False,
+        'explainer_video': public_resource('additional-modules', language),
         'show_explainer_video': explainer_video_visible('additional-modules'),
         'canonical_path': (
             '/en-us/additional-modules'
@@ -393,6 +395,7 @@ def public_share_catalog(request, share_uuid):
     )
     payload.update({
         'is_shared': True,
+        'explainer_video': public_resource('additional-modules', language),
         'share_uuid': str(share_link.uuid),
         'show_explainer_video': explainer_video_visible(
             'additional-modules', share_link=share_link,

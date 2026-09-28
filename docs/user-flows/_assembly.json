@@ -40,7 +40,8 @@
         "proposal-download-pdf",
         "proposal-share",
         "proposal-engagement-tracking",
-        "public-proposal-explainer"
+        "public-proposal-explainer",
+        "public-proposal-personalized-video"
       ]
     },
     {
@@ -297,7 +298,8 @@
         "admin-additional-modules-explainer-visibility",
         "admin-additional-modules-share-video",
         "admin-financing-explainer",
-        "admin-financing-explainer-visibility"
+        "admin-financing-explainer-visibility",
+        "admin-commercial-video-resources"
       ]
     }
   ]

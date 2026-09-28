@@ -12,6 +12,7 @@ import AdditionalModulesOnboarding from '~/components/AdditionalModules/Onboardi
 import AdditionalModulesShareButton from '~/components/AdditionalModules/ShareButton.vue'
 
 const props = defineProps({
+  explainerResource: { type: Object, default: null },
   categories: { type: Array, default: () => [] },
   totalModules: { type: Number, default: 0 },
   downloadUrl: { type: String, default: '' },
@@ -28,7 +29,7 @@ const { viewMode } = useAdditionalModulesViewMode('public')
 const { isDark, toggle: toggleTheme } = useAdditionalModulesTheme()
 const documentRef = ref(null)
 usePublicDocumentEntrance(documentRef)
-const explainer = useExplainerVideo('additional-modules', toRef(props, 'language'))
+const explainer = useExplainerVideo('additional-modules', toRef(props, 'language'), toRef(props, 'explainerResource'))
 const explainerVisible = computed(() => props.showExplainer && Boolean(explainer.value))
 const selectedModule = ref(null)
 const detailOpen = ref(false)

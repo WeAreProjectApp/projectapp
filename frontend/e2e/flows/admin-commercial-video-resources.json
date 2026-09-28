@@ -1,0 +1,17 @@
+{
+  "id": "admin-commercial-video-resources",
+  "name": "Admin Commercial Video Resources",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Admin opens resources from Partnership Program settings, Additional Modules, proposal settings or proposal editing; uploads, replaces, removes or restores a video. Validation, failed requests and revision conflicts preserve the current resource.",
+  "expectedSpecs": 4,
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

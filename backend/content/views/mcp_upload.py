@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.core import signing
-from django.core.files.base import ContentFile
+from django.core.files import File
+from tempfile import TemporaryFile
 from django.db import transaction
 from django.http import FileResponse, JsonResponse
 from django.utils import timezone
@@ -12,6 +13,8 @@ from content.mcp.upload_tools import (
     DOWNLOAD_SIGNING_SALT,
     SIGNING_SALT,
     UPLOAD_TTL_MINUTES,
+    VIDEO_UPLOAD_TTL_MINUTES,
+    max_upload_bytes,
 )
 from content.models import McpUpload
 
@@ -24,7 +27,7 @@ def mcp_signed_upload(request, upload_id, signature):
         signed = signing.loads(
             signature,
             salt=SIGNING_SALT,
-            max_age=UPLOAD_TTL_MINUTES * 60,
+            max_age=VIDEO_UPLOAD_TTL_MINUTES * 60,
         )
     except signing.BadSignature:
         return JsonResponse({'detail': 'Firma de upload inválida.'}, status=404)
@@ -43,7 +46,7 @@ def mcp_signed_upload(request, upload_id, signature):
         or not upload.credential.is_usable
     ):
         return JsonResponse({'detail': 'Upload no disponible.'}, status=409)
-    max_bytes = getattr(settings, 'MCP_UPLOAD_MAX_BYTES', DEFAULT_MAX_UPLOAD_BYTES)
+    max_bytes = max_upload_bytes(upload.content_type)
     content_length = request.META.get('CONTENT_LENGTH')
     try:
         declared_length = int(content_length) if content_length else 0
@@ -51,20 +54,26 @@ def mcp_signed_upload(request, upload_id, signature):
         declared_length = 0
     if declared_length > min(max_bytes, upload.expected_size):
         return JsonResponse({'detail': 'El archivo excede el tamaño declarado.'}, status=413)
-    body = request.body
-    if not body or len(body) != upload.expected_size or len(body) > max_bytes:
-        return JsonResponse({
-            'detail': 'El tamaño recibido no coincide con el declarado.',
-            'expected': upload.expected_size,
-            'received': len(body),
-        }, status=400)
     request_content_type = request.headers.get('Content-Type', '').split(';', 1)[0].lower()
     if request_content_type and request_content_type != upload.content_type:
         return JsonResponse({'detail': 'El Content-Type no coincide.'}, status=400)
     if upload.file or upload.received_size:
         return JsonResponse({'detail': 'El upload ya recibió contenido.'}, status=409)
-    upload.file.save(upload.filename, ContentFile(body), save=False)
-    upload.received_size = len(body)
+    received = 0
+    with TemporaryFile() as target:
+        while True:
+            chunk = request.read(min(1024 * 1024, upload.expected_size - received + 1))
+            if not chunk:
+                break
+            received += len(chunk)
+            if received > min(max_bytes, upload.expected_size):
+                return JsonResponse({'detail': 'El archivo excede el tamaño declarado.'}, status=413)
+            target.write(chunk)
+        if received != upload.expected_size:
+            return JsonResponse({'detail': 'El tamaño recibido no coincide.', 'received': received}, status=400)
+        target.seek(0)
+        upload.file.save(upload.filename, File(target), save=False)
+    upload.received_size = received
     upload.next_chunk_index = 1
     upload.save(update_fields=[
         'file', 'received_size', 'next_chunk_index', 'updated_at',

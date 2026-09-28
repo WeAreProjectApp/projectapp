@@ -232,6 +232,9 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        from content.services.video_resource_service import public_resource
+        data['explainer_video'] = public_resource('proposal', instance.language)
+        data['personalized_video'] = public_resource('proposal', instance.language, instance)['video']
         if not self.context.get('is_admin', False):
             from content.services.explainer_video_service import proposal_explainer_video_visible
             data['show_explainer_video'] = proposal_explainer_video_visible(
