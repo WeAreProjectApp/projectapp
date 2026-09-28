@@ -23,7 +23,7 @@ def validate_folder_input(data):
         raise serializers.ValidationError({'detail': 'El payload debe ser un objeto.'})
     unknown = set(data) - FOLDER_WRITE_FIELDS
     if unknown:
-        raise serializers.ValidationError({name: ['Campo desconocido o de solo lectura.'] for name in sorted(unknown)})
+        raise serializers.ValidationError({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unknown)})
     if 'parent' in data and 'parent_id' in data and data['parent'] != data['parent_id']:
         raise serializers.ValidationError({'parent_id': 'parent y parent_id deben coincidir.'})
 
@@ -114,7 +114,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
             'document_count', 'children_count',
             'active_document_count', 'active_children_count',
             'archived_document_count', 'archived_children_count',
-            'created_at', 'updated_at', 'created_by', 'creation_source',
+            'created_at', 'updated_at', 'created_by', 'creation_source', 'creation_operation',
             'is_archived', 'archived_at', 'archived_cause',
         )
         # `is_archived`/`archived_at` son read-only a propósito: update_document_folder
@@ -156,14 +156,10 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         return None
 
     def create(self, validated_data):
-        from content.mcp.context import current_mcp_context
-        context = current_mcp_context()
-        request = self.context.get('request')
-        actor = context.actor if context else getattr(request, 'user', None)
+        from content.services.document_folder_provenance import folder_creation_values
         return super().create({
             **validated_data,
-            'created_by': actor,
-            'creation_source': 'mcp' if context else 'panel' if actor else 'system',
+            **folder_creation_values(operation=self.context.get('creation_operation', 'create_folder'), request=self.context.get('request')),
         })
 
     def get_document_count(self, obj):
@@ -313,11 +309,11 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         if instance is not None:
             if value.pk == instance.pk:
                 raise serializers.ValidationError(
-                    'Una carpeta no puede ser su propio padre.'
+                    'Una carpeta no puede ser su propio padre.', code='folder_cycle'
                 )
             if value.pk in instance.get_descendant_ids():
                 raise serializers.ValidationError(
-                    'No se puede mover una carpeta dentro de una de sus subcarpetas.'
+                    'No se puede mover una carpeta dentro de una de sus subcarpetas.', code='folder_cycle'
                 )
         try:
             ensure_active_target(

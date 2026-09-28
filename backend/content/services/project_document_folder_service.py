@@ -133,6 +133,7 @@ def _synchronize_root(root, project, *, created):
     if created:
         for order, (name, document_kind) in enumerate(PROJECT_FOLDER_TEMPLATE):
             DocumentFolder.objects.create(
+                creation_source='system', creation_operation='ensure_project_folder.template',
                 name=name,
                 parent=root,
                 order=order,
@@ -178,6 +179,7 @@ def ensure_project_folder(project):
     during the reviewed migration never injects duplicate structure.
     """
     defaults = {
+        'creation_source': 'system', 'creation_operation': 'ensure_project_folder',
         'name': project.name,
         'parent': None,
         'project': project,

@@ -51,6 +51,7 @@ from content.mcp.operation_catalogs import (
 )
 from content.mcp.principal import service_actor_for_connector
 from content.mcp.registry import infer_risk, normalize_tools
+from content.mcp.registry import server_info as build_server_info
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
 from content.mcp.client_tools import CLIENT_TOOLS
 from content.mcp.communication_tools import COMMUNICATION_TOOLS
@@ -509,7 +510,7 @@ def _decorate_modern_result(payload, server_name, method):
         result['_meta'] = meta
     meta.setdefault(
         'io.modelcontextprotocol/serverInfo',
-        {**SERVER_INFO, 'name': server_name},
+        build_server_info(server_name),
     )
     if method in {'server/discover', 'tools/list'}:
         result.setdefault('ttlMs', LIST_CACHE_TTL_MS)

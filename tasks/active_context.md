@@ -2179,3 +2179,13 @@ migraciones ni cambios de política financiera. Backend focal y regresión:
 27 casos aprobados; mapa de vistas: 20 tests aprobados; quality gate focal:
 100/100, sin errores ni warnings. Flow-map vigente, con las clases declaradas
 del módulo cubiertas. El estado de navegador y CI se registra en el PR.
+
+
+### Documentos MCP 3.0.1 — correcciones y Littigio (2026-09-28)
+
+La sesión implementa errores completos también en texto, códigos por documento,
+paridad de esquemas/versiones y procedencia de carpetas. El comando de reparación
+usa manifiesto revisado, huellas, respaldo y transacción. Investigación productiva:
+MCP movió 201/202/203/208/209 de 80 a 124 a las 13:48 UTC; la migración de autoría y
+validación llegó a las 21:36 UTC. Detalle y estado operativo en
+`docs/runbooks/littigio-folder-repair.md`. No atribuir este caso a sincronización.

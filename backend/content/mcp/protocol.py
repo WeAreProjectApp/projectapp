@@ -10,6 +10,12 @@ run under gunicorn WSGI).
 import json
 import logging
 
+from rest_framework.exceptions import ValidationError
+
+from content.mcp.errors import normalize_error
+from content.mcp.registry import public_tool
+from content.mcp.registry import server_info as build_server_info
+
 logger = logging.getLogger(__name__)
 
 MODERN_PROTOCOL_VERSION = '2026-07-28'
@@ -57,12 +63,16 @@ def _result(msg_id, result):
 
 
 def _text_result(msg_id, payload, is_error=False, *, error=None, meta=None):
-    text = payload if isinstance(payload, str) else json.dumps(
-        payload, ensure_ascii=False, default=str,
-    )
     structured = payload if isinstance(payload, dict) else {'items': payload} if isinstance(payload, list) else {'message': str(payload)}
     if error:
         structured = {'ok': False, 'error': error}
+        results = error.get('details', {}).get('results')
+        if isinstance(results, list):
+            structured['results'] = results
+    text_payload = structured if error else payload
+    text = text_payload if isinstance(text_payload, str) else json.dumps(
+        text_payload, ensure_ascii=False, default=str,
+    )
     result = {
         'content': [{'type': 'text', 'text': text}],
         'isError': is_error,
@@ -99,7 +109,7 @@ def handle_message(message, tools, server_name=None, context=None):
         return _error(msg_id, INVALID_PARAMS, 'params must be a JSON object.')
 
     if method == 'server/discover':
-        server_info = {**SERVER_INFO, 'name': server_name} if server_name else SERVER_INFO
+        server_info = build_server_info(server_name)
         return _result(msg_id, {
             'resultType': 'complete',
             'supportedVersions': [MODERN_PROTOCOL_VERSION],
@@ -121,7 +131,7 @@ def handle_message(message, tools, server_name=None, context=None):
             requested if requested in LEGACY_PROTOCOL_VERSIONS
             else DEFAULT_PROTOCOL_VERSION
         )
-        server_info = {**SERVER_INFO, 'name': server_name} if server_name else SERVER_INFO
+        server_info = build_server_info(server_name)
         return _result(msg_id, {
             'protocolVersion': version,
             'capabilities': {'tools': {}},
@@ -139,22 +149,12 @@ def handle_message(message, tools, server_name=None, context=None):
             or context.credential.allows(tool['name'])
         ]
         return _result(msg_id, {
-            'tools': [
-                {
-                    'name': t['name'],
-                    'title': t.get('title'),
-                    'description': t['description'],
-                    'inputSchema': t['input_schema'],
-                    'outputSchema': t.get('output_schema', {}),
-                    'annotations': t.get('annotations', {}),
-                }
-                for t in visible_tools
-            ],
+            'tools': [public_tool(tool) for tool in visible_tools],
         })
 
     if method == 'tools/call':
         name = params.get('name', '')
-        arguments = params.get('arguments') or {}
+        arguments = params.get('arguments', {})
         tool = next((t for t in tools if t['name'] == name), None)
         if tool is None:
             return _error(msg_id, INVALID_PARAMS, f'Unknown tool: {name}')
@@ -171,6 +171,8 @@ def handle_message(message, tools, server_name=None, context=None):
                 meta={'requestId': context.request_id, 'risk': tool.get('risk')},
             )
         try:
+            if not isinstance(arguments, dict):
+                raise ToolError('Los argumentos deben ser un objeto JSON.')
             if (
                 tool.get('requires_confirmation')
                 and not (context and context.confirmation_bypass)
@@ -179,7 +181,10 @@ def handle_message(message, tools, server_name=None, context=None):
                 payload = preview_sensitive_action(tool, arguments)
             else:
                 payload = tool['handler'](arguments)
-        except ToolError as exc:
+        except (ToolError, ValidationError) as exc:
+            if isinstance(exc, ValidationError):
+                detail, code, fields = normalize_error(exc.detail)
+                exc = ToolError(detail, code=code, details=fields)
             logger.info('[MCP] tool %s rejected: %s', name, exc)
             return _text_result(
                 msg_id,
