@@ -407,11 +407,11 @@ export const useDocumentStore = defineStore('documents', {
     _reconcileScope(id, updated) {
       if (matchesScope(updated, this.archiveScope)) {
         const index = this.documents.findIndex((d) => d.id === id);
-        if (index !== -1) this.documents.splice(index, 1, updated);
+        if (index !== -1) this.documents.splice(index, 1, { ...this.documents[index], ...updated });
       } else {
         this.documents = this.documents.filter((d) => d.id !== id);
       }
-      this.searchResults = this.searchResults.map((d) => (d.id === id ? updated : d));
+      this.searchResults = this.searchResults.map((d) => (d.id === id ? { ...d, ...updated } : d));
     },
 
     /** archiveDocument: take a document out of the main view, keeping it. */
@@ -641,7 +641,8 @@ export const useDocumentStore = defineStore('documents', {
       this.error = null;
       try {
         const response = await create_request('documents/create-from-markdown/', data);
-        this.currentDocument = response.data;
+        // The destination editor fetches its full detail after navigation.
+        this.currentDocument = null;
         return { success: true, data: response.data };
       } catch (error) {
         this.error = 'create_from_markdown_failed';
@@ -662,13 +663,24 @@ export const useDocumentStore = defineStore('documents', {
      * @param {number} id - Document ID.
      * @param {object} data - Fields to update.
      */
-    async updateDocument(id, data) {
+    async updateDocument(id, data, { refreshDetail = false } = {}) {
       this.isUpdating = true;
       this.error = null;
       try {
         const response = await patch_request(`documents/${id}/update/`, data);
-        this.currentDocument = response.data;
-        return { success: true, data: response.data };
+        const summary = response.data;
+        const patch = { ...summary, folder: summary.folder_id };
+        this._reconcileScope(Number(id), patch);
+        if (Number(this.currentDocument?.id) === Number(id)) {
+          this.currentDocument = { ...this.currentDocument, ...patch };
+        }
+        if (refreshDetail) {
+          const detail = await this.fetchDocument(id);
+          // A failed refresh does not turn an already committed save into a failure.
+          if (detail.success) return detail;
+          return { success: true, data: summary, refreshFailed: true };
+        }
+        return { success: true, data: summary };
       } catch (error) {
         this.error = 'update_failed';
         console.error('Error updating document:', error);
@@ -723,7 +735,7 @@ export const useDocumentStore = defineStore('documents', {
       this.error = null;
       try {
         const response = await create_request(`documents/${id}/duplicate/`, {});
-        this.documents.unshift(response.data);
+        await this.fetchDocuments({ scope: this.archiveScope, order: this.dateOrder });
         return { success: true, data: response.data };
       } catch (error) {
         this.error = 'duplicate_failed';

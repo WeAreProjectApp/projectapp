@@ -4,6 +4,9 @@
       <div
         v-if="modelValue && document"
         class="fixed inset-0 z-[9990] flex items-stretch justify-stretch bg-black/40 p-0 backdrop-blur-sm panel-portrait:items-center panel-portrait:justify-center panel-portrait:p-4"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="move-document-title"
         @click.self="close"
       >
         <div class="flex h-dvh w-full flex-col overflow-hidden bg-surface shadow-overlay panel-portrait:h-auto panel-portrait:max-h-[90dvh] panel-portrait:rounded-2xl panel-portrait:max-w-sm">
@@ -16,7 +19,7 @@
                   <BaseActionIcon action="move" class="text-info-strong" />
                 </div>
                 <div class="min-w-0">
-                  <h3 class="text-base font-semibold text-text-default">Mover documento</h3>
+                  <h3 id="move-document-title" class="text-base font-semibold text-text-default">Mover documento</h3>
                   <p class="text-xs text-text-muted truncate max-w-[200px]">{{ document.title }}</p>
                 </div>
               </div>
@@ -189,7 +192,7 @@ async function moveToFolder(folderId) {
   // Sólo hay algo que preguntar cuando adoptar PISARÍA un cliente ya elegido.
   // Sin cliente propio, heredar el de la carpeta no le quita nada a nadie y lo
   // resuelve el backend por su cuenta.
-  if (target?.client && docClient && docClient !== target.client) {
+  if (!props.document.is_contract_mirror && target?.client && docClient && docClient !== target.client) {
     pendingMove.value = {
       folderId,
       folderName: target.name,

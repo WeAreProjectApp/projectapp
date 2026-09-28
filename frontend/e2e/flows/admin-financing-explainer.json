@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "Admin previews the financing explainer video from the compact card on the Programa tab; the public preview below does not repeat it.",
+  "description": "Admin previews the financing explainer video from the compact card on the Programa tab; the public preview below does not repeat it. Playback starts only after a click, pauses when the page or window loses activity, and never resumes automatically on return.",
   "expectedSpecs": 1,
   "outcomes": [
     "success"

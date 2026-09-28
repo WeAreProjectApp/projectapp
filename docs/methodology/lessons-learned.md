@@ -302,9 +302,9 @@ This file captures important patterns, preferences, and project intelligence tha
 - Blog supports dual format: structured JSON (preferred) with HTML fallback via `v-html`
 - This avoids the need for a full CMS while keeping content rich and structured
 
-### Single Django App: `content`
-- All models, views, serializers, and services live in the `content` app
-- This works for now but may need splitting if scope grows significantly
+### Django Apps by Domain
+- `content` handles proposals, blog, portfolio, and commercial workflows; `accounts` handles platform authentication and project data.
+- `monitoring` handles operational cases; `secure_links` handles one-time secret sharing.
 - Models are already split into individual files under `content/models/`
 
 ### Service Layer Pattern
@@ -559,7 +559,7 @@ venv/bin/python <command>
 - Follow quality standards from `docs/TESTING_QUALITY_STANDARDS.md`
 
 ### CI Sharding
-- Playwright E2E tests are sharded into 5 parallel jobs
+- Playwright E2E tests are sharded into 15 parallel jobs (`.github/workflows/ci.yml`).
 - Blob reports are merged after all shards complete
 - Test quality gate runs after all test suites pass
 

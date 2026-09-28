@@ -1032,3 +1032,31 @@ conserva la preferencia; la pública calcula la visibilidad efectiva con ambos
 controles, idioma español y las cuatro opciones disponibles. Verificar PATCH
 válido, rechazo de valor no booleano y conservación de la preferencia al apagar
 el control general; no ejecutar envíos ni migraciones reales.
+
+
+## Documentos 3.0.0 — organización y respuestas compactas
+
+Contrato y cambios incompatibles: [changelog](changelog/2026-09-28-documents-mcp-3.md).
+Validar en entorno de pruebas, con documentos descartables:
+
+1. `describe_capabilities` con `tools: ["update_folder", "move_documents"]` y
+   `summary: true`; repetir sin summary y comprobar el esquema concreto.
+2. Mover carpeta con `data.parent_id`; probar alias `parent`, campo desconocido,
+   ciclo, raíz administrada y destino protegido. Un rechazo no renombra nada.
+3. Crear dos carpetas del mismo nombre/padre (también si la primera está
+   archivada): la segunda responde error con IDs coincidentes. El mutex vuelve
+   a validar al guardar; no se intenta sanear duplicados históricos.
+4. Mover el contrato espejo sólo con `folder_id`; un payload con título o texto
+   se rechaza completo. Consultar contrato/PDF y verificar la misma fuente viva.
+5. Ejecutar cada escritura con un documento grande: sin `include_content` sólo
+   metadatos; con `true`, una clave `markdown`. Leerlo después por su ID.
+6. `move_documents` con un ID inexistente o protegido: resultados por ID y cero
+   cambios. Repetir con dos IDs válidos y comprobar ambos destinos.
+7. Verificar filtros por padre/nombre, conteos archivados y autoría en carpetas.
+8. Renombrar/mover la carpeta configurada para estimates; el resolver por ID debe
+   seguir guardando allí. Configuración ausente falla sin crear carpetas.
+
+Regresiones focales: `test_document_folder_organization.py`,
+`test_document_folder_races.py`, `test_document_organization_api.py`,
+`test_document_moves.py` y `test_create_estimate_document.py`, más respuestas y
+permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.

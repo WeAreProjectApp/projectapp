@@ -2,7 +2,7 @@
 
 Used by the ``requirement-calculator`` skill to persist estimation results
 as real documents visible under ``/panel/documents``. The target folder is
-resolved with ``get_or_create`` so re-runs reuse the same top-level folder.
+resolved by a configured ID, independently of its name and parent.
 """
 
 from pathlib import Path
@@ -10,19 +10,16 @@ from pathlib import Path
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand, CommandError
 
-from content.models import Document, DocumentFolder, DocumentType
+from content.models import Document, DocumentType
 from content.services.document_content import build_content_json
 from content.services.document_type_codes import MARKDOWN
+from content.services.estimate_folder_service import resolve_estimate_folder
 
 User = get_user_model()
 
-DEFAULT_FOLDER = 'Requirement Estimates'
-
-
 class Command(BaseCommand):
     help = (
-        'Create a markdown Document from a file inside a top-level folder '
-        f'(default: "{DEFAULT_FOLDER}"). The folder is created once and reused.'
+        'Create a markdown Document in the configured estimate folder without creating folders.'
     )
 
     def add_arguments(self, parser):
@@ -32,9 +29,10 @@ class Command(BaseCommand):
             help='Path to the markdown file with the document content.',
         )
         parser.add_argument(
-            '--folder', default=DEFAULT_FOLDER,
-            help=f'Top-level folder name (default: "{DEFAULT_FOLDER}").',
+            '--folder', default=None,
+            help='Legacy selector: exact globally unique name; never creates a folder.',
         )
+        parser.add_argument('--folder-id', type=int, help='Existing destination folder ID.')
         parser.add_argument(
             '--status', default=Document.Status.PUBLISHED,
             choices=[choice for choice, _ in Document.Status.choices],
@@ -63,9 +61,7 @@ class Command(BaseCommand):
 
         # `is_archived=False`: nunca archivar estimates nuevos en una carpeta
         # que el usuario sacó de circulación.
-        folder, folder_created = DocumentFolder.objects.get_or_create(
-            name=options['folder'], parent=None, is_archived=False,
-        )
+        folder = resolve_estimate_folder(folder_id=options['folder_id'], folder_name=options['folder'])
         doc_type, _ = DocumentType.objects.get_or_create(
             code=MARKDOWN, defaults={'name': 'Documento markdown'},
         )
@@ -110,9 +106,8 @@ class Command(BaseCommand):
         document.content_json = build_content_json(document, content)
         document.save()
 
-        suffix = ' (folder created)' if folder_created else ''
         self.stdout.write(self.style.SUCCESS(
             f'Document #{document.pk} "{document.title}" created in '
-            f'folder "{folder.name}"{suffix}.'
+            f'folder "{folder.name}" (id={folder.pk}).'
         ))
         self.stdout.write(f'Panel URL: /panel/documents/{document.pk}/edit')

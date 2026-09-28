@@ -1314,6 +1314,10 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-contract-generate.spec.js`
 
+Ante un fallo de generación, el modal conserva el borrador y permite reintentar
+desde el listado y desde el editor. Sólo se cierra tras guardar correctamente;
+durante el envío bloquea nuevos envíos y el cierre.
+
 #### FLOW: `admin-proposal-contract-edit`
 
 - **Module:** admin
@@ -6251,7 +6255,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-document-folders` | admin | P2 | display,success | 1 |
 | `admin-document-gallery` | admin | P2 | display | 1 |
 | `admin-document-list` | admin | P2 | display,success,failure | 1 |
-| `admin-document-move-folder` | admin | P1 | display,success,failure | 3 |
+| `admin-document-move-folder` | admin | P1 | display,success,error,failure | 3 |
 | `admin-document-navigation` | admin | P1 | display,success,failure | 1 |
 | `admin-document-observation-delete` | admin | P1 | display,success,failure | 1 |
 | `admin-document-pdf-download` | admin | P2 | success,failure,display | 1 |
@@ -6328,7 +6332,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-comment` | admin | P3 | success | 1 |
 | `admin-proposal-contract-download` | admin | P2 | display | 1 |
 | `admin-proposal-contract-edit` | admin | P2 | success | 1 |
-| `admin-proposal-contract-generate` | admin | P1 | success | 1 |
+| `admin-proposal-contract-generate` | admin | P1 | success,failure | 1 |
 | `admin-proposal-contract-modality` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-contract-terms-visibility` | admin | P2 | success,failure | 1 |
 | `admin-proposal-create` | admin | P1 | success,error | 1 |
@@ -6514,7 +6518,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-about-us` | public | P3 | — | 0 |
 | `public-additional-modules-catalog` | public | P1 | success,display,failure | 5 |
 | `public-additional-modules-detail` | public | P1 | success | 1 |
-| `public-additional-modules-explainer` | public | P2 | display,success,failure | 6 |
+| `public-additional-modules-explainer` | public | P2 | display,success,failure | 7 |
 | `public-additional-modules-guide` | public | P2 | success,display | 2 |
 | `public-additional-modules-pdf` | public | P2 | success,failure | 2 |
 | `public-additional-modules-share` | public | P1 | success,display,failure | 4 |
@@ -7469,8 +7473,18 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
   `show_explainer_video` del payload público y
   `e2e/public/additional-modules.spec.js`.
 
-- **Contenido audiovisual:** edición brag v2, 45 segundos en español con voz,
+- **Contenido audiovisual:** edición brag v2, 60 segundos en español con voz,
   música y subtítulos integrados. Fuentes originales conservadas.
+
+- **Control de reproducción compartido:** el video sólo comienza al pulsar
+  reproducir. Cambiar de ventana, ocultar la pestaña o salir de la página lo
+  pausa; regresar no lo reanuda. Los controles nativos permiten continuar
+  manualmente. Una carga tardía no reactiva una reproducción cancelada.
+  La misma regla aplica a Alianza y propuestas, tanto en público como en panel.
+- **Regresión:** `keeps the explainer paused after returning to its window`
+  comprueba pausa y continuación manual con el MP4 real. Las pruebas unitarias
+  del reproductor cubren pestaña oculta, restauración, carga tardía, cambio de
+  fuente y retiro del componente.
 
 ### FLOW: `public-financing-explainer`
 
@@ -7733,6 +7747,19 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Branches:** un nombre largo de carpeta sigue legible dentro del drawer; el modo archivado ordena por `archived_at` y conserva su franja; Todos y búsqueda ordenan cada fila por la fecha visible; una falla al recargar conserva el orden y las filas anteriores; una cuenta emitida conserva el mismo estado comercial y las mismas acciones restringidas en tabla y tarjeta; por debajo de 1280 px sólo cliente y proyecto se agrupan dentro de la celda principal, mientras estado sigue visible; en táctil el control compacto reemplaza al encabezado sin duplicarlo; ningún ancho produce scroll horizontal de página.
 - **Coverage:** ✅ Display responsivo cubierto en 412×915, 835×1194, 1195×835, 1440×900 y 2560×1440.
 - **E2E Specs:** `e2e/admin/admin-document-list.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
+
+### FLOW: `admin-document-move-folder`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+
+- **Éxito:** mover un documento o el contrato vigente a una carpeta o a «Sin carpeta».
+  El contrato conserva contenido y propietario; la respuesta compacta no vacía el editor.
+- **Error:** una carpeta que se vuelve protegida rechaza el movimiento y mantiene el modal.
+- **Fallo:** un error del servidor mantiene el modal y muestra el fallo.
+- **Visualización:** al abrir «Mover a carpeta», mostrar destinos activos y «Sin carpeta».
+
+Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
 
 ### FLOW: `admin-document-navigation`
 
@@ -8040,14 +8067,25 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 
 #### Datos del servicio configurables
 
-Duración y ambos preavisos ofrecen opciones globales y Personalizado (enteros de
-1–999). Las preselecciones iniciales son 9 meses / 60 / 60 días. Se envían números
-nuevos y el servidor guarda letras con el número entre paréntesis. La duración
-incluye mes/meses; la plantilla añade días calendario a los preavisos.
-Los contratos previos mantienen sus valores: los textos no reconocibles muestran
-Valor guardado hasta que se elija reemplazarlos. Carga fallida o configuración
-inválida bloquea la generación por plantilla y ofrece Reintentar. Vacíos o números
-inválidos no se envían; los errores aparecen junto a cada campo.
+Duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
+muestra debajo un campo de texto libre. Las preselecciones iniciales son
+9 meses / 60 / 60 días. Sólo las opciones frecuentes se envían como números;
+el servidor guarda el texto personalizado literalmente. La duración incluye
+su unidad; la plantilla añade días calendario a los preavisos.
+Los contratos previos mantienen sus valores y los textos diferentes de las
+opciones se abren editables. Alternar una opción conserva el borrador durante
+esa apertura. La duración permite 100 caracteres y cada preaviso 60; vacíos,
+espacios y textos demasiado largos muestran errores por campo.
+
+- **Success:** personalizar los tres valores, guardar, recargar y reabrir
+  recupera lo escrito; teclado y móvil permiten completar el mismo recorrido.
+- **Error:** una validación rechazada mantiene el modal abierto con el borrador
+  y el error junto al campo; corregir permite guardar.
+- **Failure:** un fallo del servidor conserva el borrador y permite reintentar.
+  Carga fallida o configuración inválida bloquea la generación por plantilla
+  y ofrece Reintentar.
+- **Guardado pendiente:** se bloquean envíos repetidos y cierre por Cancelar,
+  Escape o backdrop hasta conocer el resultado.
 
 ### FLOW: `admin-proposal-document-markdown`
 

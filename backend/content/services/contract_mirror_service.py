@@ -17,7 +17,8 @@ CONTRACT_MIRROR_BLOCKER = 'contract_mirror'
 CONTRACT_MIRROR_CODE = 'contract_mirror_read_only'
 CONTRACT_MIRROR_MESSAGE = (
     'Este documento es el contrato vigente: se consulta y se descarga aquí, '
-    'pero no se edita, duplica, archiva ni elimina. El contrato se modifica '
+    'pero su contenido no se edita, duplica, archiva ni elimina. '
+    'Su ubicación sí puede cambiar enviando únicamente folder_id. El contrato se modifica '
     'únicamente por migración de la plantilla del contrato.'
 )
 MIRROR_TITLE = 'Contrato de prestación de servicios — borrador vigente'

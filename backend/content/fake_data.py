@@ -188,6 +188,8 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Operational mutex provisioned by migration, not fabricated demo data.
+    'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
     # credentials must never be fabricated as reusable demo secrets.
     'accounts.VerificationCode', 'content.LinkedInToken',

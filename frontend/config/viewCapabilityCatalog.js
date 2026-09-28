@@ -75,7 +75,7 @@ const panelCapabilities = [
     'Conecta la oportunidad inicial con una propuesta medible y lista para cerrar.',
     [
       feature('panel-proposals', 'Gestionar propuestas',
-        'Crea, edita y sigue propuestas; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Configura las opciones y preselecciones de duración y preavisos del servicio, con valores personalizados convertidos a letras y conservación de contratos existentes. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Crea, edita y sigue propuestas; previsualiza el video de bienvenida y controla su visibilidad global desde Configuraciones e individual desde General; formaliza con contrato único o con contratos de producto y de servicio, anexos curados y correo por secciones. Configura las opciones y preselecciones de duración y preavisos del servicio, con opciones numéricas convertidas a letras y texto personalizado editable que se conserva al reabrir; los errores de guardado mantienen el borrador para corregir o reintentar. Copia documentos en Markdown, visualiza PDF/imágenes y contenido de DOCX/XLSX, y descarga adjuntos originales. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Conecta la venta con la documentación formal y conserva evidencia del correo y los archivos enviados.',
         ['/panel/proposals', '/panel/proposals/create', '/panel/proposals/:id/edit'],
         { icon: 'send', stage: 'Venta' }),
@@ -138,7 +138,7 @@ const panelCapabilities = [
     'Conserva la evidencia comercial y operativa sin dispersarla en herramientas externas.',
     [
       feature('panel-documents', 'Crear y seguir documentos',
-        'Administra documentos PDF, su contenido y sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. El contrato vigente se consulta en solo lectura y se descarga en PDF o Markdown desde la misma fuente que ve el cliente.',
+        'Administra documentos PDF, su contenido y sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. El contrato vigente conserva su contenido de solo lectura y puede moverse de carpeta; se descarga en PDF o Markdown desde la misma fuente que ve el cliente. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados.',
         'Mantiene entregables formales y su evolución en una sola fuente.',
         ['/panel/documents', '/panel/documents/create', '/panel/documents/:id/edit', '/panel/documents/statuses'],
         { icon: 'file', stage: 'Documentación' }),
@@ -442,7 +442,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a descubrir posibilidades relevantes y retomarlas en la conversación comercial.',
     [
       feature('public-additional-modules', 'Explorar módulos adicionales',
-        'Presenta selector ES/EN, tarjetas, lista, acordeón, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos y controles flotantes para PDF sin precios y compartir la selección.',
+        'Presenta selector ES/EN, tarjetas, lista, acordeón, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos y controles flotantes para PDF sin precios y compartir la selección. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
         'Permite entender qué resuelve cada módulo sin depender de una explicación previa.',
         ['/additional-modules', '/additional-modules/share/:uuid'],
         { icon: 'puzzle', actors: ['prospect'], stage: 'Evaluación' }),
@@ -455,7 +455,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a evaluar una alianza de largo plazo antes de formalizar una propuesta.',
     [
       feature('public-financing', 'Comprender el Programa de Alianza',
-        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y paquete mensual de horas sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa.',
+        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y paquete mensual de horas sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
         'Convierte condiciones técnicas y legales en una explicación comercial clara y compartible.',
         ['/partnership-program'],
         { icon: 'credit-card', actors: ['prospect'], stage: 'Evaluación' }),
@@ -468,7 +468,7 @@ const publicCapabilities = [
     'Convierte un documento estático en una conversación comercial medible.',
     [
       feature('public-proposal', 'Revisar una propuesta',
-        'Presenta alcance, inversión, condiciones y acciones de respuesta. Un video de bienvenida en español explica las cuatro opciones cuando todas están disponibles y los controles global e individual lo permiten.',
+        'Presenta alcance, inversión, condiciones y acciones de respuesta. Un video de bienvenida en español explica las cuatro opciones cuando todas están disponibles y los controles global e individual lo permiten; inicia manualmente y se pausa al salir sin reanudarse al volver.',
         'Ayuda al prospecto a decidir con contexto y permite medir su interés.', ['/proposal/:uuid'],
         { icon: 'send', actors: ['prospect'], stage: 'Decisión' }),
     ],

@@ -518,3 +518,6 @@ LOGGING = {
         },
     },
 }
+
+# Stable estimate destination; IDs are configured per deployment.
+REQUIREMENT_ESTIMATES_FOLDER_ID = config('REQUIREMENT_ESTIMATES_FOLDER_ID', default=None, cast=lambda value: int(value) if value else None)

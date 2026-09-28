@@ -7,16 +7,17 @@ global.useProposalStore = jest.fn(() => proposalStore);
 
 global.useI18n = () => ({
   t: (key, values = {}) => ({
-    'serviceContract.custom': 'Personalizado',
-    'serviceContract.savedValue': 'Valor guardado',
+    'serviceContract.custom': 'Personalizar',
     'serviceContract.customLabel': `${values.field}: valor personalizado`,
-    'serviceContract.monthsHint': 'Meses enteros, de 1 a 999.',
-    'serviceContract.daysHint': 'Días calendario enteros, de 1 a 999.',
-    'serviceContract.formHint': 'Elige una opción o un número personalizado.',
+    'serviceContract.customDurationHint': 'Incluye la unidad.',
+    'serviceContract.customNoticeHint': 'La plantilla agrega días calendario.',
+    'serviceContract.formHint': 'Elige una opción o Personalizar para redactar el valor.',
     'serviceContract.loading': 'Cargando configuración…',
     'serviceContract.loadError': 'No se pudo cargar la configuración del servicio. Reintenta para continuar.',
     'serviceContract.retry': 'Reintentar',
     'serviceContract.invalidNumber': 'Escribe un entero entre 1 y 999.',
+    'serviceContract.requiredTerm': 'Escribe el valor personalizado.',
+    'serviceContract.termTooLong': `Usa como máximo ${values.max} caracteres.`,
     'serviceContract.fields.service_initial_term': 'Duración inicial',
     'serviceContract.fields.service_renewal_notice_days': 'Preaviso para no renovar (días calendario)',
     'serviceContract.fields.service_termination_notice_days': 'Preaviso de terminación del cliente (días calendario)',
@@ -239,8 +240,8 @@ describe('ContractParamsModal — contratos separados', () => {
     });
   });
 
-  it('serializes a custom service duration as an integer', async () => {
-    // Falla si un valor personalizado viaja como etiqueta de presentación en vez del número del API.
+  it('serializes a custom service duration as literal text', async () => {
+    // Falla si el valor personalizado se transforma en número o pierde su redacción.
     proposalStore.fetchCompanySettings.mockResolvedValue({
       success: true,
       data: { service_contract_settings: SERVICE_SETTINGS },
@@ -249,14 +250,14 @@ describe('ContractParamsModal — contratos separados', () => {
     const duration = wrapper.findAllComponents(ServiceContractTermField)[0];
 
     await duration.get('select').setValue('custom');
-    await duration.get('input').setValue('21');
+    await duration.get('input').setValue('dieciocho (18) meses iniciales');
     await wrapper.get('form').trigger('submit');
 
-    expect(wrapper.emitted('confirm')[0][0].service_initial_term).toBe(21);
+    expect(wrapper.emitted('confirm')[0][0].service_initial_term).toBe('dieciocho (18) meses iniciales');
   });
 
-  test.each(['', '1000'])('blocks custom service duration %p', async (customValue) => {
-    // Falla si un número vacío o fuera del límite habilita una cláusula que el contrato no puede representar.
+  test.each(['', '   '])('blocks custom service duration %p', async (customValue) => {
+    // Falla si un texto vacío genera un contrato sin duración.
     proposalStore.fetchCompanySettings.mockResolvedValue({
       success: true,
       data: { service_contract_settings: SERVICE_SETTINGS },
@@ -269,7 +270,78 @@ describe('ContractParamsModal — contratos separados', () => {
     await wrapper.get('form').trigger('submit');
 
     expect(wrapper.emitted('confirm')).toBeFalsy();
-    expect(wrapper.text()).toContain('Escribe un entero entre 1 y 999.');
+    expect(wrapper.text()).toContain('Escribe el valor personalizado.');
+  });
+
+  test.each([
+    [0, 100], [1, 60], [2, 60],
+  ])('rejects overlong service wording in field %s', async (index, max) => {
+    // Falla si se envía más texto del que el servidor puede conservar.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true, data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const field = wrapper.findAllComponents(ServiceContractTermField)[index];
+
+    await field.get('select').setValue('custom');
+    await field.get('input').setValue('a'.repeat(max + 1));
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')).toBeFalsy();
+    expect(wrapper.text()).toContain(`Usa como máximo ${max} caracteres.`);
+  });
+
+  it('accepts custom wording at the API length limits', async () => {
+    // Falla si el navegador bloquea texto que el contrato API permite guardar.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true, data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const [duration, renewal, termination] = wrapper.findAllComponents(ServiceContractTermField);
+
+    await duration.get('select').setValue('custom');
+    await duration.get('input').setValue('a'.repeat(100));
+    await renewal.get('select').setValue('custom');
+    await renewal.get('input').setValue('b'.repeat(60));
+    await termination.get('select').setValue('custom');
+    await termination.get('input').setValue('c'.repeat(60));
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')[0][0]).toMatchObject({
+      service_initial_term: 'a'.repeat(100),
+      service_renewal_notice_days: 'b'.repeat(60),
+      service_termination_notice_days: 'c'.repeat(60),
+    });
+  });
+
+  it('blocks repeated submission while the contract is saving', async () => {
+    // Falla si Enter puede repetir el request aunque el botón esté deshabilitado.
+    const wrapper = await openFor('combined', PARTIES);
+    await wrapper.setProps({ saving: true });
+
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.emitted('confirm')).toBeFalsy();
+  });
+
+  it('keeps the custom draft beside a server validation error', async () => {
+    // Falla si recibir un error reinicia la redacción o no indica qué corregir.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true, data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', PARTIES);
+    const field = wrapper.findAllComponents(ServiceContractTermField)[0];
+    await field.get('select').setValue('custom');
+    await field.get('input').setValue('plazo negociado');
+    await wrapper.get('form').trigger('submit');
+
+    await wrapper.setProps({ saveError: {
+      message: 'Revisa los datos.', fieldErrors: { service_initial_term: 'Duración no válida.' },
+    } });
+
+    expect(field.get('input').element.value).toBe('plazo negociado');
+    expect(field.text()).toContain('Duración no válida.');
+    expect(wrapper.get('[role="alert"]').text()).toBe('Revisa los datos.');
   });
 
   it('preserves a legacy service duration during submission', async () => {
