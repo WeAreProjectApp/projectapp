@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "Admin previews the catalog explainer video from the compact card on the additional modules panel page.",
+  "description": "Admin previews the catalog explainer video from the compact card on the additional modules panel page. Playback starts only after a click, pauses when the page or window loses activity, and never resumes automatically on return.",
   "expectedSpecs": 1,
   "outcomes": [
     "success"
