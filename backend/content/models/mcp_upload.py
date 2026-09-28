@@ -2,9 +2,12 @@ import uuid
 
 from django.db import models
 
+from content.video_upload_storage import McpUploadStorage
+
 
 def mcp_upload_path(instance, filename):
-    return f'mcp-uploads/{instance.connector.slug}/{instance.id}/{filename}'
+    prefix = 'mcp-video-uploads' if instance.content_type == 'video/mp4' else 'mcp-uploads'
+    return f'{prefix}/{instance.connector.slug}/{instance.id}/{filename}'
 
 
 class McpUpload(models.Model):
@@ -38,7 +41,7 @@ class McpUpload(models.Model):
     expected_sha256 = models.CharField(max_length=64)
     received_size = models.PositiveBigIntegerField(default=0)
     next_chunk_index = models.PositiveIntegerField(default=0)
-    file = models.FileField(upload_to=mcp_upload_path, blank=True)
+    file = models.FileField(upload_to=mcp_upload_path, storage=McpUploadStorage(), blank=True)
     status = models.CharField(
         max_length=12,
         choices=STATUS_CHOICES,

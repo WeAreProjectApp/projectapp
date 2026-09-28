@@ -23,7 +23,7 @@ const { t } = useI18n()
 const { isDark, toggle: toggleTheme } = useFinancingTheme()
 const documentRef = ref(null)
 usePublicDocumentEntrance(documentRef)
-const explainer = useExplainerVideo('financing', toRef(props, 'language'))
+const explainer = useExplainerVideo('financing', toRef(props, 'language'), computed(() => props.program?.explainer_video))
 // The panel switch arrives in the public payload; a missing flag counts as visible.
 const explainerVisible = computed(() => (
   props.showExplainer

@@ -63,6 +63,8 @@ from content.mcp.linktree_template_tools import LINKTREE_TEMPLATE_TOOLS
 from content.mcp.proposal_tools import PROPOSAL_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
+from content.mcp.commercial_module_tools import ADDITIONAL_MODULE_TOOLS, PARTNERSHIP_PROGRAM_TOOLS
+from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
 from content.models import (
     McpActionIntent,
     McpConnector,
@@ -121,8 +123,13 @@ RAW_TOOLS_BY_SLUG = {
     ),
     'tasks': _canonical_tools(TASK_TOOLS),
     'operations': OPERATIONS_TOOLS,
+    'partnership-program': _canonical_tools(PARTNERSHIP_PROGRAM_TOOLS),
+    'additional-modules': _canonical_tools(ADDITIONAL_MODULE_TOOLS),
+    'proposals': PROPOSAL_TOOLS + PROPOSAL_VIDEO_TOOLS,
     'commercial': _canonical_tools(
         CLIENT_TOOLS + PROPOSAL_TOOLS + DIAGNOSTIC_TOOLS + COMMERCIAL_PARITY_TOOLS
+        + PROPOSAL_VIDEO_TOOLS
+        + [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]
     ),
     'projects': PROJECT_TOOLS,
     'content': _canonical_tools(
@@ -167,11 +174,13 @@ RAW_TOOLS_BY_SLUG = {
 
 
 COMMON_TOOL_SLUGS = {
+    'partnership-program', 'additional-modules', 'proposals',
     'operations', 'commercial', 'projects', 'documents', 'communications',
     'content', 'tasks', 'accounting-ledger', 'accounting-billing',
     'accounting-cards',
 }
 UPLOAD_TOOL_SLUGS = {
+    'partnership-program', 'additional-modules', 'proposals',
     'commercial', 'documents', 'communications', 'content', 'accounting-cards',
 }
 

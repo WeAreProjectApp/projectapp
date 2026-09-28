@@ -69,6 +69,7 @@
           :show-technical="hasTechnicalDocument"
           :show-legal="hasContractTerms"
           :show-explainer-video="proposal.show_explainer_video === true"
+          :explainer-resource="proposal.explainer_video"
           @select="handleViewModeSelect"
         />
       </Transition>
@@ -343,6 +344,7 @@ import {
   ValueAddedModules,
   RoiProjection,
 } from '~/components/BusinessProposal';
+import PersonalizedVideo from '~/components/BusinessProposal/PersonalizedVideo.vue';
 import ProposalIndex from '~/components/BusinessProposal/ProposalIndex.vue';
 import SectionCounter from '~/components/BusinessProposal/SectionCounter.vue';
 import ExpirationBadge from '~/components/BusinessProposal/ExpirationBadge.vue';
@@ -392,6 +394,7 @@ const browserLang = computed(() => {
 });
 
 const sectionComponentMap = {
+  personalized_video: PersonalizedVideo,
   greeting: Greeting,
   executive_summary: ExecutiveSummary,
   context_diagnostic: ContextDiagnostic,
@@ -606,6 +609,14 @@ const displayPanels = computed(() => {
       if (!resolvable) continue;
     }
     panels.push(section);
+  }
+
+  if (proposal.value?.personalized_video) {
+    const greetingIndex = panels.findIndex(panel => panel.section_type === 'greeting');
+    panels.splice(greetingIndex < 0 ? 0 : greetingIndex + 1, 0, {
+      id: 'personalized_video', section_type: 'personalized_video',
+      title: lang === 'en' ? 'Your proposal on video' : 'Tu propuesta en video',
+    });
   }
 
   // Add closing panel (validity, thank-you, accept/reject) after all sections
@@ -926,6 +937,9 @@ onMounted(async () => {
 
 // --- Section props transformer ---
 function getSectionProps(section, displayIndex) {
+  if (section.section_type === 'personalized_video') {
+    return { video: proposal.value.personalized_video, language: pLang.value };
+  }
   const content = section.content_json || {};
   const idx = typeof displayIndex === 'number' ? displayIndex : (displayIndex?.value ?? 0);
   const paddedIndex = String(idx + 1).padStart(2, '0');

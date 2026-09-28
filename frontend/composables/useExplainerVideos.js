@@ -51,6 +51,11 @@ export function formatExplainerDuration(seconds) {
   return `${minutes}:${rest}`
 }
 
-export function useExplainerVideo(id, language) {
-  return computed(() => explainerVideoFor(id, unref(language)))
+export function useExplainerVideo(id, language, resource) {
+  return computed(() => {
+    const current = unref(resource)
+    if (current?.mode === 'none') return null
+    if (current?.mode === 'uploaded') return current.video
+    return explainerVideoFor(id, unref(language))
+  })
 }

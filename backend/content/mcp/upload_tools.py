@@ -18,10 +18,13 @@ from content.models import McpUpload
 
 
 UPLOAD_TTL_MINUTES = 15
+VIDEO_UPLOAD_TTL_MINUTES = 60
+VIDEO_CONNECTORS = {'partnership-program', 'additional-modules', 'proposals', 'commercial'}
 MAX_CHUNK_BYTES = 1024 * 1024
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 SHA256_PATTERN = re.compile(r'^[0-9a-f]{64}$')
 ALLOWED_CONTENT_TYPES = {
+    'video/mp4',
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/gif',
@@ -32,6 +35,7 @@ ALLOWED_CONTENT_TYPES = {
     'text/plain',
 }
 CONTENT_TYPE_EXTENSIONS = {
+    'video/mp4': {'.mp4'},
     'application/pdf': {'.pdf'},
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
         '.docx',
@@ -45,6 +49,13 @@ CONTENT_TYPE_EXTENSIONS = {
 }
 SIGNING_SALT = 'content.mcp.upload'
 DOWNLOAD_SIGNING_SALT = 'content.mcp.download'
+
+
+def max_upload_bytes(content_type):
+    if content_type == 'video/mp4':
+        from content.services.video_resource_service import VIDEO_MAX_BYTES
+        return VIDEO_MAX_BYTES
+    return getattr(settings, 'MCP_UPLOAD_MAX_BYTES', DEFAULT_MAX_UPLOAD_BYTES)
 
 
 def _tool_error(message, code='VALIDATION_ERROR', details=None):
@@ -103,7 +114,9 @@ def begin_upload(arguments):
         expected_size = int(arguments.get('size'))
     except (TypeError, ValueError) as exc:
         raise _tool_error('size debe ser un entero positivo.') from exc
-    max_bytes = getattr(settings, 'MCP_UPLOAD_MAX_BYTES', DEFAULT_MAX_UPLOAD_BYTES)
+    max_bytes = max_upload_bytes(content_type)
+    if content_type == 'video/mp4' and context.connector.slug not in VIDEO_CONNECTORS:
+        raise _tool_error('Este conector no admite videos.', 'FORBIDDEN')
     if not filename or filename in {'.', '..'}:
         raise _tool_error('filename es obligatorio y debe ser un nombre seguro.')
     if len(filename) > McpUpload._meta.get_field('filename').max_length:
@@ -133,7 +146,7 @@ def begin_upload(arguments):
         content_type=content_type,
         expected_size=expected_size,
         expected_sha256=expected_sha256,
-        expires_at=timezone.now() + timedelta(minutes=UPLOAD_TTL_MINUTES),
+        expires_at=timezone.now() + timedelta(minutes=(VIDEO_UPLOAD_TTL_MINUTES if content_type == 'video/mp4' else UPLOAD_TTL_MINUTES)),
     )
     signature = signing.dumps(
         {'upload_id': str(upload.id), 'credential_id': context.credential.id},
@@ -254,6 +267,17 @@ def _file_sha256(upload):
 def _validate_declared_content(upload):
     """Validate common file signatures after transport integrity succeeds."""
     content_type = upload.content_type
+    if content_type == 'video/mp4':
+        from content.services.video_resource_service import probe_video
+        from rest_framework.exceptions import ValidationError
+        try:
+            with upload.file.open('rb') as source:
+                if source.read(12)[4:8] != b'ftyp':
+                    raise ValidationError('El contenido no es MP4.')
+            probe_video(upload.file.path)
+        except ValidationError as exc:
+            raise _tool_error(str(exc.detail), 'INVALID_FILE_CONTENT') from exc
+        return
     with upload.file.open('rb') as source:
         if content_type in {'text/markdown', 'text/plain'}:
             decoder = codecs.getincrementaldecoder('utf-8')()

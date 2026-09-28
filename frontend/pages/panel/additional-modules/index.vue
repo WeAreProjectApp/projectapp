@@ -6,6 +6,8 @@ import { useAdditionalModulesViewMode } from '~/composables/useAdditionalModules
 import { usePanelNotify } from '~/composables/usePanelNotify'
 import { useExplainerVideo } from '~/composables/useExplainerVideos'
 import { useExplainerVideosStore } from '~/stores/explainer_videos'
+import VideoResourceManager from '~/components/resources/VideoResourceManager.vue'
+import BaseResponsiveTabs from '~/components/base/BaseResponsiveTabs.vue'
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue'
 import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vue'
 import AdditionalModulesAdminModuleActions from '~/components/AdditionalModules/AdminModuleActions.vue'
@@ -42,10 +44,11 @@ const detailOpen = ref(false)
 const detailModule = ref(null)
 const detailOpener = ref(null)
 const expandedModuleId = ref(null)
+const activeSection = ref(route.query.tab === 'resources' ? 'resources' : 'catalog')
 
 const isEnglish = computed(() => locale.value.startsWith('en'))
 const language = computed(() => (isEnglish.value ? 'en' : 'es'))
-const explainer = useExplainerVideo('additional-modules', language)
+const explainer = useExplainerVideo('additional-modules', language, computed(() => explainerVideos.settings?.resources?.[`additional-modules:${language.value}`]))
 const catalogVideoVisible = computed(() => explainerVideos.isVisible('additional-modules'))
 const orderedCategories = computed(() => [...store.categories].sort((a, b) => a.order - b.order))
 const groupedModules = computed(() => orderedCategories.value.map((category) => ({
@@ -319,6 +322,10 @@ async function closeDetail() {
       @tracking="openHistory"
     />
 
+    <BaseResponsiveTabs v-model="activeSection" :tabs="[{ id: 'catalog', label: 'Catálogo' }, { id: 'resources', label: 'Recursos' }]" />
+    <VideoResourceManager v-if="activeSection === 'resources'" module="additional-modules" :language="language" />
+
+    <div v-show="activeSection === 'catalog'">
     <div class="mb-8 space-y-3">
       <ExplainerVisibilityToggle
         module="additional-modules"
@@ -496,6 +503,8 @@ async function closeDetail() {
           </article>
         </div>
       </section>
+    </div>
+
     </div>
 
     <AdditionalModulesModuleFormModal

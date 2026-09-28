@@ -15,6 +15,12 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
 
+## Videos y conectores comerciales (2026-09-28)
+
+Programa de Alianza (`partnership-program`) y Módulos adicionales (`additional-modules`) tienen conectores independientes; `proposals` incorpora videos general/personalizado. Todos permiten transferir un MP4 real, completar la carga y asignar/sustituir con `asset_id` y revisión. Guía y nombres exactos: [Recursos de video comerciales](COMMERCIAL_VIDEO_RESOURCES.md).
+
+Validar consulta → begin_upload → PUT firmado (o bloques) → complete_upload → set_*_video, luego repetir para reemplazar. Verificar rechazo de archivo corrupto, credencial ajena, carga incompleta, revisión vieja y límite de 250 MiB. Confirmar reproducción pública y conservación del anterior ante fallos. Los otros archivos mantienen su límite de 25 MiB y vencimiento de 15 minutos; videos vencen en una hora.
+
 ## Plataforma operativa común
 
 - El endpoint canónico acepta `Authorization: Bearer <credencial>` en

@@ -1,0 +1,16 @@
+{
+  "id": "public-proposal-personalized-video",
+  "name": "Public Proposal Personalized Video",
+  "module": "proposal",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Guest chooses Executive or Complete view and opens the personalized video immediately after the greeting. Missing resources omit the section. Playback errors provide retry.",
+  "expectedSpecs": 3,
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}
