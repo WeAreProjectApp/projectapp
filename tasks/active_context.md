@@ -1,3 +1,7 @@
+> **Implementado, en validación — organización documental REST/MCP (2026-09-28):** contrato de
+> escritura compacto, padres estrictos, auditoría, duplicados y movimientos
+> transaccionales. Implementación aislada; sin cambios a datos de producción.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**

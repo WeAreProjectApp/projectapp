@@ -50,13 +50,14 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents');
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
     await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
 
-    const modal = page.locator('div.z-\\[9990\\]').filter({ hasText: 'Mover documento' });
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
     await expect(modal).toBeVisible();
     await expect(modal.getByRole('button', { name: 'Sin carpeta' })).toBeVisible();
     await expect(modal.getByRole('button', { name: 'Diseño' })).toBeVisible();
@@ -80,12 +81,12 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents');
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
-    const modal = page.locator('div.z-\\[9990\\]').filter({ hasText: 'Mover documento' });
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
     await expect(modal).toBeVisible();
 
     await modal.getByRole('button', { name: 'Dev' }).click();
@@ -110,12 +111,12 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents');
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
-    const modal = page.locator('div.z-\\[9990\\]').filter({ hasText: 'Mover documento' });
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
     await expect(modal).toBeVisible();
 
     await modal.getByRole('button', { name: 'Dev' }).click();
@@ -142,12 +143,12 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents');
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
-    const modal = page.locator('div.z-\\[9990\\]').filter({ hasText: 'Mover documento' });
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
     await expect(modal).toBeVisible();
 
     await modal.getByRole('button', { name: 'Sin carpeta' }).click();
@@ -177,12 +178,12 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents');
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
 
-    const modal = page.locator('div.z-\\[9990\\]').filter({ hasText: 'Mover documento' });
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
     await modal.getByRole('button', { name: /^Dev/ }).click();
 
     // Nada se movió todavía: primero la pregunta.
@@ -195,4 +196,54 @@ test.describe('Admin Document Move Folder', () => {
     expect(patchBody.adopt_folder_client).toBe(true);
     expect(patchBody.folder_id).toBe(11);
   });
+  test('moves the live contract using a compact write response', {
+    tag: [...ADMIN_DOCUMENT_MOVE_FOLDER, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    let location = FOLDER_DISENO;
+    let receivedPayload;
+    await mockApi(page, async ({ apiPath, method, route }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/') return jsonOk([{ ...DOC, folder: location.id, folder_name: location.name, is_contract_mirror: true, movable: true }]);
+      if (apiPath === 'document-folders/') return jsonOk([FOLDER_DISENO, FOLDER_DEV]);
+      if (apiPath === 'document-tags/') return jsonOk([]);
+      if (apiPath === 'documents/5/update/' && method === 'PATCH') {
+        receivedPayload = route.request().postDataJSON();
+        location = FOLDER_DEV;
+        return jsonOk({ id: DOC.id, title: DOC.title, folder_id: location.id, folder_name: location.name, status: 'published', editable: false, movable: true, etag: 'moved' });
+      }
+      return null;
+    });
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    const row = page.getByRole('row', { name: /Brief de Proyecto/i });
+    await row.getByRole('button', { name: /^Acciones de / }).click();
+    await page.getByRole('button', { name: 'Mover a carpeta' }).click();
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
+    await modal.getByRole('button', { name: 'Dev' }).click();
+    await expect(modal).toBeHidden();
+    expect(receivedPayload).toEqual({ folder_id: FOLDER_DEV.id });
+    await expect(row).toContainText('Dev');
+  });
+
+  test('a protected destination keeps the document in its current folder', {
+    tag: [...ADMIN_DOCUMENT_MOVE_FOLDER, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'documents/') return jsonOk([DOC]);
+      if (apiPath === 'document-folders/') return jsonOk([FOLDER_DISENO, FOLDER_DEV]);
+      if (apiPath === 'document-tags/') return jsonOk([]);
+      if (apiPath === 'documents/5/update/' && method === 'PATCH') {
+        return { status: 409, contentType: 'application/json', body: JSON.stringify({ code: 'system_managed_folder', message: 'Destino protegido.' }) };
+      }
+      return null;
+    });
+    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
+    await page.getByRole('button', { name: 'Mover a carpeta' }).click();
+    const modal = page.getByRole('dialog', { name: /Mover documento/i });
+    await modal.getByRole('button', { name: 'Dev' }).click();
+    await expect(modal.getByText('No se pudo mover el documento.')).toBeVisible();
+    await expect(modal).toBeVisible();
+  });
+
 });

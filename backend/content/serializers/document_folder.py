@@ -1,13 +1,31 @@
 from accounts.models import Project, UserProfile
+from django.db import transaction
+from django.db.models.functions import Lower, Trim
 from rest_framework import serializers
 
 from content.models import DocumentFolder
+from content.models.document_folder import DocumentFolderMutationLock
 from content.serializers.document import (
-    ClientProjectReadMixin, apply_client_project_association,
+    ClientProjectReadMixin,
+    apply_client_project_association,
 )
+from content.serializers.strict_input import StrictInputMixin
 from content.services.document_archive_service import (
-    DocumentArchiveError, ensure_active_target,
+    DocumentArchiveError,
+    ensure_active_target,
 )
+
+FOLDER_WRITE_FIELDS = {'name', 'parent', 'parent_id', 'order', 'client', 'project'}
+
+
+def validate_folder_input(data):
+    if not hasattr(data, 'keys'):
+        raise serializers.ValidationError({'detail': 'El payload debe ser un objeto.'})
+    unknown = set(data) - FOLDER_WRITE_FIELDS
+    if unknown:
+        raise serializers.ValidationError({name: ['Campo desconocido o de solo lectura.'] for name in sorted(unknown)})
+    if 'parent' in data and 'parent_id' in data and data['parent'] != data['parent_id']:
+        raise serializers.ValidationError({'parent_id': 'parent y parent_id deben coincidir.'})
 
 
 class DocumentFolderChangeClientSerializer(serializers.Serializer):
@@ -28,7 +46,7 @@ class DocumentFolderChangeClientSerializer(serializers.Serializer):
     )
 
 
-class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializer):
+class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, serializers.ModelSerializer):
     """Serializer para carpetas de documentos (jerárquicas).
 
     Los contadores se leen de annotations del queryset cuando el caller las
@@ -43,6 +61,9 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
     que todavía guarda elementos archivados.
     """
 
+    parent_id = serializers.IntegerField(read_only=True, allow_null=True)
+    created_by = serializers.SerializerMethodField()
+    creation_source = serializers.CharField(read_only=True)
     document_count = serializers.SerializerMethodField()
     children_count = serializers.SerializerMethodField()
     active_document_count = serializers.SerializerMethodField()
@@ -86,14 +107,14 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
     class Meta:
         model = DocumentFolder
         fields = (
-            'id', 'name', 'slug', 'parent', 'order',
+            'id', 'name', 'slug', 'parent', 'parent_id', 'order',
             'client', 'client_display_name', 'project', 'project_name',
             'managed_project', 'folder_kind', 'managed_project_state',
             'managed_client', 'is_project_visible', 'is_system_managed',
             'document_count', 'children_count',
             'active_document_count', 'active_children_count',
             'archived_document_count', 'archived_children_count',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'created_by', 'creation_source',
             'is_archived', 'archived_at', 'archived_cause',
         )
         # `is_archived`/`archived_at` son read-only a propósito: update_document_folder
@@ -104,6 +125,46 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
             'managed_project', 'folder_kind', 'managed_project_state',
             'managed_client', 'is_project_visible',
         )
+
+    def to_internal_value(self, data):
+        validate_folder_input(data)
+        if isinstance(data, dict) or hasattr(data, 'dict'):
+            data = data.copy()
+            if 'parent_id' in data:
+                data['parent'] = data.pop('parent_id')
+                if isinstance(data['parent'], list):
+                    data['parent'] = data['parent'][0]
+        return super().to_internal_value(data)
+
+    @transaction.atomic
+    def save(self, **kwargs):
+        # One lazily initialized row serializes manual folder mutations.
+        DocumentFolderMutationLock.objects.get_or_create(pk=1)
+        DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
+        if self.instance is not None:
+            self.instance.refresh_from_db()
+        current = type(self)(self.instance, data=self.initial_data, partial=self.partial, context=self.context)
+        current.is_valid(raise_exception=True)
+        self.instance = super(DocumentFolderSerializer, current).save(**kwargs)
+        return self.instance
+
+    def get_created_by(self, obj):
+        if obj.creation_source in ('system', 'mcp'):
+            return obj.creation_source
+        if obj.created_by_id:
+            return {'id': obj.created_by_id, 'username': obj.created_by.get_username()}
+        return None
+
+    def create(self, validated_data):
+        from content.mcp.context import current_mcp_context
+        context = current_mcp_context()
+        request = self.context.get('request')
+        actor = context.actor if context else getattr(request, 'user', None)
+        return super().create({
+            **validated_data,
+            'created_by': actor,
+            'creation_source': 'mcp' if context else 'panel' if actor else 'system',
+        })
 
     def get_document_count(self, obj):
         attr = 'archived_document_count' if obj.is_archived else 'active_document_count'
@@ -183,9 +244,25 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
 
     def validate(self, attrs):
         """Misma regla de asociación que los documentos, sin `client_name`."""
+        if self.instance is not None and self.instance.is_system_managed:
+            raise serializers.ValidationError({'detail': 'Esta carpeta se administra automáticamente.', 'code': 'system_managed_folder'})
+        if self.instance is None or {'name', 'parent'}.intersection(attrs):
+            name = attrs.get('name', getattr(self.instance, 'name', '')).strip()
+            parent = attrs.get('parent', getattr(self.instance, 'parent', None))
+            changed = self.instance is None or (name, getattr(parent, 'pk', None)) != (self.instance.name, self.instance.parent_id)
+            if changed:
+                matches = DocumentFolder.objects.annotate(normalized_name=Lower(Trim('name'))).filter(
+                    parent=parent, normalized_name=name.lower(),
+                ).exclude(pk=getattr(self.instance, 'pk', None))
+                matching_ids = list(matches.values_list('pk', flat=True))
+                if matching_ids:
+                    raise serializers.ValidationError({
+                        'name': 'Ya existe una carpeta con ese nombre aquí',
+                        'code': 'duplicate_folder_name', 'matching_ids': matching_ids,
+                    })
         if self.instance is not None and self.instance.managed_project_id:
             protected = {'name', 'parent', 'client', 'project'}
-            if protected.intersection(self.initial_data):
+            if protected.intersection(attrs):
                 raise serializers.ValidationError({
                     'detail': (
                         'La raíz del proyecto se administra desde el proyecto, '
@@ -201,7 +278,7 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
         # no puede cambiar es a quién representa ni dejar de ser raíz.
         if self.instance is not None and self.instance.managed_client_id:
             protected = {'parent', 'client'}
-            if protected.intersection(self.initial_data):
+            if protected.intersection(attrs):
                 raise serializers.ValidationError({
                     'detail': (
                         'Esta carpeta es el espacio del cliente: no puede '
@@ -230,6 +307,8 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
         """Impide que una carpeta sea su propio padre o descienda de sí misma."""
         if value is None:
             return value
+        if value.is_system_managed:
+            raise serializers.ValidationError('La carpeta destino se administra automáticamente.')
         instance = self.instance
         if instance is not None:
             if value.pk == instance.pk:
@@ -247,3 +326,22 @@ class DocumentFolderSerializer(ClientProjectReadMixin, serializers.ModelSerializ
         except DocumentArchiveError as exc:
             raise serializers.ValidationError(str(exc)) from exc
         return value
+
+
+class DocumentFolderFilterSerializer(serializers.Serializer):
+    parent_id = serializers.IntegerField(required=False, allow_null=True, min_value=1)
+    name = serializers.CharField(required=False, max_length=120)
+
+    def to_internal_value(self, data):
+        data = data.copy()
+        if data.get('parent_id') in ('null', 'none', ''):
+            data['parent_id'] = None
+        return super().to_internal_value(data)
+
+
+def filter_folders(queryset, filters):
+    if 'parent_id' in filters:
+        queryset = queryset.filter(parent_id=filters['parent_id'])
+    if 'name' in filters:
+        queryset = queryset.annotate(normalized_name=Lower(Trim('name'))).filter(normalized_name=filters['name'].lower())
+    return queryset

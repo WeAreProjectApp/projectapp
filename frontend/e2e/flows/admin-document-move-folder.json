@@ -6,11 +6,12 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin moves a document to a different folder (or removes it from any folder) via MoveFolderModal from the documents page. PATCHes documents/{id}/update/ with folder_id.",
+  "description": "Admin moves documents, including the read-only live contract, to a folder or root. Compact write responses preserve the editor; the live contract never adopts destination ownership.",
   "expectedSpecs": 3,
   "outcomes": [
     "display",
     "success",
+    "error",
     "failure"
   ]
 }

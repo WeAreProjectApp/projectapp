@@ -138,7 +138,7 @@ const panelCapabilities = [
     'Conserva la evidencia comercial y operativa sin dispersarla en herramientas externas.',
     [
       feature('panel-documents', 'Crear y seguir documentos',
-        'Administra documentos PDF, su contenido y sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. El contrato vigente se consulta en solo lectura y se descarga en PDF o Markdown desde la misma fuente que ve el cliente.',
+        'Administra documentos PDF, su contenido y sus estados operativos, con ID visible en listado y editor y búsqueda por ID. Incluye historial por registro con fecha, autor y consulta de versiones. El contrato vigente conserva su contenido de solo lectura y puede moverse de carpeta; se descarga en PDF o Markdown desde la misma fuente que ve el cliente. Las carpetas rechazan nombres repetidos en el mismo nivel, incluidos los archivados.',
         'Mantiene entregables formales y su evolución en una sola fuente.',
         ['/panel/documents', '/panel/documents/create', '/panel/documents/:id/edit', '/panel/documents/statuses'],
         { icon: 'file', stage: 'Documentación' }),

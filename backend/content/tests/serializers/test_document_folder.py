@@ -38,7 +38,7 @@ class TestDocumentFolderAssociation:
         profile = make_client('kore@example.com', first='Kore', last='SAS')
         project = Project.objects.create(name='Kore - Diseño', client=profile.user)
         serializer = DocumentFolderSerializer(
-            data={'name': 'Kore - Diseño', 'project': project.pk},
+            data={'name': 'Kore - Diseño archivos', 'project': project.pk},
         )
         assert serializer.is_valid(), serializer.errors
         folder = serializer.save()

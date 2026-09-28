@@ -6251,7 +6251,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-document-folders` | admin | P2 | display,success | 1 |
 | `admin-document-gallery` | admin | P2 | display | 1 |
 | `admin-document-list` | admin | P2 | display,success,failure | 1 |
-| `admin-document-move-folder` | admin | P1 | display,success,failure | 3 |
+| `admin-document-move-folder` | admin | P1 | display,success,error,failure | 3 |
 | `admin-document-navigation` | admin | P1 | display,success,failure | 1 |
 | `admin-document-observation-delete` | admin | P1 | display,success,failure | 1 |
 | `admin-document-pdf-download` | admin | P2 | success,failure,display | 1 |
@@ -7733,6 +7733,19 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Branches:** un nombre largo de carpeta sigue legible dentro del drawer; el modo archivado ordena por `archived_at` y conserva su franja; Todos y búsqueda ordenan cada fila por la fecha visible; una falla al recargar conserva el orden y las filas anteriores; una cuenta emitida conserva el mismo estado comercial y las mismas acciones restringidas en tabla y tarjeta; por debajo de 1280 px sólo cliente y proyecto se agrupan dentro de la celda principal, mientras estado sigue visible; en táctil el control compacto reemplaza al encabezado sin duplicarlo; ningún ancho produce scroll horizontal de página.
 - **Coverage:** ✅ Display responsivo cubierto en 412×915, 835×1194, 1195×835, 1440×900 y 2560×1440.
 - **E2E Specs:** `e2e/admin/admin-document-list.spec.js`, `e2e/admin/admin-responsive-documents-clients-projects.spec.js`
+
+### FLOW: `admin-document-move-folder`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+
+- **Éxito:** mover un documento o el contrato vigente a una carpeta o a «Sin carpeta».
+  El contrato conserva contenido y propietario; la respuesta compacta no vacía el editor.
+- **Error:** una carpeta que se vuelve protegida rechaza el movimiento y mantiene el modal.
+- **Fallo:** un error del servidor mantiene el modal y muestra el fallo.
+- **Visualización:** al abrir «Mover a carpeta», mostrar destinos activos y «Sin carpeta».
+
+Cobertura: `frontend/e2e/admin/admin-document-move-folder.spec.js`.
 
 ### FLOW: `admin-document-navigation`
 

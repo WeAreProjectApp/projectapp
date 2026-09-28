@@ -5,7 +5,9 @@ service, permissions, transaction and audit behavior. Domain-native tools remain
 the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
+from content.mcp.document_tools import _FOLDER_FIELDS
 from content.mcp.panel_bridge import panel_operation
+from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
 
 
 def _op(
@@ -17,6 +19,7 @@ def _op(
     risk='read',
     confirm=False,
     assets=None,
+    payload_schema=None,
 ):
     return panel_operation(
         name,
@@ -28,6 +31,7 @@ def _op(
         requires_confirmation=confirm,
         confirmation_message=description,
         asset_fields=assets,
+        payload_schema=payload_schema,
     )
 
 
@@ -62,7 +66,19 @@ PROJECT_TOOLS = [
 ]
 
 
+_FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
+_MOVE_SCHEMA = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {
+        'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
+        'folder_id': {'type': ['integer', 'null'], 'minimum': 1},
+        'include_content': {'type': 'boolean', 'default': False},
+    },
+    'required': ['document_ids', 'folder_id'],
+}
+
 DOCUMENT_PARITY_TOOLS = [
+    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado por ID.', 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
     _op('browse_documents', 'Busca, filtra, ordena y pagina todo el inventario documental.', 'browse-documents'),
     _op('get_document_counts', 'Obtiene conteos documentales para filtros y navegación.', 'document-counts'),
     _op('get_document_navigation', 'Obtiene raíces, clientes y proyectos navegables.', 'document-navigation'),
@@ -74,7 +90,7 @@ DOCUMENT_PARITY_TOOLS = [
     _op('unarchive_document', 'Restaura un documento archivado individualmente.', 'unarchive-document', 'PATCH', ('document_id',), 'write'),
     _op('list_document_folders', 'Lista carpetas activas o archivadas con filtros del Panel.', 'list-document-folders'),
     _op('get_project_folder_readiness', 'Revisa la disponibilidad de raíces documentales de proyectos.', 'project-folder-readiness'),
-    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta.', 'update-document-folder', 'PATCH', ('folder_id',), 'write'),
+    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta.', 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_FOLDER_SCHEMA),
     _op('delete_folder', 'Elimina una carpeta vacía que el sistema permita eliminar.', 'delete-document-folder', 'DELETE', ('folder_id',), 'sensitive', True),
     _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True),
     _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write'),
@@ -323,3 +339,31 @@ CARD_PARITY_TOOLS = [
     _op('learn_merchant_alias', 'Aprende un alias desde una transacción revisada.', 'learn-merchant-alias', 'POST', risk='write'),
     _op('resolve_merchant_aliases', 'Resuelve descriptores contra el catálogo de alias.', 'resolve-merchant-aliases', 'POST'),
 ]
+
+
+for _tool in DOCUMENT_PARITY_TOOLS:
+    if _tool['name'] == 'move_documents':
+        _tool['input_schema'] = _MOVE_SCHEMA
+        _tool['output_schema'] = {
+            'type': 'object',
+            'properties': {
+                'ok': {'type': 'boolean'},
+                'results': {'type': 'array', 'items': {
+                    'type': 'object',
+                    'properties': {
+                        'id': {'type': 'integer'},
+                        'status': {'type': 'string', 'enum': ['moved', 'unchanged', 'failed', 'aborted']},
+                        'moved': {'type': 'boolean'},
+                        'reason': {'type': ['string', 'object']},
+                        'document': DOCUMENT_WRITE_SCHEMA,
+                    },
+                    'required': ['id', 'status', 'moved'],
+                }},
+            },
+            'required': ['ok', 'results'],
+        }
+        _tool['annotations'] = {'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}
+    if _tool['name'] in ('duplicate_document', 'archive_document', 'unarchive_document'):
+        _tool['output_schema'] = DOCUMENT_WRITE_SCHEMA
+        _tool['input_schema']['properties']['include_content'] = {'type': 'boolean', 'default': False}
+        _tool['description'] += ' Resumen por defecto; include_content=true añade markdown.'
