@@ -103,7 +103,9 @@ el primer lote de navegador como una ejecución completamente verde.
   recuperación, salud, Silk e interfaz; se distingue el resultado del código del
   estado de su instalación.
 
-Esta entrega sólo modifica documentación. No agrega capacidades visibles ni
+La primera revisión sólo modificó documentación. La continuación de rendimiento
+y QA se registra en [la verificación adicional](2026-09-28-monitoring-perf-qa.md).
+La entrega no agrega capacidades visibles ni
 cambia flujos, catálogos, modelos, exportadores, iconos o configuración de los
 monitores. Por ello no requiere actualización del Mapa de vistas ni del registro
 E2E; los flujos existentes se ejercitan con sus specs actuales.
