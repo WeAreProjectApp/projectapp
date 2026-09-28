@@ -1,7 +1,8 @@
 # Frontend Rules — ProjectApp
 
 ## Stack And Scope
-- Nuxt 3 + Vue 3 frontend.
+- Nuxt 4 + Vue 3 frontend.
+- Preserve the existing root-level `pages/`, `components/`, and `composables/` layout (`srcDir: '.'` in `nuxt.config.ts`).
 - The codebase is primarily JavaScript, not TypeScript-first.
 - State management uses Pinia.
 

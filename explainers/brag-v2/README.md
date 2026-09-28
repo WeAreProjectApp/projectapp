@@ -112,3 +112,13 @@ La verificación de esta entrega se registra en `verification.md`.
 - La agenda del HTML gobierna las demostraciones, clics y progreso. Alianza
   conserva sus escenas previas y suma la explicación del paquete; su voz se
   regenera completa para evitar mezclas de acento.
+
+## Igualdad de tarjetas 2026-09-28
+
+Las cuadrículas de las primeras dos pantallas del catálogo igualan todas sus
+tarjetas a la altura de la más alta de su propio grupo, incluidas ambas filas.
+Se conservan anchos, tipografía, padding y espaciado del diseño compacto.
+La regla se limita a `data-video="additional-modules"`; Alianza y propuestas
+conservan su composición. Un cambio de CSS exige regenerar portada y MP4;
+si guion, agenda y voz siguen intactos, se reutiliza el audio vigente con su
+metadata de fingerprint, sin volver a sintetizar la narración.

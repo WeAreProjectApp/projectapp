@@ -63,6 +63,8 @@ performance_paths:
 performance_budget_tests:
   - backend/monitoring/tests/test_query_budget.py
   - backend/monitoring/tests/test_retention.py
+  - backend/monitoring/tests/test_observe_case_query_budget.py
+  - backend/monitoring/tests/test_case_state_query_budget.py
   - backend/accounts/tests/test_project_scope_items_endpoint.py
   - backend/accounts/tests/test_requirements.py
   - backend/accounts/tests/test_payments.py

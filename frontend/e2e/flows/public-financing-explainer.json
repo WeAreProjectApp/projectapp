@@ -6,7 +6,7 @@
     "guest"
   ],
   "priority": "P2",
-  "description": "Visitor plays the one-minute Partnership Program explainer from the hero with sound and native controls, gets a direct file link when playback fails, sees no card in English until that render exists, and sees no card (the guide starts at the options) when the panel switch hides the video.",
+  "description": "Visitor plays the one-minute Partnership Program explainer from the hero with sound and native controls, gets a direct file link when playback fails, sees no card in English until that render exists, and sees no card (the guide starts at the options) when the panel switch hides the video. Playback starts only after a click, pauses when the page or window loses activity, and never resumes automatically on return.",
   "expectedSpecs": 4,
   "outcomes": [
     "display",

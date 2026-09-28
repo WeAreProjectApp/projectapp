@@ -6,7 +6,7 @@
     "guest"
   ],
   "priority": "P2",
-  "description": "Client plays the Spanish welcome video above all four proposal options, opens the media fallback after an error, or enters an option with playback stopped. Both visibility switches, Spanish language, active proposal, technical detail and contract option are required.",
+  "description": "Client plays the Spanish welcome video above all four proposal options, opens the media fallback after an error, or enters an option with playback stopped. Both visibility switches, Spanish language, active proposal, technical detail and contract option are required. Playback starts only after a click, pauses when the page or window loses activity, and never resumes automatically on return.",
   "expectedSpecs": 4,
   "outcomes": [
     "display",

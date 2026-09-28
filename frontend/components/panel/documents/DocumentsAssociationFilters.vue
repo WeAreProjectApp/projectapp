@@ -69,11 +69,7 @@ function toggleProjectNone() {
       </BaseFormRowAction>
     </BaseFormRow>
 
-    <BaseFormRow
-      layout="field-action"
-      help="Opcional. Filtra por un proyecto o elige «Sin proyecto»."
-      help-testid="documents-filter-project-help"
-    >
+    <BaseFormRow layout="field-action">
       <ProjectSelect
         :model-value="typeof project === 'number' ? project : null"
         :client-profile-id="typeof client === 'number' ? client : null"
@@ -96,5 +92,12 @@ function toggleProjectNone() {
         </BaseButton>
       </BaseFormRowAction>
     </BaseFormRow>
+
+    <p
+      class="col-span-full -mt-2 text-xs text-text-muted"
+      data-testid="documents-filter-project-help"
+    >
+      Opcional. Filtra por un proyecto o elige «Sin proyecto».
+    </p>
   </div>
 </template>
