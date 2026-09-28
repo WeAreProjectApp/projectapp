@@ -248,8 +248,15 @@
           </AccountingInlineCell>
         </template>
         <template #cell-validity="{ row }">
-          <span class="text-text-muted text-xs whitespace-nowrap">
-            {{ row.valid_from || row.valid_to ? `${row.valid_from || '—'} → ${row.valid_to || '—'}` : '—' }}
+          <span
+            class="flex min-w-0 flex-wrap gap-x-1 text-text-muted text-xs"
+            :data-testid="`hosting-validity-${row.id}`"
+          >
+            <template v-if="row.valid_from || row.valid_to">
+              <span class="whitespace-nowrap" :data-testid="`hosting-valid-from-${row.id}`">{{ row.valid_from || '—' }}</span>
+              <span class="whitespace-nowrap" :data-testid="`hosting-valid-to-${row.id}`">→ {{ row.valid_to || '—' }}</span>
+            </template>
+            <template v-else>—</template>
           </span>
         </template>
         <template #cell-is_active="{ row }">
@@ -756,7 +763,7 @@ const columns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'group' },
   },
   {
-    key: 'validity', label: 'Vigencia',
+    key: 'validity', label: 'Vigencia', size: 'date', textPolicy: 'wrap',
     responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   // `link: true`: el conteo de ciclos ES lo que el detalle despliega, así que
