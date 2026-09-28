@@ -5,6 +5,42 @@ El panel `/panel/monitoring` centraliza observaciones del VPS
 No incorpora staging, otros VPS, buzones de correo ni cuentas externas de
 Healthchecks/UptimeRobot. Los correos actuales siguen funcionando.
 
+## Estado del requerimiento
+
+La implementación del módulo está integrada en `main` desde el
+[PR #393](https://github.com/WeAreProjectApp/projectapp/pull/393). Los cambios
+de iconos están integrados desde el
+[PR #407](https://github.com/WeAreProjectApp/projectapp/pull/407).
+Esto acredita disponibilidad del código; la recepción real debe comprobarse en
+el entorno desplegado. Una instalación sin casos puede estar sana, sin configurar
+o sin recibir datos: el listado vacío por sí solo no permite distinguirlo.
+
+La inspección de producción del 2026-09-28 confirmó que el esquema está aplicado,
+pero faltan inventario, credenciales, configuración y colector; no hay entregas
+registradas. Silk está deshabilitado en la configuración de los tres proyectos.
+El primer alcance requiere completar la instalación operativa y verificar sus
+entregas. La evidencia y el orden de activación están en el
+[informe de verificación](audits/2026-09-28-monitoring-first-scope.md).
+
+### Decisiones que ya representa la implementación
+
+| Pregunta del primer alcance | Comportamiento vigente |
+| --- | --- |
+| ¿Qué se verifica? | Recepción, asociación al recurso y fuente correctos, reintentos sin duplicados, separación proyecto/servidor, seguimiento persistente y salud de las fuentes. Los criterios se detallan más abajo. |
+| ¿Sobre qué proyectos? | ProjectApp (`projectapp`), Mimittos (`mimittos_project`) y Tenndalux (`tenndalux_project`), en `vps-projectapp-prod`. El vínculo opcional con un proyecto comercial se configura explícitamente. |
+| ¿Qué icono cambia para distinguir Monitoreo y Hosting? | Monitoreo usa una lupa; Hosting conserva la base de datos. |
+| ¿Qué conjunto de iconos se usa? | El componente SVG existente `SidebarIcon`, compartido por la navegación. Propuestas usa una bolsa con monedas, sin signo de peso/dólar; no se incorporó un emoji con alas ni una dependencia nueva. |
+| ¿Qué incluye el MVP? | Casos y reportes paginados, filtros, evidencia, estados, notas, historial y estado de las fuentes. No hay asignaciones ni notificaciones nuevas. |
+| ¿De dónde llegan los eventos? | De productores del toolkit y exportadores de las aplicaciones, mediante una cola local que entrega a la API autenticada. No se importan desde el correo. |
+| ¿Qué significa seguimiento? | Pasar entre Pendiente, En revisión y Resuelto; agregar notas con autor/fecha y consultar la historia de entregas y cambios. |
+| ¿Se elimina el correo? | No. Convive con el panel y conserva sus destinatarios, horarios y cooldown. |
+| ¿Qué otros monitoreos se contemplan? | Alertas del servidor, healthcheck, integridad, resumen semanal/MySQL, diagnóstico, tráfico, QA, restauración, drift, heartbeat SMTP, avisos SSH y salud del colector. Su configuración y activación se verifican por fuente. |
+
+La librería del código es **django-silk (Silk)**, correspondiente a las consultas
+lentas y posibles N+1 mencionadas como «Sync» en el requerimiento. El inventario
+de productores y su significado se mantiene en
+`vps-ops-toolkit/docs/projectapp-monitoring.md`.
+
 ## Uso del panel
 
 1. Ingresar como administrador del panel y abrir **Monitoreo**.
@@ -65,10 +101,36 @@ Los endpoints administrativos usan sesión Django + CSRF e `IsAdminUser`, no JWT
 - Las fechas de observación deciden la condición actual; la recepción queda
   registrada por separado. Se rechazan fechas más de cinco minutos en el futuro.
 
-`PATCH /api/monitoring/resources/:id/link/` con `{"project": <id>}` vincula un
+`PATCH /api/monitoring/resources/:id/` con `{"project": <id>}` vincula un
 recurso técnico con `accounts.Project` de manera explícita. `null` desvincula.
 No se infieren relaciones por nombre ni se crean proyectos de negocio al importar
 el inventario. Una relación duplicada devuelve 409.
+
+## Criterios de verificación
+
+Las pruebas aisladas validan el comportamiento del código. La revisión operativa
+valida que el productor y la API estén conectados en el servidor desplegado.
+Ambas evidencias son necesarias para declarar el primer alcance operativo.
+
+| Criterio | Evidencia mínima |
+| --- | --- |
+| Recepción | Una entrega obtiene confirmación 200/201 con ID y se refleja en el recurso/fuente esperados. Registrar última recepción y observación por cada proyecto y por el servidor. |
+| Asociación | Un evento de proyecto aparece en Proyectos y uno del host en Servidores. Un reporte o una credencial de otro recurso no puede asociarse al caso. |
+| Duplicados | Reenviar la misma entrega conserva su ID y no aumenta las detecciones. Reutilizar su identificador con contenido distinto devuelve conflicto. |
+| Seguimiento | El cambio de estado y la nota conservan autor/fecha al reabrir el detalle. Un guardado con versión antigua no pisa el estado vigente. |
+| Recuperación | La recuperación técnica no cierra el caso manualmente. Una nueva detección posterior al cierre lo reabre; una entrega histórica anterior no lo reabre. |
+| Salud | Cada fuente distingue Sin datos, Actualizada, Atrasada y Deshabilitada. Contrastar fechas, errores del colector y pendientes/rechazos de la cola. |
+| Silk | Verificar la activación real por proyecto y, si está activo, la recepción del export saneado. Una fuente deshabilitada no acredita recepción; una muestra sin hallazgos no demuestra recuperación. |
+| Interfaz | Abrir Monitoreo desde la navegación; cambiar entre proyectos, servidores y reportes; consultar detalle, guardar estado/nota y comprobar errores recuperables. Revisar también los iconos de Propuestas y Hosting. |
+
+No provocar caídas, restauraciones ni avisos reales para validar el módulo.
+Los reintentos, conflictos y cambios de seguimiento se prueban en el entorno
+aislado; una prueba controlada contra la instalación sigue el runbook operativo.
+La inspección del servidor debe registrar resultados por recurso y fuente sin
+copiar tokens, SQL, datos personales ni contenido de reportes al documento.
+
+Resultado de la revisión del 2026-09-28:
+[verificación del primer alcance](audits/2026-09-28-monitoring-first-scope.md).
 
 ## Despliegue y seguridad
 

@@ -10,17 +10,28 @@ from django.test.utils import CaptureQueriesContext
 from django.utils import timezone
 from freezegun import freeze_time
 
-from monitoring.models import Case, Delivery, Report
+from monitoring.models import Case, Delivery, Report, Resource, Source
 from monitoring.tasks import cleanup_monitoring_reports
-from monitoring.tests.test_query_budget import monitored_source
-
 
 RETENTION_BATCH_SIZE = 500
 MAX_RETENTION_BATCHES = 4
 MAX_DELETE_QUERIES = MAX_RETENTION_BATCHES * ceil(RETENTION_BATCH_SIZE / GET_ITERATOR_CHUNK_SIZE)
 
 
+@pytest.fixture
+def monitored_source(db):
+    """Create the Silk source under its project resource and monitoring server."""
+    server = Resource.objects.create(
+        key="srv1681495", name="Retention server", kind="server"
+    )
+    resource = Resource.objects.create(
+        key="projectapp", name="ProjectApp", kind="project", server=server
+    )
+    return Source.objects.create(resource=resource, key="silk", name="Silk")
+
+
 def create_expired_reports(source, total):
+    """Create reports whose observed timestamp exceeds the retention period."""
     observed_at = timezone.now() - timedelta(days=91)
     reports = [
         Report(

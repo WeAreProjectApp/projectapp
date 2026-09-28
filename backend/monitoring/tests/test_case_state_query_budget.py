@@ -14,6 +14,8 @@ from monitoring.models import Case, CaseActivity, Resource, Source
 User = get_user_model()
 CASES_URL = "/api/monitoring/cases/"
 MAX_CASE_STATE_QUERIES = 8
+# Measured historical regression ceiling, not compliance with mutation budget <= 8.
+MAX_CHANGED_CASE_STATE_HISTORICAL_QUERIES = 9
 
 
 def _table_selects(queries, model):
@@ -107,6 +109,7 @@ def test_staff_state_change_serializes_preloaded_case_relations(
     )
     assert (body["source_name"], body["resource"]["key"]) == ("Integrity", "projectapp")
     assert (activity.actor_id, activity.text) == (staff.pk, "Checked.")
+    assert len(queries) <= MAX_CHANGED_CASE_STATE_HISTORICAL_QUERIES
     assert len(queries) - len(no_op_queries) == 2
     assert tuple(
         len(_table_selects(queries, model)) for model in (Case, Source, Resource)
