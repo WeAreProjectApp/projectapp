@@ -5,13 +5,16 @@ Fecha: 2026-09-28. Base revisada: `main`, commit `2212a758`.
 ## Resultado
 
 El módulo y los dos cambios de iconos solicitados ya están integrados.
-La revisión actual confirma sus contratos mediante pruebas aisladas y corrige
-la guía operativa. **La recepción de eventos reales en producción sigue sin
-verificarse**: el acceso a `vps-projectapp-prod` solicitó autenticación adicional
-de Tailscale y no se obtuvo una sesión del servidor durante esta revisión.
+La revisión confirma sus contratos mediante pruebas aisladas y corrige la guía
+operativa. **La integración no está operativa en producción**: la inspección
+autenticada del 2026-09-28 a las 13:43–13:45 UTC confirmó que faltan configuración,
+colector e inventario. Las tablas existen, pero no hay recursos, fuentes,
+credenciales ni entregas registradas.
 
-No se debe cerrar el punto 7 del requerimiento con esta evidencia local.
-Tampoco se debe interpretar la ausencia de acceso como una falla del colector.
+No se debe cerrar el punto 7 como funcionamiento correcto. La verificación ya
+identificó el pendiente concreto: instalar y configurar la integración existente,
+y luego comprobar la recepción por recurso. No se trata de un error de acceso ni
+de una entrega rechazada por un colector activo.
 
 ## Correspondencia con el requerimiento
 
@@ -20,7 +23,7 @@ Tampoco se debe interpretar la ausencia de acceso como una falla del colector.
 | 1–3. Módulo, niveles y separación | `backend/monitoring/` y `/panel/monitoring`; recursos de tipo proyecto o servidor y filtros por recurso/fuente. Integrado por [PR #393](https://github.com/WeAreProjectApp/projectapp/pull/393), commit `122bf1fc`. |
 | 4. Base de datos y N+1 | Exportador `backend/projectapp/monitoring_export.py` para django-silk: agrupa duración/conteos por ruta parametrizada y omite SQL y secretos. El toolkit contempla el reporte semanal/MySQL y otros productores; la activación real se verifica por fuente. |
 | 5–6. Seguimiento mínimo | Estados Pendiente/En revisión/Resuelto, notas, autor/fecha, historial, versiones contra conflictos y reportes separados. Sin asignaciones ni avisos nuevos; el correo coexiste. |
-| 7. Verificar los proyectos monitoreados | Alcance registrado: ProjectApp, Mimittos, Tenndalux y su servidor `vps-projectapp-prod`. Pruebas locales detalladas abajo; falta comprobar inventario, recepción, cola y Silk desplegados. |
+| 7. Verificar los proyectos monitoreados | Alcance registrado: ProjectApp, Mimittos, Tenndalux y su servidor `vps-projectapp-prod`. Inspección real completada: inventario y entregas vacíos, colector/cola sin instalar y Silk apagado en la configuración de los tres proyectos. Falta activar y validar la integración. |
 | 8. Icono comercial | Propuestas usa `money-bag`: bolsa con monedas sin símbolo monetario, dentro del componente SVG existente `SidebarIcon`. No hay emoji con alas en esta implementación. |
 | 9. Distinguir Monitoreo y Hosting | Monitoreo usa `search` (lupa); Hosting usa `database`. Ambos cambios de iconos llegaron por [PR #407](https://github.com/WeAreProjectApp/projectapp/pull/407), commit `87d160e9`. La navegación de escritorio y móvil comparte `panelNav.js`. |
 
@@ -30,8 +33,8 @@ Las nueve preguntas pendientes se responden según el comportamiento existente e
 También se confirmó que los exportadores de
 [Mimittos, PR #66](https://github.com/WeAreProjectApp/mimittos_project/pull/66) y
 [Tenndalux, PR #57](https://github.com/WeAreProjectApp/tenndalux_project/pull/57)
-fueron integrados el 2026-09-19. El merge de esos exportadores no acredita su
-activación en las instalaciones de producción.
+fueron integrados el 2026-09-19. Sus commits están presentes en los clones de
+producción; no hay archivos exportados ni activación declarada de Silk.
 
 ## Verificación local
 
@@ -107,6 +110,32 @@ E2E; los flujos existentes se ejercitan con sus specs actuales.
 
 ## Evidencia remota y pendiente operativo
 
+Tras la verificación adicional de Tailscale se consultó `srv1681495`
+(`vps-projectapp-prod`) mediante SSH. La lectura de MySQL se realizó en una
+transacción `READ ONLY`, cerrada con rollback, sin iniciar Django ni ejecutar
+comandos de provisión. Sólo se consultaron migraciones, inventario y conteos;
+no se imprimieron credenciales ni contenido de reportes.
+
+| Comprobación remota | Resultado a las 13:43–13:45 UTC |
+| --- | --- |
+| ProjectApp desplegado | `2212a758d8054dba6eb39da58e37bc2b22b470d3`, rama `main`, clon limpio. |
+| Mimittos desplegado | `0740d0214307f908a2f21bd78c2ecb98ed7d3159`, rama `main`, clon limpio. |
+| Tenndalux desplegado | `e6854810a4ef01880c1b78823c3bdd6c50bf1ddc`, rama `master`, clon limpio. |
+| Toolkit instalado | `b1ed6ee5bdd5b31b0af1352b04a49da9555fd0d5`, rama `master`, clon limpio. |
+| Aplicaciones | Los tres servicios web están `active`. |
+| Esquema de monitoreo | Ocho tablas presentes; migraciones `0001_initial` y `0002_case_monitoring__last_se_4418a8_idx_and_more` aplicadas el 2026-09-20 a las 15:42 UTC. |
+| Inventario y credenciales | Cero recursos, cero fuentes y cero credenciales. |
+| Historial recibido | Cero entregas, casos, reportes y actividades de seguimiento. |
+| Colector y programación | `projectapp-monitoring.service` y `.timer`: `LoadState=not-found`, `ActiveState=inactive`. |
+| Configuración y cola | No existen `/etc/projectapp-monitoring/`, su `config.json`, `/var/lib/projectapp-monitoring/` ni `outbox.sqlite3` en las rutas del runbook. |
+| Exportaciones Silk | Ningún `backend/logs/monitoring/silk-*.json` en los tres proyectos. |
+
+Los `.env` declaran `ENABLE_SILK=False` en los tres proyectos; ninguna unit
+declara una sobreescritura de ese toggle. Tenndalux carga ese mismo `.env` como
+`EnvironmentFile`. El entorno de los procesos en `/proc` no fue legible para el
+usuario SSH: el resultado acredita la configuración declarada, no una lectura
+directa del toggle en memoria de los workers.
+
 La petición anónima al catálogo de producción
 (`https://www.projectapp.co/api/monitoring/catalog/`) recibió HTTP 403. Esto
 registra el rechazo de esa petición; no demuestra inventario, permisos de una
@@ -114,22 +143,31 @@ sesión staff ni entrega del colector.
 
 | Recurso | Inventario/fuentes en vivo | Última recepción | Silk |
 | --- | --- | --- | --- |
-| `vps-projectapp-prod` | Sin verificar | Sin verificar | No aplica al recurso servidor |
-| `projectapp` | Sin verificar | Sin verificar | Activación y export sin verificar |
-| `mimittos_project` | Sin verificar | Sin verificar | Activación y export sin verificar |
-| `tenndalux_project` | Sin verificar | Sin verificar | Activación y export sin verificar |
+| `vps-projectapp-prod` | Recurso y fuentes no provisionados | Ninguna registrada | No aplica al recurso servidor |
+| `projectapp` | Recurso y fuentes no provisionados | Ninguna registrada | Configuración deshabilitada; sin export |
+| `mimittos_project` | Recurso y fuentes no provisionados | Ninguna registrada | Configuración deshabilitada; sin export |
+| `tenndalux_project` | Recurso y fuentes no provisionados | Ninguna registrada | Configuración deshabilitada; sin export |
 
-Para completar el punto 7 se necesita acceso autenticado de lectura al servidor:
+La ausencia de credenciales e inventario impide aceptar entregas autenticadas de
+estos recursos. No hay observaciones reales con las cuales demostrar asociación,
+idempotencia o seguimiento en producción; esos contratos sí están cubiertos por
+las pruebas aisladas. Una base vacía no acredita funcionamiento sin errores.
 
-1. Registrar la versión desplegada, las migraciones aplicadas y el inventario
-   real de los cuatro recursos, sin mostrar credenciales.
-2. Contrastar estado del colector/timer, pendientes y rechazos de la cola con
-   las últimas recepciones y errores de cada fuente del panel.
-3. Comprobar asociación de observaciones reales por recurso y el estado de Silk
-   por proyecto. Si está deshabilitado, declararlo explícitamente; no activarlo
-   como efecto lateral de esta revisión.
-4. Registrar las discrepancias y seguir el runbook de instalación para cualquier
-   activación o prueba controlada que haga falta. No generar incidentes reales.
+Para completar el punto 7, la operación debe seguir
+`vps-ops-toolkit/docs/projectapp-monitoring.md`:
+
+1. Preparar la configuración con las cuatro identidades y generar el manifiesto.
+   Provisionar recursos/fuentes y una credencial limitada, guardando el token
+   exclusivamente en el archivo protegido indicado por el runbook.
+2. Instalar directorio de cola y units; verificar permisos y compatibilidad de
+   los productores con el sandbox del colector. Necesita 1.
+3. Ejecutar la entrega controlada y contrastar respuesta 200/201, asociación,
+   fechas y cola sin rechazos. Habilitar el timer tras esa validación. Necesita 2.
+4. Comprobar reintentos, recuperación y seguimiento con una fuente de validación
+   aislada, sin generar incidentes reales. Necesita 3.
+5. Decidir el rollout de Silk: ProjectApp con muestra del 5 %, observación de
+   24 horas y luego cada proyecto restante por separado. Hasta entonces, declarar
+   esas fuentes deshabilitadas, sin prometer recepción de N+1/consultas lentas.
 
 No se ejecutaron migraciones productivas, provisión de inventario, cambios de
 credenciales, activación de Silk, cambios de correo, reinicios ni despliegues.

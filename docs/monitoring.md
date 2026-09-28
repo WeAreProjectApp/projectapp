@@ -15,6 +15,13 @@ Esto acredita disponibilidad del código; la recepción real debe comprobarse en
 el entorno desplegado. Una instalación sin casos puede estar sana, sin configurar
 o sin recibir datos: el listado vacío por sí solo no permite distinguirlo.
 
+La inspección de producción del 2026-09-28 confirmó que el esquema está aplicado,
+pero faltan inventario, credenciales, configuración y colector; no hay entregas
+registradas. Silk está deshabilitado en la configuración de los tres proyectos.
+El primer alcance requiere completar la instalación operativa y verificar sus
+entregas. La evidencia y el orden de activación están en el
+[informe de verificación](audits/2026-09-28-monitoring-first-scope.md).
+
 ### Decisiones que ya representa la implementación
 
 | Pregunta del primer alcance | Comportamiento vigente |
