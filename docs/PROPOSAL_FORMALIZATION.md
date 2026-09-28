@@ -76,19 +76,27 @@ hecha en la otra modalidad queda obsoleta.
 
 La duración inicial ofrece 3, 6, 9 y 12 meses; ambos preavisos ofrecen 30, 60 y
 90 días. Las preselecciones iniciales son **9 meses / 60 días / 60 días**.
-Cada selector admite **Personalizado**: un entero de 1 a 999, con vista previa
-del texto contractual. El servidor guarda `nueve (9) meses` o `sesenta (60)`;
-la plantilla agrega «días calendario» a los preavisos.
+Cada selector admite **Personalizar**: aparece debajo un campo de texto libre,
+precargado con la opción vigente. Conserva el borrador al alternar opciones.
+La duración admite hasta 100 caracteres e incluye la unidad; los preavisos
+admiten hasta 60 y la plantilla agrega «días calendario». Las opciones frecuentes
+siguen enviándose como números y el servidor las convierte a letras; el texto
+personalizado se conserva literalmente.
 
 En **Propuestas → Configuraciones → Datos del contrato de servicio** se
 administran las dos listas y las tres preselecciones. Cada lista requiere
 valores únicos y al menos una opción; sus preselecciones deben pertenecer a
 ella. Guardar aplica el conjunto completo. Las nuevas aperturas consultan la
 configuración vigente, mientras los contratos existentes conservan sus valores.
-Un texto histórico que no corresponda al formato numérico aparece como
-**Valor guardado** hasta que se elija reemplazarlo. Si falla la carga de
-configuración, la generación mediante plantilla queda bloqueada y ofrece
-**Reintentar**; el contenido Markdown personalizado mantiene su flujo habitual.
+Un texto que no coincida exactamente con una opción abre **Personalizar** y
+queda editable. Si falla la carga de configuración, la generación mediante
+plantilla queda bloqueada y ofrece **Reintentar**.
+
+El modal se cierra sólo después de guardar correctamente. Durante el envío se
+bloquean nuevos envíos y el cierre. Ante un error de validación o del servidor,
+conserva lo escrito, muestra la explicación y permite corregir o reintentar,
+tanto desde el listado como desde el editor. El contenido Markdown personalizado
+mantiene su flujo habitual y comparte esta protección del guardado.
 
 ## Preparar y enviar
 
