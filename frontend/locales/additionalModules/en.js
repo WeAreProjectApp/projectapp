@@ -72,6 +72,7 @@ export default {
   emptyTitle: 'No modules are available',
   emptyBody: 'The catalog is being updated. Please try again later.',
   sharedNotice: 'This selection was prepared for this conversation.',
+  loading: 'Loading the module catalog…',
   loadError: 'We could not load the catalog.',
   retry: 'Try again',
   panelTitle: 'Additional modules catalog',

@@ -17,6 +17,8 @@ const { data: initialProgram } = await useAsyncData(
     try {
       return await $fetch(`${base}/api/financing/public/?lang=${language.value}`)
     } catch {
+      // Builds can run before Django is reachable: the page then prerenders a
+      // loading skeleton that the browser refresh below replaces.
       return null
     }
   },
@@ -31,6 +33,11 @@ async function loadProgram() {
   } catch {
     liveError.value = !program.value
   }
+}
+
+async function retry() {
+  liveError.value = false
+  await loadProgram()
 }
 
 onMounted(loadProgram)
@@ -101,11 +108,9 @@ async function changeLanguage(nextLanguage) {
   <section class="public-document-theme public-document-canvas min-h-screen" :data-theme="theme" data-testid="financing-public-page">
     <div v-if="liveError" class="mx-auto flex min-h-[70vh] max-w-xl flex-col items-center justify-center px-4 text-center">
       <h1 class="text-2xl font-medium text-text-brand">{{ t('financing.loadError') }}</h1>
-      <BaseButton class="mt-5" @click="loadProgram">{{ t('financing.retry') }}</BaseButton>
+      <BaseButton class="mt-5" @click="retry">{{ t('financing.retry') }}</BaseButton>
     </div>
-    <div v-else-if="!program" class="flex min-h-[70vh] items-center justify-center" role="status">
-      <span class="h-9 w-9 animate-spin rounded-full border-2 border-border-default border-t-primary" />
-    </div>
+    <FinancingProgramSkeleton v-else-if="!program" />
     <FinancingProgramView
       v-else
       :program="program"

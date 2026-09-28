@@ -27,13 +27,16 @@ const { data: initialCatalog } = await useAsyncData(
       return await $fetch(`${base}/api/additional-modules/public/?lang=${language.value}`)
     } catch {
       // Builds and blue/green deploys can run before Django is reachable. The
-      // browser refresh below replaces this shell with the live catalog.
+      // page then prerenders a loading skeleton (never the empty state) and
+      // the browser refresh below replaces it with the live catalog.
       return unavailableCatalog()
     }
   },
 )
 
 if (initialCatalog.value) catalog.value = initialCatalog.value
+
+const catalogPending = computed(() => !catalog.value || catalog.value.unavailable === true)
 
 async function loadCatalog() {
   try {
@@ -102,12 +105,15 @@ useHead(() => ({
       href: `${baseUrl}${canonicalPath.value}`,
     },
   ],
-  script: [
-    {
-      type: 'application/ld+json',
-      innerHTML: JSON.stringify(itemList.value),
-    },
-  ],
+  // An unknown catalog must not be advertised as an empty ItemList.
+  script: catalogPending.value
+    ? []
+    : [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify(itemList.value),
+        },
+      ],
 }))
 
 const pdfUrl = computed(() => `/api/additional-modules/public/pdf/?lang=${language.value}`)
@@ -132,6 +138,7 @@ async function changeLanguage(nextLanguage) {
     </div>
     <AdditionalModulesCatalogView
       v-else
+      :loading="catalogPending"
       :categories="catalog?.categories || []"
       :total-modules="catalog?.total_modules || 0"
       :download-url="pdfUrl"

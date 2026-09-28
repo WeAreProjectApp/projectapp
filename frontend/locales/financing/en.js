@@ -70,6 +70,7 @@ export default {
   toggleTheme: 'Toggle theme',
   spanish: 'Español',
   english: 'English',
+  loading: 'Loading the Partnership Program…',
   loadError: 'We could not load the Partnership Program.',
   retry: 'Try again',
   panelTitle: 'Partnership Program',
