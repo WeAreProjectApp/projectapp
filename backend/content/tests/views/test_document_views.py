@@ -298,8 +298,8 @@ class TestCreateDocument:
 
         assert response.status_code == 201
         data = response.json()
-        assert data['content_json'] is not None
-        assert 'blocks' in data['content_json']
+        saved = Document.objects.get(pk=data['id'])
+        assert 'blocks' in saved.content_json
 
     def test_returns_400_on_invalid_payload(self, admin_client):
         url = reverse('create-document')
@@ -334,7 +334,7 @@ class TestCreateDocumentFromMarkdown:
         assert response.status_code == 201
         data = response.json()
         assert data['title'] == 'Markdown Creation'
-        assert data['content_json']['blocks']
+        assert Document.objects.get(pk=data['id']).content_json['blocks']
 
     def test_returns_400_on_missing_fields(self, admin_client):
         url = reverse('create-document-from-markdown')
@@ -374,12 +374,13 @@ class TestCreateDocumentFromMarkdown:
         response = admin_client.post(url, payload, format='json')
 
         assert response.status_code == 201
-        assert response.json()['client_email_subject'] == 'Entrega completada'
-        assert response.json()['client_email_body'] == 'Hola Ana,\n\nLa entrega está lista.'
-        assert response.json()['client_whatsapp_message'] == (
+        document = Document.objects.get(pk=response.json()['id'])
+        assert document.client_email_subject == 'Entrega completada'
+        assert document.client_email_body == 'Hola Ana,\n\nLa entrega está lista.'
+        assert document.client_whatsapp_message == (
             'Hola Ana, la entrega ya está lista.'
         )
-        assert response.json()['client_custom_notes'] == [
+        assert document.client_custom_notes == [
             {'title': 'Seguimiento', 'content': 'Confirmar recepción.'},
         ]
 

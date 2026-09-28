@@ -213,10 +213,21 @@ class TestDocumentsMcpFolders:
 
         assert response.data['result']['isError'] is True
         assert response.data['result']['content'][0]['text'] == (
-            'La raíz de un proyecto se renombra desde el módulo Proyectos.'
+            'La raíz del proyecto se administra desde el proyecto, '
+            'no desde el Gestor Documental.'
         )
         project.document_root_folder.refresh_from_db()
         assert project.document_root_folder.name == 'MCP Root'
+
+    def test_create_folder_explains_duplicate_name_in_text(self, api_client, documents_connector):
+        DocumentFolder.objects.create(name='Littigio')
+        _, token = documents_connector
+
+        response = _call(api_client, token, 'create_folder', {'name': 'Littigio'})
+
+        assert response.data['result']['isError'] is True
+        assert 'Ya existe una carpeta con ese nombre aquí' in response.data['result']['content'][0]['text']
+        assert DocumentFolder.objects.filter(name='Littigio').count() == 1
 
 
 @pytest.mark.django_db

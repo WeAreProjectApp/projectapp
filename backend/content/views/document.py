@@ -4,7 +4,10 @@ import logging
 
 from django.contrib.auth import get_user_model
 from django.db.models import (
-    Count, Exists, OuterRef, Prefetch,
+    Count,
+    Exists,
+    OuterRef,
+    Prefetch,
 )
 from django.db.models.deletion import ProtectedError
 from django.http import HttpResponse
@@ -28,10 +31,10 @@ from content.models import (
 )
 from content.serializers.document import (
     DocumentBrowseSerializer,
-    DocumentListSerializer,
-    DocumentDetailSerializer,
     DocumentCreateUpdateSerializer,
+    DocumentDetailSerializer,
     DocumentFromMarkdownSerializer,
+    DocumentListSerializer,
 )
 from content.services import document_archive_service
 from content.services.collection_account_service import (
@@ -53,6 +56,10 @@ from content.services.document_query_service import (
 )
 from content.services.document_type_codes import COLLECTION_ACCOUNT
 from content.services.document_type_utils import get_markdown_document_type
+from content.services.document_write_service import (
+    document_write_options,
+    write_response_data,
+)
 from content.utils import safe_slug
 
 logger = logging.getLogger(__name__)
@@ -228,6 +235,7 @@ def _system_managed_folder_target_error(raw_folder_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def create_document(request):
     """Create a document from direct JSON input."""
     managed = _system_managed_folder_target_error(request.data.get('folder_id'))
@@ -247,12 +255,12 @@ def create_document(request):
         document.content_json = build_content_json(document)
         document.save(update_fields=['content_json'])
 
-    detail = DocumentDetailSerializer(document)
-    return Response(detail.data, status=status.HTTP_201_CREATED)
+    return Response(write_response_data(document, request), status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def create_document_from_markdown(request):
     """Create a document from markdown text."""
     managed = _system_managed_folder_target_error(request.data.get('folder_id'))
@@ -293,12 +301,12 @@ def create_document_from_markdown(request):
     if tag_ids:
         document.tags.set(tag_ids)
 
-    detail = DocumentDetailSerializer(document)
-    return Response(detail.data, status=status.HTTP_201_CREATED)
+    return Response(write_response_data(document, request), status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def upload_document_markdown(request):
     """Create a document from an uploaded .md file."""
     uploaded_file = request.FILES.get('file')
@@ -419,8 +427,7 @@ def upload_document_markdown(request):
         if tag_id_list:
             document.tags.set(tag_id_list)
 
-    detail = DocumentDetailSerializer(document)
-    return Response(detail.data, status=status.HTTP_201_CREATED)
+    return Response(write_response_data(document, request), status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -504,11 +511,13 @@ def _contract_mirror_read_only_error(document):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def update_document(request, document_id):
     """Update a document."""
     document = get_object_or_404(Document, pk=document_id)
     mirror = _contract_mirror_read_only_error(document)
-    if mirror:
+    folder_only = 'folder_id' in request.data and not (set(request.data) - {'folder_id', 'include_content'})
+    if mirror and not folder_only:
         return mirror
     generated = _generated_snapshot_read_only_error(document)
     if generated:
@@ -532,8 +541,7 @@ def update_document(request, document_id):
         document.content_json = build_content_json(document)
         document.save(update_fields=['content_json'])
 
-    detail = DocumentDetailSerializer(document)
-    return Response(detail.data)
+    return Response(write_response_data(document, request))
 
 
 @api_view(['DELETE'])
@@ -656,6 +664,7 @@ def document_email_usage(request, document_id):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def archive_document(request, document_id):
     """Saca un documento de la vista principal sin destruirlo."""
     document = get_object_or_404(Document, pk=document_id)
@@ -663,11 +672,12 @@ def archive_document(request, document_id):
     if mirror:
         return mirror
     document_archive_service.archive_document(document)
-    return Response(DocumentListSerializer(document).data)
+    return Response(write_response_data(document, request, is_archived=document.is_archived, archived_at=document.archived_at))
 
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def unarchive_document(request, document_id):
     """Devuelve un documento archivado a la vista principal.
 
@@ -681,7 +691,7 @@ def unarchive_document(request, document_id):
     document = get_object_or_404(Document, pk=document_id)
     result = document_archive_service.unarchive_document(document)
     return Response({
-        **DocumentListSerializer(document).data,
+        **write_response_data(document, request, is_archived=document.is_archived, archived_at=document.archived_at),
         'restored_chain': [
             {'id': folder.id, 'name': folder.name}
             for folder in result['restored_chain']
@@ -706,6 +716,7 @@ def document_navigation(request):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@document_write_options
 def duplicate_document(request, document_id):
     """Duplicate a document.
 
@@ -756,8 +767,7 @@ def duplicate_document(request, document_id):
         updated_by=request.user,
     )
 
-    detail = DocumentDetailSerializer(new_document)
-    return Response(detail.data, status=status.HTTP_201_CREATED)
+    return Response(write_response_data(new_document, request), status=status.HTTP_201_CREATED)
 
 
 # sameorigin porque la previsualización del panel embebe `?inline=1` en un

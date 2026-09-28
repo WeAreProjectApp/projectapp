@@ -236,7 +236,7 @@ def test_duplicate_does_not_inherit_thread_membership(admin_client, documents, t
     )
 
     assert response.status_code == 201
-    assert response.json()['thread_summary'] is None
+    assert not DocumentThreadItem.objects.filter(document_id=response.json()['id']).exists()
 
 
 # ── Índice de hilos ──────────────────────────────────────────────────────────

@@ -286,6 +286,15 @@ describe('DocumentActionsSheet — contract window', () => {
   });
 });
 
+describe('DocumentActionsSheet — movable contract', () => {
+  it('emits a move action for a movable contract', async () => {
+    const wrapper = mountSheet({ document: { ...baseDocument, is_contract_mirror: true, movable: true } });
+    await actionByLabel(wrapper, 'Mover a carpeta').trigger('click');
+    expect(wrapper.emitted('move')).toHaveLength(1);
+    expect(actionByLabel(wrapper, 'Duplicar')).toBeUndefined();
+  });
+});
+
 describe('DocumentActionsSheet — generated snapshots', () => {
   it('offers only read-only navigation, one stored download and archive', () => {
     const wrapper = mountSheet({

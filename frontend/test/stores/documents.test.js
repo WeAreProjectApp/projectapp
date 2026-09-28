@@ -189,13 +189,14 @@ describe('useDocumentStore', () => {
   })
 
   describe('createFromMarkdown', () => {
-    it('sets currentDocument from response', async () => {
+    it('returns the new ID for loading its editor', async () => {
       const payload = { title: 'T', content_markdown: '# Hi' }
       create_request.mockResolvedValueOnce({ data: { id: 9 } })
       const result = await store.createFromMarkdown(payload)
       expect(create_request).toHaveBeenCalledWith('documents/create-from-markdown/', payload)
       expect(result.success).toBe(true)
-      expect(store.currentDocument).toEqual({ id: 9 })
+      expect(result.data.id).toBe(9)
+      expect(store.currentDocument).toBeNull()
     })
 
     it('returns errors when create fails', async () => {
@@ -207,12 +208,13 @@ describe('useDocumentStore', () => {
   })
 
   describe('updateDocument', () => {
-    it('patches document and updates current', async () => {
+    it('preserves loaded content when merging a write summary', async () => {
+      store.currentDocument = { id: 2, content_markdown: '# Kept' }
       patch_request.mockResolvedValueOnce({ data: { id: 2, title: 'Up' } })
       const result = await store.updateDocument(2, { title: 'Up' })
       expect(patch_request).toHaveBeenCalledWith('documents/2/update/', { title: 'Up' })
       expect(result.success).toBe(true)
-      expect(store.currentDocument).toEqual({ id: 2, title: 'Up' })
+      expect(store.currentDocument).toMatchObject({ id: 2, title: 'Up', content_markdown: '# Kept' })
     })
 
     it('returns errors when patch fails', async () => {
@@ -251,9 +253,10 @@ describe('useDocumentStore', () => {
   })
 
   describe('duplicateDocument', () => {
-    it('prepends duplicated document', async () => {
+    it('reloads the list after duplication', async () => {
       store.documents = [{ id: 1 }]
       create_request.mockResolvedValueOnce({ data: { id: 2, copy: true } })
+      get_request.mockResolvedValueOnce({ data: [{ id: 2, copy: true }, { id: 1 }] })
       const result = await store.duplicateDocument(1)
       expect(create_request).toHaveBeenCalledWith('documents/1/duplicate/', {})
       expect(result.success).toBe(true)
