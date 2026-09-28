@@ -519,6 +519,9 @@ LOGGING = {
     },
 }
 
+# Stable estimate destination; IDs are configured per deployment.
+REQUIREMENT_ESTIMATES_FOLDER_ID = config('REQUIREMENT_ESTIMATES_FOLDER_ID', default=None, cast=lambda value: int(value) if value else None)
+
 # Enable after installing the internal Nginx commercial-video location.
 VIDEO_USE_X_ACCEL_REDIRECT = config('VIDEO_USE_X_ACCEL_REDIRECT', default=False, cast=bool)
 

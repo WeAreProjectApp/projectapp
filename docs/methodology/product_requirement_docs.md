@@ -16,6 +16,8 @@
 > `client-response` los crea vía MCP con el contenido que dio el operador. Los
 > clientes envían información al equipo desde `/secure-link`; esos enlaces sólo
 > los abre el equipo y generan un aviso interno sin enlace ni contenido.
+> El equipo gestiona el CRUD desde panel y MCP; la consulta del secreto por
+> MCP requiere permiso explícito y confirmación por lectura sin consumir el enlace.
 > Vigencia 1/3/7/30 días (7 por defecto; públicos hasta 7). Detalle:
 > `docs/secure-links.md`.
 

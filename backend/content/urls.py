@@ -1,3 +1,5 @@
+from content.views.document_move import move_document_batch
+
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
 from content.views import linktree_template as lt_templates
@@ -900,6 +902,7 @@ urlpatterns = [
         document_thread_detail,
         name='document-thread-detail',
     ),
+    path('documents/move/', move_document_batch, name='move-documents'),
     path('documents/<int:document_id>/update/', update_document, name='update-document'),
     path('documents/<int:document_id>/delete/', delete_document, name='delete-document'),
     path('documents/<int:document_id>/archive/', archive_document, name='archive-document'),

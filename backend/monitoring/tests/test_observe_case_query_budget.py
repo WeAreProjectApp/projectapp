@@ -8,6 +8,9 @@ from rest_framework.test import APIClient
 from monitoring.models import Case, Credential, Delivery, Report, Resource, Source
 
 MAX_OBSERVE_CASE_QUERIES = 1
+# Measured historical regression ceilings, not compliance with mutation budget <= 8.
+MAX_DETECTION_HISTORICAL_QUERIES = 15
+MAX_RECOVERY_HISTORICAL_QUERIES = 14
 INGEST_URL = "/api/monitoring/v1/ingest/"
 SERVER_KEY = "srv1681495"
 
@@ -121,6 +124,7 @@ def test_detection_with_own_report_reads_case_once_without_loading_report_text(
         case.pk,
     )
     assert case.condition == "active"
+    assert len(queries) <= MAX_DETECTION_HISTORICAL_QUERIES
     assert (
         len(_selects_for_table(queries, Case)),
         _selects_for_table(queries, Report),
@@ -172,6 +176,7 @@ def test_recovery_with_own_report_reads_case_once_without_loading_report_text(
         case.pk,
     )
     assert case.condition == "recovered"
+    assert len(queries) <= MAX_RECOVERY_HISTORICAL_QUERIES
     assert (
         len(_selects_for_table(queries, Case)),
         _selects_for_table(queries, Report),

@@ -19,6 +19,8 @@
     />
     <ContractParamsModal
       :visible="showContractModal"
+      :saving="contractSaving"
+      :save-error="contractSaveError"
       :proposal="proposal"
       :initial-params="proposal?.contract_params || {}"
       :is-editing="contractModalEditing"
@@ -681,6 +683,9 @@ function handleNextAction() {
 
 // ── Contract modal state ──
 const showContractModal = ref(false);
+const contractSaving = ref(false);
+const contractSaveError = ref(null);
+watch(showContractModal, () => { contractSaveError.value = null; });
 const contractModalEditing = ref(false);
 // Which document the modal generates or edits: the single contract, or the
 // product or service contract of a split closing.
@@ -696,14 +701,21 @@ function openContractModal(editing = false, variant = 'combined') {
 }
 
 async function handleContractConfirm(params) {
-  showContractModal.value = false;
-  const updatesOnly = contractModalEditing.value
-    || CONTRACT_UPDATE_STATUSES.includes(proposal.value.status);
-  const result = updatesOnly
-    ? await proposalStore.updateContractParams(proposal.value.id, params, contractModalVariant.value)
-    : await proposalStore.saveContractAndNegotiate(proposal.value.id, params);
-  if (!result.success) {
-    notify.error(result.message || 'No se pudo guardar el contrato.');
+  if (contractSaving.value) return;
+  contractSaving.value = true;
+  contractSaveError.value = null;
+  try {
+    const updatesOnly = contractModalEditing.value
+      || CONTRACT_UPDATE_STATUSES.includes(proposal.value.status);
+    const result = updatesOnly
+      ? await proposalStore.updateContractParams(proposal.value.id, params, contractModalVariant.value)
+      : await proposalStore.saveContractAndNegotiate(proposal.value.id, params);
+    if (result.success) showContractModal.value = false;
+    else contractSaveError.value = result;
+  } catch {
+    contractSaveError.value = { message: 'No se pudo guardar el contrato. Inténtalo de nuevo.' };
+  } finally {
+    contractSaving.value = false;
   }
 }
 

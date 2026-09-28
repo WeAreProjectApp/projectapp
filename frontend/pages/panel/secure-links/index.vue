@@ -136,7 +136,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue';
 import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
 import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
@@ -203,12 +203,14 @@ function currentFilters() {
 let searchTimer = null;
 async function load() {
   const result = await store.fetchLinks(currentFilters());
+  if (result.success && result.page !== filters.page) filters.page = result.page;
   if (!result.success && result.error) notify.error({ title: result.error.message });
 }
 
 watch(() => [filters.tab, filters.page], load);
 watch(() => filters.tab, () => { filters.page = 1; });
 watch(() => filters.search, () => {
+  store.invalidateLists();
   clearTimeout(searchTimer);
   searchTimer = setTimeout(() => {
     filters.page = 1;
@@ -226,6 +228,19 @@ watch(() => route.query.link, (value) => {
 
 watch(() => detailModal.open, (open) => {
   if (!open && route.query.link) router.replace({ query: { ...route.query, link: undefined } });
+});
+
+watch(() => formModal.open, (open) => {
+  if (!open) { formModal.fields = null; formModal.link = null; }
+}, { flush: 'sync' });
+watch(() => createdModal.open, (open) => {
+  if (!open) { createdModal.url = ''; createdModal.expiresAt = null; }
+}, { flush: 'sync' });
+onBeforeUnmount(() => {
+  clearTimeout(searchTimer);
+  store.invalidateLists();
+  formModal.fields = null;
+  createdModal.url = '';
 });
 
 onMounted(() => {
@@ -274,7 +289,7 @@ function onSaved(data) {
 }
 
 async function copyTo(key, text, successLabel) {
-  await clipboard.copyText({
+  return clipboard.copyText({
     key,
     text,
     successLabel,
@@ -293,8 +308,8 @@ async function copyRowUrl(row) {
     notify.error({ title: result.error.message });
     return;
   }
-  await copyTo(`secure-link-row-${row.id}`, result.url, 'Enlace copiado');
-  notify.success({ title: 'Enlace copiado' });
+  const copied = await copyTo(`secure-link-row-${row.id}`, result.url, 'Enlace copiado');
+  if (copied) notify.success({ title: 'Enlace copiado' });
 }
 
 function createdFeedback(kind) {
@@ -311,12 +326,14 @@ function copyCreated(kind) {
 }
 
 async function revoke(row) {
+  if (store.isUpdating) return;
   const result = await store.revokeLink(row.id);
   if (!result.success) notify.error({ title: result.error.message });
   else load();
 }
 
 async function remove(row) {
+  if (store.isUpdating) return;
   const confirmed = await requestConfirm({
     title: 'Eliminar enlace seguro',
     message: `"${row.title}" y su contenido cifrado se eliminarán de forma permanente. El enlace dejará de funcionar. Esta acción no se puede deshacer.`,

@@ -80,6 +80,42 @@ test.describe('Admin Proposal Contract Generate', () => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8700, role: 'admin', is_staff: true } });
   });
 
+  test('a failed negotiation from the list preserves the contract draft', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_GENERATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Falla si el otro punto de entrada cierra el modal al fallar la generación.
+    let proposal = { ...mockProposal, status: 'sent', available_transitions: ['negotiating', 'rejected'] };
+    let requests = 0;
+    await mockApi(page, async ({ apiPath, method, route }) => {
+      if (apiPath === 'auth/check/') return authCheck;
+      if (apiPath === 'proposals/alerts/') return { status: 200, contentType: 'application/json', body: '[]' };
+      if (apiPath === 'proposals/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([proposal]) };
+      }
+      if (apiPath === `proposals/${PROPOSAL_ID}/contract/save-and-negotiate/` && method === 'POST') {
+        requests += 1;
+        if (requests === 1) return { status: 503, contentType: 'application/json', body: JSON.stringify({ detail: 'No se pudo generar el contrato.' }) };
+        proposal = { ...proposal, status: 'negotiating', contract_params: route.request().postDataJSON().contract_params };
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(proposal) };
+      }
+      return buildApiHandler()({ apiPath, method });
+    });
+    await page.goto('/es-co/panel/proposals', { waitUntil: 'domcontentloaded' });
+    const status = page.getByLabel('Cambiar estado de la propuesta');
+    await status.selectOption('negotiating');
+    const dialog = page.getByRole('dialog');
+    await dialog.getByRole('tab', { name: 'Contrato personalizado' }).click();
+    await dialog.getByPlaceholder(/Pega o escribe tu contrato/).fill('# Acuerdo negociado');
+    await dialog.getByRole('group', { name: 'Datos del contrato' }).locator('input[type="date"]').fill('2026-09-28');
+    await dialog.getByRole('button', { name: 'Generar contrato y negociar', exact: true }).click();
+
+    await expect(dialog.getByRole('alert')).toHaveText('No se pudo generar el contrato.');
+    await expect(dialog.getByPlaceholder(/Pega o escribe tu contrato/)).toHaveValue('# Acuerdo negociado');
+    await dialog.getByRole('button', { name: 'Generar contrato y negociar', exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(status).toHaveValue('negotiating');
+  });
+
   test('Documents tab visible for negotiating proposal with contract section', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_GENERATE, '@role:admin'],
   }, async ({ page }) => {

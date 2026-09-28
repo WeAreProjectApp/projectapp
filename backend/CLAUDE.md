@@ -1,8 +1,8 @@
 # Backend Rules — ProjectApp
 
 ## Stack And Scope
-- Django 5 + DRF backend.
-- Main apps are `content` and `accounts`.
+- Django 6.1 + DRF backend.
+- Project apps are `content`, `accounts`, `monitoring`, and `secure_links`.
 - Production settings module: `projectapp.settings_prod`.
 
 ## Project Conventions

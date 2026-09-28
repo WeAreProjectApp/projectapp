@@ -1,5 +1,14 @@
 # Architecture — ProjectApp
 
+## Personalización de datos del servicio (2026-09-28)
+
+`ServiceContractTermField` distingue presets numéricos y texto libre sin cambiar
+el contrato API. Sólo identifica como preset el texto exactamente canónico;
+los demás valores se reabren editables. `ContractParamsModal` recibe estado de
+envío y errores normalizados de sus páginas huésped; éstas mantienen la instancia
+y su borrador ante fallos y la cierran únicamente tras guardar correctamente.
+
+
 > **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
 
 > **Video de bienvenida de propuestas — 2026-09-27:** el acceso público muestra
@@ -27,9 +36,9 @@ mes/meses; las plantillas agregan días calendario a los preavisos. La configura
 no cambia contratos existentes ni agrega una superficie MCP.
 
 > **2026-09-26 — enlaces seguros:** app Django `secure_links` (`SecureLink`,
-> `SecureLinkEvent` append-only) con `services.py` como única frontera de
+> `SecureLinkEvent` inmutable salvo eliminación del enlace) con `services.py` como única frontera de
 > escritura para panel (sesión/CSRF + `IsAdminUser`), página pública (sin
-> autenticación DRF; la sesión Django sólo reconoce staff) y seis tools del
+> autenticación DRF; la sesión Django sólo reconoce staff) y las herramientas del
 > conector MCP `communications`. Payload JSON cifrado con el mismo Fernet de
 > accesos de proyecto; token en el fragmento de la URL, buscado por SHA-256 y
 > recibido en el cuerpo del POST. El revelado bloquea la fila y consume en la
@@ -1759,3 +1768,18 @@ Descargas, copia Markdown, adjuntos del compositor, envío legado, formalizació
 ### Carpetas independientes de comunicaciones
 
 `CommunicationFolder` guarda un árbol por perfil de cliente y proyecto opcional, separado de `DocumentFolder`. `CommunicationThread.folder` organiza el hilo completo. Los servicios REST/MCP validan contexto y ciclos bajo un lock del perfil del cliente; el FK PROTECT evita borrar carpetas con hilos, incluso archivados. Las comunicaciones madre no se mueven. La navegación persiste `folder=<id>|none` y la búsqueda textual/ID recorre todas las carpetas dentro del contexto seleccionado.
+
+
+### Organización documental REST/MCP — 2026-09-28
+
+Las escrituras comparten el resumen de `document_write_service`, separado del
+serializer de detalle. `include_content` se valida antes de cualquier escritura.
+El movimiento masivo usa `document_move_service`: bloquea documentos en orden,
+valida todo el conjunto y guarda atómicamente. El contrato espejo sólo permite
+ubicación y auditoría; conserva su fuente viva y todas sus asociaciones.
+
+El serializer de carpetas revalida bajo el mutex `DocumentFolderMutationLock`:
+protege el nivel raíz y evita colisiones/ciclos concurrentes conservando los
+nombres históricos duplicados. Las carpetas guardan autor/origen desde esta
+versión; origen histórico desconocido permanece explícito. Estimates se resuelve
+por ID configurable, sin aprovisionar carpetas ni convertirlas en automáticas.

@@ -1,8 +1,8 @@
 """Tests for the `create_estimate_document` management command.
 
 Business rules asserted:
-- Creates a markdown Document inside the requested top-level folder
-- The folder is created once (get_or_create) and reused on later runs
+- Creates a markdown Document inside the configured existing folder
+- The configured folder is reused independently of its parent
 - Content, status and language land on the created Document
 - A missing or empty markdown file aborts with CommandError
 - Title collisions version (" — vN") by default, or update in place with
@@ -21,6 +21,14 @@ from content.services.document_type_codes import MARKDOWN
 
 pytestmark = pytest.mark.django_db
 
+
+
+@pytest.fixture(autouse=True)
+def estimate_destination(settings):
+    parent = DocumentFolder.objects.create(name='ProjectApp')
+    folder = DocumentFolder.objects.create(name='Requirement Estimates', parent=parent)
+    settings.REQUIREMENT_ESTIMATES_FOLDER_ID = folder.pk
+    return folder
 
 def _write_markdown(tmp_path, body='# Estimate\n\nDemo content.\n'):
     md_file = tmp_path / 'estimate.md'
@@ -41,7 +49,7 @@ class TestCreateEstimateDocument:
 
         document = Document.objects.get(title='Estimate: demo — 01072026')
         assert document.folder.name == 'Requirement Estimates'
-        assert document.folder.parent is None
+        assert document.folder.parent.name == 'ProjectApp'
         assert document.document_type.code == MARKDOWN
 
     def test_folder_is_created_only_once_across_runs(self, tmp_path):
@@ -62,6 +70,7 @@ class TestCreateEstimateDocument:
         assert document.language == Document.Language.EN
 
     def test_custom_folder_name_is_used(self, tmp_path):
+        DocumentFolder.objects.create(name='Other Estimates')
         _run(_write_markdown(tmp_path), folder='Other Estimates')
 
         assert Document.objects.get().folder.name == 'Other Estimates'
@@ -133,3 +142,40 @@ class TestCreateEstimateDocument:
 
         document = Document.objects.get()
         assert f'Panel URL: /panel/documents/{document.pk}/edit' in out.getvalue()
+
+
+def test_configured_folder_survives_rename(tmp_path, estimate_destination):
+    estimate_destination.name = 'Renamed estimates'
+    estimate_destination.save()
+    _run(_write_markdown(tmp_path))
+    assert Document.objects.get().folder_id == estimate_destination.pk
+    assert not DocumentFolder.objects.filter(name='Requirement Estimates', parent=None).exists()
+
+
+def test_missing_configuration_never_creates_folder(tmp_path, settings):
+    settings.REQUIREMENT_ESTIMATES_FOLDER_ID = None
+    with pytest.raises(CommandError, match='Configura'):
+        _run(_write_markdown(tmp_path))
+    assert not Document.objects.exists()
+    assert not DocumentFolder.objects.filter(name='Requirement Estimates', parent=None).exists()
+
+
+def test_ambiguous_legacy_name_is_rejected(tmp_path):
+    DocumentFolder.objects.create(name='Requirement Estimates')
+    with pytest.raises(CommandError, match='única'):
+        _run(_write_markdown(tmp_path), folder='Requirement Estimates')
+    assert not Document.objects.exists()
+
+
+def test_archived_destination_is_rejected(tmp_path, estimate_destination):
+    estimate_destination.is_archived = True
+    estimate_destination.save()
+    with pytest.raises(CommandError, match='archivada'):
+        _run(_write_markdown(tmp_path))
+    assert not Document.objects.exists()
+
+
+def test_explicit_id_overrides_configuration(tmp_path, estimate_destination):
+    target = DocumentFolder.objects.create(name='Explicit')
+    _run(_write_markdown(tmp_path), **{'folder-id': str(target.pk)})
+    assert Document.objects.get().folder_id == target.pk

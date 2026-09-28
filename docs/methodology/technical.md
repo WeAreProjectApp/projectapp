@@ -28,10 +28,12 @@
 
 > **2026-09-26 — enlaces seguros:** `secure_links` reutiliza
 > `credential_cipher` (sin variable nueva) pero trata un descifrado vacío como
-> error. `create_secure_link` es la única tool MCP que acepta secretos en claro:
+> error. `create_secure_link` y `update_secure_link` aceptan secretos en claro:
 > riesgo `write` (un intent sensible persistiría argumentos), ninguna clave de
 > contenido termina en `_id` y la URL sólo se devuelve al crear;
-> `reactivate_secure_link` es `sensitive` y su resultado no incluye URL.
+> `reactivate_secure_link` y `delete_secure_link` requieren confirmación sin URL.
+> `reveal_secure_link_content` requiere permiso explícito y confirmación con
+> resultado efímero: sólo se persiste un comprobante y se audita `mcp_viewed`.
 > Throttles fijos 10/h (creación pública) y 30/min (status/reveal), reCAPTCHA
 > `verify_captcha` + honeypot, `Cache-Control: no-store`. Correo
 > `secure_link_received_team` por el gateway. Migraciones

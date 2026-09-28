@@ -1,3 +1,4 @@
+from accounts.models import UserProfile
 from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import status
@@ -5,12 +6,14 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
-from accounts.models import UserProfile
-
 from content.api_errors import error_response
 from content.models import DocumentFolder
 from content.serializers.document_folder import (
-    DocumentFolderChangeClientSerializer, DocumentFolderSerializer,
+    DocumentFolderChangeClientSerializer,
+    DocumentFolderFilterSerializer,
+    DocumentFolderSerializer,
+    filter_folders,
+    validate_folder_input,
 )
 from content.services import (
     document_archive_service,
@@ -18,7 +21,10 @@ from content.services import (
     project_document_folder_service,
 )
 from content.views.document import (
-    apply_archive_scope, archive_scope, archived_order_field, search_term,
+    apply_archive_scope,
+    archive_scope,
+    archived_order_field,
+    search_term,
 )
 
 
@@ -35,10 +41,11 @@ def _system_managed_folder_error(folder):
 
 
 def _managed_parent_error(request):
-    if 'parent' not in request.data or request.data.get('parent') in (None, ''):
+    value = request.data.get('parent_id', request.data.get('parent'))
+    if value in (None, ''):
         return None
     try:
-        parent_id = int(request.data['parent'])
+        parent_id = int(value)
     except (TypeError, ValueError):
         return None
     return _system_managed_folder_error(
@@ -66,7 +73,7 @@ def _annotated_folders(scope):
     # El serializer lee `client_user.profile` y `project.name` en cada fila:
     # sin el select_related el panel lateral paga tres consultas por carpeta.
     queryset = DocumentFolder.objects.select_related(
-        'client_user__profile', 'project',
+        'client_user__profile', 'project', 'created_by',
         'managed_project__current_state', 'managed_client__profile',
     )
     return apply_archive_scope(queryset, scope).annotate(
@@ -137,6 +144,10 @@ def list_document_folders(request):
         )
     folders = _annotated_folders(scope)
 
+    filters = DocumentFolderFilterSerializer(data=request.query_params)
+    filters.is_valid(raise_exception=True)
+    folders = filter_folders(folders, filters.validated_data)
+
     search = search_term(request)
     if search:
         folders = folders.filter(name__icontains=search)
@@ -157,10 +168,11 @@ def project_folder_readiness(request):
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def create_document_folder(request):
+    validate_folder_input(request.data)
     managed = _managed_parent_error(request)
     if managed:
         return managed
-    serializer = DocumentFolderSerializer(data=request.data)
+    serializer = DocumentFolderSerializer(data=request.data, context={'request': request})
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()
@@ -183,7 +195,10 @@ def _changes_client(folder, request):
         return False
     current_id = getattr(folder.client_user, 'profile', None)
     current_id = current_id.pk if current_id else None
-    return int(sent) != current_id
+    try:
+        return int(sent) != current_id
+    except (ValueError, TypeError):
+        return False
 
 
 @api_view(['PATCH'])
@@ -194,6 +209,7 @@ def update_document_folder(request, folder_id):
     Basta mirar los hijos DIRECTOS: si la rama guarda algo, o cuelga del propio
     folder o cuelga de una subcarpeta suya, así que una de las dos existe.
     """
+    validate_folder_input(request.data)
     folder = get_object_or_404(DocumentFolder, pk=folder_id)
     managed = (
         _managed_folder_error(folder)
@@ -206,7 +222,7 @@ def update_document_folder(request, folder_id):
         # como el resto de las guardas del gestor, y no un 400 de validación.
         or (
             _managed_client_folder_error(folder)
-            if {'parent', 'client'}.intersection(request.data)
+            if {'parent', 'parent_id', 'client'}.intersection(request.data)
             else None
         )
     )

@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, onBeforeUnmount, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
@@ -36,9 +36,45 @@ function translate(key, params = {}) {
 
 const state = ref('idle')
 const videoRef = ref(null)
+let playbackRequest = 0
+let windowActive = true
 
-function pause() { videoRef.value?.pause() }
-onBeforeUnmount(pause)
+function pause() {
+  playbackRequest += 1
+  videoRef.value?.pause()
+}
+function isPageActive() { return windowActive && document.visibilityState !== 'hidden' }
+function onWindowBlur() {
+  windowActive = false
+  pause()
+}
+function onWindowFocus() { windowActive = true }
+function onVisibilityChange() {
+  if (document.visibilityState === 'hidden') pause()
+}
+function onPlay(event) {
+  if (!isPageActive()) event.currentTarget.pause()
+}
+
+onMounted(() => {
+  windowActive = document.hasFocus()
+  window.addEventListener('blur', onWindowBlur)
+  window.addEventListener('focus', onWindowFocus)
+  window.addEventListener('pagehide', pause)
+  document.addEventListener('visibilitychange', onVisibilityChange)
+})
+onBeforeUnmount(() => {
+  pause()
+  window.removeEventListener('blur', onWindowBlur)
+  window.removeEventListener('focus', onWindowFocus)
+  window.removeEventListener('pagehide', pause)
+  document.removeEventListener('visibilitychange', onVisibilityChange)
+})
+onDeactivated(pause)
+watch(() => props.video.src, () => {
+  pause()
+  state.value = 'idle'
+})
 defineExpose({ pause })
 
 const ns = computed(() => props.i18nNamespace)
@@ -49,21 +85,25 @@ const description = computed(() => translate(`${ns.value}.${isCompact.value ? 'e
 const durationLabel = computed(() => translate(`${ns.value}.explainerDuration`, { time: formatExplainerDuration(props.video.durationSeconds) }))
 
 async function start() {
+  if (!isPageActive()) return
+  const request = ++playbackRequest
   state.value = 'playing'
   emit('play')
   await nextTick()
   const element = videoRef.value
-  if (!element) return
+  if (!element || request !== playbackRequest || !isPageActive()) return
   element.muted = false
   element.volume = 1
+  element.focus?.()
   if (typeof element.play === 'function') {
     try {
       await element.play()
+      // Loading may finish after the visitor leaves this window or changes video.
+      if (request !== playbackRequest || !isPageActive()) element.pause()
     } catch {
-      // Native controls stay available if the browser refuses the automatic start.
+      // Native controls allow a fresh gesture after a refusal or interrupted load.
     }
   }
-  element.focus?.()
 }
 
 function onError() {
@@ -132,13 +172,13 @@ function onEnded() {
           :poster="video.poster"
           :aria-label="title"
           controls
-          autoplay
           playsinline
-          preload="auto"
+          preload="metadata"
           class="aspect-video w-full bg-primary-strong"
           :class="isCompact ? 'rounded-2xl' : ''"
           @error="onError"
           @ended="onEnded"
+          @play="onPlay"
         />
         <BaseAlert v-if="state === 'error'" variant="warning" class="mt-3" :data-testid="`${testId}-error`">
           {{ translate(`${ns}.explainerError`) }}

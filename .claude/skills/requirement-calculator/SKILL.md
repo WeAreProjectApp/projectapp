@@ -86,7 +86,7 @@ fi
 [ -z "$DJANGO_SETTINGS_MODULE" ] && DJANGO_SETTINGS_MODULE=$(grep -m1 '^DJANGO_SETTINGS_MODULE=' "$PANEL_ROOT/backend/.env" 2>/dev/null | cut -d= -f2-)
 [ -z "$DJANGO_SETTINGS_MODULE" ] && { echo "❌ Sin DJANGO_SETTINGS_MODULE (ni exportado, ni unit systemd 'projectapp', ni backend/.env): manage.py caería en settings_dev (sqlite) y la consulta NO vería el panel real. Exportalo explícito si querés otro entorno."; exit 1; }
 export DJANGO_SETTINGS_MODULE
-"$PY" "$PANEL_ROOT/backend/manage.py" shell -c "from content.models import Document; [print(d.pk, '|', d.title) for d in Document.objects.filter(folder__name='Requirement Estimates').order_by('-created_at')[:20]]"
+"$PY" "$PANEL_ROOT/backend/manage.py" shell -c "from content.models import Document; from content.services.estimate_folder_service import resolve_estimate_folder; folder = resolve_estimate_folder(); [print(d.pk, '|', d.title) for d in Document.objects.filter(folder=folder).order_by('-created_at')[:20]]"
 ```
 
 Si **ningún** título es temáticamente similar, sigue de largo (no leas nada). Si 1–2 lo son, lee solo sus totales (`print(d.content_markdown)` del pk elegido). Si para alcance equivalente el precio nuevo difiere más de ±30%, no lo "corrijas" en silencio: decláralo en Observaciones (*"La estimación #N de <fecha> cotizó algo equivalente en $X; la diferencia se debe a <motivo>"*).
@@ -224,7 +224,7 @@ Con el Δ%SMLMV decretado de <año> (<X>%): reajuste anual = <X>% + 12% = **<Y>%
 
 ## 6. Crear el documento en el panel
 
-Persiste el markdown como documento real en `/panel/documents` (carpeta **Requirement Estimates**, creada una sola vez por el command; el PDF con portadas ProjectApp sale automático con los defaults del modelo). El bloque resuelve el entorno igual que §4-bis — sin `DJANGO_SETTINGS_MODULE` el documento caería en la sqlite de dev, invisible para el panel:
+Persiste el markdown como documento real en `/panel/documents` (carpeta configurada mediante `REQUIREMENT_ESTIMATES_FOLDER_ID`, resuelta por ID aunque cambie de nombre o padre; el PDF con portadas ProjectApp sale automático con los defaults del modelo). El bloque resuelve el entorno igual que §4-bis — sin `DJANGO_SETTINGS_MODULE` el documento caería en la sqlite de dev, invisible para el panel:
 
 ```bash
 # El panel de documentos vive SOLO en projectapp: la persistencia se ancla ahí,
@@ -250,7 +250,7 @@ export DJANGO_SETTINGS_MODULE
 
 **Saneo del título:** el nombre corto usa solo letras (con tildes/ñ), números, espacios y guiones — nunca comillas (`"` `'`), `$`, backticks ni saltos de línea. El guion largo `—` del separador de fecha sí es válido. Pasa `--title` y `--file` entre comillas simples y con rutas absolutas.
 
-El command acepta opcionalmente `--folder`, `--status` (default `published`), `--language` (default `es`) y `--on-conflict` (default `version`). Si ya existe un documento con el mismo título (re-estimación del mismo día), el command agrega automáticamente ` — v2`. Si el usuario pidió explícitamente **corregir** la estimación anterior, usa `--on-conflict replace`. En re-estimaciones, agrega en "Supuestos y exclusiones" una línea: *"Reemplaza/versiona la estimación #<id anterior>; cambio respecto a la versión previa: <qué se aclaró>."* — y si la re-estimación versiona el **mismo requerimiento** con un brief evolucionado, esa línea se amplía a una mini-tabla **Δ vs #<id>**: filas nuevas · filas retiradas · filas con cambio de nivel/precio (cada una con su motivo).
+El command acepta `--folder-id` para un destino explícito y `--folder` sólo como selector legado de nombre global único; ninguno crea carpetas. Sin destino configurado se detiene con error, sin crear un duplicado en raíz. Acepta además `--status` (default `published`), `--language` (default `es`) y `--on-conflict` (default `version`). Si ya existe un documento con el mismo título (re-estimación del mismo día), el command agrega automáticamente ` — v2`. Si el usuario pidió explícitamente **corregir** la estimación anterior, usa `--on-conflict replace`. En re-estimaciones, agrega en "Supuestos y exclusiones" una línea: *"Reemplaza/versiona la estimación #<id anterior>; cambio respecto a la versión previa: <qué se aclaró>."* — y si la re-estimación versiona el **mismo requerimiento** con un brief evolucionado, esa línea se amplía a una mini-tabla **Δ vs #<id>**: filas nuevas · filas retiradas · filas con cambio de nivel/precio (cada una con su motivo).
 
 ## 7. Reporte al usuario
 
@@ -303,6 +303,6 @@ En `validation/` vive el **baseline de calibración** de la skill, producido en 
 - `validation/test-results.md` — artefacto de consolidación: tabla resumen de las 3 estimaciones (#23 $4,9M–$7,0M ✅ · #24 $5,8M–$8,2M ✅ · #25 $10,6M–$15,1M ⚠️ — recalibración −20% del 04/08/2026), detalle por requerimiento y QA de la skill (detección de múltiples, anti-doble-cobro, persistencia, señales promovidas, recalibraciones).
 - `validation/estimates/*.md` — los 3 markdown fuente de esas estimaciones (documentos #23, #24 y #25 de `/panel/documents`), con filas, señales citadas, modificadores, horas y precios.
 
-> **Nota de entorno:** los IDs #23–#25 y sus URLs `/panel/documents/<id>/edit` pertenecen al panel del **entorno donde corrió la prueba** (la dev machine del operador, 02/07/2026). En el panel de producción esos IDs corresponden a otros documentos; la carpeta "Requirement Estimates" se crea en prod con el primer uso real (§6 resuelve el entorno explícitamente desde el fix del 01/08/2026).
+> **Nota de entorno:** los IDs #23–#25 y sus URLs `/panel/documents/<id>/edit` pertenecen al panel del **entorno donde corrió la prueba** (la dev machine del operador, 02/07/2026). En el panel de producción esos IDs corresponden a otros documentos; la carpeta destino debe configurarse previamente por ID en cada entorno (§6 resuelve el entorno explícitamente desde el fix del 01/08/2026).
 
 **Regla de mantenimiento:** si cambian las reglas de la skill —tabla de precios/tarifa en `market-pricing.md`, señales o modificadores en `effort-indicators.md`, o el flujo de este SKILL.md— y el cambio **altera los números o la clasificación** del baseline, hay que **actualizar la suite en el mismo cambio**: recalcular las columnas afectadas de los 3 estimates (manteniendo horas/clasificación salvo que el cambio sea de catálogo), refrescar los totales y semáforos de `test-results.md`, y agregar allí una fila de QA que registre el cambio y su fecha. Si el cambio no altera números ni clasificación (p. ej. una señal nueva que el baseline no usa), basta la fila de QA. El baseline es la referencia para detectar regresiones de calibración: mismo input → mismos niveles y precios.

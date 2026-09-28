@@ -1,3 +1,47 @@
+# Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
+
+Las dos cuadrículas del video de módulos adicionales igualan sus cuatro
+tarjetas a la altura de la mayor de cada grupo, conservando el diseño compacto.
+El reproductor compartido inicia sólo por acción del visitante, pausa al salir
+de ventana/pestaña y no reanuda al regresar; cancela inicios pendientes y exige
+un clic nuevo si cambia el archivo. Aplica al catálogo, Alianza y propuestas,
+incluidas sus previsualizaciones internas. Evidencia audiovisual:
+`explainers/brag-v2/verification.md`; contrato de reproducción y regresión:
+`docs/user-flows/public-additional-modules-explainer.md`.
+
+## 2026-09-28 — personalización libre de los datos del servicio
+
+Los tres desplegables del modal ofrecen Personalizar con texto debajo. Conservan
+el borrador al alternar y abren textos históricos para edición, sin normalizarlos.
+Se mantienen los límites API de 100/60/60 caracteres y la configuración numérica
+global. Listado y editor esperan el resultado antes de cerrar el modal y muestran
+los errores sin descartar el borrador; el envío pendiente bloquea repeticiones.
+
+> **Organización documental REST/MCP (2026-09-28):** entrega en
+> [PR #441](https://github.com/WeAreProjectApp/projectapp/pull/441). Escrituras
+> compactas, padres estrictos, auditoría, duplicados y movimientos transaccionales,
+> con pruebas focales. El CI final se consulta en el PR. Despliegue conjunto y
+> configuración de la carpeta de estimaciones: [changelog](../docs/changelog/2026-09-28-documents-mcp-3.md).
+> Sin cambios a datos de producción desde la rama.
+
+# MVP de enlaces seguros (2026-09-28)
+
+Implementado en el PR #442 (`feat/28092026-secure-links-mvp`), desde main con
+#418 y #433 integrados. Panel y MCP cubren CRUD; editar datos no descifra el
+contenido y leerlo por MCP requiere permiso explícito y confirmación efímera.
+Las confirmaciones comprueban permisos y cambios posteriores a la vista previa;
+ni su comprobante ni los registros guardan el secreto. El panel conserva
+borradores ante errores, descarta respuestas atrasadas y corrige la página tras
+eliminar su última fila.
+
+Validación local: 59 pruebas unitarias de frontend, 17 E2E del módulo y casos
+focales de API, servicios, permisos y confirmaciones. Recorrido adicional de
+creación, edición, recarga y eliminación contra Django con SQLite aislado.
+Mapas de vistas/flujos y gates de calidad verificados. Migración aditiva
+`secure_links.0002` reservada al deploy; no se cambió la clave de cifrado.
+La causa del incidente productivo documentada en #433 sigue pendiente de
+corroboración. No hubo despliegue.
+
 # Recursos de video y MCPs comerciales — implementados en PR (2026-09-28)
 
 Plan aprobado: conectores independientes para Alianza y Módulos adicionales; carga MP4 hasta 250 MB desde panel/MCP; genérico de propuestas y personalizado dentro de ambas vistas comerciales. Rama `feat/28092026-commercial-video-mcps`; PR #440 abierto. Pruebas focales de carga/reemplazo, permisos y operaciones comerciales aprobadas, incluida transferencia de 250 MiB por HTTP real y carga mediante herramientas MCP por bloques. Once recorridos de navegador verificados. El estado de integración se consulta en el PR; migración y despliegue corresponden al deploy.
@@ -310,7 +354,7 @@ con settings de test y sin migraciones. El diálogo nativo se simula solo en la
 frontera del navegador; la instalación en dispositivos físicos queda como
 comprobación manual posterior al despliegue.
 
-## En curso — Monitoreo operativo (2026-09-19)
+## Monitoreo operativo — código desplegado, integración sin activar (2026-09-28)
 
 Módulo interno para administradores: casos por proyecto/servidor, notas, cierre
 manual y reportes separados. Primera integración: vps-projectapp-prod y sus
@@ -318,12 +362,20 @@ proyectos activos ProjectApp, Mimittos y Tenndalux. Recepción estructurada con
 credenciales limitadas, idempotencia y cola durable local; correo coexistente.
 Silk se habilitará gradualmente mediante deploy, nunca desde el worktree.
 
-Implementación en `feat/19092026-project-monitoring`, PR #393. Incluye catálogo
+Implementación integrada en `main` por el PR #393. Incluye catálogo
 de vistas y flows nuevos, pruebas aisladas de permisos/CSRF/idempotencia/orden,
 historial manual y presupuesto de consultas/retención. Conectores locales en
-el toolkit y exportadores en worktrees independientes de Mimittos/Tenndalux.
-Activación, migraciones productivas y rollout Silk quedan al deploy del operador;
-la sesión entrega PRs abiertos, no los mergea. Runbook: `docs/monitoring.md`.
+el toolkit y exportadores para Mimittos/Tenndalux. Los iconos de Propuestas
+(bolsa con monedas) y Monitoreo (lupa distinta de Hosting) llegaron por el PR #407.
+La revisión del primer alcance contrasta estos cambios con las pruebas focales
+y corrige la ruta documentada de vinculación de recursos. La inspección por
+Tailscale confirmó el código desplegado y las dos migraciones aplicadas, pero
+cero recursos, fuentes, credenciales y entregas. No están instalados el colector,
+el timer, la configuración ni la cola en las rutas del runbook. Los tres proyectos
+declaran Silk deshabilitado y no tienen exports. Pendiente: instalación operativa,
+entrega controlada y posterior rollout gradual de Silk; no se cambió producción.
+Evidencia remota del 2026-09-28 a las 13:43–13:45 UTC y pasos pendientes:
+`docs/audits/2026-09-28-monitoring-first-scope.md`; runbook: `docs/monitoring.md`.
 
 ## Current State
 

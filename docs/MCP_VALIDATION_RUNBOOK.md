@@ -526,26 +526,38 @@ fecha idéntica, formato inválido o motivo vacío deben fallar sin crear audito
 
 ## Comunicaciones: enlaces seguros de un solo uso
 
-Seis herramientas del conector `communications` delegan en
-`secure_links/services.py`, la misma frontera del panel. Es la **única**
-superficie MCP que recibe secretos en claro, y sólo al crear: el contenido se
-cifra de inmediato y ninguna lectura lo devuelve. La URL (token en el
-fragmento `#`) se entrega una sola vez en `create_secure_link`; las lecturas
-nunca la devuelven, para que una credencial filtrada no pueda recolectar enlaces
-vivos. Ninguna clave de argumento con contenido termina en `_id` (el log sólo
-copia `*_id`), y `create_secure_link` es `write`, no `sensitive`, porque un
-intent sensible persistiría sus argumentos.
+Las herramientas de `communications` reutilizan los servicios del panel.
+Crear y actualizar reciben secretos, los cifran y no persisten sus argumentos
+en intents. Sólo la consulta explícita devuelve contenido tras permiso y
+confirmación; listas y detalle siguen siendo metadatos. La URL sólo se devuelve
+al crear. Los logs extraen exclusivamente IDs enteros permitidos de este módulo.
 
 | Herramienta | Riesgo | Verificación |
 |---|---|---|
-| `list_secure_link_types` | read | devuelve los 8 tipos y sus campos obligatorios |
-| `create_secure_link` | write | exige `fields`; devuelve `id`, `url` y vencimiento; sin `fields` responde error y no crea nada |
-| `list_secure_links` / `get_secure_link` | read | estado, vencimiento e historial por `kind`; nunca `url` ni contenido |
-| `revoke_secure_link` | write | el enlace pasa a `revoked` y la página pública muestra "desactivado" |
-| `reactivate_secure_link` | sensitive | primero `confirmation_id`, luego `confirm_action`; el resultado confirmado no incluye la URL |
+| `list_secure_link_types` | read | tipos, incluido Personalizado, y campos obligatorios |
+| `create_secure_link` | write | contenido obligatorio y URL sólo al crear |
+| `list_secure_links` / `get_secure_link` | read | estado e historial; nunca URL ni contenido |
+| `update_secure_link` | write | ID y cambios; fields reemplaza; omitir conserva; editar no reactiva |
+| `delete_secure_link` | sensitive | preview y confirmación; desaparecen enlace y eventos |
+| `reveal_secure_link_content` | sensitive | habilitación explícita en allowed_tools; preview sin secreto; entrega efímera al confirmar |
+| `revoke_secure_link` | write | el enlace queda desactivado |
+| `reactivate_secure_link` | sensitive | confirmación; mismo enlace y nueva vigencia; resultado sin URL |
 
-Rechazos a verificar: tipo inexistente, campo obligatorio vacío, campo ajeno al
-tipo, proyecto de otro cliente y vigencia fuera de 1/3/7/30.
+En MCPs → Credenciales → alcance personalizado, seleccionar explícitamente
+`reveal_secure_link_content`. Una credencial con alcance general no la descubre
+ni ejecuta. Verificar también describe_capabilities, llamada directa y
+confirm_action después de retirar el permiso.
+
+Para lectura/eliminación/reactivación: comprobar confirmación ajena, vencida,
+cancelada o registro cambiado; no debe ejecutar. Repetir una lectura confirmada
+devuelve sólo comprobante, nunca el contenido ni otra auditoría de lectura.
+No inspeccionar secretos reales: usar valores ficticios y comprobar ausencia
+en McpActionIntent (arguments/impact/result), McpRequestLog y mensajes de error.
+Las respuestas deben incluir Cache-Control: no-store.
+
+Comprobar tipo inexistente, campo obligatorio vacío, campo desconocido, título
+vacío/largo, proyecto de otro cliente, secreto inválido en una solicitud de
+confirmación y vigencia fuera de 1/3/7/30. Un error no debe guardar parcialmente.
 
 ## Documentos: eliminación recuperable de observaciones
 
@@ -1026,3 +1038,31 @@ conserva la preferencia; la pública calcula la visibilidad efectiva con ambos
 controles, idioma español y las cuatro opciones disponibles. Verificar PATCH
 válido, rechazo de valor no booleano y conservación de la preferencia al apagar
 el control general; no ejecutar envíos ni migraciones reales.
+
+
+## Documentos 3.0.0 — organización y respuestas compactas
+
+Contrato y cambios incompatibles: [changelog](changelog/2026-09-28-documents-mcp-3.md).
+Validar en entorno de pruebas, con documentos descartables:
+
+1. `describe_capabilities` con `tools: ["update_folder", "move_documents"]` y
+   `summary: true`; repetir sin summary y comprobar el esquema concreto.
+2. Mover carpeta con `data.parent_id`; probar alias `parent`, campo desconocido,
+   ciclo, raíz administrada y destino protegido. Un rechazo no renombra nada.
+3. Crear dos carpetas del mismo nombre/padre (también si la primera está
+   archivada): la segunda responde error con IDs coincidentes. El mutex vuelve
+   a validar al guardar; no se intenta sanear duplicados históricos.
+4. Mover el contrato espejo sólo con `folder_id`; un payload con título o texto
+   se rechaza completo. Consultar contrato/PDF y verificar la misma fuente viva.
+5. Ejecutar cada escritura con un documento grande: sin `include_content` sólo
+   metadatos; con `true`, una clave `markdown`. Leerlo después por su ID.
+6. `move_documents` con un ID inexistente o protegido: resultados por ID y cero
+   cambios. Repetir con dos IDs válidos y comprobar ambos destinos.
+7. Verificar filtros por padre/nombre, conteos archivados y autoría en carpetas.
+8. Renombrar/mover la carpeta configurada para estimates; el resolver por ID debe
+   seguir guardando allí. Configuración ausente falla sin crear carpetas.
+
+Regresiones focales: `test_document_folder_organization.py`,
+`test_document_folder_races.py`, `test_document_organization_api.py`,
+`test_document_moves.py` y `test_create_estimate_document.py`, más respuestas y
+permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.

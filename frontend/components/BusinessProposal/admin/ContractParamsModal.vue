@@ -2,7 +2,9 @@
   <BaseModal
     :model-value="visible"
     :kind="contractSource === 'custom' && showPreview ? 'wizard' : 'form-wide'"
-    @update:model-value="(v) => !v && $emit('cancel')"
+    :close-on-backdrop="!saving"
+    :close-on-esc="!saving"
+    @update:model-value="(v) => !v && !saving && $emit('cancel')"
   >
     <div>
       <div class="sticky top-0 bg-surface border-b border-border-muted px-6 py-4 rounded-t-2xl z-10">
@@ -17,6 +19,7 @@
           </div>
 
           <form :id="modalFormId" class="px-6 py-5 space-y-6" @submit.prevent="handleSubmit">
+            <fieldset :disabled="saving" class="min-w-0 space-y-6">
             <!-- Source toggle -->
             <BaseSegmented
               v-model="contractSource"
@@ -238,12 +241,13 @@
               </fieldset>
             </template>
 
-            <!-- Actions -->
+            </fieldset>
           </form>
     </div>
     <template #footer>
+      <p v-if="saveError?.message" role="alert" class="mb-3 text-sm text-danger-strong">{{ saveError.message }}</p>
       <BaseModalActions>
-        <BaseButton variant="ghost" size="md" @click="$emit('cancel')">
+        <BaseButton variant="ghost" size="md" :disabled="saving" :disabled-reason="t('serviceContract.contractSaving')" @click="!saving && $emit('cancel')">
           Cancelar
         </BaseButton>
         <BaseButton
@@ -252,7 +256,7 @@
           size="md"
           :loading="saving"
           :disabled="saving || serviceSettingsBlocked || (contractSource === 'custom' && !customMarkdown.trim())"
-          :disabled-reason="serviceSettingsBlocked ? t('serviceContract.loadError') : ''"
+          :disabled-reason="saving ? t('serviceContract.contractSaving') : serviceSettingsBlocked ? t('serviceContract.loadError') : ''"
         >
           {{ saving ? 'Generando...' : submitLabel }}
         </BaseButton>
@@ -277,6 +281,7 @@ const props = defineProps({
   initialParams: { type: Object, default: () => ({}) },
   isEditing: { type: Boolean, default: false },
   saving: { type: Boolean, default: false },
+  saveError: { type: Object, default: null },
   // Document being generated or edited: 'combined', 'product' or 'service'.
   variant: { type: String, default: 'combined' },
 });
@@ -298,6 +303,13 @@ const contractSource = ref('default');
 const customMarkdown = ref('');
 const showPreview = ref(false);
 const formErrors = ref({});
+watch(() => props.saveError, error => {
+  const fields = error?.fieldErrors || {};
+  formErrors.value = {
+    ...fields,
+    customMarkdown: fields[variantSpec.value.customKey] || '',
+  };
+});
 const loadingDefaults = ref(false);
 const formRevision = ref(0);
 const serviceSettingsReady = computed(() => validServiceContractSettings(companyDefaults.value.service_contract_settings));
@@ -436,10 +448,15 @@ function validate() {
       errors.contractor_identity = 'Indica el NIT o la cédula del contratista';
     }
     if (props.variant === 'service') {
-      for (const { key } of SERVICE_CONTRACT_FIELDS) {
+      for (const { key, duration } of SERVICE_CONTRACT_FIELDS) {
         const value = form.value[key];
-        if (!value?.toString().trim() || (typeof value === 'number' && serviceTermNumber(value) === null)) {
+        const max = duration ? 100 : 60;
+        if (!value?.toString().trim()) {
+          errors[key] = t('serviceContract.requiredTerm');
+        } else if (typeof value === 'number' && serviceTermNumber(value) === null) {
           errors[key] = t('serviceContract.invalidNumber');
+        } else if (typeof value === 'string' && [...value].length > max) {
+          errors[key] = t('serviceContract.termTooLong', { max });
         }
       }
     }
@@ -459,7 +476,7 @@ function validate() {
 // only sends its own source and text; the service terms travel with the
 // service contract only.
 function handleSubmit() {
-  if (!validate()) return;
+  if (props.saving || !validate()) return;
   const { sourceKey, customKey } = variantSpec.value;
   if (contractSource.value === 'custom') {
     emit('confirm', {

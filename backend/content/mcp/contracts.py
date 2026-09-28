@@ -127,7 +127,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.DocumentFolder',
-            read_only='id slug managed_project managed_client created_at updated_at',
+            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source',
             read_write='name parent project client_user order',
             excluded=(
                 _excluded(_AUTOMATION_STATE, 'system_key')
@@ -533,7 +533,7 @@ MCP_MODEL_CONTRACTS = {
             read_write='secret_type title language client project validity_days',
             excluded=(
                 _excluded(
-                    'Contenido cifrado: el MCP sólo lo recibe al crear y nunca lo devuelve.',
+                    'Cifrado interno; crear/actualizar reciben fields y la lectura explícita confirmada devuelve contenido, nunca ciphertext.',
                     'payload_encrypted',
                 )
                 | _excluded(

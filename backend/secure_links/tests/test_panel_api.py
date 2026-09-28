@@ -12,7 +12,13 @@ pytestmark = pytest.mark.django_db
 BASE = '/api/secure-links/'
 
 
-@pytest.mark.parametrize('path,method', [
+def create_page_links(make_link, count):
+    """Create enough deterministic links to exercise one list page boundary."""
+    for position in range(count):
+        make_link(title=f'Paged link {position:02d}')
+
+
+@pytest.mark.parametrize(('path', 'method'), [
     ('', 'get'), ('create/', 'post'), ('1/', 'get'), ('1/content/', 'post'),
     ('1/link/', 'post'), ('1/reactivate/', 'post'), ('1/revoke/', 'post'),
 ])
@@ -21,7 +27,8 @@ def test_panel_endpoints_reject_anonymous_and_non_staff(path, method, regular_cl
     anonymous = getattr(APIClient(), method)(BASE + path, {}, format='json')
     regular = getattr(regular_client, method)(BASE + path, {}, format='json')
 
-    assert anonymous.status_code == 403 and regular.status_code == 403
+    assert anonymous.status_code == 403
+    assert regular.status_code == 403
 
 
 def test_create_returns_url_once_and_list_never_exposes_it(staff_client, client_profile, project):
@@ -33,8 +40,10 @@ def test_create_returns_url_once_and_list_never_exposes_it(staff_client, client_
     listing = staff_client.get(BASE)
 
     token = token_from(created.json()['url'])
-    assert created.status_code == 201 and created.json()['client_name'] == 'Ana Cliente'
-    assert token not in str(listing.json()) and CREDENTIALS['password'] not in str(listing.json())
+    assert created.status_code == 201
+    assert created.json()['client_name'] == 'Ana Cliente'
+    assert token not in str(listing.json())
+    assert CREDENTIALS['password'] not in str(listing.json())
     assert listing.json()['counts']['active'] == 1
 
 
@@ -44,7 +53,8 @@ def test_create_reports_field_errors(staff_client):
         'secret_type': 'credentials', 'title': 'Sin clave', 'fields': {'username': 'admin'},
     }, format='json')
 
-    assert response.status_code == 400 and 'password' in response.json()
+    assert response.status_code == 400
+    assert 'password' in response.json()
 
 
 def test_panel_view_does_not_consume_and_is_audited(staff_client, make_link):
@@ -54,7 +64,8 @@ def test_panel_view_does_not_consume_and_is_audited(staff_client, make_link):
     response = staff_client.post(f'{BASE}{link.pk}/content/')
 
     link.refresh_from_db()
-    assert response.status_code == 200 and response['Cache-Control'] == 'no-store, max-age=0'
+    assert response.status_code == 200
+    assert response['Cache-Control'] == 'no-store, max-age=0'
     assert link.status == 'active'
     assert link.events.filter(kind=SecureLinkEvent.Kind.PANEL_VIEWED).exists()
 
@@ -77,8 +88,10 @@ def test_reactivate_and_revoke_through_panel(staff_client, make_link):
     reactivated = staff_client.post(f'{BASE}{link.pk}/reactivate/', {'validity_days': 7}, format='json')
     reopened = APIClient().post(BASE + 'public/reveal/', {'token': token_from(url)}, format='json')
 
-    assert revoked.json()['status'] == 'revoked' and blocked.json()['code'] == 'link_revoked'
-    assert reactivated.json()['status'] == 'active' and reactivated.json()['url'] == url
+    assert revoked.json()['status'] == 'revoked'
+    assert blocked.json()['code'] == 'link_revoked'
+    assert reactivated.json()['status'] == 'active'
+    assert reactivated.json()['url'] == url
     assert reopened.status_code == 200
 
 
@@ -89,7 +102,8 @@ def test_received_filter_and_unopened_counter(staff_client, make_link):
 
     response = staff_client.get(BASE, {'received': 'true'})
 
-    assert response.json()['count'] == 1 and response.json()['unopened_received'] == 1
+    assert response.json()['count'] == 1
+    assert response.json()['unopened_received'] == 1
     assert response.json()['results'][0]['team_only'] is True
 
 
@@ -101,7 +115,8 @@ def test_detail_includes_events_and_delete_removes_link(staff_client, make_link)
     deleted = staff_client.delete(f'{BASE}{link.pk}/')
 
     assert [event['kind'] for event in detail.json()['events']] == ['created']
-    assert deleted.status_code == 204 and not SecureLink.objects.exists()
+    assert deleted.status_code == 204
+    assert SecureLink.objects.exists() is False
 
 
 def test_patch_rejects_project_from_other_client(staff_client, make_link, project, db):
@@ -115,4 +130,98 @@ def test_patch_rejects_project_from_other_client(staff_client, make_link, projec
 
     response = staff_client.patch(f'{BASE}{link.pk}/', {'client': other.pk, 'project': project.pk}, format='json')
 
-    assert response.status_code == 400 and response.json()['code'] == 'project_client_mismatch'
+    assert response.status_code == 400
+    assert response.json()['code'] == 'project_client_mismatch'
+
+
+def test_panel_patch_updates_metadata_without_invalidating_the_public_token(
+    staff_client, make_link, client_profile, project,
+):
+    """Falla si editar metadatos cambia la capacidad pública del enlace."""
+    from secure_links import services
+
+    link, url = make_link(title='Original', client=client_profile, project=project)
+
+    response = staff_client.patch(f'{BASE}{link.pk}/', {
+        'title': 'Edited title', 'client': client_profile.pk, 'project': project.pk,
+    }, format='json')
+
+    refreshed, content = services.reveal(token_from(url))
+    assert response.status_code == 200
+    assert response.json()['title'] == 'Edited title'
+    assert refreshed.pk == link.pk
+    assert content['title'] == 'Edited title'
+
+
+def test_panel_patch_encrypts_replacement_content_without_auditing_its_value(
+    staff_client, make_link,
+):
+    """Falla si editar contenido lo deja legible o lo copia al historial."""
+    from secure_links import services
+
+    replacement = {**CREDENTIALS, 'password': 'Panel-updated-password'}
+    link, _url = make_link()
+
+    response = staff_client.patch(
+        f'{BASE}{link.pk}/', {'fields': replacement}, format='json',
+    )
+
+    link.refresh_from_db()
+    event = link.events.get(kind=SecureLinkEvent.Kind.UPDATED)
+    fields = {field['key']: field['value'] for field in services.content_for(link)['fields']}
+    assert response.status_code == 200
+    assert fields['password'] == replacement['password']
+    assert replacement['password'] not in link.payload_encrypted
+    assert replacement['password'] not in str(event.details)
+
+
+def test_panel_patch_requires_csrf_for_an_authenticated_staff_session(staff_user, make_link):
+    """Falla si una sesión del panel puede editar un enlace sin token CSRF."""
+    client = APIClient(enforce_csrf_checks=True)
+    client.force_login(staff_user)
+    link, _url = make_link()
+
+    response = client.patch(f'{BASE}{link.pk}/', {'title': 'CSRF edit'}, format='json')
+
+    link.refresh_from_db()
+    assert response.status_code == 403
+    assert link.title == 'Admin producción'
+
+
+def test_panel_delete_requires_csrf_for_an_authenticated_staff_session(staff_user, make_link):
+    """Falla si una sesión del panel puede borrar un enlace sin token CSRF."""
+    client = APIClient(enforce_csrf_checks=True)
+    client.force_login(staff_user)
+    link, _url = make_link()
+
+    response = client.delete(f'{BASE}{link.pk}/', format='json')
+
+    assert response.status_code == 403
+    assert SecureLink.objects.filter(pk=link.pk).exists() is True
+
+
+@pytest.mark.parametrize('method', ['patch', 'delete'])
+def test_panel_mutation_rejects_users_without_staff_access(method, regular_client):
+    """Falla si alguien fuera del equipo puede editar o borrar un enlace seguro."""
+    anonymous = getattr(APIClient(), method)(f'{BASE}1/', {}, format='json')
+    regular = getattr(regular_client, method)(f'{BASE}1/', {}, format='json')
+
+    assert anonymous.status_code == 403
+    assert regular.status_code == 403
+
+
+def test_panel_list_clamps_page_after_deleting_its_last_row(staff_client, make_link):
+    """Falla si borrar la única fila de la página dos deja el panel en una página vacía."""
+    create_page_links(make_link, 26)
+    second_page = staff_client.get(BASE, {'page': 2})
+    final_link_id = second_page.json()['results'][0]['id']
+
+    deleted = staff_client.delete(f'{BASE}{final_link_id}/')
+    clamped = staff_client.get(BASE, {'page': 2})
+
+    assert second_page.json()['count'] == 26
+    assert len(second_page.json()['results']) == 1
+    assert deleted.status_code == 204
+    assert clamped.json()['page'] == 1
+    assert clamped.json()['count'] == 25
+    assert len(clamped.json()['results']) == 25

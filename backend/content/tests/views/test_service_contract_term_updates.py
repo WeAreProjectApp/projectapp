@@ -1,4 +1,6 @@
 """Normalized and legacy service terms at the contract-update boundary."""
+from importlib import import_module
+
 import pytest
 from django.urls import reverse
 
@@ -123,6 +125,60 @@ def test_invalid_numeric_service_term_is_rejected_without_changing_proposal(
 
     response = admin_client.patch(
         _update_url(service_proposal), _service_payload(payload_terms), format='json',
+    )
+    service_proposal.refresh_from_db()
+
+    assert response.status_code == 400
+    assert term_key in response.data
+    assert service_proposal.contract_params == before
+
+
+@pytest.mark.parametrize(
+    ('term_key', 'wording'),
+    [
+        ('service_initial_term', 'dieciocho (18) meses iniciales'),
+        ('service_renewal_notice_days', 'cuarenta y cinco (45)'),
+        ('service_termination_notice_days', 'setenta y cinco (75)'),
+    ],
+)
+def test_custom_wording_round_trips_through_contract_detail(
+    admin_client, service_proposal, contract_template, term_key, wording,
+):
+    """Fails if free text is lost between saving, reloading and generating the contract."""
+    # The shared minimal fixture omits both notices; use the shipped template
+    # to exercise their actual insertion into the generated document.
+    contract_template.service_content_markdown = import_module(
+        'content.migrations.0266_seed_service_contract_text',
+    ).SERVICE_CONTRACT_MARKDOWN
+    contract_template.save(update_fields=['service_content_markdown'])
+    response = admin_client.patch(
+        _update_url(service_proposal),
+        _service_payload({term_key: wording}), format='json',
+    )
+
+    detail = admin_client.get(
+        reverse('retrieve-proposal', kwargs={'proposal_id': service_proposal.pk}),
+    )
+    document = ProposalDocument.objects.get(
+        proposal=service_proposal, document_type=ProposalDocument.DOC_TYPE_CONTRACT_SERVICE,
+    )
+
+    assert response.status_code == 200
+    assert detail.data['contract_params'][term_key] == wording
+    assert wording in document.content_markdown
+
+
+@pytest.mark.parametrize('term_key', sorted(LEGACY_TERMS))
+@pytest.mark.parametrize('invalid_text', ['   ', 'a' * 101])
+def test_invalid_text_is_rejected_without_overwriting_saved_terms(
+    admin_client, service_proposal, term_key, invalid_text,
+):
+    """Fails if a blank or overlong custom draft replaces the last saved contract."""
+    before = dict(service_proposal.contract_params)
+
+    response = admin_client.patch(
+        _update_url(service_proposal),
+        _service_payload({term_key: invalid_text}), format='json',
     )
     service_proposal.refresh_from_db()
 

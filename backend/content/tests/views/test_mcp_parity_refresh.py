@@ -114,8 +114,7 @@ def test_create_document_derives_the_client_from_its_project(
     result = payload(response)
     document = Document.objects.get(pk=result['id'])
     assert document.client_user_id == client.user_id
-    assert result['client_id'] == client.id
-    assert result['project_id'] == project.id
+    assert document.project_id == project.id
 
 
 def test_create_document_rejects_a_project_from_another_client(

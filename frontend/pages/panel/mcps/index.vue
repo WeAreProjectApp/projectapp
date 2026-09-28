@@ -402,6 +402,10 @@
           />
         </label>
 
+        <p v-if="credentialModal.connector?.slug === 'communications'" class="mt-2 text-sm text-text-muted" data-testid="mcp-secret-permission-notice">
+          {{ t('secureLinks.panel.mcpPermissionNotice') }}
+        </p>
+
         <div v-if="credentialModal.scopeMode === 'custom'" class="mt-4 rounded-xl border border-border-muted p-3">
           <BaseInput
             v-model="credentialModal.search"
@@ -503,6 +507,7 @@ import { formatDateTime as formatDate } from '~/utils/formatDate';
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useMcpsStore();
+const { t } = useI18n();
 const notify = usePanelNotify();
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
 

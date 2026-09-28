@@ -6,30 +6,24 @@ list folders, list/read markdown documents, and create/edit/delete them.
 Documents are authored in Markdown; the panel turns them into branded PDFs
 downstream, so producing correct Markdown is enough here.
 
-Guardrails baked in:
-- Only MARKDOWN-type documents are visible or mutable. Commercial
-  collection accounts (cuentas de cobro) live in the same table and are
-  deliberately out of reach.
-- Published documents cannot be deleted (unpublish first or use the panel).
-- Folders can be listed, created and renamed, but not deleted, so the MCP
-  cannot dismantle the existing structure. Archivar una carpeta arrastra su
-  contenido en cascada, así que por la misma razón tampoco se expone: es una
-  acción del panel. Lo archivado simplemente deja de verse desde aquí.
+Write contracts:
+- Native content tools handle active Markdown documents; generated snapshots remain protected.
+- The live contract permits only folder moves. Content comes from its linked template.
+- Writes return compact metadata unless include_content=true requests Markdown.
+- Folder names/slugs are distinct: renames preserve the stable slug.
 
 Each entry: {'name', 'description', 'input_schema', 'handler'}. Handlers
 receive the raw `arguments` dict, return a JSON-serializable dict, and raise
 ToolError for business errors. They reuse the exact same parser and
 document_type helpers as the panel so the PDF pipeline stays identical.
 """
-import hashlib
 import json
-
-from django.utils import timezone
-from django.utils.dateparse import parse_datetime
-from rest_framework import serializers
 
 from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
+from django.utils import timezone
+from django.utils.dateparse import parse_datetime
+from rest_framework import serializers
 
 from content.mcp.actor import mcp_actor
 from content.mcp.protocol import ToolError
@@ -40,8 +34,15 @@ from content.models import (
     DocumentState,
     DocumentStateEpisode,
 )
-from content.serializers.document import apply_client_project_association
-from content.serializers.document_folder import DocumentFolderSerializer
+from content.serializers.document import (
+    DocumentCreateUpdateSerializer,
+    apply_client_project_association,
+)
+from content.serializers.document_folder import (
+    DocumentFolderFilterSerializer,
+    DocumentFolderSerializer,
+    filter_folders,
+)
 from content.services.contract_mirror_service import (
     CONTRACT_MIRROR_BLOCKER,
     CONTRACT_MIRROR_MESSAGE,
@@ -49,11 +50,6 @@ from content.services.contract_mirror_service import (
     mirror_markdown,
 )
 from content.services.document_content import build_content_json
-from content.services.document_notes import (
-    DocumentNotesValidationError, normalize_client_custom_notes,
-)
-from content.services.document_type_codes import MARKDOWN
-from content.services.document_type_utils import get_markdown_document_type
 from content.services.document_note_service import (
     DocumentNoteError,
     create_note,
@@ -62,10 +58,25 @@ from content.services.document_note_service import (
     restore_note,
     sync_legacy_notes,
 )
+from content.services.document_notes import (
+    DocumentNotesValidationError,
+    normalize_client_custom_notes,
+)
 from content.services.document_state_service import (
     DocumentStateError,
     close_episode,
     open_state,
+)
+from content.services.document_type_codes import MARKDOWN
+from content.services.document_type_utils import get_markdown_document_type
+from content.services.document_write_service import (
+    DOCUMENT_WRITE_SCHEMA,
+    document_capabilities,
+    document_write_payload,
+    include_content_value,
+)
+from content.services.document_write_service import (
+    document_etag as _document_etag,
 )
 
 LANGUAGE_CHOICES = {c[0] for c in Document.Language.choices}
@@ -213,6 +224,13 @@ def _folder_payload(folder):
     )
     return {
         'id': folder.id,
+        'slug': folder.slug,
+        'created_at': folder.created_at.isoformat(),
+        'updated_at': folder.updated_at.isoformat(),
+        'created_by': DocumentFolderSerializer().get_created_by(folder),
+        'creation_source': folder.creation_source,
+        'archived_document_count': DocumentFolderSerializer().get_archived_document_count(folder),
+        'archived_children_count': DocumentFolderSerializer().get_archived_children_count(folder),
         'name': folder.name,
         'path': _folder_path(folder),
         'parent_id': folder.parent_id,
@@ -296,11 +314,7 @@ def _doc_summary(doc):
         'updated_at': doc.updated_at.isoformat() if doc.updated_at else None,
         'created_at': doc.created_at.isoformat() if doc.created_at else None,
         'etag': _document_etag(doc),
-        'editable': (
-            not doc.is_archived
-            and doc.document_type.code == MARKDOWN
-            and not is_contract_mirror(doc)
-        ),
+        **document_capabilities(doc),
         'edit_blockers': [CONTRACT_MIRROR_BLOCKER] if is_contract_mirror(doc) else [],
         'is_contract_mirror': is_contract_mirror(doc),
     }
@@ -317,7 +331,6 @@ def _doc_detail(doc):
     return {
         **_doc_summary(doc),
         'markdown': markdown,
-        'content_markdown': markdown,
         'client_email_subject': doc.client_email_subject,
         'client_email_body': doc.client_email_body,
         'client_whatsapp_message': doc.client_whatsapp_message,
@@ -341,11 +354,6 @@ def _doc_detail(doc):
         'include_subportada': doc.include_subportada,
         'include_contraportada': doc.include_contraportada,
     }
-
-
-def _document_etag(doc):
-    source = f'document:{doc.pk}:{doc.updated_at.isoformat() if doc.updated_at else ""}'
-    return hashlib.sha256(source.encode('utf-8')).hexdigest()
 
 
 def _check_document_etag(doc, arguments):
@@ -444,50 +452,52 @@ def _client_custom_notes_value(arguments):
 
 # ── Handlers ─────────────────────────────────────────────────────────────────
 
+def _serializer_error(errors):
+    message = errors.get('detail')
+    if isinstance(message, (list, tuple)):
+        message = ' '.join(str(value) for value in message)
+    if not message:
+        message = 'Datos inválidos: ' + json.dumps(
+            errors, ensure_ascii=False, default=str,
+        )
+    return ToolError(str(message), details=dict(errors))
+
+
+def _valid_serializer(serializer):
+    if not serializer.is_valid():
+        raise _serializer_error(serializer.errors)
+    return serializer
+
+
+def _save_folder(serializer):
+    try:
+        return serializer.save()
+    except serializers.ValidationError as exc:
+        raise _serializer_error(exc.detail) from exc
+
+
 def list_folders(arguments):
-    folders = DocumentFolder.objects.filter(is_archived=False).select_related(
-        'parent', 'project', 'client_user__profile',
-        'managed_project__current_state',
-    )
+    from content.views.document_folder import _annotated_folders
+    filters = _valid_serializer(DocumentFolderFilterSerializer(data=arguments)).validated_data
+    folders = filter_folders(_annotated_folders('active'), filters).select_related('parent')
     return {'folders': [_folder_payload(f) for f in folders]}
 
 
 def create_folder(arguments):
-    name = (arguments.get('name') or '').strip()
-    if not name:
-        raise ToolError('El nombre de la carpeta es obligatorio.')
-    parent = _resolve_folder(arguments.get('parent_id'))
-    serializer = DocumentFolderSerializer(data={
-        'name': name,
-        'parent': parent.pk if parent else None,
-    })
-    if not serializer.is_valid():
-        raise ToolError(
-            'Datos inválidos: ' + json.dumps(
-                serializer.errors, ensure_ascii=False, default=str,
-            )
-        )
-    folder = serializer.save()
-    return _folder_payload(folder)
+    serializer = _valid_serializer(DocumentFolderSerializer(data=arguments))
+    return _folder_payload(_save_folder(serializer))
 
 
 def rename_folder(arguments):
     folder_id = arguments.get('folder_id')
-    if folder_id in (None, '', 'none', 'null'):
+    if folder_id is None:
         raise ToolError('folder_id es obligatorio para renombrar una carpeta.')
     folder = _resolve_folder(folder_id)
-    if folder.managed_project_id:
-        raise ToolError(
-            'La raíz de un proyecto se renombra desde el módulo Proyectos.'
-        )
-    name = (arguments.get('name') or '').strip()
-    if not name:
-        raise ToolError('El nuevo nombre de la carpeta es obligatorio.')
-    # The slug is set once on creation and left untouched, so links and PDF
-    # references stay stable when only the display name changes.
-    folder.name = name
-    folder.save(update_fields=['name', 'updated_at'])
-    return _folder_payload(folder)
+    if 'name' not in arguments:
+        raise ToolError('El nuevo nombre es obligatorio.')
+    data = {key: value for key, value in arguments.items() if key != 'folder_id'}
+    serializer = _valid_serializer(DocumentFolderSerializer(folder, data=data, partial=True))
+    return _folder_payload(_save_folder(serializer))
 
 
 def list_documents(arguments):
@@ -577,13 +587,27 @@ def create_document(arguments):
     )
     doc.content_json = build_content_json(doc, markdown_text)
     doc.save()
-    return _doc_detail(doc)
+    return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
 
 def update_document(arguments):
     doc = _get_markdown_doc_or_error(arguments.get('document_id'))
-    _refuse_contract_mirror(doc)
+    if doc.is_generated_snapshot:
+        raise ToolError(
+            'Un documento generado no admite cambios manuales.',
+            code='NOT_EDITABLE',
+            details={'edit_blockers': ['generated_snapshot']},
+        )
     _check_document_etag(doc, arguments)
+    changes = set(arguments) - {'document_id', 'include_content', 'if_match'}
+    if is_contract_mirror(doc) and changes != {'folder_id'}:
+        _refuse_contract_mirror(doc)
+    if changes == {'folder_id'}:
+        serializer = _valid_serializer(DocumentCreateUpdateSerializer(
+            doc, data={'folder_id': arguments['folder_id']}, partial=True,
+        ))
+        doc = serializer.save(updated_by=mcp_actor())
+        return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
     if 'markdown' in arguments and 'content_markdown' in arguments:
         if arguments['markdown'] != arguments['content_markdown']:
@@ -667,7 +691,7 @@ def update_document(arguments):
     doc.save(update_fields=list(update_fields) + ['updated_at'])
     if 'client_custom_notes' in arguments:
         sync_legacy_notes(doc, actor=doc.updated_by)
-    return _doc_detail(doc)
+    return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
 
 def append_document(arguments):
@@ -697,7 +721,7 @@ def append_document(arguments):
     )
     doc.content_json = build_content_json(doc, doc.content_markdown)
     doc.save(update_fields=['content_markdown', 'content_json', 'updated_at'])
-    return _doc_detail(doc)
+    return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
 
 def delete_document(arguments):
@@ -761,7 +785,7 @@ def set_document_state(arguments):
         )
     except DocumentStateError as exc:
         raise ToolError(str(exc)) from exc
-    return _doc_summary(doc) | {'opened_episode_id': episode.id}
+    return document_write_payload(doc) | {'opened_episode_id': episode.id}
 
 
 def close_document_state(arguments):
@@ -972,7 +996,7 @@ DOCUMENT_TOOLS = [
             'properties': {
                 'name': {'type': 'string', 'description': 'Nombre de la carpeta.'},
                 'parent_id': {
-                    'type': 'integer',
+                    'type': ['integer', 'null'],
                     'description': 'ID de la carpeta padre (omitir para raíz).',
                 },
             },
@@ -1030,9 +1054,9 @@ DOCUMENT_TOOLS = [
         'name': 'read_document',
         'description': (
             'Devuelve un documento markdown completo, incluida su asociación a '
-            'cliente/proyecto, content_markdown, estados y notas privadas. El '
+            'cliente/proyecto, markdown, estados y notas privadas. El '
             'contrato vigente (is_contract_mirror) devuelve el borrador '
-            'completo en vivo y es de solo lectura.'
+            'completo en vivo: contenido de solo lectura; ubicación editable mediante folder_id.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1056,7 +1080,7 @@ DOCUMENT_TOOLS = [
             'properties': {
                 'title': {'type': 'string'},
                 'markdown': {'type': 'string', 'description': 'Contenido en Markdown.'},
-                'folder_id': {'type': 'integer', 'description': 'Carpeta destino (opcional).'},
+                'folder_id': {'type': ['integer', 'null'], 'description': 'Carpeta destino (opcional).'},
                 'language': {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
                 'client_name': {'type': 'string'},
                 **_CLIENT_PROJECT_PROPS,
@@ -1077,8 +1101,8 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) no se edita: responde '
-            'NOT_EDITABLE con edit_blockers ["contract_mirror"].'
+            'contrato vigente (is_contract_mirror) sólo admite folder_id; '
+            'su contenido no se edita.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1305,3 +1329,50 @@ DOCUMENT_TOOLS = [
         'handler': restore_document_note,
     },
 ]
+
+
+_FOLDER_FIELDS = {
+    'name': {'type': 'string', 'minLength': 1, 'maxLength': 120},
+    'parent_id': {'type': ['integer', 'null'], 'minimum': 1},
+    'parent': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Alias compatible de parent_id.'},
+    'order': {'type': 'integer', 'minimum': 0},
+    'client': {'type': ['integer', 'null'], 'minimum': 1},
+    'project': {'type': ['integer', 'null'], 'minimum': 1},
+}
+
+
+def _validated_document_tool(handler, properties):
+    def wrapped(arguments):
+        if not isinstance(arguments, dict):
+            raise ToolError('Los argumentos deben ser un objeto.')
+        unknown = set(arguments) - set(properties)
+        if unknown:
+            raise ToolError('Campos desconocidos.', details={'fields': sorted(unknown)})
+        if 'include_content' in properties:
+            try:
+                include_content_value(arguments)
+            except serializers.ValidationError as exc:
+                raise ToolError('include_content debe ser true o false.', details=dict(exc.detail)) from exc
+        return handler(arguments)
+    return wrapped
+
+
+for _tool in DOCUMENT_TOOLS:
+    _schema = _tool['input_schema']
+    if _tool['name'] == 'create_folder':
+        _schema['properties'] = _FOLDER_FIELDS.copy()
+        _tool['description'] += ' Rechaza nombres duplicados, incluso archivados. El slug permanece estable.'
+    if _tool['name'] == 'list_folders':
+        _schema['properties'] = {
+            'parent_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Omitir: todos; null: raíz; entero: hijos directos.'},
+            'name': {'type': 'string', 'maxLength': 120, 'description': 'Nombre exacto, sin distinguir mayúsculas.'},
+        }
+    if _tool['name'] == 'rename_folder':
+        _tool['description'] += ' El slug no cambia al renombrar.'
+    if _tool['name'] in ('create_document', 'update_document', 'append_document'):
+        _tool['output_schema'] = DOCUMENT_WRITE_SCHEMA
+        _schema['properties']['include_content'] = {'type': 'boolean', 'default': False}
+        _tool['description'] += ' Devuelve un resumen; include_content=true añade markdown una sola vez.'
+    if _tool['name'] in ('create_folder', 'rename_folder', 'list_folders', 'create_document', 'update_document', 'append_document'):
+        _schema['additionalProperties'] = False
+        _tool['handler'] = _validated_document_tool(_tool['handler'], _schema['properties'])

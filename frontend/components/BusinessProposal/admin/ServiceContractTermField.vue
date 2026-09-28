@@ -1,6 +1,6 @@
 <script setup>
 import { computed, ref, useId, watch } from 'vue';
-import { formatServiceTerm, savedServiceTermNumber, serviceTermNumber } from '~/utils/serviceContractTerms';
+import { formatServiceTerm, savedServiceTermNumber } from '~/utils/serviceContractTerms';
 
 const props = defineProps({
   modelValue: { type: [Number, String], default: '' },
@@ -13,60 +13,67 @@ const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const id = useId();
 const selection = ref('');
-const customValue = ref('');
-const savedValue = ref('');
+// null means Personalizar has not been opened yet; an empty draft is intentional.
+const customValue = ref(null);
 let emittedValue;
 
 watch(() => props.modelValue, value => {
-  // An internal edit must not collapse Personalizado when its number is a preset.
+  // Echoes from v-model must preserve the custom draft and the user's mode.
   if (value === emittedValue) return;
   const number = savedServiceTermNumber(value, props.duration);
-  savedValue.value = number === null && value ? String(value) : '';
-  customValue.value = number ?? '';
-  selection.value = savedValue.value ? 'saved' : props.options.includes(number) ? String(number) : 'custom';
+  selection.value = props.options.includes(number) ? String(number) : 'custom';
+  customValue.value = selection.value === 'custom'
+    ? (typeof value === 'number' ? formatServiceTerm(value, props.duration) : value)
+    : null;
 }, { immediate: true });
 
 const choices = computed(() => [
   ...props.options.map(value => ({ value: String(value), label: formatServiceTerm(value, props.duration) })),
   { value: 'custom', label: t('serviceContract.custom') },
-  ...(savedValue.value ? [{ value: 'saved', label: t('serviceContract.savedValue') }] : []),
 ]);
-const preview = computed(() => formatServiceTerm(customValue.value, props.duration));
 
-function update() {
-  emittedValue = selection.value === 'saved' ? savedValue.value
-    : selection.value === 'custom' ? (serviceTermNumber(customValue.value) ?? '')
-      : Number(selection.value);
-  emit('update:modelValue', emittedValue);
+function publish(value) {
+  emittedValue = value;
+  emit('update:modelValue', value);
+}
+
+function select(value) {
+  if (value === 'custom' && customValue.value === null) {
+    customValue.value = formatServiceTerm(Number(selection.value), props.duration);
+  }
+  selection.value = value;
+  publish(value === 'custom' ? customValue.value : Number(value));
+}
+
+function edit(value) {
+  customValue.value = value;
+  publish(value);
 }
 </script>
 
 <template>
   <div class="space-y-2">
     <BaseFormField :label="label" :for="id" required size="sm" label-policy="wrap" :error="selection !== 'custom' ? error : ''">
-      <BaseSelect :id="id" v-model="selection" size="sm" :options="choices" @update:model-value="update" />
+      <BaseSelect :id="id" :model-value="selection" size="sm" :options="choices" @update:model-value="select" />
     </BaseFormField>
     <BaseFormField
       v-if="selection === 'custom'"
       :label="t('serviceContract.customLabel', { field: label })"
       :for="`${id}-custom`"
       :error="error"
-      :hint="t(duration ? 'serviceContract.monthsHint' : 'serviceContract.daysHint')"
+      :hint="t(duration ? 'serviceContract.customDurationHint' : 'serviceContract.customNoticeHint')"
+      required
       size="sm"
       label-policy="wrap"
     >
       <BaseInput
         :id="`${id}-custom`"
-        v-model="customValue"
-        type="number"
-        min="1"
-        max="999"
-        step="1"
+        :model-value="customValue"
+        type="text"
+        :maxlength="duration ? 100 : 60"
         size="sm"
-        @update:model-value="update"
+        @update:model-value="edit"
       />
-      <p v-if="preview" class="mt-1 text-sm text-text-muted" aria-live="polite">{{ preview }}</p>
     </BaseFormField>
-    <p v-if="selection === 'saved'" class="break-words text-sm text-text-muted">{{ savedValue }}</p>
   </div>
 </template>

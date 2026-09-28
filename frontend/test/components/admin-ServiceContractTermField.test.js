@@ -6,11 +6,10 @@ import ServiceContractTermField from '../../components/BusinessProposal/admin/Se
 
 global.useI18n = () => ({
   t: (key, values = {}) => ({
-    'serviceContract.custom': 'Personalizado',
-    'serviceContract.savedValue': 'Valor guardado',
+    'serviceContract.custom': 'Personalizar',
     'serviceContract.customLabel': `${values.field}: valor personalizado`,
-    'serviceContract.monthsHint': 'Meses enteros, de 1 a 999.',
-    'serviceContract.daysHint': 'Días calendario enteros, de 1 a 999.',
+    'serviceContract.customDurationHint': 'Incluye la unidad.',
+    'serviceContract.customNoticeHint': 'La plantilla agrega días calendario.',
   }[key] || key),
 });
 
@@ -43,52 +42,73 @@ describe('ServiceContractTermField', () => {
     expect(wrapper.emitted('update:modelValue')[0][0]).toBe(9);
   });
 
-  it('previews a custom duration before emitting its number', async () => {
-    // Falla si el valor personalizado se guarda como texto distinto al que el contrato mostrará.
+  it('emits the custom contractual wording literally', async () => {
+    // Falla si el campo descarta la redacción libre o la transforma en un número.
     const wrapper = mountField();
 
     await wrapper.get('select').setValue('custom');
-    await wrapper.get('input').setValue('21');
+    await wrapper.get('input').setValue('dieciocho meses iniciales');
 
-    expect(wrapper.text()).toContain('veintiún (21) meses');
-    expect(wrapper.emitted('update:modelValue')[1][0]).toBe(21);
+    expect(wrapper.emitted('update:modelValue')[1][0]).toBe('dieciocho meses iniciales');
   });
 
-  it('restores the entered custom number after selecting a preset', async () => {
-    // Falla si alternar una opción frecuente descarta el número personalizado que el usuario quiere recuperar.
+  it('restores the entered custom text after selecting a preset', async () => {
+    // Falla si alternar una opción frecuente descarta el texto personalizado que el usuario quiere recuperar.
     const wrapper = mountField();
 
-    await wrapper.get('input').setValue('21');
+    await wrapper.get('input').setValue('dieciocho meses iniciales');
     await wrapper.get('select').setValue('9');
     await wrapper.get('select').setValue('custom');
 
-    expect(wrapper.get('input').element.value).toBe('21');
-    expect(wrapper.emitted('update:modelValue')[2][0]).toBe(21);
+    expect(wrapper.get('input').element.value).toBe('dieciocho meses iniciales');
+    expect(wrapper.emitted('update:modelValue')[2][0]).toBe('dieciocho meses iniciales');
   });
 
-  it('keeps a custom selection when its number matches a preset', async () => {
+  it('keeps the custom editor when its wording matches a preset', async () => {
     // Falla si ingresar nueve como personalizado cambia silenciosamente la decisión del usuario a una opción frecuente.
     const wrapper = mountField();
 
-    await wrapper.get('input').setValue('9');
-    await wrapper.setProps({ modelValue: 9 });
+    await wrapper.get('input').setValue('nueve (9) meses');
+    await wrapper.setProps({ modelValue: 'nueve (9) meses' });
 
     expect(wrapper.get('select').element.value).toBe('custom');
-    expect(wrapper.get('input').element.value).toBe('9');
+    expect(wrapper.get('input').element.value).toBe('nueve (9) meses');
   });
 
-  it('preserves a noncanonical saved service term after selecting its saved value', async () => {
-    // Falla si abrir un contrato anterior convierte o borra una cláusula existente.
-    const wrapper = mountField({
-      modelValue: 'veintidós (22) días calendario',
-      duration: false,
-      label: 'Preaviso para no renovar',
-    });
+  it('opens historical wording in the editable custom field', async () => {
+    // Falla si una condición ya negociada queda atrapada en Valor guardado.
+    const wrapper = mountField({ modelValue: 'plazo pactado de un año' });
 
-    await wrapper.get('select').setValue('saved');
+    await wrapper.get('input').setValue('plazo pactado de dos años');
 
-    expect(wrapper.text()).toContain('Valor guardado');
-    expect(wrapper.text()).toContain('veintidós (22) días calendario');
-    expect(wrapper.emitted('update:modelValue')[0][0]).toBe('veintidós (22) días calendario');
+    expect(wrapper.get('select').element.value).toBe('custom');
+    expect(wrapper.emitted('update:modelValue')[0][0]).toBe('plazo pactado de dos años');
+  });
+
+  it('prefills custom wording from the currently selected preset', async () => {
+    // Falla si Personalizar toma el valor inicial en lugar de la opción vigente.
+    const wrapper = mountField({ modelValue: 3 });
+    await wrapper.get('select').setValue('9');
+    await wrapper.setProps({ modelValue: 9 });
+
+    await wrapper.get('select').setValue('custom');
+
+    expect(wrapper.get('input').element.value).toBe('nueve (9) meses');
+    expect(wrapper.emitted('update:modelValue')[1][0]).toBe('nueve (9) meses');
+  });
+
+  it('preserves an intentionally empty custom draft after a preset', async () => {
+    // Falla si alternar rellena de nuevo un borrador que el operador borró.
+    const wrapper = mountField({ modelValue: 3 });
+    await wrapper.get('select').setValue('custom');
+    await wrapper.get('input').setValue('');
+    await wrapper.setProps({ modelValue: '' });
+    await wrapper.get('select').setValue('9');
+    await wrapper.setProps({ modelValue: 9 });
+
+    await wrapper.get('select').setValue('custom');
+
+    expect(wrapper.get('input').element.value).toBe('');
+    expect(wrapper.emitted('update:modelValue')[3][0]).toBe('');
   });
 });

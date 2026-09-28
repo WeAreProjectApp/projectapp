@@ -32,6 +32,8 @@ describe('serviceContractTerms', () => {
     ['doce (12) meses', true, 12],
     ['veintiún (21)', false, 21],
     ['doce (12)', true, null],
+    [' doce (12) meses ', true, null],
+    ['Doce (12) meses', true, null],
     ['veintiuno (21)', false, null],
   ])('recognizes %p with duration %p', (value, duration, expected) => {
     // Falla si abrir un contrato histórico reemplaza una cláusula que no coincide exactamente.

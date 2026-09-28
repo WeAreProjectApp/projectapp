@@ -41,6 +41,15 @@ class DocumentFolder(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name='created_document_folders',
+    )
+    creation_source = models.CharField(
+        max_length=10, default='system', editable=False,
+        choices=[('panel', 'Panel'), ('mcp', 'MCP'), ('system', 'System'), ('unknown', 'Unknown')],
+    )
+
     # Asociación. SET_NULL como en Document: borrar un cliente o un proyecto
     # no puede llevarse por delante la organización del gestor.
     project = models.ForeignKey(
@@ -212,3 +221,13 @@ class DocumentFolder(models.Model):
                 .values_list('pk', flat=True)
             )
         return descendant_ids
+
+
+class DocumentFolderMutationLock(models.Model):
+    """One mutex for manual tree writes, including siblings at the root.
+
+    Existing duplicate folders stay intact. Serializing validation with the
+    write prevents new collisions and reciprocal reparenting races without a
+    uniqueness migration that would fail on legacy names.
+    """
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)

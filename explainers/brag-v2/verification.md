@@ -123,3 +123,51 @@ Ambas piezas quedan bajo el presupuesto de 12 MiB y el límite de -1.5 dBTP.
 
 - Build de producción Nuxt completo: cliente, SSR, 24 rutas y Nitro aprobados.
   Se mantienen los avisos previos de tamaño de chunks y `eval` de dependencias.
+
+## Revisión 2026-09-28 — tarjetas del mismo tamaño
+
+La regla de cuadrícula se limita al catálogo. Cada grupo conserva su ancho y
+adopta la altura de la tarjeta más alta entre ambas filas; no se cambian textos,
+fuentes, tamaños de letra, iconos ni padding.
+
+| Grupo (fotograma) | Antes: alturas CSS | Después: tamaño de cada una de las cuatro tarjetas |
+|---|---|---|
+| Apertura (3 s) | 124,78 / 124,78 / 124,78 / 88 px | 427,80 × 124,78 px |
+| Catálogo (12 s) | 111,19 / 111,19 / 144,78 / 144,78 px | 393,80 × 144,78 px |
+
+- Chromium a 1920×1080, fuentes cargadas y timeline detenido después de las
+  entradas: las cuatro dimensiones coinciden dentro de 1 px, el texto cabe y
+  las tarjetas permanecen sobre la banda de subtítulos. Medidas y fotogramas
+  locales en `explainers/work/{before,after}-*` (regenerables, ignorados por Git).
+- Comparación de geometría contra la base: siete fotogramas de Alianza y seis
+  de propuestas idénticos; sin cambios en sus assets exportados.
+- HyperFrames: cero errores/advertencias de lint, runtime o layout;
+  48/48 comprobaciones de contraste aprobadas.
+- Narración reutilizada sin síntesis: SHA-256 del WAV
+  `16a0b6e0094373440306fb5e11d96f0ac8bd7fceaa09e6e07651a514218e0cb7`,
+  igual al utilizado por la revisión editorial del 27 de septiembre. Se
+  conservan el fingerprint vigente, los subtítulos y la mezcla con volumen
+  musical 0.22.
+- MP4 final: 2.49 MiB (2.606.455 bytes), 60.000 s, H.264 1920×1080 a
+  30 fps, AAC estéreo a 48 kHz, `moov` antes de `mdat` y decodificación
+  completa sin errores. La pista AAC exportada coincide byte a byte con la
+  anterior (hash `5db1518221d6862368ff0cf5a91e8832fea3b0f69d15a522df1ccb538f8c57ca`).
+- Chromium sobre el MP4 exportado: inicio con sonido, saltos a 3/12/58 s,
+  ancho de 375 px y final natural aprobados; 483 frames y 202.660 bytes de
+  audio decodificados, sin errores. Fotogramas finales revisados en
+  `explainers/work/export-frame-{3,12}.png` y portada WebP regenerada a 0.1 s.
+
+## Reproducción manual compartida
+
+El reproductor ya no usa `autoplay`; el clic es el único inicio programático.
+Perder foco, ocultar la pestaña, abandonar la página o desactivar el componente
+pausa el video. Volver no inicia ni reanuda la reproducción; el visitante puede
+continuar mediante los controles nativos. Una solicitud que termina de cargar
+después de una pausa se invalida, y cambiar de fuente vuelve a la portada.
+Esta regla aplica al catálogo, Alianza y propuestas, incluidas las tarjetas del
+panel; los diseños de los otros videos permanecen intactos.
+
+- 20 pruebas focales aprobadas del reproductor y descriptores: inicio explícito,
+  ausencia de autoplay, blur/focus, pestaña oculta/visible, pagehide/pageshow,
+  cancelación antes de montar, finalización tardía, reproducción oculta, cambio
+  de fuente, limpieza al desmontar, rechazo de play y controles existentes.

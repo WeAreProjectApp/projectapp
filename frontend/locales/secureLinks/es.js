@@ -50,6 +50,8 @@ export default {
     email: 'Escribe un correo válido.',
   },
   panel: {
+    mcpPermissionNotice: 'La lectura de secretos requiere seleccionar reveal_secure_link_content en el alcance personalizado. El acceso general no incluye este permiso. Cada lectura solicita confirmación.',
+    saving: 'Espera a que termine el guardado.', editContent: 'Editar contenido', deleted: 'Este enlace fue eliminado o ya no existe.',
     newTitle: 'Nuevo enlace seguro', editTitle: 'Editar enlace seguro',
     title: 'Título interno',
     titleHint: 'Para reconocerlo en el panel. El destinatario lo ve sólo después de abrirlo; no escribas el secreto aquí.',
