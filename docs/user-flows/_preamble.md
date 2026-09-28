@@ -1312,6 +1312,10 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-contract-generate.spec.js`
 
+Ante un fallo de generación, el modal conserva el borrador y permite reintentar
+desde el listado y desde el editor. Sólo se cierra tras guardar correctamente;
+durante el envío bloquea nuevos envíos y el cierre.
+
 #### FLOW: `admin-proposal-contract-edit`
 
 - **Module:** admin

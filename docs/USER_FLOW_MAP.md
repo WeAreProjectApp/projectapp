@@ -1314,6 +1314,10 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-contract-generate.spec.js`
 
+Ante un fallo de generación, el modal conserva el borrador y permite reintentar
+desde el listado y desde el editor. Sólo se cierra tras guardar correctamente;
+durante el envío bloquea nuevos envíos y el cierre.
+
 #### FLOW: `admin-proposal-contract-edit`
 
 - **Module:** admin
@@ -6328,7 +6332,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-comment` | admin | P3 | success | 1 |
 | `admin-proposal-contract-download` | admin | P2 | display | 1 |
 | `admin-proposal-contract-edit` | admin | P2 | success | 1 |
-| `admin-proposal-contract-generate` | admin | P1 | success | 1 |
+| `admin-proposal-contract-generate` | admin | P1 | success,failure | 1 |
 | `admin-proposal-contract-modality` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-contract-terms-visibility` | admin | P2 | success,failure | 1 |
 | `admin-proposal-create` | admin | P1 | success,error | 1 |
@@ -8040,14 +8044,25 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 
 #### Datos del servicio configurables
 
-Duración y ambos preavisos ofrecen opciones globales y Personalizado (enteros de
-1–999). Las preselecciones iniciales son 9 meses / 60 / 60 días. Se envían números
-nuevos y el servidor guarda letras con el número entre paréntesis. La duración
-incluye mes/meses; la plantilla añade días calendario a los preavisos.
-Los contratos previos mantienen sus valores: los textos no reconocibles muestran
-Valor guardado hasta que se elija reemplazarlos. Carga fallida o configuración
-inválida bloquea la generación por plantilla y ofrece Reintentar. Vacíos o números
-inválidos no se envían; los errores aparecen junto a cada campo.
+Duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
+muestra debajo un campo de texto libre. Las preselecciones iniciales son
+9 meses / 60 / 60 días. Sólo las opciones frecuentes se envían como números;
+el servidor guarda el texto personalizado literalmente. La duración incluye
+su unidad; la plantilla añade días calendario a los preavisos.
+Los contratos previos mantienen sus valores y los textos diferentes de las
+opciones se abren editables. Alternar una opción conserva el borrador durante
+esa apertura. La duración permite 100 caracteres y cada preaviso 60; vacíos,
+espacios y textos demasiado largos muestran errores por campo.
+
+- **Success:** personalizar los tres valores, guardar, recargar y reabrir
+  recupera lo escrito; teclado y móvil permiten completar el mismo recorrido.
+- **Error:** una validación rechazada mantiene el modal abierto con el borrador
+  y el error junto al campo; corregir permite guardar.
+- **Failure:** un fallo del servidor conserva el borrador y permite reintentar.
+  Carga fallida o configuración inválida bloquea la generación por plantilla
+  y ofrece Reintentar.
+- **Guardado pendiente:** se bloquean envíos repetidos y cierre por Cancelar,
+  Escape o backdrop hasta conocer el resultado.
 
 ### FLOW: `admin-proposal-document-markdown`
 

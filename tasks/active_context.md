@@ -1,3 +1,11 @@
+## 2026-09-28 — personalización libre de los datos del servicio
+
+Los tres desplegables del modal ofrecen Personalizar con texto debajo. Conservan
+el borrador al alternar y abren textos históricos para edición, sin normalizarlos.
+Se mantienen los límites API de 100/60/60 caracteres y la configuración numérica
+global. Listado y editor esperan el resultado antes de cerrar el modal y muestran
+los errores sin descartar el borrador; el envío pendiente bloquea repeticiones.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**

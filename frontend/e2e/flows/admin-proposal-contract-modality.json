@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "During negotiation the admin chooses one contract or separate product and service contracts. Service terms load global presets or accept custom whole numbers from 1 to 999, persisted as Spanish words with the number in parentheses. Historical saved values remain visible and are preserved. Loading failures block template generation until retry.",
+  "description": "During negotiation the admin chooses one contract or separate product and service contracts. Service terms offer global presets plus editable custom wording beneath each dropdown. Literal wording survives save and reload; historical text remains editable. Validation or server failures retain the draft for correction and retry. Pending saves block repeated submissions and closing; failed settings loads offer retry.",
   "outcomes": [
     "success",
     "error",

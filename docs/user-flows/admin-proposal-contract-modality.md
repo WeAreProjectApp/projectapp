@@ -12,11 +12,22 @@
 
 #### Datos del servicio configurables
 
-Duración y ambos preavisos ofrecen opciones globales y Personalizado (enteros de
-1–999). Las preselecciones iniciales son 9 meses / 60 / 60 días. Se envían números
-nuevos y el servidor guarda letras con el número entre paréntesis. La duración
-incluye mes/meses; la plantilla añade días calendario a los preavisos.
-Los contratos previos mantienen sus valores: los textos no reconocibles muestran
-Valor guardado hasta que se elija reemplazarlos. Carga fallida o configuración
-inválida bloquea la generación por plantilla y ofrece Reintentar. Vacíos o números
-inválidos no se envían; los errores aparecen junto a cada campo.
+Duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
+muestra debajo un campo de texto libre. Las preselecciones iniciales son
+9 meses / 60 / 60 días. Sólo las opciones frecuentes se envían como números;
+el servidor guarda el texto personalizado literalmente. La duración incluye
+su unidad; la plantilla añade días calendario a los preavisos.
+Los contratos previos mantienen sus valores y los textos diferentes de las
+opciones se abren editables. Alternar una opción conserva el borrador durante
+esa apertura. La duración permite 100 caracteres y cada preaviso 60; vacíos,
+espacios y textos demasiado largos muestran errores por campo.
+
+- **Success:** personalizar los tres valores, guardar, recargar y reabrir
+  recupera lo escrito; teclado y móvil permiten completar el mismo recorrido.
+- **Error:** una validación rechazada mantiene el modal abierto con el borrador
+  y el error junto al campo; corregir permite guardar.
+- **Failure:** un fallo del servidor conserva el borrador y permite reintentar.
+  Carga fallida o configuración inválida bloquea la generación por plantilla
+  y ofrece Reintentar.
+- **Guardado pendiente:** se bloquean envíos repetidos y cierre por Cancelar,
+  Escape o backdrop hasta conocer el resultado.
