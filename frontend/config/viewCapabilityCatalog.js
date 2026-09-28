@@ -442,7 +442,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a descubrir posibilidades relevantes y retomarlas en la conversación comercial.',
     [
       feature('public-additional-modules', 'Explorar módulos adicionales',
-        'Presenta selector ES/EN, tarjetas, lista, acordeón, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos y controles flotantes para PDF sin precios y compartir la selección.',
+        'Presenta selector ES/EN, tarjetas, lista, acordeón, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos y controles flotantes para PDF sin precios y compartir la selección. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
         'Permite entender qué resuelve cada módulo sin depender de una explicación previa.',
         ['/additional-modules', '/additional-modules/share/:uuid'],
         { icon: 'puzzle', actors: ['prospect'], stage: 'Evaluación' }),
@@ -455,7 +455,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a evaluar una alianza de largo plazo antes de formalizar una propuesta.',
     [
       feature('public-financing', 'Comprender el Programa de Alianza',
-        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y paquete mensual de horas sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa.',
+        'Presenta dos opciones de alianza, ocho condiciones con exclusividad conceptual y paquete mensual de horas sólo a cinco años, reglas expandibles, tema local, guía, video de 60 segundos con voz latinoamericana y subtítulos, PDF y un diálogo para compartir el programa. El video inicia manualmente, se pausa al salir y no se reanuda al volver.',
         'Convierte condiciones técnicas y legales en una explicación comercial clara y compartible.',
         ['/partnership-program'],
         { icon: 'credit-card', actors: ['prospect'], stage: 'Evaluación' }),
@@ -468,7 +468,7 @@ const publicCapabilities = [
     'Convierte un documento estático en una conversación comercial medible.',
     [
       feature('public-proposal', 'Revisar una propuesta',
-        'Presenta alcance, inversión, condiciones y acciones de respuesta. Un video de bienvenida en español explica las cuatro opciones cuando todas están disponibles y los controles global e individual lo permiten.',
+        'Presenta alcance, inversión, condiciones y acciones de respuesta. Un video de bienvenida en español explica las cuatro opciones cuando todas están disponibles y los controles global e individual lo permiten; inicia manualmente y se pausa al salir sin reanudarse al volver.',
         'Ayuda al prospecto a decidir con contexto y permite medir su interés.', ['/proposal/:uuid'],
         { icon: 'send', actors: ['prospect'], stage: 'Decisión' }),
     ],

@@ -6514,7 +6514,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `public-about-us` | public | P3 | — | 0 |
 | `public-additional-modules-catalog` | public | P1 | success,display,failure | 5 |
 | `public-additional-modules-detail` | public | P1 | success | 1 |
-| `public-additional-modules-explainer` | public | P2 | display,success,failure | 6 |
+| `public-additional-modules-explainer` | public | P2 | display,success,failure | 7 |
 | `public-additional-modules-guide` | public | P2 | success,display | 2 |
 | `public-additional-modules-pdf` | public | P2 | success,failure | 2 |
 | `public-additional-modules-share` | public | P1 | success,display,failure | 4 |
@@ -7469,8 +7469,18 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
   `show_explainer_video` del payload público y
   `e2e/public/additional-modules.spec.js`.
 
-- **Contenido audiovisual:** edición brag v2, 45 segundos en español con voz,
+- **Contenido audiovisual:** edición brag v2, 60 segundos en español con voz,
   música y subtítulos integrados. Fuentes originales conservadas.
+
+- **Control de reproducción compartido:** el video sólo comienza al pulsar
+  reproducir. Cambiar de ventana, ocultar la pestaña o salir de la página lo
+  pausa; regresar no lo reanuda. Los controles nativos permiten continuar
+  manualmente. Una carga tardía no reactiva una reproducción cancelada.
+  La misma regla aplica a Alianza y propuestas, tanto en público como en panel.
+- **Regresión:** `keeps the explainer paused after returning to its window`
+  comprueba pausa y continuación manual con el MP4 real. Las pruebas unitarias
+  del reproductor cubren pestaña oculta, restauración, carga tardía, cambio de
+  fuente y retiro del componente.
 
 ### FLOW: `public-financing-explainer`
 
