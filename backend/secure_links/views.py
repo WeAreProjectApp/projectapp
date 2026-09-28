@@ -100,7 +100,7 @@ def link_list(request):
     if data.get('status'):
         query = query.with_status(data['status'])
     total = query.count()
-    page = data['page']
+    page = min(data['page'], max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE))
     rows = query[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
     return Response({
         'results': SecureLinkSerializer(rows, many=True).data,
@@ -135,7 +135,10 @@ def link_create(request):
 def link_detail(request, pk):
     link = _link(pk)
     if request.method == 'DELETE':
-        link.delete()
+        try:
+            services.delete_link(link)
+        except services.SecureLinkError as exc:
+            return _service_error(exc)
         return Response(status=204)
     if request.method == 'PATCH':
         serializer = PanelUpdateSerializer(data=request.data, partial=True)

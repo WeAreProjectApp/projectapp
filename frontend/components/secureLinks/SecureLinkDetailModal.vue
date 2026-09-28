@@ -1,8 +1,8 @@
 <template>
-  <BaseModal :model-value="modelValue" kind="detail" padding="md" @update:model-value="close">
+  <BaseModal :model-value="modelValue" kind="detail" padding="md" :close-on-backdrop="!mutating" :close-on-esc="!mutating" @update:model-value="close">
     <div class="space-y-5 px-6 py-5" data-testid="secure-link-detail">
-      <div v-if="!detail" class="py-10 text-center text-sm text-text-subtle">Cargando enlace…</div>
-      <template v-else>
+      <div v-if="loading" class="py-10 text-center text-sm text-text-subtle">Cargando enlace…</div>
+      <template v-else-if="detail">
         <div class="flex min-w-0 flex-col gap-2 panel-portrait:flex-row panel-portrait:items-start panel-portrait:justify-between">
           <div class="min-w-0">
             <h3 class="text-lg font-bold text-text-default [overflow-wrap:anywhere]">{{ detail.title }}</h3>
@@ -40,7 +40,7 @@
           Lo creó un cliente desde la página pública: sólo el equipo puede abrirlo.
         </BaseAlert>
 
-        <div class="flex flex-wrap gap-2">
+        <fieldset :disabled="Boolean(busy)" class="flex flex-wrap gap-2">
           <BaseButton variant="secondary" size="sm" :loading="busy === 'content'" data-testid="secure-link-view-content" @click="toggleContent">
             <BaseActionIcon :action="content ? 'hide' : 'view'" />
             {{ content ? 'Ocultar contenido' : 'Ver contenido' }}
@@ -49,9 +49,13 @@
             <BaseActionIcon action="copy" />
             {{ urlFeedback.label || 'Copiar enlace' }}
           </BaseButton>
-          <BaseButton variant="ghost" size="sm" data-testid="secure-link-edit" @click="edit">
+          <BaseButton variant="ghost" size="sm" data-testid="secure-link-edit" @click="editMetadata">
             <BaseActionIcon action="edit" />
             Editar
+          </BaseButton>
+          <BaseButton variant="ghost" size="sm" data-testid="secure-link-edit-content" @click="editContent">
+            <BaseActionIcon action="edit" />
+            {{ t('secureLinks.panel.editContent') }}
           </BaseButton>
           <BaseButton
             v-if="detail.status === 'active'"
@@ -64,11 +68,11 @@
             <BaseActionIcon action="deactivate" />
             Revocar
           </BaseButton>
-        </div>
+        </fieldset>
 
         <SecureLinkContent v-if="content" :fields="content.fields" />
 
-        <section v-if="detail.status !== 'active'" class="space-y-3 rounded-xl border border-border-default p-4" data-testid="secure-link-reactivate">
+        <fieldset :disabled="Boolean(busy)" v-if="detail.status !== 'active'" class="space-y-3 rounded-xl border border-border-default p-4" data-testid="secure-link-reactivate">
           <h4 class="text-sm font-semibold text-text-default">Reactivar enlace</h4>
           <p class="text-sm text-text-muted">
             El mismo enlace se podrá abrir una vez más. Si sospechas que otra persona lo abrió, genera uno nuevo y el anterior dejará de funcionar.
@@ -81,7 +85,7 @@
             <BaseActionIcon action="activate" />
             Reactivar
           </BaseButton>
-        </section>
+        </fieldset>
 
         <section>
           <h4 class="mb-2 text-sm font-semibold text-text-default">Historial</h4>
@@ -96,14 +100,17 @@
           </ol>
         </section>
 
-        <BaseAlert v-if="error" variant="danger">{{ error }}</BaseAlert>
       </template>
+      <BaseAlert v-if="error" variant="danger" data-testid="secure-link-detail-error">
+        {{ error }}
+        <BaseButton v-if="!detail" variant="link" size="sm" data-testid="secure-link-detail-retry" @click="load">{{ t('secureLinks.retry') }}</BaseButton>
+      </BaseAlert>
     </div>
   </BaseModal>
 </template>
 
 <script setup>
-import { computed, reactive, ref, watch } from 'vue';
+import { computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
@@ -122,6 +129,9 @@ const props = defineProps({
 });
 const emit = defineEmits(['update:modelValue', 'edit', 'changed']);
 const store = useSecureLinksStore();
+const { t } = useI18n();
+const loading = ref(false);
+const mutating = computed(() => ['revoke', 'reactivate'].includes(busy.value));
 const clipboard = useClipboardFeedback();
 
 const detail = ref(null);
@@ -139,40 +149,61 @@ function reasonLabel(reason) {
   return REASONS[reason] || reason;
 }
 
+let generation = 0;
+function current(version) {
+  return version === generation && props.modelValue;
+}
+
 async function load() {
+  const version = generation;
+  loading.value = !detail.value;
   error.value = '';
   const result = await store.fetchDetail(props.linkId);
+  if (!current(version)) return;
+  loading.value = false;
   if (result.success) detail.value = result.data;
-  else error.value = result.error.message;
+  else error.value = result.error.status === 404
+    ? t('secureLinks.panel.deleted') : result.error.message;
 }
 
 watch(() => [props.modelValue, props.linkId], ([open]) => {
+  generation += 1;
   content.value = null;
   detail.value = null;
+  error.value = '';
+  busy.value = '';
+  loading.value = false;
   reactivation.validityDays = 7;
   reactivation.rotate = false;
   if (open && props.linkId) load();
-}, { immediate: true });
+}, { immediate: true, flush: 'sync' });
+
+onBeforeUnmount(() => { generation += 1; content.value = null; });
 
 function close(value) {
-  if (!value) content.value = null;
+  if (mutating.value) return;
+  if (!value) { generation += 1; content.value = null; }
   emit('update:modelValue', value);
 }
 
-async function toggleContent() {
-  if (content.value) {
-    content.value = null;
-    return;
-  }
-  busy.value = 'content';
-  const result = await store.viewContent(props.linkId);
-  busy.value = '';
-  if (!result.success) {
-    error.value = result.error.message;
-    return;
-  }
-  content.value = result.data;
-  await load();
+async function runAction(name, request, completed) {
+  if (busy.value) return;
+  const version = generation;
+  busy.value = name;
+  error.value = '';
+  const result = await request();
+  if (!current(version)) return;
+  if (!result.success) error.value = result.error.message;
+  else await completed(result);
+  if (current(version)) busy.value = '';
+}
+
+function toggleContent() {
+  if (content.value) { content.value = null; return; }
+  return runAction('content', () => store.viewContent(props.linkId), async (result) => {
+    content.value = result.data;
+    await load();
+  });
 }
 
 async function copyText(text) {
@@ -184,52 +215,36 @@ async function copyText(text) {
   });
 }
 
-async function copyUrl() {
-  busy.value = 'url';
-  const result = await store.fetchLinkUrl(props.linkId);
-  busy.value = '';
-  if (!result.success) {
-    error.value = result.error.message;
-    return;
-  }
-  await copyText(result.url);
+function copyUrl() {
+  return runAction('url', () => store.fetchLinkUrl(props.linkId), (result) => copyText(result.url));
 }
 
-async function edit() {
-  const result = await store.viewContent(props.linkId);
-  if (!result.success) {
-    error.value = result.error.message;
-    return;
-  }
-  const values = Object.fromEntries(result.data.fields.map((field) => [field.key, field.value]));
-  emit('edit', { link: detail.value, fields: values });
+function editMetadata() {
+  emit('edit', { link: detail.value, fields: null });
 }
 
-async function revoke() {
-  busy.value = 'revoke';
-  const result = await store.revokeLink(props.linkId);
-  busy.value = '';
-  if (!result.success) {
-    error.value = result.error.message;
-    return;
-  }
-  emit('changed');
-  await load();
+function editContent() {
+  return runAction('content', () => store.viewContent(props.linkId), (result) => {
+    const values = Object.fromEntries(result.data.fields.map((field) => [field.key, field.value]));
+    emit('edit', { link: detail.value, fields: values });
+  });
 }
 
-async function reactivate() {
-  busy.value = 'reactivate';
-  const result = await store.reactivateLink(props.linkId, {
+function revoke() {
+  return runAction('revoke', () => store.revokeLink(props.linkId), async () => {
+    emit('changed');
+    await load();
+  });
+}
+
+function reactivate() {
+  return runAction('reactivate', () => store.reactivateLink(props.linkId, {
     validity_days: reactivation.validityDays,
     rotate: reactivation.rotate,
+  }), async (result) => {
+    if (reactivation.rotate && result.data.url) await copyText(result.data.url);
+    emit('changed', result.data);
+    await load();
   });
-  busy.value = '';
-  if (!result.success) {
-    error.value = result.error.message;
-    return;
-  }
-  if (reactivation.rotate && result.data.url) await copyText(result.data.url);
-  emit('changed', result.data);
-  await load();
 }
 </script>

@@ -1,3 +1,10 @@
+> **2026-09-28 — MVP de enlaces seguros, PR #442:** implementados CRUD MCP y
+> consulta sensible con permiso explícito/confirmación efímera, recuperación
+> de errores del panel y limpieza de secretos. Verificación focal de backend,
+> 59 unitarias frontend, 17 E2E y recorrido con SQLite aislado.
+> `secure_links.0002` queda para deploy. Incidente productivo #433 pendiente
+> de corroboración; esta sesión no lo declara resuelto.
+
 # Task Plan — ProjectApp
 
 > **2026-09-26 — modalidad de cierre de contratos:** Documentos elige en

@@ -9,6 +9,7 @@ import { normalizeApiError } from './services/normalize_api_error';
  */
 export const useSecureLinksStore = defineStore('secure_links', {
   state: () => ({
+    listRequest: 0,
     links: [],
     count: 0,
     page: 1,
@@ -38,7 +39,10 @@ export const useSecureLinksStore = defineStore('secure_links', {
       }
     },
 
+    invalidateLists() { this.listRequest += 1; this.isLoading = false; },
+
     async fetchLinks(filters = {}) {
+      const request = ++this.listRequest;
       this.isLoading = true;
       this.error = null;
       try {
@@ -48,6 +52,7 @@ export const useSecureLinksStore = defineStore('secure_links', {
         });
         const query = params.toString();
         const response = await get_request(`secure-links/${query ? `?${query}` : ''}`);
+        if (request !== this.listRequest) return { success: false, stale: true };
         const data = response.data || {};
         this.links = data.results || [];
         this.count = data.count || 0;
@@ -56,12 +61,13 @@ export const useSecureLinksStore = defineStore('secure_links', {
         this.counts = data.counts || {};
         this.unopenedReceived = data.unopened_received || 0;
         this.publicCreateUrl = data.public_create_url || '';
-        return { success: true };
+        return { success: true, page: this.page };
       } catch (error) {
+        if (request !== this.listRequest) return { success: false, stale: true };
         this.error = 'fetch_failed';
         return { success: false, error: normalizeApiError(error, 'No se pudieron cargar los enlaces.') };
       } finally {
-        this.isLoading = false;
+        if (request === this.listRequest) this.isLoading = false;
       }
     },
 

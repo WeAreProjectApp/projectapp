@@ -112,6 +112,7 @@ class SecureLinkEvent(models.Model):
         REVOKED = 'revoked', 'Revocado'
         UPDATED = 'updated', 'Editado'
         PANEL_VIEWED = 'panel_viewed', 'Contenido visto en el panel'
+        MCP_VIEWED = 'mcp_viewed', 'Contenido consultado desde MCP'
 
     link = models.ForeignKey(SecureLink, on_delete=models.CASCADE, related_name='events')
     kind = models.CharField(max_length=20, choices=Kind.choices)

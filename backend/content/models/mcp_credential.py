@@ -73,6 +73,9 @@ class McpCredential(models.Model):
         return hmac.compare_digest(self.token_hash, self.hash_token(token))
 
     def allows(self, tool_name):
+        # General connector access must never silently acquire secret reads.
+        if tool_name == 'reveal_secure_link_content':
+            return tool_name in self.allowed_tools
         control_tools = {'describe_capabilities', 'confirm_action', 'cancel_action'}
         return (
             not self.allowed_tools

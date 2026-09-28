@@ -305,9 +305,15 @@ def _tool_call_object_refs(connector, credential, tool_name, params):
     if not isinstance(params, dict):
         return []
     arguments = params.get('arguments') or {}
-    refs = _argument_object_refs(arguments)
+    if tool_name in {tool['name'] for tool in SECURE_LINK_TOOLS}:
+        return [
+            {'field': key, 'value': arguments[key]}
+            for key in ('link_id', 'client_id', 'project_id')
+            if isinstance(arguments, dict) and type(arguments.get(key)) is int
+        ]
+    refs = []
     if tool_name not in {'confirm_action', 'cancel_action'}:
-        return refs
+        return _argument_object_refs(arguments)
     confirmation_id = arguments.get('confirmation_id')
     if not confirmation_id:
         return refs
@@ -637,6 +643,8 @@ def mcp_endpoint(request, slug, token=None):
         response['Mcp-Request-Id'] = request_id
         return response
     response = Response(payload, status=http_status)
+    response['Cache-Control'] = 'no-store, max-age=0'
+    response['Pragma'] = 'no-cache'
     if method == 'initialize' and isinstance(payload, dict):
         protocol_version = (
             payload.get('result', {}).get('protocolVersion')

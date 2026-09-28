@@ -7,7 +7,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from secure_links import services
-from secure_links.catalog import CatalogError, clean_fields
+from secure_links.catalog import SECRET_TYPES, CatalogError, clean_fields
 from secure_links.models import SecureLink, SecureLinkEvent
 
 from .conftest import CREDENTIALS, token_from
@@ -46,7 +46,8 @@ def test_reveal_consumes_once_and_second_attempt_is_gone(make_link):
     values = {field['key']: field['value'] for field in content['fields']}
     link.refresh_from_db()
     assert values['password'] == CREDENTIALS['password']
-    assert link.status == 'consumed' and link.consumed_ip == '198.51.100.7'
+    assert link.status == 'consumed'
+    assert link.consumed_ip == '198.51.100.7'
     assert (blocked.value.code, blocked.value.status) == ('link_consumed', 410)
     assert link.events.filter(kind=SecureLinkEvent.Kind.REVEAL_BLOCKED, details__reason='consumed').exists()
 
@@ -70,7 +71,8 @@ def test_client_created_link_is_reserved_for_staff(make_link, staff_user):
         services.reveal(token_from(url))
     services.reveal(token_from(url), staff=True, actor=staff_user)
 
-    assert blocked.value.code == 'staff_only' and blocked.value.status == 403
+    assert blocked.value.code == 'staff_only'
+    assert blocked.value.status == 403
     link.refresh_from_db()
     assert link.status == 'consumed'
 
@@ -85,7 +87,8 @@ def test_reactivation_reopens_same_link_and_restarts_validity(make_link, staff_u
         _row, content = services.reveal(token_from(url))
         expected_expiry = timezone.now() + timedelta(days=3)
 
-    assert same_url == url and content['fields']
+    assert same_url == url
+    assert content['fields']
     assert link.activation_count == 2
     assert abs((link.expires_at - expected_expiry).total_seconds()) < 5
 
@@ -112,6 +115,7 @@ def test_update_audits_field_names_but_not_values(make_link, staff_user):
 
     event = link.events.get(kind=SecureLinkEvent.Kind.UPDATED)
     assert 'Nueva-Clave-123' not in str(event.details)
+    assert 'Nueva-Clave-123' not in link.payload_encrypted
     values = {field['key']: field['value'] for field in services.content_for(link)['fields']}
     assert values['password'] == 'Nueva-Clave-123'
 
@@ -121,7 +125,8 @@ def test_catalog_rejects_missing_required_and_unknown_fields():
     with pytest.raises(CatalogError) as error:
         clean_fields('credentials', {'username': 'admin', 'color': 'rojo'})
 
-    assert 'password' in error.value.errors and 'fields' in error.value.errors
+    assert 'password' in error.value.errors
+    assert 'fields' in error.value.errors
 
 
 def test_public_links_cannot_exceed_seven_days(make_link):
@@ -135,7 +140,6 @@ def test_public_links_cannot_exceed_seven_days(make_link):
 def test_fake_data_covers_every_state_and_type(settings):
     """Falla si los datos de desarrollo no permiten revisar todos los estados."""
     from django.core.management import call_command
-    from secure_links.catalog import SECRET_TYPES
 
     call_command('create_fake_secure_links', stdout=None)
 

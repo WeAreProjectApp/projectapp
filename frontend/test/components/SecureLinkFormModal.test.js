@@ -167,7 +167,8 @@ describe('SecureLinkFormModal', () => {
     await wrapper.get('form').trigger('submit');
     await flushPromises();
 
-    expect(wrapper.text()).toContain('No se pudo crear el enlace.');
+    // Fails if a rejected save clears the password or exposes a server traceback.
+    expect(wrapper.get('[data-testid="secure-link-general-error"]').text()).toBe('No se pudo crear el enlace.');
     expect(wrapper.text()).not.toContain('private traceback');
     expect(wrapper.get('[data-testid="secure-link-field-password"]').element.value).toBe('do-not-lose-this');
   });
@@ -230,6 +231,21 @@ describe('SecureLinkFormModal', () => {
     await flushPromises();
 
     expect(create_request).toHaveBeenCalledTimes(1);
+  });
+
+  it('disables cancellation while creation is pending', async () => {
+    const wrapper = await mountForm();
+    let complete;
+    create_request.mockImplementationOnce(() => new Promise((resolve) => { complete = resolve; }));
+    await wrapper.get('[data-testid="secure-link-title"]').setValue('Acceso');
+    await wrapper.get('[data-testid="secure-link-field-password"]').setValue('keep-this-password');
+
+    await wrapper.get('[data-testid="secure-link-form"]').trigger('submit');
+
+    // Fails if Cancel closes a form while its secret is still being saved.
+    expect(wrapper.get('[data-testid="secure-link-cancel"]').element.disabled).toBe(true);
+    complete({ data: { id: 1 } });
+    await flushPromises();
   });
 
 });

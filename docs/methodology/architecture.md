@@ -34,9 +34,9 @@ mes/meses; las plantillas agregan días calendario a los preavisos. La configura
 no cambia contratos existentes ni agrega una superficie MCP.
 
 > **2026-09-26 — enlaces seguros:** app Django `secure_links` (`SecureLink`,
-> `SecureLinkEvent` append-only) con `services.py` como única frontera de
+> `SecureLinkEvent` inmutable salvo eliminación del enlace) con `services.py` como única frontera de
 > escritura para panel (sesión/CSRF + `IsAdminUser`), página pública (sin
-> autenticación DRF; la sesión Django sólo reconoce staff) y seis tools del
+> autenticación DRF; la sesión Django sólo reconoce staff) y las herramientas del
 > conector MCP `communications`. Payload JSON cifrado con el mismo Fernet de
 > accesos de proyecto; token en el fragmento de la URL, buscado por SHA-256 y
 > recibido en el cuerpo del POST. El revelado bloquea la fila y consume en la

@@ -151,7 +151,7 @@ const panelCapabilities = [
         'Da continuidad a los mensajes enviados desde distintos módulos.', ['/panel/emails'],
         { icon: 'send', stage: 'Comunicación' }),
       feature('panel-secure-links', 'Compartir información sensible',
-        'Genera enlaces de un solo uso con tipos predefinidos o contenido personalizado, sin exigir cliente ni proyecto, con validación por campo, cifrado, reactivación y recepción de lo que envían los clientes.',
+        'Genera enlaces de un solo uso con tipos predefinidos o contenido personalizado, sin exigir cliente ni proyecto, con edición de datos o contenido, eliminación confirmada, errores recuperables, cifrado, reactivación y recepción de lo que envían los clientes.',
         'Evita pegar secretos en correos o WhatsApp sin perder el control de quién los abrió.', ['/panel/secure-links'],
         { icon: 'key', stage: 'Comunicación' }),
     ],
@@ -214,7 +214,7 @@ const panelCapabilities = [
     'Reduce trabajo repetitivo sin saltarse permisos ni reglas del producto.',
     [
       feature('panel-mcp-connectors', 'Administrar conectores MCP',
-        'Permite activar, rotar y observar conectores especializados por dominio.',
+        'Permite activar, rotar y observar conectores especializados por dominio, con permisos explícitos para consultar secretos y confirmación por lectura.',
         'Extiende la operación del panel con accesos controlados y auditables.', ['/panel/mcps'],
         { icon: 'database', stage: 'Automatización' }),
     ],
