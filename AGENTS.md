@@ -285,8 +285,8 @@ por ecosistema. La fuente de verdad es `vps-ops-toolkit/workflows/`.
 - Deep project context lives in `docs/methodology/` and `tasks/`.
 
 ## Project Overview
-- Stack: Django 5 + DRF, Nuxt 3 + Vue 3, MySQL 8, Redis, Huey.
-- Main Django apps: `content` for proposals/blog/portfolio and `accounts` for platform/auth/project data.
+- Stack: Django 6.1 + DRF, Nuxt 4 + Vue 3, MySQL 8, Redis, Huey.
+- Django apps: `content` for proposals/blog/portfolio, `accounts` for platform/auth/project data, `monitoring` for operational cases, and `secure_links` for one-time secret sharing.
 - Production path: `/home/ryzepeck/webapps/projectapp`.
 - Services: `projectapp.service`, `projectapp.socket`, `projectapp-huey.service`.
 - Frontend build output is served by Django.
@@ -359,7 +359,7 @@ por ecosistema. La fuente de verdad es `vps-ops-toolkit/workflows/`.
 
 - **Name**: ProjectApp
 - **Domain**: `projectapp.co` / `www.projectapp.co`
-- **Stack**: Django 5 + DRF (backend) / Nuxt 3 + Vue 3 (frontend) / MySQL 8 / Redis / Huey
+- **Stack**: Django 6.1 + DRF (backend) / Nuxt 4 + Vue 3 (frontend) / MySQL 8 / Redis / Huey
 - **Server path**: `/home/ryzepeck/webapps/projectapp`
 - **Services**: `projectapp.service` (Gunicorn), `projectapp.socket`, `projectapp-huey.service`
 - **Settings module**: `DJANGO_SETTINGS_MODULE=projectapp.settings_prod`
@@ -744,8 +744,9 @@ Full reference: `docs/TESTING_QUALITY_STANDARDS.md`
 - Each proposal section's `content_json` maps directly to a Vue component's props schema
 - Blog supports dual format: structured JSON (preferred) with HTML fallback via `v-html`
 
-#### Single Django App: `content`
-- All models, views, serializers, and services live in the `content` app
+#### Django Apps by Domain
+- `content` handles proposals, blog, portfolio, and commercial workflows; `accounts` handles platform authentication and project data.
+- `monitoring` handles operational cases; `secure_links` handles one-time secret sharing.
 - Models are already split into individual files under `content/models/`
 
 #### Service Layer Pattern
@@ -840,7 +841,7 @@ cd backend && <command>
 
 - Custom coverage report with Unicode progress bars in `conftest.py`
 - Every E2E flow must be registered in `docs/USER_FLOW_MAP.md` and `frontend/e2e/flow-definitions.json`
-- Playwright E2E tests are sharded into 5 parallel CI jobs
+- Playwright E2E tests are sharded into 15 parallel CI jobs (`.github/workflows/ci.yml`).
 - **Never use `networkidle`** with Vite/Nuxt dev server — use `domcontentloaded` + element waits
 - **Always add `test.setTimeout(60_000)`** for SPA routes
 - `usePlatformApi.test.js` has 4 failing tests due to `window.location.href` in JSDOM
