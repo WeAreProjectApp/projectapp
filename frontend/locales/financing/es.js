@@ -70,6 +70,7 @@ export default {
   toggleTheme: 'Cambiar tema',
   spanish: 'Español',
   english: 'English',
+  loading: 'Cargando el Programa de Alianza…',
   loadError: 'No pudimos cargar el Programa de Alianza.',
   retry: 'Reintentar',
   panelTitle: 'Programa de Alianza',

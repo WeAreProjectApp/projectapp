@@ -7,6 +7,7 @@ import { useAdditionalModulesViewMode } from '~/composables/useAdditionalModules
 import { useExplainerVideo } from '~/composables/useExplainerVideos'
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue'
 import AdditionalModulesCatalogControls from '~/components/AdditionalModules/CatalogControls.vue'
+import AdditionalModulesCatalogSkeleton from '~/components/AdditionalModules/CatalogSkeleton.vue'
 import AdditionalModulesModuleDetails from '~/components/AdditionalModules/ModuleDetails.vue'
 import AdditionalModulesOnboarding from '~/components/AdditionalModules/Onboarding.vue'
 import AdditionalModulesShareButton from '~/components/AdditionalModules/ShareButton.vue'
@@ -21,6 +22,11 @@ const props = defineProps({
   language: { type: String, default: 'es' },
   /** Panel switch (and, on a shared link, its own switch) from the public payload. */
   showExplainer: { type: Boolean, default: true },
+  /**
+   * The catalog data is not known yet (a prerender whose API fetch failed, or
+   * the live fetch still running): show a skeleton, never the empty state.
+   */
+  loading: { type: Boolean, default: false },
 })
 
 const emit = defineEmits(['change-language'])
@@ -30,7 +36,10 @@ const { isDark, toggle: toggleTheme } = useAdditionalModulesTheme()
 const documentRef = ref(null)
 usePublicDocumentEntrance(documentRef)
 const explainer = useExplainerVideo('additional-modules', toRef(props, 'language'), toRef(props, 'explainerResource'))
-const explainerVisible = computed(() => props.showExplainer && Boolean(explainer.value))
+// Until the payload arrives its switch is unknown, so a hidden video never flashes.
+const explainerVisible = computed(() => (
+  !props.loading && props.showExplainer && Boolean(explainer.value)
+))
 const selectedModule = ref(null)
 const detailOpen = ref(false)
 const opener = ref(null)
@@ -40,7 +49,9 @@ const expandedModuleSlug = ref('')
 const onboardingRef = ref(null)
 const guideStarted = ref(false)
 
-const hasModules = computed(() => props.totalModules > 0 && props.categories.length > 0)
+const hasModules = computed(() => (
+  !props.loading && props.totalModules > 0 && props.categories.length > 0
+))
 
 function openModule(module, event) {
   selectedModule.value = module
@@ -287,6 +298,8 @@ watch([hasModules, onboardingRef], async ([modulesAvailable, onboarding]) => {
         </div>
       </section>
     </div>
+
+    <AdditionalModulesCatalogSkeleton v-else-if="loading" />
 
     <div v-else class="mx-auto max-w-2xl px-4 py-24 text-center sm:px-6">
       <h2 class="text-2xl font-medium text-text-brand">{{ t('additionalModules.emptyTitle') }}</h2>

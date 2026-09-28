@@ -50,7 +50,7 @@ from content.utils import get_client_ip, is_staff_session
 
 
 def _schedule_catalog_rebuild():
-    schedule_rebuild_after_publish()
+    schedule_rebuild_after_publish(reason='additional-modules')
 
 
 def _gone(detail):

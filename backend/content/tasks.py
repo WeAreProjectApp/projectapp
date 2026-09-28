@@ -546,7 +546,7 @@ def publish_single_scheduled_blog(post_id):
         auto_publish_blog_to_linkedin(post)
         logger.info('[Sched-ETA] post %s publicado ok (slug=%s)', post.id, post.slug)
         from content.services.frontend_build import schedule_rebuild_after_publish
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='blog')
     except Exception:
         logger.exception('[Sched-ETA] error publicando post %s', post_id)
 
@@ -602,7 +602,7 @@ def publish_scheduled_blog_posts():
     if count > 0:
         logger.info('[Sched-Sweep] publicados %d post(s)', count)
         from content.services.frontend_build import schedule_rebuild_after_publish
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='blog')
 
 
 @task()
@@ -670,12 +670,14 @@ def warn_linkedin_token_expiry():
 @lock_task('frontend-rebuild')
 def rebuild_frontend_prerender():
     """
-    Rebuild the prerendered frontend so published blog changes reach the
-    static HTML that crawlers and link previews read.
+    Rebuild the prerendered frontend in-process (FRONTEND_REBUILD_MODE=inline,
+    local development only) so published changes reach the static HTML that
+    crawlers and link previews read.
 
-    Enqueued (with a coalescing delay) whenever a post is published, edited
-    while published, or deleted. The service skips the build when nothing
-    changed since the last one. The Redis lock serializes builds; a locked
+    Enqueued (with a coalescing delay) by schedule_rebuild_after_publish in
+    inline mode. The service skips the build when nothing changed since the
+    last one, and always skips in request mode (production), where the ops
+    toolkit regenerates the build. The Redis lock serializes builds; a locked
     attempt fails and Huey retries it in 10 minutes.
     """
     from content.services.frontend_build import run_frontend_rebuild
@@ -688,20 +690,17 @@ def rebuild_frontend_prerender():
 
 
 @periodic_task(crontab(hour='2', minute='30'))
-@lock_task('frontend-rebuild')
-def nightly_frontend_rebuild():
+def reconcile_frontend_rebuild_request():
     """
-    Nightly safety net: rebuild if published blog content changed and no
-    on-publish trigger picked it up (Huey down at publish time, manual DB
-    edits, etc.). Skips via the marker check when there is nothing new.
+    Nightly safety net: request a regeneration when prerendered content changed
+    after the last build and no write path asked for it (Django admin, shell,
+    bulk updates). Never builds: in request mode it only writes the request
+    file the ops toolkit consumes.
     """
-    from content.services.frontend_build import run_frontend_rebuild
+    from content.services.frontend_build import reconcile_rebuild_request
 
-    result = run_frontend_rebuild()
-    logger.info(
-        '[FrontendRebuild nightly] %s — %s',
-        result['status'], (result['detail'] or '')[:300],
-    )
+    if reconcile_rebuild_request():
+        logger.info('[FrontendRebuild reconcile] stale prerender — regeneration requested')
 
 
 def _suggest_action_for_proposal(proposal, now):

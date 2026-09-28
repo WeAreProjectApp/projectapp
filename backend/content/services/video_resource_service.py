@@ -148,7 +148,7 @@ def _save_resource(module, language, proposal, actor, revision, mode, source=Non
             transaction.on_commit(lambda: _delete_files(old_names))
             if proposal is None:
                 from content.services.frontend_build import schedule_rebuild_after_publish
-                transaction.on_commit(schedule_rebuild_after_publish)
+                transaction.on_commit(lambda: schedule_rebuild_after_publish(reason='video-resource'))
     except Exception:
         _delete_files(new_names)
         raise

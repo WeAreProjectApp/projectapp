@@ -46,6 +46,7 @@ from content.services.financing_policy_service import (
     FinancingPolicyValidationError,
     create_policy_revision,
 )
+from content.services.frontend_build import schedule_rebuild_after_publish
 
 
 def _error_response(exc):
@@ -102,6 +103,8 @@ def financing_settings(request):
             create_policy_revision(serializer.validated_data, actor=request.user)
         except FinancingPolicyValidationError as exc:
             return _error_response(exc)
+        # The public Partnership Program is prerendered with the current policy.
+        schedule_rebuild_after_publish(reason='partnership-program')
 
     current = FinancingPolicyRevision.get_current()
     history = FinancingPolicyRevision.objects.select_related('created_by')[:25]

@@ -124,6 +124,24 @@ describe('AdditionalModulesCatalogView', () => {
     expect(wrapper.find('[data-testid^="additional-module-card-"]').exists()).toBe(false)
   })
 
+  it('shows a loading skeleton instead of the empty state while the catalog is pending', () => {
+    // Fails if a prerender whose API fetch failed bakes «No hay módulos disponibles».
+    const wrapper = mountCatalog({ categories: [], totalModules: 0, loading: true })
+
+    const skeleton = wrapper.get('[data-testid="additional-modules-skeleton"]')
+    expect(skeleton.attributes('role')).toBe('status')
+    expect(skeleton.text()).toBe('additionalModules.loading')
+    expect(wrapper.text()).not.toContain('additionalModules.emptyTitle')
+  })
+
+  it('keeps the catalog heading while the catalog is pending', () => {
+    // Fails if the pending prerender loses its indexable title or offers a PDF of nothing.
+    const wrapper = mountCatalog({ categories: [], totalModules: 0, loading: true })
+
+    expect(wrapper.get('h1').text()).toBe('additionalModules.title')
+    expect(wrapper.find('[data-testid="additional-modules-download-pdf"]').exists()).toBe(false)
+  })
+
   it('shows compact rows after selecting list view', async () => {
     const wrapper = mountCatalog()
 
@@ -222,6 +240,14 @@ describe('AdditionalModulesCatalogView explainer video', () => {
 
     expect(wrapper.find('[data-testid="additional-modules-explainer-card"]').exists()).toBe(false)
     expect(wrapper.find('[data-testid="additional-module-card-electronic-invoicing"]').exists()).toBe(true)
+  })
+
+  it('hides the explainer until the catalog payload arrives', () => {
+    // Fails if a video the panel switched off flashes inside the prerendered skeleton.
+    const wrapper = mountCatalog({ language: 'es', categories: [], totalModules: 0, loading: true })
+
+    expect(wrapper.find('[data-testid="additional-modules-explainer-card"]').exists()).toBe(false)
+    expect(wrapper.get('[data-testid="additional-modules-skeleton"]').attributes('aria-live')).toBe('polite')
   })
 
   it('hides the Spanish explainer when the panel switch turns it off', () => {
