@@ -52,14 +52,16 @@
 > actualizar el Mapa de vistas. La entrega es PR abierto con CI verde; merge y
 > despliegue siguen el flujo del operador.
 
-> **Implementado, pendiente de CI e integración — monitoreo 2026-09-19:**
+> **Integrado, pendiente de verificación operativa — monitoreo 2026-09-28:**
 > panel interno con casos separados por proyecto/servidor, seguimiento manual,
 > notas e historial, reportes con retención y salud de fuentes. El alcance se
 > limita a vps-projectapp-prod y ProjectApp/Mimittos/Tenndalux. Recepción
 > autenticada e idempotente, cola local y exportación Silk saneada; correo
-> coexistente. QA focal aprobado; PR #393 y PRs de exportadores independientes.
-> El deploy, las migraciones y la activación gradual son del operador.
-> Contrato y procedimiento: `docs/monitoring.md`.
+> coexistente. Módulo integrado por el PR #393; iconos pedidos por el PR #407.
+> La recepción real, el inventario desplegado y la activación de Silk por proyecto
+> requieren consulta del servidor; el acceso Tailscale pidió autenticación adicional.
+> Criterios y decisiones del MVP: `docs/monitoring.md`. Revisión y evidencia local:
+> `docs/audits/2026-09-28-monitoring-first-scope.md`.
 
 > **Orden de ingresos listo para integrar — 2026-09-04:** Mes abre del más
 > reciente al más antiguo y alterna sus dos sentidos; Total recorre mayor,
