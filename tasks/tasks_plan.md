@@ -1,3 +1,9 @@
+> **2026-09-28 — MVP de enlaces seguros:** completar CRUD MCP y consulta
+> sensible con permiso explícito/confirmación efímera, estados recuperables
+> del panel, limpieza de secretos y verificación focal. Entrega por PR a main;
+> `secure_links.0002` queda para deploy. Incidente productivo #433 pendiente
+> de corroboración; esta sesión no lo declara resuelto.
+
 # Task Plan — ProjectApp
 
 > **2026-09-26 — modalidad de cierre de contratos:** Documentos elige en

@@ -7,7 +7,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from content.mcp.context import bypass_confirmation, current_mcp_context
-from content.models import McpActionIntent
+from content.models import McpActionIntent, McpCredential
 
 
 INTENT_TTL_MINUTES = 10
@@ -33,6 +33,9 @@ def preview_sensitive_action(tool, arguments):
             'La acción sensible requiere una credencial MCP identificable.',
             code='FORBIDDEN',
         )
+    prepare_arguments = tool.get('prepare_arguments')
+    if prepare_arguments:
+        arguments = prepare_arguments(arguments)
     impact_builder = tool.get('impact_builder')
     impact = impact_builder(arguments) if impact_builder else {
         'summary': tool.get('confirmation_message') or tool['description'],
@@ -84,11 +87,23 @@ def confirm_action(arguments, tools):
                     'La confirmación pertenece a otra credencial.',
                     code='FORBIDDEN',
                 )
+            tool = next(
+                (candidate for candidate in tools if candidate['name'] == intent.tool_name),
+                None,
+            )
+            if tool is None or not tool.get('requires_confirmation'):
+                raise ToolError('La herramienta confirmada ya no está disponible.', code='CONFLICT')
+            credential = McpCredential.objects.select_for_update().get(pk=context.credential.pk)
+            if not credential.is_usable or not credential.allows(tool['name']):
+                raise ToolError('La credencial no permite esta herramienta.', code='FORBIDDEN')
             if intent.status == McpActionIntent.STATUS_EXECUTED:
                 return {
                     'confirmed': True,
                     'replayed': True,
-                    'result': intent.result,
+                    'result': (
+                        {'delivered': True, 'content_available': False, 'new_confirmation_required': True}
+                        if tool.get('ephemeral_result') else intent.result
+                    ),
                 }
             if intent.status != McpActionIntent.STATUS_PENDING:
                 raise ToolError(
@@ -100,20 +115,6 @@ def confirm_action(arguments, tools):
                 intent.save(update_fields=['status'])
                 expired = True
             else:
-                tool = next(
-                    (candidate for candidate in tools if candidate['name'] == intent.tool_name),
-                    None,
-                )
-                if tool is None or not tool.get('requires_confirmation'):
-                    raise ToolError(
-                        'La herramienta confirmada ya no está disponible.',
-                        code='CONFLICT',
-                    )
-                if not context.credential.allows(tool['name']):
-                    raise ToolError(
-                        'La credencial no permite esta herramienta.',
-                        code='FORBIDDEN',
-                    )
                 if canonical_arguments_hash(intent.arguments) != intent.arguments_hash:
                     raise ToolError(
                         'La carga de la confirmación no conserva su huella.',
@@ -135,7 +136,10 @@ def confirm_action(arguments, tools):
                     result = tool['handler'](dict(intent.arguments))
                 intent.status = McpActionIntent.STATUS_EXECUTED
                 intent.executed_at = timezone.now()
-                intent.result = result
+                intent.result = (
+                    {'delivered': True, 'content_available': False, 'new_confirmation_required': True}
+                    if tool.get('ephemeral_result') else result
+                )
                 intent.save(update_fields=['status', 'executed_at', 'result'])
     except McpActionIntent.DoesNotExist as exc:
         raise ToolError(

@@ -40,6 +40,26 @@ describe('useSecureLinksStore', () => {
     expect(store.publicCreateUrl).toBe('https://x/es-co/secure-link');
   });
 
+  it('keeps the newest list when an earlier request resolves last', async () => {
+    let resolveFirst;
+    let resolveSecond;
+    get_request
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveSecond = resolve; }));
+
+    const firstRequest = store.fetchLinks({ search: 'previous', page: 1 });
+    const latestRequest = store.fetchLinks({ search: 'current', page: 2 });
+    resolveSecond({ data: { results: [{ id: 8, title: 'Current result' }], count: 1, page: 2, page_size: 25 } });
+    await latestRequest;
+    resolveFirst({ data: { results: [{ id: 7, title: 'Previous result' }], count: 1, page: 1, page_size: 25 } });
+
+    // Fails if a slow search restores results after the user has moved to a new page.
+    expect(await firstRequest).toEqual({ success: false, stale: true });
+    expect(store.links).toEqual([{ id: 8, title: 'Current result' }]);
+    expect(store.page).toBe(2);
+    expect(store.isLoading).toBe(false);
+  });
+
   it('adds a created link to the list without keeping its one-time URL', async () => {
     create_request.mockResolvedValue({ data: { ...row, url: 'https://x#token' } });
 

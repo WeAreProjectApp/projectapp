@@ -1,3 +1,10 @@
+# MVP de enlaces seguros (2026-09-28)
+
+En implementación en `feat/28092026-secure-links-mvp`, desde main con #418 y
+#433 integrados. Alcance aprobado: CRUD en panel y MCP, lectura del secreto
+mediante permiso explícito y confirmación efímera; sin despliegue. La causa del
+incidente productivo documentada en #433 sigue pendiente de corroboración.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**

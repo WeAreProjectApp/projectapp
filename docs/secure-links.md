@@ -19,6 +19,8 @@ revoca o se reactiva.
 - **Reactivar:** desde el detalle del enlace, con nueva vigencia. Por defecto se
   reactiva el **mismo** enlace; si otra persona pudo abrirlo, marca "generar un
   enlace nuevo" y el anterior deja de funcionar.
+- **Editar:** título y asociaciones se pueden cambiar sin descifrar el secreto; **Editar contenido** carga sus campos de forma explícita. Guardar no cambia la URL, vigencia ni estado del enlace.
+- **Eliminar:** borra permanentemente el enlace, contenido cifrado e historial; requiere confirmar en el panel o MCP. Revocar permite conservarlos.
 - **Ver en el panel:** muestra el contenido sin gastar el enlace y queda en el
   historial (quién y cuándo).
 - **Recibidos:** pestaña con lo que envían los clientes y el conteo de enlaces
@@ -81,7 +83,7 @@ con credenciales ficticias guardadas en el navegador afectado.
 
 ## Contrato técnico
 
-- App Django `secure_links`: `SecureLink`, `SecureLinkEvent` (append-only),
+- App Django `secure_links`: `SecureLink`, `SecureLinkEvent` (eventos inmutables mientras existe el enlace),
   `catalog.py` (8 tipos predefinidos y Personalizado; tarjetas de pago excluidas a propósito),
   `services.py` (única capa de escritura para panel, página pública y MCP).
 - API panel (sesión + CSRF, staff): `GET /api/secure-links/`,
@@ -115,3 +117,34 @@ incidente, correlacionar el traceback del POST `/api/secure-links/create/` con
 la versión desplegada, comprobar migraciones y validar la configuración sin
 imprimir la clave. No reemplazar una clave existente: protege datos anteriores.
 Después del despliegue, verificar una creación con contenido ficticio.
+
+## CRUD y consulta desde MCP (2026-09-28)
+
+`update_secure_link` recibe `link_id` y los cambios de título, cliente, proyecto,
+tipo o contenido. Omitir conserva; `fields` reemplaza el contenido completo y
+cambiar tipo exige `fields`. Cliente/proyecto admiten `null`; si queda un
+proyecto, su cliente se deduce igual que al crear. `delete_secure_link` exige
+confirmación y borra definitivamente el registro y sus eventos.
+
+`reveal_secure_link_content` es una lectura administrativa **sin consumir** el
+enlace, incluso usado, vencido o revocado. Requiere seleccionar la herramienta
+en el alcance personalizado de una credencial de Comunicaciones (MCPs →
+Credenciales → Editar alcance). El acceso general no la incluye. Solicitarla
+crea una confirmación de diez minutos; `confirm_action` entrega el contenido
+sólo una vez. Si la respuesta se pierde o se repite, hay que pedir y confirmar
+otra lectura. La auditoría `mcp_viewed` registra actor y credencial; ni el intent
+ni los logs guardan el secreto o el resultado en claro. Una vez entregado, el
+contenido queda bajo el manejo del cliente MCP que lo solicitó.
+
+Confirmar relee permisos y bloquea el enlace mientras comprueba su versión y
+ejecuta la acción. Un registro modificado/eliminado o una confirmación vencida,
+cancelada o perteneciente a otra credencial no revela contenido. Los argumentos
+inválidos se rechazan antes de persistir la confirmación. Las respuestas MCP
+son `no-store`; listas y detalle ordinario continúan sin contenido ni URL.
+
+El panel muestra errores de consulta con reintento, conserva el borrador si
+falla un guardado y bloquea cierre/envíos repetidos durante esa operación.
+Cerrar o abandonar borra contenido y URLs temporales; respuestas atrasadas no
+reponen secretos. El listado usa la última petición y corrige la página tras
+eliminar su última fila. La migración `secure_links.0002_mcp_viewed_event` sólo
+agrega el tipo de evento; no cambia claves ni datos anteriores.

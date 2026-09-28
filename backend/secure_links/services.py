@@ -21,7 +21,7 @@ from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils import timezone
 
-from .catalog import clean_fields, labelled_fields, type_label
+from .catalog import CatalogError, clean_fields, labelled_fields, type_label
 from .models import SecureLink, SecureLinkEvent
 
 VALIDITY_CHOICES = (1, 3, 7, 30)
@@ -134,6 +134,21 @@ def _validity(days, *, allowed=VALIDITY_CHOICES):
     return days
 
 
+def _title(value):
+    if not isinstance(value, str) or not value.strip() or len(value.strip()) > 160:
+        raise CatalogError({'title': ['Escribe un título de hasta 160 caracteres.']})
+    return value.strip()
+
+
+def _association(client, project):
+    if project is not None:
+        if client is not None and project.client_id != client.user_id:
+            raise SecureLinkError('El proyecto no pertenece a ese cliente.', code='project_client_mismatch')
+        if client is None:
+            client = getattr(project.client, 'profile', None)
+    return client, project
+
+
 def log_event(link, kind, *, actor=None, meta=None, **details):
     meta = meta or RequestMeta()
     return SecureLinkEvent.objects.create(
@@ -162,10 +177,8 @@ def create_link(*, secret_type, title, fields, origin, actor=None, client=None,
     allowed = PUBLIC_VALIDITY_CHOICES if origin == SecureLink.Origin.PUBLIC else VALIDITY_CHOICES
     days = _validity(validity_days, allowed=allowed)
     payload = clean_fields(secret_type, fields)
-    if project is not None and client is not None and project.client_id != client.user_id:
-        raise SecureLinkError('El proyecto no pertenece a ese cliente.', code='project_client_mismatch')
-    if project is not None and client is None:
-        client = getattr(project.client, 'profile', None)
+    title = _title(title)
+    client, project = _association(client, project)
     token, token_hash, token_encrypted = _new_token()
     link = SecureLink.objects.create(
         token_hash=token_hash,
@@ -256,15 +269,40 @@ def reveal(token, *, staff=False, actor=None, meta=None):
     return link, content
 
 
-def panel_content(link, *, actor, meta=None):
+def _locked_link(link):
+    current = SecureLink.objects.select_for_update().filter(pk=link.pk).first()
+    if current is None:
+        raise _not_found()
+    return current
+
+
+@transaction.atomic
+def _audited_content(link, *, actor, kind, meta=None, **details):
+    link = _locked_link(link)
     content = content_for(link)
-    log_event(link, SecureLinkEvent.Kind.PANEL_VIEWED, actor=actor, meta=meta)
+    log_event(link, kind, actor=actor, meta=meta, **details)
     return content
+
+
+def panel_content(link, *, actor, meta=None):
+    return _audited_content(link, actor=actor, kind=SecureLinkEvent.Kind.PANEL_VIEWED, meta=meta)
+
+
+def mcp_content(link, *, actor, credential_id):
+    return _audited_content(
+        link, actor=actor, kind=SecureLinkEvent.Kind.MCP_VIEWED, credential_id=credential_id,
+    )
+
+
+@transaction.atomic
+def delete_link(link):
+    """Serialize deletion with updates and public consumption."""
+    _locked_link(link).delete()
 
 
 @transaction.atomic
 def reactivate(link, *, actor, validity_days=None, rotate=False, meta=None):
-    link = SecureLink.objects.select_for_update().get(pk=link.pk)
+    link = _locked_link(link)
     days = _validity(validity_days)
     url = None
     if rotate:
@@ -286,7 +324,7 @@ def reactivate(link, *, actor, validity_days=None, rotate=False, meta=None):
 
 @transaction.atomic
 def revoke(link, *, actor, meta=None):
-    link = SecureLink.objects.select_for_update().get(pk=link.pk)
+    link = _locked_link(link)
     if link.revoked_at is None:
         link.revoked_at = timezone.now()
         link.save(update_fields=['revoked_at', 'updated_at'])
@@ -297,17 +335,15 @@ def revoke(link, *, actor, meta=None):
 @transaction.atomic
 def update_link(link, *, actor, meta=None, **changes):
     """Edit title, association and/or content. Never changes the link state."""
-    link = SecureLink.objects.select_for_update().get(pk=link.pk)
+    link = _locked_link(link)
     changed = []
     if 'title' in changes:
-        link.title = changes['title'].strip()
+        link.title = _title(changes['title'])
         changed.append('title')
     if 'client' in changes or 'project' in changes:
         client = changes.get('client', link.client)
         project = changes.get('project', link.project)
-        if project is not None and client is not None and project.client_id != client.user_id:
-            raise SecureLinkError('El proyecto no pertenece a ese cliente.', code='project_client_mismatch')
-        link.client, link.project = client, project
+        link.client, link.project = _association(client, project)
         changed += ['client', 'project']
     if 'fields' in changes:
         secret_type = changes.get('secret_type', link.secret_type)

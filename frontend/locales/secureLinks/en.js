@@ -50,6 +50,8 @@ export default {
     email: 'Enter a valid email address.',
   },
   panel: {
+    mcpPermissionNotice: 'Reading secrets requires selecting reveal_secure_link_content in the custom scope. General access excludes this permission. Each read requires confirmation.',
+    saving: 'Wait for saving to finish.', editContent: 'Edit content', deleted: 'This link was deleted or no longer exists.',
     newTitle: 'New secure link', editTitle: 'Edit secure link',
     title: 'Internal title',
     titleHint: 'Use it to identify the link in the panel. The recipient only sees it after opening the link; do not put the secret here.',

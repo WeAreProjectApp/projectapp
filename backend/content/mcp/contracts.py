@@ -533,7 +533,7 @@ MCP_MODEL_CONTRACTS = {
             read_write='secret_type title language client project validity_days',
             excluded=(
                 _excluded(
-                    'Contenido cifrado: el MCP sólo lo recibe al crear y nunca lo devuelve.',
+                    'Cifrado interno; crear/actualizar reciben fields y la lectura explícita confirmada devuelve contenido, nunca ciphertext.',
                     'payload_encrypted',
                 )
                 | _excluded(

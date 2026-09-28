@@ -14,6 +14,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def mcp_token():
+    """Return an active communications connector token."""
     connector, _ = McpConnector.objects.get_or_create(
         slug='communications', defaults={'name': 'Gestor de Comunicaciones'},
     )
@@ -23,6 +24,7 @@ def mcp_token():
 
 
 def call_tool(api_client, token, name, arguments):
+    """Call one communications MCP tool through JSON-RPC."""
     return api_client.post(
         f'/api/mcp/communications/{token}/',
         {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments}},
@@ -31,11 +33,35 @@ def call_tool(api_client, token, name, arguments):
 
 
 def result(response):
+    """Return the JSON-RPC result payload."""
     return response.data['result']
 
 
 def text(response):
+    """Return the MCP text representation of a tool response."""
     return result(response)['content'][0]['text']
+
+
+def list_tools(api_client, token):
+    """Discover tools visible to a communications credential."""
+    return api_client.post(
+        f'/api/mcp/communications/{token}/',
+        {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'},
+        format='json',
+    )
+
+
+def error_code(response):
+    """Return a structured tool error code."""
+    return result(response)['structuredContent']['error']['code']
+
+
+def grant_secret_read(connector):
+    """Enable only the explicit secure-link read permission."""
+    credential = connector.credentials.get(label='Default')
+    credential.allowed_tools = ['reveal_secure_link_content']
+    credential.save(update_fields=['allowed_tools'])
+    return credential
 
 
 def test_create_returns_url_once_and_reads_never_expose_it(api_client, mcp_token, client_profile, project):
@@ -50,9 +76,12 @@ def test_create_returns_url_once_and_reads_never_expose_it(api_client, mcp_token
 
     token = token_from(data['url'])
     link = SecureLink.objects.get(pk=data['id'])
-    assert link.origin == SecureLink.Origin.MCP and link.project == project
-    for response in (listed, detail):
-        assert token not in text(response) and CREDENTIALS['password'] not in text(response)
+    assert link.origin == SecureLink.Origin.MCP
+    assert link.project == project
+    assert token not in text(listed)
+    assert CREDENTIALS['password'] not in text(listed)
+    assert token not in text(detail)
+    assert CREDENTIALS['password'] not in text(detail)
     assert json.loads(text(listed))['count'] == 1
 
 
@@ -143,3 +172,106 @@ def test_mcp_custom_creation_rejects_missing_name(api_client, mcp_token):
     assert result(response)['isError'] is True
     assert 'custom_name' in text(response)
     assert not SecureLink.objects.exists()
+
+
+def test_secret_read_requires_explicit_credential_grant(api_client, mcp_token, make_link):
+    """Falla si una credencial general descubre o inicia una lectura de secreto."""
+    link, _url = make_link()
+
+    hidden = list_tools(api_client, mcp_token)
+    forbidden = call_tool(
+        api_client, mcp_token, 'reveal_secure_link_content', {'link_id': link.pk},
+    )
+    connector = McpConnector.objects.get(slug='communications')
+    grant_secret_read(connector)
+    visible = list_tools(api_client, mcp_token)
+    preview = call_tool(
+        api_client, mcp_token, 'reveal_secure_link_content', {'link_id': link.pk},
+    )
+
+    hidden_names = {tool['name'] for tool in result(hidden)['tools']}
+    visible_names = {tool['name'] for tool in result(visible)['tools']}
+    assert 'reveal_secure_link_content' not in hidden_names
+    assert error_code(forbidden) == 'FORBIDDEN'
+    assert 'reveal_secure_link_content' in visible_names
+    assert result(preview)['structuredContent']['confirmation_id']
+    assert CREDENTIALS['password'] not in text(preview)
+
+
+def test_mcp_update_preserves_the_public_url_without_returning_content(api_client, mcp_token, make_link):
+    """Falla si editar por MCP cambia la URL, consume el enlace o devuelve el secreto."""
+    from secure_links import services
+
+    link, url = make_link()
+    replacement = {**CREDENTIALS, 'password': 'Mcp-updated-password'}
+
+    response = call_tool(api_client, mcp_token, 'update_secure_link', {
+        'link_id': link.pk, 'fields': replacement,
+    })
+
+    link.refresh_from_db()
+    assert link.status == 'active'
+    assert services.link_url(link) == url
+    assert {field['key']: field['value'] for field in services.content_for(link)['fields']}['password'] == replacement['password']
+    assert replacement['password'] not in text(response)
+    assert url not in text(response)
+
+
+def test_mcp_delete_requires_confirmation_before_removing_the_link(api_client, mcp_token, make_link):
+    """Falla si eliminar por MCP borra el enlace antes de confirmar la acción."""
+    link, _url = make_link()
+
+    preview = call_tool(api_client, mcp_token, 'delete_secure_link', {'link_id': link.pk})
+    confirmation_id = result(preview)['structuredContent']['confirmation_id']
+    pending = SecureLink.objects.filter(pk=link.pk).exists()
+    confirmed = call_tool(
+        api_client, mcp_token, 'confirm_action', {'confirmation_id': confirmation_id},
+    )
+
+    assert pending is True
+    assert json.loads(text(confirmed))['result'] == {'id': link.pk, 'deleted': True}
+    assert SecureLink.objects.filter(pk=link.pk).exists() is False
+
+
+def test_invalid_delete_preview_does_not_create_an_intent(api_client, mcp_token):
+    """Falla si una vista previa inválida queda persistida como acción confirmable."""
+    response = call_tool(api_client, mcp_token, 'delete_secure_link', {'link_id': 'no-id'})
+
+    assert error_code(response) == 'VALIDATION_ERROR'
+    assert McpActionIntent.objects.exists() is False
+
+
+def test_confirmation_rejects_a_link_modified_after_delete_preview(api_client, mcp_token, make_link, staff_user):
+    """Falla si una confirmación antigua elimina un enlace modificado después de la vista previa."""
+    from secure_links import services
+
+    link, _url = make_link()
+    preview = call_tool(api_client, mcp_token, 'delete_secure_link', {'link_id': link.pk})
+    services.update_link(link, actor=staff_user, title='Título actualizado')
+
+    confirmed = call_tool(
+        api_client, mcp_token, 'confirm_action',
+        {'confirmation_id': result(preview)['structuredContent']['confirmation_id']},
+    )
+
+    link.refresh_from_db()
+    assert error_code(confirmed) == 'STALE_VERSION'
+    assert link.title == 'Título actualizado'
+
+
+def test_confirmation_rejects_a_link_removed_after_preview(api_client, mcp_token, make_link):
+    """Falla si una confirmación de eliminación afecta otro enlace tras borrar su objetivo."""
+    from secure_links import services
+
+    link, _url = make_link(title='Original target')
+    other, _other_url = make_link(title='Other target')
+    preview = call_tool(api_client, mcp_token, 'delete_secure_link', {'link_id': link.pk})
+    services.delete_link(link)
+
+    confirmed = call_tool(
+        api_client, mcp_token, 'confirm_action',
+        {'confirmation_id': result(preview)['structuredContent']['confirmation_id']},
+    )
+
+    assert error_code(confirmed) == 'NOT_FOUND'
+    assert SecureLink.objects.filter(pk=other.pk).exists() is True

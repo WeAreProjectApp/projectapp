@@ -28,16 +28,22 @@ function listPayload(rows) {
   };
 }
 
-async function setupPanel(page, { rows = [secureLinkRow()], create, types } = {}) {
+async function setupPanel(page, {
+  rows = [secureLinkRow()], create, types, detail, update, remove, list,
+} = {}) {
   let store = [...rows];
-  const calls = { create: [], content: 0, revoke: 0, reactivate: [] };
+  const calls = {
+    create: [], content: 0, revoke: 0, reactivate: [], update: [], delete: 0,
+  };
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
     if (apiPath === 'panel/dashboard/' && method === 'GET') {
       return json({ finance: null, proposals: { total_proposals: 0, by_status: {}, recent: [] }, additional_modules: {}, operations: {}, attention: [] });
     }
     if (apiPath === 'secure-links/public/types/') return types ? types() : json({ types: secureLinkTypes });
-    if (apiPath === 'secure-links/' && method === 'GET') return json(listPayload(store));
+    if (apiPath === 'secure-links/' && method === 'GET') {
+      return list ? list({ route, store }) : json(listPayload(store));
+    }
     if (apiPath === 'secure-links/create/' && method === 'POST') {
       calls.create.push(route.request().postDataJSON());
       if (create) return typeof create === 'function' ? create() : create;
@@ -49,7 +55,23 @@ async function setupPanel(page, { rows = [secureLinkRow()], create, types } = {}
     if (!match) return null;
     const id = Number(match[1]);
     const row = store.find((item) => item.id === id);
-    if (!match[2]) return json({ ...row, events: [{ id: 1, kind: 'created', kind_label: 'Creado', actor_name: 'Admin', ip_address: null, details: {}, created_at: row.created_at }] });
+    if (!match[2] && method === 'GET') {
+      if (detail) return typeof detail === 'function' ? detail({ route, row }) : detail;
+      return json({ ...row, events: [{ id: 1, kind: 'created', kind_label: 'Creado', actor_name: 'Admin', ip_address: null, details: {}, created_at: row.created_at }] });
+    }
+    if (!match[2] && method === 'PATCH') {
+      const payload = route.request().postDataJSON();
+      calls.update.push(payload);
+      if (update) return typeof update === 'function' ? update({ route, row, payload }) : update;
+      Object.assign(row, payload);
+      return json(row);
+    }
+    if (!match[2] && method === 'DELETE') {
+      calls.delete += 1;
+      if (remove) return typeof remove === 'function' ? remove({ route, row }) : remove;
+      store = store.filter((item) => item.id !== id);
+      return { status: 204, body: '' };
+    }
     if (match[2] === 'content/') {
       calls.content += 1;
       return json(revealedContent);
@@ -227,6 +249,186 @@ test.describe('Admin secure links', () => {
     await expect(page.getByTestId('secure-link-field-password')).toHaveValue('');
     await expect(page.getByTestId('secure-link-field-password')).toHaveAttribute('type', 'password');
     await expect(page.getByTestId('secure-link-field-password')).toHaveAttribute('autocomplete', 'new-password');
+  });
+
+  // Bug caught: metadata edits used to reveal the secret even when no content changed.
+  test('edits link metadata without revealing its content', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page);
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-open-7').click();
+    await page.getByTestId('secure-link-edit').click();
+
+    await expect(page.getByTestId('secure-link-form')).toContainText('Editar enlace');
+    await page.getByTestId('secure-link-title').fill('Acceso Django actualizado');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(page.getByTestId('secure-links-page')).toContainText('Acceso Django actualizado');
+    expect(calls.content).toBe(0);
+    expect(calls.update[0]).toEqual({ title: 'Acceso Django actualizado', client: null, project: null });
+  });
+
+  // Bug caught: editing content could discard the fields retrieved explicitly from the detail.
+  test('edits revealed content with the refreshed field values', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page);
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-open-7').click();
+    await page.getByTestId('secure-link-edit-content').click();
+
+    await expect(page.getByTestId('secure-link-field-password')).toHaveValue('S3cr3t-E2E!');
+    await page.getByTestId('secure-link-field-password').fill('S3cr3t-Updated!');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(page.getByTestId('secure-links-page')).toContainText('Admin Django producción');
+    expect(calls.content).toBe(1);
+    expect(calls.update[0]).toMatchObject({
+      title: 'Admin Django producción', secret_type: 'credentials', fields: { password: 'S3cr3t-Updated!' },
+    });
+  });
+
+  // Bug caught: a rejected metadata change could clear the draft that the administrator needs to correct.
+  test('keeps a rejected metadata draft for correction', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await setupPanel(page, {
+      update: json({ title: ['El título ya existe.'] }, 400),
+    });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-open-7').click();
+    await page.getByTestId('secure-link-edit').click();
+    await page.getByTestId('secure-link-title').fill('Título duplicado');
+    await page.getByTestId('secure-link-save').click();
+
+    await expect(page.getByTestId('secure-link-form')).toContainText('El título ya existe.');
+    await expect(page.getByTestId('secure-link-title')).toHaveValue('Título duplicado');
+  });
+
+  // Bug caught: cancelling the destructive dialog could still remove the secure link locally.
+  test('cancels deletion without removing the secure link', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page);
+    // quality: allow-deep-link (the panel home is the shell entry; its visible navigation opens the secure-links module)
+    await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Enlaces seguros', exact: true }).click();
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-delete-7').click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click();
+
+    await expect(page.getByTestId('secure-link-row-7')).toContainText('Admin Django producción');
+    expect(calls.delete).toBe(0);
+  });
+
+  // Bug caught: a server failure could hide an undeleted secret from the current list.
+  test('keeps the secure link visible after a failed deletion', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page, { remove: json({ detail: 'No se pudo eliminar.' }, 500) });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-delete-7').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByTestId('secure-link-row-7')).toContainText('Admin Django producción');
+    expect(calls.delete).toBe(1);
+  });
+
+  // Bug caught: confirming deletion could leave the stale row visible after the server removed it.
+  test('removes the secure link after confirmed deletion', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page);
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-delete-7').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('Sin enlaces en esta vista')).toHaveCount(1);
+    expect(calls.delete).toBe(1);
+  });
+
+  // Bug caught: a failed detail request left the administrator on an endless loading state.
+  test('retries a failed detail request', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    let unavailable = true;
+    await setupPanel(page, {
+      detail: ({ row }) => unavailable
+        ? json({ detail: 'Servicio no disponible.' }, 503)
+        : json({ ...row, events: [{ id: 1, kind: 'created', kind_label: 'Creado', actor_name: 'Admin', ip_address: null, details: {}, created_at: row.created_at }] }),
+    });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-open-7').click();
+
+    await expect(page.getByTestId('secure-link-detail-error')).toContainText('Servicio no disponible.');
+    unavailable = false;
+    await page.getByTestId('secure-link-detail-retry').click();
+    await expect(page.getByTestId('secure-link-detail')).toContainText('Admin Django producción');
+  });
+
+  // Bug caught: a saved edit could disappear after reloading before the administrator deletes the link.
+  test('persists a created link through edit reload and deletion', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = await setupPanel(page, { rows: [] });
+    await page.goto('/es-co/panel/secure-links', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-links-new').click();
+    await page.getByTestId('secure-link-title').fill('Llaves Wompi');
+    await page.getByTestId('secure-link-field-password').fill('created-secret');
+    await page.getByTestId('secure-link-save').click();
+    await page.getByTestId('secure-link-created-close').click();
+    await page.getByTestId('secure-link-actions-9').click();
+    await page.getByTestId('secure-link-open-9').click();
+    await page.getByTestId('secure-link-edit').click();
+    await page.getByTestId('secure-link-title').fill('Llaves Wompi editadas');
+    await page.getByTestId('secure-link-save').click();
+    await page.reload({ waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('secure-link-row-9')).toContainText('Llaves Wompi editadas');
+    await page.getByTestId('secure-link-actions-9').click();
+    await page.getByTestId('secure-link-delete-9').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('Sin enlaces en esta vista')).toHaveCount(1);
+    expect(calls.create).toHaveLength(1);
+    expect(calls.update[0]).toEqual({ title: 'Llaves Wompi editadas', client: null, project: null });
+    expect(calls.delete).toBe(1);
+  });
+
+  // Bug caught: deleting the only result on the final page could retain a blank out-of-range page.
+  test('clamps to the surviving page after deleting its final result', {
+    tag: [...ADMIN_SECURE_LINK_MANAGE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    let lastPage = true;
+    const calls = await setupPanel(page, {
+      list: () => json(lastPage
+        ? {
+          ...listPayload([secureLinkRow()]), count: 26, page: 2, page_size: 25,
+          counts: { active: 26, consumed: 0, expired: 0, revoked: 0, all: 26 },
+        }
+        : {
+          ...listPayload([secureLinkRow({ id: 8, title: 'Enlace de la página anterior' })]), count: 25, page: 1, page_size: 25,
+          counts: { active: 25, consumed: 0, expired: 0, revoked: 0, all: 25 },
+        }),
+      remove: () => {
+        lastPage = false;
+        return { status: 204, body: '' };
+      },
+    });
+    await page.goto('/es-co/panel/secure-links?page=2', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('secure-link-actions-7').click();
+    await page.getByTestId('secure-link-delete-7').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByTestId('secure-link-row-8')).toContainText('Enlace de la página anterior');
+    expect(calls.delete).toBe(1);
   });
 
 });

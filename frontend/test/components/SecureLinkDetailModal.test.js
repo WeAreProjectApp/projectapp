@@ -103,15 +103,74 @@ describe('SecureLinkDetailModal', () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith('https://x/view#new');
   });
 
-  it('opens the edit form with the current values', async () => {
+  it('retries a deleted detail after a 404 error', async () => {
+    get_request.mockRejectedValueOnce({ response: { status: 404, data: { error: 'No existe.' } } });
+    const wrapper = mountModal();
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="secure-link-detail-error"]').text()).toContain('secureLinks.panel.deleted');
+    await wrapper.get('[data-testid="secure-link-detail-retry"]').trigger('click');
+    await flushPromises();
+
+    // Fails if a 404 keeps the detail modal in its loading state or cannot recover.
+    expect(wrapper.get('[data-testid="secure-link-events"]').text()).toContain('IP 198.51.100.7 · ya estaba usado');
+    expect(wrapper.text()).not.toContain('secureLinks.panel.deleted');
+  });
+
+  it('does not render content from a request resolved after closing', async () => {
+    let resolveContent;
+    const wrapper = mountModal();
+    await flushPromises();
+    create_request.mockImplementationOnce(() => new Promise((resolve) => { resolveContent = resolve; }));
+
+    await wrapper.get('[data-testid="secure-link-view-content"]').trigger('click');
+    await wrapper.setProps({ modelValue: false });
+    resolveContent({ data: content });
+    await flushPromises();
+
+    // Fails if a late decrypt response reveals a secret after its modal is closed.
+    expect(wrapper.text()).not.toContain('S3cr3t');
+    expect(wrapper.emitted('changed')).toBeUndefined();
+  });
+
+  it('does not render the previous detail after switching links', async () => {
+    let resolveFirst;
+    get_request
+      .mockImplementationOnce(() => new Promise((resolve) => { resolveFirst = resolve; }))
+      .mockResolvedValueOnce({ data: { ...baseDetail, id: 8, title: 'Replacement link' } });
+    const wrapper = mountModal();
+
+    await wrapper.setProps({ linkId: 8 });
+    await flushPromises();
+    resolveFirst({ data: baseDetail });
+    await flushPromises();
+
+    // Fails if a detail response from the prior link replaces the selected link.
+    expect(wrapper.text()).toContain('Replacement link');
+  });
+
+  it('opens metadata editing without requesting decrypted content', async () => {
+    const wrapper = mountModal();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="secure-link-edit"]').trigger('click');
+
+    // Fails if changing a title or association requires decrypting the secret.
+    expect(wrapper.emitted('edit')[0][0]).toEqual({ link: baseDetail, fields: null });
+    expect(create_request).not.toHaveBeenCalled();
+  });
+
+  it('loads decrypted fields before opening content editing', async () => {
     const wrapper = mountModal();
     await flushPromises();
     create_request.mockResolvedValueOnce({ data: content });
 
-    await wrapper.get('[data-testid="secure-link-edit"]').trigger('click');
+    await wrapper.get('[data-testid="secure-link-edit-content"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.emitted('edit')[0][0].fields).toEqual({ password: 'S3cr3t' });
+    // Fails if content editing opens without the decrypted field values.
+    expect(create_request).toHaveBeenCalledWith('secure-links/7/content/', {});
+    expect(wrapper.emitted('edit')[0][0]).toEqual({ link: baseDetail, fields: { password: 'S3cr3t' } });
   });
 
   it('shows the server message when an action fails', async () => {
