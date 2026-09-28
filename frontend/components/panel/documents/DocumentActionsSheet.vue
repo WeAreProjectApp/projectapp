@@ -178,8 +178,7 @@ const BASE_ACTIONS = [
   },
 ];
 
-// The window onto the one contract is rendered live and never edited, moved,
-// duplicated, archived or deleted here: only consulted, shared and exported.
+// The live contract permits organization while its content stays read-only.
 const CONTRACT_MIRROR_ACTIONS = [
   {
     event: 'edit',
@@ -246,7 +245,9 @@ const isIssuedAccount = computed(() => (
 
 const actions = computed(() => {
   if (props.document?.is_contract_mirror) {
-    return CONTRACT_MIRROR_ACTIONS.filter((action) => !action.newTab || props.editTo);
+    const available = [...CONTRACT_MIRROR_ACTIONS];
+    if (props.document.movable) available.push(BASE_ACTIONS.find((action) => action.event === 'move'));
+    return available.filter((action) => action && (!action.newTab || props.editTo));
   }
   if (isIssuedAccount.value || props.document?.is_generated_snapshot) {
     // A stored account is both an issued account and a generated snapshot;

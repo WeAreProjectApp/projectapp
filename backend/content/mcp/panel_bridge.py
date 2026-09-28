@@ -11,11 +11,10 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from content.mcp.actor import mcp_actor
-from content.mcp.protocol import ToolError
 from content.mcp.context import current_mcp_context
+from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
-
 
 factory = APIRequestFactory()
 
@@ -33,6 +32,8 @@ def _error_message(payload, status_code):
             else 'CONFLICT' if status_code == 409
             else 'VALIDATION_ERROR'
         )
+        if isinstance(code, list) and len(code) == 1:
+            code = code[0]
         return str(message or 'La operación del Panel fue rechazada.'), str(code), payload
     return str(payload), 'VALIDATION_ERROR', {'response': payload}
 
@@ -117,6 +118,11 @@ def _request_for(method, url, *, query, data, files, if_match):
 @transaction.atomic
 def _execute(operation, arguments):
     args = deepcopy(arguments)
+    if operation.get('payload_schema'):
+        permitted = set(operation['path_params']) | {'data', 'if_match'} | set(operation['payload_schema']['properties'])
+        unexpected = set(args) - permitted
+        if unexpected:
+            raise ToolError('Campos desconocidos.', details={'fields': sorted(unexpected)})
     route_kwargs = {}
     for name in operation['path_params']:
         value = args.pop(name, None)
@@ -150,6 +156,10 @@ def _execute(operation, arguments):
     if operation['method'] == 'GET':
         query.update(args)
     else:
+        if operation.get('payload_schema'):
+            conflicts = [key for key in args if key in data and args[key] != data[key]]
+            if conflicts:
+                raise ToolError('Campos contradictorios entre data y argumentos.', details={'fields': conflicts})
         data.update(args)
     url = reverse(operation['route_name'], kwargs=route_kwargs)
     request = _request_for(
@@ -189,6 +199,7 @@ def panel_operation(
     requires_confirmation=False,
     confirmation_message='',
     asset_fields=None,
+    payload_schema=None,
 ):
     if len(description.strip()) < 40:
         description = (
@@ -203,6 +214,7 @@ def panel_operation(
         'requires_confirmation': requires_confirmation,
         'confirmation_message': confirmation_message or description,
         'asset_fields': asset_fields or {},
+        'payload_schema': payload_schema,
     }
     properties = {
         **_path_properties(path_params),
@@ -221,6 +233,9 @@ def panel_operation(
             'description': 'ETag leído previamente, cuando el recurso lo ofrece.',
         },
     }
+    if payload_schema:
+        properties = {**_path_properties(path_params), **payload_schema['properties'],
+                      'data': payload_schema, 'if_match': properties['if_match']}
     for argument_name in operation['asset_fields']:
         properties[argument_name] = {'type': 'string', 'format': 'uuid'}
     tool = {
@@ -233,7 +248,7 @@ def panel_operation(
             'type': 'object',
             'properties': properties,
             'required': list(path_params),
-            'additionalProperties': True,
+            'additionalProperties': not bool(payload_schema),
         },
         'handler': lambda arguments: _execute(operation, arguments),
         '_panel_operation': operation,

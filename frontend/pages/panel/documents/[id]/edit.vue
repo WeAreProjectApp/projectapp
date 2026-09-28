@@ -1103,7 +1103,7 @@ function notifySaveError(result, title = 'No se pudo guardar el documento') {
 }
 
 async function saveClientNote(note) {
-  const result = await documentStore.updateDocument(route.params.id, notePayload(note));
+  const result = await documentStore.updateDocument(route.params.id, notePayload(note), { refreshDetail: true });
   if (!result.success) {
     notifySaveError(result, 'No se pudieron guardar las notas');
     return;
@@ -1309,10 +1309,10 @@ async function handleSave() {
   // Se capturan ANTES de guardar: guardar limpia la lista.
   const savedLabels = [...dirtyLabels.value];
 
-  const result = await documentStore.updateDocument(route.params.id, payload);
+  const result = await documentStore.updateDocument(route.params.id, payload, { refreshDetail: true });
   if (result.success) {
     commitBaseline();
-    if (result.data) {
+    if (result.data && !result.refreshFailed) {
       applyAssociationSnapshot(result.data);
       clientDisplayName.value = result.data.client_display_name || clientDisplayName.value;
     }

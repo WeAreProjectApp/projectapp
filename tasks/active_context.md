@@ -17,6 +17,13 @@ Se mantienen los límites API de 100/60/60 caracteres y la configuración numér
 global. Listado y editor esperan el resultado antes de cerrar el modal y muestran
 los errores sin descartar el borrador; el envío pendiente bloquea repeticiones.
 
+> **Organización documental REST/MCP (2026-09-28):** entrega en
+> [PR #441](https://github.com/WeAreProjectApp/projectapp/pull/441). Escrituras
+> compactas, padres estrictos, auditoría, duplicados y movimientos transaccionales,
+> con pruebas focales. El CI final se consulta en el PR. Despliegue conjunto y
+> configuración de la carpeta de estimaciones: [changelog](../docs/changelog/2026-09-28-documents-mcp-3.md).
+> Sin cambios a datos de producción desde la rama.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**

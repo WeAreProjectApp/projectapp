@@ -208,6 +208,14 @@ describe('MoveFolderModal', () => {
       expect(wrapper.find('[data-testid="move-folder-client-choice"]').exists()).toBe(true);
     });
 
+    it('moves a contract without offering to adopt the destination client', async () => {
+      const wrapper = mountModal({ document: { ...ownDoc, is_contract_mirror: true } });
+      await folderButton(wrapper).trigger('click');
+      await flushPromises();
+      expect(mockDocumentStore.updateDocument).toHaveBeenCalledWith(ownDoc.id, { folder_id: 3 });
+      expect(wrapper.find('[data-testid="move-folder-client-choice"]').exists()).toBe(false);
+    });
+
     it('keeps the document client when that is the answer', async () => {
       const wrapper = mountModal({ document: ownDoc });
       await folderButton(wrapper).trigger('click');

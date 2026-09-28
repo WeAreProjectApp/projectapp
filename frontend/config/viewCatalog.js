@@ -585,7 +585,7 @@ export const viewCatalogSections = [
         reference: 'vista principal del gestor documental',
         audience: 'admin',
         viewType: 'list',
-        notes: 'ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial.',
+        notes: 'ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Permite mover el contrato vigente de carpeta sin editar su contenido y rechaza carpetas duplicadas en el mismo nivel.',
       },
       {
         label: 'Crear documento',

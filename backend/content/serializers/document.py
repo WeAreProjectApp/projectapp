@@ -1,9 +1,7 @@
-from content.services.entity_history import historical_write
-
+from accounts.models import Project, UserProfile
 from django.core.exceptions import ObjectDoesNotExist
 from rest_framework import serializers
 
-from accounts.models import Project, UserProfile
 from content.models import (
     AccountingChangeLog,
     Document,
@@ -18,12 +16,15 @@ from content.serializers.document_state import (
     DocumentStateEpisodeSerializer,
 )
 from content.services.document_archive_service import (
-    DocumentArchiveError, ensure_active_target,
+    DocumentArchiveError,
+    ensure_active_target,
 )
 from content.services.document_notes import (
-    DocumentNotesValidationError, normalize_client_custom_notes,
+    DocumentNotesValidationError,
+    normalize_client_custom_notes,
 )
 from content.services.document_type_codes import COLLECTION_ACCOUNT
+from content.services.entity_history import historical_write
 
 
 class ClientCustomNotesField(serializers.JSONField):
@@ -69,6 +70,7 @@ def apply_client_project_association(attrs, instance=None, *, snapshot_client_na
     cambie de nombre.
     """
     from accounts.services.proposal_client_service import build_client_display_name
+
     from content.serializers.accounting import validate_project_client_match
 
     client_sent = 'client' in attrs
@@ -211,6 +213,10 @@ class GeneratedDocumentReadMixin:
     def get_is_generated_snapshot(self, obj):
         return obj.is_generated_snapshot
 
+    def get_movable(self, obj):
+        from content.services.document_write_service import movement_blockers
+        return not movement_blockers(obj)
+
     def get_is_contract_mirror(self, obj):
         return obj.is_contract_mirror
 
@@ -256,6 +262,7 @@ class DocumentListSerializer(
     display_state = serializers.SerializerMethodField()
     is_generated_snapshot = serializers.SerializerMethodField()
     is_contract_mirror = serializers.SerializerMethodField()
+    movable = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     thread_summary = serializers.SerializerMethodField()
 
@@ -268,7 +275,7 @@ class DocumentListSerializer(
             'client_name', 'client', 'client_display_name',
             'project', 'project_name',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror', 'movable',
             'source_proposal_id', 'source_version',
             'issue_date',
             'language', 'cover_type', 'template_style',
@@ -370,6 +377,7 @@ class DocumentDetailSerializer(
     display_state = serializers.SerializerMethodField()
     is_generated_snapshot = serializers.SerializerMethodField()
     is_contract_mirror = serializers.SerializerMethodField()
+    movable = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     billing_notes = serializers.CharField(source='notes', read_only=True)
     collection_account_observations = serializers.CharField(
@@ -387,7 +395,7 @@ class DocumentDetailSerializer(
             'client_whatsapp_message', 'client_custom_notes',
             'project', 'project_name',
             'document_type_code', 'commercial_status',
-            'display_state', 'is_generated_snapshot', 'is_contract_mirror',
+            'display_state', 'is_generated_snapshot', 'is_contract_mirror', 'movable',
             'source_proposal_id', 'source_version',
             'public_number', 'issue_date', 'due_date', 'currency', 'total',
             'billing_notes', 'collection_account_observations',
@@ -415,6 +423,12 @@ class DocumentDetailSerializer(
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        from content.services.document_write_service import (
+            document_capabilities,
+            document_etag,
+        )
+        data.update(document_capabilities(instance))
+        data['etag'] = document_etag(instance)
         if data.get('is_contract_mirror'):
             # The row stores a pointer; readers get the contract itself.
             from content.services.contract_mirror_service import mirror_markdown
@@ -462,6 +476,15 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
             'content_json': {'required': False},
         }
 
+    def to_internal_value(self, data):
+        if self.instance is not None and self.instance.is_contract_mirror:
+            if set(data) - {'folder_id', 'include_content'} or 'folder_id' not in data:
+                from content.services.contract_mirror_service import (
+                    CONTRACT_MIRROR_MESSAGE,
+                )
+                raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
+        return super().to_internal_value(data)
+
     def validate(self, attrs):
         """Guarda de carpeta archivada + resolución de la asociación.
 
@@ -486,6 +509,8 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
                 )
             except DocumentArchiveError as exc:
                 raise serializers.ValidationError({'folder_id': str(exc)}) from exc
+            if self.instance is not None and self.instance.is_contract_mirror:
+                return attrs
             _inherit_from_folder(attrs, self.instance, adopt=adopt)
         return apply_client_project_association(attrs, self.instance)
 

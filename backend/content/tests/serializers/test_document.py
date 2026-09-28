@@ -50,7 +50,7 @@ class TestDocumentListSerializer:
             'active_states',
             'content_excerpt', 'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
-            'thread_summary',
+            'thread_summary', 'movable',
         }
         assert set(data.keys()) == expected
 
@@ -124,7 +124,7 @@ class TestDocumentDetailSerializer:
             'tag_ids', 'tag_details', 'active_states', 'notes',
             'created_at', 'updated_at',
             'is_archived', 'archived_at', 'archived_cause',
-            'thread_summary',
+            'thread_summary', 'editable', 'movable', 'move_blockers', 'etag',
         }
         assert set(data.keys()) == expected
 
