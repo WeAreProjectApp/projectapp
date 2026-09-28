@@ -239,6 +239,7 @@
       @reset="reloadFilterTabs"
     >
       <section class="space-y-4" aria-label="Video de bienvenida">
+        <VideoResourceManager module="proposal" />
         <ExplainerVideoCard
           v-if="proposalExplainer"
           :video="proposalExplainer"
@@ -558,6 +559,8 @@ import ContractParamsModal from '~/components/BusinessProposal/admin/ContractPar
 import ServiceContractSettings from '~/components/BusinessProposal/admin/ServiceContractSettings.vue';
 import ProposalResendModal from '~/components/BusinessProposal/admin/ProposalResendModal.vue';
 import ProposalFilterTabs from '~/components/proposals/ProposalFilterTabs.vue';
+import VideoResourceManager from '~/components/resources/VideoResourceManager.vue';
+import { useExplainerVideosStore } from '~/stores/explainer_videos';
 import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';
 import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vue';
 import { useExplainerVideo } from '~/composables/useExplainerVideos';
@@ -604,7 +607,8 @@ const {
   reloadTabs: reloadFilterTabs,
 } = useProposalFilters();
 
-const proposalExplainer = useExplainerVideo('proposal', 'es');
+const videoSettings = useExplainerVideosStore();
+const proposalExplainer = useExplainerVideo('proposal', 'es', computed(() => videoSettings.settings?.resources?.['proposal:es']));
 
 // Fixed trailing "Configuraciones" tab: swaps the list for the settings panel.
 const showConfigTab = ref(false);

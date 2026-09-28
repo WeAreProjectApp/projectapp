@@ -1,3 +1,7 @@
+# Recursos de video y MCPs comerciales — en implementación (2026-09-28)
+
+Plan aprobado: conectores independientes para Alianza y Módulos adicionales; carga MP4 hasta 250 MB desde panel/MCP; genérico de propuestas y personalizado dentro de ambas vistas comerciales. Rama `feat/28092026-commercial-video-mcps`; migraciones y despliegue pendientes.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**

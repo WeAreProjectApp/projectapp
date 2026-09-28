@@ -118,6 +118,8 @@
 
       <EntityHistoryPanel v-if="activeTab === 'history'" entity-type="proposal" :object-id="proposal.id" />
 
+      <VideoResourceManager v-if="activeTab === 'resources'" :proposal-id="proposal.id" :language="proposal.language" @updated="proposal.personalized_video = $event.video" />
+
       <!-- Tab: General -->
       <div v-if="visitedTabs.has('general')" v-show="activeTab === 'general'">
         <ProposalGeneralTab
@@ -442,6 +444,7 @@ import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, r
 // General is the default tab: keep it static so the first paint needs no
 // extra round-trip. Every other tab panel is only mounted once visited
 // (see visitedTabs below), so deferring its chunk costs nothing up front.
+import VideoResourceManager from '~/components/resources/VideoResourceManager.vue';
 import ProposalGeneralTab from '~/components/panel/proposal/ProposalGeneralTab.vue';
 import TabPanelSkeleton from '~/components/panel/proposal/TabPanelSkeleton.vue';
 
@@ -549,7 +552,7 @@ const technicalItemLinkOptions = computed(() =>
   buildProposalItemLinkOptions(proposal.value?.sections || []),
 );
 
-const validTabs =['general', 'emails', 'documents', 'schedule', 'development', 'sections', 'hour-rate', 'technical', 'prompt', 'json', 'activity', 'analytics'];
+const validTabs =['resources', 'general', 'emails', 'documents', 'schedule', 'development', 'sections', 'hour-rate', 'technical', 'prompt', 'json', 'activity', 'analytics'];
 const activeTab = ref(validTabs.includes(route.query.tab) ? route.query.tab : 'general');
 const technicalSubTab = ref('editor');
 
@@ -609,6 +612,7 @@ const tabs = computed(() => {
   const base = [
     { id: 'general', label: 'General' },
     { id: 'emails', label: 'Correos' },
+    { id: 'resources', label: 'Recursos' },
   ];
   if (hasDocumentsTab.value) {
     base.push({ id: 'documents', label: 'Documentos' });

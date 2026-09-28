@@ -1,3 +1,4 @@
+from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
 from content.views import linktree_template as lt_templates
 from django.urls import path
@@ -353,6 +354,9 @@ from content.views.entity_history import (
 )
 
 urlpatterns = [
+    path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),
+    path('video-resources/admin/proposals/<int:proposal_id>/', admin_proposal_video, name='admin-proposal-video'),
+    path('video-resources/<uuid:resource_id>/<int:revision>/<str:kind>/', public_video_file, name='public-video-file'),
     path('entity-history/<str:entity_type>/<int:object_id>/', entity_history_list),
     path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/file/', entity_history_file),
     path('entity-history/<str:entity_type>/<int:object_id>/compare/', entity_history_compare),

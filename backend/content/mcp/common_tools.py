@@ -77,6 +77,10 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
         },
     ]
     if include_uploads:
-        from content.mcp.upload_tools import UPLOAD_TOOLS
-        tools.extend(UPLOAD_TOOLS)
+        from copy import deepcopy
+        from content.mcp.upload_tools import UPLOAD_TOOLS, VIDEO_CONNECTORS
+        uploads = deepcopy(UPLOAD_TOOLS)
+        if connector_slug not in VIDEO_CONNECTORS:
+            uploads[0]['input_schema']['properties']['content_type']['enum'].remove('video/mp4')
+        tools.extend(uploads)
     return tools

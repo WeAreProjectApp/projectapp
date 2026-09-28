@@ -1,3 +1,4 @@
+from content.services.video_resource_service import public_resource
 from django.http import HttpResponse
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -29,6 +30,7 @@ def public_financing_program(request):
     if language is None:
         return _invalid_language_response()
     payload = serialize_financing_program(language=language)
+    payload['explainer_video'] = public_resource('financing', language)
     payload['show_explainer_video'] = explainer_video_visible('financing')
     return Response(payload)
 

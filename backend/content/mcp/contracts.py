@@ -894,3 +894,53 @@ MCP_MODEL_CONTRACTS.update({
         'content.MerchantAlias',
     ),
 })
+
+# Each connector owns the same service contract as its Panel surface.
+VIDEO_RESOURCE_CONTRACT = _contract(
+    'content.VideoResource',
+    read_only='id key module language proposal filename size sha256 duration_seconds width height revision updated_by created_at updated_at',
+    read_write='mode file poster',
+)
+PARTNERSHIP_CONTRACTS = (
+    _contract(
+        'content.FinancingAgreement',
+        read_write=(
+            'client source_proposal source_project client_full_name client_company client_id_type '
+            'client_id_number client_email client_phone original_contract_reference original_contract_date '
+            'project_name financed_scope modality partnership_start_date currency total_value initial_payment '
+            'hosting_value hosting_period installment_schedule template contract_markdown signed_document '
+            'status completion_note cancellation_reason is_archived policy_revision'
+        ),
+        read_only=(
+            'id uuid number cycle_number previous_agreement partnership_end_date eligibility_exchange_rate '
+            'financed_balance template_version resolved_contract_markdown resolved_contract_sha256 '
+            'signed_document_sha256 signed_document_size ready_at ready_by activated_at activated_by '
+            'completed_at completed_by cancelled_at cancelled_by second_cycle_approved_at second_cycle_approved_by '
+            'archived_at archived_by created_by updated_by created_at updated_at'
+        ),
+    ),
+    _contract('content.FinancingAgreementTemplate', read_only='id name version content_markdown is_default is_active created_at updated_at'),
+    _contract(
+        'content.FinancingPolicyRevision',
+        read_only='id version created_by created_at',
+        read_write='minimum_project_value_cop maximum_project_value_cop financing_months maximum_financed_percent late_hosting_increase_percent installment_due_day_start installment_due_day_end',
+    ),
+    _contract('content.FinancingAgreementEvent', read_only='id agreement event_type actor before_state after_state details created_at'),
+)
+MCP_MODEL_CONTRACTS['partnership-program'] = PARTNERSHIP_CONTRACTS + (VIDEO_RESOURCE_CONTRACT,)
+MCP_MODEL_CONTRACTS['additional-modules'] = tuple(
+    contract for contract in COMMERCIAL_CATALOG_CONTRACTS
+    if contract.model_label.startswith('content.AdditionalModule')
+) + (VIDEO_RESOURCE_CONTRACT,)
+MCP_MODEL_CONTRACTS['proposals'] += (VIDEO_RESOURCE_CONTRACT,)
+MCP_MODEL_CONTRACTS['commercial'] += PARTNERSHIP_CONTRACTS + (VIDEO_RESOURCE_CONTRACT,)
+
+for connector, field in [('partnership-program', 'show_financing_video'), ('additional-modules', 'show_additional_modules_video')]:
+    MCP_MODEL_CONTRACTS[connector] += (_contract(
+        'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write=field,
+        excluded={name: 'Interruptor de otro módulo; no es editable desde este conector.' for name in ('show_financing_video', 'show_additional_modules_video', 'show_proposal_video') if name != field},
+    ),)
+MCP_MODEL_CONTRACTS['proposals'] += (_contract(
+    'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write='show_proposal_video',
+    excluded=_excluded('Interruptor de otro módulo.', 'show_financing_video show_additional_modules_video'),
+),)

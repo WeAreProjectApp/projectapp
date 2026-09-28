@@ -518,3 +518,8 @@ LOGGING = {
         },
     },
 }
+
+# Enable after installing the internal Nginx commercial-video location.
+VIDEO_USE_X_ACCEL_REDIRECT = config('VIDEO_USE_X_ACCEL_REDIRECT', default=False, cast=bool)
+
+FILE_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
