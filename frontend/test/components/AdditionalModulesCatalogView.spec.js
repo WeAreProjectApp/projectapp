@@ -234,6 +234,8 @@ describe('AdditionalModulesCatalogView explainer video', () => {
 
   it('renders the uploaded video source in English', async () => {
     // Fails if an uploaded English resource is discarded because no bundled English render exists.
+    jest.spyOn(document, 'hasFocus').mockReturnValue(true)
+    jest.spyOn(document, 'visibilityState', 'get').mockReturnValue('visible')
     const playSpy = jest.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined)
     const wrapper = mountCatalog({
       language: 'en',
