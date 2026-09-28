@@ -30,7 +30,8 @@ function jsonOk(body) {
 }
 
 test.describe('Admin Document Move Folder', () => {
-  test.setTimeout(60_000);
+  // Leave time for a fresh SPA context to load before exercising the modal.
+  test.setTimeout(90_000);
 
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
@@ -50,9 +51,10 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
-    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
+    await page.waitForURL('**/en-us/panel/documents');
+    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 45000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
@@ -81,8 +83,8 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 45000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
@@ -111,8 +113,8 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 45000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
@@ -143,8 +145,8 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 45000 });
 
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
@@ -178,8 +180,8 @@ test.describe('Admin Document Move Folder', () => {
       return null;
     });
 
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 15000 });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('Brief de Proyecto').first()).toBeVisible({ timeout: 45000 });
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
 
@@ -213,7 +215,7 @@ test.describe('Admin Document Move Folder', () => {
       }
       return null;
     });
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
     const row = page.getByRole('row', { name: /Brief de Proyecto/i });
     await row.getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
@@ -237,7 +239,7 @@ test.describe('Admin Document Move Folder', () => {
       }
       return null;
     });
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
     await page.getByRole('row', { name: /Brief de Proyecto/i }).getByRole('button', { name: /^Acciones de / }).click();
     await page.getByRole('button', { name: 'Mover a carpeta' }).click();
     const modal = page.getByRole('dialog', { name: /Mover documento/i });

@@ -138,7 +138,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
 
     @transaction.atomic
     def save(self, **kwargs):
-        # One lazily initialized row serializes manual folder mutations.
+        # Migration seeds this row; get_or_create also supports migration-free tests.
         DocumentFolderMutationLock.objects.get_or_create(pk=1)
         DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
         if self.instance is not None:

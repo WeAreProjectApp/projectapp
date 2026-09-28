@@ -3,6 +3,11 @@ from django.conf import settings
 from django.db import migrations, models
 
 
+def seed_folder_mutex(apps, schema_editor):
+    lock = apps.get_model('content', 'DocumentFolderMutationLock')
+    lock.objects.using(schema_editor.connection.alias).get_or_create(pk=1)
+
+
 class Migration(migrations.Migration):
     dependencies = [
         ("content", "0269_merge_service_contract_and_proposal_explainer"),
@@ -20,6 +25,7 @@ class Migration(migrations.Migration):
                 )
             ],
         ),
+        migrations.RunPython(seed_folder_mutex, migrations.RunPython.noop),
         migrations.AddField(
             model_name="documentfolder",
             name="created_by",

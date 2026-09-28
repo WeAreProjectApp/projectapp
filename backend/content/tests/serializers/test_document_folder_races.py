@@ -1,11 +1,26 @@
 """Validation is repeated under the tree mutex at commit time."""
+from importlib import import_module
+
 import pytest
+from django.apps import apps
+from django.db import connection
 from rest_framework.exceptions import ValidationError
 
 from content.models import DocumentFolder
+from content.models.document_folder import DocumentFolderMutationLock
 from content.serializers.document_folder import DocumentFolderSerializer
 
 pytestmark = pytest.mark.django_db
+
+
+def test_migration_initializes_one_folder_mutex():
+    migration = import_module('content.migrations.0270_document_folder_authorship')
+    DocumentFolderMutationLock.objects.all().delete()
+
+    migration.seed_folder_mutex(apps, connection.schema_editor())
+    migration.seed_folder_mutex(apps, connection.schema_editor())
+
+    assert list(DocumentFolderMutationLock.objects.values_list('pk', flat=True)) == [1]
 
 
 def test_stale_validation_cannot_create_a_duplicate():
