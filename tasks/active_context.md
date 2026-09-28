@@ -1,3 +1,14 @@
+# Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
+
+Las dos cuadrículas del video de módulos adicionales igualan sus cuatro
+tarjetas a la altura de la mayor de cada grupo, conservando el diseño compacto.
+El reproductor compartido inicia sólo por acción del visitante, pausa al salir
+de ventana/pestaña y no reanuda al regresar; cancela inicios pendientes y exige
+un clic nuevo si cambia el archivo. Aplica al catálogo, Alianza y propuestas,
+incluidas sus previsualizaciones internas. Evidencia audiovisual:
+`explainers/brag-v2/verification.md`; contrato de reproducción y regresión:
+`docs/user-flows/public-additional-modules-explainer.md`.
+
 # Creación de enlaces seguros (2026-09-27)
 
 **2026-09-27 — corrección de creación de enlaces seguros, en validación:**
