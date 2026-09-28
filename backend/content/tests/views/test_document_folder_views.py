@@ -93,10 +93,13 @@ class TestCreateDocumentFolder:
 
         assert response.status_code == 400
 
-    def test_auto_slug_handles_duplicate_names(self, admin_client):
+    def test_auto_slug_distinguishes_names_in_different_parents(self, admin_client):
         DocumentFolder.objects.create(name='Contratos')
+        parent = DocumentFolder.objects.create(name='Proyecto')
         url = reverse('create-document-folder')
-        response = admin_client.post(url, {'name': 'Contratos'}, format='json')
+        response = admin_client.post(
+            url, {'name': 'Contratos', 'parent_id': parent.pk}, format='json',
+        )
 
         assert response.status_code == 201
         assert response.json()['slug'] == 'contratos-2'

@@ -452,9 +452,20 @@ def _client_custom_notes_value(arguments):
 
 # ── Handlers ─────────────────────────────────────────────────────────────────
 
+def _serializer_error(errors):
+    message = errors.get('detail')
+    if isinstance(message, (list, tuple)):
+        message = ' '.join(str(value) for value in message)
+    if not message:
+        message = 'Datos inválidos: ' + json.dumps(
+            errors, ensure_ascii=False, default=str,
+        )
+    return ToolError(str(message), details=dict(errors))
+
+
 def _valid_serializer(serializer):
     if not serializer.is_valid():
-        raise ToolError('Datos inválidos.', details=dict(serializer.errors))
+        raise _serializer_error(serializer.errors)
     return serializer
 
 
@@ -462,7 +473,7 @@ def _save_folder(serializer):
     try:
         return serializer.save()
     except serializers.ValidationError as exc:
-        raise ToolError('Datos inválidos.', details=dict(exc.detail)) from exc
+        raise _serializer_error(exc.detail) from exc
 
 
 def list_folders(arguments):
