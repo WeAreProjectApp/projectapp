@@ -507,7 +507,8 @@ class TestUpdateDocumentFolderArchiveGuard:
         url = reverse('update-document-folder', kwargs={'folder_id': folder.id})
         response = admin_client.patch(url, {'is_archived': True}, format='json')
 
-        assert response.status_code == 200
+        assert response.status_code == 400
+        assert response.json()['is_archived'] == ['Campo desconocido o de solo lectura.']
         folder.refresh_from_db()
         assert folder.is_archived is False
 

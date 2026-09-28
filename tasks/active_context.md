@@ -1,6 +1,9 @@
-> **Implementado, en validación — organización documental REST/MCP (2026-09-28):** contrato de
-> escritura compacto, padres estrictos, auditoría, duplicados y movimientos
-> transaccionales. Implementación aislada; sin cambios a datos de producción.
+> **Organización documental REST/MCP (2026-09-28):** entrega en
+> [PR #441](https://github.com/WeAreProjectApp/projectapp/pull/441). Escrituras
+> compactas, padres estrictos, auditoría, duplicados y movimientos transaccionales,
+> con pruebas focales. El CI final se consulta en el PR. Despliegue conjunto y
+> configuración de la carpeta de estimaciones: [changelog](../docs/changelog/2026-09-28-documents-mcp-3.md).
+> Sin cambios a datos de producción desde la rama.
 
 # Creación de enlaces seguros (2026-09-27)
 
