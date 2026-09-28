@@ -249,7 +249,7 @@
         </template>
         <template #cell-validity="{ row }">
           <span
-            class="flex min-w-0 flex-wrap gap-x-1 text-text-muted text-xs"
+            class="hosting-validity flex min-w-0 flex-wrap gap-x-1 text-text-muted text-xs"
             :data-testid="`hosting-validity-${row.id}`"
           >
             <template v-if="row.valid_from || row.valid_to">
@@ -763,13 +763,13 @@ const columns = [
     responsive: { compact: 'group', portrait: 'group', landscape: 'group' },
   },
   {
-    key: 'validity', label: 'Vigencia', size: 'date', textPolicy: 'wrap',
+    key: 'validity', label: 'Vigencia', size: 'name', textPolicy: 'wrap',
     responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   // `link: true`: el conteo de ciclos ES lo que el detalle despliega, así que
   // ahí va el enlace al histórico.
   {
-    key: 'cycles_count', label: 'Ciclos', align: 'center', link: true,
+    key: 'cycles_count', label: 'Ciclos', size: 'text', textPolicy: 'atomic', align: 'center', link: true,
     responsive: { compact: 'group', portrait: 'group', landscape: 'group' },
   },
   {
@@ -1032,3 +1032,10 @@ onMounted(() => {
 });
 usePanelRefresh(loadRecords);
 </script>
+
+<style scoped>
+/* Keep the complete date range readable beside its label in compact rows. */
+:deep([data-testid="responsive-group-compact"] > div:has(.hosting-validity)) {
+  grid-template-columns: max-content minmax(0, 1fr);
+}
+</style>
