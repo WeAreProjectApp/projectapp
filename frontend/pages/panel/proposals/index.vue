@@ -13,6 +13,8 @@
     />
     <ContractParamsModal
       :visible="showContractModal"
+      :saving="contractSaving"
+      :save-error="contractSaveError"
       :proposal="contractModalProposal || {}"
       @confirm="handleContractConfirmFromList"
       @cancel="showContractModal = false; contractModalProposal = null"
@@ -1058,6 +1060,9 @@ function navigateToProposal(id, event) {
 
 // Contract modal for inline negotiation
 const showContractModal = ref(false);
+const contractSaving = ref(false);
+const contractSaveError = ref(null);
+watch(showContractModal, () => { contractSaveError.value = null; });
 const contractModalProposal = ref(null);
 
 // Shared confirm + PATCH + notify flow for the status selects (inline cell
@@ -1111,13 +1116,21 @@ async function onStatusSelect(proposal, newStatus) {
 }
 
 async function handleContractConfirmFromList(params) {
-  showContractModal.value = false;
-  if (!contractModalProposal.value) return;
-  const result = await proposalStore.saveContractAndNegotiate(contractModalProposal.value.id, params);
-  if (result.success) {
-    proposalStore.fetchProposals();
+  if (contractSaving.value || !contractModalProposal.value) return;
+  contractSaving.value = true;
+  contractSaveError.value = null;
+  try {
+    const result = await proposalStore.saveContractAndNegotiate(contractModalProposal.value.id, params);
+    if (result.success) {
+      showContractModal.value = false;
+      contractModalProposal.value = null;
+      proposalStore.fetchProposals();
+    } else contractSaveError.value = result;
+  } catch {
+    contractSaveError.value = { message: 'No se pudo guardar el contrato. Inténtalo de nuevo.' };
+  } finally {
+    contractSaving.value = false;
   }
-  contractModalProposal.value = null;
 }
 
 const alerts = ref([]);

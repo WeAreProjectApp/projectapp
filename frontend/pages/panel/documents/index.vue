@@ -164,16 +164,6 @@
 
         <FolderHeader :folder="currentFolder" @edit="openFolderForm" />
 
-        <FolderBreadcrumb
-          v-if="showBreadcrumb"
-          :active-id="documentStore.activeFolderId"
-          :dragging-folder-id="draggingFolder?.id ?? null"
-          :root-label="navigationRootLabel"
-          :root-value="navigationRootValue"
-          @select="handleSelectFolder"
-          @nest="handleNestFolder"
-        />
-
         <!-- La búsqueda ignora carpeta y estado: decirlo evita la lectura de
              que el filtro visible está acotando los resultados. -->
         <BaseAlert v-if="isSearching" variant="info" class="mb-4">
@@ -233,6 +223,16 @@
             @update:project="handleProjectFilter"
           />
         </div>
+
+        <FolderBreadcrumb
+          v-if="showBreadcrumb"
+          :active-id="documentStore.activeFolderId"
+          :dragging-folder-id="draggingFolder?.id ?? null"
+          :root-label="navigationRootLabel"
+          :root-value="navigationRootValue"
+          @select="handleSelectFolder"
+          @nest="handleNestFolder"
+        />
 
         <!-- Loading -->
         <DocumentListSkeleton v-if="isListLoading" :mode="viewMode" />

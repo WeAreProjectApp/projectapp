@@ -283,8 +283,8 @@ por ecosistema. La fuente de verdad es `vps-ops-toolkit/workflows/`.
 - Deep project context lives in `docs/methodology/` and `tasks/`.
 
 ## Project Overview
-- Stack: Django 5 + DRF, Nuxt 3 + Vue 3, MySQL 8, Redis, Huey.
-- Main Django apps: `content` for proposals/blog/portfolio and `accounts` for platform/auth/project data.
+- Stack: Django 6.1 + DRF, Nuxt 4 + Vue 3, MySQL 8, Redis, Huey.
+- Django apps: `content` for proposals/blog/portfolio, `accounts` for platform/auth/project data, `monitoring` for operational cases, and `secure_links` for one-time secret sharing.
 - Production path: `/home/ryzepeck/webapps/projectapp`.
 - Services: `projectapp.service`, `projectapp.socket`, `projectapp-huey.service`.
 - Frontend build output is served by Django.

@@ -1,5 +1,14 @@
 # Architecture — ProjectApp
 
+## Personalización de datos del servicio (2026-09-28)
+
+`ServiceContractTermField` distingue presets numéricos y texto libre sin cambiar
+el contrato API. Sólo identifica como preset el texto exactamente canónico;
+los demás valores se reabren editables. `ContractParamsModal` recibe estado de
+envío y errores normalizados de sus páginas huésped; éstas mantienen la instancia
+y su borrador ante fallos y la cierran únicamente tras guardar correctamente.
+
+
 > **Video de bienvenida de propuestas — 2026-09-27:** el acceso público muestra
 > una pieza genérica en español antes de elegir modo, solo si están disponibles
 > las cuatro opciones. `BusinessProposal.show_explainer_video` conserva la

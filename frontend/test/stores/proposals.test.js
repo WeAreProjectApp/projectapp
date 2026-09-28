@@ -2222,6 +2222,18 @@ describe('useProposalStore', () => {
       expect(store.error).toBe('contract_save_failed');
       expect(store.isUpdating).toBe(false);
     });
+    it('returns field errors from a refused contract creation', async () => {
+      // Falla si la negociación oculta qué campo debe corregirse en el modal.
+      create_request.mockRejectedValueOnce({
+        response: { status: 400, data: { client_email: ['Correo inválido.'] } },
+      });
+
+      const result = await store.saveContractAndNegotiate(1, {});
+
+      expect(result.fieldErrors).toEqual({ client_email: 'Correo inválido.' });
+      expect(result.message).toBe('Correo inválido.');
+    });
+
   });
 
   describe('updateContractParams', () => {

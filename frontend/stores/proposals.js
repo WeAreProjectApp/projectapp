@@ -1308,7 +1308,7 @@ export const useProposalStore = defineStore('proposals', {
       } catch (error) {
         this.error = 'contract_save_failed';
         console.error('Error saving contract and negotiating:', error);
-        return { success: false };
+        return { success: false, ...normalizeApiError(error, 'No se pudo guardar el contrato.') };
       /* c8 ignore next 3 */
       } finally {
         this.isUpdating = false;

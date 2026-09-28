@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin opens Propuestas → Configuraciones, previews the compact welcome video and changes global visibility. A failed save restores the previous switch and reports the failure.",
+  "description": "Admin opens Propuestas → Configuraciones, previews the compact welcome video and changes global visibility. A failed save restores the previous switch and reports the failure. Playback starts only after a click, pauses when the page or window loses activity, and never resumes automatically on return.",
   "expectedSpecs": 4,
   "outcomes": [
     "display",

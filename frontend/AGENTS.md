@@ -1,4 +1,4 @@
-# Frontend Rules — Nuxt 3 / Vue 3 / TypeScript
+# Frontend Rules — Nuxt 4 / Vue 3 / TypeScript
 
 ## NuxtJS / Vue / TypeScript Development
 
@@ -50,7 +50,7 @@ You are an expert in TypeScript, Node.js, NuxtJS, Vue 3, Shadcn Vue, Radix Vue, 
   **Navigable rows**; `check-design-tokens.mjs` enforces it.
 
 ### Nuxt-specific Guidelines
-- Follow Nuxt 3 directory structure (pages/, components/, composables/).
+- Preserve the existing root-level pages/, components/, and composables/ layout under Nuxt 4 (`srcDir: '.'` in nuxt.config.ts).
 - Use Nuxt's built-in features: auto-imports, file-based routing, server routes, plugins.
 - Use useFetch and useAsyncData for data fetching.
 - Implement SEO best practices using Nuxt's useHead and useSeoMeta.

@@ -28,7 +28,7 @@ export function savedServiceTermNumber(value, duration = false) {
   if (typeof value !== 'string') return null;
   const match = value.match(/\((\d{1,3})\)/);
   const number = match ? serviceTermNumber(match[1]) : null;
-  return number !== null && formatServiceTerm(number, duration) === value.trim().toLowerCase() ? number : null;
+  return number !== null && formatServiceTerm(number, duration) === value ? number : null;
 }
 
 export function validServiceContractSettings(settings) {

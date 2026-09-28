@@ -394,6 +394,7 @@ test.describe('Public additional modules catalog', () => {
     const firstModuleBox = await page.getByTestId('additional-module-card-electronic-invoicing').boundingBox()
     expect(cardBox.y).toBeGreaterThan(headingBox.y)
     expect(cardBox.y).toBeLessThan(firstModuleBox.y)
+    await expect(page.getByTestId('additional-modules-explainer-player')).toHaveCount(0)
   })
 
   test('plays the explainer inline with native controls', {
@@ -409,6 +410,27 @@ test.describe('Public additional modules catalog', () => {
     await expect(player).toHaveAttribute('controls', '')
     await expect(player).toHaveAttribute('src', /additional-modules-brag-v2-es[^/]*\.mp4/)
     await expect(page.getByTestId('additional-modules-explainer-play')).toHaveCount(0)
+  })
+
+  test('keeps the explainer paused after returning to its window', {
+    tag: [...PUBLIC_ADDITIONAL_MODULES_EXPLAINER, '@role:guest', '@outcome:success'],
+  }, async ({ page }) => {
+    await setupPublicApi(page)
+    await openFromFooter(page)
+    await page.getByTestId('additional-modules-explainer-play').click()
+    const player = page.getByTestId('additional-modules-explainer-player')
+    await expect.poll(() => player.evaluate(element => element.currentTime)).toBeGreaterThan(0)
+
+    // The OS focus event is the browser boundary; media playback itself is real.
+    await page.evaluate(() => window.dispatchEvent(new Event('blur')))
+    await expect(player).toHaveJSProperty('paused', true)
+    const pausedAt = await player.evaluate(element => element.currentTime)
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+
+    await expect(player).toHaveJSProperty('paused', true)
+    await expect(player).toHaveJSProperty('autoplay', false)
+    await player.press('Space')
+    await expect.poll(() => player.evaluate(element => element.currentTime)).toBeGreaterThan(pausedAt)
   })
 
   test('offers the video file when the browser cannot load the explainer', {
