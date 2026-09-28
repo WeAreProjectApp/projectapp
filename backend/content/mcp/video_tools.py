@@ -67,7 +67,7 @@ def _set_visibility(arguments, module):
     serializer.is_valid(raise_exception=True)
     serializer.save()
     if module != 'proposal':
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='explainer-video')
     return {'visible': arguments['visible']}
 
 

@@ -139,6 +139,49 @@ def test_admin_rejects_invalid_financing_value_range(admin_client):
     assert 'maximum_project_value_cop' in response.data
 
 
+@pytest.fixture
+def rebuild_calls(monkeypatch):
+    calls = []
+    monkeypatch.setattr(
+        'content.views.financing_agreements.schedule_rebuild_after_publish',
+        lambda **kwargs: calls.append(kwargs),
+    )
+    return calls
+
+
+def test_published_policy_requests_program_rebuild(admin_client, rebuild_calls):
+    """Fails if a new policy leaves the prerendered Partnership Program with old terms."""
+    response = admin_client.post(
+        '/api/financing/settings/',
+        _settings_payload(financing_months=18),
+        format='json',
+    )
+
+    assert response.status_code == 201
+    assert response.data['current']['financing_months'] == 18
+    assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+
+def test_rejected_policy_skips_program_rebuild(admin_client, rebuild_calls):
+    response = admin_client.post(
+        '/api/financing/settings/',
+        _settings_payload(maximum_project_value_cop='10000000.00'),
+        format='json',
+    )
+
+    assert response.status_code == 400
+    assert 'maximum_project_value_cop' in response.data
+    assert rebuild_calls == []
+
+
+def test_reading_financing_settings_skips_program_rebuild(admin_client, rebuild_calls):
+    response = admin_client.get('/api/financing/settings/')
+
+    assert response.status_code == 200
+    assert response.data['current']['version'] == 2
+    assert rebuild_calls == []
+
+
 @freeze_time('2026-02-01 12:00:00')
 def test_draft_action_applies_published_financing_policy(
     admin_client,

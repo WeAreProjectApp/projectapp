@@ -80,7 +80,7 @@ class TestExplainerVideoSettingsEndpoints:
         assert response.data['show_financing_video'] is False
         assert stored.show_financing_video is False
         assert stored.show_additional_modules_video is True
-        mock_rebuild.assert_called_once_with()
+        mock_rebuild.assert_called_once_with(reason='explainer-video')
 
     @patch(REBUILD_TARGET)
     def test_patch_without_change_skips_rebuild(self, mock_rebuild, admin_client):

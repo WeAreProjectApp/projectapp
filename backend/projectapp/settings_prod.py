@@ -17,9 +17,14 @@ DEBUG = False  # Hardcoded, never from environment
 RECAPTCHA_ENABLED = True  # Deployed logins cannot bypass CAPTCHA, even with missing keys.
 FAKE_DATA_ALLOWED = False  # Hard stop for destructive demo-data commands.
 
-# Frontend prerender rebuild — explicit prod values (the base-settings default
-# derives from DEBUG at import time, before the hardcoded override above).
+# Frontend prerender regeneration — explicit prod values (the base-settings
+# defaults derive from DEBUG at import time, before the hardcoded override above).
 FRONTEND_REBUILD_ENABLED = _config('FRONTEND_REBUILD_ENABLED', default=True, cast=bool)
+# Hardcoded, never from environment: the Huey worker runs sandboxed with the
+# project tree read-only, so an in-process build can only fail (EROFS). Content
+# changes write backend/logs/frontend-rebuild-request.json and the ops toolkit
+# regenerates the build.
+FRONTEND_REBUILD_MODE = 'request'
 PRERENDER_API_ORIGIN = _config('PRERENDER_API_ORIGIN', default='https://projectapp.co')
 
 # Required in production

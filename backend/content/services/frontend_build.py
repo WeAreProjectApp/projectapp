@@ -1,12 +1,50 @@
 """
-Frontend prerender rebuild service.
+Frontend prerender regeneration.
 
 The public site is a static `nuxi generate` build served by Django from
-backend/static/frontend/ (see projectapp.views.serve_nuxt). Blog posts and the
-canonical additional-modules catalog are prerendered into that build, so their
-static HTML goes stale after a publish or catalog change. This service runs the
-frontend build and tracks the last successful build in a marker file so
-unnecessary rebuilds are skipped.
+backend/static/frontend/ (see projectapp.views.serve_nuxt). Blog posts, the
+canonical additional-modules catalog and the Partnership Program are
+prerendered into that build, so their static HTML goes stale after a publish or
+a catalog/policy change. What happens next depends on
+``settings.FRONTEND_REBUILD_MODE``:
+
+``request`` (production)
+    The app never builds. The Huey worker runs sandboxed with the project tree
+    read-only (only backend/media, backend/logs and backend/private_media are
+    writable), so an in-process `nuxi generate` can only fail with EROFS. A
+    change writes a regeneration request instead, and the ops toolkit owns the
+    build as a typed, integrity-audited operation.
+
+``inline`` (local development)
+    The app runs the build itself through the ``rebuild_frontend_prerender``
+    Huey task, emailing staff when it fails.
+
+Regeneration contract (``request`` mode)
+----------------------------------------
+The app writes ``backend/logs/frontend-rebuild-request.json`` atomically
+(temp file in the same directory + ``os.replace``)::
+
+    {"requested_at": "<ISO 8601 UTC, first pending request>",
+     "updated_at": "<ISO 8601 UTC, latest request>",
+     "reasons": ["blog", "partnership-program", ...]}
+
+``requested_at`` survives later requests until the file is consumed;
+``reasons`` is deduplicated and keeps the latest ``REQUEST_REASONS_LIMIT``
+entries. The regenerator:
+
+1. claims the request before it starts reading content — renames the file away
+   (or remembers ``updated_at`` and later deletes it only if unchanged) — so a
+   request written while the build runs survives as a new request;
+2. regenerates backend/static/frontend and collects static files;
+3. on success, writes ``backend/logs/frontend-build-marker.json`` as
+   ``{"started_at": "<ISO 8601 UTC build start>"}`` and deletes the claimed
+   request; on failure it keeps (or restores) the request for the next attempt.
+
+Any other build that regenerates backend/static/frontend (a deploy) should
+write the marker too. ``rebuild_needed()`` compares the marker against the
+content timestamps; the nightly reconcile task uses it to re-request a build
+when an edit bypassed the views that write requests (admin, shell, bulk
+updates).
 
 No service restarts are involved: serve_nuxt reads the files from disk on
 every request, and collectstatic only copies hashed assets.
@@ -15,6 +53,7 @@ import json
 import logging
 import os
 import subprocess
+import tempfile
 from pathlib import Path
 
 from django.conf import settings
@@ -34,9 +73,30 @@ logger = logging.getLogger(__name__)
 
 FRONTEND_DIR = Path(settings.BASE_DIR).parent / 'frontend'
 MARKER_PATH = Path(settings.BASE_DIR) / 'logs' / 'frontend-build-marker.json'
+REQUEST_PATH = Path(settings.BASE_DIR) / 'logs' / 'frontend-rebuild-request.json'
+REQUEST_REASONS_LIMIT = 20
+REQUEST_REASON_MAX_LENGTH = 64
 BUILD_TIMEOUT_SECONDS = 30 * 60
 FAILURE_ALERT_CACHE_KEY = 'frontend_rebuild_failure_alerted'
 FAILURE_ALERT_INTERVAL_SECONDS = 60 * 60 * 6
+
+MODE_INLINE = 'inline'
+MODE_REQUEST = 'request'
+
+
+def rebuild_mode():
+    """Configured regeneration mode; anything unrecognized means ``request``.
+
+    Failing towards ``request`` keeps a typo in the environment from turning
+    the production worker back into a builder.
+    """
+    mode = getattr(settings, 'FRONTEND_REBUILD_MODE', MODE_REQUEST)
+    if mode in (MODE_INLINE, MODE_REQUEST):
+        return mode
+    logger.warning(
+        '[FrontendRebuild] unknown FRONTEND_REBUILD_MODE %r; using %r', mode, MODE_REQUEST,
+    )
+    return MODE_REQUEST
 
 
 def latest_published_change():
@@ -46,21 +106,37 @@ def latest_published_change():
         AdditionalModuleCategory,
         BlogPost,
         ExplainerVideoSettings,
+        FinancingPolicyRevision,
+        HourPackage,
         VideoResource,
+    )
+    from content.services.financing_program_service import (
+        INCLUDED_PACKAGE_HOURS,
+        INCLUDED_PACKAGE_NATIONALITY,
     )
 
     candidates = []
-    for queryset in (
-        BlogPost.objects.filter(is_published=True),
-        AdditionalModuleCategory.objects.all(),
-        AdditionalModule.objects.all(),
+    for queryset, field in (
+        (BlogPost.objects.filter(is_published=True), 'updated_at'),
+        (AdditionalModuleCategory.objects.all(), 'updated_at'),
+        (AdditionalModule.objects.all(), 'updated_at'),
         # The video switches change what the prerendered module pages show.
-        ExplainerVideoSettings.objects.all(),
-        VideoResource.objects.filter(proposal__isnull=True),
+        (ExplainerVideoSettings.objects.all(), 'updated_at'),
+        (VideoResource.objects.filter(proposal__isnull=True), 'updated_at'),
+        # Partnership Program: revisions are immutable, so a publish is a new
+        # row; the page names the included monthly package from the catalog.
+        (FinancingPolicyRevision.objects.all(), 'created_at'),
+        (
+            HourPackage.objects.filter(
+                nationality=INCLUDED_PACKAGE_NATIONALITY,
+                hours=INCLUDED_PACKAGE_HOURS,
+            ),
+            'updated_at',
+        ),
     ):
-        row = queryset.order_by('-updated_at').first()
+        row = queryset.order_by(f'-{field}').first()
         if row:
-            candidates.append(row.updated_at)
+            candidates.append(getattr(row, field))
     return max(candidates) if candidates else None
 
 
@@ -69,13 +145,34 @@ def last_build_started_at():
     try:
         data = json.loads(MARKER_PATH.read_text())
         return parse_datetime(data.get('started_at') or '')
-    except (OSError, ValueError):
+    except (OSError, ValueError, AttributeError):
         return None
 
 
+def _write_json_atomic(path, payload):
+    """Replace ``path`` with ``payload`` so readers never see a partial file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, tmp_name = tempfile.mkstemp(
+        dir=path.parent, prefix=f'.{path.name}.', suffix='.tmp',
+    )
+    try:
+        with os.fdopen(fd, 'w') as handle:
+            # Not secret, and the toolkit may read it as another user.
+            os.fchmod(handle.fileno(), 0o644)
+            json.dump(payload, handle)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise
+
+
 def _write_marker(started_at):
-    MARKER_PATH.parent.mkdir(parents=True, exist_ok=True)
-    MARKER_PATH.write_text(json.dumps({'started_at': started_at.isoformat()}))
+    _write_json_atomic(MARKER_PATH, {'started_at': started_at.isoformat()})
 
 
 def rebuild_needed():
@@ -92,11 +189,63 @@ def rebuild_needed():
     return last is None or latest > last
 
 
-def _notify_failure(detail):
-    """Email staff that the rebuild failed, at most once per alert window.
+def _read_request():
+    try:
+        data = json.loads(REQUEST_PATH.read_text())
+    except (OSError, ValueError):
+        return {}
+    return data if isinstance(data, dict) else {}
 
-    The rebuild runs unattended inside Huey; without this, failures only show
-    up in logs and published posts silently never reach the public HTML.
+
+def _is_timestamp(value):
+    try:
+        return isinstance(value, str) and parse_datetime(value) is not None
+    except ValueError:
+        return False
+
+
+def _normalize_reason(reason):
+    text = str(reason or '').strip()[:REQUEST_REASON_MAX_LENGTH]
+    return text or 'content'
+
+
+def request_rebuild(reason='content'):
+    """Record that the prerendered site must be regenerated by the toolkit.
+
+    Creates or refreshes REQUEST_PATH (see the module docstring for the
+    contract) and returns the payload written. Raises on I/O errors; callers
+    hooked into a publish flow go through schedule_rebuild_after_publish,
+    which never raises. Concurrent writers are last-writer-wins: the worst
+    case loses one reason label, never the pending request itself.
+    """
+    now = timezone.now().isoformat()
+    existing = _read_request()
+
+    requested_at = existing.get('requested_at')
+    if not _is_timestamp(requested_at):
+        requested_at = now
+
+    previous = existing.get('reasons')
+    if not isinstance(previous, list):
+        previous = []
+    reasons = [item for item in previous if isinstance(item, str) and item]
+    reason = _normalize_reason(reason)
+    reasons = [item for item in reasons if item != reason] + [reason]
+
+    payload = {
+        'requested_at': requested_at,
+        'updated_at': now,
+        'reasons': reasons[-REQUEST_REASONS_LIMIT:],
+    }
+    _write_json_atomic(REQUEST_PATH, payload)
+    return payload
+
+
+def _notify_failure(detail):
+    """Email staff that the in-app rebuild failed, at most once per alert window.
+
+    Only the ``inline`` mode (local development) builds in-process, so only it
+    can reach this alert; production regeneration belongs to the ops toolkit.
     """
     if cache.get(FAILURE_ALERT_CACHE_KEY):
         return
@@ -134,12 +283,19 @@ def _notify_failure(detail):
 
 
 def run_frontend_rebuild(force=False):
-    """Run the static frontend build and swap it live.
+    """Run the static frontend build in-process and swap it live (inline mode).
 
-    Returns {'status': 'success'|'skipped'|'failed', 'detail': str}.
+    Returns {'status': 'success'|'skipped'|'failed', 'detail': str}. In
+    ``request`` mode it always skips, so a task queued before the switch can
+    neither build nor alert.
     """
     if not settings.FRONTEND_REBUILD_ENABLED:
         return {'status': 'skipped', 'detail': 'FRONTEND_REBUILD_ENABLED is off'}
+    if rebuild_mode() != MODE_INLINE:
+        return {
+            'status': 'skipped',
+            'detail': 'FRONTEND_REBUILD_MODE is request: the ops toolkit regenerates the build',
+        }
     if not force and not rebuild_needed():
         return {'status': 'skipped', 'detail': 'no published changes since last build'}
 
@@ -190,19 +346,48 @@ def run_frontend_rebuild(force=False):
     return {'status': 'success', 'detail': ''}
 
 
-def schedule_rebuild_after_publish(delay_seconds=120):
-    """Enqueue a frontend rebuild shortly after a publish-state change.
+def schedule_rebuild_after_publish(delay_seconds=120, reason='content'):
+    """Ask for the prerendered site to be regenerated after a content change.
 
-    The small delay lets bursts of consecutive saves coalesce: the first task
-    to run rebuilds with everything published so far, and the rest see a
-    fresh marker and skip. Never raises — a failed enqueue must not break the
-    publish flow it hooks into.
+    ``request`` mode writes the regeneration request the ops toolkit consumes
+    (``delay_seconds`` does not apply: the toolkit coalesces on its own).
+    ``inline`` mode enqueues the in-app build with a small delay so bursts of
+    consecutive saves coalesce: the first task to run rebuilds with everything
+    published so far, and the rest see a fresh marker and skip.
+
+    ``reason`` is a short label of the surface that changed ('blog',
+    'additional-modules', 'explainer-video', 'video-resource',
+    'partnership-program', ...). Never raises — a failed request must not break
+    the publish flow it hooks into.
     """
     if not settings.FRONTEND_REBUILD_ENABLED:
         return
+    mode = rebuild_mode()
+    if mode == MODE_INLINE:
+        try:
+            from content.tasks import rebuild_frontend_prerender
+            rebuild_frontend_prerender.schedule(delay=delay_seconds)
+            logger.info(
+                '[FrontendRebuild] rebuild enqueued (delay=%ss, reason=%s)',
+                delay_seconds, reason,
+            )
+        except Exception:
+            logger.exception('[FrontendRebuild] failed to enqueue rebuild (reason=%s)', reason)
+        return
     try:
-        from content.tasks import rebuild_frontend_prerender
-        rebuild_frontend_prerender.schedule(delay=delay_seconds)
-        logger.info('[FrontendRebuild] rebuild enqueued (delay=%ss)', delay_seconds)
+        request_rebuild(reason)
+        logger.info('[FrontendRebuild] regeneration requested (reason=%s)', reason)
     except Exception:
-        logger.exception('[FrontendRebuild] failed to enqueue rebuild')
+        logger.exception('[FrontendRebuild] failed to write rebuild request (reason=%s)', reason)
+
+
+def reconcile_rebuild_request():
+    """Re-request a regeneration when content changed after the last build.
+
+    Safety net for edits that bypass the views writing requests (Django admin,
+    shell, bulk updates). Returns True when a request was issued.
+    """
+    if not settings.FRONTEND_REBUILD_ENABLED or not rebuild_needed():
+        return False
+    schedule_rebuild_after_publish(reason='reconcile')
+    return True

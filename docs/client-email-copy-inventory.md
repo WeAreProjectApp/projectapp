@@ -1,6 +1,6 @@
 # Inventario universal de correos salientes
 
-**Actualizado:** 2026-08-28
+**Actualizado:** 2026-09-28
 
 **Fuente ejecutable:** `backend/content/services/outbound_email_inventory.py`
 
@@ -64,7 +64,7 @@ construcción.
 | 45 | Tareas y operación | `task_deadline_notification` | Aviso de fecha límite de una tarea. |
 | 46 | Tareas y operación | `task_alert_notification` | Alerta operativa de una tarea. |
 | 47 | Tareas y operación | `generic_internal_notification` | Notificación interna genérica. |
-| 48 | Tareas y operación | `frontend_build_failure` | Alerta por fallo del build frontend. |
+| 48 | Tareas y operación | `frontend_build_failure` | Alerta por fallo del build frontend en modo `inline` (sólo desarrollo local). Producción no la emite: pide la regeneración al toolkit. |
 | 49 | Tareas y operación | `linkedin_token_expiry` | Alerta por vencimiento del token de LinkedIn. |
 | 50 | Tareas y operación | `proposal_notification_diagnostic` | Diagnóstico operativo del canal de propuestas. |
 | 51 | Seguridad y acceso | `client_invitation` | Invitación de cliente con acceso inicial. |

@@ -156,7 +156,7 @@ def run_post_save_pipeline(post, was_published=False):
         auto_publish_blog_to_linkedin(post)
     enqueue_scheduled_publish_if_future(post)
     if post.is_published or was_published:
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='blog')
 
 
 def build_blog_json_template():

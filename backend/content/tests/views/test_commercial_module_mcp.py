@@ -213,7 +213,7 @@ def test_additional_modules_mcp_creates_catalog_module(api_client, monkeypatch):
     """Fails if the dedicated catalog connector cannot persist a Panel-valid module."""
     monkeypatch.setattr(
         'content.views.additional_modules.schedule_rebuild_after_publish',
-        lambda: None,
+        lambda **_: None,
     )
     token = _active_connector('additional-modules')
 
@@ -248,7 +248,7 @@ def test_additional_modules_mcp_updates_catalog_module(api_client, monkeypatch):
     """Fails if the dedicated catalog connector cannot persist an existing module edit."""
     monkeypatch.setattr(
         'content.views.additional_modules.schedule_rebuild_after_publish',
-        lambda: None,
+        lambda **_: None,
     )
     category = _catalog_category()
     module_data = _module_data(category.id)
@@ -270,7 +270,7 @@ def test_additional_modules_mcp_retires_catalog_module(api_client, monkeypatch):
     """Fails if a connector retirement leaves a catalog module publicly active."""
     monkeypatch.setattr(
         'content.views.additional_modules.schedule_rebuild_after_publish',
-        lambda: None,
+        lambda **_: None,
     )
     category = _catalog_category()
     module_data = _module_data(category.id)
