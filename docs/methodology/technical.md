@@ -640,7 +640,7 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 ### Static payload and collection policy
 
 - Production sets `experimental.payloadExtraction: false`. The generated site is mounted below Django's `/static/frontend/` CDN prefix; keeping payloads inline prevents Nitro from treating CDN payload URLs as prerenderable HTML routes.
-- Both `scripts/deploy.sh` and the automatic blog rebuild call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
+- `scripts/deploy.sh`, the ops toolkit's regeneration and the in-app `inline` rebuild (local development) call `collectstatic` with `clear=True`/`--clear`. `staticfiles/` is generated output and must not retain hashed chunks or file/directory shapes from older Nuxt builds.
 - A production-equivalent build must contain zero `_payload.json` artifacts and zero JavaScript chunks above 500,000 bytes before publication.
 
 ### MCP connector concurrency
@@ -927,11 +927,18 @@ description and preserves its credentials, active state and last-use timestamp.
 - Pre-rendered routes for static generation in production
 
 ### Blog prerender at build time (build:django)
-- `npm run build:django` (`frontend/update-django-template.js`) is the single chokepoint for every production build — used by both `/deploy-and-check` and the on-publish `run_frontend_rebuild` task.
+- `npm run build:django` (`frontend/update-django-template.js`) is the single chokepoint for every build — used by `/deploy-and-check`, by the ops toolkit when it consumes a regeneration request (production), and by the `inline` `run_frontend_rebuild` task (local development only).
 - Blog post pages are prerendered to static HTML so crawlers and link previews get the full article + per-post `og:`/JSON-LD metadata. The route list is fetched from `/api/blog/sitemap-data/`; each page fetches its post from `/api/blog/<slug>/` (`pages/blog/[slug].vue`).
 - **Must prerender against Django on loopback, not the public domain.** Hitting `https://projectapp.co` routes the build's many API requests through nginx, whose `limit_req zone=api` (5 r/s) returns 429 and drops most posts (see error-documentation ERR-015). The build script therefore spins up a throwaway Django server on a free 127.0.0.1 port using `backend/projectapp/settings_build.py` (prod DB + data, HTTPS enforcement off), prerenders against it, and tears it down.
 - `settings_build.py` exists **only** for this loopback build server — never serves real traffic. It disables `SECURE_SSL_REDIRECT`/HSTS/secure-cookies that `settings_prod` enforces.
 - Gates: `PRERENDER_BLOG=1` enables it; `PRERENDER_API_ORIGIN` overrides the target; `PRERENDER_REQUIRE_BLOG=1` makes a failed prerender a hard build error. With no backend present (CI/dev) the script skips the local server and falls back to the env-provided origin.
+
+### Prerender regeneration request (production)
+- The app never builds in production: `projectapp-huey` runs sandboxed with the project tree read-only (writable: `backend/media`, `backend/logs`, `backend/private_media`), so an in-process `nuxi generate` fails with `EROFS`. `settings_prod` pins `FRONTEND_REBUILD_MODE = 'request'`; the base default is `inline` only when `DEBUG`. Unknown values fall back to `request`. `FRONTEND_REBUILD_ENABLED` stays the master switch.
+- Every content change that affects a prerendered page calls `schedule_rebuild_after_publish(reason=...)` (blog create/update/delete and scheduled publish, additional-modules catalog, explainer-video switches, public video resources, Partnership Program policy revisions and the COL 60-hour package). In `request` mode it writes `backend/logs/frontend-rebuild-request.json` atomically (temp file in the same directory, `fsync`, `os.replace`, mode 0644): `{"requested_at": ISO-8601 UTC of the first pending request (preserved), "updated_at": ISO-8601 UTC of the latest, "reasons": [deduplicated, latest 20]}`. It never raises; a failed write is logged.
+- Consumer contract (ops toolkit): claim the request before reading content (rename it away, or delete it later only if `updated_at` is unchanged) so a request written mid-build survives; run `build:django` + `collectstatic --clear`; on success write `backend/logs/frontend-build-marker.json` as `{"started_at": "<build start>"}` and drop the claimed request; on failure keep it. Any other full build (deploy) should write the marker too.
+- `rebuild_needed()` compares `latest_published_change()` with the marker. The periodic `reconcile_frontend_rebuild_request` (02:30) re-requests a regeneration when it is true, covering edits that bypass the views (Django admin, shell, bulk updates). It never builds.
+- `inline` mode keeps the old path: `rebuild_frontend_prerender` (Huey, 120 s coalescing delay, `@lock_task('frontend-rebuild')`) and the `frontend_build_failure` staff alert. `run_frontend_rebuild` returns `skipped` in `request` mode, so neither a stale queued task nor production can send that email.
 
 ### Current hosting terms versus historical snapshots
 

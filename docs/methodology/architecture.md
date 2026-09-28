@@ -1,5 +1,39 @@
 # Architecture — ProjectApp
 
+## Regeneración del prerender por pedido (2026-09-28)
+
+La app ya no construye el frontend en producción. `projectapp-huey` corre con el
+árbol del proyecto en sólo lectura (escribe sólo `backend/media`, `backend/logs`
+y `backend/private_media`), así que el `nuxi generate` en proceso fallaba con
+EROFS y mandaba correos a staff. `FRONTEND_REBUILD_MODE` decide el camino:
+`request` (fijo en `settings_prod`) y `inline` (desarrollo local, por defecto
+con `DEBUG`). `FRONTEND_REBUILD_ENABLED` sigue siendo el interruptor maestro.
+
+- **`request`:** `schedule_rebuild_after_publish(reason=...)` escribe de forma
+  atómica (temporal en el mismo directorio + `os.replace`)
+  `backend/logs/frontend-rebuild-request.json` con
+  `{"requested_at", "updated_at", "reasons"}`: `requested_at` es el primer
+  pedido pendiente y se conserva; `reasons` se deduplica y guarda los 20 más
+  recientes (`blog`, `additional-modules`, `explainer-video`, `video-resource`,
+  `partnership-program`, `reconcile`). Nunca lanza.
+- **Regenerador (toolkit):** reclama el pedido antes de leer contenido
+  (renombrándolo, o borrándolo sólo si `updated_at` no cambió), construye,
+  hace `collectstatic` y, si todo sale bien, escribe
+  `backend/logs/frontend-build-marker.json` (`{"started_at"}`) y borra el
+  pedido reclamado. Un pedido escrito durante la construcción sobrevive.
+- **`inline`:** encola `rebuild_frontend_prerender` como antes; sólo ese camino
+  puede enviar `frontend_build_failure`. `run_frontend_rebuild` se salta en
+  `request`, así que una tarea encolada antes del cambio no construye ni avisa.
+- `reconcile_frontend_rebuild_request` (02:30) reemplaza la reconstrucción
+  nocturna: si `rebuild_needed()` ve contenido posterior al marcador, vuelve a
+  pedir la regeneración. `latest_published_change()` incluye ahora el
+  Programa de Alianza (`FinancingPolicyRevision.created_at` y el paquete COL de
+  60 horas), y publicar una política o tocar ese paquete pide la regeneración.
+- Las páginas públicas nunca hornean un error: si la API no responde durante
+  el build, `/additional-modules` y `/partnership-program` prerenderizan un
+  esqueleto neutro que el fetch del cliente reemplaza; el error con reintento
+  queda sólo para cuando también falla la carga en vivo.
+
 ## Personalización de datos del servicio (2026-09-28)
 
 `ServiceContractTermField` distingue presets numéricos y texto libre sin cambiar
@@ -114,8 +148,8 @@ seguridad y activación manual: `docs/monitoring.md`.
 > uno por enlace; `explainer_video_visible()` los combina —el del catálogo
 > manda— y las vistas públicas exponen un único `show_explainer_video` (fuera
 > de los serializadores de contenido, que también alimentan los PDF). Un
-> cambio de interruptor entra en `latest_published_change()` y agenda el
-> rebuild del prerender. En Vue, `ExplainerVisibilityToggle` y el store
+> cambio de interruptor entra en `latest_published_change()` y pide la
+> regeneración del prerender (`schedule_rebuild_after_publish`). En Vue, `ExplainerVisibilityToggle` y el store
 > `explainer_videos` (optimista con reversión) viven junto a la tarjeta
 > compacta, fuera de ella; el video se ve si el interruptor está encendido y
 > existe render para el idioma. El video de financiación conserva el nombre y
@@ -1315,12 +1349,12 @@ flowchart TD
         StageDeadlines["notify_proposal_stage_deadlines (periodic — daily 13:30 UTC = 08:30 Bogotá)"]
         AutoChargeSubs["auto_charge_due_subscriptions (periodic — daily 06:00; stored-card hosting billing + prorated phase onboarding)"]
         CardDebtReminder["send_card_debt_reminder (periodic — Fridays; accounting card-debt, re-alerts every 2 days until a snapshot clears the cycle)"]
-        NightlyRebuild["nightly_frontend_rebuild (periodic — 02:30, @lock_task 'frontend-rebuild')"]
-        RebuildPrerender["rebuild_frontend_prerender (on blog publish; @lock_task 'frontend-rebuild', retries=2)"]
+        ReconcileRebuild["reconcile_frontend_rebuild_request (periodic — 02:30; re-requests a stale prerender, never builds)"]
+        RebuildPrerender["rebuild_frontend_prerender (FRONTEND_REBUILD_MODE=inline, local dev only; @lock_task 'frontend-rebuild', retries=2)"]
     end
 
     subgraph MoreTriggers["More Triggers"]
-        BlogPublish["Blog create/update/delete or scheduled publish"]
+        BlogPublish["Blog, additional-modules, explainer-video, video-resource or Partnership Program change"]
     end
 
     SendAction -->|schedule delay| SendReminder
@@ -1331,8 +1365,10 @@ flowchart TD
     DailyCron --> StageDeadlines
     DailyCron --> AutoChargeSubs
     DailyCron --> CardDebtReminder
-    DailyCron --> NightlyRebuild
-    BlogPublish -->|coalesced 120s| RebuildPrerender
+    DailyCron --> ReconcileRebuild
+    BlogPublish -->|"request mode (production)"| RebuildRequest["backend/logs/frontend-rebuild-request.json → ops toolkit regenerates"]
+    ReconcileRebuild -->|stale prerender| RebuildRequest
+    BlogPublish -->|"inline mode: coalesced 120s"| RebuildPrerender
     TrackEndpoint -->|conditional| SendAbandon
     TrackEndpoint -->|conditional| SendRevisit
     TrackEndpoint -->|conditional| SendInvestment
@@ -1391,7 +1427,7 @@ flowchart LR
     Nginx -->|serves| StaticFiles
 ```
 
-Nuxt payload data stays inline because the generated site is mounted below `app.cdnURL=/static/frontend/`; external `_payload.json` URLs are not part of this deployment topology. Private routes are deliberately not prerendered and therefore depend on the root `200.html` SPA shell. The build refuses to publish a fallback that is empty, redirects, or lacks `#__nuxt`. Django owns the locale redirect for the bare root through the preferred-locale cookie and nginx country header; Nuxt browser-language detection stays disabled so it cannot rewrite the unprefixed fallback. Clearing `staticfiles/` on every deploy and blog rebuild prevents old content-hashed chunks and file/directory collisions from surviving publication.
+Nuxt payload data stays inline because the generated site is mounted below `app.cdnURL=/static/frontend/`; external `_payload.json` URLs are not part of this deployment topology. Private routes are deliberately not prerendered and therefore depend on the root `200.html` SPA shell. The build refuses to publish a fallback that is empty, redirects, or lacks `#__nuxt`. Django owns the locale redirect for the bare root through the preferred-locale cookie and nginx country header; Nuxt browser-language detection stays disabled so it cannot rewrite the unprefixed fallback. Clearing `staticfiles/` on every deploy and prerender regeneration prevents old content-hashed chunks and file/directory collisions from surviving publication.
 
 ---
 
