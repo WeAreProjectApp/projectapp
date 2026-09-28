@@ -12,6 +12,12 @@ pytestmark = pytest.mark.django_db
 BASE = '/api/secure-links/'
 
 
+def create_page_links(make_link, count):
+    """Create enough deterministic links to exercise one list page boundary."""
+    for position in range(count):
+        make_link(title=f'Paged link {position:02d}')
+
+
 @pytest.mark.parametrize(('path', 'method'), [
     ('', 'get'), ('create/', 'post'), ('1/', 'get'), ('1/content/', 'post'),
     ('1/link/', 'post'), ('1/reactivate/', 'post'), ('1/revoke/', 'post'),
@@ -202,3 +208,20 @@ def test_panel_mutation_rejects_users_without_staff_access(method, regular_clien
 
     assert anonymous.status_code == 403
     assert regular.status_code == 403
+
+
+def test_panel_list_clamps_page_after_deleting_its_last_row(staff_client, make_link):
+    """Falla si borrar la única fila de la página dos deja el panel en una página vacía."""
+    create_page_links(make_link, 26)
+    second_page = staff_client.get(BASE, {'page': 2})
+    final_link_id = second_page.json()['results'][0]['id']
+
+    deleted = staff_client.delete(f'{BASE}{final_link_id}/')
+    clamped = staff_client.get(BASE, {'page': 2})
+
+    assert second_page.json()['count'] == 26
+    assert len(second_page.json()['results']) == 1
+    assert deleted.status_code == 204
+    assert clamped.json()['page'] == 1
+    assert clamped.json()['count'] == 25
+    assert len(clamped.json()['results']) == 25

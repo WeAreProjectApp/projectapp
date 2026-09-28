@@ -117,18 +117,21 @@ describe('SecureLinkDetailModal', () => {
     expect(wrapper.text()).not.toContain('secureLinks.panel.deleted');
   });
 
-  it('does not render content from a request resolved after closing', async () => {
+  it('does not render late content after selecting another link', async () => {
     let resolveContent;
     const wrapper = mountModal();
     await flushPromises();
     create_request.mockImplementationOnce(() => new Promise((resolve) => { resolveContent = resolve; }));
 
     await wrapper.get('[data-testid="secure-link-view-content"]').trigger('click');
-    await wrapper.setProps({ modelValue: false });
+    get_request.mockResolvedValue({ data: { ...baseDetail, id: 8, title: 'Other secure link' } });
+    await wrapper.setProps({ linkId: 8 });
+    await flushPromises();
     resolveContent({ data: content });
     await flushPromises();
 
-    // Fails if a late decrypt response reveals a secret after its modal is closed.
+    // Fails if a late decrypt response reveals the former link's secret in the current modal.
+    expect(wrapper.text()).toContain('Other secure link');
     expect(wrapper.text()).not.toContain('S3cr3t');
     expect(wrapper.emitted('changed')).toBeUndefined();
   });

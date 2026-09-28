@@ -1,9 +1,20 @@
 # MVP de enlaces seguros (2026-09-28)
 
-En implementación en `feat/28092026-secure-links-mvp`, desde main con #418 y
-#433 integrados. Alcance aprobado: CRUD en panel y MCP, lectura del secreto
-mediante permiso explícito y confirmación efímera; sin despliegue. La causa del
-incidente productivo documentada en #433 sigue pendiente de corroboración.
+Implementado en el PR #442 (`feat/28092026-secure-links-mvp`), desde main con
+#418 y #433 integrados. Panel y MCP cubren CRUD; editar datos no descifra el
+contenido y leerlo por MCP requiere permiso explícito y confirmación efímera.
+Las confirmaciones comprueban permisos y cambios posteriores a la vista previa;
+ni su comprobante ni los registros guardan el secreto. El panel conserva
+borradores ante errores, descarta respuestas atrasadas y corrige la página tras
+eliminar su última fila.
+
+Validación local: 59 pruebas unitarias de frontend, 17 E2E del módulo y casos
+focales de API, servicios, permisos y confirmaciones. Recorrido adicional de
+creación, edición, recarga y eliminación contra Django con SQLite aislado.
+Mapas de vistas/flujos y gates de calidad verificados. Migración aditiva
+`secure_links.0002` reservada al deploy; no se cambió la clave de cifrado.
+La causa del incidente productivo documentada en #433 sigue pendiente de
+corroboración. No hubo despliegue.
 
 # Creación de enlaces seguros (2026-09-27)
 

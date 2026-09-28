@@ -286,8 +286,9 @@ test.describe('Admin secure links', () => {
 
     await expect(page.getByTestId('secure-links-page')).toContainText('Admin Django producción');
     expect(calls.content).toBe(1);
-    expect(calls.update[0]).toMatchObject({
-      title: 'Admin Django producción', secret_type: 'credentials', fields: { password: 'S3cr3t-Updated!' },
+    expect(calls.update[0]).toEqual({
+      title: 'Admin Django producción', client: null, project: null,
+      secret_type: 'credentials', fields: { service: 'Django admin', password: 'S3cr3t-Updated!' },
     });
   });
 
@@ -389,6 +390,7 @@ test.describe('Admin secure links', () => {
     await page.getByTestId('secure-link-edit').click();
     await page.getByTestId('secure-link-title').fill('Llaves Wompi editadas');
     await page.getByTestId('secure-link-save').click();
+    await expect(page.getByTestId('secure-link-form')).not.toBeVisible();
     await page.reload({ waitUntil: 'domcontentloaded' });
 
     await expect(page.getByTestId('secure-link-row-9')).toContainText('Llaves Wompi editadas');

@@ -215,6 +215,30 @@ def test_mcp_update_preserves_the_public_url_without_returning_content(api_clien
     assert {field['key']: field['value'] for field in services.content_for(link)['fields']}['password'] == replacement['password']
     assert replacement['password'] not in text(response)
     assert url not in text(response)
+    assert replacement['password'] not in str(list(McpRequestLog.objects.values()))
+
+
+def test_mcp_update_clears_associations_without_changing_content_or_token(
+    api_client, mcp_token, make_link, client_profile, project,
+):
+    """Falla si limpiar asociaciones por MCP altera el secreto o la URL existente."""
+    from secure_links import services
+
+    link, url = make_link(client=client_profile, project=project)
+    original_content = services.content_for(link)
+
+    response = call_tool(api_client, mcp_token, 'update_secure_link', {
+        'link_id': link.pk, 'client_id': None, 'project_id': None,
+    })
+
+    link.refresh_from_db()
+    assert link.client_id is None
+    assert link.project_id is None
+    assert services.content_for(link) == original_content
+    assert services.link_url(link) == url
+    assert CREDENTIALS['password'] not in text(response)
+    assert url not in text(response)
+    assert CREDENTIALS['password'] not in str(list(McpRequestLog.objects.values()))
 
 
 def test_mcp_delete_requires_confirmation_before_removing_the_link(api_client, mcp_token, make_link):
@@ -275,3 +299,51 @@ def test_confirmation_rejects_a_link_removed_after_preview(api_client, mcp_token
 
     assert error_code(confirmed) == 'NOT_FOUND'
     assert SecureLink.objects.filter(pk=other.pk).exists() is True
+
+
+def test_mcp_update_requires_content_when_changing_type(api_client, mcp_token, make_link):
+    """Falla si cambiar el tipo por MCP conserva contenido con un esquema distinto."""
+    link, _url = make_link()
+
+    response = call_tool(api_client, mcp_token, 'update_secure_link', {
+        'link_id': link.pk, 'secret_type': 'custom',
+    })
+
+    link.refresh_from_db()
+    assert error_code(response) == 'VALIDATION_ERROR'
+    assert link.secret_type == 'credentials'
+
+
+def test_mcp_update_rejects_a_blank_title(api_client, mcp_token, make_link):
+    """Falla si una actualización MCP guarda un título vacío."""
+    link, _url = make_link()
+
+    response = call_tool(
+        api_client, mcp_token, 'update_secure_link', {'link_id': link.pk, 'title': ' '},
+    )
+
+    link.refresh_from_db()
+    assert error_code(response) == 'VALIDATION_ERROR'
+    assert link.title == 'Admin producción'
+
+
+def test_mcp_update_rejects_a_project_from_another_client(
+    api_client, mcp_token, make_link, client_profile, project,
+):
+    """Falla si una actualización MCP mezcla cliente y proyecto de distinto dueño."""
+    from accounts.models import UserProfile
+    from django.contrib.auth import get_user_model
+
+    other_user = get_user_model().objects.create_user(username='mcp-other-client')
+    other, _ = UserProfile.objects.get_or_create(
+        user=other_user, defaults={'role': UserProfile.ROLE_CLIENT},
+    )
+    link, _url = make_link(client=client_profile, project=project)
+
+    response = call_tool(api_client, mcp_token, 'update_secure_link', {
+        'link_id': link.pk, 'client_id': other.pk, 'project_id': project.pk,
+    })
+
+    link.refresh_from_db()
+    assert error_code(response) == 'project_client_mismatch'
+    assert link.client_id == client_profile.pk

@@ -5,7 +5,6 @@ Create/update arguments and reveal results never enter persisted MCP payloads.
 Ordinary reads remain metadata-only; URLs are only returned at creation.
 """
 
-from accounts.models import Project, UserProfile
 from django.core.paginator import Paginator
 from django.db import connection
 from secure_links import services
@@ -104,7 +103,6 @@ def create_secure_link(arguments):
     }
 
 
-
 def _catalog_error(exc):
     # Unknown keys can themselves contain secrets. Only echo catalog field names.
     known = {field['key'] for definition in SECRET_TYPES.values() for field in definition['fields']}
@@ -181,6 +179,7 @@ def reveal_secure_link_content(arguments):
         )
     except services.SecureLinkError as exc:
         raise ToolError(exc.message, code=exc.code) from exc
+
 
 def list_secure_links(arguments):
     arguments = arguments or {}

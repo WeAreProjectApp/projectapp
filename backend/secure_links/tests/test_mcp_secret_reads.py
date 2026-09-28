@@ -87,10 +87,10 @@ def _revoke_link(link, _url):
     services.revoke(link, actor=link.created_by)
 
 
-def test_confirmed_secret_read_delivers_once_without_consuming_or_persisting_content(
+def test_confirmed_secret_read_delivers_content_without_consuming_public_link(
     api_client, secret_reader, make_link,
 ):
-    """Falla si una lectura MCP consume el enlace o deja el secreto en su recibo."""
+    """Falla si una lectura MCP no entrega el secreto o consume el enlace público."""
     credential, token = secret_reader
     link, _url = make_link()
     preview = call_tool(
@@ -101,29 +101,71 @@ def test_confirmed_secret_read_delivers_once_without_consuming_or_persisting_con
     confirmed = call_tool(
         api_client, token, 'confirm_action', {'confirmation_id': confirmation_id},
     )
-    replay = call_tool(
-        api_client, token, 'confirm_action', {'confirmation_id': confirmation_id},
-    )
-
     link.refresh_from_db()
-    intent = McpActionIntent.objects.get(pk=confirmation_id)
     content = json.loads(text(confirmed))['result']
     fields = {field['key']: field['value'] for field in content['fields']}
-    acknowledgement = {
-        'delivered': True,
-        'content_available': False,
-        'new_confirmation_required': True,
-    }
     assert fields['password'] == CREDENTIALS['password']
     assert link.status == 'active'
     assert link.events.filter(
         kind=SecureLinkEvent.Kind.MCP_VIEWED,
         details__credential_id=credential.pk,
     ).exists() is True
+
+
+def test_secret_read_intent_receipt_omits_content(
+    api_client, secret_reader, make_link,
+):
+    """Falla si el recibo persistido de una lectura MCP conserva el secreto."""
+    _credential, token = secret_reader
+    link, _url = make_link()
+    preview = call_tool(
+        api_client, token, 'reveal_secure_link_content', {'link_id': link.pk},
+    )
+    confirmation_id = result(preview)['structuredContent']['confirmation_id']
+    call_tool(api_client, token, 'confirm_action', {'confirmation_id': confirmation_id})
+    intent = McpActionIntent.objects.get(pk=confirmation_id)
+    acknowledgement = {
+        'delivered': True,
+        'content_available': False,
+        'new_confirmation_required': True,
+    }
+    assert intent.arguments == {'link_id': link.pk}
+    assert intent.impact['arguments'] == {'link_id': link.pk}
     assert intent.result == acknowledgement
+    assert CREDENTIALS['password'] not in str(intent.arguments)
+    assert CREDENTIALS['password'] not in str(intent.impact)
+    assert CREDENTIALS['password'] not in str(intent.result)
+
+
+def test_secret_read_audit_log_omits_content_after_replay(
+    api_client, secret_reader, make_link,
+):
+    """Falla si repetir una lectura copia el secreto a auditoría o registros MCP."""
+    credential, token = secret_reader
+    link, _url = make_link()
+    preview = call_tool(
+        api_client, token, 'reveal_secure_link_content', {'link_id': link.pk},
+    )
+    confirmation_id = result(preview)['structuredContent']['confirmation_id']
+    call_tool(api_client, token, 'confirm_action', {'confirmation_id': confirmation_id})
+    replay = call_tool(
+        api_client, token, 'confirm_action', {'confirmation_id': confirmation_id},
+    )
+
+    credential.refresh_from_db()
+    event = link.events.get(kind=SecureLinkEvent.Kind.MCP_VIEWED)
+    logs = list(McpRequestLog.objects.values())
+    acknowledgement = {
+        'delivered': True,
+        'content_available': False,
+        'new_confirmation_required': True,
+    }
+    assert event.details == {'credential_id': credential.pk}
+    assert event.actor_id == credential.actor_id
+    assert CREDENTIALS['password'] not in str(event.details)
     assert json.loads(text(replay))['result'] == acknowledgement
     assert CREDENTIALS['password'] not in text(replay)
-    assert CREDENTIALS['password'] not in str(list(McpRequestLog.objects.values()))
+    assert CREDENTIALS['password'] not in str(logs)
 
 
 def test_confirmation_rechecks_secret_read_permission_before_delivery(
@@ -144,6 +186,26 @@ def test_confirmation_rechecks_secret_read_permission_before_delivery(
     )
 
     assert error_code(confirmed) == 'FORBIDDEN'
+    assert link.events.filter(kind=SecureLinkEvent.Kind.MCP_VIEWED).exists() is False
+
+
+def test_secret_read_rejects_a_link_changed_after_preview(
+    api_client, secret_reader, make_link, staff_user,
+):
+    """Falla si una lectura confirmada ignora cambios posteriores a su vista previa."""
+    _credential, token = secret_reader
+    link, _url = make_link()
+    preview = call_tool(
+        api_client, token, 'reveal_secure_link_content', {'link_id': link.pk},
+    )
+    services.update_link(link, actor=staff_user, title='Changed after preview')
+
+    confirmed = call_tool(
+        api_client, token, 'confirm_action',
+        {'confirmation_id': result(preview)['structuredContent']['confirmation_id']},
+    )
+
+    assert error_code(confirmed) == 'STALE_VERSION'
     assert link.events.filter(kind=SecureLinkEvent.Kind.MCP_VIEWED).exists() is False
 
 
@@ -248,7 +310,7 @@ def test_secret_read_confirmation_rejects_a_foreign_credential(
     assert link.events.filter(kind=SecureLinkEvent.Kind.MCP_VIEWED).exists() is False
 
 
-def test_unknown_secure_link_identifier_is_not_persisted_in_mcp_metadata(
+def test_unknown_secure_link_argument_is_not_persisted_in_mcp_metadata(
     api_client, secret_reader, make_link,
 ):
     """Falla si un identificador desconocido queda registrado tras rechazar la solicitud."""
