@@ -1,7 +1,7 @@
 <template>
-  <BaseModal :model-value="modelValue" kind="form" padding="md" @update:model-value="emit('update:modelValue', $event)">
+  <BaseModal :model-value="modelValue" kind="form" padding="md" :close-on-backdrop="!store.isUpdating" :close-on-esc="!store.isUpdating" @update:model-value="requestClose">
     <form :id="modalFormId" ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
-      <div class="space-y-4 px-6 py-5">
+      <fieldset :disabled="store.isUpdating" class="space-y-4 px-6 py-5">
         <h3 class="text-lg font-bold text-text-default">{{ t(link ? 'secureLinks.panel.editTitle' : 'secureLinks.panel.newTitle') }}</h3>
 
         <BaseAlert v-if="typesError" variant="danger" data-testid="secure-link-types-error">
@@ -90,12 +90,12 @@
         </template>
 
         <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-general-error">{{ generalError }}</BaseAlert>
-      </div>
+      </fieldset>
 
     </form>
     <template #footer>
       <BaseModalActions>
-        <BaseButton type="button" variant="ghost" size="sm" @click="emit('update:modelValue', false)">{{ t('secureLinks.panel.cancel') }}</BaseButton>
+        <BaseButton type="button" variant="ghost" size="sm" data-testid="secure-link-cancel" :disabled="store.isUpdating" :disabled-reason="t('secureLinks.panel.saving')" @click="requestClose(false)">{{ t('secureLinks.panel.cancel') }}</BaseButton>
         <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" :disabled="editingContent && !catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
           {{ t(link ? 'secureLinks.panel.save' : 'secureLinks.panel.create') }}
         </BaseButton>
@@ -105,7 +105,7 @@
 </template>
 
 <script setup>
-import { useId, computed, reactive, ref, watch } from 'vue';
+import { useId, computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -180,6 +180,13 @@ function onClientSelect(client) {
   form.project = null;
 }
 
+let active = true;
+onBeforeUnmount(() => { active = false; form.fields = {}; });
+
+function requestClose(value) {
+  if (!store.isUpdating) emit('update:modelValue', value);
+}
+
 async function submit() {
   if (store.isUpdating || (editingContent.value && !catalogReady.value)) return;
   resetErrors();
@@ -204,6 +211,7 @@ async function submit() {
   const result = props.link
     ? await store.updateLink(props.link.id, payload)
     : await store.createLink({ ...payload, language: form.language, validity_days: form.validityDays });
+  if (!active) return;
   if (!result.success) {
     mapErrors(result.error, [
       'title', 'client', 'project', ...(!props.link ? ['language', 'validity_days'] : []),
