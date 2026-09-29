@@ -281,10 +281,29 @@ def download_proposal_pdf(request, proposal_uuid):
 
     if proposal.is_expired:
         return Response(
-            {'error': 'This proposal has expired.'},
+            {
+                'error': 'This proposal has expired.',
+                'code': 'proposal_expired',
+            },
             status=status.HTTP_410_GONE,
         )
 
+    return _proposal_pdf_response(request, proposal)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+@throttle_classes([ProposalPdfThrottle])
+def download_admin_proposal_pdf(request, proposal_id):
+    """Allow staff to download the original proposal even after expiry."""
+    proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
+    response = _proposal_pdf_response(request, proposal)
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+def _proposal_pdf_response(request, proposal):
+    """Render the same commercial/technical content for both access policies."""
     from content.services.proposal_pdf_service import (
         ProposalPdfService,
         default_selected_modules_from_content,

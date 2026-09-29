@@ -117,7 +117,7 @@ from content.views.view_map import (
 )
 from content.views.proposal import (
     retrieve_public_proposal, retrieve_public_proposal_by_slug,
-    download_proposal_pdf, retrieve_public_contract_terms,
+    download_proposal_pdf, download_admin_proposal_pdf, retrieve_public_contract_terms,
     download_public_draft_contract_pdf,
     list_proposals, retrieve_proposal, create_proposal,
     create_proposal_from_json, get_proposal_json_template,
@@ -525,6 +525,9 @@ urlpatterns = [
         admin_catalog_pdf,
         name='admin-additional-module-catalog-pdf',
     ),
+
+    # Staff PDF access is independent of public proposal expiry.
+    path('proposals/<int:proposal_id>/pdf/', download_admin_proposal_pdf, name='download-admin-proposal-pdf'),
 
     # Proposals — public
     path('proposals/<uuid:proposal_uuid>/', retrieve_public_proposal, name='retrieve-public-proposal'),

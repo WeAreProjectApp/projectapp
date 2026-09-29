@@ -101,14 +101,14 @@
       <div v-if="!hasDocumentsTab">
         <span class="text-text-subtle text-xs">PDFs</span>
         <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-          <a :href="'/api/proposals/' + proposal.uuid + '/pdf/'"
+          <a :href="'/api/proposals/' + proposal.id + '/pdf/'"
              target="_blank"
              class="inline-flex items-center gap-1.5 text-text-brand hover:text-text-brand text-xs font-medium transition-colors">
             <BaseActionIcon action="download" />
             Propuesta comercial
           </a>
           <span class="text-text-subtle text-xs">|</span>
-          <a :href="'/api/proposals/' + proposal.uuid + '/pdf/?doc=technical'"
+          <a :href="'/api/proposals/' + proposal.id + '/pdf/?doc=technical'"
              target="_blank"
              class="inline-flex items-center gap-1.5 text-text-brand hover:text-text-brand text-xs font-medium transition-colors">
             <BaseActionIcon action="download" />

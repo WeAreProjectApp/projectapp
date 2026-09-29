@@ -1,3 +1,10 @@
+> **2026-09-29 — PDFs y anexos de propuestas, PR #451:** descarga administrativa
+> de comercial y técnico aun vencidos; bloqueo público explícito para vencidas.
+> Documentos conserva el contenido original y sólo excluye seis secciones
+> comerciales completas; las condiciones comerciales se mantienen y el técnico
+> permanece completo. Markdown y adjuntos de correo usan el mismo contenido.
+> Pruebas focales de igualdad textual, permisos, selección, revisión y envío.
+
 - **2026-09-28 · Paridad MCP de Propuestas:** implementación de contratos
   personalizados, ajustes, documentos y Formalización con confirmación y
   aislamiento por credencial. Matriz y compatibilidad en

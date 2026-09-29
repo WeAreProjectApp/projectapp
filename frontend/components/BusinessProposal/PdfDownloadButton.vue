@@ -8,9 +8,10 @@
            flex items-center justify-center text-text-default
            hover:bg-primary-soft hover:text-text-brand hover:border-emerald-200
            transition-colors"
-    :disabled="isGenerating"
+    :disabled="isGenerating || isExpired"
+    :aria-describedby="message ? messageId : undefined"
     :aria-label="isGenerating ? 'Generando PDF' : 'Descargar PDF'"
-    :title="isGenerating ? 'Generando...' : 'Descargar PDF'"
+    :title="message || (isGenerating ? 'Generando...' : 'Descargar PDF')"
     @click="downloadPdf"
   >
     <!-- Spinner while generating -->
@@ -24,10 +25,15 @@
             d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
     </svg>
   </BaseButton>
+  <p v-if="message" :id="messageId" role="status"
+    class="fixed bottom-32 right-4 z-40 max-w-[calc(100vw-2rem)] w-72 rounded-xl border border-border-default bg-surface p-3 text-sm text-text-default shadow-lg">
+    {{ message }}
+  </p>
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { computed, useId } from 'vue';
+import { useProposalPdfDownload } from '~/composables/useProposalPdfDownload';
 
 const props = defineProps({
   viewMode: {
@@ -40,63 +46,31 @@ const props = defineProps({
   },
 });
 
-const isGenerating = ref(false);
-
 const proposalStore = useProposalStore();
-
-async function downloadPdf() {
-  if (isGenerating.value) return;
-  isGenerating.value = true;
-
-  try {
-    const uuid = proposalStore.currentProposal?.uuid;
-    if (!uuid) return;
-
-    const params = new URLSearchParams();
-    if (Array.isArray(props.selectedModuleIds) && props.selectedModuleIds.length) {
-      params.set('selected_modules', props.selectedModuleIds.join(','));
-    }
-    if (props.viewMode === 'technical') {
-      params.set('doc', 'technical');
-    }
-    const q = params.toString();
-    const pdfUrl = props.viewMode === 'legal'
-      ? `/api/proposals/${uuid}/contract/draft-pdf/`
-      : `/api/proposals/${uuid}/pdf/${q ? `?${q}` : ''}`;
-
-    const response = await fetch(pdfUrl);
-    if (!response.ok) {
-      throw new Error(`PDF request failed: ${response.status}`);
-    }
-
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-
-    const title = proposalStore.currentProposal?.title || proposalStore.currentProposal?.client_name || 'Propuesta';
-    const safeName = title.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').trim().replace(/\s+/g, '_').slice(0, 100);
-    const createdAt = proposalStore.currentProposal?.created_at;
-    const d = createdAt ? new Date(createdAt) : new Date();
-    const dd = String(d.getDate()).padStart(2, '0');
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const yy = String(d.getFullYear()).slice(-2);
-    const dateSuffix = `${dd}-${mm}-${yy}`;
-    const filePrefix = props.viewMode === 'technical'
-      ? 'Detalle_Tecnico'
-      : props.viewMode === 'legal'
-        ? 'Borrador_Contrato'
-        : 'Propuesta_Comercial';
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${filePrefix}_${safeName}_${dateSuffix}.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  } catch (err) {
-    console.error('PDF download failed:', err);
-  } finally {
-    isGenerating.value = false;
-  }
-}
+const messageId = useId();
+const pdfUrl = computed(() => {
+  const uuid = proposalStore.currentProposal?.uuid;
+  if (props.viewMode === 'legal') return `/api/proposals/${uuid}/contract/draft-pdf/`;
+  const params = new URLSearchParams();
+  if (props.selectedModuleIds?.length) params.set('selected_modules', props.selectedModuleIds.join(','));
+  if (props.viewMode === 'technical') params.set('doc', 'technical');
+  const query = params.toString();
+  return `/api/proposals/${uuid}/pdf/${query ? `?${query}` : ''}`;
+});
+const pdfFilename = computed(() => {
+  const proposal = proposalStore.currentProposal;
+  const title = proposal?.title || proposal?.client_name || 'Propuesta';
+  const safeName = title.replace(/[^\w\sáéíóúñÁÉÍÓÚÑ-]/g, '').trim().replace(/\s+/g, '_').slice(0, 100);
+  const date = proposal?.created_at ? new Date(proposal.created_at) : new Date();
+  const suffix = `${String(date.getDate()).padStart(2, '0')}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getFullYear()).slice(-2)}`;
+  const prefix = props.viewMode === 'technical' ? 'Detalle_Tecnico'
+    : props.viewMode === 'legal' ? 'Borrador_Contrato' : 'Propuesta_Comercial';
+  return `${prefix}_${safeName}_${suffix}.pdf`;
+});
+const { isGenerating, isExpired, message, downloadPdf } = useProposalPdfDownload({
+  proposal: () => proposalStore.currentProposal,
+  url: pdfUrl,
+  filename: pdfFilename,
+  isLegal: () => props.viewMode === 'legal',
+});
 </script>

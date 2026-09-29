@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin prepares a formalization email from proposal Documents, selects curated PDFs and attachments, reviews frozen email and files, then sends them once. Missing documents, stale previews and uncertain deliveries are visible.",
+  "description": "Admin prepares a formalization email from proposal Documents, selects original-content annexes and attachments (commercial omits only six whole sales sections; technical stays complete), reviews frozen email and files, then sends them once. Missing documents, stale previews and uncertain deliveries are visible.",
   "outcomes": [
     "success",
     "error",
