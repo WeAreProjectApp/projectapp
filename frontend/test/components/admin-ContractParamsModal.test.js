@@ -1,5 +1,7 @@
-import { flushPromises, mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import ServiceContractTermField from '../../components/BusinessProposal/admin/ServiceContractTermField.vue';
+
+enableAutoUnmount(afterEach);
 
 const proposalStore = { fetchCompanySettings: jest.fn() };
 
@@ -78,6 +80,11 @@ function mountContractParamsModal(props = {}, components = {}) {
       },
     },
   });
+}
+
+async function personalize(field) {
+  await field.get('[role="combobox"]').trigger('keydown', { key: 'End' });
+  await field.get('[role="combobox"]').trigger('keydown', { key: 'Enter' });
 }
 
 describe('ContractParamsModal', () => {
@@ -228,7 +235,7 @@ describe('ContractParamsModal — contratos separados', () => {
     const wrapper = await openFor('service', PARTIES);
     const fields = wrapper.findAllComponents(ServiceContractTermField);
 
-    expect(fields.map((field) => field.get('select').element.value)).toEqual(['9', '60', '60']);
+    expect(fields.map((field) => field.get('[role="combobox"]').text())).toEqual(['nueve (9) meses', 'sesenta (60)', 'sesenta (60)']);
 
     await wrapper.get('form').trigger('submit');
 
@@ -249,7 +256,7 @@ describe('ContractParamsModal — contratos separados', () => {
     const wrapper = await openFor('service', PARTIES);
     const duration = wrapper.findAllComponents(ServiceContractTermField)[0];
 
-    await duration.get('select').setValue('custom');
+    await personalize(duration);
     await duration.get('input').setValue('dieciocho (18) meses iniciales');
     await wrapper.get('form').trigger('submit');
 
@@ -265,7 +272,7 @@ describe('ContractParamsModal — contratos separados', () => {
     const wrapper = await openFor('service', PARTIES);
     const duration = wrapper.findAllComponents(ServiceContractTermField)[0];
 
-    await duration.get('select').setValue('custom');
+    await personalize(duration);
     await duration.get('input').setValue(customValue);
     await wrapper.get('form').trigger('submit');
 
@@ -283,7 +290,7 @@ describe('ContractParamsModal — contratos separados', () => {
     const wrapper = await openFor('service', PARTIES);
     const field = wrapper.findAllComponents(ServiceContractTermField)[index];
 
-    await field.get('select').setValue('custom');
+    await personalize(field);
     await field.get('input').setValue('a'.repeat(max + 1));
     await wrapper.get('form').trigger('submit');
 
@@ -299,11 +306,11 @@ describe('ContractParamsModal — contratos separados', () => {
     const wrapper = await openFor('service', PARTIES);
     const [duration, renewal, termination] = wrapper.findAllComponents(ServiceContractTermField);
 
-    await duration.get('select').setValue('custom');
+    await personalize(duration);
     await duration.get('input').setValue('a'.repeat(100));
-    await renewal.get('select').setValue('custom');
+    await personalize(renewal);
     await renewal.get('input').setValue('b'.repeat(60));
-    await termination.get('select').setValue('custom');
+    await personalize(termination);
     await termination.get('input').setValue('c'.repeat(60));
     await wrapper.get('form').trigger('submit');
 
@@ -331,7 +338,7 @@ describe('ContractParamsModal — contratos separados', () => {
     });
     const wrapper = await openFor('service', PARTIES);
     const field = wrapper.findAllComponents(ServiceContractTermField)[0];
-    await field.get('select').setValue('custom');
+    await personalize(field);
     await field.get('input').setValue('plazo negociado');
     await wrapper.get('form').trigger('submit');
 
@@ -408,7 +415,7 @@ describe('ContractParamsModal — contratos separados', () => {
     await flushPromises();
 
     const fields = wrapper.findAllComponents(ServiceContractTermField);
-    expect(fields.map((field) => field.get('select').element.value)).toEqual(['12', '90', '30']);
+    expect(fields.map((field) => field.get('[role="combobox"]').text())).toEqual(['doce (12) meses', 'noventa (90)', 'treinta (30)']);
   });
 
   it('keeps a saved service term when the service modal reopens', async () => {
@@ -431,7 +438,7 @@ describe('ContractParamsModal — contratos separados', () => {
     await wrapper.setProps({ visible: true });
     await flushPromises();
 
-    expect(wrapper.findAllComponents(ServiceContractTermField)[0].get('select').element.value).toBe('6');
+    expect(wrapper.findAllComponents(ServiceContractTermField)[0].get('[role="combobox"]').text()).toBe('seis (6) meses');
   });
 
   it('keeps the service terms out of the single contract payload', async () => {
