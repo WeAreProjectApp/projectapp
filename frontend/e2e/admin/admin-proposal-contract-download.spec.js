@@ -180,7 +180,7 @@ test.describe('Panel downloads stay on the current screen', () => {
         if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
           return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...proposalWithoutContract, status: 'draft' }) };
         }
-        if (apiPath === `proposals/${proposalWithContract.uuid}/pdf/`) return pdfResult;
+        if (apiPath === `proposals/${PROPOSAL_ID}/pdf/`) return pdfResult;
         return null;
       });
       await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
@@ -188,7 +188,7 @@ test.describe('Panel downloads stay on the current screen', () => {
       await expect(link).toBeVisible();
       const before = page.url();
       const downloadPromise = page.waitForEvent('download');
-      const requestPromise = page.waitForRequest(request => request.url().endsWith(`/api/proposals/${proposalWithContract.uuid}/pdf/${query}`));
+      const requestPromise = page.waitForRequest(request => request.url().endsWith(`/api/proposals/${PROPOSAL_ID}/pdf/${query}`));
 
       await link.click();
       const download = await downloadPromise;
