@@ -77,13 +77,13 @@ def test_commercial_markdown_keeps_text_inside_retained_sections(formal_markdown
     assert 'Texto extraído del PDF' in export['warnings'][0]
 
 
-def test_technical_markdown_keeps_original_growth_information(formal_markdown_proposal):
+def test_technical_markdown_omits_growth_chapter(formal_markdown_proposal):
     export = _export(formal_markdown_proposal, 'technical')
 
     assert export['title'] == 'Formal technical specification'
     assert 'Create order' in export['markdown']
-    assert 'FUTURE\\_SENTINEL' in export['markdown']
-    assert 'Indexes' in export['markdown']
+    assert 'FUTURE\\_SENTINEL' not in export['markdown']
+    assert 'Indexes' not in export['markdown']
 
 
 def test_formal_markdown_rejects_unknown_document_kind(formal_markdown_proposal):
@@ -103,14 +103,15 @@ def test_formal_markdown_preserves_pasted_scope(formal_markdown_proposal):
     assert 'Pasted scope reviewed by client.' in rendered
 
 
-def test_technical_markdown_accepts_original_scope_without_epics(formal_markdown_proposal):
+def test_technical_markdown_accepts_stack_without_epics(formal_markdown_proposal):
     technical = formal_markdown_proposal.sections.get(section_type='technical_document')
-    technical.content_json = {'purpose': 'Manage orders', 'epics': []}
+    technical.content_json = {'purpose': 'Manage orders', 'stack': [{'layer': 'Backend', 'technology': 'Django'}], 'epics': []}
     technical.save(update_fields=['content_json'])
 
     rendered = _export(formal_markdown_proposal, 'technical')['markdown']
 
-    assert 'Manage orders' in rendered
+    assert 'Django' in rendered
+    assert 'Manage orders' not in rendered
 
 
 @pytest.mark.parametrize('is_enabled', [False, True])
@@ -125,13 +126,13 @@ def test_technical_markdown_requires_an_available_technical_section(formal_markd
     assert error.value.status == 404
 
 
-def test_commercial_markdown_preserves_saved_section_order(formal_markdown_proposal):
+def test_commercial_markdown_uses_pdf_chapter_order(formal_markdown_proposal):
     scope = formal_markdown_proposal.sections.get(section_type='functional_requirements')
-    scope.order = 10
+    scope.order = 0
     scope.title = 'Scope last'
     scope.save(update_fields=['order', 'title'])
     investment = formal_markdown_proposal.sections.get(section_type='investment')
-    investment.order = 0
+    investment.order = 10
     investment.title = 'Investment first'
     investment.save(update_fields=['order', 'title'])
 
@@ -141,7 +142,7 @@ def test_commercial_markdown_preserves_saved_section_order(formal_markdown_propo
     assert rendered.index('Investment first') < rendered.index('Scope last')
 
 
-def test_technical_markdown_preserves_original_environment_columns(formal_markdown_proposal):
+def test_technical_markdown_omits_environment_chapter(formal_markdown_proposal):
     technical = formal_markdown_proposal.sections.get(section_type='technical_document')
     technical.content_json['environments'] = [{
         'name': 'Staging', 'purpose': 'Validation', 'whoAccesses': 'QA team',
@@ -152,7 +153,7 @@ def test_technical_markdown_preserves_original_environment_columns(formal_markdo
 
     rendered = _export(formal_markdown_proposal, 'technical')['markdown']
 
-    assert 'staging.example.test' in rendered
-    assert 'Application database' in rendered
-    assert 'QA team' in rendered
+    assert 'staging.example.test' not in rendered
+    assert 'Application database' not in rendered
+    assert 'QA team' not in rendered
     assert 'NeverPrintedSecret' not in rendered

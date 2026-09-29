@@ -16,7 +16,6 @@ from content.models import (
 )
 from content.services.formalization_content import FormalizationError
 from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
-from content.services.technical_document_pdf import generate_technical_document_pdf
 from content.services.proposal_email_service import ProposalEmailService
 from content.services.proposal_formalization_service import (
     document_bytes,
@@ -27,6 +26,8 @@ from content.services.proposal_formalization_service import (
 from content.tests.services import (
     test_proposal_formalization_service as service_fixtures,
 )
+
+from content.tests.services.test_formalization_pdf import original_technical_text
 
 pytestmark = pytest.mark.django_db
 formalization_payload = service_fixtures.formalization_payload
@@ -88,7 +89,7 @@ def test_formal_technical_pdf_excludes_unselected_module_requirement(
 
     assert 'Crear pedido' in rendered
     assert 'Registra la orden.' in rendered
-    assert rendered == _pdf_text(generate_technical_document_pdf(formalization_proposal))
+    assert rendered == original_technical_text(formalization_proposal)
     assert 'OPTIONAL_FLOW_99' not in rendered
     assert 'OPTIONAL_REQUIREMENT' not in rendered
 
@@ -111,14 +112,16 @@ def test_send_rejects_a_preparation_after_its_section_title_changes(
     assert len(mailoutbox) == 0
 
 
+@pytest.mark.parametrize('document_version', [1, 2])
 @freeze_time('2026-09-24 12:00:00')
 def test_send_legacy_annex_requires_review_of_the_new_content(
-    mailoutbox, formalization_proposal, admin_user, formalization_payload,
+    mailoutbox, formalization_proposal, admin_user, formalization_payload, document_version,
 ):
     """An old curated attachment must be reviewed again, never silently overwritten."""
     legacy_payload = {
         **formalization_payload,
         'documents': ['commercial'],
+        '_document_version': document_version,
         'from_email': ProposalEmailService._get_from_email(),
     }
     preparation = ProposalFormalization.objects.create(

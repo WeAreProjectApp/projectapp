@@ -34,10 +34,10 @@ def pdf_text(raw):
 
 
 def original_commercial_text(proposal):
-    # Independent reference: the normal PDF with precisely the agreed six sections disabled.
+    # Independent reference: the normal PDF with precisely the agreed five sections disabled.
     excluded = proposal.sections.filter(is_enabled=True, section_type__in=[
-        'executive_summary', 'context_diagnostic', 'conversion_strategy',
-        'roi_projection', 'final_note', 'next_steps',
+        'context_diagnostic', 'roi_projection', 'development_stages',
+        'final_note', 'next_steps',
     ])
     ids = list(excluded.values_list('pk', flat=True))
     excluded.update(is_enabled=False)
@@ -49,13 +49,27 @@ def original_commercial_text(proposal):
         proposal.sections.filter(pk__in=ids).update(is_enabled=True)
 
 
+def original_technical_text(proposal):
+    # Independent reference: the public renderer with only the three agreed
+    # chapters present. Restore the source after generating the comparison.
+    section = proposal.sections.get(section_type='technical_document')
+    original = section.content_json
+    section.content_json = {key: original[key] for key in ('stack', 'dataModel', 'epics') if key in original}
+    section.save(update_fields=['content_json'])
+    try:
+        return pdf_text(generate_technical_document_pdf(proposal))
+    finally:
+        section.content_json = original
+        section.save(update_fields=['content_json'])
+
+
 def render(proposal, kind='commercial'):
     return pdf_text(generate_formal_pdf(FormalContent(proposal), kind, timezone.now(), 'PROP-TEST'))
 
 
 @pytest.mark.parametrize('section_type', [
-    'executive_summary', 'context_diagnostic', 'conversion_strategy',
-    'roi_projection', 'final_note', 'next_steps',
+    'context_diagnostic', 'roi_projection', 'development_stages',
+    'final_note', 'next_steps',
 ])
 def test_commercial_annex_excludes_only_the_agreed_whole_sections(formal_proposal, section_type):
     formal_proposal.sections.update_or_create(
@@ -101,7 +115,7 @@ def test_technical_annex_preserves_original_legacy_requirement_content(formal_pr
 
     assert 'Crear pedido' in rendered
     assert 'Conservar fecha.' in rendered
-    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
+    assert rendered == original_technical_text(formal_proposal)
 
 
 @pytest.fixture
@@ -200,13 +214,13 @@ def test_commercial_pdf_preserves_saved_hosting_options(formal_proposal):
     assert rendered == original_commercial_text(formal_proposal)
 
 
-def test_technical_annex_preserves_future_scope_as_original(formal_proposal):
+def test_technical_annex_omits_growth_chapter(formal_proposal):
     rendered = render(formal_proposal, 'technical')
 
     assert 'Crear pedido' in rendered
-    assert 'Índices' in rendered
-    assert 'FUTURE_SENTINEL' in rendered
-    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
+    assert 'Índices' not in rendered
+    assert 'FUTURE_SENTINEL' not in rendered
+    assert rendered == original_technical_text(formal_proposal)
 
 
 def test_commercial_annex_omits_a_disabled_retained_section(formal_proposal):
