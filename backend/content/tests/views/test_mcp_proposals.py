@@ -3,9 +3,9 @@ import json
 from unittest import mock
 
 import pytest
+from accounts.services import proposal_client_service
 from django.db.models import ProtectedError
 
-from accounts.services import proposal_client_service
 from content.models import (
     BusinessProposal,
     McpConnector,
@@ -42,24 +42,53 @@ def _rpc(method, params=None, msg_id=1):
 
 
 def _call(api_client, token, name, arguments):
-    return api_client.post(
+    response = api_client.post(
         _url(token), _rpc('tools/call', {'name': name, 'arguments': arguments}),
         format='json',
     )
+    payload = response.data.get('result', {}).get('structuredContent', {})
+    if payload.get('confirmation_required'):
+        response = api_client.post(
+            _url(token), _rpc('tools/call', {
+                'name': 'confirm_action',
+                'arguments': {'confirmation_id': payload['confirmation_id']},
+            }), format='json',
+        )
+        result = response.data['result']
+        if not result['isError']:
+            payload = result['structuredContent']['result']
+            result['content'][0]['text'] = json.dumps(payload, default=str)
+            result['structuredContent'] = payload
+    return response
 
 
 @pytest.mark.django_db
 class TestProposalsMcp:
     def test_tool_list(self, api_client, proposals_connector):
+        """Fails if full-scope discovery hides an available proposal workflow."""
         _, token = proposals_connector
         response = api_client.post(_url(token), _rpc('tools/list'), format='json')
-        names = [t['name'] for t in response.data['result']['tools']]
-        for expected in (
+        names = {tool['name'] for tool in response.data['result']['tools']}
+        expected = {
             'get_proposal_template', 'list_proposals', 'create_proposal',
             'update_proposal', 'update_proposal_status', 'send_proposal',
             'delete_proposal', 'duplicate_proposal', 'create_share_link',
-        ):
-            assert expected in names
+            'update_proposal_settings', 'get_proposal_defaults',
+            'update_proposal_defaults', 'reset_proposal_defaults',
+            'get_proposal_company_settings', 'update_proposal_service_settings',
+            'get_proposal_contract_template', 'update_proposal_contract',
+            'update_proposal_contract_modality', 'read_proposal_contract_markdown',
+            'list_proposal_documents', 'upload_proposal_document',
+            'read_proposal_document_markdown', 'download_proposal_document',
+            'list_email_templates', 'update_email_template', 'send_multi_proposal',
+            'send_branded_email', 'send_custom_proposal_email',
+            'render_proposal_email_markdown_pdf', 'export_proposal_analytics_csv',
+            'get_proposal_formalization_options', 'render_proposal_formalization_pdf',
+            'read_proposal_formalization_markdown', 'prepare_proposal_formalization',
+            'get_proposal_formalization', 'download_proposal_formalization_file',
+            'send_proposal_formalization', 'confirm_action',
+        }
+        assert expected <= names
 
     def test_template_has_required_fields(self, api_client, proposals_connector):
         _, token = proposals_connector

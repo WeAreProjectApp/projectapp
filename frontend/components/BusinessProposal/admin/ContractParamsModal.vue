@@ -1,7 +1,7 @@
 <template>
   <BaseModal
     :model-value="visible"
-    :kind="contractSource === 'custom' && showPreview ? 'wizard' : 'form-wide'"
+    :kind="contractSource === 'custom' && showPreview ? 'wizard' : 'form'"
     :close-on-backdrop="!saving"
     :close-on-esc="!saving"
     @update:model-value="(v) => !v && !saving && $emit('cancel')"
@@ -18,8 +18,8 @@
             </p>
           </div>
 
-          <form :id="modalFormId" class="px-6 py-5 space-y-6" @submit.prevent="handleSubmit">
-            <fieldset :disabled="saving" class="min-w-0 space-y-6">
+          <form :id="modalFormId" class="px-6 py-5 space-y-4" @submit.prevent="handleSubmit">
+            <fieldset :disabled="saving" class="min-w-0 space-y-4">
             <!-- Source toggle -->
             <BaseSegmented
               v-model="contractSource"
@@ -33,121 +33,158 @@
 
             <!-- DEFAULT MODE: contract params form -->
             <template v-if="contractSource === 'default'">
-              <!-- Contractor (seller) section -->
-              <fieldset>
+              <!-- Outer groups separate rows; empty hint bands need no extra gap. -->
+              <fieldset class="min-w-0">
                 <legend class="text-sm font-semibold text-text-brand mb-3">EL CONTRATISTA (tu empresa)</legend>
                 <div class="space-y-4">
-                  <BaseFormRow :cols="2" :gap="4" at="sm">
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
                     <BaseFormField
+                      :for="`${modalFormId}-contractor_full_name`"
                       label="Nombre completo"
                       required
                       size="sm"
+                      label-policy="wrap"
                       :error="formErrors.contractor_full_name"
                     >
-                    <BaseInput v-model="form.contractor_full_name" type="text" size="sm" />
-                    </BaseFormField>
-                    <BaseFormField label="NIT" size="sm">
-                    <BaseInput v-model="form.contractor_nit" type="text" size="sm" />
-                    </BaseFormField>
-                  </BaseFormRow>
-                  <BaseFormRow :cols="2" :gap="4" at="sm">
-                    <BaseFormField label="Cédula" size="sm">
-                    <BaseInput v-model="form.contractor_cedula" type="text" size="sm" />
+                      <BaseInput :id="`${modalFormId}-contractor_full_name`" v-model="form.contractor_full_name" type="text" size="sm" />
                     </BaseFormField>
                     <BaseFormField
+                      :for="`${modalFormId}-contractor_email`"
                       label="Email de notificación"
                       required
                       size="sm"
+                      label-policy="wrap"
                       :error="formErrors.contractor_email"
                     >
-                    <BaseInput v-model="form.contractor_email" type="email" size="sm" />
+                      <BaseInput :id="`${modalFormId}-contractor_email`" v-model="form.contractor_email" type="email" size="sm" />
+                    </BaseFormField>
+                  </BaseFormRow>
+                  <BaseFormRow :cols="2" :gap="4" at="sm">
+                    <BaseFormField
+                      :for="`${modalFormId}-contractor_nit`"
+                      label="NIT"
+                      size="sm"
+                      label-policy="wrap"
+                    >
+                      <BaseInput :id="`${modalFormId}-contractor_nit`" v-model="form.contractor_nit" type="text" size="sm" />
+                    </BaseFormField>
+                    <BaseFormField
+                      :for="`${modalFormId}-contractor_cedula`"
+                      label="Cédula"
+                      size="sm"
+                      label-policy="wrap"
+                    >
+                      <BaseInput :id="`${modalFormId}-contractor_cedula`" v-model="form.contractor_cedula" type="text" size="sm" />
                     </BaseFormField>
                     <template #help>
                       <span>Indica NIT o cédula. El NIT tiene prioridad en el contrato.</span>
-                      <span
-                        v-if="formErrors.contractor_identity"
-                        class="mt-1 block text-danger-strong"
-                        role="alert"
-                      >
+                      <span v-if="formErrors.contractor_identity" class="mt-1 block text-danger-strong" role="alert">
                         {{ formErrors.contractor_identity }}
                       </span>
                     </template>
                   </BaseFormRow>
-                  <BaseFormField
-                    label="Ciudad del contrato"
-                    required
-                    size="sm"
-                    :error="formErrors.contract_city"
-                  >
-                    <BaseInput v-model="form.contract_city" type="text" size="sm" />
-                  </BaseFormField>
-                </div>
-                <BaseFormRow :cols="3" :gap="4" at="sm" class="mt-4">
-                  <BaseFormField label="Banco" required size="sm" :error="formErrors.bank_name">
-                    <BaseInput v-model="form.bank_name" type="text" size="sm" />
-                  </BaseFormField>
-                  <BaseFormField label="Tipo de cuenta" size="sm">
-                    <BaseSelect
-                      v-model="form.bank_account_type"
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
+                    <BaseFormField
+                      :for="`${modalFormId}-bank_name`"
+                      label="Banco"
+                      required
                       size="sm"
-                      :options="[{ value: 'Ahorros', label: 'Ahorros' }, { value: 'Corriente', label: 'Corriente' }]"
-                    />
-                  </BaseFormField>
-                  <BaseFormField
-                    label="Número de cuenta"
-                    required
-                    size="sm"
-                    :error="formErrors.bank_account_number"
-                  >
-                    <BaseInput v-model="form.bank_account_number" type="text" size="sm" />
-                  </BaseFormField>
-                </BaseFormRow>
+                      label-policy="wrap"
+                      :error="formErrors.bank_name"
+                    >
+                      <BaseInput :id="`${modalFormId}-bank_name`" v-model="form.bank_name" type="text" size="sm" />
+                    </BaseFormField>
+                    <BaseFormField
+                      :for="`${modalFormId}-bank_account_type`"
+                      label="Tipo de cuenta"
+                      size="sm"
+                      label-policy="wrap"
+                    >
+                      <BaseSelect :id="`${modalFormId}-bank_account_type`" v-model="form.bank_account_type" size="sm"
+                        :options="[{ value: 'Ahorros', label: 'Ahorros' }, { value: 'Corriente', label: 'Corriente' }]" />
+                    </BaseFormField>
+                  </BaseFormRow>
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
+                    <BaseFormField
+                      :for="`${modalFormId}-bank_account_number`"
+                      label="Número de cuenta"
+                      required
+                      size="sm"
+                      label-policy="wrap"
+                      :error="formErrors.bank_account_number"
+                    >
+                      <BaseInput :id="`${modalFormId}-bank_account_number`" v-model="form.bank_account_number" type="text" size="sm" />
+                    </BaseFormField>
+                  </BaseFormRow>
+                </div>
               </fieldset>
 
-              <!-- Client (contratante) section -->
-              <fieldset>
+              <fieldset class="min-w-0">
                 <legend class="text-sm font-semibold text-text-brand mb-3">EL CONTRATANTE (cliente)</legend>
                 <div class="space-y-4">
-                  <BaseFormRow :cols="2" :gap="4" at="sm">
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
                     <BaseFormField
+                      :for="`${modalFormId}-client_full_name`"
                       label="Nombre completo"
                       required
                       size="sm"
+                      label-policy="wrap"
                       :error="formErrors.client_full_name"
                     >
-                    <BaseInput v-model="form.client_full_name" type="text" size="sm" />
+                      <BaseInput :id="`${modalFormId}-client_full_name`" v-model="form.client_full_name" type="text" size="sm" />
                     </BaseFormField>
                     <BaseFormField
+                      :for="`${modalFormId}-client_email`"
+                      label="Email de notificación"
+                      required
+                      size="sm"
+                      label-policy="wrap"
+                      :error="formErrors.client_email"
+                    >
+                      <BaseInput :id="`${modalFormId}-client_email`" v-model="form.client_email" type="email" size="sm" />
+                    </BaseFormField>
+                  </BaseFormRow>
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
+                    <BaseFormField
+                      :for="`${modalFormId}-client_cedula`"
                       label="Cédula / NIT"
                       required
                       size="sm"
+                      label-policy="wrap"
                       :error="formErrors.client_cedula"
                     >
-                    <BaseInput v-model="form.client_cedula" type="text" size="sm" placeholder="Ej: 1.234.567.890" />
+                      <BaseInput :id="`${modalFormId}-client_cedula`" v-model="form.client_cedula" type="text" size="sm" placeholder="Ej: 1.234.567.890" />
                     </BaseFormField>
                   </BaseFormRow>
-                  <BaseFormField
-                    label="Email de notificación"
-                    required
-                    size="sm"
-                    :error="formErrors.client_email"
-                  >
-                    <BaseInput v-model="form.client_email" type="email" size="sm" />
-                  </BaseFormField>
                 </div>
               </fieldset>
 
-              <!-- Contract date -->
-              <fieldset>
+              <fieldset class="min-w-0">
                 <legend class="text-sm font-semibold text-text-brand mb-3">Datos del contrato</legend>
-                <BaseFormField
-                  label="Fecha del contrato"
-                  required
-                  size="sm"
-                  :error="formErrors.contract_date"
-                >
-                    <BaseInput v-model="form.contract_date" type="date" size="sm" />
-                </BaseFormField>
+                <div class="space-y-4">
+                  <BaseFormRow :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
+                    <BaseFormField
+                      :for="`${modalFormId}-contract_city`"
+                      label="Ciudad del contrato"
+                      required
+                      size="sm"
+                      label-policy="wrap"
+                      :error="formErrors.contract_city"
+                    >
+                      <BaseInput :id="`${modalFormId}-contract_city`" v-model="form.contract_city" type="text" size="sm" />
+                    </BaseFormField>
+                    <BaseFormField
+                      :for="`${modalFormId}-contract_date`"
+                      label="Fecha del contrato"
+                      required
+                      size="sm"
+                      label-policy="wrap"
+                      :error="formErrors.contract_date"
+                    >
+                      <BaseInput :id="`${modalFormId}-contract_date`" v-model="form.contract_date" type="date" size="sm" />
+                    </BaseFormField>
+                  </BaseFormRow>
+                </div>
               </fieldset>
 
               <!-- Service terms: only the standalone service contract uses them -->
@@ -160,15 +197,18 @@
                   <BaseButton size="sm" variant="secondary" @click="retryDefaults">{{ t('serviceContract.retry') }}</BaseButton>
                 </div>
                 <div v-else class="space-y-4">
-                  <ServiceContractTermField
-                    v-for="field in SERVICE_CONTRACT_FIELDS"
-                    :key="`${formRevision}-${field.key}`"
-                    v-model="form[field.key]"
-                    :label="t(`serviceContract.fields.${field.key}`)"
-                    :options="companyDefaults.service_contract_settings[field.optionsKey]"
-                    :duration="Boolean(field.duration)"
-                    :error="formErrors[field.key]"
-                  />
+                  <BaseFormRow v-for="(fields, index) in serviceFieldRows" :key="index" :cols="2" :gap="4" at="sm" class="sm:gap-y-0">
+                    <ServiceContractTermField
+                      v-for="field in fields"
+                      :key="`${formRevision}-${field.key}`"
+                      v-model="form[field.key]"
+                      :label="t(`serviceContract.fields.${field.key}`)"
+                      :options="companyDefaults.service_contract_settings[field.optionsKey]"
+                      :duration="Boolean(field.duration)"
+                      :error="formErrors[field.key]"
+                      :disabled="saving"
+                    />
+                  </BaseFormRow>
                 </div>
               </fieldset>
             </template>
@@ -176,7 +216,7 @@
             <!-- CUSTOM MODE: markdown editor -->
             <template v-else>
               <div>
-                <div class="flex items-center justify-between mb-2">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
                   <label class="block text-sm font-medium text-text-default">Contenido del contrato (Markdown)</label>
                   <div class="flex items-center gap-2">
                     <label
@@ -231,12 +271,14 @@
               <fieldset>
                 <legend class="text-sm font-semibold text-text-brand mb-3">Datos del contrato</legend>
                 <BaseFormField
+                  class="sm:max-w-xs"
+                  :for="`${modalFormId}-custom-date`"
                   label="Fecha del contrato"
                   required
                   size="sm"
                   :error="formErrors.contract_date"
                 >
-                    <BaseInput v-model="form.contract_date" type="date" size="sm" />
+                    <BaseInput :id="`${modalFormId}-custom-date`" v-model="form.contract_date" type="date" size="sm" />
                 </BaseFormField>
               </fieldset>
             </template>
@@ -274,6 +316,7 @@ import { serviceTermNumber, validServiceContractSettings } from '~/utils/service
 
 const { parseMarkdown } = useMarkdownPreview();
 const { t } = useI18n();
+const serviceFieldRows = [SERVICE_CONTRACT_FIELDS.slice(0, 1), SERVICE_CONTRACT_FIELDS.slice(1)];
 
 const props = defineProps({
   visible: { type: Boolean, default: false },

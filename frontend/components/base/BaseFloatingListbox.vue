@@ -16,6 +16,7 @@ const props = defineProps({
   anchor: { type: Object, default: null },
   owner: { type: Object, default: null },
   id: { type: String, default: undefined },
+  ariaLabel: { type: String, default: undefined },
   as: { type: String, default: 'div' },
   maxHeight: { type: Number, default: 320 },
   offset: { type: Number, default: 4 },
@@ -215,6 +216,7 @@ onBeforeUnmount(deactivate);
       :id="id"
       ref="panelRef"
       role="listbox"
+      :aria-label="ariaLabel"
       class="pointer-events-auto fixed z-[10020] overflow-y-auto overscroll-contain rounded-xl border border-border-default bg-surface shadow-raised"
       :style="panelStyle"
       data-floating-listbox

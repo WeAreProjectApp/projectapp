@@ -13,6 +13,20 @@ Validación local: 106 casos backend, 32 unitarias frontend y 22 recorridos E2E
 en verde; comparación textual de PDFs reales y controles de calidad aprobados.
 La entrega conjunta y el CI final se consultan en el PR #451.
 
+## 2026-09-28 — formularios compactos de contratos
+
+Creación y edición de contrato único/producto/servicio usan el modal de 42 rem,
+filas de dos campos y una columna bajo 640 px. Ciudad comparte fila con fecha;
+los preavisos se alinean y los auxiliares quedan debajo de su selector. Los
+selects del servicio pasan a listas flotantes sin buscador con teclado, foco y
+bloqueo explícito al guardar. Se conservan catálogos, defaults y textos libres
+sin cambios de API o backend. La vista previa Markdown mantiene su ancho.
+Verificación: 75 pruebas unitarias y 39 E2E aprobadas, incluidas creación,
+reapertura y geometría en los cinco viewports del panel. En la referencia de
+1440 × 900, el ancho baja de 1024 a 672 px y el contenido del servicio de 1079
+a 985 px. Registro de flujos y mapa de vistas actualizados; ambos flujos afectados
+cubren éxito, errores, fallos y visualización.
+
 # Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
 
 Las dos cuadrículas del video de módulos adicionales igualan sus cuatro
@@ -267,6 +281,13 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+**2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
+con Comercial para ajustes, contratos personalizados y documentos. Formalización
+prepara paquetes privados por credencial y confirma el envío con comprobante
+durable; conserva el historial ordinario. Validación focal de contratos, permisos,
+concurrencia y fallos de envío. Entrega mediante PR de
+`feat/28092026-proposals-mcp-parity`; migración reservada al deploy.
 
 **2026-09-27 — datos del contrato de servicio:** implementación en el worktree
 `service-contract-options`. Los tres campos pasan a desplegables con números
@@ -2194,3 +2215,16 @@ migraciones ni cambios de política financiera. Backend focal y regresión:
 27 casos aprobados; mapa de vistas: 20 tests aprobados; quality gate focal:
 100/100, sin errores ni warnings. Flow-map vigente, con las clases declaradas
 del módulo cubiertas. El estado de navegador y CI se registra en el PR.
+
+
+### Documentos MCP 3.0.1 — correcciones y Littigio (2026-09-28)
+
+La sesión implementa errores completos también en texto, códigos por documento,
+paridad de esquemas/versiones y procedencia de carpetas. El comando de reparación
+usa manifiesto revisado, huellas, respaldo y transacción. Investigación productiva:
+MCP movió 201/202/203/208/209 de 80 a 124 a las 13:48 UTC; la migración de autoría y
+validación llegó a las 21:36 UTC. Detalle y estado operativo en
+`docs/runbooks/littigio-folder-repair.md`. No atribuir este caso a sincronización.
+Reparación aplicada y verificada el 28-09 a las 23:56 UTC: cinco documentos en 80,
+124 vacía/archivada y atribuida al MCP; revisiones 126–130, recibo 797. Contenido y
+asociaciones conservados contra respaldo privado; reintento sin escrituras.

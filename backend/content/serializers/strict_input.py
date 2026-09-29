@@ -15,7 +15,7 @@ class StrictInputMixin:
             if unexpected:
                 raise serializers.ValidationError(
                     {
-                        name: ["Campo desconocido o de solo lectura."]
+                        name: [serializers.ErrorDetail("Campo desconocido o de solo lectura.", code="unknown_field")]
                         for name in sorted(unexpected)
                     }
                 )

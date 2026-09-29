@@ -121,7 +121,9 @@ mantiene su flujo habitual y comparte esta protección del guardado.
 - El gateway habitual conserva copias configuradas, destinatarios, evidencias e
   historial. Enviar estos documentos no cambia el estado de la propuesta.
 - La migración `content.0249` crea las preparaciones y sus archivos privados.
-  Sus modelos son temporales, excluidos de fake data persistente y del MCP.
+  Sus modelos son temporales y quedan excluidos de fake data persistente. El MCP
+  permite preparar, revisar y confirmar el envío de paquetes propios, aislados por
+  credencial; no consulta preparaciones del panel. Ver [MCP de Propuestas](PROPOSALS_MCP.md).
 
 ## Copiar y consultar documentos
 

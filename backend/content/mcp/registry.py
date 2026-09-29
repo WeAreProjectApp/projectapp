@@ -1,6 +1,5 @@
 from copy import deepcopy
 
-
 READ_PREFIXES = (
     'describe_', 'get_', 'list_', 'read_', 'search_', 'preview_', 'export_',
     'download_',
@@ -61,3 +60,27 @@ def normalize_tools(tools, connector_slug):
             f'Duplicate MCP tools for {connector_slug}: {", ".join(duplicates)}'
         )
     return normalized
+
+
+CONNECTOR_VERSIONS = {'documents': '3.0.1'}
+
+
+def connector_version(slug, default='2.0.0'):
+    return CONNECTOR_VERSIONS.get(slug, default)
+
+
+def public_tool(tool):
+    """The sole public schema projection for list and capabilities discovery."""
+    return {
+        'name': tool['name'], 'title': tool.get('title'),
+        'description': tool['description'],
+        'inputSchema': deepcopy(tool['input_schema']),
+        'outputSchema': deepcopy(tool.get('output_schema', {})),
+        'annotations': deepcopy(tool.get('annotations', {})),
+    }
+
+
+def server_info(server_name=None):
+    slug = (server_name or '').removeprefix('projectapp-').removesuffix('-mcp')
+    return {'name': server_name or 'projectapp-mcp',
+            'version': connector_version(slug, default='1.0.0')}

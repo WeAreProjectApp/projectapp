@@ -179,13 +179,13 @@ def availability(proposal):
     return result
 
 
-def prepare(proposal, user, payload):
+def prepare(proposal, user, payload, *, mcp_credential=None):
     if not ProposalEmailService._is_template_active(TEMPLATE_KEY):
         raise FormalizationError('La plantilla de formalización está desactivada.', 'template_disabled')
     payload = {**payload, '_source_version': SOURCE_VERSION, '_document_version': DOCUMENT_VERSION}
     captured_hash = source_hash(proposal, payload)
     now = timezone.now()
-    preparation = ProposalFormalization(proposal=proposal, created_by=user, payload=payload, source_hash=captured_hash, expires_at=now + timedelta(hours=24))
+    preparation = ProposalFormalization(proposal=proposal, created_by=user, mcp_credential=mcp_credential, payload=payload, source_hash=captured_hash, expires_at=now + timedelta(hours=24))
     reference = f'PROP-{proposal.pk} / {str(preparation.id)[:8]}'
     content = FormalContent(proposal)
     attachments = []
