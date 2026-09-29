@@ -7,11 +7,11 @@ import pytest
 from django.core.files.base import ContentFile
 
 from content.models import (
+    BusinessProposal,
     EmailLog,
     McpActionIntent,
     McpConnector,
     McpCredential,
-    BusinessProposal,
     ProposalFormalization,
     ProposalSection,
 )

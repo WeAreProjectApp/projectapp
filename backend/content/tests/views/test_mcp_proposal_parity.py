@@ -4,7 +4,10 @@ from datetime import timedelta
 import pytest
 
 from content.models import (
-    BusinessProposal, EntityHistory, McpConnector, ProposalDefaultConfig,
+    BusinessProposal,
+    EntityHistory,
+    McpConnector,
+    ProposalDefaultConfig,
 )
 
 
