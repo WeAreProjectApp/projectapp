@@ -1,3 +1,9 @@
+- **2026-09-28 · Paridad MCP de Propuestas:** implementación de contratos
+  personalizados, ajustes, documentos y Formalización con confirmación y
+  aislamiento por credencial. Matriz y compatibilidad en
+  `docs/PROPOSALS_MCP.md`; validación focal aprobada, entrega mediante PR
+  de `feat/28092026-proposals-mcp-parity`. Migración reservada al deploy.
+
 > **2026-09-28 — MVP de enlaces seguros, PR #442:** implementados CRUD MCP y
 > consulta sensible con permiso explícito/confirmación efímera, recuperación
 > de errores del panel y limpieza de secretos. Verificación focal de backend,

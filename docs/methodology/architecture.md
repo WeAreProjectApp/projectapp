@@ -1,5 +1,13 @@
 # Architecture — ProjectApp
 
+> **Paridad MCP de Propuestas — 2026-09-28:** `proposal_operations` comparte
+> los adaptadores del panel entre `proposals` y `commercial`; `proposal_schemas`
+> deriva los campos editables de los serializers y rechaza claves desconocidas.
+> Formalización reutiliza el servicio de documentos, con propiedad opcional por
+> credencial en `ProposalFormalization`; el actor técnico no determina acceso.
+> La confirmación muestra el paquete exacto y conserva resultados fallidos o
+> inciertos sin habilitar un reenvío. API y compatibilidad: `docs/PROPOSALS_MCP.md`.
+
 ## Regeneración del prerender por pedido (2026-09-28)
 
 La app ya no construye el frontend en producción. `projectapp-huey` corre con el

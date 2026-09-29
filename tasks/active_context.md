@@ -267,6 +267,13 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+**2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
+con Comercial para ajustes, contratos personalizados y documentos. Formalización
+prepara paquetes privados por credencial y confirma el envío con comprobante
+durable; conserva el historial ordinario. Validación focal de contratos, permisos,
+concurrencia y fallos de envío. Entrega mediante PR de
+`feat/28092026-proposals-mcp-parity`; migración reservada al deploy.
+
 **2026-09-27 — datos del contrato de servicio:** implementación en el worktree
 `service-contract-options`. Los tres campos pasan a desplegables con números
 personalizados (1–999); preselecciones iniciales 9 meses / 60 / 60 días.

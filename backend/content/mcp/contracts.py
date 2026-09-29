@@ -372,20 +372,52 @@ MCP_MODEL_CONTRACTS = {
     ),
     'proposals': (
         _contract(
+            'content.ProposalDefaultConfig',
+            read_only='id created_at updated_at',
+            read_write=(
+                'language sections_json default_currency default_total_investment '
+                'hosting_percent hosting_discount_nine_month hosting_discount_semiannual '
+                'hosting_discount_quarterly expiration_days reminder_days '
+                'urgency_reminder_days default_discount_percent default_slug_pattern'
+            ),
+        ),
+        _contract(
+            'content.CompanySettings',
+            read_only=(
+                'contractor_full_name contractor_nit contractor_cedula contractor_email '
+                'bank_name bank_account_type bank_account_number contract_city'
+            ),
+            read_write='service_contract_settings',
+            excluded=_excluded(_PANEL_ONLY, 'id contractor_signature created_at updated_at'),
+        ),
+        _contract(
+            'content.ContractTemplate',
+            read_only='id name content_markdown',
+            excluded=_excluded(
+                'Plantilla canónica administrada fuera del módulo Propuestas; aquí sólo se consulta el texto predeterminado.',
+                'service_content_markdown is_default mirror_document created_at updated_at',
+            ),
+        ),
+        _contract(
+            'content.EmailTemplateConfig',
+            read_only='id template_key created_at updated_at',
+            read_write='content_overrides is_active',
+        ),
+        _contract(
             'content.BusinessProposal',
             read_only=(
-                'id uuid slug reminder_sent_at urgency_email_sent_at '
+                'id uuid reminder_sent_at urgency_email_sent_at '
                 'last_activity_at view_count first_viewed_at sent_at responded_at '
-                'engagement_declining cached_heat_score client deliverable '
+                'engagement_declining cached_heat_score deliverable '
                 'platform_onboarding_completed_at platform_onboarding_status '
                 'created_at updated_at'
             ),
             read_write=(
-                'title client_name client_email language total_investment currency '
+                'title slug client client_name client_email language total_investment currency '
                 'nationality hosting_percent hosting_discount_nine_month '
                 'hosting_discount_semiannual hosting_discount_quarterly status '
                 'expires_at reminder_days urgency_reminder_days discount_percent '
-                'is_active show_contract_terms show_explainer_video project_type market_type '
+                'is_active automations_paused show_contract_terms show_explainer_video project_type market_type '
                 'project_type_custom market_type_custom client_phone email_intro '
                 'email_features email_method_phases email_signed_by selected_modules '
                 'contract_params contract_modality'
@@ -393,7 +425,7 @@ MCP_MODEL_CONTRACTS = {
             excluded=(
                 _excluded(
                     _AUTOMATION_STATE,
-                    'automations_paused revisit_alert_sent_at '
+                    'revisit_alert_sent_at '
                     'abandonment_email_sent_at investment_interest_email_sent_at '
                     'followup_scheduled_at stakeholder_alert_sent_at '
                     'post_expiration_alert_sent_at calculator_followup_sent_at '
@@ -424,28 +456,21 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.ProposalDocument',
-            excluded=_excluded(
-                'Archivo y snapshot textual de contrato administrados por el panel; '
-                'el MCP de propuestas no consulta ni modifica adjuntos.',
-                'id proposal document_type title file custom_type_label is_generated '
-                'content_markdown created_at updated_at',
-            ),
+            read_only='id proposal is_generated content_markdown created_at updated_at',
+            read_write='document_type title file custom_type_label',
         ),
         _contract(
             'content.ProposalFormalization',
-            excluded=_excluded(
-                'Preparación privada y temporal del administrador: su revisión y envío '
-                'se realizan exclusivamente en el panel, sin exposición por MCP.',
-                'id proposal created_by payload source_hash html_body text_body '
-                'status created_at expires_at sent_at error',
-            ),
+            read_only='id proposal html_body text_body status expires_at sent_at error',
+            read_write='payload',
+            excluded=_excluded(_AUDIT_INTERNAL, 'created_by mcp_credential source_hash created_at'),
         ),
         _contract(
             'content.ProposalFormalizationFile',
+            read_only='id key filename description mime_type sha256 size',
             excluded=_excluded(
-                'Adjunto privado de una preparación; requiere la sesión de su creador '
-                'y no admite lectura ni descarga por MCP.',
-                'id preparation key filename description mime_type file sha256 size',
+                'Archivo privado descargable sólo mediante artefacto temporal de la credencial propietaria.',
+                'preparation file',
             ),
         ),
     ),
