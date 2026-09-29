@@ -1,5 +1,17 @@
 # Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
 
+**2026-09-29 — descargas y enlaces de la PWA:** corrección acotada en
+`fix/29092026-pwa-download-links`. Contratos, PDF formales, acuerdos, adjuntos y
+CSV usan descargas de sesión sin abrir ventanas, también desde General en
+propuestas en borrador; hay carga, cancelación y
+reintento, rechazo de HTML/JSON y nombres del servidor. Se conserva el ámbito
+raíz y el login bilingüe. La apertura de enlaces públicos en Chrome requiere
+la preferencia local de captura desactivada: ver `docs/PWA_DOWNLOADS_AND_LINKS.md`.
+Pruebas focales y flujos verificados; una instalación aislada en Chrome for
+Testing 151 confirmó descarga sin ventanas y enlace público en navegador con
+captura desactivada. La entrega se valida en el PR de esta rama; no desplegado.
+
+
 Las dos cuadrículas del video de módulos adicionales igualan sus cuatro
 tarjetas a la altura de la mayor de cada grupo, conservando el diseño compacto.
 El reproductor compartido inicia sólo por acción del visitante, pausa al salir

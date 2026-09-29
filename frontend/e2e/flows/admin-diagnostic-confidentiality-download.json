@@ -6,9 +6,11 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin downloads the generated Acuerdo de Confidencialidad from the Documentos tab. 'Descargar' link → GET /api/diagnostics/:id/confidentiality/pdf/ (FileResponse, streams the saved PDF with placeholders filled from confidentiality_params). 'Borrador' link → GET /api/diagnostics/:id/confidentiality/draft-pdf/ (renders fresh with all placeholders forced to XXX-XXX-XXX and applies BORRADOR watermark). When no NDA exists, neither link is present and the section shows 'No generado' with 'Generar acuerdo' CTA.",
+  "description": "Admin downloads the final or draft confidentiality PDF from Documents without opening a window or leaving the diagnostic. The browser saves the server filename. Download controls appear only when an agreement exists. Original attachments also download directly; supported previews stay in the existing modal.",
   "expectedSpecs": 1,
   "outcomes": [
-    "display"
-  ]
+    "display",
+    "success"
+  ],
+  "knownGaps": "NDA-specific E2E error/failure cases are not duplicated here; the shared download controller has HTTP, invalid-response and network tests and the proposal flow exercises recovery in the browser."
 }

@@ -96,7 +96,7 @@ function opensLabel(link) {
               </div>
               <div class="flex flex-wrap gap-2">
                 <BaseButton variant="secondary" size="sm" @click="emit('copy', link)">{{ t('additionalModules.copyLink') }}</BaseButton>
-                <BaseButton as="a" :to="link.public_path" target="_blank" rel="noopener" variant="secondary" size="sm">
+                <BaseButton as="a" :to="link.public_path" target="_blank" rel="noopener noreferrer" variant="secondary" size="sm">
                   {{ t('additionalModules.openLink') }}
                 </BaseButton>
                 <BaseButton

@@ -247,7 +247,7 @@ test.describe('Admin Diagnostic — Documentos tab', () => {
     await expect(page.getByText('Acuerdo de confidencialidad')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('PDF · No generado')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Generar acuerdo' })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Descargar PDF/ })).toBeHidden();
+    await expect(page.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toBeHidden();
   });
 
   test('a generated NDA exposes download, draft and edit-params actions', {
@@ -266,8 +266,8 @@ test.describe('Admin Diagnostic — Documentos tab', () => {
     await page.getByRole('tab', { name: 'Documentos' }).click();
 
     await expect(page.getByText('Acuerdo de confidencialidad')).toBeVisible({ timeout: 10000 });
-    await expect(page.getByRole('link', { name: /Descargar PDF/ })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Borrador' })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Borrador|Draft/ })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Editar parámetros' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Generar acuerdo' })).toBeHidden();
   });

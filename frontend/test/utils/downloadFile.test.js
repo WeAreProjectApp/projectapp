@@ -2,10 +2,13 @@ import { downloadBlob, filenameFromDisposition } from '../../utils/downloadFile'
 
 describe('downloadBlob', () => {
   afterEach(() => {
+    jest.runOnlyPendingTimers();
+    jest.useRealTimers();
     jest.restoreAllMocks();
   });
 
-  it('downloads through a temporary revoked object-url anchor', () => {
+  it('keeps the download URL alive until the browser consumes it', () => {
+    jest.useFakeTimers();
     URL.createObjectURL = jest.fn().mockReturnValue('blob:fake-url');
     URL.revokeObjectURL = jest.fn();
     const click = jest
@@ -16,6 +19,8 @@ describe('downloadBlob', () => {
 
     expect(URL.createObjectURL).toHaveBeenCalledTimes(1);
     expect(click).toHaveBeenCalledTimes(1);
+    expect(URL.revokeObjectURL).not.toHaveBeenCalled();
+    jest.runOnlyPendingTimers();
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:fake-url');
     // quality: allow-fragile-selector (the temporary anchor has no user-facing role after cleanup)
     expect(document.querySelector('a[download]')).toBeNull();

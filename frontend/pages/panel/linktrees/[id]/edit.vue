@@ -8,7 +8,7 @@
           <a
             :href="`/lk/@${form.handle}`"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             class="text-text-brand underline"
             data-testid="linktree-public-link"
           >/lk/@{{ form.handle }}</a>

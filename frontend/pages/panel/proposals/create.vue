@@ -1083,7 +1083,7 @@
         <BaseModalActions v-if="createdProposal">
           <a
             :href="'/proposal/' + createdProposal.uuid + '?preview=1'"
-            target="_blank"
+            target="_blank" rel="noopener noreferrer"
             class="w-full px-5 py-2.5 bg-surface-raised text-text-default rounded-xl font-medium text-sm hover:bg-surface-raised transition-colors inline-flex items-center justify-center gap-2"
           >
             <BaseActionIcon action="view" />

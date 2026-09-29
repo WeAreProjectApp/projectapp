@@ -138,7 +138,7 @@ async function copyGeneratedUrl() {
           <BaseButton data-testid="additional-share-copy" @click="copyGeneratedUrl">
             {{ copied ? t('additionalModules.copied') : t('additionalModules.copyLink') }}
           </BaseButton>
-          <BaseButton as="a" :to="generatedUrl" target="_blank" rel="noopener" variant="secondary">
+          <BaseButton as="a" :to="generatedUrl" target="_blank" rel="noopener noreferrer" variant="secondary">
             {{ t('additionalModules.openLink') }}
           </BaseButton>
         </div>

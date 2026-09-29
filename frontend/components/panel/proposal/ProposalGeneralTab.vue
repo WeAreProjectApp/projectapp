@@ -59,7 +59,7 @@
           />
         </div>
         <p class="mt-0.5">
-          <a :href="'/proposal/' + publicIdentifier" target="_blank" class="text-text-brand hover:underline text-xs break-all">
+          <a :href="'/proposal/' + publicIdentifier" target="_blank" rel="noopener noreferrer" class="text-text-brand hover:underline text-xs break-all">
             /proposal/{{ publicIdentifier }}
           </a>
         </p>
@@ -76,7 +76,7 @@
             />
           </div>
           <p class="mt-0.5">
-            <a :href="'/proposal/' + publicIdentifier + '?mode=' + link.mode" target="_blank" class="text-text-brand hover:underline text-xs break-all">
+            <a :href="'/proposal/' + publicIdentifier + '?mode=' + link.mode" target="_blank" rel="noopener noreferrer" class="text-text-brand hover:underline text-xs break-all">
               /proposal/{{ publicIdentifier }}?mode={{ link.mode }}
             </a>
           </p>
@@ -101,19 +101,11 @@
       <div v-if="!hasDocumentsTab">
         <span class="text-text-subtle text-xs">PDFs</span>
         <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-          <a :href="'/api/proposals/' + proposal.uuid + '/pdf/'"
-             target="_blank"
-             class="inline-flex items-center gap-1.5 text-text-brand hover:text-text-brand text-xs font-medium transition-colors">
-            <BaseActionIcon action="download" />
-            Propuesta comercial
-          </a>
+          <PanelDownloadLink :url="'/api/proposals/' + proposal.uuid + '/pdf/'"
+            filename="propuesta-comercial.pdf" variant="link" label="Propuesta comercial" />
           <span class="text-text-subtle text-xs">|</span>
-          <a :href="'/api/proposals/' + proposal.uuid + '/pdf/?doc=technical'"
-             target="_blank"
-             class="inline-flex items-center gap-1.5 text-text-brand hover:text-text-brand text-xs font-medium transition-colors">
-            <BaseActionIcon action="download" />
-            Detalle técnico
-          </a>
+          <PanelDownloadLink :url="'/api/proposals/' + proposal.uuid + '/pdf/?doc=technical'"
+            filename="detalle-tecnico.pdf" variant="link" label="Detalle técnico" />
         </div>
       </div>
       <div class="sm:col-span-2">
@@ -766,6 +758,7 @@
 </template>
 
 <script setup>
+import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
 import { computed, ref, watch } from 'vue';
 import {
   QuestionMarkCircleIcon,

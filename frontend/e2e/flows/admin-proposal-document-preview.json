@@ -6,9 +6,10 @@
     "admin"
   ],
   "priority": "P3",
-  "description": "From the Documents tab of the proposal edit page, admin opens an attachment preview. PDFs render in an iframe and images in an img element; DOCX and XLSX files render their extracted Markdown text and tables with an extraction warning. Legacy DOC/XLS and unsupported formats leave preview disabled while preserving original-file download. The modal closes through its close control or backdrop.",
+  "description": "From the Documents tab of the proposal edit page, admin opens an attachment preview from its title or eye icon without leaving the current screen. PDFs render in an iframe and images in an img element; DOCX and XLSX files render their extracted Markdown text and tables with an extraction warning. Legacy DOC/XLS and unsupported formats leave preview disabled while preserving original-file download. The modal closes through its close control or backdrop.",
   "expectedSpecs": 1,
   "outcomes": [
-    "display"
+    "display",
+    "success"
   ]
 }

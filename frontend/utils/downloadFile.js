@@ -18,7 +18,7 @@ export function downloadUrl(url, filename) {
 export function downloadBlob(blob, filename) {
   const url = URL.createObjectURL(blob);
   downloadUrl(url, filename);
-  URL.revokeObjectURL(url);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Extract the filename from a Content-Disposition header, if present. */
