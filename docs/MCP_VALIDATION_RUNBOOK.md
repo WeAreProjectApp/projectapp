@@ -1066,3 +1066,19 @@ Regresiones focales: `test_document_folder_organization.py`,
 `test_document_folder_races.py`, `test_document_organization_api.py`,
 `test_document_moves.py` y `test_create_estimate_document.py`, más respuestas y
 permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.
+
+
+## Documentos 3.0.1 — errores, paridad y origen
+
+1. En datos de test, crear una carpeta y probar campo desconocido y ciclo.
+   Comprobar `error.code`, `error.message`, `details.errors` y su presencia en
+   `content[0].text`, igual a `structuredContent`.
+2. Mover un ID válido junto a uno inexistente. Debe responder un resultado por ID
+   (`aborted`/`failed`) con códigos y mensajes, sin guardar movimientos.
+3. Comparar el mapa nombre→inputSchema de `tools/list` contra
+   nombre→input_schema de capacidades; repetir con credencial restringida.
+   El conector documents debe anunciar 3.0.1 también en initialize/discover.
+4. Crear desde Panel, MCP y procesos automáticos: origen y operación presentes,
+   usuario cuando corresponde; una sincronización no cambia la procedencia.
+5. Para Littigio seguir el [runbook de reparación](runbooks/littigio-folder-repair.md).
+   No repetir ensayos mutantes contra documentos reales como prueba del conector.

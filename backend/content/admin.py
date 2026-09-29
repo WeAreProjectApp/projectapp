@@ -311,6 +311,37 @@ class ContractTemplateAdmin(admin.ModelAdmin):
         return super().has_delete_permission(request, obj)
 
 
+class DocumentFolderAdminForm(forms.ModelForm):
+    class Meta:
+        model = DocumentFolder
+        fields = '__all__'
+
+    def folder_data(self):
+        user = self.cleaned_data.get('client_user')
+        profile = getattr(user, 'profile', None)
+        if user is not None and profile is None:
+            raise forms.ValidationError('El usuario seleccionado no tiene un perfil de cliente.')
+        parent = self.cleaned_data.get('parent')
+        project = self.cleaned_data.get('project')
+        data = {'name': self.cleaned_data.get('name'), 'parent': getattr(parent, 'pk', None),
+                'order': self.cleaned_data.get('order', 0), 'client': getattr(profile, 'pk', None),
+                'project': getattr(project, 'pk', None)}
+        # Protected fields on managed roots are absent from the admin form.
+        return {key: value for key, value in data.items()
+                if ('client_user' if key == 'client' else key) in self.cleaned_data}
+
+    def clean(self):
+        data = super().clean()
+        from content.serializers.document_folder import DocumentFolderSerializer
+        serializer = DocumentFolderSerializer(self.instance if self.instance.pk else None,
+                                              data=self.folder_data(), partial=bool(self.instance.pk))
+        if not serializer.is_valid():
+            from content.mcp.errors import normalize_error
+            message, _code, _details = normalize_error(serializer.errors)
+            raise forms.ValidationError(message)
+        return data
+
+
 class DocumentFolderAdmin(admin.ModelAdmin):
     """
     Folder admin with the archive state sealed read-only.
@@ -320,6 +351,8 @@ class DocumentFolderAdmin(admin.ModelAdmin):
     archivadas. `parent` sigue editable a propósito (mover carpetas desde el
     admin es legítimo); el comando audit_archive_integrity detecta el drift.
     """
+    form = DocumentFolderAdminForm
+
     list_display = (
         'name', 'folder_kind', 'managed_project', 'parent', 'order',
         'is_archived', 'archived_at',
@@ -328,8 +361,19 @@ class DocumentFolderAdmin(admin.ModelAdmin):
     search_fields = ('name',)
     readonly_fields = (
         'managed_project', 'is_archived', 'archived_at',
-        'archived_via_folder',
+        'archived_via_folder', 'created_by', 'creation_source', 'creation_operation', 'slug', 'managed_client',
     )
+
+    def save_model(self, request, obj, form, change):
+        from content.serializers.document_folder import DocumentFolderSerializer
+        serializer = DocumentFolderSerializer(
+            DocumentFolder.objects.get(pk=obj.pk) if change else None,
+            data=form.folder_data(), partial=change,
+            context={'request': request, 'creation_operation': 'django_admin.create_folder'},
+        )
+        serializer.is_valid(raise_exception=True)
+        saved = serializer.save()  # Revalidates duplicate/cycle rules under the mutex.
+        obj.__dict__.update(saved.__dict__)
 
     def get_readonly_fields(self, request, obj=None):
         fields = list(super().get_readonly_fields(request, obj))

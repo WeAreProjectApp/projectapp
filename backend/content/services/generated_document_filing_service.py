@@ -209,7 +209,7 @@ def _ensure_level(level, parent):
     }
     folder, _created = DocumentFolder.objects.get_or_create(
         system_key=level.system_key,
-        defaults=defaults,
+        defaults={**defaults, 'creation_source': 'system', 'creation_operation': 'ensure_generated_folder_path'},
     )
     changes = []
     for field, value in defaults.items():

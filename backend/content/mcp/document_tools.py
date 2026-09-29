@@ -26,6 +26,7 @@ from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
 from content.mcp.actor import mcp_actor
+from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.models import (
     Document,
@@ -229,6 +230,7 @@ def _folder_payload(folder):
         'updated_at': folder.updated_at.isoformat(),
         'created_by': DocumentFolderSerializer().get_created_by(folder),
         'creation_source': folder.creation_source,
+        'creation_operation': folder.creation_operation,
         'archived_document_count': DocumentFolderSerializer().get_archived_document_count(folder),
         'archived_children_count': DocumentFolderSerializer().get_archived_children_count(folder),
         'name': folder.name,
@@ -453,14 +455,8 @@ def _client_custom_notes_value(arguments):
 # ── Handlers ─────────────────────────────────────────────────────────────────
 
 def _serializer_error(errors):
-    message = errors.get('detail')
-    if isinstance(message, (list, tuple)):
-        message = ' '.join(str(value) for value in message)
-    if not message:
-        message = 'Datos inválidos: ' + json.dumps(
-            errors, ensure_ascii=False, default=str,
-        )
-    return ToolError(str(message), details=dict(errors))
+    message, code, details = normalize_error(errors)
+    return ToolError(message, code=code, details=details)
 
 
 def _valid_serializer(serializer):
@@ -1347,7 +1343,7 @@ def _validated_document_tool(handler, properties):
             raise ToolError('Los argumentos deben ser un objeto.')
         unknown = set(arguments) - set(properties)
         if unknown:
-            raise ToolError('Campos desconocidos.', details={'fields': sorted(unknown)})
+            raise _serializer_error({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unknown)})
         if 'include_content' in properties:
             try:
                 include_content_value(arguments)

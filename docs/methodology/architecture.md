@@ -1827,3 +1827,14 @@ protege el nivel raíz y evita colisiones/ciclos concurrentes conservando los
 nombres históricos duplicados. Las carpetas guardan autor/origen desde esta
 versión; origen histórico desconocido permanece explícito. Estimates se resuelve
 por ID configurable, sin aprovisionar carpetas ni convertirlas en automáticas.
+
+
+### MCP Documents 3.0.1
+
+La proyección pública de esquemas vive en el registro MCP y alimenta lista y
+capacidades. El normalizador conserva códigos DRF antes de convertir ErrorDetail
+a JSON; el dispatcher entrega el mismo error en texto y structuredContent.
+Los resultados de movimientos rechazados también tienen `results` en la raíz.
+`DocumentFolder.creation_operation` identifica el camino de creación sin
+reescribir historia durante sincronizaciones. La reparación operativa usa
+huellas y el historial existente; no hereda cliente/proyecto al devolver documentos.
