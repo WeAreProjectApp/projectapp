@@ -6,12 +6,11 @@
     "guest"
   ],
   "priority": "P2",
-  "description": "Client uses the floating PDF button; browser fetches GET /api/proposals/:uuid/pdf. E2E mocks a 200 PDF response.",
-  "expectedSpecs": 1,
-  "knownGaps": [
-    "Production may return 501 if PDF generation is disabled; E2E covers the UI path when the API succeeds."
-  ],
+  "description": "Descarga comercial o técnica de propuestas vigentes; bloqueo explicado por vencimiento y reintento ante errores.",
+  "knownGaps": [],
   "outcomes": [
-    "success"
+    "success",
+    "error",
+    "failure"
   ]
 }

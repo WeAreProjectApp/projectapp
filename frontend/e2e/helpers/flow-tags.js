@@ -233,6 +233,7 @@ export const ADMIN_PROPOSAL_DOCUMENT_MARKDOWN = ['@flow:admin-proposal-document-
 export const ADMIN_PROPOSAL_DOCUMENT_PREVIEW = ['@flow:admin-proposal-document-preview', '@module:admin', '@priority:P3'];
 export const ADMIN_PROPOSAL_DOCUMENTS_MANAGE = ['@flow:admin-proposal-documents-manage', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_DOCUMENTS_SEND = ['@flow:admin-proposal-documents-send', '@module:admin', '@priority:P1'];
+export const ADMIN_PROPOSAL_DOWNLOAD_PDF = ['@flow:admin-proposal-download-pdf', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_DUPLICATE = ['@flow:admin-proposal-duplicate', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_EDIT = ['@flow:admin-proposal-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_ENGAGEMENT_DECAY_ALERT = ['@flow:admin-proposal-engagement-decay-alert', '@module:admin', '@priority:P2'];

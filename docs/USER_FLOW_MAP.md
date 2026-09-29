@@ -3602,18 +3602,16 @@ Two transitions that were previously bundled into other flows now have their own
 
 ### FLOW: `proposal-download-pdf`
 
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** Download a proposal as PDF.
-- **Steps:**
-  1. User views the proposal.
-  2. User clicks the download PDF button.
-  3. API call to `GET /api/proposals/:uuid/pdf/`.
-  4. PDF file downloads to user's device.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-pdf.spec.js`
+- **Módulo:** propuesta pública
+- **Rol:** visitante
+- **Prioridad:** P2
+- **Ruta:** `/proposal/:uuid`
+- **Éxito:** abre la vista comercial o técnica, pulsa Descargar PDF y recibe el archivo.
+- **Error:** una propuesta vencida conserva su lectura, pero explica por qué sus PDFs no se pueden descargar; un 410 posterior a la carga muestra el mismo aviso.
+- **Fallo:** un error de servidor o de red informa del fallo y permite reintentar.
+- **Presentación:** el aviso pertenece al bloqueo anterior, no constituye otro flujo.
+- **E2E:** `frontend/e2e/proposal/proposal-pdf.spec.js`.
+- **Límite:** E2E intercepta HTTP; la generación de PDFs reales y los permisos se prueban en backend.
 
 ### FLOW: `proposal-share`
 
@@ -6364,6 +6362,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-document-preview` | admin | P3 | display | 1 |
 | `admin-proposal-documents-manage` | admin | P2 | success | 1 |
 | `admin-proposal-documents-send` | admin | P1 | — | 0 |
+| `admin-proposal-download-pdf` | admin | P2 | success | — |
 | `admin-proposal-duplicate` | admin | P2 | success | 1 |
 | `admin-proposal-edit` | admin | P1 | success,error | 1 |
 | `admin-proposal-engagement-decay-alert` | admin | P2 | — | 0 |
@@ -6492,7 +6491,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-contract-terms` | proposal | P1 | display,success,error,failure | 1 |
 | `proposal-countdown-realtime` | proposal | P3 | display | 1 |
 | `proposal-discount-multi-section` | proposal | P2 | display | 1 |
-| `proposal-download-pdf` | proposal | P2 | success | 1 |
+| `proposal-download-pdf` | proposal | P2 | success,error,failure | — |
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
@@ -8123,6 +8122,18 @@ espacios y textos demasiado largos muestran errores por campo.
 - **Failure:** errores de extracción, archivo ausente o portapapeles bloqueado permiten reintentar. Cerrar el visor aborta su solicitud pendiente.
 - **Límites:** 15 MB, 100 páginas PDF, 20.000 celdas XLSX, 50 MB expandidos y un millón de caracteres; sin macros, consultas externas ni OCR.
 - **E2E Spec:** `e2e/admin/admin-proposal-document-markdown.spec.js`.
+
+### FLOW: `admin-proposal-download-pdf`
+
+- **Módulo:** panel de propuestas
+- **Rol:** administrador
+- **Prioridad:** P2
+- **Ruta:** `/panel/proposals/:id/edit`
+- **Éxito:** desde General, descarga Propuesta comercial o Detalle técnico de una propuesta vencida; recibe el archivo por `/api/proposals/:id/pdf/`.
+- **Error:** la autorización y el detalle técnico ausente se verifican en backend; esta corrección conserva los enlaces de descarga nativos del panel.
+- **Fallo:** sin nuevo estado de error en panel; sigue la respuesta HTTP del enlace nativo.
+- **Presentación:** sin nueva vista; los anexos formales de Documentos conservan contenido y rutas.
+- **E2E:** `frontend/e2e/admin/admin-proposal-pdf.spec.js`.
 
 ### FLOW: `admin-proposal-first-view-retry`
 

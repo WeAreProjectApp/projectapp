@@ -1,3 +1,10 @@
+# Descargas de propuestas vencidas (2026-09-29)
+
+Implementado, en validación: las propuestas vencidas se descargan únicamente
+por personal del panel mediante un endpoint administrativo. La vista pública
+conserva el 410 con un aviso visible. Aplica a PDFs comercial y técnico;
+no modifica su contenido ni los anexos de formalización de Documentos.
+
 # Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
 
 Las dos cuadrículas del video de módulos adicionales igualan sus cuatro

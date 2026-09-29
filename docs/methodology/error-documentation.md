@@ -1,4 +1,15 @@
 ---
+
+## 2026-09-29 — PDFs vencidos desde el panel
+
+La pestaña General usaba la descarga pública por UUID, que devuelve 410 al
+vencer la propuesta, también para personal autenticado. Los PDFs comercial y
+técnico comparten ese control previo a la generación. La ruta administrativa
+por ID permite obtener los mismos documentos mediante `IsAdminUser`; la pública
+conserva el bloqueo con `proposal_expired`. El control flotante y el cierre
+muestran el motivo o permiten reintentar errores de servidor/red. Los anexos
+formales de Documentos tienen otro generador y no se cambian en esta corrección.
+
 trigger: model_decision
 description: Error documentation and known issues tracking. Reference when debugging, fixing bugs, or encountering recurring issues.
 ---
