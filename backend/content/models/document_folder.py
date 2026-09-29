@@ -47,8 +47,10 @@ class DocumentFolder(models.Model):
     )
     creation_source = models.CharField(
         max_length=10, default='system', editable=False,
-        choices=[('panel', 'Panel'), ('mcp', 'MCP'), ('system', 'System'), ('unknown', 'Unknown')],
+        choices=[('panel', 'Panel'), ('mcp', 'MCP'), ('system', 'System'), ('migration', 'Migration'), ('unknown', 'Unknown')],
     )
+
+    creation_operation = models.CharField(max_length=160, blank=True, default='', editable=False)
 
     # Asociación. SET_NULL como en Document: borrar un cliente o un proyecto
     # no puede llevarse por delante la organización del gestor.
@@ -185,6 +187,8 @@ class DocumentFolder(models.Model):
         return bool(self.system_key)
 
     def save(self, *args, **kwargs):
+        if self._state.adding and not self.creation_operation:
+            self.creation_operation = 'orm.create'
         if not self.slug:
             base = safe_slug(self.name, 'folder')
             slug = base

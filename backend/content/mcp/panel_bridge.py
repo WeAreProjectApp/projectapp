@@ -7,11 +7,13 @@ from django.db import transaction
 from django.http import HttpResponseBase, StreamingHttpResponse
 from django.urls import resolve, reverse
 from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
+from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
@@ -24,18 +26,7 @@ def _json_safe(value):
 
 
 def _error_message(payload, status_code):
-    if isinstance(payload, dict):
-        message = payload.get('detail') or payload.get('message')
-        code = payload.get('code') or (
-            'NOT_FOUND' if status_code == 404
-            else 'FORBIDDEN' if status_code == 403
-            else 'CONFLICT' if status_code == 409
-            else 'VALIDATION_ERROR'
-        )
-        if isinstance(code, list) and len(code) == 1:
-            code = code[0]
-        return str(message or 'La operación del Panel fue rechazada.'), str(code), payload
-    return str(payload), 'VALIDATION_ERROR', {'response': payload}
+    return normalize_error(payload, status_code)
 
 
 def _response_filename(response, fallback):
@@ -122,7 +113,8 @@ def _execute(operation, arguments):
         permitted = set(operation['path_params']) | {'data', 'if_match'} | set(operation['payload_schema']['properties'])
         unexpected = set(args) - permitted
         if unexpected:
-            raise ToolError('Campos desconocidos.', details={'fields': sorted(unexpected)})
+            message, code, details = normalize_error({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unexpected)})
+            raise ToolError(message, code=code, details=details)
     route_kwargs = {}
     for name in operation['path_params']:
         value = args.pop(name, None)
@@ -177,10 +169,10 @@ def _execute(operation, arguments):
         if isinstance(response, HttpResponseBase) and response.status_code < 400:
             return _artifact_payload(response, operation)
         raise ToolError('La operación devolvió una respuesta no compatible.')
-    payload = _json_safe(response.data)
     if response.status_code >= 400:
-        message, code, details = _error_message(payload, response.status_code)
-        raise ToolError(message, code=code.upper(), details=details)
+        message, code, details = _error_message(response.data, response.status_code)
+        raise ToolError(message, code=code, details=details)
+    payload = _json_safe(response.data)
     for upload in uploads:
         upload.status = McpUpload.STATUS_CONSUMED
         upload.consumed_at = upload.consumed_at or timezone.now()
