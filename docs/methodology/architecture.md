@@ -8,6 +8,15 @@
 > La confirmación muestra el paquete exacto y conserva resultados fallidos o
 > inciertos sin habilitar un reenvío. API y compatibilidad: `docs/PROPOSALS_MCP.md`.
 
+> **Descargas del panel — 2026-09-29:** `usePanelDownload` centraliza la
+> petición autenticada, valida respuestas y descarga con la utilidad existente.
+> `PanelDownloadLink` conserva el enlace nativo pero evita navegar durante la
+> descarga normal; cancela peticiones al cambiar de destino o desmontarse.
+> La navegación pública mantiene enlaces reales con aislamiento de ventana.
+> El ámbito de la PWA sigue en `/`; Chrome decide la captura según el perfil.
+> Guía y comprobación instalada: `docs/PWA_DOWNLOADS_AND_LINKS.md`.
+
+
 ## Regeneración del prerender por pedido (2026-09-28)
 
 La app ya no construye el frontend en producción. `projectapp-huey` corre con el

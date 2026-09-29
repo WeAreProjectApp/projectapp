@@ -334,7 +334,7 @@
           <BaseButton variant="primary" size="md" type="submit" :disabled="blogStore.isUpdating">
             {{ blogStore.isUpdating ? 'Guardando...' : 'Guardar Cambios' }}
           </BaseButton>
-          <a v-if="post?.slug" :href="`/blog/${post.slug}`" target="_blank" class="px-6 py-2.5 border border-border-default text-text-muted rounded-xl text-sm hover:bg-surface-raised transition-colors inline-flex items-center gap-1">
+          <a v-if="post?.slug" :href="`/blog/${post.slug}`" target="_blank" rel="noopener noreferrer" class="px-6 py-2.5 border border-border-default text-text-muted rounded-xl text-sm hover:bg-surface-raised transition-colors inline-flex items-center gap-1">
             Ver en blog
           <BaseActionIcon action="open-external" />
           </a>

@@ -25,15 +25,8 @@
                 <BaseActionButton action="view" label="Vista previa del acuerdo"
                   @click="openPdfPreview('Acuerdo de confidencialidad', ndaPdfUrl)"
                   class="bg-surface-muted text-text-muted dark:bg-surface/[0.03] dark:text-white/70" />
-                <a :href="ndaPdfUrl" target="_blank"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft text-text-brand rounded-lg text-xs font-medium hover:bg-primary-soft transition-colors">
-                  <BaseActionIcon action="download" />
-                  Descargar PDF
-                </a>
-                <a :href="ndaDraftPdfUrl" target="_blank"
-                  class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
-                  Borrador
-                </a>
+                <PanelDownloadLink :url="ndaPdfUrl" filename="acuerdo-confidencialidad.pdf" />
+                <PanelDownloadLink :url="ndaDraftPdfUrl" filename="borrador-confidencialidad.pdf" :label="t('pwa.download.draft')" />
                 <BaseButton variant="secondary" size="sm" @click="showParamsModal = true">
                   Editar parámetros
                 </BaseButton>
@@ -91,17 +84,20 @@
 
       <div v-if="userAttachments.length" class="space-y-2 mb-4">
         <div v-for="att in userAttachments" :key="att.id"
-          class="flex items-center justify-between py-2 px-3 bg-surface-muted dark:bg-surface/[0.03] rounded-lg">
+          class="flex flex-wrap gap-3 items-center justify-between py-2 px-3 bg-surface-muted dark:bg-surface/[0.03] rounded-lg">
           <div class="flex items-center gap-2 min-w-0">
             <span class="px-2 py-0.5 bg-gray-200 dark:bg-surface/[0.08] text-text-muted dark:text-text-muted rounded text-[10px] font-medium">
               {{ att.document_type_display }}
             </span>
-            <a :href="att.file" target="_blank" rel="noopener noreferrer"
-              class="text-xs text-text-brand hover:text-text-brand font-medium truncate">
+            <BaseButton v-if="canPreviewFile(att.file)" variant="link" size="sm"
+              class="min-w-0 truncate" @click="openAttachmentPreview(att)">
               {{ att.title }}
-            </a>
+            </BaseButton>
+            <span v-else class="text-xs text-text-default truncate">{{ att.title }}</span>
           </div>
-          <div class="flex items-center gap-1">
+          <div class="flex flex-wrap items-center gap-1">
+            <PanelDownloadLink :url="att.file" :filename="att.file?.split('/').pop() || att.title"
+              expected-type="" :label="t('pwa.download.fileAction')" />
             <BaseActionButton
               v-if="canPreviewFile(att.file)"
               action="view"
@@ -181,6 +177,8 @@
 </template>
 
 <script setup>
+import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
+import { useI18n } from '#imports';
 import { ref, computed, reactive, onMounted } from 'vue';
 import ConfidentialityParamsModal from '~/components/WebAppDiagnostic/ConfidentialityParamsModal.vue';
 import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewModal.vue';
@@ -191,6 +189,8 @@ import { canPreviewFile, isPdfUrl, isImageUrl } from '~/utils/filePreview';
 import { formatDateTime } from '~/utils/formatDate';
 
 const { parseMarkdown } = useMarkdownPreview();
+
+const { t } = useI18n();
 
 const props = defineProps({
   diagnostic: { type: Object, required: true },

@@ -111,7 +111,7 @@
                 v-if="!hasEmailIntro(p)"
                 :href="`/panel/proposals/${p.id}/edit?tab=emails`"
                 target="_blank"
-                rel="noopener"
+                rel="noopener noreferrer"
                 class="mt-2 inline-flex text-xs font-medium text-text-brand hover:underline"
                 @click.stop
               >

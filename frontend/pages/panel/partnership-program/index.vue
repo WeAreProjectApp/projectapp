@@ -159,7 +159,7 @@ function modalityLabel(value, fallback = '') {
           </div>
           <div class="flex flex-wrap gap-2">
             <BaseButton variant="secondary" data-testid="financing-copy-public-url" @click="copyPublicUrl">{{ t('financing.copyPublicUrl') }}</BaseButton>
-            <BaseButton as="NuxtLink" :to="publicPath" target="_blank" data-testid="financing-open-public">{{ t('financing.openPublicView') }}</BaseButton>
+            <BaseButton as="NuxtLink" :to="publicPath" target="_blank" rel="noopener noreferrer" data-testid="financing-open-public">{{ t('financing.openPublicView') }}</BaseButton>
             <BaseButton as="a" :to="pdfUrl" variant="secondary" data-testid="financing-panel-download-pdf">{{ t('financing.downloadPdf') }}</BaseButton>
           </div>
         </div>

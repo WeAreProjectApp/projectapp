@@ -1,3 +1,6 @@
+jest.mock('~/stores/services/request_http', () => ({ get_request: jest.fn() }));
+import { get_request } from '~/stores/services/request_http';
+
 import { mount } from '@vue/test-utils';
 
 global.useTooltipTexts = jest.fn(() => ({
@@ -295,14 +298,22 @@ describe('DiagnosticAnalytics heat sections', () => {
 // ── downloadCSV ───────────────────────────────────────────────────────────
 
 describe('DiagnosticAnalytics downloadCSV', () => {
-  it('calls window.open with the diagnostic CSV URL when download button is clicked', async () => {
-    global.window.open = jest.fn();
+  it('downloads the diagnostic analytics CSV without opening a window', async () => {
+    const blob = new Blob(['date,views\n2026-09-29,2'], { type: 'text/csv' });
+    get_request.mockResolvedValue({ data: blob, headers: { 'content-type': 'text/csv' } });
+    URL.createObjectURL = jest.fn().mockReturnValue('blob:csv');
+    URL.revokeObjectURL = jest.fn();
+    const saved = [];
+    const click = jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(function () { saved.push(this.download); });
     const wrapper = withRichData();
     await flushPromises();
 
     await wrapper.findAll('button').find((btn) => btn.text().includes('CSV')).trigger('click');
 
-    expect(window.open).toHaveBeenCalledWith('/api/diagnostics/42/analytics/csv/', '_blank');
+    await flushPromises();
+    expect(saved).toEqual(['diagnostics-analytics.csv']);
+    expect(URL.createObjectURL).toHaveBeenCalledWith(blob);
+    click.mockRestore();
   });
 });
 

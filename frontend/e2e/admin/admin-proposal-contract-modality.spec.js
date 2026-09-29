@@ -36,7 +36,7 @@ test.describe('Admin proposal contract modality', () => {
     await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('proposal-contract-row-combined')).toHaveCount(0);
     const product = page.getByTestId('proposal-contract-row-product');
-    await expect(product.getByRole('link', { name: 'Descargar PDF' })).toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=product`);
+    await expect(product.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=product`);
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('PDF · No generado');
   });
 
@@ -278,7 +278,7 @@ test.describe('Admin proposal contract modality', () => {
     await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 });
     await expect(page.getByTestId('proposal-contract-modality-single')).toBeDisabled();
     await expect(page.getByTestId('proposal-contract-row-product')).toContainText('Desarrollo e implementación del software');
-    await expect(page.getByTestId('proposal-contract-row-service').getByRole('link', { name: 'Descargar PDF' }))
+    await expect(page.getByTestId('proposal-contract-row-service').getByRole('link', { name: /Descargar PDF|Download PDF/ }))
       .toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=service`);
     await expect(page.getByTestId('proposal-contract-row-combined')).toHaveCount(0);
   });

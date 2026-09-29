@@ -67,47 +67,48 @@ test.describe('Admin Proposal — Document Preview (eye icon)', () => {
         body: Buffer.from('%PDF-1.4\n%mock\n'),
       });
     });
+    await mockApi(page, async ({ apiPath }) => {
+      if (apiPath === 'auth/check/') return authOk;
+      if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify(makeProposal()) };
+      }
+      return null;
+    });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('proposal-attachment-101')).toBeVisible({ timeout: 15000 });
   });
 
   test('eye icon is visible next to a previewable PDF document', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DOCUMENT_PREVIEW, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === 'auth/check/') return authOk;
-      if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(makeProposal()) };
-      }
-      return null;
-    });
-
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
-
-    await expect(page.getByText('Anexo Técnico')).toBeVisible({ timeout: 15000 });
-
-    const previewButton = page.getByRole('button', { name: /Vista previa/i }).first();
-    await expect(previewButton).toBeVisible({ timeout: 5000 });
+    const attachment = page.getByTestId('proposal-attachment-101');
+    await expect(attachment.getByRole('button', { name: 'Vista previa de Anexo Técnico', exact: true })).toBeVisible();
   });
 
   test('clicking the eye icon opens the preview modal with the document title', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DOCUMENT_PREVIEW, '@role:admin'],
   }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === 'auth/check/') return authOk;
-      if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(makeProposal()) };
-      }
-      return null;
-    });
+    const attachment = page.getByTestId('proposal-attachment-101');
+    await attachment.getByRole('button', { name: 'Vista previa de Anexo Técnico', exact: true }).click();
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=documents`, { waitUntil: 'domcontentloaded' });
+    const preview = page.getByTestId('markdown-preview-modal-panel');
+    await expect(preview.getByRole('heading', { name: 'Anexo Técnico', exact: true })).toBeVisible();
+    await expect(preview.locator('iframe[title="Vista previa"]')).toBeVisible();
+  });
 
-    await expect(page.getByText('Anexo Técnico')).toBeVisible({ timeout: 15000 });
+  test('attachment title keeps its preview inside the current screen', {
+    tag: ['@outcome:success', ...ADMIN_PROPOSAL_DOCUMENT_PREVIEW, '@role:admin'],
+  }, async ({ page, context }) => {
+    const previousUrl = page.url();
+    const pagesBefore = context.pages().length;
+    await page.getByTestId('proposal-attachment-101').getByRole('button', { name: 'Anexo Técnico', exact: true }).click();
 
-    const previewButton = page.getByRole('button', { name: /Vista previa/i }).first();
-    await previewButton.click();
-
-    // Modal title reflects the doc title (loadPreviewBlob sets previewTitle = doc.title).
-    // The modal renders with role="dialog" and shows the title + an iframe for PDFs.
-    await expect(page.locator('iframe[title="Vista previa"]')).toBeVisible({ timeout: 10000 });
+    const preview = page.getByTestId('markdown-preview-modal-panel');
+    await expect(preview.getByRole('heading', { name: 'Anexo Técnico', exact: true })).toBeVisible();
+    await expect(preview.locator('iframe[title="Vista previa"]')).toBeVisible();
+    await preview.getByRole('button', { name: 'Cerrar vista previa', exact: true }).click();
+    await expect(preview).toBeHidden();
+    await expect(page).toHaveURL(previousUrl);
+    expect(context.pages()).toHaveLength(pagesBefore);
   });
 });

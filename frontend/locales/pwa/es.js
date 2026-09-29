@@ -1,4 +1,14 @@
 export default {
+  download: {
+    fileAction: 'Descargar archivo',
+    pdf: 'Descargar PDF',
+    draft: 'Borrador',
+    loading: 'Descargando…',
+    file: 'archivo',
+    error: 'No se pudo descargar el archivo. Comprueba la conexión y vuelve a intentarlo.',
+    sessionExpired: 'Tu sesión venció. Inicia sesión de nuevo para descargar el archivo.',
+    forbidden: 'No tienes permiso para descargar este archivo.',
+  },
   install: 'Instalar ProjectApp',
   invitation: 'Abre el panel desde el ícono de ProjectApp en tu dispositivo.',
   dismiss: 'Cerrar invitación de instalación',

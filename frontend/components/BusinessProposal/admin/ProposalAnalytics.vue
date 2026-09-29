@@ -18,7 +18,7 @@
     <template v-else>
       <!-- CSV Export button -->
       <div class="flex justify-end">
-        <BaseButton variant="secondary" size="md" @click="downloadCSV">
+        <BaseButton variant="secondary" size="md" :loading="csvDownload.loading.value" @click="downloadCSV">
         <BaseActionIcon action="export" />
           Exportar CSV
         </BaseButton>
@@ -781,6 +781,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue';
 import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline';
+import { usePanelDownload } from '~/composables/usePanelDownload';
+const csvDownload = usePanelDownload();
 import { usePanelNotify } from '~/composables/usePanelNotify';
 // Explicit rather than relying on Nuxt auto-import, so the unit spec that
 // mounts this component in isolation resolves it too (same as
@@ -1046,7 +1048,7 @@ function sectionAnalyticsTypeLabel(sectionType) {
 
 function downloadCSV() {
   const url = `/api/proposals/${props.proposalId}/analytics/csv/`;
-  window.open(url, '_blank');
+  csvDownload.download(url, 'proposals-analytics.csv', 'text/csv');
 }
 
 function formatTime(seconds, { compact = false } = {}) {

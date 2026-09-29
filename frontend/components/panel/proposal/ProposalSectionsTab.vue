@@ -145,7 +145,7 @@
   <!-- Sticky send bar for sections tab -->
   <div v-if="proposal.client_email" class="sticky bottom-0 mt-4 bg-surface/95 backdrop-blur-sm border border-border-muted rounded-xl shadow-lg px-5 py-3 flex items-center justify-between gap-3 z-10">
     <div class="flex items-center gap-2 text-xs text-text-muted">
-      <a :href="'/proposal/' + proposal.uuid + '?preview=1'" target="_blank" class="inline-flex items-center gap-1 text-text-brand hover:underline"><BaseActionIcon action="open-external" /> Preview</a>
+      <a :href="'/proposal/' + proposal.uuid + '?preview=1'" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-text-brand hover:underline"><BaseActionIcon action="open-external" /> Preview</a>
     </div>
     <div class="flex items-center gap-3">
       <BaseButton

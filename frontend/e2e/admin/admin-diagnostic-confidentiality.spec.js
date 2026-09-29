@@ -161,8 +161,8 @@ test.describe('Admin Diagnostic — Generar NDA', () => {
 
     // Modal closes → generated state renders Descargar / Borrador / Editar parámetros.
     await expect(modal).toBeHidden({ timeout: 10000 });
-    await expect(page.getByRole('link', { name: /Descargar/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Borrador/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Descargar|Download/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Borrador|Draft/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Editar parámetros/i })).toBeVisible();
 
     // Wire payload sanity check: client fields sent, defaults preserved.

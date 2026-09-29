@@ -1,3 +1,11 @@
+jest.mock('#imports', () => ({
+  ...jest.requireActual('#imports'),
+  useI18n: () => ({ t: (key) => {
+    const messages = jest.requireActual('../../locales/pwa/es').default;
+    return key.split('.').slice(1).reduce((value, part) => value?.[part], messages) || key;
+  } }),
+}));
+
 /**
  * Tests for DiagnosticDocumentsTab.vue.
  *

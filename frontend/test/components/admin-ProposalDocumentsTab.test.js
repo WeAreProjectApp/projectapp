@@ -1,3 +1,11 @@
+jest.mock('#imports', () => ({
+  ...jest.requireActual('#imports'),
+  useI18n: () => ({ t: (key) => {
+    const messages = jest.requireActual('../../locales/pwa/es').default;
+    return key.split('.').slice(1).reduce((value, part) => value?.[part], messages) || key;
+  } }),
+}));
+
 import { mount } from '@vue/test-utils';
 
 jest.mock('~/stores/services/request_http', () => ({
@@ -179,7 +187,7 @@ describe('ProposalDocumentsTab', () => {
     await downloadButton.trigger('click');
     await Promise.resolve();
 
-    expect(get_request).toHaveBeenCalledWith('proposals/1/documents/12/download/', { responseType: 'blob' });
+    expect(get_request).toHaveBeenCalledWith('proposals/1/documents/12/download/', expect.objectContaining({ responseType: 'blob' }));
     expect(downloadBlob).toHaveBeenCalledWith(blob, 'contrato final español.docx');
   });
 });
