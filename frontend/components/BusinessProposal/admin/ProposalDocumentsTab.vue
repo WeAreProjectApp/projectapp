@@ -10,7 +10,7 @@
       </div>
 
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs text-text-muted">Versiones formales con alcance y condiciones del proyecto.</p>
+        <p class="text-xs text-text-muted">Mismo contenido y reglas de la propuesta; el anexo comercial omite solo las secciones de presentación y cierre comercial.</p>
         <BaseButton variant="primary" size="sm" data-testid="proposal-formalization-open" @click="formalizationOpen = true">Preparar correo de formalización</BaseButton>
       </div>
 
@@ -56,7 +56,7 @@
         <li class="py-3 flex items-start justify-between gap-3 flex-wrap">
           <div class="min-w-0">
             <div class="text-sm font-medium text-text-default dark:text-white">Propuesta comercial formal</div>
-            <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">PDF formal · Contenido curado</div>
+            <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">PDF formal · Secciones originales</div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ProposalDocumentCopyButton :endpoint="`proposals/${proposal.id}/formalization/markdown/commercial/`"
@@ -76,7 +76,7 @@
         <li class="py-3 flex items-start justify-between gap-3 flex-wrap">
           <div class="min-w-0">
             <div class="text-sm font-medium text-text-default dark:text-white">Detalle técnico formal</div>
-            <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">PDF formal · Contenido curado</div>
+            <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">PDF formal · Detalle técnico original</div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <ProposalDocumentCopyButton :endpoint="`proposals/${proposal.id}/formalization/markdown/technical/`"

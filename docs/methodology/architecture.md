@@ -94,7 +94,7 @@ no cambia contratos existentes ni agrega una superficie MCP.
 > La edición v1 queda archivada en sus rutas originales; no hay cambios de API
 > ni dependencias nuevas en el runtime del sitio.
 
-> **2026-09-24 — copia de documentos:** El contrato guarda el snapshot Markdown junto al PDF en `ProposalDocument`; los anexos formalizados comparten `FormalContent` entre PDF y Markdown. Los nuevos GET administrativos de exportación son privados y de sólo lectura. La extracción de adjuntos ocurre en un proceso local limitado; no utiliza servicios externos.
+> **2026-09-24 — copia de documentos:** El contrato guarda el snapshot Markdown junto al PDF en `ProposalDocument`; los anexos formalizados reutilizan el PDF original y Markdown extrae su texto (regla actualizada el 2026-09-29). Los nuevos GET administrativos de exportación son privados y de sólo lectura. La extracción de adjuntos ocurre en un proceso local limitado; no utiliza servicios externos.
 
 > **CAPTCHA de acceso — 2026-09-23:** `projectapp.recaptcha` centraliza la
 > validación de reCAPTCHA v2 para Django Admin (formulario nativo) y el login
@@ -1797,7 +1797,7 @@ historical record.
 
 ## Formalización de propuestas
 
-Los endpoints administrativos `proposals/{id}/formalization/` delegan en un servicio independiente. `FormalContent` proyecta campos permitidos e importes resueltos; `formalization_pdf` delega en los generadores públicos comercial/técnico con un contexto formal. Comparten composición y assets sin refrescar catálogos ni añadir valores predeterminados del canal público. Las preparaciones nuevas incluyen títulos de sección en una huella versionada; las anteriores conservan su validación y sus adjuntos originales. Una preparación privada conserva payload, HTML/texto, huella de origen y bytes de adjuntos por 24 horas. El envío reclama la preparación mediante actualización condicional de estado y entrega esos mismos bytes al gateway existente, que conserva snapshots e historial. El envío no cambia el estado comercial. Los archivos temporales se eliminan por tarea diaria y también al borrar su propuesta.
+Los endpoints administrativos `proposals/{id}/formalization/` delegan en un servicio independiente. `FormalContent` captura las secciones originales habilitadas. `formalization_pdf` invoca los generadores originales sin contexto de reescritura: el comercial sólo excluye `executive_summary`, `context_diagnostic`, `conversion_strategy`, `roi_projection`, `final_note` y `next_steps`; el técnico conserva su contenido completo y su filtro normal de selección. Las condiciones comerciales siguen las reglas originales del catálogo; Markdown extrae texto del PDF generado. Las preparaciones con anexos anteriores a esta versión requieren revisión nueva, sin modificar sus archivos ni los envíos históricos. Una preparación privada conserva payload, HTML/texto, huella de origen y bytes de adjuntos por 24 horas. El envío reclama la preparación mediante actualización condicional de estado y entrega esos mismos bytes al gateway existente, que conserva snapshots e historial. El envío no cambia el estado comercial. Los archivos temporales se eliminan por tarea diaria y también al borrar su propuesta.
 
 ### Modalidad de cierre
 

@@ -1,13 +1,19 @@
 """The formalization package carries the contracts of the deal's closing modality."""
 from unittest.mock import patch
+from io import BytesIO
+from pypdf import PdfReader
+
+from content.models import ProposalSection
+from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
 
 import pytest
 from django.core.files.base import ContentFile
 
 from content.models import ProposalDocument
-from content.services.formalization_content import FormalContent, FormalizationError
+from content.services.formalization_content import FormalizationError
 from content.services.proposal_formalization_service import (
     availability,
+    document_bytes,
     prepare,
     send_preparation,
 )
@@ -131,19 +137,21 @@ def test_switching_modality_makes_a_prepared_package_stale(delivery, split_propo
     delivery.assert_not_called()
 
 
-def test_commercial_annex_points_at_both_contracts_when_split(split_proposal):
-    """Fails if the curated annex still defers obligations to a single development contract."""
-    note = FormalContent(split_proposal).contract_note()
-
-    assert 'contrato de producto' in note
-    assert 'contrato de servicio (hosting, mantenimiento y soporte)' in note
-
-
-def test_commercial_annex_points_at_the_single_contract_by_default(proposal):
-    """Fails if a non-split proposal's annex note describes the two-contract split instead."""
-    note = FormalContent(proposal).contract_note()
-
-    assert note == (
-        'Las garantías y obligaciones se rigen por el contrato de desarrollo de '
-        'software asociado a esta propuesta.'
+@pytest.mark.parametrize('modality', ['single', 'split'])
+def test_commercial_annex_adds_no_contract_note(proposal, modality):
+    proposal.contract_modality = modality
+    proposal.save(update_fields=['contract_modality'])
+    ProposalSection.objects.create(
+        proposal=proposal, section_type='commercial_conditions', title='Condiciones', order=1,
+        content_json={'scopeParagraphs': ['Condiciones revisadas por el cliente.']},
     )
+    original = ProposalPdfService.generate(
+        proposal, selected_modules=default_selected_modules_from_content(proposal),
+    )
+
+    raw = document_bytes(proposal, 'commercial')
+
+    rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
+    expected = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(original)).pages)
+    assert 'Condiciones revisadas por el cliente.' in rendered
+    assert rendered == expected

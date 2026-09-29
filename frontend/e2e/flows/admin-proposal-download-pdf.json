@@ -1,0 +1,13 @@
+{
+  "id": "admin-proposal-download-pdf",
+  "name": "Descargar PDF original de propuesta desde el panel",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "General descarga los PDFs comercial y técnico por la ruta administrativa, incluso para propuestas vencidas. Documentos conserva sus anexos formales.",
+  "outcomes": [
+    "success"
+  ]
+}

@@ -1,54 +1,46 @@
 # Formalización de propuestas
 
-En **Propuestas → editar → Documentos**, el administrador puede descargar los
-anexos formales y preparar un correo para revisión y firma. Los anexos formales comparten los generadores, portadas y componentes visuales
-de los PDF públicos comercial y técnico. Usan los datos guardados en la
-propuesta y reglas de contenido explícitas: cambia lo que se incluye,
-conservando la identidad visual del documento que ya conoce el cliente.
+En **Propuestas → editar → Documentos**, el administrador descarga los anexos
+y prepara un correo para revisión y firma. El cliente recibe el contenido que
+ya revisó en la propuesta. El anexo comercial sólo retira seis secciones
+completas; el detalle técnico conserva todo el contenido de su PDF original.
 
-## Contenido curado
+## Contenido de los anexos
 
-| Documento | Contenido incluido | Contenido excluido |
+| Elemento del PDF original | Propuesta comercial de Documentos | Detalle técnico de Documentos |
 |---|---|---|
-| Propuesta comercial formal | Cliente, proyecto, referencia y emisión; alcance y entregables incluidos con sus IDs; prestaciones concretas de diseño y acompañamiento; cronograma, etapas y aportes del cliente; inversión efectiva y moneda; hitos y medios de pago; condiciones guardadas de hosting, mantenimiento y soporte; condiciones de módulos incluidos; límites y cambios de alcance. | ROI y proyecciones de retorno, argumentos de venta, diagnósticos persuasivos, paquetes de ampliación, precios de alcance no seleccionado, urgencia, testimonios, badges de garantías, próximos pasos comerciales y llamadas a comprar. |
-| Detalle técnico formal | Propósito, stack, arquitectura y modelo de datos; preparación técnica actual; épicas y requerimientos del alcance seleccionado, IDs, configuración, flujo de uso y referencias comerciales; API, integraciones incluidas y excluidas; ambientes y roles; seguridad, rendimiento, respaldos, calidad, pruebas y decisiones técnicas. | Evoluciones futuras ofrecidas como posibilidad, ampliaciones no seleccionadas, venta o ROI, URLs y nombres de bases de datos de ambientes y campos arbitrarios de credenciales. |
-| Contrato de desarrollo | El PDF final ya generado desde los parámetros de contrato de la propuesta, con el tratamiento de firma existente. | La variante de contrato borrador. |
-| Contrato de producto | En cierre separado: el PDF final del desarrollo e implementación del software (el contrato único sin las cláusulas 21–24). | El borrador y el contrato único, que ya no corresponde a la modalidad. |
-| Contrato de servicio | En cierre separado: el PDF final del contrato autónomo de hosting, mantenimiento y soporte, con su duración inicial y sus preavisos. | El borrador y el contrato único. |
+| Resumen ejecutivo, diagnóstico, estrategia de conversión | Se excluyen las tres secciones completas. | No aplica. |
+| Proyección de retorno, nota final, próximos pasos | Se excluyen las tres secciones completas. | No aplica. |
+| Las demás secciones habilitadas, incluidas las condiciones comerciales | Se conservan con sus títulos, orden y contenido originales. | No aplica. |
+| Detalle técnico | Mantiene la separación del PDF comercial original. | Se conserva completo, con las mismas reglas del PDF técnico original. |
+| Selección de módulos, importes, pagos, hosting y paquetes de horas | Hereda las reglas originales; no tiene un cálculo ni una selección de campos propios. | Hereda el filtro técnico original para la selección de módulos. |
+| Texto pegado y campos estructurados | Se muestran como en el original. | Se muestran como en el original. |
 
-Los campos estructurados son la fuente. Una sección necesaria en modo de texto
-pegado requiere completar sus campos antes de preparar ese anexo. No se extraen
-compromisos automáticamente de texto comercial libre ni se inventan obligaciones
-o criterios de aceptación. Las garantías y obligaciones remiten al contrato.
+No se reescriben párrafos, eliminan campos dentro de una sección conservada ni
+se agregan notas contractuales o una identidad documental distinta. El índice
+y la paginación se generan a partir de las secciones presentes. Las condiciones
+comerciales conservan sus paquetes y las reglas de catálogo automático o manual
+que ya aplica el PDF original. El detalle técnico conserva, entre otros campos
+que imprime el original, la evolución prevista y las columnas de ambientes.
 
-La selección funcional y los IDs normalizados se comparten entre anexos. Los
-importes porcentuales se calculan sobre la inversión efectiva. Si hosting tiene
-varias modalidades guardadas, se presentan como opciones de periodicidad, sin
-afirmar que el cliente eligió una. No se refrescan catálogos al producir los PDFs.
+Los contratos único, de producto y de servicio continúan usando sus PDF finales
+guardados, de acuerdo con la modalidad de cierre elegida.
 
-## Presentación compartida
+## Generación y revisión
 
-Markdown adapta las mismas proyecciones curadas (`formalization_blocks`):
-conserva títulos y orden guardados, importes resueltos y condiciones de hosting,
-sin volver a leer campos crudos ni recalcular la inversión. La migración `0256`
-une el snapshot Markdown del contrato y el reajuste contractual incorporados
-por las dos migraciones `0255`.
-
-- La proyección de `FormalContent` entrega secciones comerciales y un payload
-  técnico con campos permitidos. El adaptador `formalization_pdf` los pasa a
-  `ProposalPdfService` y `generate_technical_document_pdf` mediante un contexto
-  interno; los endpoints y las llamadas públicas conservan sus interfaces.
-- Los renderers reutilizan tipografías, colores, portadas, índice y componentes.
-  El comercial respeta el orden guardado de sus secciones habilitadas. Las
-  exclusiones retiran también encabezados y columnas; no dejan tablas vacías.
-- Los importes y condiciones formales llegan resueltos: no se refrescan catálogos,
-  no se normaliza hosting y no se agregan cláusulas comerciales predeterminadas.
-  Las filas extensas se dividen entre páginas y el índice conserva sus destinos
-  cuando sus títulos requieren más de una página.
-- Cliente, proyecto, referencia, emisión e IDs se conservan. Las nuevas
-  preparaciones incluyen los títulos de sección en la huella de origen. Las
-  anteriores conservan la versión original de esa huella y sus bytes revisados;
-  el cambio visual no regenera adjuntos existentes.
+- `FormalContent` captura las secciones habilitadas sin transformarlas.
+  `formalization_pdf` invoca los generadores originales; sólo el comercial
+  recibe la lista de secciones después de las seis exclusiones.
+- **Copiar Markdown** extrae el texto del PDF del anexo, sin una segunda
+  interpretación del contenido. Avisa que reconstruye el formato y que las
+  imágenes y firmas gráficas no se copian. Se mantienen los límites de extracción
+  de 100 páginas, 50 MB de contenido descomprimido y un millón de caracteres.
+- Los archivos adjuntos se generan una vez al preparar el correo. La revisión
+  y el envío usan esos mismos bytes. Las preparaciones pendientes con anexos
+  del formato anterior deben prepararse y revisarse nuevamente; nunca se
+  reemplazan sus archivos silenciosamente. Los envíos históricos se conservan.
+- La huella de origen comprueba los datos y títulos de las secciones, la
+  selección y la modalidad de cierre antes de enviar.
 
 ## Modalidad de cierre
 
