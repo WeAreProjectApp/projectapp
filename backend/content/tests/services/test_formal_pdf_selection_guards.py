@@ -2,7 +2,6 @@
 import hashlib
 from datetime import timedelta
 from io import BytesIO
-from unittest.mock import Mock
 
 import pytest
 from django.core.files.base import ContentFile
@@ -16,6 +15,8 @@ from content.models import (
     ProposalSection,
 )
 from content.services.formalization_content import FormalizationError
+from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
+from content.services.technical_document_pdf import generate_technical_document_pdf
 from content.services.proposal_email_service import ProposalEmailService
 from content.services.proposal_formalization_service import (
     document_bytes,
@@ -37,32 +38,21 @@ def _pdf_text(raw):
 
 
 @freeze_time('2026-09-24 12:00:00')
-def test_formal_commercial_pdf_keeps_saved_conditions_without_catalog_reseed(
-    monkeypatch, formalization_proposal,
-):
-    """Fails if a formal PDF replaces its saved scope conditions from the catalog."""
+def test_formal_commercial_pdf_inherits_original_commercial_conditions(formalization_proposal):
     ProposalSection.objects.create(
-        proposal=formalization_proposal,
-        section_type='commercial_conditions',
-        title='Condiciones comerciales',
-        order=4,
-        content_json={
-            'hourPackagesMode': 'auto',
-            'scopeParagraphs': ['SAVED_FORMAL_SCOPE_CONDITION'],
-        },
+        proposal=formalization_proposal, section_type='commercial_conditions',
+        title='Condiciones comerciales', order=4,
+        content_json={'hourPackagesMode': 'auto', 'scopeParagraphs': ['SAVED_SCOPE_CONDITION']},
     )
-    catalog_reseed = Mock(side_effect=AssertionError(
-        'formal PDF must not reseed the catalog',
+    original = _pdf_text(ProposalPdfService.generate(
+        formalization_proposal,
+        selected_modules=default_selected_modules_from_content(formalization_proposal),
     ))
-    monkeypatch.setattr(
-        'content.services.proposal_pdf_service.seed_commercial_conditions_from_catalog',
-        catalog_reseed,
-    )
 
     rendered = _pdf_text(document_bytes(formalization_proposal, 'commercial'))
 
-    assert 'SAVED_FORMAL_SCOPE_CONDITION' in rendered
-    catalog_reseed.assert_not_called()
+    assert 'SAVED_SCOPE_CONDITION' in rendered
+    assert rendered == original
 
 
 @freeze_time('2026-09-24 12:00:00')
@@ -96,8 +86,9 @@ def test_formal_technical_pdf_excludes_unselected_module_requirement(
 
     rendered = _pdf_text(document_bytes(formalization_proposal, 'technical'))
 
-    assert 'ORD-01' in rendered
-    assert 'create-order' in rendered
+    assert 'Crear pedido' in rendered
+    assert 'Registra la orden.' in rendered
+    assert rendered == _pdf_text(generate_technical_document_pdf(formalization_proposal))
     assert 'OPTIONAL_FLOW_99' not in rendered
     assert 'OPTIONAL_REQUIREMENT' not in rendered
 
@@ -121,10 +112,10 @@ def test_send_rejects_a_preparation_after_its_section_title_changes(
 
 
 @freeze_time('2026-09-24 12:00:00')
-def test_send_legacy_preparation_delivers_its_frozen_bytes(
-    mailoutbox, formalization_proposal, admin_user, formalization_payload, monkeypatch,
+def test_send_legacy_annex_requires_review_of_the_new_content(
+    mailoutbox, formalization_proposal, admin_user, formalization_payload,
 ):
-    """Fails if a pre-versioned preparation regenerates its frozen attachment during delivery."""
+    """An old curated attachment must be reviewed again, never silently overwritten."""
     legacy_payload = {
         **formalization_payload,
         'documents': ['commercial'],
@@ -150,20 +141,11 @@ def test_send_legacy_preparation_delivers_its_frozen_bytes(
         size=len(frozen_bytes),
     )
     attachment.file.save(attachment.filename, ContentFile(frozen_bytes), save=True)
-    section = formalization_proposal.sections.get(section_type='investment')
-    section.title = 'Inversión editada después del envío legado'
-    section.save(update_fields=['title'])
-    document_generation = Mock(side_effect=AssertionError(
-        'delivery must use the frozen attachment',
-    ))
-    monkeypatch.setattr(
-        'content.services.proposal_formalization_service.document_bytes',
-        document_generation,
-    )
+    with pytest.raises(FormalizationError) as error:
+        send_preparation(preparation)
 
-    delivered = send_preparation(preparation)
-
-    assert delivered.status == ProposalFormalization.Status.SENT
-    assert mailoutbox[0].attachments[0].filename == 'legacy-commercial.pdf'
-    assert mailoutbox[0].attachments[0].content == frozen_bytes
-    document_generation.assert_not_called()
+    assert error.value.code == 'stale_preparation'
+    assert error.value.status == 409
+    assert len(mailoutbox) == 0
+    with attachment.file.open('rb') as stored:
+        assert stored.read() == frozen_bytes

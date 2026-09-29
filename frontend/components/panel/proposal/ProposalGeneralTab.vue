@@ -101,10 +101,10 @@
       <div v-if="!hasDocumentsTab">
         <span class="text-text-subtle text-xs">PDFs</span>
         <div class="flex items-center gap-3 mt-0.5 flex-wrap">
-          <PanelDownloadLink :url="'/api/proposals/' + proposal.uuid + '/pdf/'"
+          <PanelDownloadLink :url="'/api/proposals/' + proposal.id + '/pdf/'"
             filename="propuesta-comercial.pdf" variant="link" label="Propuesta comercial" />
           <span class="text-text-subtle text-xs">|</span>
-          <PanelDownloadLink :url="'/api/proposals/' + proposal.uuid + '/pdf/?doc=technical'"
+          <PanelDownloadLink :url="'/api/proposals/' + proposal.id + '/pdf/?doc=technical'"
             filename="detalle-tecnico.pdf" variant="link" label="Detalle técnico" />
         </div>
       </div>

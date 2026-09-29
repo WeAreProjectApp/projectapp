@@ -57,8 +57,8 @@ const proposal = {
 const baseOptions = {
   documents: [
     { key: 'contract', label: 'Contrato de desarrollo', description: 'Contrato final guardado.', available: true, error: '' },
-    { key: 'commercial', label: 'Propuesta comercial formal', description: 'Alcance y condiciones curados.', available: true, error: '' },
-    { key: 'technical', label: 'Detalle técnico formal', description: 'Requerimientos técnicos curados.', available: true, error: '' },
+    { key: 'commercial', label: 'Propuesta comercial formal', description: 'Contenido original sin las seis secciones de presentación y cierre.', available: true, error: '' },
+    { key: 'technical', label: 'Detalle técnico formal', description: 'Detalle técnico original.', available: true, error: '' },
   ],
   defaults: {
     subject: 'Documentación para formalizar Portal de formalización',
@@ -167,11 +167,13 @@ test.describe('Admin proposal formalization delivery', () => {
     await openDocumentsFromProposalList(page);
 
     const commercialDocument = page.getByRole('listitem').filter({ hasText: 'Propuesta comercial formal' });
+    await expect(commercialDocument).toContainText('Secciones originales');
     await expect(commercialDocument.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute(
       'href',
       `/api/proposals/${PROPOSAL_ID}/formalization/pdf/commercial/`,
     );
     const technicalDocument = page.getByRole('listitem').filter({ hasText: 'Detalle técnico formal' });
+    await expect(technicalDocument).toContainText('Detalle técnico original');
     await expect(technicalDocument.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute(
       'href',
       `/api/proposals/${PROPOSAL_ID}/formalization/pdf/technical/`,

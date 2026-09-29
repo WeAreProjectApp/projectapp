@@ -1,5 +1,6 @@
-"""Regressions for sharing the public PDF layout without changing formal scope."""
+"""Annex parity with the original PDF layout, content and validation rules."""
 from copy import deepcopy
+from decimal import Decimal
 from datetime import datetime, timezone
 from io import BytesIO
 
@@ -8,14 +9,14 @@ from freezegun import freeze_time
 from pypdf import PdfReader
 
 from content.models import ProposalSection
-from content.services.formalization_content import FormalContent, FormalizationError
+from content.services.formalization_content import FormalContent
 from content.services.formalization_pdf import generate_formal_pdf
-from content.services.proposal_formalization_service import document_bytes
 from content.services.proposal_pdf_service import ProposalPdfService
 from content.services.technical_document_pdf import generate_technical_document_pdf
 from content.tests.services import test_formalization_pdf as formal_fixtures
 
 formal_proposal = formal_fixtures.formal_proposal
+original_commercial_text = formal_fixtures.original_commercial_text
 pytestmark = pytest.mark.django_db
 ISSUED_AT = datetime(2026, 9, 24, 12, tzinfo=timezone.utc)
 
@@ -46,7 +47,7 @@ def test_formal_pdf_reuses_public_booklet_covers(formal_proposal, kind, public_r
 
     assert formal.pages[0].get_contents().get_data() == public.pages[0].get_contents().get_data()
     assert formal.pages[-1].get_contents().get_data() == public.pages[-1].get_contents().get_data()
-    assert 'PROP-LAYOUT' in formal.pages[1].extract_text()
+    assert 'PROP-LAYOUT' not in pdf_text(render(formal_proposal, kind))
 
 
 def test_commercial_pdf_preserves_saved_section_order(formal_proposal):
@@ -65,8 +66,8 @@ def test_commercial_pdf_preserves_saved_section_order(formal_proposal):
     assert '01' in toc
 
 
-def test_technical_formal_pdf_removes_excluded_columns(formal_proposal):
-    """Reject internal environment data and empty columns from excluded content."""
+def test_technical_annex_preserves_all_original_columns(formal_proposal):
+    """Every column already visible in the original remains in the annex."""
     section = formal_proposal.sections.get(section_type='technical_document')
     section.content_json['environments'] = [{
         'name': 'Staging', 'purpose': 'Validación', 'whoAccesses': 'Equipo QA',
@@ -81,29 +82,30 @@ def test_technical_formal_pdf_removes_excluded_columns(formal_proposal):
 
     assert 'Equipo QA' in rendered
     assert 'Fuera de alcance' in rendered
-    assert set(rendered.split()).isdisjoint({
-        'URL', 'BD', 'SECRET_FIELD', 'INTERNAL_URL', 'INTERNAL_DATABASE',
-        'Disponibilidad', 'FUTURE_AVAILABILITY', 'Evolución',
-    })
+    assert 'INTERNAL_URL' in rendered
+    assert 'INTERNAL_DATABASE' in rendered
+    assert 'FUTURE_AVAILABILITY' in rendered
+    assert 'SECRET_FIELD' not in rendered  # Not a printable field in the original either.
+    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
 
 
-def test_commercial_formal_pdf_does_not_invent_hosting_renewal(formal_proposal):
+
+def test_commercial_annex_uses_original_hosting_rules(formal_proposal):
     section = formal_proposal.sections.get(section_type='investment')
     section.content_json['hostingPlan'] = {'title': 'Hosting', 'monthlyPrice': 'SAVED_PRICE'}
     section.save(update_fields=['content_json'])
 
     rendered = pdf_text(render(formal_proposal, 'commercial'))
 
-    assert 'SAVED_PRICE' in rendered
-    assert 'SMLMV' not in rendered
-    assert 'REGALO' not in rendered
+    assert 'Hosting' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
-def test_formal_pdf_preserves_fractional_payment_amounts(formal_proposal):
-    """Keep Decimal amounts instead of recalculating integer public payment pills."""
+def test_commercial_annex_uses_original_payment_calculation(formal_proposal):
+    """The annex cannot apply a separate rounding or payment interpretation."""
     formal_proposal.currency = 'USD'
     formal_proposal.language = 'en'
-    formal_proposal.total_investment = '1000.25'
+    formal_proposal.total_investment = Decimal('1000.25')
     formal_proposal.save(update_fields=['currency', 'language', 'total_investment'])
     section = formal_proposal.sections.get(section_type='investment')
     section.content_json['paymentOptions'] = [{'label': '12.5% upon kickoff', 'description': 'OLD_AMOUNT'}]
@@ -111,24 +113,18 @@ def test_formal_pdf_preserves_fractional_payment_amounts(formal_proposal):
 
     rendered = pdf_text(render(formal_proposal, 'commercial'))
 
-    assert '1,000.25 USD' in rendered
-    assert '125.03 USD' in rendered
-    assert 'OLD_AMOUNT' not in rendered
-    assert '+ Tax' not in rendered
+    assert '12.5% upon kickoff' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
-def test_technical_formal_pdf_localizes_renderer_labels(formal_proposal):
+def test_technical_annex_uses_original_language_labels(formal_proposal):
     formal_proposal.language = 'en'
     formal_proposal.save(update_fields=['language'])
 
     rendered = pdf_text(render(formal_proposal, 'technical'))
 
-    assert 'FORMAL TECHNICAL SPECIFICATION' in rendered
-    assert 'CONTENTS' in rendered
-    assert 'Included technical preparation' in rendered
-    assert 'Commercial reference:' in rendered
-    assert 'item-core-pedidos' not in rendered
-    assert 'orders' in rendered
+    assert 'Crear pedido' in rendered
+    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
 
 
 @pytest.mark.parametrize('kind', ['commercial', 'technical'])
@@ -143,27 +139,8 @@ def test_formal_pdf_does_not_mutate_captured_sections(formal_proposal, kind):
     assert list(formal_proposal.sections.values('content_json', 'title', 'order')) == saved
 
 
-def scope_text_bounds(reader):
-    """Read PDF text geometry independently of the renderer's wrapping decisions."""
-    bounds = []
-
-    def collect(value, cm, tm, font, size):
-        if 'LONG_SCOPE' not in value and 'END_OF_SCOPE' not in value:
-            return
-        x = tm[4] * cm[0] + tm[5] * cm[2] + cm[4]
-        y = tm[4] * cm[1] + tm[5] * cm[3] + cm[5]
-        widths = font['/Widths']
-        first = font['/FirstChar']
-        width = sum(widths[ord(char) - first] for char in value.rstrip('\n')) * size / 1000
-        bounds.append((x, x + width, y))
-
-    for page in reader.pages:
-        page.extract_text(visitor_text=collect)
-    return bounds
-
-
 @pytest.mark.parametrize('kind', ['commercial', 'technical'])
-def test_formal_pdf_paginates_oversized_requirements(formal_proposal, kind):
+def test_formal_pdf_inherits_original_long_requirement_layout(formal_proposal, kind):
     requirements = formal_proposal.sections.get(section_type='functional_requirements')
     requirements.content_json['groups'][0]['items'][0]['description'] = 'LONG_SCOPE ' * 1800 + 'END_OF_SCOPE'
     requirements.save(update_fields=['content_json'])
@@ -171,32 +148,31 @@ def test_formal_pdf_paginates_oversized_requirements(formal_proposal, kind):
     technical.content_json['epics'][0]['requirements'][0]['description'] = 'LONG_SCOPE ' * 1800 + 'END_OF_SCOPE'
     technical.save(update_fields=['content_json'])
 
-    reader = PdfReader(BytesIO(render(formal_proposal, kind)))
-    content_pages = [p.extract_text() for p in reader.pages[3:-1]]
-    bounds = scope_text_bounds(reader)
+    original = {
+        'commercial': lambda: original_commercial_text(formal_proposal),
+        'technical': lambda: pdf_text(generate_technical_document_pdf(formal_proposal)),
+    }[kind]()
 
-    assert sum('LONG_SCOPE' in page for page in content_pages) >= 3
-    assert sum(page.count('LONG_SCOPE') for page in content_pages) == 1800
-    assert sum(page.count('END_OF_SCOPE') for page in content_pages) == 1
-    assert len(bounds) >= 3
-    assert all(48 <= left < right <= 548 and 48 <= baseline <= 786
-               for left, right, baseline in bounds)
+    rendered = pdf_text(render(formal_proposal, kind))
+
+    assert 'LONG_SCOPE' in rendered
+    assert rendered == original
 
 
-def test_formal_pdf_rejects_unstructured_scope(formal_proposal):
+def test_formal_pdf_preserves_original_pasted_scope(formal_proposal):
     section = formal_proposal.sections.get(section_type='functional_requirements')
     section.content_json.update({'_editMode': 'paste', 'rawText': 'UNREVIEWED_CONTRACT'})
     section.save(update_fields=['content_json'])
 
-    with pytest.raises(FormalizationError, match='campos estructurados') as exc:
-        document_bytes(formal_proposal, 'commercial')
+    rendered = pdf_text(render(formal_proposal, 'commercial'))
 
-    assert exc.value.code == 'unstructured_content'
+    assert 'UNREVIEWED_CONTRACT' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
 def test_formal_pdf_retains_concrete_design_services(formal_proposal):
     ProposalSection.objects.create(proposal=formal_proposal, section_type='design_ux', title='Design', order=6,
-        content_json={'focusItems': [{'description': 'INCLUDED_DESIGN'}], 'objective': 'SALES_OBJECTIVE'})
+        content_json={'focusItems': ['INCLUDED_DESIGN'], 'objective': 'SALES_OBJECTIVE'})
     ProposalSection.objects.create(proposal=formal_proposal, section_type='creative_support', title='Support', order=7,
         content_json={'includes': ['INCLUDED_SUPPORT'], 'closing': 'SALES_CLOSING'})
 
@@ -204,8 +180,9 @@ def test_formal_pdf_retains_concrete_design_services(formal_proposal):
 
     assert 'INCLUDED_DESIGN' in rendered
     assert 'INCLUDED_SUPPORT' in rendered
-    assert 'SALES_OBJECTIVE' not in rendered
-    assert 'SALES_CLOSING' not in rendered
+    assert 'SALES_OBJECTIVE' in rendered
+    assert 'SALES_CLOSING' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
 @pytest.fixture
@@ -219,7 +196,7 @@ def long_index_proposal(formal_proposal):
     }
     for order, (kind, data) in enumerate(extra.items(), 4):
         ProposalSection.objects.create(proposal=formal_proposal, section_type=kind, title=kind, order=order, content_json=data)
-    included = formal_proposal.sections.exclude(section_type__in=['technical_document', 'roi_projection']).order_by('order')
+    included = formal_proposal.sections.exclude(section_type__in=['technical_document', 'roi_projection', 'greeting']).order_by('order')
     for index, section in enumerate(included):
         section.title = f'Section{index} ' + 'W' * 240
         section.save(update_fields=['title'])
@@ -237,11 +214,11 @@ def toc_destinations(reader):
     return result
 
 
-def test_formal_pdf_toc_links_follow_wrapped_titles(long_index_proposal):
+def test_formal_pdf_toc_links_follow_original_title_layout(long_index_proposal):
     reader = PdfReader(BytesIO(render(long_index_proposal, 'commercial')))
 
     destinations = toc_destinations(reader)
 
-    assert {index for index, _ in destinations} == {2, 3}
+    assert {index for index, _ in destinations} == {2}
     assert len(destinations) == 7
     assert all(f'Section{index}' in text for index, (_, text) in enumerate(destinations))

@@ -3605,18 +3605,16 @@ Two transitions that were previously bundled into other flows now have their own
 
 ### FLOW: `proposal-download-pdf`
 
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** Download a proposal as PDF.
-- **Steps:**
-  1. User views the proposal.
-  2. User clicks the download PDF button.
-  3. API call to `GET /api/proposals/:uuid/pdf/`.
-  4. PDF file downloads to user's device.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-pdf.spec.js`
+- **Módulo:** propuesta pública
+- **Rol:** visitante
+- **Prioridad:** P2
+- **Ruta:** `/proposal/:uuid`
+- **Éxito:** abre la vista comercial o técnica, pulsa Descargar PDF y recibe el archivo.
+- **Error:** una propuesta vencida conserva su lectura, pero explica por qué sus PDFs no se pueden descargar; un 410 posterior a la carga muestra el mismo aviso.
+- **Fallo:** un error de servidor o de red informa del fallo y permite reintentar.
+- **Presentación:** el aviso pertenece al bloqueo anterior, no constituye otro flujo.
+- **E2E:** `frontend/e2e/proposal/proposal-pdf.spec.js`.
+- **Límite:** E2E intercepta HTTP; la generación de PDFs reales y los permisos se prueban en backend.
 
 ### FLOW: `proposal-share`
 
@@ -6367,6 +6365,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-document-preview` | admin | P3 | display,success | 1 |
 | `admin-proposal-documents-manage` | admin | P2 | success | 1 |
 | `admin-proposal-documents-send` | admin | P1 | — | 0 |
+| `admin-proposal-download-pdf` | admin | P2 | success | — |
 | `admin-proposal-duplicate` | admin | P2 | success | 1 |
 | `admin-proposal-edit` | admin | P1 | success,error | 1 |
 | `admin-proposal-engagement-decay-alert` | admin | P2 | — | 0 |
@@ -6495,7 +6494,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-contract-terms` | proposal | P1 | display,success,error,failure | 1 |
 | `proposal-countdown-realtime` | proposal | P3 | display | 1 |
 | `proposal-discount-multi-section` | proposal | P2 | display | 1 |
-| `proposal-download-pdf` | proposal | P2 | success | 1 |
+| `proposal-download-pdf` | proposal | P2 | success,error,failure | — |
 | `proposal-engagement-tracking` | proposal | P2 | success | 1 |
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
@@ -6726,6 +6725,7 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Priority:** P2
 - **Routes:** `/panel/accounting/hostings`
 - **Description:** Client hosting registry: monthly value, payment modality, validity and billing contact, with KPI cards and modal CRUD. New records offer exactly quarterly, semiannual and every-9-month modalities; `payment_per_cycle` is derived from the monthly value. Legacy monthly/annual rows remain readable as historical values but cannot be selected for new records. Estado is inline; ciclos/total pagado are read-only and computed from cycle history. Cliente and Proyecto remain separate linked columns. Every row leads with a single three-dots button at every width (after the selection checkbox); its menu opens with **Detalle e historial** and **Ver nota** (when present), then cycles, cuenta de cobro, emails, edit and delete. On a phone Valor/mes groups under Cliente so the row fits without a horizontal scroll.
+- **Responsive acceptance:** At 412×915, 835×1195, 1195×835, 1440×900 and 2560×1440, both validity dates remain complete without overlapping Ciclos. The range may wrap between dates, retaining partial/missing-date placeholders. Grouped values remain accessible on narrow screens and the cycle count still opens the selected hosting’s history.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-expenses-hostings.spec.js`
 
@@ -8114,6 +8114,24 @@ espacios y textos demasiado largos muestran errores por campo.
 - **Guardado pendiente:** se bloquean envíos repetidos y cierre por Cancelar,
   Escape o backdrop hasta conocer el resultado.
 
+#### Formularios compactos y listas flotantes
+
+Crear y editar contrato único, producto o servicio comparten un ancho máximo de
+42 rem. Nombre/email, identificaciones, banco/tipo y ciudad/fecha se agrupan;
+los dos preavisos comparten fila. Bajo 640 px los campos se apilan en orden de
+lectura. Markdown conserva su editor y la vista previa amplia.
+
+Los tres datos del servicio usan listas visuales sin buscador, con opción
+seleccionada marcada. Flechas, Inicio/Fin y Enter permiten elegir; Escape
+cierra primero la lista y recupera el foco, y Tab sale sin modificar el valor.
+Personalizar lleva el foco al texto auxiliar y mantiene la redacción literal.
+Las listas flotan dentro del área visible y también se bloquean al guardar.
+
+Verificación: `admin-contract-modal-layout.spec.js` cubre creación y reapertura
+de las tres variantes, geometría y selección personalizada en los cinco
+viewports del panel. Los errores y reintentos siguen cubiertos por
+`admin-proposal-contract-modality.spec.js`.
+
 ### FLOW: `admin-proposal-document-markdown`
 
 - **Módulo:** admin
@@ -8121,11 +8139,23 @@ espacios y textos demasiado largos muestran errores por campo.
 - **Prioridad:** P2
 - **Ruta:** `/panel/proposals/:id/edit` → Documentos; disponible en `sent`, `viewed`, `negotiating`, `accepted` y `rejected`.
 - **Display:** acciones de copia para contrato generado, comercial, técnico y adjuntos compatibles; PDF e imágenes conservan su visor; DOCX/XLSX presentan Markdown y tablas con advertencia. Todo adjunto conserva descarga del original.
-- **Success:** Copiar Markdown solicita el documento elegido, escribe su contenido en el portapapeles y confirma Copiado. Contrato usa el snapshot guardado; comercial y técnico comparten los bloques curados del PDF.
+- **Success:** Copiar Markdown solicita el documento elegido, escribe su contenido en el portapapeles y confirma Copiado. Contrato usa el snapshot guardado; comercial y técnico extraen el texto de sus PDF originales; el comercial sólo omite las seis secciones acordadas, sin reescribir las demás.
 - **Error:** DOC/XLS requieren conversión e imágenes requieren OCR. Archivo vacío, escaneado, protegido, corrupto o fuera de límites devuelve un error recuperable.
 - **Failure:** errores de extracción, archivo ausente o portapapeles bloqueado permiten reintentar. Cerrar el visor aborta su solicitud pendiente.
 - **Límites:** 15 MB, 100 páginas PDF, 20.000 celdas XLSX, 50 MB expandidos y un millón de caracteres; sin macros, consultas externas ni OCR.
 - **E2E Spec:** `e2e/admin/admin-proposal-document-markdown.spec.js`.
+
+### FLOW: `admin-proposal-download-pdf`
+
+- **Módulo:** panel de propuestas
+- **Rol:** administrador
+- **Prioridad:** P2
+- **Ruta:** `/panel/proposals/:id/edit`
+- **Éxito:** desde General, descarga Propuesta comercial o Detalle técnico de una propuesta vencida; recibe el archivo por `/api/proposals/:id/pdf/`.
+- **Error:** la autorización y el detalle técnico ausente se verifican en backend; esta corrección conserva los enlaces de descarga nativos del panel.
+- **Fallo:** sin nuevo estado de error en panel; sigue la respuesta HTTP del enlace nativo.
+- **Presentación:** sin nueva vista; los anexos formales de Documentos conservan contenido y rutas.
+- **E2E:** `frontend/e2e/admin/admin-proposal-pdf.spec.js`.
 
 ### FLOW: `admin-proposal-first-view-retry`
 
@@ -8150,10 +8180,10 @@ espacios y textos demasiado largos muestran errores por campo.
 - **Rol:** admin
 - **Prioridad:** P1
 - **Ruta:** `/panel/proposals/:id/edit` → Documentos
-- **Recorrido:** abrir una propuesta desde el panel; entrar en Documentos; descargar o previsualizar anexos formales; abrir Formalización; elegir contrato final, anexos y adjuntos propios; editar Para/CC, asunto y secciones; preparar; revisar correo y archivos exactos; enviar.
+- **Recorrido:** abrir una propuesta desde el panel; entrar en Documentos; descargar o previsualizar anexos que conservan el contenido original (comercial sin seis secciones de presentación y cierre; técnico completo); abrir Formalización; elegir contrato final, anexos y adjuntos propios; editar Para/CC, asunto y secciones; preparar; revisar correo y archivos exactos; enviar.
 - **Display:** contenido real de la propuesta, plantilla precargada, disponibilidad, destinatarios y manifiesto de archivos preparados.
 - **Success:** preparar una selección válida, revisar sus bytes y enviarla; aparece confirmación y evidencia en Correos.
-- **Error:** datos requeridos o adjuntos no disponibles impiden preparar; revisión obsoleta, vencida o consumida muestra un error accionable.
+- **Error:** datos requeridos o adjuntos no disponibles impiden preparar; revisión obsoleta, del formato anterior de anexos, vencida o consumida muestra un error accionable.
 - **Failure:** falla de carga o preparación conserva el formulario; resultado incierto de envío consulta el estado y evita un segundo envío automático.
 - **Límites:** preparación privada de 24 horas, hasta 20 secciones y 10 destinatarios; sin transición automática del estado comercial.
 

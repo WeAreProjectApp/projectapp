@@ -1,6 +1,6 @@
 """Contracts that make model/tool drift fail loudly during delivery."""
-from itertools import product
 import re
+from itertools import product
 from unittest.mock import Mock, call
 
 import pytest
@@ -10,10 +10,9 @@ from django.urls import NoReverseMatch, resolve, reverse
 from content.mcp.contracts import MCP_MODEL_CONTRACTS
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
-
 CONNECTOR_SLUGS = tuple(MCP_MODEL_CONTRACTS)
 CANONICAL_CONNECTOR_SLUGS = (
-    'operations', 'commercial', 'projects', 'documents', 'communications',
+    'operations', 'commercial', 'proposals', 'projects', 'documents', 'communications',
     'content', 'tasks', 'accounting-ledger', 'accounting-billing',
     'accounting-cards',
 )

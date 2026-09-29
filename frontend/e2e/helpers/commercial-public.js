@@ -64,7 +64,7 @@ export async function expectLayeredCard(page, entry) {
   const card = page.getByTestId(cardId)
   const pageBackground = await page.getByTestId(entry.root).evaluate((root) => getComputedStyle(root).backgroundColor)
   await expect(card).not.toHaveCSS('background-color', pageBackground)
-  const contrast = await card.getByText(summary, { exact: true }).evaluate((text, id) => {
+  await expect.poll(() => card.getByText(summary, { exact: true }).evaluate((text, id) => {
     const luminance = (color) => color.match(/[\d.]+/g).slice(0, 3).map((channel) => {
       const value = Number(channel) / 255
       return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4
@@ -72,8 +72,7 @@ export async function expectLayeredCard(page, entry) {
     const foreground = luminance(getComputedStyle(text).color)
     const background = luminance(getComputedStyle(document.querySelector(`[data-testid="${id}"]`)).backgroundColor)
     return (Math.max(foreground, background) + 0.05) / (Math.min(foreground, background) + 0.05)
-  }, cardId)
-  expect(contrast).toBeGreaterThanOrEqual(4.5)
+  }, cardId)).toBeGreaterThanOrEqual(4.5)
 }
 
 export async function expectFloatingOrder(page, entry) {

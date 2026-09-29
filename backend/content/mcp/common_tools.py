@@ -1,6 +1,7 @@
 from content.mcp.confirmation import cancel_action, confirm_action
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
+from content.mcp.registry import connector_version, public_tool
 
 
 def build_common_tools(connector_slug, tools_provider, *, include_uploads=False):
@@ -20,7 +21,7 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
         ]
         return {
             'connector': connector_slug,
-            'version': '3.0.0' if connector_slug == 'documents' else '2.0.0',
+            'version': connector_version(connector_slug),
             'tools': [
                 {
                     'name': tool['name'],
@@ -30,13 +31,13 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
                     'requires_confirmation': bool(tool.get('requires_confirmation')),
                     **({} if summary else {
                         'description': tool['description'],
-                        'input_schema': tool['input_schema'],
-                        'output_schema': tool.get('output_schema', {}),
+                        'input_schema': public_tool(tool)['inputSchema'],
+                        'output_schema': public_tool(tool)['outputSchema'],
                         'annotations': tool.get('annotations', {}),
                     }),
                 }
                 for tool in tools
-                if tool['name'] != 'describe_capabilities' and (requested is None or tool['name'] in requested)
+                if requested is None or tool['name'] in requested
             ],
         }
 
@@ -94,6 +95,7 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
     ]
     if include_uploads:
         from copy import deepcopy
+
         from content.mcp.upload_tools import UPLOAD_TOOLS, VIDEO_CONNECTORS
         uploads = deepcopy(UPLOAD_TOOLS)
         if connector_slug not in VIDEO_CONNECTORS:

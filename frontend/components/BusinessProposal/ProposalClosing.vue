@@ -214,13 +214,19 @@
         <!-- PDF download -->
         <a
           v-if="proposal?.uuid"
-          :href="pdfUrl"
+          :href="pdfExpired ? undefined : pdfUrl"
+          :aria-disabled="pdfExpired || pdfGenerating"
+          :aria-describedby="pdfMessage ? pdfMessageId : undefined"
+          @click.prevent="downloadPdf"
           :download="pdfFilename"
           target="_blank"
           class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-accent rounded-xl font-bold text-sm hover:bg-primary-strong transition-colors shadow-sm mb-6"
         >
           📄 {{ t.downloadPdf }}
         </a>
+        <p v-if="pdfMessage" :id="pdfMessageId" role="status" class="mb-6 text-sm text-text-default">
+          {{ pdfMessage }}
+        </p>
 
         <!-- Onboarding timeline -->
         <div class="bg-primary/5 border border-primary/15 rounded-xl p-5 text-left space-y-4">
@@ -435,7 +441,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, nextTick } from 'vue';
+import { ref, computed, onMounted, nextTick, useId } from 'vue';
+import { useProposalPdfDownload } from '~/composables/useProposalPdfDownload';
 import { useSectionAnimations } from '~/composables/useSectionAnimations';
 import { linkify } from '~/composables/useLinkify';
 import { ensureProposalTaxLabel, proposalTaxLabel } from '~/utils/proposalTax';
@@ -681,6 +688,13 @@ const pdfFilename = computed(() => {
   const created = props.proposal?.created_at;
   const date = created ? new Date(created).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
   return `${safe}_${date}.pdf`;
+});
+
+const pdfMessageId = useId();
+const { isGenerating: pdfGenerating, isExpired: pdfExpired, message: pdfMessage, downloadPdf } = useProposalPdfDownload({
+  proposal: () => props.proposal,
+  url: pdfUrl,
+  filename: pdfFilename,
 });
 
 const canRespond = computed(() => {

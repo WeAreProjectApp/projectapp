@@ -23,11 +23,16 @@ def current_mcp_context():
 
 
 @contextmanager
-def use_mcp_context(context):
+def use_mcp_context(context, *, atomic_history=True):
     token = _current_context.set(context)
     try:
-        from content.services.entity_history import history_operation
-        with history_operation(actor=context.actor, source=f'mcp:{context.connector.slug}'):
+        if atomic_history:
+            from content.services.entity_history import history_operation
+            with history_operation(actor=context.actor, source=f'mcp:{context.connector.slug}'):
+                yield context
+        else:
+            # Durable deliveries own their claim and cannot share a transaction
+            # with external I/O. Their receipt and email evidence remain audited.
             yield context
     finally:
         _current_context.reset(token)

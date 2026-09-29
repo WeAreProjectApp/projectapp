@@ -2,10 +2,10 @@
 import json
 
 import pytest
+from accounts.models import Project, UserProfile
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 
-from accounts.models import Project, UserProfile
 from content.models import (
     Document,
     DocumentFolder,
@@ -212,7 +212,9 @@ class TestDocumentsMcpFolders:
         })
 
         assert response.data['result']['isError'] is True
-        assert response.data['result']['content'][0]['text'] == (
+        error = json.loads(response.data['result']['content'][0]['text'])['error']
+        assert error['code'] == 'MANAGED_PROJECT_FOLDER'
+        assert error['message'] == (
             'La raíz del proyecto se administra desde el proyecto, '
             'no desde el Gestor Documental.'
         )

@@ -1,5 +1,7 @@
 """Behavioral tests for the frozen formalization delivery package."""
 import hashlib
+from io import BytesIO
+from pypdf import PdfReader
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -21,6 +23,7 @@ from content.services.formalization_content import FormalizationError
 from content.services.email_snapshot_service import EmailSnapshotCaptureError
 from content.services.proposal_formalization_service import (
     availability,
+    document_bytes,
     cleanup_expired,
     load_proposal,
     prepare,
@@ -387,3 +390,21 @@ def test_cleanup_expired_deletes_the_private_preparation_file(formalization_prop
     assert deleted == 1
     assert not ProposalFormalization.objects.filter(pk=preparation.pk).exists()
     assert storage.exists(private_path) is False
+
+
+@pytest.mark.parametrize('kind', ['commercial', 'technical'])
+def test_prepared_annex_matches_the_downloaded_document(
+    formalization_proposal, admin_user, formalization_payload, kind,
+):
+    """The attachment reviewed for email must have the same content as Download PDF."""
+    downloaded = document_bytes(formalization_proposal, kind)
+
+    prepared = prepare(formalization_proposal, admin_user, {
+        **formalization_payload, 'documents': [kind],
+    })
+
+    raw = _stored_bytes(prepared.files.get(key=kind))
+    rendered = [page.extract_text() for page in PdfReader(BytesIO(raw)).pages]
+    expected = [page.extract_text() for page in PdfReader(BytesIO(downloaded)).pages]
+    assert any('Crear pedido' in page for page in rendered)
+    assert rendered == expected

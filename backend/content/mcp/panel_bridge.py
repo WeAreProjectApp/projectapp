@@ -7,11 +7,13 @@ from django.db import transaction
 from django.http import HttpResponseBase, StreamingHttpResponse
 from django.urls import resolve, reverse
 from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
+from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
@@ -24,18 +26,7 @@ def _json_safe(value):
 
 
 def _error_message(payload, status_code):
-    if isinstance(payload, dict):
-        message = payload.get('detail') or payload.get('message')
-        code = payload.get('code') or (
-            'NOT_FOUND' if status_code == 404
-            else 'FORBIDDEN' if status_code == 403
-            else 'CONFLICT' if status_code == 409
-            else 'VALIDATION_ERROR'
-        )
-        if isinstance(code, list) and len(code) == 1:
-            code = code[0]
-        return str(message or 'La operación del Panel fue rechazada.'), str(code), payload
-    return str(payload), 'VALIDATION_ERROR', {'response': payload}
+    return normalize_error(payload, status_code)
 
 
 def _response_filename(response, fallback):
@@ -75,7 +66,7 @@ def _artifact_payload(response, operation):
 def _impact_for(operation, arguments):
     identifiers = {
         key: value for key, value in arguments.items()
-        if key.endswith('_id') or key.endswith('_ids') or key in {'action', 'mode'}
+        if key.endswith(('_id', '_ids')) or key in {'action', 'mode'}
     }
     return {
         'summary': operation['confirmation_message'],
@@ -104,7 +95,10 @@ def _request_for(method, url, *, query, data, files, if_match):
     method = method.lower()
     if method == 'get':
         return factory.get(url, data=query, secure=secure, **headers)
-    payload = {**data, **files}
+    # Multipart cannot encode nested objects; the Panel parsers accept JSON strings.
+    encoded = {key: json.dumps(value) if isinstance(value, (dict, list)) else value
+               for key, value in data.items()} if files else data
+    payload = {**encoded, **files}
     request_factory = getattr(factory, method)
     return request_factory(
         url,
@@ -119,10 +113,12 @@ def _request_for(method, url, *, query, data, files, if_match):
 def _execute(operation, arguments):
     args = deepcopy(arguments)
     if operation.get('payload_schema'):
-        permitted = set(operation['path_params']) | {'data', 'if_match'} | set(operation['payload_schema']['properties'])
+        permitted = (set(operation['path_params']) | set(operation['asset_fields'])
+                     | {'data', 'if_match', 'query'} | set(operation['payload_schema']['properties']))
         unexpected = set(args) - permitted
         if unexpected:
-            raise ToolError('Campos desconocidos.', details={'fields': sorted(unexpected)})
+            message, code, details = normalize_error({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unexpected)})
+            raise ToolError(message, code=code, details=details)
     route_kwargs = {}
     for name in operation['path_params']:
         value = args.pop(name, None)
@@ -142,17 +138,23 @@ def _execute(operation, arguments):
         asset_id = args.pop(argument_name, None)
         if not asset_id:
             continue
-        upload = consume_upload(
-            asset_id,
-            allowed_content_types=set(config.get('content_types') or []),
-        )
-        with upload.file.open('rb') as source:
-            files[config['field']] = SimpleUploadedFile(
-                upload.filename,
-                source.read(),
-                content_type=upload.content_type,
+        asset_ids = asset_id if config.get('many') else [asset_id]
+        if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(item, str) for item in asset_ids):
+            raise ToolError(f'{argument_name} debe contener identificadores de archivo.')
+        if len(set(asset_ids)) != len(asset_ids):
+            raise ToolError('No repitas archivos adjuntos.')
+        attachments = []
+        for selected_asset_id in asset_ids:
+            upload = consume_upload(
+                selected_asset_id,
+                allowed_content_types=set(config.get('content_types') or []),
             )
-        uploads.append(upload)
+            with upload.file.open('rb') as source:
+                attachments.append(SimpleUploadedFile(
+                    upload.filename, source.read(), content_type=upload.content_type,
+                ))
+            uploads.append(upload)
+        files[config['field']] = attachments if config.get('many') else attachments[0]
     if operation['method'] == 'GET':
         query.update(args)
     else:
@@ -177,10 +179,10 @@ def _execute(operation, arguments):
         if isinstance(response, HttpResponseBase) and response.status_code < 400:
             return _artifact_payload(response, operation)
         raise ToolError('La operación devolvió una respuesta no compatible.')
-    payload = _json_safe(response.data)
     if response.status_code >= 400:
-        message, code, details = _error_message(payload, response.status_code)
-        raise ToolError(message, code=code.upper(), details=details)
+        message, code, details = _error_message(response.data, response.status_code)
+        raise ToolError(message, code=code, details=details)
+    payload = _json_safe(response.data)
     for upload in uploads:
         upload.status = McpUpload.STATUS_CONSUMED
         upload.consumed_at = upload.consumed_at or timezone.now()
@@ -236,8 +238,12 @@ def panel_operation(
     if payload_schema:
         properties = {**_path_properties(path_params), **payload_schema['properties'],
                       'data': payload_schema, 'if_match': properties['if_match']}
-    for argument_name in operation['asset_fields']:
-        properties[argument_name] = {'type': 'string', 'format': 'uuid'}
+    for argument_name, config in operation['asset_fields'].items():
+        asset_schema = {'type': 'string', 'format': 'uuid'}
+        properties[argument_name] = (
+            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True}
+            if config.get('many') else asset_schema
+        )
     tool = {
         'name': name,
         'description': description,
