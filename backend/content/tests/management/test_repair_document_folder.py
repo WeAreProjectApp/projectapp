@@ -17,7 +17,7 @@ def test_command_preview_writes_reviewable_manifest(django_user_model, tmp_path)
     client = UserProfile.objects.create(user=owner, role=UserProfile.ROLE_CLIENT)
     source = DocumentFolder.objects.create(name='Littigio', creation_source='unknown')
     target = DocumentFolder.objects.create(name='Littigio', managed_client=owner, client_user=owner)
-    kind = DocumentType.objects.create(code='markdown', name='Markdown')
+    kind, _ = DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Markdown'})
     document = Document.objects.create(title='Review me', folder=source, document_type=kind)
     output = tmp_path / 'repair.json'
     stdout = StringIO()

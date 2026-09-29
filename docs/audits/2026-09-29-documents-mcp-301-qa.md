@@ -58,3 +58,12 @@ archivo pasan con las migraciones reales, igual que en CI. El gate del archivo
 adicional pasa: cero errores y tres advertencias de determinismo preexistentes
 en pruebas de notas ajenas al cambio. No se modificó código de producción para
 resolver este fallo.
+
+Los grupos backend 2/6 y 6/6 detectaron cuatro casos nuevos cuya preparación
+recreaba registros sembrados por las migraciones: el conector `documents`
+y el tipo documental `markdown`. Se reprodujeron los errores localmente con
+migraciones reales y se corrigieron ambas preparaciones con `get_or_create`,
+sin modificar sus aserciones. Los cuatro casos afectados pasan. También
+pasaron los otros quince casos del lote de reparación, procedencia y admin
+con migraciones reales. La auditoría independiente aprobó ambos ajustes y el
+gate focal de los dos archivos pasó sin errores ni advertencias.

@@ -37,7 +37,9 @@ def evidence_case(django_user_model):
     source.refresh_from_db()
     kind = DocumentType.objects.create(code='evidence-markdown', name='Evidence Markdown')
     document = Document.objects.create(title='Littigio evidence', folder=source, document_type=kind)
-    connector = McpConnector.objects.create(slug='documents', name='Documents', is_active=True)
+    connector, _ = McpConnector.objects.get_or_create(
+        slug='documents', defaults={'name': 'Documents', 'is_active': True},
+    )
     return source, target, client, document, connector, now
 
 
