@@ -9,7 +9,7 @@ próximos pasos. Condiciones comerciales y demás secciones se conservan; el
 anexo técnico usa el PDF técnico original completo. Descargas, copia Markdown
 y adjuntos preparados comparten el mismo contenido. Las preparaciones del
 formato anterior requieren nueva revisión; los envíos históricos se conservan.
-Validación local: 106 casos backend, 32 unitarias frontend y 15 recorridos E2E
+Validación local: 106 casos backend, 32 unitarias frontend y 22 recorridos E2E
 en verde; comparación textual de PDFs reales y controles de calidad aprobados.
 La entrega conjunta y el CI final se consultan en el PR #451.
 

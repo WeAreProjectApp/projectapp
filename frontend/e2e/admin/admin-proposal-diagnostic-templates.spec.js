@@ -110,9 +110,9 @@ test.describe('Admin Proposal — Documentos tab', () => {
     await page.getByRole('tab', { name: 'Documentos' }).click();
 
     const docsList = page.getByRole('list').first();
-    await expect(docsList.getByText('Contrato de desarrollo')).toBeVisible({ timeout: 10000 });
-    await expect(docsList.getByText('Propuesta comercial')).toBeVisible();
-    await expect(docsList.getByText('Detalle técnico')).toBeVisible();
+    await expect(docsList.getByText('Contrato de desarrollo', { exact: true })).toBeVisible({ timeout: 10000 });
+    await expect(docsList.getByText('Propuesta comercial formal', { exact: true })).toBeVisible();
+    await expect(docsList.getByText('Detalle técnico formal', { exact: true })).toBeVisible();
   });
 
   test('documents tab shows generate contract button when no contract doc exists', {
