@@ -1348,6 +1348,7 @@ durante el envío bloquea nuevos envíos y el cierre.
   3. "Borrador" link points to `GET /api/proposals/:id/contract/draft-pdf/`.
   4. [Branch A — No contract] When no contract is generated, section shows "No generado" and no download links.
 - **Coverage:** ✅ Covered
+- **Descargas:** los PDF finales, borradores y anexos formales se guardan sin abrir ventanas ni abandonar la pantalla. Los errores permiten reintentar; las respuestas HTML/JSON inválidas no se descargan como PDF.
 - **E2E Spec:** `e2e/admin/admin-proposal-contract-download.spec.js`
 
 #### FLOW: `admin-proposal-documents-manage`
@@ -2238,6 +2239,8 @@ No active browser flow is registered for client profile editing at this time.
 ### 16.3 Diagnostic NDA Download
 
 #### FLOW: `admin-diagnostic-confidentiality-download`
+
+Las descargas final y borrador conservan el nombre del servidor y la pantalla actual, sin abrir ventanas. La vista previa sigue dentro del modal.
 
 | Attribute | Value |
 |-----------|-------|
@@ -6227,7 +6230,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-diagnostic-analytics` | admin | P2 | display,failure | 2 |
 | `admin-diagnostic-attach-from-documents` | admin | P2 | display,success | 1 |
 | `admin-diagnostic-bulk-actions` | admin | P2 | success | 1 |
-| `admin-diagnostic-confidentiality-download` | admin | P2 | display | 1 |
+| `admin-diagnostic-confidentiality-download` | admin | P2 | display,success | 1 |
 | `admin-diagnostic-confidentiality-edit` | admin | P2 | success,error | 1 |
 | `admin-diagnostic-confidentiality-generate` | admin | P1 | success,error | 1 |
 | `admin-diagnostic-create` | admin | P1 | success,error | 3 |
@@ -6340,7 +6343,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-client-autocomplete` | admin | P1 | display | 1 |
 | `admin-proposal-client-no-email` | admin | P2 | success | 1 |
 | `admin-proposal-comment` | admin | P3 | success | 1 |
-| `admin-proposal-contract-download` | admin | P2 | display | 1 |
+| `admin-proposal-contract-download` | admin | P2 | display,success,error,failure | 1 |
 | `admin-proposal-contract-edit` | admin | P2 | success | 1 |
 | `admin-proposal-contract-generate` | admin | P1 | success,failure | 1 |
 | `admin-proposal-contract-modality` | admin | P1 | success,error,failure,display | — |
@@ -6359,7 +6362,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-diagnostic-templates` | admin | P2 | display | 1 |
 | `admin-proposal-discount-offer-send` | admin | P2 | success,failure | 1 |
 | `admin-proposal-document-markdown` | admin | P2 | success,error,failure,display | — |
-| `admin-proposal-document-preview` | admin | P3 | display | 1 |
+| `admin-proposal-document-preview` | admin | P3 | display,success | 1 |
 | `admin-proposal-documents-manage` | admin | P2 | success | 1 |
 | `admin-proposal-documents-send` | admin | P1 | — | 0 |
 | `admin-proposal-download-pdf` | admin | P2 | success | — |

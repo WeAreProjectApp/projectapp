@@ -17,15 +17,8 @@
         <BaseActionButton action="view" :label="previewLabel"
           @click="$emit('preview', variant.label, pdfUrl)"
           class="bg-surface-raised text-text-muted hover:bg-surface-raised" />
-        <a :href="pdfUrl" target="_blank"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft text-text-brand rounded-lg text-xs font-medium hover:bg-primary-soft transition-colors">
-          <BaseActionIcon action="download" />
-          Descargar PDF
-        </a>
-        <a :href="draftPdfUrl" target="_blank"
-          class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 rounded-lg text-xs font-medium hover:bg-amber-100 dark:hover:bg-amber-900/30 transition-colors">
-          Borrador
-        </a>
+        <PanelDownloadLink :url="pdfUrl" filename="contrato.pdf" />
+        <PanelDownloadLink :url="draftPdfUrl" filename="borrador.pdf" :label="t('pwa.download.draft')" />
         <BaseButton variant="secondary" size="sm" :disabled="actionsDisabled" disabled-reason="El contrato ya no se puede editar en el estado actual de la propuesta." @click="$emit('edit')">
           Editar parámetros
         </BaseButton>
@@ -38,9 +31,13 @@
 </template>
 
 <script setup>
+import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
+import { useI18n } from '#imports';
 import { computed } from 'vue';
 import ProposalDocumentCopyButton from './ProposalDocumentCopyButton.vue';
 import { formatDateTime } from '~/utils/formatDate';
+
+const { t } = useI18n();
 
 const props = defineProps({
   proposal: { type: Object, required: true },

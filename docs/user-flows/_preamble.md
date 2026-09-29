@@ -1346,6 +1346,7 @@ durante el envío bloquea nuevos envíos y el cierre.
   3. "Borrador" link points to `GET /api/proposals/:id/contract/draft-pdf/`.
   4. [Branch A — No contract] When no contract is generated, section shows "No generado" and no download links.
 - **Coverage:** ✅ Covered
+- **Descargas:** los PDF finales, borradores y anexos formales se guardan sin abrir ventanas ni abandonar la pantalla. Los errores permiten reintentar; las respuestas HTML/JSON inválidas no se descargan como PDF.
 - **E2E Spec:** `e2e/admin/admin-proposal-contract-download.spec.js`
 
 #### FLOW: `admin-proposal-documents-manage`
@@ -2236,6 +2237,8 @@ No active browser flow is registered for client profile editing at this time.
 ### 16.3 Diagnostic NDA Download
 
 #### FLOW: `admin-diagnostic-confidentiality-download`
+
+Las descargas final y borrador conservan el nombre del servidor y la pantalla actual, sin abrir ventanas. La vista previa sigue dentro del modal.
 
 | Attribute | Value |
 |-----------|-------|

@@ -6,9 +6,12 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin downloads contract PDF (final version) or draft PDF from the Documents tab. Download links visible only when contract has been generated.",
+  "description": "Admin downloads final or draft contracts and formal commercial/technical PDFs from Documents, or the PDFs of draft proposals from General, without leaving the editor or opening a popup. Files keep the server filename; validation and network failures show a recoverable notification. Invalid HTML/JSON responses are never saved as PDFs.",
   "expectedSpecs": 1,
   "outcomes": [
-    "display"
+    "display",
+    "success",
+    "error",
+    "failure"
   ]
 }

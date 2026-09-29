@@ -3,7 +3,7 @@
     <div class="flex items-center gap-4 mb-8">
       <BaseActionButton as="NuxtLink" :to="localePath('/panel/portfolio')" action="back" label="Volver al portafolio" />
       <h1 class="text-2xl font-light text-text-default">Editar Proyecto</h1>
-      <a v-if="work?.slug" :href="`/portfolio-works/${work.slug}`" target="_blank" class="text-xs text-text-brand hover:text-text-brand transition-colors ml-auto">
+      <a v-if="work?.slug" :href="`/portfolio-works/${work.slug}`" target="_blank" rel="noopener noreferrer" class="text-xs text-text-brand hover:text-text-brand transition-colors ml-auto">
         <BaseActionIcon action="open-external" /> Ver en público
       </a>
     </div>

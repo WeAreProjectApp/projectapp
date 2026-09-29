@@ -64,11 +64,7 @@
             <BaseActionButton action="view" label="Vista previa de la propuesta comercial"
               @click="openPdfPreview('Propuesta comercial', commercialPdfUrl)"
               class="bg-surface-raised text-text-muted hover:bg-surface-raised" />
-            <a :href="commercialPdfUrl" target="_blank"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft text-text-brand rounded-lg text-xs font-medium hover:bg-primary-soft transition-colors">
-              <BaseActionIcon action="download" />
-              Descargar PDF
-            </a>
+            <PanelDownloadLink :url="commercialPdfUrl" filename="propuesta-comercial.pdf" />
           </div>
         </li>
 
@@ -84,11 +80,7 @@
             <BaseActionButton action="view" label="Vista previa del detalle técnico"
               @click="openPdfPreview('Detalle técnico', technicalPdfUrl)"
               class="bg-surface-raised text-text-muted hover:bg-surface-raised" />
-            <a :href="technicalPdfUrl" target="_blank"
-              class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-primary-soft text-text-brand rounded-lg text-xs font-medium hover:bg-primary-soft transition-colors">
-              <BaseActionIcon action="download" />
-              Descargar PDF
-            </a>
+            <PanelDownloadLink :url="technicalPdfUrl" filename="detalle-tecnico.pdf" />
           </div>
         </li>
       </ul>
@@ -111,9 +103,10 @@
             <span class="px-2 py-0.5 bg-surface-raised text-text-muted/60 rounded text-[10px] font-medium">
               {{ doc.document_type_display }}
             </span>
-            <a :href="doc.file" target="_blank" class="text-xs text-text-brand hover:text-text-brand font-medium truncate">
+            <BaseButton variant="link" size="sm" class="min-w-0 truncate"
+              @click="canPreviewFile(doc.file) || isOfficeFile(doc.file) ? openDocPreview(doc) : downloadAttachment(doc)">
               {{ doc.title }}
-            </a>
+            </BaseButton>
           </div>
           <div class="flex items-center gap-1 flex-wrap">
             <ProposalDocumentCopyButton :endpoint="`proposals/${proposal.id}/documents/${doc.id}/markdown/`"
@@ -202,12 +195,13 @@
 </template>
 
 <script setup>
+import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import ProposalDocumentCopyButton from './ProposalDocumentCopyButton.vue';
 import ProposalContractRow from './ProposalContractRow.vue';
 import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownBody.vue';
 import { get_request } from '~/stores/services/request_http';
-import { downloadBlob, filenameFromDisposition } from '~/utils/downloadFile';
+import { usePanelDownload } from '~/composables/usePanelDownload';
 import ProposalFormalizationModal from './ProposalFormalizationModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import {
@@ -311,6 +305,7 @@ const previewOpen = ref(false);
 const previewMarkdown = ref('');
 const previewWarnings = ref([]);
 const downloadingDocId = ref(null);
+const attachmentDownload = usePanelDownload();
 const previewKind = ref('pdf');
 const previewTitle = ref('Vista previa');
 const previewUrl = ref('');
@@ -422,10 +417,7 @@ async function downloadAttachment(doc) {
   if (downloadingDocId.value !== null) return;
   downloadingDocId.value = doc.id;
   try {
-    const response = await get_request(`proposals/${props.proposal.id}/documents/${doc.id}/download/`, { responseType: 'blob' });
-    downloadBlob(response.data, filenameFromDisposition(response.headers['content-disposition']) || doc.file?.split('/').pop() || doc.title);
-  } catch {
-    notify.error('No se pudo descargar el archivo. Vuelve a intentarlo.');
+    await attachmentDownload.download(`/api/proposals/${props.proposal.id}/documents/${doc.id}/download/`, doc.file?.split('/').pop() || doc.title);
   } finally {
     downloadingDocId.value = null;
   }

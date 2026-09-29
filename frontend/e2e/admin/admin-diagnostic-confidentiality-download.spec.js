@@ -88,13 +88,13 @@ test.describe('Admin Diagnostic — NDA Download Links', () => {
     await page.getByRole('tab', { name: 'Documentos' }).click();
 
     await expect(page.getByText('Acuerdo de confidencialidad').first()).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByRole('link', { name: /Descargar/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /Borrador/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Descargar|Download/i })).toBeVisible();
+    await expect(page.getByRole('link', { name: /Borrador|Draft/i })).toBeVisible();
     await expect(page.getByRole('button', { name: /Editar parámetros/i })).toBeVisible();
 
     // Links point to the correct API endpoints.
-    const downloadHref = await page.getByRole('link', { name: /Descargar/i }).getAttribute('href');
-    const draftHref = await page.getByRole('link', { name: /Borrador/i }).getAttribute('href');
+    const downloadHref = await page.getByRole('link', { name: /Descargar|Download/i }).getAttribute('href');
+    const draftHref = await page.getByRole('link', { name: /Borrador|Draft/i }).getAttribute('href');
     expect(downloadHref).toContain(`/diagnostics/${DIAG_ID}/confidentiality/pdf/`);
     expect(draftHref).toContain(`/diagnostics/${DIAG_ID}/confidentiality/draft-pdf/`);
   });
@@ -111,7 +111,39 @@ test.describe('Admin Diagnostic — NDA Download Links', () => {
     await expect(page.getByRole('button', { name: /Generar acuerdo/i })).toBeVisible();
 
     // Neither download link is present.
-    await expect(page.getByRole('link', { name: /Descargar/i })).not.toBeVisible();
-    await expect(page.getByRole('link', { name: /Borrador/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /Descargar|Download/i })).not.toBeVisible();
+    await expect(page.getByRole('link', { name: /Borrador|Draft/i })).not.toBeVisible();
   });
+});
+
+
+test.describe('Diagnostic downloads stay in the panel', () => {
+  for (const suffix of ['pdf/', 'draft-pdf/']) {
+    test(`downloads NDA ${suffix} on the current screen`, {
+      tag: [...ADMIN_DIAGNOSTIC_CONFIDENTIALITY_DOWNLOAD, '@role:admin', '@outcome:success'],
+    }, async ({ page, context }) => {
+      await setAuthLocalStorage(page, { token: 'e2e-admin-token', userAuth: { id: 9200, role: 'admin', is_staff: true } });
+      await setupMock(page, buildDiagnostic());
+      const bytes = Buffer.from('%PDF-1.4\nConfidencialidad\n%%EOF');
+      await page.route(`**/api/diagnostics/${DIAG_ID}/confidentiality/${suffix}`, route => route.fulfill({
+        status: 200, contentType: 'application/pdf', body: bytes,
+        headers: { 'content-disposition': 'attachment; filename="acuerdo.pdf"' },
+      }));
+      await page.goto(`/es-co/panel/diagnostics/${DIAG_ID}/edit`, { waitUntil: 'domcontentloaded' });
+      await page.getByRole('tab', { name: 'Documentos' }).click();
+      await expect(page).toHaveURL(/\?tab=documents$/);
+      const before = page.url();
+      const downloadPromise = page.waitForEvent('download');
+
+      await page.locator(`a[href="/api/diagnostics/${DIAG_ID}/confidentiality/${suffix}"]`).click();
+      const download = await downloadPromise;
+      const chunks = [];
+      for await (const chunk of await download.createReadStream()) chunks.push(chunk);
+
+      expect(Buffer.concat(chunks)).toEqual(bytes);
+      expect(download.suggestedFilename()).toBe('acuerdo.pdf');
+      expect(context.pages()).toHaveLength(1);
+      expect(page.url()).toBe(before);
+    });
+  }
 });

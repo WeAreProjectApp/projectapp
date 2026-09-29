@@ -144,7 +144,7 @@
             { id: 'comparison', label: 'Comparativa' },
           ]"
         />
-        <BaseButton variant="secondary" size="md" class="shrink-0" @click="downloadCSV">
+        <BaseButton variant="secondary" size="md" class="shrink-0" :loading="csvDownload.loading.value" @click="downloadCSV">
           <BaseActionIcon action="export" />
           Exportar CSV
         </BaseButton>
@@ -460,6 +460,8 @@
 <script setup>
 import { ref, computed, watch, onMounted } from 'vue';
 import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline';
+import { usePanelDownload } from '~/composables/usePanelDownload';
+const csvDownload = usePanelDownload();
 import BaseTabs from '~/components/base/BaseTabs.vue';
 import BaseTooltip from '~/components/base/BaseTooltip.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
@@ -754,7 +756,7 @@ defineExpose({ refresh });
 
 function downloadCSV() {
   const url = `/api/diagnostics/${props.diagnosticId}/analytics/csv/`;
-  window.open(url, '_blank');
+  csvDownload.download(url, 'diagnostics-analytics.csv', 'text/csv');
 }
 
 function formatTime(seconds) {

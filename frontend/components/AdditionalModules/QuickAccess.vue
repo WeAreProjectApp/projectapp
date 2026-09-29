@@ -163,7 +163,7 @@ async function handleDownload() {
             as="a"
             :to="publicPath"
             target="_blank"
-            rel="noopener"
+            rel="noopener noreferrer"
             variant="secondary"
             size="sm"
             data-testid="additional-modules-open-public"

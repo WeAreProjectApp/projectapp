@@ -168,13 +168,13 @@ test.describe('Admin proposal formalization delivery', () => {
 
     const commercialDocument = page.getByRole('listitem').filter({ hasText: 'Propuesta comercial formal' });
     await expect(commercialDocument).toContainText('Secciones originales');
-    await expect(commercialDocument.getByRole('link', { name: 'Descargar PDF' })).toHaveAttribute(
+    await expect(commercialDocument.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute(
       'href',
       `/api/proposals/${PROPOSAL_ID}/formalization/pdf/commercial/`,
     );
     const technicalDocument = page.getByRole('listitem').filter({ hasText: 'Detalle técnico formal' });
     await expect(technicalDocument).toContainText('Detalle técnico original');
-    await expect(technicalDocument.getByRole('link', { name: 'Descargar PDF' })).toHaveAttribute(
+    await expect(technicalDocument.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute(
       'href',
       `/api/proposals/${PROPOSAL_ID}/formalization/pdf/technical/`,
     );
