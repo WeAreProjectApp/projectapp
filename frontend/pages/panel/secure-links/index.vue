@@ -70,7 +70,7 @@
         {{ row.team_only ? `Cliente: ${row.creator_name || 'sin nombre'}` : row.origin_label }}
       </template>
       <template #cell-status="{ row }">
-        <SecureLinkStatusBadge :status="row.status" />
+        <SecureLinkStatusBadge :status="row.lifecycle_status || row.status" :team-only="row.team_only" />
       </template>
       <template #cell-expires_at="{ row }">{{ formatDateTime(row.expires_at) }}</template>
       <template #cell-consumed_at="{ row }">{{ row.consumed_at ? formatDateTime(row.consumed_at) : '—' }}</template>
@@ -165,6 +165,7 @@ const notify = usePanelNotify();
 const clipboard = useClipboardFeedback();
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
 
+const { t } = useI18n();
 const filters = reactive({ tab: 'all', search: '', page: 1 });
 const formModal = reactive({ open: false, link: null, fields: null });
 const detailModal = reactive({ open: false, id: null });
@@ -179,13 +180,11 @@ const columns = [
   { key: 'consumed_at', label: 'Abierto', mobile: 'meta' },
 ];
 
-const TABS = [
-  ['all', 'Todos'], ['active', 'Activos'], ['consumed', 'Usados'],
-  ['expired', 'Vencidos'], ['revoked', 'Revocados'],
-];
+const TABS = ['ready', 'sent', 'opened', 'expired', 'revoked'];
 const tabOptions = computed(() => [
-  ...TABS.map(([value, label]) => ({ value, label: `${label} (${store.counts[value] ?? 0})` })),
-  { value: 'received', label: `Recibidos · ${store.unopenedReceived} sin abrir` },
+  { value: 'all', label: `${t('secureLinks.panel.all')} (${store.lifecycleCounts.all ?? store.counts.all ?? 0})` },
+  ...TABS.map(value => ({ value, label: `${t(`secureLinks.states.${value}`)} (${store.lifecycleCounts[value] ?? 0})` })),
+  { value: 'received', label: `${t('secureLinks.panel.received')} · ${store.unopenedReceived} ${t('secureLinks.panel.unopened')}` },
 ]);
 const totalPages = computed(() => Math.max(1, Math.ceil(store.count / store.pageSize)));
 const publicFeedback = computed(() => clipboard.feedbackFor('secure-links-public'));
@@ -193,7 +192,7 @@ const publicFeedback = computed(() => clipboard.feedbackFor('secure-links-public
 function currentFilters() {
   const tab = filters.tab;
   return {
-    status: ['all', 'received'].includes(tab) ? '' : tab,
+    lifecycle_status: ['all', 'received'].includes(tab) ? '' : tab,
     received: tab === 'received' ? 'true' : '',
     search: filters.search.trim(),
     page: filters.page,
@@ -252,6 +251,8 @@ function actionItems(row) {
   return [
     { action: 'view', label: 'Ver detalle', testid: `secure-link-open-${row.id}`, onClick: () => openDetail(row.id) },
     { action: 'copy', label: 'Copiar enlace', testid: `secure-link-copy-${row.id}`, onClick: () => copyRowUrl(row) },
+    ...(!row.team_only && row.status === 'active' && !row.sent_at
+      ? [{ action: 'complete', label: t('secureLinks.panel.markSent'), testid: `secure-link-mark-sent-${row.id}`, onClick: () => markSent(row) }] : []),
     ...(row.status === 'active'
       ? [{ action: 'deactivate', label: 'Revocar', testid: `secure-link-revoke-${row.id}`, onClick: () => revoke(row) }]
       : [{ action: 'activate', label: 'Reactivar', testid: `secure-link-reactivate-${row.id}`, onClick: () => openDetail(row.id) }]),
@@ -330,6 +331,13 @@ async function revoke(row) {
   const result = await store.revokeLink(row.id);
   if (!result.success) notify.error({ title: result.error.message });
   else load();
+}
+
+async function markSent(row) {
+  if (store.isUpdating) return;
+  const result = await store.markSent(row.id);
+  if (!result.success) notify.error({ title: result.error.message });
+  else { notify.success({ title: t('secureLinks.panel.markedSent') }); load(); }
 }
 
 async function remove(row) {

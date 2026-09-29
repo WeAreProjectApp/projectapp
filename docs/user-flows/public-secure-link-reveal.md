@@ -2,6 +2,7 @@
 
 - **Módulo / rol:** enlaces seguros / destinatario sin sesión.
 - **Ruta:** `/{locale}/secure-link/view#<token>` (el token viaja en el fragmento).
+- **Estado de entrega:** sólo pulsar Ver contenido consume el enlace y lo muestra como Abierto en el panel; cargar la página no altera el estado.
 - **Display:** tipo, remitente, vencimiento y advertencia de un solo uso; cargar la página no gasta el enlace.
 - **Success:** **Ver contenido** revela los campos una vez, con mostrar/ocultar y copiar.
 - **Failure:** enlaces usados, vencidos, revocados o inválidos muestran su estado sin contenido; los creados por clientes piden iniciar sesión del equipo.

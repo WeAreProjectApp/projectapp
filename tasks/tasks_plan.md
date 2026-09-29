@@ -1,3 +1,10 @@
+> **2026-09-29 — Formulario y estados de enlaces seguros:** implementación
+> en `feat/29092026-secure-links-simple-states`: dropdown compartido, plantilla
+> inicial de mensaje, opcionales plegables, marca de envío manual y cinco estados.
+> API anterior compatible; migración `secure_links.0003` y comprobación de cifrado
+> para deploy. Validación local y entrega en curso; la revisión productiva del
+> error 503 requiere completar la verificación de identidad de Tailscale.
+
 > **2026-09-29 — PDFs y anexos de propuestas, PR #451:** descarga administrativa
 > de comercial y técnico aun vencidos; bloqueo público explícito para vencidas.
 > Documentos conserva el contenido original y sólo excluye seis secciones

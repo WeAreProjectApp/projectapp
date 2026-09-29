@@ -2,8 +2,15 @@
   "id": "admin-secure-link-create",
   "name": "Admin Secure Link Create",
   "module": "admin",
-  "roles": ["admin"],
+  "roles": [
+    "admin"
+  ],
   "priority": "P1",
-  "description": "Admin creates a one-time secure link choosing a catalog type, internal title, validity and recipient language; required secret fields are validated server-side and the created URL is shown once with copy actions for the link and a suggested message. Supports Custom with an encrypted name and free text, validates required fields before sending, handles HTML failures without discarding content, retries catalog loading, and clears credentials for a new link. Client and project remain optional in the panel.",
-  "outcomes": ["success", "error", "failure", "display"]
+  "description": "Admin creates a one-time secure link. Confidential message is the default type; required fields (and the credentials username) remain visible while optional fields are in More details, and client, project, language and validity are collapsed under optional Settings. Saving shows the URL and copy actions. Sharing is manual: the flow creates no draft and sends no message automatically. Custom requires a type name and content; validation errors, catalog retry and recoverable server failures preserve retryable input.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
 }

@@ -151,7 +151,7 @@ const panelCapabilities = [
         'Da continuidad a los mensajes enviados desde distintos módulos.', ['/panel/emails'],
         { icon: 'send', stage: 'Comunicación' }),
       feature('panel-secure-links', 'Compartir información sensible',
-        'Genera enlaces de un solo uso con tipos predefinidos o contenido personalizado, sin exigir cliente ni proyecto, con edición de datos o contenido, eliminación confirmada, errores recuperables, cifrado, reactivación y recepción de lo que envían los clientes.',
+        'Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones plegables. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; conserva edición, eliminación confirmada, reactivación e historial.',
         'Evita pegar secretos en correos o WhatsApp sin perder el control de quién los abrió.', ['/panel/secure-links'],
         { icon: 'key', stage: 'Comunicación' }),
     ],
@@ -492,7 +492,7 @@ const publicCapabilities = [
     'Protege credenciales y datos confidenciales fuera del correo y del chat.',
     [
       feature('public-secure-links', 'Enviar y abrir información sensible',
-        'El cliente crea enlaces con tipos predefinidos o nombre y contenido personalizados, corrige campos y reintenta errores; sólo el equipo puede abrirlos. También abre una sola vez los enlaces que recibe de ProjectApp.',
+        'El cliente empieza con Mensaje confidencial o elige otra plantilla desde un dropdown; Personalizado muestra su nombre y Más detalles agrupa campos opcionales. La URL se genera automáticamente y sólo el equipo puede abrirla. También abre una sola vez los enlaces que recibe de ProjectApp.',
         'Da un canal seguro y simple para compartir accesos durante el proyecto.',
         ['/secure-link', '/secure-link/view'],
         { icon: 'key', actors: ['client'], stage: 'Colaboración' }),

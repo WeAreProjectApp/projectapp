@@ -60,6 +60,9 @@ def _summary(link):
         'type_label': type_label(link.secret_type),
         'origin': link.origin,
         'status': link.status,
+        'lifecycle_status': link.lifecycle_status,
+        'sent_at': link.sent_at.isoformat() if link.sent_at else None,
+        'sent_by': link.sent_by_id,
         'language': link.language,
         'client_id': link.client_id,
         'project_id': link.project_id,
@@ -183,7 +186,7 @@ def reveal_secure_link_content(arguments):
 
 def list_secure_links(arguments):
     arguments = arguments or {}
-    _reject_unknown(arguments, {'client_id', 'project_id', 'status', 'page', 'page_size'})
+    _reject_unknown(arguments, {'client_id', 'project_id', 'status', 'lifecycle_status', 'page', 'page_size'})
     query = SecureLink.objects.all()
     if arguments.get('client_id') not in (None, ''):
         query = query.filter(client_id=_int(arguments['client_id'], 'client_id'))
@@ -194,6 +197,11 @@ def list_secure_links(arguments):
         if status not in SecureLink.STATUSES:
             raise ToolError(f'status debe ser uno de: {", ".join(SecureLink.STATUSES)}.')
         query = query.with_status(status)
+    lifecycle_status = arguments.get('lifecycle_status')
+    if lifecycle_status:
+        if lifecycle_status not in SecureLink.LIFECYCLE_STATUSES:
+            raise ToolError(f'lifecycle_status debe ser uno de: {", ".join(SecureLink.LIFECYCLE_STATUSES)}.')
+        query = query.with_lifecycle_status(lifecycle_status)
     page_size = min(_int(arguments.get('page_size') or 20, 'page_size'), 50)
     paginator = Paginator(query, page_size)
     page = paginator.get_page(_int(arguments.get('page') or 1, 'page'))
@@ -219,6 +227,14 @@ def revoke_secure_link(arguments):
     _reject_unknown(arguments, {'link_id'})
     link = services.revoke(_link_or_error(arguments), actor=mcp_actor())
     return _summary(link)
+
+
+def mark_secure_link_sent(arguments):
+    _reject_unknown(arguments, {'link_id'})
+    try:
+        return _summary(services.mark_sent(_link_or_error(arguments), actor=mcp_actor()))
+    except services.SecureLinkError as exc:
+        raise ToolError(exc.message, code=exc.code) from exc
 
 
 
@@ -299,6 +315,7 @@ SECURE_LINK_TOOLS = [
                 'client_id': {'type': 'integer', 'minimum': 1},
                 'project_id': {'type': 'integer', 'minimum': 1},
                 'status': {'type': 'string', 'enum': list(SecureLink.STATUSES)},
+                'lifecycle_status': {'type': 'string', 'enum': list(SecureLink.LIFECYCLE_STATUSES)},
                 'page': {'type': 'integer', 'minimum': 1},
                 'page_size': {'type': 'integer', 'minimum': 1, 'maximum': 50},
             },
@@ -371,6 +388,13 @@ SECURE_LINK_TOOLS = [
         'prepare_arguments': _prepare_link_action,
         'etag_resolver': _link_etags,
         'handler': reveal_secure_link_content,
+    },
+    {
+        'name': 'mark_secure_link_sent',
+        'risk': 'write',
+        'description': 'Registra que el equipo compartió manualmente un enlace disponible. No envía correo ni WhatsApp. Repetir conserva la fecha original; nunca devuelve contenido ni URL.',
+        'input_schema': {'type': 'object', 'properties': _LINK_ID, 'required': ['link_id'], 'additionalProperties': False},
+        'handler': mark_secure_link_sent,
     },
     {
         'name': 'reactivate_secure_link',

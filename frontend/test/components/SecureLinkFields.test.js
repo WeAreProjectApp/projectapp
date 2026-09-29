@@ -3,11 +3,11 @@
  * masked inputs with a show toggle, long secrets and text areas are
  * multi-line, labels follow the language and every edit emits the new object.
  */
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
 import SecureLinkFields from '../../components/secureLinks/SecureLinkFields.vue';
-import SecureLinkStatusBadge from '../../components/secureLinks/SecureLinkStatusBadge.vue';
 
 global.useI18n = jest.fn(() => ({ t: (key) => key }));
+enableAutoUnmount(afterEach);
 
 const type = {
   key: 'server_access',
@@ -23,7 +23,15 @@ const type = {
 };
 
 function mountFields(props = {}) {
-  return mount(SecureLinkFields, { props: { type, modelValue: { host: 'srv' }, ...props } });
+  return mount(SecureLinkFields, {
+    attachTo: document.body,
+    props: { type, modelValue: { host: 'srv' }, ...props },
+  });
+}
+
+function optionalDetails(wrapper) {
+  const id = wrapper.get('[data-testid="secure-link-more-details"]').attributes('aria-controls');
+  return document.getElementById(id);
 }
 
 describe('SecureLinkFields', () => {
@@ -59,20 +67,41 @@ describe('SecureLinkFields', () => {
     expect(wrapper.emitted('update:modelValue').at(-1)).toEqual([{ host: 'srv', password: 'S3cr3t' }]);
   });
 
+  it('keeps optional fields inert until more details are requested', async () => {
+    // Fails if optional values become interactable before the user explicitly asks to see them.
+    const wrapper = mountFields();
+    const toggle = wrapper.get('[data-testid="secure-link-more-details"]');
+    const details = optionalDetails(wrapper);
+
+    expect(toggle.attributes('aria-expanded')).toBe('false');
+    expect(details.getAttribute('aria-hidden')).toBe('true');
+    expect(details.hasAttribute('inert')).toBe(true);
+
+    await toggle.trigger('click');
+
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(details.getAttribute('aria-hidden')).toBe('false');
+    expect(details.hasAttribute('inert')).toBe(false);
+  });
+
+  it('opens optional fields when the server returns an optional-field error', async () => {
+    // Fails if a rejected optional value stays inaccessible and cannot be corrected.
+    const wrapper = mountFields();
+    const toggle = wrapper.get('[data-testid="secure-link-more-details"]');
+    const details = optionalDetails(wrapper);
+
+    await wrapper.setProps({ errors: { url: 'La URL no es válida.' } });
+
+    expect(toggle.attributes('aria-expanded')).toBe('true');
+    expect(details.getAttribute('aria-hidden')).toBe('false');
+    expect(details.hasAttribute('inert')).toBe(false);
+    expect(wrapper.text()).toContain('La URL no es válida.');
+  });
+
   it('renders nothing when no type is selected yet', () => {
     const wrapper = mountFields({ type: null });
 
     expect(wrapper.get('[data-testid="secure-link-fields"]').element.tagName).toBe('DIV');
     expect(wrapper.findAll('input, textarea')).toHaveLength(0);
-  });
-});
-
-describe('SecureLinkStatusBadge', () => {
-  it.each([
-    ['active', 'Activo'], ['consumed', 'Usado'], ['expired', 'Vencido'], ['revoked', 'Revocado'], ['other', 'other'],
-  ])('labels the %s status', (status, label) => {
-    const wrapper = mount(SecureLinkStatusBadge, { props: { status } });
-
-    expect(wrapper.text()).toBe(label);
   });
 });

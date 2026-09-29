@@ -10,7 +10,7 @@ revoca o se reactiva.
 
 | Quién | Dónde | Qué hace |
 |---|---|---|
-| Equipo | `/panel/secure-links` → **Nuevo enlace** | Elige tipo, título interno, campos, vigencia (1/3/7/30 días, 7 por defecto) e idioma; copia la URL o el mensaje sugerido. |
+| Equipo | `/panel/secure-links` → **Nuevo enlace** | Escribe título y contenido; el formulario empieza en Mensaje confidencial. Genera la URL, la copia y después puede marcarla como enviada. |
 | Asistente | MCP `communications` → `create_secure_link` | La skill `client-response` crea el enlace **con contenido** y pone la URL en los borradores. Si el secreto no está en la conversación, se lo pide al operador. |
 | Cliente | `https://projectapp.co/es-co/secure-link` (botón **Enlace para clientes** del panel) | Crea un enlace de hasta 7 días para enviárselo al equipo. **Sólo el equipo** (sesión del panel) puede abrirlo; el equipo recibe un correo sin enlace ni contenido. |
 
@@ -26,17 +26,41 @@ revoca o se reactiva.
 - **Recibidos:** pestaña con lo que envían los clientes y el conteo de enlaces
   sin abrir. El correo de aviso enlaza a `/panel/secure-links?link=<id>`.
 
+## Estados del enlace
+
+| Estado | Cuándo aparece |
+|---|---|
+| Listo para compartir | El enlace ya existe y todavía no se marcó como enviado. |
+| Enviado | El equipo pulsó **Marcar como enviado** después de compartirlo. Es una anotación manual; no envía correo ni confirma entrega. |
+| Abierto | El destinatario pulsó **Ver contenido** y consumió el enlace. Visitar la página o consultar el contenido desde el panel no lo consume. |
+| Vencido | Terminó la vigencia sin consumirse. |
+| Revocado | El equipo desactivó el enlace. |
+
+No hay borradores. Reactivar devuelve el enlace a Listo para compartir y limpia
+la marca de envío actual; los eventos anteriores permanecen en el historial.
+La marca de envío sólo está disponible para enlaces salientes activos. En
+Recibidos, el estado inicial se presenta como **Disponible para abrir**.
+
 ## Formulario y errores
 
-Cliente y proyecto son opcionales. El panel pide título interno y los campos
-obligatorios del tipo elegido; la página pública pide el nombre del remitente,
-contenido y CAPTCHA cuando está habilitado. Idioma y vigencia conservan sus defaults.
+El tipo se elige con el mismo dropdown del formulario de parámetros de contrato
+de servicio. **Personalizado** muestra debajo el campo para darle un nombre.
+Los campos esenciales están visibles; **Más detalles** despliega los opcionales.
+**Configuración** agrupa cliente, proyecto, idioma y vigencia del panel
+(1/3/7/30 días, 7 por defecto). Cliente y proyecto siguen siendo opcionales.
+La página pública conserva nombre del remitente y CAPTCHA cuando está habilitado.
+
+La URL del enlace seguro se genera automáticamente. En la plantilla Credenciales,
+**Dirección del sistema** es una URL opcional del sitio al que pertenece la
+cuenta; **Usuario de la cuenta** y **Contraseña que quieres compartir** son los
+datos confidenciales de esa cuenta, no el destinatario ni una contraseña extra
+para abrir el enlace. Para compartir texto sin contraseña, usa Mensaje confidencial.
 
 **Personalizado** pide `fields.custom_name` (nombre, hasta 200 caracteres) y
 `fields.content` (texto libre, hasta 15 000). Ambos se cifran; las listas, MCP y
 el estado público previo a revelar sólo muestran «Personalizado». El nombre no
 se agrega a un catálogo global. API y MCP mantienen los endpoints y argumentos
-existentes, sin migración de esquema.
+existentes.
 
 Los formularios validan antes de enviar, muestran errores junto al campo y
 conservan el contenido mientras se reintenta. Si el catálogo falla, ofrecen
@@ -67,7 +91,9 @@ con credenciales ficticias guardadas en el navegador afectado.
   y marca `consumed_at` en la misma transacción. Los intentos rechazados quedan
   como `reveal_blocked` con el motivo.
 - **Estado derivado:** revocado → usado → vencido → activo, calculado desde las
-  fechas; no hay tarea programada de expiración.
+  fechas; no hay tarea programada de expiración. El campo `status` conserva
+  `active/consumed/expired/revoked`. `lifecycle_status` añade
+  `ready/sent/opened/expired/revoked`, con `sent_at` y `sent_by` como metadatos.
 - **Sin analítica:** `/secure-link` está en `PRIVATE_SEGMENTS`
   (`plugins/analytics.client.js`), sin navbar ni botón de WhatsApp, fuera del
   prerender y con `noindex` y `referrer=no-referrer`. Silk omite
@@ -87,7 +113,9 @@ con credenciales ficticias guardadas en el navegador afectado.
   `catalog.py` (8 tipos predefinidos y Personalizado; tarjetas de pago excluidas a propósito),
   `services.py` (única capa de escritura para panel, página pública y MCP).
 - API panel (sesión + CSRF, staff): `GET /api/secure-links/`,
-  `POST create/`, `GET|PATCH|DELETE <id>/`, `POST <id>/content|link|reactivate|revoke/`.
+  `POST create/`, `GET|PATCH|DELETE <id>/`, `POST <id>/content|link|reactivate|revoke|mark-sent/`.
+  El listado admite `lifecycle_status` y devuelve `lifecycle_counts` además
+  de los filtros y conteos anteriores.
 - API pública: `GET public/types/`, `POST public/create|status|reveal/`.
 - MCP: ver `docs/MCP_VALIDATION_RUNBOOK.md` → "Comunicaciones: enlaces seguros".
 - Datos de desarrollo: `python manage.py create_fake_secure_links` (bloqueado en
@@ -95,10 +123,15 @@ con credenciales ficticias guardadas en el navegador afectado.
 
 ## Despliegue
 
-El deploy aplica `secure_links.0001_initial` y `content.0259` (sólo la
-descripción del conector Comunicaciones). Las herramientas MCP aparecen en el
+El deploy aplica las migraciones pendientes, incluida `secure_links.0003`
+para fecha/actor de envío y el evento `marked_sent`. Las herramientas MCP aparecen en el
 conector Comunicaciones sin reemitir credenciales, salvo credenciales con
 `allowed_tools` restringido.
+
+`manage.py check --deploy` valida `PROJECT_ACCESS_CIPHER_KEY` mediante
+`projectapp.E002`, sin imprimirla. La clave también protege los accesos y notas
+de proyectos: recuperar la existente si hay datos cifrados. Crear una nueva sólo
+tras comprobar que no hay datos dependientes. No se genera ni se rota desde la app.
 
 ## Fuera de alcance (posibles mejoras)
 

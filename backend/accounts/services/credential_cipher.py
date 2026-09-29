@@ -22,20 +22,33 @@ from decouple import config
 from django.core.exceptions import ImproperlyConfigured
 
 
-@lru_cache(maxsize=1)
-def _get_cipher() -> Fernet:
+def _configured_cipher() -> Fernet:
     key = config('PROJECT_ACCESS_CIPHER_KEY', default='')
     if not key:
         raise ImproperlyConfigured(
-            'PROJECT_ACCESS_CIPHER_KEY is not set. Generate one with '
-            'Fernet.generate_key() and add it to the environment.',
+            'PROJECT_ACCESS_CIPHER_KEY is not set. Restore the existing key '
+            'before creating a new one if encrypted data already exists.',
         )
     try:
         return Fernet(key.encode() if isinstance(key, str) else key)
     except (ValueError, TypeError) as exc:
         raise ImproperlyConfigured(
-            f'PROJECT_ACCESS_CIPHER_KEY is not a valid Fernet key: {exc}',
+            'PROJECT_ACCESS_CIPHER_KEY is not a valid Fernet key.',
         ) from exc
+
+
+@lru_cache(maxsize=1)
+def _get_cipher() -> Fernet:
+    return _configured_cipher()
+
+
+def cipher_configuration_errors():
+    """Validate the current configuration without caching or revealing key material."""
+    try:
+        _configured_cipher()
+    except ImproperlyConfigured as exc:
+        return [str(exc)]
+    return []
 
 
 def encrypt_secret(plain: str) -> str:

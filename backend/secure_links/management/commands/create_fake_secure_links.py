@@ -27,7 +27,7 @@ class Command(BaseCommand):
         if not getattr(settings, 'FAKE_DATA_ALLOWED', False) or getattr(settings, 'IS_PRODUCTION', False):
             raise CommandError('Los datos ficticios no están permitidos en este entorno.')
         now = timezone.now()
-        states = ['active', 'consumed', 'expired', 'revoked']
+        states = ['ready', 'sent', 'opened', 'expired', 'revoked']
         for index, (secret_type, title, fields) in enumerate(SAMPLES * 3):
             origin = [SecureLink.Origin.PANEL, SecureLink.Origin.MCP, SecureLink.Origin.PUBLIC][index % 3]
             link, _url = services.create_link(
@@ -35,7 +35,9 @@ class Command(BaseCommand):
                 validity_days=7, creator_name='Cliente demo' if origin == SecureLink.Origin.PUBLIC else '',
             )
             state = states[index % len(states)]
-            if state == 'consumed':
+            if state == 'sent' and not link.team_only:
+                link = services.mark_sent(link, actor=None)
+            elif state == 'opened':
                 link.consumed_at = now - timedelta(hours=index)
             elif state == 'expired':
                 link.expires_at = now - timedelta(days=1)

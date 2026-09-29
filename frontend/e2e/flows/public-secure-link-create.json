@@ -2,8 +2,15 @@
   "id": "public-secure-link-create",
   "name": "Public Secure Link Create",
   "module": "public",
-  "roles": ["guest"],
+  "roles": [
+    "guest"
+  ],
   "priority": "P1",
-  "description": "Client creates a secure link addressed to the ProjectApp team from the public page (type, fields, name, validity up to 7 days, captcha); receives the one-time URL to copy or email, and sees field errors when required values are missing. Supports Custom with an encrypted name and free text, validates required fields before sending, handles HTML failures without discarding content, retries catalog loading, and clears credentials for a new link.",
-  "outcomes": ["success", "error", "failure", "display"]
+  "description": "A guest creates a team-only one-time secure link from the public page. Confidential message is the default; required and Custom fields are directly available while optional type fields use More details. After valid captcha and submission, the guest receives a URL to copy or manually open in a mail client; the page creates no draft or automatic delivery flow. Field validation, catalog retry and recoverable server failures keep the input available for retry.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
 }

@@ -312,6 +312,8 @@ def reactivate(link, *, actor, validity_days=None, rotate=False, meta=None):
     link.consumed_ip = None
     link.consumed_user_agent = ''
     link.revoked_at = None
+    link.sent_at = None
+    link.sent_by = None
     link.validity_days = days
     link.expires_at = timezone.now() + timedelta(days=days)
     link.activation_count += 1
@@ -320,6 +322,23 @@ def reactivate(link, *, actor, validity_days=None, rotate=False, meta=None):
     if rotate:
         log_event(link, SecureLinkEvent.Kind.ROTATED, actor=actor, meta=meta)
     return link, url or link_url(link)
+
+
+@transaction.atomic
+def mark_sent(link, *, actor, meta=None):
+    """Record the team's manual sharing acknowledgement; never send a message."""
+    link = _locked_link(link)
+    if link.team_only or link.status != 'active':
+        raise SecureLinkError(
+            'Sólo puedes marcar como enviado un enlace disponible creado por el equipo.',
+            code='invalid_send_state', status=409,
+        )
+    if link.sent_at is None:
+        link.sent_at = timezone.now()
+        link.sent_by = actor if getattr(actor, 'pk', None) else None
+        link.save(update_fields=['sent_at', 'sent_by', 'updated_at'])
+        log_event(link, SecureLinkEvent.Kind.MARKED_SENT, actor=actor, meta=meta)
+    return link
 
 
 @transaction.atomic

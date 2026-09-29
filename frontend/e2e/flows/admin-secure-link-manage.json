@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin consults secure link metadata and audit history, explicitly reveals or edits content without consuming the public link, edits metadata independently, confirms or cancels permanent deletion, retries recoverable errors, revokes and reactivates links. Closing the modal discards revealed content.",
+  "description": "Admin views, searches and filters secure links by ready, sent, opened, expired and revoked lifecycle states, including received links and audit history. The admin can manually mark an active team-created link as sent, which records the acknowledgement without sending a message; can reveal content without consuming the public link, copy its URL, edit it, revoke, reactivate or delete it. A recipient explicitly revealing the public link changes the displayed lifecycle to opened; reactivation returns it to ready.",
   "outcomes": [
     "success",
     "error",

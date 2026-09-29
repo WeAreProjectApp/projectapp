@@ -8223,10 +8223,10 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 
 - **Módulo / rol:** enlaces seguros / administrador del panel.
 - **Ruta:** `/panel/secure-links` → **Nuevo enlace**.
-- **Success:** elegir tipo predefinido o Personalizado (nombre y contenido), título, campos, vigencia e idioma, sin exigir cliente ni proyecto, crea el enlace y muestra una única vez la URL con copiar enlace y copiar mensaje sugerido.
+- **Success:** escribir título y mensaje en la plantilla inicial Mensaje confidencial o elegir otro tipo desde el dropdown; Personalizado muestra nombre y contenido. Generar crea la URL automáticamente y ofrece copiar enlace o mensaje. Compartir es manual, sin borradores ni envío automático.
 - **Error:** si falta un campo obligatorio (por ejemplo, la contraseña) el formulario valida antes de enviar y muestra los errores del servidor junto a sus campos y no crea nada.
 - **Failure:** catálogo no disponible bloquea el envío y permite reintentar; errores HTML/servidor se convierten en avisos breves, conservando el contenido para reintentar.
-- **Display:** al cancelar y volver a Nuevo enlace, las credenciales aparecen vacías y la contraseña vuelve a estar oculta.
+- **Display:** campos esenciales visibles; opcionales bajo Más detalles y cliente/proyecto/idioma/vigencia bajo Configuración. Al cancelar y volver a Nuevo enlace, empieza otra vez en Mensaje confidencial sin contenido anterior; las contraseñas se ocultan al elegir Credenciales.
 - **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/create/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`.
 
@@ -8234,11 +8234,11 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 
 - **Módulo / rol:** enlaces seguros / administrador del panel.
 - **Ruta:** `/panel/secure-links`; `?link=<id>` abre el detalle.
-- **Display:** pestañas con conteos, Recibidos y detalle con historial; cancelar una eliminación conserva el registro.
-- **Success:** consultar contenido sin consumir el enlace; editar título/asociaciones sin descifrar, editar contenido explícitamente, confirmar eliminación permanente, revocar o reactivar (opcionalmente con URL nueva).
+- **Display:** pestañas con conteos de Listo para compartir, Enviado, Abierto, Vencido y Revocado, más Recibidos; detalle con historial y fecha de envío. Cancelar una eliminación conserva el registro.
+- **Success:** marcar manualmente como enviado un enlace saliente activo sin enviar correo ni revelar contenido; consultar contenido sin consumir el enlace; editar datos o contenido explícitamente, eliminar con confirmación, revocar o reactivar. Reactivar vuelve a Listo y limpia la marca actual conservando el historial; revelar como destinatario produce Abierto.
 - **Error:** campos inválidos al editar conservan el borrador y muestran el error junto al campo; un registro inexistente muestra error visible.
-- **Failure:** errores de consulta ofrecen reintento; un fallo al guardar/eliminar conserva el borrador o la fila. Respuestas atrasadas no sustituyen el enlace abierto ni reponen secretos tras cerrar.
-- **API:** `GET /api/secure-links/`, `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`.
+- **Failure:** errores de consulta ofrecen reintento; un fallo al guardar/eliminar/marcar enviado conserva los datos o la fila y muestra el error. Respuestas atrasadas no sustituyen el enlace abierto ni reponen secretos tras cerrar.
+- **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
 
 ### FLOW: `admin-service-contract-settings`
@@ -8472,10 +8472,10 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 
 - **Módulo / rol:** enlaces seguros / cliente sin sesión.
 - **Ruta:** `/{locale}/secure-link`, compartida desde el panel con **Enlace para clientes**.
-- **Success:** tipo predefinido o Personalizado (nombre y contenido), campos, nombre del remitente, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o enviar por correo; sólo el equipo puede abrirla y el equipo recibe un aviso sin el enlace ni el contenido.
+- **Success:** empieza en Mensaje confidencial o permite elegir otra plantilla desde el dropdown; Personalizado muestra nombre y contenido. Campos, remitente, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o abrir en el cliente de correo manualmente; sólo el equipo puede abrirla y recibe un aviso sin enlace ni contenido.
 - **Error:** los campos obligatorios faltantes o un captcha fallido se muestran en el formulario sin crear el enlace.
 - **Failure:** catálogo no disponible ofrece reintento con envío bloqueado; HTML del servidor se reemplaza por un aviso y se preservan los campos.
-- **Display:** Crear otro enlace vuelve al formulario con credenciales vacías.
+- **Display:** campos esenciales visibles y opcionales bajo Más detalles. Crear otro enlace vuelve al formulario sin contenido del anterior.
 - **API:** `GET /api/secure-links/public/types/`, `POST /api/secure-links/public/create/`.
 - **Cobertura:** `e2e/public/public-secure-links.spec.js`, `e2e/responsive/public.spec.js`.
 
@@ -8483,6 +8483,7 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 
 - **Módulo / rol:** enlaces seguros / destinatario sin sesión.
 - **Ruta:** `/{locale}/secure-link/view#<token>` (el token viaja en el fragmento).
+- **Estado de entrega:** sólo pulsar Ver contenido consume el enlace y lo muestra como Abierto en el panel; cargar la página no altera el estado.
 - **Display:** tipo, remitente, vencimiento y advertencia de un solo uso; cargar la página no gasta el enlace.
 - **Success:** **Ver contenido** revela los campos una vez, con mostrar/ocultar y copiar.
 - **Failure:** enlaces usados, vencidos, revocados o inválidos muestran su estado sin contenido; los creados por clientes piden iniciar sesión del equipo.
