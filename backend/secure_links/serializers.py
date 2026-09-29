@@ -24,6 +24,7 @@ class SecureLinkSerializer(serializers.ModelSerializer):
     """Panel projection. Never includes the token or the content."""
 
     status = serializers.CharField(read_only=True)
+    lifecycle_status = serializers.CharField(read_only=True)
     type_label = serializers.SerializerMethodField()
     origin_label = serializers.CharField(source='get_origin_display', read_only=True)
     sender = serializers.SerializerMethodField()
@@ -39,6 +40,7 @@ class SecureLinkSerializer(serializers.ModelSerializer):
             'sender', 'team_only', 'status', 'client', 'client_name', 'project', 'project_name',
             'created_by_name', 'creator_name', 'creator_email', 'validity_days', 'expires_at',
             'consumed_at', 'revoked_at', 'activation_count', 'created_at', 'updated_at',
+            'lifecycle_status', 'sent_at', 'sent_by',
         )
 
     def get_type_label(self, obj):
@@ -97,6 +99,7 @@ class ReactivateSerializer(serializers.Serializer):
 
 class FilterSerializer(serializers.Serializer):
     status = serializers.ChoiceField(choices=SecureLink.STATUSES, required=False)
+    lifecycle_status = serializers.ChoiceField(choices=SecureLink.LIFECYCLE_STATUSES, required=False)
     origin = serializers.ChoiceField(choices=SecureLink.Origin.choices, required=False)
     received = serializers.BooleanField(required=False)
     client = serializers.IntegerField(required=False, min_value=1)

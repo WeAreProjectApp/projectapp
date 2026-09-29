@@ -1,7 +1,8 @@
 from content.api_errors import error_response
 from django.contrib.auth import get_user
-from django.db.models import Q
+from django.db.models import Count, Q
 from django.shortcuts import get_object_or_404
+from django.utils import timezone
 from projectapp.recaptcha import CaptchaError, verify_captcha
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
@@ -95,10 +96,18 @@ def link_list(request):
             | Q(client__user__first_name__icontains=term) | Q(client__user__last_name__icontains=term)
             | Q(client__company_name__icontains=term) | Q(project__name__icontains=term)
         )
-    counts = {status: query.with_status(status).count() for status in SecureLink.STATUSES}
-    counts['all'] = query.count()
+    now = timezone.now()
+    totals = query.aggregate(
+        all=Count('pk'),
+        **{f'legacy_{status}': Count('pk', filter=condition) for status, condition in query.status_conditions(now).items()},
+        **{f'lifecycle_{status}': Count('pk', filter=condition) for status, condition in query.lifecycle_conditions(now).items()},
+    )
+    counts = {'all': totals['all'], **{status: totals[f'legacy_{status}'] for status in SecureLink.STATUSES}}
+    lifecycle_counts = {'all': totals['all'], **{status: totals[f'lifecycle_{status}'] for status in SecureLink.LIFECYCLE_STATUSES}}
     if data.get('status'):
         query = query.with_status(data['status'])
+    if data.get('lifecycle_status'):
+        query = query.with_lifecycle_status(data['lifecycle_status'])
     total = query.count()
     page = min(data['page'], max(1, (total + PAGE_SIZE - 1) // PAGE_SIZE))
     rows = query[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
@@ -108,6 +117,7 @@ def link_list(request):
         'page': page,
         'page_size': PAGE_SIZE,
         'counts': counts,
+        'lifecycle_counts': lifecycle_counts,
         'unopened_received': services.unopened_received_count(),
         'public_create_url': services.public_create_url(),
     })
@@ -192,6 +202,15 @@ def link_reactivate(request, pk):
     except services.SecureLinkError as exc:
         return _service_error(exc)
     return private(Response({**SecureLinkSerializer(link).data, 'url': url}))
+
+
+@admin_api(['POST'])
+def link_mark_sent(request, pk):
+    try:
+        link = services.mark_sent(_link(pk), actor=request.user, meta=services.RequestMeta.from_request(request))
+    except services.SecureLinkError as exc:
+        return _service_error(exc)
+    return Response(SecureLinkSerializer(link).data)
 
 
 @admin_api(['POST'])

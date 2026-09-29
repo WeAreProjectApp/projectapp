@@ -15,6 +15,7 @@ export const useSecureLinksStore = defineStore('secure_links', {
     page: 1,
     pageSize: 25,
     counts: {},
+    lifecycleCounts: {},
     unopenedReceived: 0,
     publicCreateUrl: '',
     types: [],
@@ -59,6 +60,7 @@ export const useSecureLinksStore = defineStore('secure_links', {
         this.page = data.page || 1;
         this.pageSize = data.page_size || 25;
         this.counts = data.counts || {};
+        this.lifecycleCounts = data.lifecycle_counts || {};
         this.unopenedReceived = data.unopened_received || 0;
         this.publicCreateUrl = data.public_create_url || '';
         return { success: true, page: this.page };
@@ -94,6 +96,10 @@ export const useSecureLinksStore = defineStore('secure_links', {
 
     async revokeLink(id) {
       return this._write(() => create_request(`secure-links/${id}/revoke/`, {}), 'No se pudo revocar el enlace.');
+    },
+
+    async markSent(id) {
+      return this._write(() => create_request(`secure-links/${id}/mark-sent/`, {}), 'No se pudo marcar el enlace como enviado.');
     },
 
     async deleteLink(id) {

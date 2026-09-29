@@ -10,6 +10,7 @@ urlpatterns = [
     path('<int:pk>/link/', views.link_url),
     path('<int:pk>/reactivate/', views.link_reactivate),
     path('<int:pk>/revoke/', views.link_revoke),
+    path('<int:pk>/mark-sent/', views.link_mark_sent),
     # The token always travels in the POST body, never in a URL path.
     path('public/types/', views.public_types),
     path('public/create/', views.public_create),

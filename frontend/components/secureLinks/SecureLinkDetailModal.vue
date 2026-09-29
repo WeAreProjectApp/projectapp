@@ -8,10 +8,14 @@
             <h3 class="text-lg font-bold text-text-default [overflow-wrap:anywhere]">{{ detail.title }}</h3>
             <p class="text-sm text-text-muted">{{ detail.type_label }} · {{ detail.origin_label }}</p>
           </div>
-          <SecureLinkStatusBadge :status="detail.status" />
+          <SecureLinkStatusBadge :status="detail.lifecycle_status || detail.status" :team-only="detail.team_only" />
         </div>
 
         <dl class="grid grid-cols-1 gap-3 text-sm panel-portrait:grid-cols-2">
+          <div v-if="!detail.team_only">
+            <dt class="text-text-subtle">{{ t('secureLinks.panel.sentAt') }}</dt>
+            <dd class="text-text-default">{{ detail.sent_at ? formatDateTime(detail.sent_at) : t('secureLinks.panel.notSent') }}</dd>
+          </div>
           <div v-if="detail.team_only">
             <dt class="text-text-subtle">Enviado por</dt>
             <dd class="text-text-default [overflow-wrap:anywhere]">
@@ -41,6 +45,10 @@
         </BaseAlert>
 
         <fieldset :disabled="Boolean(busy)" class="flex flex-wrap gap-2">
+          <BaseButton v-if="!detail.team_only && detail.status === 'active' && !detail.sent_at" variant="secondary" size="sm" :loading="busy === 'sent'" :title="t('secureLinks.panel.manualSendHint')" data-testid="secure-link-mark-sent" @click="markSent">
+            <BaseActionIcon action="complete" />
+            {{ t('secureLinks.panel.markSent') }}
+          </BaseButton>
           <BaseButton variant="secondary" size="sm" :loading="busy === 'content'" data-testid="secure-link-view-content" @click="toggleContent">
             <BaseActionIcon :action="content ? 'hide' : 'view'" />
             {{ content ? 'Ocultar contenido' : 'Ver contenido' }}
@@ -131,7 +139,7 @@ const emit = defineEmits(['update:modelValue', 'edit', 'changed']);
 const store = useSecureLinksStore();
 const { t } = useI18n();
 const loading = ref(false);
-const mutating = computed(() => ['revoke', 'reactivate'].includes(busy.value));
+const mutating = computed(() => ['revoke', 'reactivate', 'sent'].includes(busy.value));
 const clipboard = useClipboardFeedback();
 
 const detail = ref(null);
@@ -232,6 +240,13 @@ function editContent() {
 
 function revoke() {
   return runAction('revoke', () => store.revokeLink(props.linkId), async () => {
+    emit('changed');
+    await load();
+  });
+}
+
+function markSent() {
+  return runAction('sent', () => store.markSent(props.linkId), async () => {
     emit('changed');
     await load();
   });

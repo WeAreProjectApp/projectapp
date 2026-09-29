@@ -14,16 +14,33 @@ from django.utils import timezone
 
 
 class SecureLinkQuerySet(models.QuerySet):
-    def with_status(self, status, now=None):
+    @staticmethod
+    def status_conditions(now=None):
         now = now or timezone.now()
-        open_link = Q(revoked_at__isnull=True, consumed_at__isnull=True)
-        filters = {
+        available = Q(revoked_at__isnull=True, consumed_at__isnull=True)
+        return {
             'revoked': Q(revoked_at__isnull=False),
             'consumed': Q(revoked_at__isnull=True, consumed_at__isnull=False),
-            'expired': open_link & Q(expires_at__lte=now),
-            'active': open_link & Q(expires_at__gt=now),
+            'expired': available & Q(expires_at__lte=now),
+            'active': available & Q(expires_at__gt=now),
         }
-        return self.filter(filters[status])
+
+    @classmethod
+    def lifecycle_conditions(cls, now=None):
+        conditions = cls.status_conditions(now)
+        return {
+            'ready': conditions['active'] & Q(sent_at__isnull=True),
+            'sent': conditions['active'] & Q(sent_at__isnull=False),
+            'opened': conditions['consumed'],
+            'expired': conditions['expired'],
+            'revoked': conditions['revoked'],
+        }
+
+    def with_lifecycle_status(self, status, now=None):
+        return self.filter(self.lifecycle_conditions(now)[status])
+
+    def with_status(self, status, now=None):
+        return self.filter(self.status_conditions(now)[status])
 
 
 class SecureLink(models.Model):
@@ -37,6 +54,7 @@ class SecureLink(models.Model):
         EN = 'en', 'English'
 
     STATUSES = ('active', 'consumed', 'expired', 'revoked')
+    LIFECYCLE_STATUSES = ('ready', 'sent', 'opened', 'expired', 'revoked')
 
     token_hash = models.CharField(max_length=64, unique=True)
     token_encrypted = models.TextField()
@@ -66,6 +84,11 @@ class SecureLink(models.Model):
     consumed_ip = models.GenericIPAddressField(null=True, blank=True)
     consumed_user_agent = models.CharField(max_length=300, blank=True)
     revoked_at = models.DateTimeField(null=True, blank=True)
+    sent_at = models.DateTimeField(null=True, blank=True)
+    sent_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='secure_links_marked_sent',
+    )
     activation_count = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -97,6 +120,13 @@ class SecureLink(models.Model):
         return 'active'
 
     @property
+    def lifecycle_status(self):
+        status = self.status
+        if status == 'active':
+            return 'sent' if self.sent_at else 'ready'
+        return 'opened' if status == 'consumed' else status
+
+    @property
     def team_only(self):
         """Links created by clients are addressed to the team only."""
         return self.origin == self.Origin.PUBLIC
@@ -111,6 +141,7 @@ class SecureLinkEvent(models.Model):
         ROTATED = 'rotated', 'Enlace regenerado'
         REVOKED = 'revoked', 'Revocado'
         UPDATED = 'updated', 'Editado'
+        MARKED_SENT = 'marked_sent', 'Marcado como enviado por el equipo'
         PANEL_VIEWED = 'panel_viewed', 'Contenido visto en el panel'
         MCP_VIEWED = 'mcp_viewed', 'Contenido consultado desde MCP'
 

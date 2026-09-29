@@ -28,6 +28,9 @@ global.useI18n = jest.fn(() => ({
 }));
 
 const types = [{
+  key: 'confidential_message', label_es: 'Mensaje confidencial', label_en: 'Confidential message',
+  fields: [{ key: 'message', label_es: 'Mensaje', label_en: 'Message', kind: 'textarea', required: true, max_length: 15000 }],
+}, {
   key: 'credentials', label_es: 'Credenciales', label_en: 'Credentials',
   fields: [{ key: 'password', label_es: 'Contraseña', label_en: 'Password', kind: 'secret', required: true, max_length: 2000 }],
 }, {
@@ -41,6 +44,7 @@ const types = [{
 const stubs = {
   NuxtLink: true,
   BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>' },
+  BaseFloatingListbox: { props: ['open'], template: '<div v-if="open" role="listbox"><slot /></div>' },
   ClientAutocomplete: {
     name: 'ClientAutocomplete',
     props: ['modelValue'],
@@ -50,18 +54,38 @@ const stubs = {
   ProjectSelect: { props: ['modelValue'], template: '<div data-testid="project-stub" />' },
 };
 
-async function mountForm(props = {}, catalog = types) {
+const mounted = [];
+
+async function selectType(wrapper, value) {
+  await wrapper.get('[data-testid="secure-link-type"]').trigger('click');
+  const label = types.find(type => type.key === value).label_es;
+  await wrapper.findAll('[role="option"]').find(option => option.text() === label).trigger('click');
+  await flushPromises();
+}
+
+async function mountForm(props = {}, catalog = types, initialType = 'credentials') {
   setActivePinia(createPinia());
   useSecureLinksStore().types = catalog;
   const wrapper = mount(SecureLinkFormModal, { props: { modelValue: false, ...props }, global: { stubs } });
   await wrapper.setProps({ modelValue: true });
   await flushPromises();
+  mounted.push(wrapper);
+  if (!props.link && catalog.length && initialType !== 'confidential_message') await selectType(wrapper, initialType);
   return wrapper;
 }
 
 describe('SecureLinkFormModal', () => {
   beforeEach(() => {
     get_request.mockReset(); create_request.mockReset(); patch_request.mockReset();
+  });
+  afterEach(() => { mounted.splice(0).forEach(wrapper => wrapper.unmount()); });
+
+  it('starts with a confidential message template', async () => {
+    const wrapper = await mountForm({}, types, 'confidential_message');
+
+    expect(wrapper.get('[data-testid="secure-link-type"]').text()).toContain('Mensaje confidencial');
+    expect(wrapper.get('[data-testid="secure-link-field-message"]').attributes('required')).toBeDefined();
+    expect(wrapper.get('[data-testid="secure-link-configuration"]').attributes('aria-expanded')).toBe('false');
   });
 
   it('asks for a title before calling the server', async () => {
@@ -129,7 +153,7 @@ describe('SecureLinkFormModal', () => {
   it('creates custom content without associations', async () => {
     const wrapper = await mountForm();
     create_request.mockResolvedValueOnce({ data: { id: 10, url: 'https://example.test/#token' } });
-    await wrapper.get('[data-testid="secure-link-type"]').setValue('custom');
+    await selectType(wrapper, 'custom');
     await wrapper.get('[data-testid="secure-link-title"]').setValue('Referencia');
     await wrapper.get('[data-testid="secure-link-field-custom_name"]').setValue('Instrucciones');
     await wrapper.get('[data-testid="secure-link-field-content"]').setValue('  Texto\ncon espacios  ');
@@ -155,7 +179,7 @@ describe('SecureLinkFormModal', () => {
     await flushPromises();
 
     expect(wrapper.get('[data-testid="secure-link-save"]').element.disabled).toBe(false);
-    expect(wrapper.find('[data-testid="secure-link-field-password"]').exists()).toBe(true);
+    expect(wrapper.find('[data-testid="secure-link-field-message"]').exists()).toBe(true);
   });
 
   it('keeps typed content after an HTML server error', async () => {
@@ -193,6 +217,7 @@ describe('SecureLinkFormModal', () => {
     await wrapper.setProps({ modelValue: false });
     await wrapper.setProps({ modelValue: true });
     await flushPromises();
+    await selectType(wrapper, 'credentials');
 
     const password = wrapper.get('[data-testid="secure-link-field-password"]');
     expect(password.element.value).toBe('');
@@ -206,7 +231,7 @@ describe('SecureLinkFormModal', () => {
       initialFields: { password: 'old-secret' },
     });
     patch_request.mockResolvedValueOnce({ data: { id: 7 } });
-    await wrapper.get('[data-testid="secure-link-type"]').setValue('custom');
+    await selectType(wrapper, 'custom');
     await wrapper.get('[data-testid="secure-link-field-custom_name"]').setValue('Notas');
     await wrapper.get('[data-testid="secure-link-field-content"]').setValue('new-content');
 

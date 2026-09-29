@@ -554,7 +554,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'secure_links.SecureLink',
-            read_only='id origin expires_at consumed_at revoked_at activation_count created_at',
+            read_only='id origin expires_at consumed_at revoked_at sent_at sent_by activation_count created_at',
             read_write='secret_type title language client project validity_days',
             excluded=(
                 _excluded(

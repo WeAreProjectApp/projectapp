@@ -135,6 +135,35 @@ def test_revoke_tool_blocks_link(api_client, mcp_token, make_link):
     assert json.loads(text(response))['status'] == 'revoked'
 
 
+def test_mcp_marks_manual_sharing_without_revealing_secrets(api_client, mcp_token, make_link):
+    """La marca de envío conserva la privacidad del enlace disponible."""
+    link, url = make_link()
+
+    response = call_tool(api_client, mcp_token, 'mark_secure_link_sent', {'link_id': link.pk})
+
+    data = json.loads(text(response))
+    assert data['lifecycle_status'] == 'sent'
+    assert data['status'] == 'active'
+    assert data['sent_at'] is not None
+    assert url not in text(response)
+    assert CREDENTIALS['password'] not in text(response)
+
+
+def test_mcp_filters_manually_sent_links(api_client, mcp_token, make_link, staff_user):
+    """El filtro nuevo distingue enviados sin cambiar los estados anteriores."""
+    from secure_links import services
+
+    make_link(title='Not shared')
+    link, _ = make_link(title='Shared')
+    services.mark_sent(link, actor=staff_user)
+
+    response = call_tool(api_client, mcp_token, 'list_secure_links', {'lifecycle_status': 'sent'})
+
+    data = json.loads(text(response))
+    assert [row['id'] for row in data['results']] == [link.pk]
+    assert data['count'] == 1
+
+
 def test_custom_type_is_discoverable(api_client, mcp_token):
     """El asistente descubre los campos de Personalizado desde el catálogo."""
     response = call_tool(api_client, mcp_token, 'list_secure_link_types', {})

@@ -3,24 +3,18 @@
     <form :id="modalFormId" ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
       <fieldset :disabled="store.isUpdating" class="space-y-4 px-6 py-5">
         <h3 class="text-lg font-bold text-text-default">{{ t(link ? 'secureLinks.panel.editTitle' : 'secureLinks.panel.newTitle') }}</h3>
+        <p v-if="!link" class="text-sm text-text-muted">{{ t('secureLinks.panel.formHint') }}</p>
 
         <BaseAlert v-if="typesError" variant="danger" data-testid="secure-link-types-error">
           {{ t('secureLinks.typesError') }}
           <BaseButton type="button" variant="ghost" size="sm" :loading="loadingTypes" data-testid="secure-link-types-retry" @click="loadTypes">{{ t('secureLinks.retry') }}</BaseButton>
         </BaseAlert>
 
-        <BaseFormField v-if="editingContent" v-slot="{ invalid, errorId }" :label="t('secureLinks.type')" for="secure-link-type" required :error="errors.secret_type">
-          <BaseSelect
-            id="secure-link-type"
-            v-model="form.secretType"
-            :disabled="!catalogReady || store.isUpdating"
-            :disabled-reason="t('secureLinks.typesPending')"
-            :options="typeOptions"
-            :error="invalid"
-            :aria-describedby="errorId"
-            data-testid="secure-link-type"
-          />
-        </BaseFormField>
+        <SecureLinkTypeField
+          v-if="editingContent" v-model="form.secretType" v-model:custom-name="form.fields.custom_name"
+          :types="store.types" :language="uiLanguage" :disabled="!catalogReady || store.isUpdating"
+          :disabled-reason="t('secureLinks.typesPending')" :error="errors.secret_type" :custom-error="errors.custom_name"
+        />
 
         <BaseFormField
           v-slot="{ invalid, errorId }"
@@ -48,9 +42,15 @@
           v-model="form.fields"
           :type="selectedType"
           :errors="errors"
+          :exclude-keys="['custom_name']"
           id-prefix="secure-link-panel"
         />
 
+        <BaseButton type="button" variant="ghost" size="sm" :aria-expanded="showConfiguration" :aria-controls="configurationId" data-testid="secure-link-configuration" @click="showConfiguration = !showConfiguration">
+          {{ t('secureLinks.configuration') }}
+        </BaseButton>
+        <BaseCollapse :id="configurationId" :open="showConfiguration">
+        <div class="space-y-4">
         <BaseFormField :label="t('secureLinks.panel.client')" :hint="t('secureLinks.panel.associationHint')" :error="errors.client">
           <ClientAutocomplete
             v-model="form.client"
@@ -88,6 +88,8 @@
             />
           </BaseFormField>
         </template>
+        </div>
+        </BaseCollapse>
 
         <BaseAlert v-if="generalError" variant="danger" tabindex="-1" data-testid="secure-link-general-error">{{ generalError }}</BaseAlert>
       </fieldset>
@@ -113,10 +115,11 @@ import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseModalActions from '~/components/base/BaseModalActions.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
-import BaseSelect from '~/components/base/BaseSelect.vue';
+import BaseCollapse from '~/components/base/BaseCollapse.vue';
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue';
+import SecureLinkTypeField from '~/components/secureLinks/SecureLinkTypeField.vue';
 import { useSecureLinksStore } from '~/stores/secure_links';
 import { useSecureLinkForm } from '~/composables/useSecureLinkForm';
 
@@ -133,17 +136,21 @@ const { t, locale } = useI18n();
 const uiLanguage = computed(() => locale.value.startsWith('en') ? 'en' : 'es');
 const formElement = ref(null);
 const fieldsVersion = ref(0);
+const showConfiguration = ref(false);
+const configurationId = useId();
 const editingContent = computed(() => !props.link || Boolean(props.initialFields));
 
 const form = reactive({
-  secretType: 'credentials', title: '', fields: {}, client: null, clientLabel: '',
+  secretType: 'confidential_message', title: '', fields: {}, client: null, clientLabel: '',
   project: null, language: 'es', validityDays: 7,
 });
 
-const typeOptions = computed(() => store.types.map((type) => ({ value: type.key, label: uiLanguage.value === 'en' ? type.label_en : type.label_es })));
 const selectedType = computed(() => store.typeByKey(form.secretType));
 const validityOptions = computed(() => [1, 3, 7, 30].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
 const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
+watch(errors, value => {
+  if (['client', 'project', 'language', 'validity_days'].some(key => value[key])) showConfiguration.value = true;
+}, { deep: true });
 
 watch(() => props.modelValue, (open) => {
   if (!open) {
@@ -151,11 +158,12 @@ watch(() => props.modelValue, (open) => {
     return;
   }
   fieldsVersion.value += 1;
+  showConfiguration.value = false;
   resetErrors();
   typesError.value = false;
   if (editingContent.value) loadTypes();
   Object.assign(form, {
-    secretType: props.link?.secret_type || 'credentials',
+    secretType: props.link?.secret_type || 'confidential_message',
     title: props.link?.title || '',
     fields: props.initialFields ? { ...props.initialFields } : {},
     client: props.link?.client ?? null,

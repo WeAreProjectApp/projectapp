@@ -43,20 +43,15 @@
           <BaseButton type="button" variant="ghost" size="sm" :loading="loadingTypes" data-testid="secure-link-types-retry" @click="loadTypes">{{ t('secureLinks.retry') }}</BaseButton>
         </BaseAlert>
 
-        <BaseFormField v-slot="{ invalid, errorId }" :label="t('secureLinks.type')" for="secure-link-public-type" required :error="errors.secret_type">
-          <BaseSelect
-            id="secure-link-public-type"
-            v-model="form.secretType"
-            :disabled="!catalogReady || submitting"
-            :disabled-reason="t('secureLinks.typesPending')"
-            :options="typeOptions"
-            :error="invalid"
-            :aria-describedby="errorId"
-            data-testid="secure-link-public-type"
-          />
-        </BaseFormField>
+        <SecureLinkTypeField
+          v-model="form.secretType" v-model:custom-name="form.fields.custom_name"
+          :types="store.types" :language="language" :disabled="!catalogReady || submitting"
+          :disabled-reason="t('secureLinks.typesPending')" :error="errors.secret_type" :custom-error="errors.custom_name"
+          testid="secure-link-public-type"
+        />
 
         <SecureLinkFields
+          :exclude-keys="['custom_name']"
           v-if="catalogReady"
           :disabled="submitting"
           v-model="form.fields"
@@ -120,7 +115,7 @@ import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
-import BaseSelect from '~/components/base/BaseSelect.vue';
+import SecureLinkTypeField from '~/components/secureLinks/SecureLinkTypeField.vue';
 import SecureLinkFields from '~/components/secureLinks/SecureLinkFields.vue';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { useSecureLinksStore } from '~/stores/secure_links';
@@ -139,7 +134,7 @@ const recaptchaSiteKey = config.public.recaptchaSiteKey;
 const recaptchaEnabled = config.public.recaptchaEnabled !== false;
 
 const form = reactive({
-  secretType: 'credentials', fields: {}, creatorName: '', creatorEmail: '', title: '',
+  secretType: 'confidential_message', fields: {}, creatorName: '', creatorEmail: '', title: '',
   validityDays: 7, website: '',
 });
 const formElement = ref(null);
@@ -149,10 +144,6 @@ const recaptchaToken = ref('');
 const captchaResetKey = ref(0);
 const captchaUnavailable = ref(false);
 
-const typeOptions = computed(() => store.types.map((type) => ({
-  value: type.key,
-  label: language.value === 'en' ? type.label_en : type.label_es,
-})));
 const selectedType = computed(() => store.typeByKey(form.secretType));
 const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
 const validityOptions = computed(() => [1, 3, 7].map((days) => ({ value: days, label: t('secureLinks.days', days) })));

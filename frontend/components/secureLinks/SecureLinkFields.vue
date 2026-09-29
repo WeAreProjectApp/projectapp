@@ -1,7 +1,14 @@
 <template>
   <div class="space-y-4" data-testid="secure-link-fields">
+    <p v-if="type?.key === 'credentials'" class="text-sm text-text-muted">{{ t('secureLinks.credentialsHint') }}</p>
+    <template v-for="group in groups" :key="group.key">
+      <BaseButton v-if="group.optional && group.fields.length" type="button" variant="ghost" size="sm" :aria-expanded="showDetails" :aria-controls="detailsId" data-testid="secure-link-more-details" @click="showDetails = !showDetails">
+        {{ t('secureLinks.moreDetails') }}
+      </BaseButton>
+      <BaseCollapse v-if="group.fields.length" :id="group.optional ? detailsId : undefined" :open="!group.optional || showDetails">
+      <div class="space-y-4">
     <BaseFormField
-      v-for="field in fields"
+      v-for="field in group.fields"
       :key="field.key"
       v-slot="{ invalid, errorId }"
       :label="labelFor(field)"
@@ -52,15 +59,20 @@
         />
       </div>
     </BaseFormField>
+      </div>
+      </BaseCollapse>
+    </template>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, watch } from 'vue';
+import { computed, reactive, ref, useId, watch } from 'vue';
 import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseTextarea from '~/components/base/BaseTextarea.vue';
+import BaseButton from '~/components/base/BaseButton.vue';
+import BaseCollapse from '~/components/base/BaseCollapse.vue';
 
 const props = defineProps({
   /** Catalog entry `{ key, label_es, label_en, fields: [...] }`. */
@@ -70,15 +82,27 @@ const props = defineProps({
   errors: { type: Object, default: () => ({}) },
   idPrefix: { type: String, default: 'secure-link' },
   disabled: { type: Boolean, default: false },
+  excludeKeys: { type: Array, default: () => [] },
 });
 const emit = defineEmits(['update:modelValue']);
 const { t } = useI18n();
 const visible = reactive({});
+const showDetails = ref(false);
+const detailsId = useId();
 
-const fields = computed(() => props.type?.fields || []);
+const fields = computed(() => (props.type?.fields || []).filter(field => !props.excludeKeys.includes(field.key)));
+const isPrimary = field => field.required || (props.type?.key === 'credentials' && field.key === 'username');
+const groups = computed(() => [
+  { key: 'primary', optional: false, fields: fields.value.filter(isPrimary) },
+  { key: 'optional', optional: true, fields: fields.value.filter(field => !isPrimary(field)) },
+]);
+watch(() => props.errors, errors => {
+  if (groups.value[1].fields.some(field => errors?.[field.key])) showDetails.value = true;
+}, { deep: true, immediate: true });
 
 watch(() => props.type?.key, () => {
   Object.keys(visible).forEach((key) => delete visible[key]);
+  showDetails.value = false;
 });
 
 function labelFor(field) {

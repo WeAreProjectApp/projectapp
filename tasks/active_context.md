@@ -2257,3 +2257,12 @@ validación llegó a las 21:36 UTC. Detalle y estado operativo en
 Reparación aplicada y verificada el 28-09 a las 23:56 UTC: cinco documentos en 80,
 124 vacía/archivada y atribuida al MCP; revisiones 126–130, recibo 797. Contenido y
 asociaciones conservados contra respaldo privado; reintento sin escrituras.
+# Enlaces seguros: formulario simple y estados de envío (2026-09-29)
+
+En implementación en `feat/29092026-secure-links-simple-states`: plantillas por
+tipo con dropdown compartido, opcionales plegados, cinco estados sin borradores
+y marca manual de envío. `status` conserva compatibilidad; `lifecycle_status`
+distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
+`secure_links_unavailable`; la revisión de la clave efectiva de producción
+está pendiente de autenticación adicional de Tailscale. No rotar una clave
+sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
