@@ -22,6 +22,7 @@ def _preparation(request, proposal_id, preparation_id):
     return get_object_or_404(
         ProposalFormalization.objects.select_related('proposal__client').prefetch_related('files'),
         pk=preparation_id, proposal_id=proposal_id, created_by=request.user,
+        mcp_credential__isnull=True,
     )
 
 
