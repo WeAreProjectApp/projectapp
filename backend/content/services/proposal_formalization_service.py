@@ -46,7 +46,7 @@ SOURCE_FIELDS = (
 )
 # Fingerprint version 4 covers the closing modality and service discounts.
 SOURCE_VERSION = 4
-DOCUMENT_VERSION = 5
+DOCUMENT_VERSION = 6
 # A switch of modality leaves a prepared package pointing at documents that
 # are no longer the deal's contracts; that is a stale preparation.
 STALE_CONTRACT_CODES = ('contract_missing', 'modality_mismatch', 'contract_stale')

@@ -15,7 +15,6 @@ from content.models import (
     ProposalSection,
 )
 from content.services.formalization_content import FormalizationError
-from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
 from content.services.proposal_email_service import ProposalEmailService
 from content.services.proposal_formalization_service import (
     document_bytes,
@@ -23,10 +22,13 @@ from content.services.proposal_formalization_service import (
     send_preparation,
     source_hash,
 )
+from content.services.proposal_pdf_service import (
+    ProposalPdfService,
+    default_selected_modules_from_content,
+)
 from content.tests.services import (
     test_proposal_formalization_service as service_fixtures,
 )
-
 from content.tests.services.test_formalization_pdf import original_technical_text
 
 pytestmark = pytest.mark.django_db
@@ -112,7 +114,7 @@ def test_send_rejects_a_preparation_after_its_section_title_changes(
     assert len(mailoutbox) == 0
 
 
-@pytest.mark.parametrize('document_version', [1, 2, 3])
+@pytest.mark.parametrize('document_version', [1, 2, 3, 4, 5])
 @freeze_time('2026-09-24 12:00:00')
 def test_send_legacy_annex_requires_review_of_the_new_content(
     mailoutbox, formalization_proposal, admin_user, formalization_payload, document_version,

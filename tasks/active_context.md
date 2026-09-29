@@ -1,3 +1,12 @@
+# Anexo comercial sin justificación de inversión (2026-09-29)
+
+El PDF comercial de Documentos omite la subsección «¿Por qué esta inversión?»
+en ambas modalidades e idiomas. Conserva importes y formas de pago; la propuesta
+pública y los datos guardados mantienen el contenido original. Vista previa,
+copia Markdown y nuevos adjuntos comparten la exclusión. Versión documental 6:
+las preparaciones anteriores requieren otra revisión, sin sustituir sus archivos.
+El cambio continúa en PR #457; la validación se registra allí.
+
 # Condiciones del servicio en contratos separados (2026-09-29)
 
 En modalidad producto + servicio, el anexo comercial conserva la inversión y

@@ -24,6 +24,9 @@ interno de la migración. La formalización usa el mismo control de vigencia del
 contrato de servicio que el panel y rechaza adjuntos obsoletos; las descargas y
 preparaciones respetan la modalidad de cierre. Validar clasificación de campos,
 consulta de propuesta y errores de generación/preparación antes de publicar.
+El anexo comercial usa la misma exclusión de «¿Por qué esta inversión?» que
+Documentos, conservando importes y pagos. La versión documental 6 exige revisar
+las preparaciones previas sin reemplazar sus adjuntos; no cambia el esquema MCP.
 
 ## Videos y conectores comerciales (2026-09-28)
 

@@ -16,6 +16,7 @@ def generate_formal_pdf(content, kind, issued_at, reference):
             selected_modules=content.selected,
             sections_override=content.commercial(),
             include_hosting=modality(content.proposal) != 'split',
+            include_value_reasons=False,
         )
     else:
         content.technical()

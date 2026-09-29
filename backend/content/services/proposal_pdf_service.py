@@ -1098,7 +1098,7 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
 
     # Value reasons \u2014 grouped in a branded panel with numbered chips
     reasons = _safe(data, 'valueReasons', [])
-    if reasons:
+    if reasons and (ps or {}).get('include_value_reasons', True):
         y -= 8
         reasons_title = ('Why this investment?'
                          if (ps or {}).get('_pdf_lang') == 'en'
@@ -1897,7 +1897,7 @@ class ProposalPdfService:
 
     @classmethod
     def generate(cls, proposal, selected_modules=None, *, sections_override=None,
-                 include_hosting=True, _content_start=3):
+                 include_hosting=True, include_value_reasons=True, _content_start=3):
         """
         Build a multi-page portrait-A4 PDF from the proposal's
         enabled sections and return the raw bytes.
@@ -1911,6 +1911,7 @@ class ProposalPdfService:
             selected_modules: Optional list of contracted module IDs for scope filtering.
             sections_override: Original section snapshots after whole-section exclusions.
             include_hosting: Whether investment includes the hosting block and KPI.
+            include_value_reasons: Whether investment includes its sales rationale panel.
 
         Returns:
             bytes: The PDF content, or None on failure.
@@ -1940,7 +1941,7 @@ class ProposalPdfService:
                 'client': proposal.client_name,
                 'selected_modules': selected_modules,
                 'include_hosting': include_hosting,
-
+                'include_value_reasons': include_value_reasons,
             }
 
             _value_added_ids = set()
@@ -2220,7 +2221,10 @@ class ProposalPdfService:
             if ps_prefix['num'] != content_start:
                 return cls.generate(
                     proposal, selected_modules=selected_modules,
-                    sections_override=sections_override, include_hosting=include_hosting, _content_start=ps_prefix['num'],
+                    sections_override=sections_override,
+                    include_hosting=include_hosting,
+                    include_value_reasons=include_value_reasons,
+                    _content_start=ps_prefix['num'],
                 )
 
             pdf_bytes = cls._merge_with_covers(content_bytes, prepend_bytes=prefix_bytes)

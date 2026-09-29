@@ -39,6 +39,11 @@ según su padre y los grupos visibles. Portadas y presentación no son capítulo
 El índice utiliza esos mismos números y enlaza las páginas reales, incluso
 cuando ocupa varias páginas o no hay presentación.
 
+En el anexo comercial se omite la subsección **¿Por qué esta inversión?**
+(`valueReasons`), tanto en contrato único como separado y en ambos idiomas.
+La inversión y las formas de pago permanecen. La vista pública y su PDF
+conservan esa subsección; no se reescribe la narrativa guardada.
+
 Se preservan los títulos personalizados, párrafos, texto pegado, tablas y reglas
 de selección, precios y pagos del producto. En contrato único se conserva también
 el hosting; en modalidad separada, su bloque completo pasa al contrato de servicio. Condiciones comerciales mantiene sus
@@ -62,7 +67,7 @@ guardados, de acuerdo con la modalidad de cierre elegida.
   interpretación del contenido. Avisa que reconstruye el formato y que las
   imágenes y firmas gráficas no se copian. Se mantienen los límites de extracción
   de 100 páginas, 50 MB de contenido descomprimido y un millón de caracteres.
-- La versión documental 5 exige revisar de nuevo las preparaciones anteriores
+- La versión documental 6 exige revisar de nuevo las preparaciones anteriores
   con anexos o contrato de servicio; no sustituye sus archivos ni altera envíos históricos.
 - Los archivos adjuntos se generan una vez al preparar el correo. La revisión
   y el envío usan esos mismos bytes. Las preparaciones pendientes con anexos
