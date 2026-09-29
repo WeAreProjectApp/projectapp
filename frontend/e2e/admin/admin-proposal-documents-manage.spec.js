@@ -64,7 +64,7 @@ test.describe('Admin Proposal Documents Manage', () => {
   test('additional documents section renders with existing docs', {
     tag: [...ADMIN_PROPOSAL_DOCUMENTS_MANAGE, '@role:admin'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (display — asserts the additional-docs list renders type badge and title link from proposal_documents; upload/delete actions are exercised by the tests below)
+    // quality: allow-no-interaction (display — asserts the additional-docs list renders type badge and title from proposal_documents; upload/delete actions are exercised by the tests below)
     await mockApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
@@ -80,8 +80,8 @@ test.describe('Admin Proposal Documents Manage', () => {
     await expect(page.getByText('Documentos adjuntos').first()).toBeVisible();
     // Document type badge
     await expect(page.getByText('Otrosí').first()).toBeVisible();
-    // Document title link
-    await expect(page.getByRole('link', { name: 'Otrosí No. 1' })).toBeVisible();
+    // Document title
+    await expect(page.getByRole('button', { name: 'Otrosí No. 1', exact: true })).toBeVisible();
   });
 
   test('uploads a document and it appears in the attached list', {
@@ -119,7 +119,7 @@ test.describe('Admin Proposal Documents Manage', () => {
     await uploadResponse;
 
     await expect(page.getByRole('alert')).toContainText('Documento subido.');
-    await expect(additionalSection.getByRole('link', { name: 'Otrosí No. 2' })).toBeVisible();
+    await expect(additionalSection.getByRole('button', { name: 'Otrosí No. 2', exact: true })).toBeVisible();
   });
 
   test('delete button visible on non-generated documents only', {
@@ -168,7 +168,7 @@ test.describe('Admin Proposal Documents Manage', () => {
     await page.waitForLoadState('domcontentloaded');
 
     const additionalSection = page.locator('section').filter({ hasText: 'Documentos adjuntos' });
-    await expect(additionalSection.getByRole('link', { name: 'Otrosí No. 1' })).toBeVisible();
+    await expect(additionalSection.getByRole('button', { name: 'Otrosí No. 1', exact: true })).toBeVisible();
 
     const deleteButton = additionalSection.getByRole('button', { name: 'Eliminar documento' });
     await Promise.all([
@@ -179,7 +179,7 @@ test.describe('Admin Proposal Documents Manage', () => {
     ]);
 
     await expect(page.getByRole('alert')).toContainText('Documento eliminado.');
-    await expect(additionalSection.getByRole('link', { name: 'Otrosí No. 1' })).toHaveCount(0);
+    await expect(additionalSection.getByRole('button', { name: 'Otrosí No. 1', exact: true })).toHaveCount(0);
   });
 
   test('shows empty state when no additional documents', {
