@@ -129,9 +129,10 @@ describe('BaseFloatingListbox', () => {
 
   // Falla si la lista deja de exponer la semántica que usan los lectores de pantalla.
   it('exposes listbox semantics', async () => {
-    const { panel } = await mountList();
+    const { panel } = await mountList({ props: { ariaLabel: 'Duración inicial' } });
 
     expect(panel.getAttribute('role')).toBe('listbox');
+    expect(panel.getAttribute('aria-label')).toBe('Duración inicial');
   });
 
   // Falla si una lista ancha vuelve a salir por el borde horizontal de la pantalla.
@@ -239,6 +240,7 @@ describe('BaseFloatingListbox', () => {
   });
 
   // Falla si un listbox dentro de un modal vuelve a depender del panel que puede recortarlo.
+  // quality: allow-fragile-selector (role=dialog verifies the teleported list remains inside the modal's accessible boundary)
   it('places modal results in the dialog floating layer', async () => {
     mountModalListbox();
     await settleModalListbox();
