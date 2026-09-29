@@ -195,7 +195,7 @@ def _priority_spec(priority, lang):
 
 
 def _title_blocks(c, title, width, priority='', lang='es'):
-    blocks = _cell_text(title, width, font='bold', size=9)
+    blocks = _cell_text(pdf._clean_cell_text(title), width, font='bold', size=9)
     spec = _priority_spec(priority, lang)
     if spec:
         badge_h = _badge_size(c, spec['text'], max_width=width)[2] + CELL_GAP
@@ -332,3 +332,20 @@ def _draw_payment_option(c, y, label, badge, width, ps=None):
     c.roundRect(pdf.MARGIN_L, y - height, width, height, 4, fill=1, stroke=0)
     _paint_cell(c, pdf.MARGIN_L + CELL_GAP, y - CELL_GAP, blocks, width - CELL_GAP * 2)
     return y - height - 8
+
+
+def _draw_contact_value(c, y, value, link=None, ps=None):
+    lines = pdf._wrap_paragraph_lines(value, pdf._font('regular'), 9, pdf.CONTENT_W)
+    for line in lines:
+        if line is None:
+            y -= PARAGRAPH_GAP
+            continue
+        if ps:
+            y = pdf._check_y(c, y, ps, need=20)
+        c.setFont(pdf._font('regular'), 9)
+        c.setFillColor(pdf.ESMERALD_80)
+        end_x = pdf._draw_mixed_string(c, pdf.MARGIN_L, y, line, pdf._font('regular'), 9)
+        if link:
+            c.linkURL(link, (pdf.MARGIN_L, y - 2, end_x, y + 10), relative=0)
+        y -= 13
+    return y - BLOCK_GAP

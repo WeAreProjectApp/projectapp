@@ -122,6 +122,7 @@ from content.services.proposal_pdf_layout import (
     _draw_badge_group, _draw_heading_badge, _draw_requirements_table,
     _draw_linked_row, BADGE_GAP, _paint_badge, _draw_feature_row,
     _draw_badge_panel, _payment_option_height, _draw_payment_option, _heading_badge_height,
+    _draw_contact_value,
 )
 
 logger = logging.getLogger(__name__)
@@ -1871,8 +1872,7 @@ def _render_next_steps(c, data, _proposal, ps=None, y=None):
                 continue
             y = _draw_badge_group(c, y, [{'text': ct_title, 'bg': ESMERALD,
                                           'fg': WHITE}], ps=ps)
-            value = f'[{ct_value}]({ct_link})' if ct_link else ct_value
-            y = _draw_paragraphs(c, y, [value], font_size=9, ps=ps)
+            y = _draw_contact_value(c, y, ct_value, ct_link, ps)
     return y
 
 

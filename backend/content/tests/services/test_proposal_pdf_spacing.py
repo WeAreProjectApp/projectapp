@@ -189,3 +189,12 @@ def test_badge_label_uses_its_measured_font(drawing, page_state, font_size):
 
     assert badge[1] < label[2] < label[4] < badge[3]
     assert badge[2] <= label[3] < label[5] <= badge[4]
+
+
+def test_contact_email_keeps_its_explicit_mailto_target(drawing, page_state):
+    layout._draw_contact_value(drawing, 700, 'team@example.com', 'mailto:team@example.com', page_state)
+    drawing.save()
+    page = PdfReader(drawing.buffer).pages[0]
+
+    assert 'team@example.com' in page.extract_text()
+    assert [a.get_object()['/A']['/URI'] for a in page['/Annots']] == ['mailto:team@example.com']
