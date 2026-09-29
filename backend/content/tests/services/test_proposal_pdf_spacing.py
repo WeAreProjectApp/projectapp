@@ -9,7 +9,9 @@ from reportlab.pdfgen import canvas
 
 from content.services import pdf_utils as pdf
 from content.services import proposal_pdf_layout as layout
-from content.services.proposal_pdf_service import _render_requirement_group_page
+from content.services.proposal_pdf_service import (
+    _render_requirement_group_page, _render_value_added_modules,
+)
 
 
 class RecordingCanvas:
@@ -198,3 +200,17 @@ def test_contact_email_keeps_its_explicit_mailto_target(drawing, page_state):
 
     assert 'team@example.com' in page.extract_text()
     assert [a.get_object()['/A']['/URI'] for a in page['/Annots']] == ['mailto:team@example.com']
+
+
+def test_oversized_included_module_keeps_closing_paragraph(drawing, page_state):
+    page_state['_value_added_catalog'] = {'included': {
+        'title': 'Administración',
+        'description': 'Contenido de administración ' * 1000 + '\n\nCIERRE_DEL_MODULO',
+    }}
+
+    _render_value_added_modules(drawing, {'title': 'Incluido', 'module_ids': ['included']},
+                                None, ps=page_state, y=700)
+
+    closing = next(t for t in drawing.text if t[0] == 'CIERRE_DEL_MODULO')
+    assert closing[1] > 1
+    assert closing[3] >= pdf.MARGIN_B
