@@ -72,6 +72,7 @@ export default {
   emptyTitle: 'No hay módulos disponibles',
   emptyBody: 'El catálogo se está actualizando. Vuelve a intentarlo más tarde.',
   sharedNotice: 'Esta selección fue preparada para esta conversación.',
+  loading: 'Cargando el catálogo de módulos…',
   loadError: 'No pudimos cargar el catálogo.',
   retry: 'Reintentar',
   panelTitle: 'Catálogo de módulos adicionales',

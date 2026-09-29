@@ -275,3 +275,92 @@ class TestRestoreDefaultHourPackages:
         assert float(col.first().hourly_rate) == 30000.0
         # The response returns the fresh list for the store to swap in.
         assert len(response.data) == 4
+
+
+class TestHourPackageProgramRebuild:
+    """The public Partnership Program is prerendered with its monthly package."""
+
+    @pytest.fixture
+    def rebuild_calls(self, monkeypatch):
+        calls = []
+        monkeypatch.setattr(
+            'content.views.hour_packages.schedule_rebuild_after_publish',
+            lambda **kwargs: calls.append(kwargs),
+        )
+        return calls
+
+    @pytest.fixture
+    def program_package(self, db):
+        return HourPackage.objects.get(nationality='COL', hours=60)
+
+    def test_renaming_program_package_requests_rebuild(
+        self, admin_client, program_package, rebuild_calls,
+    ):
+        """Fails if the prerendered program keeps the old monthly package name."""
+        url = reverse('update-hour-package', args=[program_package.id])
+        response = admin_client.patch(url, {'name_es': 'Paquete Pro Plus'}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['name_es'] == 'Paquete Pro Plus'
+        assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+    def test_moving_program_package_off_sixty_hours_requests_rebuild(
+        self, admin_client, program_package, rebuild_calls,
+    ):
+        """Fails if a package leaving the program only triggers on its new values."""
+        url = reverse('update-hour-package', args=[program_package.id])
+        response = admin_client.patch(url, {'hours': 50}, format='json')
+
+        assert response.status_code == 200
+        assert response.data['hours'] == 50
+        assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+    def test_editing_unlisted_package_skips_rebuild(
+        self, admin_client, ext_package, rebuild_calls,
+    ):
+        """Fails if a package the program never shows forces a regeneration."""
+        url = reverse('update-hour-package', args=[ext_package.id])
+        response = admin_client.patch(url, {'hourly_rate': '50.00'}, format='json')
+
+        assert response.status_code == 200
+        assert float(response.data['hourly_rate']) == 50.0
+        assert rebuild_calls == []
+
+    def test_deleting_program_package_requests_rebuild(
+        self, admin_client, program_package, rebuild_calls,
+    ):
+        url = reverse('delete-hour-package', args=[program_package.id])
+        response = admin_client.delete(url)
+
+        assert response.status_code == 204
+        assert not HourPackage.objects.filter(pk=program_package.id).exists()
+        assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+    def test_creating_program_package_requests_rebuild(self, admin_client, rebuild_calls):
+        payload = {
+            'nationality': 'COL', 'name_es': 'Paquete Socio', 'name_en': 'Partner Pack',
+            'hours': 60, 'hourly_rate': '30000', 'order': 0,
+        }
+        response = admin_client.post(reverse('create-hour-package'), payload, format='json')
+
+        assert response.status_code == 201
+        assert response.data['name_es'] == 'Paquete Socio'
+        assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+    def test_restoring_colombian_defaults_requests_rebuild(self, admin_client, rebuild_calls):
+        response = admin_client.post(
+            reverse('restore-default-hour-packages'), {'nationality': 'COL'}, format='json',
+        )
+
+        assert response.status_code == 200
+        assert [row['hours'] for row in response.data] == [1, 20, 60, 180]
+        assert rebuild_calls == [{'reason': 'partnership-program'}]
+
+    def test_restoring_foreign_defaults_skips_rebuild(self, admin_client, rebuild_calls):
+        response = admin_client.post(
+            reverse('restore-default-hour-packages'), {'nationality': 'EXT'}, format='json',
+        )
+
+        assert response.status_code == 200
+        assert len(response.data) == 4
+        assert rebuild_calls == []

@@ -11,6 +11,9 @@ from content.services.financing_policy_service import (
 
 
 WHATSAPP_NUMBER = '573238122373'
+# The public program names the catalog package it includes: the active
+# Colombian package with exactly this many hours.
+INCLUDED_PACKAGE_NATIONALITY = Nationality.COL
 INCLUDED_PACKAGE_HOURS = 60
 
 
@@ -744,9 +747,14 @@ PROGRAM_CONTENT = {
 }
 
 
+def is_included_package(nationality, hours):
+    """True when a catalog package with these values feeds the public program."""
+    return nationality == INCLUDED_PACKAGE_NATIONALITY and hours == INCLUDED_PACKAGE_HOURS
+
+
 def _included_package(language):
     package = HourPackage.objects.filter(
-        nationality=Nationality.COL,
+        nationality=INCLUDED_PACKAGE_NATIONALITY,
         hours=INCLUDED_PACKAGE_HOURS,
         is_active=True,
     ).order_by('order', 'id').first()

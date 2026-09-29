@@ -36,5 +36,5 @@ def update_explainer_video_settings(request):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()
     if any(getattr(settings, field) != value for field, value in before.items()):
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='explainer-video')
     return Response(serializer.data, status=status.HTTP_200_OK)

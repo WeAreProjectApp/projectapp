@@ -17,10 +17,27 @@ from content.serializers.hour_packages import (
     HourPackageCreateUpdateSerializer,
     HourPackageSettingsSerializer,
 )
+from content.services.financing_program_service import (
+    INCLUDED_PACKAGE_NATIONALITY,
+    is_included_package,
+)
+from content.services.frontend_build import schedule_rebuild_after_publish
 from content.services.hour_package_service import (
     apply_base_rates_to_catalog,
     restore_default_packages,
 )
+
+
+def _request_program_rebuild(*packages):
+    """Request a regeneration when a change touches the public program's package.
+
+    The prerendered Partnership Program names its included monthly package
+    (see financing_program_service), so only a package that matched it before
+    or after the change can alter that page. ``packages`` are
+    ``(nationality, hours)`` pairs.
+    """
+    if any(is_included_package(nationality, hours) for nationality, hours in packages):
+        schedule_rebuild_after_publish(reason='partnership-program')
 
 
 # ---------------------------------------------------------------------------
@@ -52,6 +69,7 @@ def create_hour_package(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     package = serializer.save()
+    _request_program_rebuild((package.nationality, package.hours))
     detail = HourPackageAdminDetailSerializer(package)
     return Response(detail.data, status=status.HTTP_201_CREATED)
 
@@ -70,12 +88,14 @@ def retrieve_admin_hour_package(request, package_id):
 def update_hour_package(request, package_id):
     """Update an hour package's fields."""
     package = get_object_or_404(HourPackage, pk=package_id)
+    before = (package.nationality, package.hours)
     serializer = HourPackageCreateUpdateSerializer(
         package, data=request.data, partial=True
     )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()
+    _request_program_rebuild(before, (package.nationality, package.hours))
     detail = HourPackageAdminDetailSerializer(package)
     return Response(detail.data, status=status.HTTP_200_OK)
 
@@ -85,7 +105,9 @@ def update_hour_package(request, package_id):
 def delete_hour_package(request, package_id):
     """Delete an hour package."""
     package = get_object_or_404(HourPackage, pk=package_id)
+    removed = (package.nationality, package.hours)
     package.delete()
+    _request_program_rebuild(removed)
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -143,6 +165,8 @@ def restore_default_hour_packages(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
     restore_default_packages(nationality)
+    if nationality == INCLUDED_PACKAGE_NATIONALITY:
+        schedule_rebuild_after_publish(reason='partnership-program')
     qs = HourPackage.objects.filter(nationality=nationality)
     serializer = HourPackageAdminListSerializer(qs, many=True)
     return Response(serializer.data, status=status.HTTP_200_OK)

@@ -308,7 +308,7 @@ def delete_blog_post(request, post_id):
     was_published = post.is_published
     post.delete()
     if was_published:
-        schedule_rebuild_after_publish()
+        schedule_rebuild_after_publish(reason='blog')
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 

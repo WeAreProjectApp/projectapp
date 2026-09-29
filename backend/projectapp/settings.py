@@ -209,10 +209,17 @@ FRONTEND_BASE_URL = config('FRONTEND_BASE_URL', default='http://localhost:3000')
 # backend (i18n strategy is "prefix", so the segment is always required).
 FRONTEND_DEFAULT_LOCALE = config('FRONTEND_DEFAULT_LOCALE', default='en-us')
 
-# Frontend prerender rebuild (blog SEO). The static build bakes blog posts
-# into HTML, so publishing content triggers a rebuild (content/tasks.py).
+# Frontend prerender regeneration (content/services/frontend_build.py). The
+# static build bakes blog posts, the additional-modules catalog and the
+# Partnership Program into HTML, so publishing content asks for a new build.
 # Disabled by default in dev so local publishes don't spawn npm builds.
 FRONTEND_REBUILD_ENABLED = config('FRONTEND_REBUILD_ENABLED', default=not DEBUG, cast=bool)
+# 'request': write backend/logs/frontend-rebuild-request.json for the ops
+# toolkit, which owns the build (production — settings_prod pins it).
+# 'inline': run `npm run build:django` from Huey (local development only).
+FRONTEND_REBUILD_MODE = config(
+    'FRONTEND_REBUILD_MODE', default='inline' if DEBUG else 'request',
+)
 FRONTEND_BUILD_COMMAND = config('FRONTEND_BUILD_COMMAND', default='npm run build:django')
 # API origin the build fetches slugs/content from. In production gunicorn
 # listens on a unix socket, so the public domain is the reachable origin.
