@@ -1,4 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import { defineComponent, nextTick, ref } from 'vue';
 import SecureLinkTypeField from '../../components/secureLinks/SecureLinkTypeField.vue';
 
 global.useI18n = jest.fn(() => ({ t: (key) => key }));
@@ -16,6 +17,19 @@ function mountField(props = {}) {
     attachTo: document.body,
     props: { modelValue: 'credentials', types, ...props },
   });
+  mounted.push(wrapper);
+  return wrapper;
+}
+
+function mountControlledField() {
+  const Harness = defineComponent({
+    components: { SecureLinkTypeField },
+    setup() {
+      return { selectedType: ref('credentials'), types };
+    },
+    template: '<SecureLinkTypeField v-model="selectedType" :types="types" />',
+  });
+  const wrapper = mount(Harness, { attachTo: document.body });
   mounted.push(wrapper);
   return wrapper;
 }
@@ -50,12 +64,13 @@ describe('SecureLinkTypeField', () => {
 
   it('focuses the custom-name editor after selecting Custom', async () => {
     // Fails if a Custom type can be selected but cannot receive its required name.
-    const wrapper = mountField({ modelValue: 'custom' });
+    const wrapper = mountControlledField();
 
+    expect(wrapper.findAll('[data-testid="secure-link-field-custom_name"]')).toHaveLength(0);
     await wrapper.get('[data-testid="secure-link-type"]').trigger('click');
     await flushPromises();
     await option(wrapper, 'Personalizado').click();
-    await flushPromises();
+    await nextTick();
 
     expect(document.activeElement).toBe(wrapper.get('[data-testid="secure-link-field-custom_name"]').element);
   });

@@ -39,6 +39,7 @@ def test_repeated_mark_preserves_original_acknowledgement(make_link, staff_user)
 
 
 @pytest.mark.parametrize('state', ['expired', 'consumed', 'revoked'])
+@freeze_time('2026-09-29 12:00:00')
 def test_mark_rejects_unavailable_links(make_link, staff_user, state):
     link, _ = make_link()
     field = {'expired': 'expires_at', 'consumed': 'consumed_at', 'revoked': 'revoked_at'}[state]
@@ -121,6 +122,7 @@ def test_mark_endpoint_returns_only_metadata(staff_client, make_link):
 
 
 @pytest.mark.parametrize('state', ['expired', 'consumed', 'revoked'])
+@freeze_time('2026-09-29 12:00:00')
 def test_mark_endpoint_rejects_unavailable_links(staff_client, make_link, state):
     link, url = make_link()
     field = {'expired': 'expires_at', 'consumed': 'consumed_at', 'revoked': 'revoked_at'}[state]

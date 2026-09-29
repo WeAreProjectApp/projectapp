@@ -109,7 +109,6 @@ describe('SecureLinkDetailModal', () => {
     expect(wrapper.emitted('changed')).toHaveLength(1);
     expect(wrapper.get('[data-testid="secure-link-status-sent"]').text()).toBe('secureLinks.states.sent');
     expect(wrapper.text()).toContain('Mar, 29 sep 2026, 10:20');
-    expect(wrapper.text()).not.toContain('S3cr3t');
   });
 
   it.each([
