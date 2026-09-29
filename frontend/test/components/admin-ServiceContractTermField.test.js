@@ -1,8 +1,9 @@
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, flushPromises, mount } from '@vue/test-utils';
 import BaseFormField from '../../components/base/BaseFormField.vue';
 import BaseInput from '../../components/base/BaseInput.vue';
-import BaseSelect from '../../components/base/BaseSelect.vue';
 import ServiceContractTermField from '../../components/BusinessProposal/admin/ServiceContractTermField.vue';
+
+enableAutoUnmount(afterEach);
 
 global.useI18n = () => ({
   t: (key, values = {}) => ({
@@ -22,14 +23,20 @@ function mountField(props = {}) {
       duration: true,
       ...props,
     },
+    attachTo: document.body,
     global: {
+      stubs: { Teleport: true },
       components: {
         BaseFormField,
         BaseInput,
-        BaseSelect,
       },
     },
   });
+}
+
+async function choose(wrapper, label) {
+  await wrapper.get('[role="combobox"]').trigger('click');
+  await wrapper.findAll('[role="option"]').find(option => option.text() === label).trigger('click');
 }
 
 describe('ServiceContractTermField', () => {
@@ -37,7 +44,7 @@ describe('ServiceContractTermField', () => {
     // Falla si elegir una opción frecuente envía la etiqueta contractual en vez del número API.
     const wrapper = mountField();
 
-    await wrapper.get('select').setValue('9');
+    await choose(wrapper, 'nueve (9) meses');
 
     expect(wrapper.emitted('update:modelValue')[0][0]).toBe(9);
   });
@@ -46,7 +53,7 @@ describe('ServiceContractTermField', () => {
     // Falla si el campo descarta la redacción libre o la transforma en un número.
     const wrapper = mountField();
 
-    await wrapper.get('select').setValue('custom');
+    await choose(wrapper, 'Personalizar');
     await wrapper.get('input').setValue('dieciocho meses iniciales');
 
     expect(wrapper.emitted('update:modelValue')[1][0]).toBe('dieciocho meses iniciales');
@@ -57,8 +64,8 @@ describe('ServiceContractTermField', () => {
     const wrapper = mountField();
 
     await wrapper.get('input').setValue('dieciocho meses iniciales');
-    await wrapper.get('select').setValue('9');
-    await wrapper.get('select').setValue('custom');
+    await choose(wrapper, 'nueve (9) meses');
+    await choose(wrapper, 'Personalizar');
 
     expect(wrapper.get('input').element.value).toBe('dieciocho meses iniciales');
     expect(wrapper.emitted('update:modelValue')[2][0]).toBe('dieciocho meses iniciales');
@@ -71,7 +78,7 @@ describe('ServiceContractTermField', () => {
     await wrapper.get('input').setValue('nueve (9) meses');
     await wrapper.setProps({ modelValue: 'nueve (9) meses' });
 
-    expect(wrapper.get('select').element.value).toBe('custom');
+    expect(wrapper.get('[role="combobox"]').text()).toBe('Personalizar');
     expect(wrapper.get('input').element.value).toBe('nueve (9) meses');
   });
 
@@ -81,17 +88,17 @@ describe('ServiceContractTermField', () => {
 
     await wrapper.get('input').setValue('plazo pactado de dos años');
 
-    expect(wrapper.get('select').element.value).toBe('custom');
+    expect(wrapper.get('[role="combobox"]').text()).toBe('Personalizar');
     expect(wrapper.emitted('update:modelValue')[0][0]).toBe('plazo pactado de dos años');
   });
 
   it('prefills custom wording from the currently selected preset', async () => {
     // Falla si Personalizar toma el valor inicial en lugar de la opción vigente.
     const wrapper = mountField({ modelValue: 3 });
-    await wrapper.get('select').setValue('9');
+    await choose(wrapper, 'nueve (9) meses');
     await wrapper.setProps({ modelValue: 9 });
 
-    await wrapper.get('select').setValue('custom');
+    await choose(wrapper, 'Personalizar');
 
     expect(wrapper.get('input').element.value).toBe('nueve (9) meses');
     expect(wrapper.emitted('update:modelValue')[1][0]).toBe('nueve (9) meses');
@@ -100,15 +107,65 @@ describe('ServiceContractTermField', () => {
   it('preserves an intentionally empty custom draft after a preset', async () => {
     // Falla si alternar rellena de nuevo un borrador que el operador borró.
     const wrapper = mountField({ modelValue: 3 });
-    await wrapper.get('select').setValue('custom');
+    await choose(wrapper, 'Personalizar');
     await wrapper.get('input').setValue('');
     await wrapper.setProps({ modelValue: '' });
-    await wrapper.get('select').setValue('9');
+    await choose(wrapper, 'nueve (9) meses');
     await wrapper.setProps({ modelValue: 9 });
 
-    await wrapper.get('select').setValue('custom');
+    await choose(wrapper, 'Personalizar');
 
     expect(wrapper.get('input').element.value).toBe('');
     expect(wrapper.emitted('update:modelValue')[3][0]).toBe('');
   });
+
+  it('chooses a preset using the keyboard', async () => {
+    const wrapper = mountField({ modelValue: 3 });
+    const trigger = wrapper.get('[role="combobox"]');
+
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'ArrowDown' });
+    await trigger.trigger('keydown', { key: 'Enter' });
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toBe(6);
+  });
+
+  it('focuses the custom editor after choosing Personalizar', async () => {
+    const wrapper = mountField({ modelValue: 3 });
+
+    await choose(wrapper, 'Personalizar');
+
+    expect(document.activeElement).toBe(wrapper.get('input').element);
+  });
+
+  it('closes an open list when saving starts', async () => {
+    const wrapper = mountField({ modelValue: 3 });
+    await wrapper.get('[role="combobox"]').trigger('click');
+
+    await wrapper.setProps({ disabled: true });
+
+    expect(wrapper.find('[role="listbox"]').exists()).toBe(false);
+    expect(wrapper.get('[role="combobox"]').element.disabled).toBe(true);
+  });
+
+  it('keeps the chosen value when Tab dismisses the options', async () => {
+    const wrapper = mountField({ modelValue: 3 });
+    const trigger = wrapper.get('[role="combobox"]');
+    await trigger.trigger('keydown', { key: 'End' });
+
+    await trigger.trigger('keydown', { key: 'Tab' });
+
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
+    expect(trigger.text()).toBe('tres (3) meses');
+  });
+
+  it('connects a server error to the dropdown', async () => {
+    const wrapper = mountField({ modelValue: 3 });
+
+    await wrapper.setProps({ error: 'Revisa la duración acordada.' });
+    await flushPromises();
+
+    expect(wrapper.get('[role="combobox"]').attributes('aria-describedby')).toBe(wrapper.get('[role="alert"]').attributes('id'));
+  });
+
 });

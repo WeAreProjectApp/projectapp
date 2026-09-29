@@ -1,3 +1,17 @@
+## 2026-09-28 — formularios compactos de contratos
+
+Creación y edición de contrato único/producto/servicio usan el modal de 42 rem,
+filas de dos campos y una columna bajo 640 px. Ciudad comparte fila con fecha;
+los preavisos se alinean y los auxiliares quedan debajo de su selector. Los
+selects del servicio pasan a listas flotantes sin buscador con teclado, foco y
+bloqueo explícito al guardar. Se conservan catálogos, defaults y textos libres
+sin cambios de API o backend. La vista previa Markdown mantiene su ancho.
+Verificación: 75 pruebas unitarias y 39 E2E aprobadas, incluidas creación,
+reapertura y geometría en los cinco viewports del panel. En la referencia de
+1440 × 900, el ancho baja de 1024 a 672 px y el contenido del servicio de 1079
+a 985 px. Registro de flujos y mapa de vistas actualizados; ambos flujos afectados
+cubren éxito, errores, fallos y visualización.
+
 # Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
 
 Las dos cuadrículas del video de módulos adicionales igualan sus cuatro

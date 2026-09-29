@@ -177,7 +177,7 @@ test.describe('Admin service-contract settings', () => {
     });
 
     const dialog = await openServiceModalAfterSettings(page);
-    await expect(dialog.getByLabel('Duración inicial')).toHaveValue('18');
+    await expect(dialog.getByRole('combobox', { name: 'Duración inicial' })).toHaveText('dieciocho (18) meses');
     await dialog.getByRole('button', { name: 'Generar contrato', exact: true }).click();
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('Generado el');
     expect(scenario.contractPayload.contract_params.service_initial_term).toBe(18);
