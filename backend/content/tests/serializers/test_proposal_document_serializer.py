@@ -8,11 +8,12 @@ pytestmark = pytest.mark.django_db
 
 
 class TestSerializeProposalDocument:
-    def test_returns_correct_keys(self, proposal_document):
+    def test_exposes_document_metadata_with_freshness(self, proposal_document):
         result = serialize_proposal_document(proposal_document)
         expected_keys = {
             'id', 'document_type', 'document_type_display',
             'custom_type_label', 'title', 'file', 'is_generated', 'created_at',
+            'updated_at', 'needs_regeneration',
         }
         assert set(result.keys()) == expected_keys
 
