@@ -33,6 +33,7 @@ from content.services.hour_package_service import (
     seed_commercial_conditions_from_catalog,
 )
 from content.services.proposal_service import normalize_hosting_plan
+from content.services.proposal_pdf_sections import ordered_commercial_sections
 from content.services.proposal_totals_service import safe_decimal
 from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _register_fonts,
@@ -2459,7 +2460,8 @@ class ProposalPdfService:
     """
 
     @classmethod
-    def generate(cls, proposal, selected_modules=None, *, formal=None, sections_override=None):
+    def generate(cls, proposal, selected_modules=None, *, formal=None, sections_override=None,
+                 _content_start=3):
         """
         Build a multi-page portrait-A4 PDF from the proposal's
         enabled sections and return the raw bytes.
@@ -2499,7 +2501,7 @@ class ProposalPdfService:
             )
 
             ps = {
-                'num': formal.content_start if formal else 3,
+                'num': formal.content_start if formal else _content_start,
                 'client': proposal.client_name,
                 'selected_modules': None if formal else selected_modules,
                 'formal': formal,
@@ -2623,7 +2625,7 @@ class ProposalPdfService:
             first_content = True
             toc_entries = []
 
-            for sec in sections:
+            for sec in ordered_commercial_sections(sections):
                 stype = sec.section_type
                 if stype in ('technical_document', 'greeting'):
                     continue
@@ -2667,9 +2669,6 @@ class ProposalPdfService:
 
                 if 'title' not in data or not data['title']:
                     data['title'] = sec.title
-                if not data.get('index'):
-                    data['index'] = str(sec.order + 1).zfill(2)
-
                 is_paste = (
                     data.get('_editMode') == 'paste'
                     and data.get('rawText')
@@ -2686,6 +2685,15 @@ class ProposalPdfService:
                 if (stype == 'roi_projection' and not is_paste
                         and not _roi_has_content(data)):
                     continue
+
+                # The value-added renderer also skips unresolved module IDs.
+                # Apply that visibility guard before numbering or adding a TOC row.
+                if (stype == 'value_added_modules' and not is_paste and not formal
+                        and not any(mid in _value_added_catalog
+                                    for mid in (data.get('module_ids') or []))):
+                    continue
+
+                data['index'] = str(len(toc_entries) + 1).zfill(2)
 
                 if first_content:
                     first_content = False
@@ -2713,7 +2721,8 @@ class ProposalPdfService:
                         # Filter out hidden groups and calculator-module groups not selected
                         func_groups = [g for g in func_groups if _safe(g, 'is_visible', True) is not False]
                         func_groups = _filter_calculator_groups(func_groups, sel_ids)
-                        for gi, grp in enumerate(func_groups):
+                        visible_group_count = 0
+                        for grp in func_groups:
                             grp_paste = (
                                 _safe(grp, '_editMode') == 'paste'
                                 and _safe(grp, 'rawText')
@@ -2740,9 +2749,10 @@ class ProposalPdfService:
                                 grp = dict(grp, items=items)
                             if not items and not grp_paste:
                                 continue
+                            visible_group_count += 1
                             sub_idx = (
-                                f'{parent_idx}.{gi + 1}'
-                                if parent_idx else str(gi + 1)
+                                f'{parent_idx}.{visible_group_count}'
+                                if parent_idx else str(visible_group_count)
                             )
                             y -= 28
                             y = _check_y(
@@ -2815,8 +2825,13 @@ class ProposalPdfService:
             c_prefix.save()
             prefix_bytes = buf_prefix.getvalue()
             buf_prefix.close()
-            if formal and ps_prefix['num'] != formal.content_start:
-                return cls.generate(proposal, formal=formal.with_content_start(ps_prefix['num']))
+            content_start = formal.content_start if formal else _content_start
+            if ps_prefix['num'] != content_start:
+                return cls.generate(
+                    proposal, selected_modules=selected_modules,
+                    formal=formal.with_content_start(ps_prefix['num']) if formal else None,
+                    sections_override=sections_override, _content_start=ps_prefix['num'],
+                )
 
             pdf_bytes = cls._merge_with_covers(content_bytes, prepend_bytes=prefix_bytes)
 

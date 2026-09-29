@@ -1,6 +1,7 @@
 """Formal annexes use the original PDF renderers without rewriting their inputs."""
 from content.services.formalization_content import FormalizationError, formal_document_title
 from content.services.proposal_pdf_service import ProposalPdfService
+from content.services.proposal_pdf_sections import FORMAL_TECHNICAL_SECTIONS
 from content.services.technical_document_pdf import generate_technical_document_pdf
 
 
@@ -18,6 +19,7 @@ def generate_formal_pdf(content, kind, issued_at, reference):
         content.technical()
         result = generate_technical_document_pdf(
             content.proposal, selected_modules=content.selected,
+            included_sections=FORMAL_TECHNICAL_SECTIONS,
         )
     if not result:
         raise FormalizationError('No se pudo generar el documento formal. Intenta nuevamente.', 'pdf_generation_failed', 500)

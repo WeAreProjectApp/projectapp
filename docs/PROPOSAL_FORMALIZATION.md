@@ -2,26 +2,47 @@
 
 En **Propuestas → editar → Documentos**, el administrador descarga los anexos
 y prepara un correo para revisión y firma. El cliente recibe el contenido que
-ya revisó en la propuesta. El anexo comercial sólo retira seis secciones
-completas; el detalle técnico conserva todo el contenido de su PDF original.
+ya revisó en la propuesta. Los PDF ordenan y numeran sus capítulos sin cambiar
+la redacción de las secciones conservadas ni el orden editable de la web.
 
 ## Contenido de los anexos
 
-| Elemento del PDF original | Propuesta comercial de Documentos | Detalle técnico de Documentos |
-|---|---|---|
-| Resumen ejecutivo, diagnóstico, estrategia de conversión | Se excluyen las tres secciones completas. | No aplica. |
-| Proyección de retorno, nota final, próximos pasos | Se excluyen las tres secciones completas. | No aplica. |
-| Las demás secciones habilitadas, incluidas las condiciones comerciales | Se conservan con sus títulos, orden y contenido originales. | No aplica. |
-| Detalle técnico | Mantiene la separación del PDF comercial original. | Se conserva completo, con las mismas reglas del PDF técnico original. |
-| Selección de módulos, importes, pagos, hosting y paquetes de horas | Hereda las reglas originales; no tiene un cálculo ni una selección de campos propios. | Hereda el filtro técnico original para la selección de módulos. |
-| Texto pegado y campos estructurados | Se muestran como en el original. | Se muestran como en el original. |
+| Capítulo | PDF comercial público | Propuesta comercial formal |
+|---|---:|---:|
+| Resumen ejecutivo | 01 | 01 |
+| Contexto y diagnóstico | 02 | — |
+| Enfoque propuesto y estrategia de conversión | 03 | 02 |
+| Proyección de retorno y beneficios | 04 | — |
+| Diseño Visual y Experiencia de Usuario | 05 | 03 |
+| Acompañamiento Creativo Personalizado | 06 | 04 |
+| Proceso y Metodología | 07 | 05 |
+| Cronograma del Proyecto | 08 | 06 |
+| Inversión y Formas de Pago | 09 | 07 |
+| Requerimientos Funcionales del Proyecto | 10 | 08 |
+| Incluido sin costo adicional | 11 | 09 |
+| Etapas de contratación y desarrollo | 12 | — |
+| Nota Final y Próximos Pasos | 13 | — |
+| Próximos pasos | 14 | — |
+| Condiciones comerciales | 15 | 10 |
 
-No se reescriben párrafos, eliminan campos dentro de una sección conservada ni
-se agregan notas contractuales o una identidad documental distinta. El índice
-y la paginación se generan a partir de las secciones presentes. Las condiciones
-comerciales conservan sus paquetes y las reglas de catálogo automático o manual
-que ya aplica el PDF original. El detalle técnico conserva, entre otros campos
-que imprime el original, la evolución prevista y las columnas de ambientes.
+El detalle técnico **formal** conserva únicamente **Stack tecnológico**, **Modelo
+de datos** y **Módulos del producto**, en ese orden. El detalle técnico público
+continúa completo. Las tablas, justificaciones, entidades y requerimientos de
+los capítulos conservados usan los mismos renderizadores y filtro de selección
+que el original. Los indicadores iniciales sólo cuentan contenido incluido.
+
+Los números de la tabla suponen todos los capítulos habilitados y con contenido
+imprimible. Las secciones deshabilitadas, el retorno vacío y los módulos
+adicionales sin contenido resoluble no consumen un número ni una entrada del
+índice. Cada PDF comienza en 01, y los subcapítulos de requerimientos se numeran
+según su padre y los grupos visibles. Portadas y presentación no son capítulos.
+El índice utiliza esos mismos números y enlaza las páginas reales, incluso
+cuando ocupa varias páginas o no hay presentación.
+
+Se preservan los títulos personalizados, párrafos, texto pegado, tablas y reglas
+de selección, precios, pagos y hosting. Condiciones comerciales mantiene sus
+paquetes y las reglas vigentes del catálogo automático o manual. No se editan
+los datos guardados ni los identificadores de módulos o requerimientos.
 
 Los contratos único, de producto y de servicio continúan usando sus PDF finales
 guardados, de acuerdo con la modalidad de cierre elegida.
@@ -29,12 +50,15 @@ guardados, de acuerdo con la modalidad de cierre elegida.
 ## Generación y revisión
 
 - `FormalContent` captura las secciones habilitadas sin transformarlas.
-  `formalization_pdf` invoca los generadores originales; sólo el comercial
-  recibe la lista de secciones después de las seis exclusiones.
+  `formalization_pdf` invoca los generadores originales con la selección de
+  capítulos correspondiente. El orden comercial es exclusivo del PDF, y el
+  técnico recibe `included_sections=("stack", "dataModel", "epics")`.
 - **Copiar Markdown** extrae el texto del PDF del anexo, sin una segunda
   interpretación del contenido. Avisa que reconstruye el formato y que las
   imágenes y firmas gráficas no se copian. Se mantienen los límites de extracción
   de 100 páginas, 50 MB de contenido descomprimido y un millón de caracteres.
+- La versión documental 3 exige revisar de nuevo las preparaciones con anexos
+  de las versiones 1 y 2; no sustituye sus archivos ni altera envíos históricos.
 - Los archivos adjuntos se generan una vez al preparar el correo. La revisión
   y el envío usan esos mismos bytes. Las preparaciones pendientes con anexos
   del formato anterior deben prepararse y revisarse nuevamente; nunca se

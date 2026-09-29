@@ -17,6 +17,7 @@ from content.tests.services import test_formalization_pdf as formal_fixtures
 
 formal_proposal = formal_fixtures.formal_proposal
 original_commercial_text = formal_fixtures.original_commercial_text
+original_technical_text = formal_fixtures.original_technical_text
 pytestmark = pytest.mark.django_db
 ISSUED_AT = datetime(2026, 9, 24, 12, tzinfo=timezone.utc)
 
@@ -50,12 +51,12 @@ def test_formal_pdf_reuses_public_booklet_covers(formal_proposal, kind, public_r
     assert 'PROP-LAYOUT' not in pdf_text(render(formal_proposal, kind))
 
 
-def test_commercial_pdf_preserves_saved_section_order(formal_proposal):
+def test_commercial_pdf_orders_investment_before_requirements(formal_proposal):
     section = formal_proposal.sections.get(section_type='investment')
     scope = formal_proposal.sections.get(section_type='functional_requirements')
-    scope.order = 10
+    scope.order = 0
     scope.save(update_fields=['order'])
-    section.order = 0
+    section.order = 10
     section.title = 'INVESTMENT_FIRST'
     section.save(update_fields=['order', 'title'])
 
@@ -66,27 +67,25 @@ def test_commercial_pdf_preserves_saved_section_order(formal_proposal):
     assert '01' in toc
 
 
-def test_technical_annex_preserves_all_original_columns(formal_proposal):
-    """Every column already visible in the original remains in the annex."""
+def test_technical_annex_preserves_retained_chapter_columns(formal_proposal):
     section = formal_proposal.sections.get(section_type='technical_document')
-    section.content_json['environments'] = [{
-        'name': 'Staging', 'purpose': 'Validación', 'whoAccesses': 'Equipo QA',
-        'url': 'INTERNAL_URL', 'database': 'INTERNAL_DATABASE', 'credentials': 'SECRET_FIELD',
+    section.content_json['stack'] = [{
+        'layer': 'Backend', 'technology': 'Django', 'rationale': 'STACK_RATIONALE',
     }]
-    section.content_json['integrations'] = {'excluded': [{
-        'service': 'Servicio excluido', 'reason': 'Fuera de alcance', 'availability': 'FUTURE_AVAILABILITY',
-    }]}
+    section.content_json['dataModel'] = {
+        'summary': 'DATA_SUMMARY', 'relationships': 'DATA_RELATIONSHIPS',
+        'entities': [{'name': 'Order', 'description': 'DATA_DESCRIPTION', 'keyFields': 'DATA_FIELDS'}],
+    }
     section.save(update_fields=['content_json'])
 
     rendered = pdf_text(render(formal_proposal, 'technical'))
 
-    assert 'Equipo QA' in rendered
-    assert 'Fuera de alcance' in rendered
-    assert 'INTERNAL_URL' in rendered
-    assert 'INTERNAL_DATABASE' in rendered
-    assert 'FUTURE_AVAILABILITY' in rendered
-    assert 'SECRET_FIELD' not in rendered  # Not a printable field in the original either.
-    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
+    assert 'STACK_RATIONALE' in rendered
+    assert 'DATA_SUMMARY' in rendered
+    assert 'DATA_RELATIONSHIPS' in rendered
+    assert 'DATA_DESCRIPTION' in rendered
+    assert 'DATA_FIELDS' in rendered
+    assert rendered == original_technical_text(formal_proposal)
 
 
 
@@ -124,7 +123,7 @@ def test_technical_annex_uses_original_language_labels(formal_proposal):
     rendered = pdf_text(render(formal_proposal, 'technical'))
 
     assert 'Crear pedido' in rendered
-    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
+    assert rendered == original_technical_text(formal_proposal)
 
 
 @pytest.mark.parametrize('kind', ['commercial', 'technical'])
@@ -150,7 +149,7 @@ def test_formal_pdf_inherits_original_long_requirement_layout(formal_proposal, k
 
     original = {
         'commercial': lambda: original_commercial_text(formal_proposal),
-        'technical': lambda: pdf_text(generate_technical_document_pdf(formal_proposal)),
+        'technical': lambda: original_technical_text(formal_proposal),
     }[kind]()
 
     rendered = pdf_text(render(formal_proposal, kind))
@@ -219,6 +218,7 @@ def test_formal_pdf_toc_links_follow_original_title_layout(long_index_proposal):
 
     destinations = toc_destinations(reader)
 
-    assert {index for index, _ in destinations} == {2}
+    assert len({index for index, _ in destinations}) > 1
     assert len(destinations) == 7
-    assert all(f'Section{index}' in text for index, (_, text) in enumerate(destinations))
+    expected = (2, 3, 5, 4, 1, 0, 6)
+    assert all(f'Section{index}' in text for index, (_, text) in zip(expected, destinations, strict=True))

@@ -55,6 +55,24 @@ from content.services.pdf_utils import (
 
 logger = logging.getLogger(__name__)
 
+# Each entry owns a whole printed chapter, including all of its fields.
+_SECTION_FIELDS = {
+    'purpose': ('purpose',),
+    'stack': ('stack',),
+    'architecture': ('architecture',),
+    'dataModel': ('dataModel',),
+    'growthReadiness': ('growthReadiness',),
+    'epics': ('epics',),
+    'api': ('apiSummary', 'apiDomains'),
+    'integrations': ('integrations',),
+    'environments': ('environmentsNote', 'environments'),
+    'security': ('security',),
+    'performanceQuality': ('performanceQuality',),
+    'backups': ('backupsNote',),
+    'quality': ('quality',),
+    'decisions': ('decisions',),
+}
+
 
 def _nonempty_str(v):
     return isinstance(v, str) and v.strip()
@@ -66,7 +84,8 @@ def _row_any(row, keys):
     return any(_nonempty_str(row.get(k)) for k in keys)
 
 
-def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=None):
+def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=None,
+                                    included_sections=None, _content_start=3):
     """
     Build a PDF from the enabled technical_document section only.
     Returns bytes or None if section missing/disabled or on error.
@@ -76,6 +95,10 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
     list or admin defaults), so epics of unselected optional modules never
     leak into the rendered document. Empty list filters to base-scope
     requirements only.
+
+    included_sections: optional chapter keys from _SECTION_FIELDS, in the
+    document's normal order. Only whole chapters are omitted; retained values
+    and the module-selection pipeline are unchanged. None keeps all chapters.
     """
     from content.services.proposal_pdf_service import (
         default_selected_modules_from_content,
@@ -103,6 +126,9 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         if selected_modules is None:
             selected_modules = default_selected_modules_from_content(proposal)
         data = get_filtered_technical_document(data, section_payloads, selected_modules)
+    if included_sections is not None:
+        fields = {field for chapter in included_sections for field in _SECTION_FIELDS[chapter]}
+        data = {key: value for key, value in data.items() if key in fields}
     try:
         _register_fonts()
         buf = io.BytesIO()
@@ -117,7 +143,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
 
         # ── Pass A: Content pages (ps.num starts at 3) ───────
         # Page 1 = title page, page 2 = TOC; content begins at page 3.
-        ps = {'num': formal.content_start if formal else 3, 'client': proposal.client_name, 'formal': formal}
+        ps = {'num': formal.content_start if formal else _content_start,
+              'client': proposal.client_name, 'formal': formal}
 
         _draw_header_bar(c)
         y = PAGE_H - MARGIN_T
@@ -701,8 +728,13 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         c2.save()
         prefix_bytes = buf2.getvalue()
         buf2.close()
-        if formal and ps2['num'] != formal.content_start:
-            return generate_technical_document_pdf(proposal, formal=formal.with_content_start(ps2['num']))
+        content_start = formal.content_start if formal else _content_start
+        if ps2['num'] != content_start:
+            return generate_technical_document_pdf(
+                proposal, selected_modules=selected_modules,
+                formal=formal.with_content_start(ps2['num']) if formal else None,
+                included_sections=included_sections, _content_start=ps2['num'],
+            )
 
         final_pdf = merge_with_covers(
             content_bytes,

@@ -1,3 +1,20 @@
+# Orden y numeración de los PDF de propuestas (2026-09-29)
+
+Implementación en `fix/29092026-proposal-pdf-order`: el comercial público usa
+15 capítulos y el formal 10; el detalle técnico formal sólo stack, modelo de
+datos y módulos. Se preserva el contenido, los precios y el orden editable de
+la web. Números e índice se calculan por PDF desde los capítulos visibles;
+subcapítulos sin saltos y enlaces ajustados a índices de varias páginas.
+La versión documental 3 exige revisar las preparaciones anteriores con anexos,
+sin reemplazar sus archivos históricos. Esta selección sustituye la de #451,
+descrita debajo. Pasaron las pruebas focalizadas de composición, conservación
+de contenido, Markdown, preparaciones, MCP y generación existente; el gate de
+calidad no reportó errores ni advertencias. Se revisaron visualmente los
+índices y capítulos de los tres PDF en SQLite aislado. El mapa de vistas y el
+registro de flujos reflejan la selección nueva; los flujos afectados mantienen
+cobertura de sus resultados declarados. Los 20 tests de los catálogos pasan.
+La entrega y el veredicto final de CI se consultan en el PR de esta rama.
+
 # Descargas y contenido original de anexos (2026-09-29)
 
 PR #451: el panel descarga los PDF originales comercial y técnico aun con la

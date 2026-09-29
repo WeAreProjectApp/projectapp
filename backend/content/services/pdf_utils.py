@@ -2466,7 +2466,7 @@ def _draw_toc_page(c, entries, ps, link_areas=None):
         entries: List of (index_str, title, page_num) tuples.
         ps: Page-state dict with 'num' and optional 'client'.
         link_areas: Optional list; each entry's clickable rect and target
-            page num are appended as ((x1,y1,x2,y2), page_num) so the
+            page num are appended as ((x1,y1,x2,y2), page_num, toc_page_num) so the
             caller can later add GoTo annotations via _apply_toc_links.
     """
     _draw_header_bar(c)
@@ -2489,8 +2489,9 @@ def _draw_toc_page(c, entries, ps, link_areas=None):
     title_x = MARGIN_L + 36
 
     for idx_str, title, page_num in entries:
-        title_lines = (_wrap_by_width(_sanitize_pdf_text(str(title)), _font('regular'), 12,
-                                      CONTENT_W - 80) if ps.get('formal') else [_sanitize_pdf_text(str(title))])
+        title_lines = _wrap_by_width(
+            _sanitize_pdf_text(str(title)), _font('regular'), 12, CONTENT_W - 80,
+        ) or ['']
         row_height = max(34, len(title_lines) * 16 + 18)
         y = _check_y(c, y, ps, need=row_height)
         y_top = y  # baseline of this entry after any page break
@@ -2525,7 +2526,7 @@ def _draw_toc_page(c, entries, ps, link_areas=None):
             if link_areas is not None:
                 # rect spans full row width; y coords in PDF space (origin bottom-left)
                 area = ((MARGIN_L, y - 32, PAGE_W - MARGIN_R, y_top + 4), page_num)
-                link_areas.append((*area, ps['num']) if ps.get('formal') else area)
+                link_areas.append((*area, ps['num']))
 
         c.setStrokeColor(ESMERALD_LIGHT)
         c.setLineWidth(0.5)
@@ -2544,7 +2545,8 @@ def _apply_toc_links(pdf_bytes, link_areas, cover_offset):
 
     Args:
         pdf_bytes: Fully assembled PDF (cover + prefix + content + back).
-        link_areas: List of ((x1,y1,x2,y2), section_ps_num) from _draw_toc_page.
+        link_areas: List of (rect, section_ps_num, toc_ps_num) from _draw_toc_page.
+            Legacy two-element entries default to the second prefix page.
         cover_offset: 1 if a cover page was prepended, else 0.  Used to convert
             a content-pass ps['num'] (1-indexed, starting at 3) to the
             0-indexed page position in the final assembled PDF.
@@ -2561,7 +2563,8 @@ def _apply_toc_links(pdf_bytes, link_areas, cover_offset):
     writer = PdfWriter()
     writer.append(reader)
 
-    # TOC is always the second page after the cover (cover=0, TOC=1 when cover exists)
+    # Legacy callers put the TOC on the second prefix page; new entries
+    # carry their actual source page, including multipage indexes.
     toc_page_idx = cover_offset + 1
     total = len(writer.pages)
     for area in link_areas:

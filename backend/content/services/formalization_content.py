@@ -3,12 +3,7 @@ from copy import deepcopy
 from dataclasses import dataclass
 
 from content.services.proposal_pdf_service import default_selected_modules_from_content
-
-# Keep the original titles, order, prose, and pricing inputs of every other section.
-COMMERCIAL_EXCLUDED_SECTIONS = frozenset({
-    'executive_summary', 'context_diagnostic', 'conversion_strategy',
-    'roi_projection', 'final_note', 'next_steps',
-})
+from content.services.proposal_pdf_sections import FORMAL_COMMERCIAL_SECTIONS
 
 
 class FormalizationError(ValueError):
@@ -42,8 +37,11 @@ class FormalContent:
         return en if self.proposal.language == 'en' else es
 
     def commercial(self):
+        # Greeting and technical data support the shared cover/detail renderers;
+        # they are not numbered commercial chapters.
         return [section for section in self.sections
-                if section.section_type not in COMMERCIAL_EXCLUDED_SECTIONS]
+                if section.section_type in FORMAL_COMMERCIAL_SECTIONS
+                or section.section_type in ('greeting', 'technical_document')]
 
     def technical(self):
         # Match the public PDF's availability: an enabled technical section.
