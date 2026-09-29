@@ -869,7 +869,7 @@ export const viewCatalogSections = [
         group: 'Conectores',
         file: 'frontend/pages/panel/mcps/index.vue',
         reference: 'vista de gestion de conectores MCP del panel',
-        notes: 'La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
+        notes: 'Propuestas permite administrar contratos personalizados en Markdown, ajustes y documentos; Formalización prepara paquetes privados por credencial y confirma su envío. La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
         audience: 'admin',
         viewType: 'config',
       },

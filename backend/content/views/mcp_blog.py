@@ -27,17 +27,21 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
-from content.mcp.protocol import (
-    DEFAULT_PROTOCOL_VERSION,
-    LEGACY_PROTOCOL_VERSIONS,
-    LIST_CACHE_TTL_MS,
-    MODERN_PROTOCOL_VERSION,
-    SERVER_INFO,
-    SUPPORTED_PROTOCOL_VERSIONS,
-    handle_message,
+from content.mcp.accounting_tools import ACCOUNTING_TOOLS
+from content.mcp.client_tools import CLIENT_TOOLS
+from content.mcp.commercial_module_tools import (
+    ADDITIONAL_MODULE_TOOLS,
+    PARTNERSHIP_PROGRAM_TOOLS,
 )
 from content.mcp.common_tools import build_common_tools
+from content.mcp.communication_tools import COMMUNICATION_TOOLS
+from content.mcp.confirmation import requires_durable_confirmation
 from content.mcp.context import McpExecutionContext, use_mcp_context
+from content.mcp.diagnostic_tools import DIAGNOSTIC_TOOLS
+from content.mcp.document_thread_tools import DOCUMENT_THREAD_TOOLS
+from content.mcp.document_tools import DOCUMENT_TOOLS
+from content.mcp.linkedin_tools import LINKEDIN_TOOLS
+from content.mcp.linktree_template_tools import LINKTREE_TEMPLATE_TOOLS
 from content.mcp.operation_catalogs import (
     BILLING_PARITY_TOOLS,
     CARD_PARITY_TOOLS,
@@ -50,20 +54,22 @@ from content.mcp.operation_catalogs import (
     PROJECT_TOOLS,
 )
 from content.mcp.principal import service_actor_for_connector
-from content.mcp.registry import infer_risk, normalize_tools
-from content.mcp.accounting_tools import ACCOUNTING_TOOLS
-from content.mcp.client_tools import CLIENT_TOOLS
-from content.mcp.communication_tools import COMMUNICATION_TOOLS
-from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
-from content.mcp.diagnostic_tools import DIAGNOSTIC_TOOLS
-from content.mcp.document_thread_tools import DOCUMENT_THREAD_TOOLS
-from content.mcp.document_tools import DOCUMENT_TOOLS
-from content.mcp.linkedin_tools import LINKEDIN_TOOLS
-from content.mcp.linktree_template_tools import LINKTREE_TEMPLATE_TOOLS
+from content.mcp.proposal_formalization_tools import PROPOSAL_FORMALIZATION_TOOLS
+from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.proposal_tools import PROPOSAL_TOOLS
+from content.mcp.protocol import (
+    DEFAULT_PROTOCOL_VERSION,
+    LEGACY_PROTOCOL_VERSIONS,
+    LIST_CACHE_TTL_MS,
+    MODERN_PROTOCOL_VERSION,
+    SERVER_INFO,
+    SUPPORTED_PROTOCOL_VERSIONS,
+    handle_message,
+)
+from content.mcp.registry import infer_risk, normalize_tools
+from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
-from content.mcp.commercial_module_tools import ADDITIONAL_MODULE_TOOLS, PARTNERSHIP_PROGRAM_TOOLS
 from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
 from content.models import (
     McpActionIntent,
@@ -99,6 +105,8 @@ def _canonical_tools(tools):
     for source in tools:
         tool = deepcopy(source)
         risk = tool.get('risk', infer_risk(tool['name']))
+        if tool['name'] in {'update_proposal_status', 'create_share_link'}:
+            risk = 'sensitive'
         tool['risk'] = risk
         if risk == 'sensitive':
             tool['requires_confirmation'] = True
@@ -125,10 +133,13 @@ RAW_TOOLS_BY_SLUG = {
     'operations': OPERATIONS_TOOLS,
     'partnership-program': _canonical_tools(PARTNERSHIP_PROGRAM_TOOLS),
     'additional-modules': _canonical_tools(ADDITIONAL_MODULE_TOOLS),
-    'proposals': PROPOSAL_TOOLS + PROPOSAL_VIDEO_TOOLS,
+    'proposals': _canonical_tools(
+        PROPOSAL_TOOLS + PROPOSAL_PARITY_TOOLS + PROPOSAL_VIDEO_TOOLS
+        + PROPOSAL_FORMALIZATION_TOOLS
+    ),
     'commercial': _canonical_tools(
         CLIENT_TOOLS + PROPOSAL_TOOLS + DIAGNOSTIC_TOOLS + COMMERCIAL_PARITY_TOOLS
-        + PROPOSAL_VIDEO_TOOLS
+        + PROPOSAL_VIDEO_TOOLS + PROPOSAL_FORMALIZATION_TOOLS
         + [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]
     ),
     'projects': PROJECT_TOOLS,
@@ -535,6 +546,7 @@ def _credential_for_request(connector, token):
     return credential
 
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @authentication_classes([])  # token in URL is the credential; no session ⇒ no CSRF
 @permission_classes([AllowAny])
@@ -617,7 +629,15 @@ def mcp_endpoint(request, slug, token=None):
         protocol_version=protocol_version,
     )
     started = time.monotonic()
-    with use_mcp_context(context):
+    params = message.get('params', {}) if isinstance(message, dict) else {}
+    durable_confirmation = (
+        isinstance(message, dict) and message.get('method') == 'tools/call'
+        and isinstance(params, dict) and params.get('name') == 'confirm_action'
+        and requires_durable_confirmation(params.get('arguments'), tools, context)
+    )
+    # Ordinary tools keep one atomic history operation. Only a confirmed durable
+    # delivery manages its own transactions, so SMTP cannot roll back its claim.
+    with use_mcp_context(context, atomic_history=not durable_confirmation):
         http_status, payload = handle_message(
             message,
             tools,

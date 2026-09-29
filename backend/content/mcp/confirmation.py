@@ -9,7 +9,6 @@ from django.utils import timezone
 from content.mcp.context import bypass_confirmation, current_mcp_context
 from content.models import McpActionIntent, McpCredential
 
-
 INTENT_TTL_MINUTES = 10
 
 
@@ -62,6 +61,23 @@ def preview_sensitive_action(tool, arguments):
     }
 
 
+def requires_durable_confirmation(arguments, tools, context):
+    """Resolve the owned intent before selecting the request's history boundary."""
+    if context is None or context.credential is None or not isinstance(arguments, dict):
+        return False
+    durable_tools = {tool['name'] for tool in tools if tool.get('durable_execution')}
+    if not durable_tools:
+        return False
+    try:
+        confirmation_id = uuid.UUID(str(arguments.get('confirmation_id')))
+    except (AttributeError, ValueError):
+        return False
+    return McpActionIntent.objects.filter(
+        pk=confirmation_id, connector=context.connector,
+        credential=context.credential, tool_name__in=durable_tools,
+    ).exists()
+
+
 def confirm_action(arguments, tools):
     from content.mcp.protocol import ToolError
 
@@ -76,8 +92,11 @@ def confirm_action(arguments, tools):
             'No existe esa confirmación para este conector.',
             code='NOT_FOUND',
         ) from exc
+    # Deliveries with a durable domain claim must never run under the intent
+    # transaction: a later DB failure cannot undo an already sent email.
+    durable_execution = requires_durable_confirmation(arguments, tools, context)
     try:
-        with transaction.atomic():
+        with transaction.atomic(durable=durable_execution):
             intent = (
                 McpActionIntent.objects.select_for_update()
                 .get(pk=confirmation_id, connector=context.connector)
@@ -132,8 +151,18 @@ def confirm_action(arguments, tools):
                                 'current': current_etags,
                             },
                         )
-                with bypass_confirmation():
-                    result = tool['handler'](dict(intent.arguments))
+                if durable_execution:
+                    # This receipt survives even if execution or the final result
+                    # write fails. A repeated confirmation must not send again.
+                    result = {
+                        'status': 'unknown',
+                        'message': 'Confirmación consumida. Consulta el estado del paquete antes de cualquier nuevo envío.',
+                        'proposal_id': intent.arguments.get('proposal_id'),
+                        'preparation_id': intent.arguments.get('preparation_id'),
+                    }
+                else:
+                    with bypass_confirmation():
+                        result = tool['handler'](dict(intent.arguments))
                 intent.status = McpActionIntent.STATUS_EXECUTED
                 intent.executed_at = timezone.now()
                 intent.result = (
@@ -151,6 +180,18 @@ def confirm_action(arguments, tools):
             'La confirmación expiró; genera una vista previa nueva.',
             code='CONFIRMATION_EXPIRED',
         )
+    if durable_execution:
+        try:
+            with bypass_confirmation():
+                result = tool['handler'](dict(intent.arguments))
+        except ToolError as exc:
+            intent.result = {'status': 'rejected', 'error': {
+                'code': exc.code, 'message': str(exc), 'details': exc.details,
+            }}
+            intent.save(update_fields=['result'])
+            raise
+        intent.result = result
+        intent.save(update_fields=['result'])
     return {'confirmed': True, 'replayed': False, 'result': result}
 
 

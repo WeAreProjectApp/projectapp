@@ -20,6 +20,10 @@ class ProposalFormalization(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     proposal = models.ForeignKey('content.BusinessProposal', on_delete=models.CASCADE, related_name='formalizations')
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    mcp_credential = models.ForeignKey(
+        'content.McpCredential', on_delete=models.PROTECT, null=True, blank=True,
+        related_name='proposal_formalizations',
+    )
     payload = models.JSONField(default=dict)
     source_hash = models.CharField(max_length=64)
     html_body = models.TextField()

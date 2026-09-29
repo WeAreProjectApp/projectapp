@@ -214,7 +214,7 @@ const panelCapabilities = [
     'Reduce trabajo repetitivo sin saltarse permisos ni reglas del producto.',
     [
       feature('panel-mcp-connectors', 'Administrar conectores MCP',
-        'Permite activar, rotar y observar conectores especializados por dominio, incluidos Programa de Alianza y Módulos adicionales, con carga y sustitución de archivos de video también desde Propuestas, y permisos explícitos para consultar secretos con confirmación por lectura.',
+        'Permite activar, rotar y observar conectores especializados por dominio, incluidos Programa de Alianza y Módulos adicionales, con contratos personalizados, ajustes, documentos y Formalización privada con envío confirmado desde Propuestas, además de carga y sustitución de videos, y permisos explícitos para consultar secretos con confirmación por lectura.',
         'Extiende la operación del panel con accesos controlados y auditables.', ['/panel/mcps'],
         { icon: 'database', stage: 'Automatización' }),
     ],

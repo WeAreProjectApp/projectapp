@@ -1,5 +1,16 @@
 # Technical Documentation — ProjectApp
 
+> **MCP Propuestas — 2026-09-28:** `update_proposal` sigue siendo importación
+> JSON; `update_proposal_settings` modifica metadata parcial. Los contratos
+> usan `variant` y los campos existentes de `contract_params`, sin mezclar
+> `combined`, `product` y `service`. Los correos admiten `attachment_asset_ids`
+> y el puente codifica estructuras como JSON al construir multipart. La migración
+> `0272_proposal_formalization_mcp_owner` agrega ownership por credencial y la
+> descripción del conector; no se ejecuta desde el worktree. El transporte MCP
+> delega el historial atómico en `use_mcp_context`: sólo la confirmación de
+> Formalización ejecuta su claim durable y el envío fuera de ese bloque.
+
+
 > **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
 
 > **Pies de modales — 2026-09-27:** los modales con acciones inferiores usan
