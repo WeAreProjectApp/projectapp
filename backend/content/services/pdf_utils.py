@@ -1266,7 +1266,8 @@ def _section_header_height(title, index_str='01'):
 def _draw_paragraphs(c, y, paragraphs, max_width=None, font_size=10,
                       leading=15, color=ESMERALD_80, ps=None, x=None,
                       font_name=None, justify=False, bold_font_name=None,
-                      link_color=None):
+                      link_color=None, preserve_breaks=False,
+                      paragraph_gap=5, block_gap=0):
     """Draw a list of paragraph strings and return the new y."""
     if max_width is None:
         max_width = CONTENT_W
@@ -1274,20 +1275,30 @@ def _draw_paragraphs(c, y, paragraphs, max_width=None, font_size=10,
         x = MARGIN_L
     fn = font_name or _font('regular')
     bfn = bold_font_name or _font('bold')
+    drawn = False
     for para in (paragraphs or []):
         if not para:
             continue
-        clean, _links = _replace_urls_with_placeholders(_sanitize_pdf_text(str(para)))
-        lines = _wrap_by_width(clean, fn, font_size, max_width,
-                               bold_font_name=bfn)
+        source = _paragraph_breaks(str(para)) if preserve_breaks else str(para)
+        clean, _links = _replace_urls_with_placeholders(_sanitize_pdf_text(source))
+        lines = (_wrap_paragraph_lines(clean, fn, font_size, max_width, bfn)
+                 if preserve_breaks else
+                 _wrap_by_width(clean, fn, font_size, max_width,
+                                bold_font_name=bfn))
+        if not lines:
+            continue
+        drawn = True
         if ps and len(lines) > 1 and y < MARGIN_B + leading * 2:
             y = _new_page(c, ps)
         for i, line in enumerate(lines):
+            if preserve_breaks and line is None:
+                y -= paragraph_gap
+                continue
             if ps:
                 y = _check_y(c, y, ps)
             elif y < MARGIN_B + 20:
                 return y
-            is_justified = justify and i < len(lines) - 1
+            is_justified = justify and i < len(lines) - 1 and lines[i + 1] is not None
             _draw_line_with_links(
                 c, x, y, line, fn, font_size, color,
                 link_color=link_color,
@@ -1295,12 +1306,37 @@ def _draw_paragraphs(c, y, paragraphs, max_width=None, font_size=10,
                 justify=is_justified, max_width=max_width,
             )
             y -= leading
-        y -= 5
-    return y
+        y -= paragraph_gap
+    return y - (max(0, block_gap - paragraph_gap) if drawn else 0)
+
+
+def _paragraph_breaks(text):
+    text = _BR_TAG_RE.sub('\n', str(text)).replace('\r\n', '\n').replace('\r', '\n')
+    return re.sub(r'</p\s*>\s*<p\b[^>]*>', '\n\n', text, flags=re.I)
+
+
+def _wrap_paragraph_lines(text, font_name, font_size, max_width,
+                          bold_font_name=None):
+    """Wrap hard lines separately; ``None`` marks a paragraph gap.
+
+    Opt-in for proposal documents. Other PDF families retain their layout.
+    HTML line/paragraph boundaries are structural, never printable glyphs.
+    """
+    text = _sanitize_pdf_text(_paragraph_breaks(text))
+    lines = []
+    for raw in text.strip().split('\n'):
+        if not raw.strip():
+            if lines and lines[-1] is not None:
+                lines.append(None)
+            continue
+        lines.extend(_wrap_by_width(raw.strip(), font_name, font_size,
+                                    max_width, bold_font_name))
+    return lines
 
 
 def _estimate_text_height(paragraphs, max_width=None, font_size=10, leading=15,
-                          font_name=None, bold_font_name=None):
+                          font_name=None, bold_font_name=None,
+                          preserve_breaks=False, paragraph_gap=5, block_gap=0):
     """Pre-estimate vertical height for wrapped paragraphs without drawing.
 
     Pass *font_name*/*bold_font_name* when the caller draws with a font
@@ -1313,10 +1349,16 @@ def _estimate_text_height(paragraphs, max_width=None, font_size=10, leading=15,
     for para in (paragraphs or []):
         if not para:
             continue
-        clean, _links = _replace_urls_with_placeholders(_sanitize_pdf_text(str(para)))
-        total += len(_wrap_by_width(clean, fn, font_size, max_width,
-                                    bold_font_name=bold_font_name)) * leading + 5
-    return total
+        source = _paragraph_breaks(str(para)) if preserve_breaks else str(para)
+        clean, _links = _replace_urls_with_placeholders(_sanitize_pdf_text(source))
+        lines = (_wrap_paragraph_lines(clean, fn, font_size, max_width, bold_font_name)
+                 if preserve_breaks else
+                 _wrap_by_width(clean, fn, font_size, max_width, bold_font_name))
+        if not lines:
+            continue
+        total += sum(paragraph_gap if line is None else leading for line in lines)
+        total += paragraph_gap
+    return total + (max(0, block_gap - paragraph_gap) if total else 0)
 
 
 _UL_MARKERS = ['\u2022', '\u2013', '\u25e6']  # bullet, en-dash, white bullet
@@ -1936,7 +1978,7 @@ def _table_col_widths(headers, rows, max_width, pad_h, font_size=8):
 
 
 def _draw_table(c, y, headers, rows, ps=None, max_width=None,
-                col_widths=None, aligns=None, theme=None):
+                col_widths=None, aligns=None, theme=None, preserve_breaks=False):
     """Draw a table with header row and data rows. Returns new y.
 
     Args:
@@ -2068,9 +2110,11 @@ def _draw_table(c, y, headers, rows, ps=None, max_width=None,
         for ci, cell in enumerate(row):
             if ci >= num_cols:
                 break
-            lines = _wrap_by_width(_sanitize_pdf_text(str(cell)), fn,
-                                   data_font_size,
-                                   max(widths[ci] - 2 * cell_pad_h, 20))
+            wrap = _wrap_paragraph_lines if preserve_breaks else _wrap_by_width
+            source = _paragraph_breaks(str(cell)) if preserve_breaks else str(cell)
+            lines = [line or '' for line in wrap(
+                _sanitize_pdf_text(source), fn, data_font_size,
+                max(widths[ci] - 2 * cell_pad_h, 20))]
             wrapped.append(lines or [''])
             max_lines = max(max_lines, len(lines) or 1)
         row_h = max_lines * leading + 2 * cell_pad_v
@@ -2099,7 +2143,7 @@ def _draw_table(c, y, headers, rows, ps=None, max_width=None,
                                     v_center=False)
                 offset += take
 
-    return y - 6
+    return y - (12 if preserve_breaks else 6)
 
 
 def _draw_blockquote(c, y, text, ps=None, theme=None):

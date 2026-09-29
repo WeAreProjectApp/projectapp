@@ -112,7 +112,7 @@ def test_send_rejects_a_preparation_after_its_section_title_changes(
     assert len(mailoutbox) == 0
 
 
-@pytest.mark.parametrize('document_version', [1, 2])
+@pytest.mark.parametrize('document_version', [1, 2, 3])
 @freeze_time('2026-09-24 12:00:00')
 def test_send_legacy_annex_requires_review_of_the_new_content(
     mailoutbox, formalization_proposal, admin_user, formalization_payload, document_version,

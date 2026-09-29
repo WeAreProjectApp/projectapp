@@ -53,12 +53,16 @@ guardados, de acuerdo con la modalidad de cierre elegida.
   `formalization_pdf` invoca los generadores originales con la selección de
   capítulos correspondiente. El orden comercial es exclusivo del PDF, y el
   técnico recibe `included_sections=("stack", "dataModel", "epics")`.
+- Los renderizadores comercial y técnico comparten medidas de texto, badges y
+  filas: 6 pt mínimos dentro de tablas, 30 pt alrededor de badges externos y
+  saltos explícitos entre párrafos. Las filas largas continúan en otra página
+  con encabezado repetido; no cambian el contenido ni los capítulos elegidos.
 - **Copiar Markdown** extrae el texto del PDF del anexo, sin una segunda
   interpretación del contenido. Avisa que reconstruye el formato y que las
   imágenes y firmas gráficas no se copian. Se mantienen los límites de extracción
   de 100 páginas, 50 MB de contenido descomprimido y un millón de caracteres.
-- La versión documental 3 exige revisar de nuevo las preparaciones con anexos
-  de las versiones 1 y 2; no sustituye sus archivos ni altera envíos históricos.
+- La versión documental 4 exige revisar de nuevo las preparaciones con anexos
+  de las versiones 1, 2 y 3; no sustituye sus archivos ni altera envíos históricos.
 - Los archivos adjuntos se generan una vez al preparar el correo. La revisión
   y el envío usan esos mismos bytes. Las preparaciones pendientes con anexos
   del formato anterior deben prepararse y revisarse nuevamente; nunca se

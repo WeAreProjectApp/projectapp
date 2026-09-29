@@ -93,20 +93,14 @@ from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _draw_footer,
     _draw_section_header,
     _section_header_height,
-    _draw_paragraphs,
-    _estimate_text_height,
     _draw_bullet_list,
     _sidebar_box_height,
     _draw_sidebar_box,
-    _draw_subtitle,
     _draw_pill,
     _draw_banner_box,
-    _draw_badge_panel,
     _draw_callout_box,
     _draw_blockquote,
-    _draw_table,
     _draw_kpi_tile_row,
-    _draw_feature_row,
     _draw_priority_pill,
     _priority_pill_width,
     _clean_cell_text,
@@ -121,6 +115,13 @@ from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _clean_inline_bold,
     _BR_TAG_RE,
     _HTML_TAG_RE,
+)
+
+from content.services.proposal_pdf_layout import (
+    _draw_paragraphs, _estimate_text_height, _draw_subtitle, _draw_table,
+    _draw_badge_group, _draw_heading_badge, _draw_requirements_table,
+    _draw_linked_row, BADGE_GAP, _paint_badge, _draw_feature_row,
+    _draw_badge_panel, _payment_option_height, _draw_payment_option, _heading_badge_height,
 )
 
 logger = logging.getLogger(__name__)
@@ -751,80 +752,12 @@ def _render_functional_requirements(c, data, proposal, ps=None, y=None):
     return row_y - 8
 
 
-def _render_linked_requirements(c, item, ps, row_y):
-    """Render the technical requirements linked to a group item as
-    indented sub-rows under the item's table row. Items without an id
-    or without linked requirements render nothing."""
-    linked = []
-    if ps:
-        item_id = _safe(item, 'id')
-        if item_id:
-            linked = (ps.get('_item_requirements_map') or {}).get(item_id) or []
-    if not linked:
-        return row_y
-
-    lang = ps.get('_pdf_lang') or 'es'
-    num_col_w = 28
-    text_x = MARGIN_L + num_col_w + 6      # aligns with the item-name column
-    right_pad = 10
-    avail_w = CONTENT_W - num_col_w - 6 - right_pad
-    line_h = 11
-    top_pad = 12  # pill (13pt tall) anchored on line 1 stays inside the band
-
+def _render_linked_requirements(c, item, ps, row_y, redraw=None):
+    """Render complete linked requirements inside compact, measured sub-rows."""
+    linked = ((ps or {}).get('_item_requirements_map') or {}).get(_safe(item, 'id')) or []
     for req in linked:
-        title = _clean_cell_text(req.get('title') or '')
-        pill_w = _priority_pill_width(req.get('priority'), lang=lang)
-        title_avail = max(avail_w - (pill_w + 8 if pill_w else 0), 60)
-        title_lines = _wrap_by_width(title, _font('bold'), 8, title_avail) \
-            if title else []
-        # Rich description like the parent item rows (honors <br>/<b>/**bold**),
-        # capped so dense groups don't explode the page count.
-        desc_seg_lines = _desc_to_segmented_lines_w(
-            req.get('description') or '', avail_w, 8)[:3]
-        if not title_lines and not desc_seg_lines:
-            continue
-        n_lines = len(title_lines) + len(desc_seg_lines)
-        row_h = max(n_lines * line_h + 8, 24)
-
-        row_y = _check_y(c, row_y, ps, need=row_h)
-        row_bottom = row_y - row_h
-
-        # Full-width tinted band so the sub-row reads as part of the table
-        c.setFillColor(BONE)
-        c.rect(MARGIN_L, row_bottom, CONTENT_W, row_h, fill=1, stroke=0)
-        # Muted left accent, same geometry as the parent's LEMON bar
-        c.setFillColor(GREEN_LIGHT)
-        c.rect(MARGIN_L, row_bottom, 3, row_h, fill=1, stroke=0)
-        # Elbow connector in the (empty) # gutter to show nesting
-        c.setStrokeColor(GREEN_LIGHT)
-        c.setLineWidth(0.8)
-        elbow_x = MARGIN_L + num_col_w / 2
-        c.line(elbow_x, row_y - 4, elbow_x, row_y - top_pad + 3)
-        c.line(elbow_x, row_y - top_pad + 3, text_x - 4, row_y - top_pad + 3)
-
-        text_y = row_y - top_pad
-        c.setFont(_font('bold'), 8)
-        c.setFillColor(ESMERALD)
-        for i, tl in enumerate(title_lines):
-            c.drawString(text_x, text_y, tl)
-            if i == 0 and pill_w:
-                # Semantic priority badge (rose/amber/esmerald/gray),
-                # right-anchored with its width reserved off the title wrap.
-                _draw_priority_pill(
-                    c, MARGIN_L + CONTENT_W - right_pad - pill_w, text_y,
-                    req.get('priority'), lang=lang)
-            text_y -= line_h
-        c.setFillColor(ESMERALD_80)
-        for seg_line in desc_seg_lines:
-            x = text_x
-            for seg_text, seg_bold in seg_line:
-                fnt = _font('bold') if seg_bold else _font('regular')
-                c.setFont(fnt, 8)
-                c.drawString(x, text_y, seg_text)
-                x += c.stringWidth(seg_text, fnt, 8)
-            text_y -= line_h
-
-        row_y = row_bottom
+        if req.get('title') or req.get('description'):
+            row_y = _draw_linked_row(c, row_y, req, ps, redraw)
     return row_y
 
 
@@ -835,6 +768,12 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
         y = PAGE_H - MARGIN_T
 
     # Sub-index numeral (e.g. "07.1")
+    if ps and not ps.get('formal'):
+        count = len(_safe(grp, 'items', []))
+        label = f'{count} elemento{"s" if count != 1 else ""}' if count else ''
+        need = _heading_badge_height(c, _safe(grp, 'title'), label,
+                                     font_size=20, font_name=_font('light'))
+        y = _check_y(c, y, ps, need=need + (22 if sub_index else 0))
     if sub_index:
         c.setFont(_font('light'), 11)
         c.setFillColor(GREEN_LIGHT)
@@ -850,20 +789,10 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
             _draw_mixed_string(c, MARGIN_L, y, line, _font('light'), 20)
             y -= 26
     else:
-        # Group title
         title_text = _strip_emoji(_safe(grp, 'title'))
-        c.setFont(_font('light'), 20)
-        c.setFillColor(ESMERALD)
-        c.drawString(MARGIN_L, y, title_text)
-
-        # Item count pill next to title
-        items = _safe(grp, 'items', [])
-        if items:
-            title_w = c.stringWidth(title_text, _font('light'), 20)
-            pill_label = f'{len(items)} elemento{"s" if len(items) != 1 else ""}'
-            _draw_pill(c, MARGIN_L + title_w + 12, y + 2, pill_label,
-                       bg_color=BONE, text_color=ESMERALD)
-        y -= 28
+        pill_label = f'{len(items)} elemento{"s" if len(items) != 1 else ""}' if items else ''
+        y = _draw_heading_badge(c, y, title_text, pill_label, ps=ps,
+                                font_size=20, font_name=_font('light'))
 
     # Thin accent line
     c.setStrokeColor(LEMON)
@@ -887,103 +816,8 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
             [[item['id'], f"**{item['name']}**", item['description']] for item in items],
             ps=ps, col_widths=[0.2, 0.3, 0.5])
 
-    # Table column widths
-    num_col_w = 28
-    name_col_w = int((CONTENT_W - num_col_w) * 0.36)
-    desc_col_w = CONTENT_W - num_col_w - name_col_w
-    name_text_w = name_col_w - 12
-    desc_text_w = desc_col_w - 12
-
-    row_y = y
-
-    # ── Table header (closure so it repeats after every page break) ──
-    hdr_h = 22
-
-    def _draw_items_header(c, yy):
-        hdr_bottom = yy - hdr_h
-        c.setFillColor(ESMERALD)
-        c.rect(MARGIN_L, hdr_bottom, CONTENT_W, hdr_h, fill=1, stroke=0)
-        # Offset +2 aligns the optical midline of the glyphs with the
-        # rect's vertical center.
-        hdr_text_y = hdr_bottom + (hdr_h - 8) / 2 + 2
-        c.setFont(_font('bold'), 8)
-        c.setFillColor(WHITE)
-        c.drawCentredString(MARGIN_L + num_col_w / 2, hdr_text_y, '#')
-        c.drawString(MARGIN_L + num_col_w + 6, hdr_text_y, 'Requerimiento')
-        c.drawString(MARGIN_L + num_col_w + name_col_w + 6, hdr_text_y,
-                     'Descripción')
-        return hdr_bottom
-
-    if ps:
-        row_y = _check_y(c, row_y, ps, need=hdr_h + 32)
-    row_y = _draw_items_header(c, row_y)
-
-    # ── Item rows ─────────────────────────────────────────────
-    line_h = 11
-    for idx, item in enumerate(items):
-        name = _clean_cell_text(_safe(item, 'name') or '')
-        # Rich description honoring <br><br> and <b>/<strong>/**bold**,
-        # wrapped by real glyph width so it stays inside its column.
-        desc_seg_lines = _desc_to_segmented_lines_w(
-            _safe(item, 'description') or '', desc_text_w, 8)
-        name_lines = _wrap_by_width(name, _font('bold'), 9,
-                                    name_text_w) or [name]
-
-        n_lines = max(len(name_lines),
-                      len(desc_seg_lines) if desc_seg_lines else 1)
-        row_h = max(n_lines * line_h + 14, 28)
-
-        # Page break: repeat the column header on the fresh page so
-        # continued rows keep their context.
-        if ps:
-            row_y = _check_y_with_redraw(c, row_y, ps, need=row_h,
-                                         redraw=_draw_items_header)
-
-        row_bottom = row_y - row_h
-
-        # Row background (alternating)
-        c.setFillColor(ESMERALD_LIGHT if idx % 2 == 0 else WHITE)
-        c.rect(MARGIN_L, row_bottom, CONTENT_W, row_h, fill=1, stroke=0)
-
-        # LEMON left accent bar
-        c.setFillColor(LEMON)
-        c.rect(MARGIN_L, row_bottom, 3, row_h, fill=1, stroke=0)
-
-        # Row number (vertically centred)
-        c.setFont(_font('bold'), 8)
-        c.setFillColor(ESMERALD_80)
-        c.drawCentredString(
-            MARGIN_L + num_col_w / 2,
-            row_bottom + (row_h - 8) / 2,
-            str(idx + 1).zfill(2),
-        )
-
-        # Item name (top-aligned, bold)
-        text_y = row_y - 9
-        c.setFont(_font('bold'), 9)
-        c.setFillColor(ESMERALD)
-        for nl in name_lines:
-            c.drawString(MARGIN_L + num_col_w + 6, text_y, nl)
-            text_y -= line_h
-
-        # Item description (top-aligned) — draws bold/regular segments per line
-        if desc_seg_lines:
-            text_y = row_y - 9
-            c.setFillColor(ESMERALD_80)
-            desc_x0 = MARGIN_L + num_col_w + name_col_w + 6
-            for seg_line in desc_seg_lines:
-                x = desc_x0
-                for seg_text, seg_bold in seg_line:
-                    fnt = _font('bold') if seg_bold else _font('regular')
-                    c.setFont(fnt, 8)
-                    c.drawString(x, text_y, seg_text)
-                    x += c.stringWidth(seg_text, fnt, 8)
-                text_y -= line_h
-
-        row_y = row_bottom
-        row_y = _render_linked_requirements(c, item, ps, row_y)
-
-    return row_y - 4
+    rows = [dict(item, title=_safe(item, 'name')) for item in items]
+    return _draw_requirements_table(c, y, rows, ps, _render_linked_requirements)
 
 
 def _render_timeline(c, data, _proposal, ps=None, y=None):
@@ -1030,35 +864,14 @@ def _render_timeline(c, data, _proposal, ps=None, y=None):
 
         tx = MARGIN_L + 30
 
-        # Duration pill — measured and right-anchored; the phase title
-        # wraps to the space left of it so the two can never collide.
-        dur = _safe(phase, 'duration')
-        pill_w = 0.0
-        if dur:
-            dur_txt = _sanitize_pdf_text(str(dur))
-            pill_w = _string_width_mixed(dur_txt, _font('medium'), 7) + 16
-            _draw_pill(c, PAGE_W - MARGIN_R - pill_w, y + 1, dur_txt,
-                       bg_color=ESMERALD_LIGHT, text_color=ESMERALD)
-
-        title_w = (PAGE_W - MARGIN_R - tx) - (pill_w + 10 if pill_w else 0)
-        title = _sanitize_pdf_text(_safe(phase, 'title'))
-        c.setFont(_font('bold'), 11)
-        c.setFillColor(ESMERALD)
-        title_lines = _wrap_by_width(title, _font('bold'), 11,
-                                     max(title_w, 60))
-        for li, tl in enumerate(title_lines):
-            if li > 0 and ps:
-                y = _check_y(c, y, ps, need=15)
-            _draw_mixed_string(c, tx, y, tl, _font('bold'), 11)
-            y -= 15
-
-        # Optional week span, right under the pill.
+        duration = _safe(phase, 'duration')
+        y = _draw_heading_badge(c, y, _safe(phase, 'title'), duration,
+                                ps=ps, font_size=11, x=tx,
+                                max_width=PAGE_W - MARGIN_R - tx)
         weeks = _safe(phase, 'weeks')
         if weeks:
-            c.setFont(_font('regular'), 7)
-            c.setFillColor(GRAY_500)
-            c.drawRightString(PAGE_W - MARGIN_R, y + 4,
-                              _sanitize_pdf_text(str(weeks)))
+            y = _draw_paragraphs(c, y, [weeks], x=tx, font_size=8,
+                                 max_width=CONTENT_W - 30, ps=ps)
 
         desc = _safe(phase, 'description')
         if desc:
@@ -1075,11 +888,9 @@ def _render_timeline(c, data, _proposal, ps=None, y=None):
 
         milestone = _safe(phase, 'milestone')
         if milestone:
-            if ps:
-                y = _check_y(c, y, ps, need=18)
-            _draw_pill(c, tx, y, f'{"Milestone" if ps and ps.get("formal") and ps["formal"].language == "en" else "Hito"}: {_sanitize_pdf_text(str(milestone))}',
-                       bg_color=BONE, text_color=ESMERALD, font_size=7)
-            y -= 16
+            label = 'Milestone' if ps and ps.get('formal') and ps['formal'].language == 'en' else 'Hito'
+            y = _draw_badge_group(c, y, [{'text': f'{label}: {milestone}', 'bg': BONE}],
+                                  ps=ps, x=tx, max_width=CONTENT_W - 30)
 
         y -= 6
     return y
@@ -1324,7 +1135,13 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     right_x = MARGIN_L + left_w + col_gap
 
     # Pre-calculate heights to decide two-column vs linear layout
-    left_need = 20 + len(options) * 22 if options else 0
+    payment_rows = [(_strip_emoji(_safe(opt, 'label')),
+                     _payment_pill_desc(_strip_emoji(_safe(opt, 'label')),
+                                        _strip_emoji(_safe(opt, 'description')),
+                                        display_num, tax_suffix=tax_suffix))
+                    for opt in options]
+    left_need = 20 + sum(_payment_option_height(c, label, badge, left_w)
+                         for label, badge in payment_rows) if options else 0
     items_text = []
     if included:
         items_text = [
@@ -1348,29 +1165,8 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
             c.drawString(MARGIN_L, left_y, 'Formas de Pago')
             left_y -= 20
 
-            for opt in options:
-                label = _strip_emoji(_safe(opt, 'label'))
-                desc = _strip_emoji(_safe(opt, 'description'))
-
-                c.setFillColor(ESMERALD_LIGHT)
-                c.roundRect(MARGIN_L, left_y - 6, left_w, 18, 4,
-                            fill=1, stroke=0)
-                pill_desc = _payment_pill_desc(label, desc, display_num,
-                                               tax_suffix=tax_suffix)
-                pill_w = (c.stringWidth(pill_desc, _font('medium'), 7) + 16
-                          if pill_desc else 0)
-                # Clamp the label so it can never run under the pill.
-                label = _fit_text_ellipsis(
-                    label, _font('regular'), 8,
-                    left_w - 16 - (pill_w + 6 if pill_w else 0))
-                c.setFont(_font('regular'), 8)
-                c.setFillColor(ESMERALD_80)
-                c.drawString(MARGIN_L + 8, left_y - 2, label)
-                if pill_desc:
-                    # Right-anchor the pill so the tax suffix cannot overflow.
-                    _draw_pill(c, MARGIN_L + left_w - pill_w, left_y - 2, pill_desc,
-                               bg_color=ESMERALD, text_color=WHITE, font_size=7)
-                left_y -= 22
+            for label, badge in payment_rows:
+                left_y = _draw_payment_option(c, left_y, label, badge, left_w)
 
         # RIGHT COLUMN: Incluye
         right_bottom = columns_top
@@ -1389,31 +1185,8 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
             c.drawString(MARGIN_L, y, 'Formas de Pago')
             y -= 20
 
-            for opt in options:
-                if ps:
-                    y = _check_y(c, y, ps, need=24)
-                label = _strip_emoji(_safe(opt, 'label'))
-                desc = _strip_emoji(_safe(opt, 'description'))
-
-                c.setFillColor(ESMERALD_LIGHT)
-                c.roundRect(MARGIN_L, y - 6, CONTENT_W, 18, 4,
-                            fill=1, stroke=0)
-                pill_desc = _payment_pill_desc(label, desc, display_num,
-                                               tax_suffix=tax_suffix)
-                pill_w = (c.stringWidth(pill_desc, _font('medium'), 7) + 16
-                          if pill_desc else 0)
-                # Clamp the label so it can never run under the pill.
-                label = _fit_text_ellipsis(
-                    label, _font('regular'), 8,
-                    CONTENT_W - 16 - (pill_w + 6 if pill_w else 0))
-                c.setFont(_font('regular'), 8)
-                c.setFillColor(ESMERALD_80)
-                c.drawString(MARGIN_L + 8, y - 2, label)
-                if pill_desc:
-                    # Right-anchor the pill so the tax suffix cannot overflow.
-                    _draw_pill(c, MARGIN_L + CONTENT_W - pill_w, y - 2, pill_desc,
-                               bg_color=ESMERALD, text_color=WHITE, font_size=7)
-                y -= 22
+            for label, badge in payment_rows:
+                y = _draw_payment_option(c, y, label, badge, CONTENT_W, ps)
 
         if included:
             y -= 10
@@ -1665,7 +1438,7 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
     Mirrors frontend/components/BusinessProposal/ValueAddedModules.vue:
     resolves each module_id against the functional_requirements catalog
     (ps['_value_added_catalog']) and renders one tinted card per module
-    with title, top-right "Sin costo adicional" pill, justification
+    with title, separate "Sin costo adicional" pill, justification
     (primary) and optional description (secondary). Each card's full
     height is pre-computed so it never splits across a page break.
     """
@@ -1752,13 +1525,9 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
     just_leading = 13
     desc_font_size = 8
     desc_leading = 11
-    pill_font_size = 7
     pill_text = 'Sin costo adicional'
-
-    pill_w = (c.stringWidth(pill_text, _font('medium'), pill_font_size)
-              + 8 * 2)  # padding_h*2 in _draw_pill
     content_area_w = CONTENT_W - card_pad_x * 2 - icon_size - icon_gap
-    title_max_w = content_area_w - pill_w - 8  # gap before pill
+    title_max_w = content_area_w
 
     for mid in module_ids:
         module = catalog.get(mid)
@@ -1779,24 +1548,39 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
                   if justification else 0)
         desc_h = (_estimate_text_height(
                       [description], max_width=content_area_w,
-                      font_size=desc_font_size, leading=desc_leading)
+                      font_size=desc_font_size, leading=desc_leading,
+                      font_name=_font('italic'))
                   if description else 0)
         cond_lines = _module_condition_lines(mid)
         cond_h = sum(
             _estimate_text_height(
                 [ct], max_width=content_area_w,
-                font_size=desc_font_size, leading=desc_leading)
-            for ct, _ in cond_lines
+                font_size=desc_font_size, leading=desc_leading,
+                font_name=_font('italic') if is_italic else _font('medium'))
+            for ct, is_italic in cond_lines
         )
         card_h = (
             card_pad_y
             + len(title_lines) * 14
+            + BADGE_GAP * 2 + 13
             + (6 + just_h if justification else 0)
             + (4 + desc_h if description else 0)
             + (4 + cond_h if cond_lines else 0)
             + card_pad_y
         )
 
+        if ps and card_h > PAGE_H - MARGIN_T - MARGIN_B:
+            # Oversized cards flow as normal blocks instead of clipping text.
+            y = _draw_feature_row(c, y, title, pill_text=pill_text,
+                                  pill_bg=LEMON, ps=ps)
+            for text, font_style in [(justification, 'regular'), (description, 'italic')]:
+                if text:
+                    y = _draw_paragraphs(c, y, [text], ps=ps,
+                                         font_name=_font(font_style))
+            for text, is_italic in cond_lines:
+                y = _draw_paragraphs(c, y, [text], ps=ps,
+                                     font_name=_font('italic' if is_italic else 'medium'))
+            continue
         if ps:
             y = _check_y(c, y, ps, need=card_h + 14)
 
@@ -1819,13 +1603,6 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
                             icon_y + icon_size / 2 - 3.5,
                             title[:1].upper() if title else '•')
 
-        # Right-aligned pill guarantees no overlap with long titles.
-        pill_x = MARGIN_L + CONTENT_W - card_pad_x - pill_w
-        pill_baseline_y = card_top - card_pad_y - 10
-        _draw_pill(c, pill_x, pill_baseline_y, pill_text,
-                   bg_color=LEMON, text_color=ESMERALD,
-                   font_size=pill_font_size)
-
         text_x = icon_x + icon_size + icon_gap
         title_y = card_top - card_pad_y - 10
         c.setFont(_font('bold'), title_font_size)
@@ -1834,7 +1611,9 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
             c.drawString(text_x, title_y, line)
             title_y -= 14
 
-        next_y = title_y - 2
+        _paint_badge(c, text_x, title_y - BADGE_GAP,
+                     {'text': pill_text, 'bg': LEMON, 'fg': ESMERALD}, content_area_w)
+        next_y = title_y - BADGE_GAP * 2 - 13 - 2
 
         if justification:
             next_y -= 4
@@ -2019,32 +1798,13 @@ def _render_final_note(c, data, proposal, ps=None, y=None):
                                         9, CONTENT_W))
         y -= 13
 
-    # Commitment badges as inline pills
+    # The whole badge group shares its exterior spacing.
     if badges:
-        y -= 10
-        if ps:
-            y = _check_y(c, y, ps, need=40)
-        c.setFont(_font('bold'), 10)
-        c.setFillColor(ESMERALD)
-        c.drawString(MARGIN_L, y, 'Compromisos')
-        y -= 18
-        pill_x = MARGIN_L
-        for b in badges:
-            b_title = _strip_emoji(_safe(b, 'title'))
-            if not b_title:
-                continue
-            c.setFont(_font('medium'), 7)
-            tw = c.stringWidth(b_title, _font('medium'), 7) + 16
-            # Wrap to next row if pill overflows
-            if pill_x + tw > PAGE_W - MARGIN_R:
-                pill_x = MARGIN_L
-                y -= 18
-                if ps:
-                    y = _check_y(c, y, ps)
-            _draw_pill(c, pill_x, y, b_title,
-                       bg_color=ESMERALD_LIGHT, text_color=ESMERALD)
-            pill_x += tw + 6
-        y -= 14
+        y = _draw_heading_badge(c, y, 'Compromisos', '', ps=ps, font_size=10)
+        y = _draw_badge_group(c, y, [
+            {'text': _strip_emoji(_safe(b, 'title'))} for b in badges
+        ], ps=ps)
+
     return y
 
 
@@ -2089,22 +1849,13 @@ def _render_next_steps(c, data, _proposal, ps=None, y=None):
         if isinstance(obj, dict) and _safe(obj, 'text'):
             ctas.append((obj, primary))
     if ctas:
-        y -= 6
-        if ps:
-            y = _check_y(c, y, ps, need=26)
-        btn_x = MARGIN_L
-        for obj, primary in ctas:
-            text = _sanitize_pdf_text(_safe(obj, 'text'))
-            bg, fg = ((ESMERALD, WHITE) if primary
-                      else (ESMERALD_LIGHT, ESMERALD))
-            right_x, _ = _draw_pill(c, btn_x, y, text, bg_color=bg,
-                                    text_color=fg, font_size=9,
-                                    padding_h=12, padding_v=5)
-            link = _safe(obj, 'link')
-            if link:
-                c.linkURL(link, (btn_x, y - 6, right_x, y + 12), relative=0)
-            btn_x = right_x + 10
-        y -= 24
+        y = _draw_badge_group(c, y, [
+            {'text': _safe(obj, 'text'), 'link': _safe(obj, 'link'),
+             'bg': ESMERALD if primary else ESMERALD_LIGHT,
+             'fg': WHITE if primary else ESMERALD, 'font_size': 9,
+             'padding_h': 12, 'padding_v': 5}
+            for obj, primary in ctas
+        ], ps=ps)
 
     # Contact methods as pills (value is a clickable link when present)
     if contacts:
@@ -2118,19 +1869,10 @@ def _render_next_steps(c, data, _proposal, ps=None, y=None):
             ct_link = _safe(ct, 'link')
             if not ct_title:
                 continue
-            if ps:
-                y = _check_y(c, y, ps, need=18)
-            pr, _ = _draw_pill(c, MARGIN_L, y, ct_title,
-                               bg_color=ESMERALD, text_color=WHITE,
-                               font_size=7)
-            c.setFont(_font('regular'), 9)
-            c.setFillColor(ESMERALD_80)
-            val_end = _draw_mixed_string(c, pr + 8, y, ct_value,
-                                         _font('regular'), 9)
-            if ct_link:
-                c.linkURL(ct_link, (pr + 8, y - 2, val_end, y + 10),
-                          relative=0)
-            y -= 18
+            y = _draw_badge_group(c, y, [{'text': ct_title, 'bg': ESMERALD,
+                                          'fg': WHITE}], ps=ps)
+            value = f'[{ct_value}]({ct_link})' if ct_link else ct_value
+            y = _draw_paragraphs(c, y, [value], font_size=9, ps=ps)
     return y
 
 
@@ -2702,7 +2444,7 @@ class ProposalPdfService:
                     # Reserve the measured height of the section header so a
                     # multi-line title is never orphaned at the page bottom.
                     y = _check_y(c, y, ps,
-                                 need=_section_header_height(data['title']))
+                                 need=_section_header_height(data['title']) + 38)
 
                 # Record TOC entry at the page where this section starts
                 toc_entries.append((data['index'], data['title'], ps['num']))

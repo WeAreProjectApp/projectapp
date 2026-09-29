@@ -523,9 +523,17 @@ class TestDrawSidebarBox:
 
 
 class TestDrawSubtitle:
-    def test_returns_lower_y(self, pdf_canvas):
+    def test_leaves_space_before_next_paragraph(self, pdf_canvas):
         end_y = _draw_subtitle(pdf_canvas, 400, 'Subtitle')
-        assert end_y == 382
+        _draw_paragraphs(pdf_canvas, end_y, ['Following paragraph'])
+        rendered = []
+        reader = PdfReader(io.BytesIO(pdf_canvas.getpdfdata()))
+
+        reader.pages[0].extract_text(visitor_text=lambda text, cm, tm, font, size: rendered.append((text, tm[5])))
+
+        title_y = next(y for text, y in rendered if 'Subtitle' in text)
+        paragraph_y = next(y for text, y in rendered if 'Following paragraph' in text)
+        assert title_y - paragraph_y >= 24
 
 
 # ── Section renderer tests ───────────────────────────────────
