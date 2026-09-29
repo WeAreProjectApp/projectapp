@@ -120,6 +120,24 @@ def test_mark_endpoint_returns_only_metadata(staff_client, make_link):
     assert CREDENTIALS['password'] not in str(response.data)
 
 
+@pytest.mark.parametrize('state', ['expired', 'consumed', 'revoked'])
+def test_mark_endpoint_rejects_unavailable_links(staff_client, make_link, state):
+    link, url = make_link()
+    field = {'expired': 'expires_at', 'consumed': 'consumed_at', 'revoked': 'revoked_at'}[state]
+    setattr(link, field, timezone.now() - timedelta(days=1))
+    link.save(update_fields=[field])
+
+    response = staff_client.post(f'/api/secure-links/{link.pk}/mark-sent/', {}, format='json')
+
+    assert response.status_code == 409
+    assert response.data['code'] == 'invalid_send_state'
+    assert url not in str(response.data)
+    assert CREDENTIALS['password'] not in str(response.data)
+    link.refresh_from_db()
+    assert link.sent_at is None
+    assert not link.events.filter(kind='marked_sent').exists()
+
+
 @pytest.mark.parametrize('client_fixture', ['api_client', 'regular_client'])
 def test_mark_endpoint_rejects_nonstaff(request, client_fixture, make_link):
     link, _ = make_link()

@@ -1,5 +1,13 @@
 # Technical Documentation — ProjectApp
 
+> **Enlaces seguros — 2026-09-29:** `secure_links.0003` agrega `sent_at`,
+> `sent_by` y el evento `marked_sent`. API/MCP mantienen `status` y agregan
+> `lifecycle_status`; el listado del panel suma `lifecycle_counts` con un único
+> agregado SQL para ambos grupos de contadores. `projectapp.E002` comprueba la
+> clave Fernet actual en `check --deploy`, sin revelar valores ni reutilizar el
+> caché del cifrador. El despliegue aplica la migración; el worktree sólo ejecuta
+> tests aislados. La configuración productiva se verifica por separado.
+
 > **MCP Propuestas — 2026-09-28:** `update_proposal` sigue siendo importación
 > JSON; `update_proposal_settings` modifica metadata parcial. Los contratos
 > usan `variant` y los campos existentes de `contract_params`, sin mezclar

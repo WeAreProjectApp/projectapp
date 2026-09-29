@@ -32,6 +32,12 @@ export const secureLinkTypes = [
   },
 ];
 
+/** Select a catalog type through the accessible floating combobox. */
+export async function chooseSecureLinkType(page, { testId = 'secure-link-type', name }) {
+  await page.getByTestId(testId).click();
+  await page.getByRole('option', { name, exact: true }).click();
+}
+
 export function secureLinkRow(overrides = {}) {
   return {
     id: 7,
@@ -44,6 +50,7 @@ export function secureLinkRow(overrides = {}) {
     sender: 'ProjectApp',
     team_only: false,
     status: 'active',
+    lifecycle_status: 'ready',
     client: null,
     client_name: 'Ana Cliente',
     project: null,
@@ -55,6 +62,7 @@ export function secureLinkRow(overrides = {}) {
     expires_at: '2026-10-03T15:00:00Z',
     consumed_at: null,
     revoked_at: null,
+    sent_at: null,
     activation_count: 1,
     created_at: '2026-09-26T15:00:00Z',
     updated_at: '2026-09-26T15:00:00Z',

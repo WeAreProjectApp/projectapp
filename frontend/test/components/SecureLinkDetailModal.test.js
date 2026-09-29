@@ -90,6 +90,39 @@ describe('SecureLinkDetailModal', () => {
     expect(wrapper.emitted('changed')).toHaveLength(1);
   });
 
+  it('refreshes the delivery metadata after a manual send mark', async () => {
+    // Fails if manual delivery posts to the wrong endpoint or leaves the panel on its stale Ready metadata.
+    const sentDetail = {
+      ...baseDetail,
+      lifecycle_status: 'sent',
+      sent_at: '2026-09-29T15:20:00Z',
+    };
+    const wrapper = mountModal();
+    await flushPromises();
+    create_request.mockResolvedValueOnce({ data: sentDetail });
+    get_request.mockResolvedValueOnce({ data: sentDetail });
+
+    await wrapper.get('[data-testid="secure-link-mark-sent"]').trigger('click');
+    await flushPromises();
+
+    expect(create_request).toHaveBeenCalledWith('secure-links/7/mark-sent/', {});
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="secure-link-status-sent"]').text()).toBe('secureLinks.states.sent');
+    expect(wrapper.text()).toContain('Mar, 29 sep 2026, 10:20');
+    expect(wrapper.text()).not.toContain('S3cr3t');
+  });
+
+  it.each([
+    ['team-only', { ...baseDetail, team_only: true }],
+    ['already-sent', { ...baseDetail, sent_at: '2026-09-29T15:20:00Z' }],
+  ])('does not offer manual delivery for a %s link', async (_label, detail) => {
+    // Fails if team-owned or already-sent links can be recorded as manually delivered again.
+    const wrapper = mountModal(detail);
+    await flushPromises();
+
+    expect(wrapper.findAll('[data-testid="secure-link-mark-sent"]')).toHaveLength(0);
+  });
+
   it('reactivates a used link generating a new URL and copies it', async () => {
     const wrapper = mountModal({ ...baseDetail, status: 'consumed', consumed_at: '2026-09-26T15:30:00Z' });
     await flushPromises();

@@ -29,13 +29,14 @@ describe('useSecureLinksStore', () => {
   it('requests only the active filters and stores counters and the public page URL', async () => {
     get_request.mockResolvedValue({ data: {
       results: [row], count: 1, page: 2, page_size: 25,
-      counts: { active: 1 }, unopened_received: 3, public_create_url: 'https://x/es-co/secure-link',
+      counts: { active: 1 }, lifecycle_counts: { ready: 1, sent: 2 }, unopened_received: 3, public_create_url: 'https://x/es-co/secure-link',
     } });
 
     await store.fetchLinks({ status: 'active', received: '', search: '', page: 2 });
 
     expect(get_request).toHaveBeenCalledWith('secure-links/?status=active&page=2');
     expect(store.links).toEqual([row]);
+    expect(store.lifecycleCounts).toEqual({ ready: 1, sent: 2 });
     expect(store.unopenedReceived).toBe(3);
     expect(store.publicCreateUrl).toBe('https://x/es-co/secure-link');
   });
@@ -68,6 +69,18 @@ describe('useSecureLinksStore', () => {
     expect(result.data.url).toBe('https://x#token');
     expect(store.links).toEqual([row]);
     expect(JSON.stringify(store.$state)).not.toContain('token');
+  });
+
+  it('merges manual delivery metadata into the listed link', async () => {
+    // Fails if the manual-send control posts to a legacy endpoint or does not refresh its list row.
+    store.links = [row];
+    store.count = 1;
+    create_request.mockResolvedValue({ data: { id: 7, lifecycle_status: 'sent', sent_at: '2026-09-29T15:20:00Z' } });
+
+    await store.markSent(7);
+
+    expect(create_request).toHaveBeenCalledWith('secure-links/7/mark-sent/', {});
+    expect(store.links).toEqual([{ id: 7, title: 'Admin', status: 'active', lifecycle_status: 'sent', sent_at: '2026-09-29T15:20:00Z' }]);
   });
 
   it('returns revealed panel content without storing it', async () => {

@@ -2,7 +2,7 @@
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
-import { json, revealedContent, secureLinkRow, secureLinkTypes } from '../helpers/secure-links.js';
+import { chooseSecureLinkType, json, revealedContent, secureLinkRow, secureLinkTypes } from '../helpers/secure-links.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
@@ -19,7 +19,7 @@ async function installSecureLinksMock(page) {
     }
     if (apiPath === 'secure-links/public/types/') return json({ types: secureLinkTypes });
     if (apiPath === 'secure-links/' && method === 'GET') {
-      return json({ results: [row], count: 1, page: 1, page_size: 25, counts: { active: 1, consumed: 0, expired: 0, revoked: 0, all: 1 }, unopened_received: 0, public_create_url: 'http://localhost:3000/es-co/secure-link' });
+      return json({ results: [row], count: 1, page: 1, page_size: 25, counts: { active: 1, consumed: 0, expired: 0, revoked: 0, all: 1 }, lifecycle_counts: { ready: 1, sent: 0, opened: 0, expired: 0, revoked: 0, all: 1 }, unopened_received: 0, public_create_url: 'http://localhost:3000/es-co/secure-link' });
     }
     if (apiPath === `secure-links/${row.id}/` && method === 'GET') {
       return json({ ...row, events: [{ id: 1, kind: 'created', kind_label: 'Creado', actor_name: 'Admin', ip_address: null, details: {}, created_at: row.created_at }] });
@@ -64,8 +64,9 @@ for (const profile of RESPONSIVE_PROFILES) {
       });
     });
 
+    // Bug caught: the floating Custom listbox could be clipped outside a compact panel viewport.
     test('keeps custom fields usable in the create modal', {
-      tag: ['@flow:admin-secure-link-create', '@outcome:display', '@responsive:communications', `@viewport:${profile}`],
+      tag: ['@flow:admin-secure-link-create', '@outcome:display', '@outcome:error', '@responsive:communications', `@viewport:${profile}`],
     }, async ({ page }, testInfo) => {
       await setAuthLocalStorage(page, { token: 'secure-links-responsive-token', userAuth: { id: 9002, role: 'admin', is_staff: true, is_superuser: true } });
       await installSecureLinksMock(page);
@@ -73,13 +74,14 @@ for (const profile of RESPONSIVE_PROFILES) {
       await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
       await enterByProfile[profile](page);
       await page.getByTestId('secure-links-new').click();
-      await page.getByTestId('secure-link-type').selectOption('custom');
+      await chooseSecureLinkType(page, { name: 'Personalizado' });
       await page.getByTestId('secure-link-title').fill('Referencia');
       await page.getByTestId('secure-link-field-custom_name').fill('Instrucciones');
+      await expect(page.getByTestId('secure-link-field-custom_name')).toHaveValue('Instrucciones');
       await page.getByTestId('secure-link-save').click();
 
       const modal = page.getByTestId('secure-link-form');
-      await expect(modal.getByText('Este campo es obligatorio.')).toBeVisible();
+      await expect(modal.getByText('Este campo es obligatorio.')).toHaveText('Este campo es obligatorio.');
       await expect(page.getByTestId('secure-link-field-content')).toBeFocused();
       await assertResponsiveScenario(page, testInfo, secureLinksScenario, {
         profile, modalLocator: modal, finalActionLocator: modal.getByTestId('secure-link-save'),

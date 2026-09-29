@@ -161,7 +161,7 @@ Validar consulta → begin_upload → PUT firmado (o bloques) → complete_uploa
 | `commercial` | 135 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos y correos comerciales |
 | `projects` | 21 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
 | `documents` | 64 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
-| `communications` | 43 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
+| `communications` | 44 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 43 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
 | `accounting-ledger` | 56 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
@@ -537,6 +537,7 @@ al crear. Los logs extraen exclusivamente IDs enteros permitidos de este módulo
 | `list_secure_link_types` | read | tipos, incluido Personalizado, y campos obligatorios |
 | `create_secure_link` | write | contenido obligatorio y URL sólo al crear |
 | `list_secure_links` / `get_secure_link` | read | estado e historial; nunca URL ni contenido |
+| `mark_secure_link_sent` | write | marca manual de envío, fecha y actor; no envía correo ni consume/revela el enlace; repetición idempotente |
 | `update_secure_link` | write | ID y cambios; fields reemplaza; omitir conserva; editar no reactiva |
 | `delete_secure_link` | sensitive | preview y confirmación; desaparecen enlace y eventos |
 | `reveal_secure_link_content` | sensitive | habilitación explícita en allowed_tools; preview sin secreto; entrega efímera al confirmar |
@@ -554,6 +555,12 @@ devuelve sólo comprobante, nunca el contenido ni otra auditoría de lectura.
 No inspeccionar secretos reales: usar valores ficticios y comprobar ausencia
 en McpActionIntent (arguments/impact/result), McpRequestLog y mensajes de error.
 Las respuestas deben incluir Cache-Control: no-store.
+
+Los metadatos agregan `lifecycle_status` (`ready/sent/opened/expired/revoked`),
+`sent_at` y `sent_by`. `list_secure_links` permite filtrar por `lifecycle_status`;
+`status` conserva sus valores anteriores. Marcar un recibido, vencido, abierto
+o revocado debe responder `invalid_send_state` sin eventos ni cambios. Reactivar
+limpia la marca de envío actual y conserva su historial.
 
 Comprobar tipo inexistente, campo obligatorio vacío, campo desconocido, título
 vacío/largo, proyecto de otro cliente, secreto inválido en una solicitud de

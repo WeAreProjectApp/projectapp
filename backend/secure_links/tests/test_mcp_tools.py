@@ -164,6 +164,19 @@ def test_mcp_filters_manually_sent_links(api_client, mcp_token, make_link, staff
     assert data['count'] == 1
 
 
+def test_mcp_rejects_marking_received_links(api_client, mcp_token, make_link):
+    """El MCP no permite marcar como enviado un enlace recibido del cliente."""
+    link, _ = make_link(origin=SecureLink.Origin.PUBLIC)
+
+    response = call_tool(api_client, mcp_token, 'mark_secure_link_sent', {'link_id': link.pk})
+
+    assert result(response)['isError'] is True
+    assert error_code(response) == 'invalid_send_state'
+    link.refresh_from_db()
+    assert link.sent_at is None
+    assert not link.events.filter(kind='marked_sent').exists()
+
+
 def test_custom_type_is_discoverable(api_client, mcp_token):
     """El asistente descubre los campos de Personalizado desde el catálogo."""
     response = call_tool(api_client, mcp_token, 'list_secure_link_types', {})

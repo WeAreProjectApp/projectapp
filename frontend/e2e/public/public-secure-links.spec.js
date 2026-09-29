@@ -7,7 +7,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PUBLIC_SECURE_LINK_CREATE, PUBLIC_SECURE_LINK_REVEAL } from '../helpers/flow-tags.js';
 import {
-  SECURE_LINK_TOKEN, json, publicStatus, revealedContent, secureLinkTypes,
+  SECURE_LINK_TOKEN, chooseSecureLinkType, json, publicStatus, revealedContent, secureLinkTypes,
 } from '../helpers/secure-links.js';
 
 test.setTimeout(60_000);
@@ -112,14 +112,14 @@ async function mockCreate(page, { create, types } = {}) {
   return calls;
 }
 
-test('a client creates a link for the team and gets the URL to send', {
+// Bug caught: public creation could silently retain Credentials instead of starting as a confidential message.
+test('a client creates a confidential message for the team and gets the URL to send', {
   tag: [...PUBLIC_SECURE_LINK_CREATE, '@role:guest', '@outcome:success'],
 }, async ({ page }) => {
   const calls = await mockCreate(page);
 
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
-  await page.getByTestId('secure-link-field-service').fill('GoDaddy');
-  await page.getByTestId('secure-link-field-password').fill('Cliente-Clave-1');
+  await page.getByTestId('secure-link-field-message').fill('La clave se comparte por el canal acordado.');
   await page.getByTestId('secure-link-public-name').fill('Laura Gómez');
   await page.getByTestId('secure-link-public-validity').getByRole('tab', { name: '3 días' }).click();
   await page.getByTestId('secure-link-public-submit').click();
@@ -127,8 +127,8 @@ test('a client creates a link for the team and gets the URL to send', {
   await expect(page.getByTestId('secure-link-create-url')).toContainText(`#${SECURE_LINK_TOKEN}`);
   await expect(page.getByTestId('secure-link-create-mail')).toHaveAttribute('href', /^mailto:team@projectapp\.co/);
   expect(calls[0]).toMatchObject({
-    secret_type: 'credentials',
-    fields: { service: 'GoDaddy', password: 'Cliente-Clave-1' },
+    secret_type: 'confidential_message',
+    fields: { message: 'La clave se comparte por el canal acordado.' },
     creator_name: 'Laura Gómez',
     validity_days: 3,
     website: '',
@@ -143,20 +143,22 @@ test('missing required values are shown on the field without creating the link',
   });
 
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Credenciales de acceso' });
   await page.getByTestId('secure-link-public-name').fill('Laura Gómez');
   await page.getByTestId('secure-link-public-submit').click();
 
-  await expect(page.getByText('Este campo es obligatorio.')).toBeVisible();
+  await expect(page.getByText('Este campo es obligatorio.')).toHaveText('Este campo es obligatorio.');
   await expect(page.getByTestId('secure-link-create-url')).toHaveCount(0);
 });
 
 
+// Bug caught: Custom content could become unreachable when the native select was replaced by a listbox.
 test('a client creates custom content', {
   tag: [...PUBLIC_SECURE_LINK_CREATE, '@role:guest', '@outcome:success'],
 }, async ({ page }) => {
   const calls = await mockCreate(page);
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
-  await page.getByTestId('secure-link-public-type').selectOption('custom');
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Personalizado' });
   await page.getByTestId('secure-link-field-custom_name').fill('Instrucciones');
   await page.getByTestId('secure-link-field-content').fill('Mensaje privado');
   await page.getByTestId('secure-link-public-name').fill('Laura');
@@ -166,17 +168,18 @@ test('a client creates custom content', {
   expect(calls[0]).toMatchObject({ secret_type: 'custom', fields: { custom_name: 'Instrucciones', content: 'Mensaje privado' } });
 });
 
+// Bug caught: Custom validation could submit without a name after the listbox migration.
 test('custom content asks for its name before sending', {
   tag: [...PUBLIC_SECURE_LINK_CREATE, '@role:guest', '@outcome:error'],
 }, async ({ page }) => {
   const calls = await mockCreate(page);
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
-  await page.getByTestId('secure-link-public-type').selectOption('custom');
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Personalizado' });
   await page.getByTestId('secure-link-field-content').fill('Mensaje privado');
   await page.getByTestId('secure-link-public-name').fill('Laura');
   await page.getByTestId('secure-link-public-submit').click();
 
-  await expect(page.getByText('Este campo es obligatorio.')).toBeVisible();
+  await expect(page.getByText('Este campo es obligatorio.')).toHaveText('Este campo es obligatorio.');
   await expect(page.getByTestId('secure-link-field-custom_name')).toBeFocused();
   expect(calls).toHaveLength(0);
 });
@@ -187,6 +190,7 @@ test('a client retries creation after an HTML error', {
   const responses = [{ status: 500, contentType: 'text/html', body: '<html>private traceback</html>' }];
   await mockCreate(page, { create: () => responses.shift() });
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Credenciales de acceso' });
   await page.getByTestId('secure-link-field-password').fill('retry-value');
   await page.getByTestId('secure-link-public-name').fill('Laura');
   await page.getByTestId('secure-link-public-submit').click();
@@ -207,8 +211,8 @@ test('a client can retry loading the catalog', {
   await expect(page.getByTestId('secure-link-types-error')).toContainText('No pudimos cargar');
   await expect(page.getByTestId('secure-link-public-submit')).toBeDisabled();
   await page.getByTestId('secure-link-types-retry').click();
-  await page.getByTestId('secure-link-public-type').selectOption('custom');
-  await expect(page.getByTestId('secure-link-field-custom_name')).toBeVisible();
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Personalizado' });
+  await expect(page.getByTestId('secure-link-field-custom_name')).toHaveValue('');
 });
 
 
@@ -218,6 +222,7 @@ test('creating another link starts with empty credentials', {
   await mockCreate(page);
   // quality: allow-deep-link (clients enter through the public creation URL shared by the team)
   await page.goto('/es-co/secure-link', { waitUntil: 'domcontentloaded' });
+  await chooseSecureLinkType(page, { testId: 'secure-link-public-type', name: 'Credenciales de acceso' });
   await page.getByTestId('secure-link-field-username').fill('previous-user');
   await page.getByTestId('secure-link-field-password').fill('previous-password');
   await page.getByTestId('secure-link-public-name').fill('Laura');

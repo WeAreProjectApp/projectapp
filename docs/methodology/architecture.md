@@ -1,5 +1,13 @@
 # Architecture — ProjectApp
 
+> **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
+> fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
+> `mark_sent`, una marca manual idempotente con evento, fecha y actor que no
+> consume ni revela contenido. Reactivar limpia esa marca y conserva eventos.
+> El formulario compartido usa un dropdown con nombre condicional para
+> Personalizado, Mensaje confidencial inicial y campos opcionales plegables.
+> Contrato y operación: [Enlaces seguros](../secure-links.md).
+
 > **Paridad MCP de Propuestas — 2026-09-28:** `proposal_operations` comparte
 > los adaptadores del panel entre `proposals` y `commercial`; `proposal_schemas`
 > deriva los campos editables de los serializers y rechaza claves desconocidas.

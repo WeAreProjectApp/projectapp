@@ -2,8 +2,14 @@
   "id": "public-secure-link-reveal",
   "name": "Public Secure Link Reveal",
   "module": "public",
-  "roles": ["guest"],
+  "roles": [
+    "guest"
+  ],
   "priority": "P1",
-  "description": "Recipient opens a one-time link whose token travels in the URL fragment; loading the page never consumes it, the Show content button reveals the fields once with copy actions, and used, expired, revoked, invalid or team-only links show a clear state without content.",
-  "outcomes": ["success", "display", "failure"]
+  "description": "A recipient opens a token held in the URL fragment. Loading displays type, sender and expiry without consuming the link; explicitly selecting Show content reveals it once and consumes it. Used, expired, revoked, invalid and team-only links show a non-content state; team-only links direct the recipient to team sign-in.",
+  "outcomes": [
+    "success",
+    "display",
+    "failure"
+  ]
 }
