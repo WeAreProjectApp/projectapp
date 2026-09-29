@@ -1,4 +1,4 @@
-"""Behavioral smoke tests for curated annex generation."""
+"""Regressions for annexes that preserve the original PDF sections."""
 from io import BytesIO
 
 import pytest
@@ -9,6 +9,8 @@ from pypdf import PdfReader
 from content.models import ProposalSection
 from content.services.formalization_content import FormalContent
 from content.services.formalization_pdf import generate_formal_pdf
+from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
+from content.services.technical_document_pdf import generate_technical_document_pdf
 
 pytestmark = pytest.mark.django_db
 
@@ -16,6 +18,7 @@ pytestmark = pytest.mark.django_db
 @pytest.fixture
 def formal_proposal(proposal):
     sections = {
+        'greeting': {'proposalTitle': 'Propuesta original'},
         'functional_requirements': {'groups': [{'id': 'core', 'title': 'Operación', 'items': [{'id': 'orders', 'name': 'Pedidos', 'description': 'Registrar pedidos.'}]}]},
         'investment': {'paymentOptions': [{'label': '100% al entregar', 'description': ''}], 'valueReasons': ['SALES_SENTINEL']},
         'technical_document': {'purpose': 'Gestionar pedidos', 'epics': [{'epicKey': 'OP', 'title': 'Operación', 'requirements': [{'flowKey': 'OP-01', 'title': 'Crear pedido', 'description': 'Conservar fecha.', 'linked_item_ids': ['orders']}]}], 'growthReadiness': {'strategies': [{'dimension': 'Carga', 'preparation': 'Índices', 'evolution': 'FUTURE_SENTINEL'}]}},
@@ -26,40 +29,67 @@ def formal_proposal(proposal):
     return proposal
 
 
-@freeze_time('2026-09-19 12:00:00')
-def test_commercial_pdf_excludes_sales_copy(formal_proposal):
-    raw = generate_formal_pdf(FormalContent(formal_proposal), 'commercial', timezone.now(), 'PROP-TEST')
-    rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
-    assert 'Pedidos' in rendered
-    assert '15.000,00 COP' in rendered
-    assert 'SALES_SENTINEL' not in rendered
-    assert 'ROI_SENTINEL' not in rendered
+def pdf_text(raw):
+    return '\n'.join(page.extract_text() or '' for page in PdfReader(BytesIO(raw)).pages)
 
 
-@freeze_time('2026-09-19 12:00:00')
-def test_commercial_pdf_excludes_unselected_priceable_requirement(formal_proposal):
-    """Fails if a declined priced requirement or its amount enters the formal annex."""
+def original_commercial_text(proposal):
+    # Independent reference: the normal PDF with precisely the agreed six sections disabled.
+    excluded = proposal.sections.filter(is_enabled=True, section_type__in=[
+        'executive_summary', 'context_diagnostic', 'conversion_strategy',
+        'roi_projection', 'final_note', 'next_steps',
+    ])
+    ids = list(excluded.values_list('pk', flat=True))
+    excluded.update(is_enabled=False)
+    try:
+        return pdf_text(ProposalPdfService.generate(
+            proposal, selected_modules=default_selected_modules_from_content(proposal),
+        ))
+    finally:
+        proposal.sections.filter(pk__in=ids).update(is_enabled=True)
+
+
+def render(proposal, kind='commercial'):
+    return pdf_text(generate_formal_pdf(FormalContent(proposal), kind, timezone.now(), 'PROP-TEST'))
+
+
+@pytest.mark.parametrize('section_type', [
+    'executive_summary', 'context_diagnostic', 'conversion_strategy',
+    'roi_projection', 'final_note', 'next_steps',
+])
+def test_commercial_annex_excludes_only_the_agreed_whole_sections(formal_proposal, section_type):
+    formal_proposal.sections.update_or_create(
+        section_type=section_type,
+        defaults={'title': section_type, 'order': 20, 'content_json': {
+            '_editMode': 'paste', 'rawText': 'EXCLUDED_SALES_SECTION',
+        }},
+    )
+    original = pdf_text(ProposalPdfService.generate(formal_proposal))
+
+    rendered = render(formal_proposal)
+
+    assert 'EXCLUDED_SALES_SECTION' in original
+    assert 'EXCLUDED_SALES_SECTION' not in rendered
+    assert 'SALES_SENTINEL' in rendered  # Part of investment: no field-level curation.
+    assert rendered == original_commercial_text(formal_proposal)
+
+
+def test_commercial_annex_inherits_unselected_item_pricing(formal_proposal):
     requirements = formal_proposal.sections.get(section_type='functional_requirements')
     requirements.content_json['groups'][0]['items'].append({
-        'id': 'campaigns',
-        'name': 'Módulo comercial opcional',
-        'description': 'OPTIONAL_SALES_SCOPE',
-        'price': '5000',
-        'is_required': False,
+        'id': 'campaigns', 'name': 'Módulo opcional',
+        'description': 'OPTIONAL_SALES_SCOPE', 'price': '5000', 'is_required': False,
     })
     requirements.save(update_fields=['content_json'])
 
-    raw = generate_formal_pdf(FormalContent(formal_proposal), 'commercial', timezone.now(), 'PROP-TEST')
-    rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
+    rendered = render(formal_proposal)
 
     assert 'OPTIONAL_SALES_SCOPE' not in rendered
-    assert 'Módulo comercial opcional' not in rendered
-    assert '10.000,00 COP' in rendered
+    assert '10.000' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
-@freeze_time('2026-09-19 12:00:00')
-def test_curated_pdfs_preserve_legacy_requirement_traceability(formal_proposal):
-    """Fails if legacy requirement references diverge between the commercial and technical annexes."""
+def test_technical_annex_preserves_original_legacy_requirement_content(formal_proposal):
     requirements = formal_proposal.sections.get(section_type='functional_requirements')
     del requirements.content_json['groups'][0]['items'][0]['id']
     requirements.save(update_fields=['content_json'])
@@ -67,15 +97,11 @@ def test_curated_pdfs_preserve_legacy_requirement_traceability(formal_proposal):
     technical.content_json['epics'][0]['requirements'][0]['linked_item_ids'] = ['item-core-pedidos']
     technical.save(update_fields=['content_json'])
 
-    commercial = generate_formal_pdf(FormalContent(formal_proposal), 'commercial', timezone.now(), 'PROP-TEST')
-    technical = generate_formal_pdf(FormalContent(formal_proposal), 'technical', timezone.now(), 'PROP-TEST')
-    commercial_text = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(commercial)).pages)
-    technical_text = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(technical)).pages)
+    rendered = render(formal_proposal, 'technical')
 
-    assert 'item-core-pedidos' in commercial_text
-    assert 'item-core-pedidos' in technical_text
-    assert 'fr-core-pedidos' not in commercial_text
-    assert 'fr-core-pedidos' not in technical_text
+    assert 'Crear pedido' in rendered
+    assert 'Conservar fecha.' in rendered
+    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
 
 
 @pytest.fixture
@@ -137,18 +163,16 @@ def module_terms_proposal(formal_proposal):
 
 
 @freeze_time('2026-09-19 12:00:00')
-def test_commercial_pdf_includes_only_earned_module_terms(module_terms_proposal):
-    """Fails if eligible module terms disappear or ineligible catalog terms become contractual obligations."""
+def test_commercial_annex_preserves_original_module_terms(module_terms_proposal):
+    """Do not apply an annex-specific eligibility or rewriting policy."""
     formal_proposal = module_terms_proposal
 
     raw = generate_formal_pdf(FormalContent(formal_proposal), 'commercial', timezone.now(), 'PROP-TEST')
     rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
 
     assert 'CLÁUSULA_ELEGIBLE' in rendered
-    assert 'Meses de vigencia: 12' in rendered
     assert 'NOTA_DISCRECIONAL_ELEGIBLE' in rendered
-    assert 'TERMINO_NO_SELECCIONADO' not in rendered
-    assert 'TERMINO_BAJO_UMBRAL' not in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
 @freeze_time('2026-09-19 12:00:00')
@@ -171,16 +195,25 @@ def test_commercial_pdf_preserves_saved_hosting_options(formal_proposal):
     raw = generate_formal_pdf(FormalContent(formal_proposal), 'commercial', timezone.now(), 'PROP-TEST')
     rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
 
-    assert '300,00 COP' in rendered
-    assert '810,00 COP' in rendered
-    assert 'Meses incluidos sin costo: 2' in rendered
-    assert 'Modalidades disponibles; esta tabla no registra una elección de periodicidad.' in rendered
+    assert 'Hosting administrado' in rendered
+    assert 'Trimestral' in rendered
+    assert rendered == original_commercial_text(formal_proposal)
 
 
-@freeze_time('2026-09-19 12:00:00')
-def test_technical_pdf_excludes_future_scope(formal_proposal):
-    raw = generate_formal_pdf(FormalContent(formal_proposal), 'technical', timezone.now(), 'PROP-TEST')
-    rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
-    assert 'OP-01' in rendered
+def test_technical_annex_preserves_future_scope_as_original(formal_proposal):
+    rendered = render(formal_proposal, 'technical')
+
+    assert 'Crear pedido' in rendered
     assert 'Índices' in rendered
-    assert 'FUTURE_SENTINEL' not in rendered
+    assert 'FUTURE_SENTINEL' in rendered
+    assert rendered == pdf_text(generate_technical_document_pdf(formal_proposal))
+
+
+def test_commercial_annex_omits_a_disabled_retained_section(formal_proposal):
+    formal_proposal.sections.filter(section_type='investment').update(is_enabled=False)
+
+    rendered = render(formal_proposal)
+
+    assert 'SALES_SENTINEL' not in rendered
+    assert 'Pedidos' in rendered
+    assert rendered == original_commercial_text(formal_proposal)

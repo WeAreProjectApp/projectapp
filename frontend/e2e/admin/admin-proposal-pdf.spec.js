@@ -19,7 +19,7 @@ for (const [label, query, filename] of [
     tag: ['@flow:admin-proposal-download-pdf', '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     await setAuthLocalStorage(page, { token: 'e2e-admin-token', userAuth: { id: 8300, role: 'admin', is_staff: true } });
-    await mockApi(page, async ({ apiPath }) => {
+    await mockApi(page.context(), async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
       if (apiPath === 'proposals/2/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(proposal) };
       if (apiPath.startsWith('proposals/2/pdf/')) return { status: 200, contentType: 'application/pdf', body: '%PDF-staff', headers: { 'content-disposition': `attachment; filename="${filename}"` } };

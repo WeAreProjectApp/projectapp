@@ -1,4 +1,4 @@
-"""Behavioral tests for Markdown exports of curated formal annexes."""
+"""Markdown mirrors the text of the actual PDF without another projection."""
 from datetime import datetime, timezone
 
 import pytest
@@ -66,91 +66,66 @@ def _export(proposal, kind):
     )
 
 
-def test_commercial_markdown_preserves_selected_english_scope(formal_markdown_proposal):
-    """Fails if commercial Markdown includes declined sales scope or loses its English projection."""
+def test_commercial_markdown_keeps_text_inside_retained_sections(formal_markdown_proposal):
     export = _export(formal_markdown_proposal, 'commercial')
 
     assert export['title'] == 'Formal commercial proposal'
     assert 'Orders' in export['markdown']
-    assert 'orders' in export['markdown']
-    assert 'Optional sales module' not in export['markdown']
-    assert 'UNSELECTED_SENTINEL' not in export['markdown']
-    assert 'SALES_SENTINEL' not in export['markdown']
-    assert 'ROI_SENTINEL' not in export['markdown']
+    assert 'SALES\\_SENTINEL' in export['markdown']
+    assert 'UNSELECTED' not in export['markdown']
+    assert 'ROI' not in export['markdown']
+    assert 'Texto extraído del PDF' in export['warnings'][0]
 
 
-def test_technical_markdown_preserves_selected_requirement_identifiers(formal_markdown_proposal):
-    """Fails if technical Markdown loses the selected requirement traceability used by the formal PDF."""
+def test_technical_markdown_keeps_original_growth_information(formal_markdown_proposal):
     export = _export(formal_markdown_proposal, 'technical')
 
     assert export['title'] == 'Formal technical specification'
-    assert 'OPS-01' in export['markdown']
-    assert 'orders' in export['markdown']
-    assert 'FUTURE_SENTINEL' not in export['markdown']
+    assert 'Create order' in export['markdown']
+    assert 'FUTURE\\_SENTINEL' in export['markdown']
+    assert 'Indexes' in export['markdown']
 
 
 def test_formal_markdown_rejects_unknown_document_kind(formal_markdown_proposal):
-    """Fails if an unsupported formal Markdown URL produces arbitrary document content."""
     with pytest.raises(FormalizationError, match='Tipo de documento inválido') as error:
         _export(formal_markdown_proposal, 'unsupported')
 
     assert error.value.code == 'invalid_document'
 
 
-def test_formal_markdown_rejects_unstructured_scope(formal_markdown_proposal):
-    """Fails if pasted unstructured requirements enter a legally formalized Markdown annex."""
+def test_formal_markdown_preserves_pasted_scope(formal_markdown_proposal):
     requirements = formal_markdown_proposal.sections.get(section_type='functional_requirements')
-    requirements.content_json = {'_editMode': 'paste', 'rawText': 'UNSTRUCTURED_SCOPE'}
+    requirements.content_json = {'_editMode': 'paste', 'rawText': 'Pasted scope reviewed by client.'}
     requirements.save(update_fields=['content_json'])
 
-    with pytest.raises(FormalizationError) as error:
-        _export(formal_markdown_proposal, 'commercial')
+    rendered = _export(formal_markdown_proposal, 'commercial')['markdown']
 
-    assert error.value.code == 'unstructured_content'
+    assert 'Pasted scope reviewed by client.' in rendered
 
 
-def test_technical_markdown_rejects_missing_selected_scope(formal_markdown_proposal):
-    """Fails if a technical export can omit every selected requirement and still look valid."""
+def test_technical_markdown_accepts_original_scope_without_epics(formal_markdown_proposal):
     technical = formal_markdown_proposal.sections.get(section_type='technical_document')
     technical.content_json = {'purpose': 'Manage orders', 'epics': []}
     technical.save(update_fields=['content_json'])
 
+    rendered = _export(formal_markdown_proposal, 'technical')['markdown']
+
+    assert 'Manage orders' in rendered
+
+
+@pytest.mark.parametrize('is_enabled', [False, True])
+def test_technical_markdown_requires_an_available_technical_section(formal_markdown_proposal, is_enabled):
+    formal_markdown_proposal.sections.filter(section_type='technical_document').update(is_enabled=is_enabled)
+    formal_markdown_proposal.sections.filter(section_type='technical_document', is_enabled=True).delete()
+
     with pytest.raises(FormalizationError) as error:
         _export(formal_markdown_proposal, 'technical')
 
-    assert error.value.code == 'technical_scope_missing'
-
-
-@pytest.mark.parametrize(('section_type', 'data', 'expected'), [
-    ('design_ux', {'focusItems': [{'description': 'Accessible screens'}]}, 'Accessible screens'),
-    ('creative_support', {'includes': ['Editorial assistance']}, 'Editorial assistance'),
-    ('timeline', {'phases': [{'title': 'Build', 'tasks': ['Review orders']}]}, 'Review orders'),
-    ('process_methodology', {'steps': [{'title': 'Review', 'clientAction': 'Approve screens'}]}, 'Approve screens'),
-    ('development_stages', {'stages': [{'title': 'Delivery', 'description': 'Publish release'}]}, 'Publish release'),
-    ('commercial_conditions', {'scopeParagraphs': ['Changes require approval']}, 'Changes require approval'),
-    ('value_added_modules', {
-        'module_ids': ['operations'],
-        'conditions': {'operations': {'terms_clauses': [{'label': 'Term', 'text': 'Includes onboarding'}]}},
-    }, 'Includes onboarding'),
-])
-def test_commercial_markdown_preserves_curated_section_content(
-    formal_markdown_proposal, section_type, data, expected,
-):
-    """Fails if the public PDF schema causes a saved commercial provision to disappear from Markdown."""
-    ProposalSection.objects.create(
-        proposal=formal_markdown_proposal, section_type=section_type,
-        title='Saved provision', order=10, content_json={**data, 'subtitle': 'SalesOnlySentinel'},
-    )
-
-    rendered = _export(formal_markdown_proposal, 'commercial')['markdown']
-
-    assert expected in rendered
-    assert 'Saved provision' in rendered
-    assert 'SalesOnlySentinel' not in rendered
+    assert error.value.code == 'technical_missing'
+    assert error.value.status == 404
 
 
 def test_commercial_markdown_preserves_saved_section_order(formal_markdown_proposal):
-    """Fails if Markdown uses a fixed scope-first order despite the order captured for the PDF."""
     scope = formal_markdown_proposal.sections.get(section_type='functional_requirements')
     scope.order = 10
     scope.title = 'Scope last'
@@ -162,64 +137,22 @@ def test_commercial_markdown_preserves_saved_section_order(formal_markdown_propo
 
     rendered = _export(formal_markdown_proposal, 'commercial')['markdown']
 
-    assert '## 01. Investment first' in rendered
+    assert 'Scope last' in rendered
     assert rendered.index('Investment first') < rendered.index('Scope last')
 
 
-def test_commercial_markdown_preserves_resolved_fractional_payment(formal_markdown_proposal):
-    """Fails if the Markdown adapter recalculates or rounds the resolved payment amount."""
-    formal_markdown_proposal.currency = 'USD'
-    formal_markdown_proposal.total_investment = '6000.25'
-    formal_markdown_proposal.save(update_fields=['currency', 'total_investment'])
-    investment = formal_markdown_proposal.sections.get(section_type='investment')
-    investment.content_json['paymentOptions'] = [{'label': '12.5% upon kickoff', 'description': 'OldAmount'}]
-    investment.save(update_fields=['content_json'])
-
-    rendered = _export(formal_markdown_proposal, 'commercial')['markdown']
-
-    assert '1,000.25 USD' in rendered
-    assert '125.03 USD' in rendered
-    assert 'OldAmount' not in rendered
-
-
-def test_commercial_markdown_uses_saved_hosting_terms(formal_markdown_proposal):
-    """Fails if an export reseeds the hosting catalog instead of retaining the accepted proposal terms."""
-    investment = formal_markdown_proposal.sections.get(section_type='investment')
-    investment.content_json['hostingPlan'] = {
-        'title': 'Hosting', 'monthlyPrice': 'SavedPrice', 'renewalNote': 'Renewal on anniversary',
-        'specs': [{'label': 'Storage', 'value': '20 GB'}],
-    }
-    investment.save(update_fields=['content_json'])
-
-    rendered = _export(formal_markdown_proposal, 'commercial')['markdown']
-
-    assert 'SavedPrice' in rendered
-    assert 'Renewal on anniversary' in rendered
-    assert '20 GB' in rendered
-    assert 'SMMLV' not in rendered
-
-
-@pytest.mark.parametrize(('field', 'data', 'expected'), [
-    ('environments', [{
-        'name': 'Staging', 'purpose': 'Validation', 'whoAccesses': 'QA team',
-        'url': 'PrivateSentinel', 'database': 'PrivateSentinel', 'credentials': 'PrivateSentinel',
-    }], 'QA team'),
-    ('integrations', {'excluded': [{
-        'service': 'External service', 'reason': 'Outside scope', 'availability': 'PrivateSentinel',
-    }]}, 'Outside scope'),
-    ('growthReadiness', {'strategies': [{
-        'dimension': 'Load', 'preparation': 'Query indexes', 'evolution': 'PrivateSentinel',
-    }]}, 'Query indexes'),
-])
-def test_technical_markdown_exports_only_allowed_projection_fields(
-    formal_markdown_proposal, field, data, expected,
-):
-    """Fails if adapting the PDF projection leaks internal fields or removes the permitted detail."""
+def test_technical_markdown_preserves_original_environment_columns(formal_markdown_proposal):
     technical = formal_markdown_proposal.sections.get(section_type='technical_document')
-    technical.content_json[field] = data
+    technical.content_json['environments'] = [{
+        'name': 'Staging', 'purpose': 'Validation', 'whoAccesses': 'QA team',
+        'url': 'staging.example.test', 'database': 'Application database',
+        'credentials': 'NeverPrintedSecret',
+    }]
     technical.save(update_fields=['content_json'])
 
     rendered = _export(formal_markdown_proposal, 'technical')['markdown']
 
-    assert expected in rendered
-    assert 'PrivateSentinel' not in rendered
+    assert 'staging.example.test' in rendered
+    assert 'Application database' in rendered
+    assert 'QA team' in rendered
+    assert 'NeverPrintedSecret' not in rendered

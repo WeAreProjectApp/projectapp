@@ -33,6 +33,7 @@ from content.services.hour_package_service import (
     seed_commercial_conditions_from_catalog,
 )
 from content.services.proposal_service import normalize_hosting_plan
+from content.services.proposal_totals_service import safe_decimal
 from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _register_fonts,
     _font,
@@ -1209,17 +1210,17 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
         fr_items = ps.get('_fr_items', []) if ps else []
         calc_items = ps.get('_calc_module_items', []) if ps else []
         deselected_sum = sum(
-            _safe(m, 'price', 0) for m in all_mods
+            safe_decimal(_safe(m, 'price', 0)) for m in all_mods
             if _safe(m, 'id') not in selected_ids
         ) + sum(
-            it.get('price', 0) for it in fr_items
+            safe_decimal(it.get('price', 0)) for it in fr_items
             if it.get('id') not in selected_ids
         )
         added_sum = sum(
             it.get('price', 0) for it in calc_items
             if it.get('id') in selected_ids and it.get('price')
         )
-        adjusted = base_num - deselected_sum + added_sum
+        adjusted = float(base_num - deselected_sum + added_sum)
 
     if adjusted is not None:
         display_num = adjusted
@@ -2458,7 +2459,7 @@ class ProposalPdfService:
     """
 
     @classmethod
-    def generate(cls, proposal, selected_modules=None, *, formal=None):
+    def generate(cls, proposal, selected_modules=None, *, formal=None, sections_override=None):
         """
         Build a multi-page portrait-A4 PDF from the proposal's
         enabled sections and return the raw bytes.
@@ -2470,6 +2471,7 @@ class ProposalPdfService:
         Args:
             proposal: BusinessProposal instance with related sections.
             selected_modules: Optional list of module IDs for dynamic pricing.
+            sections_override: Original section snapshots after whole-section exclusions.
 
         Returns:
             bytes: The PDF content, or None on failure.
@@ -2477,11 +2479,12 @@ class ProposalPdfService:
         try:
             _register_fonts()
 
-            sections = list(formal.sections) if formal else list(
-                proposal.sections
-                .filter(is_enabled=True)
-                .order_by('order')
-            )
+            if sections_override is not None:
+                sections = list(sections_override)
+            elif formal:
+                sections = list(formal.sections)
+            else:
+                sections = list(proposal.sections.filter(is_enabled=True).order_by('order'))
 
             buf = io.BytesIO()
             c = canvas.Canvas(buf, pagesize=A4)

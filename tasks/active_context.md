@@ -1,9 +1,17 @@
-# Descargas de propuestas vencidas (2026-09-29)
+# Descargas y contenido original de anexos (2026-09-29)
 
-Implementado, en validación: las propuestas vencidas se descargan únicamente
-por personal del panel mediante un endpoint administrativo. La vista pública
-conserva el 410 con un aviso visible. Aplica a PDFs comercial y técnico;
-no modifica su contenido ni los anexos de formalización de Documentos.
+PR #451: el panel descarga los PDF originales comercial y técnico aun con la
+propuesta vencida. La vista pública conserva el 410 con un aviso visible.
+
+Documentos deja de reestructurar el contenido: sólo excluye resumen ejecutivo,
+diagnóstico, estrategia de conversión, proyección de retorno, nota final y
+próximos pasos. Condiciones comerciales y demás secciones se conservan; el
+anexo técnico usa el PDF técnico original completo. Descargas, copia Markdown
+y adjuntos preparados comparten el mismo contenido. Las preparaciones del
+formato anterior requieren nueva revisión; los envíos históricos se conservan.
+Validación local: 106 casos backend, 32 unitarias frontend y 15 recorridos E2E
+en verde; comparación textual de PDFs reales y controles de calidad aprobados.
+La entrega conjunta y el CI final se consultan en el PR #451.
 
 # Videos explicativos: tarjetas iguales y reproducción manual (2026-09-28)
 

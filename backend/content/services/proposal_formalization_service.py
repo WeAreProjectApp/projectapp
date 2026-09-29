@@ -46,6 +46,7 @@ SOURCE_FIELDS = (
 )
 # Fingerprint version 3 also covers the closing modality.
 SOURCE_VERSION = 3
+DOCUMENT_VERSION = 2
 # A switch of modality leaves a prepared package pointing at documents that
 # are no longer the deal's contracts; that is a stale preparation.
 STALE_CONTRACT_CODES = ('contract_missing', 'modality_mismatch')
@@ -181,7 +182,7 @@ def availability(proposal):
 def prepare(proposal, user, payload):
     if not ProposalEmailService._is_template_active(TEMPLATE_KEY):
         raise FormalizationError('La plantilla de formalización está desactivada.', 'template_disabled')
-    payload = {**payload, '_source_version': SOURCE_VERSION}
+    payload = {**payload, '_source_version': SOURCE_VERSION, '_document_version': DOCUMENT_VERSION}
     captured_hash = source_hash(proposal, payload)
     now = timezone.now()
     preparation = ProposalFormalization(proposal=proposal, created_by=user, payload=payload, source_hash=captured_hash, expires_at=now + timedelta(hours=24))
@@ -233,6 +234,9 @@ def check_current(preparation):
     if preparation.expires_at <= timezone.now():
         raise FormalizationError('La preparación venció. Prepara nuevamente el correo.', 'expired_preparation', 410)
     stale = FormalizationError('Los datos de origen cambiaron. Prepara y revisa nuevamente el correo.', 'stale_preparation', 409)
+    if (preparation.payload.get('_document_version', 1) < DOCUMENT_VERSION
+            and {'commercial', 'technical'}.intersection(preparation.payload.get('documents', []))):
+        raise stale
     try:
         current = source_hash(load_proposal(preparation.proposal_id), preparation.payload)
     except FormalizationError as exc:
