@@ -11,13 +11,11 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from content.services.pdf_utils import (
-    BONE,
     CONTENT_W,
     COVER_PDF,
     COVER_TECHNICAL_PDF,
     ESMERALD,
     ESMERALD_80,
-    ESMERALD_LIGHT,
     GRAY_500,
     LEMON,
     MARGIN_L,
@@ -27,19 +25,14 @@ from content.services.pdf_utils import (
     WHITE,
     _apply_toc_links,
     _check_y,
-    _check_y_with_redraw,
     _draw_bullet_list,
     _draw_decorative_title_page,
     _draw_footer,
     _draw_header_bar,
     _draw_kpi_tile_row,
-    _draw_paragraphs,
-    _draw_pill,
-    _draw_priority_pill,
     _draw_section_header,
+    _section_header_height,
     _draw_separator,
-    _draw_subtitle,
-    _draw_table,
     _draw_toc_page,
     _pdf_label,
     _font,
@@ -47,10 +40,14 @@ from content.services.pdf_utils import (
     _safe,
     _sanitize_pdf_text,
     _strip_emoji,
-    _string_width_mixed,
     _wrap_by_width,
     format_date_es,
     merge_with_covers,
+)
+
+from content.services.proposal_pdf_layout import (
+    _draw_paragraphs, _draw_subtitle, _draw_table,
+    _draw_heading_badge, _draw_requirements_table, _heading_badge_height,
 )
 
 logger = logging.getLogger(__name__)
@@ -144,7 +141,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         # ── Pass A: Content pages (ps.num starts at 3) ───────
         # Page 1 = title page, page 2 = TOC; content begins at page 3.
         ps = {'num': formal.content_start if formal else _content_start,
-              'client': proposal.client_name, 'formal': formal}
+              'client': proposal.client_name, 'formal': formal,
+              '_pdf_lang': getattr(proposal, 'language', 'es') or 'es'}
 
         _draw_header_bar(c)
         y = PAGE_H - MARGIN_T
@@ -176,13 +174,13 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
             y = _draw_kpi_tile_row(c, y, _kpi_tiles, ps=ps,
                                    accent_first=True)
 
-        def next_section(title_es):
+        def next_section(title_es, first_block_height=20):
             nonlocal y, section_i
             title_es = _pdf_label(title_es, ps)
             section_i += 1
             idx = str(section_i).zfill(2)
             y -= 24
-            y = _check_y(c, y, ps, need=90)
+            y = _check_y(c, y, ps, need=_section_header_height(title_es) + first_block_height)
             section_page = ps['num']
             y = _draw_section_header(c, y, idx, title_es, ps=ps)
             toc_entries.append((idx, title_es, section_page))
@@ -313,8 +311,11 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
             if _nonempty_str(ep.get('title')) or _nonempty_str(ep.get('description')) or reqs:
                 epic_blocks.append((ep, reqs))
         if epic_blocks:
-            y = next_section('M\u00f3dulos del producto')
-            epic_lang = getattr(proposal, 'language', 'es') or 'es'
+            first_epic, first_reqs = epic_blocks[0]
+            first_title = _safe(first_epic, 'title') or _safe(first_epic, 'epicKey') or 'Módulo'
+            first_badge = f'{len(first_reqs)} requerimientos' if first_reqs else ''
+            y = next_section('M\u00f3dulos del producto',
+                             _heading_badge_height(c, first_title, first_badge))
             for ei, (ep, reqs) in enumerate(epic_blocks):
                 if ei > 0:
                     y = _draw_separator(c, y, ps=ps)
@@ -322,14 +323,10 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                 head = _safe(ep, 'title') or _safe(ep, 'epicKey') or 'M\u00f3dulo'
                 if formal:
                     head = ' · '.join(filter(None, [ep.get('epicKey'), ep.get('title')]))
-                y = _draw_subtitle(c, y, _strip_emoji(head) if formal else _strip_emoji(head)[:80], ps=ps)
-                if reqs:
-                    _draw_pill(
-                        c, MARGIN_L, y + 4,
-                        f'{len(reqs)} {"requirement" if formal and formal.language == "en" else "requerimiento"}'
-                        f'{"s" if len(reqs) != 1 else ""}',
-                        bg_color=BONE, text_color=ESMERALD, font_size=7)
-                    y -= 16
+                count_label = (
+                    f'{len(reqs)} {"requirement" if formal and formal.language == "en" else "requerimiento"}'
+                    f'{"s" if len(reqs) != 1 else ""}' if reqs else '')
+                y = _draw_heading_badge(c, y, _strip_emoji(head), count_label, ps=ps)
 
                 desc = (_safe(ep, 'description') or '').strip()
                 if desc:
@@ -351,119 +348,15 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                                     records, ps=ps, col_widths=[0.18, 0.30, 0.52])
                     continue
 
-                # ── Requirements table — one row per requirement ──────
                 if reqs:
-                    num_col_w = 28
-                    name_col_w = int((CONTENT_W - num_col_w) * 0.36)
-                    desc_col_w = CONTENT_W - num_col_w - name_col_w
-                    name_text_w = name_col_w - 12
-                    desc_text_w = desc_col_w - 12
-                    hdr_h = 22
-
-                    def _draw_reqs_header(c, yy):
-                        hb = yy - hdr_h
-                        c.setFillColor(ESMERALD)
-                        c.rect(MARGIN_L, hb, CONTENT_W, hdr_h, fill=1, stroke=0)
-                        hty = hb + (hdr_h - 8) / 2 + 2
-                        c.setFont(_font('bold'), 8)
-                        c.setFillColor(WHITE)
-                        c.drawCentredString(MARGIN_L + num_col_w / 2, hty, '#')
-                        c.drawString(MARGIN_L + num_col_w + 6, hty,
-                                     'Requerimiento')
-                        c.drawString(MARGIN_L + num_col_w + name_col_w + 6,
-                                     hty, 'Descripción')
-                        return hb
-
-                    y = _check_y(c, y, ps, need=hdr_h + 32)
-                    y = _draw_reqs_header(c, y)
-
-                    for qi, q in enumerate(reqs):
-                        pr = _safe(q, 'priority') or ''
-                        qt = _strip_emoji(_safe(q, 'title') or 'Requerimiento')
-                        q_desc = (_safe(q, 'description') or '').strip()
-                        q_conf = (_safe(q, 'configuration') or '').strip()
-                        q_flow = (_safe(q, 'usageFlow') or '').strip()
-
-                        name_lines = _wrap_by_width(
-                            qt, _font('bold'), 9, name_text_w) or [qt]
-                        all_desc_lines = []  # (text, bold_prefix | None)
-                        for label, val in (('', q_desc),
-                                           ('Config: ', q_conf),
-                                           ('Flujo: ', q_flow)):
-                            if not val:
-                                continue
-                            wrapped = _wrap_by_width(
-                                f'{label}{val}', _font('regular'), 8,
-                                desc_text_w) or [f'{label}{val}']
-                            for i, line in enumerate(wrapped):
-                                bp = (label.rstrip() if label and i == 0
-                                      else None)
-                                all_desc_lines.append((line, bp))
-
-                        line_h = 11
-                        n_lines = max(len(name_lines),
-                                      len(all_desc_lines) if all_desc_lines
-                                      else 1)
-                        row_h = max(n_lines * line_h + 14, 28)
-
-                        # Repeat the header when a row spills to a new page.
-                        y = _check_y_with_redraw(c, y, ps, need=row_h,
-                                                 redraw=_draw_reqs_header)
-                        row_bottom = y - row_h
-
-                        # Row background (alternating)
-                        c.setFillColor(ESMERALD_LIGHT if qi % 2 == 0 else WHITE)
-                        c.rect(MARGIN_L, row_bottom, CONTENT_W, row_h, fill=1, stroke=0)
-
-                        # LEMON left accent bar
-                        c.setFillColor(LEMON)
-                        c.rect(MARGIN_L, row_bottom, 3, row_h, fill=1, stroke=0)
-
-                        # Row number (vertically centred)
-                        c.setFont(_font('bold'), 8)
-                        c.setFillColor(ESMERALD_80)
-                        c.drawCentredString(
-                            MARGIN_L + num_col_w / 2,
-                            row_bottom + (row_h - 8) / 2,
-                            str(qi + 1).zfill(2),
-                        )
-
-                        # Requirement title (top-aligned, bold)
-                        text_y = y - 9
-                        c.setFont(_font('bold'), 9)
-                        c.setFillColor(ESMERALD)
-                        for nl in name_lines:
-                            c.drawString(MARGIN_L + num_col_w + 6, text_y, nl)
-                            text_y -= line_h
-                        if pr:
-                            # Semantic priority badge (localized label).
-                            _draw_priority_pill(
-                                c, MARGIN_L + num_col_w + 6, text_y + 2, pr,
-                                lang=epic_lang)
-
-                        # Description + config + flow (top-aligned; config/flujo prefix bold only)
-                        if all_desc_lines:
-                            text_y = y - 9
-                            c.setFillColor(ESMERALD_80)
-                            dx = MARGIN_L + num_col_w + name_col_w + 6
-                            for dl, bold_prefix in all_desc_lines:
-                                if bold_prefix and dl.startswith(bold_prefix):
-                                    c.setFont(_font('bold'), 8)
-                                    c.setFillColor(ESMERALD_80)
-                                    c.drawString(dx, text_y, bold_prefix)
-                                    prefix_w = c.stringWidth(bold_prefix, _font('bold'), 8)
-                                    remainder = dl[len(bold_prefix):]
-                                    if remainder:
-                                        c.setFont(_font('regular'), 8)
-                                        c.drawString(dx + prefix_w, text_y, remainder)
-                                else:
-                                    c.setFont(_font('regular'), 8)
-                                    c.setFillColor(ESMERALD_80)
-                                    c.drawString(dx, text_y, dl)
-                                text_y -= line_h
-
-                        y = row_bottom
-                    y -= 8
+                    records = []
+                    for req in reqs:
+                        details = [req.get('description') or '']
+                        for label, key in (('Config:', 'configuration'), ('Flujo:', 'usageFlow')):
+                            if req.get(key):
+                                details.append(f"**{label}** {req[key]}")
+                        records.append(dict(req, description='\n\n'.join(filter(None, details))))
+                    y = _draw_requirements_table(c, y, records, ps)
 
         # ── 7. API ────────────────────────────────────────────
         api_sum = (data.get('apiSummary') or '').strip()
@@ -715,7 +608,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         # ── Pass B: Title page + TOC (pages 1-2) ─────────────
         buf2 = io.BytesIO()
         c2 = canvas.Canvas(buf2, pagesize=A4)
-        ps2 = {'num': 1, 'client': proposal.client_name, 'formal': formal}
+        ps2 = {'num': 1, 'client': proposal.client_name, 'formal': formal,
+              '_pdf_lang': getattr(proposal, 'language', 'es') or 'es'}
         _draw_decorative_title_page(
             c2,
             formal.title.upper() if formal else 'DETALLE T\u00c9CNICO',

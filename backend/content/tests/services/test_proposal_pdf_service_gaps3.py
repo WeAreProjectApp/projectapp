@@ -336,10 +336,6 @@ class TestRenderCreativeSupportTier2:
         self, pdf_canvas,
     ):
         """Fails if the partial layout drops its sidebar or closing content."""
-        # 7 short paragraphs give para_h ≈ 140, closing_h ≈ 20 (full_left_h ≈ 160).
-        # 1 include item gives sb_h ≈ 51.
-        # partial_need = max(51, 140) + 20 = 160; full_need = max(51, 160) + 20 = 180.
-        # With y_start=280: content_top ≈ 224, avail ≈ 176 — lands in (160, 180].
         data = {
             'index': None,
             'title': 'Soporte',
@@ -349,7 +345,7 @@ class TestRenderCreativeSupportTier2:
             'includesTitle': 'Incluye',
         }
 
-        _render_creative_support(pdf_canvas, data, None, ps=None, y=280)
+        _render_creative_support(pdf_canvas, data, None, ps=None, y=304)
 
         draw_ops = '\n'.join(pdf_canvas._code)
         assert 'Soporte' in draw_ops

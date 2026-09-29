@@ -1,3 +1,17 @@
+# Espaciado de los PDF comercial y técnico (2026-09-29)
+
+Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto
+real del título y de su prioridad, con separación compacta de 6 pt. Los badges
+externos tienen 30 pt de margen y las filas extensas continúan sin perder
+contenido. Saltos simples, párrafos vacíos y `<br>` conservan su separación;
+el índice sigue apuntando al capítulo después de paginar. El cambio se aplica
+a los PDF públicos y formales, sin cambiar la web, las secciones ni la redacción.
+`proposal_pdf_layout` concentra la medición y dibujo; otros generadores
+mantienen los defaults de `pdf_utils`. Versión documental 4: revisar de nuevo
+las preparaciones pendientes con anexos antiguos, conservando sus archivos.
+Validación: pruebas de geometría sobre canvas real, equivalencia de anexos,
+índices y muestras renderizadas. La entrega final y el CI se registran en el PR.
+
 # Orden y numeración de los PDF de propuestas (2026-09-29)
 
 Implementación en `fix/29092026-proposal-pdf-order`: el comercial público usa
