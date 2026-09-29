@@ -3271,6 +3271,17 @@ def _merged_contract_params(proposal, incoming):
     return {**saved, **(incoming if isinstance(incoming, dict) else {})}
 
 
+def _service_conditions_error(proposal, params, variants):
+    from content.services.proposal_hosting_terms import ServiceConditionsError, service_conditions_markdown
+
+    if contract_variants.SERVICE in variants and contract_variants.can_generate(params, contract_variants.SERVICE):
+        try:
+            service_conditions_markdown(proposal)
+        except ServiceConditionsError as exc:
+            return Response({'error': str(exc), 'code': 'service_conditions_missing'}, status=422)
+    return None
+
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def save_contract_and_negotiate(request, proposal_id):
@@ -3291,6 +3302,9 @@ def save_contract_and_negotiate(request, proposal_id):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    error = _service_conditions_error(proposal, serializer.validated_data, contract_variants.active_variants(proposal))
+    if error is not None:
+        return error
     old_status = proposal.status
     proposal.contract_params = serializer.validated_data
     proposal.status = BusinessProposal.Status.NEGOTIATING
@@ -3367,6 +3381,9 @@ def update_contract_params(request, proposal_id):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        error = _service_conditions_error(proposal, serializer.validated_data, contract_variants.active_variants(proposal))
+        if error is not None:
+            return error
         proposal.contract_params = serializer.validated_data
         proposal.save(update_fields=['contract_params', 'updated_at'])
 
@@ -3415,6 +3432,9 @@ def update_contract_modality(request, proposal_id):
                     },
                     status=status.HTTP_409_CONFLICT,
                 )
+            error = _service_conditions_error(proposal, proposal.contract_params, contract_variants.MODALITY_VARIANTS[new_value])
+            if error is not None:
+                return error
             proposal.contract_modality = new_value
             proposal.save(update_fields=['contract_modality', 'updated_at'])
             log_proposal_change(
@@ -3485,6 +3505,12 @@ def download_draft_contract_pdf(request, proposal_id):
     variant, error = _requested_variant(proposal, request.query_params.get('variant'))
     if error:
         return error
+    if variant == contract_variants.SERVICE:
+        from content.services.proposal_hosting_terms import ServiceConditionsError, service_conditions_markdown
+        try:
+            service_conditions_markdown(proposal)
+        except ServiceConditionsError as exc:
+            return Response({'error': str(exc), 'code': 'service_conditions_missing'}, status=422)
     from content.services.contract_pdf_service import generate_contract_pdf
     from content.services.pdf_utils import add_watermark_to_pdf
 
@@ -3537,8 +3563,10 @@ def get_default_contract_template(request):
 def list_proposal_documents(request, proposal_id):
     """List all documents attached to a proposal."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
-    docs = proposal.proposal_documents.all().order_by('-created_at')
-    return Response([serialize_proposal_document(d) for d in docs], status=status.HTTP_200_OK)
+    docs = list(proposal.proposal_documents.all().order_by('-created_at'))
+    from content.services.service_contract_freshness import current_service_snapshot
+    snapshot = current_service_snapshot(proposal) if any(d.document_type == 'contract_service' for d in docs) else None
+    return Response([serialize_proposal_document(d, proposal=proposal, service_snapshot=snapshot) for d in docs], status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

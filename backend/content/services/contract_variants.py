@@ -133,8 +133,8 @@ PRODUCT_ADJUSTMENTS = (
         'del presente contrato y por las condiciones económicas definidas en el '
         'Documento Propuesta Comercial.',
         'dicho servicio se regirá por el contrato de prestación del servicio de hosting, '
-        'mantenimiento y soporte que las partes suscriban de manera independiente y por '
-        'las condiciones económicas definidas en el Documento Propuesta Comercial.',
+        'mantenimiento y soporte que las partes suscriban de manera independiente, '
+        'incluidas las condiciones económicas establecidas en ese contrato de servicio.',
     ),
     # Cl. 15: the business-day definition lived in Cl. 22 Par. 1 a).
     (

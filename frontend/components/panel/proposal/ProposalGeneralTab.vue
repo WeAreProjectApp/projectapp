@@ -216,15 +216,6 @@
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Inversión total</label>
         <BaseCurrencyInput v-model="form.total_investment" :decimals="2" data-testid="general-finance-total-investment" />
-        <p
-          v-if="hasCustomizedEffectiveTotal"
-          data-testid="general-finance-effective-total-note"
-          class="text-xs text-warning-strong mt-1.5"
-        >
-          Total efectivo visible al cliente:
-          <strong>{{ formatInvestment(effectiveTotalInvestment, proposal.currency) }}</strong>
-          (incluye módulos adicionales seleccionados).
-        </p>
       </div>
       <div>
         <label class="block text-sm font-medium text-text-default mb-1">Moneda</label>
@@ -789,9 +780,6 @@ const props = defineProps({
   /** getProposalNextAction result decorated by the page (launch pending state). */
   nextAction: { type: Object, default: null },
   hasDocumentsTab: { type: Boolean, default: false },
-  /** Live effective total (page computed — the header shows it too). */
-  effectiveTotalInvestment: { type: [Number, String], default: 0 },
-  hasCustomizedEffectiveTotal: { type: Boolean, default: false },
   /** Page-owned editable percentages array (synced into the investment section on save). */
   investmentPaymentPercentages: { type: Array, default: () => [] },
   paymentAmounts: { type: Array, default: () => [] },
@@ -816,21 +804,13 @@ const notify = usePanelNotify();
 const clipboardFeedback = useClipboardFeedback();
 const { proposalEdit: tt } = useTooltipTexts();
 
-// Aliases so the code moved verbatim from the edit page keeps reading
-// `proposal.value` / `form.x` / `effectiveTotalInvestment.value`.
+// The shared form keeps unsaved commercial edits in sync with the page.
 const proposal = computed(() => props.proposal);
 const form = props.form;
-const effectiveTotalInvestment = computed(() => props.effectiveTotalInvestment);
 
 const investmentSection = computed(() =>
   (props.proposal?.sections || []).find(s => s.section_type === 'investment') || null
 );
-
-function formatInvestment(value, currency = 'COP') {
-  if (!value) return '';
-  const num = Number(value);
-  return '$' + num.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 }) + ' ' + currency;
-}
 
 const proposalModeLinks = computed(() => {
   const links = [
@@ -968,11 +948,9 @@ watch(expiryDaysInput, (days) => {
 
 // Must match Investment.vue's hostingTwelveMonthReference / computedBillingTiers so admin preview
 // shows the exact same numbers the client will see (avoids rounding drift).
-// Client-facing basis is the effective total (base + admin-default additional
-// modules), same input the client's "Inversión Total" line uses.
+// The manually agreed investment is the basis for both previews.
 const hostingTwelveMonthReference = computed(() => {
-  const effective = Number(effectiveTotalInvestment.value);
-  const basis = effective > 0 ? effective : Number(form.total_investment) || 0;
+  const basis = Number(form.total_investment) || 0;
   const percent = Number(form.hosting_percent) || 0;
   return Math.round(basis * percent / 100);
 });

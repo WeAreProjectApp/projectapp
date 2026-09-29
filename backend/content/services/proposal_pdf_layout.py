@@ -24,7 +24,6 @@ _draw_table = partial(pdf._draw_table, preserve_breaks=True)
 
 
 def _draw_subtitle(c, y, text, color=pdf.ESMERALD, ps=None):
-    text = pdf._pdf_label(text, ps)
     lines = pdf._wrap_by_width(pdf._sanitize_pdf_text(str(text)),
                                pdf._font('bold'), 12, pdf.CONTENT_W)
     if ps:

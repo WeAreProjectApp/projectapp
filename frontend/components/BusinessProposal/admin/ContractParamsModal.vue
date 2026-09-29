@@ -31,6 +31,10 @@
               ]"
             />
 
+            <p v-if="variant === 'service'" class="text-xs text-text-muted" data-testid="contract-service-conditions-note">
+              Al generar el contrato se incorporan automáticamente la infraestructura, cobertura, cortesías, precios, descuentos y renovación configurados en la propuesta, también si usas un texto personalizado.
+            </p>
+
             <!-- DEFAULT MODE: contract params form -->
             <template v-if="contractSource === 'default'">
               <!-- Outer groups separate rows; empty hint bands need no extra gap. -->

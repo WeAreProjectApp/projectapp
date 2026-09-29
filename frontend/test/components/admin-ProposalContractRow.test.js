@@ -66,6 +66,23 @@ describe('ProposalContractRow', () => {
     expect(wrapper.emitted('edit')).toHaveLength(1);
   });
 
+  it('opens regeneration for a stale service contract', async () => {
+    // Falla si el aviso de condiciones cambiadas no permite abrir su regeneración.
+    const wrapper = mountRow({
+      variant: CONTRACT_VARIANTS.service,
+      doc: { ...doc, needs_regeneration: true },
+    });
+
+    expect(wrapper.get('[data-testid="proposal-service-contract-stale"]').text())
+      .toBe('Las condiciones del servicio cambiaron. Regenera y revisa el contrato antes de enviarlo.');
+    expect(wrapper.text()).toContain('Regenerar contrato');
+
+    const regenerate = wrapper.findAll('button').find((button) => button.text() === 'Regenerar contrato');
+    await regenerate.trigger('click');
+
+    expect(wrapper.emitted('edit')).toEqual([[]]);
+  });
+
   it('hides generation while the contract is locked', () => {
     // Falla si una propuesta enviada o vista ofrece generar un contrato antes de negociar.
     const wrapper = mountRow({ variant: CONTRACT_VARIANTS.product, actionsDisabled: true });

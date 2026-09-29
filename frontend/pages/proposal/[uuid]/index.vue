@@ -784,11 +784,10 @@ const confirmedModuleCount = computed(() =>
 );
 
 // Mirror of Investment.vue computedPaymentOptions: derive each amount from
-// the label percentage × the current displayed total. baseTotalStr is kept
-// in the signature for callsite compatibility but no longer used.
-function recomputePaymentOptions(paymentOptions, baseTotalStr, customTotal) {
-  if (customTotal == null || !paymentOptions?.length) return paymentOptions;
-  const target = Number(customTotal) || 0;
+// the label percentage × the current displayed total.
+function recomputePaymentOptions(paymentOptions, agreedTotal) {
+  if (agreedTotal == null || !paymentOptions?.length) return paymentOptions;
+  const target = Number(agreedTotal) || 0;
   if (target <= 0) return paymentOptions;
   return paymentOptions.map(opt => {
     const pctMatch = String(opt.label || '').match(/(\d+)\s*%/);
@@ -906,8 +905,8 @@ function getSectionProps(section, displayIndex) {
       expiresAt: section._expiresAt || '',
       language: proposal.value?.language || 'es',
       whatsappLink: extractedWhatsappLink.value,
-      paymentOptions: recomputePaymentOptions(rawPaymentOptions, investContent.totalInvestment, displayTotal),
-      customizedTotal: displayTotal,
+      paymentOptions: recomputePaymentOptions(rawPaymentOptions, displayTotal),
+      investmentTotal: displayTotal,
       viewMode: viewMode.value || 'detailed',
       ctaMessage: section._ctaMessage || '',
       primaryCTA: section._primaryCTA || {},
@@ -1028,23 +1027,17 @@ function getSectionProps(section, displayIndex) {
     const investmentSection = enabledSections.value.find(s => s.section_type === 'investment');
     const investContent = investmentSection?.content_json || {};
     const investmentModules = (investContent.modules || []).map(m => ({ ...m, _source: 'investment' }));
-    const allCalculatorItems = [...investmentModules, ...optionalScopeModules.value];
+    const contractedModules = [...investmentModules, ...optionalScopeModules.value];
     const effectiveTotal = resolvedInvestmentTotal.value;
-    const formattedSummaryTotal = effectiveTotal > 0
-      ? '$' + effectiveTotal.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-      : investContent.totalInvestment || '';
     const rawPaymentOptions = investContent.paymentOptions || [];
     return {
       content: { ...content, index: paddedIndex },
       proposal: proposal.value,
       timelineDuration,
       language: proposal.value?.language || 'es',
-      proposalUuid: proposal.value?.uuid || '',
-      investmentModules: allCalculatorItems,
-      rawTotalInvestment: formattedSummaryTotal,
-      paymentOptions: recomputePaymentOptions(rawPaymentOptions, investContent.totalInvestment, effectiveTotal),
-      customizedTotal: effectiveTotal,
-      preview: isPreviewMode.value,
+      investmentModules: contractedModules,
+      paymentOptions: recomputePaymentOptions(rawPaymentOptions, effectiveTotal),
+      investmentTotal: effectiveTotal,
       selectedModuleCount: confirmedModuleCount.value,
     };
   }

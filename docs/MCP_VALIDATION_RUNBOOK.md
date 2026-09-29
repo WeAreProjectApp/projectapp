@@ -15,6 +15,16 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
 
+## Intereses y contratos de propuestas (2026-09-29)
+
+En `proposals` y `commercial`, los intereses en módulos y su fecha son sólo de
+lectura: proceden de la elección pública del cliente, sin alterar alcance ni
+inversión. El snapshot del precio anterior queda excluido por ser respaldo
+interno de la migración. La formalización usa el mismo control de vigencia del
+contrato de servicio que el panel y rechaza adjuntos obsoletos; las descargas y
+preparaciones respetan la modalidad de cierre. Validar clasificación de campos,
+consulta de propuesta y errores de generación/preparación antes de publicar.
+
 ## Videos y conectores comerciales (2026-09-28)
 
 Programa de Alianza (`partnership-program`) y Módulos adicionales (`additional-modules`) tienen conectores independientes; `proposals` incorpora videos general/personalizado. Todos permiten transferir un MP4 real, completar la carga y asignar/sustituir con `asset_id` y revisión. Guía y nombres exactos: [Recursos de video comerciales](COMMERCIAL_VIDEO_RESOURCES.md).

@@ -1,4 +1,5 @@
 """Formal annexes use the original PDF renderers without rewriting their inputs."""
+from content.services.contract_variants import modality
 from content.services.formalization_content import FormalizationError, formal_document_title
 from content.services.proposal_pdf_service import ProposalPdfService
 from content.services.proposal_pdf_sections import FORMAL_TECHNICAL_SECTIONS
@@ -14,6 +15,7 @@ def generate_formal_pdf(content, kind, issued_at, reference):
             content.proposal,
             selected_modules=content.selected,
             sections_override=content.commercial(),
+            include_hosting=modality(content.proposal) != 'split',
         )
     else:
         content.technical()

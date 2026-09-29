@@ -340,7 +340,9 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             return []
         # Meta ordering is ['-created_at']; plain .all() keeps prefetch warm.
         docs = list(obj.proposal_documents.all())
-        return [serialize_proposal_document(d) for d in docs]
+        from content.services.service_contract_freshness import current_service_snapshot
+        snapshot = current_service_snapshot(obj) if any(d.document_type == 'contract_service' for d in docs) else None
+        return [serialize_proposal_document(d, proposal=obj, service_snapshot=snapshot) for d in docs]
 
     def get_first_view_notification(self, obj):
         """Expose operational delivery details only inside the admin panel."""
@@ -449,12 +451,17 @@ class ContractParamsSerializer(serializers.Serializer):
         return data
 
 
-def serialize_proposal_document(d):
+def serialize_proposal_document(d, *, proposal=None, service_snapshot=None):
     """Serialize a ProposalDocument instance to a dict. Used by views and serializers."""
     display = (
         d.custom_type_label
         if d.document_type == 'other' and d.custom_type_label
         else d.get_document_type_display()
+    )
+    from content.services.service_contract_freshness import service_contract_needs_regeneration
+    needs_regeneration = (
+        service_contract_needs_regeneration(proposal or d.proposal, d, expected_snapshot=service_snapshot)
+        if d.document_type == 'contract_service' and d.is_generated else False
     )
     return {
         'id': d.id,
@@ -465,6 +472,8 @@ def serialize_proposal_document(d):
         'file': d.file.url if d.file else None,
         'is_generated': d.is_generated,
         'created_at': d.created_at.isoformat(),
+        'updated_at': d.updated_at.isoformat(),
+        'needs_regeneration': needs_regeneration,
     }
 
 

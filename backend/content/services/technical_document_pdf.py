@@ -11,18 +11,12 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 
 from content.services.pdf_utils import (
-    CONTENT_W,
     COVER_PDF,
     COVER_TECHNICAL_PDF,
-    ESMERALD,
-    ESMERALD_80,
     GRAY_500,
-    LEMON,
-    MARGIN_L,
     MARGIN_T,
     PAGE_H,
     PAGE_W,
-    WHITE,
     _apply_toc_links,
     _check_y,
     _draw_bullet_list,
@@ -34,13 +28,10 @@ from content.services.pdf_utils import (
     _section_header_height,
     _draw_separator,
     _draw_toc_page,
-    _pdf_label,
     _font,
     _register_fonts,
     _safe,
-    _sanitize_pdf_text,
     _strip_emoji,
-    _wrap_by_width,
     format_date_es,
     merge_with_covers,
 )
@@ -81,7 +72,7 @@ def _row_any(row, keys):
     return any(_nonempty_str(row.get(k)) for k in keys)
 
 
-def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=None,
+def generate_technical_document_pdf(proposal, selected_modules=None, *,
                                     included_sections=None, _content_start=3):
     """
     Build a PDF from the enabled technical_document section only.
@@ -104,25 +95,22 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         get_filtered_technical_document,
     )
 
-    if formal:
-        data = formal.technical_data
-    else:
-        sec = (
-            proposal.sections.filter(is_enabled=True, section_type='technical_document').first()
-        )
-        if not sec:
-            return None
-        data = sec.content_json if isinstance(sec.content_json, dict) else {}
-        section_payloads = [
-            {
-                'section_type': section.section_type,
-                'content_json': section.content_json if isinstance(section.content_json, dict) else {},
-            }
-            for section in proposal.sections.all()
-        ]
-        if selected_modules is None:
-            selected_modules = default_selected_modules_from_content(proposal)
-        data = get_filtered_technical_document(data, section_payloads, selected_modules)
+    sec = (
+        proposal.sections.filter(is_enabled=True, section_type='technical_document').first()
+    )
+    if not sec:
+        return None
+    data = sec.content_json if isinstance(sec.content_json, dict) else {}
+    section_payloads = [
+        {
+            'section_type': section.section_type,
+            'content_json': section.content_json if isinstance(section.content_json, dict) else {},
+        }
+        for section in proposal.sections.all()
+    ]
+    if selected_modules is None:
+        selected_modules = default_selected_modules_from_content(proposal)
+    data = get_filtered_technical_document(data, section_payloads, selected_modules)
     if included_sections is not None:
         fields = {field for chapter in included_sections for field in _SECTION_FIELDS[chapter]}
         data = {key: value for key, value in data.items() if key in fields}
@@ -130,7 +118,7 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         _register_fonts()
         buf = io.BytesIO()
         c = canvas.Canvas(buf, pagesize=A4)
-        c.setTitle(formal.title if formal else f'Detalle t\u00e9cnico \u2014 {proposal.client_name}')
+        c.setTitle(f'Detalle t\u00e9cnico \u2014 {proposal.client_name}')
         c.setAuthor('Project App')
 
         from django.utils import timezone as _tz
@@ -140,8 +128,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
 
         # ── Pass A: Content pages (ps.num starts at 3) ───────
         # Page 1 = title page, page 2 = TOC; content begins at page 3.
-        ps = {'num': formal.content_start if formal else _content_start,
-              'client': proposal.client_name, 'formal': formal,
+        ps = {'num': _content_start,
+              'client': proposal.client_name,
               '_pdf_lang': getattr(proposal, 'language', 'es') or 'es'}
 
         _draw_header_bar(c)
@@ -176,7 +164,6 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
 
         def next_section(title_es, first_block_height=20):
             nonlocal y, section_i
-            title_es = _pdf_label(title_es, ps)
             section_i += 1
             idx = str(section_i).zfill(2)
             y -= 24
@@ -238,7 +225,7 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                                 col_widths=[0.20, 0.24, 0.56])
             if arch_note:
                 y -= 8
-                y = _draw_paragraphs(c, y, [f'{"Note" if formal and formal.language == "en" else "Nota"}: {arch_note}'], ps=ps)
+                y = _draw_paragraphs(c, y, [f'Nota: {arch_note}'], ps=ps)
 
         # ── 4. Modelo de datos ────────────────────────────────
         dm = data.get('dataModel') if isinstance(data.get('dataModel'), dict) else {}
@@ -279,12 +266,12 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
             if isinstance(r, dict) and _row_any(r, ('dimension', 'preparation', 'evolution'))
         ]
         if gr_sum or gr_strat:
-            y = next_section('Preparación técnica incluida' if formal else 'Preparaci\u00f3n para el crecimiento')
+            y = next_section('Preparaci\u00f3n para el crecimiento')
             if gr_sum:
                 y = _draw_paragraphs(c, y, [gr_sum], ps=ps)
             if gr_strat:
                 y -= 8
-                headers = ['Dimensi\u00f3n', 'Preparaci\u00f3n'] if formal else ['Dimensi\u00f3n', 'Preparaci\u00f3n', 'Evoluci\u00f3n']
+                headers = ['Dimensi\u00f3n', 'Preparaci\u00f3n', 'Evoluci\u00f3n']
                 rows = [
                     [
                         _safe(r, 'dimension') or '\u2014',
@@ -293,10 +280,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                     ]
                     for r in gr_strat
                 ]
-                if formal:
-                    rows = [row[:2] for row in rows]
                 y = _draw_table(c, y, headers, rows, ps=ps,
-                                col_widths=[0.3, 0.7] if formal else [0.18, 0.41, 0.41])
+                                col_widths=[0.18, 0.41, 0.41])
 
         # ── 6. Módulos del producto ───────────────────────────
         epics = [e for e in (data.get('epics') or []) if isinstance(e, dict)]
@@ -321,32 +306,14 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                     y = _draw_separator(c, y, ps=ps)
 
                 head = _safe(ep, 'title') or _safe(ep, 'epicKey') or 'M\u00f3dulo'
-                if formal:
-                    head = ' · '.join(filter(None, [ep.get('epicKey'), ep.get('title')]))
                 count_label = (
-                    f'{len(reqs)} {"requirement" if formal and formal.language == "en" else "requerimiento"}'
+                    f'{len(reqs)} requerimiento'
                     f'{"s" if len(reqs) != 1 else ""}' if reqs else '')
                 y = _draw_heading_badge(c, y, _strip_emoji(head), count_label, ps=ps)
 
                 desc = (_safe(ep, 'description') or '').strip()
                 if desc:
                     y = _draw_paragraphs(c, y, [desc], ps=ps)
-
-                if formal and reqs:
-                    english = formal.language == 'en'
-                    records = []
-                    for req in reqs:
-                        details = [req.get('description') or '']
-                        for label, key in ((('Configuration' if english else 'Configuración'), 'configuration'),
-                                           (('Flow' if english else 'Flujo'), 'usageFlow'),
-                                           (('Commercial reference' if english else 'Referencia comercial'), 'linked_item_ids')):
-                            if req.get(key):
-                                details.append(f"**{label}:** {req[key]}")
-                        records.append([req.get('flowKey', ''), f"**{req.get('title', '')}**", '\n\n'.join(details)])
-                    y = _draw_table(c, y,
-                                    ['ID', 'Requirement', 'Description'] if english else ['ID', 'Requerimiento', 'Descripción'],
-                                    records, ps=ps, col_widths=[0.18, 0.30, 0.52])
-                    continue
 
                 if reqs:
                     records = []
@@ -422,10 +389,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                     ]
                     for r in exc
                 ]
-                if formal:
-                    headers, rows = headers[:2], [row[:2] for row in rows]
                 y = _draw_table(c, y, headers, rows, ps=ps,
-                                col_widths=[0.3, 0.7] if formal else [0.24, 0.46, 0.30])
+                                col_widths=[0.24, 0.46, 0.30])
             if notes:
                 y -= 8
                 bullets = [b.strip() for b in notes.splitlines() if b.strip()]
@@ -457,10 +422,8 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
                     ]
                     for r in envs
                 ]
-                if formal:
-                    headers, rows = [headers[i] for i in (0, 1, 4)], [[row[i] for i in (0, 1, 4)] for row in rows]
                 y = _draw_table(c, y, headers, rows, ps=ps,
-                                col_widths=[0.22, 0.5, 0.28] if formal else [0.13, 0.24, 0.23, 0.22, 0.18])
+                                col_widths=[0.13, 0.24, 0.23, 0.22, 0.18])
 
         # ── 10. Seguridad ─────────────────────────────────────
         sec_rows = [
@@ -591,13 +554,13 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         c.drawCentredString(
             PAGE_W / 2,
             y,
-            formal.identity_lines[-1] if formal else f'Fecha de creaci\u00f3n del documento: {date_str}',
+            f'Fecha de creaci\u00f3n del documento: {date_str}',
         )
         y -= 16
         c.drawCentredString(
             PAGE_W / 2,
             y,
-            formal.reference if formal else 'Condiciones de soporte seg\u00fan propuesta comercial.',
+            'Condiciones de soporte seg\u00fan propuesta comercial.',
         )
 
         _draw_footer(c, ps['num'], client_name=ps['client'])
@@ -608,11 +571,11 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         # ── Pass B: Title page + TOC (pages 1-2) ─────────────
         buf2 = io.BytesIO()
         c2 = canvas.Canvas(buf2, pagesize=A4)
-        ps2 = {'num': 1, 'client': proposal.client_name, 'formal': formal,
+        ps2 = {'num': 1, 'client': proposal.client_name,
               '_pdf_lang': getattr(proposal, 'language', 'es') or 'es'}
         _draw_decorative_title_page(
             c2,
-            formal.title.upper() if formal else 'DETALLE T\u00c9CNICO',
+            'DETALLE T\u00c9CNICO',
             proposal.client_name or 'Cliente',
             date_str,
             ps2,
@@ -622,11 +585,10 @@ def generate_technical_document_pdf(proposal, selected_modules=None, *, formal=N
         c2.save()
         prefix_bytes = buf2.getvalue()
         buf2.close()
-        content_start = formal.content_start if formal else _content_start
+        content_start = _content_start
         if ps2['num'] != content_start:
             return generate_technical_document_pdf(
                 proposal, selected_modules=selected_modules,
-                formal=formal.with_content_start(ps2['num']) if formal else None,
                 included_sections=included_sections, _content_start=ps2['num'],
             )
 

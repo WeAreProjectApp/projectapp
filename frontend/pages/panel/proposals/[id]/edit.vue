@@ -79,14 +79,6 @@
         <span v-if="proposal.total_investment > 0" class="text-sm sm:text-base font-light text-text-subtle whitespace-nowrap">
           ({{ formatInvestment(proposal.total_investment, proposal.currency) }})
         </span>
-        <span
-          v-if="hasCustomizedEffectiveTotal"
-          data-testid="general-finance-effective-total-badge"
-          class="text-xs px-2 py-0.5 rounded-full font-medium bg-warning-soft text-warning-strong whitespace-nowrap"
-          :title="`Total efectivo visible al cliente según módulos seleccionados`"
-        >
-          Cliente ve: {{ formatInvestment(effectiveTotalInvestment, proposal.currency) }}
-        </span>
         <ProposalStatusSelect
           :proposal="proposal"
           :updating="statusUpdatingId === proposal.id"
@@ -129,8 +121,6 @@
           :form="form"
           :next-action="nextAction"
           :has-documents-tab="hasDocumentsTab"
-          :effective-total-investment="effectiveTotalInvestment"
-          :has-customized-effective-total="hasCustomizedEffectiveTotal"
           :investment-payment-percentages="investmentPaymentPercentages"
           :payment-amounts="paymentAmounts"
           @update="handleUpdate"
@@ -522,29 +512,6 @@ const technicalSection = computed(() =>
 const investmentSection = computed(() =>
   allSections.value.find(s => s.section_type === 'investment') || null
 );
-
-// Multiplier derived from the loaded proposal: effective / base. The backend
-// computes effective_total_investment as base + Σ(base * pct_module/100), so
-// the ratio is constant for a given module selection. Reusing it here keeps
-// the % logic in a single place (backend) while letting the live form base
-// drive the displayed effective total.
-const effectiveTotalsMultiplier = computed(() => {
-  const base = Number(proposal.value?.total_investment || 0);
-  const effective = Number(proposal.value?.effective_total_investment || 0);
-  if (base <= 0 || effective <= 0) return 1;
-  return effective / base;
-});
-
-const effectiveTotalInvestment = computed(() => {
-  const liveBase = Number(form.total_investment) || 0;
-  return Math.round(liveBase * effectiveTotalsMultiplier.value);
-});
-
-const hasCustomizedEffectiveTotal = computed(() => {
-  const liveBase = Number(form.total_investment) || 0;
-  const effective = effectiveTotalInvestment.value;
-  return liveBase > 0 && effective > 0 && Math.round(effective) !== Math.round(liveBase);
-});
 
 const technicalModuleLinkOptions = computed(() =>
   buildProposalModuleLinkOptions(proposal.value?.sections || []),
@@ -1107,7 +1074,7 @@ function replaceOrPrefixPercent(label, percent, index) {
 }
 
 function buildPaymentDescription(percent) {
-  const total = Number(effectiveTotalInvestment.value) || 0;
+  const total = Number(form.total_investment) || 0;
   const amount = Math.round(total * normalizePercent(percent) / 100);
   return `$${amount.toLocaleString('es-CO')} ${form.currency || 'COP'}`;
 }

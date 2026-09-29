@@ -420,33 +420,15 @@ class TestSendFirstViewNotification:
 
     @patch('content.services.proposal_email_service.EmailMultiAlternatives')
     @patch('content.services.proposal_email_service.render_to_string')
-    def test_context_with_additional_modules_includes_effective_total(
+    def test_context_with_module_interest_preserves_manual_total(
         self, mock_render, mock_email_cls, email_proposal,
     ):
-        from content.models import ProposalSection
-        ProposalSection.objects.create(
-            proposal=email_proposal,
-            section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS,
-            title='Requisitos',
-            content_json={
-                'groups': [
-                    {
-                        'id': 'mod-extra-1',
-                        'is_calculator_module': True,
-                        'price_percent': 10,
-                    },
-                ],
-            },
-        )
-        email_proposal.selected_modules = ['mod-extra-1']
-        email_proposal.save(update_fields=['selected_modules'])
-
-        from content.models import ProposalChangeLog
-        ProposalChangeLog.objects.create(
-            proposal=email_proposal,
-            change_type=ProposalChangeLog.ChangeType.CALCULATOR_CONFIRMED,
-            actor_type=ProposalChangeLog.ActorType.CLIENT,
-        )
+        email_proposal.module_interests = [{
+            'id': 1,
+            'slug': 'analytics',
+            'name': 'Analítica avanzada',
+        }]
+        email_proposal.save(update_fields=['module_interests'])
 
         mock_render.return_value = '<html>First view</html>'
         mock_email_cls.return_value = _stub_email()
@@ -454,12 +436,9 @@ class TestSendFirstViewNotification:
         ProposalEmailService.send_first_view_notification(email_proposal)
 
         ctx = mock_render.call_args_list[0][0][1]
-        assert ctx['has_additional_modules'] is True
-        # base 5'000.000 + 10% = 5'500.000 (COP format from format_cop_email)
-        assert ctx['effective_total_investment'] != ctx['total_investment']
-        digits_only = lambda s: ''.join(c for c in s if c.isdigit())
-        assert digits_only(ctx['total_investment']) == '5000000'
-        assert digits_only(ctx['effective_total_investment']) == '5500000'
+        assert ctx['has_additional_modules'] is False
+        assert ctx['effective_total_investment'] == ctx['total_investment']
+        assert ctx['effective_total_investment'] == "5'000.000"
 
 
 # ---------------------------------------------------------------------------
@@ -941,7 +920,7 @@ class TestSendProposalToClientEnrichedContext:
     @patch('content.services.proposal_pdf_service.ProposalPdfService.generate', return_value=b'pdf')
     @patch('content.services.proposal_email_service.EmailMultiAlternatives')
     def test_places_message_after_body_before_commercial_blocks(
-        self, mock_email_cls, _mock_pdf, _mock_content, proposal_with_sections,
+        self, mock_email_cls, mock_pdf, mock_content, proposal_with_sections,
     ):
         mock_instance = _stub_email()
         mock_email_cls.return_value = mock_instance
@@ -969,7 +948,7 @@ class TestSendProposalToClientEnrichedContext:
     )
     @patch.object(ProposalEmailService, '_attach_commercial_pdf', return_value=False)
     def test_saved_email_history_keeps_original_message(
-        self, _mock_attach, _mock_content, proposal_with_sections,
+        self, mock_attach, mock_content, proposal_with_sections,
     ):
         original = proposal_with_sections.email_intro
 

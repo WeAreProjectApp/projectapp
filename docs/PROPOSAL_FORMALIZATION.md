@@ -40,7 +40,8 @@ El índice utiliza esos mismos números y enlaza las páginas reales, incluso
 cuando ocupa varias páginas o no hay presentación.
 
 Se preservan los títulos personalizados, párrafos, texto pegado, tablas y reglas
-de selección, precios, pagos y hosting. Condiciones comerciales mantiene sus
+de selección, precios y pagos del producto. En contrato único se conserva también
+el hosting; en modalidad separada, su bloque completo pasa al contrato de servicio. Condiciones comerciales mantiene sus
 paquetes y las reglas vigentes del catálogo automático o manual. No se editan
 los datos guardados ni los identificadores de módulos o requerimientos.
 
@@ -61,14 +62,14 @@ guardados, de acuerdo con la modalidad de cierre elegida.
   interpretación del contenido. Avisa que reconstruye el formato y que las
   imágenes y firmas gráficas no se copian. Se mantienen los límites de extracción
   de 100 páginas, 50 MB de contenido descomprimido y un millón de caracteres.
-- La versión documental 4 exige revisar de nuevo las preparaciones con anexos
-  de las versiones 1, 2 y 3; no sustituye sus archivos ni altera envíos históricos.
+- La versión documental 5 exige revisar de nuevo las preparaciones anteriores
+  con anexos o contrato de servicio; no sustituye sus archivos ni altera envíos históricos.
 - Los archivos adjuntos se generan una vez al preparar el correo. La revisión
   y el envío usan esos mismos bytes. Las preparaciones pendientes con anexos
   del formato anterior deben prepararse y revisarse nuevamente; nunca se
   reemplazan sus archivos silenciosamente. Los envíos históricos se conservan.
 - La huella de origen comprueba los datos y títulos de las secciones, la
-  selección y la modalidad de cierre antes de enviar.
+  selección, la modalidad de cierre y los tres descuentos de hosting antes de enviar.
 
 ## Modalidad de cierre
 
@@ -91,6 +92,29 @@ modalidad elegida se regeneran con los datos vigentes, y los de la otra no se
 sirven, no se adjuntan y no pasan a la plataforma. Cada documento puede usar el
 texto estándar o uno personalizado, por separado. Una preparación de correo
 hecha en la otra modalidad queda obsoleta.
+
+### Condiciones de hosting en contratos separados
+
+En **Producto y servicio**, el anexo comercial conserva la inversión y la forma
+de pago del producto. Su bloque de hosting, incluido el indicador de precio,
+pasa íntegro al contrato de servicio: infraestructura, cobertura, cortesía,
+precios, descuentos y condiciones de renovación. La propuesta pública y el
+anexo técnico mantienen su contenido habitual.
+
+El contrato presenta las modalidades **trimestral, semestral y cada nueve meses**,
+con el equivalente mensual y el total de cada periodo calculados desde los
+valores vigentes de la propuesta. La redacción pide al cliente comunicar por
+escrito su elección antes del primer cobro; no se presupone una modalidad.
+El bloque se incorpora también a los contratos personalizados, conservando su
+texto. Al regenerar se reemplaza el bloque automático anterior sin duplicarlo.
+
+Si durante la negociación cambian las condiciones, la fila del contrato de
+servicio muestra **Regenerar contrato**. Abrir, guardar y revisar ese contrato
+actualiza el archivo y su texto. La formalización rechaza un contrato obsoleto
+hasta completar esa revisión; no reemplaza adjuntos ya preparados ni archivos
+históricos. Los contratos cerrados no se marcan para regeneración automática.
+La migración `content.0276` actualiza las remisiones de la plantilla estándar e
+inserta el bloque en su cláusula de precio; se aplica durante el despliegue.
 
 ### Opciones de los datos del servicio
 

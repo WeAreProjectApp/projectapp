@@ -9,7 +9,10 @@ from pypdf import PdfReader
 from content.models import ProposalSection
 from content.services.formalization_content import FormalContent
 from content.services.formalization_pdf import generate_formal_pdf
-from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
+from content.services.proposal_pdf_service import (
+    ProposalPdfService,
+    default_selected_modules_from_content,
+)
 from content.services.technical_document_pdf import generate_technical_document_pdf
 
 pytestmark = pytest.mark.django_db
@@ -88,18 +91,18 @@ def test_commercial_annex_excludes_only_the_agreed_whole_sections(formal_proposa
     assert rendered == original_commercial_text(formal_proposal)
 
 
-def test_commercial_annex_inherits_unselected_item_pricing(formal_proposal):
+def test_commercial_annex_preserves_manual_total_for_unselected_item(formal_proposal):
     requirements = formal_proposal.sections.get(section_type='functional_requirements')
     requirements.content_json['groups'][0]['items'].append({
         'id': 'campaigns', 'name': 'Módulo opcional',
-        'description': 'OPTIONAL_SALES_SCOPE', 'price': '5000', 'is_required': False,
+        'description': 'OPTIONAL_SALES_SCOPE', 'is_required': False,
     })
     requirements.save(update_fields=['content_json'])
 
     rendered = render(formal_proposal)
 
     assert 'OPTIONAL_SALES_SCOPE' not in rendered
-    assert '10.000' in rendered
+    assert '$15.000' in rendered
     assert rendered == original_commercial_text(formal_proposal)
 
 

@@ -213,11 +213,6 @@ class TestProposalMcpContractMarkdown:
                 'service_contract_source': 'custom',
                 'service_custom_contract_markdown': '# Existing service terms',
             }),
-            ('split', 'service', 'service_contract_source', 'service_custom_contract_markdown', {
-                'client_cedula': '900123456',
-                'product_contract_source': 'custom',
-                'product_custom_contract_markdown': '# Existing product terms',
-            }),
         ],
     )
     def test_custom_contract_markdown_round_trips_in_its_own_variant(
@@ -245,6 +240,40 @@ class TestProposalMcpContractMarkdown:
         assert proposal.contract_params[markdown_key] == markdown
         assert read['isError'] is False
         assert _payload(read)['markdown'].strip() == markdown
+
+    def test_custom_service_contract_appends_generated_conditions_after_custom_prose(
+        self, api_client, proposals_token, proposal,
+    ):
+        """Fails if the service read drops custom prose or its automatic economic conditions."""
+        markdown = '# Service contractual scope'
+        proposal.status = BusinessProposal.Status.NEGOTIATING
+        proposal.contract_modality = 'split'
+        proposal.contract_params = {
+            'client_cedula': '900123456',
+            'product_contract_source': 'custom',
+            'product_custom_contract_markdown': '# Existing product terms',
+        }
+        proposal.save(update_fields=['status', 'contract_modality', 'contract_params'])
+
+        updated = _call(api_client, proposals_token, 'update_proposal_contract', {
+            'proposal_id': proposal.pk,
+            'variant': 'service',
+            'contract_params': {
+                'service_contract_source': 'custom',
+                'service_custom_contract_markdown': markdown,
+            },
+        })
+        read = _call(api_client, proposals_token, 'read_proposal_contract_markdown', {
+            'proposal_id': proposal.pk, 'variant': 'service',
+        })
+
+        proposal.refresh_from_db()
+        rendered = _payload(read)['markdown'].strip()
+        assert updated['isError'] is False
+        assert proposal.contract_params['service_custom_contract_markdown'] == markdown
+        assert read['isError'] is False
+        assert rendered.startswith(f'{markdown}\n\n### Condiciones particulares del servicio')
+        assert '**Condiciones de renovación**' in rendered
 
     def test_service_edit_preserves_product_custom_markdown(
         self, api_client, proposals_token, proposal,

@@ -1,21 +1,22 @@
 """The formalization package carries the contracts of the deal's closing modality."""
-from unittest.mock import patch
 from io import BytesIO
-from pypdf import PdfReader
-
-from content.models import ProposalSection
-from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
+from unittest.mock import patch
 
 import pytest
 from django.core.files.base import ContentFile
+from pypdf import PdfReader
 
-from content.models import ProposalDocument
+from content.models import ProposalDocument, ProposalSection
 from content.services.formalization_content import FormalizationError
 from content.services.proposal_formalization_service import (
     availability,
     document_bytes,
     prepare,
     send_preparation,
+)
+from content.services.proposal_pdf_service import (
+    ProposalPdfService,
+    default_selected_modules_from_content,
 )
 
 pytestmark = pytest.mark.django_db
@@ -85,7 +86,7 @@ def test_prepare_attaches_product_then_service_contract(split_proposal, admin_us
     files = list(preparation.files.order_by('pk'))
     assert [item.key for item in files] == ['contract_product', 'contract_service']
     assert files[0].filename.startswith('Contrato de producto')
-    assert preparation.payload['_source_version'] == 3
+    assert preparation.payload['_source_version'] == 4
 
 
 def test_prepare_rejects_the_contract_of_the_other_modality(split_proposal, admin_user, payload):
@@ -137,10 +138,18 @@ def test_switching_modality_makes_a_prepared_package_stale(delivery, split_propo
     delivery.assert_not_called()
 
 
-@pytest.mark.parametrize('modality', ['single', 'split'])
-def test_commercial_annex_adds_no_contract_note(proposal, modality):
-    proposal.contract_modality = modality
-    proposal.save(update_fields=['contract_modality'])
+def test_single_commercial_annex_preserves_hosting_terms(proposal):
+    """Fails if the single-contract commercial annex loses the hosting terms the client reviewed."""
+    ProposalSection.objects.create(
+        proposal=proposal, section_type='investment', title='Inversión', order=0,
+        content_json={'hostingPlan': {
+            'title': 'Hosting administrado',
+            'description': 'HOSTING_BLOCK_SENTINEL',
+            'billingTiers': [{'label': 'Trimestral', 'months': 3, 'discountPercent': 10}],
+        }},
+    )
+    proposal.hosting_percent = 12
+    proposal.save(update_fields=['hosting_percent'])
     ProposalSection.objects.create(
         proposal=proposal, section_type='commercial_conditions', title='Condiciones', order=1,
         content_json={'scopeParagraphs': ['Condiciones revisadas por el cliente.']},
@@ -154,4 +163,29 @@ def test_commercial_annex_adds_no_contract_note(proposal, modality):
     rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
     expected = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(original)).pages)
     assert 'Condiciones revisadas por el cliente.' in rendered
+    assert 'Hosting administrado' in rendered
+    assert 'HOSTING_BLOCK_SENTINEL' in rendered
+    assert 'Hosting y mantenimiento' in rendered
     assert rendered == expected
+
+
+def test_split_commercial_annex_omits_hosting_terms(proposal):
+    """Fails if the product annex repeats hosting price or coverage after service separation."""
+    proposal.contract_modality = 'split'
+    proposal.hosting_percent = 12
+    proposal.save(update_fields=['contract_modality', 'hosting_percent'])
+    ProposalSection.objects.create(
+        proposal=proposal, section_type='investment', title='Inversión', order=0,
+        content_json={'hostingPlan': {
+            'title': 'Hosting administrado',
+            'description': 'HOSTING_BLOCK_SENTINEL',
+            'billingTiers': [{'label': 'Trimestral', 'months': 3, 'discountPercent': 10}],
+        }},
+    )
+
+    raw = document_bytes(proposal, 'commercial')
+    rendered = '\n'.join(page.extract_text() for page in PdfReader(BytesIO(raw)).pages)
+
+    assert 'Hosting administrado' not in rendered
+    assert 'HOSTING_BLOCK_SENTINEL' not in rendered
+    assert 'Hosting y mantenimiento' not in rendered

@@ -26,7 +26,6 @@ from pathlib import Path
 
 from django.conf import settings
 from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
@@ -1224,11 +1223,6 @@ def _draw_footer(
     c.drawRightString(page_w - margin_r, footer_y - 11, page_label)
 
 
-def _pdf_label(value, ps):
-    formal = (ps or {}).get('formal')
-    return formal.label(value) if formal else value
-
-
 def _draw_section_header(c, y, index_str, title, ps=None, theme=None):
     """Draw section index + title and return the new y position."""
     t = _resolve_theme(theme)
@@ -1239,7 +1233,7 @@ def _draw_section_header(c, y, index_str, title, ps=None, theme=None):
         y -= 22
     c.setFont(_font('light'), 24)
     c.setFillColor(t.section_title_color)
-    clean_title = _sanitize_pdf_text(_pdf_label(title, ps))
+    clean_title = _sanitize_pdf_text(title)
     for line in _wrap_by_width(clean_title, _font('light'), 24, CONTENT_W):
         _draw_mixed_string(c, MARGIN_L, y, line, _font('light'), 24)
         y -= 30
@@ -1514,16 +1508,6 @@ def _draw_sidebar_box(c, y_start, title, items, sidebar_x=None,
 
 def _draw_subtitle(c, y, text, color=ESMERALD, ps=None):
     """Draw a bold subtitle and return the new y."""
-    text = _pdf_label(text, ps)
-    if (ps or {}).get('formal'):
-        lines = _wrap_by_width(_sanitize_pdf_text(str(text)), _font('bold'), 12, CONTENT_W)
-        for line in lines:
-            y = _check_y(c, y, ps, need=30)
-            c.setFont(_font('bold'), 12)
-            c.setFillColor(color)
-            _draw_mixed_string(c, MARGIN_L, y, line, _font('bold'), 12)
-            y -= 16
-        return y - 4
     if ps:
         y = _check_y(c, y, ps, need=24)
     c.setFont(_font('bold'), 12)
@@ -1696,7 +1680,7 @@ def _draw_kpi_tile_row(c, y, tiles, ps=None, x=None, max_width=None,
     Values auto-shrink 14 -> 11pt and then ellipsize, so long figures
     can never overflow their tile.
     """
-    tiles = [dict(t, label=_pdf_label(t.get('label', ''), ps)) for t in (tiles or [])
+    tiles = [dict(t) for t in (tiles or [])
              if _safe(t, 'value') or _safe(t, 'label')]
     if not tiles:
         return y
@@ -1995,7 +1979,6 @@ def _draw_table(c, y, headers, rows, ps=None, max_width=None,
     """
     if not headers:
         return y
-    headers = [_pdf_label(header, ps) for header in headers]
     if max_width is None:
         max_width = CONTENT_W
     t = _resolve_theme(theme)
@@ -2424,18 +2407,6 @@ def merge_with_covers(content_bytes, include_portada=True,
     return out.getvalue()
 
 
-def _draw_document_identity(c, y, lines):
-    """Print formal identity below the existing cover divider, with wrapping."""
-    for value in lines:
-        for line in _wrap_by_width(_sanitize_pdf_text(str(value)), _font('regular'), 10, CONTENT_W):
-            c.setFont(_font('regular'), 10)
-            c.setFillColor(GRAY_500)
-            _draw_mixed_centred(c, PAGE_W / 2, y, line, _font('regular'), 10)
-            y -= 14
-        y -= 6
-    return y
-
-
 def _draw_decorative_title_page(c, document_label, client_name, date_str, ps):
     """Draw a decorative title page (sub-portada) and advance to next page.
 
@@ -2482,11 +2453,8 @@ def _draw_decorative_title_page(c, document_label, client_name, date_str, ps):
     c.circle(PAGE_W / 2 - 60, line_y, 2.5, fill=1, stroke=0)
     c.circle(PAGE_W / 2 + 60, line_y, 2.5, fill=1, stroke=0)
 
-    # Formal variants preserve project, reference and issue date in this layout.
-    if ps.get('formal'):
-        _draw_document_identity(c, line_y - 30, ps['formal'].identity_lines)
     # Date below divider
-    if date_str and not ps.get('formal'):
+    if date_str:
         c.setFont(_font('regular'), 11)
         c.setFillColor(GRAY_500)
         c.drawCentredString(PAGE_W / 2, line_y - 30, date_str)
@@ -2518,7 +2486,7 @@ def _draw_toc_page(c, entries, ps, link_areas=None):
 
     c.setFont(_font('light'), 11)
     c.setFillColor(GREEN_LIGHT)
-    c.drawString(MARGIN_L, y, _pdf_label('\u00cdNDICE', ps))
+    c.drawString(MARGIN_L, y, '\u00cdNDICE')
     y -= 22
     c.setStrokeColor(LEMON)
     c.setLineWidth(2)
@@ -2527,7 +2495,7 @@ def _draw_toc_page(c, entries, ps, link_areas=None):
 
     c.setFont(_font('light'), 24)
     c.setFillColor(ESMERALD)
-    c.drawString(MARGIN_L, y, _pdf_label('Contenido del documento', ps))
+    c.drawString(MARGIN_L, y, 'Contenido del documento')
     y -= 44
 
     title_x = MARGIN_L + 36

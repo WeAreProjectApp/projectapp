@@ -7997,6 +7997,27 @@ de las tres variantes, geometría y selección personalizada en los cinco
 viewports del panel. Los errores y reintentos siguen cubiertos por
 `admin-proposal-contract-modality.spec.js`.
 
+#### Condiciones económicas y regeneración
+
+En modalidad separada, Documentos explica que hosting, cobertura, cortesía,
+precios y renovación pertenecen al contrato de servicio. El anexo comercial
+queda centrado en el producto y su forma de pago. El modal de servicio avisa que
+las condiciones se incorporan automáticamente tanto con plantilla como con texto
+personalizado. Presenta los tres periodos disponibles sin elegir por el cliente.
+
+- **Success:** el aviso de contrato desactualizado permite abrir **Regenerar
+  contrato**, guardar la variante de servicio y recuperar el documento vigente.
+- **Error:** si faltan condiciones económicas para generar, el servidor lo
+  explica y el modal conserva los datos; no cambia parcialmente la modalidad.
+- **Failure:** un contrato de servicio obsoleto impide preparar su adjunto de
+  formalización hasta regenerarlo. Las preparaciones anteriores requieren revisión.
+- **Display:** el aviso pertenece sólo a la fila del servicio desactualizado.
+  Los documentos de propuestas cerradas conservan su historial.
+
+Verificación: `admin-proposal-contract-modality.spec.js` recorre el aviso y la
+regeneración; las pruebas backend verifican importes, ausencia del hosting en
+el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoletos.
+
 ### FLOW: `admin-proposal-document-markdown`
 
 - **Módulo:** admin

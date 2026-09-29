@@ -49,20 +49,11 @@ const props = defineProps({
   proposal: { type: Object, default: () => ({}) },
   timelineDuration: { type: String, default: '' },
   language: { type: String, default: 'es' },
-  proposalUuid: { type: String, default: '' },
   investmentModules: { type: Array, default: () => [] },
-  rawTotalInvestment: { type: String, default: '' },
   paymentOptions: { type: Array, default: () => [] },
-  customizedTotal: { type: Number, default: null },
-  isCustomized: { type: Boolean, default: false },
+  investmentTotal: { type: Number, default: null },
   selectedModuleCount: { type: Number, default: null },
 });
-
-function parseInvestment(str) {
-  if (!str) return 0;
-  const cleaned = String(str).replace(/[^\d]/g, '');
-  return parseInt(cleaned, 10) || 0;
-}
 
 function formatCurrency(value) {
   if (value == null || value === '') return '';
@@ -74,7 +65,6 @@ function formatCurrency(value) {
 
 const i18n = {
   es: {
-    customized: 'Inversión personalizada según tu selección.',
     modulesTitle: 'Módulos del proyecto',
     modulesDesc: 'Componentes técnicos que conforman tu solución personalizada.',
     modulesCustomized: 'Personalizado — ajustado a tus necesidades.',
@@ -92,7 +82,6 @@ const i18n = {
     guaranteeDesc: 'Acompañamiento técnico después de la entrega para asegurar que todo funcione correctamente y resolver cualquier ajuste.',
   },
   en: {
-    customized: 'Customized investment based on your selection.',
     modulesTitle: 'Project modules',
     modulesDesc: 'Technical components that make up your custom solution.',
     modulesCustomized: 'Customized — tailored to your needs.',
@@ -121,17 +110,15 @@ const resolvedCards = computed(() => {
     let value = '';
     let description = card.description;
     if (card.source === 'total_investment') {
-      const effectiveCustom = props.customizedTotal;
+      const agreedTotal = props.investmentTotal;
       const currency = props.proposal?.currency || 'COP';
       const taxLabel = proposalTaxLabel(currency);
-      if (effectiveCustom !== null && effectiveCustom !== undefined) {
-        value = `${formatCurrency(effectiveCustom)} ${currency} ${taxLabel}`;
+      if (agreedTotal !== null && agreedTotal !== undefined) {
+        value = `${formatCurrency(agreedTotal)} ${currency} ${taxLabel}`;
       } else if (props.proposal?.total_investment) {
         value = `${formatCurrency(props.proposal.total_investment)} ${currency} ${taxLabel}`;
       }
-      if (props.isCustomized) {
-        description = t.value.customized;
-      } else if (description && value) {
+      if (description && value) {
         // Re-template any hard-typed amount in the description so the price
         // inside the narrative stays in sync with the live total.
         description = description.replace(

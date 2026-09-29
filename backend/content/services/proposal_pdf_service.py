@@ -12,29 +12,21 @@ Shared PDF utilities (fonts, colours, drawing helpers) live in
 
 import io
 import logging
-import math
 import os
 import re
 import tempfile
-import textwrap
 from pathlib import Path
 
 from django.conf import settings
-from pypdf import PdfReader, PdfWriter
-from reportlab.lib import colors
-from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
 from content.services.hour_package_service import (
     apply_manual_hour_rates,
     seed_commercial_conditions_from_catalog,
 )
-from content.services.proposal_service import normalize_hosting_plan
+from content.services.proposal_hosting_terms import resolve_hosting_terms
 from content.services.proposal_pdf_sections import ordered_commercial_sections
-from content.services.proposal_totals_service import safe_decimal
 from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _register_fonts,
     _font,
@@ -107,8 +99,6 @@ from content.services.pdf_utils import (  # noqa: F401 — re-exported
     _REQ_PRIORITY_LABELS,
     _apply_toc_links,
     _draw_toc_page,
-    _draw_document_identity,
-    _pdf_label,
     format_date_es,
     # Markdown helpers
     _parse_markdown_lines,
@@ -278,8 +268,7 @@ def _render_greeting(c, data, proposal, ps=None):
     c.setFont(_font('light'), 14)
     c.setFillColor(GREEN_LIGHT)
     c.drawCentredString(PAGE_W / 2, mid_y + 60,
-                        (ps['formal'].title.upper() if ps and ps.get('formal')
-                         else 'PROPUESTA DE DESARROLLO WEB'))
+                        'PROPUESTA DE DESARROLLO WEB')
 
     # Client name — large, centred, wrapped by real width. The font
     # steps down (36 -> 30 -> 26) until the name fits in three lines,
@@ -319,8 +308,6 @@ def _render_greeting(c, data, proposal, ps=None):
 
     # Quote — clamped to the space above the bottom branding so a long
     # quote can never collide with it.
-    if ps and ps.get('formal'):
-        _draw_document_identity(c, line_y - 30, ps['formal'].identity_lines)
     quote = _safe(data, 'inspirationalQuote')
     if quote:
         qy = line_y - 30
@@ -436,8 +423,7 @@ def _render_design_ux(c, data, _proposal, ps=None, y=None):
     y -= 8
 
     focus_items = _safe(data, 'focusItems', [])
-    focus_title = _pdf_label(_safe(data, 'focusTitle', 'Enfoque'), ps)
-    content_top = y
+    focus_title = _safe(data, 'focusTitle', 'Enfoque')
 
     # Render paragraphs + objective first (full width or left column)
     paragraphs = _safe(data, 'paragraphs', [])
@@ -471,7 +457,7 @@ def _render_creative_support(c, data, _proposal, ps=None, y=None):
     y -= 8
 
     includes = _safe(data, 'includes', [])
-    inc_title = _pdf_label(_safe(data, 'includesTitle', 'Incluye'), ps)
+    inc_title = _safe(data, 'includesTitle', 'Incluye')
     content_top = y
 
     if includes:
@@ -648,7 +634,7 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
         y = PAGE_H - MARGIN_T
 
     # Sub-index numeral (e.g. "07.1")
-    if ps and not ps.get('formal'):
+    if ps:
         count = len(_safe(grp, 'items', []))
         label = f'{count} elemento{"s" if count != 1 else ""}' if count else ''
         need = _heading_badge_height(c, _safe(grp, 'title'), label,
@@ -661,18 +647,10 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
         y -= 22
 
     items = _safe(grp, 'items', [])
-    if ps and ps.get('formal'):
-        for line in _wrap_by_width(_sanitize_pdf_text(_safe(grp, 'title')), _font('light'), 20, CONTENT_W):
-            y = _check_y(c, y, ps, need=42)
-            c.setFont(_font('light'), 20)
-            c.setFillColor(ESMERALD)
-            _draw_mixed_string(c, MARGIN_L, y, line, _font('light'), 20)
-            y -= 26
-    else:
-        title_text = _strip_emoji(_safe(grp, 'title'))
-        pill_label = f'{len(items)} elemento{"s" if len(items) != 1 else ""}' if items else ''
-        y = _draw_heading_badge(c, y, title_text, pill_label, ps=ps,
-                                font_size=20, font_name=_font('light'))
+    title_text = _strip_emoji(_safe(grp, 'title'))
+    pill_label = f'{len(items)} elemento{"s" if len(items) != 1 else ""}' if items else ''
+    y = _draw_heading_badge(c, y, title_text, pill_label, ps=ps,
+                            font_size=20, font_name=_font('light'))
 
     # Thin accent line
     c.setStrokeColor(LEMON)
@@ -688,13 +666,6 @@ def _render_requirement_group_page(c, grp, ps=None, y=None,
     # Render items as a full-width table — one row per requirement
     if not items:
         return y
-
-    if ps and ps.get('formal'):
-        english = ps['formal'].language == 'en'
-        return _draw_table(c, y,
-            ['ID', 'Deliverable', 'Description'] if english else ['ID', 'Entregable', 'Descripción'],
-            [[item['id'], f"**{item['name']}**", item['description']] for item in items],
-            ps=ps, col_widths=[0.2, 0.3, 0.5])
 
     rows = [dict(item, title=_safe(item, 'name')) for item in items]
     return _draw_requirements_table(c, y, rows, ps, _render_linked_requirements)
@@ -768,7 +739,7 @@ def _render_timeline(c, data, _proposal, ps=None, y=None):
 
         milestone = _safe(phase, 'milestone')
         if milestone:
-            label = 'Milestone' if ps and ps.get('formal') and ps['formal'].language == 'en' else 'Hito'
+            label = 'Hito'
             y = _draw_badge_group(c, y, [{'text': f'{label}: {milestone}', 'bg': BONE}],
                                   ps=ps, x=tx, max_width=CONTENT_W - 30)
 
@@ -854,27 +825,6 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     y = _draw_section_header(c, y, _safe(data, 'index'), _safe(data, 'title'))
     y -= 8
 
-    if ps and ps.get('formal'):
-        resolved = data['resolved']
-        english = ps['formal'].language == 'en'
-        y = _draw_kpi_tile_row(c, y, [{
-            'value': resolved['total'],
-            'label': 'Total investment' if english else 'Inversión Total',
-            'sub': resolved['tax'].strip(),
-        }], ps=ps, accent_first=True)
-        y = _draw_subtitle(c, y, 'Payment milestones' if english else 'Hitos de pago', ps=ps)
-        y = _draw_table(c, y, ['Milestone', 'Amount'] if english else ['Hito', 'Importe'],
-                        [[p['milestone'], p['amount']] for p in resolved['payments']],
-                        ps=ps, col_widths=[0.6, 0.4], aligns=['left', 'right'])
-        y = _draw_paragraphs(c, y, [resolved['paymentMethods'], resolved['paymentNote']], ps=ps)
-        for block in resolved['hosting']:
-            y = _draw_subtitle(c, y, block['title'], ps=ps)
-            if block['rows']:
-                y = _draw_table(c, y, block['headers'], block['rows'], ps=ps,
-                                col_widths=[0.4, 0.6])
-            y = _draw_paragraphs(c, y, block['paragraphs'], ps=ps)
-        return y
-
     intro = _safe(data, 'introText')
     included = _safe(data, 'whatsIncluded', [])
     # BusinessProposal fields are the source of truth; content_json is the
@@ -894,12 +844,10 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     # ── Hosting figures (hoisted: reused by the KPI tiles and the
     # hosting block below) ──
     hosting = _safe(data, 'hostingPlan', {})
-    normalized_hosting = normalize_hosting_plan(_proposal, hosting)
-    h_percent = normalized_hosting.get('hostingPercent', 0) or 0
-    hosting_twelve_month_reference = (
-        round(display_num * h_percent / 100)
-        if h_percent and display_num else 0
-    )
+    hosting_terms = resolve_hosting_terms(_proposal, hosting, display_num)
+    normalized_hosting = hosting_terms['plan']
+    hosting_twelve_month_reference = hosting_terms['annual_reference']
+    include_hosting = (ps or {}).get('include_hosting', True)
 
     duration_value = ''
     duration_sub = ''
@@ -922,14 +870,10 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     if duration_value:
         tiles.append({'value': duration_value,
                       'label': 'Duración estimada', 'sub': duration_sub})
-    if hosting_twelve_month_reference > 0:
-        first_tier = (normalized_hosting.get('billingTiers') or [{}])[0]
+    if include_hosting and hosting_twelve_month_reference > 0:
+        first_tier = (hosting_terms['tiers'] or [{}])[0]
         if _safe(first_tier, 'frequency') == 'nine_month':
-            discount = _safe(first_tier, 'discountPercent', 0) or 0
-            monthly_base = round(hosting_twelve_month_reference / 12)
-            nine_month_total = (
-                round(monthly_base * (100 - discount) / 100) * 9
-            )
+            nine_month_total = first_tier['period_total']
             hosting_kpi = f'{_format_cop(nine_month_total)}/9 meses'
         else:
             # Closed historical proposals preserve their original annual KPI.
@@ -1032,7 +976,7 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     # the web view reads them from too.
     hosting = normalized_hosting
     h_title = _safe(hosting, 'title')
-    if h_title:
+    if include_hosting and h_title:
         y -= 14
         if ps:
             y = _check_y(c, y, ps, need=120)
@@ -1061,11 +1005,11 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
 
         # Billing tiers — one full-width table instead of N fixed-height
         # side-by-side cards (labels/prices can never collide again).
-        # normalized_hosting / h_percent / hosting_twelve_month_reference are hoisted at
+        # normalized_hosting / hosting_twelve_month_reference are hoisted at
         # the top of the renderer (shared with the KPI tiles). Hosting is
         # a percentage of the SAME "Inversión Total" the client sees —
         # parity with Investment.vue ``hostingTwelveMonthReference``.
-        billing_tiers = normalized_hosting.get('billingTiers', [])
+        billing_tiers = hosting_terms['tiers']
 
         tier_headers = ['Frecuencia', 'Ahorro',
                         f'Precio/mes ({tax_suffix.strip()})',
@@ -1073,15 +1017,14 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
         tier_col_widths = [0.28, 0.14, 0.27, 0.31]
         tier_aligns = ['left', 'center', 'right', 'right']
         if billing_tiers and hosting_twelve_month_reference > 0:
-            monthly_base = round(hosting_twelve_month_reference / 12)
             tier_rows = []
             for tier in billing_tiers:
                 discount = _safe(tier, 'discountPercent', 0)
                 months = _safe(tier, 'months', 1) or 1
                 label = _safe(tier, 'label', '')
                 badge = _safe(tier, 'badge', '')
-                monthly_discounted = round(monthly_base * (100 - discount) / 100)
-                period_total = monthly_discounted * months
+                monthly_discounted = tier['monthly_price']
+                period_total = tier['period_total']
                 freq_cell = f'**{label}**' if label else ''
                 if badge:
                     freq_cell = f'{freq_cell} — {badge}' if freq_cell else badge
@@ -1134,19 +1077,7 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
                                   ps=ps, label='REGALO')
 
         # Renewal note — SMLMV formula text
-        renewal = _safe(hosting, 'renewalNote')
-        if not renewal and h_title:
-            renewal = (
-                'Renovaciones para cada año de renovación (a partir del segundo año): '
-                'el costo se ajusta una vez al año tomando como referencia el porcentaje '
-                'en que aumentó el SMLMV (Salario Mínimo Legal Mensual Vigente en Colombia) '
-                'ese año, más un 8% fijo, aplicado sobre el costo del año anterior:\n\n'
-                'Costo de renovación = Costo del año anterior × '
-                '(1 + (% de aumento del SMLMV + 8%))\n\n'
-                'Por ejemplo, si el SMLMV aumentó 5%, el incremento total sería '
-                '5% + 8% = 13%. Si venías pagando $100.000 COP, el nuevo costo sería '
-                '$113.000 COP (un aumento de $13.000).'
-            )
+        renewal = hosting_terms['renewal_note']
         if renewal:
             y -= 8
             # Split on double-newlines to preserve paragraph breaks. The
@@ -1219,13 +1150,6 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
     if y is None:
         y = PAGE_H - MARGIN_T
 
-    if ps and ps.get('formal'):
-        y = _draw_section_header(c, y, _safe(data, 'index'), _safe(data, 'title'))
-        for block in data['terms']:
-            y = _draw_subtitle(c, y, block['title'], ps=ps)
-            y = _draw_paragraphs(c, y, block['paragraphs'], ps=ps)
-        return y
-
     catalog = ps.get('_value_added_catalog', {}) if ps else {}
     module_ids = _safe(data, 'module_ids', []) or []
     # No resolvable module means no section at all — not a header with nothing
@@ -1241,7 +1165,6 @@ def _render_value_added_modules(c, data, _proposal, ps=None, y=None):
     if intro:
         y = _draw_paragraphs(c, y, [intro], ps=ps)
         y -= 8
-
 
     justifications = _safe(data, 'justifications', {}) or {}
     conditions = _safe(data, 'conditions', {}) or {}
@@ -1815,8 +1738,6 @@ def _render_commercial_conditions(c, data, _proposal, ps=None, y=None):
     elif scope_title:
         y -= 12
         y = _draw_subtitle(c, y, scope_title, ps=ps)
-    if ps and ps.get('formal'):
-        y = _draw_paragraphs(c, y, [data.get('contractNote')], ps=ps)
     return y
 
 
@@ -1975,8 +1896,8 @@ class ProposalPdfService:
     """
 
     @classmethod
-    def generate(cls, proposal, selected_modules=None, *, formal=None, sections_override=None,
-                 _content_start=3):
+    def generate(cls, proposal, selected_modules=None, *, sections_override=None,
+                 include_hosting=True, _content_start=3):
         """
         Build a multi-page portrait-A4 PDF from the proposal's
         enabled sections and return the raw bytes.
@@ -1987,8 +1908,9 @@ class ProposalPdfService:
 
         Args:
             proposal: BusinessProposal instance with related sections.
-            selected_modules: Optional list of module IDs for dynamic pricing.
+            selected_modules: Optional list of contracted module IDs for scope filtering.
             sections_override: Original section snapshots after whole-section exclusions.
+            include_hosting: Whether investment includes the hosting block and KPI.
 
         Returns:
             bytes: The PDF content, or None on failure.
@@ -1998,14 +1920,12 @@ class ProposalPdfService:
 
             if sections_override is not None:
                 sections = list(sections_override)
-            elif formal:
-                sections = list(formal.sections)
             else:
                 sections = list(proposal.sections.filter(is_enabled=True).order_by('order'))
 
             buf = io.BytesIO()
             c = canvas.Canvas(buf, pagesize=A4)
-            c.setTitle(formal.title if formal else f'Propuesta \u2014 {proposal.client_name}')
+            c.setTitle(f'Propuesta \u2014 {proposal.client_name}')
             c.setAuthor('Project App')
             # PDF metadata: creation date
             from django.utils import timezone as _tz
@@ -2016,10 +1936,11 @@ class ProposalPdfService:
             )
 
             ps = {
-                'num': formal.content_start if formal else _content_start,
+                'num': _content_start,
                 'client': proposal.client_name,
-                'selected_modules': None if formal else selected_modules,
-                'formal': formal,
+                'selected_modules': selected_modules,
+                'include_hosting': include_hosting,
+
             }
 
             _value_added_ids = set()
@@ -2038,7 +1959,7 @@ class ProposalPdfService:
 
             # Extract base_weeks from timeline section for dynamic duration
             base_weeks = 0
-            if selected_modules is not None and not formal:
+            if selected_modules is not None:
                 for _sec in sections:
                     if _sec.section_type == 'timeline':
                         _td = (_sec.content_json or {}).get('totalDuration', '')
@@ -2083,7 +2004,7 @@ class ProposalPdfService:
             from content.services.proposal_totals_service import (
                 effective_total_for_proposal,
             )
-            ps['_effective_total'] = 0 if formal else effective_total_for_proposal(proposal)
+            ps['_effective_total'] = effective_total_for_proposal(proposal)
             ps['_currency'] = getattr(proposal, 'currency', 'COP') or 'COP'
 
             # ── Pass A: Content canvas (pages 3+) ────────────────────
@@ -2120,7 +2041,7 @@ class ProposalPdfService:
                 # the panel.
                 #
                 # Any failure → keep the stored snapshot.
-                if stype == 'commercial_conditions' and not formal:
+                if stype == 'commercial_conditions':
                     try:
                         if data.get('hourPackagesMode') == 'manual':
                             data = apply_manual_hour_rates(data)
@@ -2158,7 +2079,7 @@ class ProposalPdfService:
 
                 # The value-added renderer also skips unresolved module IDs.
                 # Apply that visibility guard before numbering or adding a TOC row.
-                if (stype == 'value_added_modules' and not is_paste and not formal
+                if (stype == 'value_added_modules' and not is_paste
                         and not any(mid in _value_added_catalog
                                     for mid in (data.get('module_ids') or []))):
                     continue
@@ -2253,7 +2174,7 @@ class ProposalPdfService:
             c.setFillColor(GRAY_500)
             c.drawCentredString(
                 PAGE_W / 2, y,
-                formal.identity_lines[-1] if formal else f'Fecha de creaci\u00f3n de la propuesta: {date_str}',
+                f'Fecha de creaci\u00f3n de la propuesta: {date_str}',
             )
             _draw_footer(c, ps['num'], client_name=ps['client'])
             c.save()
@@ -2263,9 +2184,9 @@ class ProposalPdfService:
             # ── Pass B: Greeting + TOC (pages 1-2) ───────────────────
             buf_prefix = io.BytesIO()
             c_prefix = canvas.Canvas(buf_prefix, pagesize=A4)
-            c_prefix.setTitle(formal.title if formal else f'Propuesta \u2014 {proposal.client_name}')
+            c_prefix.setTitle(f'Propuesta \u2014 {proposal.client_name}')
             c_prefix.setAuthor('Project App')
-            ps_prefix = {'num': 1, 'client': proposal.client_name, 'formal': formal}
+            ps_prefix = {'num': 1, 'client': proposal.client_name}
 
             greeting_sec = next(
                 (s for s in sections if s.section_type == 'greeting'), None
@@ -2295,12 +2216,11 @@ class ProposalPdfService:
             c_prefix.save()
             prefix_bytes = buf_prefix.getvalue()
             buf_prefix.close()
-            content_start = formal.content_start if formal else _content_start
+            content_start = _content_start
             if ps_prefix['num'] != content_start:
                 return cls.generate(
                     proposal, selected_modules=selected_modules,
-                    formal=formal.with_content_start(ps_prefix['num']) if formal else None,
-                    sections_override=sections_override, _content_start=ps_prefix['num'],
+                    sections_override=sections_override, include_hosting=include_hosting, _content_start=ps_prefix['num'],
                 )
 
             pdf_bytes = cls._merge_with_covers(content_bytes, prepend_bytes=prefix_bytes)

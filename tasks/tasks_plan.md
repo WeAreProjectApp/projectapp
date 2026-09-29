@@ -1,3 +1,10 @@
+> **2026-09-29 — condiciones del servicio, PR #457:** traslado del bloque completo
+> de hosting al contrato de servicio en modalidad separada; anexo comercial del
+> producto, condiciones automáticas en texto personalizado y regeneración
+> explícita antes de formalizar si cambian. Limpieza de rutas PDF y cálculos de
+> recargos sin uso. Migración `0276` sólo durante despliegue; ver
+> `docs/PROPOSAL_FORMALIZATION.md` y verificaciones del PR.
+
 > **2026-09-29 — implementado y verificado localmente:** calculadora y recargos retirados, importes históricos preservados, intereses independientes y guía con accesos desde portada. Pruebas focales de API, migración, PDF, componentes y navegador en verde; compilación Nuxt y mapas validados. Migraciones sólo en despliegue. Referencia: `docs/PROPOSAL_MODULE_INTERESTS.md`.
 
 > **2026-09-29 — Formulario y estados de enlaces seguros:** implementación

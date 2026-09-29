@@ -1818,6 +1818,17 @@ historical record.
 
 Los endpoints administrativos `proposals/{id}/formalization/` delegan en un servicio independiente. `FormalContent` captura las secciones originales habilitadas. `formalization_pdf` invoca los generadores originales sin contexto de reescritura: el comercial conserva los diez capítulos acordados, ordenados por tipo por `proposal_pdf_sections`, y el técnico sólo `stack`, `dataModel` y `epics`, después del filtro normal de selección. Los dos PDF comerciales tienen orden fijo independiente de la web; encabezados, subsecciones e índice se numeran según contenido visible. Los generadores ajustan el inicio del contenido a las páginas reales de presentación e índice, con enlaces por página del índice. El detalle técnico público sigue completo. `proposal_pdf_layout` comparte entre ambos generadores las medidas de filas, badges y párrafos: reserva real de prioridad, tablas compactas, márgenes exteriores y continuidad paginada. Los parámetros de saltos de párrafo de `pdf_utils` son optativos para conservar otros tipos de PDF. Las condiciones comerciales siguen las reglas originales del catálogo; Markdown extrae texto del PDF generado. Las preparaciones con anexos anteriores a esta versión requieren revisión nueva, sin modificar sus archivos ni los envíos históricos. Una preparación privada conserva payload, HTML/texto, huella de origen y bytes de adjuntos por 24 horas. El envío reclama la preparación mediante actualización condicional de estado y entrega esos mismos bytes al gateway existente, que conserva snapshots e historial. El envío no cambia el estado comercial. Los archivos temporales se eliminan por tarea diaria y también al borrar su propuesta.
 
+En modalidad separada, `proposal_hosting_terms` resuelve los importes y el
+contenido de hosting compartidos por PDF y contrato. El anexo comercial pasa
+`include_hosting=False`; `resolve_contract_content` incorpora las condiciones al
+servicio estándar o personalizado y guarda el mismo snapshot que se renderiza.
+`service_contract_freshness` compara ese texto durante negociación, sin escribir
+documentos al consultar. La lista calcula un snapshot por propuesta y entrega
+`needs_regeneration` a las filas; la formalización bloquea el servicio obsoleto.
+La huella de origen incluye los tres descuentos. No se reescriben paquetes
+preparados ni contratos de propuestas cerradas.
+
+
 ### Modalidad de cierre
 
 `BusinessProposal.contract_modality` decide si el negocio cierra con el contrato único o con dos documentos:

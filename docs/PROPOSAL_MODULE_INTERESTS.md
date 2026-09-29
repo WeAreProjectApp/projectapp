@@ -20,6 +20,16 @@ Las migraciones 0274–0275 agregan los intereses y materializan los recargos ex
 
 La migración de datos es irreversible: no reconstruye porcentajes retirados al bajar de versión. El despliegue debe conservar el backup previo y aplicar las migraciones antes de servir el código nuevo; nunca se ejecutan en el worktree. Ante una reversión operativa se restaura el backup siguiendo el procedimiento de despliegue, sin intentar deducir el importe base desde el nuevo total.
 
+## Limpieza y compatibilidad
+
+Se retiraron el multiplicador de recargos y los avisos de un total personalizado
+del panel, las propiedades de la calculadora en resumen/cierre y las ramas de
+reescritura formal de PDF que ya no tenían consumidores. Pagos y hosting usan
+la inversión manual. Los nombres históricos `selected_modules` e
+`is_calculator_module` siguen siendo necesarios para interpretar el alcance
+guardado; no representan intereses nuevos ni recalculan precios. El total
+efectivo de la API permanece como alias compatible del importe acordado.
+
 ## Verificación
 
 Pruebas focales de API, migración, importes manuales, modal, errores recuperables, guía y accesos exclusivos de portada. El generador de propuestas ficticias usa intereses del catálogo activo. Las pruebas crean sus datos en SQLite aislado. No se usan bases reales ni se envían mensajes.

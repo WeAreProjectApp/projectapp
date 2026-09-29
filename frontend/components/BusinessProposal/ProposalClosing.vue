@@ -460,7 +460,7 @@ const props = defineProps({
   language: { type: String, default: 'es' },
   whatsappLink: { type: String, default: '' },
   paymentOptions: { type: Array, default: () => [] },
-  customizedTotal: { type: Number, default: null },
+  investmentTotal: { type: Number, default: null },
   viewMode: { type: String, default: 'detailed' },
   ctaMessage: { type: String, default: '' },
   primaryCTA: { type: Object, default: () => ({}) },
@@ -468,8 +468,8 @@ const props = defineProps({
   contactMethods: { type: Array, default: () => [] },
 });
 
-// Use customizedTotal from calculator when available, otherwise fall back to proposal.total_investment
-const effectiveTotal = computed(() => props.customizedTotal ?? props.proposal?.total_investment);
+// Use the resolved manual total supplied by the proposal page.
+const effectiveTotal = computed(() => props.investmentTotal ?? props.proposal?.total_investment);
 const taxLabel = computed(() => proposalTaxLabel(props.proposal?.currency));
 
 const whatsappTalkUrl = computed(() => {
