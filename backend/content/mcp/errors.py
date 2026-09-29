@@ -1,6 +1,7 @@
 """Preserve serializer error codes before JSON serialization loses ErrorDetail."""
 
 import json
+import logging
 
 
 def normalize_error(payload, status_code=400):
@@ -67,3 +68,25 @@ def normalize_error(payload, status_code=400):
     if errors:
         details["errors"] = errors
     return str(message), code, details
+
+
+def transport_exception_handler(exc, context):
+    """Keep codes/messages on HTTP failures raised before tool dispatch, too."""
+    from rest_framework.response import Response
+    from rest_framework.views import exception_handler, set_rollback
+
+    response = exception_handler(exc, context)
+    if response is None:
+        logging.getLogger(__name__).exception("MCP transport failed", exc_info=exc)
+        set_rollback()
+        response = Response(status=500)
+        code, message = "INTERNAL_ERROR", "Error interno del servidor."
+    else:
+        message, code, _details = normalize_error(response.data, response.status_code)
+        code = str(getattr(exc, "default_code", code)).upper()
+    response.data = {
+        "jsonrpc": "2.0",
+        "id": None,
+        "error": {"code": code, "message": message},
+    }
+    return response

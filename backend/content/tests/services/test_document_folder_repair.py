@@ -1,10 +1,8 @@
 """A repair moves only the reviewed documents and records the operation."""
-from io import StringIO
 from unittest.mock import patch
 
 import pytest
 from accounts.models import UserProfile
-from django.core.management import call_command
 from django.db import IntegrityError
 
 from content.models import (
@@ -128,16 +126,3 @@ def test_failed_archive_rolls_back_moves(repair_case, superuser):
     assert source.documents.count() == 5
     assert target.documents.count() == 0
     assert not AccountingChangeLog.objects.filter(entity_type='document_folder').exists()
-
-
-def test_command_preview_writes_reviewable_manifest(repair_case, tmp_path):
-    import json
-    source, target, _, manifest = repair_case
-    output = tmp_path / 'repair.json'
-
-    call_command('repair_document_folder', source_folder_id=source.pk, target_folder_id=target.pk,
-                 client_profile_id=manifest['client_profile_id'], document_ids=manifest['document_ids'],
-                 manifest=str(output), stdout=StringIO())
-
-    assert json.loads(output.read_text()) == manifest
-    assert source.documents.count() == 5

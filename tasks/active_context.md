@@ -2189,3 +2189,6 @@ usa manifiesto revisado, huellas, respaldo y transacción. Investigación produc
 MCP movió 201/202/203/208/209 de 80 a 124 a las 13:48 UTC; la migración de autoría y
 validación llegó a las 21:36 UTC. Detalle y estado operativo en
 `docs/runbooks/littigio-folder-repair.md`. No atribuir este caso a sincronización.
+Reparación aplicada y verificada el 28-09 a las 23:56 UTC: cinco documentos en 80,
+124 vacía/archivada y atribuida al MCP; revisiones 126–130, recibo 797. Contenido y
+asociaciones conservados contra respaldo privado; reintento sin escrituras.

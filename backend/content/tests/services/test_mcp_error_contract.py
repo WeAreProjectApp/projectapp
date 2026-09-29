@@ -3,7 +3,9 @@ import json
 
 import pytest
 from rest_framework import serializers
+from rest_framework.exceptions import Throttled
 
+from content.mcp.errors import transport_exception_handler
 from content.mcp.panel_bridge import _error_message
 from content.mcp.protocol import handle_message
 
@@ -53,3 +55,21 @@ def test_internal_error_hides_exception_contents():
     error = json.loads(response['result']['content'][0]['text'])['error']
     assert error['code'] == 'INTERNAL_ERROR'
     assert 'private-database-password' not in json.dumps(response)
+
+
+def test_transport_throttle_preserves_retry_metadata():
+    response = transport_exception_handler(Throttled(wait=12), {})
+
+    assert response.status_code == 429
+    assert response['Retry-After'] == '12'
+    assert response.data['error']['code'] == 'THROTTLED'
+    assert '12' in response.data['error']['message']
+
+
+def test_transport_internal_error_hides_exception_contents():
+    response = transport_exception_handler(RuntimeError('private-database-password'), {})
+
+    assert response.status_code == 500
+    assert response.data['error'] == {
+        'code': 'INTERNAL_ERROR', 'message': 'Error interno del servidor.',
+    }

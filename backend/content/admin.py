@@ -319,6 +319,8 @@ class DocumentFolderAdminForm(forms.ModelForm):
     def folder_data(self):
         user = self.cleaned_data.get('client_user')
         profile = getattr(user, 'profile', None)
+        if user is not None and profile is None:
+            raise forms.ValidationError('El usuario seleccionado no tiene un perfil de cliente.')
         parent = self.cleaned_data.get('parent')
         project = self.cleaned_data.get('project')
         data = {'name': self.cleaned_data.get('name'), 'parent': getattr(parent, 'pk', None),

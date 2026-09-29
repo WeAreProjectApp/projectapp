@@ -9,6 +9,9 @@ Los errores de campos incluyen `details.errors`, con `field`, `code` y `message`
 Se preservan los detalles anteriores y los códigos ya publicados. Campos
 inesperados y ciclos de carpetas usan `unknown_field` y `folder_cycle`.
 Los fallos internos no revelan la excepción del servidor.
+Los rechazos HTTP anteriores al despacho (token, origen, formato, método o
+límite de solicitudes) también devuelven `error.code` y `error.message`,
+conservando su estado HTTP y las cabeceras de reintento.
 
 `move_documents` conserva la atomicidad y el orden de IDs. Los resultados
 `failed` y `aborted` añaden código y mensaje; `reason` se conserva por compatibilidad.
@@ -60,5 +63,7 @@ El comando `repair_document_folder` previsualiza un manifiesto de IDs y huellas;
 la aplicación exige hash, administrador y respaldo. Rechaza cambios posteriores,
 conserva asociaciones y contenido, registra el historial y archiva sólo el origen
 vacío. La repetición con recibo durable no genera nuevos movimientos.
+La reparación de producción se completó el 28-09-2026 a las 23:56 UTC: cinco
+documentos restaurados a 80, carpeta 124 archivada y autoría MCP recuperada.
 
 Evidencia y procedimiento: [reparación de Littigio](../runbooks/littigio-folder-repair.md).

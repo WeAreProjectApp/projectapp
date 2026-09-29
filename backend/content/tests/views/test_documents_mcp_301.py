@@ -20,14 +20,15 @@ def rpc(api_client, superuser):
             'jsonrpc': '2.0', 'id': 1, 'method': method, 'params': params,
         }, format='json').json()['result']
     call.connector = connector
+    call.url = f'/api/mcp/documents/{token}/'
     return call
 
 
-@pytest.mark.parametrize('nested', [False, True])
-def test_unknown_folder_field_reaches_text_client(rpc, nested):
+@pytest.mark.parametrize('payload_location', ['flat', 'data'])
+def test_unknown_folder_field_reaches_text_client(rpc, payload_location):
     folder = DocumentFolder.objects.create(name='Original')
     values = {'name': 'Changed', 'typo': 1}
-    arguments = {'folder_id': folder.pk, **({'data': values} if nested else values)}
+    arguments = {'folder_id': folder.pk, **{'flat': values, 'data': {'data': values}}[payload_location]}
 
     result = rpc('tools/call', name='update_folder', arguments=arguments)
 
@@ -39,11 +40,11 @@ def test_unknown_folder_field_reaches_text_client(rpc, nested):
     assert folder.name == 'Original'
 
 
-@pytest.mark.parametrize('self_parent', [False, True])
-def test_folder_cycle_reaches_text_client(rpc, self_parent):
+@pytest.mark.parametrize('destination_kind', ['self', 'descendant'])
+def test_folder_cycle_reaches_text_client(rpc, destination_kind):
     parent = DocumentFolder.objects.create(name='Parent')
     child = DocumentFolder.objects.create(name='Child', parent=parent)
-    destination = parent.pk if self_parent else child.pk
+    destination = {'self': parent.pk, 'descendant': child.pk}[destination_kind]
 
     result = rpc('tools/call', name='update_folder', arguments={'folder_id': parent.pk, 'parent_id': destination})
 
@@ -79,10 +80,10 @@ def test_rejected_move_exposes_every_id_at_root(rpc):
     assert document.folder_id is None
 
 
-@pytest.mark.parametrize('restricted', [False, True])
-def test_discovery_input_schemas_match_capabilities(rpc, restricted):
+@pytest.mark.parametrize('allowed_tools', [[], ['list_folders', 'create_folder']])
+def test_discovery_input_schemas_match_capabilities(rpc, allowed_tools):
     credential = rpc.connector.credentials.get(label='Default')
-    credential.allowed_tools = ['list_folders', 'create_folder'] if restricted else []
+    credential.allowed_tools = allowed_tools
     credential.save()
 
     listed = rpc('tools/list')['tools']
@@ -109,7 +110,7 @@ def test_discovery_uses_connector_version(rpc):
     assert discovered == capabilities['version'] == '3.0.1'
 
 
-def test_mcp_folder_provenance_is_read_only(rpc):
+def test_mcp_folder_creation_records_provenance(rpc):
     result = rpc('tools/call', name='create_folder', arguments={'name': 'Audited'})
     folder = DocumentFolder.objects.get(pk=result['structuredContent']['id'])
 
@@ -129,3 +130,37 @@ def test_credential_denial_reaches_text_client(rpc):
     assert error['code'] == 'FORBIDDEN'
     assert error['message'] == 'La credencial no permite esta herramienta.'
     assert not DocumentFolder.objects.filter(name='Denied').exists()
+
+
+def test_invalid_transport_token_returns_machine_code(api_client):
+    response = api_client.post('/api/mcp/documents/invalid-token/', {}, format='json')
+
+    assert response.status_code == 404
+    assert response.json()['error']['code'] == 'NOT_FOUND'
+    assert isinstance(response.json()['error']['message'], str)
+    assert len(response.json()['error']['message']) > 0
+
+
+def test_foreign_origin_returns_machine_code(api_client, rpc):
+    response = api_client.post(rpc.url, {}, format='json', HTTP_ORIGIN='https://foreign.example')
+
+    assert response.status_code == 403
+    assert response.json()['error'] == {
+        'code': 'FORBIDDEN', 'message': 'El origen de la solicitud no está permitido.',
+    }
+
+
+def test_malformed_transport_json_returns_machine_code(api_client, rpc):
+    response = api_client.post(rpc.url, '{broken', content_type='application/json')
+
+    assert response.status_code == 400
+    assert response.json()['error']['code'] == 'PARSE_ERROR'
+    assert 'JSON parse error' in response.json()['error']['message']
+
+
+def test_unsupported_transport_method_returns_machine_code(api_client, rpc):
+    response = api_client.get(rpc.url)
+
+    assert response.status_code == 405
+    assert response.json()['error']['code'] == 'METHOD_NOT_ALLOWED'
+    assert 'GET' in response.json()['error']['message']

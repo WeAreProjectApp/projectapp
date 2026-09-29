@@ -63,4 +63,27 @@ anteriores del respaldo y registrar una nueva operación histórica.
 
 ## Estado
 
-Investigación completada. Reparación productiva pendiente de ejecución verificada.
+**Reparación aplicada en producción el 28-09-2026 a las 23:56:19 UTC.**
+
+- Carpeta 80: exactamente **201, 202, 203, 208, 209**. Carpeta 124: vacía y
+  archivada, `creation_source=mcp`, `created_by_id=68`.
+- Respaldo privado de las siete filas, manifiesto y resultado:
+  `/var/backups/projectapp/littigio-repair-20260928T234945Z/`.
+  El gzip se leyó íntegro y los siete objetos se deserializaron antes de aplicar.
+- SHA-256 del respaldo:
+  `c2447d106dbd0e138596fbe240d5de7767be2d48a322d702624c49bd2df6061f`.
+- SHA-256 del manifiesto revisado:
+  `7f45dbded73caafe992cedde7c9d5b94982911ebf4649e7bc0978bc233147898`.
+- Se ejecutó el servicio probado de `77817947` como mantenimiento en el backend
+  desplegado 3.0.0, sin modificar su checkout ni aplicar migraciones. Se usó el
+  principal técnico `mcp_documents` (68), con origen histórico explícito
+  `command:repair_document_folder`.
+- Revisiones **126–130** y recibo **AccountingChangeLog 797**. Dentro de la
+  transacción se compararon todos los campos documentales con el respaldo,
+  permitiendo sólo carpeta, autor y fecha de modificación.
+- El reintento del mismo manifiesto devolvió `changed: false` sin agregar
+  revisiones. Una conexión independiente confirmó luego el estado persistido.
+
+El nombre de operación de creación está conservado en la evidencia del recibo;
+el campo nuevo `creation_operation` se incorpora al desplegar 0272. No se ejecutó
+el despliegue de 3.0.1 como parte de esta reparación.

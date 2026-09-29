@@ -31,10 +31,6 @@ SUPPORTED_PROTOCOL_VERSIONS = (
 )
 DEFAULT_PROTOCOL_VERSION = LEGACY_PROTOCOL_VERSIONS[0]
 LIST_CACHE_TTL_MS = 300_000
-# Fallback identity; the endpoint passes a per-connector server_name so each
-# of the /api/mcp/<slug>/ connectors identifies itself distinctly.
-SERVER_INFO = {'name': 'projectapp-mcp', 'version': '1.0.0'}
-
 INVALID_REQUEST = -32600
 METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
