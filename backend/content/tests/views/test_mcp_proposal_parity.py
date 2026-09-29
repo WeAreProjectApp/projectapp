@@ -88,7 +88,8 @@ class TestProposalMcpSettings:
         ).entries.get(action='updated')
         assert result['isError'] is False
         assert revision.source == 'mcp:proposals'
-        assert revision.actor_id_snapshot is not None
+        credential = McpConnector.objects.get(slug='proposals').credential_for_token(proposals_token)
+        assert revision.actor_id_snapshot == credential.actor.pk
 
     def test_unknown_settings_field_is_rejected_without_a_write(
         self, api_client, proposals_token, proposal,
