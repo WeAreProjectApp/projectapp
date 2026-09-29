@@ -11,7 +11,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
-from django.http import Http404, HttpResponse
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as tz
 from django.utils.dateparse import parse_datetime
@@ -32,7 +32,6 @@ from content.mcp.protocol import (
     LEGACY_PROTOCOL_VERSIONS,
     LIST_CACHE_TTL_MS,
     MODERN_PROTOCOL_VERSION,
-    SERVER_INFO,
     SUPPORTED_PROTOCOL_VERSIONS,
     handle_message,
 )
@@ -51,6 +50,8 @@ from content.mcp.operation_catalogs import (
 )
 from content.mcp.principal import service_actor_for_connector
 from content.mcp.registry import infer_risk, normalize_tools
+from content.mcp.registry import server_info as build_server_info
+from content.mcp.errors import transport_exception_handler
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
 from content.mcp.client_tools import CLIENT_TOOLS
 from content.mcp.communication_tools import COMMUNICATION_TOOLS
@@ -509,7 +510,7 @@ def _decorate_modern_result(payload, server_name, method):
         result['_meta'] = meta
     meta.setdefault(
         'io.modelcontextprotocol/serverInfo',
-        {**SERVER_INFO, 'name': server_name},
+        build_server_info(server_name),
     )
     if method in {'server/discover', 'tools/list'}:
         result.setdefault('ttlMs', LIST_CACHE_TTL_MS)
@@ -554,7 +555,10 @@ def mcp_endpoint(request, slug, token=None):
             connector_for_log, 'origin_rejected', ok=False,
             detail=request.headers.get('Origin', ''),
         )
-        return HttpResponse(status=403)
+        return Response(
+            _jsonrpc_error(None, 'FORBIDDEN', 'El origen de la solicitud no está permitido.'),
+            status=403,
+        )
 
     tools = TOOLS_BY_SLUG.get(slug)
     connector = connector_for_log if (connector_for_log and connector_for_log.is_active) else None
@@ -667,6 +671,7 @@ def mcp_endpoint(request, slug, token=None):
 # api_view exposes the wrapped APIView class as .cls; override negotiation so
 # an SSE-only Accept header reaches the view instead of 406ing in initial().
 mcp_endpoint.cls.content_negotiation_class = McpContentNegotiation
+mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handler
 
 
 # ---------------------------------------------------------------------------

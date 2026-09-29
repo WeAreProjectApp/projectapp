@@ -137,7 +137,7 @@ def _ensure_folders():
             # esta carpeta, se crea una activa en vez de reusar la archivada.
             folder, _ = DocumentFolder.objects.get_or_create(
                 name=name, parent=parent, is_archived=False,
-                defaults={'order': 0},
+                defaults={'order': 0, 'creation_source': 'system', 'creation_operation': 'create_fake_documents'},
             )
             if children:
                 walk(children, folder)

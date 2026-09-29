@@ -127,7 +127,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.DocumentFolder',
-            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source',
+            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source creation_operation',
             read_write='name parent project client_user order',
             excluded=(
                 _excluded(_AUTOMATION_STATE, 'system_key')

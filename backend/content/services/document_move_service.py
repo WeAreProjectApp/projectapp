@@ -1,5 +1,6 @@
 """Atomic moves with the same serializer rules as the document editor."""
 
+from content.mcp.errors import normalize_error
 from content.models import Document, DocumentFolder
 from content.serializers.document import DocumentCreateUpdateSerializer
 from content.services.document_write_service import (
@@ -15,8 +16,15 @@ class DocumentMoveError(ValueError):
         self.results = results
 
 
+def _failure(pk, code, message, **details):
+    return {'id': pk, 'status': 'failed', 'moved': False, 'code': code,
+            'message': message, 'reason': details.pop('reason', message), **details}
+
+
 @transaction.atomic
 def move_documents(document_ids, folder_id, *, actor, include_content=False):
+    if not actor or not actor.is_active or not actor.is_staff:
+        raise DocumentMoveError([_failure(pk, "permission_denied", "No tienes permiso para mover documentos.") for pk in document_ids])
     documents = {
         doc.pk: doc
         for doc in Document.objects.select_for_update()
@@ -30,24 +38,25 @@ def move_documents(document_ids, folder_id, *, actor, include_content=False):
         target = DocumentFolder.objects.select_for_update().filter(pk=folder_id).first()
     target_error = None
     if folder_id is not None and target is None:
-        target_error = "La carpeta destino no existe."
-    elif target and (target.is_archived or target.is_system_managed):
-        target_error = (
-            "La carpeta destino está archivada o administrada por el sistema."
-        )
+        target_error = ('folder_not_found', 'La carpeta destino no existe.')
+    elif target and target.is_archived:
+        target_error = ('folder_archived', 'La carpeta destino está archivada.')
+    elif target and target.is_system_managed:
+        target_error = ('folder_not_movable', 'La carpeta destino está administrada por el sistema.')
     results, validated = [], {}
     for pk in document_ids:
         document = documents.get(pk)
-        blockers = movement_blockers(document) if document else ["not_found"]
-        if target_error or blockers:
-            results.append(
-                {
-                    "id": pk,
-                    "status": "failed",
-                    "moved": False,
-                    "reason": target_error or ", ".join(blockers),
-                }
-            )
+        blockers = movement_blockers(document) if document else []
+        if document is None:
+            results.append(_failure(pk, 'not_found', 'El documento no existe.'))
+            continue
+        if blockers:
+            code = 'archived' if document.is_archived else 'not_movable'
+            message = 'El documento está archivado.' if document.is_archived else 'El documento no admite movimientos.'
+            results.append(_failure(pk, code, message, reason=', '.join(blockers), move_blockers=blockers))
+            continue
+        if target_error:
+            results.append(_failure(pk, *target_error))
             continue
         serializer = DocumentCreateUpdateSerializer(
             document,
@@ -55,14 +64,8 @@ def move_documents(document_ids, folder_id, *, actor, include_content=False):
             partial=True,
         )
         if not serializer.is_valid():
-            results.append(
-                {
-                    "id": pk,
-                    "status": "failed",
-                    "moved": False,
-                    "reason": serializer.errors,
-                }
-            )
+            message, _code, details = normalize_error(serializer.errors)
+            results.append(_failure(pk, 'not_movable', message, reason=serializer.errors, errors=details.get('errors', [])))
             continue
         validated[pk] = serializer
         results.append({"id": pk, "status": "pending", "moved": False})
@@ -71,6 +74,8 @@ def move_documents(document_ids, folder_id, *, actor, include_content=False):
             if result["status"] == "pending":
                 result.update(
                     status="aborted",
+                    code="batch_aborted",
+                    message="Lote cancelado por errores en otros documentos.",
                     reason="Lote cancelado por errores en otros documentos.",
                 )
         raise DocumentMoveError(results)
@@ -95,6 +100,8 @@ def move_documents(document_ids, folder_id, *, actor, include_content=False):
             row.update(
                 status="failed" if row["id"] == failed_id else "aborted",
                 moved=False,
+                code="write_failed" if row["id"] == failed_id else "batch_aborted",
+                message="No se pudo guardar el movimiento; no se modificó ningún documento.",
                 reason="No se pudo guardar el movimiento; no se modificó ningún documento.",
             )
         raise DocumentMoveError(results) from exc
