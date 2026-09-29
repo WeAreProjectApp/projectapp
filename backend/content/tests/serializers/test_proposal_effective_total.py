@@ -1,128 +1,68 @@
-"""Tests for ProposalDetailSerializer.effective_total_investment.
-
-Covers the field added to close the divergence between the admin detail
-view and the client public view: admin was seeing the base investment
-while the client saw base + selected calculator modules, and the backend
-was not exposing the effective total anywhere in the detail API.
-"""
+"""Serializer compatibility for manually agreed proposal investment."""
 from decimal import Decimal
 
 import pytest
 
-from content.models import ProposalChangeLog, ProposalSection
 from content.serializers.proposal import ProposalDetailSerializer
 
 pytestmark = pytest.mark.django_db
 
 
-def _confirm_selection(proposal):
-    """Mark the proposal's module selection as confirmed by the client.
-
-    The effective-total helper uses ``has_confirmed_module_selection`` (backed
-    by a ``ProposalChangeLog`` row with ``change_type='calc_confirmed'``) to
-    decide whether ``selected_modules`` is authoritative or whether to fall
-    back to admin-configured defaults.
-    """
-    ProposalChangeLog.objects.create(
-        proposal=proposal,
-        change_type=ProposalChangeLog.ChangeType.CALCULATOR_CONFIRMED,
-        actor_type=ProposalChangeLog.ActorType.CLIENT,
-    )
-
-
-def _make_fr_section(proposal, *, calc_percent=15, calc_group_id='mod-a',
-                    extra_groups=None):
-    """Create a functional_requirements section with one calculator module."""
-    groups = extra_groups or []
-    groups.append({
-        'id': calc_group_id,
-        'title': 'Módulo adicional',
-        'is_calculator_module': True,
-        'price_percent': calc_percent,
-    })
-    return ProposalSection.objects.create(
-        proposal=proposal,
-        section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS,
-        title='Funcional',
-        order=3,
-        is_enabled=True,
-        content_json={'groups': groups},
-    )
-
-
-def test_effective_total_equals_base_when_no_modules_selected(proposal):
-    _make_fr_section(proposal)
-    proposal.selected_modules = []
-    proposal.save(update_fields=['selected_modules'])
+def test_effective_total_ignores_legacy_selected_modules(proposal):
+    """Falla si una selección histórica vuelve a sumar porcentajes al total manual."""
+    proposal.total_investment = Decimal('15000.00')
+    proposal.selected_modules = ['module-legacy-crm']
+    proposal.save(update_fields=['total_investment', 'selected_modules'])
 
     data = ProposalDetailSerializer(proposal, context={'is_admin': True}).data
 
-    assert Decimal(data['effective_total_investment']) == Decimal(
-        proposal.total_investment,
-    )
+    assert Decimal(data['effective_total_investment']) == Decimal('15000.00')
 
 
-def test_effective_total_adds_selected_calculator_module(proposal):
-    _make_fr_section(proposal, calc_percent=15, calc_group_id='mod-a')
-    proposal.selected_modules = ['module-mod-a']
-    proposal.save(update_fields=['selected_modules'])
-    _confirm_selection(proposal)
-
-    data = ProposalDetailSerializer(proposal, context={'is_admin': True}).data
-
-    # 15000 base + 15% = 17250
-    assert Decimal(data['effective_total_investment']) == Decimal('17250.00')
-
-
-def test_effective_total_accepts_bare_group_ids(proposal):
-    """Persisted payloads without the ``module-`` prefix must still resolve."""
-    _make_fr_section(proposal, calc_percent=10, calc_group_id='mod-b')
-    proposal.selected_modules = ['mod-b']
-    proposal.save(update_fields=['selected_modules'])
-    _confirm_selection(proposal)
+def test_discounted_investment_uses_migrated_snapshot(proposal):
+    """Falla si serializar una propuesta migrada recalcula y pierde su descuento histórico."""
+    proposal.total_investment = Decimal('1200.00')
+    proposal.discount_percent = 10
+    proposal.legacy_pricing_snapshot = {
+        'original_investment': '1000.00',
+        'total_investment': '1200.00',
+        'discount_percent': 10,
+        'currency': 'COP',
+        'discounted_investment': '900.00',
+    }
+    proposal.save(update_fields=[
+        'total_investment',
+        'discount_percent',
+        'legacy_pricing_snapshot',
+    ])
 
     data = ProposalDetailSerializer(proposal, context={'is_admin': True}).data
 
-    # 15000 base + 10% = 16500
-    assert Decimal(data['effective_total_investment']) == Decimal('16500.00')
+    assert Decimal(data['discounted_investment']) == Decimal('900.00')
+    assert Decimal(data['discount_original_investment']) == Decimal('1000.00')
 
 
-def test_effective_total_falls_back_to_admin_defaults(proposal):
-    """When the client never confirmed, admin-marked defaults drive the total."""
-    ProposalSection.objects.create(
-        proposal=proposal,
-        section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS,
-        title='Funcional',
-        order=3,
-        is_enabled=True,
-        content_json={
-            'groups': [
-                {
-                    'id': 'mod-default',
-                    'title': 'Default add-on',
-                    'is_calculator_module': True,
-                    'price_percent': 20,
-                    'default_selected': True,
-                },
-            ],
-        },
-    )
-    proposal.selected_modules = []
-    proposal.save(update_fields=['selected_modules'])
+def test_discount_reference_uses_edited_manual_total_after_snapshot_is_cleared(proposal):
+    """Falla si una edición financiera conserva una referencia de descuento obsoleta."""
+    proposal.total_investment = Decimal('1200.00')
+    proposal.discount_percent = 10
+    proposal.legacy_pricing_snapshot = {
+        'original_investment': '1000.00',
+        'total_investment': '1200.00',
+        'discount_percent': 10,
+        'currency': 'COP',
+        'discounted_investment': '900.00',
+    }
+    proposal.save(update_fields=[
+        'total_investment',
+        'discount_percent',
+        'legacy_pricing_snapshot',
+    ])
+    proposal.total_investment = Decimal('1300.00')
+    proposal.save(update_fields=['total_investment'])
 
     data = ProposalDetailSerializer(proposal, context={'is_admin': True}).data
 
-    assert Decimal(data['effective_total_investment']) == Decimal('18000.00')
-
-
-def test_effective_total_is_public_field(proposal):
-    """Client-facing (non-admin) context exposes the same computed value."""
-    _make_fr_section(proposal, calc_percent=15, calc_group_id='mod-a')
-    proposal.selected_modules = ['module-mod-a']
-    proposal.save(update_fields=['selected_modules'])
-    _confirm_selection(proposal)
-
-    data = ProposalDetailSerializer(proposal, context={'is_admin': False}).data
-
-    assert 'effective_total_investment' in data
-    assert Decimal(data['effective_total_investment']) == Decimal('17250.00')
+    assert proposal.legacy_pricing_snapshot == {}
+    assert Decimal(data['discount_original_investment']) == Decimal('1300.00')
+    assert Decimal(data['discounted_investment']) == Decimal('1170.00')

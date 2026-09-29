@@ -71,7 +71,7 @@
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
-Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-calculator-followup-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`, `proposal-calculator-abandonment-tracking`.
+Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`.
 
 ---
 
@@ -1751,37 +1751,6 @@ No active browser flow is registered for client profile editing at this time.
   4. Proposal is rejected successfully and the UI moves to the rejection confirmation state.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-rejection-optional.spec.js`
-
-#### FLOW: `proposal-calculator-timeline`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Investment calculator changes the estimated delivery timeline dynamically as optional modules are toggled on or off.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Baseline weeks are visible before any changes.
-  3. Client selects or removes priced modules.
-  4. Estimated timeline updates immediately to reflect the module mix.
-  5. Confirming the selection preserves the new timeline in the closing state.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-timeline.spec.js`
-
-#### FLOW: `proposal-calculator-micro-feedback`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** Calculator toggles show transient micro-feedback badges such as positive or negative price deltas when the client adds or removes priced modules.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Client toggles a module with a price impact.
-  3. A transient feedback badge appears near the interaction showing the delta.
-  4. Badge fades away while totals remain updated.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-micro-feedback.spec.js`
 
 #### FLOW: `proposal-payment-plan-closing`
 

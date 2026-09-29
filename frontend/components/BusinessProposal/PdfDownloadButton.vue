@@ -40,10 +40,6 @@ const props = defineProps({
     type: String,
     default: '',
   },
-  selectedModuleIds: {
-    type: Array,
-    default: null,
-  },
 });
 
 const proposalStore = useProposalStore();
@@ -52,7 +48,6 @@ const pdfUrl = computed(() => {
   const uuid = proposalStore.currentProposal?.uuid;
   if (props.viewMode === 'legal') return `/api/proposals/${uuid}/contract/draft-pdf/`;
   const params = new URLSearchParams();
-  if (props.selectedModuleIds?.length) params.set('selected_modules', props.selectedModuleIds.join(','));
   if (props.viewMode === 'technical') params.set('doc', 'technical');
   const query = params.toString();
   return `/api/proposals/${uuid}/pdf/${query ? `?${query}` : ''}`;

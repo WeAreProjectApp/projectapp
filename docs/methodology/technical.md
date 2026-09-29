@@ -505,7 +505,6 @@ python3 manage.py run_huey              # Requires Redis running
 | `delete_fake_data --settings=projectapp.settings_dev --confirm` | Reset development data while preserving staff/catalogs/manual accounting |
 | `cleanup_in_calculator` | Clean up stale in-calculator proposal states |
 | `update_hosting_specs` | Update hosting tier specifications |
-| `zero_group_price_percent` | Reset group price percentages |
 | `create_platform_admin` | Create a platform admin user |
 | `seed_demo_clients` | Seed demo client users for platform |
 | `seed_platform_data` | Seed full platform demo data (projects, requirements, etc.) |

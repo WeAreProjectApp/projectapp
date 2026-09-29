@@ -84,7 +84,7 @@ export function buildFormFromJson(json, type, proposalData) {
           selected: g.selected ?? (g.default_selected ?? false),
           is_calculator_module: g.is_calculator_module || false,
           default_selected: g.default_selected ?? false,
-          price_percent: g.price_percent ?? null,
+          is_always_included: g.is_always_included ?? !g.is_calculator_module,
           is_invite: g.is_invite || false,
           invite_note: g.invite_note || '',
           items: (g.items || []).map(i => ({ id: i.id || '', icon: i.icon || '', name: i.name || '', description: i.description || '', price: i.price ?? null, is_required: i.is_required !== false })),
@@ -96,7 +96,7 @@ export function buildFormFromJson(json, type, proposalData) {
           selected: m.selected ?? (m.default_selected ?? false),
           is_calculator_module: m.is_calculator_module || false,
           default_selected: m.default_selected ?? false,
-          price_percent: m.price_percent ?? null,
+          is_always_included: m.is_always_included ?? false,
           is_invite: m.is_invite || false,
           invite_note: m.invite_note || '',
           items: (m.items || []).map(i => ({ id: i.id || '', icon: i.icon || '', name: i.name || '', description: i.description || '', price: i.price ?? null, is_required: i.is_required !== false })),
@@ -273,7 +273,7 @@ export function formToJson(formData, type) {
         };
         if (g.is_calculator_module) out.is_calculator_module = true;
         if (g.default_selected != null) out.default_selected = g.default_selected;
-        if (g.price_percent != null) out.price_percent = g.price_percent;
+        if (g.is_always_included != null) out.is_always_included = g.is_always_included;
         if (g.is_invite) out.is_invite = true;
         if (g.invite_note) out.invite_note = g.invite_note;
         if (g._pasteMode) {

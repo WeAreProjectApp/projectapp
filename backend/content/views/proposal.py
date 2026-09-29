@@ -48,12 +48,8 @@ from content.services.proposal_analytics_service import (
 )
 from content.services.proposal_totals_service import (
     build_effective_totals_map as _build_effective_totals_map,
-    calculate_effective_total_investment as _calculate_effective_total_investment,
-    calculator_price_percent_by_group_id as _calculator_price_percent_by_group_id,
     effective_total_for_proposal as _effective_total_for_proposal,
-    resync_investment_from_modules as _resync_investment_from_modules,
-    safe_decimal as _safe_decimal,
-    selected_group_ids_from_modules as _selected_group_ids_from_modules,
+    sync_manual_investment,
 )
 from content.throttles import (
     MagicLinkRequestThrottle,
@@ -310,28 +306,10 @@ def _proposal_pdf_response(request, proposal):
     )
 
     doc_variant = (request.query_params.get('doc') or '').strip().lower()
-    selected_modules_param = request.query_params.get('selected_modules', '')
-    selected_modules = (
-        [m.strip() for m in selected_modules_param.split(',') if m.strip()]
-        if selected_modules_param
-        else None
-    )
-    # Derive defaults from current content_json so admin toggles of
-    # additionalModules[i].selected propagate to the PDF even when the
-    # client never opened the calculator (localStorage empty).
-    if selected_modules is None:
-        selected_modules = default_selected_modules_from_content(proposal)
-    else:
-        # Legacy query payloads may arrive with bare group ids — match the
-        # canonical prefixed form the renderer uses.
-        from content.services.proposal_service import normalize_selected_module_ids
-        fr_section = proposal.sections.filter(
-            section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS,
-        ).only('content_json').first()
-        selected_modules = normalize_selected_module_ids(
-            selected_modules,
-            fr_section.content_json if fr_section else None,
-        )
+    # Selection is persisted administrative scope, never a public query override.
+    if 'selected_modules' in request.query_params:
+        return Response({'error': 'Module selection is managed by the proposal owner.'}, status=400)
+    selected_modules = default_selected_modules_from_content(proposal)
 
     if doc_variant == 'technical':
         from content.services.technical_document_pdf import generate_technical_document_pdf
@@ -929,7 +907,7 @@ def get_proposal_json_template(request):
             'reports_alerts_module leads the list and the description names WhatsApp as the '
             'primary channel). '
             'Never invent a match that is not supported by the requirements. When in doubt, '
-            'leave default_selected as false. Do NOT change the module id, icon, price_percent, '
+            'leave default_selected as false. Do NOT change the module id, icon, '
             'is_invite, or its position in the array.'
         ),
     }
@@ -1087,12 +1065,7 @@ def update_proposal(request, proposal_id):
                 or old_values.get('currency') != str(proposal.currency)
             )
             if investment_changed:
-                fr_section = proposal.sections.filter(
-                    section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS
-                ).first()
-                _resync_investment_from_modules(
-                    proposal, fr_section.content_json if fr_section else None
-                )
+                sync_manual_investment(proposal)
     except ValueError as exc:
         return Response(
             {'client_email': [str(exc)]},
@@ -1812,7 +1785,7 @@ def update_proposal_section(request, section_id):
 
     investment_section = None
     if section.section_type == ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS:
-        _resync_investment_from_modules(section.proposal, section.content_json)
+        sync_manual_investment(section.proposal)
         investment_section = section.proposal.sections.filter(
             section_type=ProposalSection.SectionType.INVESTMENT,
         ).first()
@@ -2312,70 +2285,9 @@ def track_proposal_engagement(request, proposal_uuid):
 @permission_classes([AllowAny])
 @throttle_classes([TrackingAnonThrottle])
 def track_calculator_interaction(request, proposal_uuid):
-    """
-    Track calculator interactions: confirmed selections or abandonment.
-
-    Payload:
-        {
-            "event": "confirmed" | "abandoned",
-            "selected": [module_id, ...],
-            "deselected": [module_id, ...],
-            "total": 3500000
-        }
-    """
-    import json as _json
-
-    proposal = get_object_or_404(
-        BusinessProposal, uuid=proposal_uuid, is_active=True,
-    )
-
-    # Skip tracking for admin staff
-    if is_staff_session(request):
-        return Response({'status': 'skipped'}, status=status.HTTP_200_OK)
-
-    event = request.data.get('event', '')
-    if event not in ('confirmed', 'abandoned'):
-        return Response(
-            {'error': 'event must be "confirmed" or "abandoned".'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    selected = request.data.get('selected', [])
-    deselected = request.data.get('deselected', [])
-    total = request.data.get('total', 0)
-    elapsed_seconds = request.data.get('elapsed_seconds', 0)
-
-    change_type = (
-        ProposalChangeLog.ChangeType.CALCULATOR_CONFIRMED
-        if event == 'confirmed'
-        else ProposalChangeLog.ChangeType.CALCULATOR_ABANDONED
-    )
-
-    ProposalChangeLog.objects.create(
-        proposal=proposal,
-        change_type=change_type,
-        actor_type='client',
-        description=_json.dumps({
-            'selected': selected,
-            'deselected': deselected,
-            'total': total,
-            'elapsed_seconds': elapsed_seconds,
-        }),
-    )
-
-    # Persist confirmed selections so PDF can use them as fallback
-    if event == 'confirmed' and isinstance(selected, list):
-        fr_section = proposal.sections.filter(
-            section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS
-        ).first()
-        fr_content = fr_section.content_json if fr_section else None
-        proposal.selected_modules = _normalize_selected_module_ids(
-            selected, fr_content,
-        )
-        proposal.save(update_fields=['selected_modules', 'updated_at'])
-        _resync_investment_from_modules(proposal, fr_content)
-
-    return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+    """Retired: client interests cannot mutate contracted scope or pricing."""
+    return Response({'error': 'The investment calculator has been retired.',
+                     'code': 'calculator_retired'}, status=status.HTTP_410_GONE)
 
 
 @api_view(['POST'])

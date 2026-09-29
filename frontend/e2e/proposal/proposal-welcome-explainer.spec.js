@@ -84,11 +84,19 @@ function proposalHandler({ showExplainerVideo = true } = {}) {
   };
 }
 
-async function openSharedProposal(page, options) {
+async function openSharedProposal(page, { showGatewayGuide = false, ...options } = {}) {
   await mockApi(page, proposalHandler(options));
-  await page.addInitScript(() => localStorage.setItem('proposal_onboarding_seen', 'true'));
+  await page.addInitScript((showGuide) => {
+    localStorage.setItem('proposal_onboarding_seen', 'true');
+    if (showGuide) localStorage.removeItem('projectapp-proposal-gateway-guide-v1');
+    else localStorage.setItem('projectapp-proposal-gateway-guide-v1', 'true');
+  }, showGatewayGuide);
   // quality: allow-deep-link (the client receives this shared URL and then selects an option in the gateway)
   await page.goto(`/en-us/proposal/${PROPOSAL_UUID}`, { waitUntil: 'domcontentloaded' });
+  if (showGatewayGuide) {
+    await expect(page.getByTestId('gateway-guide')).toContainText('Tu propuesta en un minuto', { timeout: 30_000 });
+    return;
+  }
   await expect(page.getByRole('heading', { name: '¿Cómo prefieres explorar esta propuesta?' })).toBeVisible({ timeout: 30_000 });
 }
 
@@ -163,4 +171,73 @@ test.describe('Public proposal welcome video', () => {
     await page.getByTestId('gateway-legal-card').click();
     await expect(page.getByRole('heading', { name: 'Índice de cláusulas' })).toBeVisible({ timeout: 20_000 });
   });
+
+  // Catches regressions where gateway-only public links survive a view choice or
+  // send the client to an internal route instead of the localized public catalog.
+  test('gateway guide introduces both public actions and can be replayed', {
+    tag: ['@flow:proposal-gateway-guide', '@role:guest', '@outcome:success'],
+  }, async ({ page }) => {
+    await openSharedProposal(page, { showGatewayGuide: true });
+
+    const guide = page.getByTestId('gateway-guide');
+    await expect(guide).toContainText('Tu propuesta en un minuto');
+    for (const stepTitle of ['Vista ejecutiva', 'Propuesta completa', 'Detalle técnico', 'Contrato y condiciones', 'Módulos adicionales']) {
+      await page.getByTestId('gateway-guide-next').click();
+      await expect(guide).toContainText(stepTitle);
+    }
+    await page.getByTestId('gateway-guide-next').click();
+    await expect(guide).toContainText('Programa de alianza');
+    await guide.getByRole('button', { name: 'Omitir' }).click();
+    await expect(guide).toHaveCount(0);
+    await page.getByTestId('gateway-restart-guide').click();
+    await expect(guide).toContainText('Tu propuesta en un minuto');
+    await guide.getByRole('button', { name: 'Omitir' }).click();
+
+  });
+
+  test('gateway public links open localized catalog and alliance pages', {
+    tag: ['@flow:proposal-gateway-guide', '@role:guest', '@outcome:success'],
+  }, async ({ page }) => {
+    await openSharedProposal(page);
+
+    const modulesLink = page.getByTestId('gateway-modules-link');
+    const allianceLink = page.getByTestId('gateway-alliance-link');
+    await expect(modulesLink).toHaveAttribute('href', '/es-co/additional-modules');
+    await expect(allianceLink).toHaveAttribute('href', '/es-co/partnership-program');
+
+    const [modulesPage] = await Promise.all([
+      page.waitForEvent('popup'),
+      modulesLink.click(),
+    ]);
+    await expect(modulesPage).toHaveURL(/\/es-co\/additional-modules$/);
+    await modulesPage.close();
+
+    const [alliancePage] = await Promise.all([
+      page.waitForEvent('popup'),
+      allianceLink.click(),
+    ]);
+    await expect(alliancePage).toHaveURL(/\/es-co\/partnership-program$/);
+    await alliancePage.close();
+  });
+
+  for (const [card, label] of [
+    ['gateway-executive-card', 'executive'],
+    ['gateway-detailed-card', 'detailed'],
+    ['gateway-technical-card', 'technical'],
+    ['gateway-legal-card', 'legal'],
+  ]) {
+    test(`shows public gateway links only before the ${label} view is selected`, {
+      tag: ['@flow:proposal-gateway-guide', '@role:guest', '@outcome:display'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the client enters through the shared proposal URL, then selects this view from the gateway)
+      // quality: allow-duplicate (per-view contract: every gateway choice removes the public gateway actions)
+      await openSharedProposal(page);
+
+      await expect(page.getByTestId('gateway-modules-link')).toHaveAttribute('href', '/es-co/additional-modules');
+      await expect(page.getByTestId('gateway-alliance-link')).toHaveAttribute('href', '/es-co/partnership-program');
+      await page.getByTestId(card).click();
+      await expect(page.getByTestId('gateway-modules-link')).toHaveCount(0);
+      await expect(page.getByTestId('gateway-alliance-link')).toHaveCount(0);
+    });
+  }
 });

@@ -214,12 +214,8 @@ def default_selected_modules_from_content(proposal, has_confirmed=None):
             if mid:
                 selected.append(mid)
 
-    # Calculator modules: align with the canonical backend rule used by
-    # ``_calculate_effective_total_investment`` — include when ``selected`` OR
-    # ``default_selected`` is truthy. Anything else (e.g. ``selected=False``
-    # while ``default_selected=True``) was previously skipped here, which
-    # made the PDF render against a smaller total than the public client view.
-    # Hidden groups (``is_visible=False``) stay out of the PDF render scope.
+    # Preserve the scope established in the panel before the calculator retired.
+    # Hidden groups remain outside the PDF render scope.
     calc_default_ids = admin_default_calculator_group_ids(fr_content)
     if calc_default_ids and fr_content:
         hidden_ids = {
@@ -891,45 +887,8 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
     tax_suffix = _tax_suffix(currency)
     options = _safe(data, 'paymentOptions', [])
 
-    # ── Resolve the total the client actually sees / pays ──
-    # Mirrors Investment.vue: display total and payment amounts must both
-    # anchor on the SAME number — the effective total (base + admin pre-
-    # selected modules) by default, or the client's adjusted selection when
-    # ``selected_modules`` is provided. Otherwise the PDF shows base as the
-    # headline while the cuotas (built server-side as effective × pct) sum
-    # to a different number.
-    selected_ids = ps.get('selected_modules') if ps else None
-    base_num = int(re.sub(r'[^\d]', '', str(total)) or '0') if total else 0
-    adjusted = None
-    if total and selected_ids is not None:
-        all_mods = _safe(data, 'modules', [])
-        fr_items = ps.get('_fr_items', []) if ps else []
-        calc_items = ps.get('_calc_module_items', []) if ps else []
-        deselected_sum = sum(
-            safe_decimal(_safe(m, 'price', 0)) for m in all_mods
-            if _safe(m, 'id') not in selected_ids
-        ) + sum(
-            safe_decimal(it.get('price', 0)) for it in fr_items
-            if it.get('id') not in selected_ids
-        )
-        added_sum = sum(
-            it.get('price', 0) for it in calc_items
-            if it.get('id') in selected_ids and it.get('price')
-        )
-        adjusted = float(base_num - deselected_sum + added_sum)
-
-    if adjusted is not None:
-        display_num = adjusted
-    else:
-        try:
-            from content.services.proposal_totals_service import (
-                effective_total_for_proposal,
-            )
-            _eff = (effective_total_for_proposal(_proposal)
-                    if _proposal is not None else None)
-            display_num = int(_eff) if _eff else base_num
-        except Exception:
-            display_num = base_num
+    # Scope selection never changes the manually agreed investment.
+    display_num = float(_proposal.total_investment) if _proposal is not None else int(re.sub(r'[^\d]', '', str(total)) or '0')
     display_total = _format_cop(display_num) if display_num else (total or '')
 
     # ── Hosting figures (hoisted: reused by the KPI tiles and the
@@ -942,41 +901,10 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
         if h_percent and display_num else 0
     )
 
-    # ── Estimated duration (adjusted when modules are deselected) ──
     duration_value = ''
     duration_sub = ''
-    if ps:
-        base_weeks = ps.get('base_weeks', 0) or 0
-        if base_weeks > 0:
-            adjusted_weeks = base_weeks
-            if selected_ids is not None:
-                all_mods = _safe(data, 'modules', [])
-                fr_items = ps.get('_fr_items', []) or []
-                deselected = [
-                    m for m in all_mods
-                    if _safe(m, 'id') not in selected_ids
-                ] + [
-                    it for it in fr_items
-                    if it.get('id') not in selected_ids
-                ]
-                reduction = 0
-                views_removed = 0
-                features_removed = 0
-                for m in deselected:
-                    src = _safe(m, '_source') or m.get('_source', '')
-                    gid = _safe(m, 'groupId') or m.get('groupId', '')
-                    if src == 'investment' or gid.startswith('integration_'):
-                        reduction += 1
-                    elif gid == 'views':
-                        views_removed += 1
-                    elif gid == 'features':
-                        features_removed += 1
-                reduction += views_removed // 3
-                reduction += features_removed // 3
-                adjusted_weeks = max(1, base_weeks - reduction)
-            duration_value = f'{adjusted_weeks} semanas'
-            if adjusted_weeks != base_weeks:
-                duration_sub = f'reducido de {base_weeks}'
+    if ps and ps.get('base_weeks'):
+        duration_value = f"{ps['base_weeks']} semanas"
 
     # Intro text — full width, brief
     if intro:
@@ -1082,36 +1010,6 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
             y -= 4
 
 
-    # ── AI scope note (when AI module selected) ───────────────────
-    # Only emit for invite modules WITHOUT a defined price. When
-    # ``price_percent > 0`` the module is treated as a normal priced module
-    # (the calculator already shows the price to the client), so the
-    # "schedule a call to define scope" note would contradict it.
-    if ps:
-        calc_items = ps.get('_calc_module_items', [])
-        sel_check = ps.get('selected_modules')
-        for ci in calc_items:
-            if not ci.get('is_invite'):
-                continue
-            if sel_check is not None and ci.get('id') not in sel_check:
-                continue
-            _pp = ci.get('price_percent')
-            if _pp is not None and _pp > 0:
-                continue
-            lang = (_proposal.language or 'es') if _proposal else 'es'
-            ai_note = (
-                'Nota: El alcance y costos del módulo de IA se definirán '
-                'en una llamada personalizada. Este módulo no tiene costo '
-                'adicional asignado hasta acordar el alcance.'
-            ) if lang == 'es' else (
-                'Note: The scope and costs of the AI module will be defined '
-                'in a personalized call. This module has no additional cost '
-                'assigned until the scope is agreed upon.'
-            )
-            y = _draw_callout_box(c, y, ai_note, style='important',
-                                  ps=ps, label='MÓDULO IA')
-            break
-
     # ── Interactive Modules (if present) ──────────────────────────
     modules = _safe(data, 'modules', [])
     selected_ids = ps.get('selected_modules') if ps else None
@@ -1125,16 +1023,8 @@ def _render_investment(c, data, _proposal, ps=None, y=None):
         if ps:
             y = _check_y(c, y, ps, need=60)
         y = _draw_subtitle(c, y, 'Módulos del Proyecto', ps=ps)
-        mod_rows = []
-        for mod in visible_modules:
-            mod_price = _safe(mod, 'price', 0)
-            mod_rows.append([
-                _safe(mod, 'name'),
-                _format_cop(mod_price) if mod_price else '—',
-            ])
-        y = _draw_table(c, y, ['Módulo', f'Precio ({tax_suffix.strip()})'],
-                        mod_rows, ps=ps,
-                        col_widths=[0.74, 0.26], aligns=['left', 'right'])
+        mod_rows = [[_safe(mod, 'name')] for mod in visible_modules]
+        y = _draw_table(c, y, ['Módulo'], mod_rows, ps=ps)
 
     # ── Hosting plan (detailed specs + pricing) ───────────────────
     # Read the NORMALIZED plan hoisted above, not the raw content_json: that is
@@ -2132,21 +2022,8 @@ class ProposalPdfService:
                 'formal': formal,
             }
 
-            # Single pass over sections to build every ps.* derived from them:
-            # FR configurable items (for total), calculator modules (additive
-            # pricing), value-added IDs + catalog, and the investment total.
-            _fr_items = []
-            _calc_module_items = []
             _value_added_ids = set()
             _value_added_catalog = {}
-            # Trust the model field for the base investment used to price
-            # calculator modules (percent-of-base). ``content_json`` mirrors
-            # this value but can drift — matches the override applied in
-            # ``_render_investment`` and the public frontend view.
-            _model_total = getattr(proposal, 'total_investment', None) or 0
-            _base_num = 0 if formal else int(_model_total)
-            needs_selection_data = selected_modules is not None and not formal
-
             for _sec in sections:
                 _cj = _sec.content_json or {}
                 if _sec.section_type == 'value_added_modules':
@@ -2156,35 +2033,6 @@ class ProposalPdfService:
                         _gid = _safe(_grp, 'id')
                         if _gid and _gid not in _value_added_catalog:
                             _value_added_catalog[_gid] = _grp
-                        if not needs_selection_data:
-                            continue
-                        _gkey = _gid or _safe(_grp, 'title') or ''
-                        for _it in _safe(_grp, 'items', []):
-                            _iname = _safe(_it, 'name') or ''
-                            _fid = re.sub(r'\s+', '-', f'fr-{_gkey}-{_iname}').lower()
-                            _fprice = _safe(_it, 'price', 0)
-                            if _fprice or _safe(_it, 'is_required') is False:
-                                _fr_items.append({'id': _fid, 'price': _fprice})
-                        if _safe(_grp, 'is_calculator_module'):
-                            _pp_raw = _safe(_grp, 'price_percent')
-                            try:
-                                _pp = float(_pp_raw) if _pp_raw not in (None, '') else None
-                            except (TypeError, ValueError):
-                                _pp = None
-                            _calc_module_items.append({
-                                'id': f'module-{_gid or ""}',
-                                'group_id': _gid or '',
-                                'price_percent': _pp,
-                                'price': 0,
-                                'is_invite': bool(_safe(_grp, 'is_invite')),
-                            })
-
-            for _ci in _calc_module_items:
-                if _ci['price_percent'] is not None:
-                    _ci['price'] = round(_base_num * _ci['price_percent'] / 100)
-
-            ps['_fr_items'] = _fr_items
-            ps['_calc_module_items'] = _calc_module_items
             ps['_value_added_ids'] = _value_added_ids
             ps['_value_added_catalog'] = _value_added_catalog
 
@@ -2229,16 +2077,13 @@ class ProposalPdfService:
             ps['_item_requirements_map'] = item_req_map
             ps['_pdf_lang'] = 'en' if proposal.language == 'en' else 'es'
 
-            # Effective total (base + selected calculator modules) + currency,
+            # Agreed investment and currency,
             # used by the value-added renderer to gate module minimums
             # ("condicionado"). Canonical source shared with panel/serializer.
             from content.services.proposal_totals_service import (
                 effective_total_for_proposal,
             )
-            try:
-                ps['_effective_total'] = 0 if formal else effective_total_for_proposal(proposal)
-            except Exception:
-                ps['_effective_total'] = _base_num
+            ps['_effective_total'] = 0 if formal else effective_total_for_proposal(proposal)
             ps['_currency'] = getattr(proposal, 'currency', 'COP') or 'COP'
 
             # ── Pass A: Content canvas (pages 3+) ────────────────────

@@ -155,6 +155,7 @@ const activityMeta = {
   meeting:       { icon: '🤝', label: 'Reunión',                  ...AC.indigo },
   followup:      { icon: '📩', label: 'Seguimiento',              ...AC.amber },
   note:          { icon: '📝', label: 'Nota',                     ...AC.grayMd },
+  module_interests: { icon: '🧩', label: 'Interés en módulos', ...AC.emerald },
   calc_confirmed:{ icon: '🧮', label: 'Calculadora confirmada',   ...AC.emerald },
   calc_abandoned:{ icon: '🧮', label: 'Calculadora abandonada',   ...AC.red },
   calc_followup: { icon: '🧮', label: 'Seguimiento calculadora',  ...AC.orange },
@@ -183,6 +184,13 @@ function fmtDate(val) {
 
 function formatActivityDescription(log) {
   const desc = log.description || '';
+
+  if (log.change_type === 'module_interests') {
+    try {
+      const modules = JSON.parse(desc);
+      return modules.length ? `Módulos de interés: ${modules.map(module => escapeHtml(module.name_es)).join(', ')}` : 'Retiró su selección de intereses.';
+    } catch { return escapeHtml(desc); }
+  }
 
   // Calculator events — plain text (no v-html needed for counts)
   if (log.change_type === 'calc_abandoned' || log.change_type === 'calc_confirmed') {

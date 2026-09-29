@@ -47,7 +47,7 @@ function makeProposal(overrides = {}) {
               title: 'Blog',
               description: 'Sistema de blog.',
               is_calculator_module: false,
-              price_percent: 0,
+              selected: true,
               items: [{ name: 'Editor', description: 'Editor WYSIWYG.' }],
             },
             {
@@ -55,7 +55,7 @@ function makeProposal(overrides = {}) {
               title: 'Facturación electrónica',
               description: 'Integración DIAN.',
               is_calculator_module: true,
-              price_percent: 60,
+              selected: true,
               items: [{ name: 'API DIAN', description: 'Conexión REST.' }],
             },
           ],
@@ -152,14 +152,16 @@ describe('buildDevChecklistMarkdown', () => {
     expect(md).toContain('- [ ] **Contacto**');
   });
 
-  it('separates free additional modules from paid ones', () => {
+  it('lists selected additional modules without prices', () => {
+    // Fails if the checklist revives price-based optional-module output.
     const md = buildDevChecklistMarkdown(makeProposal());
     expect(md).toContain('## ➕ Módulos adicionales');
     expect(md).toContain('### Blog');
     expect(md).toContain('- [ ] **Editor** — Editor WYSIWYG.');
-    expect(md).toContain('## 💰 Costes adicionales (módulos opcionales)');
-    expect(md).toContain('- [ ] **Facturación electrónica** (+60%) — Integración DIAN.');
-    expect(md).toContain('  - [ ] API DIAN — Conexión REST.');
+    expect(md).toContain('### Facturación electrónica');
+    expect(md).toContain('- [ ] **API DIAN** — Conexión REST.');
+    expect(md).not.toContain('Costes adicionales');
+    expect(md).not.toContain('+60%');
   });
 
   it('resolves value_added_modules ids against additionalModules titles', () => {

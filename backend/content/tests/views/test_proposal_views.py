@@ -223,10 +223,10 @@ class TestDownloadProposalPdf:
         mock_tech.assert_called_once_with(sent_proposal, selected_modules=[])
 
     @patch('content.services.technical_document_pdf.generate_technical_document_pdf')
-    def test_doc_technical_passes_selected_modules_query(
+    def test_doc_technical_rejects_selected_modules_query(
         self, mock_tech, api_client, sent_proposal,
     ):
-        """?doc=technical forwards selected_modules to technical PDF service."""
+        """Falla si una URL pública vuelve a alterar el alcance del documento."""
         ProposalSection.objects.create(
             proposal=sent_proposal,
             section_type='technical_document',
@@ -241,10 +241,11 @@ class TestDownloadProposalPdf:
             url,
             {'doc': 'technical', 'selected_modules': 'module-1,group-2'},
         )
-        assert response.status_code == 200
-        mock_tech.assert_called_once_with(
-            sent_proposal, selected_modules=['module-1', 'group-2'],
-        )
+        assert response.status_code == 400
+        assert response.data == {
+            'error': 'Module selection is managed by the proposal owner.',
+        }
+        mock_tech.assert_not_called()
 
     def test_doc_technical_returns_404_when_no_technical_section(
         self, api_client, sent_proposal,
@@ -333,10 +334,10 @@ class TestDownloadProposalPdf:
         assert kwargs['selected_modules'] == ['module-persisted_a', 'group-persisted_b']
 
     @patch('content.services.proposal_pdf_service.ProposalPdfService.generate')
-    def test_commercial_pdf_query_param_overrides_resolution(
+    def test_commercial_pdf_rejects_selected_modules_query(
         self, mock_generate, api_client, sent_proposal,
     ):
-        """Explicit ?selected_modules= still wins over any persisted or content_json resolution (calculator personalization flow)."""
+        """Falla si una consulta pública vuelve a reemplazar el alcance administrado."""
         sent_proposal.selected_modules = ['module-persisted_a']
         sent_proposal.save(update_fields=['selected_modules'])
 
@@ -344,9 +345,11 @@ class TestDownloadProposalPdf:
         url = reverse('download-proposal-pdf', kwargs={'proposal_uuid': sent_proposal.uuid})
         response = api_client.get(url, {'selected_modules': 'module-query_x,group-query_y'})
 
-        assert response.status_code == 200
-        _, kwargs = mock_generate.call_args
-        assert kwargs['selected_modules'] == ['module-query_x', 'group-query_y']
+        assert response.status_code == 400
+        assert response.data == {
+            'error': 'Module selection is managed by the proposal owner.',
+        }
+        mock_generate.assert_not_called()
 
 
 class TestTechnicalFragmentHasContent:
@@ -487,7 +490,7 @@ class TestAdminListProposals:
         assert len(response.data) == 1
         assert response.data[0]['status'] == 'sent'
 
-    def test_includes_effective_total_with_selected_calculator_modules(self, admin_client, db):
+    def test_effective_total_uses_manual_investment_with_legacy_modules(self, admin_client, db):
         proposal = BusinessProposal.objects.create(
             title='With module',
             client_name='Client',
@@ -519,10 +522,10 @@ class TestAdminListProposals:
         response = admin_client.get(reverse('list-proposals'))
         assert response.status_code == 200
         item = next(i for i in response.data if i['id'] == proposal.id)
-        assert item['effective_total_investment'] == '1400.00'
+        assert item['effective_total_investment'] == '1000.00'
 
-    def test_effective_total_falls_back_to_fr_selected_modules(self, admin_client, db):
-        """When selected_modules is empty, use modules marked selected/default_selected in FR content."""
+    def test_effective_total_ignores_legacy_default_module_percentages(self, admin_client, db):
+        """Falla si el panel vuelve a sumar porcentajes de módulos ya retirados."""
         proposal = BusinessProposal.objects.create(
             title='FR default selected',
             client_name='Fallback',
@@ -559,11 +562,10 @@ class TestAdminListProposals:
         response = admin_client.get(reverse('list-proposals'))
         assert response.status_code == 200
         item = next(i for i in response.data if i['id'] == proposal.id)
-        # Only i18n (15%) should be included: 1000 + 150 = 1150
-        assert item['effective_total_investment'] == '1150.00'
+        assert item['effective_total_investment'] == '1000.00'
 
-    def test_effective_total_confirmed_selection_unioned_with_admin_pinned(self, admin_client, db):
-        """When the client confirmed an explicit selection, it is honored but unioned with the calculator modules the admin pinned (``selected=True``) — the admin's panel choices always reach the total."""
+    def test_effective_total_ignores_legacy_confirmed_module_percentages(self, admin_client, db):
+        """Falla si una selección histórica vuelve a modificar la inversión manual."""
         proposal = BusinessProposal.objects.create(
             title='Explicit override',
             client_name='Override',
@@ -604,8 +606,7 @@ class TestAdminListProposals:
         response = admin_client.get(reverse('list-proposals'))
         assert response.status_code == 200
         item = next(i for i in response.data if i['id'] == proposal.id)
-        # pwa (40%, confirmed) + i18n (15%, admin-pinned) → 1000 + 400 + 150 = 1550
-        assert item['effective_total_investment'] == '1550.00'
+        assert item['effective_total_investment'] == '1000.00'
 
 
 class TestAdminRetrieveProposal:
@@ -1038,8 +1039,10 @@ class TestCreateProposalFromJSON:
         assert 'technical_document' in types
 
     def test_custom_technical_document_content_from_json(self, admin_client):
-        """Create-from-JSON keeps the payload's custom epic first and appends the
-        backend-seeded module epics, every one of them selection-gated."""
+        """Keep the payload's custom epic first when creating from JSON.
+
+        Append the backend-seeded module epics, all selection-gated.
+        """
         url = reverse('create-proposal-from-json')
         payload = self._minimal_payload()
         payload['sections']['technicalDocument'] = {
@@ -2483,7 +2486,7 @@ class TestProposalDashboardExtended:
         assert response.data['discount_close_rate'] == 100.0
         assert response.data['no_discount_close_rate'] == 0.0
 
-    def test_avg_accepted_value_uses_effective_total_with_added_modules(self, admin_client, db):
+    def test_avg_accepted_value_uses_manual_total_with_legacy_modules(self, admin_client, db):
         with_module = BusinessProposal.objects.create(
             title='Accepted + module',
             client_name='A',
@@ -2520,9 +2523,9 @@ class TestProposalDashboardExtended:
 
         response = admin_client.get(reverse('proposal-dashboard'))
         assert response.status_code == 200
-        assert response.data['avg_value_by_status']['accepted'] == 1200.0
+        assert response.data['avg_value_by_status']['accepted'] == 1000.0
 
-    def test_pipeline_value_uses_effective_total_with_modules(self, admin_client, db):
+    def test_pipeline_value_uses_manual_total_with_legacy_modules(self, admin_client, db):
         proposal = BusinessProposal.objects.create(
             title='Pipeline module',
             client_name='C',
@@ -2554,7 +2557,7 @@ class TestProposalDashboardExtended:
 
         response = admin_client.get(reverse('proposal-dashboard'))
         assert response.status_code == 200
-        assert response.data['pipeline_value'] == 1500.0
+        assert response.data['pipeline_value'] == 1000.0
 
     @freeze_time('2026-03-01 12:00:00')
     def test_returns_top_dropoff_section(self, admin_client, sent_proposal):
@@ -3679,8 +3682,8 @@ class TestTrackCalculatorInteraction:
     def _url(self, uuid):
         return reverse('track-calculator-interaction', kwargs={'proposal_uuid': uuid})
 
-    def test_records_confirmed_interaction(self, api_client, sent_proposal):
-        """Confirmed calculator interaction creates calc_confirmed change log."""
+    def test_rejects_retired_calculator_payload_without_creating_change_log(self, api_client, sent_proposal):
+        """Falla si la API retirada vuelve a persistir alcance o actividad comercial."""
         payload = {
             'event': 'confirmed',
             'selected': ['module_a', 'module_b'],
@@ -3688,30 +3691,9 @@ class TestTrackCalculatorInteraction:
             'total': 3500000,
         }
         response = api_client.post(self._url(sent_proposal.uuid), payload, format='json')
-        assert response.status_code == 200
-        assert ProposalChangeLog.objects.filter(
-            proposal=sent_proposal, change_type='calc_confirmed',
-        ).exists()
-
-    def test_records_abandoned_interaction(self, api_client, sent_proposal):
-        """Abandoned calculator interaction creates calc_abandoned change log."""
-        payload = {
-            'event': 'abandoned',
-            'selected': [],
-            'deselected': [],
-            'total': 0,
-        }
-        response = api_client.post(self._url(sent_proposal.uuid), payload, format='json')
-        assert response.status_code == 200
-        assert ProposalChangeLog.objects.filter(
-            proposal=sent_proposal, change_type='calc_abandoned',
-        ).exists()
-
-    def test_returns_400_for_invalid_event(self, api_client, sent_proposal):
-        """Invalid event type returns 400."""
-        payload = {'event': 'invalid'}
-        response = api_client.post(self._url(sent_proposal.uuid), payload, format='json')
-        assert response.status_code == 400
+        assert response.status_code == 410
+        assert response.data['code'] == 'calculator_retired'
+        assert not ProposalChangeLog.objects.filter(proposal=sent_proposal).exists()
 
 
 # ---------------------------------------------------------------------------

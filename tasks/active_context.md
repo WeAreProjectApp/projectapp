@@ -1,3 +1,7 @@
+# Intereses en módulos de propuestas (2026-09-29)
+
+Nuevo modal del catálogo sin precios, intereses separados del alcance y edición manual de la inversión. La portada incluye guía y accesos a catálogo/alianza. Migraciones 0274–0275 conservan los importes históricos antes de retirar recargos. Verificación focal de API, migración, PDF, componentes y recorridos completada, con compilación Nuxt y revisión de calidad sin errores nuevos. Procedimiento y compatibilidad: `docs/PROPOSAL_MODULE_INTERESTS.md`; evidencia de integración y CI en el PR de esta rama.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto

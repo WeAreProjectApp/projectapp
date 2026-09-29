@@ -169,6 +169,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
         'available_transitions', 'proposal_documents',
         'platform_onboarding_completed_at', 'platform_onboarding_status',
         'first_view_notification', 'contract_modality',
+        'module_interests', 'module_interests_updated_at',
     )
 
     sections = serializers.SerializerMethodField()
@@ -180,6 +181,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
     validity_text = serializers.SerializerMethodField()
     public_url = serializers.SerializerMethodField()
     discounted_investment = serializers.SerializerMethodField()
+    discount_original_investment = serializers.SerializerMethodField()
     effective_total_investment = serializers.SerializerMethodField()
     has_confirmed_module_selection = serializers.ReadOnlyField()
     available_transitions = serializers.SerializerMethodField()
@@ -189,6 +191,8 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
     # no proposal surface reads them. See ProposalNestedClientSerializer.
     client = ProposalNestedClientSerializer(read_only=True)
 
+    module_interests = serializers.JSONField(read_only=True)
+    module_interests_updated_at = serializers.DateTimeField(read_only=True)
     change_logs = serializers.SerializerMethodField()
 
     class Meta:
@@ -211,8 +215,9 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'email_intro', 'email_features', 'email_method_phases', 'email_signed_by',
             'sections', 'project_stages', 'change_logs',
             'days_remaining', 'is_expired', 'validity_text', 'public_url',
-            'discounted_investment', 'effective_total_investment',
+            'discounted_investment', 'discount_original_investment', 'effective_total_investment',
             'selected_modules', 'has_confirmed_module_selection',
+            'module_interests', 'module_interests_updated_at',
             'contract_params', 'contract_modality',
             'available_transitions', 'proposal_documents',
             'platform_onboarding_completed_at',
@@ -314,26 +319,17 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             for log in logs
         ]
 
+    def get_discount_original_investment(self, obj):
+        from content.services.proposal_totals_service import discount_original_for_proposal
+        return str(discount_original_for_proposal(obj))
+
     def get_discounted_investment(self, obj):
-        """Return discounted price when discount_percent > 0."""
-        if not obj.discount_percent or obj.discount_percent <= 0:
-            return None
-        from decimal import Decimal
-        factor = (Decimal(100) - Decimal(obj.discount_percent)) / Decimal(100)
-        return str(round(obj.total_investment * factor, 2))
+        from content.services.proposal_totals_service import discounted_total_for_proposal
+        value = discounted_total_for_proposal(obj)
+        return str(value) if value is not None else None
 
     def get_effective_total_investment(self, obj):
-        """
-        Client-facing total: base ``total_investment`` plus the price of
-        the additional calculator modules in the client's selection, with
-        a fallback to admin-marked defaults when the client hasn't
-        confirmed the calculator yet. Same rule as the PDF and the admin
-        metrics map so every consumer sees the same number.
-        """
-        from content.services.proposal_totals_service import (
-            effective_total_for_proposal,
-        )
-        return str(effective_total_for_proposal(obj))
+        return str(obj.total_investment)
 
     def get_available_transitions(self, obj):
         return obj.available_transitions

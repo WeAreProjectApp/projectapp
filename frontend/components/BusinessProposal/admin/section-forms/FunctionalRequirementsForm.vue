@@ -27,15 +27,15 @@
           :class="group._pasteMode ? 'bg-primary text-on-primary border-primary' : 'bg-surface text-text-muted border-border-default'"
           @click="onToggleGroupPaste(group, true)">Pegar contenido</button>
         <BaseActionButton action="view" label="Previsualizar módulo" size="sm" @click="openSubPreview(group, gIdx)" />
-        <label class="flex items-center gap-1 cursor-pointer" title="Si está marcado, este módulo aparecerá preseleccionado en la calculadora del cliente">
+        <label class="flex items-center gap-1 cursor-pointer" title="Si está marcado, este módulo forma parte del alcance de la propuesta">
           <input type="checkbox" v-model="group.selected" class="rounded border-input-border text-text-brand focus:ring-focus-ring/30" />
           <span class="text-[10px] text-text-muted font-medium">Seleccionado</span>
         </label>
         <button type="button" class="text-[10px] font-medium px-2 py-1 rounded border transition-colors"
           :class="group.is_calculator_module ? 'bg-info-soft text-info-strong border-info-strong/30' : 'bg-surface-raised text-text-subtle border-border-default dark:border-white/[0.08]'"
-          :title="group.is_calculator_module ? 'Este módulo aparece en la calculadora de inversión del cliente' : 'Este módulo NO aparece en la calculadora de inversión'"
+          :title="group.is_calculator_module ? 'Módulo opcional: se incluye cuando está seleccionado' : 'Grupo base del alcance'"
           @click="group.is_calculator_module = !group.is_calculator_module">
-          <BaseActionIcon action="calculate" /> {{ group.is_calculator_module ? 'En calc.' : 'No calc.' }}
+          <BaseActionIcon action="calculate" /> {{ group.is_calculator_module ? 'Opcional' : 'Base' }}
         </button>
         <button type="button" class="text-[10px] font-medium px-2 py-1 rounded border transition-colors"
           :class="group.is_visible !== false ? 'bg-primary-soft text-text-brand border-emerald-300' : 'bg-danger-soft text-danger-strong border-danger-strong/30'"
@@ -58,14 +58,9 @@
 
       <!-- Form mode for this group -->
       <div v-else class="space-y-3">
-        <div class="grid grid-cols-[100px_1fr_auto] gap-3 items-end">
+        <div class="grid grid-cols-[100px_1fr] gap-3 items-end">
           <EmojiIconField v-model="group.icon" label="Icono" placeholder="🖥️" />
           <FieldInput v-model="group.title" label="Título del grupo" />
-          <div class="flex flex-col gap-1" title="Porcentaje de la inversión total que representa este módulo. Se usa para calcular el precio en la calculadora">
-            <label class="text-[10px] text-text-muted font-medium uppercase">% del precio</label>
-            <input type="number" v-model.number="group.price_percent" min="0" max="100" step="1" placeholder="0"
-              class="w-20 px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-sm focus:ring-1 focus:ring-focus-ring/30 outline-none" />
-          </div>
         </div>
         <FieldTextarea v-model="group.description" label="Descripción" :rows="2" :isSingle="true" />
         <div>
@@ -115,15 +110,15 @@
             :class="mod._pasteMode ? 'bg-primary text-on-primary border-primary' : 'bg-surface text-text-muted border-border-default'"
             @click="onToggleGroupPaste(mod, true)">Pegar contenido</button>
           <BaseActionButton action="view" label="Previsualizar funcionalidad" size="sm" @click="openSubPreview(mod, mIdx, true)" />
-          <label class="flex items-center gap-1 cursor-pointer" title="Si está marcado, este módulo aparecerá preseleccionado en la calculadora del cliente">
+          <label class="flex items-center gap-1 cursor-pointer" title="Si está marcado, este módulo forma parte del alcance de la propuesta">
             <input type="checkbox" v-model="mod.selected" class="rounded border-input-border text-text-brand focus:ring-focus-ring/30" />
             <span class="text-[10px] text-text-muted font-medium">Seleccionado</span>
           </label>
           <button type="button" class="text-[10px] font-medium px-2 py-1 rounded border transition-colors"
             :class="mod.is_calculator_module ? 'bg-info-soft text-info-strong border-info-strong/30' : 'bg-surface-raised text-text-subtle border-border-default dark:border-white/[0.08]'"
-            :title="mod.is_calculator_module ? 'Este módulo aparece en la calculadora de inversión del cliente' : 'Este módulo NO aparece en la calculadora de inversión'"
+            :title="mod.is_calculator_module ? 'Módulo opcional: se incluye cuando está seleccionado' : 'Grupo base del alcance'"
             @click="mod.is_calculator_module = !mod.is_calculator_module">
-            <BaseActionIcon action="calculate" /> {{ mod.is_calculator_module ? 'En calc.' : 'No calc.' }}
+            <BaseActionIcon action="calculate" /> {{ mod.is_calculator_module ? 'Opcional' : 'Base' }}
           </button>
           <button type="button" class="text-[10px] font-medium px-2 py-1 rounded border transition-colors"
             :class="mod.is_visible !== false ? 'bg-primary-soft text-text-brand border-emerald-300' : 'bg-danger-soft text-danger-strong border-danger-strong/30'"
@@ -141,14 +136,9 @@
             class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-lg text-sm font-mono focus:ring-1 focus:ring-focus-ring/30 outline-none resize-y" />
         </div>
         <div v-else class="space-y-3">
-          <div class="grid grid-cols-[100px_1fr_auto] gap-3 items-end">
+          <div class="grid grid-cols-[100px_1fr] gap-3 items-end">
             <EmojiIconField v-model="mod.icon" label="Icono" placeholder="🧩" />
             <FieldInput v-model="mod.title" label="Título del módulo" />
-            <div class="flex flex-col gap-1" title="Porcentaje de la inversión total que representa este módulo. Se usa para calcular el precio en la calculadora">
-              <label class="text-[10px] text-text-muted font-medium uppercase">% del precio</label>
-              <input type="number" v-model.number="mod.price_percent" min="0" max="100" step="1" placeholder="0"
-                class="w-20 px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-sm focus:ring-1 focus:ring-focus-ring/30 outline-none" />
-            </div>
           </div>
           <FieldTextarea v-model="mod.description" label="Descripción" :rows="2" :isSingle="true" />
           <div>
@@ -238,7 +228,6 @@ function addAdditionalModule() {
     selected: false,
     is_calculator_module: false,
     default_selected: false,
-    price_percent: null,
     is_invite: false,
     invite_note: '',
     items: [],

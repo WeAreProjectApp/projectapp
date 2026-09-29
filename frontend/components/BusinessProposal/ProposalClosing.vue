@@ -461,7 +461,6 @@ const props = defineProps({
   whatsappLink: { type: String, default: '' },
   paymentOptions: { type: Array, default: () => [] },
   customizedTotal: { type: Number, default: null },
-  selectedModuleIds: { type: Array, default: () => [] },
   viewMode: { type: String, default: 'detailed' },
   ctaMessage: { type: String, default: '' },
   primaryCTA: { type: Object, default: () => ({}) },
@@ -672,9 +671,6 @@ const proposalStore = useProposalStore();
 const pdfUrl = computed(() => {
   const base = `/api/proposals/${props.proposal?.uuid}/pdf/`;
   const params = new URLSearchParams();
-  if (props.selectedModuleIds.length) {
-    params.set('selected_modules', props.selectedModuleIds.join(','));
-  }
   if (props.viewMode === 'technical') {
     params.set('doc', 'technical');
   }

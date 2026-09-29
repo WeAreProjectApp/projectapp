@@ -41,7 +41,9 @@
         "proposal-share",
         "proposal-engagement-tracking",
         "public-proposal-explainer",
-        "public-proposal-personalized-video"
+        "public-proposal-personalized-video",
+        "proposal-gateway-guide",
+        "proposal-module-interests"
       ]
     },
     {
@@ -114,12 +116,8 @@
         "proposal-welcome-back",
         "proposal-process-methodology",
         "proposal-value-added-modules",
-        "proposal-calculator-modules",
-        "proposal-calculator-selected-first",
         "proposal-expired-graceful",
         "proposal-magic-link-request",
-        "proposal-calculator-abandonment-tracking",
-        "proposal-investment-calculator",
         "proposal-comment-from-closing",
         "proposal-rejection-smart-recovery",
         "proposal-schedule-followup-reminder",
@@ -134,10 +132,6 @@
         "proposal-summary-kpis",
         "proposal-roi-projection",
         "admin-proposal-log-activity",
-        "proposal-calculator-new-modules",
-        "proposal-calculator-biometric-module",
-        "proposal-calculator-behavior-tracking-module",
-        "proposal-calculator-integrations",
         "admin-blog-list",
         "admin-blog-calendar",
         "admin-blog-create",
@@ -180,7 +174,8 @@
         "admin-diagnostic-markdown-attachment",
         "diagnostic-public-view",
         "admin-proposal-explainer-visibility",
-        "admin-proposal-explainer-preference"
+        "admin-proposal-explainer-preference",
+        "admin-proposal-module-interests"
       ]
     },
     {
@@ -238,7 +233,6 @@
         "admin-layout-title-mapping",
         "platform-layout-title-mapping",
         "admin-proposal-json-import-client-picker",
-        "proposal-calculator-reopen-after-nav",
         "proposal-slug-access",
         "admin-client-first-login-notification",
         "admin-client-email-validated-notification",

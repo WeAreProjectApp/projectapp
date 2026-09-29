@@ -6,7 +6,7 @@
     "guest"
   ],
   "priority": "P3",
-  "description": "First-visit tutorial overlay with step-by-step tooltips and reading time popup.",
+  "description": "After selecting detailed or executive mode, the existing guide explains proposal navigation and reading time; it is independent of the gateway guide.",
   "expectedSpecs": 1,
   "outcomes": [
     "display"

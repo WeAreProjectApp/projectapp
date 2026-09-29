@@ -1,5 +1,14 @@
 <template>
   <div>
+  <div v-if="proposal.module_interests_updated_at" class="mb-6 rounded-xl border border-border-default bg-surface p-5" data-testid="proposal-module-interests">
+    <h2 class="text-base font-semibold text-text-brand">Módulos de interés</h2>
+    <p class="mt-1 text-sm text-text-muted">El cliente quiere conversar sobre estos módulos. Actualiza el alcance y la inversión manualmente después de acordarlos.</p>
+    <p class="mt-2 text-xs text-text-subtle">Última actualización: {{ new Date(proposal.module_interests_updated_at).toLocaleString('es-CO') }}</p>
+    <ul v-if="proposal.module_interests?.length" class="mt-3 space-y-2">
+      <li v-for="module in proposal.module_interests" :key="module.id" class="text-sm text-text-default">{{ module.name_es }} <span class="text-text-muted">· {{ module.category_es }}</span></li>
+    </ul>
+    <p v-else class="mt-3 text-sm text-text-muted">El cliente retiró su selección de intereses.</p>
+  </div>
   <TabSplitLayout ratio="1:1" :aside-first-mobile="true">
     <template #aside>
   <!-- Editable slug (URL personalizada) -->

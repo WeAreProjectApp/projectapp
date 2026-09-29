@@ -1453,20 +1453,20 @@ describe('edge cases', () => {
     expect(json.additionalModules).toEqual([]);
   });
 
-  it('buildFormFromJson preserves is_visible and calculator metadata for groups', () => {
+  it('buildFormFromJson preserves scope metadata for groups', () => {
     const json = {
       index: '1', title: 'Reqs', intro: '',
       groups: [{
         id: 'gift_cards_module', icon: '🎁', title: 'Gift Cards',
         description: 'Desc', is_visible: false,
         is_calculator_module: true, default_selected: false,
-        price_percent: 20, is_invite: false, invite_note: '',
+        is_always_included: false, is_invite: false, invite_note: '',
         items: [],
       }],
       additionalModules: [{
         icon: '📬', title: 'Reports', description: 'Desc',
         is_visible: true, is_calculator_module: true,
-        default_selected: true, price_percent: 15,
+        default_selected: true, is_always_included: false,
         is_invite: true, invite_note: 'Invite only',
         items: [],
       }],
@@ -1475,20 +1475,20 @@ describe('edge cases', () => {
     expect(form.groups[0].is_visible).toBe(false);
     expect(form.groups[0].is_calculator_module).toBe(true);
     expect(form.groups[0].default_selected).toBe(false);
-    expect(form.groups[0].price_percent).toBe(20);
+    expect(form.groups[0].is_always_included).toBe(false);
     expect(form.additionalModules[0].is_visible).toBe(true);
     expect(form.additionalModules[0].is_invite).toBe(true);
     expect(form.additionalModules[0].invite_note).toBe('Invite only');
   });
 
-  it('formToJson preserves is_visible and calculator metadata through round-trip', () => {
+  it('formToJson preserves scope metadata through round-trip', () => {
     const json = {
       index: '1', title: 'Reqs', intro: '',
       groups: [{
         id: 'gift_cards_module', icon: '🎁', title: 'Gift Cards',
         description: 'Desc', is_visible: false,
         is_calculator_module: true, default_selected: false,
-        price_percent: 20, items: [],
+        is_always_included: false, items: [],
       }],
       additionalModules: [],
     };
@@ -1497,7 +1497,7 @@ describe('edge cases', () => {
     expect(output.groups[0].is_visible).toBe(false);
     expect(output.groups[0].is_calculator_module).toBe(true);
     expect(output.groups[0].default_selected).toBe(false);
-    expect(output.groups[0].price_percent).toBe(20);
+    expect(output.groups[0].is_always_included).toBe(false);
   });
 
   it('buildSavePayload for executive_summary in paste mode preserves structured data', () => {

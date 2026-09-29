@@ -759,12 +759,10 @@ class ProposalEmailService:
         }
 
         if has_discount:
-            from decimal import Decimal
-            discount_factor = (
-                Decimal(100 - proposal.discount_percent) / Decimal(100)
-            )
-            discounted = proposal.total_investment * discount_factor
+            from content.services.proposal_totals_service import discounted_total_for_proposal, discount_original_for_proposal
+            discounted = discounted_total_for_proposal(proposal)
             context.update({
+                'total_investment': format_cop_email(discount_original_for_proposal(proposal)),
                 'discounted_investment': format_cop_email(discounted),
                 'discount_percent': proposal.discount_percent,
             })
@@ -1411,7 +1409,6 @@ class ProposalEmailService:
             logger.info('Skipping proposal_reengagement: template disabled')
             return False
 
-        from decimal import Decimal
         has_discount = bool(proposal.discount_percent and proposal.discount_percent > 0)
         context = {
             'client_name': proposal.client_name,
@@ -1421,12 +1418,9 @@ class ProposalEmailService:
             'currency': proposal.currency,
         }
         if has_discount:
-            discount_factor = (
-                Decimal(100 - proposal.discount_percent) / Decimal(100)
-            )
-            context['discounted_investment'] = format_cop_email(
-                proposal.total_investment * discount_factor
-            )
+            from content.services.proposal_totals_service import discounted_total_for_proposal, discount_original_for_proposal
+            context['total_investment'] = format_cop_email(discount_original_for_proposal(proposal))
+            context['discounted_investment'] = format_cop_email(discounted_total_for_proposal(proposal))
             context['discount_percent'] = proposal.discount_percent
 
         context.update(_build_design_context(proposal))

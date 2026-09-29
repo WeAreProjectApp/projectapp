@@ -1,0 +1,15 @@
+{
+  "id": "proposal-gateway-guide",
+  "name": "Proposal Gateway Guide and External Resources",
+  "module": "proposal",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Before choosing a reading mode, the proposal gateway guides the client through its available video and cards, and opens Additional Modules and Partnership Program in separate tabs.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

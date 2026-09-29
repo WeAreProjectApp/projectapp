@@ -134,10 +134,10 @@ const arrowComputedStyle = ref({});
 
 const stepsI18n = {
   es: [
-    { target: '.customize-investment-btn', title: 'Personaliza tu inversión', description: 'Este botón abre una calculadora interactiva donde puedes agregar o quitar módulos opcionales. El precio total se ajusta automáticamente según tu selección.', prefer: 'bottom' },
+    { target: '.customize-investment-btn', title: 'Explora módulos adicionales', description: 'Descubre módulos por categorías y guarda tu interés para conversar sobre ellos. La inversión y el alcance se acuerdan contigo.', prefer: 'bottom' },
   ],
   en: [
-    { target: '.customize-investment-btn', title: 'Customize your investment', description: 'This button opens an interactive calculator where you can add or remove optional modules. The total price adjusts automatically based on your selection.', prefer: 'bottom' },
+    { target: '.customize-investment-btn', title: 'Explore additional modules', description: 'Explore modules by category and save your interests for a conversation. Investment and scope are agreed with you.', prefer: 'bottom' },
   ],
 };
 const steps = computed(() => stepsI18n[props.language] || stepsI18n.es);

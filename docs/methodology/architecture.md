@@ -1,5 +1,7 @@
 # Architecture — ProjectApp
 
+**2026-09-29 — intereses de módulos:** `BusinessProposal.module_interests` guarda instantáneas del catálogo independientemente de `selected_modules` (alcance contratado). El endpoint público idempotente sólo actualiza intereses; el total manual alimenta panel, web y PDF. La migración materializa recargos antiguos y conserva descuentos heredados. Véase `docs/PROPOSAL_MODULE_INTERESTS.md`.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no

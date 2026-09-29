@@ -1,3 +1,5 @@
+> **2026-09-29 — implementado y verificado localmente:** calculadora y recargos retirados, importes históricos preservados, intereses independientes y guía con accesos desde portada. Pruebas focales de API, migración, PDF, componentes y navegador en verde; compilación Nuxt y mapas validados. Migraciones sólo en despliegue. Referencia: `docs/PROPOSAL_MODULE_INTERESTS.md`.
+
 > **2026-09-29 — Formulario y estados de enlaces seguros:** implementación
 > en `feat/29092026-secure-links-simple-states`: dropdown compartido, plantilla
 > inicial de mensaje, opcionales plegables, marca de envío manual y cinco estados.
