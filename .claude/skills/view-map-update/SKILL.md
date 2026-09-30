@@ -34,7 +34,8 @@ AskUserQuestion con Q1+Q2 (Codex: lista numerada, regla 8).
 > **Invocada por [[implement]], [[new-feature-checklist]] o [[qa]]: NUNCA
 > pregunta — hereda el gating del conductor (regla 4 de §4) y usa los flags que
 > él pasa.** Nunca en fleet/headless/cron. Una corrida por diff: si la sesión ya
-> la corrió sobre el mismo diff, se cita ese resultado.
+> la corrió sobre el mismo contenido, base y alcance, se cita ese resultado.
+> Un nuevo cambio, aunque conserve los mismos nombres de archivo, exige revisión.
 
 **Q1 — Modo** (`multiSelect: false`):
 
@@ -90,11 +91,26 @@ sustituciones de comando, expansión de llaves y bucles).
 ```bash
 ls frontend/config/viewCatalog.js frontend/config/viewCapabilityCatalog.js frontend/scripts/check-view-catalog.mjs
 git rev-parse --show-toplevel
+```
+
+Falta un archivo → `⏭️` (sin mapa) o `🔴` si se renombró. En un worktree de
+sesión, consultar su registro:
+
+```bash
 bash ~/webapps/vps-ops-toolkit/scripts/maintenance/session-worktree.sh status
 ```
 
-Falta un archivo → `⏭️` (sin mapa) o `🔴` si se renombró. `--diff` fuera de un
-worktree de sesión → `⏭️`. `--apply` fuera de `~/webapps/.wt/` → crear el
+En una auditoría `--check` desde el clon principal, resolver la base mediante
+el proyecto canónico del registry (en projectapp, `projectapp`):
+
+```bash
+bash ~/webapps/vps-ops-toolkit/scripts/maintenance/resolve-work-coordinate.sh --check <proyecto>
+```
+
+Usar `base=` del worktree, o `resolved_branch=` del resolver para la auditoría;
+una coordenada ambigua sin resolución detiene la comparación. `status` fuera
+de un worktree retorna `2`: no significa que el mapa esté ausente.
+`--apply` fuera de `~/webapps/.wt/` → crear el
 worktree y entrar antes de escribir:
 
 ```bash
@@ -104,7 +120,7 @@ bash ~/webapps/vps-ops-toolkit/scripts/maintenance/session-worktree.sh create ch
 
 ## Fase 1 — Alcance
 
-`<base>` = el `base=` del status.
+`<base>` es la base resuelta en Fase 0; nunca asumir `main` o `master`.
 
 ```bash
 git fetch origin <base>
@@ -113,31 +129,47 @@ git fetch origin <base>
 `--diff`:
 
 ```bash
-git log --no-merges --name-status --format='%h %s' origin/<base>..HEAD -- frontend
-git status --porcelain -- frontend
+git diff --name-status --find-renames 'origin/<base>...HEAD' -- frontend
+git diff --cached --name-status --find-renames -- frontend
+git diff --name-status --find-renames -- frontend
+git ls-files --others --exclude-standard -- frontend
 ```
 
 `--since`: la marca de agua `<W>` es el último commit de los catálogos EN LA
 BASE (en tu rama, tu propio commit la movería); `--first-parent` evita que un
-merge devuelva un commit lateral. `--since=<ref>` reemplaza `<W>`; `git status`
-sólo en tu worktree. Deriva anterior a `<W>` → `--since=<ref>` o `--all`.
+merge devuelva un commit lateral. `--since=<ref>` reemplaza `<W>`. Sin marca de
+agua, revisar `--all`; si `<W>` no es ancestro de HEAD, detener la comparación y
+usar una referencia común o `--all`. Deriva anterior a `<W>` → `--since=<ref>`
+o `--all`.
 
 ```bash
 git log -1 --first-parent --format=%H origin/<base> -- frontend/config/viewCatalog.js frontend/config/viewCapabilityCatalog.js
-git log --no-merges --name-status --format='%h %s' <W>..HEAD -- frontend
-git status --porcelain -- frontend
+git merge-base --is-ancestor <W> HEAD
+git diff --name-status --find-renames <W> HEAD -- frontend
+git diff --cached --name-status --find-renames -- frontend
+git diff --name-status --find-renames -- frontend
+git ls-files --others --exclude-standard -- frontend
 ```
 
 `--all`: todas las entradas, una sección por vez (subagentes read-only por
 sección si el runtime los tiene; el conductor edita).
 
 Candidatos: páginas de `frontend/pages/` agregadas, borradas, renombradas o
-modificadas; componentes/composables/stores de commits `feat`/`fix` o no
-commiteados, llevados a su página huésped con un salto (máx. dos):
+modificadas; componentes/composables/stores de las diferencias anteriores,
+llevados a su página huésped con un salto (máx. dos). Deduplicar la unión de los
+paths y leer su estado final: incluir renombres, bajas, cambios introducidos por
+merges y archivos nuevos. Los mensajes de commit no deciden si una capacidad
+cambió; un refactor o cambio visual sin efecto en la capacidad sigue excluido.
 
 ```bash
 rg -l -e <NombreA> -e <NombreB> frontend/pages frontend/components
 ```
+
+Para una baja o renombre, contrastar también la versión de la base o de `<W>`
+con el catálogo para retirar la referencia anterior; no descartar el candidato
+porque el archivo ya no existe. Leer el patch de los candidatos con `git diff`
+y los archivos nuevos desde disco. La unión evita perder una edición preparada
+o sin preparar sobre un archivo que también cambió en la rama.
 
 Lo que importan >5 páginas (`components/base/`, `components/ui/`, composables
 genéricos) es infraestructura. Encadenada, el contexto del conductor manda.
@@ -254,7 +286,7 @@ tabla va `### Punch list` (HIGH→LOW, una línea `archivo:línea → cambio`).
 
 | Dimensión | Estado | Detalle |
 |---|---|---|
-| Alcance | ✅ | N commits feat/fix · M entradas candidatas |
+| Alcance | ✅ | base/marca `<sha>` · M entradas candidatas, incluidos cambios locales |
 | Estructura (Lista/Mapa) | ✅ | check:view-catalog verde · +A −B ~C entradas |
 | Semántica de entradas | ✅ | N entradas ajustadas |
 | Explorador | ✅ | N features ajustados · cada URL en un feature |
