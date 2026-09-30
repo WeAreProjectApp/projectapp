@@ -14,6 +14,12 @@ MAX_MCP_CONNECTOR_LIST_QUERIES = 6
 PANEL_URL = '/api/mcp-connectors/'
 
 
+@pytest.fixture(autouse=True)
+def isolate_connector_catalog(db):
+    """Keep data-migration connectors outside these explicit fixtures."""
+    McpConnector.objects.all().delete()
+
+
 def _panel_client(user):
     client = APIClient()
     client.force_login(user)
