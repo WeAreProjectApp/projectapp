@@ -1,5 +1,7 @@
 """Serializers for the credit-card statement sub-module (extractos)."""
 
+from decimal import Decimal
+
 from rest_framework import serializers
 from rest_framework.validators import UniqueTogetherValidator
 
@@ -104,9 +106,15 @@ class CreditCardStatementSerializer(PeriodReadMixin, serializers.ModelSerializer
         )
 
     def get_transactions_count(self, obj):
+        if hasattr(obj, '_transactions_count'):
+            return obj._transactions_count if obj._transactions_count is not None else 0
         return obj.transactions.count()
 
     def get_transactions_sum(self, obj):
+        if hasattr(obj, '_transactions_sum'):
+            if obj._transactions_sum is None:
+                return '0'
+            return str(obj._transactions_sum.quantize(Decimal('0.01')))
         total = sum((tx.amount for tx in obj.transactions.all()), start=0)
         return str(total)
 
