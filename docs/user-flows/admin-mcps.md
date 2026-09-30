@@ -11,7 +11,7 @@
   3. Genera la principal o crea una limitada → recibe la URL una sola vez → la copia al cliente MCP.
   4. Edita alcance/vencimiento, rota o revoca una credencial individual; la revocación exige confirmación en el modal estándar del Panel.
   5. Activa o desactiva el conector con el toggle.
-  - [Display] La card y sus acordeones presentan inventario real, no sólo un contenedor visible.
+  - [Display] La card y sus acordeones presentan inventario real. En los cinco perfiles del Panel se leen etiquetas, actores e identificadores de petición largos sin desborde horizontal; en móvil y tableta vertical los acordeones ofrecen zonas táctiles de al menos 44 px. En tableta vertical se puede abrir la edición del alcance y cancelarla sin cambiar la credencial.
   - [Success] Crear, editar, rotar, revocar y activar producen el estado observable correspondiente.
   - [Error] Un staff no superusuario es redirigido; etiqueta vacía o alcance custom vacío permanecen bloqueados en cliente.
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
