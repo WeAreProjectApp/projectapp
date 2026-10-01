@@ -29,6 +29,7 @@ Las fuentes siguen siendo `Project.production_url/staging_url` y `ProjectAdminAc
 - Un cifrado ilegible o configuración de cifrado no disponible devuelve 503 controlado, sin detalles internos y sin registrar una revelación exitosa.
 - El valor revelado vive sólo en el componente, sin Pinia/storage/historial. Se elimina al ocultar la pestaña, cambiar contexto/sesión, desmontar o cumplir 30 segundos. Copiar es una acción explícita del usuario y el portapapeles del sistema queda bajo su control.
 - Cambiar cliente revoca todos los grants. Cambiar/borrar/mover URL o credencial revoca sus campos. Señales cubren saves/deletes ajenos al editor; un receptor propio consume los nombres de campos del historial existente para cubrir `QuerySet.update/bulk_update`, incluso si después se restaura el valor anterior. Las huellas también rechazan fuentes distintas antes de compartir. Escrituras SQL manuales o realizadas con `without_history()` eluden esta frontera y deben revocar grants explícitamente.
+- Django Admin bloquea el proyecto original dentro de la transacción y revoca antes de guardar: todo al cambiar cliente, sólo permisos de URL al cambiar producción/QA. Usa el propietario original en el evento y conserva grants/auditoría si el guard financiero rechaza o el guardado falla. Formulario y guard financiero pertenecen a P2 y deben ejecutar antes del puente P4. La regresión financiera conjunta queda pendiente hasta absorber la referencia publicada de P2 que coordine P0.
 - Sesión JWT impersonada no registra/corrige ideas ni revela credenciales; conserva lectura permitida. El backend verifica la claim firmada; la UI sólo ajusta controles.
 
 ## Rutas
@@ -64,7 +65,7 @@ Accesos muestra al cliente sólo ambientes/datos efectivos. Su enlace aparece co
 | `accounts/models.py`, `apps.py` | Imports de modelos propios y registro de hooks | P3 publicado antes; migración propia 0070 sobre 0067, sin hoja merge de otras sesiones |
 | `accounts/urls.py`, `content/urls.py` | Include de rutas de dominio | Modelos/servicios propios |
 | `accounts/serializers.py` | Capability de acceso en detalle; conserva redacción previa | Política y fuente existentes |
-| `project_access.py`, `project_service.py` | Locks/revocación por edición y transferencia | Orden: proyecto bloqueado → guard financiero P2 sin writes al rechazar → revoke_grants P4 → reasignación/cascada. P2 mantiene ProjectAdmin; P4 no edita ese puente |
+| `project_access.py`, `project_service.py`, `accounts/admin.py::ProjectAdmin.save_model` | Locks/revocación por edición y transferencia; en Admin compara contra el proyecto original | Orden: proyecto bloqueado → guard financiero P2 sin writes al rechazar → revoke_grants P4 → reasignación/cascada o guardado Admin. P2 conserva formulario/guard; P4 sólo su puente de revocación. P0 coordina el cruce y la regresión financiera |
 | MCP `operation_catalogs.py`, `contracts.py` | Registros nombrados del dominio | Rutas Panel y modelos disponibles |
 | Sidebar, Panel projects y modal access | Enlaces Ideas y capability; política adicional | Páginas/components propios |
 | Agregadores locales, catálogos, responsive y flows | Entradas/secciones de dominio; derivados regenerados | Integrar sin reordenar bloques ajenos |

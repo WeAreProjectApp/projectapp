@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import transaction
 
 from content.admin import admin_site
 
@@ -49,6 +50,15 @@ class ProjectAdmin(admin.ModelAdmin):
             ),
         }),
     )
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        if change:
+            previous = Project.objects.select_for_update().get(pk=obj.pk)
+            # The P2 financial guard must reject before this P4 revocation.
+            from .services.project_client_access import revoke_project_edits
+            revoke_project_edits(previous, obj, actor=request.user)
+        super().save_model(request, obj, form, change)
 
 
 admin_site.register(UserProfile)

@@ -42,7 +42,7 @@ def main():
     with override_settings(ALLOWED_HOSTS=['localhost', '127.0.0.1', 'testserver'], DEBUG=True,
                            CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3213'], RECAPTCHA_ENABLED=False,
                            PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
-                           EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                           MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}},
                            MIGRATION_MODULES={config.label: None for config in apps.get_app_configs()}):
         database = setup_databases(verbosity=0, interactive=False)
         try:

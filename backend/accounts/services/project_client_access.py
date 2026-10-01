@@ -150,6 +150,18 @@ def update_policy(project_id, actor, data, *, channel='platform'):
     return _admin_payload(project, policy, sources)
 
 
+def revoke_project_edits(previous, current, *, actor):
+    """Revoke against the locked original project before an admin source write."""
+    if previous.client_id != current.client_id:
+        revoke_grants(previous, actor=actor)
+        return
+    fields = [f'{environment}.site_url' for environment, name in (
+        ('production', 'production_url'), ('staging', 'staging_url'))
+        if getattr(previous, name) != getattr(current, name)]
+    if fields:
+        revoke_grants(previous, actor=actor, fields=fields)
+
+
 @transaction.atomic
 def revoke_grants(project, *, actor=None, fields=None):
     """Explicit revocation; fingerprints additionally cover bypassing bulk writers."""
