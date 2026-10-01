@@ -129,7 +129,7 @@ directamente.
 ## Bloques de integración
 
 Base main `cce8e694`, dependencia publicada P3
-`ebbf331d76fedb5f89f3b440f2fdeb50c148e977` absorbida mediante merge exacto en la rama
+`cecb5b93d8cfd0b968fec3a71239323c48c7018f` absorbida mediante merge exacto en la rama
 propia. P0 reservó `0068_issue_reports`, dependiente de
 `0067_explicit_delivery_authoring_context`; se conserva la dependencia
 `content.0273_merge_document_provenance_and_proposal_owner`. La no-op propia
@@ -183,10 +183,14 @@ autores; distingue los joins de `IssueResponse`/`IssueEvent` y exige una lectura
 por colección. Las fuentes nulas siguen siendo nulas y la conversión archivada
 no crea una guía ni un evento. La revisión contractual y su transporte MCP
 pasaron juntos en un lote de dieciocho casos después de esta corrección.
+La regresión de conversión y transporte MCP pasó veinte casos, y los detalles
+GET de bugs/solicitudes pasaron quince casos. La última verificación de los seis
+contratos de CI propios pasó después de simplificar sus fixtures de consultas.
 El contrato GET de bugs admite ocho consultas acotadas: las cinco originales,
 las dos colecciones nuevas de historia y una lectura conjunta de evidencia de
 comentarios, igual que el contrato GET de solicitudes. Sigue exigiendo el mismo
-costo con uno y cincuenta comentarios y los campos públicos correctos.
+costo con uno y cincuenta comentarios (ocho consultas en ambos) y los campos
+públicos correctos.
 La auditoría de calidad cerró sus observaciones. La ejecución de los gates y
 la disponibilidad del lint externo se informan junto al CI del head publicado. Los dos flujos del dominio cubren
 éxito, error, fallo y presentación. CI del head publicado se informa por separado.
