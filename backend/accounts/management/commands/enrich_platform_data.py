@@ -113,7 +113,7 @@ class Command(BaseCommand):
             return
 
         target = max(1, target)
-        stage = ensure_delivery_stage(project, anchor_now=context.anchor_now, actor=admin)
+        stage = ensure_delivery_stage(project, context=context, actor=admin)
         client = project.client
 
         requirement_count = Requirement.objects.filter(stage__phase__scope__contract__project=project).count()

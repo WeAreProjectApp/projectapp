@@ -38,7 +38,7 @@ def ensure_phase(project):
     return ProjectPhase.objects.create(project=project, business_proposal=proposal, order=0)
 
 
-def ensure_delivery_stage(project, *, anchor_now, actor=None):
+def ensure_delivery_stage(project, *, context, actor=None):
     """Create a fake signed contract and independently authored delivery stages."""
     from django.contrib.auth import get_user_model
     from django.core.files.base import ContentFile
@@ -51,10 +51,13 @@ def ensure_delivery_stage(project, *, anchor_now, actor=None):
     import hashlib
 
     ensure_fake_data_allowed('delivery_seed_helpers')
+    anchor_now = context.anchor_now
+    document_key = f'delivery:{project.client.email}:{project.name}:demo-contract'
     actor = actor or get_user_model().objects.filter(profile__role='admin').first() or project.client
     contract = ProjectContract.objects.filter(project=project, key='demo-contract').first()
     if contract is None:
         document = Document.objects.create(
+            uuid=context.uuid(document_key),
             title=f'[Seed] Contrato — {project.name}'[:255], project=project,
             client_user=project.client, created_by=actor,
             is_client_visible=True, requires_signature=True,
@@ -70,6 +73,7 @@ def ensure_delivery_stage(project, *, anchor_now, actor=None):
     amendment = ContractAmendment.objects.filter(contract=contract, key='demo-amendment').first()
     if amendment is None:
         document = Document.objects.create(
+            uuid=context.uuid(f'{document_key}:demo-amendment'),
             title=f'[Seed] Otrosí — {project.name}'[:255], project=project,
             client_user=project.client, created_by=actor, is_client_visible=True,
             content_markdown='# Otrosí de demostración\n\nAmpliación ficticia para pruebas.',
@@ -134,11 +138,12 @@ def _demo_pdf(title):
     return stream.getvalue()
 
 
-def seed_validation_guides(project, specs, *, anchor_now, actor=None):
+def seed_validation_guides(project, specs, *, context, actor=None):
     """Seed partial reviews and draft guides without inferring real approvals."""
     from accounts.models import DeliveryMessage, DeliveryStage, Requirement, RequirementReview
 
-    stage = ensure_delivery_stage(project, anchor_now=anchor_now, actor=actor)
+    anchor_now = context.anchor_now
+    stage = ensure_delivery_stage(project, context=context, actor=actor)
     draft_stage = DeliveryStage.objects.get(
         phase__scope=stage.phase.scope, key='demo-draft',
     )
@@ -180,8 +185,8 @@ def seed_validation_guides(project, specs, *, anchor_now, actor=None):
         defaults={'actor': project.client},
     )
     message.requirements.set(stage.requirements.exclude(review_status='in_review'))
-    _seed_stage_document(stage, anchor_now=anchor_now, actor=actor)
-    _seed_stage_document(draft_stage, anchor_now=anchor_now, actor=actor)
+    _seed_stage_document(stage, context=context, actor=actor)
+    _seed_stage_document(draft_stage, context=context, actor=actor)
     refresh_seed_publication(stage, actor=actor)
     return stage
 
@@ -225,7 +230,7 @@ def refresh_seed_publication(stage, *, actor=None):
             snapshot.file.save('demo-review-guide.pdf', ContentFile(payload), save=True)
 
 
-def _seed_stage_document(stage, *, anchor_now, actor=None):
+def _seed_stage_document(stage, *, context, actor=None):
     from accounts.models import DeliveryDocumentLink
     from content.models import Document
     from django.core.files.base import ContentFile
@@ -233,8 +238,14 @@ def _seed_stage_document(stage, *, anchor_now, actor=None):
     if stage.document_links.exists():
         return
     project = stage.project
+    scope = stage.phase.scope
+    document_key = (
+        f'delivery:{project.client.email}:{project.name}:{scope.contract.key}:'
+        f'{scope.key}:{stage.phase.key}:{stage.key}:guide'
+    )
     actor = actor or project.client
     document = Document.objects.create(
+        uuid=context.uuid(document_key),
         title=f'[Seed] Guía — {project.name} — {stage.title}'[:255],
         project=project, client_user=project.client, created_by=actor,
         # Delivery publication is authoritative even when this old flag is true.

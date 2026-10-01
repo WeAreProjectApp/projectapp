@@ -393,6 +393,60 @@ def test_platform_fake_reset_clears_protected_review_graph(seeded_review_workflo
     assert not storage.exists(filename)
 
 
+def test_mihuella_flush_replays_document_identity():
+    """Recreating the same seed must retain the documents' public identities."""
+    from accounts.management.commands.seed_mihuella import CLIENT_EMAIL
+
+    seed_args = ('--seed', '19', '--anchor-date', '2026-08-26')
+    run_command('seed_mihuella', *seed_args)
+    first_snapshot = list(Document.objects.filter(
+        client_user__email=CLIENT_EMAIL, title__startswith='[Seed]',
+    ).order_by('title').values_list('uuid', 'title'))
+
+    run_command('seed_mihuella', '--flush', *seed_args)
+
+    assert len(first_snapshot) == 4
+    assert list(Document.objects.filter(
+        client_user__email=CLIENT_EMAIL, title__startswith='[Seed]',
+    ).order_by('title').values_list('uuid', 'title')) == first_snapshot
+
+
+def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflow):
+    """Resetting this demo must preserve other agreements and client history."""
+    from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
+    from accounts.models import ProjectContract
+    from content.models import CommunicationThread
+
+    seed_args = ('--seed', '19', '--anchor-date', '2026-08-26')
+    run_command('seed_mihuella', *seed_args)
+    client = get_user_model().objects.get(email=CLIENT_EMAIL)
+    role = client.profile.role
+    client_thread = CommunicationThread.objects.get(client=client.profile, project__name=PROJECT_NAME)
+    document = Document.objects.create(
+        title='Contrato externo del cliente', client_user=client,
+    )
+    other_project = Project.objects.create(name='Proyecto fuera de Mi Huella', client=client)
+    other_document = Document.objects.create(
+        title='[Seed] Documento de otro proyecto', project=other_project, client_user=client,
+    )
+    other_proposal = BusinessProposal.objects.create(
+        title='Propuesta fuera de Mi Huella', client_email=CLIENT_EMAIL,
+    )
+    foreign_contract = ProjectContract.objects.get(
+        project=seeded_review_workflow, key='demo-contract',
+    )
+    preserved_ids = [document.pk, other_document.pk, foreign_contract.document_id]
+
+    run_command('seed_mihuella', '--flush', *seed_args)
+
+    assert Document.objects.filter(pk__in=preserved_ids).count() == 3
+    assert ProjectContract.objects.get(pk=foreign_contract.pk).document_id == foreign_contract.document_id
+    assert Project.objects.get(pk=other_project.pk).client_id == client.pk
+    assert BusinessProposal.objects.filter(pk=other_proposal.pk).exists()
+    assert get_user_model().objects.get(pk=client.pk).profile.role == role
+    assert CommunicationThread.objects.get(pk=client_thread.pk).client_id == client.profile.pk
+
+
 def test_platform_seed_configures_communication_preferences():
     admin = get_user_model().objects.create_user(
         username='preference-admin',

@@ -29,7 +29,7 @@ from accounts.management.commands._seed_helpers import seed_validation_guides, c
 from accounts.models import (
     BugComment, BugReport, ChangeRequest, ChangeRequestComment,
     Deliverable, DeliverableVersion, HostingSubscription, Payment,
-    Project, Requirement, UserProfile,
+    Project, ProjectPhase, Requirement, UserProfile,
 )
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.models import BusinessProposal, ProposalSection
@@ -40,6 +40,7 @@ User = get_user_model()
 CLIENT_EMAIL = 'laura@entre-especies.com'
 CLIENT_PASSWORD = os.environ.get('SEED_MIHUELLA_PASSWORD')
 PROJECT_NAME = 'Mi Huella — Plataforma de Adopción Animal'
+PROPOSAL_SLUG = 'mi-huella-plataforma-adopcion'
 PROPOSAL_INVESTMENT = Decimal('38000000')
 
 # ---------------------------------------------------------------------------
@@ -172,18 +173,25 @@ class Command(BaseCommand):
         return admin_profile.user if admin_profile else None
 
     def _flush(self):
+        from content.models import Document
+
         user = User.objects.filter(email=CLIENT_EMAIL).first()
         if user:
-            clear_fake_delivery(Project.objects.filter(client=user))
+            projects = Project.objects.filter(client=user, name=PROJECT_NAME)
+            clear_fake_delivery(projects)
+            Document.objects.filter(
+                client_user=user, project__in=projects, title__startswith='[Seed]',
+            ).delete()
             # Delete payments → subscriptions → projects (ProtectedFKs)
-            for project in Project.objects.filter(client=user):
+            for project in projects:
                 for sub in HostingSubscription.objects.filter(project=project):
                     Payment.objects.filter(subscription=sub).delete()
                 HostingSubscription.objects.filter(project=project).delete()
-            Project.objects.filter(client=user).delete()
-            BusinessProposal.objects.filter(client_email=CLIENT_EMAIL).delete()
-            user.delete()
-            self.stdout.write(f'  Deleted existing user: {CLIENT_EMAIL}')
+            projects.delete()
+            BusinessProposal.objects.filter(
+                client_email=CLIENT_EMAIL, slug=PROPOSAL_SLUG,
+            ).delete()
+            self.stdout.write(f'  Cleared Mi Huella seed project data for: {CLIENT_EMAIL}')
 
     def _create_client(self):
         if User.objects.filter(email=CLIENT_EMAIL).exists():
@@ -215,7 +223,7 @@ class Command(BaseCommand):
         return user
 
     def _create_proposal(self, client):
-        if BusinessProposal.objects.filter(client_email=CLIENT_EMAIL).exists():
+        if BusinessProposal.objects.filter(client_email=CLIENT_EMAIL, slug=PROPOSAL_SLUG).exists():
             self.stdout.write(f'  Proposal already exists for {CLIENT_EMAIL}')
             return
 
@@ -227,7 +235,7 @@ class Command(BaseCommand):
             client_name='Laura Blanco',
             client_email=CLIENT_EMAIL,
             client_phone='+57 315 420 8899',
-            slug='mi-huella-plataforma-adopcion',
+            slug=PROPOSAL_SLUG,
             language='es',
             status=BusinessProposal.Status.ACCEPTED,
             total_investment=PROPOSAL_INVESTMENT,
@@ -657,11 +665,18 @@ class Command(BaseCommand):
             start_date=today - timedelta(days=45),
             estimated_end_date=today + timedelta(days=90),
         )
+        ProjectPhase.objects.create(
+            project=project,
+            business_proposal=BusinessProposal.objects.get(
+                client_email=CLIENT_EMAIL, slug=PROPOSAL_SLUG,
+            ),
+            order=0,
+        )
         self.stdout.write(self.style.SUCCESS(f'  Created project: {PROJECT_NAME}'))
         return project
 
     def _create_requirements(self, project):
-        seed_validation_guides(project, VALIDATION_GUIDES, anchor_now=self.seed_context.anchor_now)
+        seed_validation_guides(project, VALIDATION_GUIDES, context=self.seed_context)
 
     def _create_change_requests(self, project, client, admin):
         if ChangeRequest.objects.filter(project=project).exists():

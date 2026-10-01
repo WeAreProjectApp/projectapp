@@ -5,7 +5,7 @@ from rest_framework import serializers
 class StrictSerializer(serializers.Serializer):
     def to_internal_value(self, data):
         if not isinstance(data, dict):
-            raise serializers.ValidationError('Se esperaba un objeto JSON.')
+            raise serializers.ValidationError({'non_field_errors': ['Se esperaba un objeto JSON.']})
         unknown = set(data) - set(self.fields)
         if unknown:
             raise serializers.ValidationError({key: 'Campo no permitido.' for key in sorted(unknown)})

@@ -760,10 +760,10 @@ class Command(BaseCommand):
         return proposal
 
     def _create_requirements(self, project):
-        seed_validation_guides(project, VALIDATION_GUIDES_ECOMMERCE, anchor_now=self.seed_context.anchor_now)
+        seed_validation_guides(project, VALIDATION_GUIDES_ECOMMERCE, context=self.seed_context)
 
     def _create_inventory_requirements(self, project):
-        seed_validation_guides(project, VALIDATION_GUIDES_INVENTORY, anchor_now=self.seed_context.anchor_now)
+        seed_validation_guides(project, VALIDATION_GUIDES_INVENTORY, context=self.seed_context)
 
     def _create_change_requests(self, project, client_user, admin_user):
         if ChangeRequest.objects.filter(project=project).exists():
