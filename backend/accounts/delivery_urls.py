@@ -5,6 +5,11 @@ from accounts import views_delivery as views
 urlpatterns = [
     path('', views.delivery_overview, name='delivery-overview'),
     path('prompt/', views.delivery_prompt, name='delivery-prompt'),
+    path('prompt/options/', views.delivery_prompt_options, name='delivery-prompt-options'),
+    path('prompt/contexts/', views.delivery_prompt_contexts, name='delivery-prompt-contexts'),
+    path('prompt/<uuid:context_id>/', views.delivery_prompt_context, name='delivery-prompt-context'),
+    path('prompt/<uuid:context_id>/sources/<str:source_key>/download/', views.delivery_prompt_source_download, name='delivery-prompt-source-download'),
+    path('reply/preview/', views.delivery_reply_preview, name='delivery-reply-preview'),
     path('import/preview/', views.delivery_import, name='delivery-import-preview'),
     path('import/apply/', views.delivery_import, {'apply': True}, name='delivery-import-apply'),
     path('stages/<int:stage_id>/publish/', views.delivery_publish, name='delivery-publish'),

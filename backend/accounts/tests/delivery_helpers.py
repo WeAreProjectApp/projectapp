@@ -36,6 +36,14 @@ def version(context):
     return DeliveryWorkspace.objects.filter(project=context.project).values_list('version', flat=True).first() or 0
 
 
+def prepare_prompt(context, **overrides):
+    from accounts.services.delivery_authoring import create_prompt_context
+    values = {'expected_version': version(context), 'request_id': 'prepare-guides',
+              'mode': 'guides', 'contract_id': context.contract.pk}
+    values.update(overrides)
+    return create_prompt_context(context.project.pk, context.admin, values)
+
+
 def publish(context, request_id='publish-1'):
     return delivery.publish_stage(context.project.pk, context.admin, context.stage.pk,
                                   {'expected_version': version(context), 'request_id': request_id})

@@ -594,7 +594,21 @@ def delete_document(request, document_id):
         return Response(status=status.HTTP_204_NO_CONTENT)
     try:
         document.delete()
-    except ProtectedError:
+    except ProtectedError as exc:
+        retained_models = {
+            'accounts.ProjectContract', 'accounts.ContractAmendment',
+            'accounts.DeliveryDocumentLink', 'accounts.DeliveryReviewDocumentEvidence',
+            'accounts.DeliveryPromptSource',
+        }
+        if any(item._meta.label in retained_models for item in exc.protected_objects):
+            return error_response(
+                'Este documento forma parte de una fuente o evidencia contractual '
+                'retenida y no se puede eliminar.',
+                code='document_used_in_delivery',
+                hint='Puedes archivarlo. Las copias usadas en guías, respuestas '
+                     'y conformidades deben conservarse.',
+                status=status.HTTP_409_CONFLICT,
+            )
         return Response(
             {
                 'detail': (

@@ -1,6 +1,7 @@
 """Thin JWT endpoints over the shared delivery services."""
 from django.http import HttpResponse
 from django.utils.text import slugify
+from django.utils.http import content_disposition_header
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
@@ -10,6 +11,8 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 from accounts.services import delivery_workflow as delivery
 from accounts.services.delivery_access import fail
 from accounts.services.delivery_review_evidence import list_review_evidence, review_evidence_pdf
+from accounts.services import delivery_authoring as authoring
+from accounts.serializers_delivery import VersionedSerializer
 
 
 def delivery_endpoint(methods):
@@ -33,13 +36,51 @@ def delivery_node(request, project_id, kind, node_id=None):
     return Response(result, status=201 if request.method == 'POST' else 200)
 
 
-@delivery_endpoint(['GET'])
+@delivery_endpoint(['GET', 'POST'])
 def delivery_prompt(request, project_id):
-    return Response(delivery.authoring_prompt(project_id, request.user))
+    if request.method == 'POST':
+        return Response(authoring.create_prompt_context(project_id, request.user, request.data), status=201)
+    return Response(authoring.prompt_options(project_id, request.user))
+
+
+@delivery_endpoint(['GET'])
+def delivery_prompt_options(request, project_id):
+    return Response(authoring.prompt_options(project_id, request.user))
+
+
+@delivery_endpoint(['GET'])
+def delivery_prompt_context(request, project_id, context_id):
+    return Response(authoring.get_prompt_context(project_id, request.user, context_id))
+
+
+@delivery_endpoint(['GET'])
+def delivery_prompt_contexts(request, project_id):
+    return Response(authoring.list_prompt_contexts(project_id, request.user))
+
+
+@delivery_endpoint(['GET'])
+def delivery_prompt_source_download(request, project_id, context_id, source_key):
+    raw, filename, content_type = authoring.prompt_source_file(project_id, request.user, context_id, source_key)
+    response = HttpResponse(raw, content_type=content_type)
+    response['Content-Disposition'] = content_disposition_header(True, filename)
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@delivery_endpoint(['POST'])
+def delivery_reply_preview(request, project_id):
+    if not isinstance(request.data, dict) or set(request.data) - {'payload', 'expected_version', 'request_id'}:
+        fail('La preparación de respuesta contiene campos no permitidos.')
+    serializer = VersionedSerializer(data={key: value for key, value in request.data.items() if key != 'payload'})
+    serializer.is_valid(raise_exception=True)
+    return Response(authoring.preview_reply(project_id, request.user, request.data.get('payload'),
+                                           serializer.validated_data['expected_version']))
 
 
 @delivery_endpoint(['POST'])
 def delivery_import(request, project_id, apply=False):
+    if not isinstance(request.data, dict):
+        fail('Se esperaba un objeto JSON.')
     unknown = set(request.data) - {'payload', 'expected_version', 'request_id'}
     if unknown:
         fail('La importación contiene campos no permitidos.')

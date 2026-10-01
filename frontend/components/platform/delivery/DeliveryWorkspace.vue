@@ -19,6 +19,8 @@ import DeliveryDocumentPicker from './DeliveryDocumentPicker.vue'
 import DeliveryDocuments from './DeliveryDocuments.vue'
 import DeliveryReviewForm from './DeliveryReviewForm.vue'
 import DeliveryStage from './DeliveryStage.vue'
+import DeliveryPromptWorkbench from './DeliveryPromptWorkbench.vue'
+import DeliveryPromptSources from './DeliveryPromptSources.vue'
 
 const props = defineProps({ projectId: { type: [String, Number], required: true } })
 const { t } = useI18n()
@@ -47,13 +49,19 @@ const reportMessage = ref('')
 const reportRequirementIds = ref([])
 const reportDocumentIds = ref([])
 const reportInternal = ref(false)
+const reportPromptProof = ref(null)
+const reportHumanReviewed = ref(false)
+const retainedPromptContext = ref(null)
+const loadingPromptContext = ref(false)
+const promptContexts = ref([])
+const loadingPromptHistory = ref(false)
 const documentId = ref('')
 const signature = reactive({ signer_name: '', signed_at: '', attestation: '', file: null, accept: false })
 const signatureErrors = reactive({})
 const entityNames = { contracts: 'contract', amendments: 'amendment', scopes: 'scope', phases: 'phase', stages: 'stage', requirements: 'requirement' }
 const modalTitle = computed(() => {
   if (dialog.value === 'author') return t(author.value.node ? 'platformDelivery.editTitle' : 'platformDelivery.createTitle', { entity: t(`platformDelivery.${entityNames[author.value.entity]}`) })
-  const keys = { import: 'importTitle', review: 'reviewTitle', historical: 'historicalTitle', report: 'reportTitle', externalSignature: 'signatureTitle', sign: 'signTitle', attach: 'attachTitle' }
+  const keys = { import: 'importTitle', guidesPrompt: 'promptAuthoring.createGuides', replyPrompt: 'promptAuthoring.prepareReply', promptContext: 'promptSources.title', promptHistory: 'promptSources.history', review: 'reviewTitle', historical: 'historicalTitle', report: 'reportTitle', externalSignature: 'signatureTitle', sign: 'signTitle', attach: 'attachTitle' }
   return t(`platformDelivery.${keys[dialog.value] || 'close'}`, { title: selected.value?.node?.title || selected.value?.title || '', entity: selected.value?.node?.title || '' })
 })
 const chosenDocuments = computed(() => {
@@ -130,11 +138,55 @@ async function submitReview(payload) {
 function openReport(stage) {
   reportMessage.value = ''; reportRequirementIds.value = []; reportDocumentIds.value = []
   reportInternal.value = false
+  reportPromptProof.value = null
+  reportHumanReviewed.value = false
   open('report', stage)
+}
+function openReplyPrompt(stage) { open('replyPrompt', stage) }
+function useReplyDraft(proof) {
+  const stage = selected.value
+  openReport(stage)
+  reportPromptProof.value = proof
+  reportMessage.value = proof.message
+}
+function finishPromptImport() { close(); announce(t('platformDelivery.imported')) }
+async function openPromptContext(id) {
+  retainedPromptContext.value = null
+  open('promptContext', { context_id: id })
+  loadingPromptContext.value = true
+  const result = await store.fetchPromptContext(id)
+  if (dialog.value !== 'promptContext' || selected.value?.context_id !== id) return
+  if (result.success) retainedPromptContext.value = result.data
+  else failure(result)
+  loadingPromptContext.value = false
+}
+async function downloadPromptSource(source) {
+  const result = await store.downloadPromptSource(source)
+  if (!result.success) failure(result)
+}
+async function openPromptHistory() {
+  promptContexts.value = []
+  open('promptHistory')
+  loadingPromptHistory.value = true
+  const result = await store.fetchPromptContexts()
+  if (dialog.value !== 'promptHistory') return
+  if (result.success) promptContexts.value = result.data.contexts
+  else failure(result)
+  loadingPromptHistory.value = false
 }
 async function sendReport() {
   if (!reportMessage.value.trim()) { formError.value = t('platformDelivery.messageRequired'); return }
-  const result = await store.sendMessage({ level: 'stage', target_id: selected.value.id, message: reportMessage.value.trim(), requirement_ids: reportRequirementIds.value, document_ids: reportDocumentIds.value, is_internal: isAdmin.value && reportInternal.value })
+  if (reportPromptProof.value && !reportHumanReviewed.value) { formError.value = t('platformDelivery.promptAuthoring.reviewRequired'); return }
+  const result = await store.sendMessage({
+    level: 'stage', target_id: selected.value.id, message: reportMessage.value.trim(),
+    requirement_ids: reportRequirementIds.value, document_ids: reportDocumentIds.value,
+    is_internal: isAdmin.value && reportInternal.value,
+    ...(reportPromptProof.value ? {
+      context_id: reportPromptProof.value.context_id,
+      source_references: reportPromptProof.value.source_references,
+      classifications: reportPromptProof.value.classifications, human_reviewed: true,
+    } : {}),
+  })
   if (!result.success) { failure(result); return }
   close(); announce(t('platformDelivery.sent'))
 }
@@ -153,13 +205,6 @@ async function copyStage(stage) {
   const path = localePath({ path: `/platform/projects/${props.projectId}/delivery`, query: { stage: stage.id } })
   const success = await clipboard.copyText({ key: `stage-${stage.id}`, text: new URL(path, window.location.origin).href, successLabel: t('platformDelivery.copied'), errorLabel: t('platformDelivery.copyError') })
   announce(t(success ? 'platformDelivery.copied' : 'platformDelivery.copyError'), success ? 'success' : 'danger')
-}
-async function copyPrompt() {
-  const result = await store.fetchPrompt()
-  if (!result.success) { failure(result); return }
-  const success = await clipboard.copyText({ key: 'prompt', text: result.data.prompt, successLabel: t('platformDelivery.copied'), errorLabel: t('platformDelivery.copyError') })
-  announce(t(success ? 'platformDelivery.copied' : 'platformDelivery.copyError'), success ? 'success' : 'danger')
-  if (!importJson.value) importJson.value = JSON.stringify(result.data.template, null, 2)
 }
 function openImport() { preview.value = null; previewedJson.value = ''; open('import') }
 async function previewImport() {
@@ -207,6 +252,7 @@ async function refreshVersion() { close(); await load() }
 onMounted(load)
 watch(() => props.projectId, load)
 watch(() => route.query.stage, () => nextTick(scrollToStage))
+watch(reportMessage, () => { reportHumanReviewed.value = false })
 </script>
 
 <template>
@@ -234,7 +280,8 @@ watch(() => route.query.stage, () => nextTick(scrollToStage))
         <BaseButton data-testid="delivery-add-contract" @click="openAuthor({ entity: 'contracts' })">{{ t('platformDelivery.addContract') }}</BaseButton>
         <BaseButton variant="secondary" data-testid="delivery-add-scope" @click="openAuthor({ entity: 'scopes' })">{{ t('platformDelivery.addScope') }}</BaseButton>
         <BaseButton variant="secondary" data-testid="delivery-import" @click="openImport">{{ t('platformDelivery.import') }}</BaseButton>
-        <BaseButton variant="ghost" data-testid="delivery-copy-prompt" @click="copyPrompt">{{ t('platformDelivery.copyPrompt') }}</BaseButton>
+        <BaseButton variant="secondary" data-testid="delivery-create-guides" @click="open('guidesPrompt')">{{ t('platformDelivery.promptAuthoring.createGuides') }}</BaseButton>
+        <BaseButton variant="ghost" data-testid="delivery-prompt-history" @click="openPromptHistory">{{ t('platformDelivery.promptSources.history') }}</BaseButton>
       </div>
       <BaseAlert v-if="isAdmin && optionsError" variant="warning">
         <p>{{ t('platformDelivery.documentOptionsError') }}</p>
@@ -310,13 +357,13 @@ watch(() => route.query.stage, () => nextTick(scrollToStage))
             </header>
             <DeliveryDocuments :documents="phase.documents" :can-edit="isAdmin && phase.status !== 'approved'" @attach="openAttach({ level: 'phase', node: phase })" @download="downloadDocument" @unlink="requestUnlink" />
             <p v-if="!phase.stages.length" class="text-sm text-text-muted">{{ t('platformDelivery.emptyPhase') }}</p>
-            <DeliveryStage v-for="stage in phase.stages" :key="stage.id" :stage="stage" :project-id="projectId" :is-admin="!!isAdmin" :busy="store.isUpdating" @author="openAuthor" @remove="requestRemove" @publish="requestPublish" @review="openReview($event)" @historical="openReview($event, true)" @report="openReport" @attach="openAttach" @download="downloadDocument" @unlink="requestUnlink" @copy="copyStage" />
+            <DeliveryStage v-for="stage in phase.stages" :key="stage.id" :stage="stage" :project-id="projectId" :is-admin="!!isAdmin" :busy="store.isUpdating" @author="openAuthor" @remove="requestRemove" @publish="requestPublish" @review="openReview($event)" @historical="openReview($event, true)" @report="openReport" @prepare-reply="openReplyPrompt" @prompt-context="openPromptContext" @attach="openAttach" @download="downloadDocument" @unlink="requestUnlink" @copy="copyStage" />
           </section>
         </section>
       </section>
     </template>
 
-    <BaseModal :model-value="!!dialog" :kind="dialog === 'confirm' ? 'confirm' : ['review', 'historical', 'author', 'import'].includes(dialog) ? 'form-wide' : 'form'" :close-on-backdrop="!store.isUpdating" :close-on-esc="!store.isUpdating" @update:model-value="!$event && close()">
+    <BaseModal :model-value="!!dialog" :kind="dialog === 'confirm' ? 'confirm' : ['review', 'historical', 'author', 'import', 'guidesPrompt', 'replyPrompt', 'promptContext', 'promptHistory'].includes(dialog) ? 'form-wide' : 'form'" :close-on-backdrop="!store.isUpdating" :close-on-esc="!store.isUpdating" @update:model-value="!$event && close()">
       <div class="space-y-5 p-4 sm:p-6">
         <template v-if="dialog === 'confirm'">
           <h2 class="text-lg font-semibold text-text-default">{{ t(confirm.kind === 'publish' ? 'platformDelivery.publishTitle' : 'platformDelivery.confirmRemove', { title: confirm.node.title }) }}</h2>
@@ -327,7 +374,28 @@ watch(() => route.query.stage, () => nextTick(scrollToStage))
         </template>
         <template v-else>
           <h2 class="text-lg font-semibold text-text-default">{{ modalTitle }}</h2>
-          <DeliveryAuthoringForm v-if="dialog === 'author'" :key="`${author.entity}-${author.node?.id || 'new'}`" :entity="author.entity" :initial="author.node || author.initial || {}" :contracts="store.contracts" :documents="store.documentOptions" :proposal-documents="store.proposalDocumentOptions" :commercial-phases="commercialPhases" :loading="store.isUpdating" :error="formError" @submit="saveAuthor" @cancel="close" />
+          <DeliveryPromptWorkbench v-if="dialog === 'guidesPrompt' || dialog === 'replyPrompt'" :key="dialog + '-' + (selected?.id || 'initial')" :mode="dialog === 'replyPrompt' ? 'reply' : 'guides'" :stage="selected" @cancel="close" @imported="finishPromptImport" @reply="useReplyDraft" />
+          <section v-else-if="dialog === 'promptContext'" class="space-y-4">
+            <p v-if="loadingPromptContext" class="text-sm text-text-muted" role="status">{{ t('platformDelivery.loading') }}</p>
+            <BaseAlert v-if="formError" variant="danger" role="alert">{{ formError }}</BaseAlert>
+            <DeliveryPromptSources v-if="retainedPromptContext" :context="retainedPromptContext" @download="downloadPromptSource" />
+            <BaseModalActions><BaseButton variant="ghost" @click="close">{{ t('platformDelivery.close') }}</BaseButton></BaseModalActions>
+          </section>
+          <section v-else-if="dialog === 'promptHistory'" class="space-y-4" data-testid="delivery-prompt-history-list">
+            <p v-if="loadingPromptHistory" class="text-sm text-text-muted" role="status">{{ t('platformDelivery.loading') }}</p>
+            <BaseAlert v-if="formError" variant="danger" role="alert">{{ formError }}</BaseAlert>
+            <p v-if="!loadingPromptHistory && !formError && !promptContexts.length" class="text-sm text-text-muted">{{ t('platformDelivery.promptSources.noHistory') }}</p>
+            <p v-if="promptContexts.length" class="text-sm text-text-muted">{{ t('platformDelivery.promptSources.historyHint') }}</p>
+            <article v-for="item in promptContexts" :key="item.id" class="min-w-0 space-y-2 rounded-xl border border-border-default p-4" :data-testid="`delivery-prompt-history-${item.id}`">
+              <h3 class="break-words text-sm font-semibold text-text-default">{{ store.contracts.find((contract) => contract.id === item.contract_id)?.title || t('platformDelivery.contract') }}</h3>
+              <p class="break-words text-sm text-text-muted">{{ t(item.mode === 'guides' ? 'platformDelivery.promptAuthoring.createGuides' : 'platformDelivery.promptAuthoring.prepareReply') }} · {{ item.created_at }}</p>
+              <p class="break-all text-xs text-text-muted">{{ item.id }}</p>
+              <BaseBadge :variant="item.complete ? 'success' : 'warning'">{{ t(item.complete ? 'platformDelivery.promptSources.status.included' : 'platformDelivery.promptSources.status.partial') }}</BaseBadge>
+              <div><BaseButton variant="secondary" size="sm" @click="openPromptContext(item.id)">{{ t('platformDelivery.promptSources.openSources') }}</BaseButton></div>
+            </article>
+            <BaseModalActions><BaseButton variant="ghost" @click="close">{{ t('platformDelivery.close') }}</BaseButton></BaseModalActions>
+          </section>
+          <DeliveryAuthoringForm v-else-if="dialog === 'author'" :key="`${author.entity}-${author.node?.id || 'new'}`" :entity="author.entity" :initial="author.node || author.initial || {}" :contracts="store.contracts" :documents="store.documentOptions" :proposal-documents="store.proposalDocumentOptions" :commercial-phases="commercialPhases" :loading="store.isUpdating" :error="formError" @submit="saveAuthor" @cancel="close" />
           <DeliveryReviewForm v-else-if="dialog === 'review' || dialog === 'historical'" :key="`${dialog}-${selected.id}`" :stage="selected" :historical="dialog === 'historical'" :documents="chosenDocuments" :evidence-messages="store.evidenceMessages" :loading="store.isUpdating" :error="formError" @submit="submitReview" @cancel="close" />
           <template v-else>
             <BaseAlert v-if="formError" variant="danger" role="alert">{{ formError }}</BaseAlert>
@@ -336,6 +404,10 @@ watch(() => route.query.stage, () => nextTick(scrollToStage))
               <BaseFormField :label="t('platformDelivery.message')" for="delivery-report-message" required><BaseTextarea id="delivery-report-message" v-model="reportMessage" :rows="5" data-testid="delivery-report-message" /></BaseFormField>
               <fieldset class="space-y-2"><legend class="mb-2 text-sm font-medium text-text-default">{{ t('platformDelivery.relatedRequirements') }}</legend><BaseCheckbox v-for="requirement in selected.requirements" :key="requirement.id" v-model="reportRequirementIds" :value="requirement.id" class="flex">{{ requirement.title }}</BaseCheckbox></fieldset>
               <DeliveryDocumentPicker v-model="reportDocumentIds" :documents="chosenDocuments" />
+              <template v-if="reportPromptProof">
+                <BaseAlert variant="info">{{ t('platformDelivery.promptAuthoring.manualReply') }}</BaseAlert>
+                <BaseCheckbox v-model="reportHumanReviewed" data-testid="delivery-reply-human-reviewed">{{ t('platformDelivery.promptAuthoring.humanReviewed') }}</BaseCheckbox>
+              </template>
               <BaseCheckbox v-if="isAdmin" v-model="reportInternal">{{ t('platformDelivery.internalMessage') }}</BaseCheckbox>
               <BaseModalActions><BaseButton variant="ghost" @click="close">{{ t('platformDelivery.cancel') }}</BaseButton><BaseButton type="submit" :loading="store.isUpdating" data-testid="delivery-report-submit">{{ t('platformDelivery.send') }}</BaseButton></BaseModalActions>
             </form>
@@ -346,7 +418,7 @@ watch(() => route.query.stage, () => nextTick(scrollToStage))
             </form>
             <section v-else-if="dialog === 'import'" class="space-y-5">
               <p class="text-sm text-text-muted">{{ t('platformDelivery.importHint') }}</p>
-              <BaseButton variant="secondary" @click="copyPrompt">{{ t('platformDelivery.copyPrompt') }}</BaseButton>
+              <BaseAlert variant="info">{{ t('platformDelivery.manualJsonProvenance') }}</BaseAlert>
               <BaseFormField :label="t('platformDelivery.json')" for="delivery-import-json"><BaseTextarea id="delivery-import-json" v-model="importJson" :rows="12" class="font-mono" data-testid="delivery-import-json" /></BaseFormField>
               <BaseAlert v-if="preview?.valid && previewedJson === importJson" variant="success">{{ t('platformDelivery.previewReady') }}</BaseAlert>
               <section v-if="preview" class="space-y-2"><h3 class="text-sm font-medium text-text-default">{{ t('platformDelivery.previewSummary') }}</h3><pre class="max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-xl bg-surface-raised p-4 text-xs text-text-default">{{ previewSummary }}</pre></section>

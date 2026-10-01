@@ -9,7 +9,7 @@ const props = defineProps({
   stage: { type: Object, required: true }, projectId: { type: [String, Number], required: true },
   isAdmin: { type: Boolean, default: false }, busy: { type: Boolean, default: false },
 })
-const emit = defineEmits(['author', 'remove', 'publish', 'review', 'historical', 'report', 'attach', 'download', 'unlink', 'copy'])
+const emit = defineEmits(['author', 'remove', 'publish', 'review', 'historical', 'report', 'prepare-reply', 'prompt-context', 'attach', 'download', 'unlink', 'copy'])
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
@@ -46,6 +46,7 @@ const formattedDate = (value) => value ? new Intl.DateTimeFormat(locale.value, {
         </template>
         <BaseButton v-if="!isAdmin && reviewAvailable()" size="sm" :data-testid="`delivery-review-open-${stage.id}`" @click="emit('review', stage)">{{ t('platformDelivery.review') }}</BaseButton>
         <BaseButton v-if="isAdmin || stage.publication_id" variant="secondary" size="sm" :data-testid="`delivery-report-open-${stage.id}`" @click="emit('report', stage)">{{ t('platformDelivery.report') }}</BaseButton>
+        <BaseButton v-if="isAdmin && stage.publication_id" variant="secondary" size="sm" :data-testid="`delivery-prepare-reply-${stage.id}`" @click="emit('prepare-reply', stage)">{{ t('platformDelivery.promptAuthoring.prepareReply') }}</BaseButton>
         <BaseButton variant="ghost" size="sm" @click="emit('copy', stage)">{{ t('platformDelivery.copyLink') }}</BaseButton>
       </div>
     </header>
@@ -54,6 +55,7 @@ const formattedDate = (value) => value ? new Intl.DateTimeFormat(locale.value, {
     <DeliveryRequirementGuide v-for="requirement in stage.requirements" :key="requirement.id" :requirement="requirement">
       <DeliveryDocuments :documents="requirement.documents" :can-edit="isAdmin && !isFrozen() && requirement.review_status !== 'approved'" @attach="emit('attach', { level: 'requirement', node: requirement })" @download="emit('download', $event)" @unlink="emit('unlink', $event)" />
       <div class="flex flex-wrap gap-2 border-t border-border-muted pt-3">
+        <BaseButton v-if="isAdmin && requirement.context_id" variant="secondary" size="sm" :data-testid="`delivery-guide-sources-${requirement.id}`" @click="emit('prompt-context', requirement.context_id)">{{ t('platformDelivery.promptSources.viewGuideSources') }}</BaseButton>
         <template v-if="isAdmin && !isFrozen() && requirement.review_status !== 'approved'">
           <BaseButton variant="secondary" size="sm" :data-testid="`delivery-edit-requirement-${requirement.id}`" @click="edit('requirements', requirement)">{{ t('platformDelivery.edit') }}</BaseButton>
           <BaseButton variant="danger-ghost" size="sm" @click="emit('remove', { entity: 'requirements', node: requirement })">{{ t('platformDelivery.remove') }}</BaseButton>
@@ -74,6 +76,7 @@ const formattedDate = (value) => value ? new Intl.DateTimeFormat(locale.value, {
         </header>
         <BaseBadge v-if="message.is_internal" variant="neutral">{{ t('platformDelivery.internalMessage') }}</BaseBadge>
         <p class="whitespace-pre-line break-words text-sm text-text-default">{{ message.message }}</p>
+        <BaseButton v-if="isAdmin && message.context_id" variant="secondary" size="sm" :data-testid="`delivery-reply-sources-${message.id}`" @click="emit('prompt-context', message.context_id)">{{ t('platformDelivery.promptSources.viewReplySources') }}</BaseButton>
         <ul v-if="message.requirement_ids?.length" class="flex flex-wrap gap-2">
           <li v-for="id in message.requirement_ids" :key="id" class="text-xs text-text-muted">{{ stage.requirements.find((item) => item.id === id)?.title }}</li>
         </ul>

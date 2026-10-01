@@ -3693,8 +3693,18 @@ def delete_proposal_document(request, proposal_id, doc_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    try:
+        doc.delete()
+    except ProtectedError:
+        return error_response(
+            'Este documento forma parte de una fuente o evidencia contractual '
+            'retenida y no se puede eliminar.',
+            code='document_used_in_delivery',
+            hint='Conserva el original: las capturas de guías y respuestas son inmutables.',
+            status=status.HTTP_409_CONFLICT,
+        )
+    # Resolve all protected database references before removing the original.
     doc.file.delete(save=False)
-    doc.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 

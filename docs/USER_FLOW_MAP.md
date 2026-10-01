@@ -6352,7 +6352,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-deliverable-detail` | platform | P2 | success | 1 |
 | `platform-deliverables` | platform | P2 | success,error,display | 1 |
 | `platform-delivery-authoring` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-guide-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-import` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-responses` | platform | P1 | success,error | 1 |
 | `platform-delivery-review` | platform | P1 | display,success,error | 1 |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
@@ -8245,6 +8247,56 @@ adaptador. `/platform/changes` redirige a proyectos.
 
 Código: `frontend/pages/platform/projects/[id]/changes.vue`, componentes
 `frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
+
+### Platform: crear guías con fuentes conservadas
+
+Fuente: `DeliveryPromptWorkbench.vue`, `DeliveryPromptSources.vue` y
+`accounts.services.delivery_authoring`.
+
+El administrador elige un contrato, los otrosíes aplicables y anexos o referencias
+explícitos. Puede empezar sin una etapa previa. Cada fuente conserva su identidad,
+versión conocida, fecha, hash, copia y fragmentos citables; la selección de un anexo
+no demuestra su incorporación jurídica. Las fuentes faltantes, ilegibles o
+parciales y las incertidumbres aparecen antes de usar el prompt.
+
+El JSON con contexto y citas se valida contra las capturas del servidor. La
+previsualización no escribe; la aplicación prepara borradores y conserva guías
+aprobadas. Cambiar la selección invalida el prompt y cambiar el JSON exige otra
+previsualización. El JSON manual anterior se identifica como sin trazabilidad.
+Las correcciones muestran y conservan las citas originales y exigen revisar su
+aplicabilidad al texto final. El historial permite reabrir preparaciones y
+descargar las copias exactas.
+
+`delivery-guide-prompt.spec.js` cubre aplicar un borrador con cita verificada,
+contrato obligatorio, rechazo de una cita inventada y consulta de un anexo faltante
+después de navegar desde el proyecto.
+También cubre la corrección trazada, descarga comprobada por huella, consulta
+del historial y operación en los cinco tamaños de pantalla.
+
+### Platform: preparar y revisar una respuesta fundamentada
+
+Fuente: `DeliveryPromptWorkbench.vue`, `DeliveryWorkspace.vue` y
+`accounts.services.delivery_authoring`.
+
+El administrador abre «Preparar respuesta» en una etapa publicada. El contrato y
+alcance se obtienen de esa etapa; el prompt distingue las fuentes contractuales de
+las guías, rondas, decisiones y conversación pública. No aparecer en una guía no
+demuestra que un pedido esté fuera del contrato, y una conversación no modifica
+el acuerdo por sí sola.
+
+Cada pedido se clasifica como dentro, fuera o indeterminado, con citas que el
+servidor verifica contra las fuentes conservadas. Una fuente incompleta o una
+incertidumbre bloquea una conclusión definitiva fuera del alcance. Validar la
+cita acredita su existencia, no su interpretación.
+
+La respuesta es un borrador editable. Usarlo no envía un mensaje; el administrador
+revisa el texto final y lo envía mediante la acción manual existente, con documento
+opcional. Una edición posterior exige revisar de nuevo. Las firmas y conformidades
+del cliente permanecen intactas.
+
+`delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
+editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
+consulta de la conversación pública que originó el prompt.
 
 ### FLOW: `proposal-closing-contact`
 
