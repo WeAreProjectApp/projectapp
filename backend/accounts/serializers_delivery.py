@@ -14,6 +14,12 @@ class StrictSerializer(serializers.Serializer):
 
 class GuideSerializer(StrictSerializer):
     role = serializers.CharField(required=False, allow_blank=True, max_length=300)
+    access = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    allowed_actions = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    blocked_actions = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    blocked_steps = serializers.ListField(child=serializers.CharField(max_length=3000), required=False, max_length=100)
+    blocked_result = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    dependencies = serializers.CharField(required=False, allow_blank=True, max_length=20000)
     environment = serializers.CharField(required=False, allow_blank=True, max_length=500)
     preparation = serializers.CharField(required=False, allow_blank=True, max_length=20000)
     data = serializers.CharField(required=False, allow_blank=True, max_length=20000)
@@ -161,6 +167,18 @@ class ReplyPayloadSerializer(StrictSerializer):
     context_id = serializers.UUIDField()
     response_text = serializers.CharField(max_length=20000)
     classifications = ReplyClassificationSerializer(many=True, allow_empty=False, max_length=100)
+
+
+class ReplyDestinationSerializer(StrictSerializer):
+    kind = serializers.ChoiceField(choices=['bug', 'change'])
+    id = serializers.IntegerField(min_value=1)
+
+
+class ContractReplyContextSerializer(PromptContextSerializer):
+    mode = serializers.ChoiceField(choices=['reply'], default='reply')
+    contract_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
+    destination = ReplyDestinationSerializer()
+    expected_ticket_version = serializers.IntegerField(min_value=1)
 
 
 class SignatureSerializer(PublishSerializer):
