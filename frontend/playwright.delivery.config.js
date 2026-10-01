@@ -4,6 +4,7 @@ const python = process.env.DELIVERY_TEST_PYTHON || 'python3'
 const quotedPython = "'" + python.replaceAll("'", "'\\''") + "'"
 
 export default defineConfig({
+  globalSetup: './e2e/delivery/global-setup.js',
   testDir: './e2e',
   testMatch: ['delivery/*.spec.js'],
   timeout: 60_000,

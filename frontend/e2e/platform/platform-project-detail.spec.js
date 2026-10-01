@@ -4,7 +4,7 @@
  * @flow:platform-project-detail
  * Covers: project detail render with stats, module cards,
  *         back link to projects, edit modal (admin),
- *         not found state, board link navigation.
+ *         not found state, delivery link navigation.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -108,14 +108,17 @@ test.describe('Platform Project Detail — Admin', () => {
   test('renders the project delivery navigation link', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (display — the project nav exposes its delivery destination)
+    // quality: allow-deep-link (the authenticated projects list is the entry point; project detail is reached by selecting its row)
     await setupDetailMocks(page, { user: mockPlatformAdmin });
-    await gotoProjectDetail(page);
+    await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
+    await page.getByTestId('project-row-1').click();
+    await expect(page.getByRole('heading', { name: mockProject.name, exact: true })).toBeVisible();
 
-    const boardLink = page.getByRole('link', { name: 'Entregas', exact: true });
-    await expect(boardLink).toBeVisible();
+    const deliveryLink = page.getByRole('link', { name: 'Entregas', exact: true });
+    await expect(deliveryLink).toBeVisible();
     // i18n prefix strategy adds locale prefix to all hrefs
-    await expect(boardLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
+    await expect(deliveryLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
   });
 
   test('admin jumps back to the commercial record in a new tab (PA-50)', {

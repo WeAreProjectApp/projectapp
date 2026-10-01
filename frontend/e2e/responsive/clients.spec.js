@@ -20,7 +20,12 @@ const clientRow = { user_id: 9002, first_name: 'Client', last_name: 'E2E', email
 const clientFixture = { id: 101, name: 'Kore Healths', email: 'kore@test.com', phone: '+57 300 111 1111', company: 'Kore', is_onboarded: true, is_email_placeholder: false, total_proposals: 1, projects_count: 1, diagnostics_count: 1, is_orphan: false, is_archived: false, hostings_count: 2, active_hostings_count: 1, active_projects_count: 1, documents_count: 3, documents_no_project_count: 1, created_at: '2026-01-01T00:00:00Z' };
 const secondClientFixture = { ...clientFixture, id: 102, name: 'Mimittos SAS', email: 'mimittos@test.com', company: 'Mimittos', total_proposals: 0, hostings_count: 0, active_hostings_count: 0, documents_count: 0 };
 const proposalFixture = { id: 1, title: 'Propuesta Alpha', status: 'sent', total_investment: 5000000, currency: 'COP', view_count: 5 };
-const boardRequirement = { id: 11, title: 'Diseño de landing', status: 'in_progress', column: 'doing', priority: 'high', description: 'La tarjeta conserva su contenido en tableta.' };
+const deliveryRequirement = { id: 11, key: 'save-record', title: 'Guardar un registro', version: 1, stage_id: 21, review_status: 'in_review', guide: { role: 'Cliente', environment: 'Staging', preparation: 'Usar la cuenta de validación.', data: 'Un registro preparado para la prueba.', steps: ['Abrir el registro preparado.', 'Guardar los cambios.'], expected_result: 'Los cambios aparecen al volver a abrir el registro.', failure_signals: 'El formulario pierde los datos.' }, documents: [], reviews: [] };
+const deliveryWorkspace = {
+  version: 1, is_admin: false, project: { ...platformProject, documents: [] },
+  contracts: [{ id: 1, key: 'implementation', title: 'Contrato de implementación firmado', signature_status: 'external', signer_name: 'Client E2E', documents: [], amendments: [] }],
+  scopes: [{ id: 2, key: 'agreed-scope', title: 'Alcance acordado', contract_id: 1, is_current: true, status: 'in_review', documents: [], phases: [{ id: 3, key: 'initial-phase', title: 'Primera fase de validación', status: 'in_review', documents: [], stages: [{ id: 21, key: 'record-stage', title: 'Revisar el guardado de registros', editorial_status: 'published', publication_id: 1, status: 'in_review', requirements: [deliveryRequirement], documents: [], messages: [] }] }] }],
+};
 const bugFixture = { id: 31, title: 'El botón no guarda', status: 'open', description: 'El formulario pierde la acción principal.', requirement_id: 11, created_at: '2026-08-20T00:00:00Z' };
 const changeFixture = { id: 41, title: 'Agregar reporte de auditoría', status: 'pending', description: 'El cliente puede pedir cambios desde la plataforma.', requirement_id: 11, created_at: '2026-08-21T00:00:00Z' };
 const notificationFixture = { id: 51, title: 'Entrega publicada', body: 'Manual de marca disponible.', is_read: false, created_at: '2026-08-22T00:00:00Z', route: '/platform/projects/1/deliverables' };
@@ -36,7 +41,8 @@ function platformHandler(user = mockPlatformAdmin) {
     if (apiPath === 'accounts/projects/1/' && method === 'GET') return json(platformProject);
     if (apiPath === 'accounts/projects/1/access/' && method === 'GET') return json(projectAccessDetail);
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') return json([projectPhase]);
-    if (apiPath === 'accounts/projects/1/requirements/' && method === 'GET') return json([boardRequirement]);
+    if (apiPath === 'accounts/projects/1/requirements/' && method === 'GET') return json([deliveryRequirement]);
+    if (apiPath === 'accounts/projects/1/delivery/' && method === 'GET') return json(deliveryWorkspace);
     if (apiPath === 'accounts/projects/1/bug-reports/' && method === 'GET') return json([bugFixture]);
     if (apiPath === 'accounts/projects/1/change-requests/' && method === 'GET') return json([changeFixture]);
     if (apiPath === 'accounts/projects/1/collection-accounts/' && method === 'GET') return json([collectionFixture]);
@@ -102,6 +108,7 @@ const visualKeys = [
   'frontend/pages/platform/profile.vue',
   'frontend/pages/platform/projects/index.vue',
   'frontend/pages/platform/projects/[id]/index.vue',
+  'frontend/pages/platform/projects/[id]/delivery.vue',
   'frontend/pages/platform/projects/[id]/bugs.vue',
   'frontend/pages/platform/projects/[id]/changes.vue',
   'frontend/pages/platform/projects/[id]/collection-accounts.vue',
@@ -126,6 +133,7 @@ const flowForScenario = Object.freeze({
   'frontend/pages/platform/profile.vue': 'platform-profile-edit',
   'frontend/pages/platform/projects/index.vue': 'platform-project-list',
   'frontend/pages/platform/projects/[id]/index.vue': 'platform-project-detail',
+  'frontend/pages/platform/projects/[id]/delivery.vue': 'platform-delivery-review',
   'frontend/pages/platform/projects/[id]/bugs.vue': 'platform-bug-reports',
   'frontend/pages/platform/projects/[id]/changes.vue': 'platform-change-requests',
   'frontend/pages/platform/projects/[id]/collection-accounts.vue': 'platform-project-collection-accounts',
@@ -256,13 +264,27 @@ async function exerciseCatalogView(page, scenario, profile) {
 
   await setupPlatform(
     page,
-    scenario.catalogKey === 'frontend/pages/platform/documents/index.vue'
+    ['frontend/pages/platform/documents/index.vue', 'frontend/pages/platform/projects/[id]/delivery.vue'].includes(scenario.catalogKey)
       ? mockPlatformClient
       : mockPlatformAdmin,
   );
   // quality: allow-deep-link (catalog dynamic pages need their resolved fixture id; each route then drives a visible UI control)
-  await page.goto(scenario.resolvedUrl, { waitUntil: 'domcontentloaded' });
+  const url = scenario.catalogKey === 'frontend/pages/platform/projects/[id]/delivery.vue'
+    ? `/es-co${scenario.resolvedUrl}`
+    : scenario.resolvedUrl;
+  await page.goto(url, { waitUntil: 'domcontentloaded' });
   await platformNavigationByProfile[profile](page);
+
+  if (scenario.catalogKey === 'frontend/pages/platform/projects/[id]/delivery.vue') {
+    await page.getByTestId('delivery-review-open-21').click();
+    const decision = page.getByTestId('delivery-review-decision-11');
+    await decision.selectOption('approved');
+    await expect(decision).toHaveValue('approved');
+    await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click();
+    const guide = page.getByTestId('delivery-requirement-11');
+    await expect(guide).toContainText(deliveryRequirement.guide.expected_result);
+    return guide;
+  }
 
   const expected = {
     'frontend/pages/platform/documents/index.vue': 'Contrato de implementación',
