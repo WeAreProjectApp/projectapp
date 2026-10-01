@@ -8,6 +8,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_SECTION_SYNC } from '../helpers/flow-tags.js';
 
@@ -93,9 +94,9 @@ test.describe('Admin Proposal Section Sync (Preview & Apply)', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Det. técnico' }).click();
+    await selectProposalDestination(page, 'proposal', 'technical');
 
     await page.getByRole('button', { name: 'Guardar detalle técnico' }).click();
 
@@ -142,8 +143,8 @@ test.describe('Admin Proposal Section Sync (Preview & Apply)', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Det. técnico' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'technical');
     await page.getByRole('button', { name: 'Guardar detalle técnico' }).click();
 
     await expect(page.getByText('Vista previa de sincronización')).toBeVisible({ timeout: 10000 });

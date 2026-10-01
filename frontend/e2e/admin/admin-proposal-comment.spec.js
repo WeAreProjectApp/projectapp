@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_COMMENT } from '../helpers/flow-tags.js';
 
@@ -77,11 +78,11 @@ test.describe('Admin Proposal Comment / Activity', () => {
     tag: [...ADMIN_PROPOSAL_COMMENT, '@role:admin'],
   }, async ({ page }) => {
     await setupMock(page);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // Wait for page content instead of networkidle
-    await expect(page.getByRole('tab', { name: 'Actividad' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('tab', { name: 'Actividad' }).click();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true })).toBeVisible({ timeout: 15000 });
+    await selectProposalDestination(page, 'tracking', 'activity');
 
     await expect(page.getByText('Registrar actividad')).toBeVisible();
     await expect(page.getByText('Propuesta creada')).toBeVisible();
@@ -91,10 +92,10 @@ test.describe('Admin Proposal Comment / Activity', () => {
     tag: [...ADMIN_PROPOSAL_COMMENT, '@role:admin'],
   }, async ({ page }) => {
     await setupMock(page);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await expect(page.getByRole('tab', { name: 'Actividad' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('tab', { name: 'Actividad' }).click();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true })).toBeVisible({ timeout: 15000 });
+    await selectProposalDestination(page, 'tracking', 'activity');
 
     await expect(page.getByText('Registrar actividad')).toBeVisible();
     await expect(page.getByPlaceholder('Descripción de la actividad...')).toBeVisible();
@@ -106,10 +107,10 @@ test.describe('Admin Proposal Comment / Activity', () => {
   }, async ({ page }) => {
     const captured = [];
     await setupMock(page, captured);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await expect(page.getByRole('tab', { name: 'Actividad' })).toBeVisible({ timeout: 15000 });
-    await page.getByRole('tab', { name: 'Actividad' }).click();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true })).toBeVisible({ timeout: 15000 });
+    await selectProposalDestination(page, 'tracking', 'activity');
 
     // Wait for the input to be ready before filling
     const descInput = page.getByPlaceholder('Descripción de la actividad...');

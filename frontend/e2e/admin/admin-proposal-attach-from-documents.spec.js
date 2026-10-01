@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS } from '../helpers/flow-tags.js';
 
@@ -109,9 +110,9 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
     tag: [...ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal()));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await selectProposalDestination(page, 'communication', 'emails');
 
     await expect(page.getByRole('button', { name: /Adjuntar desde Documentos/i }))
       .toBeVisible({ timeout: 15000 });
@@ -121,9 +122,9 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
     tag: [...ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal()));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();
 
     await expect(page.getByText('Adjuntar desde Documentos').first()).toBeVisible({ timeout: 5000 });
@@ -134,9 +135,9 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
     tag: [...ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal()));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();
 
     await expect(page.getByText('Propuesta comercial (PDF)')).toBeVisible({ timeout: 5000 });
@@ -148,9 +149,9 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
   }, async ({ page }) => {
     const proposal = makeProposal({ proposal_documents: [generatedContractDoc] });
     await mockApi(page, baseHandler(proposal));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();
 
     await expect(page.getByText('Contrato de desarrollo (PDF)')).toBeVisible({ timeout: 5000 });
@@ -161,9 +162,9 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
     tag: [...ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal()));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();
 
     await page.getByLabel('Propuesta comercial (PDF)').check();
@@ -195,8 +196,8 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'communication', 'emails');
 
     // Fill required fields — subject is not auto-filled from defaults in proposal mode
     await page.getByPlaceholder('Asunto del correo').fill('Asunto de prueba');

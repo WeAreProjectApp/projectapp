@@ -8,6 +8,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_UPDATE_FROM_JSON } from '../helpers/flow-tags.js';
 
@@ -75,9 +76,9 @@ test.describe('Admin Proposal Update From JSON', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await selectProposalDestination(page, 'proposal', 'json');
 
     const textarea = page.getByTestId('proposal-import-json-textarea');
     await textarea.fill(importJson);
@@ -121,8 +122,8 @@ test.describe('Admin Proposal Update From JSON', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'json');
     const textarea = page.getByTestId('proposal-import-json-textarea');
     await textarea.fill(JSON.stringify({
       general: { clientName: 'Updated Client' },
@@ -164,8 +165,8 @@ test.describe('Admin Proposal Update From JSON', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'json');
     const textarea = page.getByTestId('proposal-import-json-textarea');
     await textarea.fill(JSON.stringify({ general: { clientName: 'Updated Client' } }));
     await textarea.dispatchEvent('input');

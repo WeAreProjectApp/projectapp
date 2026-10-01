@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_PROPOSAL_FUNCTIONAL_REQUIREMENTS_FORM,
@@ -137,9 +138,9 @@ function buildMockHandler(capturedUpdates) {
  */
 async function openRequirementsEditor(page, capturedUpdates) {
   await mockApi(page, buildMockHandler(capturedUpdates));
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-  await page.getByRole('tab', { name: 'Secciones' }).click();
+  await selectProposalDestination(page, 'proposal', 'sections');
 
   // Expand the functional_requirements section
   await page.getByTestId('section-header-functional_requirements').click();
@@ -273,8 +274,8 @@ test.describe('Functional Requirements — Form Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'sections');
     await page.getByTestId('section-header-functional_requirements').click();
 
     const editor = page.getByTestId('section-editor');
@@ -497,8 +498,8 @@ test.describe('Functional Requirements — Paste Content Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'sections');
     await page.getByTestId('section-header-functional_requirements').click();
 
     const editor = page.getByTestId('section-editor');

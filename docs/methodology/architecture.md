@@ -1,5 +1,12 @@
 # Architecture — ProjectApp
 
+> **Navegación del editor de propuestas — 2026-10-01:** `proposalNavigation`
+> centraliza áreas, herramientas y estados permitidos; `useProposalNavigation`
+> conserva la herramienta activa, las últimas selecciones por área y el montaje
+> diferido por herramienta. Las URLs usan `tab` para el área y `section` para la
+> herramienta, aceptan enlaces anteriores y se actualizan con `replaceState`
+> preservando otros parámetros y fragmentos, sin repetir `admin-auth`.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no

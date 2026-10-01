@@ -1,5 +1,11 @@
 # Technical Documentation — ProjectApp
 
+> **Editor de propuestas — 2026-10-01:** navegación responsive en dos niveles
+> mediante `BaseResponsiveTabs`, principal subrayado y herramientas en pill.
+> Los paneles se montan al primer acceso y permanecen montados para conservar
+> borradores y cargas; sus consultas no se disparan al abrir General. Se validan
+> destinos después de cargar la propuesta y al cambiar su estado.
+
 > **Enlaces seguros — 2026-09-29:** `secure_links.0003` agrega `sent_at`,
 > `sent_by` y el evento `marked_sent`. API/MCP mantienen `status` y agregan
 > `lifecycle_status`; el listado del panel suma `lifecycle_counts` con un único

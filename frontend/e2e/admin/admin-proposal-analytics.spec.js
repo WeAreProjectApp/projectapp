@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_PROPOSAL_ANALYTICS,
@@ -117,9 +118,9 @@ test.describe('Admin Proposal Analytics', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_ANALYTICS, '@role:admin'],
   }, async ({ page }) => {
     await setupMock(page);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await selectProposalDestination(page, 'tracking', 'analytics');
     await expect(page.getByRole('button', { name: 'Exportar CSV' })).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('Dispositivos')).toBeVisible();
     await expect(page.getByTestId('first-view-notification-status')).toContainText('Enviado');
@@ -129,9 +130,9 @@ test.describe('Admin Proposal Analytics', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_ANALYTICS, '@role:admin'],
   }, async ({ page }) => {
     await setupMock(page);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await selectProposalDestination(page, 'tracking', 'analytics');
     await expect(page.getByRole('button', { name: 'Exportar CSV' })).toBeVisible({ timeout: 15000 });
   });
 
@@ -139,9 +140,9 @@ test.describe('Admin Proposal Analytics', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_ANALYTICS, '@role:admin'],
   }, async ({ page }) => {
     await setupMock(page);
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await selectProposalDestination(page, 'tracking', 'analytics');
     await expect(page.getByRole('button', { name: 'Exportar CSV' })).toBeVisible({ timeout: 15000 });
   });
 
@@ -155,9 +156,9 @@ test.describe('Admin Proposal Analytics', () => {
       if (apiPath === `proposals/${PROPOSAL_ID}/analytics/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(analyticsWithScore) };
       return null;
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await selectProposalDestination(page, 'tracking', 'analytics');
     await expect(page.getByText('Engagement Score')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText('75', { exact: true })).toBeVisible();
     await expect(page.getByText(/Alto engagement/)).toBeVisible();
@@ -173,9 +174,9 @@ test.describe('Admin Proposal Analytics', () => {
       if (apiPath === `proposals/${PROPOSAL_ID}/analytics/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(analyticsLowScore) };
       return null;
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await selectProposalDestination(page, 'tracking', 'analytics');
     await expect(page.getByText('Engagement Score')).toBeVisible({ timeout: 15000 });
     await expect(page.getByText(/Bajo engagement/)).toBeVisible();
   });
@@ -199,8 +200,8 @@ test.describe('Admin Proposal Analytics', () => {
         body: JSON.stringify(pendingNotification),
       },
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await selectProposalDestination(page, 'tracking', 'analytics');
 
     await expect(page.getByTestId('first-view-notification-status')).toContainText('SMTP timeout');
     await page.getByTestId('retry-first-view-notification').click();
@@ -224,8 +225,8 @@ test.describe('Admin Proposal Analytics', () => {
         body: JSON.stringify({ error: 'queue unavailable' }),
       },
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('tab', { name: 'Analytics' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await selectProposalDestination(page, 'tracking', 'analytics');
 
     await page.getByTestId('retry-first-view-notification').click();
 

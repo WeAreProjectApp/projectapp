@@ -9,6 +9,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_REOPEN_FROM_EXPIRED } from '../helpers/flow-tags.js';
 
@@ -77,13 +78,13 @@ test.describe('Admin Proposal Reopen From Expired', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // The sticky-header status select shows the current status: Expirada.
     const statusSelect = page.getByLabel('Cambiar estado de la propuesta');
     await expect(statusSelect).toHaveValue('expired', { timeout: 10000 });
 
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await selectProposalDestination(page, 'proposal', 'json');
 
     const textarea = page.getByTestId('proposal-import-json-textarea');
     await textarea.fill(importJson);
@@ -131,12 +132,12 @@ test.describe('Admin Proposal Reopen From Expired', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     const statusSelect = page.getByLabel('Cambiar estado de la propuesta');
     await expect(statusSelect).toHaveValue('expired', { timeout: 10000 });
 
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await selectProposalDestination(page, 'proposal', 'json');
 
     const textarea = page.getByTestId('proposal-import-json-textarea');
     await textarea.fill(importJson);
@@ -183,7 +184,7 @@ test.describe('Admin Proposal Reopen From Expired', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     const dateInput = page.locator('input[type="datetime-local"]').first();
     await expect(dateInput).toBeVisible({ timeout: 15000 });
