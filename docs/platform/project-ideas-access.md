@@ -1,13 +1,13 @@
 # Ideas por proyecto y exposición de accesos — P4
 
-Incremento propio sobre la dependencia publicada e inmutable P3 `dea940345fc37c361f8749d30e1a96ac2bba73ee`, absorbida mediante merge en la rama propia. El PR apunta a `main`; P0 reserva el orden de integración. Migración propia `0070_platform_ideas_access` con padre P3 `0067_explicit_delivery_authoring_context` y dependencia del modelo de usuario; P0 coordina las futuras hojas paralelas. No aplica migraciones ni despliegue. Esta referencia publicada de P3 todavía no constituye su entrega verde/final.
+Incremento propio sobre la dependencia publicada e inmutable P3 `dea940345fc37c361f8749d30e1a96ac2bba73ee`, absorbida mediante merge en la rama propia. El PR apunta a `main`; P0 fijó el orden P3 → P1 → P2 → P4 → P5. Migración propia `0070_platform_ideas_access` con padre P3 `0067_explicit_delivery_authoring_context` y dependencia del modelo de usuario. P0 reservó la nueva hoja sin operaciones `0075_p4_platform_domains_merge`, aún no creada: sólo se añadirá después de recibir y absorber mediante merge el SHA final publicado de P2. No aplica migraciones ni despliegue. Esta referencia publicada de P3 todavía no constituye su entrega verde/final.
 
 ## Acuerdos recibidos directamente del operador
 
 - Oculto por defecto se aplica **sólo a URLs y accesos**. No hay interruptores globales de bugs, hosting, cobros o entregas publicadas.
 - Cada dato se habilita explícitamente por proyecto y ambiente; la API aplica los mismos permisos.
 - Ideas son texto simple por proyecto. Audio/IA, contratación automática, correo, finanzas y bugs quedan fuera del incremento.
-- Cada sesión conserva su rama, worktree y PR. Esta sesión sólo integra commits publicados de P3 dentro de su propia rama; no mergea a main.
+- Cada sesión conserva su rama, worktree y PR. Esta sesión integra únicamente referencias publicadas e inmutables de dependencias bajo la coordenada de P0 dentro de su propia rama; no mergea a main.
 
 ## Modelos y decisiones
 
@@ -29,7 +29,7 @@ Las fuentes siguen siendo `Project.production_url/staging_url` y `ProjectAdminAc
 - Un cifrado ilegible o configuración de cifrado no disponible devuelve 503 controlado, sin detalles internos y sin registrar una revelación exitosa.
 - El valor revelado vive sólo en el componente, sin Pinia/storage/historial. Se elimina al ocultar la pestaña, cambiar contexto/sesión, desmontar o cumplir 30 segundos. Copiar es una acción explícita del usuario y el portapapeles del sistema queda bajo su control.
 - Cambiar cliente revoca todos los grants. Cambiar/borrar/mover URL o credencial revoca sus campos. Señales cubren saves/deletes ajenos al editor; un receptor propio consume los nombres de campos del historial existente para cubrir `QuerySet.update/bulk_update`, incluso si después se restaura el valor anterior. Las huellas también rechazan fuentes distintas antes de compartir. Escrituras SQL manuales o realizadas con `without_history()` eluden esta frontera y deben revocar grants explícitamente.
-- Django Admin bloquea el proyecto original dentro de la transacción y revoca antes de guardar: todo al cambiar cliente, sólo permisos de URL al cambiar producción/QA. Usa el propietario original en el evento y conserva grants/auditoría si el guard financiero rechaza o el guardado falla. Formulario y guard financiero pertenecen a P2 y deben ejecutar antes del puente P4. La regresión financiera conjunta queda pendiente hasta absorber la referencia publicada de P2 que coordine P0.
+- Django Admin bloquea el proyecto original dentro de la transacción y revoca antes de guardar: todo al cambiar cliente, sólo permisos de URL al cambiar producción/QA. Usa el propietario original en el evento; un fallo de guardado revierte grants y auditoría. P2 posee el formulario, la validación, el helper de core/tickets y el guard financiero. Al absorber su referencia publicada, sus guards deben ejecutarse antes del puente P4, sin escrituras ni revocación si rechazan. La regresión conjunta de rechazo financiero queda pendiente de esa absorción bajo la coordenada de P0.
 - Sesión JWT impersonada no registra/corrige ideas ni revela credenciales; conserva lectura permitida. El backend verifica la claim firmada; la UI sólo ajusta controles.
 
 ## Rutas
@@ -63,9 +63,10 @@ Accesos muestra al cliente sólo ambientes/datos efectivos. Su enlace aparece co
 | Bloque compartido reservado a P4 | Cambio mínimo | Dependencia/orden P0 |
 |---|---|---|
 | `accounts/models.py`, `apps.py` | Imports de modelos propios y registro de hooks | P3 publicado antes; migración propia 0070 sobre 0067, sin hoja merge de otras sesiones |
+| `accounts/migrations/0075_p4_platform_domains_merge.py` (reservada, no creada) | Nueva migración con `operations=[]`; padres `0074_p2_platform_billing_merge` y `0070_platform_ideas_access` | Crear únicamente después de recibir y mergear el SHA final publicado de P2, verificando que existe su padre 0074; no editar migraciones anteriores |
 | `accounts/urls.py`, `content/urls.py` | Include de rutas de dominio | Modelos/servicios propios |
 | `accounts/serializers.py` | Capability de acceso en detalle; conserva redacción previa | Política y fuente existentes |
-| `project_access.py`, `project_service.py`, `accounts/admin.py::ProjectAdmin.save_model` | Locks/revocación por edición y transferencia; en Admin compara contra el proyecto original | Orden: proyecto bloqueado → guard financiero P2 sin writes al rechazar → revoke_grants P4 → reasignación/cascada o guardado Admin. P2 conserva formulario/guard; P4 sólo su puente de revocación. P0 coordina el cruce y la regresión financiera |
+| `project_access.py`, `project_service.py`, `accounts/admin.py::ProjectAdmin.save_model` | Locks/revocación por edición y transferencia; en Admin compara contra el proyecto original | Orden: proyecto bloqueado → validación/guards financiero y core/tickets P2 sin writes al rechazar → revoke_grants P4 → reasignación/cascada o guardado Admin. P2 conserva formulario, validación y helper; P4 sólo su puente de revocación. P0 coordina el cruce y la regresión financiera |
 | MCP `operation_catalogs.py`, `contracts.py` | Registros nombrados del dominio | Rutas Panel y modelos disponibles |
 | Sidebar, Panel projects y modal access | Enlaces Ideas y capability; política adicional | Páginas/components propios |
 | Agregadores locales, catálogos, responsive y flows | Entradas/secciones de dominio; derivados regenerados | Integrar sin reordenar bloques ajenos |
@@ -78,4 +79,4 @@ Archivos propios: modelos/serializers/services/views/hooks/urls en `accounts` co
 
 Deben pasar autoría/revisiones/archivo; idempotencia; recopilación congelada y atomicidad; permisos granulares/default deny; revocación por fuente/propietario; aislamiento de proyectos/clientes; ausencia de secretos en listas/preview/audit; JWT frente a sesión/CSRF; paridad MCP y confirmaciones obsoletas; UI con borradores y revelación efímera; navegación y cinco anchos canónicos.
 
-Las pruebas usan SQLite y settings_test, límites <=20 por lote y <=2 specs E2E. Los locks de producción MySQL conservan el orden proyecto → acceso/política; SQLite no demuestra contención concurrente MySQL. La migración 0070 es nueva, propia y no aplicada; P0 coordina las hojas merge sin operaciones al integrar otros PRs. P3 revisa diseño central al terminar. PR abierto, CI propio y revisión de integración son la entrega; no self-merge.
+Las pruebas usan SQLite y settings_test, límites <=20 por lote y <=2 specs E2E. Los locks de producción MySQL conservan el orden proyecto → acceso/política; SQLite no demuestra contención concurrente MySQL. La migración 0070 es nueva, propia y no aplicada. La hoja 0075 permanece reservada hasta absorber el SHA final publicado de P2; entonces unirá 0074 y 0070 sin operaciones. P0 coordina las demás hojas y el orden P3 → P1 → P2 → P4 → P5. P3 revisa diseño central al terminar. PR abierto, CI propio y revisión de integración son la entrega; no self-merge.
