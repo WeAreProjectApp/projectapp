@@ -5,6 +5,7 @@ from zipfile import ZIP_DEFLATED, ZipFile
 
 from PIL import Image
 from pypdf import PdfReader, PdfWriter
+from pypdf.generic import DecodedStreamObject, NameObject
 import pytest
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfgen.canvas import Canvas
@@ -15,6 +16,7 @@ from accounts.services.delivery_source_extraction import (
 )
 from content.services.attachment_markdown import (
     MAX_FILE_BYTES, MAX_PDF_PAGES, MAX_SOURCE_CHARACTERS, MAX_SOURCE_FRAGMENTS,
+    docx_source_fragments, pdf_source_fragments,
 )
 
 
@@ -51,6 +53,98 @@ def _docx_bytes(paragraphs):
         </Relationships>''')
         archive.writestr('word/document.xml', '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body>' + body + '</w:body></w:document>')
     return output.getvalue()
+
+
+def _docx_with_part(part_name, part_xml):
+    base = _docx_bytes([(False, 'Contenido principal')])
+    part_kind = part_name.removeprefix('word/').removesuffix('.xml').rstrip('0123456789')
+    reference = (
+        f'<w:sectPr><w:{part_kind}Reference w:type="default" r:id="rIdPart"/></w:sectPr>'
+        if part_kind in ('header', 'footer') else
+        f'<w:p><w:r><w:{part_kind.removesuffix("s")}Reference w:id="2"/></w:r></w:p>'
+    )
+    output = BytesIO()
+    with ZipFile(BytesIO(base)) as original, ZipFile(output, 'w', ZIP_DEFLATED) as document:
+        for item in original.infolist():
+            value = original.read(item.filename).decode('utf-8')
+            if item.filename == '[Content_Types].xml':
+                value = value.replace('</Types>',
+                    f'<Override PartName="/{part_name}" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.{part_kind}+xml"/></Types>')
+            elif item.filename == 'word/document.xml':
+                value = value.replace('<w:document ', '<w:document xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" ')
+                value = value.replace('</w:body>', reference + '</w:body>')
+            document.writestr(item, value)
+        document.writestr('word/_rels/document.xml.rels',
+            '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            f'<Relationship Id="rIdPart" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/{part_kind}" Target="{part_name.removeprefix("word/")}"/>'
+            '</Relationships>')
+        document.writestr(part_name, part_xml)
+    return output.getvalue()
+
+
+def test_pdf_parser_preserves_readable_pages_after_truncated_text_stream():
+    """One damaged text stream leaves later clauses available with an explicit warning for the damaged page."""
+    reader = PdfReader(BytesIO(_pdf_bytes(['Cláusula inicial', 'Contenido dañado', 'Cláusula posterior'])))
+    writer = PdfWriter()
+    for page in reader.pages:
+        writer.add_page(page)
+    damaged = DecodedStreamObject()
+    damaged.set_data(b'BT (unterminated text')
+    writer.pages[1][NameObject('/Contents')] = writer._add_object(damaged)
+    data = BytesIO()
+    writer.write(data)
+
+    result = pdf_source_fragments(data.getvalue())
+
+    assert result['status'] == 'partial'
+    assert result['fragments'] == [
+        {'locator': 'Página 1', 'text': 'Cláusula inicial'},
+        {'locator': 'Página 3', 'text': 'Cláusula posterior'},
+    ]
+    assert 'No se pudo extraer texto de la página 2.' in result['warnings']
+    assert result['limits']['pdf_pages_examined'] == 3
+
+
+@pytest.mark.parametrize(('part_name', 'part_xml', 'locator', 'text'), [
+    ('word/header1.xml',
+     '<w:hdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Referencia de contrato</w:t></w:r></w:p></w:hdr>',
+     'Encabezado 1 · párrafo 1', 'Referencia de contrato'),
+    ('word/footer1.xml',
+     '<w:ftr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:p><w:r><w:t>Vigencia acordada</w:t></w:r></w:p></w:ftr>',
+     'Pie de página 1 · párrafo 1', 'Vigencia acordada'),
+    ('word/footnotes.xml',
+     '<w:footnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:footnote w:id="2"><w:p><w:r><w:t>Condición al pie</w:t></w:r></w:p></w:footnote></w:footnotes>',
+     'Notas al pie · párrafo 1', 'Condición al pie'),
+    ('word/endnotes.xml',
+     '<w:endnotes xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:endnote w:id="2"><w:p><w:r><w:t>Aclaración final</w:t></w:r></w:p></w:endnote></w:endnotes>',
+     'Notas finales · párrafo 1', 'Aclaración final'),
+], ids=['header', 'footer', 'footnote', 'endnote'])
+def test_docx_parser_locates_clauses_outside_the_document_body(part_name, part_xml, locator, text):
+    """A clause outside the body identifies its actual office part instead of a fabricated page or body paragraph."""
+    data = _docx_with_part(part_name, part_xml)
+
+    result = docx_source_fragments(data)
+
+    assert result['status'] == 'included'
+    assert result['fragments'] == [
+        {'locator': 'Documento · párrafo 1', 'text': 'Contenido principal'},
+        {'locator': locator, 'text': text},
+    ]
+    assert result['limits']['fragments_returned'] == 2
+
+
+def test_docx_parser_marks_oversized_paragraph_as_partial():
+    """A long Word clause declares the exact retained text length and its omitted remainder."""
+    data = _docx_bytes([(False, 'X' * (MAX_SOURCE_CHARACTERS + 1))])
+
+    result = docx_source_fragments(data)
+
+    assert result['status'] == 'partial'
+    assert result['fragments'] == [
+        {'locator': 'Documento · párrafo 1', 'text': 'X' * MAX_SOURCE_CHARACTERS},
+    ]
+    assert result['limits']['characters_returned'] == MAX_SOURCE_CHARACTERS
+    assert 'Se alcanzó el límite de 60.000 caracteres; quedó contenido sin incluir.' in result['warnings']
 
 
 def test_pdf_source_locates_actual_pages():
