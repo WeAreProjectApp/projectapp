@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { issueError } from '~/utils/issue-reports'
 import { buildPlatformListUrl } from '~/composables/useIncludeArchivedQuery'
 import { usePlatformApi } from '~/composables/usePlatformApi'
 
@@ -41,7 +42,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         this.bugReports = response.data
         return { success: true }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar los reportes de bugs.'
+        const message = issueError(error, 'No pudimos cargar los reportes de bugs.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -66,7 +67,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         this.bugReports = response.data
         return { success: true }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar los reportes de bugs.'
+        const message = issueError(error, 'No pudimos cargar los reportes de bugs.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -85,7 +86,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         this.currentBugReport = response.data
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar el reporte de bug.'
+        const message = issueError(error, 'No pudimos cargar el reporte de bug.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -107,7 +108,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         this.bugReports.unshift(response.data)
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos crear el reporte de bug.'
+        const message = issueError(error, 'No pudimos crear el reporte de bug.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -132,7 +133,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
 
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos evaluar el reporte de bug.'
+        const message = issueError(error, 'No pudimos evaluar el reporte de bug.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -149,7 +150,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         const response = await post(`projects/${projectId}/bug-reports/bulk-evaluate/`, items)
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos aplicar las respuestas masivas.'
+        const message = issueError(error, 'No pudimos aplicar las respuestas masivas.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -168,7 +169,7 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
         this.bugReports = this.bugReports.filter((b) => b.id !== bugId)
         return { success: true, message: data?.detail || '' }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos archivar el reporte de bug.'
+        const message = issueError(error, 'No pudimos archivar el reporte de bug.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -177,12 +178,34 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
       }
     },
 
-    async addComment(projectId, bugId, content, isInternal = false) {
+    async reopenBugReport(projectId, bugId, payload) {
+      this.isUpdating = true
+      this.error = ''
+      try {
+        const { post } = usePlatformApi()
+        await post(`projects/${projectId}/bug-reports/${bugId}/reopen/`, payload)
+        const result = await this.fetchBugReport(projectId, bugId)
+        if (result.success) {
+          const index = this.bugReports.findIndex((bug) => bug.id === bugId)
+          if (index !== -1) this.bugReports[index] = result.data
+        }
+        return result
+      } catch (error) {
+        this.error = issueError(error, 'No pudimos reabrir el bug.')
+        return { success: false, message: this.error }
+      } finally {
+        this.isUpdating = false
+      }
+    },
+
+    async addComment(projectId, bugId, content, isInternal = false, options = {}) {
+      this.error = ''
       try {
         const { post } = usePlatformApi()
         const response = await post(`projects/${projectId}/bug-reports/${bugId}/comments/`, {
           content,
           is_internal: isInternal,
+          ...options,
         })
 
         if (this.currentBugReport?.id === bugId && this.currentBugReport.comments) {
@@ -191,7 +214,8 @@ export const usePlatformBugReportsStore = defineStore('platformBugReports', {
 
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos agregar el comentario.'
+        const message = issueError(error, 'No pudimos agregar el comentario.')
+        this.error = message
         return { success: false, message }
       }
     },

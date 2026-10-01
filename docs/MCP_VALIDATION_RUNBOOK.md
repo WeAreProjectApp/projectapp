@@ -1,5 +1,16 @@
 # Guion de validación y mantenimiento de MCP
 
+## Tickets de proyecto: bugs y solicitudes contextualizadas
+
+`projects` incorpora once acciones mediante los mismos servicios REST. Inventario,
+permisos, versiones, reintentos y dependencia de revisión contractual:
+[Bugs y solicitudes](PLATFORM_ISSUE_REPORTS.md). Validar bug general sin guía,
+origen con ronda publicada, respuesta pública o interna con PDF opcional,
+descarga aislada y reapertura «sigue fallando». Archivar y convertir exigen
+confirmación. Convertir sólo crea una guía pendiente en una etapa editable del
+contrato aplicable; las aprobaciones existentes permanecen intactas y el alcance
+sigue indeterminado hasta el adaptador compartido de P3.
+
 Las carpetas del conector de Documentos declaran `folder_kind`, proyecto y
 estado. `create_folder` hereda la asociación de su padre y `rename_folder`
 rechaza raíces automáticas de proyecto; estas protecciones se validan junto

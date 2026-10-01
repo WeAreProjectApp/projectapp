@@ -7,10 +7,12 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Both roles report bugs with severity, steps to reproduce, expected/actual behavior, device/browser, screenshot. Admin evaluates with status changes and responses. Per-project view at /platform/projects/:id/bugs and unified cross-project view at /platform/bugs.",
+  "description": "Client reports a general project bug without a guide or captures the original published requirement. Team resolution, responses, private evidence and client reopening preserve history without changing guide approvals.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",
+    "error",
+    "failure",
     "display"
   ]
 }

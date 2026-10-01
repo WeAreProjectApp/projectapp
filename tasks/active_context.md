@@ -1,3 +1,13 @@
+# Bugs y solicitudes contextualizadas — P1 (2026-10-01)
+
+Implementación en validación en `platform-bugs-context`: bug general sin guías,
+captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
+y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
+Dependencia publicada P3 `dea9403` incorporada; P0 reservó `0068_issue_reports`
+con parent `0067_explicit_delivery_authoring_context`. Pendiente de integración:
+adaptador de revisión contractual P3 y hojas paralelas coordinadas por P0. Detalles en
+`docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
+
 # Alcance y entregas en Platform (2026-10-01)
 
 Primer incremento implementado en `platform-review-workflow`, en validación:

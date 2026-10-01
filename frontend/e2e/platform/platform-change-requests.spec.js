@@ -39,17 +39,16 @@ const mockChangeRequests = [
 
 const meResponse = (user) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
 
-// A change request now requires a source requirement; the create form
-// populates its select from this endpoint.
+// Change requests keep their published source and original round.
 const mockProjectRequirements = [
-  { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', status: 'todo' },
+  { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', stage_title: 'Etapa 1', source_publication_id: 101, source_requirement_version: 1 },
 ];
 
 function setupMocks(page, { user }) {
-  return mockApi(page, async ({ apiPath, method }) => {
+  return mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
-    if (apiPath === 'accounts/projects/1/requirements/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProjectRequirements) };
+    if (apiPath === 'accounts/projects/1/issue-reports/context-options/' && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify({ requirements: mockProjectRequirements, contracts: [], documents: [] }) };
     }
     if (apiPath === 'accounts/projects/1/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProject) };
@@ -61,7 +60,7 @@ function setupMocks(page, { user }) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockChangeRequests) };
     }
     if (apiPath === 'accounts/projects/1/change-requests/' && method === 'POST') {
-      return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 10, title: 'New CR', status: 'pending', comments_count: 0 }) };
+      return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 10, title: route.request().postDataJSON().title, status: 'pending', comments_count: 0 }) };
     }
     if (apiPath.match(/accounts\/projects\/1\/change-requests\/\d+\/evaluate\/$/) && method === 'POST') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...mockChangeRequests[0], status: 'approved' }) };
@@ -107,6 +106,7 @@ test.describe('Platform Change Requests — Client', () => {
 
     // On a successful submit the create form closes.
     await expect(page.getByPlaceholder('¿Qué cambio necesitas?')).not.toBeVisible();
+    await expect(page.getByText('New change request', { exact: true })).toBeVisible();
   });
 });
 
