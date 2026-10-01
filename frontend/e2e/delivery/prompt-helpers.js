@@ -26,7 +26,7 @@ export function guidePayload(context, contractId) {
         key: 'prepared-stage', title: 'Etapa preparada', requirements: [{
           key: 'prepared-test', title: 'Validar las pruebas pactadas',
           guide: {
-            role: 'Cliente', environment: 'Staging', preparation: 'Abrir el caso preparado.',
+            environment: 'Staging', preparation: 'Abrir el caso preparado.',
             data: 'Registro de prueba.', steps: ['Abrir la pantalla.', 'Confirmar el resultado.'],
             expected_result: 'Aparece el resultado acordado.', failure_signals: 'Aparece un error.',
           },

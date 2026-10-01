@@ -1,6 +1,6 @@
 """Manual, reviewed emails that close an approved delivery stage.
 
-Preparing the email persists the exact body, approved-history summary and
+Preparing the email persists the exact body, public closure record and
 selected public document snapshots.  Sending only claims an already prepared
 record before crossing the SMTP boundary; it never regenerates content.
 """
@@ -297,8 +297,70 @@ def _read_snapshot(snapshot):
     return content
 
 
+def _public_record_sections(history):
+    """Render only the frozen public record, without reading live conversations."""
+    events = []
+    for publication in history['publications']:
+        payload = publication['payload']
+        lines = [
+            f'Publicación de la ronda {publication["round"]} — {publication["created_at"]}',
+            f'Publicó: {publication["published_by"]}',
+            f'Etapa: {payload.get("title", "Etapa")} (v{payload.get("version", "sin indicar")})',
+            'Guías publicadas: ' + '; '.join(
+                f'{item.get("title", "Requerimiento")} (v{item.get("version", "sin indicar")})'
+                for item in payload.get('requirements', [])
+            ),
+        ]
+        events.append((publication['created_at'], 0, publication['id'], lines, None, ''))
+    decisions = {'approved': 'Aprobación', 'objected': 'Objeción', 'rejected': 'Rechazo'}
+    for review in history['reviews']:
+        lines = [
+            f'{decisions.get(review["decision"], review["decision"])} — {review["reviewed_at"]}',
+            f'{review["guide"].get("title", "Requerimiento")} '
+            f'(v{review["requirement_version"]}, ronda {review["publication_round"]})',
+            f'Revisó: {review["reviewer"]} — canal: {review["channel"]}',
+            f'Registró: {review["author"]} — {review["created_at"]}',
+        ]
+        if review['environment']:
+            lines.append(f'Entorno de prueba: {review["environment"]}')
+        events.append((review['reviewed_at'], 1, review['id'], lines, review['author_id'], review['message']))
+    for message in history['messages']:
+        lines = [f'Conversación pública — {message["created_at"]}', f'Autor: {message["author"]}']
+        publication = max(
+            (item for item in history['publications'] if item['created_at'] <= message['created_at']),
+            key=lambda item: (item['created_at'], item['id']), default=None,
+        )
+        if publication:
+            lines.append(f'Ronda {publication["round"]}')
+            identifiers = set(message['requirement_ids'])
+            if message['level'] == 'requirement':
+                identifiers.add(message['target_id'])
+            lines.extend(
+                f'{item.get("title", "Requerimiento")} (v{item.get("version", "sin indicar")})'
+                for item in publication['payload'].get('requirements', [])
+                if item.get('id') in identifiers
+            )
+        lines.extend(
+            f'Documento mencionado: {item["title"]} — copia {item["snapshot_id"]}, SHA-256 {item["sha256"]}'
+            for item in message['attachments']
+        )
+        events.append((message['created_at'], 2, message['id'], lines, message['author_id'], message['message']))
+    sections = [f'Registro público de la revisión hasta el cierre — {history["closed_at"]}']
+    shared_messages = {}
+    for position, (occurred_at, _, _, lines, author_id, message) in enumerate(sorted(events), 1):
+        if message:
+            identity = (author_id, occurred_at, message)
+            if identity in shared_messages:
+                lines.append(f'Mensaje compartido con el registro {shared_messages[identity]}.')
+            else:
+                shared_messages[identity] = position
+                lines.append(f'Mensaje:\n{message}')
+        sections.append(f'{position}. ' + '\n'.join(lines))
+    return sections
+
+
 def _record_pdf(project, stage, history, onion):
-    """Small optional summary; source files stay separately selected snapshots."""
+    """Optional public closure record; source files remain selected snapshots."""
     from html import escape
     from reportlab.lib.pagesizes import A4
     from reportlab.lib.styles import getSampleStyleSheet
@@ -321,11 +383,11 @@ def _record_pdf(project, stage, history, onion):
             f'{item["reviewer"]}, {item["reviewed_at"]}, {item["channel"]}'
             for item in history['requirements']
         ],
-        f'Registro público congelado: {len(history["publications"])} rondas y {len(history["reviews"])} decisiones.',
+        *_public_record_sections(history),
     ]
     story = [Paragraph('Constancia de cierre de etapa', styles['Heading1'])]
     for line in lines:
-        story.extend([Paragraph(escape(line), styles['BodyText']), Spacer(1, 8)])
+        story.extend([Paragraph(escape(line).replace('\n', '<br/>'), styles['BodyText']), Spacer(1, 8)])
     document.build(story)
     return stream.getvalue()
 
@@ -348,8 +410,7 @@ def _render(project, stage, client, message, attachment_names, *, onion, history
             f'{item["requirement_title"]} v{item["requirement_version"]} — {item["reviewer"]} ({item["reviewed_at"]})'
             for item in history['requirements']
         ),
-        f'Registro público congelado: {len(history["publications"])} rondas, '
-        f'{len(history["reviews"])} decisiones y {len(history["messages"])} conversaciones hasta el cierre.',
+        *_public_record_sections(history),
     ]
     if message:
         sections.append(message)
