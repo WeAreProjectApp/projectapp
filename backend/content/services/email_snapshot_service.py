@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 
 from content.services.email_delivery_service import EmailMultiAlternatives
+from content.storage import get_private_storage
 
 logger = logging.getLogger(__name__)
 
@@ -222,17 +223,23 @@ def capture_delivery_snapshot(
     family,
     attachment_sources=None,
     resend_of=None,
+    private_attachments=False,
 ):
-    """Persist complete evidence before SMTP or raise without sending."""
+    """Persist exact evidence before SMTP; private resends cannot become public."""
     from content.models import (
         EmailAttachmentSnapshot,
         EmailBody,
         EmailDeliverySnapshot,
         EmailLinkSnapshot,
     )
+    from content.models.email_delivery_snapshot import PRIVATE_ATTACHMENT_PREFIX
 
     stored_files = []
     try:
+        private_attachments = private_attachments or (
+            resend_of is not None
+            and resend_of.attachments.filter(file__startswith=PRIVATE_ATTACHMENT_PREFIX).exists()
+        )
         mime_message = message.message()
         raw_message = mime_message.as_bytes()
         attachments = _mime_attachments(mime_message)
@@ -291,6 +298,10 @@ def capture_delivery_snapshot(
                     ),
                     **source_fields,
                 )
+                # This opt-in belongs to the server-side capture, never to an upload.
+                attachment._private_attachments = bool(private_attachments)
+                if private_attachments:
+                    attachment.file.storage = get_private_storage()
                 attachment.file.save(
                     item['filename'],
                     ContentFile(item['payload']),

@@ -43,6 +43,7 @@ CLIENT_EMAIL_CHANNELS = {
     'proposal_documents_sent': DOCUMENTS_MANUAL,
     'branded_email': DOCUMENTS_MANUAL,
     'proposal_email': DOCUMENTS_MANUAL,
+    'delivery_stage_approved_client': DOCUMENTS_MANUAL,
 
     # Billing documents sent to the customer. Initial issue, resend and retry
     # intentionally share one key and one family.

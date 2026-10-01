@@ -27,12 +27,18 @@ Los nombres entre llaves indican seis herramientas concretas, una por entidad:
 | Consultar las preparaciones anteriores | `list_delivery_prompt_contexts` | Hasta cincuenta capturas del proyecto, sin cargar el texto de las fuentes. |
 | Reabrir una preparación retenida | `get_delivery_prompt_context` | Contexto del proyecto indicado; conserva prompt, fuentes y conversación capturados aunque el origen cambie. |
 | Descargar la copia usada al preparar un prompt | `download_delivery_prompt_source` | `context_id` y `source_key`; bytes exactos y formato original como artefacto privado temporal de la credencial. |
-| Previsualizar JSON de una respuesta | `preview_delivery_reply` | Lectura sin compartir: valida citas/localizadores, clasificación e integridad del contexto. Fuentes incompletas bloquean `outside_scope`. |
+| Previsualizar JSON de una respuesta | `preview_delivery_reply` | Lectura sin compartir: valida citas/localizadores, clasificación e integridad del contexto. Fuentes incompletas exigen alcance indeterminado. |
 | Previsualizar una importación JSON | `preview_delivery_import` | Valida v1 manual o v2 con contexto y citas, y su impacto sin guardar. |
 | Aplicar una importación JSON revisada | `apply_delivery_import` | Confirmación, versión vigente, transacción completa e idempotencia; no importa firmas ni decisiones. |
 | Publicar una etapa o abrir otra ronda de pendientes | `publish_delivery_stage` | Confirmación; exige contrato/otrosí firmado y guía completa. Conserva requerimientos aprobados. |
 | Constatar un PDF firmado fuera de Platform | `attest_external_delivery_signature` | Confirmación; `asset_id` PDF completo de la misma credencial, máximo 10 MB, firmante, fecha y declaración administrativa. |
 | Registrar una aprobación previa explícita del cliente | `record_external_delivery_approval` | Confirmación; requiere `client_statement: true`, transcripción entrante y decisión `approved`. Usa un mensaje entrante recibido del mismo cliente/proyecto, o evidencia documental con revisor original, fecha, canal y referencia externa. Registra actor administrativo y `is_external`, sin atribuirle una revisión nueva al cliente. |
+| Preparar la constancia por correo de una etapa aprobada | `prepare_delivery_stage_closure_email` | Etapa publicada y completamente aprobada; conserva destinatario, cuerpo, historia pública hasta el cierre y adjuntos opcionales. No envía. |
+| Consultar el historial de constancias | `list_delivery_stage_closure_emails` | Preparaciones e intentos del administrador y su credencial; documentos públicos seleccionables con su ronda y hash. |
+| Revisar una copia preparada | `get_delivery_stage_closure_email` | Vista exacta, estado e historia conservados; no publica ni envía. |
+| Descargar un adjunto de la constancia | `download_delivery_stage_closure_email_attachment` | Bytes privados exactos por `preparation_id` y `file_id`; artefacto temporal limitado a esa credencial. |
+| Enviar manualmente la constancia revisada | `send_delivery_stage_closure_email` | Confirmación sensible del contenido exacto y `human_reviewed: true`; captura duradera antes de SMTP y un solo intento por preparación. |
+| Preparar un reenvío explícito | `prepare_delivery_stage_closure_email_resend` | Nueva copia ligada a la anterior, con el mismo cuerpo y archivos; requiere otra revisión y confirmación para enviar. |
 | Elegir la comunicación entrante que respalda una conformidad | `list_delivery_approval_evidence` | Solo mensajes recibidos, no anulados y del mismo cliente/proyecto; el servicio comprueba la cita al guardar. |
 | Responder un reporte o una revisión | `add_delivery_message` | Mensaje manual, autoría real y documentos opcionales. Una respuesta citada exige `context_id`, `source_references`, `classifications` y `human_reviewed: true`; rechaza observaciones cambiadas desde la captura. |
 | Elegir un documento del proyecto | `list_delivery_document_options` | Propiedad del cliente/proyecto; no admite una fuente ajena. |
@@ -52,7 +58,7 @@ explícita y mantiene su procedencia externa.
 
 ## Autoría con fuentes elegidas y respuesta revisada
 
-El catálogo implementado contiene **46 herramientas de entrega**. Los contextos
+El catálogo implementado contiene **52 herramientas de entrega**. Los contextos
 se crean y se consultan; no tienen CRUD editorial ni permiten sustituir las
 copias retenidas. Crear un contexto exige `expected_version` y `request_id`,
 pero no incrementa la versión del espacio ni publica etapas. Repetir la misma
@@ -75,8 +81,8 @@ complementar esas citas y nunca sustituirlas por sí solo.
 
 La respuesta v2 contiene `response_text` y solicitudes clasificadas como
 `inside_scope`, `outside_scope` o `indeterminate`, con fundamento y citas.
-Fuentes faltantes, lectura parcial o incertidumbre impiden una conclusión
-definitiva `outside_scope`. Previsualizar no comparte el texto. El administrador
+Fuentes faltantes, lectura parcial o incertidumbre impiden conclusiones
+definitivas dentro o fuera del alcance. Previsualizar no comparte el texto. El administrador
 debe revisarlo y ejecutar `add_delivery_message` de forma explícita; Platform no
 ejecuta un modelo ni envía correo desde este flujo.
 
@@ -140,24 +146,21 @@ ejecuta un modelo ni envía correo desde este flujo.
 - Retención del original en el panel: `test_delivery_source_deletion.py` cubre
   referencias/anexos de `Document` y `ProposalDocument` y la eliminación válida
   de archivos que no sustentan una captura.
+- Constancias manuales de cierre: `test_mcp_delivery_closure_email.py` verifica
+  preparación y descarga privada, propiedad del actor/credencial, confirmación
+  sensible, hash/versión/revisión humana, captura anterior al transporte,
+  idempotencia y reenvío explícito. Las pruebas usan correo en memoria.
 
 La existencia de esta matriz describe la cobertura del incremento. Los resultados
 ejecutados se registran en `MCP_VALIDATION_RUNBOOK.md`; no se validan conectores ni
 se modifican datos reales de producción durante las pruebas.
 
-## Correo de etapa aprobada — backlog, herramientas no registradas
+## Evidencia privada de correo
 
-Estas capacidades corresponden a un incremento futuro. No amplían el catálogo
-actual de herramientas ni autorizan envíos en este primer alcance.
-
-| Capacidad pendiente | Herramienta propuesta | Contrato esperado |
-| --- | --- | --- |
-| Consultar el registro de aprobación | `get_delivery_stage_approval_record` | Etapa aprobada de este proyecto; versiones, rondas, decisiones y conversación pública pertinente; sin notas internas ni otros contratos. |
-| Revisar el correo antes del envío | `preview_delivery_stage_approval_email` | Preparación que conserva exactamente el registro y adjuntos; destinatario explícito; no envía ni modifica conformidades. |
-| Enviar manualmente la preparación | `send_delivery_stage_approval_email` | Confirmación sensible y clave de operación; copia exacta del envío y resultado; reintentos sin duplicados. |
-| Consultar envíos y reenvíos | `list_delivery_stage_approval_emails` | Historial con destinatario, fecha, resultado, copia retenida y relación explícita de reenvío. |
-
-Las pruebas de ese incremento deberán comprobar aislamiento contractual,
-exclusión de notas internas, igualdad entre la vista previa y la copia enviada,
-reintentos idempotentes, reenvío explícito y paridad del panel con MCP. Ninguna
-de estas herramientas se considera implementada por aparecer en esta tabla.
+Las preparaciones usan `DeliveryEvidenceEmail`, `DeliveryEvidenceEmailFile` y
+`DeliveryEvidenceEmailAttempt`; quedan excluidas de CRUD y generación automática.
+Los adjuntos del gateway optan por almacenamiento privado sin cambiar los
+correos históricos ni introducir un transportador adicional. Captura fallida
+impide SMTP y limpia los archivos nuevos. El estado desconocido o enviando no
+provoca un reintento automático. La operación explícita de reenvío conserva el
+vínculo con la copia y el snapshot anteriores.

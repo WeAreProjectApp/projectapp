@@ -232,6 +232,7 @@ class EmailDeliveryGateway:
         primary_log_writes: int = 1,
         attachment_sources=None,
         resend_of=None,
+        private_attachments=False,
     ) -> int:
         family = outbound_email_family(template_key)
         if not family:
@@ -280,6 +281,7 @@ class EmailDeliveryGateway:
                 family=family,
                 attachment_sources=attachment_sources,
                 resend_of=resend_of,
+                private_attachments=private_attachments,
             )
             trace.body = trace.snapshot.body
             logger.info(

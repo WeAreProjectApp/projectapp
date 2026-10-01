@@ -27,6 +27,13 @@ Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
 > y límites visibles. Guías y respuestas conservan contexto y citas; el servidor
 > verifica las referencias, y la interpretación requiere revisión humana.
 > Descubrir fuentes, previsualizar o consultar no publica ni envía contenido.
+> `delivery_contract_reply` extiende la misma autoría mediante un proveedor de
+> tickets, con propietario, origen y conversación congelados y dos versiones
+> independientes; publicar requiere revalidación bajo lock. `delivery_closure_email`
+> conserva la constancia y sus intentos privados. REST y MCP envían sólo tras
+> revisar una preparación y confirmar manualmente, fuera de la transacción de
+> petición, usando snapshots privados del gateway común antes de SMTP. La
+> captura fallida limpia archivos; un reenvío requiere otra preparación explícita.
 > `technical_resources_sync` sólo refleja recursos y datos. La purga autorizada
 > retira las tarjetas antiguas, conserva bugs/cambios y anula sus referencias.
 > [Reglas y superficies vigentes](../PLATFORM_DELIVERY.md).

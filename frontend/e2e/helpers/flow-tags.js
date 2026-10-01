@@ -342,6 +342,7 @@ export const PLATFORM_DASHBOARD = ['@flow:platform-dashboard', '@module:platform
 export const PLATFORM_DELIVERABLE_DETAIL = ['@flow:platform-deliverable-detail', '@module:platform', '@priority:P2'];
 export const PLATFORM_DELIVERABLES = ['@flow:platform-deliverables', '@module:platform', '@priority:P2'];
 export const PLATFORM_DELIVERY_AUTHORING = ['@flow:platform-delivery-authoring', '@module:platform', '@priority:P1'];
+export const PLATFORM_DELIVERY_CLOSURE_EMAIL = ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_GUIDE_PROMPT = ['@flow:platform-delivery-guide-prompt', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_IMPORT = ['@flow:platform-delivery-import', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_REPLY_PROMPT = ['@flow:platform-delivery-reply-prompt', '@module:platform', '@priority:P1'];
