@@ -65,7 +65,8 @@ async function panelIdeas(page, data) {
   await page.goto(`${frontendUrl}/es-co/panel/projects`, { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
   await page.getByTestId('projects-search-input').fill(data.project.name)
-  await page.getByTestId(`project-ideas-${data.project.id}`).click()
+  await page.getByTestId(`project-actions-${data.project.id}`).click()
+  await page.getByTestId('project-actions-ideas').click()
   await expect(page.getByTestId(`project-idea-${data.idea.id}`)).toContainText(data.idea.text)
 }
 

@@ -6,6 +6,7 @@ defineProps({
 })
 const emit = defineEmits(['close', 'action'])
 const actions = [
+  { id: 'ideas', icon: 'list', label: 'projectIdeas.navigation' },
   { id: 'brand', icon: 'folders', label: 'projectBrand.title' },
   { id: 'detail', icon: 'view', label: 'projectAccess.projectActions.detail' },
   { id: 'space', icon: 'open-platform', label: 'projectAccess.projectActions.space' },
