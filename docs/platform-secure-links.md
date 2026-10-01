@@ -122,6 +122,15 @@ modifican contratos/prompts/guías, hosting/cobros ni políticas de otros frente
 P3 revisa diseño; P0 coordina final P3 y orden de integración. Esta sesión entrega
 PR a main y no hace merge ni deploy.
 
+Base inicial verificada: `origin/main=cce8e6949b080269cf603b8013a97876604b63a5`.
+La dependencia publicada P3 `dea940345fc37c361f8749d30e1a96ac2bba73ee`
+se absorbió por merge en la rama P5, después de publicar los commits propios,
+sin copiar el worktree mutable. El único conflicto fue el mapa derivado de flujos;
+se regeneró desde los shards y documentos de ambos dominios. La referencia
+publicada no se presenta como cierre final/verde de P3: P0 conserva ese gate
+y coordina la integración. `secure_links/0004` sigue dependiendo de accounts/0066,
+aunque la hoja accounts publicada sea ahora 0067; no se renumera ni aplica a DB real.
+
 ## Evidencia de validación
 
 Las pruebas se ejecutaron desde el worktree P5, exclusivamente con
@@ -139,6 +148,14 @@ El finally restaura latest aunque falle la preparación/get_model. Los tres caso
 originales de purga y conservación pasaron sin skip/xfail; no se modificó el
 esquema ni la migración 0064. El lote combinado de esos tres casos y el backfill
 legacy pasó 4/4 en el mismo proceso SQLite, verificando la restauración efectiva.
+
+Después del merge de P3 `dea94034`, el lote focal pasó 13/13: tres casos del
+fixture histórico, backfill legacy, siete casos MCP propios y dos verificaciones
+del registro/contrato MCP. El pin de catálogo pasó 1/1. Se revalidaron catálogo
+(120 páginas), contrato responsive (600 celdas), tokens de diseño, flow-sync
+(394 referencias/424 definiciones) y frescura del mapa; los tres flujos P5
+siguen covered para display/success/error/failure. No se repitió toda la QA ni
+se ejecutaron pruebas contra MySQL.
 
 Frontend: 13 pruebas unitarias dedicadas y una verificación del catálogo existente.
 Dos casos reprodujeron respuestas tardías de catálogo entre proyectos y pasaron
@@ -159,8 +176,9 @@ El build Nuxt final terminó correctamente. Los guards de catálogo, responsive 
 tokens de diseño pasaron; Ruff se ejecutó realmente desde el venv aislado del
 worktree. La validación de concurrencia MySQL sigue pendiente del harness aislado
 permitido. El piloto de mutación del toolkit no admite este clon no registrado;
-no se alteraron sus guards ni projects.yml para hacerlo pasar. El CI y la absorción
-final de P3 se verifican por SHA en el PR, separados de estas pruebas locales.
+no se alteraron sus guards ni projects.yml para hacerlo pasar. El CI del head P5
+y el cierre final de P3 se verifican por SHA en el PR, separados de estas pruebas
+locales; la referencia P3 publicada anterior ya está absorbida.
 
 QA local: APPROVED. El gate final de los 15 archivos de pruebas/helpers tuvo
 0 errores y 0 warnings (7 backend, 4 unitarios, 3 E2E; helper revisado manualmente).
