@@ -1,6 +1,6 @@
 """
 When a BusinessProposal becomes accepted (client response or admin panel), provision
-platform resources if needed, sync Kanban from technical_document, and send welcome email (via ProposalEmailService).
+platform resources if needed, sync resources from technical_document, and send welcome email (via ProposalEmailService).
 """
 
 from __future__ import annotations
@@ -13,8 +13,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import Deliverable, Project, UserProfile
-from accounts.services.technical_requirements_sync import (
-    sync_technical_requirements_for_deliverable,
+from accounts.services.technical_resources_sync import (
+    sync_technical_resources_for_deliverable,
 )
 
 logger = logging.getLogger(__name__)
@@ -106,11 +106,16 @@ def ensure_deliverable_for_accepted_proposal(
 
 
 def teardown_platform_for_proposal(proposal) -> None:
-    """Delete linked project (cascading deliverables, requirements, files) and clear FK."""
+    """Retire an unused onboarding graph; contractual delivery evidence is retained."""
     if not proposal.deliverable_id:
         return
     deliverable = proposal.deliverable
     project = deliverable.project
+    if project.delivery_contracts.exists():
+        from rest_framework.exceptions import ValidationError
+        raise ValidationError({
+            'detail': 'Este proyecto tiene seguimiento contractual. Gestiona la nueva entrega desde Platform sin reiniciar el proyecto.',
+        })
     proposal.deliverable = None
     proposal.platform_onboarding_completed_at = None
     proposal.save(update_fields=['deliverable_id', 'platform_onboarding_completed_at'])
@@ -149,7 +154,7 @@ def handle_proposal_accepted_for_platform(
             acting_user=actor,
         )
     if d and actor:
-        sync_result = sync_technical_requirements_for_deliverable(d, actor)
+        sync_result = sync_technical_resources_for_deliverable(d, actor)
         if not sync_result.get('ok'):
             logger.warning(
                 'Technical sync after acceptance failed for proposal %s: %s',

@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import include, path
 
 from accounts.collection_account_views import (
     collection_account_detail_view,
@@ -62,9 +62,8 @@ from accounts.views import (
     deliverable_detail_view,
     project_data_model_entities_view,
     project_data_model_template_view,
-    project_scope_items_view,
     deliverable_list_view,
-    deliverable_sync_technical_requirements_view,
+    deliverable_sync_technical_resources_view,
     deliverable_technical_document_pdf_view,
     deliverable_upload_version_view,
     notification_list_view,
@@ -108,17 +107,14 @@ from accounts.views import (
     project_phase_detail_view,
     project_phases_reorder_view,
     project_phases_view,
-    requirement_bulk_upload_view,
-    requirement_comment_view,
-    requirement_detail_view,
     requirement_list_view,
-    requirement_move_view,
     resend_code_view,
     token_refresh_view,
     verify_view,
 )
 
 urlpatterns = [
+    path('projects/<int:project_id>/delivery/', include('accounts.delivery_urls')),
     # Auth
     path('session-token-bridge/', session_token_bridge, name='platform-session-bridge'),
     path('login/', login_view, name='platform-login'),
@@ -231,34 +227,14 @@ urlpatterns = [
     path('deliverables/', deliverable_all_view, name='platform-deliverable-all'),
     path('projects/<int:project_id>/deliverables/', deliverable_list_view, name='platform-deliverable-list'),
     path(
-        'projects/<int:project_id>/deliverables/<int:deliverable_id>/sync-technical-requirements/',
-        deliverable_sync_technical_requirements_view,
+        'projects/<int:project_id>/deliverables/<int:deliverable_id>/sync-technical-resources/',
+        deliverable_sync_technical_resources_view,
         name='platform-deliverable-sync-technical',
     ),
     path(
         'projects/<int:project_id>/requirements/',
         requirement_list_view,
         name='platform-requirement-list',
-    ),
-    path(
-        'projects/<int:project_id>/requirements/bulk/',
-        requirement_bulk_upload_view,
-        name='platform-requirement-bulk',
-    ),
-    path(
-        'projects/<int:project_id>/requirements/<int:req_id>/',
-        requirement_detail_view,
-        name='platform-requirement-detail',
-    ),
-    path(
-        'projects/<int:project_id>/requirements/<int:req_id>/move/',
-        requirement_move_view,
-        name='platform-requirement-move',
-    ),
-    path(
-        'projects/<int:project_id>/requirements/<int:req_id>/comments/',
-        requirement_comment_view,
-        name='platform-requirement-comments',
     ),
     path(
         'projects/<int:project_id>/deliverables/<int:deliverable_id>/client-folders/',
@@ -306,11 +282,6 @@ urlpatterns = [
         'projects/<int:project_id>/data-model-entities/template/',
         project_data_model_template_view,
         name='platform-project-data-model-template',
-    ),
-    path(
-        'projects/<int:project_id>/scope-items/',
-        project_scope_items_view,
-        name='platform-project-scope-items',
     ),
 
     # Notifications

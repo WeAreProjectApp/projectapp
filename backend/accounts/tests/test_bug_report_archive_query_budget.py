@@ -1,5 +1,6 @@
 """Query-budget contracts for archived bug reports."""
 
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 import pytest
 from content.models import BusinessProposal
 from django.contrib.auth import get_user_model
@@ -12,8 +13,6 @@ from accounts.models import (
     BugComment,
     BugReport,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 
@@ -101,22 +100,10 @@ def project_and_bug_reports(users_and_headers):
         title='Bug archive budget proposal',
         client_name='Bug archive budget client',
     )
-    phase = ProjectPhase.objects.create(project=project, business_proposal=proposal, order=1)
-    requirement = Requirement.objects.create(phase=phase, title='Bug archive source')
-    one_comment_bug = BugReport.objects.create(
-        project=project,
-        reported_by=client,
-        phase=phase,
-        source_requirement=requirement,
-        title='One comment bug',
-    )
-    fifty_comment_bug = BugReport.objects.create(
-        project=project,
-        reported_by=client,
-        phase=phase,
-        source_requirement=requirement,
-        title='Fifty comment bug',
-    )
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title='Bug archive source')
+    one_comment_bug = BugReport.objects.create(project=project, reported_by=client, source_requirement=requirement, title='One comment bug')
+    fifty_comment_bug = BugReport.objects.create(project=project, reported_by=client, source_requirement=requirement, title='Fifty comment bug')
     return project, one_comment_bug, fifty_comment_bug
 
 

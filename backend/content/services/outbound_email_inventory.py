@@ -61,6 +61,7 @@ OUTBOUND_EMAIL_CHANNELS = {
     'proposal_documents_sent': DOCUMENTS_COMMUNICATIONS,
     'branded_email': DOCUMENTS_COMMUNICATIONS,
     'proposal_email': DOCUMENTS_COMMUNICATIONS,
+    'delivery_stage_approved_client': DOCUMENTS_COMMUNICATIONS,
     # Internal notice of a client-created secure link; never carries the
     # link token or the protected content.
     'secure_link_received_team': DOCUMENTS_COMMUNICATIONS,

@@ -16,6 +16,9 @@ from content.services.markdown_export import (
 MAX_FILE_BYTES = 15 * 1024 * 1024
 MAX_EXPANDED_BYTES = 50 * 1024 * 1024
 MAX_PDF_PAGES = 100
+MAX_SOURCE_CHARACTERS = 60_000
+MAX_SOURCE_FRAGMENTS = 1000
+MAX_SOURCE_SECTION_CHARACTERS = 200
 MAX_SHEET_CELLS = 20_000
 WORD_NS = '{http://schemas.openxmlformats.org/wordprocessingml/2006/main}'
 PDF_WARNING = 'Texto extraído del PDF; el formato fue reconstruido. Las imágenes y firmas gráficas no se copian.'
@@ -73,7 +76,7 @@ def pdf_markdown(data):
     return output.render(), warnings
 
 
-def word_text(node):
+def word_text(node, *, escape=True):
     values = []
     for element in node.iter():
         if element.tag == WORD_NS + 'p' and values:
@@ -84,7 +87,8 @@ def word_text(node):
             values.append('\t')
         elif element.tag in (WORD_NS + 'br', WORD_NS + 'cr'):
             values.append('\n')
-    return literal(''.join(values).strip())
+    text = ''.join(values).strip()
+    return literal(text) if escape else text
 
 
 def word_paragraph(node, numbering):
@@ -186,6 +190,175 @@ def xlsx_markdown(data):
     return output.render(), warnings
 
 
+class SourceFragmentBuffer:
+    """Keep source excerpts within explicit limits without hiding omissions."""
+
+    def __init__(self, warnings=()):
+        self.fragments = []
+        self.warnings = list(warnings)
+        self.characters = 0
+        self.partial = False
+        self.limits = {
+            'max_characters': MAX_SOURCE_CHARACTERS,
+            'max_fragments': MAX_SOURCE_FRAGMENTS,
+            'max_section_title_characters': MAX_SOURCE_SECTION_CHARACTERS,
+            'max_pdf_pages': MAX_PDF_PAGES,
+            'max_file_bytes': MAX_FILE_BYTES,
+            'max_expanded_bytes': MAX_EXPANDED_BYTES,
+        }
+
+    def omit(self, message):
+        self.partial = True
+        if message not in self.warnings:
+            self.warnings.append(message)
+
+    def append(self, locator, text):
+        text = text.strip()
+        if not text:
+            return True
+        if len(self.fragments) >= MAX_SOURCE_FRAGMENTS:
+            self.omit('Se alcanzó el límite de 1.000 fragmentos; quedó contenido sin incluir.')
+            return False
+        remaining = MAX_SOURCE_CHARACTERS - self.characters
+        clipped = len(text) > remaining
+        excerpt = text[:remaining]
+        if excerpt:
+            self.fragments.append({'locator': locator, 'text': excerpt})
+            self.characters += len(excerpt)
+        if clipped:
+            self.omit('Se alcanzó el límite de 60.000 caracteres; quedó contenido sin incluir.')
+        return not clipped
+
+    def payload(self):
+        status = 'unreadable'
+        if self.fragments:
+            status = 'partial' if self.partial else 'included'
+        return {
+            'fragments': self.fragments,
+            'status': status,
+            'warnings': self.warnings,
+            'limits': {
+                **self.limits, 'characters_returned': self.characters,
+                'fragments_returned': len(self.fragments),
+            },
+        }
+
+
+def pdf_source_fragments(data):
+    """Read actual PDF pages while preserving incomplete extraction evidence."""
+    from pypdf import PdfReader
+
+    reader = PdfReader(BytesIO(data))
+    if reader.is_encrypted:
+        raise MarkdownExportError('El PDF está protegido. Usa una copia sin contraseña.', 'document_protected')
+    output = SourceFragmentBuffer([PDF_WARNING])
+    total = len(reader.pages)
+    output.limits.update({'pdf_pages_total': total, 'pdf_pages_examined': 0})
+    if total > MAX_PDF_PAGES:
+        output.omit(f'El PDF tiene {total} páginas; sólo se revisan las primeras 100.')
+    expanded = 0
+    for number, page in enumerate(reader.pages[:MAX_PDF_PAGES], 1):
+        output.limits['pdf_pages_examined'] = number
+        try:
+            contents = page.get_contents()
+            expanded += len(contents.get_data()) if contents is not None else 0
+            if expanded > MAX_EXPANDED_BYTES:
+                output.omit(f'La página {number} supera el límite de contenido descomprimido; no se terminó de leer el PDF.')
+                break
+            text = (page.extract_text() or '').strip()
+        except MemoryError:
+            raise
+        except Exception:
+            output.omit(f'No se pudo extraer texto de la página {number}.')
+            continue
+        if not text:
+            output.omit(f'Página {number} sin texto extraíble; puede contener imágenes o un escaneo. No se aplicó OCR.')
+        elif not output.append(f'Página {number}', text):
+            break
+    if not output.fragments:
+        output.warnings.append('El PDF no contiene texto disponible para preparar una guía; requiere revisión del original.')
+    return output.payload()
+
+
+def source_section_title(text, output):
+    """Make any shortened section locator explicit rather than silent."""
+    if len(text) > MAX_SOURCE_SECTION_CHARACTERS:
+        output.omit('Un título de sección supera 200 caracteres; su referencia se abrevia y requiere revisión.')
+        return text[:MAX_SOURCE_SECTION_CHARACTERS] + '…'
+    return text
+
+
+def _office_part_label(name):
+    if name == 'word/document.xml':
+        return 'Documento'
+    if name.startswith('word/header'):
+        return 'Encabezado ' + Path(name).stem.removeprefix('header')
+    if name.startswith('word/footer'):
+        return 'Pie de página ' + Path(name).stem.removeprefix('footer')
+    return 'Notas al pie' if name.startswith('word/footnotes') else 'Notas finales'
+
+
+def docx_source_fragments(data):
+    """Locate DOCX text by XML paragraph order, never by invented pages."""
+    output = SourceFragmentBuffer([OFFICE_WARNING])
+    with office_archive(data) as archive:
+        names = ['word/document.xml'] + sorted(
+            name for name in archive.namelist()
+            if name.startswith(('word/header', 'word/footer', 'word/footnotes', 'word/endnotes')) and name.endswith('.xml')
+        )
+        for name in names:
+            root = ElementTree.fromstring(archive.read(name))
+            body = root.find(WORD_NS + 'body') if name == 'word/document.xml' else root
+            if body is None:
+                continue
+            section = ''
+            for number, paragraph in enumerate(body.iter(WORD_NS + 'p'), 1):
+                text = word_text(paragraph, escape=False)
+                style = paragraph.find('./' + WORD_NS + 'pPr/' + WORD_NS + 'pStyle')
+                style_name = style.get(WORD_NS + 'val', '').lower() if style is not None else ''
+                if text and style_name.startswith(('heading', 'titulo', 'título', 'title')):
+                    section = source_section_title(text, output)
+                locator = _office_part_label(name)
+                if section:
+                    locator += f' · sección «{section}»'
+                locator += f' · párrafo {number}'
+                if not output.append(locator, text):
+                    return output.payload()
+    if not output.fragments:
+        output.warnings.append('El DOCX no contiene texto extraíble; las imágenes y los escaneos requieren revisión del original.')
+    return output.payload()
+
+
+def extract_attachment_source(data, suffix):
+    """Use the same isolated parser for page/paragraph source fragments."""
+    if suffix not in ('.pdf', '.docx'):
+        raise MarkdownExportError('El formato no admite extracción de fuentes verificables.', 'unsupported_format', 415)
+    if len(data) > MAX_FILE_BYTES:
+        raise MarkdownExportError('El archivo supera el límite de 15 MB.', 'document_too_large', 413)
+    return _extract_attachment_bytes(data, suffix, 'fragments')
+
+
+def _extract_attachment_bytes(data, suffix, mode='markdown'):
+    try:
+        result = subprocess.run(
+            [sys.executable, '-m', 'content.services.attachment_markdown_worker', suffix, mode],
+            input=data, capture_output=True, timeout=12,
+            cwd=Path(__file__).resolve().parents[2], check=False,
+        )
+        if result.returncode:
+            raise MarkdownExportError('La extracción superó el límite de procesamiento. Descarga el original o usa un archivo más pequeño.', 'extraction_limit', 413)
+        payload = json.loads(result.stdout)
+        if 'error' in payload:
+            raise MarkdownExportError(payload['error'], payload['code'], payload['status'])
+        return payload
+    except MarkdownExportError:
+        raise
+    except subprocess.TimeoutExpired as exc:
+        raise MarkdownExportError('La extracción tardó demasiado. Usa un archivo más pequeño.', 'extraction_limit', 413) from exc
+    except Exception as exc:
+        raise MarkdownExportError('No se pudo leer el archivo. Puede estar dañado o protegido.', 'invalid_document') from exc
+
+
 def extract_attachment_markdown(document):
     suffix = Path(document.file.name or '').suffix.lower()
     if suffix not in ('.pdf', '.docx', '.xlsx'):
@@ -197,16 +370,7 @@ def extract_attachment_markdown(document):
         # Parsers can expand compressed data before their page/cell limits can
         # run. Bound their memory and CPU in a short-lived process, not the web
         # worker. No shell, remote URLs, temporary files or DB access.
-        result = subprocess.run(
-            [sys.executable, '-m', 'content.services.attachment_markdown_worker', suffix],
-            input=read_attachment(document), capture_output=True, timeout=12,
-            cwd=Path(__file__).resolve().parents[2], check=False,
-        )
-        if result.returncode:
-            raise MarkdownExportError('La extracción superó el límite de procesamiento. Descarga el original o usa un archivo más pequeño.', 'extraction_limit', 413)
-        payload = json.loads(result.stdout)
-        if 'error' in payload:
-            raise MarkdownExportError(payload['error'], payload['code'], payload['status'])
+        payload = _extract_attachment_bytes(read_attachment(document), suffix)
         return export_payload(document.title, payload['markdown'], payload['warnings'])
     except MarkdownExportError:
         raise

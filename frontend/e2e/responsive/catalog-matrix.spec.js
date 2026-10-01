@@ -52,6 +52,7 @@ const proposalDefaultsRedirect = redirectScenario('/panel/proposals/defaults');
 const diagnosticDefaultsRedirect = redirectScenario('/panel/diagnostics/defaults');
 const deliverableRedirect = redirectScenario('/platform/projects/:id/deliverables/:deliverableId');
 const adminLoginRedirect = redirectScenario('/platform/admin-login');
+const projectBoardRedirect = redirectScenario('/platform/projects/:id/board');
 const partnershipRedirects = [
   '/panel/financing', '/panel/financing/new', '/panel/financing/:id',
 ].map(redirectScenario);
@@ -124,6 +125,16 @@ for (const profile of RESPONSIVE_PROFILES) {
     tag: [`@viewport:${profile}`],
   }, () => {
     test.use(viewportUse(profile));
+
+    if (belongsToRequestedBatch(projectBoardRedirect)) {
+      test('the former project board opens its delivery workspace', {
+        tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(projectBoardRedirect, profile)],
+      }, async ({ page }) => {
+        // quality: allow-no-interaction (an old project bookmark invokes the compatibility redirect)
+        await navigateCompatibilityRedirect(page, projectBoardRedirect);
+        await expect(page).toHaveURL(redirectUrlPattern(projectBoardRedirect));
+      });
+    }
 
     for (const scenario of partnershipRedirects.filter(belongsToRequestedBatch)) {
       test(`partnership alias ${scenario.url} retains its destination`, {

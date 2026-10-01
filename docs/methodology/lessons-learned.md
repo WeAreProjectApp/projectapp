@@ -7,6 +7,14 @@ description: Project intelligence and lessons learned. Reference for project-spe
 
 This file captures important patterns, preferences, and project intelligence that help work more effectively with this codebase. Updated as new insights are discovered.
 
+> **Lección 2026-10-01 — redacción, publicación y conformidad son hechos distintos:**
+> el detalle técnico no produce automáticamente una guía comprensible. El equipo
+> redacta por separado; publicar congela lo que el cliente ve y la revisión
+> conserva exactamente lo que aprobó. Una segunda ronda no invalida conformidades
+> previas, y una constancia saliente del equipo no sustituye evidencia entrante
+> del cliente. Mantener estas reglas en servicios compartidos evita que JSON,
+> formularios o MCP eludan el workflow. [Contrato](../PLATFORM_DELIVERY.md).
+
 > **Lección 2026-09-26 — un contrato de formularios se barre por superficie:**
 > aplicar «el error pertenece al campo» a los *modales* de creación dejó fuera
 > la página Nuevo documento y la mitad Documentos de un catálogo compartido. El
@@ -490,7 +498,7 @@ venv/bin/python <command>
 ### Data Model Entity Patterns
 - `DataModelEntity` stores a reusable JSON schema (field definitions, types, constraints) independent of any project
 - `ProjectDataModelEntity` associates an entity with a project and optionally overrides its schema
-- Technical requirements sync: syncs project `Requirement` entries from the linked data model entity's schema fields
+- La sincronización técnica conserva recursos y modelos de datos; las guías del cliente se redactan de forma independiente.
 - JSON upload via API endpoint allows bulk creation of entity schemas from external tools
 - Platform UI: `/platform/projects/:id/data-model` tab shows linked entities and allows sync actions
 
@@ -504,16 +512,17 @@ venv/bin/python <command>
 - **Never mix these two HTTP clients**
 
 ### Platform Store Naming
-- Platform stores use kebab-case: `platform-auth.js`, `platform-clients.js`, `platform-projects.js`, `platform-requirements.js`
+- Platform stores use kebab-case: `platform-auth.js`, `platform-clients.js`, `platform-projects.js`, `platform-delivery.js`
 - Content stores use snake_case: `portfolio_works.js`, `proposals.js`
 
-### Accounts Services (19 modules)
+### Accounts Services
 - `services/onboarding.py` — profile completion flow
 - `services/tokens.py` — JWT token generation/refresh
 - `services/verification.py` — OTP code generation and validation (login + email validation purposes)
 - `services/password_reset.py` — password-reset OTP flow
 - `services/client_flow_notifications.py` — best-effort team milestone alerts (first login / email validated / document signed); never raises
-- `services/technical_requirements_sync.py` — mirrors accepted-proposal FR groups into `ProjectScopeItem` + `Requirement` rows (respects `content_overridden`)
+- `services/technical_resources_sync.py` — refleja recursos seleccionados y modelos de datos; no redacta guías ni recalcula el progreso comercial.
+- `services/delivery_workflow.py`, `delivery_documents.py`, `delivery_access.py` — autoría, publicación, revisión del cliente, evidencia y permisos compartidos por JWT/MCP.
 - `services/hosting_billing.py` + `services/payment_notifications.py` + `services/project_phases.py` — hosting multi-phase billing/proration + payment alerts
 - `services/impersonation.py` — panel→platform admin impersonation exchange
 - `services/image_utils.py` — avatar processing

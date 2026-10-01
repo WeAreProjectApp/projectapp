@@ -219,7 +219,7 @@
                   >
                     <option :value="null" disabled>Selecciona el requerimiento</option>
                     <option v-for="req in projectRequirements" :key="req.id" :value="req.id">
-                      {{ req.phase_title ? req.phase_title + ' — ' : '' }}{{ req.title }}
+                      {{ req.stage_title ? req.stage_title + ' — ' : '' }}{{ req.title }}
                     </option>
                   </select>
                   <p class="mt-1 text-[10px] text-green-light/60">¿De qué requerimiento es este cambio?</p>
@@ -377,10 +377,10 @@
                   Fase: {{ detailCR.source_requirement.phase_title }}
                 </p>
                 <NuxtLink
-                  :to="localePath(`/platform/projects/${projectId}/board?phase_id=${detailCR.source_requirement.phase_id}`)"
+                  :to="localePath(`/platform/projects/${projectId}/delivery?stage=${detailCR.source_requirement.stage_id}#requirement-${detailCR.source_requirement.id}`)"
                   class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-accent dark:decoration-accent/30 dark:hover:decoration-accent"
                 >
-                  Ver en el tablero
+                  {{ t('platformDelivery.seeDelivery') }}
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16" /></svg>
                 </NuxtLink>
               </div>
@@ -482,8 +482,8 @@
                     <BaseButton variant="secondary" size="sm" @click="openEvaluateForm">
                       Evaluar
                     </BaseButton>
-                    <BaseButton variant="primary" size="sm" v-if="detailCR.status === 'approved' && !detailCR.linked_requirement_id" :disabled="crStore.isUpdating" @click="handleConvert">
-                      Convertir en requerimiento
+                    <BaseButton variant="primary" size="sm" v-if="detailCR.status === 'approved' && !detailCR.linked_requirement_id" :disabled="crStore.isUpdating" @click="openConvert">
+                      {{ t('platformDelivery.convert') }}
                     </BaseButton>
                     <BaseButton variant="danger-ghost" size="sm" :disabled="crStore.isUpdating" @click="handleDelete">
                       Archivar
@@ -537,6 +537,17 @@
       </Transition>
     </Teleport>
   </div>
+    <BaseModal v-model="isConvertOpen" kind="form">
+      <form class="space-y-5 p-4 sm:p-6" @submit.prevent="handleConvert">
+        <h2 class="text-lg font-semibold text-text-default">{{ t('platformDelivery.convert') }}</h2>
+        <p class="text-sm text-text-muted">{{ t('platformDelivery.selectDraftStage') }}</p>
+        <BaseAlert v-if="convertError" variant="danger" role="alert">{{ convertError }}</BaseAlert>
+        <BaseFormField :label="t('platformDelivery.draftStage')" for="change-request-stage" required>
+          <BaseSelect id="change-request-stage" v-model="convertStageId" :options="draftStageOptions" :placeholder="t('platformDelivery.select')" />
+        </BaseFormField>
+        <BaseModalActions><BaseButton variant="ghost" @click="isConvertOpen = false">{{ t('platformDelivery.cancel') }}</BaseButton><BaseButton type="submit" :loading="crStore.isUpdating">{{ t('platformDelivery.convert') }}</BaseButton></BaseModalActions>
+      </form>
+    </BaseModal>
   </ProjectShell>
 </template>
 
@@ -548,6 +559,7 @@ import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformChangeRequestsStore } from '~/stores/platform-change-requests'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { usePlatformRequirementsStore } from '~/stores/platform-requirements'
+import { usePlatformDeliveryStore } from '~/stores/platform-delivery'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
 
@@ -560,10 +572,16 @@ usePageEntrance('#platform-changes')
 
 const route = useRoute()
 const localePath = useLocalePath()
+const { t } = useI18n()
 const authStore = usePlatformAuthStore()
 const crStore = usePlatformChangeRequestsStore()
 const projectsStore = usePlatformProjectsStore()
 const requirementsStore = usePlatformRequirementsStore()
+const deliveryStore = usePlatformDeliveryStore()
+const isConvertOpen = ref(false)
+const convertStageId = ref('')
+const convertError = ref('')
+const draftStageOptions = computed(() => deliveryStore.stages.filter((stage) => stage.editorial_status === 'draft' && stage.status !== 'approved').map((stage) => ({ value: stage.id, label: stage.title })))
 
 const { isMobile } = useIsMobile()
 
@@ -584,28 +602,20 @@ const statusTabs = computed(() => [
   { value: 'out_of_scope', label: 'Fuera de alcance' },
 ])
 
-const phases = ref([])
 const selectedPhaseId = ref(null)
-const phaseOptions = computed(() =>
-  phases.value.map((p) => ({ id: p.id, order: p.order, title: p.proposal?.title || `Fase ${p.order}` }))
-)
-const selectedPhaseLabel = computed(() => {
-  if (!selectedPhaseId.value) return 'Todas las fases'
-  const found = phaseOptions.value.find((p) => p.id === selectedPhaseId.value)
-  return found ? `Fase ${found.order} · ${found.title}` : 'Todas las fases'
-})
+const phaseOptions = computed(() => [...new Map(projectRequirements.value
+  .filter((requirement) => requirement.phase_id)
+  .map((requirement) => [requirement.phase_id, { id: requirement.phase_id, title: requirement.phase_title }])).values()])
+const selectedPhaseLabel = computed(() => phaseOptions.value.find((phase) => phase.id === selectedPhaseId.value)?.title || 'Todas las fases')
 const phaseDropdownItems = computed(() => [
   { label: 'Todas las fases', onClick: () => { selectedPhaseId.value = null } },
-  ...phaseOptions.value.map((opt) => ({
-    label: `Fase ${opt.order} · ${opt.title}`,
-    onClick: () => { selectedPhaseId.value = opt.id },
-  })),
+  ...phaseOptions.value.map((phase) => ({ label: phase.title, onClick: () => { selectedPhaseId.value = phase.id } })),
 ])
 
 const filteredRequests = computed(() => {
   let list = crStore.filteredByStatus(activeFilter.value)
   if (selectedPhaseId.value) {
-    list = list.filter((cr) => cr.phase_id === selectedPhaseId.value)
+    list = list.filter((cr) => cr.source_requirement?.phase_id === selectedPhaseId.value)
   }
   return list
 })
@@ -688,7 +698,7 @@ function openCreateModal() {
   createForm.source_requirement_id = null
   screenshotFile.value = null
   screenshotPreview.value = null
-  // Honor ?from_req=X&title=Y from board.vue deep-link
+  // Honor ?from_req=X&title=Y from delivery.vue deep-link
   const fromReq = Number(route.query.from_req)
   if (fromReq && projectRequirements.value.some((r) => r.id === fromReq)) {
     createForm.source_requirement_id = fromReq
@@ -772,11 +782,23 @@ async function handleEvaluate() {
   }
 }
 
+async function openConvert() {
+  convertStageId.value = ''
+  convertError.value = ''
+  const result = await deliveryStore.fetchDelivery(projectId.value)
+  if (!result.success) { convertError.value = result.message || t('platformDelivery.loadError') }
+  isConvertOpen.value = true
+}
+
 async function handleConvert() {
   if (!detailCR.value) return
-  const result = await crStore.convertToRequirement(projectId.value, detailCR.value.id)
+  if (!convertStageId.value) { convertError.value = t('platformDelivery.fieldRequired'); return }
+  const result = await crStore.convertToRequirement(projectId.value, detailCR.value.id, { stage_id: Number(convertStageId.value), expected_version: deliveryStore.version })
   if (result.success) {
     detailCR.value = result.data
+    isConvertOpen.value = false
+  } else {
+    convertError.value = result.message || t('platformDelivery.actionError')
   }
 }
 
@@ -789,14 +811,6 @@ async function handleDelete() {
   }
 }
 
-async function loadPhases() {
-  try {
-    const list = await projectsStore.loadPhases(projectId.value)
-    phases.value = Array.isArray(list) ? list : []
-  } catch {
-    phases.value = []
-  }
-}
 
 async function loadChangeRequests() {
   await crStore.fetchChangeRequests(projectId.value, null, false)
@@ -899,12 +913,11 @@ onMounted(async () => {
   await Promise.all([
     loadChangeRequests(),
     loadProjectRequirements(),
-    loadPhases(),
     projectsStore.currentProject?.id !== Number(projectId.value)
       ? projectsStore.fetchProject(projectId.value)
       : Promise.resolve(),
   ])
-  // Deep-link from board: ?from_req=X&title=Y → auto-open create modal (client only)
+  // Deep-link from deliveries: ?from_req=X&title=Y → auto-open create modal (client only)
   if (!authStore.isAdmin && route.query.from_req && projectRequirements.value.length) {
     openCreateModal()
   }
@@ -913,7 +926,6 @@ onMounted(async () => {
 watch(projectId, () => {
   loadChangeRequests()
   loadProjectRequirements()
-  loadPhases()
 })
 </script>
 

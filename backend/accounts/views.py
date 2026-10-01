@@ -68,9 +68,7 @@ from accounts.services.archive import (
     filter_bug_reports_for_list,
     filter_change_requests_for_list,
     filter_deliverables_for_list,
-    filter_requirements_for_list,
     filter_subscriptions_for_list,
-    requirement_visible_for_request,
     unarchive_record,
     wants_include_archived,
 )
@@ -1139,18 +1137,15 @@ def project_access_list_view(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
-def deliverable_sync_technical_requirements_view(request, project_id, deliverable_id):
-    """
-    Admin: upsert deliverables (per épica) and requirements from the BusinessProposal
-    on this deliverable's technical_document section.
-    """
+def deliverable_sync_technical_resources_view(request, project_id, deliverable_id):
+    """Admin: mirror the proposal's resources and data model into the project."""
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
 
     from accounts.models import Deliverable
-    from accounts.services.technical_requirements_sync import (
-        sync_technical_requirements_for_deliverable,
+    from accounts.services.technical_resources_sync import (
+        sync_technical_resources_for_deliverable,
     )
 
     d = Deliverable.objects.filter(pk=deliverable_id, project=proj).first()
@@ -1166,7 +1161,7 @@ def deliverable_sync_technical_requirements_view(request, project_id, deliverabl
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    result = sync_technical_requirements_for_deliverable(d, request.user)
+    result = sync_technical_resources_for_deliverable(d, request.user)
     if not result.get('ok'):
         return Response(
             {'detail': result.get('detail', 'No se pudo sincronizar.')},
@@ -1176,18 +1171,11 @@ def deliverable_sync_technical_requirements_view(request, project_id, deliverabl
 
 
 # ==========================================================================
-# Requirements (Kanban board)
+# Published delivery requirement selectors
 # ==========================================================================
 
-from accounts.models import Requirement, RequirementComment, RequirementHistory  # noqa: E402
-from accounts.serializers import (  # noqa: E402
-    CreateCommentSerializer,
-    CreateRequirementSerializer,
-    MoveRequirementSerializer,
-    RequirementDetailSerializer,
-    RequirementListSerializer,
-    UpdateRequirementSerializer,
-)
+from accounts.models import Requirement  # noqa: E402
+from accounts.serializers import RequirementListSerializer, published_requirement_rows  # noqa: E402
 
 
 def _get_project_or_403(request, project_id, *, related_fields=()):
@@ -1206,417 +1194,31 @@ def _get_project_or_403(request, project_id, *, related_fields=()):
     return proj, None
 
 
-def _pick_default_deliverable_for_requirements(proj):
-    from accounts.models import Deliverable
-
-    d = (
-        Deliverable.objects.filter(project=proj, is_archived=False)
-        .filter(business_proposal__isnull=False)
-        .order_by('id')
-        .first()
-    )
-    if d:
-        return d
-    d = Deliverable.objects.filter(project=proj, is_archived=False).order_by('id').first()
-    if d:
-        return d
-    return Deliverable.objects.create(
-        project=proj,
-        category=Deliverable.CATEGORY_OTHER,
-        title='Alcance inicial',
-        description='',
-        file=None,
-        uploaded_by=proj.client,
-    )
-
-
-def _recalculate_project_progress(project):
-    """Auto-sync project.progress from done/total requirements."""
-    from django.db.models import Count, Q
-
-    counts = Requirement.objects.filter(
-        phase__project=project,
-        is_archived=False,
-    ).aggregate(
-        total=Count('pk'),
-        done=Count('pk', filter=Q(status=Requirement.STATUS_DONE)),
-    )
-    total = counts['total']
-    if total == 0:
-        project.progress = 0
-    else:
-        done = counts['done']
-        project.progress = round((done / total) * 100)
-    project.save(update_fields=['progress', 'updated_at'])
-
-
-def _resolve_phase_for_project(project, phase_id):
-    """Return ProjectPhase pk for the given project, or None."""
-    if not phase_id:
-        return None
-    from accounts.models import ProjectPhase
-    return ProjectPhase.objects.filter(pk=phase_id, project=project).first()
-
-
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def requirement_list_view(request, project_id):
-    """
-    GET  — Requirements for a project; optional ?phase_id=X filter.
-    POST — Admin creates a new requirement (phase_id required).
-    """
-    from django.db.models import Count
+    """Read requirements visible in the contractual delivery hierarchy."""
+    from accounts.services.delivery_workflow import visible_requirements
 
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
+    stage_id = request.query_params.get('stage_id')
+    phase_id = request.query_params.get('phase_id')
     profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-
-    if request.method == 'GET':
-        qs = (
-            Requirement.objects.filter(phase__project=proj)
-            .select_related('phase__business_proposal', 'scope_item')
-            .only(
-                'id', 'title', 'description', 'configuration', 'flow',
-                'status', 'priority', 'order',
-                'source_epic_key', 'source_epic_title', 'source_flow_key',
-                'synced_from_proposal', 'is_archived', 'archived_at',
-                'created_at', 'updated_at',
-                'phase__id', 'phase__order', 'phase__business_proposal__id',
-                'phase__business_proposal__title',
-                'scope_item__id', 'scope_item__name', 'scope_item__group_id',
-            )
-            .annotate(_comments_count=Count('comments'))
-            .order_by('order', '-created_at')
-        )
-        qs = filter_requirements_for_list(qs, request, is_admin=is_admin)
-        phase_id = request.query_params.get('phase_id')
+    if profile and profile.is_admin:
+        qs = visible_requirements(proj.pk, request.user).select_related('stage__phase__scope')
+        if stage_id:
+            qs = qs.filter(stage_id=stage_id)
         if phase_id:
-            qs = qs.filter(phase_id=phase_id)
-        serializer = RequirementListSerializer(qs, many=True)
-        return Response(serializer.data)
-
-    if not is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden crear requerimientos.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    serializer = CreateRequirementSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    phase = _resolve_phase_for_project(proj, data.get('phase_id'))
-    if phase is None:
-        return Response(
-            {'detail': 'phase_id requerido (la fase debe pertenecer al proyecto).'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    max_order = Requirement.objects.filter(
-        phase=phase, status=data.get('status', Requirement.STATUS_BACKLOG),
-    ).count()
-
-    req = Requirement.objects.create(
-        phase=phase,
-        title=data['title'],
-        description=data.get('description', ''),
-        configuration=data.get('configuration', ''),
-        flow=data.get('flow', ''),
-        status=data.get('status', Requirement.STATUS_BACKLOG),
-        priority=data.get('priority', Requirement.PRIORITY_MEDIUM),
-        order=max_order,
-    )
-
-    _recalculate_project_progress(proj)
-    return Response(RequirementListSerializer(req).data, status=status.HTTP_201_CREATED)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated, IsAdminRole])
-def requirement_bulk_upload_view(request, project_id):
-    """
-    Admin uploads a JSON array of requirements to create in bulk under a project phase.
-    Expected format: [{ title, description?, configuration?, flow?, priority?, status? }, ...]
-
-    Query params:
-      - ``phase_id`` (required): target phase.
-      - ``mode`` (optional): ``append`` (default) or ``replace`` (hard-deletes existing reqs of the phase first).
-    """
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    phase = _resolve_phase_for_project(proj, request.query_params.get('phase_id'))
-    if phase is None:
-        return Response(
-            {'detail': 'phase_id requerido (la fase debe pertenecer al proyecto).'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    items = request.data
-    if not isinstance(items, list):
-        return Response(
-            {'detail': 'Se espera un array JSON de requerimientos.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if len(items) > 500:
-        return Response(
-            {'detail': 'Máximo 500 requerimientos por carga.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    mode = (request.query_params.get('mode') or 'append').lower()
-    if mode not in ('append', 'replace'):
-        return Response(
-            {'detail': "Parámetro 'mode' inválido. Use 'append' o 'replace'."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    deleted_count = 0
-    if mode == 'replace':
-        deleted_count, _ = Requirement.objects.filter(phase=phase).delete()
-        order_offset = 0
-    else:
-        order_offset = Requirement.objects.filter(phase=phase).count()
-
-    created = []
-    for idx, item in enumerate(items):
-        if not isinstance(item, dict) or not item.get('title'):
-            continue
-
-        req = Requirement.objects.create(
-            phase=phase,
-            title=item['title'][:300],
-            description=item.get('description', ''),
-            configuration=item.get('configuration', ''),
-            flow=item.get('flow', ''),
-            status=item.get('status', Requirement.STATUS_BACKLOG),
-            priority=item.get('priority', Requirement.PRIORITY_MEDIUM),
-            order=order_offset + idx,
-        )
-        # New requirements cannot have comments yet; reuse the list serializer's
-        # annotated-count path instead of issuing one COUNT per created row.
-        req._comments_count = 0
-        created.append(req)
-
-    _recalculate_project_progress(proj)
-    return Response(
-        {
-            'created': len(created),
-            'deleted': deleted_count,
-            'mode': mode,
-            'requirements': RequirementListSerializer(created, many=True).data,
-        },
-        status=status.HTTP_201_CREATED,
-    )
-
-
-@api_view(['GET', 'PATCH', 'DELETE'])
-@permission_classes([IsAuthenticated])
-def requirement_detail_view(request, project_id, req_id):
-    """GET detail, PATCH update (admin), DELETE remove (admin)."""
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    if request.method == 'GET':
-        requirements = Requirement.objects.select_related('scope_item').prefetch_related(
-            Prefetch(
-                'comments',
-                queryset=RequirementComment.objects.select_related('user'),
-                to_attr='_detail_comments',
-            ),
-            Prefetch('history', queryset=RequirementHistory.objects.select_related('changed_by')),
-        )
-    elif request.method == 'PATCH':
-        requirements = Requirement.objects.select_related('scope_item')
-    else:
-        requirements = Requirement.objects.all()
-
-    try:
-        req = requirements.get(id=req_id, phase__project=proj)
-    except Requirement.DoesNotExist:
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    if not requirement_visible_for_request(req, request):
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    if request.method == 'GET':
-        return Response(RequirementDetailSerializer(req, context={'request': request}).data)
-
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden modificar requerimientos.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    if request.method == 'DELETE':
-        req.updated_at = timezone.now()
-        archive_record(req, extra_update_fields=('updated_at',))
-        _recalculate_project_progress(proj)
-        return Response({'detail': 'Requerimiento archivado.'})
-
-    serializer = UpdateRequirementSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = dict(serializer.validated_data)
-
-    # Preserve the pre-update history snapshot without loading collections for
-    # rejected requests. Comments are read once by the response serializer.
-    prefetch_related_objects(
-        [req],
-        Prefetch('history', queryset=RequirementHistory.objects.select_related('changed_by')),
-    )
-
-    if 'is_archived' in data:
-        flag = data.pop('is_archived')
-        req.updated_at = timezone.now()
-        if flag:
-            archive_record(req, extra_update_fields=('updated_at',))
-        else:
-            unarchive_record(req, extra_update_fields=('updated_at',))
-
-    old_status = req.status
-    upd_fields = ['updated_at']
-    for field in ('title', 'description', 'status', 'priority', 'configuration', 'flow', 'order'):
-        if field in data:
-            setattr(req, field, data[field])
-            upd_fields.append(field)
-    # An admin edit of proposal-authored content marks the card as overridden so
-    # a later proposal re-sync will not clobber it (status/order are workflow
-    # fields, always preserved by the sync regardless).
-    content_fields = {'title', 'description', 'priority', 'configuration', 'flow'}
-    if content_fields & data.keys() and not req.content_overridden:
-        req.content_overridden = True
-        upd_fields.append('content_overridden')
-    if len(upd_fields) > 1:
-        req.save(update_fields=upd_fields)
-
-    if 'status' in data and data['status'] != old_status:
-        RequirementHistory.objects.create(
-            requirement=req, from_status=old_status,
-            to_status=data['status'], changed_by=request.user,
-        )
-        _recalculate_project_progress(proj)
-
-    return Response(RequirementDetailSerializer(req, context={'request': request}).data)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def requirement_move_view(request, project_id, req_id):
-    """
-    Move a card to a new column/order.
-    Admin can move to any column. Client can only approve (approval→done).
-    """
-    from django.db.models import Count
-
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    try:
-        req = (
-            Requirement.objects
-            .select_related('phase__business_proposal', 'scope_item')
-            .annotate(_comments_count=Count('comments'))
-            .get(id=req_id, phase__project=proj)
-        )
-    except Requirement.DoesNotExist:
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    if not requirement_visible_for_request(req, request):
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = MoveRequirementSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    new_status = serializer.validated_data['status']
-    new_order = serializer.validated_data.get('order', 0)
-
-    profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-
-    if not is_admin:
-        if not (req.status == Requirement.STATUS_APPROVAL and new_status == Requirement.STATUS_DONE):
-            return Response(
-                {'detail': 'Solo puedes aprobar requerimientos en la columna de aprobación.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-    old_status = req.status
-    req.status = new_status
-    req.order = new_order
-    req.save(update_fields=['status', 'order', 'updated_at'])
-
-    if new_status != old_status:
-        RequirementHistory.objects.create(
-            requirement=req, from_status=old_status,
-            to_status=new_status, changed_by=request.user,
-        )
-        _recalculate_project_progress(proj)
-
-        # Notifications
-        from accounts.models import Notification
-        from accounts.services.notifications import notify_project_admins, notify_project_client
-
-        status_labels = dict(Requirement.STATUS_CHOICES)
-        new_label = status_labels.get(new_status, new_status)
-
-        if new_status == Requirement.STATUS_DONE and not is_admin:
-            notify_project_admins(
-                proj, Notification.TYPE_REQUIREMENT_APPROVED,
-                f'Requerimiento aprobado: {req.title}',
-                message=f'{request.user.first_name} aprobó "{req.title}" en {proj.name}.',
-                related_object_type='requirement', related_object_id=req.id,
-                exclude_user=request.user,
-            )
-        elif is_admin:
-            notify_project_client(
-                proj, Notification.TYPE_REQUIREMENT_MOVED,
-                f'Requerimiento actualizado: {req.title}',
-                message=f'"{req.title}" se movió a "{new_label}" en {proj.name}.',
-                related_object_type='requirement', related_object_id=req.id,
-                exclude_user=request.user,
-            )
-
-    return Response(RequirementListSerializer(req).data)
-
-
-@api_view(['POST'])
-@permission_classes([IsAuthenticated])
-def requirement_comment_view(request, project_id, req_id):
-    """Add a comment to a requirement. Both roles can comment."""
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    try:
-        req = Requirement.objects.get(id=req_id, phase__project=proj)
-    except Requirement.DoesNotExist:
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    if not requirement_visible_for_request(req, request):
-        return Response({'detail': 'Requerimiento no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
-
-    serializer = CreateCommentSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-    is_internal = data.get('is_internal', False) and is_admin
-
-    comment = RequirementComment.objects.create(
-        requirement=req, user=request.user,
-        content=data['content'], is_internal=is_internal,
-    )
-
-    from accounts.serializers import RequirementCommentSerializer as RCS  # noqa: E402
-    return Response(RCS(comment).data, status=status.HTTP_201_CREATED)
+            qs = qs.filter(stage__phase_id=phase_id)
+        return Response(RequirementListSerializer(qs.order_by('stage__order', 'order', 'id'), many=True).data)
+    rows = published_requirement_rows(proj.pk, request.user)
+    if stage_id:
+        rows = [row for row in rows if str(row['stage_id']) == stage_id]
+    if phase_id:
+        rows = [row for row in rows if str(row['phase_id']) == phase_id]
+    return Response(rows)
 
 
 # ==========================================================================
@@ -1638,13 +1240,18 @@ from accounts.serializers import (  # noqa: E402
 _SOURCE_REQUIREMENT_LIST_FIELDS = (
     'source_requirement__id',
     'source_requirement__title',
-    'source_requirement__status',
-    'source_requirement__phase_id',
-    'source_requirement__phase__id',
-    'source_requirement__phase__order',
-    'source_requirement__phase__business_proposal_id',
-    'source_requirement__phase__business_proposal__id',
-    'source_requirement__phase__business_proposal__title',
+    'source_requirement__review_status',
+    'source_requirement__stage_id',
+    'source_requirement__stage__id',
+    'source_requirement__stage__title',
+    'source_requirement__stage__phase_id',
+    'source_requirement__stage__phase__id',
+    'source_requirement__stage__phase__title',
+    'source_requirement__stage__phase__scope_id',
+    'source_requirement__stage__phase__scope__id',
+    'source_requirement__stage__phase__scope__contract_id',
+    'source_requirement__stage__phase__scope__contract__id',
+    'source_requirement__stage__phase__scope__contract__project_id',
 )
 
 
@@ -1653,9 +1260,9 @@ def _change_request_list_queryset(qs):
     from django.db.models import Count
 
     return (
-        qs.select_related('created_by', 'project', 'source_requirement__phase__business_proposal')
+        qs.select_related('created_by', 'project', 'source_requirement__stage__phase__scope')
         .only(
-            'id', 'project_id', 'created_by_id', 'source_requirement_id', 'phase_id',
+            'id', 'project_id', 'created_by_id', 'source_requirement_id',
             'title', 'description', 'module_or_screen', 'suggested_priority',
             'is_urgent', 'status', 'admin_response', 'estimated_cost', 'estimated_time',
             'linked_requirement_id', 'screenshot', 'is_archived', 'archived_at',
@@ -1723,11 +1330,11 @@ def change_request_list_view(request, project_id):
             qs = qs.filter(status=status_filter)
         phase_id_filter = request.query_params.get('phase_id')
         if phase_id_filter:
-            qs = qs.filter(phase_id=phase_id_filter)
+            qs = qs.filter(source_requirement__stage__phase_id=phase_id_filter)
         serializer = ChangeRequestListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
-    serializer = CreateChangeRequestSerializer(data=request.data, context={'project': proj})
+    serializer = CreateChangeRequestSerializer(data=request.data, context={'project': proj, 'request': request})
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
 
@@ -1742,9 +1349,6 @@ def change_request_list_view(request, project_id):
     )
     if data.get('source_requirement_id'):
         cr.source_requirement_id = data['source_requirement_id']
-        req = Requirement.objects.filter(pk=data['source_requirement_id']).select_related('phase').first()
-        if req and req.phase_id:
-            cr.phase_id = req.phase_id
     if data.get('screenshot'):
         cr.screenshot = data['screenshot']
     cr.save()
@@ -1783,7 +1387,7 @@ def change_request_detail_view(request, project_id, cr_id):
 
     if request.method == 'GET':
         change_requests = ChangeRequest.objects.select_related(
-            'created_by', 'source_requirement__phase__business_proposal',
+            'created_by', 'source_requirement__stage__phase__scope',
         ).only(
             'id', 'project_id', 'created_by_id', 'source_requirement_id',
             'title', 'description', 'module_or_screen', 'suggested_priority',
@@ -1853,7 +1457,7 @@ def change_request_evaluate_view(request, project_id, cr_id):
     try:
         cr = (
             ChangeRequest.objects
-            .select_related('created_by', 'source_requirement__phase__business_proposal')
+            .select_related('created_by', 'source_requirement__stage__phase__scope')
             .get(id=cr_id, project=proj)
         )
     except ChangeRequest.DoesNotExist:
@@ -2049,84 +1653,42 @@ def change_request_comment_view(request, project_id, cr_id):
 
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticated, IsAdminRole])
 def change_request_convert_view(request, project_id, cr_id):
-    """
-    Admin converts an approved change request into a Kanban requirement.
-    Creates the requirement and links it back to the CR.
-    """
+    """Convert an approved request to a new draft guide in an explicit editable stage."""
+    from accounts.services.delivery_workflow import mutate_node
+    from rest_framework import serializers as drf_serializers
+
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden convertir solicitudes en requerimientos.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+    class ConversionSerializer(drf_serializers.Serializer):
+        stage_id = drf_serializers.IntegerField(min_value=1)
+        expected_version = drf_serializers.IntegerField(min_value=0)
 
-    try:
-        cr = ChangeRequest.objects.get(id=cr_id, project=proj)
-    except ChangeRequest.DoesNotExist:
-        return Response(
-            {'detail': 'Solicitud de cambio no encontrada.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if cr.status != ChangeRequest.STATUS_APPROVED:
-        return Response(
-            {'detail': 'Solo se pueden convertir solicitudes aprobadas.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if cr.linked_requirement is not None:
-        return Response(
-            {'detail': 'Esta solicitud ya fue convertida en un requerimiento.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    if cr.is_archived:
-        return Response(
-            {'detail': 'La solicitud está archivada.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    # Pick the same phase as the source requirement (if any), otherwise the project's first phase.
-    target_phase = None
-    if cr.source_requirement_id:
-        target_phase = cr.source_requirement.phase
-    if target_phase is None:
-        target_phase = proj.phases.order_by('order').first()
-    if target_phase is None:
-        return Response(
-            {'detail': 'El proyecto no tiene fases configuradas. Crea una fase antes de convertir solicitudes.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    max_order = Requirement.objects.filter(
-        phase=target_phase, status=Requirement.STATUS_TODO,
-    ).count()
-
-    req = Requirement.objects.create(
-        phase=target_phase,
-        title=cr.title,
-        description=cr.description,
-        configuration=f'Originado de solicitud de cambio #{cr.id} — módulo: {cr.module_or_screen}',
-        status=Requirement.STATUS_TODO,
-        priority=cr.suggested_priority,
-        order=max_order,
-    )
-
-    cr.linked_requirement = req
-    cr.save(update_fields=['linked_requirement', 'updated_at'])
-
-    _recalculate_project_progress(proj)
-
-    return Response(
-        ChangeRequestDetailSerializer(cr, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+    serializer = ConversionSerializer(data=request.data)
+    with transaction.atomic():
+        try:
+            cr = ChangeRequest.objects.select_for_update().get(id=cr_id, project=proj)
+        except ChangeRequest.DoesNotExist:
+            return Response({'detail': 'Solicitud de cambio no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
+        if cr.is_archived or cr.status != ChangeRequest.STATUS_APPROVED:
+            return Response({'detail': 'Solo se pueden convertir solicitudes aprobadas y activas.'}, status=status.HTTP_400_BAD_REQUEST)
+        if cr.linked_requirement_id is not None:
+            return Response({'detail': 'Esta solicitud ya fue convertida en un requerimiento.'}, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        node = mutate_node(proj.pk, request.user, 'requirements', {
+            **serializer.validated_data,
+            'key': f'change-request-{cr.pk}',
+            'title': cr.title,
+            'description': cr.description,
+            'guide': {},
+        })
+        # Authoring a draft never records acceptance of the resulting guide.
+        cr.linked_requirement_id = node['result']['id']
+        cr.save(update_fields=['linked_requirement', 'updated_at'])
+    return Response(ChangeRequestDetailSerializer(cr, context={'request': request}).data, status=status.HTTP_201_CREATED)
 
 
 # ==========================================================================
@@ -2149,9 +1711,9 @@ def _bug_report_list_queryset(qs):
     from django.db.models import Count
 
     return (
-        qs.select_related('reported_by', 'project', 'source_requirement__phase__business_proposal')
+        qs.select_related('reported_by', 'project', 'source_requirement__stage__phase__scope')
         .only(
-            'id', 'project_id', 'reported_by_id', 'source_requirement_id', 'phase_id',
+            'id', 'project_id', 'reported_by_id', 'source_requirement_id',
             'title', 'description', 'severity', 'status', 'environment', 'device_browser',
             'is_recurring', 'steps_to_reproduce', 'expected_behavior', 'actual_behavior',
             'admin_response', 'linked_bug_id', 'screenshot', 'is_archived', 'archived_at',
@@ -2225,11 +1787,11 @@ def bug_report_list_view(request, project_id):
             qs = qs.filter(severity=severity_filter)
         phase_id_filter = request.query_params.get('phase_id')
         if phase_id_filter:
-            qs = qs.filter(phase_id=phase_id_filter)
+            qs = qs.filter(source_requirement__stage__phase_id=phase_id_filter)
         serializer = BugReportListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
-    serializer = CreateBugReportSerializer(data=request.data, context={'project': proj})
+    serializer = CreateBugReportSerializer(data=request.data, context={'project': proj, 'request': request})
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
 
@@ -2247,9 +1809,6 @@ def bug_report_list_view(request, project_id):
         is_recurring=data.get('is_recurring', False),
     )
     bug.source_requirement_id = data['source_requirement_id']
-    req = Requirement.objects.filter(pk=data['source_requirement_id']).select_related('phase').first()
-    if req and req.phase_id:
-        bug.phase_id = req.phase_id
     if data.get('screenshot'):
         bug.screenshot = data['screenshot']
     bug.save()
@@ -2288,7 +1847,7 @@ def bug_report_detail_view(request, project_id, bug_id):
 
     if request.method == 'GET':
         bugs = BugReport.objects.select_related(
-            'reported_by', 'source_requirement__phase__business_proposal',
+            'reported_by', 'source_requirement__stage__phase__scope',
         ).only(
             'id', 'project_id', 'reported_by_id', 'source_requirement_id',
             'title', 'description', 'severity', 'status', 'environment',
@@ -2359,7 +1918,7 @@ def bug_report_evaluate_view(request, project_id, bug_id):
     try:
         bug = (
             BugReport.objects
-            .select_related('reported_by', 'source_requirement__phase__business_proposal')
+            .select_related('reported_by', 'source_requirement__stage__phase__scope')
             .get(id=bug_id, project=proj)
         )
     except BugReport.DoesNotExist:
@@ -3245,38 +2804,6 @@ def project_data_model_entities_view(request, project_id):
         ProjectDataModelEntitySerializer(qs, many=True).data,
         status=status.HTTP_201_CREATED,
     )
-
-
-@api_view(['GET'])
-@permission_classes([IsAuthenticated])
-def project_scope_items_view(request, project_id):
-    """
-    GET — List the project's scope items (vistas/componentes/funcionalidades)
-    mirrored from the accepted proposal's functional_requirements section.
-    Read-only; admin or owning client. Optional ?phase_id=X filter; admins may
-    pass ?include_archived=1.
-    """
-    from django.db.models import Count, Q
-
-    from accounts.models import ProjectScopeItem
-    from accounts.serializers import ProjectScopeItemSerializer
-    from accounts.services.archive import filter_not_archived
-
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    qs = ProjectScopeItem.objects.filter(phase__project=proj).select_related('phase')
-    qs = filter_not_archived(qs, request, admin_may_include_archived=True)
-    phase_id = request.query_params.get('phase_id')
-    if phase_id:
-        qs = qs.filter(phase_id=phase_id)
-    qs = qs.annotate(
-        _requirements_count=Count(
-            'requirements', filter=Q(requirements__is_archived=False),
-        ),
-    )
-    return Response(ProjectScopeItemSerializer(qs, many=True).data)
 
 
 @api_view(['GET'])

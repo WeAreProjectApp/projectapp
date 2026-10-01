@@ -1,4 +1,6 @@
 """Response and query-budget contracts for change-request detail."""
+
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from decimal import Decimal
 
 import pytest
@@ -12,8 +14,6 @@ from accounts.models import (
     ChangeRequest,
     ChangeRequestComment,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 from accounts.serializers import ChangeRequestDetailSerializer
@@ -109,15 +109,9 @@ def change_request(users_and_headers):
         client_name='Change detail client',
         total_investment=Decimal(12000000),
     )
-    phase = ProjectPhase.objects.create(project=project, business_proposal=proposal, order=1)
-    requirement = Requirement.objects.create(phase=phase, title='Source requirement')
-    request = ChangeRequest.objects.create(
-        project=project,
-        phase=phase,
-        source_requirement=requirement,
-        created_by=client,
-        title='Change request detail',
-    )
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title='Source requirement')
+    request = ChangeRequest.objects.create(project=project, source_requirement=requirement, created_by=client, title='Change request detail')
     return project, request
 
 

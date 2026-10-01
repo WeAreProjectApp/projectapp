@@ -56,6 +56,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Cambiar estado y filtros sin ocultar el primer cliente.',
     'Leer los datos prioritarios de una tarjeta de cliente.',
     'Abrir acciones y reasignación.',
+    'Preparar, publicar y revisar guías de entrega sin perder las conformidades anteriores.',
   ]),
   projects: module('projects', [
     'frontend/components/panel/projects/',

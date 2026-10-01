@@ -103,64 +103,6 @@ def archived_deliverable(project, admin_user):
 
 
 # ===========================================================================
-# _pick_default_deliverable_for_requirements — BP-linked deliverable (line 825)
-# ===========================================================================
-
-class TestPickDefaultDeliverableBPLinked:
-    def test_returns_bp_linked_deliverable_first(self, project, deliverable):
-        """When a non-archived BP-linked deliverable exists, it is returned (line 825)."""
-        from content.models import BusinessProposal
-        from accounts.views import _pick_default_deliverable_for_requirements
-
-        BusinessProposal.objects.create(
-            title='Test BP', client_name='Test Client',
-            deliverable=deliverable,
-        )
-
-        result = _pick_default_deliverable_for_requirements(project)
-
-        assert result.id == deliverable.id
-
-
-# ===========================================================================
-# requirement_bulk_upload_view — phase not found in project
-# ===========================================================================
-
-class TestRequirementBulkUploadPhaseNotFound:
-    def test_wrong_phase_returns_400(self, api_client, admin_headers, project):
-        """POST bulk upload with a phase_id not in the project → 400."""
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/?phase_id=99999'
-        resp = api_client.post(url, [{'title': 'Test'}], format='json', **admin_headers)
-
-        assert resp.status_code == 400
-
-
-# ===========================================================================
-# requirement_bulk_upload_view — item without title is skipped
-# ===========================================================================
-
-class TestRequirementBulkUploadSkipsItemsWithoutTitle:
-    def test_items_without_title_are_skipped(self, api_client, admin_headers, project):
-        """Items that lack 'title' are skipped; items with title are created."""
-        from accounts.models import ProjectPhase, Requirement
-        from content.models.business_proposal import BusinessProposal
-
-        bp = BusinessProposal.objects.create(title='Skip proposal', client_name='Carlos')
-        phase = ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
-
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/?phase_id={phase.id}'
-        payload = [
-            {'no_title_here': 'ignored item'},
-            'not a dict',
-            {'title': 'Valid Requirement'},
-        ]
-        resp = api_client.post(url, payload, format='json', **admin_headers)
-
-        assert resp.status_code in (200, 201)
-        assert Requirement.objects.filter(phase=phase, title='Valid Requirement').exists()
-
-
-# ===========================================================================
 # _build_proposal_pdf_http_response — pdf_bytes=None for technical (line 2051)
 # ===========================================================================
 

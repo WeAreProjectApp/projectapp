@@ -1,3 +1,4 @@
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 import io
 from datetime import datetime, timezone as datetime_timezone
 
@@ -14,7 +15,6 @@ from accounts.models import (
     ChangeRequestComment,
     Deliverable,
     Project,
-    ProjectPhase,
     Requirement,
     UserProfile,
 )
@@ -96,14 +96,13 @@ def default_deliverable(project, client_user):
 @pytest.fixture
 def default_phase(project):
     from content.models.business_proposal import BusinessProposal
-    from accounts.models import ProjectPhase
     bp = BusinessProposal.objects.create(title='CR proposal', client_name='Carlos')
-    return ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
+    return make_delivery_stage(project, phase_title=bp.title)
 
 
 @pytest.fixture
 def source_requirement(default_phase):
-    return Requirement.objects.create(phase=default_phase, title='Source req')
+    return make_requirement(default_phase, title='Source req')
 
 
 @pytest.fixture
@@ -147,41 +146,24 @@ def _detail_url(project_id, cr_id, suffix=''):
 
 
 def _create_change_request_rows(project, user, count, *, start=0, add_comments=False):
-    proposals = [
-        BusinessProposal(
-            title=f'Change budget proposal {index}', client_name='Carlos', slug=f'change-budget-{index}',
+    requirements = [
+        make_requirement(
+            make_delivery_stage(project, phase_title=f'Change budget proposal {index}'),
+            title=f'Change budget source {index}', key=f'change-budget-source-{index}',
         )
         for index in range(start, start + count)
     ]
-    persisted_proposals = BusinessProposal.objects.bulk_create(proposals)
-    phases = [
-        ProjectPhase(project=project, business_proposal=proposal, order=index + 10)
-        for index, proposal in enumerate(persisted_proposals, start=start)
-    ]
-    persisted_phases = ProjectPhase.objects.bulk_create(phases)
-    requirements = Requirement.objects.bulk_create([
-        Requirement(
-            phase=phase, title=f'Change budget source {phase.id}',
-            source_flow_key=f'change-budget-source-{phase.id}',
-        )
-        for phase in persisted_phases
-    ])
-    change_requests = ChangeRequest.objects.bulk_create([
-        ChangeRequest(
-            project=project, created_by=user, phase=phase, source_requirement=requirement,
-            title=f'Change budget request {requirement.id}',
-        )
-        for phase, requirement in zip(persisted_phases, requirements)
+    items = ChangeRequest.objects.bulk_create([
+        ChangeRequest(project=project, created_by=user, source_requirement=requirement,
+            title=f'Change budget request {requirement.id}', )
+        for requirement in requirements
     ])
     if add_comments:
         ChangeRequestComment.objects.bulk_create([
-            ChangeRequestComment(
-                change_request=change_request, user=user,
-                content=f'Change budget comment {change_request.id}', is_internal=True,
-            )
-            for change_request in change_requests
+            ChangeRequestComment(change_request=item, user=user, content=f'Change budget comment {item.id}', is_internal=True)
+            for item in items
         ])
-    return change_requests
+    return items
 
 
 # =========================================================================
@@ -281,7 +263,7 @@ class TestChangeRequestList:
         """Fails if the phase filter returns requests from another project phase."""
         target, _ = _create_change_request_rows(project, client_user, 2)
 
-        response = api_client.get(f'{_url(project.id)}?phase_id={target.phase_id}', **admin_headers)
+        response = api_client.get(f'{_url(project.id)}?phase_id={target.source_requirement.stage.phase_id}', **admin_headers)
 
         assert response.status_code == 200
         assert [item['id'] for item in response.json()] == [target.id]
@@ -313,8 +295,10 @@ class TestChangeRequestList:
         assert by_id[source_request.id]['source_requirement'] == {
             'id': source.id,
             'title': source.title,
-            'status': Requirement.STATUS_BACKLOG,
-            'phase_id': source.phase_id,
+            'review_status': source.review_status,
+            'stage_id': source.stage_id,
+            'stage_title': source.stage.title,
+            'phase_id': source.stage.phase_id,
             'phase_title': 'Change budget proposal 0',
         }
         assert by_id[no_source.id]['source_requirement'] is None
@@ -708,84 +692,95 @@ class TestChangeRequestComments:
 
 @pytest.mark.django_db
 class TestChangeRequestConvert:
-    def test_admin_converts_approved_cr_to_requirement(
-        self, api_client, admin_headers, project, sample_change_requests, default_phase,
-    ):
-        approved_cr = sample_change_requests[1]
-        assert approved_cr.status == ChangeRequest.STATUS_APPROVED
+    def test_admin_converts_approved_request_to_draft_guide(self, api_client, admin_headers, project, sample_change_requests):
+        stage = make_delivery_stage(project, published=False)
+        approved = sample_change_requests[1]
 
-        resp = api_client.post(
-            _detail_url(project.id, approved_cr.id, 'convert/'),
-            format='json', **admin_headers,
-        )
+        response = api_client.post(_detail_url(project.id, approved.id, 'convert/'), {
+            'stage_id': stage.id, 'expected_version': 0,
+        }, format='json', **admin_headers)
 
-        assert resp.status_code == 201
-        data = resp.json()
-        assert data['linked_requirement_id'] is not None
+        assert response.status_code == 201
+        requirement = Requirement.objects.get(id=response.json()['linked_requirement_id'])
+        assert (requirement.title, requirement.stage_id, requirement.review_status) == (approved.title, stage.id, 'pending')
 
-        req = Requirement.objects.get(id=data['linked_requirement_id'])
-        assert req.title == approved_cr.title
-        assert req.status == Requirement.STATUS_TODO
-        assert req.priority == approved_cr.suggested_priority
-        assert approved_cr.module_or_screen in req.configuration
+    def test_conversion_preserves_project_commercial_progress(self, api_client, admin_headers, project, sample_change_requests):
+        stage = make_delivery_stage(project, published=False)
+        project.progress = 72
+        project.save(update_fields=['progress'])
 
-    def test_convert_recalculates_project_progress(
-        self, api_client, admin_headers, project, sample_change_requests, default_phase,
-    ):
-        Requirement.objects.create(
-            phase=default_phase, title='Existing Done', status='done', order=0,
-        )
-        approved_cr = sample_change_requests[1]
-
-        api_client.post(
-            _detail_url(project.id, approved_cr.id, 'convert/'),
-            format='json', **admin_headers,
-        )
+        response = api_client.post(_detail_url(project.id, sample_change_requests[1].id, 'convert/'), {
+            'stage_id': stage.id, 'expected_version': 0,
+        }, format='json', **admin_headers)
 
         project.refresh_from_db()
-        assert project.progress == 50
+        assert response.status_code == 201
+        assert project.progress == 72
 
-    def test_cannot_convert_non_approved_cr(
-        self, api_client, admin_headers, project, sample_change_requests,
-    ):
-        pending_cr = sample_change_requests[0]
-        assert pending_cr.status == ChangeRequest.STATUS_PENDING
+    def test_conversion_requires_approved_change_request(self, api_client, admin_headers, project, sample_change_requests):
+        response = api_client.post(_detail_url(project.id, sample_change_requests[0].id, 'convert/'), format='json', **admin_headers)
 
-        resp = api_client.post(
-            _detail_url(project.id, pending_cr.id, 'convert/'),
-            format='json', **admin_headers,
-        )
+        assert response.status_code == 400
 
-        assert resp.status_code == 400
+    def test_conversion_does_not_duplicate_linked_requirement(self, api_client, admin_headers, project, sample_change_requests):
+        stage = make_delivery_stage(project, published=False)
+        approved = sample_change_requests[1]
+        api_client.post(_detail_url(project.id, approved.id, 'convert/'), {'stage_id': stage.id, 'expected_version': 0}, format='json', **admin_headers)
 
-    def test_cannot_convert_already_converted_cr(
-        self, api_client, admin_headers, project, sample_change_requests,
-    ):
-        approved_cr = sample_change_requests[1]
+        response = api_client.post(_detail_url(project.id, approved.id, 'convert/'), {'stage_id': stage.id, 'expected_version': 1}, format='json', **admin_headers)
 
-        api_client.post(
-            _detail_url(project.id, approved_cr.id, 'convert/'),
-            format='json', **admin_headers,
-        )
+        assert response.status_code == 400
+        assert Requirement.objects.filter(key=f'change-request-{approved.id}').count() == 1
 
-        resp = api_client.post(
-            _detail_url(project.id, approved_cr.id, 'convert/'),
-            format='json', **admin_headers,
-        )
+    def test_client_cannot_convert_change_request(self, api_client, client_headers, project, sample_change_requests):
+        response = api_client.post(_detail_url(project.id, sample_change_requests[1].id, 'convert/'), format='json', **client_headers)
 
-        assert resp.status_code == 400
+        assert response.status_code == 403
 
-    def test_client_cannot_convert_change_request(
-        self, api_client, client_headers, project, sample_change_requests,
-    ):
-        approved_cr = sample_change_requests[1]
+    def test_conversion_cannot_add_a_guide_to_an_approved_stage(self, api_client, admin_headers, project, sample_change_requests):
+        stage = make_delivery_stage(project)
+        existing = make_requirement(stage)
+        existing.review_status = 'approved'
+        existing.save(update_fields=['review_status'])
+        request = sample_change_requests[1]
 
-        resp = api_client.post(
-            _detail_url(project.id, approved_cr.id, 'convert/'),
-            format='json', **client_headers,
-        )
+        response = api_client.post(_detail_url(project.id, request.id, 'convert/'), {
+            'stage_id': stage.id, 'expected_version': 0,
+        }, format='json', **admin_headers)
 
-        assert resp.status_code == 403
+        request.refresh_from_db()
+        assert response.status_code == 400
+        assert request.linked_requirement_id is None
+        assert list(stage.requirements.values_list('pk', flat=True)) == [existing.pk]
+
+    def test_conversion_rejects_a_stage_from_another_project(self, api_client, admin_headers, project, client_user, sample_change_requests):
+        other = Project.objects.create(name='Other delivery', client=client_user)
+        stage = make_delivery_stage(other, published=False)
+        request = sample_change_requests[1]
+
+        response = api_client.post(_detail_url(project.id, request.id, 'convert/'), {
+            'stage_id': stage.id, 'expected_version': 0,
+        }, format='json', **admin_headers)
+
+        request.refresh_from_db()
+        assert response.status_code == 404
+        assert request.linked_requirement_id is None
+        assert not stage.requirements.exists()
+
+    def test_conversion_rejects_a_stale_followup_version(self, api_client, admin_headers, project, sample_change_requests):
+        from accounts.models import DeliveryWorkspace
+        stage = make_delivery_stage(project, published=False)
+        DeliveryWorkspace.objects.create(project=project, version=2)
+        request = sample_change_requests[1]
+
+        response = api_client.post(_detail_url(project.id, request.id, 'convert/'), {
+            'stage_id': stage.id, 'expected_version': 0,
+        }, format='json', **admin_headers)
+
+        request.refresh_from_db()
+        assert response.status_code == 409
+        assert request.linked_requirement_id is None
+        assert not stage.requirements.exists()
 
 
 # =========================================================================

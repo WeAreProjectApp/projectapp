@@ -196,13 +196,13 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
       }
     },
 
-    async convertToRequirement(projectId, crId) {
+    async convertToRequirement(projectId, crId, payload) {
       this.isUpdating = true
       this.error = ''
 
       try {
         const { post } = usePlatformApi()
-        const response = await post(`projects/${projectId}/change-requests/${crId}/convert/`)
+        const response = await post(`projects/${projectId}/change-requests/${crId}/convert/`, payload)
 
         const idx = this.changeRequests.findIndex((cr) => cr.id === crId)
         if (idx !== -1) this.changeRequests[idx] = { ...this.changeRequests[idx], ...response.data }

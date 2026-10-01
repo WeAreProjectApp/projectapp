@@ -1,7 +1,7 @@
 <template>
   <div class="rounded-2xl border border-border-default bg-surface p-6">
     <div class="flex items-center justify-between">
-      <h2 class="text-base font-medium text-text-default">Fases del proyecto</h2>
+      <h2 class="text-base font-medium text-text-default">{{ t('platformDelivery.commercialPhases') }}</h2>
     </div>
     <p v-if="!phases.length" class="mt-4 text-sm text-green-light/60">
       Este proyecto no tiene fases vinculadas todavía.
@@ -42,6 +42,7 @@ const props = defineProps({
 })
 const emit = defineEmits(['add-phase', 'changed'])
 
+const { t } = useI18n()
 const authStore = usePlatformAuthStore()
 const store = usePlatformProjectsStore()
 

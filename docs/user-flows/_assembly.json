@@ -295,6 +295,15 @@
         "admin-financing-explainer-visibility",
         "admin-commercial-video-resources"
       ]
+    },
+    {
+      "title": "Section 33 — Platform Delivery Workflow (Oct 1, 2026)",
+      "flows": [
+        "platform-delivery-authoring",
+        "platform-delivery-import",
+        "platform-delivery-review",
+        "platform-delivery-responses"
+      ]
     }
   ]
 }

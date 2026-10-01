@@ -1816,7 +1816,7 @@ def preview_sync_section(request, section_id):
     """
     from django.db import transaction as _tx
     from accounts.models import Project
-    from accounts.services.technical_requirements_sync import (
+    from accounts.services.technical_resources_sync import (
         compute_sync_diff,
         filtered_technical_doc_for_sync,
     )
@@ -1860,11 +1860,11 @@ def preview_sync_section(request, section_id):
 @permission_classes([IsAdminUser])
 def apply_sync_section(request, section_id):
     """
-    Save the submitted content_json to the section and sync project requirements
+    Save the submitted content_json to the section and sync project resources
     (with soft-deletion of records removed from the JSON). Transactional.
     """
     from django.db import transaction as _tx
-    from accounts.services.technical_requirements_sync import sync_technical_requirements_for_deliverable
+    from accounts.services.technical_resources_sync import sync_technical_resources_for_deliverable
 
     section = get_object_or_404(ProposalSection, pk=section_id)
     if section.section_type != ProposalSection.SectionType.TECHNICAL_DOCUMENT:
@@ -1892,7 +1892,7 @@ def apply_sync_section(request, section_id):
         serializer.save()
 
         deliverable = proposal.deliverable
-        sync_result = sync_technical_requirements_for_deliverable(
+        sync_result = sync_technical_resources_for_deliverable(
             deliverable, request.user, delete_removed=True,
         )
 
@@ -3633,8 +3633,18 @@ def delete_proposal_document(request, proposal_id, doc_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    try:
+        doc.delete()
+    except ProtectedError:
+        return error_response(
+            'Este documento forma parte de una fuente o evidencia contractual '
+            'retenida y no se puede eliminar.',
+            code='document_used_in_delivery',
+            hint='Conserva el original: las capturas de guías y respuestas son inmutables.',
+            status=status.HTTP_409_CONFLICT,
+        )
+    # Resolve all protected database references before removing the original.
     doc.file.delete(save=False)
-    doc.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 

@@ -38,6 +38,57 @@ Sin migraciones ni deploy. Adjuntos de propuestas siguen bloqueados por su
 contrato de listado; rendimiento contable y responsividad de Documentos quedan
 pendientes por cupo, sin declaración de suficiencia global.
 
+# Alcance y entregas en Platform (2026-10-01)
+
+Primer incremento implementado en `platform-review-workflow`, en validación:
+contrato/otrosí → alcance → fases → etapas → guías simples, con borradores,
+prompt/JSON, publicación y decisiones parciales del cliente. Firmas portal o PDF
+externo, conformidades históricas con evidencia entrante y documentos por nivel
+conservan contenido y autoría; las conformidades aprobadas sobreviven a otra ronda.
+El Kanban de clientes y su sincronización se retiran mediante purga autorizada;
+propuestas, fases comerciales, hosting, finanzas, recursos y bugs/cambios permanecen.
+El refinamiento autorizado anterior a bugs está implementado en validación: «Crear guías»
+y «Preparar respuesta» seleccionan un contrato, sus otrosíes aplicables y anexos
+con procedencia explícita; conservan fuentes y verifican citas del JSON. Una
+guía incompleta no demuestra que un pedido esté fuera del contrato. Los textos
+ilegibles, faltantes, contradictorios o recortados requieren revisión humana.
+La corrección de guías conserva sus citas; el contrato u otrosí debe sustentar
+el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
+administrativo de preparaciones y descarga de copias exactas. UI y las 52
+herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
+El incremento coordinado P3 redacta guías desde los recorridos del producto
+del cliente: roles sólo con respaldo de fuentes, acciones permitidas y
+bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
+Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
+distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
+inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
+P3 publica la frontera contractual reutilizable de tickets en
+`accounts.services.delivery_contract_reply`: proveedor estrecho del dominio
+P1, origen/conversación congelados, versiones independientes de ticket y
+workspace, citas verificadas, preview sin publicación y DTO público separado
+de fuentes privadas. Sin contrato o fuentes completas, alcance indeterminado.
+Validación: 16 casos nuevos + 3 regresiones inmediatas verdes; gate 100/100.
+La guarda de transferencia conserva la historia del cliente anterior y no
+modifica accesos ni filas al rechazar el cambio; 16 casos verdes, gate 100/100.
+Contrato de integración: [DELIVERY_CONTRACT_REPLY_ADAPTER](../docs/DELIVERY_CONTRACT_REPLY_ADAPTER.md).
+La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
+capturas de tickets y los modelos de evidencia de correo del siguiente
+incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
+ninguna migración desde el worktree.
+La compatibilidad con tickets legados admite versión 0 sin alterar los tickets;
+un cambio posterior sigue invalidando la preparación (dos pruebas verdes).
+El correo manual de cierre ya tiene preparación inmutable, vista previa,
+confirmación, historial privado y reenvío explícito. Sólo habilita etapas
+completamente aprobadas; conserva las rondas, decisiones y conversación pública
+hasta la operación de cierre, incluido su último mensaje. Distingue revisor
+original, registrador y fechas de conformidades externas. Capturas fallidas
+limpian archivos, y la captura común opta por almacenamiento privado conservado
+tras recarga y reenvío. Validación focal en curso; el estado final de CI se
+consulta en el PR. Bugs y cuentas de cobro avanzan en frentes propios coordinados
+por P0. No se aplican migraciones ni se envían correos reales.
+Operación y JSON vigente:
+[PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto
@@ -364,6 +415,18 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+**2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
+`feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
+alcance, fases de ejecución, etapas y guías de validación. Publicación por etapa,
+conformidades parciales por requerimiento, evidencia de firma y rondas de revisión
+son reglas independientes. Los ejemplos documentales 137/138/181 y los hilos 2/3/7
+de Comunicaciones respaldan ese flujo; Vástago y TORRIOS pertenecen al mismo
+proyecto. El operador autorizó descartar las tarjetas de seguimiento antiguas,
+preservando bugs/solicitudes y los datos comerciales, documentales y financieros.
+La entrega incluye autoría por prompt/JSON y paridad administrativa MCP; cuentas
+de cobro, mejoras de bugs y accesos del cliente permanecen incrementos posteriores.
+No hay despliegue ni migraciones contra la base del clon principal en esta sesión.
 
 **2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
 con Comercial para ajustes, contratos personalizados y documentos. Formalización

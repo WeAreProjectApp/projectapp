@@ -1,5 +1,18 @@
 # Technical Documentation — ProjectApp
 
+> **Entregas de Platform — 2026-10-01:** `/api/accounts/projects/:id/delivery/`
+> expone autoría, importación `schema_version: 1`, publicaciones, revisiones,
+> documentos y firmas sobre servicios compartidos con MCP. `expected_version`
+> detecta cambios concurrentes y `request_id` conserva reintentos de operaciones.
+> PDFs firmados, publicados y de evidencia histórica usan almacenamiento privado
+> y descarga autenticada; `0066` agrega `DeliveryReviewDocumentEvidence`.
+> Una sesión `impersonated_by` no puede firmar ni aprobar como cliente.
+> `accounts.0064_delivery_review_workflow` incluye la purga autorizada del Kanban;
+> las migraciones de esta entrega las aplica el deploy, nunca el worktree.
+> JSON conserva ancestros publicados idénticos y sólo escribe descendientes
+> editables. Seeds y reset protegidos siguen la capacidad explícita de fake data.
+> Esquema, límites y continuidad: [PLATFORM_DELIVERY](../PLATFORM_DELIVERY.md).
+
 > **Enlaces seguros — 2026-09-29:** `secure_links.0003` agrega `sent_at`,
 > `sent_by` y el evento `marked_sent`. API/MCP mantienen `status` y agregan
 > `lifecycle_status`; el listado del panel suma `lifecycle_counts` con un único
@@ -1099,7 +1112,7 @@ description and preserves its credentials, active state and last-use timestamp.
 ### Backend Patterns
 
 - **Function-based views** (`@api_view`) — all DRF views are FBV, not class-based
-- **Service layer** — business logic in `content/services/` (47 modules: ProposalService, ProposalEmailService, ProposalPdfService, ProposalStageTracker, ContractPdfService, EmailTemplateRegistry, PdfUtils, DocumentPdfService, MarkdownParser, CollectionAccountService, CollectionAccountPdfService, TechnicalDocumentPdf, TechnicalDocumentFilter, PlatformOnboardingPdf, DiagnosticService, DiagnosticEmailService, DiagnosticPdfService, DiagnosticDocumentsService, AccountingService, AccountingExportService, AccountingEmailService, AccountingCardReminderService, plus the `content/mcp/` tool package) and in `accounts/services/` (19 modules: archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_requirements_sync, tokens, verification, wompi). Services are class-based with `@classmethod` static methods (matching `ProposalEmailService`), or function modules for stateless flows. `proposal_client_service` is the silent variant of `accounts/services/onboarding.create_client` — same User+UserProfile shape but **never sends invitation emails**, so the proposal admin panel can create/reuse clients without triggering platform onboarding.
+- **Service layer** — business logic in `content/services/` (47 modules: ProposalService, ProposalEmailService, ProposalPdfService, ProposalStageTracker, ContractPdfService, EmailTemplateRegistry, PdfUtils, DocumentPdfService, MarkdownParser, CollectionAccountService, CollectionAccountPdfService, TechnicalDocumentPdf, TechnicalDocumentFilter, PlatformOnboardingPdf, DiagnosticService, DiagnosticEmailService, DiagnosticPdfService, DiagnosticDocumentsService, AccountingService, AccountingExportService, AccountingEmailService, AccountingCardReminderService, plus the `content/mcp/` tool package) and in `accounts/services/` (delivery_workflow, delivery_documents, delivery_access, archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_resources_sync, tokens, verification, wompi). Services are class-based with `@classmethod` static methods (matching `ProposalEmailService`), or function modules for stateless flows. `proposal_client_service` is the silent variant of `accounts/services/onboarding.create_client` — same User+UserProfile shape but **never sends invitation emails**, so the proposal admin panel can create/reuse clients without triggering platform onboarding.
 - **Public proposal tracking** — document retrieval and commercial evidence are separate boundaries. `proposal_tracking_service.py` is the only writer for qualified proposal heartbeats; `proposal_tracking.py` validates the anonymous payload before any row changes. Drafts and staff previews return `skipped`.
 - **Model layer** — thin models with properties (`is_expired`, `days_remaining`, `public_url`)
 - **Huey tasks** — async operations: reminders, expiration, engagement-based emails, project-stage deadline scans, hosting recurring billing (`accounts/tasks.py::auto_charge_due_subscriptions` — daily 06:00 UTC, charges due hosting payments with the subscription's stored Wompi payment source)
@@ -1391,10 +1404,10 @@ Triggers: Push/PR to `main`/`master`. Concurrency group cancels in-progress runs
 ```
 projectapp/
 ├── backend/
-│   ├── accounts/               # Platform app (auth, onboarding, projects, kanban, bug reports, changes, deliverables, notifications, payments, collection accounts, quick-access)
-│   │   ├── models.py            # 24 models (UserProfile, VerificationCode, SavedFilterTab, Project, ProjectPhase, ProjectScopeItem, Requirement, RequirementComment, RequirementHistory, BugReport, BugComment, ChangeRequest, ChangeRequestComment, Deliverable, DeliverableVersion, DeliverableFile, DeliverableClientFolder, DeliverableClientUpload, DataModelEntity, ProjectDataModelEntity, Notification, HostingSubscription, Payment, PaymentHistory)
+│   ├── accounts/               # Platform app (auth, onboarding, projects, contractual delivery reviews, bug reports, changes, deliverables, notifications, payments, collection accounts, quick-access)
+│   │   ├── models.py            # Modelos de cuentas/proyectos, jerarquía contractual y evidencia, recursos, bugs, cambios y finanzas
 │   │   ├── admin.py             # ProjectAdmin — project metadata + product URLs; no credential writes
-│   │   ├── services/            # 19 service modules (archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_requirements_sync, tokens, verification, wompi)
+│   │   ├── services/            # delivery_workflow/documents/access, technical_resources_sync y servicios existentes de cuentas/hosting
 │   │   ├── management/commands/ # 6 commands (create_platform_admin, seed_demo_clients, seed_platform_data, seed_mihuella, …)
 │   │   ├── document_views.py    # Client document portal (list/retrieve/pdf/sign) + email OTP verify (request/confirm)
 │   │   ├── tests/               # 67 test files
@@ -1418,7 +1431,7 @@ projectapp/
 ├── frontend/
 │   ├── pages/                   # Nuxt file-based routing (114 pages)
 │   │   ├── panel/               # Admin pages (proposals, diagnostics, blog, portfolio, clients, documents, admins, tasks, accounting/*, mcps, defaults, styleguide, views). Proposal edit page has Cronograma tab; `/panel/tasks` is the internal Kanban board; `/panel/accounting/*` and `/panel/mcps` are superuser-gated.
-│   │   ├── platform/            # Platform pages (login/verify/complete-profile, projects/*, board, bugs, changes, deliverables, collection-accounts, data-model, payments, notifications, clients, profile, documents — client document-signing portal)
+│   │   ├── platform/            # Platform pages (login/verify/complete-profile, projects/* (delivery reviews), bugs, changes, deliverables, collection-accounts, data-model, payments, notifications, clients, profile, documents — client document-signing portal)
 │   │   ├── blog/                # Blog listing + detail
 │   │   ├── portfolio-works/     # Portfolio listing + detail
 │   │   └── proposal/            # Client proposal view

@@ -29,6 +29,7 @@ export default defineI18nLocale(async () => {
     communicationFiling,
     secureLinks,
     serviceContract,
+    platformDelivery,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
     import('~/locales/home/es.js'),
@@ -59,6 +60,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/communicationFiling/es.js'),
     import('~/locales/secureLinks/es.js'),
     import('~/locales/serviceContract/es.js'),
+    import('~/locales/platformDelivery/es.js'),
   ])
 
   return {
@@ -91,5 +93,6 @@ export default defineI18nLocale(async () => {
     communicationFiling: communicationFiling.default,
     secureLinks: secureLinks.default,
     serviceContract: serviceContract.default,
+    platformDelivery: platformDelivery.default,
   }
 })

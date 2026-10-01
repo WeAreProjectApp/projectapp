@@ -6,9 +6,9 @@ Creates:
   - 1 onboarded client (maria@techstartup.co; optional SEED_CLIENT_PASSWORD)
   - 1 full demo BusinessProposal (all default sections + populated technical_document) for TechStartup
   - 2 demo projects for the client
-  - Kanban, change requests, bugs, deliverables, hosting + extra payments (pending / overdue / failed)
+  - guías de validación, change requests, bugs, deliverables, hosting + extra payments (pending / overdue / failed)
   - Collection accounts (titles prefixed [Demo]) for platform QA
-  - In-app notifications + requirement/bug comments (titles/content prefixed [Seed])
+  - In-app notifications + respuestas de validación y comentarios de bugs (titles/content prefixed [Seed])
   - Markdown panel documents (titles prefixed [Seed]) for PDF pipeline tests
 
 Usage:
@@ -37,12 +37,10 @@ from accounts.models import (
     ProjectAccessNote,
     ProjectAdminAccess,
     ProjectDataModelEntity,
-    Requirement,
-    RequirementComment,
     UserProfile,
 )
 
-from accounts.management.commands._seed_helpers import ensure_phase
+from accounts.management.commands._seed_helpers import seed_validation_guides, clear_fake_delivery
 from accounts.services.credential_cipher import encrypt_secret
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 
@@ -57,6 +55,8 @@ SEED_PREFIX = '[Seed]'
 ADMIN_PASSWORD = os.environ.get('SEED_ADMIN_PASSWORD')
 CLIENT_PASSWORD = os.environ.get('SEED_CLIENT_PASSWORD')
 
+
+
 EPICS_ECOMMERCE = {
     'AUTH':          'Autenticación y Cuenta',
     'CATALOG':       'Catálogo y Productos',
@@ -66,7 +66,6 @@ EPICS_ECOMMERCE = {
     'NOTIFICATIONS': 'Notificaciones',
     'SEO':           'SEO y Performance',
 }
-
 EPICS_INVENTORY = {
     'AUTH':      'Autenticación y Roles',
     'INVENTORY': 'Gestión de Inventario',
@@ -76,88 +75,70 @@ EPICS_INVENTORY = {
 }
 
 # fmt: off
-REQUIREMENTS_ECOMMERCE = [
-    # ── DONE (6) ───────────────────────────────────────────────────────────
-    {"title": "Diseño de la página principal (landing)", "description": "Hero section con propuesta de valor, carrusel de productos destacados, CTA de registro y sección de categorías.", "configuration": "Visible para todos los usuarios (guests y autenticados).", "flow": "Usuario abre / → ve hero con tagline y CTA → navega carrusel de productos → ve categorías → puede ir a /catalog.", "priority": "high", "status": "done", "epic": "CATALOG"},
-    {"title": "Catálogo de productos con filtros", "description": "Grid paginado de productos con filtros por categoría, precio, disponibilidad y ordenamiento.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a /catalog → ve grid de productos → aplica filtros → resultados se actualizan sin recargar → click en producto navega a detalle.", "priority": "high", "status": "done", "epic": "CATALOG"},
-    {"title": "Registro de usuario con email y contraseña", "description": "Formulario de registro con nombre, email, contraseña y confirmación. Envía email de bienvenida al registrarse.", "configuration": "Solo usuarios no autenticados.", "flow": "Usuario en /register → completa formulario → el sistema valida → crea cuenta → envía email de bienvenida → redirige a /catalog.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Inicio de sesión con email y contraseña", "description": "Formulario de login con email y contraseña, opción de recordar sesión y enlace a recuperación.", "configuration": "Solo usuarios no autenticados.", "flow": "Usuario en /login → ingresa credenciales → el sistema valida → emite sesión/JWT → redirige al catálogo.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Vista de detalle de producto", "description": "Página con galería de imágenes, descripción completa, precio, variantes (talla/color), stock disponible y botón Agregar al carrito.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario click en producto → navega a /product/{id} → ve galería, precio, variantes → click 'Agregar al carrito' → producto agregado al estado del carrito.", "priority": "high", "status": "done", "epic": "CATALOG"},
-    {"title": "Header con navegación y estado del carrito", "description": "Barra de navegación con logo, enlaces a secciones, ícono de carrito con contador de ítems y menú de usuario.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario ve header → links: Inicio, Catálogo, Nosotros → ícono de carrito con badge numérico → click carrito → abre sidebar/modal.", "priority": "high", "status": "done", "epic": "CATALOG"},
-
-    # ── IN REVIEW (4) ──────────────────────────────────────────────────────
-    {"title": "Carrito de compras con persistencia", "description": "Carrito persistente en localStorage con lista de productos, cantidades, subtotales y botón de ir al checkout.", "configuration": "Todos los usuarios (carrito anónimo persistido; al autenticarse se fusiona).", "flow": "Usuario agrega productos → click en ícono carrito → ve lista de ítems con cantidades → puede editar cantidades o eliminar → ve total → click 'Ir al checkout'.", "priority": "critical", "status": "in_review", "epic": "CART"},
-    {"title": "Panel de administración de productos (CRUD)", "description": "Panel para crear, editar y archivar productos con imágenes, variantes, precio y categoría.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/products → ve listado → click 'Nuevo' → completa formulario → guarda → producto visible en catálogo.", "priority": "medium", "status": "in_review", "epic": "ADMIN"},
-    {"title": "Inicio de sesión con Google OAuth", "description": "Autenticación alternativa con Google. Si el usuario no existe, se crea automáticamente.", "configuration": "Solo usuarios no autenticados.", "flow": "Usuario en /login → click 'Continuar con Google' → flujo OAuth → sistema crea o vincula cuenta → redirige al catálogo.", "priority": "high", "status": "in_review", "epic": "AUTH"},
-    {"title": "Búsqueda de productos con autocompletado", "description": "Barra de búsqueda global con sugerencias en tiempo real mientras el usuario escribe.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario escribe en barra de búsqueda → el sistema sugiere productos en dropdown → usuario selecciona → navega a /product/{id}.", "priority": "medium", "status": "in_review", "epic": "CATALOG"},
-
-    # ── IN PROGRESS (6) ────────────────────────────────────────────────────
-    {"title": "Integración pasarela de pagos Wompi", "description": "Checkout con Wompi: tarjeta de crédito, PSE y Nequi. Webhooks para confirmar pagos asíncronos.", "configuration": "Solo usuarios autenticados. Requiere API keys de Wompi.", "flow": "Usuario en checkout → selecciona método de pago → sistema crea transacción Wompi → usuario completa pago → webhook confirma → pedido marcado como pagado.", "priority": "critical", "status": "in_progress", "epic": "PAYMENTS"},
-    {"title": "Flujo de checkout en 3 pasos", "description": "Proceso de compra: Paso 1 — datos de envío. Paso 2 — método de pago. Paso 3 — resumen y confirmación.", "configuration": "Solo usuarios autenticados.", "flow": "Usuario en carrito → click 'Ir al checkout' → Paso 1: dirección → Paso 2: pago → Paso 3: resumen → confirma → pedido creado → redirige a /order/{id}/confirmation.", "priority": "critical", "status": "in_progress", "epic": "CART"},
-    {"title": "Sistema de autenticación con JWT", "description": "Tokens de acceso y refresh para mantener sesiones seguras. Renovación automática sin re-autenticación.", "configuration": "Todos los usuarios autenticados.", "flow": "Token de acceso expira → interceptor Axios detecta 401 → envía refresh token → sistema emite nuevos tokens → solicitud original reintentada.", "priority": "high", "status": "in_progress", "epic": "AUTH"},
-    {"title": "Gestión de pedidos del cliente", "description": "Historial de pedidos con estado, productos, monto y opción de ver detalle.", "configuration": "Solo usuarios autenticados.", "flow": "Usuario navega a /my-orders → ve lista de pedidos (fecha, monto, estado) → click en pedido → ve detalle con productos y tracking.", "priority": "high", "status": "in_progress", "epic": "PAYMENTS"},
-    {"title": "Confirmación de pedido por email", "description": "Email transaccional con resumen del pedido: productos, cantidades, total y datos de envío.", "configuration": "Se dispara automáticamente al confirmar un pago exitoso.", "flow": "Webhook Wompi confirma pago → sistema crea pedido → dispara tarea async → envía email con resumen al cliente.", "priority": "medium", "status": "in_progress", "epic": "NOTIFICATIONS"},
-    {"title": "Gestión de categorías de productos", "description": "CRUD de categorías con nombre, descripción, imagen y estado. Las categorías organizan el catálogo.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/categories → ve árbol de categorías → crea/edita → categoría disponible para asignar a productos.", "priority": "medium", "status": "in_progress", "epic": "ADMIN"},
-
-    # ── TODO (10) ──────────────────────────────────────────────────────────
-    {"title": "Sistema de cupones y descuentos", "description": "Códigos de descuento porcentuales o fijos, con fecha de vencimiento y límite de usos.", "configuration": "Admin crea los cupones. Cliente los aplica en el checkout.", "flow": "Admin crea cupón en /admin/coupons → cliente en checkout escribe código → sistema valida y aplica descuento → refleja en total.", "priority": "low", "status": "todo", "epic": "PAYMENTS"},
-    {"title": "Recuperación de contraseña por email", "description": "Flujo de restablecimiento enviando código de verificación al email del usuario.", "configuration": "Solo usuarios no autenticados.", "flow": "Usuario en /forgot-password → ingresa email → sistema envía código → usuario ingresa código → establece nueva contraseña.", "priority": "high", "status": "todo", "epic": "AUTH"},
-    {"title": "Gestión de inventario por producto", "description": "Control de stock por producto y variante, con alertas cuando el stock cae por debajo del mínimo configurado.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/inventory → ve stock actual por variante → actualiza cantidades → al llegar al mínimo, sistema genera alerta.", "priority": "medium", "status": "todo", "epic": "ADMIN"},
-    {"title": "Dashboard de reportes de ventas", "description": "Panel con métricas: ventas totales del mes, pedidos por estado, productos más vendidos y ticket promedio.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/reports → ve KPIs con filtro por período → gráfico de ventas → tabla de top productos.", "priority": "low", "status": "todo", "epic": "ADMIN"},
-    {"title": "Página de confirmación de pedido", "description": "Pantalla de éxito post-pago con resumen del pedido, número de referencia y CTAs (volver al catálogo, ver mis pedidos).", "configuration": "Solo usuarios autenticados que acaban de pagar.", "flow": "Usuario completa pago → redirigido a /order/{id}/confirmation → ve mensaje de éxito, productos, total y referencia.", "priority": "high", "status": "todo", "epic": "PAYMENTS"},
-    {"title": "Notificaciones por email de estado de pedido", "description": "Emails automáticos cuando el estado del pedido cambia: confirmado, en preparación, enviado, entregado.", "configuration": "Se disparan automáticamente por cambios de estado. Solo usuarios autenticados.", "flow": "Admin cambia estado de pedido → sistema detecta cambio → envía email al cliente con nuevo estado y detalles.", "priority": "medium", "status": "todo", "epic": "NOTIFICATIONS"},
-    {"title": "Optimización SEO del catálogo y productos", "description": "Meta titles, descriptions y Open Graph para cada página de producto y categoría. URLs amigables.", "configuration": "Configurado a nivel de producto/categoría por el admin.", "flow": "Admin edita producto → rellena campos SEO (meta title, meta description) → sistema genera metatags en el HTML.", "priority": "low", "status": "todo", "epic": "SEO"},
-    {"title": "Gestión de pedidos en el panel admin", "description": "Lista de todos los pedidos con filtros por estado, fecha y cliente. Permite cambiar estado y agregar notas internas.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/orders → ve tabla de pedidos → filtra por estado → click en pedido → cambia estado → guarda nota interna.", "priority": "high", "status": "todo", "epic": "ADMIN"},
-    {"title": "Lista de deseos (wishlist)", "description": "Permite a usuarios autenticados guardar productos en su lista de deseos para comprar después.", "configuration": "Solo usuarios autenticados.", "flow": "Usuario click en ícono corazón en producto → guardado en wishlist → accede desde /my-wishlist → puede mover al carrito.", "priority": "medium", "status": "todo", "epic": "CATALOG"},
-    {"title": "Reseñas y calificaciones de productos", "description": "Usuarios que han comprado un producto pueden dejar reseña con calificación 1-5 y comentario.", "configuration": "Solo usuarios que han comprado el producto. Admin puede moderar.", "flow": "Usuario en /product/{id} → ve sección reseñas → click 'Escribir reseña' → ingresa calificación y texto → publica.", "priority": "low", "status": "todo", "epic": "CATALOG"},
-
-    # ── BACKLOG (14) ───────────────────────────────────────────────────────
-    {"title": "Sitemap XML automático", "description": "Generación automática del sitemap.xml con todas las páginas públicas para indexación por motores de búsqueda.", "configuration": "Generado automáticamente. Accesible en /sitemap.xml.", "flow": "Motor de búsqueda accede a /sitemap.xml → ve todas las URLs de productos y categorías con fecha de modificación.", "priority": "low", "status": "backlog", "epic": "SEO"},
-    {"title": "Integración Google Tag Manager", "description": "Instalación de GTM para tracking de eventos: vistas de producto, agregar al carrito, iniciar checkout y compra completada.", "configuration": "Configurado con ID de container de GTM. Eventos mapeados al estándar GA4 e-commerce.", "flow": "Usuario navega por la tienda → eventos disparados a la capa de datos → GTM los envía a GA4 y Facebook Pixel.", "priority": "medium", "status": "backlog", "epic": "SEO"},
-    {"title": "Perfil de usuario — datos personales y direcciones", "description": "Pantalla donde el usuario gestiona su nombre, teléfono y carnet de identidad, y guarda múltiples direcciones de envío.", "configuration": "Solo usuarios autenticados.", "flow": "Usuario en /my-profile → edita datos personales → agrega o edita direcciones de envío → guarda.", "priority": "medium", "status": "backlog", "epic": "AUTH"},
-    {"title": "Métodos de pago guardados", "description": "Permite al usuario tokenizar una tarjeta via Wompi para reutilizarla en compras futuras sin re-ingresar datos.", "configuration": "Solo usuarios autenticados con al menos una compra previa.", "flow": "Usuario en checkout → activa 'Recordar tarjeta' → Wompi tokeniza → en próximas compras aparece tarjeta guardada con últimos 4 dígitos.", "priority": "medium", "status": "backlog", "epic": "PAYMENTS"},
-    {"title": "Descuentos por volumen de compra", "description": "Reglas automáticas de descuento basadas en el monto total del carrito (ej: compras > $200.000 obtienen 10%).", "configuration": "Admin configura umbrales y porcentajes. Se aplica automáticamente al cumplir la condición.", "flow": "Usuario agrega productos → carrito supera umbral → sistema aplica descuento automático → se muestra en resumen del carrito.", "priority": "low", "status": "backlog", "epic": "PAYMENTS"},
-    {"title": "Módulo de envíos y logística", "description": "Integración con operadores logísticos (Servientrega, Coordinadora) para calcular costo de envío y generar guías.", "configuration": "Requiere API keys de operadores logísticos. Configurable por zona y peso.", "flow": "Usuario en checkout → ingresa dirección → sistema calcula opciones de envío con costo → usuario elige → costo sumado al total.", "priority": "medium", "status": "backlog", "epic": "PAYMENTS"},
-    {"title": "Notificación WhatsApp de pedido nuevo", "description": "Mensaje de WhatsApp al admin cuando entra un pedido nuevo, con resumen de productos y datos del cliente.", "configuration": "Requiere API de WhatsApp Business. Configurable el número receptor.", "flow": "Pago confirmado → sistema dispara webhook a WhatsApp API → admin recibe mensaje con resumen del pedido.", "priority": "high", "status": "backlog", "epic": "NOTIFICATIONS"},
-    {"title": "Productos relacionados en detalle", "description": "'También te puede interesar' — sección en la ficha del producto mostrando 4 productos de la misma categoría.", "configuration": "Basado en misma categoría y precio similar. No requiere motor de ML.", "flow": "Usuario en /product/{id} → ve sección 'También te puede interesar' → tarjetas de 4 productos relacionados → puede navegar a ellos.", "priority": "medium", "status": "backlog", "epic": "CATALOG"},
-    {"title": "Carrusel de productos en promoción", "description": "Sección en la landing con productos marcados como 'en oferta', mostrando precio original y precio con descuento.", "configuration": "Admin marca productos como 'en oferta' y configura precio de oferta.", "flow": "Usuario en home → ve carrusel de ofertas → precio original tachado + precio oferta → click navega a detalle.", "priority": "medium", "status": "backlog", "epic": "CATALOG"},
-    {"title": "Comparación de productos", "description": "Permite al usuario seleccionar hasta 3 productos para compararlos lado a lado por especificaciones técnicas.", "configuration": "Solo disponible para categorías con atributos comparables.", "flow": "Usuario en catálogo → checkbox 'Comparar' en máx 3 productos → click 'Comparar seleccionados' → tabla comparativa.", "priority": "low", "status": "backlog", "epic": "CATALOG"},
-    {"title": "Facturación electrónica DIAN", "description": "Generación de factura electrónica para los pedidos con pago confirmado, cumpliendo la normativa DIAN.", "configuration": "Integración con proveedor de FE (Siigo o Alegra). Configuración del NIT y responsabilidades.", "flow": "Pago confirmado → sistema genera factura → la envía al proveedor FE → proveedor valida con DIAN → factura enviada al cliente por email.", "priority": "high", "status": "backlog", "epic": "PAYMENTS"},
-    {"title": "Política de devoluciones y reembolsos", "description": "Flujo para que el cliente solicite devolución de un pedido entregado. Admin aprueba y gestiona el reembolso.", "configuration": "Solo pedidos con estado 'entregado' dentro de los 30 días.", "flow": "Cliente en /my-orders → click 'Solicitar devolución' → selecciona motivo → admin revisa → aprueba → Wompi procesa reembolso.", "priority": "medium", "status": "backlog", "epic": "PAYMENTS"},
-    {"title": "Blog corporativo con SEO", "description": "Sección de blog con artículos optimizados para SEO, categorías y buscador interno.", "configuration": "Admin crea artículos desde panel. Publicación programada.", "flow": "Admin navega a /admin/blog → crea artículo con contenido, imágenes y metadatos SEO → publica → visible en /blog.", "priority": "low", "status": "backlog", "epic": "SEO"},
-    {"title": "Exportación de reportes a Excel", "description": "Permite al admin descargar reportes de ventas, pedidos e inventario en formato Excel.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin en /admin/reports → click 'Exportar Excel' → descarga archivo .xlsx con datos del período seleccionado.", "priority": "low", "status": "backlog", "epic": "ADMIN"},
+VALIDATION_GUIDES_ECOMMERCE = [
+    {'title': 'Diseño de la página principal (landing)', 'description': 'Hero section con propuesta de valor, carrusel de productos destacados, CTA de registro y sección de categorías.', 'role': 'Visible para todos los usuarios (guests y autenticados).', 'steps': ['Usuario abre /', 've hero con tagline y CTA', 'navega carrusel de productos', 've categorías', 'puede ir a /catalog'], 'review_status': 'approved', 'draft': False},
+    {'title': 'Catálogo de productos con filtros', 'description': 'Grid paginado de productos con filtros por categoría, precio, disponibilidad y ordenamiento.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a /catalog', 've grid de productos', 'aplica filtros', 'resultados se actualizan sin recargar', 'click en producto navega a detalle'], 'review_status': 'objected', 'draft': False},
+    {'title': 'Registro de usuario con email y contraseña', 'description': 'Formulario de registro con nombre, email, contraseña y confirmación. Envía email de bienvenida al registrarse.', 'role': 'Solo usuarios no autenticados.', 'steps': ['Usuario en /register', 'completa formulario', 'el sistema valida', 'crea cuenta', 'envía email de bienvenida', 'redirige a /catalog'], 'review_status': 'rejected', 'draft': False},
+    {'title': 'Inicio de sesión con email y contraseña', 'description': 'Formulario de login con email y contraseña, opción de recordar sesión y enlace a recuperación.', 'role': 'Solo usuarios no autenticados.', 'steps': ['Usuario en /login', 'ingresa credenciales', 'el sistema valida', 'emite sesión/JWT', 'redirige al catálogo'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Vista de detalle de producto', 'description': 'Página con galería de imágenes, descripción completa, precio, variantes (talla/color), stock disponible y botón Agregar al carrito.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario click en producto', 'navega a /product/{id}', 've galería, precio, variantes', "click 'Agregar al carrito'", 'producto agregado al estado del carrito'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Header con navegación y estado del carrito', 'description': 'Barra de navegación con logo, enlaces a secciones, ícono de carrito con contador de ítems y menú de usuario.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario ve header', 'links: Inicio, Catálogo, Nosotros', 'ícono de carrito con badge numérico', 'click carrito', 'abre sidebar/modal'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Carrito de compras con persistencia', 'description': 'Carrito persistente en localStorage con lista de productos, cantidades, subtotales y botón de ir al checkout.', 'role': 'Todos los usuarios (carrito anónimo persistido; al autenticarse se fusiona).', 'steps': ['Usuario agrega productos', 'click en ícono carrito', 've lista de ítems con cantidades', 'puede editar cantidades o eliminar', 've total', "click 'Ir al checkout'"], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Panel de administración de productos (CRUD)', 'description': 'Panel para crear, editar y archivar productos con imágenes, variantes, precio y categoría.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/products', 've listado', "click 'Nuevo'", 'completa formulario', 'guarda', 'producto visible en catálogo'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Inicio de sesión con Google OAuth', 'description': 'Autenticación alternativa con Google. Si el usuario no existe, se crea automáticamente.', 'role': 'Solo usuarios no autenticados.', 'steps': ['Usuario en /login', "click 'Continuar con Google'", 'flujo OAuth', 'sistema crea o vincula cuenta', 'redirige al catálogo'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Búsqueda de productos con autocompletado', 'description': 'Barra de búsqueda global con sugerencias en tiempo real mientras el usuario escribe.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario escribe en barra de búsqueda', 'el sistema sugiere productos en dropdown', 'usuario selecciona', 'navega a /product/{id}'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Integración pasarela de pagos Wompi', 'description': 'Checkout con Wompi: tarjeta de crédito, PSE y Nequi. Webhooks para confirmar pagos asíncronos.', 'role': 'Solo usuarios autenticados. Requiere API keys de Wompi.', 'steps': ['Usuario en checkout', 'selecciona método de pago', 'sistema crea transacción Wompi', 'usuario completa pago', 'webhook confirma', 'pedido marcado como pagado'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Flujo de checkout en 3 pasos', 'description': 'Proceso de compra: Paso 1 — datos de envío. Paso 2 — método de pago. Paso 3 — resumen y confirmación.', 'role': 'Solo usuarios autenticados.', 'steps': ['Usuario en carrito', "click 'Ir al checkout'", 'Paso 1: dirección', 'Paso 2: pago', 'Paso 3: resumen', 'confirma', 'pedido creado', 'redirige a /order/{id}/confirmation'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Sistema de autenticación con JWT', 'description': 'Tokens de acceso y refresh para mantener sesiones seguras. Renovación automática sin re-autenticación.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Token de acceso expira', 'interceptor Axios detecta 401', 'envía refresh token', 'sistema emite nuevos tokens', 'solicitud original reintentada'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de pedidos del cliente', 'description': 'Historial de pedidos con estado, productos, monto y opción de ver detalle.', 'role': 'Solo usuarios autenticados.', 'steps': ['Usuario navega a /my-orders', 've lista de pedidos (fecha, monto, estado)', 'click en pedido', 've detalle con productos y tracking'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Confirmación de pedido por email', 'description': 'Email transaccional con resumen del pedido: productos, cantidades, total y datos de envío.', 'role': 'Se dispara automáticamente al confirmar un pago exitoso.', 'steps': ['Webhook Wompi confirma pago', 'sistema crea pedido', 'dispara tarea async', 'envía email con resumen al cliente'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de categorías de productos', 'description': 'CRUD de categorías con nombre, descripción, imagen y estado. Las categorías organizan el catálogo.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/categories', 've árbol de categorías', 'crea/edita', 'categoría disponible para asignar a productos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Sistema de cupones y descuentos', 'description': 'Códigos de descuento porcentuales o fijos, con fecha de vencimiento y límite de usos.', 'role': 'Admin crea los cupones. Cliente los aplica en el checkout.', 'steps': ['Admin crea cupón en /admin/coupons', 'cliente en checkout escribe código', 'sistema valida y aplica descuento', 'refleja en total'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Recuperación de contraseña por email', 'description': 'Flujo de restablecimiento enviando código de verificación al email del usuario.', 'role': 'Solo usuarios no autenticados.', 'steps': ['Usuario en /forgot-password', 'ingresa email', 'sistema envía código', 'usuario ingresa código', 'establece nueva contraseña'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de inventario por producto', 'description': 'Control de stock por producto y variante, con alertas cuando el stock cae por debajo del mínimo configurado.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/inventory', 've stock actual por variante', 'actualiza cantidades', 'al llegar al mínimo, sistema genera alerta'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Dashboard de reportes de ventas', 'description': 'Panel con métricas: ventas totales del mes, pedidos por estado, productos más vendidos y ticket promedio.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/reports', 've KPIs con filtro por período', 'gráfico de ventas', 'tabla de top productos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Página de confirmación de pedido', 'description': 'Pantalla de éxito post-pago con resumen del pedido, número de referencia y CTAs (volver al catálogo, ver mis pedidos).', 'role': 'Solo usuarios autenticados que acaban de pagar.', 'steps': ['Usuario completa pago', 'redirigido a /order/{id}/confirmation', 've mensaje de éxito, productos, total y referencia'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Notificaciones por email de estado de pedido', 'description': 'Emails automáticos cuando el estado del pedido cambia: confirmado, en preparación, enviado, entregado.', 'role': 'Se disparan automáticamente por cambios de estado. Solo usuarios autenticados.', 'steps': ['Admin cambia estado de pedido', 'sistema detecta cambio', 'envía email al cliente con nuevo estado y detalles'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Optimización SEO del catálogo y productos', 'description': 'Meta titles, descriptions y Open Graph para cada página de producto y categoría. URLs amigables.', 'role': 'Configurado a nivel de producto/categoría por el admin.', 'steps': ['Admin edita producto', 'rellena campos SEO (meta title, meta description)', 'sistema genera metatags en el HTML'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de pedidos en el panel admin', 'description': 'Lista de todos los pedidos con filtros por estado, fecha y cliente. Permite cambiar estado y agregar notas internas.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/orders', 've tabla de pedidos', 'filtra por estado', 'click en pedido', 'cambia estado', 'guarda nota interna'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Lista de deseos (wishlist)', 'description': 'Permite a usuarios autenticados guardar productos en su lista de deseos para comprar después.', 'role': 'Solo usuarios autenticados.', 'steps': ['Usuario click en ícono corazón en producto', 'guardado en wishlist', 'accede desde /my-wishlist', 'puede mover al carrito'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Reseñas y calificaciones de productos', 'description': 'Usuarios que han comprado un producto pueden dejar reseña con calificación 1-5 y comentario.', 'role': 'Solo usuarios que han comprado el producto. Admin puede moderar.', 'steps': ['Usuario en /product/{id}', 've sección reseñas', "click 'Escribir reseña'", 'ingresa calificación y texto', 'publica'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Sitemap XML automático', 'description': 'Generación automática del sitemap.xml con todas las páginas públicas para indexación por motores de búsqueda.', 'role': 'Generado automáticamente. Accesible en /sitemap.xml.', 'steps': ['Motor de búsqueda accede a /sitemap.xml', 've todas las URLs de productos y categorías con fecha de modificación'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Integración Google Tag Manager', 'description': 'Instalación de GTM para tracking de eventos: vistas de producto, agregar al carrito, iniciar checkout y compra completada.', 'role': 'Configurado con ID de container de GTM. Eventos mapeados al estándar GA4 e-commerce.', 'steps': ['Usuario navega por la tienda', 'eventos disparados a la capa de datos', 'GTM los envía a GA4 y Facebook Pixel'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Perfil de usuario — datos personales y direcciones', 'description': 'Pantalla donde el usuario gestiona su nombre, teléfono y carnet de identidad, y guarda múltiples direcciones de envío.', 'role': 'Solo usuarios autenticados.', 'steps': ['Usuario en /my-profile', 'edita datos personales', 'agrega o edita direcciones de envío', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Métodos de pago guardados', 'description': 'Permite al usuario tokenizar una tarjeta via Wompi para reutilizarla en compras futuras sin re-ingresar datos.', 'role': 'Solo usuarios autenticados con al menos una compra previa.', 'steps': ['Usuario en checkout', "activa 'Recordar tarjeta'", 'Wompi tokeniza', 'en próximas compras aparece tarjeta guardada con últimos 4 dígitos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Descuentos por volumen de compra', 'description': 'Reglas automáticas de descuento basadas en el monto total del carrito (ej: compras > $200.000 obtienen 10%).', 'role': 'Admin configura umbrales y porcentajes. Se aplica automáticamente al cumplir la condición.', 'steps': ['Usuario agrega productos', 'carrito supera umbral', 'sistema aplica descuento automático', 'se muestra en resumen del carrito'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Módulo de envíos y logística', 'description': 'Integración con operadores logísticos (Servientrega, Coordinadora) para calcular costo de envío y generar guías.', 'role': 'Requiere API keys de operadores logísticos. Configurable por zona y peso.', 'steps': ['Usuario en checkout', 'ingresa dirección', 'sistema calcula opciones de envío con costo', 'usuario elige', 'costo sumado al total'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Notificación WhatsApp de pedido nuevo', 'description': 'Mensaje de WhatsApp al admin cuando entra un pedido nuevo, con resumen de productos y datos del cliente.', 'role': 'Requiere API de WhatsApp Business. Configurable el número receptor.', 'steps': ['Pago confirmado', 'sistema dispara webhook a WhatsApp API', 'admin recibe mensaje con resumen del pedido'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Productos relacionados en detalle', 'description': "'También te puede interesar' — sección en la ficha del producto mostrando 4 productos de la misma categoría.", 'role': 'Basado en misma categoría y precio similar. No requiere motor de ML.', 'steps': ['Usuario en /product/{id}', "ve sección 'También te puede interesar'", 'tarjetas de 4 productos relacionados', 'puede navegar a ellos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Carrusel de productos en promoción', 'description': "Sección en la landing con productos marcados como 'en oferta', mostrando precio original y precio con descuento.", 'role': "Admin marca productos como 'en oferta' y configura precio de oferta.", 'steps': ['Usuario en home', 've carrusel de ofertas', 'precio original tachado + precio oferta', 'click navega a detalle'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Comparación de productos', 'description': 'Permite al usuario seleccionar hasta 3 productos para compararlos lado a lado por especificaciones técnicas.', 'role': 'Solo disponible para categorías con atributos comparables.', 'steps': ['Usuario en catálogo', "checkbox 'Comparar' en máx 3 productos", "click 'Comparar seleccionados'", 'tabla comparativa'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Facturación electrónica DIAN', 'description': 'Generación de factura electrónica para los pedidos con pago confirmado, cumpliendo la normativa DIAN.', 'role': 'Integración con proveedor de FE (Siigo o Alegra). Configuración del NIT y responsabilidades.', 'steps': ['Pago confirmado', 'sistema genera factura', 'la envía al proveedor FE', 'proveedor valida con DIAN', 'factura enviada al cliente por email'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Política de devoluciones y reembolsos', 'description': 'Flujo para que el cliente solicite devolución de un pedido entregado. Admin aprueba y gestiona el reembolso.', 'role': "Solo pedidos con estado 'entregado' dentro de los 30 días.", 'steps': ['Cliente en /my-orders', "click 'Solicitar devolución'", 'selecciona motivo', 'admin revisa', 'aprueba', 'Wompi procesa reembolso'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Blog corporativo con SEO', 'description': 'Sección de blog con artículos optimizados para SEO, categorías y buscador interno.', 'role': 'Admin crea artículos desde panel. Publicación programada.', 'steps': ['Admin navega a /admin/blog', 'crea artículo con contenido, imágenes y metadatos SEO', 'publica', 'visible en /blog'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Exportación de reportes a Excel', 'description': 'Permite al admin descargar reportes de ventas, pedidos e inventario en formato Excel.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin en /admin/reports', "click 'Exportar Excel'", 'descarga archivo .xlsx con datos del período seleccionado'], 'review_status': 'in_review', 'draft': True},
 ]
 
-REQUIREMENTS_INVENTORY = [
-    # ── DONE (3) ───────────────────────────────────────────────────────────
-    {"title": "Autenticación con email y contraseña (app móvil)", "description": "Login con email/contraseña para acceder a la app. JWT almacenado en Secure Storage del dispositivo.", "configuration": "Todos los usuarios de la app.", "flow": "Usuario abre app → ingresa email y contraseña → sistema valida → emite JWT → redirige al dashboard principal.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Pantalla de inicio con resumen de inventario", "description": "Dashboard principal con KPIs: artículos totales, artículos con stock bajo, últimas entradas y últimas salidas.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario autenticado → ve dashboard con 4 tarjetas KPI → puede navegar a cada módulo desde los botones de acceso rápido.", "priority": "high", "status": "done", "epic": "INVENTORY"},
-    {"title": "Listado de productos/artículos del inventario", "description": "Pantalla con todos los artículos del inventario, filtrable por categoría y con buscador por nombre o código.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario navega a Inventario → ve lista de artículos con nombre, código, stock actual → puede buscar o filtrar → click en artículo ve detalle.", "priority": "high", "status": "done", "epic": "INVENTORY"},
-
-    # ── IN REVIEW (3) ──────────────────────────────────────────────────────
-    {"title": "Lectura de código de barras con cámara", "description": "Usar la cámara del dispositivo para escanear códigos de barras (EAN-13, Code 128) y buscar el artículo en el inventario.", "configuration": "Requiere permiso de cámara en el dispositivo. Todos los usuarios autenticados.", "flow": "Usuario en cualquier pantalla → toca ícono de cámara → activa escáner → apunta a código de barras → el sistema identifica el artículo → navega a su detalle.", "priority": "critical", "status": "in_review", "epic": "BARCODE"},
-    {"title": "Registro de entradas de inventario", "description": "Formulario para registrar una entrada de stock: artículo, cantidad, proveedor y fecha.", "configuration": "Usuarios con rol almacenista o admin.", "flow": "Usuario en app → navega a Entradas → click 'Nueva entrada' → escanea código o busca artículo → ingresa cantidad y proveedor → guarda → stock actualizado.", "priority": "high", "status": "in_review", "epic": "INVENTORY"},
-    {"title": "Registro de salidas de inventario", "description": "Formulario para registrar salidas: artículo, cantidad, destino o área, y referencia de orden.", "configuration": "Usuarios con rol almacenista o admin.", "flow": "Usuario en app → navega a Salidas → click 'Nueva salida' → selecciona artículo → ingresa cantidad y destino → guarda → stock descontado.", "priority": "high", "status": "in_review", "epic": "INVENTORY"},
-
-    # ── IN PROGRESS (4) ────────────────────────────────────────────────────
-    {"title": "Sincronización bidireccional con ERP (SAP B1)", "description": "Sync de productos, stock y movimientos entre la app y SAP Business One vía API REST.", "configuration": "Requiere credenciales SAP B1. Sincronización automática cada 15 minutos y manual bajo demanda.", "flow": "App detecta cambio en inventario → envía delta a la API del ERP → SAP actualiza maestro → próxima sync trae datos actualizados a la app.", "priority": "critical", "status": "in_progress", "epic": "SYNC"},
-    {"title": "Alerta de stock mínimo", "description": "Notificación push cuando el stock de un artículo cae por debajo del umbral mínimo configurado.", "configuration": "Umbral configurable por artículo. Notificación a usuarios con rol admin o almacenista.", "flow": "Sistema detecta stock < mínimo → genera notificación push → usuario ve alerta en la app → puede crear orden de compra desde la alerta.", "priority": "high", "status": "in_progress", "epic": "INVENTORY"},
-    {"title": "Historial de movimientos por artículo", "description": "Línea de tiempo con todas las entradas y salidas de un artículo, con fecha, cantidad, usuario y referencia.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario en detalle de artículo → tap 'Ver historial' → ve lista cronológica de movimientos → puede filtrar por rango de fechas.", "priority": "medium", "status": "in_progress", "epic": "INVENTORY"},
-    {"title": "Roles y permisos de usuario", "description": "Gestión de roles: admin (acceso completo), almacenista (entradas/salidas), viewer (solo lectura).", "configuration": "Solo el admin puede asignar roles.", "flow": "Admin en ajustes → navega a Usuarios → invita usuario o edita existente → asigna rol → usuario tiene los permisos correspondientes.", "priority": "high", "status": "in_progress", "epic": "AUTH"},
-
-    # ── TODO (5) ───────────────────────────────────────────────────────────
-    {"title": "Inventario físico (conteo cíclico)", "description": "Módulo para realizar conteos físicos de inventario: crear sesión de conteo, escanear artículos y comparar con stock teórico.", "configuration": "Solo usuarios con rol admin. Bloquea movimientos del área durante el conteo.", "flow": "Admin crea sesión de conteo → asigna área → almacenistas escanean artículos y registran cantidad física → sistema compara con stock teórico → genera reporte de diferencias.", "priority": "high", "status": "todo", "epic": "INVENTORY"},
-    {"title": "Generación de QR/código de barras para artículos", "description": "Generar e imprimir etiquetas con código de barras o QR para artículos que no tienen código propio.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin en detalle de artículo → click 'Generar etiqueta' → selecciona formato (QR o barcode) → descarga PDF → imprime desde dispositivo Bluetooth.", "priority": "medium", "status": "todo", "epic": "BARCODE"},
-    {"title": "Reporte de inventario valorizado", "description": "Reporte con el valor total del inventario calculado como stock × costo unitario por artículo.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a Reportes → Inventario valorizado → selecciona fecha de corte → ve tabla con artículo, stock, costo y valor total → puede exportar a Excel.", "priority": "medium", "status": "todo", "epic": "REPORTS"},
-    {"title": "Modo offline con cola de sincronización", "description": "La app funciona sin conexión registrando movimientos localmente. Al recuperar conexión, sincroniza automáticamente con el servidor.", "configuration": "Todos los usuarios. Requiere SQLite local en el dispositivo.", "flow": "Usuario sin internet registra entrada/salida → guardado en SQLite local → al recuperar conexión → sistema sincroniza delta → conflictos resueltos por timestamp.", "priority": "high", "status": "todo", "epic": "SYNC"},
-    {"title": "Integración con impresora Bluetooth para etiquetas", "description": "Impresión directa de etiquetas de código de barras desde la app a impresoras Zebra vía Bluetooth.", "configuration": "Requiere permiso Bluetooth. Compatible con Zebra ZQ series.", "flow": "Usuario genera etiqueta → selecciona impresora Bluetooth desde la lista → confirma impresión → etiqueta impresa.", "priority": "low", "status": "todo", "epic": "BARCODE"},
-
-    # ── BACKLOG (5) ────────────────────────────────────────────────────────
-    {"title": "Transferencias entre bodegas", "description": "Módulo para registrar transferencias de stock entre distintas ubicaciones o bodegas de la empresa.", "configuration": "Usuarios con rol admin o almacenista con acceso a múltiples bodegas.", "flow": "Usuario navega a Transferencias → selecciona bodega origen y destino → elige artículos y cantidades → confirma → stocks ajustados en ambas bodegas.", "priority": "medium", "status": "backlog", "epic": "INVENTORY"},
-    {"title": "Dashboard analítico de movimientos", "description": "Gráficos de barras y líneas mostrando rotación de inventario, entradas vs salidas por período y artículos de mayor movimiento.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin en Reportes → Analítica → selecciona período → ve gráficos de rotación y tendencias → puede exportar datos.", "priority": "low", "status": "backlog", "epic": "REPORTS"},
-    {"title": "Gestión de proveedores", "description": "CRUD de proveedores con nombre, NIT, contacto y catálogo de productos que suministran.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a Proveedores → crea proveedor con datos → asigna artículos que provee → al registrar entradas puede seleccionar proveedor del listado.", "priority": "medium", "status": "backlog", "epic": "INVENTORY"},
-    {"title": "Órdenes de compra desde alertas de stock bajo", "description": "Desde la alerta de stock mínimo, el admin puede crear una orden de compra al proveedor con la cantidad sugerida.", "configuration": "Solo usuarios con rol admin. Requiere proveedores configurados.", "flow": "Admin ve alerta stock bajo → click 'Crear orden de compra' → sistema pre-llena artículo, cantidad sugerida y proveedor → admin confirma → orden enviada.", "priority": "high", "status": "backlog", "epic": "SYNC"},
-    {"title": "Notificaciones push de sync completada", "description": "Notificación push confirmando que la sincronización con el ERP se completó exitosamente, o alertando si falló.", "configuration": "Solo usuarios con rol admin.", "flow": "Sistema completa sync → envía push al admin → 'Sincronización completada: X artículos actualizados' o 'Error de sync: verificar conexión ERP'.", "priority": "low", "status": "backlog", "epic": "SYNC"},
+VALIDATION_GUIDES_INVENTORY = [
+    {'title': 'Autenticación con email y contraseña (app móvil)', 'description': 'Login con email/contraseña para acceder a la app. JWT almacenado en Secure Storage del dispositivo.', 'role': 'Todos los usuarios de la app.', 'steps': ['Usuario abre app', 'ingresa email y contraseña', 'sistema valida', 'emite JWT', 'redirige al dashboard principal'], 'review_status': 'approved', 'draft': False},
+    {'title': 'Pantalla de inicio con resumen de inventario', 'description': 'Dashboard principal con KPIs: artículos totales, artículos con stock bajo, últimas entradas y últimas salidas.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario autenticado', 've dashboard con 4 tarjetas KPI', 'puede navegar a cada módulo desde los botones de acceso rápido'], 'review_status': 'objected', 'draft': False},
+    {'title': 'Listado de productos/artículos del inventario', 'description': 'Pantalla con todos los artículos del inventario, filtrable por categoría y con buscador por nombre o código.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario navega a Inventario', 've lista de artículos con nombre, código, stock actual', 'puede buscar o filtrar', 'click en artículo ve detalle'], 'review_status': 'rejected', 'draft': False},
+    {'title': 'Lectura de código de barras con cámara', 'description': 'Usar la cámara del dispositivo para escanear códigos de barras (EAN-13, Code 128) y buscar el artículo en el inventario.', 'role': 'Requiere permiso de cámara en el dispositivo. Todos los usuarios autenticados.', 'steps': ['Usuario en cualquier pantalla', 'toca ícono de cámara', 'activa escáner', 'apunta a código de barras', 'el sistema identifica el artículo', 'navega a su detalle'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Registro de entradas de inventario', 'description': 'Formulario para registrar una entrada de stock: artículo, cantidad, proveedor y fecha.', 'role': 'Usuarios con rol almacenista o admin.', 'steps': ['Usuario en app', 'navega a Entradas', "click 'Nueva entrada'", 'escanea código o busca artículo', 'ingresa cantidad y proveedor', 'guarda', 'stock actualizado'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Registro de salidas de inventario', 'description': 'Formulario para registrar salidas: artículo, cantidad, destino o área, y referencia de orden.', 'role': 'Usuarios con rol almacenista o admin.', 'steps': ['Usuario en app', 'navega a Salidas', "click 'Nueva salida'", 'selecciona artículo', 'ingresa cantidad y destino', 'guarda', 'stock descontado'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Sincronización bidireccional con ERP (SAP B1)', 'description': 'Sync de productos, stock y movimientos entre la app y SAP Business One vía API REST.', 'role': 'Requiere credenciales SAP B1. Sincronización automática cada 15 minutos y manual bajo demanda.', 'steps': ['App detecta cambio en inventario', 'envía delta a la API del ERP', 'SAP actualiza maestro', 'próxima sync trae datos actualizados a la app'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Alerta de stock mínimo', 'description': 'Notificación push cuando el stock de un artículo cae por debajo del umbral mínimo configurado.', 'role': 'Umbral configurable por artículo. Notificación a usuarios con rol admin o almacenista.', 'steps': ['Sistema detecta stock < mínimo', 'genera notificación push', 'usuario ve alerta en la app', 'puede crear orden de compra desde la alerta'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Historial de movimientos por artículo', 'description': 'Línea de tiempo con todas las entradas y salidas de un artículo, con fecha, cantidad, usuario y referencia.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario en detalle de artículo', "tap 'Ver historial'", 've lista cronológica de movimientos', 'puede filtrar por rango de fechas'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Roles y permisos de usuario', 'description': 'Gestión de roles: admin (acceso completo), almacenista (entradas/salidas), viewer (solo lectura).', 'role': 'Solo el admin puede asignar roles.', 'steps': ['Admin en ajustes', 'navega a Usuarios', 'invita usuario o edita existente', 'asigna rol', 'usuario tiene los permisos correspondientes'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Inventario físico (conteo cíclico)', 'description': 'Módulo para realizar conteos físicos de inventario: crear sesión de conteo, escanear artículos y comparar con stock teórico.', 'role': 'Solo usuarios con rol admin. Bloquea movimientos del área durante el conteo.', 'steps': ['Admin crea sesión de conteo', 'asigna área', 'almacenistas escanean artículos y registran cantidad física', 'sistema compara con stock teórico', 'genera reporte de diferencias'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Generación de QR/código de barras para artículos', 'description': 'Generar e imprimir etiquetas con código de barras o QR para artículos que no tienen código propio.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin en detalle de artículo', "click 'Generar etiqueta'", 'selecciona formato (QR o barcode)', 'descarga PDF', 'imprime desde dispositivo Bluetooth'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Reporte de inventario valorizado', 'description': 'Reporte con el valor total del inventario calculado como stock × costo unitario por artículo.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a Reportes', 'Inventario valorizado', 'selecciona fecha de corte', 've tabla con artículo, stock, costo y valor total', 'puede exportar a Excel'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Modo offline con cola de sincronización', 'description': 'La app funciona sin conexión registrando movimientos localmente. Al recuperar conexión, sincroniza automáticamente con el servidor.', 'role': 'Todos los usuarios. Requiere SQLite local en el dispositivo.', 'steps': ['Usuario sin internet registra entrada/salida', 'guardado en SQLite local', 'al recuperar conexión', 'sistema sincroniza delta', 'conflictos resueltos por timestamp'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Integración con impresora Bluetooth para etiquetas', 'description': 'Impresión directa de etiquetas de código de barras desde la app a impresoras Zebra vía Bluetooth.', 'role': 'Requiere permiso Bluetooth. Compatible con Zebra ZQ series.', 'steps': ['Usuario genera etiqueta', 'selecciona impresora Bluetooth desde la lista', 'confirma impresión', 'etiqueta impresa'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Transferencias entre bodegas', 'description': 'Módulo para registrar transferencias de stock entre distintas ubicaciones o bodegas de la empresa.', 'role': 'Usuarios con rol admin o almacenista con acceso a múltiples bodegas.', 'steps': ['Usuario navega a Transferencias', 'selecciona bodega origen y destino', 'elige artículos y cantidades', 'confirma', 'stocks ajustados en ambas bodegas'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Dashboard analítico de movimientos', 'description': 'Gráficos de barras y líneas mostrando rotación de inventario, entradas vs salidas por período y artículos de mayor movimiento.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin en Reportes', 'Analítica', 'selecciona período', 've gráficos de rotación y tendencias', 'puede exportar datos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de proveedores', 'description': 'CRUD de proveedores con nombre, NIT, contacto y catálogo de productos que suministran.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a Proveedores', 'crea proveedor con datos', 'asigna artículos que provee', 'al registrar entradas puede seleccionar proveedor del listado'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Órdenes de compra desde alertas de stock bajo', 'description': 'Desde la alerta de stock mínimo, el admin puede crear una orden de compra al proveedor con la cantidad sugerida.', 'role': 'Solo usuarios con rol admin. Requiere proveedores configurados.', 'steps': ['Admin ve alerta stock bajo', "click 'Crear orden de compra'", 'sistema pre-llena artículo, cantidad sugerida y proveedor', 'admin confirma', 'orden enviada'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Notificaciones push de sync completada', 'description': 'Notificación push confirmando que la sincronización con el ERP se completó exitosamente, o alertando si falló.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Sistema completa sync', 'envía push al admin', "'Sincronización completada: X artículos actualizados' o 'Error de sync: verificar conexión ERP'"], 'review_status': 'in_review', 'draft': True},
 ]
 # fmt: on
 
@@ -203,6 +184,7 @@ class Command(BaseCommand):
         from content.models import Document
         from content.services.document_type_codes import COLLECTION_ACCOUNT
 
+        clear_fake_delivery(Project.objects.filter(client__email__in=[ADMIN_EMAIL, CLIENT_EMAIL]))
         seed_docs = Document.objects.filter(title__startswith=SEED_PREFIX).delete()
         if seed_docs[0]:
             self.stdout.write(f'  Deleted {seed_docs[0]} documents titled {SEED_PREFIX!r}')
@@ -438,7 +420,7 @@ class Command(BaseCommand):
         self._create_seed_markdown_documents(admin_user, client_user, ecommerce_project)
         self._create_data_model_entities(ecommerce_project)
         self._verify_some_client_emails(client_user)
-        self._sync_scope_items_from_proposal(ecommerce_project, admin_user)
+        self._sync_resources_from_proposal(ecommerce_project, admin_user)
 
     def _verify_some_client_emails(self, client_user):
         """Mark a deterministic subset of client emails as verified (idempotent).
@@ -468,66 +450,17 @@ class Command(BaseCommand):
         else:
             self.stdout.write('  Client email verification already applied — skipped')
 
-    def _sync_scope_items_from_proposal(self, project, admin_user):
-        """Run the proposal→platform sync so ProjectScopeItem rows + scope-linked
-        Requirements exist end-to-end for the demo project (idempotent).
+    def _sync_resources_from_proposal(self, project, admin_user):
+        """Refresh resources only; review guides remain separately authored."""
+        from accounts.services.technical_resources_sync import sync_technical_resources_for_project
 
-        Guarded: the service returns ``ok=False`` when the linked proposal lacks an
-        enabled technical_document section, so we check the result and skip
-        gracefully instead of crashing the seeder.
-        """
-        from accounts.services.technical_requirements_sync import (
-            sync_technical_requirements_for_project,
-        )
-
-        if not project:
-            return
-
-        try:
-            result = sync_technical_requirements_for_project(project, admin_user)
-        except Exception as exc:  # defensive: never let seeding crash on sync
-            self.stdout.write(self.style.WARNING(
-                f'  Scope-item sync skipped for {project.name}: {exc}'
-            ))
-            return
-
+        result = sync_technical_resources_for_project(project, admin_user)
         if not result.get('ok'):
-            self.stdout.write(self.style.WARNING(
-                f'  Scope-item sync no-op for {project.name}: {result.get("error")}'
-            ))
+            self.stdout.write(self.style.WARNING(f'  Resource sync skipped: {result.get("error")}'))
             return
-
         self.stdout.write(self.style.SUCCESS(
-            f'  Synced scope items for {project.name}: '
-            f'{result.get("scope_items_created", 0)} scope items created, '
-            f'{result.get("requirements_created", 0)} requirements created'
+            f'  Synced {result["deliverables_created"]} resources for {project.name}',
         ))
-
-        # Edge case: represent one admin-overridden requirement so re-sync
-        # content preservation is exercised. Idempotent: only when none exists.
-        already_overridden = Requirement.objects.filter(
-            phase__project=project,
-            synced_from_proposal=True,
-            content_overridden=True,
-        ).exists()
-        if not already_overridden:
-            overridden = (
-                Requirement.objects.filter(
-                    phase__project=project,
-                    synced_from_proposal=True,
-                    content_overridden=False,
-                    is_archived=False,
-                )
-                .exclude(source_flow_key='')
-                .order_by('id')
-                .first()
-            )
-            if overridden:
-                overridden.content_overridden = True
-                overridden.save(update_fields=['content_overridden', 'updated_at'])
-                self.stdout.write(self.style.SUCCESS(
-                    f'  Flagged 1 requirement as admin-overridden ({overridden.title[:40]})'
-                ))
 
     def _extend_subscription_payments(self, project):
         sub = HostingSubscription.objects.filter(project=project).first()
@@ -640,25 +573,6 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS('  Created seed notifications (admin + client)'))
 
     def _create_seed_comments(self, project, admin_user, client_user):
-        if not RequirementComment.objects.filter(content__startswith=SEED_PREFIX).exists():
-            req = Requirement.objects.filter(
-                phase__project=project, status=Requirement.STATUS_IN_PROGRESS,
-            ).first()
-            if req:
-                RequirementComment.objects.create(
-                    requirement=req,
-                    user=admin_user,
-                    content=f'{SEED_PREFIX} Internal: synced scope with backend; no blockers.',
-                    is_internal=True,
-                )
-                RequirementComment.objects.create(
-                    requirement=req,
-                    user=client_user,
-                    content=f'{SEED_PREFIX} Can we prioritize checkout before recommendations?',
-                    is_internal=False,
-                )
-                self.stdout.write(self.style.SUCCESS('  Created seed requirement comments'))
-
         first_bug = BugReport.objects.filter(project=project).order_by('id').first()
         if first_bug and not BugComment.objects.filter(
             bug_report=first_bug,
@@ -846,68 +760,10 @@ class Command(BaseCommand):
         return proposal
 
     def _create_requirements(self, project):
-        if Requirement.objects.filter(phase__project=project).exists():
-            self.stdout.write(f'  Requirements already exist for {project.name}')
-            return
-
-        phase = ensure_phase(project)
-
-        order_counters = {}
-        objs = []
-        for req in REQUIREMENTS_ECOMMERCE:
-            status = req['status']
-            order_counters.setdefault(status, 0)
-            epic_key = req.get('epic', '')
-            objs.append(Requirement(
-                phase=phase,
-                title=req['title'],
-                description=req.get('description', ''),
-                configuration=req.get('configuration', ''),
-                flow=req.get('flow', ''),
-                status=status,
-                priority=req.get('priority', 'medium'),
-                order=order_counters[status],
-                source_epic_key=epic_key,
-                source_epic_title=EPICS_ECOMMERCE.get(epic_key, ''),
-            ))
-            order_counters[status] += 1
-
-        Requirement.objects.bulk_create(objs)
-        self.stdout.write(self.style.SUCCESS(
-            f'  Created {len(objs)} requirements across {len(EPICS_ECOMMERCE)} epics for {project.name}'
-        ))
+        seed_validation_guides(project, VALIDATION_GUIDES_ECOMMERCE, context=self.seed_context)
 
     def _create_inventory_requirements(self, project):
-        if Requirement.objects.filter(phase__project=project).exists():
-            self.stdout.write(f'  Requirements already exist for {project.name}')
-            return
-
-        phase = ensure_phase(project)
-
-        order_counters = {}
-        objs = []
-        for req in REQUIREMENTS_INVENTORY:
-            status = req['status']
-            order_counters.setdefault(status, 0)
-            epic_key = req.get('epic', '')
-            objs.append(Requirement(
-                phase=phase,
-                title=req['title'],
-                description=req.get('description', ''),
-                configuration=req.get('configuration', ''),
-                flow=req.get('flow', ''),
-                status=status,
-                priority=req.get('priority', 'medium'),
-                order=order_counters[status],
-                source_epic_key=epic_key,
-                source_epic_title=EPICS_INVENTORY.get(epic_key, ''),
-            ))
-            order_counters[status] += 1
-
-        Requirement.objects.bulk_create(objs)
-        self.stdout.write(self.style.SUCCESS(
-            f'  Created {len(objs)} requirements across {len(EPICS_INVENTORY)} epics for {project.name}'
-        ))
+        seed_validation_guides(project, VALIDATION_GUIDES_INVENTORY, context=self.seed_context)
 
     def _create_change_requests(self, project, client_user, admin_user):
         if ChangeRequest.objects.filter(project=project).exists():
@@ -1002,7 +858,6 @@ class Command(BaseCommand):
             self.stdout.write(f'  Bug reports already exist for {project.name}')
             return
 
-        phase = ensure_phase(project)
 
         bugs = [
             {
@@ -1098,7 +953,6 @@ class Command(BaseCommand):
         for bug_data in bugs:
             bug = BugReport.objects.create(
                 project=project,
-                phase=phase,
                 reported_by=client_user,
                 title=bug_data['title'],
                 description=bug_data['description'],
@@ -1728,7 +1582,6 @@ class Command(BaseCommand):
             self.stdout.write(f'  Bug reports already exist for {project.name}')
             return
 
-        phase = ensure_phase(project)
 
         bugs = [
             {
@@ -1827,7 +1680,6 @@ class Command(BaseCommand):
         for bug_data in bugs:
             bug = BugReport.objects.create(
                 project=project,
-                phase=phase,
                 reported_by=client_user,
                 title=bug_data['title'],
                 description=bug_data['description'],

@@ -68,14 +68,9 @@
               <path d="M23 20v-6h-6" />
               <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15" />
             </template>
-            <template v-else-if="notif.type === 'cr_converted' || notif.type === 'requirement_approved'">
+            <template v-else-if="notif.type === 'cr_converted'">
               <path d="M22 11.08V12a10 10 0 11-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
-            </template>
-            <template v-else-if="notif.type === 'requirement_moved'">
-              <rect x="4" y="3" width="4" height="18" rx="1" />
-              <rect x="10" y="3" width="4" height="12" rx="1" />
-              <rect x="16" y="3" width="4" height="15" rx="1" />
             </template>
             <template v-else-if="notif.type === 'deliverable_uploaded' || notif.type === 'deliverable_new_version'">
               <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -139,7 +134,6 @@ function typeIconColor(type) {
   const map = {
     bug_reported: 'text-red-500', bug_status_changed: 'text-red-500',
     cr_created: 'text-amber-500', cr_status_changed: 'text-amber-500', cr_converted: 'text-emerald-500',
-    requirement_moved: 'text-blue-500', requirement_approved: 'text-emerald-500',
     deliverable_uploaded: 'text-purple-500', deliverable_new_version: 'text-purple-500',
     comment_added: 'text-blue-500', general: 'text-text-muted',
   }
@@ -150,7 +144,6 @@ function typeIconBg(type) {
   const map = {
     bug_reported: 'bg-red-500/10', bug_status_changed: 'bg-red-500/10',
     cr_created: 'bg-amber-500/10', cr_status_changed: 'bg-amber-500/10', cr_converted: 'bg-emerald-500/10',
-    requirement_moved: 'bg-blue-500/10', requirement_approved: 'bg-emerald-500/10',
     deliverable_uploaded: 'bg-purple-500/10', deliverable_new_version: 'bg-purple-500/10',
     comment_added: 'bg-blue-500/10', general: 'bg-surface-raised',
   }
@@ -177,10 +170,11 @@ const localePath = useLocalePath()
 function getNotifRoute(notif) {
   if (!notif.project) return null
   const base = `/platform/projects/${notif.project}`
+  if (notif.related_object_type === 'delivery_stage') return localePath(`${base}/delivery?stage=${notif.related_object_id}`)
   const typeRoutes = {
     bug_reported: '/bugs', bug_status_changed: '/bugs',
     cr_created: '/changes', cr_status_changed: '/changes', cr_converted: '/changes',
-    requirement_moved: '/board', requirement_approved: '/board',
+    delivery_published: '/delivery', delivery_reviewed: '/delivery', delivery_message: '/delivery',
     deliverable_uploaded: '/deliverables', deliverable_new_version: '/deliverables',
   }
   return localePath(base + (typeRoutes[notif.type] || ''))

@@ -195,7 +195,7 @@ COMMON_TOOL_SLUGS = {
 }
 UPLOAD_TOOL_SLUGS = {
     'partnership-program', 'additional-modules', 'proposals',
-    'commercial', 'documents', 'communications', 'content', 'accounting-cards',
+    'commercial', 'projects', 'documents', 'communications', 'content', 'accounting-cards',
 }
 
 TOOLS_BY_SLUG = {

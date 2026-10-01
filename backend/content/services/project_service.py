@@ -292,6 +292,8 @@ def change_client_apply(project, new_profile, mode, user):
     must not leave a log claiming it happened) and none of them notify by
     email — the bulk convention.
     """
+    from accounts.services.delivery_client_transfer import assert_delivery_client_transfer_safe
+    project = assert_delivery_client_transfer_safe(project, new_profile.user, actor=user)
     sets = linked_sets(project)
     blocked = sets['blocked_income_pks']
     # A liquid child whose expected parent is also linked rides with the

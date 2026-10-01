@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-guide-prompt",
+  "name": "Platform Guide Prompt Sources",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "Select one contract and applicable amendments or annexes, retain exact sources with readable fragments and warnings, then preview verified JSON before applying guide drafts without requiring an existing stage.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error", "failure", "display"]
+}

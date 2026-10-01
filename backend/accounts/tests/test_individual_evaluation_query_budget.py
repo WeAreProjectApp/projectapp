@@ -1,5 +1,6 @@
 """Query-budget contracts for individual change-request and bug evaluations."""
 
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 import re
 
 import pytest
@@ -94,10 +95,8 @@ def evaluation_context():
     proposal = BusinessProposal.objects.create(
         title="Evaluation budget proposal", client_name="Evaluation budget client"
     )
-    phase = ProjectPhase.objects.create(
-        project=project, business_proposal=proposal, order=1
-    )
-    requirement = Requirement.objects.create(phase=phase, title="Evaluation source")
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title="Evaluation source")
     return (
         APIClient(),
         {"HTTP_AUTHORIZATION": f"Bearer {AccessToken.for_user(admin)}"},
@@ -109,23 +108,11 @@ def evaluation_context():
 
 
 def _change_request(project, phase, requirement, client, label):
-    return ChangeRequest.objects.create(
-        project=project,
-        phase=phase,
-        source_requirement=requirement,
-        created_by=client,
-        title=f"Change {label}",
-    )
+    return ChangeRequest.objects.create(project=project, source_requirement=requirement, created_by=client, title=f"Change {label}")
 
 
 def _bug_report(project, phase, requirement, client, label):
-    return BugReport.objects.create(
-        project=project,
-        phase=phase,
-        source_requirement=requirement,
-        reported_by=client,
-        title=f"Bug {label}",
-    )
+    return BugReport.objects.create(project=project, source_requirement=requirement, reported_by=client, title=f"Bug {label}")
 
 
 def _comments(model, parent_field, parent, count, *, start):
