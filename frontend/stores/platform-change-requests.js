@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { issueError } from '~/utils/issue-reports'
 import { buildPlatformListUrl } from '~/composables/useIncludeArchivedQuery'
 import { usePlatformApi } from '~/composables/usePlatformApi'
 
@@ -41,7 +42,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         this.changeRequests = response.data
         return { success: true }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar las solicitudes de cambio.'
+        const message = issueError(error, 'No pudimos cargar las solicitudes de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -60,7 +61,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         this.currentChangeRequest = response.data
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar la solicitud de cambio.'
+        const message = issueError(error, 'No pudimos cargar la solicitud de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -82,7 +83,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         this.changeRequests.unshift(response.data)
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos crear la solicitud de cambio.'
+        const message = issueError(error, 'No pudimos crear la solicitud de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -107,7 +108,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         this.changeRequests = response.data
         return { success: true }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos cargar las solicitudes de cambio.'
+        const message = issueError(error, 'No pudimos cargar las solicitudes de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -132,7 +133,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
 
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos evaluar la solicitud de cambio.'
+        const message = issueError(error, 'No pudimos evaluar la solicitud de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -149,7 +150,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         const response = await post(`projects/${projectId}/change-requests/bulk-evaluate/`, items)
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos aplicar las respuestas masivas.'
+        const message = issueError(error, 'No pudimos aplicar las respuestas masivas.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -168,7 +169,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
         this.changeRequests = this.changeRequests.filter((cr) => cr.id !== crId)
         return { success: true, message: data?.detail || '' }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos archivar la solicitud de cambio.'
+        const message = issueError(error, 'No pudimos archivar la solicitud de cambio.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */
@@ -177,12 +178,14 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
       }
     },
 
-    async addComment(projectId, crId, content, isInternal = false) {
+    async addComment(projectId, crId, content, isInternal = false, options = {}) {
+      this.error = ''
       try {
         const { post } = usePlatformApi()
         const response = await post(`projects/${projectId}/change-requests/${crId}/comments/`, {
           content,
           is_internal: isInternal,
+          ...options,
         })
 
         if (this.currentChangeRequest?.id === crId && this.currentChangeRequest.comments) {
@@ -191,7 +194,8 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
 
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos agregar el comentario.'
+        const message = issueError(error, 'No pudimos agregar el comentario.')
+        this.error = message
         return { success: false, message }
       }
     },
@@ -212,7 +216,7 @@ export const usePlatformChangeRequestsStore = defineStore('platformChangeRequest
 
         return { success: true, data: response.data }
       } catch (error) {
-        const message = error.response?.data?.detail || 'No pudimos convertir la solicitud en requerimiento.'
+        const message = issueError(error, 'No pudimos convertir la solicitud en requerimiento.')
         this.error = message
         return { success: false, message }
       /* c8 ignore next 3 */

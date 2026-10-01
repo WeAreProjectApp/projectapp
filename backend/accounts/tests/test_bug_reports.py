@@ -415,15 +415,6 @@ class TestBugReportCreate:
         assert data['screenshot_url'] is not None
         assert data['screenshot_url'].endswith('.jpg')
 
-    def test_create_without_source_requirement_id_fails(
-        self, api_client, client_headers, project,
-    ):
-        resp = api_client.post(_url(project.id), {
-            'title': 'Missing source',
-        }, format='json', **client_headers)
-
-        assert resp.status_code == 400
-
     def test_create_with_source_requirement_from_other_project_fails(
         self, api_client, client_headers, project, admin_user,
     ):

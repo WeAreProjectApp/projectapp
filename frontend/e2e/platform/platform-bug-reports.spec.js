@@ -41,16 +41,15 @@ const mockBugReports = [
   },
 ];
 
-// Bugs require a source requirement; the create form populates its
-// "Requerimiento de origen" select from this endpoint.
+// A published guide is optional for bugs; selecting one captures its round.
 const mockProjectRequirements = [
-  { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', status: 'todo' },
+  { id: 501, title: 'Checkout flow', phase_title: 'Fase 1', stage_title: 'Etapa 1', source_publication_id: 101, source_requirement_version: 1 },
 ];
 
 const meResponse = (user) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(user) });
 
 function setupMocks(page, { user }) {
-  return mockApi(page, async ({ apiPath, method }) => {
+  return mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
     if (apiPath === 'accounts/projects/1/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProject) };
@@ -58,14 +57,14 @@ function setupMocks(page, { user }) {
     if (apiPath === 'accounts/projects/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([mockProject]) };
     }
-    if (apiPath === 'accounts/projects/1/requirements/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProjectRequirements) };
+    if (apiPath === 'accounts/projects/1/issue-reports/context-options/' && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify({ requirements: mockProjectRequirements, contracts: [], documents: [] }) };
     }
     if (apiPath === 'accounts/projects/1/bug-reports/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockBugReports) };
     }
     if (apiPath === 'accounts/projects/1/bug-reports/' && method === 'POST') {
-      return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 10, title: 'New bug', severity: 'medium', status: 'reported', comments_count: 0 }) };
+      return { status: 201, contentType: 'application/json', body: JSON.stringify({ id: 10, title: route.request().postDataJSON().title, severity: 'medium', status: 'reported', comments_count: 0 }) };
     }
     if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 0 }) };
@@ -102,12 +101,12 @@ test.describe('Platform Bug Reports — Client', () => {
 
     await page.getByRole('button', { name: /reportar bug/i }).click();
     await page.getByPlaceholder('¿Qué está fallando?').fill('New bug report');
-    // A bug now requires a source requirement — pick the first real option.
-    await page.locator('select[required]').selectOption({ index: 1 });
+    await page.getByLabel('Entrega de origen (opcional)', { exact: true }).selectOption('501');
     await page.getByRole('button', { name: /reportar bug/i }).last().click();
 
     // On a successful submit the create form closes.
     await expect(page.getByPlaceholder('¿Qué está fallando?')).not.toBeVisible();
+    await expect(page.getByText('New bug report', { exact: true })).toBeVisible();
   });
 });
 

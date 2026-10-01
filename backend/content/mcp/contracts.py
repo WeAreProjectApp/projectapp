@@ -983,6 +983,8 @@ BILLING_CATALOG_CONTRACTS = (
 )
 
 
+from content.mcp.issue_contracts import build_issue_contracts  # noqa: E402
+
 MCP_MODEL_CONTRACTS.update({
     # Read-only aggregate; every source model remains governed by its domain
     # connector contract instead of receiving a second mutation contract here.
@@ -993,7 +995,7 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
     ),
-    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS,
+    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS + build_issue_contracts(_contract),
     'content': (
         MCP_MODEL_CONTRACTS['blog']
         + MCP_MODEL_CONTRACTS['linkedin-personal']

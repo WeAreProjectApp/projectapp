@@ -1,3 +1,12 @@
+# Bugs y solicitudes contextualizadas — P1 (2026-10-01)
+
+Implementación en validación en `platform-bugs-context`: bug general sin guías,
+captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
+y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
+Pendientes de integración: adaptador de revisión contractual y hoja/número de
+migración final coordinados por P0 con P3. Detalles en
+`docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
+
 # Alcance y entregas en Platform (2026-10-01)
 
 Primer incremento implementado en `platform-review-workflow`, en validación:

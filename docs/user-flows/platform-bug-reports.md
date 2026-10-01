@@ -1,0 +1,29 @@
+### Platform: reportar y seguir bugs de proyecto
+
+El cliente puede reportar un bug general aunque no existan guías publicadas. Si
+elige una entrega, el ticket conserva contrato, otrosí, alcance, fase, etapa,
+publicación, ronda y versión del requerimiento originales. Los datos, pasos,
+resultado esperado/real, entorno, pantallazo y comentarios permanecen en el ticket.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
+| success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
+| success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |
+| success | El cliente explica «Sigue fallando». | Comentario público y reapertura a Reportado; se conservan respuestas anteriores. |
+| error | Enviar sin título o reabrir sin explicación. | Validación visible; el estado no cambia. |
+| error | Usar un documento, contrato o requerimiento de otro contexto. | Rechazo sin guardar respuesta, adjunto ni cambio de estado. |
+| failure | Responder con una versión antigua o fallar la API/descarga. | Error visible y datos anteriores conservados; el cliente puede recargar y reintentar. |
+
+El administrador puede evaluar, comentar y archivar. El cliente sólo opera sus
+proyectos y no recibe notas ni adjuntos internos. Un PDF se descarga mediante JWT
+y conserva los bytes adjuntos aunque el documento fuente cambie después.
+
+La revisión contractual de tickets depende del adaptador compartido de P3.
+Mientras no esté disponible, el resultado es indeterminado; seleccionar un
+contrato no inventa una decisión dentro/fuera de alcance. La ruta global
+`/platform/bugs` redirige a proyectos.
+
+Código: `frontend/pages/platform/projects/[id]/bugs.vue`, componentes
+`frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.

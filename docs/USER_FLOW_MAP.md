@@ -6340,8 +6340,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
 | `platform-admin-project-create` | platform | P3 | success,error | 1 |
-| `platform-bug-reports` | platform | P2 | success,display | 1 |
-| `platform-change-requests` | platform | P2 | success,display | 1 |
+| `platform-bug-reports` | platform | P2 | success,error,failure,display | 1 |
+| `platform-change-requests` | platform | P2 | success,error,failure,display | 1 |
 | `platform-client-document-portal` | platform | P1 | success,display | 1 |
 | `platform-client-document-sign` | platform | P1 | success,error | 1 |
 | `platform-client-email-validation` | platform | P1 | success,error | 1 |
@@ -8190,6 +8190,61 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** guarda mediante PATCH de company-settings y las siguientes aperturas del modal reciben la configuración.
 - **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
 - **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
+
+### Platform: reportar y seguir bugs de proyecto
+
+El cliente puede reportar un bug general aunque no existan guías publicadas. Si
+elige una entrega, el ticket conserva contrato, otrosí, alcance, fase, etapa,
+publicación, ronda y versión del requerimiento originales. Los datos, pasos,
+resultado esperado/real, entorno, pantallazo y comentarios permanecen en el ticket.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
+| success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
+| success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |
+| success | El cliente explica «Sigue fallando». | Comentario público y reapertura a Reportado; se conservan respuestas anteriores. |
+| error | Enviar sin título o reabrir sin explicación. | Validación visible; el estado no cambia. |
+| error | Usar un documento, contrato o requerimiento de otro contexto. | Rechazo sin guardar respuesta, adjunto ni cambio de estado. |
+| failure | Responder con una versión antigua o fallar la API/descarga. | Error visible y datos anteriores conservados; el cliente puede recargar y reintentar. |
+
+El administrador puede evaluar, comentar y archivar. El cliente sólo opera sus
+proyectos y no recibe notas ni adjuntos internos. Un PDF se descarga mediante JWT
+y conserva los bytes adjuntos aunque el documento fuente cambie después.
+
+La revisión contractual de tickets depende del adaptador compartido de P3.
+Mientras no esté disponible, el resultado es indeterminado; seleccionar un
+contrato no inventa una decisión dentro/fuera de alcance. La ruta global
+`/platform/bugs` redirige a proyectos.
+
+Código: `frontend/pages/platform/projects/[id]/bugs.vue`, componentes
+`frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
+
+### Platform: solicitudes de cambio contextualizadas
+
+El cliente crea una solicitud sobre un requerimiento publicado. El origen conserva
+contrato, otrosí, alcance, fase, etapa, publicación, ronda y versión. Las respuestas
+y documentos del equipo se guardan separados de las guías y sus aprobaciones.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Abrir Solicitudes de cambio desde el proyecto. | Estado, prioridad, origen congelado, comentarios, respuestas y adjuntos. |
+| success | Seleccionar una guía publicada y enviar título/descripción. | Solicitud pendiente con el contexto original. |
+| success | Evaluar o responder con documentos opcionales. | Historia y evidencia privada conservadas; no cambia la guía fuente. |
+| success | Convertir una solicitud aprobada. | Requerimiento nuevo y pendiente, vinculado a una etapa editable explícita del contrato aplicable. |
+| error | Crear sin título/requerimiento o convertir una solicitud ya vinculada. | Validación; no se duplica ninguna guía. |
+| error | Seleccionar etapa de otro contrato o documento de otro contexto. | Rechazo sin cambiar el ticket ni la entrega. |
+| failure | API, descarga o conflicto de versión. | Error visible y estado anterior conservado; recargar antes de continuar. |
+
+El cliente sólo consulta solicitudes de sus proyectos. Los comentarios no amplían
+el alcance. La aprobación de una solicitud no constituye aceptación de una guía;
+la conversión no publica ni aprueba el nuevo requerimiento. La revisión contractual
+por fuentes/prompts depende de P3 y permanece indeterminada mientras falte ese
+adaptador. `/platform/changes` redirige a proyectos.
+
+Código: `frontend/pages/platform/projects/[id]/changes.vue`, componentes
+`frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
 
 ### FLOW: `proposal-closing-contact`
 
