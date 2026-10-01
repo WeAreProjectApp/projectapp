@@ -178,7 +178,7 @@ class ContractReplyContextSerializer(PromptContextSerializer):
     mode = serializers.ChoiceField(choices=['reply'], default='reply')
     contract_id = serializers.IntegerField(min_value=1, required=False, allow_null=True, default=None)
     destination = ReplyDestinationSerializer()
-    expected_ticket_version = serializers.IntegerField(min_value=1)
+    expected_ticket_version = serializers.IntegerField(min_value=0)
 
 
 class SignatureSerializer(PublishSerializer):
