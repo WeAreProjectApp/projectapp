@@ -310,6 +310,8 @@ class Command(BaseCommand):
             created_md += 1
 
         # ── Collection accounts ───────────────────────────────────────────
+        from accounts.management.commands._billing_seed_helpers import billing_seed_actor, collection_context_for_seed
+        billing_actor = billing_seed_actor(admin)
         # Lifecycle buckets across the generated accounts.
         lifecycles = self._lifecycle_plan(n_collection)
 
@@ -339,10 +341,11 @@ class Command(BaseCommand):
                     'unit_price': base_amount,
                 }],
             }
+            account_data.update(collection_context_for_seed(project, i, context=self.seed_context, actor=billing_actor))
             if lifecycle == 'draft':
                 doc = ca_create_service.create_income_collection_account_draft(
                     account_data,
-                    acting_user=admin,
+                    acting_user=billing_actor,
                 )
             else:
                 issue_age_days = {
@@ -351,7 +354,7 @@ class Command(BaseCommand):
                 }.get(lifecycle, rng.choice([15, 45, 90]))
                 doc = ca_create_service.create_income_collection_account(
                     account_data,
-                    acting_user=admin,
+                    acting_user=billing_actor,
                     issued_on=self.seed_context.anchor_date - timedelta(
                         days=issue_age_days,
                     ),

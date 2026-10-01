@@ -535,6 +535,9 @@ def create_record(entity_type, serializer, user, notify=True, *,
             )
             if entity_type == EntityType.POCKET:
                 _sync_from_pocket(instance, mirror_ledger, user, is_create=True)
+        if entity_type == EntityType.HOSTING:
+            from accounts.services.hosting_context import register_new_hosting_origin
+            register_new_hosting_origin(instance, user)
     new_values = snapshot_values(instance, entity_type)
     changes = compute_changes(entity_type, {}, new_values)
     change_log = log_accounting_change(
@@ -567,6 +570,9 @@ def update_record(entity_type, instance, serializer, user, notify=True):
     old_client_id = getattr(instance, 'client_id', None)
     old_project_id = getattr(instance, 'project_id', None)
     with transaction.atomic():
+        if entity_type in (EntityType.HOSTING, EntityType.INCOME):
+            from accounts.services.billing_reassignment import validate_financial_reassignment
+            validate_financial_reassignment(instance, serializer.validated_data)
         instance = serializer.save()
         _sync_pocket(
             entity_type, instance, user,
@@ -722,6 +728,8 @@ def bulk_assign_client(entity_type, record_ids, client, user):
         if record.client_id == (client.pk if client else None):
             continue
         old_values = snapshot_values(record, entity_type)
+        from accounts.services.billing_reassignment import validate_financial_reassignment
+        validate_financial_reassignment(record, {'client': client})
         record.client = client
         update_fields = ['client', 'updated_at']
         project_cleared = False
@@ -817,6 +825,8 @@ def _sync_project_to_draft_cuentas(record, user):
     ).exclude(project_id=record.project_id)
     for document in drafts.select_related('project', 'client_user__profile'):
         old_values = snapshot_values(document, EntityType.COLLECTION_ACCOUNT)
+        from accounts.services.billing_reassignment import validate_document_reassignment
+        validate_document_reassignment(document, changes={'project': record.project})
         document.project = record.project
         document.save(update_fields=['project', 'updated_at'])
         log_entity_diff(
@@ -847,6 +857,8 @@ def bulk_assign_project(entity_type, record_ids, project, user):
         if record.project_id == target_id:
             continue
         old_values = snapshot_values(record, entity_type)
+        from accounts.services.billing_reassignment import validate_financial_reassignment
+        validate_financial_reassignment(record, {'project': project})
         record.project = project
         record.save(update_fields=['project', 'updated_at'])
         changes = compute_changes(
@@ -907,6 +919,8 @@ def assign_project_to_documents(document_ids, project, user):
             else EntityType.DOCUMENT
         )
         old_values = snapshot_values(document, entity_type)
+        from accounts.services.billing_reassignment import validate_document_reassignment
+        validate_document_reassignment(document, changes={'project': project})
         document.project = project
         document.save(update_fields=['project', 'updated_at'])
         if (

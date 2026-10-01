@@ -80,7 +80,8 @@ def _default_issuer():
         raise HostingBillingError(str(exc)) from exc
 
 
-def create_hosting_collection_account(hosting, *, acting_user=None):
+@transaction.atomic
+def create_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
     """Draft Document + extension + line item + default payment methods."""
     period_from, period_to = next_billing_period(hosting)
     # What is being hosted, not who pays for it: with no domain the project
@@ -97,6 +98,16 @@ def create_hosting_collection_account(hosting, *, acting_user=None):
         created_by=acting_user,
         updated_by=acting_user,
     )
+    if hosting.project_id:
+        from accounts.models import ProjectHostingAccountingSource
+        from accounts.services.billing_context import associate_account
+        source = ProjectHostingAccountingSource.objects.filter(hosting_record=hosting).first()
+        if not source:
+            raise HostingBillingError('Hosting pendiente de asociar: concilia el origen del proyecto antes de emitir.')
+        associate_account(document.pk, acting_user, {
+            'billing_nature': 'hosting', 'project_hosting_id': source.hosting_id,
+            'hosting_payment_id': hosting_payment_id,
+        }, creating=True)
     DocumentCollectionAccount.objects.create(
         document=document,
         billing_concept=f'Servicio de hosting {label}',
@@ -123,7 +134,7 @@ def create_hosting_collection_account(hosting, *, acting_user=None):
     return document
 
 
-def send_hosting_collection_account(hosting, *, acting_user=None):
+def send_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
     """Create + issue + email the cuenta de cobro. Returns
     {'document': Document, 'email_sent': bool}."""
     from content.services.project_state_service import project_allows_billing
@@ -183,7 +194,7 @@ def send_hosting_collection_account(hosting, *, acting_user=None):
     try:
         with transaction.atomic():
             document = create_hosting_collection_account(
-                hosting, acting_user=acting_user,
+                hosting, acting_user=acting_user, hosting_payment_id=hosting_payment_id,
             )
             issue_collection_account(
                 document,

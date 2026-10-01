@@ -83,6 +83,8 @@
           </div>
         </section>
 
+        <CollectionAccountContextEditor v-if="record?.project_id" :account-id="record.id" :project-id="record.project_id" @saved="load" />
+
         <!-- The document froze a name that no longer matches the relation.
              Surfacing it is the point: this is exactly the confusion the
              separate columns exist to remove. -->
@@ -328,6 +330,7 @@ import { computed, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import IncomePaymentStateCell from '~/components/accounting/IncomePaymentStateCell.vue';
+import CollectionAccountContextEditor from '~/components/accounting/billing/CollectionAccountContextEditor.vue';
 import { useAccountingStore } from '~/stores/accounting';
 import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';

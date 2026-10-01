@@ -1,0 +1,17 @@
+export default {
+  accounts: 'Collection accounts', account: 'Collection account', hosting: 'Hosting', projectHosting: 'Project hosting', nonProjectAccount: 'Account outside projects',
+  project: 'Project', noProject: 'No project', nature: 'Nature', contract: 'Contract', amendment: 'Amendment', context: 'Association',
+  all: 'All', state: 'Status', total: 'Total', issued: 'Issued', due: 'Due date',
+  loading: 'Loading…', retry: 'Retry', noAccounts: 'No collection accounts match these filters.',
+  noHosting: 'No hosting is registered for this project.', noPayments: 'No payments registered.', noCycles: 'No paid cycles registered.',
+  noHostingProjects: 'You have no projects with registered hosting.',
+  pendingAssociation: 'Pending association', backAccounts: 'Back to collection accounts', downloadPdf: 'Download PDF', pdfError: 'Could not download the PDF.',
+  paymentInstructions: 'Payment instructions', hostingAccounts: 'View hosting accounts', reconcile: 'Reconcile hosting',
+  hostingIndependent: 'One hosting per project, independent of its contracts.',
+  sourcesPending: 'Some records need administrative association. Each source is preserved without adding amounts whose equivalence is unconfirmed.',
+  subscriptionPayments: 'Subscription payments', accountingOrigin: 'Accounting source', operationalOrigin: 'Operational source', historicalOrigin: 'Associated historical source',
+  reconciledEvidence: 'Reconciled evidence', evidenceDifference: 'The evidence contains different amounts or statuses; association does not confirm payment.',
+  evidenceKinds: { payment: 'Payment', cycle: 'Paid cycle' },
+  modalities: { quarterly: 'Quarterly', semiannual: 'Semiannual', nine_month: 'Every 9 months', monthly: 'Monthly (historical)', annual: 'Annual (historical)' },
+  states: { draft: 'Draft', issued: 'Issued', paid: 'Paid', cancelled: 'Cancelled', pending: 'Pending', processing: 'Processing', overdue: 'Overdue', failed: 'Failed', active: 'Active', inactive: 'Inactive', suspended: 'Suspended' },
+}

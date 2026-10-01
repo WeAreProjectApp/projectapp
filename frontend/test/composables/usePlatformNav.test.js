@@ -7,6 +7,7 @@
  * en redirects).
  */
 
+global.useI18n = jest.fn(() => ({ t: key => ({ "platformBilling.accounts": "Cuentas de cobro", "platformBilling.hosting": "Hosting" })[key] || key }))
 global.useLocalePath = jest.fn(() => (path) => path)
 global.useRoute = jest.fn(() => ({ path: '/platform/projects' }))
 
@@ -53,10 +54,15 @@ describe('usePlatformNav', () => {
       '/platform/bugs',
       '/platform/changes',
       '/platform/deliverables',
-      '/platform/payments',
     ]) {
       expect(hrefs).not.toContain(dead)
     }
+  })
+
+  it('ofrece las lecturas de cuentas y hosting en la navegación común', () => {
+    const { primaryItems } = usePlatformNav()
+    expect(primaryItems.value.find(item => item.label === 'Cuentas de cobro').href).toBe('/platform/collection-accounts')
+    expect(primaryItems.value.find(item => item.label === 'Hosting').href).toBe('/platform/payments')
   })
 
   it('muestra Documentos apuntando al portal del cliente para el rol client', () => {

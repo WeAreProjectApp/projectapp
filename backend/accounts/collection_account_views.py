@@ -11,6 +11,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Project
+from accounts.services.billing_access import documents_for_actor, is_billing_admin
+from accounts.services.billing_read import account_queryset, visible_accounts
+from accounts.services.billing_context import associate_account
+from accounts.serializers_billing_read import BillingAccountListSerializer, BillingAccountDetailSerializer
 from accounts.permissions import IsAdminRole
 from accounts.serializers_collection_accounts import (
     CollectionAccountCreateSerializer,
@@ -46,7 +50,7 @@ from content.services.document_type_utils import get_collection_account_document
 
 def _get_project_or_403(request, project_id):
     profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
+    is_admin = is_billing_admin(request.user)
     try:
         proj = Project.objects.get(id=project_id)
     except Project.DoesNotExist:
@@ -63,53 +67,24 @@ def _get_project_or_403(request, project_id):
 
 
 def _base_collection_qs():
-    # Sin filtro `is_archived`: archivar es orden interno del panel. La plata
-    # que se debe no puede desaparecerle al cliente porque un admin ordenó una
-    # carpeta; para retirar una cuenta está `commercial_status`.
-    return Document.objects.filter(
-        document_type__code=COLLECTION_ACCOUNT,
-    ).select_related(
-        'document_type', 'project', 'client_user', 'issuer',
-    ).prefetch_related(
-        'items', 'payment_methods', 'collection_account',
-    )
-
+    return account_queryset()
 
 def _visible_qs_for_user(request):
-    qs = _base_collection_qs()
-    profile = getattr(request.user, 'profile', None)
-    if profile and profile.is_admin:
-        return qs
-    return qs.filter(
-        Q(client_user=request.user) | Q(project__client=request.user),
-    ).exclude(commercial_status=Document.CommercialStatus.DRAFT)
-
+    return documents_for_actor(_base_collection_qs(), request.user)
 
 def _is_platform_admin(request):
-    profile = getattr(request.user, 'profile', None)
-    return profile is not None and profile.is_admin
-
+    return is_billing_admin(request.user)
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def collection_account_list_create_view(request):
     if request.method == 'GET':
-        qs = _visible_qs_for_user(request)
-        if _is_platform_admin(request):
-            pid = request.query_params.get('project_id')
-            if pid:
-                qs = qs.filter(project_id=pid)
-            cid = request.query_params.get('client_user_id')
-            if cid:
-                qs = qs.filter(client_user_id=cid)
-            st = request.query_params.get('commercial_status')
-            if st:
-                qs = qs.filter(commercial_status=st)
-        data = CollectionAccountListSerializer(
-            qs.order_by('-created_at'),
-            many=True,
-        ).data
-        return Response(data)
+        qs = visible_accounts(request.user, request.query_params)
+        if _is_platform_admin(request) and request.query_params.get('client_user_id'):
+            qs = qs.filter(client_user_id=request.query_params['client_user_id'])
+        serializer = CollectionAccountListSerializer if _is_platform_admin(request) else BillingAccountListSerializer
+        return Response(serializer(qs, many=True).data)
 
     if not _is_platform_admin(request):
         return Response(
@@ -148,6 +123,8 @@ def collection_account_list_create_view(request):
         created_by=request.user,
         updated_by=request.user,
     )
+    if doc.project_id:
+        associate_account(doc.pk, request.user, data, creating=True)
     DocumentCollectionAccount.objects.create(
         document=doc,
         billing_concept=data.get('billing_concept', ''),
@@ -168,15 +145,12 @@ def project_collection_account_list_view(request, project_id):
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    qs = _visible_qs_for_user(request).filter(project_id=project_id)
+    qs = visible_accounts(request.user, request.query_params).filter(project_id=project_id)
     did = request.query_params.get('deliverable_id')
     if did:
         qs = qs.filter(deliverable_id=did)
-    data = CollectionAccountListSerializer(
-        qs.order_by('-created_at'),
-        many=True,
-    ).data
-    return Response(data)
+    serializer = CollectionAccountListSerializer if _is_platform_admin(request) else BillingAccountListSerializer
+    return Response(serializer(qs.order_by('-created_at'), many=True).data)
 
 
 def _detail_queryset_for_request(request):
@@ -187,6 +161,7 @@ def _detail_queryset_for_request(request):
 
 @api_view(['GET', 'PATCH'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def collection_account_detail_view(request, account_id):
     doc = _detail_queryset_for_request(request).filter(pk=account_id).first()
     if not doc:
@@ -196,7 +171,8 @@ def collection_account_detail_view(request, account_id):
         )
 
     if request.method == 'GET':
-        return Response(CollectionAccountDetailSerializer(doc).data)
+        serializer = CollectionAccountDetailSerializer if _is_platform_admin(request) else BillingAccountDetailSerializer
+        return Response(serializer(doc).data)
 
     if not _is_platform_admin(request):
         return Response(
@@ -213,6 +189,9 @@ def collection_account_detail_view(request, account_id):
     if not ser.is_valid():
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
     payload = ser.validated_data
+    from accounts.services.billing_reassignment import validate_document_reassignment
+    relation_changes = {key: payload[key] for key in ('project_id', 'client_user_id') if key in payload}
+    validate_document_reassignment(doc, changes=relation_changes)
 
     # Draft moves of client/project alter per-client figures like any
     # reassignment; the diff-and-log at the end makes them reconstructable.

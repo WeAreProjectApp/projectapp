@@ -174,6 +174,11 @@ def _reassign(entity_type, record, new_user, user):
     """Mueve un registro al nuevo cliente y desvincula un proyecto ajeno."""
     old_values = accounting_service.snapshot_values(record, entity_type)
     fields = ['client_user']
+    from accounts.services.billing_reassignment import validate_document_reassignment
+    changes = {'client_user': new_user}
+    if record.project_id and record.project.client_id != new_user.pk:
+        changes['project'] = None
+    validate_document_reassignment(record, changes=changes)
     record.client_user = new_user
     if record.project_id and record.project.client_id != new_user.pk:
         record.project = None

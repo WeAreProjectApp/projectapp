@@ -4,7 +4,7 @@
  *
  * @flow:platform-hosting-subscription
  * Covers: hosting plan selection (client), subscription activation, payment via mocked Wompi,
- *         Netflix-style active state, admin read-only view, unified payments page.
+ *         Netflix-style active state, admin read-only view.
  *         Wompi payment endpoints are mocked — no real transactions.
  */
 import { test, expect } from '../helpers/test.js';
@@ -117,20 +117,6 @@ function setupMocksWithSubscription(page, { user }) {
     }
     if (apiPath === 'accounts/subscriptions/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockSubscription, pending_payments: 0 }]) };
-    }
-    if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 0 }) };
-    }
-    return null;
-  });
-}
-
-/** `/platform/payments` — only `fetchSubscriptions()` (GET subscriptions list). */
-function setupMocksUnifiedPaymentsPage(page, { user, subscriptions }) {
-  return mockApi(page, async ({ apiPath, method }) => {
-    if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
-    if (apiPath === 'accounts/subscriptions/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(subscriptions) };
     }
     if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 0 }) };
@@ -368,21 +354,5 @@ test.describe('Platform Hosting Subscription — Admin view', () => {
 
     await expect(page.getByRole('heading', { name: 'Hosting Trimestral' })).toHaveText('Hosting Trimestral');
     await expect(page.getByText('Activa', { exact: true })).toHaveText('Activa');
-  });
-});
-
-// The standalone /platform/payments view was removed in the platform IA
-// refactor — subscriptions are now project-scoped and the route redirects.
-test.describe('Platform Hosting Subscription — /platform/payments redirect', () => {
-  test.setTimeout(60_000);
-
-  test('client visiting /platform/payments is redirected to projects', {
-    tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
-  }, async ({ page }) => {
-    await setPlatformAuth(page, { user: mockPlatformClient });
-    await setupMocksUnifiedPaymentsPage(page, { user: mockPlatformClient, subscriptions: [] });
-    await page.goto('/platform/payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL('**/platform/projects**', { timeout: 30000 });
-    await expect(page).toHaveURL(/\/platform\/projects/);
   });
 });

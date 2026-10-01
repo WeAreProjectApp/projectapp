@@ -169,6 +169,10 @@ class Command(BaseCommand):
                     'auxiliary modules', 'create_fake_auxiliary',
                     '--count', str(count),
                 )
+            if not options['skip_accounting'] and not options['skip_documents']:
+                from accounts.management.commands._billing_seed_helpers import seed_fake_hosting_billing
+                seed_fake_hosting_billing(context=context)
+                self._completed.append('project billing contexts')
 
         command = (
             f'python manage.py create_fake_data --replace --count {count} '

@@ -1,0 +1,16 @@
+{
+  "id": "platform-hosting-project-list",
+  "name": "Platform Hosting Project List",
+  "module": "platform",
+  "roles": [
+    "platform-admin",
+    "platform-client"
+  ],
+  "priority": "P2",
+  "description": "Lista los proyectos con hosting en /platform/payments y abre cada proyecto mediante una fila real; ofrece vacío y reintento de lectura.",
+  "outcomes": [
+    "display",
+    "success",
+    "error"
+  ]
+}

@@ -292,6 +292,10 @@ def change_client_apply(project, new_profile, mode, user):
     must not leave a log claiming it happened) and none of them notify by
     email — the bulk convention.
     """
+    from accounts.models import Project
+    from accounts.services.billing_reassignment import validate_project_billing_reassignment
+    project = Project.objects.select_for_update().get(pk=project.pk)
+    validate_project_billing_reassignment(project, new_profile.user)
     sets = linked_sets(project)
     blocked = sets['blocked_income_pks']
     # A liquid child whose expected parent is also linked rides with the

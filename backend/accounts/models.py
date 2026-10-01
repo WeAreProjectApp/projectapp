@@ -1790,3 +1790,9 @@ class SavedFilterTab(models.Model):
 
     def __str__(self):
         return f'{self.user_id}/{self.view}/{self.name}'
+
+# Project billing domain (identity/context only; existing financial engines stay authoritative).
+from accounts.billing_models import (  # noqa: E402,F401
+    BillingContextEvent, CollectionAccountContext, HostingEvidence,
+    HostingEvidenceGroup, ProjectHosting, ProjectHostingAccountingSource,
+)

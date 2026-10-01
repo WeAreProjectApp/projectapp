@@ -512,7 +512,16 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
             if self.instance is not None and self.instance.is_contract_mirror:
                 return attrs
             _inherit_from_folder(attrs, self.instance, adopt=adopt)
-        return apply_client_project_association(attrs, self.instance)
+        attrs = apply_client_project_association(attrs, self.instance)
+        kind = attrs.get('document_type') or getattr(self.instance, 'document_type', None)
+        if kind and kind.code == 'collection_account':
+            project = attrs.get('project', getattr(self.instance, 'project', None))
+            if project and (self.instance is None or self.instance.document_type_id != kind.pk):
+                raise serializers.ValidationError({'detail': 'Crea las cuentas de proyecto desde Contabilidad con naturaleza y vínculo explícitos.'})
+            if self.instance:
+                from accounts.services.billing_reassignment import validate_document_reassignment
+                validate_document_reassignment(self.instance, changes={key: attrs[key] for key in ('project', 'client_user') if key in attrs})
+        return attrs
 
     @historical_write
     def create(self, validated_data):

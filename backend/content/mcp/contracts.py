@@ -1078,3 +1078,20 @@ MCP_MODEL_CONTRACTS['proposals'] += (_contract(
     'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write='show_proposal_video',
     excluded=_excluded('Interruptor de otro módulo.', 'show_financing_video show_additional_modules_video'),
 ),)
+
+
+# P2: project billing identity/context. Mutations only via audited services.
+PROJECT_BILLING_CONTRACTS = (
+    _contract('accounts.HostingSubscription', read_only='id project plan base_monthly_amount discount_percent effective_monthly_amount billing_amount status start_date next_billing_date card_brand card_last_four created_at updated_at',
+              excluded=_excluded(_AUTOMATION_STATE, 'wompi_payment_source_id card_exp_month card_exp_year is_archived archived_at')),
+    _contract('accounts.Payment', read_only='id subscription amount description billing_period_start billing_period_end due_date status paid_at created_at',
+              excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at is_archived archived_at')),
+    _contract('accounts.ProjectHosting', read_only='id project version created_at updated_at', read_write='subscription operational_accounting_source'),
+    _contract('accounts.ProjectHostingAccountingSource', read_only='id created_at', read_write='hosting hosting_record'),
+    _contract('accounts.CollectionAccountContext', read_only='id document version updated_at', read_write='nature contract amendment hosting'),
+    _contract('accounts.HostingEvidenceGroup', read_only='id hosting created_at', read_write='label'),
+    _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
+    _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),
+)
+for _billing_connector in ('projects', 'accounting-billing'):
+    MCP_MODEL_CONTRACTS[_billing_connector] += PROJECT_BILLING_CONTRACTS

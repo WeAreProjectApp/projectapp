@@ -187,6 +187,9 @@ def _create_income_collection_account(
     document = Document.objects.create(
         **document_fields,
     )
+    from accounts.services.billing_context import associate_account
+    if document.project_id:
+        associate_account(document.pk, acting_user, data, creating=True)
     due_date = data.get('due_date')
     if due_date:
         term_type = DocumentCollectionAccount.PaymentTermType.FIXED_DATE

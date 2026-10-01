@@ -3,7 +3,7 @@ from content.views.document_move import move_document_batch
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
 from content.views import linktree_template as lt_templates
-from django.urls import path
+from django.urls import include, path
 from content.views.accounting import (
     accounting_dashboard, accounting_stats, accounting_receivables,
     list_income_records, create_income_record, retrieve_income_record,
@@ -356,6 +356,7 @@ from content.views.entity_history import (
 )
 
 urlpatterns = [
+    path('admin/billing-context/', include('content.billing_urls')),
     path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),
     path('video-resources/admin/proposals/<int:proposal_id>/', admin_proposal_video, name='admin-proposal-video'),
     path('video-resources/<uuid:resource_id>/<int:revision>/<str:kind>/', public_video_file, name='public-video-file'),

@@ -5,6 +5,7 @@ import BaseFloatingListbox from '~/components/base/BaseFloatingListbox.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
 import IncomeFormModal from '~/components/accounting/IncomeFormModal.vue';
+import CollectionAccountProjectContext from '~/components/accounting/billing/CollectionAccountProjectContext.vue';
 import { INPUT_FIELD_BASE, INPUT_FIELD_SIZE } from '~/components/base/inputClasses';
 import { PANEL_BREAKPOINTS } from '~/config/responsive';
 import { useIsMobile } from '~/composables/useIsMobile';
@@ -65,6 +66,8 @@ const inlineClientErrors = ref({});
 
 // ── Income ──
 const selectedIncome = ref(null);
+const billingContext = ref({});
+const billingContextValid = ref(false);
 const incomeQuery = ref('');
 /** The FULL eligible set for the current search term, unscoped by client. */
 const incomeOptions = ref([]);
@@ -770,6 +773,7 @@ const incomeValidationError = computed(() => {
   if (!validationAttempted.value) return '';
   if (!selectedIncome.value?.id) return 'Selecciona un ingreso vinculado.';
   if (incomeClientConflict.value) return 'Resuelve el conflicto con el cliente del ingreso.';
+  if ((selectedIncome.value?.project || selectedIncome.value?.project_id) && !billingContextValid.value) return 'Fija la naturaleza y el vínculo del cobro del proyecto.';
   return '';
 });
 const amountValidationError = computed(() => (
@@ -811,6 +815,7 @@ function buildPayload() {
   const payload = {
     client_profile_id: clientId.value,
     income_record_id: selectedIncome.value.id,
+    ...billingContext.value,
     billing_concept: form.value.billing_concept,
     items: [{
       // The Descripción column of the detalle. Sent raw — the backend falls
@@ -1277,6 +1282,12 @@ const modalFormId = useId();
               Crear ingreso esperado
             </button>
           </div>
+        <CollectionAccountProjectContext
+          v-model="billingContext"
+          :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
+          @valid="billingContextValid = $event"
+        />
+
         </div>
       </BaseFormField>
 

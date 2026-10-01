@@ -2980,6 +2980,7 @@ def _extract_proposal_financial_data(proposal):
     return payment_milestones, hosting_tiers
 
 
+@transaction.atomic
 def _create_subscription_multi_phase(project, plan):
     """
     Create a HostingSubscription billing the sum of the project's started
@@ -3033,6 +3034,8 @@ def _create_subscription_multi_phase(project, plan):
         next_billing_date=billing_end + relativedelta(days=1),
     )
     sub.save()
+    from accounts.services.hosting_context import register_new_hosting_origin
+    register_new_hosting_origin(sub, None, subscription=True)
 
     Payment.objects.create(
         subscription=sub,

@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db import transaction
 
 from content.admin import admin_site
 
@@ -25,6 +26,17 @@ from .models import (
 
 
 class ProjectAdmin(admin.ModelAdmin):
+    from .forms_billing import BillingProjectAdminForm
+    form = BillingProjectAdminForm
+
+    @transaction.atomic
+    def save_model(self, request, obj, form, change):
+        if change:
+            from .services.billing_reassignment import validate_project_billing_reassignment
+            original = Project.objects.select_for_update().get(pk=obj.pk)
+            validate_project_billing_reassignment(original, obj.client)
+        super().save_model(request, obj, form, change)
+
     list_display = (
         'name', 'client', 'status',
         'production_url', 'updated_at',

@@ -6,7 +6,12 @@
     "platform-admin",
     "platform-client"
   ],
-  "priority": "P2",
-  "description": "Browse collection accounts at /platform/collection-accounts: table, filters (admin), new draft (admin), Open links to detail.",
-  "expectedSpecs": 0
+  "priority": "P1",
+  "description": "Consulta cuentas emitidas del cliente con agrupación y filtros explícitos por proyecto, naturaleza, contrato, otrosí y estado; navega al detalle y ofrece vacío y reintento de lectura.",
+  "expectedSpecs": 0,
+  "outcomes": [
+    "display",
+    "success",
+    "error"
+  ]
 }

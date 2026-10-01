@@ -2,6 +2,8 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from accounts.services.billing_context import context_data
+from accounts.serializers_billing_context import BillingContextFields
 
 from content.models import Document, DocumentItem, DocumentPaymentMethod
 from content.services.collection_account_service import (
@@ -18,6 +20,11 @@ STATUS_LABELS = {
 
 
 class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     customer_name = serializers.CharField(
         source='collection_account.customer_name', read_only=True, default='',
     )
@@ -51,6 +58,7 @@ class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context',
             'id', 'uuid', 'public_number', 'title',
             'billing_concept', 'customer_name', 'customer_email',
             'client', 'client_display_name', 'project_name',
@@ -228,7 +236,7 @@ class _CustomerOverrideSerializer(serializers.Serializer):
     )
 
 
-class CollectionAccountCreateSerializer(serializers.Serializer):
+class CollectionAccountCreateSerializer(BillingContextFields):
     """Shared payload of the panel create and preview endpoints."""
 
     # UserProfile pk — what ClientAutocomplete / the clients module handle.

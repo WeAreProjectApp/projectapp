@@ -6,10 +6,12 @@
     "platform-admin",
     "platform-client"
   ],
-  "priority": "P2",
-  "description": "List collection accounts scoped to a project at /platform/projects/:id/collection-accounts with links to detail.",
+  "priority": "P1",
+  "description": "Consulta las cuentas del proyecto con agrupación y filtros de contrato, otrosí, hosting y estado, sin incorporar cuentas de otro proyecto; abre el detalle y permite reintentar la lectura.",
   "expectedSpecs": 1,
   "outcomes": [
-    "display"
+    "display",
+    "success",
+    "error"
   ]
 }

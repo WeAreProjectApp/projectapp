@@ -2305,3 +2305,13 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 `secure_links_unavailable`; la revisión de la clave efectiva de producción
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
+
+
+### P2 — cuentas y hosting por proyecto (2026-10-01)
+
+En implementación en rama propia `feat/01102026-platform-client-billing`, desde
+`origin/main=cce8e694` con dependencia publicada P3 `abcffaf9` absorbida mediante
+merge. Identidad única de hosting por proyecto, cuentas excluyentes
+contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
+No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
+contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.

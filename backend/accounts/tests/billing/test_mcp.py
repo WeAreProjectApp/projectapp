@@ -1,5 +1,4 @@
 """Behavioral MCP coverage for explicit project-billing context."""
-# quality: disable misplaced_file (billing is a bounded cross-layer domain test slice assigned by QA)
 from types import SimpleNamespace
 
 import pytest

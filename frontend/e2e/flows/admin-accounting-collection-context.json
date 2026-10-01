@@ -1,0 +1,16 @@
+{
+  "id": "admin-accounting-collection-context",
+  "name": "Admin Accounting Collection Account Context",
+  "module": "admin",
+  "roles": [
+    "superuser"
+  ],
+  "priority": "P1",
+  "description": "Asocia una cuenta de proyecto a contrato y otrosí opcional del mismo contrato, o al único hosting, con razón, control de versión y validación de coherencia; conserva snapshot, PDF, importes y pagos.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

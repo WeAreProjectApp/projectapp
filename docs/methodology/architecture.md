@@ -1872,3 +1872,18 @@ Los resultados de movimientos rechazados también tienen `results` en la raíz.
 `DocumentFolder.creation_operation` identifica el camino de creación sin
 reescribir historia durante sincronizaciones. La reparación operativa usa
 huellas y el historial existente; no hereda cliente/proyecto al devolver documentos.
+
+### Cuentas y hosting por proyecto — P2 (2026-10-01)
+
+`accounts/billing_models.py` añade contexto de cuenta exclusivo contrato/otrosí
+o hosting, identidad única de hosting por proyecto, equivalencias explícitas de
+evidencias y auditoría. Los servicios `billing_*`/`hosting_context` se comparten
+entre JWT, Panel con sesión/CSRF y MCP. Las representaciones financieras
+existentes conservan pagos, ciclos, fases comerciales y automatismos; ninguna
+relación histórica se deduce ni se vuelve a emitir un PDF al reclasificar.
+
+El cambio real de cliente bloquea el proyecto y valida su historia financiera
+antes de dueño/cascada; Django Admin utiliza el mismo guard. El puente acotado
+de delivery impide mover un otrosí con cuentas a otro contrato. El contrato de
+integración con P4 conserva el orden guard financiero → revocación → cambio.
+Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`.

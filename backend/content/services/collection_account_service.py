@@ -243,6 +243,13 @@ def issue_collection_account(
     if document.commercial_status != Document.CommercialStatus.DRAFT:
         raise CollectionAccountError('Only draft documents can be issued.')
 
+    from accounts.services.billing_context import validate_account_context
+    from rest_framework.exceptions import ValidationError
+    try:
+        validate_account_context(document)
+    except ValidationError as exc:
+        detail = exc.detail.get('detail', exc.detail) if isinstance(exc.detail, dict) else exc.detail
+        raise CollectionAccountError(str(detail)) from exc
     ext, _ = DocumentCollectionAccount.objects.get_or_create(document=document)
 
     _fill_payer_from_issuer(ext, issuer)
@@ -413,6 +420,12 @@ def delete_collection_account(document, *, acting_user=None):
         raise CollectionAccountError(
             'Esta cuenta de cobro ya se envió al cliente. Anúlala en vez de '
             'eliminarla.',
+        )
+    from accounts.models import HostingEvidence
+    if HostingEvidence.objects.filter(document=document).exists():
+        raise CollectionAccountError(
+            'La cuenta tiene evidencia de hosting conciliada. Corrige su grupo '
+            'administrativo antes de eliminarla; los pagos y ciclos se conservan.',
         )
 
     from content.services import accounting_service
