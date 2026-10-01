@@ -254,7 +254,7 @@ class TestPhaseOnboarding:
         assert phase.hosting_activated_at is None
 
     @pytest.mark.parametrize('failure_target', [
-        'accounts.tasks.Payment.objects.create',
+        'accounts.models.Payment.objects.create',
         'accounts.models.HostingSubscription.save',
         'django.db.models.query.QuerySet.update',
     ])
@@ -289,7 +289,7 @@ class TestPhaseOnboarding:
         phase = _phase(project, 6_000_000, order=2, start_date=date(2026, 3, 1))
         sub = self._active_subscription(project)
 
-        with patch('accounts.tasks.Payment.objects.create', side_effect=RuntimeError('write failed')):
+        with patch('accounts.models.Payment.objects.create', side_effect=RuntimeError('write failed')):
             _onboard_due_phases()
         with django_capture_on_commit_callbacks(execute=True):
             retry_count = _onboard_due_phases()
@@ -313,7 +313,7 @@ class TestPhaseOnboarding:
         sub = self._active_subscription(project)
 
         with patch(
-            'accounts.tasks.Payment.objects.create',
+            'accounts.models.Payment.objects.create',
             wraps=Payment.objects.create,
             side_effect=[RuntimeError('first phase write failed'), DEFAULT],
         ), django_capture_on_commit_callbacks(execute=True):
