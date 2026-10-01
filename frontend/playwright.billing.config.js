@@ -19,6 +19,7 @@ export default defineConfig({
     '**/admin/admin-project-billing-context.spec.js',
     '**/admin/admin-accounting-collections.spec.js',
     '**/admin/admin-accounting-hosting-billing-cycles.spec.js',
+    '**/responsive/accounting-specials.spec.js',
     '**/responsive/billing.spec.js',
   ],
 })
