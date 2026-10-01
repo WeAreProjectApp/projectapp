@@ -7,6 +7,7 @@ import copy
 import hashlib
 import json
 import mimetypes
+import unicodedata
 from pathlib import PurePosixPath
 
 from django.db import transaction
@@ -17,7 +18,7 @@ from rest_framework.exceptions import APIException, NotFound
 from accounts.models import (
     ContractAmendment, ContractSignatureEvidence, DeliveryMessage, DeliveryPromptContext,
     DeliveryPromptSource, DeliveryScope, DeliveryStage, DeliveryWorkspace, ProjectContract,
-    RequirementReview,
+    Requirement, RequirementReview,
 )
 from accounts.serializers_delivery import PromptContextSerializer, ReplyPayloadSerializer
 from accounts.services.delivery_access import DeliveryConflict, fail, project_for_actor, require_admin
@@ -376,17 +377,30 @@ def _template(context, sources):
             'key': 'etapa-1', 'title': 'Primera etapa', 'requirements': [{
                 'key': 'validacion-1', 'title': 'Qué podrá comprobar el cliente', 'description': '',
                 'source_references': citations,
-                'guide': {'role': 'Cliente', 'environment': 'Staging', 'preparation': 'Indicar cómo acceder',
+                'guide': {'environment': 'Staging', 'preparation': 'Indicar cómo acceder',
                           'data': 'Describir los datos de prueba', 'steps': ['Abrir la pantalla indicada'],
                           'expected_result': 'Describir el resultado visible esperado',
-                          'failure_signals': 'Describir cómo reconocer que no funcionó'},
+                          'failure_signals': 'Describir cómo reconocer que no funcionó',
+                          'access': '', 'allowed_actions': '', 'blocked_actions': '',
+                          'blocked_steps': [], 'blocked_result': '', 'dependencies': ''},
             }],
         }]}],
     }]}
 
 
 def _build_prompt(context, sources, instructions):
-    task = ('Crea guías de validación en lenguaje sencillo, con datos, pasos, resultado esperado y señales de fallo. '
+    task = ('Crea guías de validación en lenguaje sencillo a partir de los recorridos de usuario del sistema del cliente, '
+            'con datos, pasos, resultado esperado y señales de fallo. '
+            'Cuando las fuentes contractuales, otrosíes o anexos/detalles seleccionados acrediten roles reales de ese producto, '
+            'agrupa preferentemente las etapas por rol, responsabilidad y acceso. Usa el nombre del rol tal como aparece '
+            'en una cita de esas fuentes; los roles administrador y cliente de Platform no definen roles del producto validado. '
+            'Para cada guía con roles indica quién actúa (role), accesos previos (access), preparación y datos, '
+            'qué ve y hace (allowed_actions), qué no ve o no puede hacer (blocked_actions), '
+            'un caso permitido (steps y expected_result) y cómo comprobar un caso bloqueado (blocked_steps y blocked_result). '
+            'Conserva en dependencies los pasos previos y referencias a otras etapas si un recorrido atraviesa varios roles; '
+            'cada requerimiento debe tener una identidad única y no duplicarse para agrupar por rol. '
+            'No inventes perfiles, permisos, pantallas ni restricciones; pide aclaración si las fuentes no los determinan. '
+            'Si no existen roles acreditados, omite role y la separación por roles; no agregues texto de perfiles supuesto. '
             'No reformules ni alteres guías que ya fueron aprobadas.') if context.mode == 'guides' else (
         'Prepara una respuesta borrador a las observaciones de esta etapa. Clasifica cada solicitud como '
         'inside_scope, outside_scope o indeterminate. Que una función no figure en la guía no prueba que esté fuera del contrato. '
@@ -570,6 +584,29 @@ def validate_references(context, references, *, normative=False):
     return result
 
 
+def _normalized_role(value):
+    return ' '.join(unicodedata.normalize('NFKC', value).casefold().split())
+
+
+def _validate_product_role(context, guide, references, existing_role=''):
+    """A new product role must be named in cited sources, not Platform metadata.
+
+    Existing manual wording is retained without rewriting published history.
+    Matching proves provenance only; interpreting access still requires review.
+    """
+    if not isinstance(guide, dict):
+        return
+    role = guide.get('role', '')
+    if not isinstance(role, str) or not role.strip() or role == existing_role:
+        return
+    sources = {source.source_key: source for source in context.sources.all()}
+    eligible = NORMATIVE_ROLES | {'contractual_annex', 'reference'}
+    if not any(sources[item['source_key']].role in eligible and
+               _normalized_role(role) in _normalized_role(item['quote']) for item in references):
+        fail('El rol del producto debe aparecer con su nombre exacto en una cita de las fuentes seleccionadas. '
+             'No uses los perfiles de Platform como roles del sistema del cliente.', 'guide_role_source')
+
+
 def validate_guides_payload(project, actor, payload):
     """Convert cited v2 to the existing draft import after proving its provenance."""
     if not isinstance(payload, dict) or set(payload) != {'schema_version', 'context_id', 'scopes'} or type(payload.get('schema_version')) is not int or payload['schema_version'] != 2:
@@ -587,6 +624,13 @@ def validate_guides_payload(project, actor, payload):
                              context.scope.key != scope_source.snapshot['key'] or
                              context.scope.amendment_id != scope_source.snapshot['amendment_id']):
         fail('El alcance cambió de identidad contractual. Prepara un contexto actualizado.', 'context_scope')
+    existing_roles = {
+        (contract_id, scope_key, phase_key, stage_key, key): guide.get('role', '')
+        for contract_id, scope_key, phase_key, stage_key, key, guide in Requirement.objects.filter(
+            stage__phase__scope__contract=context.contract,
+        ).values_list('stage__phase__scope__contract_id', 'stage__phase__scope__key',
+                      'stage__phase__key', 'stage__key', 'key', 'guide')
+    }
     for scope in result['scopes']:
         if not isinstance(scope, dict) or scope.get('contract_id') != context.contract_id:
             fail('El JSON intenta utilizar un contrato distinto del contexto.', 'context_scope')
@@ -596,6 +640,7 @@ def validate_guides_payload(project, actor, payload):
             fail('El JSON debe conservar el alcance seleccionado.', 'context_scope')
         if context.scope_id and scope.get('amendment_id') != scope_source.snapshot['amendment_id']:
             fail('El JSON debe conservar el otrosí del alcance capturado.', 'context_scope')
+        requirement_keys = set()
         phases = scope.get('phases', [])
         if not isinstance(phases, list):
             fail('Las fases deben ser una lista.', 'import_schema')
@@ -615,6 +660,16 @@ def validate_guides_payload(project, actor, payload):
                     if not isinstance(requirement, dict):
                         fail('Cada requerimiento debe ser un objeto.', 'import_schema')
                     requirement['source_references'] = validate_references(context, requirement.get('source_references', []), normative=True)
+                    key = requirement.get('key')
+                    if isinstance(key, str):
+                        if key in requirement_keys:
+                            fail('No dupliques un requerimiento para agruparlo por rol; referencia la etapa previa en dependencies.', 'duplicate_requirement')
+                        requirement_keys.add(key)
+                    identity = (scope.get('contract_id'), scope.get('key'), phase.get('key'), stage.get('key'), key)
+                    existing_role = existing_roles.get(identity, '') if all(
+                        isinstance(value, (str, int)) for value in identity
+                    ) else ''
+                    _validate_product_role(context, requirement.get('guide', {}), requirement['source_references'], existing_role)
                     requirement['context_id'] = str(context.pk)
     return result
 
@@ -644,7 +699,9 @@ def requirement_provenance(project, stage, values, existing=None):
             fail('El alcance cambió de otrosí o identidad. Prepara un contexto actualizado.', 'context_scope')
     elif scope.amendment_id and scope.amendment_id not in context.amendment_ids:
         fail('El requerimiento pertenece a un otrosí que no se capturó en el contexto.', 'context_scope')
-    validate_references(context, references, normative=True)
+    validated = validate_references(context, references, normative=True)
+    _validate_product_role(context, values.get('guide', {}), validated,
+                           existing.guide.get('role', '') if existing else '')
 
 
 def preview_reply(project_id, actor, payload, expected_version=None):

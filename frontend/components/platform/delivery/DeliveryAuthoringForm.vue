@@ -19,8 +19,13 @@ const form = reactive({
   key: '', title: '', description: '', order: 0, contract_id: '', amendment_id: '', commercial_phase_id: '',
   document_id: '', proposal_document_id: '', client_visible: true, is_current: true,
   ...props.initial,
-  guide: { role: '', environment: '', preparation: '', data: '', expected_result: '', failure_signals: '', ...props.initial.guide },
+  guide: {
+    role: '', environment: '', preparation: '', access: '', data: '', allowed_actions: '',
+    expected_result: '', failure_signals: '', blocked_actions: '', blocked_result: '', dependencies: '',
+    ...props.initial.guide,
+  },
   stepsText: (props.initial.guide?.steps || []).join('\n'),
+  blockedStepsText: (props.initial.guide?.blocked_steps || []).join('\n'),
 })
 const fieldErrors = reactive({})
 const contractOptions = computed(() => props.contracts.map((item) => ({ value: item.id, label: item.title })))
@@ -32,7 +37,7 @@ const idOrNull = (value) => value ? Number(value) : null
 const isContract = computed(() => ['contracts', 'amendments'].includes(props.entity))
 const hasProvenance = computed(() => props.entity === 'requirements' && !!props.initial.context_id)
 const provenanceReviewed = ref(false)
-watch(() => [form.title, form.description, form.guide, form.stepsText], () => {
+watch(() => [form.title, form.description, form.guide, form.stepsText, form.blockedStepsText], () => {
   provenanceReviewed.value = false
 }, { deep: true })
 function submit() {
@@ -56,7 +61,11 @@ function submit() {
   if (props.entity === 'stages') payload.phase_id = form.phase_id
   if (props.entity === 'requirements') Object.assign(payload, {
     stage_id: form.stage_id,
-    guide: { ...form.guide, steps: form.stepsText.split('\n').map((line) => line.trim()).filter(Boolean) },
+    guide: {
+      ...form.guide,
+      steps: form.stepsText.split('\n').map((line) => line.trim()).filter(Boolean),
+      blocked_steps: form.blockedStepsText.split('\n').map((line) => line.trim()).filter(Boolean),
+    },
   })
   if (hasProvenance.value) Object.assign(payload, {
     context_id: props.initial.context_id,
@@ -108,19 +117,28 @@ function submit() {
     </BaseFormField>
     <template v-if="entity === 'requirements'">
       <h3 class="text-base font-semibold text-text-default">{{ t('platformDelivery.guide') }}</h3>
-      <BaseFormRow :cols="2">
+      <BaseFormRow :cols="2" :help="t('platformDelivery.roleHint')" help-testid="delivery-author-role-hint">
         <BaseFormField :label="t('platformDelivery.role')" for="delivery-author-role">
-          <BaseInput id="delivery-author-role" v-model="form.guide.role" />
+          <BaseInput id="delivery-author-role" v-model="form.guide.role" data-testid="delivery-author-role" />
         </BaseFormField>
         <BaseFormField :label="t('platformDelivery.environment')" for="delivery-author-environment">
           <BaseInput id="delivery-author-environment" v-model="form.guide.environment" />
         </BaseFormField>
       </BaseFormRow>
-      <BaseFormField v-for="[key, label] in [['preparation', 'preparation'], ['data', 'data'], ['expected_result', 'expected'], ['failure_signals', 'failures']]" :key="key" :label="t(`platformDelivery.${label}`)" :for="`delivery-author-${key}`">
-        <BaseTextarea :id="`delivery-author-${key}`" v-model="form.guide[key]" :rows="3" />
+      <BaseFormField v-for="[key, label] in [['preparation', 'preparation'], ['access', 'access'], ['data', 'data'], ['allowed_actions', 'allowedActions']]" :key="key" :label="t(`platformDelivery.${label}`)" :for="`delivery-author-${key}`" label-policy="wrap">
+        <BaseTextarea :id="`delivery-author-${key}`" v-model="form.guide[key]" :rows="3" :data-testid="`delivery-author-${key}`" />
       </BaseFormField>
-      <BaseFormField :label="t('platformDelivery.steps')" :hint="t('platformDelivery.stepsHint')" for="delivery-author-steps">
-        <BaseTextarea id="delivery-author-steps" v-model="form.stepsText" :rows="5" />
+      <BaseFormField :label="t('platformDelivery.steps')" :hint="t('platformDelivery.stepsHint')" for="delivery-author-steps" label-policy="wrap">
+        <BaseTextarea id="delivery-author-steps" v-model="form.stepsText" :rows="5" data-testid="delivery-author-steps" />
+      </BaseFormField>
+      <BaseFormField v-for="[key, label] in [['expected_result', 'expected'], ['failure_signals', 'failures'], ['blocked_actions', 'blockedActions']]" :key="key" :label="t(`platformDelivery.${label}`)" :for="`delivery-author-${key}`" label-policy="wrap">
+        <BaseTextarea :id="`delivery-author-${key}`" v-model="form.guide[key]" :rows="3" :data-testid="`delivery-author-${key}`" />
+      </BaseFormField>
+      <BaseFormField :label="t('platformDelivery.blockedSteps')" :hint="t('platformDelivery.stepsHint')" for="delivery-author-blocked_steps" label-policy="wrap">
+        <BaseTextarea id="delivery-author-blocked_steps" v-model="form.blockedStepsText" :rows="4" data-testid="delivery-author-blocked_steps" />
+      </BaseFormField>
+      <BaseFormField v-for="[key, label] in [['blocked_result', 'blockedResult'], ['dependencies', 'dependencies']]" :key="key" :label="t(`platformDelivery.${label}`)" :for="`delivery-author-${key}`" :hint="key === 'dependencies' ? t('platformDelivery.dependenciesHint') : ''" label-policy="wrap">
+        <BaseTextarea :id="`delivery-author-${key}`" v-model="form.guide[key]" :rows="3" :data-testid="`delivery-author-${key}`" />
       </BaseFormField>
       <section v-if="hasProvenance" class="min-w-0 space-y-3 rounded-xl border border-border-default p-4" data-testid="delivery-authoring-provenance">
         <h3 class="text-sm font-semibold text-text-default">{{ t('platformDelivery.promptSources.guideCitations') }}</h3>

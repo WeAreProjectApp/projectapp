@@ -334,7 +334,7 @@ def _requirement_payload(req):
 
 def _validate_guide(req):
     guide = _validate(GuideSerializer, req.guide)
-    labels = {'role': 'quién hará la prueba', 'environment': 'el ambiente de prueba',
+    labels = {'environment': 'el ambiente de prueba',
               'steps': 'los pasos', 'expected_result': 'el resultado esperado',
               'failure_signals': 'cómo reconocer un fallo'}
     for field, label in labels.items():
@@ -996,7 +996,7 @@ def _historical_evidence(project, values, documents):
 def import_schema():
     """The exact structural JSON contract used by authoring and MCP discovery."""
     guide = {'type': 'object', 'additionalProperties': False, 'properties': {
-        field: ({'type': 'array', 'items': {'type': 'string'}, 'maxItems': 100} if field == 'steps' else {'type': 'string'})
+        field: ({'type': 'array', 'items': {'type': 'string'}, 'maxItems': 100} if field in ('steps', 'blocked_steps') else {'type': 'string'})
         for field in GuideSerializer().fields
     }}
     schemas = {}
