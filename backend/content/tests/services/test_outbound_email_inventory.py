@@ -74,6 +74,7 @@ def test_documents_inventory_lists_every_channel():
         'proposal_documents_sent',
         'branded_email',
         'proposal_email',
+        'delivery_stage_approved_client',
         'secure_link_received_team',
     }
 
@@ -123,5 +124,5 @@ def test_security_inventory_lists_every_channel():
     }
 
 
-def test_inventory_contains_58_unique_channels():
-    assert len(OUTBOUND_EMAIL_CHANNELS) == 58
+def test_inventory_contains_59_unique_channels():
+    assert len(OUTBOUND_EMAIL_CHANNELS) == 59

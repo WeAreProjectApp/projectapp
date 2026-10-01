@@ -3,7 +3,7 @@
 from content.services.entity_history import historical_write
 from django.db import transaction
 
-from accounts.models import ProjectAccessNote, ProjectAdminAccess
+from accounts.models import Project, ProjectAccessNote, ProjectAdminAccess
 from accounts.services.credential_cipher import decrypt_secret, encrypt_secret
 
 
@@ -89,6 +89,7 @@ def serialize_project_access(project):
 
 @historical_write
 def update_access_field(project, validated_data, actor):
+    Project.objects.select_for_update().get(pk=project.pk)
     field = validated_data['field']
     value = validated_data[field]
     if field == 'repository_url':
@@ -97,6 +98,8 @@ def update_access_field(project, validated_data, actor):
         return
 
     environment = validated_data['environment']
+    from accounts.services.project_client_access import revoke_grants
+    revoke_grants(project, actor=actor, fields=[f'{environment}.{field}'])
     if field == 'site_url':
         model_field = (
             'production_url'
@@ -129,6 +132,9 @@ def reveal_environment_password(project, environment):
 
 @historical_write
 def delete_environment_password(project, environment, actor):
+    Project.objects.select_for_update().get(pk=project.pk)
+    from accounts.services.project_client_access import revoke_grants
+    revoke_grants(project, actor=actor, fields=[f'{environment}.admin_password'])
     access = project.admin_accesses.filter(environment=environment).first()
     if not access or not access.admin_password_encrypted:
         return

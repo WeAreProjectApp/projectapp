@@ -1140,3 +1140,10 @@ El otrosí conserva su revisión jurídica previa a firma.
 ### Organización y lectura de comunicaciones (2026-09-25)
 
 El equipo puede organizar conversaciones completas en carpetas/subcarpetas por cliente/proyecto, identificar documentos e hilos por su ID y encontrarlos mediante búsqueda exacta. El lector permite saltar al inicio/final, plegar la redacción y sus detalles conservando datos, y copiar mensajes directamente. Los hilos madre mantienen su papel de entrada y la organización no modifica el histórico.
+
+
+## P4 — Ideas y accesos del cliente (2026-10-01)
+
+Cada proyecto conserva sugerencias simples con autor, fecha, correcciones y archivo reversible. El equipo recopila versiones seleccionadas en copias internas inmutables para estudiar un futuro contrato; recopilar nunca amplía alcances ni crea aprobaciones. Audio, IA y contratación automática quedan fuera.
+
+Oculto por defecto aplica exclusivamente a URLs y accesos: producción/QA y cada URL, usuario o contraseña Django se habilitan de forma independiente por proyecto. Bugs, hosting, cobros y entregas publicadas conservan su visibilidad. La API aplica la política aunque se acceda por URL directa. Contrato completo: `docs/platform/project-ideas-access.md`.

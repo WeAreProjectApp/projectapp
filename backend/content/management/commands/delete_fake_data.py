@@ -66,8 +66,12 @@ class Command(BaseCommand):
 
         # Signed and review PDF evidence protects documents and source messages.
         # A fake reset explicitly clears that graph before those source records.
+        from accounts.management.commands._billing_seed_helpers import clear_fake_billing
+        clear_fake_billing(Project.objects.all())
         from accounts.management.commands._seed_helpers import clear_fake_delivery
         clear_fake_delivery(Project.objects.all())
+        from accounts.management.commands._project_collaboration_seed import clear_fake_project_collaboration
+        clear_fake_project_collaboration(Project.objects.all())
 
         # Order matters because of PROTECT chains:
         #   CommunicationAttachment ─PROTECT→ Document

@@ -4,11 +4,16 @@ import BaseBadge from '~/components/base/BaseBadge.vue'
 
 const props = defineProps({ requirement: { type: Object, required: true } })
 const { t } = useI18n()
+const prose = (value) => (Array.isArray(value) ? value.filter((item) => String(item || '').trim()).join('\n') : String(value || '')).trim()
 const fields = computed(() => [
   ['role', 'role'], ['environment', 'environment'], ['preparation', 'preparation'],
-  ['data', 'data'], ['expected_result', 'expected'], ['failure_signals', 'failures'],
-].filter(([key]) => props.requirement.guide?.[key]))
-const prose = (value) => Array.isArray(value) ? value.join('\n') : String(value || '')
+  ['access', 'access'], ['data', 'data'], ['allowed_actions', 'allowedActions'],
+  ['expected_result', 'expected'], ['failure_signals', 'failures'],
+  ['blocked_actions', 'blockedActions'], ['blocked_result', 'blockedResult'], ['dependencies', 'dependencies'],
+].filter(([key]) => prose(props.requirement.guide?.[key])))
+const stepLists = computed(() => [['steps', 'steps'], ['blocked_steps', 'blockedSteps']].map(([key, label]) => ({
+  key, label, steps: (props.requirement.guide?.[key] || []).filter((step) => prose(step)),
+})).filter(({ steps }) => steps.length))
 </script>
 
 <template>
@@ -24,16 +29,16 @@ const prose = (value) => Array.isArray(value) ? value.join('\n') : String(value 
     </header>
     <p v-if="requirement.description" class="whitespace-pre-line break-words text-sm text-text-muted">{{ requirement.description }}</p>
     <p v-if="requirement.review_status === 'approved'" class="text-sm text-success-strong">{{ t('platformDelivery.frozenHint') }}</p>
-    <dl class="grid gap-4 sm:grid-cols-2">
-      <div v-for="[key, label] in fields" :key="key" class="min-w-0">
+    <dl v-if="fields.length" class="grid gap-4 sm:grid-cols-2">
+      <div v-for="[key, label] in fields" :key="key" class="min-w-0" :data-testid="`delivery-guide-field-${key}`">
         <dt class="text-xs font-semibold text-text-muted">{{ t(`platformDelivery.${label}`) }}</dt>
         <dd class="mt-1 whitespace-pre-line break-words text-sm text-text-default">{{ prose(requirement.guide[key]) }}</dd>
       </div>
     </dl>
-    <div v-if="requirement.guide?.steps?.length">
-      <h6 class="text-xs font-semibold text-text-muted">{{ t('platformDelivery.steps') }}</h6>
+    <div v-for="{ key, label, steps } in stepLists" :key="key" :data-testid="`delivery-guide-${key}`">
+      <h6 class="text-xs font-semibold text-text-muted">{{ t(`platformDelivery.${label}`) }}</h6>
       <ol class="mt-2 list-decimal space-y-2 pl-5 text-sm text-text-default">
-        <li v-for="(step, index) in requirement.guide.steps" :key="index" class="whitespace-pre-line break-words">{{ step }}</li>
+        <li v-for="(step, index) in steps" :key="index" class="whitespace-pre-line break-words">{{ step }}</li>
       </ol>
     </div>
     <slot />

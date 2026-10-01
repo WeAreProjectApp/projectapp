@@ -1,3 +1,4 @@
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 """
 Blog Publisher MCP: public JSON-RPC endpoint (token-authenticated) and
 the panel management endpoints backing /panel/mcps.
@@ -171,7 +172,7 @@ RAW_TOOLS_BY_SLUG = {
             'create_notification_recipient', 'update_notification_recipient',
             'delete_notification_recipient',
             exact=('get_settings', 'update_settings'),
-        ) + BILLING_PARITY_TOOLS
+        ) + BILLING_PARITY_TOOLS + PLATFORM_BILLING_TOOLS
     ),
     'accounting-cards': _canonical_tools(
         _accounting_tools(

@@ -2,6 +2,8 @@
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { computed } from 'vue'
 import ProjectAccessEditor from '~/components/projects/ProjectAccessEditor.vue'
+import ProjectClientAccessPolicyEditor from '~/components/projects/client-access/ProjectClientAccessPolicyEditor.vue'
+import { createProjectClientAccessApi } from '~/services/projectClientAccessApi'
 import { createProjectAccessApi } from '~/services/projectAccessApi'
 import {
   create_request,
@@ -27,6 +29,7 @@ const api = computed(() => {
     remove: delete_request,
   }, `projects/${props.project.id}/access/`)
 })
+const clientApi = computed(() => createProjectClientAccessApi({ get: get_request, post: create_request, patch: patch_request }, props.project?.id))
 </script>
 
 <template>
@@ -56,6 +59,7 @@ const api = computed(() => {
       <div class="min-h-0 flex-1 overflow-y-auto p-4 panel-portrait:p-6">
         <EntityHistoryTabs entity-type="project" :object-id="project.id">
           <ProjectAccessEditor :key="project.id" :api="api" />
+          <ProjectClientAccessPolicyEditor :key="project.id" class="mt-6" :project-id="project.id" :api="clientApi" />
         </EntityHistoryTabs>
       </div>
     </div>

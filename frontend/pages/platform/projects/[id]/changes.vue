@@ -22,20 +22,12 @@
             width="w-56"
           >
             <template #trigger>
-              <button
-                type="button"
-                :class="[
-                  'flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition',
-                  selectedPhaseId
-                    ? 'border-primary/40 bg-primary/5 text-text-brand dark:border-lemon/30 dark:bg-lemon/5 dark:text-accent'
-                    : 'border-border-default bg-surface text-green-light hover:text-text-default hover:bg-surface-raised',
-                ]"
-              >
+              <BaseButton variant="secondary" size="sm">
                 <span class="max-w-[140px] truncate">{{ selectedPhaseLabel }}</span>
                 <svg class="h-3 w-3 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-              </button>
+              </BaseButton>
             </template>
           </BaseDropdown>
           <!-- Admin bulk tools -->
@@ -59,6 +51,7 @@
 
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
+        <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
@@ -92,15 +85,14 @@
             <tr
               v-for="cr in filteredRequests"
               :key="cr.id"
-              class="cursor-pointer border-t border-border-muted transition hover:bg-primary-soft"
+              class="border-t border-border-muted"
               :class="cr.is_archived ? 'opacity-70' : ''"
-              @click="openDetailModal(cr)"
             >
               <td class="px-4 py-3">
                 <div class="flex items-start gap-2">
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-1.5">
-                      <p class="truncate font-medium text-text-default">{{ cr.title }}</p>
+                    <BaseButton variant="link" size="sm" class="min-w-0 truncate text-left" @click="openDetailModal(cr)">{{ cr.title }}</BaseButton>
                       <span v-if="cr.is_urgent" class="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-red-600 dark:text-red-400">Urgente</span>
                       <span v-if="cr.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivada</span>
                       <span v-if="cr.linked_requirement_id" class="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-text-brand">Convertida</span>
@@ -150,6 +142,7 @@
 
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
+        <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
         <button
           v-for="cr in filteredRequests"
           :key="cr.id"
@@ -210,20 +203,8 @@
               <h2 class="mb-5 text-lg font-bold text-text-default">Nueva solicitud de cambio</h2>
 
               <form class="space-y-4" @submit.prevent="handleCreate">
-                <div>
-                  <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Requerimiento de origen <span class="text-red-400">*</span></label>
-                  <select
-                    v-model.number="createForm.source_requirement_id"
-                    required
-                    class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none focus:border-border-default dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
-                  >
-                    <option :value="null" disabled>Selecciona el requerimiento</option>
-                    <option v-for="req in projectRequirements" :key="req.id" :value="req.id">
-                      {{ req.stage_title ? req.stage_title + ' — ' : '' }}{{ req.title }}
-                    </option>
-                  </select>
-                  <p class="mt-1 text-[10px] text-green-light/60">¿De qué requerimiento es este cambio?</p>
-                </div>
+                <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="change-source" required />
+                <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
                   <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
@@ -275,6 +256,7 @@
                   </div>
                 </div>
 
+                <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                 <div class="flex justify-end gap-3 pt-2">
                   <BaseButton variant="ghost" size="md" @click="isCreateOpen = false">Cancelar</BaseButton>
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!createForm.title.trim() || crStore.isUpdating">
@@ -385,6 +367,8 @@
                 </NuxtLink>
               </div>
 
+              <IssueHistory :ticket="detailCR" />
+
               <!-- Description -->
               <div v-if="detailCR.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-green-light">
                 {{ detailCR.description }}
@@ -457,8 +441,11 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" placeholder="Respuesta para el cliente..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
+                      <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" admin id="change-response-evidence" />
+                      <IssueContractReply v-model="contractReply" :project-id="projectId" kind="change" :ticket="detailCR" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
+                      <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                       <div class="grid grid-cols-2 gap-3">
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Tiempo estimado</label>
@@ -471,7 +458,7 @@
                       </div>
                       <div class="flex justify-end gap-2">
                         <BaseButton variant="ghost" size="sm" @click="showEvaluateForm = false">Cancelar</BaseButton>
-                        <BaseButton variant="accent" size="sm" :disabled="crStore.isUpdating" @click="handleEvaluate">
+                        <BaseButton variant="accent" size="sm" :loading="crStore.isUpdating" :disabled="!!contractReply && !contractReply.human_reviewed" :disabled-reason="t('platformIssues.reply.humanRequired')" @click="handleEvaluate">
                           {{ crStore.isUpdating ? 'Guardando...' : 'Guardar evaluación' }}
                         </BaseButton>
                       </div>
@@ -510,6 +497,7 @@
                       <span class="text-[10px] text-green-light/40">{{ formatDate(comment.created_at) }}</span>
                     </div>
                     <p class="text-sm leading-relaxed text-green-light">{{ comment.content }}</p>
+                    <IssueAttachments :attachments="comment.attachments" />
                     <span v-if="comment.is_internal" class="mt-1 inline-block text-[9px] font-semibold uppercase tracking-wider text-amber-500">Interno</span>
                   </div>
                 </div>
@@ -526,6 +514,8 @@
                     Enviar
                   </BaseButton>
                 </form>
+                <IssueEvidenceFields v-if="!detailCR.is_archived" v-model="commentEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" id="change-comment-evidence" />
+                <p v-if="crStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ crStore.error }}</p>
                 <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)
@@ -558,7 +548,13 @@ import { useIsMobile } from '~/composables/useIsMobile'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformChangeRequestsStore } from '~/stores/platform-change-requests'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
-import { usePlatformRequirementsStore } from '~/stores/platform-requirements'
+import { usePlatformIssueReportsStore } from '~/stores/platform-issue-reports'
+import { issueSourcePayload, prefillIssueGuide } from '~/utils/issue-reports'
+import IssueSourcePicker from '~/components/platform/issues/IssueSourcePicker.vue'
+import IssueHistory from '~/components/platform/issues/IssueHistory.vue'
+import IssueAttachments from '~/components/platform/issues/IssueAttachments.vue'
+import IssueEvidenceFields from '~/components/platform/issues/IssueEvidenceFields.vue'
+import IssueContractReply from '~/components/platform/issues/IssueContractReply.vue'
 import { usePlatformDeliveryStore } from '~/stores/platform-delivery'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
@@ -576,12 +572,21 @@ const { t } = useI18n()
 const authStore = usePlatformAuthStore()
 const crStore = usePlatformChangeRequestsStore()
 const projectsStore = usePlatformProjectsStore()
-const requirementsStore = usePlatformRequirementsStore()
+const issueStore = usePlatformIssueReportsStore()
+const sourceError = ref('')
+const responseEvidence = ref({ contract_id: null, document_ids: [] })
+const contractReply = ref(null)
+let evaluationRetry = null
+const commentEvidence = ref({ document_ids: [] })
 const deliveryStore = usePlatformDeliveryStore()
 const isConvertOpen = ref(false)
 const convertStageId = ref('')
 const convertError = ref('')
-const draftStageOptions = computed(() => deliveryStore.stages.filter((stage) => stage.editorial_status === 'draft' && stage.status !== 'approved').map((stage) => ({ value: stage.id, label: stage.title })))
+const draftStageOptions = computed(() => deliveryStore.scopes
+  .filter((scope) => !detailCR.value?.origin_context?.contract_id || scope.contract_id === detailCR.value.origin_context.contract_id)
+  .flatMap((scope) => scope.phases.flatMap((phase) => phase.stages))
+  .filter((stage) => stage.editorial_status === 'draft' && stage.status !== 'approved')
+  .map((stage) => ({ value: stage.id, label: stage.title })))
 
 const { isMobile } = useIsMobile()
 
@@ -689,6 +694,7 @@ function priorityLabel(p) {
 }
 
 function openCreateModal() {
+  crStore.error = ''
   if (!projectRequirements.value.length) return
   createForm.title = ''
   createForm.description = ''
@@ -747,6 +753,13 @@ async function handleCreate() {
   } else {
     payload = { ...createForm }
   }
+  const source = issueSourcePayload(projectRequirements.value.find((row) => row.id === createForm.source_requirement_id))
+  if (payload instanceof FormData) {
+    Object.entries(source).forEach(([key, value]) => payload.set(key, String(value)))
+    payload.set('request_id', crypto.randomUUID())
+  } else {
+    Object.assign(payload, source, { request_id: crypto.randomUUID() })
+  }
   const result = await crStore.createChangeRequest(projectId.value, payload)
   if (result.success) {
     if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
@@ -764,8 +777,11 @@ async function openDetailModal(cr) {
 }
 
 function openEvaluateForm() {
+  contractReply.value = null
+  evaluationRetry = null
   evalForm.status = detailCR.value?.status || 'evaluating'
-  evalForm.admin_response = detailCR.value?.admin_response || ''
+  evalForm.admin_response = ''
+  responseEvidence.value = { contract_id: detailCR.value?.origin_context?.contract_id || null, document_ids: [] }
   evalForm.estimated_time = detailCR.value?.estimated_time || ''
   evalForm.estimated_cost = detailCR.value?.estimated_cost || null
   showEvaluateForm.value = true
@@ -773,9 +789,11 @@ function openEvaluateForm() {
 
 async function handleEvaluate() {
   if (!detailCR.value) return
-  const payload = { ...evalForm }
+  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailCR.value.version, ...(contractReply.value ? { contract_reply: contractReply.value } : {}) }
   if (!payload.estimated_cost) payload.estimated_cost = null
-  const result = await crStore.evaluateChangeRequest(projectId.value, detailCR.value.id, payload)
+  const fingerprint = JSON.stringify(payload)
+  if (evaluationRetry?.fingerprint !== fingerprint) evaluationRetry = { fingerprint, requestId: crypto.randomUUID() }
+  const result = await crStore.evaluateChangeRequest(projectId.value, detailCR.value.id, { ...payload, request_id: evaluationRetry.requestId })
   if (result.success) {
     detailCR.value = result.data
     showEvaluateForm.value = false
@@ -793,7 +811,7 @@ async function openConvert() {
 async function handleConvert() {
   if (!detailCR.value) return
   if (!convertStageId.value) { convertError.value = t('platformDelivery.fieldRequired'); return }
-  const result = await crStore.convertToRequirement(projectId.value, detailCR.value.id, { stage_id: Number(convertStageId.value), expected_version: deliveryStore.version })
+  const result = await crStore.convertToRequirement(projectId.value, detailCR.value.id, { stage_id: Number(convertStageId.value), expected_version: deliveryStore.version, issue_version: detailCR.value.version, request_id: crypto.randomUUID() })
   if (result.success) {
     detailCR.value = result.data
     isConvertOpen.value = false
@@ -817,13 +835,16 @@ async function loadChangeRequests() {
 }
 
 async function loadProjectRequirements() {
-  const r = await requirementsStore.fetchProjectRequirements(projectId.value)
-  projectRequirements.value = r.success ? (r.data || []) : []
+  const r = await issueStore.contextOptions(projectId.value, {
+    ...(route.query.from_pub ? { source_publication_id: Number(route.query.from_pub), source_requirement_id: Number(route.query.from_req) } : {}),
+  })
+  projectRequirements.value = r.success ? (r.data.requirements || []) : []
+  sourceError.value = r.success ? '' : r.message
 }
 
 async function onQuickStatus(cr, newStatus) {
   if (!newStatus || newStatus === cr.status) return
-  const result = await crStore.evaluateChangeRequest(projectId.value, cr.id, { status: newStatus })
+  const result = await crStore.evaluateChangeRequest(projectId.value, cr.id, { status: newStatus, expected_version: cr.version, request_id: crypto.randomUUID() })
   if (!result.success) {
     window.alert(result.message || 'No pudimos actualizar el estado.')
   }
@@ -902,12 +923,19 @@ async function handleImportResponses() {
 
 async function handleAddComment() {
   if (!newComment.value.trim() || !detailCR.value) return
-  const result = await crStore.addComment(projectId.value, detailCR.value.id, newComment.value.trim(), commentInternal.value)
+  const result = await crStore.addComment(projectId.value, detailCR.value.id, newComment.value.trim(), commentInternal.value, { document_ids: commentEvidence.value.document_ids, expected_version: detailCR.value.version, request_id: crypto.randomUUID() })
   if (result.success) {
     newComment.value = ''
     commentInternal.value = false
+    commentEvidence.value = { document_ids: [] }
+    const updated = await crStore.fetchChangeRequest(projectId.value, detailCR.value.id)
+    if (updated.success) detailCR.value = updated.data
   }
 }
+
+watch(() => createForm.source_requirement_id, (id) => {
+  prefillIssueGuide(createForm, projectRequirements.value.find((row) => row.id === id))
+})
 
 onMounted(async () => {
   await Promise.all([

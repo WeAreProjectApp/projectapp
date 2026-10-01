@@ -1,0 +1,16 @@
+{
+  "id": "platform-project-hosting-context",
+  "name": "Platform Project Hosting Context",
+  "module": "platform",
+  "roles": [
+    "platform-admin",
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Consulta el único contexto de hosting del proyecto, fuentes contables, suscripción, pagos, ciclos y grupos de evidencia. Identifica fuentes pendientes sin sumarlas ni crear cobros; navega a cuentas de hosting y permite reintentar la lectura.",
+  "outcomes": [
+    "display",
+    "success",
+    "error"
+  ]
+}

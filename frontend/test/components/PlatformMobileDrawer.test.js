@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 
 global.useLocalePath = jest.fn(() => (path) => path);
+global.useI18n = jest.fn(() => ({ t: (key) => key }));
 global.useRoute = jest.fn(() => ({ fullPath: '/', name: 'index', path: '/' }));
 
 jest.mock('../../stores/platform-auth', () => ({
@@ -30,6 +31,7 @@ function mountPlatformMobileDrawer(props = {}) {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
         SidebarItem: { template: '<div class="sidebar-item-stub" />' },
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
       },
     },
   });

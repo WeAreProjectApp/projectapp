@@ -1,5 +1,16 @@
 # Guion de validación y mantenimiento de MCP
 
+## Tickets de proyecto: bugs y solicitudes contextualizadas
+
+`projects` incorpora once acciones mediante los mismos servicios REST. Inventario,
+permisos, versiones, reintentos y dependencia de revisión contractual:
+[Bugs y solicitudes](PLATFORM_ISSUE_REPORTS.md). Validar bug general sin guía,
+origen con ronda publicada, respuesta pública o interna con PDF opcional,
+descarga aislada y reapertura «sigue fallando». Archivar y convertir exigen
+confirmación. Convertir sólo crea una guía pendiente en una etapa editable del
+contrato aplicable; las aprobaciones existentes permanecen intactas y el alcance
+sigue indeterminado hasta el adaptador compartido de P3.
+
 Las carpetas del conector de Documentos declaran `folder_kind`, proyecto y
 estado. `create_folder` hereda la asociación de su padre y `rename_folder`
 rechaza raíces automáticas de proyecto; estas protecciones se validan junto
@@ -1096,7 +1107,7 @@ El conector `projects` cubre la administración de contratos, otrosíes, alcance
 fases de ejecución, etapas y guías de validación desde el primer incremento.
 La [matriz de paridad](PLATFORM_DELIVERY_MCP_MATRIX.md) relaciona cada acción de
 Platform con su herramienta y regla de negocio compartida. El catálogo añade
-46 herramientas de entrega y habilita los uploads temporales del conector.
+52 herramientas de entrega y habilita los uploads temporales del conector.
 
 Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
 20 casos. No invocar estas pruebas contra un conector activo de producción.
@@ -1141,7 +1152,7 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
     la evidencia, pero no constituir por sí solo el fundamento contractual.
 12. Preparar `create_delivery_reply_prompt` desde una etapa publicada y validar
     `preview_delivery_reply`. No crea mensajes. Fuentes faltantes/parciales o
-    incertidumbre bloquean `outside_scope`. Compartir con `add_delivery_message`
+    incertidumbre exigen alcance indeterminado. Compartir con `add_delivery_message`
     exige `human_reviewed: true`, contexto, citas y clasificaciones; una nueva
     observación pública desde la captura obliga a preparar otro contexto.
 13. Intentar eliminar en el panel una referencia o anexo seleccionado de
@@ -1150,6 +1161,23 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
     mantiene su eliminación normal. La clasificación de fake data excluye las
     capturas/fuentes de la generación automática; se crean solo por selección
     administrativa explícita.
+14. Preparar `prepare_delivery_stage_closure_email` sólo con una etapa publicada
+    completamente aprobada. Consultar destinatario, asunto, cuerpo y adjuntos
+    mediante `get_delivery_stage_closure_email`, sin transporte. Una etapa
+    parcial, un cliente ajeno o una credencial distinta deben fallar.
+    El cuerpo en texto y HTML debe incluir conversaciones y decisiones públicas,
+    autores, fechas, versiones y rondas, también sin adjuntos. Verificar la objeción
+    previa y el mensaje de cierre; las notas internas y fuentes privadas no salen.
+15. Enviar `send_delivery_stage_closure_email` con confirmación sensible,
+    versión vigente, hash de la preparación y revisión humana. Comprobar que
+    intento y snapshot persisten antes de SMTP y que repetir la confirmación o
+    petición conserva un solo envío. Un fallo posterior a SMTP debe conservar
+    resultado desconocido sin reenvío automático.
+16. Consultar `list_delivery_stage_closure_emails` y descargar los bytes exactos
+    mediante `download_delivery_stage_closure_email_attachment`. Recargar las
+    filas desde la base no debe cambiar su almacenamiento privado ni crear una
+    URL pública. `prepare_delivery_stage_closure_email_resend` conserva cuerpo,
+    archivos y relación con el original; sólo prepara otra vista revisable.
 
 Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
 `content/tests/views/test_mcp_delivery_contracts.py` (20 casos),
@@ -1157,6 +1185,8 @@ Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
 verificaciones específicas de `projects` en `test_mcp_contracts.py`.
 La autoría seleccionada se cubre en
 `content/tests/views/test_mcp_delivery_authoring.py` (20 casos).
+El correo de cierre se cubre en
+`content/tests/views/test_mcp_delivery_closure_email.py` (17 casos).
 La revisión de modelos incluye todos los campos nuevos, con exclusiones
 explícitas de almacenamiento privado, captura de IP/navegador de la firma y
 recibos internos de idempotencia, huella de captura, instantánea interna de origen
@@ -1186,3 +1216,35 @@ el catálogo Markdown que consumen los fixtures existentes. No se modificaron
 esos fixtures. La clasificación registra `DeliveryPromptContext` y
 `DeliveryPromptSource` como exentos de generación automática: las capturas solo
 nacen de una selección administrativa explícita.
+
+## Cuentas y hosting por proyecto — P2
+
+Las operaciones nuevas de `projects` son `get_project_billing_options`,
+`get_project_hosting`, `get_project_hosting_inventory`,
+`get_collection_account_context`, `associate_collection_account_context`,
+`preview_project_hosting_reconciliation`, `reconcile_project_hosting`,
+`preview_hosting_evidence` y `reconcile_hosting_evidence`.
+
+Validar en settings_test, por lotes de hasta 20 casos:
+
+1. Leer una cuenta pendiente y sus opciones sin exponer notas, metadata, secretos
+   o documentos contractuales. Un proyecto ajeno falla sin escritura.
+2. Asociar exclusivamente contrato/otrosí del proyecto o su hosting con razón y
+   versión; rechazar otrosí de otro contrato, doble naturaleza y cliente ajeno.
+3. Previsualizar identidad/evidencias sin persistir. Confirmar con el principal
+   real, y rechazar una versión que cambió después de la vista previa.
+4. Consultar varios orígenes históricos sin sumarlos ni seleccionar uno por
+   texto/importe. Elegir origen operativo y equivalencias expresamente; verificar
+   que no se crearon `Payment`, `HostingCycle` ni movimientos contables.
+5. Emitir desde ingreso con contexto, o desde hosting con pago existente cuando
+   hay suscripción. La obligación ya emitida rechaza duplicación; dos obligaciones
+   diferentes admiten dos cuentas. Conservar numeración, snapshot y bytes PDF al
+   reclasificar una cuenta histórica.
+6. Rechazar mover un otrosí con cuentas; permitir el cambio sin cuentas si lo
+   permiten las guardas de delivery. `ProjectContract.project` sigue inmutable.
+
+Pruebas dedicadas: `accounts/tests/billing/`, más las clasificaciones, metadata,
+confirmaciones y adaptadores de `projects` y `accounting-billing` en
+`content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
+`financial_effect: none`; la emisión conserva el adaptador contable existente.
+No ejecutar validaciones mutantes contra conectores activos de producción.

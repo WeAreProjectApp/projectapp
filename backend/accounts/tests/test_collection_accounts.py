@@ -3,10 +3,19 @@ from unittest.mock import patch
 
 import pytest
 
-from accounts.models import Project
+from accounts.models import Project, ProjectContract
 from content.models import Document, DocumentCollectionAccount
 from content.services.document_type_codes import COLLECTION_ACCOUNT
 from content.services.document_type_utils import get_collection_account_document_type
+
+
+def project_context(project):
+    """Select an actual contract explicitly in project-account test inputs."""
+    contract = ProjectContract.objects.filter(project=project, key='billing-test').first()
+    if contract is None:
+        source = Document.objects.create(title='Billing contract', project=project, client_user=project.client)
+        contract = ProjectContract.objects.create(project=project, key='billing-test', title='Billing contract', document=source)
+    return {'billing_nature': 'contract', 'contract_id': contract.pk}
 
 
 @pytest.mark.django_db
@@ -15,7 +24,7 @@ def test_admin_creates_collection_account_draft(api_client, admin_headers, proje
         '/api/accounts/collection-accounts/',
         {
             'title': 'Invoice one',
-            'project_id': project.id,
+            'project_id': project.id, **project_context(project),
             'payment_term_days': 15,
         },
         format='json',
@@ -33,7 +42,7 @@ def test_client_list_excludes_draft_collection_accounts(
 ):
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Hidden draft', 'project_id': project.id},
+        {'title': 'Hidden draft', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -48,7 +57,7 @@ def test_issue_then_client_sees_account(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Issued doc', 'project_id': project.id, 'payment_term_days': 5},
+        {'title': 'Issued doc', 'project_id': project.id, **project_context(project), 'payment_term_days': 5},
         format='json',
         **admin_headers,
     )
@@ -94,7 +103,7 @@ def test_client_cannot_patch_collection_account(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Doc', 'project_id': project.id},
+        {'title': 'Doc', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -117,7 +126,7 @@ def test_client_cannot_patch_collection_account(
 def test_mark_paid_from_issued(api_client, admin_headers, project):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Pay me', 'project_id': project.id},
+        {'title': 'Pay me', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -171,7 +180,7 @@ def test_get_collection_account_pdf_returns_pdf_attachment_when_issued(
     settings.MEDIA_ROOT = tmp_path
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'PDF doc', 'project_id': project.id},
+        {'title': 'PDF doc', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -217,7 +226,7 @@ def test_issue_collection_account_returns_400_when_no_issuer_profile_exists(
     IssuerProfile.objects.all().delete()
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'No issuer', 'project_id': project.id},
+        {'title': 'No issuer', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -237,7 +246,7 @@ def test_issue_collection_account_returns_400_when_no_issuer_profile_exists(
 def test_client_post_collection_account_returns_403(api_client, client_headers, project):
     resp = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Blocked', 'project_id': project.id},
+        {'title': 'Blocked', 'project_id': project.id, **project_context(project)},
         format='json',
         **client_headers,
     )
@@ -257,13 +266,13 @@ def test_admin_list_collection_accounts_filters_by_project_id_query_param(
     )
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'On target project', 'project_id': project.id},
+        {'title': 'On target project', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'On other project', 'project_id': other.id},
+        {'title': 'On other project', 'project_id': other.id, **project_context(other)},
         format='json',
         **admin_headers,
     )
@@ -285,7 +294,7 @@ def test_client_get_pdf_for_draft_collection_account_returns_404(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Draft hidden', 'project_id': project.id},
+        {'title': 'Draft hidden', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -334,7 +343,7 @@ def test_admin_list_filters_by_client_user_id_query_param(
 ):
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'For client', 'project_id': project.id},
+        {'title': 'For client', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -355,7 +364,7 @@ def test_admin_list_filters_by_commercial_status_query_param(
 ):
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Draft one', 'project_id': project.id},
+        {'title': 'Draft one', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -376,7 +385,7 @@ def test_admin_get_collection_account_detail_returns_200(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Detail test', 'project_id': project.id},
+        {'title': 'Detail test', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -398,7 +407,7 @@ def test_patch_issued_collection_account_returns_400(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Will be issued', 'project_id': project.id},
+        {'title': 'Will be issued', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -425,7 +434,7 @@ def test_admin_cancels_issued_collection_account_returns_200(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'To cancel', 'project_id': project.id},
+        {'title': 'To cancel', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -474,7 +483,7 @@ def test_admin_list_collection_accounts_for_project_returns_200(
 ):
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Project CA', 'project_id': project.id},
+        {'title': 'Project CA', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -534,7 +543,7 @@ def test_admin_patch_items_auto_calculates_line_total(
 ):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Auto calc', 'project_id': project.id},
+        {'title': 'Auto calc', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -581,7 +590,7 @@ def test_admin_list_project_collection_accounts_filters_by_deliverable_id(
 ):
     api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'No deliverable', 'project_id': project.id},
+        {'title': 'No deliverable', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -599,7 +608,7 @@ def test_admin_list_project_collection_accounts_filters_by_deliverable_id(
 def test_admin_patch_updates_multiple_fields(api_client, admin_headers, project):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'Original', 'project_id': project.id},
+        {'title': 'Original', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )
@@ -631,7 +640,7 @@ def test_admin_patch_updates_multiple_fields(api_client, admin_headers, project)
 def test_admin_patch_with_payment_methods(api_client, admin_headers, project):
     create = api_client.post(
         '/api/accounts/collection-accounts/',
-        {'title': 'With payment', 'project_id': project.id},
+        {'title': 'With payment', 'project_id': project.id, **project_context(project)},
         format='json',
         **admin_headers,
     )

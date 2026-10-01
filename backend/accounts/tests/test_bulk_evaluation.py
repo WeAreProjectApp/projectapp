@@ -8,12 +8,14 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from accounts.models import BugReport, ChangeRequest, Notification, Project, UserProfile
+from accounts.models import BugReport, ChangeRequest, IssueEvent, Notification, Project, UserProfile
 
 
 User = get_user_model()
 HUGE_ID = 2 ** 100
-MAX_BULK_EVALUATION_QUERIES = 8
+# Includes the per-item transaction, locked project and persistent ticket history.
+# Verified at 12 queries regardless of how many unrelated tickets the project has.
+MAX_BULK_EVALUATION_QUERIES = 12
 
 CHANGE_REQUEST_CASE = pytest.param(
     ChangeRequest,
@@ -145,6 +147,7 @@ def test_bulk_evaluation_materializes_requested_rows_with_constant_query_count(
     assert not model.objects.filter(project=crowded_project, status=new_status).exclude(
         id=crowded_target.id,
     ).exists()
+    assert IssueEvent.objects.filter(project=crowded_project, action='evaluate', status=new_status).count() == 1
 
 
 @pytest.mark.django_db
@@ -359,10 +362,10 @@ def test_bulk_evaluation_repeats_duplicate_valid_ids(model, new_status, old_stat
     BULK_CASES,
 )
 @pytest.mark.parametrize('unhashable_id', ([], {}), ids=('list', 'dictionary'))
-def test_bulk_evaluation_preserves_unhashable_id_partial_write(model, new_status, old_status,
-                                                               notification_type, notification_prefix,
-                                                               missing_detail, unhashable_id):
-    """Fails if an unhashable ID stops surfacing after an earlier valid item was written."""
+def test_bulk_evaluation_returns_unhashable_id_error_after_a_valid_item(model, new_status, old_status,
+                                                                    notification_type, notification_prefix,
+                                                                    missing_detail, unhashable_id):
+    """Fails if malformed IDs crash the batch instead of reporting an independent item error."""
     _, api_client = _admin_client()
     project = _project()
     target = _target(model, project)
@@ -371,9 +374,13 @@ def test_bulk_evaluation_preserves_unhashable_id_partial_write(model, new_status
         {'id': unhashable_id, 'status': new_status},
     ]
 
-    with pytest.raises(TypeError):
-        api_client.post(_url(model, project), payload, format='json')
+    response = api_client.post(_url(model, project), payload, format='json')
 
+    assert response.status_code == 200
+    assert response.json() == {
+        'updated': 1, 'updated_ids': [target.pk],
+        'errors': [{'index': 1, 'id': unhashable_id, 'detail': missing_detail}],
+    }
     target.refresh_from_db()
     assert target.status == new_status
     assert Notification.objects.filter(

@@ -40,6 +40,16 @@ function platformHandler(user = mockPlatformAdmin) {
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([platformProject]);
     if (apiPath === 'accounts/projects/1/' && method === 'GET') return json(platformProject);
     if (apiPath === 'accounts/projects/1/access/' && method === 'GET') return json(projectAccessDetail);
+    if (apiPath === 'accounts/projects/1/access/client-policy/' && method === 'GET') {
+      const permissions = Object.fromEntries(['production', 'staging'].map((environment) => (
+        [environment, { site_url: false, admin_url: false, admin_username: false, admin_password: false }]
+      )));
+      const availableFields = Object.fromEntries(['production', 'staging'].map((environment) => (
+        [environment, { site_url: true, admin_url: true, admin_username: true, admin_password: true }]
+      )));
+      return json({ project_id: 1, version: 0, permissions, effective_permissions: permissions,
+        available_fields: availableFields, source_token: 'responsive-client-access' });
+    }
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') return json([projectPhase]);
     if (apiPath === 'accounts/projects/1/requirements/' && method === 'GET') return json([deliveryRequirement]);
     if (apiPath === 'accounts/projects/1/delivery/' && method === 'GET') return json(deliveryWorkspace);
@@ -111,10 +121,8 @@ const visualKeys = [
   'frontend/pages/platform/projects/[id]/delivery.vue',
   'frontend/pages/platform/projects/[id]/bugs.vue',
   'frontend/pages/platform/projects/[id]/changes.vue',
-  'frontend/pages/platform/projects/[id]/collection-accounts.vue',
   'frontend/pages/platform/projects/[id]/data-model.vue',
   'frontend/pages/platform/projects/[id]/deliverables/index.vue',
-  'frontend/pages/platform/projects/[id]/payments.vue',
   'frontend/pages/platform/clients/index.vue',
   'frontend/pages/platform/clients/[id].vue',
   'frontend/pages/platform/projects/[id]/access.vue',

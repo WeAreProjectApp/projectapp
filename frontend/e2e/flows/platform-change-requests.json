@@ -7,10 +7,12 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Client creates change requests for a project. Admin evaluates (approve/reject/needs clarification) with estimated cost and time. Both roles can comment. Per-project view at /platform/projects/:id/changes and unified cross-project view at /platform/changes.",
+  "description": "Client requests a change against a published requirement. Original contract, scope, phase, stage, round and version remain frozen. The shared source engine verifies contractual reply citations against a server-captured conversation before explicit human publication; private provenance stays hidden. Conversion creates a new draft in an explicit stage of the applicable contract.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",
+    "error",
+    "failure",
     "display"
   ]
 }

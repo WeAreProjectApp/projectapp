@@ -644,3 +644,11 @@
 5. **WebSocket notifications** — real-time alerts instead of polling
 6. **Multi-tenant support** — currently single-company; could generalize for SaaS
 7. **Codex docs drift guard** — add a lightweight check ensuring native skill inventory and sensitive-skill policy stay in sync with Codex methodology docs
+
+
+## P4 — Cierre e integración de ideas/accesos (2026-10-01)
+
+- Dominio implementado en archivos propios; los agregadores reciben sólo registros/entradas reservados de ideas/client_access.
+- Verificar navegador real y responsive, aislamiento, revocación permanente y ausencia de secretos; entregar PR separado hacia main con CI verde.
+- P0 fijó `0070_platform_ideas_access`, padre P3 `0067_explicit_delivery_authoring_context`, y el orden P3 → P1 → P2 → P4 → P5. La nueva no-op `0075_p4_platform_domains_merge`, padres `0074_p2_platform_billing_merge` y `0070_platform_ideas_access`, está creada después de absorber P2 `fae1e361` y P3 `cecb5b93`; no aplicada. No modificar migraciones anteriores ni referenciar padres inexistentes.
+- Preservar en change_client_apply y ProjectAdmin.save_model el orden proyecto bloqueado → validación/guards financiero y core/tickets P2 sin escrituras si rechazan → revoke_grants P4 → reasignación/cascada o guardado. P2 conserva formulario, validación y helper; P4 conserva únicamente su puente y regresiones. Las referencias P2/P3 publicadas están absorbidas; las regresiones de rechazo y edición inocua pasan. P0 conserva el orden de integración. No ejecutar deploy/migrate ni mergear desde esta sesión; P3 conserva núcleo y guías.

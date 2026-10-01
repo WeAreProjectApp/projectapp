@@ -6,6 +6,7 @@ on the authenticated client API. Sensitive writes use the existing owned MCP
 confirmation, including a workspace-version check at confirmation time.
 """
 from copy import deepcopy
+from uuid import UUID
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
@@ -13,6 +14,7 @@ from django.utils import timezone
 from rest_framework.exceptions import APIException
 
 from accounts.services import delivery_authoring as authoring
+from accounts.services import delivery_closure_email as closure_email
 from accounts.services import delivery_workflow as delivery
 from accounts.services.delivery_access import is_admin
 from content.mcp.actor import mcp_actor
@@ -325,7 +327,76 @@ def _workspace_etag(arguments):
     return {f'project:{arguments["project_id"]}:delivery': str(result['version'])}
 
 
-def _tool(name, description, handler, properties=None, required=(), *, risk='read', one_of=None):
+def _closure_credential():
+    context = current_mcp_context()
+    if context is None or context.credential is None or not context.credential.is_usable:
+        raise ToolError('El correo preparado requiere una credencial MCP activa.', code='FORBIDDEN')
+    return context.credential
+
+
+def _closure_data(arguments):
+    return {name: deepcopy(value) for name, value in arguments.items()
+            if name not in {'project_id', 'stage_id', 'preparation_id', 'file_id'}}
+
+
+def _closure_preparation_id(arguments):
+    try:
+        return UUID(str(arguments['preparation_id']))
+    except (ValueError, TypeError, AttributeError) as exc:
+        raise ToolError('preparation_id debe identificar un correo preparado válido.') from exc
+
+
+def _closure_prepare(arguments, actor):
+    return _call(closure_email.prepare_stage_email,
+                 arguments['project_id'], actor, arguments['stage_id'], _closure_data(arguments),
+                 mcp_credential=_closure_credential())
+
+
+def _closure_history(arguments, actor):
+    return _call(closure_email.list_stage_emails,
+                 arguments['project_id'], actor, arguments['stage_id'],
+                 mcp_credential=_closure_credential())
+
+
+def _closure_preparation(arguments, actor):
+    return _call(closure_email.get_preparation,
+                 arguments['project_id'], actor, _closure_preparation_id(arguments),
+                 mcp_credential=_closure_credential())
+
+
+def _closure_send(arguments, actor):
+    return _call(closure_email.send_stage_email,
+                 arguments['project_id'], actor, _closure_preparation_id(arguments), _closure_data(arguments),
+                 mcp_credential=_closure_credential())
+
+
+def _closure_resend_prepare(arguments, actor):
+    return _call(closure_email.prepare_stage_email_resend,
+                 arguments['project_id'], actor, _closure_preparation_id(arguments), _closure_data(arguments),
+                 mcp_credential=_closure_credential())
+
+
+def _closure_attachment(arguments, actor):
+    raw, filename, content_type = _call(closure_email.download_attachment,
+                                      arguments['project_id'], actor, _closure_preparation_id(arguments), arguments['file_id'],
+                                      mcp_credential=_closure_credential())
+    return _artifact(raw, filename, filename, content_type=content_type)
+
+
+def _closure_send_impact(arguments):
+    preview = _closure_preparation(arguments, _actor())
+    if arguments['expected_version'] != preview['version']:
+        raise ToolError('El seguimiento cambió. Actualiza antes de continuar.', code='CONFLICT')
+    if arguments['preview_sha256'] != preview['manifest_sha256']:
+        raise ToolError('El correo no coincide con la vista revisada.', code='CONFLICT')
+    return {'summary': 'Enviar exactamente el correo de cierre revisado al cliente actual.',
+            **preview}
+
+
+def _tool(name, description, handler, properties=None, required=(), *, risk='read',
+          one_of=None, durable_execution=False, impact_builder=None):
+    if durable_execution and risk != 'sensitive':
+        raise ValueError('Durable execution requires explicit sensitive confirmation.')
     schema = {
         'type': 'object', 'additionalProperties': False,
         'properties': {'project_id': ID, **(properties or {})},
@@ -337,6 +408,9 @@ def _tool(name, description, handler, properties=None, required=(), *, risk='rea
     def execute(arguments):
         _validate(arguments, schema)
         actor = _actor()
+        if durable_execution:
+            # External transport must retain its claim if later history fails.
+            return handler(arguments, actor)
         with transaction.atomic():
             return handler(arguments, actor)
 
@@ -362,6 +436,10 @@ def _tool(name, description, handler, properties=None, required=(), *, risk='rea
                    if key in arguments},
             },
         })
+        if impact_builder is not None:
+            tool['impact_builder'] = impact_builder
+        if durable_execution:
+            tool['durable_execution'] = True
     return tool
 
 
@@ -447,6 +525,37 @@ REPLY_PAYLOAD = {
     'required': ['schema_version', 'context_id', 'response_text', 'classifications'],
 }
 DELIVERY_TOOLS = [
+    _tool('prepare_delivery_stage_closure_email',
+          'Prepara un correo privado de cierre sólo para una etapa completamente aprobada; conserva destinatario, cuerpo y adjuntos para revisar sin enviar.',
+          _closure_prepare, {
+              'stage_id': ID, 'expected_version': VERSION, 'request_id': REQUEST_ID,
+              'message': {**TEXT, 'maxLength': 20000},
+              'include_record_pdf': {'type': 'boolean', 'default': False},
+              'document_snapshot_ids': {**DOCUMENT_IDS, 'maxItems': 20},
+          }, ('stage_id', 'expected_version', 'request_id'), risk='write'),
+    _tool('list_delivery_stage_closure_emails',
+          'Consulta las preparaciones propias y documentos públicos exactos disponibles para el correo de cierre de una etapa.',
+          _closure_history, {'stage_id': ID}, ('stage_id',)),
+    _tool('get_delivery_stage_closure_email',
+          'Consulta el destinatario, cuerpo, manifest, adjuntos y estado de una preparación propia de correo de cierre.',
+          _closure_preparation, {'preparation_id': CONTEXT_ID}, ('preparation_id',)),
+    _tool('download_delivery_stage_closure_email_attachment',
+          'Descarga un adjunto privado exacto de una preparación propia como artefacto temporal autorizado de esta credencial.',
+          _closure_attachment, {'preparation_id': CONTEXT_ID, 'file_id': ID},
+          ('preparation_id', 'file_id')),
+    _tool('send_delivery_stage_closure_email',
+          'Previsualiza el correo de cierre exacto; confirm_action lo envía una sola vez después de revisar cuerpo, destinatario y adjuntos.',
+          _closure_send, {
+              'preparation_id': CONTEXT_ID, 'expected_version': VERSION, 'request_id': REQUEST_ID,
+              'preview_sha256': {**TEXT, 'minLength': 64, 'maxLength': 64},
+              'human_reviewed': {'type': 'boolean', 'enum': [True]},
+          }, ('preparation_id', 'expected_version', 'request_id', 'preview_sha256', 'human_reviewed'),
+          risk='sensitive', durable_execution=True, impact_builder=_closure_send_impact),
+    _tool('prepare_delivery_stage_closure_email_resend',
+          'Prepara un reenvío explícito con el mismo cuerpo y adjuntos conservados; requiere nueva revisión y confirmación para enviarlo.',
+          _closure_resend_prepare, {
+              'preparation_id': CONTEXT_ID, 'expected_version': VERSION, 'request_id': REQUEST_ID,
+          }, ('preparation_id', 'expected_version', 'request_id'), risk='write'),
     _tool('get_delivery_overview',
           'Consulta contratos, otrosíes, alcances, fases, etapas, guías y versiones de Platform.',
           _overview),

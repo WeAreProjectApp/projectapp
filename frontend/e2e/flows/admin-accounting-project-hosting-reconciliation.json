@@ -1,0 +1,16 @@
+{
+  "id": "admin-accounting-project-hosting-reconciliation",
+  "name": "Admin Accounting Project Hosting Reconciliation",
+  "module": "admin",
+  "roles": [
+    "superuser"
+  ],
+  "priority": "P1",
+  "description": "Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

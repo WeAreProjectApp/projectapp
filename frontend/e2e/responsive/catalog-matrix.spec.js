@@ -42,10 +42,7 @@ const legacyPlatformRedirects = Object.freeze([
   redirectScenario('/platform/bugs'),
   redirectScenario('/platform/changes'),
   redirectScenario('/platform/deliverables'),
-  redirectScenario('/platform/payments'),
   redirectScenario('/platform/access'),
-  redirectScenario('/platform/collection-accounts'),
-  redirectScenario('/platform/collection-accounts/:id'),
 ]);
 const proposalEmailTemplatesRedirect = redirectScenario('/panel/proposals/email-templates');
 const proposalDefaultsRedirect = redirectScenario('/panel/proposals/defaults');
@@ -190,31 +187,10 @@ for (const profile of RESPONSIVE_PROFILES) {
         });
       }
       if (belongsToRequestedBatch(legacyPlatformRedirects[6])) {
-        test('platform payments retains the projects destination', { tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(legacyPlatformRedirects[6], profile)] }, async ({ page }) => {
+        test('platform access retains the projects destination', { tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(legacyPlatformRedirects[6], profile)] }, async ({ page }) => {
           // quality: allow-no-interaction (a legacy bookmark invokes a route-only compatibility redirect)
           await navigateCompatibilityRedirect(page, legacyPlatformRedirects[6]);
           await expect(page).toHaveURL(redirectUrlPattern(legacyPlatformRedirects[6]));
-        });
-      }
-      if (belongsToRequestedBatch(legacyPlatformRedirects[7])) {
-        test('platform access retains the projects destination', { tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(legacyPlatformRedirects[7], profile)] }, async ({ page }) => {
-          // quality: allow-no-interaction (a legacy bookmark invokes a route-only compatibility redirect)
-          await navigateCompatibilityRedirect(page, legacyPlatformRedirects[7]);
-          await expect(page).toHaveURL(redirectUrlPattern(legacyPlatformRedirects[7]));
-        });
-      }
-      if (belongsToRequestedBatch(legacyPlatformRedirects[8])) {
-        test('platform collection accounts retains the projects destination', { tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(legacyPlatformRedirects[8], profile)] }, async ({ page }) => {
-          // quality: allow-no-interaction (a legacy bookmark invokes a route-only compatibility redirect)
-          await navigateCompatibilityRedirect(page, legacyPlatformRedirects[8]);
-          await expect(page).toHaveURL(redirectUrlPattern(legacyPlatformRedirects[8]));
-        });
-      }
-      if (belongsToRequestedBatch(legacyPlatformRedirects[9])) {
-        test('platform collection account detail retains the projects destination', { tag: [...PLATFORM_LEGACY_ROUTE_REDIRECTS, '@outcome:success', ...redirectTags(legacyPlatformRedirects[9], profile)] }, async ({ page }) => {
-          // quality: allow-no-interaction (a legacy bookmark invokes a route-only compatibility redirect)
-          await navigateCompatibilityRedirect(page, legacyPlatformRedirects[9]);
-          await expect(page).toHaveURL(redirectUrlPattern(legacyPlatformRedirects[9]));
         });
       }
     });

@@ -304,6 +304,21 @@ function buildHandler({
     },
   };
   return async ({ route, apiPath, method }) => {
+    if (apiPath === 'admin/billing-context/projects/7/options/' && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ project_id: 7, project_name: 'Vastago', hosting_id: null,
+          contracts: [{ id: 10, title: 'Contrato Vastago', amendments: [] }] }),
+      };
+    }
+    if (apiPath === 'admin/billing-context/projects/7/hosting/' && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ overview: { subscription: null, accounting_sources: [], evidence_groups: [] } }),
+      };
+    }
     if (apiPath === 'auth/check/') {
       return {
         status: 200,
@@ -1197,6 +1212,8 @@ test.describe('Admin Accounting Collections', () => {
     // A liquid link is the exception, so the test opts into it explicitly.
     await page.getByTestId('collection-form-income-kind-liquid').click();
     await page.getByTestId('collection-form-income-option-21').click();
+    await page.getByTestId('billing-nature').selectOption('contract');
+    await page.getByTestId('billing-contract').selectOption('10');
     await page.getByTestId('collection-form-preview').click();
     await page.getByTestId('collection-form-confirm').click();
 
@@ -1205,6 +1222,8 @@ test.describe('Admin Accounting Collections', () => {
     // live FK (F7): the new row lands with its project visible, no reload.
     const newRow = page.getByTestId('accounting-row-9');
     await expect(newRow).toContainText('Vastago');
+    expect(calls.find(call => call.apiPath === 'accounting/collection-accounts/create/').body)
+      .toMatchObject({ billing_nature: 'contract', contract_id: 10 });
     await expect(
       page.getByTestId('collection-project-space-9').filter({ visible: true }),
     ).toBeVisible();
@@ -1438,6 +1457,8 @@ test.describe('Admin Accounting Collections', () => {
     // Acme's own income: this test is about the preview layout, so it takes the
     // shortest route to it rather than widening the alcance.
     await page.getByTestId('collection-form-income-option-21').click();
+    await page.getByTestId('billing-nature').selectOption('contract');
+    await page.getByTestId('billing-contract').selectOption('10');
     await page.getByTestId('collection-form-preview').click();
 
     await expect(page.getByTestId('collection-preview-subject')).toBeVisible();

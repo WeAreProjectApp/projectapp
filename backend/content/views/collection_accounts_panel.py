@@ -73,6 +73,7 @@ def _base_qs():
     return (
         Document.objects.filter(document_type__code=COLLECTION_ACCOUNT)
         .select_related(
+            'billing_context__contract', 'billing_context__amendment', 'billing_context__hosting',
             'collection_account', 'hosting_record', 'project', 'income_record',
         )
         .prefetch_related('items', 'payment_methods')
@@ -101,10 +102,13 @@ def _get_document(doc_id):
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def send_hosting_collection_account(request, record_id):
+    from accounts.serializers_billing_context import HostingAccountEmissionSerializer
+    context_serializer = HostingAccountEmissionSerializer(data=request.data)
+    context_serializer.is_valid(raise_exception=True)
     hosting = get_object_or_404(HostingRecord, pk=record_id)
     try:
         result = hosting_billing_service.send_hosting_collection_account(
-            hosting, acting_user=request.user,
+            hosting, acting_user=request.user, hosting_payment_id=context_serializer.validated_data.get('hosting_payment_id'),
         )
     except hosting_billing_service.HostingBillingError as exc:
         return error_response(str(exc))

@@ -196,7 +196,10 @@ def _validate_relations(project, kind, values, node):
         _document_source(project, values, node)
     if kind in ('amendments', 'scopes'):
         contract_id = values.get('contract_id', getattr(node, 'contract_id', None))
-        _node(project, 'contracts', contract_id)
+        contract = _node(project, 'contracts', contract_id)
+        if kind == 'amendments' and node is not None:
+            from accounts.services.billing_reassignment import validate_amendment_billing_reassignment
+            validate_amendment_billing_reassignment(node, contract)
         if kind == 'scopes':
             amendment_id = values.get('amendment_id', getattr(node, 'amendment_id', None))
             if amendment_id:
@@ -331,7 +334,7 @@ def _requirement_payload(req):
 
 def _validate_guide(req):
     guide = _validate(GuideSerializer, req.guide)
-    labels = {'role': 'quién hará la prueba', 'environment': 'el ambiente de prueba',
+    labels = {'environment': 'el ambiente de prueba',
               'steps': 'los pasos', 'expected_result': 'el resultado esperado',
               'failure_signals': 'cómo reconocer un fallo'}
     for field, label in labels.items():
@@ -993,7 +996,7 @@ def _historical_evidence(project, values, documents):
 def import_schema():
     """The exact structural JSON contract used by authoring and MCP discovery."""
     guide = {'type': 'object', 'additionalProperties': False, 'properties': {
-        field: ({'type': 'array', 'items': {'type': 'string'}, 'maxItems': 100} if field == 'steps' else {'type': 'string'})
+        field: ({'type': 'array', 'items': {'type': 'string'}, 'maxItems': 100} if field in ('steps', 'blocked_steps') else {'type': 'string'})
         for field in GuideSerializer().fields
     }}
     schemas = {}

@@ -292,6 +292,16 @@ def change_client_apply(project, new_profile, mode, user):
     must not leave a log claiming it happened) and none of them notify by
     email — the bulk convention.
     """
+    from accounts.models import Project
+    from accounts.services.billing_reassignment import validate_project_billing_reassignment
+    from accounts.services.delivery_client_transfer import assert_delivery_client_transfer_safe
+    from accounts.services.issue_client_transfer import assert_issue_client_transfer_safe
+    original_project = project
+    project = Project.objects.select_for_update().get(pk=project.pk)
+    # P0 integrates finance -> delivery -> issues -> access revoke -> save.
+    validate_project_billing_reassignment(project, new_profile.user)
+    project = assert_delivery_client_transfer_safe(original_project, new_profile.user, actor=user)
+    assert_issue_client_transfer_safe(project, new_profile.user)
     sets = linked_sets(project)
     blocked = sets['blocked_income_pks']
     # A liquid child whose expected parent is also linked rides with the
@@ -309,6 +319,9 @@ def change_client_apply(project, new_profile, mode, user):
     old_project_values = accounting_service.snapshot_values(
         project, EntityType.PROJECT,
     )
+    if project.client_id != new_profile.user_id:
+        from accounts.services.project_client_access import revoke_grants
+        revoke_grants(project, actor=user)
     project.client = new_profile.user
     project.save(update_fields=['client', 'updated_at'])
     _log_diff(EntityType.PROJECT, project, old_project_values, user)

@@ -19,7 +19,9 @@ from accounts.models import (
 from accounts.serializers import ChangeRequestDetailSerializer
 
 User = get_user_model()
-MAX_CHANGE_REQUEST_DETAIL_QUERIES = 5
+# Two history collections plus one batched comment-evidence query are additive;
+# author/evidence reads must still remain constant as comments grow.
+MAX_CHANGE_REQUEST_DETAIL_QUERIES = 8
 
 
 def _detail_url(project_id, change_request_id):

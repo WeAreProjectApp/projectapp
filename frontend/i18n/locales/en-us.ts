@@ -22,6 +22,8 @@ export default defineI18nLocale(async () => {
     financing,
     proposalExplainer,
     projectAccess,
+    projectIdeas,
+    projectClientAccess,
     projectBrand,
     pwa,
     monitoring,
@@ -30,6 +32,8 @@ export default defineI18nLocale(async () => {
     secureLinks,
     serviceContract,
     platformDelivery,
+    platformBilling,
+    platformIssues,
     platformSecureLinks,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
@@ -54,6 +58,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/financing/en.js'),
     import('~/locales/proposalExplainer/en.js'),
     import('~/locales/projectAccess/en.js'),
+    import('~/locales/projectIdeas/en.js'),
+    import('~/locales/projectClientAccess/en.js'),
     import('~/locales/projectBrand/en.js'),
     import('~/locales/pwa/en.js'),
     import('~/locales/monitoring/en.js'),
@@ -62,6 +68,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/secureLinks/en.js'),
     import('~/locales/serviceContract/en.js'),
     import('~/locales/platformDelivery/en.js'),
+    import('~/locales/platformBilling/en.js'),
+    import('~/locales/platformIssues/en.js'),
     import('~/locales/platformSecureLinks/en.js'),
   ])
 
@@ -88,6 +96,8 @@ export default defineI18nLocale(async () => {
     financing: financing.default,
     proposalExplainer: proposalExplainer.default,
     projectAccess: projectAccess.default,
+    projectIdeas: projectIdeas.default,
+    projectClientAccess: projectClientAccess.default,
     projectBrand: projectBrand.default,
     pwa: pwa.default,
     monitoring: monitoring.default,
@@ -96,6 +106,8 @@ export default defineI18nLocale(async () => {
     secureLinks: secureLinks.default,
     serviceContract: serviceContract.default,
     platformDelivery: platformDelivery.default,
+    platformBilling: platformBilling.default,
+    platformIssues: platformIssues.default,
     platformSecureLinks: platformSecureLinks.default,
   }
 })

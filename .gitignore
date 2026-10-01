@@ -134,3 +134,6 @@ coverage*.json
 
 # Versioned visual regression baselines
 !frontend/e2e/visual/styleguide.spec.js-snapshots/*.png
+
+# P4 Playwright blobs consumed by the shared E2E aggregate.
+frontend/blob-report/

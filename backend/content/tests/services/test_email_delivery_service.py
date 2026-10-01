@@ -176,7 +176,10 @@ def test_every_registered_outbound_channel_uses_its_family_bcc_copy():
     delivery_matrix = _exercise_outbound_inventory_bcc_matrix()
 
     assert set(delivery_matrix) == set(OUTBOUND_EMAIL_CHANNELS)
-    assert len(delivery_matrix) == 58
+    assert len(delivery_matrix) == 59
+    assert delivery_matrix['delivery_stage_approved_client']['copy_bcc'] == [
+        'audit-documents_communications@example.com',
+    ]
     assert all(
         delivery == {
             'result': 1,

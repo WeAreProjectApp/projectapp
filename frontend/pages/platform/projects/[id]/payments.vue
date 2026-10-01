@@ -1,5 +1,6 @@
 <template>
   <ProjectShell>
+    <ProjectHostingOverview :project-id="projectId" :show-payments="false" />
     <div id="platform-project-payments">
     <div v-if="payStore.isLoading" class="py-20 text-center">
       <div class="mx-auto h-8 w-8 animate-spin rounded-full border-2 border-border-default border-t-esmerald dark:border-t-lemon" />
@@ -370,20 +371,20 @@
         </div>
 
         <!-- Payment history (collapsible) -->
-        <div v-if="payStore.pastPayments.length > 0" data-enter>
+        <div v-if="payStore.otherPayments.length > 0" data-enter>
           <button
             type="button"
             class="mb-3 flex w-full items-center gap-2 text-xs font-semibold uppercase tracking-wider text-green-light/60 transition hover:text-green-light"
             @click="showHistory = !showHistory"
           >
             <svg class="h-3.5 w-3.5 transition-transform" :class="showHistory ? 'rotate-90' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-            Historial de pagos ({{ payStore.pastPayments.length }})
+            Historial y pagos programados ({{ payStore.otherPayments.length }})
           </button>
 
           <transition name="slide">
             <div v-show="showHistory" class="space-y-2">
               <div
-                v-for="payment in payStore.pastPayments"
+                v-for="payment in payStore.otherPayments"
                 :key="payment.id"
                 class="rounded-xl border border-border-muted bg-surface px-5 py-3.5"
               >
@@ -666,7 +667,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted, reactive, ref } from 'vue'
+import ProjectHostingOverview from '~/components/platform/billing/ProjectHostingOverview.vue'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { usePageEntrance } from '~/composables/usePageEntrance'
 import { usePlatformApi } from '~/composables/usePlatformApi'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
@@ -850,12 +852,14 @@ const isPollingPayment = ref(false)
 async function pollProcessingPayment() {
   if (isPollingPayment.value) return
   isPollingPayment.value = true
+  const pollingProjectId = projectId.value
   try {
     for (let i = 0; i < 12; i += 1) {
       const p = payStore.currentPeriodPayment
       if (!p || p.status !== 'processing') return
       await sleep(3000)
-      await payStore.verifyTransaction(projectId.value, p.id)
+      if (String(projectId.value) !== String(pollingProjectId)) return
+      await payStore.verifyTransaction(pollingProjectId, p.id)
       await payStore.fetchProjectSubscription(projectId.value)
     }
   } finally {
@@ -1139,6 +1143,12 @@ async function handleRegisterManualPayment() {
     manualError.value = result.message
   }
 }
+
+watch(projectId, async id => {
+  Object.keys(phaseEditDates).forEach(key => delete phaseEditDates[key])
+  await Promise.all([payStore.fetchProjectSubscription(id), payStore.fetchProjectPhases(id), projectsStore.fetchProject(id)])
+  if (sub.value) selectedPlan.value = sub.value.plan
+})
 
 onMounted(async () => {
   const dark = getComputedStyle(document.documentElement).getPropertyValue('--theme-dark').trim()
