@@ -36,8 +36,11 @@ borrador permitido conserva su auditoría; una cuenta usada como evidencia exige
 corregir explícitamente esa asociación primero.
 
 No hay backfill que elija relaciones. La migración crea únicamente tablas de
-contexto. Su hoja y número definitivo los coordina P0 después de P3 final; no se
-han aplicado migraciones a una base de servicio.
+contexto. P0 fijó `0069_p2_project_billing_context`, con padre
+`0067_explicit_delivery_authoring_context` y dependencia content `0273`. P0
+coordina las hojas paralelas y sus merges sin operaciones. No se han aplicado
+migraciones a una base de servicio. La dependencia P3 absorbida por merge es
+`dea940345fc37c361f8749d30e1a96ac2bba73ee` (PR #460); no se considera su entrega final verde.
 
 ## Conciliación y emisión
 
@@ -88,7 +91,7 @@ este dominio. Los escritores financieros existentes reciben puentes mínimos.
 
 | Bloque compartido reservado a P2 | Dependencia / integración por P0 |
 | --- | --- |
-| `accounts/models.py` import y migración aditiva de billing | Después de la hoja final P3; fijar número y dependencia antes de entregar. |
+| `accounts/models.py` import y migración aditiva de billing | Nombre P2 `0069`, padre P3 `0067`; P0 integra las hojas paralelas sin operaciones. |
 | `accounts/urls.py`, `content/urls.py` includes de billing | Preservar registros P1/P3/P4/P5; módulos nuevos sin reorganizar URLs. |
 | Registries/contratos MCP y `mcp_blog.py` | Sólo entradas/modelos/operaciones billing; conservar núcleo delivery de P3. |
 | Navegación de cuentas/hosting, imports i18n | Sólo enlaces y claves de billing; sin políticas de accesos P4. |
@@ -113,7 +116,7 @@ reparentado y rollback de dueño. Panel/MCP ejercitan los escritores reales.
 Los journeys de navegador usan APIs simuladas y nunca cobran ni contactan a
 clientes. Los resultados concretos y CI se registran en el PR.
 
-Pendientes de integración: P0 coordina P3 final, la hoja de migración y el orden
+Pendientes de integración: P0 coordina P3 final, el merge de hojas y el orden
 de PRs. La revocación de accesos P4 se absorbe por commit publicado; no se copia
 desde su worktree. No se cambian el fallo contable ajeno de P3, guías por roles,
 prompt/core, enlaces seguros, correos ni políticas de publicación documental.

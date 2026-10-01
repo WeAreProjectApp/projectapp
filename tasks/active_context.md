@@ -2322,8 +2322,10 @@ sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
 ### P2 — cuentas y hosting por proyecto (2026-10-01)
 
 En implementación en rama propia `feat/01102026-platform-client-billing`, desde
-`origin/main=cce8e694` con dependencia publicada P3 `abcffaf9` absorbida mediante
-merge. Identidad única de hosting por proyecto, cuentas excluyentes
+`origin/main=cce8e694`, con dependencia P3 inicial `abcffaf9` y actualización
+publicada `dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbidas mediante merge.
+P0 fijó migración P2 `0069_p2_project_billing_context`, padre P3 `0067`; las
+hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por proyecto, cuentas excluyentes
 contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
 No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
 contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.

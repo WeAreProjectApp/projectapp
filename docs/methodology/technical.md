@@ -1540,6 +1540,7 @@ versión esperada y razón; no escriben dinero ni regeneran documentos emitidos.
 La creación/emisión contable exige vínculos explícitos para cuentas de proyecto.
 `frontend/playwright.billing.config.js` limita la validación local a journeys y
 matriz responsive de billing, con API simulada y sin automatismos externos.
-La migración aditiva sigue sujeta a la hoja final que coordine P0; no ejecutar
-`migrate` desde el worktree. El runbook del dominio está en
+P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
+P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
+sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
 `docs/PLATFORM_PROJECT_BILLING.md`.
