@@ -12,6 +12,22 @@
 > y respuestas desconocidas, y sólo las borra ante rechazo explícito admitido.
 > No hay nuevos contratos públicos ni garantías de concurrencia.
 
+### Bugs y solicitudes contextualizadas — 2026-10-01
+
+`issue_reports` comparte el ciclo de vida entre REST y MCP; los adaptadores
+existentes quedan delgados. `IssueContext` conserva el origen publicado,
+`IssueResponse` agrega respuestas, `IssueEvent` conserva estados/recibos y
+`IssueAttachment` guarda PDFs históricos privados. El bug general no depende
+de contrato o guía. «Resuelto por equipo» admite reapertura del cliente sin
+modificar aprobaciones. Se reutilizan almacenamiento e índices de documentos de
+entregas. `issue_contract_reply` delega fuentes/citas a P3 y proporciona identidad,
+origen congelado y conversación pública real. Publicar revalida dueño, actor,
+destino, versiones y hashes bajo `_run`; el JSON guarda procedencia privada y
+el serializer expone una allowlist pública. El guard propio impide transferencias
+con historia de tickets, después del guard de entregas. `0073` combina `0068`
+y `0071` sin operaciones.
+Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
+
 > **Seguimiento contractual — 2026-10-01:** `ProjectContract` y
 > `ContractAmendment` sustentan `DeliveryScope` → `DeliveryPhase` →
 > `DeliveryStage` → `Requirement`. Publicaciones, revisiones, evidencias de firma,

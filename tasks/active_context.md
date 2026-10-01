@@ -38,6 +38,18 @@ Sin migraciones ni deploy. Adjuntos de propuestas siguen bloqueados por su
 contrato de listado; rendimiento contable y responsividad de Documentos quedan
 pendientes por cupo, sin declaración de suficiencia global.
 
+# Bugs y solicitudes contextualizadas — P1 (2026-10-01)
+
+Implementación en validación en `platform-bugs-context`: bug general sin guías,
+captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
+y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
+El adaptador REST/MCP/UI usa P3 publicado `edfff19c` (provider `30fd7ab9`), con revisión humana y
+procedencia privada. El guard protege bugs generales y se compone con entregas.
+P0 reservó `0068` y la no-op `0073` (padres `0068` + `0071`); no se alteran
+migraciones publicadas. El fixture comprueba MAILERS en memoria antes de crear datos.
+QA focal de REST/MCP/UI y aislamiento de correo pasó; CI del head propio sigue en cierre. Detalles en
+`docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
+
 # Alcance y entregas en Platform (2026-10-01)
 
 Primer incremento implementado en `platform-review-workflow`, en validación:

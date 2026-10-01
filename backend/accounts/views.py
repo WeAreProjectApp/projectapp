@@ -1255,23 +1255,25 @@ _SOURCE_REQUIREMENT_LIST_FIELDS = (
 )
 
 
-def _change_request_list_queryset(qs):
+def _change_request_list_queryset(qs, actor=None):
     """Load the list payload without per-row counts or proposal content."""
-    from django.db.models import Count
+    from django.db.models import Count, Q
+    from accounts.services.delivery_access import is_admin
 
     return (
-        qs.select_related('created_by', 'project', 'source_requirement__stage__phase__scope')
+        qs.select_related('created_by', 'project', 'source_requirement__stage__phase__scope', 'issue_context')
         .only(
             'id', 'project_id', 'created_by_id', 'source_requirement_id',
             'title', 'description', 'module_or_screen', 'suggested_priority',
             'is_urgent', 'status', 'admin_response', 'estimated_cost', 'estimated_time',
             'linked_requirement_id', 'screenshot', 'is_archived', 'archived_at',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'version',
+            'issue_context__id', 'issue_context__snapshot', 'issue_context__publication_id',
             'created_by__id', 'created_by__first_name', 'created_by__last_name',
             'created_by__email', 'project__id', 'project__name',
             *_SOURCE_REQUIREMENT_LIST_FIELDS,
         )
-        .annotate(_comments_count=Count('comments'))
+        .annotate(_comments_count=Count('comments', filter=Q() if actor and is_admin(actor) else Q(comments__is_internal=False)))
         .order_by('-created_at')
     )
 
@@ -1291,7 +1293,7 @@ def change_request_all_view(request):
     else:
         qs = ChangeRequest.objects.filter(project__client=request.user)
 
-    qs = _change_request_list_queryset(qs)
+    qs = _change_request_list_queryset(qs, request.user)
     qs = filter_change_requests_for_list(qs, request, is_admin=is_admin)
 
     status_filter = request.query_params.get('status')
@@ -1323,7 +1325,7 @@ def change_request_list_view(request, project_id):
     is_admin = profile and profile.is_admin
 
     if request.method == 'GET':
-        qs = _change_request_list_queryset(ChangeRequest.objects.filter(project=proj))
+        qs = _change_request_list_queryset(ChangeRequest.objects.filter(project=proj), request.user)
         qs = filter_change_requests_for_list(qs, request, is_admin=is_admin)
         status_filter = request.query_params.get('status')
         if status_filter:
@@ -1334,44 +1336,8 @@ def change_request_list_view(request, project_id):
         serializer = ChangeRequestListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
-    serializer = CreateChangeRequestSerializer(data=request.data, context={'project': proj, 'request': request})
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    cr = ChangeRequest(
-        project=proj,
-        created_by=request.user,
-        title=data['title'],
-        description=data.get('description', ''),
-        module_or_screen=data.get('module_or_screen', ''),
-        suggested_priority=data.get('suggested_priority', ChangeRequest.PRIORITY_MEDIUM),
-        is_urgent=data.get('is_urgent', False),
-    )
-    if data.get('source_requirement_id'):
-        cr.source_requirement_id = data['source_requirement_id']
-    if data.get('screenshot'):
-        cr.screenshot = data['screenshot']
-    cr.save()
-
-    if is_admin:
-        notify_project_client(
-            proj, Notification.TYPE_CR_CREATED, f'Nueva solicitud de cambio: {cr.title}',
-            message=f'El equipo creó una solicitud de cambio en {proj.name}.',
-            related_object_type='change_request', related_object_id=cr.id,
-            exclude_user=request.user,
-        )
-    else:
-        notify_project_admins(
-            proj, Notification.TYPE_CR_CREATED, f'Nueva solicitud de cambio: {cr.title}',
-            message=f'{request.user.first_name} creó una solicitud en {proj.name}.',
-            related_object_type='change_request', related_object_id=cr.id,
-            exclude_user=request.user,
-        )
-
-    return Response(
-        ChangeRequestListSerializer(cr, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+    from accounts.views_issue_reports import create_handler
+    return create_handler(request, project_id, 'change')
 
 
 @api_view(['GET', 'DELETE'])
@@ -1387,19 +1353,20 @@ def change_request_detail_view(request, project_id, cr_id):
 
     if request.method == 'GET':
         change_requests = ChangeRequest.objects.select_related(
-            'created_by', 'source_requirement__stage__phase__scope',
+            'created_by', 'source_requirement__stage__phase__scope', 'issue_context',
         ).only(
             'id', 'project_id', 'created_by_id', 'source_requirement_id',
             'title', 'description', 'module_or_screen', 'suggested_priority',
             'is_urgent', 'status', 'admin_response', 'estimated_cost', 'estimated_time',
             'linked_requirement_id', 'screenshot', 'is_archived', 'archived_at',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'version',
+            'issue_context__id', 'issue_context__snapshot', 'issue_context__publication_id',
             'created_by__id', 'created_by__first_name', 'created_by__last_name',
             'created_by__email', *_SOURCE_REQUIREMENT_LIST_FIELDS,
         ).prefetch_related(
             Prefetch(
                 'comments',
-                queryset=ChangeRequestComment.objects.select_related('user'),
+                queryset=ChangeRequestComment.objects.select_related('user').prefetch_related('issue_attachments'),
                 to_attr='_detail_comments',
             ),
         )
@@ -1425,71 +1392,19 @@ def change_request_detail_view(request, project_id, cr_id):
             ChangeRequestDetailSerializer(cr, context={'request': request}).data,
         )
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden eliminar solicitudes de cambio.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    cr.updated_at = timezone.now()
-    archive_record(cr, extra_update_fields=('updated_at',))
-    return Response({'detail': 'Solicitud de cambio archivada.'})
+    from accounts.views_issue_reports import archive_handler
+    return archive_handler(request, project_id, 'change', cr_id)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_request_evaluate_view(request, project_id, cr_id):
-    """
-    Admin evaluates a change request: update status, admin_response, estimated_cost/time.
-    """
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import evaluate_handler
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden evaluar solicitudes de cambio.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    try:
-        cr = (
-            ChangeRequest.objects
-            .select_related('created_by', 'source_requirement__stage__phase__scope')
-            .get(id=cr_id, project=proj)
-        )
-    except ChangeRequest.DoesNotExist:
-        return Response(
-            {'detail': 'Solicitud de cambio no encontrada.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    serializer = EvaluateChangeRequestSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    upd_fields = ['updated_at']
-    for field in ('status', 'admin_response', 'estimated_cost', 'estimated_time'):
-        if field in data:
-            setattr(cr, field, data[field])
-            upd_fields.append(field)
-    cr.save(update_fields=upd_fields)
-
-    if 'status' in data:
-        status_display = dict(ChangeRequest.STATUS_CHOICES).get(data['status'], data['status'])
-        notify_project_client(
-            proj, Notification.TYPE_CR_STATUS_CHANGED,
-            f'Solicitud actualizada: {cr.title}',
-            message=f'Estado cambiado a "{status_display}".',
-            related_object_type='change_request', related_object_id=cr.id,
-            exclude_user=request.user,
-        )
-
-    return Response(
-        ChangeRequestDetailSerializer(cr, context={'request': request}).data,
-    )
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return evaluate_handler(request, project_id, 'change', cr_id)
 
 
 def _bulk_evaluation_ids(items, model):
@@ -1520,175 +1435,34 @@ def _bulk_evaluation_ids(items, model):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_request_bulk_evaluate_view(request, project_id):
-    """
-    Admin bulk-evaluates change requests of a project.
-    Body: array of {id, status?, admin_response?, estimated_time?, estimated_cost?}.
-    Each item is applied independently via the same EvaluateChangeRequestSerializer.
-    Items with unknown id or that don't belong to the project are skipped.
-    """
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import bulk_handler
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden evaluar solicitudes de cambio.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    items = request.data
-    if not isinstance(items, list):
-        return Response(
-            {'detail': 'Se espera un array JSON de evaluaciones.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if len(items) > 500:
-        return Response(
-            {'detail': 'Máximo 500 evaluaciones por carga.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    project_crs = {
-        cr.id: cr for cr in ChangeRequest.objects.filter(
-            project=proj, id__in=_bulk_evaluation_ids(items, ChangeRequest),
-        )
-    }
-
-    updated_ids = []
-    errors = []
-    for idx, item in enumerate(items):
-        if not isinstance(item, dict):
-            errors.append({'index': idx, 'detail': 'Item no es un objeto.'})
-            continue
-        cr_id = item.get('id')
-        if cr_id is None:
-            errors.append({'index': idx, 'detail': 'Falta el campo id.'})
-            continue
-        cr = project_crs.get(cr_id)
-        if cr is None:
-            errors.append({'index': idx, 'id': cr_id, 'detail': 'No encontrada en el proyecto.'})
-            continue
-
-        payload = {
-            k: v for k, v in item.items()
-            if k in ('status', 'admin_response', 'estimated_time', 'estimated_cost')
-        }
-        if not payload:
-            continue
-
-        serializer = EvaluateChangeRequestSerializer(data=payload, partial=True)
-        if not serializer.is_valid():
-            errors.append({'index': idx, 'id': cr_id, 'detail': serializer.errors})
-            continue
-
-        data = serializer.validated_data
-        upd_fields = ['updated_at']
-        new_status = data.get('status')
-        for field in ('status', 'admin_response', 'estimated_cost', 'estimated_time'):
-            if field in data:
-                setattr(cr, field, data[field])
-                upd_fields.append(field)
-        cr.save(update_fields=upd_fields)
-        updated_ids.append(cr.id)
-
-        if new_status is not None:
-            status_display = dict(ChangeRequest.STATUS_CHOICES).get(new_status, new_status)
-            notify_project_client(
-                proj, Notification.TYPE_CR_STATUS_CHANGED,
-                f'Solicitud actualizada: {cr.title}',
-                message=f'Estado cambiado a "{status_display}".',
-                related_object_type='change_request', related_object_id=cr.id,
-                exclude_user=request.user,
-            )
-
-    return Response({
-        'updated': len(updated_ids),
-        'updated_ids': updated_ids,
-        'errors': errors,
-    })
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return bulk_handler(request, project_id, 'change')
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def change_request_comment_view(request, project_id, cr_id):
-    """Add a comment to a change request. Both roles can comment."""
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import comment_handler
 
-    try:
-        cr = ChangeRequest.objects.get(id=cr_id, project=proj)
-    except ChangeRequest.DoesNotExist:
-        return Response(
-            {'detail': 'Solicitud de cambio no encontrada.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if not change_request_visible_for_request(cr, request):
-        return Response(
-            {'detail': 'Solicitud de cambio no encontrada.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    serializer = CreateChangeRequestCommentSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-    is_internal = data.get('is_internal', False) and is_admin
-
-    comment = ChangeRequestComment.objects.create(
-        change_request=cr,
-        user=request.user,
-        content=data['content'],
-        is_internal=is_internal,
-    )
-
-    return Response(
-        ChangeRequestCommentSerializer(comment).data,
-        status=status.HTTP_201_CREATED,
-    )
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return comment_handler(request, project_id, 'change', cr_id)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
 def change_request_convert_view(request, project_id, cr_id):
-    """Convert an approved request to a new draft guide in an explicit editable stage."""
-    from accounts.services.delivery_workflow import mutate_node
-    from rest_framework import serializers as drf_serializers
+    from accounts.views_issue_reports import convert_handler
 
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
-
-    class ConversionSerializer(drf_serializers.Serializer):
-        stage_id = drf_serializers.IntegerField(min_value=1)
-        expected_version = drf_serializers.IntegerField(min_value=0)
-
-    serializer = ConversionSerializer(data=request.data)
-    with transaction.atomic():
-        try:
-            cr = ChangeRequest.objects.select_for_update().get(id=cr_id, project=proj)
-        except ChangeRequest.DoesNotExist:
-            return Response({'detail': 'Solicitud de cambio no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
-        if cr.is_archived or cr.status != ChangeRequest.STATUS_APPROVED:
-            return Response({'detail': 'Solo se pueden convertir solicitudes aprobadas y activas.'}, status=status.HTTP_400_BAD_REQUEST)
-        if cr.linked_requirement_id is not None:
-            return Response({'detail': 'Esta solicitud ya fue convertida en un requerimiento.'}, status=status.HTTP_400_BAD_REQUEST)
-        serializer.is_valid(raise_exception=True)
-        node = mutate_node(proj.pk, request.user, 'requirements', {
-            **serializer.validated_data,
-            'key': f'change-request-{cr.pk}',
-            'title': cr.title,
-            'description': cr.description,
-            'guide': {},
-        })
-        # Authoring a draft never records acceptance of the resulting guide.
-        cr.linked_requirement_id = node['result']['id']
-        cr.save(update_fields=['linked_requirement', 'updated_at'])
-    return Response(ChangeRequestDetailSerializer(cr, context={'request': request}).data, status=status.HTTP_201_CREATED)
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return convert_handler(request, project_id, cr_id)
 
 
 # ==========================================================================
@@ -1706,23 +1480,25 @@ from accounts.serializers import (  # noqa: E402
 )
 
 
-def _bug_report_list_queryset(qs):
+def _bug_report_list_queryset(qs, actor=None):
     """Load the list payload while keeping optional source relations nullable."""
-    from django.db.models import Count
+    from django.db.models import Count, Q
+    from accounts.services.delivery_access import is_admin
 
     return (
-        qs.select_related('reported_by', 'project', 'source_requirement__stage__phase__scope')
+        qs.select_related('reported_by', 'project', 'source_requirement__stage__phase__scope', 'issue_context')
         .only(
             'id', 'project_id', 'reported_by_id', 'source_requirement_id',
             'title', 'description', 'severity', 'status', 'environment', 'device_browser',
             'is_recurring', 'steps_to_reproduce', 'expected_behavior', 'actual_behavior',
             'admin_response', 'linked_bug_id', 'screenshot', 'is_archived', 'archived_at',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'version',
+            'issue_context__id', 'issue_context__snapshot', 'issue_context__publication_id',
             'reported_by__id', 'reported_by__first_name', 'reported_by__last_name',
             'reported_by__email', 'project__id', 'project__name',
             *_SOURCE_REQUIREMENT_LIST_FIELDS,
         )
-        .annotate(_comments_count=Count('comments'))
+        .annotate(_comments_count=Count('comments', filter=Q() if actor and is_admin(actor) else Q(comments__is_internal=False)))
         .order_by('-created_at')
     )
 
@@ -1742,7 +1518,7 @@ def bug_report_all_view(request):
     else:
         qs = BugReport.objects.filter(project__client=request.user)
 
-    qs = _bug_report_list_queryset(qs)
+    qs = _bug_report_list_queryset(qs, request.user)
     qs = filter_bug_reports_for_list(qs, request, is_admin=is_admin)
 
     status_filter = request.query_params.get('status')
@@ -1777,7 +1553,7 @@ def bug_report_list_view(request, project_id):
     is_admin = profile and profile.is_admin
 
     if request.method == 'GET':
-        qs = _bug_report_list_queryset(BugReport.objects.filter(project=proj))
+        qs = _bug_report_list_queryset(BugReport.objects.filter(project=proj), request.user)
         qs = filter_bug_reports_for_list(qs, request, is_admin=is_admin)
         status_filter = request.query_params.get('status')
         if status_filter:
@@ -1791,47 +1567,8 @@ def bug_report_list_view(request, project_id):
         serializer = BugReportListSerializer(qs, many=True, context={'request': request})
         return Response(serializer.data)
 
-    serializer = CreateBugReportSerializer(data=request.data, context={'project': proj, 'request': request})
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    bug = BugReport(
-        project=proj,
-        reported_by=request.user,
-        title=data['title'],
-        description=data.get('description', ''),
-        severity=data.get('severity', BugReport.SEVERITY_MEDIUM),
-        steps_to_reproduce=data.get('steps_to_reproduce', []),
-        expected_behavior=data.get('expected_behavior', ''),
-        actual_behavior=data.get('actual_behavior', ''),
-        environment=data.get('environment', BugReport.ENV_PRODUCTION),
-        device_browser=data.get('device_browser', ''),
-        is_recurring=data.get('is_recurring', False),
-    )
-    bug.source_requirement_id = data['source_requirement_id']
-    if data.get('screenshot'):
-        bug.screenshot = data['screenshot']
-    bug.save()
-
-    if is_admin:
-        notify_project_client(
-            proj, Notification.TYPE_BUG_REPORTED, f'Bug reportado: {bug.title}',
-            message=f'El equipo reportó un bug en {proj.name}.',
-            related_object_type='bug_report', related_object_id=bug.id,
-            exclude_user=request.user,
-        )
-    else:
-        notify_project_admins(
-            proj, Notification.TYPE_BUG_REPORTED, f'Bug reportado: {bug.title}',
-            message=f'{request.user.first_name} reportó un bug en {proj.name}.',
-            related_object_type='bug_report', related_object_id=bug.id,
-            exclude_user=request.user,
-        )
-
-    return Response(
-        BugReportListSerializer(bug, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+    from accounts.views_issue_reports import create_handler
+    return create_handler(request, project_id, 'bug')
 
 
 @api_view(['GET', 'DELETE'])
@@ -1847,20 +1584,21 @@ def bug_report_detail_view(request, project_id, bug_id):
 
     if request.method == 'GET':
         bugs = BugReport.objects.select_related(
-            'reported_by', 'source_requirement__stage__phase__scope',
+            'reported_by', 'source_requirement__stage__phase__scope', 'issue_context',
         ).only(
             'id', 'project_id', 'reported_by_id', 'source_requirement_id',
             'title', 'description', 'severity', 'status', 'environment',
             'device_browser', 'is_recurring', 'steps_to_reproduce',
             'expected_behavior', 'actual_behavior', 'admin_response',
             'linked_bug_id', 'screenshot', 'is_archived', 'archived_at',
-            'created_at', 'updated_at',
+            'created_at', 'updated_at', 'version',
+            'issue_context__id', 'issue_context__snapshot', 'issue_context__publication_id',
             'reported_by__id', 'reported_by__first_name', 'reported_by__last_name',
             'reported_by__email', *_SOURCE_REQUIREMENT_LIST_FIELDS,
         ).prefetch_related(
             Prefetch(
                 'comments',
-                queryset=BugComment.objects.select_related('user'),
+                queryset=BugComment.objects.select_related('user').prefetch_related('issue_attachments'),
                 to_attr='_detail_comments',
             ),
         )
@@ -1886,213 +1624,42 @@ def bug_report_detail_view(request, project_id, bug_id):
             BugReportDetailSerializer(bug, context={'request': request}).data,
         )
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden eliminar reportes de bugs.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    bug.updated_at = timezone.now()
-    archive_record(bug, extra_update_fields=('updated_at',))
-    return Response({'detail': 'Reporte de bug archivado.'})
+    from accounts.views_issue_reports import archive_handler
+    return archive_handler(request, project_id, 'bug', bug_id)
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bug_report_evaluate_view(request, project_id, bug_id):
-    """
-    Admin evaluates a bug report: update status, admin_response, linked_bug.
-    """
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import evaluate_handler
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden evaluar reportes de bugs.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    try:
-        bug = (
-            BugReport.objects
-            .select_related('reported_by', 'source_requirement__stage__phase__scope')
-            .get(id=bug_id, project=proj)
-        )
-    except BugReport.DoesNotExist:
-        return Response(
-            {'detail': 'Bug no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    serializer = EvaluateBugReportSerializer(data=request.data, context={'bug': bug})
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    upd_fields = ['updated_at']
-    for field in ('status', 'admin_response'):
-        if field in data:
-            setattr(bug, field, data[field])
-            upd_fields.append(field)
-    if 'linked_bug_id' in data:
-        bug.linked_bug_id = data['linked_bug_id']
-        upd_fields.append('linked_bug_id')
-    bug.save(update_fields=upd_fields)
-
-    if 'status' in data:
-        status_display = dict(BugReport.STATUS_CHOICES).get(data['status'], data['status'])
-        notify_project_client(
-            proj, Notification.TYPE_BUG_STATUS_CHANGED,
-            f'Bug actualizado: {bug.title}',
-            message=f'Estado cambiado a "{status_display}".',
-            related_object_type='bug_report', related_object_id=bug.id,
-            exclude_user=request.user,
-        )
-
-    return Response(
-        BugReportDetailSerializer(bug, context={'request': request}).data,
-    )
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return evaluate_handler(request, project_id, 'bug', bug_id)
 
 
 @transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bug_report_bulk_evaluate_view(request, project_id):
-    """
-    Admin bulk-evaluates bug reports of a project.
-    Body: array of {id, status?, admin_response?, linked_bug_id?}.
-    Each item is applied independently via EvaluateBugReportSerializer (partial).
-    Items with unknown id or that don't belong to the project are skipped.
-    """
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import bulk_handler
 
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden evaluar reportes de bugs.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    items = request.data
-    if not isinstance(items, list):
-        return Response(
-            {'detail': 'Se espera un array JSON de evaluaciones.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-    if len(items) > 500:
-        return Response(
-            {'detail': 'Máximo 500 evaluaciones por carga.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    project_bugs = {
-        b.id: b for b in BugReport.objects.filter(
-            project=proj, id__in=_bulk_evaluation_ids(items, BugReport),
-        )
-    }
-
-    updated_ids = []
-    errors = []
-    for idx, item in enumerate(items):
-        if not isinstance(item, dict):
-            errors.append({'index': idx, 'detail': 'Item no es un objeto.'})
-            continue
-        bug_id = item.get('id')
-        if bug_id is None:
-            errors.append({'index': idx, 'detail': 'Falta el campo id.'})
-            continue
-        bug = project_bugs.get(bug_id)
-        if bug is None:
-            errors.append({'index': idx, 'id': bug_id, 'detail': 'No encontrado en el proyecto.'})
-            continue
-
-        payload = {
-            k: v for k, v in item.items()
-            if k in ('status', 'admin_response', 'linked_bug_id')
-        }
-        if not payload:
-            continue
-
-        serializer = EvaluateBugReportSerializer(data=payload, context={'bug': bug}, partial=True)
-        if not serializer.is_valid():
-            errors.append({'index': idx, 'id': bug_id, 'detail': serializer.errors})
-            continue
-
-        data = serializer.validated_data
-        upd_fields = ['updated_at']
-        new_status = data.get('status')
-        for field in ('status', 'admin_response'):
-            if field in data:
-                setattr(bug, field, data[field])
-                upd_fields.append(field)
-        if 'linked_bug_id' in data:
-            bug.linked_bug_id = data['linked_bug_id']
-            upd_fields.append('linked_bug_id')
-        bug.save(update_fields=upd_fields)
-        updated_ids.append(bug.id)
-
-        if new_status is not None:
-            status_display = dict(BugReport.STATUS_CHOICES).get(new_status, new_status)
-            notify_project_client(
-                proj, Notification.TYPE_BUG_STATUS_CHANGED,
-                f'Bug actualizado: {bug.title}',
-                message=f'Estado cambiado a "{status_display}".',
-                related_object_type='bug_report', related_object_id=bug.id,
-                exclude_user=request.user,
-            )
-
-    return Response({
-        'updated': len(updated_ids),
-        'updated_ids': updated_ids,
-        'errors': errors,
-    })
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return bulk_handler(request, project_id, 'bug')
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def bug_report_comment_view(request, project_id, bug_id):
-    """Add a comment to a bug report. Both roles can comment."""
-    proj, err = _get_project_or_403(request, project_id)
-    if err:
-        return err
+    from accounts.views_issue_reports import comment_handler
 
-    try:
-        bug = BugReport.objects.get(id=bug_id, project=proj)
-    except BugReport.DoesNotExist:
-        return Response(
-            {'detail': 'Bug no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if not bug_visible_for_request(bug, request):
-        return Response(
-            {'detail': 'Bug no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    serializer = CreateBugCommentSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-    is_internal = data.get('is_internal', False) and is_admin
-
-    comment = BugComment.objects.create(
-        bug_report=bug,
-        user=request.user,
-        content=data['content'],
-        is_internal=is_internal,
-    )
-
-    return Response(
-        BugCommentSerializer(comment).data,
-        status=status.HTTP_201_CREATED,
-    )
+    _, error = _get_project_or_403(request, project_id)
+    if error:
+        return error
+    return comment_handler(request, project_id, 'bug', bug_id)
 
 
 # ==========================================================================

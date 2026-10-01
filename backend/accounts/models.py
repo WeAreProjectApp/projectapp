@@ -1025,6 +1025,7 @@ class ChangeRequest(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_PENDING,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     estimated_cost = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True,
         help_text='Estimated additional cost in project currency.',
@@ -1126,7 +1127,7 @@ class BugReport(models.Model):
         (STATUS_CONFIRMED, 'Confirmado'),
         (STATUS_FIXING, 'En corrección'),
         (STATUS_QA, 'En QA'),
-        (STATUS_RESOLVED, 'Resuelto'),
+        (STATUS_RESOLVED, 'Resuelto por equipo'),
         (STATUS_NOT_REPRODUCIBLE, 'No reproducible'),
         (STATUS_WONT_FIX, 'No se corregirá'),
         (STATUS_DUPLICATE, 'Duplicado'),
@@ -1168,6 +1169,7 @@ class BugReport(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_REPORTED,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     linked_bug = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='duplicates',
@@ -1880,6 +1882,11 @@ class SavedFilterTab(models.Model):
     def __str__(self):
         return f'{self.user_id}/{self.view}/{self.name}'
 
+
+# Ticket domain models; imports keep the public accounts.models surface stable.
+from accounts.models_issue_reports import (  # noqa: E402,F401
+    IssueAttachment, IssueContext, IssueEvent, IssueResponse,
+)
 
 from accounts.models_delivery_email import (  # noqa: E402,F401
     DeliveryEvidenceEmail, DeliveryEvidenceEmailAttempt, DeliveryEvidenceEmailFile,

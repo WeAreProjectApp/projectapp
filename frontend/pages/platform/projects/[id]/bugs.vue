@@ -22,20 +22,12 @@
             width="w-56"
           >
             <template #trigger>
-              <button
-                type="button"
-                :class="[
-                  'flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition',
-                  selectedPhaseId
-                    ? 'border-primary/40 bg-primary/5 text-text-brand dark:border-lemon/30 dark:bg-lemon/5 dark:text-accent'
-                    : 'border-border-default bg-surface text-green-light hover:text-text-default hover:bg-surface-raised',
-                ]"
-              >
+              <BaseButton variant="secondary" size="sm">
                 <span class="max-w-[140px] truncate">{{ selectedPhaseLabel }}</span>
                 <svg class="h-3 w-3 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-              </button>
+              </BaseButton>
             </template>
           </BaseDropdown>
           <template v-if="authStore.isAdmin">
@@ -48,7 +40,7 @@
               Importar respuestas
             </BaseButton>
           </template>
-          <BaseButton variant="accent" size="md" v-else :disabled="!projectRequirements.length" :title="projectRequirements.length ? '' : 'El equipo aún no ha cargado el tablero del proyecto.'" @click="openCreateModal">
+          <BaseButton variant="accent" size="md" v-else @click="openCreateModal">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
             Reportar bug
           </BaseButton>
@@ -57,6 +49,7 @@
 
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
+        <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
@@ -91,14 +84,13 @@
             <tr
               v-for="bug in filteredBugs"
               :key="bug.id"
-              class="cursor-pointer border-t border-border-muted transition hover:bg-primary-soft"
+              class="border-t border-border-muted"
               :class="bug.is_archived ? 'opacity-70' : ''"
-              @click="openDetailModal(bug)"
             >
               <td class="px-4 py-3">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <p class="truncate font-medium text-text-default">{{ bug.title }}</p>
+                    <BaseButton variant="link" size="sm" class="min-w-0 truncate text-left" @click="openDetailModal(bug)">{{ bug.title }}</BaseButton>
                     <span v-if="bug.is_recurring" class="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400">Recurrente</span>
                     <span v-if="bug.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
                     <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -120,7 +112,7 @@
                   <option value="confirmed">Confirmado</option>
                   <option value="fixing">En corrección</option>
                   <option value="qa">En QA</option>
-                  <option value="resolved">Resuelto</option>
+                  <option value="resolved">{{ t('platformIssues.status.resolved') }}</option>
                   <option value="not_reproducible">No reproducible</option>
                   <option value="wont_fix">No se corregirá</option>
                   <option value="duplicate">Duplicado</option>
@@ -149,6 +141,7 @@
 
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
+        <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
         <button
           v-for="bug in filteredBugs"
           :key="bug.id"
@@ -205,23 +198,8 @@
               <h2 class="mb-5 text-lg font-bold text-text-default">Reportar bug</h2>
 
               <form class="space-y-4" @submit.prevent="handleCreate">
-                <div>
-                  <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Requerimiento de origen <span class="text-red-400">*</span></label>
-                  <select
-                    v-model.number="createForm.source_requirement_id"
-                    required
-                    :disabled="!projectRequirements.length"
-                    class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none focus:border-border-default disabled:opacity-50 dark:bg-primary-strong dark:text-white dark:focus:border-lemon/40"
-                  >
-                    <option :value="null" disabled>
-                      {{ projectRequirements.length ? 'Selecciona el requerimiento' : 'El proyecto no tiene requerimientos' }}
-                    </option>
-                    <option v-for="req in projectRequirements" :key="req.id" :value="req.id">
-                      {{ req.stage_title ? req.stage_title + ' — ' : '' }}{{ req.title }}
-                    </option>
-                  </select>
-                  <p class="mt-1 text-[10px] text-green-light/60">¿De qué requerimiento es este bug?</p>
-                </div>
+                <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="bug-source" />
+                <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
                   <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
@@ -311,6 +289,7 @@
                   </div>
                 </div>
 
+                <p v-if="bugStore.error" role="alert" class="text-xs text-danger-strong">{{ bugStore.error }}</p>
                 <div class="flex justify-end gap-3 pt-2">
                   <BaseButton variant="ghost" size="md" @click="isCreateOpen = false">Cancelar</BaseButton>
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!createForm.title.trim() || bugStore.isUpdating">
@@ -417,6 +396,8 @@
                 </NuxtLink>
               </div>
 
+              <IssueHistory :ticket="detailBug" />
+
               <!-- Description -->
               <div v-if="detailBug.description" class="mb-5 rounded-xl border border-border-muted bg-surface-muted/20 p-4 text-sm leading-relaxed text-green-light">
                 {{ detailBug.description }}
@@ -479,6 +460,9 @@
                 <p class="text-sm leading-relaxed text-green-light">{{ detailBug.admin_response }}</p>
               </div>
 
+              <p v-if="detailBug.status === 'resolved'" class="mb-3 text-xs text-text-muted">{{ t('platformIssues.resolvedHint') }}</p>
+              <IssueReopenForm v-if="!authStore.isAdmin && detailBug.status === 'resolved' && !detailBug.is_archived" :ticket="detailBug" :project-id="projectId" @updated="detailBug = $event" />
+
               <!-- Admin actions -->
               <div v-if="authStore.isAdmin" class="mb-5 space-y-3">
                 <div v-if="detailBug.is_archived" class="rounded-xl border border-border-default px-4 py-3 text-xs text-green-light/70">
@@ -495,7 +479,7 @@
                           <option value="confirmed">Confirmado</option>
                           <option value="fixing">En corrección</option>
                           <option value="qa">En QA</option>
-                          <option value="resolved">Resuelto</option>
+                          <option value="resolved">{{ t('platformIssues.status.resolved') }}</option>
                           <option value="not_reproducible">No reproducible</option>
                           <option value="wont_fix">No se corregirá</option>
                           <option value="duplicate">Duplicado</option>
@@ -503,11 +487,14 @@
                       </div>
                       <div>
                         <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Respuesta</label>
-                        <textarea v-model="evalForm.admin_response" rows="2" placeholder="Respuesta para el cliente..." class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
+                        <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
+                      <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" admin id="bug-response-evidence" />
+                      <IssueContractReply v-model="contractReply" :project-id="projectId" kind="bug" :ticket="detailBug" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
+                      <p v-if="bugStore.error" role="alert" class="text-xs text-danger-strong">{{ bugStore.error }}</p>
                       <div class="flex justify-end gap-2">
                         <BaseButton variant="ghost" size="sm" @click="showEvaluateForm = false">Cancelar</BaseButton>
-                        <BaseButton variant="accent" size="sm" :disabled="bugStore.isUpdating" @click="handleEvaluate">
+                        <BaseButton variant="accent" size="sm" :loading="bugStore.isUpdating" :disabled="!!contractReply && !contractReply.human_reviewed" :disabled-reason="t('platformIssues.reply.humanRequired')" @click="handleEvaluate">
                           {{ bugStore.isUpdating ? 'Guardando...' : 'Guardar' }}
                         </BaseButton>
                       </div>
@@ -543,6 +530,7 @@
                       <span class="text-[10px] text-green-light/40">{{ formatDate(comment.created_at) }}</span>
                     </div>
                     <p class="text-sm leading-relaxed text-green-light">{{ comment.content }}</p>
+                    <IssueAttachments :attachments="comment.attachments" />
                     <span v-if="comment.is_internal" class="mt-1 inline-block text-[9px] font-semibold uppercase tracking-wider text-amber-500">Interno</span>
                   </div>
                 </div>
@@ -553,6 +541,8 @@
                     Enviar
                   </BaseButton>
                 </form>
+                <IssueEvidenceFields v-if="!detailBug.is_archived" v-model="commentEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" id="bug-comment-evidence" />
+                <p v-if="bugStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ bugStore.error }}</p>
                 <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)
@@ -574,7 +564,14 @@ import { useIsMobile } from '~/composables/useIsMobile'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformBugReportsStore } from '~/stores/platform-bug-reports'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
-import { usePlatformRequirementsStore } from '~/stores/platform-requirements'
+import { usePlatformIssueReportsStore } from '~/stores/platform-issue-reports'
+import { issueSourcePayload, prefillIssueGuide } from '~/utils/issue-reports'
+import IssueSourcePicker from '~/components/platform/issues/IssueSourcePicker.vue'
+import IssueHistory from '~/components/platform/issues/IssueHistory.vue'
+import IssueAttachments from '~/components/platform/issues/IssueAttachments.vue'
+import IssueEvidenceFields from '~/components/platform/issues/IssueEvidenceFields.vue'
+import IssueContractReply from '~/components/platform/issues/IssueContractReply.vue'
+import IssueReopenForm from '~/components/platform/issues/IssueReopenForm.vue'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
 
@@ -587,7 +584,12 @@ const { t } = useI18n()
 const authStore = usePlatformAuthStore()
 const bugStore = usePlatformBugReportsStore()
 const projectsStore = usePlatformProjectsStore()
-const requirementsStore = usePlatformRequirementsStore()
+const issueStore = usePlatformIssueReportsStore()
+const sourceError = ref('')
+const responseEvidence = ref({ contract_id: null, document_ids: [] })
+const contractReply = ref(null)
+let evaluationRetry = null
+const commentEvidence = ref({ document_ids: [] })
 
 const { isMobile } = useIsMobile()
 
@@ -603,7 +605,7 @@ const statusTabs = computed(() => [
   { value: 'confirmed', label: 'Confirmados', count: bugStore.confirmedCount },
   { value: 'fixing', label: 'En corrección', count: bugStore.fixingCount },
   { value: 'qa', label: 'En QA' },
-  { value: 'resolved', label: 'Resueltos', count: bugStore.resolvedCount },
+  { value: 'resolved', label: t('platformIssues.status.resolved'), count: bugStore.resolvedCount },
   { value: 'not_reproducible', label: 'No reproducible' },
   { value: 'wont_fix', label: 'No se corregirá' },
   { value: 'duplicate', label: 'Duplicado' },
@@ -665,7 +667,7 @@ function statusBadgeClass(s) {
 function statusLabel(s) {
   const map = {
     reported: 'Reportado', confirmed: 'Confirmado', fixing: 'En corrección',
-    qa: 'En QA', resolved: 'Resuelto', not_reproducible: 'No reproducible',
+    qa: 'En QA', resolved: t('platformIssues.status.resolved'), not_reproducible: 'No reproducible',
     wont_fix: 'No se corregirá', duplicate: 'Duplicado',
   }
   return map[s] || s
@@ -692,7 +694,7 @@ function envLabel(env) {
 }
 
 function openCreateModal() {
-  if (!projectRequirements.value.length) return
+  bugStore.error = ''
   createForm.source_requirement_id = null
   createForm.title = ''; createForm.description = ''; createForm.severity = 'medium'
   createForm.environment = 'production'; createForm.device_browser = ''
@@ -726,12 +728,12 @@ function removeScreenshot() {
 }
 
 async function handleCreate() {
-  if (!createForm.title.trim() || !createForm.source_requirement_id) return
+  if (!createForm.title.trim()) return
   const steps = createForm.steps_to_reproduce.filter((s) => s.trim())
   let payload
   if (screenshotFile.value) {
     payload = new FormData()
-    payload.append('source_requirement_id', String(createForm.source_requirement_id))
+    if (createForm.source_requirement_id) payload.append('source_requirement_id', String(createForm.source_requirement_id))
     payload.append('title', createForm.title)
     payload.append('description', createForm.description)
     payload.append('severity', createForm.severity)
@@ -756,6 +758,13 @@ async function handleCreate() {
       actual_behavior: createForm.actual_behavior,
     }
   }
+  const source = issueSourcePayload(projectRequirements.value.find((row) => row.id === createForm.source_requirement_id))
+  if (payload instanceof FormData) {
+    Object.entries(source).forEach(([key, value]) => payload.set(key, String(value)))
+    payload.set('request_id', crypto.randomUUID())
+  } else {
+    Object.assign(payload, source, { request_id: crypto.randomUUID() })
+  }
   const result = await bugStore.createBugReport(projectId.value, payload)
   if (result.success) {
     if (screenshotPreview.value) URL.revokeObjectURL(screenshotPreview.value)
@@ -770,14 +779,20 @@ async function openDetailModal(bug) {
 }
 
 function openEvaluateForm() {
+  contractReply.value = null
+  evaluationRetry = null
   evalForm.status = detailBug.value?.status || 'confirmed'
-  evalForm.admin_response = detailBug.value?.admin_response || ''
+  evalForm.admin_response = ''
+  responseEvidence.value = { contract_id: detailBug.value?.origin_context?.contract_id || null, document_ids: [] }
   showEvaluateForm.value = true
 }
 
 async function handleEvaluate() {
   if (!detailBug.value) return
-  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...evalForm })
+  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailBug.value.version, ...(contractReply.value ? { contract_reply: contractReply.value } : {}) }
+  const fingerprint = JSON.stringify(payload)
+  if (evaluationRetry?.fingerprint !== fingerprint) evaluationRetry = { fingerprint, requestId: crypto.randomUUID() }
+  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...payload, request_id: evaluationRetry.requestId })
   if (result.success) { detailBug.value = result.data; showEvaluateForm.value = false }
 }
 
@@ -790,7 +805,7 @@ async function handleDelete() {
 
 async function onQuickStatus(bug, newStatus) {
   if (!newStatus || newStatus === bug.status) return
-  const result = await bugStore.evaluateBugReport(projectId.value, bug.id, { status: newStatus })
+  const result = await bugStore.evaluateBugReport(projectId.value, bug.id, { status: newStatus, expected_version: bug.version, request_id: crypto.randomUUID() })
   if (!result.success) {
     window.alert(result.message || 'No pudimos actualizar el estado.')
   }
@@ -872,15 +887,26 @@ async function loadBugsAndDeliverables() {
 }
 
 async function loadProjectRequirements() {
-  const r = await requirementsStore.fetchProjectRequirements(projectId.value)
-  projectRequirements.value = r.success ? (r.data || []) : []
+  const r = await issueStore.contextOptions(projectId.value, {
+    ...(route.query.from_pub ? { source_publication_id: Number(route.query.from_pub), source_requirement_id: Number(route.query.from_req) } : {}),
+  })
+  projectRequirements.value = r.success ? (r.data.requirements || []) : []
+  sourceError.value = r.success ? '' : r.message
 }
 
 async function handleAddComment() {
   if (!newComment.value.trim() || !detailBug.value) return
-  const result = await bugStore.addComment(projectId.value, detailBug.value.id, newComment.value.trim(), commentInternal.value)
-  if (result.success) { newComment.value = ''; commentInternal.value = false }
+  const result = await bugStore.addComment(projectId.value, detailBug.value.id, newComment.value.trim(), commentInternal.value, { document_ids: commentEvidence.value.document_ids, expected_version: detailBug.value.version, request_id: crypto.randomUUID() })
+  if (result.success) {
+    newComment.value = ''; commentInternal.value = false; commentEvidence.value = { document_ids: [] }
+    const updated = await bugStore.fetchBugReport(projectId.value, detailBug.value.id)
+    if (updated.success) detailBug.value = updated.data
+  }
 }
+
+watch(() => createForm.source_requirement_id, (id) => {
+  prefillIssueGuide(createForm, projectRequirements.value.find((row) => row.id === id))
+})
 
 onMounted(async () => {
   await Promise.all([
