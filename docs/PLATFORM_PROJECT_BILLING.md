@@ -40,7 +40,13 @@ contexto. P0 fijó `0069_p2_project_billing_context`, con padre
 `0067_explicit_delivery_authoring_context` y dependencia content `0273`. P0
 coordina las hojas paralelas y sus merges sin operaciones. No se han aplicado
 migraciones a una base de servicio. La dependencia P3 absorbida por merge es
-`dea940345fc37c361f8749d30e1a96ac2bba73ee` (PR #460); no se considera su entrega final verde.
+`4c6e132281554de14a2b303fe7a3b05f012910bf` (PR #460), después de
+`dea940345fc37c361f8749d30e1a96ac2bba73ee`. P1 publicado
+`b25ad2e080597b7708126b5d865d7ba805253478` (PR #464) se absorbió mediante merge.
+La no-op P2 `0072_p2_issues_billing_bridge` depende de `0068_issue_reports` y
+`0069_p2_project_billing_context`. La futura `0074_p2_platform_billing_merge`
+dependerá de `0072` y de la hoja `0073` de P1 cuando ambos padres estén publicados;
+no se genera antes. P3 todavía no se considera entrega final verde.
 
 ## Conciliación y emisión
 
@@ -98,8 +104,9 @@ este dominio. Los escritores financieros existentes reciben puentes mínimos.
 | Catálogos de vistas, responsive y shards de flows | Datos del dominio y sus docs derivadas; regenerar agregados tras integrar. |
 | Seeds y clasificación fake data | Contextos explícitos de fixtures, reset ordenado y guard de entorno; no ejecutar contra servicio. |
 | Memoria y runbook MCP | Secciones P2; no reemplazar textos de los otros frentes. |
-| `project_service.change_client_apply` | Lock del proyecto → guard financiero P2 → revocación P4 → dueño/cascada. La lógica P4 se conserva al absorber su commit publicado. |
-| `ProjectAdmin` | Formulario y guard transaccional para impedir saltar el mismo límite desde Django Admin. |
+| `project_service.change_client_apply` | Lock del proyecto → finanzas P2 → delivery P3 → tickets P1 → revocación P4 → dueño/cascada. Las tres guardas están compuestas; la lógica P4 se conserva al absorber su commit publicado. |
+| `ProjectAdmin` y `forms_billing` | Formulario y recheck bajo lock, con proyecto original y actor del request; componen finanzas → delivery → tickets y muestran errores DRF con rollback. P4 integra revocación después de estas guardas. |
+| `accounts/migrations/0072_p2_issues_billing_bridge` | No-op autorizada por P0 que reúne las hojas `0068` de P1 y `0069` de P2; no altera migraciones anteriores. |
 | `delivery_workflow._validate_relations` | Excepción directa acotada: rechazar reparentar un otrosí con cuentas mediante helper P2. P3 mantiene el resto del núcleo. |
 
 `ProjectContract.project` continúa inmutable en REST/MCP. Un otrosí sin cobros
@@ -139,6 +146,18 @@ Los journeys de navegador usan APIs simuladas y nunca cobran ni contactan a
 clientes. Los resultados concretos y CI se registran en el PR.
 SQLite valida estados y rollback; no certifica exclusión real ni ausencia de
 carreras en MySQL. No se inició un harness MySQL.
+El servidor local de navegador usa APIs simuladas contra un backend inexistente.
+La fixture pytest dedicada configura `MAILERS.default` y todos los aliases con
+locmem, comprueba el backend efectivo y exige ese guard antes de preparar su DB.
+No depende del antiguo `EMAIL_BACKEND` para impedir envíos reales.
+
+El cierre local de los puentes incluye 8 casos de Admin con errores visibles y
+rollback, 20 cruces delivery/Admin, 17 casos de correo/liquidación/MCP y 17
+regresiones contables. Los 8 journeys de hosting existentes también pasaron con
+la navegación por proyecto. El build Nuxt pasó; el gate estricto focal registra
+19 archivos sin errores ni advertencias. El mapa tiene las 8 rutas de billing y
+hosting cubiertas, sin brechas de resultados. Son verificaciones locales: no
+sustituyen el CI del head que finalmente se publique.
 
 Pendientes de integración: P0 coordina P3 final, el merge de hojas y el orden
 de PRs. La revocación de accesos P4 se absorbe por commit publicado; no se copia

@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-09-01 — app_reachable=no)
 /**
  * E2E tests for platform hosting subscription flow.
  *
@@ -264,6 +263,9 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
         return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...mockProject, has_subscription: true }) };
       }
       if (apiPath === 'accounts/projects/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
+      }
+      if (apiPath === 'accounts/hosting/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
       }
       if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') {

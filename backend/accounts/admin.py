@@ -32,13 +32,15 @@ class ProjectAdmin(admin.ModelAdmin):
     def get_form(self, request, obj=None, **kwargs):
         form_class = super().get_form(request, obj, **kwargs)
         conflict = getattr(request, '_billing_project_conflict', None)
-        if not conflict:
-            return form_class
         from django import forms
-        class RejectedBillingForm(form_class):
+        class RequestBillingForm(form_class):
+            billing_actor = request.user
+
             def clean_client(self):
-                raise forms.ValidationError(conflict)
-        return RejectedBillingForm
+                if conflict:
+                    raise forms.ValidationError(conflict)
+                return super().clean_client()
+        return RequestBillingForm
 
     def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
         from .forms_billing import BillingProjectAdminConflict
@@ -53,13 +55,15 @@ class ProjectAdmin(admin.ModelAdmin):
     @transaction.atomic
     def save_model(self, request, obj, form, change):
         if change:
-            from rest_framework.exceptions import ValidationError
-            from .forms_billing import BillingProjectAdminConflict, billing_validation_message
-            from .services.billing_reassignment import validate_project_billing_reassignment
+            from rest_framework.exceptions import APIException
+            from .forms_billing import (
+                BillingProjectAdminConflict, billing_validation_message,
+                validate_project_admin_client_transfer,
+            )
             original = Project.objects.select_for_update().get(pk=obj.pk)
             try:
-                validate_project_billing_reassignment(original, obj.client)
-            except ValidationError as exc:
+                validate_project_admin_client_transfer(original, obj.client, actor=request.user)
+            except APIException as exc:
                 raise BillingProjectAdminConflict(billing_validation_message(exc)) from exc
         super().save_model(request, obj, form, change)
 

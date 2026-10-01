@@ -2340,8 +2340,16 @@ sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
 En implementación en rama propia `feat/01102026-platform-client-billing`, desde
 `origin/main=cce8e694`, con dependencia P3 inicial `abcffaf9` y actualización
 publicada `dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbidas mediante merge.
+Se absorbieron también P3 `4c6e132281554de14a2b303fe7a3b05f012910bf` y P1
+`b25ad2e080597b7708126b5d865d7ba805253478`; Admin compone sus guardas después
+de finanzas usando proyecto original/actual y actor del request, con error visible
+y rollback. Los escritores reservados de cobros y las dos entradas de liquidación
+toman Project antes de origen/documento y revalidan dueño/relaciones vigentes.
 P0 fijó migración P2 `0069_p2_project_billing_context`, padre P3 `0067`; las
 hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por proyecto, cuentas excluyentes
 contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
 No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
 contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.
+La no-op autorizada `0072` reúne las hojas `0068`/`0069`. `0074` espera los padres
+publicados `0072`/`0073`; P4 conserva su reserva de revocación después de guardas.
+SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.

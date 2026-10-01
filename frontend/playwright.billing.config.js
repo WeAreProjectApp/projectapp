@@ -15,6 +15,7 @@ export default defineConfig({
   },
   testMatch: [
     '**/platform/platform-collection-accounts.spec.js',
+    '**/platform/platform-hosting-subscription.spec.js',
     '**/admin/admin-project-billing-context.spec.js',
     '**/admin/admin-accounting-collections.spec.js',
     '**/admin/admin-accounting-hosting-billing-cycles.spec.js',

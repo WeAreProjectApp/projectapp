@@ -102,12 +102,14 @@ def test_admin_project_form_rejects_a_financial_owner_change(project, account, n
     assert project.client_id == account.client_user_id
 
 
-def test_admin_save_cannot_bypass_financial_owner_validation(project, account, new_client):
+def test_admin_save_cannot_bypass_financial_owner_validation(project, account, new_client, admin_user):
     project.client = new_client
     administrator = ProjectAdmin(Project, admin_site)
+    request = RequestFactory().post('/admin/')
+    request.user = admin_user
 
     with pytest.raises(BillingProjectAdminConflict, match='historia financiera'):
-        administrator.save_model(RequestFactory().post('/admin/'), project, None, change=True)
+        administrator.save_model(request, project, None, change=True)
 
     project.refresh_from_db()
     assert project.client_id == account.client_user_id
