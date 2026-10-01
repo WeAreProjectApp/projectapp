@@ -21,7 +21,7 @@ from accounts.models import (
     ProjectContract, ProjectPhase, Requirement, RequirementReview, UserProfile,
 )
 from accounts.serializers_delivery import (
-    GuideSerializer, LinkSerializer, MessageSerializer, NODE_SERIALIZERS,
+    GuideSerializer, LinkSerializer, MessageSerializer, NODE_SERIALIZERS, guide_publication_fields,
     PublishSerializer, ReviewSerializer, SignatureSerializer, VersionedSerializer,
 )
 from accounts.services.delivery_access import (
@@ -334,9 +334,9 @@ def _requirement_payload(req):
 
 def _validate_guide(req):
     guide = _validate(GuideSerializer, req.guide)
-    labels = {'environment': 'el ambiente de prueba',
-              'steps': 'los pasos', 'expected_result': 'el resultado esperado',
-              'failure_signals': 'cómo reconocer un fallo'}
+    labels = guide_publication_fields(
+        guide, sourced=bool(req.context_id), approved=req.review_status == 'approved',
+    )
     for field, label in labels.items():
         if not guide.get(field):
             fail(f'Completa {label} en «{req.title}» antes de publicar.', 'guide_incomplete')

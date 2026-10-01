@@ -60,6 +60,12 @@ def guides_schema():
     requirements = schema['properties']['scopes']['items']['properties']['phases']['items']['properties']['stages']['items']['properties']['requirements']['items']
     requirements['properties']['source_references'] = {'type': 'array', 'minItems': 1, 'maxItems': 100, 'items': CITATION_SCHEMA}
     requirements['required'].append('source_references')
+    from accounts.serializers_delivery import ROLE_GUIDE_PUBLICATION_FIELDS
+    requirements['properties']['guide']['description'] = (
+        'Los borradores pueden importarse incompletos. Antes de publicar una guía nueva con rol, '
+        'completa ' + ', '.join(ROLE_GUIDE_PUBLICATION_FIELDS) + '. '
+        'No se añaden condiciones a versiones ya aprobadas ni a guías sin roles.'
+    )
     return schema
 
 
@@ -412,6 +418,8 @@ def _build_prompt(context, sources, instructions):
             'cada requerimiento debe tener una identidad única y no duplicarse para agrupar por rol. '
             'No inventes perfiles, permisos, pantallas ni restricciones; pide aclaración si las fuentes no los determinan. '
             'Si no existen roles acreditados, omite role y la separación por roles; no agregues texto de perfiles supuesto. '
+            'Los borradores incompletos pueden importarse; una guía nueva con rol no se puede publicar sin acceso, '
+            'acciones permitidas y bloqueadas, pasos y resultado del caso bloqueado. '
             'No reformules ni alteres guías que ya fueron aprobadas.') if context.mode == 'guides' else (
         'Prepara una respuesta borrador a las observaciones del destino capturado. Clasifica cada solicitud como '
         'inside_scope, outside_scope o indeterminate. Que una función no figure en la guía no prueba que esté fuera del contrato. '

@@ -12,6 +12,29 @@ class StrictSerializer(serializers.Serializer):
         return super().to_internal_value(data)
 
 
+GUIDE_PUBLICATION_FIELDS = {
+    'environment': 'el ambiente de prueba',
+    'steps': 'los pasos',
+    'expected_result': 'el resultado esperado',
+    'failure_signals': 'cómo reconocer un fallo',
+}
+ROLE_GUIDE_PUBLICATION_FIELDS = {
+    'access': 'el acceso previo del rol',
+    'allowed_actions': 'qué puede ver y hacer el rol',
+    'blocked_actions': 'qué no puede ver o hacer el rol',
+    'blocked_steps': 'los pasos para comprobar un caso bloqueado',
+    'blocked_result': 'el resultado esperado del caso bloqueado',
+}
+
+
+def guide_publication_fields(guide, *, sourced, approved):
+    """Keep drafts permissive while preserving already approved guide versions."""
+    fields = dict(GUIDE_PUBLICATION_FIELDS)
+    if sourced and guide.get('role') and not approved:
+        fields.update(ROLE_GUIDE_PUBLICATION_FIELDS)
+    return fields
+
+
 class GuideSerializer(StrictSerializer):
     role = serializers.CharField(required=False, allow_blank=True, max_length=300)
     access = serializers.CharField(required=False, allow_blank=True, max_length=20000)
