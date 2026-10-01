@@ -73,7 +73,7 @@
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
-Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-calculator-followup-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`, `proposal-calculator-abandonment-tracking`.
+Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`.
 
 ---
 
@@ -1753,37 +1753,6 @@ No active browser flow is registered for client profile editing at this time.
   4. Proposal is rejected successfully and the UI moves to the rejection confirmation state.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-rejection-optional.spec.js`
-
-#### FLOW: `proposal-calculator-timeline`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Investment calculator changes the estimated delivery timeline dynamically as optional modules are toggled on or off.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Baseline weeks are visible before any changes.
-  3. Client selects or removes priced modules.
-  4. Estimated timeline updates immediately to reflect the module mix.
-  5. Confirming the selection preserves the new timeline in the closing state.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-timeline.spec.js`
-
-#### FLOW: `proposal-calculator-micro-feedback`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** Calculator toggles show transient micro-feedback badges such as positive or negative price deltas when the client adds or removes priced modules.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Client toggles a module with a price impact.
-  3. A transient feedback badge appears near the interaction showing the delta.
-  4. Badge fades away while totals remain updated.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-micro-feedback.spec.js`
 
 #### FLOW: `proposal-payment-plan-closing`
 
@@ -3478,9 +3447,9 @@ Two transitions that were previously bundled into other flows now have their own
 - **Role:** guest (via shared UUID link)
 - **Priority:** P3
 - **Routes:** `/proposal/:uuid`
-- **Description:** First-visit tutorial overlay (ProposalOnboarding component) that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
+- **Description:** Inner-view tutorial overlay (ProposalOnboarding component), independent of the gateway guide, that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
 - **Steps:**
-  1. User opens the proposal for the first time.
+  1. User chooses detailed or executive view from the gateway.
   2. ProposalOnboarding overlay appears with first tooltip step.
   3. User clicks through each onboarding step.
   4. Onboarding completes and emits `@complete` event.
@@ -3499,9 +3468,9 @@ Two transitions that were previously bundled into other flows now have their own
 - **Routes:** `/proposal/:uuid`
 - **Description:** Per-section spotlight onboarding tutorials that trigger automatically the first time a client navigates to specific sections. Each section has its own component with a spotlight overlay (blur backdrop + cloned element), progress dots, and positioned tooltip card. Tutorials are skipped for returning visitors (localStorage flag per proposal UUID).
 - **Steps:**
-  1. Client navigates to the Investment section for the first time (detailed view, with calculator modules).
+  1. Client navigates to the Investment section for the first time (detailed view).
   2. InvestmentOnboarding component triggers after 800ms delay.
-  3. Spotlight highlights the "Personalizar tu inversión" button with a tooltip explaining the calculator.
+  3. Spotlight highlights the "Explorar módulos adicionales" button with a tooltip explaining the catalog and saving commercial interests.
   4. Client clicks through onboarding steps → completes → localStorage flag set.
   5. [Separate trigger] Client navigates to functional_requirements section.
   6. RequirementsOnboarding component triggers after 800ms delay.
@@ -3509,7 +3478,7 @@ Two transitions that were previously bundled into other flows now have their own
   8. [Separate trigger] Client in executive view navigates to investment section.
   9. ExecutiveInvestmentOnboarding triggers, highlighting the "Ver detalle" teaser button.
 - **Branches:**
-  - [Branch A — Detailed Investment] InvestmentOnboarding triggers only in detailed view when calculator modules exist.
+  - [Branch A — Detailed Investment] InvestmentOnboarding triggers only in detailed view for a public proposal.
   - [Branch B — Executive Investment] ExecutiveInvestmentOnboarding triggers only in executive view.
   - [Branch C — Requirements] RequirementsOnboarding triggers in both view modes.
   - [Branch D — Returning visitor] Each tutorial is skipped if already completed (per-UUID localStorage flag).
@@ -3672,6 +3641,47 @@ Two transitions that were previously bundled into other flows now have their own
 - **Outcomes:** display (sección opcional y título localizado tras navegación), success (reproducción dentro de ambas vistas), failure (error de carga con Reintentar). Error de validación no aplica: no hay formulario; enlaces desconocidos/expirados pertenecen a sus flujos existentes.
 - **Evidencia:** `pages/proposal/[uuid]/index.vue` y `components/BusinessProposal/PersonalizedVideo.vue`.
 - **E2E Spec:** `e2e/public/proposal-personalized-video.spec.js`.
+
+### FLOW: `proposal-gateway-guide`
+
+- **Module:** proposal
+- **Role:** guest (via shared UUID link)
+- **Priority:** P2
+- **Routes:** `/proposal/:uuid`
+- **Description:** La portada con video y tarjetas ofrece una guía inicial y dos accesos inferiores derechos a Módulos adicionales y Programa de alianza. Los accesos abren las vistas públicas existentes en pestañas nuevas y conservan el idioma de la propuesta.
+- **Steps:**
+  1. Abrir la propuesta en su portada.
+  2. Seguir u omitir la guía del video disponible, las tarjetas y los dos accesos.
+  3. Abrir cada recurso sin abandonar la pestaña de la propuesta.
+  4. Elegir una tarjeta; los accesos y la guía de portada desaparecen.
+  5. Volver a la portada y reiniciar la guía con su botón de ayuda.
+- **Branches:**
+  - Sin video, el recorrido omite ese paso.
+  - La guía no se abre automáticamente si ya fue vista; puede reiniciarse.
+  - Las vistas ejecutiva, detallada, técnica y legal mantienen sus acciones propias.
+- **E2E Spec:** `e2e/proposal/proposal-welcome-explainer.spec.js`
+- **Components:** `ProposalViewGateway.vue`, `GatewayGuide.vue`, `PublicGuidedTour.vue`
+
+### FLOW: `proposal-module-interests`
+
+- **Module:** proposal
+- **Role:** guest (via shared UUID link)
+- **Priority:** P1
+- **Routes:** `/proposal/:uuid`
+- **Description:** Desde Inversión, el cliente explora el catálogo vigente por categorías y registra módulos que le interesan conversar. El modal no muestra precios; guardar intereses no cambia el alcance contratado, el importe, los plazos ni el PDF.
+- **Steps:**
+  1. Elegir la vista detallada y abrir Inversión.
+  2. Pulsar «Explorar módulos adicionales»; se carga el catálogo y la selección guardada.
+  3. Ver el video disponible y desplegar categorías y detalles de módulos.
+  4. Marcar módulos y guardar; aparece una confirmación y la selección persiste al reabrir.
+- **Branches:**
+  - Si falla la carga, aparece Reintentar.
+  - Si falla el guardado, los cambios pendientes siguen visibles para reintentar.
+  - El catálogo vacío se informa sin precios ni una selección ficticia.
+  - Los intereses anteriores desactivados se conservan y pueden retirarse.
+  - La vista previa informa que no registra intereses.
+- **E2E Spec:** `e2e/proposal/proposal-module-interests.spec.js`
+- **Components:** `Investment.vue`, `ModuleInterestsModal.vue`, `AdditionalModules/ModuleDetails.vue`
 
 
 ## 6. Admin Flows
@@ -4943,43 +4953,6 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered — `frontend/e2e/proposal/proposal-value-added-modules.spec.js` (card grid, condition badges, and terms modal)
 - **Known gaps:** The terms modal now renders `**bold**` via `renderInlineBold` (2026-07) but the spec's mock terms carry no `**` markers, so bold output is unasserted. The canonical card order (admin → manual → kpi_dashboard → analytics → ai_automation, 2026-07) is not asserted either.
 
-### FLOW: `proposal-calculator-modules`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Calculator modal displays core calculator modules in order: PWA (40%), AI (invite-only), Conversiones Inteligentes (invite-only), Facturación Electrónica (60%), Pasarela Internacional (20%), Pasarela Regional (20%), Email Marketing (10%), Reportes y Alertas (20%, selected by default), Multi-idioma (15%). An informational badge at the **top** of the modal explains items are optional. Selecting a calculator module **adds** ~1 week to the timeline.
-- **Steps:**
-  1. Client navigates to the Investment section and clicks "Personalizar tu inversión".
-  2. Calculator modal opens with informational badge at the top.
-  3. Modules appear in the specified order: PWA, AI, Smart Conversions, Electronic Invoicing, International Payments, Regional Payments, Email Marketing, Reports & Alerts, Multi-idioma.
-  4. PWA module appears unselected by default, with price as +40% of total.
-  5. AI module appears with "Agendar llamada" label instead of price and a purple creative invite note.
-  6. Reports & Alerts module appears selected by default with price as +20% of total.
-  7. Selecting a module adds ~1 week to estimated timeline; deselecting an investment module reduces ~1 week.
-  8. Client confirms selection → modal closes, total updates on Investment section.
-- **Branches:**
-  - [Branch A — AI invite] Client selects AI module → invite note visible, no cost added.
-  - [Branch B — FR integration] Selected calculator modules appear in Functional Requirements section.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-modules.spec.js`
-
-### FLOW: `proposal-calculator-selected-first`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** When the calculator modal opens, groups containing pre-selected (`default_selected`) modules are sorted to the top so the client sees included modules first without scrolling.
-- **Steps:**
-  1. Client opens the proposal and navigates to the Investment section.
-  2. Client clicks "Personalizar tu inversión".
-  3. Calculator modal opens with selected module groups sorted to the top.
-  4. Unselected module groups appear below.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-modules.spec.js`
-
 ### FLOW: `proposal-expired-graceful`
 
 - **Module:** proposal
@@ -5019,44 +4992,6 @@ Two transitions that were previously bundled into other flows now have their own
   - [Branch B — Network error] Submit fails; UI surfaces a retry message.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-magic-link-request.spec.js`
-
-### FLOW: `proposal-calculator-abandonment-tracking`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link) / system
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The calculator modal tracks whether the client confirms or abandons their module selection. On close without confirming, an `abandoned` event is sent. On confirm, a `confirmed` event is sent. Both are stored as `ProposalChangeLog` entries and aggregated in the admin dashboard as `calc_abandonment_rate` and `dropped_modules`.
-- **Steps:**
-  1. Client opens the calculator modal in the Investment section.
-  2. Client toggles modules (selects/deselects).
-  3. [Branch A — Confirm] Client clicks "Confirmar selección" → `confirmed` event sent via `POST /api/proposals/:uuid/track-calculator/`.
-  4. [Branch B — Abandon] Client closes modal without confirming → `abandoned` event sent automatically.
-  5. Backend creates `ProposalChangeLog` with `calc_confirmed` or `calc_abandoned` change type.
-  6. Dashboard aggregates data: `calc_abandonment_rate` = abandoned / (abandoned + confirmed), `dropped_modules` = most frequently deselected modules.
-- **Coverage:** ⚠️ Backend-only
-- **Backend Tests:** `content/tests/views/test_proposal_views.py`
-
-### FLOW: `proposal-investment-calculator`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **API:** (client-side only — no API call for toggling)
-- **Description:** Client reviews readable payment rows in the Investment section, opens the calculator modal, toggles optional feature modules on/off, sees dynamic total investment and estimated timeline update in real time, and confirms or cancels the selection.
-- **Outcomes:**
-  - `display` — at laptop width, every payment keeps amount, currency, and `+ IVA` together on one line.
-  - `success` — the client opens the calculator, changes optional modules, and confirms the resulting selection.
-- **Steps:**
-  1. Client views the proposal and navigates to the Investment section.
-  2. The payment list leaves room for its labels and keeps each complete tax-qualified amount together.
-  3. Client clicks "Personalizar tu inversión" to open the calculator modal.
-  4. Client toggles optional feature modules — total investment and timeline update dynamically.
-  5. Client clicks "Confirmar selección" → modal closes; closing section reflects updated total.
-  6. [Branch B — Abandon] Client closes modal without confirming → selection reverts.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-investment-calculator.spec.js`
 
 ### FLOW: `proposal-comment-from-closing`
 
@@ -5287,75 +5222,6 @@ Two transitions that were previously bundled into other flows now have their own
   5. Activity timeline refreshes with the new entry.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-log-activity.spec.js`
-
-### FLOW: `proposal-calculator-new-modules`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator displays additional default modules: Email Marketing (10%), i18n (15%), and Gift Cards (20%). KPI Dashboard has been removed from the calculator and is now included by default (like Analytics). Conversion Tracking moved to integrations (see `proposal-calculator-integrations`).
-- **Steps:**
-  1. Client opens the calculator modal.
-  2. Email Marketing module appears unselected with price as +10% of total.
-  3. i18n module appears unselected with price as +15% of total.
-  4. Gift Cards module appears unselected with price as +20% of total.
-  5. Client toggles modules → total investment and timeline update in real-time.
-  6. KPI Dashboard is NOT shown in the modal (included by default like Analytics module).
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-new-modules.spec.js`
-
-### FLOW: `proposal-calculator-biometric-module`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator exposes `biometric_verification_module` as a provider-billed integration: ID document reading + OCR, facial recognition, liveness detection, antifraud + KYC, frictionless digital onboarding, and a verifications panel. Because the integration provider invoices the end client directly, the module follows the `is_invite=True, price_percent=0` pattern (same as `ai_module` and `integration_conversion_tracking`). Two sibling modules — `qr_generator_module` (25%) and `content_generator_module` (30%, with editorial calendar + scheduling) — are added to the catalog at the same time but are regular non-invite calculator modules; their structural behavior is already covered by `proposal-calculator-modules` and `proposal-calculator-new-modules`.
-- **Steps:**
-  1. Client opens the calculator modal on a proposal that includes `biometric_verification_module`.
-  2. Module row renders with the bilingual title "🪪 Verificación y Validación Biométrica (Integración API)".
-  3. Module shows "Agendar llamada" badge instead of a price (because `is_invite=True, price_percent=0`).
-  4. Client clicks the module row → `invite_note` is revealed ("Te invitamos a una llamada... un proveedor especializado factura el servicio directamente al cliente final").
-  5. Selecting the module does NOT alter the total investment (provider-billed; verified at the unit level by `computeWeeksAddition — does not count invite modules`).
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-biometric-module.spec.js`
-
-### FLOW: `proposal-calculator-behavior-tracking-module`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator exposes `behavior_tracking_module` as a priced add-on (30% of the base investment, `default_selected: False`): first-party user behavior tracking installed in the client's own product — session/open registry, views opened + time per view (up to 15 tracked views), interest map, journey funnel with drop-off (1 main funnel), built-in behavior panel (up to 8 KPIs / 4 charts), device breakdown, and 12-month data retention with explicit exclusions (no screen recording, click heatmaps or cross-site tracking). It is the same capability the platform uses in its own proposal analytics tab, productized for clients.
-- **Steps:**
-  1. Client opens the calculator modal on a proposal that includes `behavior_tracking_module`.
-  2. Module row renders under the bilingual label "👣 Rastreo de Comportamiento" with `+30%` pricing over the base total (e.g. base $4.000.000 COP → +$1.200.000).
-  3. Client expands the module → 7 scope-closed items are listed.
-  4. Selecting the module raises the effective total by base×30% and rescales payment options.
-  5. In technical mode, an epic with `linked_module_ids: ["module-behavior_tracking_module"]` is hidden while the module is deselected and shown once selected (same gating as other additional modules).
-- **Coverage:** ⚠️ Pending (registered, E2E spec not yet implemented; catalog data verified by `backend/content/tests/services/test_proposal_service.py` and migration tests, calculator mechanics structurally covered by `proposal-calculator-modules` / `proposal-investment-calculator`)
-- **E2E Spec:** _suggested:_ `e2e/proposal/proposal-calculator-behavior-tracking-module.spec.js`
-
-### FLOW: `proposal-calculator-integrations`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator displays integration groups as individually toggleable calculator modules: International Payments (20%), Regional Payments Colombia (20%), Electronic Invoicing / DIAN (60%), and Conversion Tracking Meta & Google Ads (invite-only, 0%). Each was previously grouped under a single `integrations_api` group and now has its own pricing, selection state, and invite attributes.
-- **Steps:**
-  1. Client opens the calculator modal.
-  2. International Payments integration appears unselected with price as +20% of total.
-  3. Regional Payments (Colombia) integration appears unselected with price as +20% of total.
-  4. Electronic Invoicing integration appears unselected with price as +60% of total.
-  5. Conversion Tracking integration appears with "Agendar llamada" invite-only label and invite note.
-  6. Client selects International Payments → total investment increases by 20%.
-  7. Client selects Electronic Invoicing → total investment increases by 60%.
-- **Branches:**
-  - [Branch A — Conversion Tracking invite] Client sees invite note, no cost added.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-integrations.spec.js`
 
 ### FLOW: `admin-blog-list`
 
@@ -6136,6 +6002,24 @@ Two transitions that were previously bundled into other flows now have their own
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidencia:** `ProposalGeneralTab.vue`, `ProposalExplainerToggle.vue`, `pages/panel/proposals/[id]/edit.vue`.
 
+### FLOW: `admin-proposal-module-interests`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Routes:** `/panel/proposals/:id/edit`
+- **Description:** El vendedor consulta los intereses del cliente como información comercial. Su posterior acuerdo se incorpora manualmente al alcance y a la inversión.
+- **Steps:**
+  1. Abrir la propuesta en el panel y consultar General.
+  2. Leer la lista de módulos de interés y la fecha de su última actualización.
+  3. Abrir Actividad y consultar el registro automático de la selección o su retiro.
+- **Branches:**
+  - Sin selecciones previas no se muestra una fecha inventada.
+  - El retiro de todos los intereses queda registrado con fecha y actividad.
+  - Los nombres registrados se conservan aunque se edite o desactive el catálogo.
+- **E2E Spec:** `e2e/admin/admin-proposal-module-interests.spec.js`
+- **Components:** `ProposalGeneralTab.vue`, `ProposalActivityTab.vue`
+
 
 ## 7. E2E Coverage Index
 
@@ -6197,7 +6081,6 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-blog-list` | admin | P2 | display | 1 |
 | `admin-blog-overdue-detection` | admin | P2 | — | 0 |
 | `admin-blog-publish-mode` | admin | P2 | display,success | 1 |
-| `admin-calculator-followup-alert` | admin | P2 | — | 0 |
 | `admin-client-archived-tab` | admin | P2 | display,success,failure | 1 |
 | `admin-client-change-history` | admin | P2 | display,success,failure | — |
 | `admin-client-communications` | admin | P1 | display,success,error,failure | 15 |
@@ -6384,6 +6267,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-log-activity` | admin | P2 | success,failure,display | 1 |
 | `admin-proposal-manual-alerts` | admin | P2 | success | 1 |
 | `admin-proposal-metrics-manual` | admin | P3 | display | 1 |
+| `admin-proposal-module-interests` | admin | P2 | display | 1 |
 | `admin-proposal-multi-send` | admin | P1 | success,error,failure | 1 |
 | `admin-proposal-platform-handoff` | admin | P1 | success,failure | 1 |
 | `admin-proposal-post-rejection-revisit` | admin | P2 | — | 0 |
@@ -6477,16 +6361,6 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
 | `platform-unified-board` | platform | P2 | — | 0 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
-| `proposal-calculator-abandonment-tracking` | proposal | P2 | — | 0 |
-| `proposal-calculator-behavior-tracking-module` | proposal | P2 | success | 0 |
-| `proposal-calculator-biometric-module` | proposal | P2 | display | 1 |
-| `proposal-calculator-integrations` | proposal | P2 | success | 1 |
-| `proposal-calculator-micro-feedback` | proposal | P2 | display | 1 |
-| `proposal-calculator-modules` | proposal | P1 | success | 1 |
-| `proposal-calculator-new-modules` | proposal | P2 | success | 1 |
-| `proposal-calculator-reopen-after-nav` | proposal | P1 | success | 1 |
-| `proposal-calculator-selected-first` | proposal | P2 | display | 1 |
-| `proposal-calculator-timeline` | proposal | P1 | success | 1 |
 | `proposal-closing-contact` | proposal | P2 | display | 1 |
 | `proposal-comment-from-closing` | proposal | P2 | success | 1 |
 | `proposal-conditional-acceptance` | proposal | P2 | success | 1 |
@@ -6499,10 +6373,11 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
 | `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
-| `proposal-investment-calculator` | proposal | P1 | success,display | 1 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
 | `proposal-magic-link-request` | proposal | P1 | success | 1 |
+| `proposal-module-interests` | proposal | P1 | display,success,failure | 1 |
 | `proposal-negotiate` | proposal | P1 | success | 1 |
 | `proposal-og-meta-personalized` | proposal | P3 | display | 1 |
 | `proposal-onboarding-mobile-swipe` | proposal | P3 | display | 1 |
@@ -6516,7 +6391,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-respond` | proposal | P1 | success | 1 |
 | `proposal-roi-projection` | proposal | P1 | display | 1 |
 | `proposal-schedule-followup-reminder` | proposal | P2 | success | 1 |
-| `proposal-section-onboarding` | proposal | P3 | success | 1 |
+| `proposal-section-onboarding` | proposal | P3 | display,success | 1 |
 | `proposal-share` | proposal | P2 | success | 1 |
 | `proposal-slug-access` | proposal | P1 | display,failure | 3 |
 | `proposal-sticky-bar-accept` | proposal | P2 | — | 0 |
@@ -7141,16 +7016,6 @@ Also registered/updated in this audit and documented in their home sections:
 - **Description:** When a pasted/imported proposal JSON does not resolve to an existing client, a client-picker prompts the admin to bind the imported proposal to a client before creating it.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-json-import-client-picker.spec.js`
-
-### FLOW: `proposal-calculator-reopen-after-nav`
-
-- **Module:** proposal
-- **Role:** guest
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** On the public proposal, reopening the investment calculator after navigating between sections preserves the previously selected modules and calculator state.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-reopen-after-nav.spec.js`
 
 ### FLOW: `proposal-slug-access`
 
@@ -8131,6 +7996,27 @@ Verificación: `admin-contract-modal-layout.spec.js` cubre creación y reapertur
 de las tres variantes, geometría y selección personalizada en los cinco
 viewports del panel. Los errores y reintentos siguen cubiertos por
 `admin-proposal-contract-modality.spec.js`.
+
+#### Condiciones económicas y regeneración
+
+En modalidad separada, Documentos explica que hosting, cobertura, cortesía,
+precios y renovación pertenecen al contrato de servicio. El anexo comercial
+queda centrado en el producto y su forma de pago. El modal de servicio avisa que
+las condiciones se incorporan automáticamente tanto con plantilla como con texto
+personalizado. Presenta los tres periodos disponibles sin elegir por el cliente.
+
+- **Success:** el aviso de contrato desactualizado permite abrir **Regenerar
+  contrato**, guardar la variante de servicio y recuperar el documento vigente.
+- **Error:** si faltan condiciones económicas para generar, el servidor lo
+  explica y el modal conserva los datos; no cambia parcialmente la modalidad.
+- **Failure:** un contrato de servicio obsoleto impide preparar su adjunto de
+  formalización hasta regenerarlo. Las preparaciones anteriores requieren revisión.
+- **Display:** el aviso pertenece sólo a la fila del servicio desactualizado.
+  Los documentos de propuestas cerradas conservan su historial.
+
+Verificación: `admin-proposal-contract-modality.spec.js` recorre el aviso y la
+regeneración; las pruebas backend verifican importes, ausencia del hosting en
+el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoletos.
 
 ### FLOW: `admin-proposal-document-markdown`
 

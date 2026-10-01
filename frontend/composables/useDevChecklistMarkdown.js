@@ -8,7 +8,6 @@ const LABELS = {
     components: '🧩 Componentes y funcionalidades',
     additionalModules: '➕ Módulos adicionales',
     includedFree: '🎁 Incluidos sin costo extra',
-    extraCosts: '💰 Costes adicionales (módulos opcionales)',
     dataModel: '🗄️ Modelos de datos',
     epics: '🏗️ Épicas y requerimientos',
     apis: '🔌 API endpoints',
@@ -31,7 +30,6 @@ const LABELS = {
     components: '🧩 Components and features',
     additionalModules: '➕ Additional modules',
     includedFree: '🎁 Included at no extra cost',
-    extraCosts: '💰 Additional costs (optional modules)',
     dataModel: '🗄️ Data models',
     epics: '🏗️ Epics and requirements',
     apis: '🔌 API endpoints',
@@ -149,22 +147,15 @@ function buildComponents(sections, L) {
   return lines.join('\n\n');
 }
 
-function isPaidModule(mod) {
-  if (!mod) return false;
-  const isCalculator = mod.is_calculator_module === true;
-  const percent = Number(mod.price_percent);
-  return isCalculator && Number.isFinite(percent) && percent > 0;
-}
-
 function buildAdditionalModules(sections, L) {
   const fr = findSection(sections, 'functional_requirements');
   const modules = Array.isArray(fr?.content_json?.additionalModules)
     ? fr.content_json.additionalModules
     : [];
-  const free = modules.filter((m) => m && !isPaidModule(m));
-  if (!free.length) return '';
+  const included = modules.filter((m) => m && m.is_visible !== false && (m.selected ?? m.default_selected ?? false));
+  if (!included.length) return '';
   const lines = [`## ${L.additionalModules}`];
-  for (const mod of free) {
+  for (const mod of included) {
     if (nonEmpty(mod.title)) lines.push(`### ${mod.title}`);
     if (nonEmpty(mod.description)) lines.push(mod.description);
     const items = Array.isArray(mod.items) ? mod.items : [];
@@ -191,29 +182,6 @@ function buildIncludedFree(sections, L) {
     const justification = justifications[id];
     const line = checklistItem(label, justification);
     if (line) lines.push(line);
-  }
-  return lines.join('\n');
-}
-
-function buildExtraCosts(sections, L) {
-  const fr = findSection(sections, 'functional_requirements');
-  const modules = Array.isArray(fr?.content_json?.additionalModules)
-    ? fr.content_json.additionalModules
-    : [];
-  const paid = modules.filter(isPaidModule);
-  if (!paid.length) return '';
-  const lines = [`## ${L.extraCosts}`];
-  for (const mod of paid) {
-    const percent = Number(mod.price_percent);
-    const title = nonEmpty(mod.title) ? mod.title : humanizeId(mod.id);
-    const header = `- [ ] **${title}** (+${percent}%)${nonEmpty(mod.description) ? ` — ${mod.description}` : ''}`;
-    lines.push(header);
-    const items = Array.isArray(mod.items) ? mod.items : [];
-    for (const item of items) {
-      if (!nonEmpty(item?.name)) continue;
-      const desc = nonEmpty(item.description) ? ` — ${item.description}` : '';
-      lines.push(`  - [ ] ${item.name}${desc}`);
-    }
   }
   return lines.join('\n');
 }
@@ -313,7 +281,6 @@ export function buildDevChecklistMarkdown(proposal) {
     buildComponents(sections, L),
     buildAdditionalModules(sections, L),
     buildIncludedFree(sections, L),
-    buildExtraCosts(sections, L),
     buildDataModel(technical, L),
     buildEpics(technical, L),
     buildApiEndpoints(technical, L),

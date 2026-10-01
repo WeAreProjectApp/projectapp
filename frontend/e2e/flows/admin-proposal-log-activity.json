@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin logs seller activity from proposal edit page Activity tab.",
+  "description": "Admin logs seller activity from the proposal Activity tab and reads automatic client module-interest changes.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

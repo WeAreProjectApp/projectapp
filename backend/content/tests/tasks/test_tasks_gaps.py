@@ -291,53 +291,6 @@ class TestPublishScheduledBlogPostsException:
 
 
 # ---------------------------------------------------------------------------
-# check_calculator_abandonment_followup — skip conditions (lines 784, 792)
-# ---------------------------------------------------------------------------
-
-class TestCalculatorAbandonmentSkips:
-    def test_skips_proposal_with_no_abandoned_logs(self):
-        import content.tasks as tasks_module
-
-        proposal = BusinessProposal.objects.create(
-            title='No Abandonment Logs', client_name='C',
-            client_email='c@x.com', status='sent',
-            automations_paused=False,
-            is_active=True,
-        )
-
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        from content.models import ProposalAlert
-        assert not ProposalAlert.objects.filter(proposal=proposal).exists()
-
-    @freeze_time('2026-01-15 12:00:00')
-    def test_skips_when_calc_confirmed_after_abandonment(self):
-        import content.tasks as tasks_module
-
-        proposal = BusinessProposal.objects.create(
-            title='Confirmed After', client_name='C',
-            client_email='c@x.com', status='viewed',
-            automations_paused=False,
-            is_active=True,
-        )
-        # auto_now_add=True ignores created_at — use update() to backdate
-        abandoned_log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-        )
-        ProposalChangeLog.objects.filter(pk=abandoned_log.pk).update(
-            created_at=timezone.now() - timedelta(hours=48),
-        )
-        ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_confirmed',
-        )
-
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        from content.models import ProposalAlert
-        assert not ProposalAlert.objects.filter(proposal=proposal).exists()
-
-
-# ---------------------------------------------------------------------------
 # generate_whatsapp_suggestions — already-exists skip (line 868)
 # ---------------------------------------------------------------------------
 

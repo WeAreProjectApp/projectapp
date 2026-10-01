@@ -1,3 +1,29 @@
+# Anexo comercial sin justificación de inversión (2026-09-29)
+
+El PDF comercial de Documentos omite la subsección «¿Por qué esta inversión?»
+en ambas modalidades e idiomas. Conserva importes y formas de pago; la propuesta
+pública y los datos guardados mantienen el contenido original. Vista previa,
+copia Markdown y nuevos adjuntos comparten la exclusión. Versión documental 6:
+las preparaciones anteriores requieren otra revisión, sin sustituir sus archivos.
+El cambio continúa en PR #457; la validación se registra allí.
+
+# Condiciones del servicio en contratos separados (2026-09-29)
+
+En modalidad producto + servicio, el anexo comercial conserva la inversión y
+los pagos del producto. Infraestructura, cobertura, cortesía, precios por 3/6/9
+meses, descuentos y renovación se incorporan al contrato de servicio, también
+cuando usa texto personalizado. El panel detecta cambios y ofrece regeneración;
+la formalización rechaza adjuntos obsoletos y conserva los archivos históricos.
+Se retiraron las ramas PDF de reescritura sin consumidores y los multiplicadores
+y avisos de la calculadora que permanecían en el panel. Los campos históricos de
+selección siguen activos para conservar el alcance contratado. Migración de
+plantilla `0276`, reservada al despliegue; procedimiento actualizado en
+`docs/PROPOSAL_FORMALIZATION.md`. Evidencia de pruebas e integración en PR #457.
+
+# Intereses en módulos de propuestas (2026-09-29)
+
+Nuevo modal del catálogo sin precios, intereses separados del alcance y edición manual de la inversión. La portada incluye guía y accesos a catálogo/alianza. Migraciones 0274–0275 conservan los importes históricos antes de retirar recargos. Verificación focal de API, migración, PDF, componentes y recorridos completada, con compilación Nuxt y revisión de calidad sin errores nuevos. Procedimiento y compatibilidad: `docs/PROPOSAL_MODULE_INTERESTS.md`; evidencia de integración y CI en el PR de esta rama.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto

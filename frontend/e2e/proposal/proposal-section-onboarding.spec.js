@@ -84,6 +84,8 @@ function buildMockHandler() {
 }
 
 test.describe('Proposal Section Onboarding', () => {
+  test.setTimeout(60_000);
+
   test('first visit shows onboarding overlay with step 1', {
     tag: [...PROPOSAL_SECTION_ONBOARDING, '@role:guest'],
   }, async ({ page }) => {
@@ -173,6 +175,33 @@ test.describe('Proposal Section Onboarding', () => {
 
     // Backdrop should NOT be visible
     await expect(page.getByTestId('onboarding-backdrop')).not.toBeVisible();
+  });
+
+  // Catches regressions where the detailed investment journey either skips the
+  // additional-modules guidance or reintroduces a calculator price into it.
+  test('detailed investment guidance explains saving module interest without a price', {
+    tag: [...PROPOSAL_SECTION_ONBOARDING, '@role:guest', '@outcome:display'],
+  }, async ({ page }) => {
+    await page.addInitScript((uuid) => {
+      localStorage.setItem('proposal_onboarding_seen', 'true');
+      localStorage.removeItem(`investment_onboarding_seen_${uuid}`);
+    }, MOCK_UUID);
+    await mockApi(page, buildMockHandler());
+    // quality: allow-deep-link (the guest receives this public proposal URL, then uses its gateway and section navigation)
+    await page.goto(`/proposal/${MOCK_UUID}`, { waitUntil: 'domcontentloaded' });
+
+    await page.getByTestId('gateway-detailed-card').click();
+    await page.getByRole('button', { name: 'Abrir índice' }).click();
+    await page.getByRole('navigation').getByRole('button', { name: /Inversión/ }).click();
+
+    const tooltip = page.getByRole('heading', { name: 'Explora módulos adicionales' });
+    await expect(tooltip).toHaveText('Explora módulos adicionales', { timeout: 20_000 });
+    const explanation = page.getByText('Descubre módulos por categorías y guarda tu interés para conversar sobre ellos. La inversión y el alcance se acuerdan contigo.');
+    await expect(explanation).toHaveText('Descubre módulos por categorías y guarda tu interés para conversar sobre ellos. La inversión y el alcance se acuerdan contigo.');
+    await expect(explanation).not.toContainText(/[\d$]/);
+
+    await page.getByRole('button', { name: 'Omitir' }).click();
+    await expect(tooltip).toHaveCount(0);
   });
 
   test('last step shows "Entendido" button instead of "Siguiente"', {

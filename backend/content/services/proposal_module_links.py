@@ -299,16 +299,7 @@ def build_proposal_module_link_catalog(sections: list[dict] | None) -> dict[str,
         is_calc = group.get('is_calculator_module') is True
         canonical_id = f'module-{raw_id}' if is_calc else f'group-{raw_id}'
         label = f'{group.get("icon") or ""} {group.get("title") or raw_id}'.strip()
-        price_percent = group.get('price_percent') or 0
-        try:
-            price_percent = float(price_percent)
-        except (TypeError, ValueError):
-            price_percent = 0
-        is_always_included = (
-            price_percent == 0 and not group.get('is_invite')
-            if is_calc
-            else price_percent == 0
-        )
+        is_always_included = group.get('is_always_included', not is_calc) is True
         aliases = _unique_strings([canonical_id, raw_id])
         add_option({
             'id': canonical_id,

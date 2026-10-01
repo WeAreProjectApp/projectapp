@@ -1,0 +1,14 @@
+{
+  "id": "admin-proposal-module-interests",
+  "name": "Admin Proposal Module Interests",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "The administrator reads the latest module-interest list and date in General and the automatic change entry in Activity, without modifying scope or investment.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display"
+  ]
+}

@@ -1658,183 +1658,22 @@ class TestDetectHighEngagementTodayTask:
         ).exists()
 
 
-class TestCheckCalculatorAbandonmentFollowupTask:
-    """Tests for the check_calculator_abandonment_followup periodic task."""
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_creates_followup_for_abandoned_calculator(self):
-        """Alert created when calculator was abandoned >24h ago."""
+class TestRetiredCalculatorFollowupTask:
+    def test_noop_does_not_create_followup_for_legacy_abandonment(self):
+        """Falla si un job legado vuelve a crear seguimiento de la calculadora retirada."""
         from content.models import ProposalAlert
-        now = timezone.now()
         proposal = BusinessProposal.objects.create(
-            title='Calc Abandoned', client_name='Calc Client',
-            client_email='calc@test.com',
-            status='viewed',
-            automations_paused=False,
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description='{}',
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        alert = ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).first()
-        assert alert is not None
-        assert 'abandonó' in alert.message
-        proposal.refresh_from_db()
-        assert proposal.calculator_followup_sent_at is not None
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_high_intent_message_for_long_calculator_session(self):
-        """High-intent message when calculator session was >5 minutes."""
-        import json
-
-        from content.models import ProposalAlert
-        now = timezone.now()
-        proposal = BusinessProposal.objects.create(
-            title='High Intent Calc', client_name='Intent Client',
-            status='viewed',
-            automations_paused=False,
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description=json.dumps({'elapsed_seconds': 400}),
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        alert = ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).first()
-        assert alert is not None
-        assert 'alta intención' in alert.message
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_skips_when_calc_confirmed_after(self):
-        """No alert when calculator was confirmed after abandonment."""
-        from content.models import ProposalAlert
-        now = timezone.now()
-        proposal = BusinessProposal.objects.create(
-            title='Confirmed Calc', client_name='Client',
-            status='viewed',
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description='{}',
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
+            title='Calculadora retirada', client_name='Cliente', status='viewed',
         )
         ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_confirmed',
-            description='Confirmed',
+            proposal=proposal,
+            change_type=ProposalChangeLog.ChangeType.CALCULATOR_ABANDONED,
         )
 
         import content.tasks as tasks_module
         tasks_module.check_calculator_abandonment_followup.call_local()
 
         assert not ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).exists()
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_skips_when_no_abandoned_logs(self):
-        """No alert when there are no calc_abandoned logs."""
-        from content.models import ProposalAlert
-        proposal = BusinessProposal.objects.create(
-            title='No Logs', client_name='Client',
-            status='viewed',
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        assert not ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).exists()
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_skips_when_automations_paused(self):
-        """No alert when automations are paused."""
-        from content.models import ProposalAlert
-        now = timezone.now()
-        proposal = BusinessProposal.objects.create(
-            title='Paused Calc', client_name='Client',
-            status='viewed', automations_paused=True,
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description='{}',
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        assert not ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).exists()
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_skips_when_followup_already_sent(self):
-        """No alert when calculator_followup_sent_at is already set."""
-        from content.models import ProposalAlert
-        now = timezone.now()
-        proposal = BusinessProposal.objects.create(
-            title='Already Sent Calc', client_name='Client',
-            status='viewed',
-            calculator_followup_sent_at=now - timedelta(hours=2),
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description='{}',
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        assert not ProposalAlert.objects.filter(
-            proposal=proposal, alert_type='calculator_followup',
-        ).exists()
-
-    @freeze_time('2026-03-10 12:00:00')
-    def test_handles_invalid_json_in_description(self):
-        """Alert still created when description contains invalid JSON."""
-        from content.models import ProposalAlert
-        now = timezone.now()
-        proposal = BusinessProposal.objects.create(
-            title='Bad JSON', client_name='Client',
-            status='viewed',
-            automations_paused=False,
-        )
-        log = ProposalChangeLog.objects.create(
-            proposal=proposal, change_type='calc_abandoned',
-            description='not-valid-json',
-        )
-        ProposalChangeLog.objects.filter(pk=log.pk).update(
-            created_at=now - timedelta(hours=30),
-        )
-
-        import content.tasks as tasks_module
-        tasks_module.check_calculator_abandonment_followup.call_local()
-
-        assert ProposalAlert.objects.filter(
             proposal=proposal, alert_type='calculator_followup',
         ).exists()
 
@@ -2300,12 +2139,12 @@ class TestSuggestActionForProposalBranches:
         assert 'WhatsApp' in result
 
 
-class TestCalculatorAbandonmentEmptyDescription:
-    """Tests for falsy-description branch in check_calculator_abandonment_followup (branch 733->740)."""
+class TestRetiredCalculatorFollowupEmptyDescription:
+    """Legacy queued jobs remain observational regardless of old payload shape."""
 
     @freeze_time('2026-03-10 12:00:00')
-    def test_creates_alert_when_log_description_is_empty(self):
-        """Alert is created with max_elapsed=0 (no-high-intent msg) when description is empty."""
+    def test_empty_legacy_payload_does_not_create_alert(self):
+        """Falla si una carga histórica vacía revive el seguimiento retirado."""
         from content.models import ProposalAlert
         now = timezone.now()
         proposal = BusinessProposal.objects.create(
@@ -2327,8 +2166,7 @@ class TestCalculatorAbandonmentEmptyDescription:
         alert = ProposalAlert.objects.filter(
             proposal=proposal, alert_type='calculator_followup',
         ).first()
-        assert alert is not None
-        assert 'abandonó' in alert.message
+        assert alert is None
 
 
 class TestRefreshCachedHeatScoresTask:
@@ -2402,9 +2240,10 @@ class TestRefreshCachedHeatScoresTask:
         assert mock_score.call_count == 0
 
 
-class TestCalculatorAbandonmentFollowupDescriptionFallback:
+class TestRetiredCalculatorFollowupDescriptionFallback:
     @freeze_time('2026-03-10 12:00:00')
-    def test_treats_abandoned_log_without_description_as_low_intent(self):
+    def test_legacy_log_does_not_update_followup_timestamp(self):
+        """Falla si ejecutar el job legado cambia el estado comercial de la propuesta."""
         now = timezone.now()
         proposal = BusinessProposal.objects.create(
             title='No Description',
@@ -2426,7 +2265,7 @@ class TestCalculatorAbandonmentFollowupDescriptionFallback:
         tasks_module.check_calculator_abandonment_followup.call_local()
 
         proposal.refresh_from_db()
-        assert proposal.calculator_followup_sent_at is not None
+        assert proposal.calculator_followup_sent_at is None
 
 
 class TestRefreshCachedHeatScores:
@@ -3016,9 +2855,10 @@ class TestSuggestActionExpiryBranches:
 # -- Coverage gap tests: calculator abandonment JSON parse error -------------
 
 
-class TestCalculatorAbandonmentInvalidJson:
+class TestRetiredCalculatorFollowupInvalidJson:
     @freeze_time('2026-03-10 12:00:00')
-    def test_creates_low_intent_alert_when_description_is_invalid_json(self):
+    def test_invalid_legacy_payload_does_not_create_alert(self):
+        """Falla si un JSON histórico inválido vuelve a generar seguimiento."""
         from content.models import ProposalAlert
         now = timezone.now()
         proposal = BusinessProposal.objects.create(
@@ -3040,8 +2880,7 @@ class TestCalculatorAbandonmentInvalidJson:
         alert = ProposalAlert.objects.filter(
             proposal=proposal, alert_type='calculator_followup',
         ).first()
-        assert alert is not None
-        assert 'abandonó' in alert.message
+        assert alert is None
 
 
 # -- Coverage gap tests: engagement followup last_event is None --------------

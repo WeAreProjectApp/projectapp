@@ -44,12 +44,12 @@ SOURCE_FIELDS = (
     'total_investment', 'selected_modules', 'contract_params',
     'hosting_percent', 'email_signed_by',
 )
-# Fingerprint version 3 also covers the closing modality.
-SOURCE_VERSION = 3
-DOCUMENT_VERSION = 4
+# Fingerprint version 4 covers the closing modality and service discounts.
+SOURCE_VERSION = 4
+DOCUMENT_VERSION = 6
 # A switch of modality leaves a prepared package pointing at documents that
 # are no longer the deal's contracts; that is a stale preparation.
-STALE_CONTRACT_CODES = ('contract_missing', 'modality_mismatch')
+STALE_CONTRACT_CODES = ('contract_missing', 'modality_mismatch', 'contract_stale')
 
 
 def document_keys(proposal):
@@ -104,6 +104,13 @@ def contract_attachments(proposal, keys):
         missing = contract_variants.missing_final_params(proposal.contract_params, variant)
         if missing:
             raise FormalizationError('Completa los parámetros del contrato final: ' + ', '.join(missing) + '.', 'contract_incomplete')
+        if variant == contract_variants.SERVICE:
+            from content.services.service_contract_freshness import service_contract_needs_regeneration
+            if service_contract_needs_regeneration(proposal, contract):
+                raise FormalizationError(
+                    'Las condiciones del servicio cambiaron. Regenera y revisa el contrato de servicio desde Documentos.',
+                    'contract_stale', 409,
+                )
         result.append((key, contract))
     return result
 
@@ -129,6 +136,8 @@ def source_hash(proposal, payload):
     proposal_fields = SOURCE_FIELDS
     if payload.get('_source_version', 1) >= 3:
         proposal_fields += ('contract_modality',)
+    if payload.get('_source_version', 1) >= 4:
+        proposal_fields += ('hosting_discount_nine_month', 'hosting_discount_semiannual', 'hosting_discount_quarterly')
     document_sources = []
     for key, doc in related_documents(proposal, payload):
         document_sources.append([key, doc.pk, doc.title, doc.file.name, hashlib.sha256(read_document(doc)).hexdigest()])
@@ -235,7 +244,7 @@ def check_current(preparation):
         raise FormalizationError('La preparación venció. Prepara nuevamente el correo.', 'expired_preparation', 410)
     stale = FormalizationError('Los datos de origen cambiaron. Prepara y revisa nuevamente el correo.', 'stale_preparation', 409)
     if (preparation.payload.get('_document_version', 1) < DOCUMENT_VERSION
-            and {'commercial', 'technical'}.intersection(preparation.payload.get('documents', []))):
+            and {'commercial', 'technical', 'contract_service'}.intersection(preparation.payload.get('documents', []))):
         raise stale
     try:
         current = source_hash(load_proposal(preparation.proposal_id), preparation.payload)

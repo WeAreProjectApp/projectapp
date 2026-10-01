@@ -203,7 +203,7 @@ class TestGetDefaultSections:
         assert len(intl['items']) == 2
         assert intl['is_calculator_module'] is True
         assert intl['default_selected'] is False
-        assert intl['price_percent'] == 20
+        assert 'price_percent' not in intl
         assert intl['is_invite'] is False
 
     def test_integration_regional_payments_group(self):
@@ -214,7 +214,7 @@ class TestGetDefaultSections:
         assert len(reg['items']) == 3
         assert reg['is_calculator_module'] is True
         assert reg['default_selected'] is False
-        assert reg['price_percent'] == 20
+        assert 'price_percent' not in reg
         assert reg['is_invite'] is False
 
     def test_integration_electronic_invoicing_group(self):
@@ -225,7 +225,7 @@ class TestGetDefaultSections:
         assert len(inv['items']) == 5
         assert inv['is_calculator_module'] is True
         assert inv['default_selected'] is False
-        assert inv['price_percent'] == 60
+        assert 'price_percent' not in inv
         assert inv['is_invite'] is False
 
     def test_integration_conversion_tracking_group(self):
@@ -236,7 +236,7 @@ class TestGetDefaultSections:
         assert len(ct['items']) == 6
         assert ct['is_calculator_module'] is True
         assert ct['default_selected'] is False
-        assert ct['price_percent'] == 0
+        assert 'price_percent' not in ct
         assert ct['is_invite'] is True
         assert ct['invite_note']
 
@@ -257,7 +257,7 @@ class TestGetDefaultSections:
         bio = next(g for g in fr['content_json']['additionalModules'] if g['id'] == 'biometric_verification_module')
         assert bio['default_selected'] is False
         assert bio['selected'] is False
-        assert bio['price_percent'] == 0
+        assert 'price_percent' not in bio
         assert bio['is_invite'] is True
         assert bio['invite_note']
 
@@ -278,7 +278,7 @@ class TestGetDefaultSections:
         qr = next(g for g in fr['content_json']['additionalModules'] if g['id'] == 'qr_generator_module')
         assert qr['default_selected'] is False
         assert qr['selected'] is False
-        assert qr['price_percent'] == 25
+        assert 'price_percent' not in qr
         assert qr.get('is_invite', False) is False
         assert 'invite_note' not in qr
 
@@ -293,7 +293,7 @@ class TestGetDefaultSections:
         assert cg['is_calculator_module'] is True
         assert cg['default_selected'] is False
         assert cg['selected'] is False
-        assert cg['price_percent'] == 30
+        assert 'price_percent' not in cg
 
     def test_content_generator_module_no_invite_and_calendar_copy(self):
         """Verify content_generator_module has no invite flag and contains editorial calendar content."""
@@ -319,7 +319,7 @@ class TestGetDefaultSections:
         assert len(pwa['items']) == 6
         assert pwa['is_calculator_module'] is True
         assert pwa['default_selected'] is False
-        assert pwa['price_percent'] == 40
+        assert 'price_percent' not in pwa
 
     def test_corporate_branding_module_has_5_items_and_35_percent(self):
         sections = ProposalService.get_default_sections('es')
@@ -330,7 +330,7 @@ class TestGetDefaultSections:
         # Pre-selected by default for every new proposal.
         assert cb['default_selected'] is True
         assert cb['selected'] is True
-        assert cb['price_percent'] == 35
+        assert 'price_percent' not in cb
         assert cb.get('is_invite', False) is False
         assert cb['is_visible'] is True
 
@@ -341,7 +341,7 @@ class TestGetDefaultSections:
         assert len(ai['items']) == 11
         assert ai['is_calculator_module'] is True
         assert ai['is_invite'] is True
-        assert ai['price_percent'] == 0
+        assert 'price_percent' not in ai
 
     def test_reports_alerts_module_is_priced_calculator_module(self):
         sections = ProposalService.get_default_sections('es')
@@ -350,7 +350,7 @@ class TestGetDefaultSections:
         assert len(reports['items']) == 5
         assert reports['is_calculator_module'] is True
         assert reports['default_selected'] is False
-        assert reports['price_percent'] == 20
+        assert 'price_percent' not in reports
 
     def test_reports_alerts_module_offers_whatsapp_not_telegram(self):
         sections = ProposalService.get_default_sections('es')
@@ -371,7 +371,7 @@ class TestGetDefaultSections:
         assert bt['is_calculator_module'] is True
         assert bt['default_selected'] is False
         assert bt['selected'] is False
-        assert bt['price_percent'] == 30
+        assert 'price_percent' not in bt
         assert bt.get('is_invite', False) is False
         assert 'invite_note' not in bt
 
@@ -405,7 +405,8 @@ class TestGetDefaultSections:
             en_g = next(g for g in en_fr['content_json']['additionalModules'] if g['id'] == mod_id)
             assert len(es_g['items']) == len(en_g['items'])
             assert es_g['is_calculator_module'] == en_g['is_calculator_module']
-            assert es_g.get('price_percent') == en_g.get('price_percent')
+            assert 'price_percent' not in es_g
+            assert 'price_percent' not in en_g
 
     def test_en_functional_requirements_has_complete_catalog(self):
         """Verify the complete EN functional-requirements catalog."""
@@ -440,7 +441,7 @@ class TestGetDefaultSections:
         kpi = next(g for g in fr['content_json']['groups'] if g['id'] == 'kpi_dashboard_module')
         assert 'is_calculator_module' not in kpi
         assert kpi['selected'] is True
-        assert kpi['price_percent'] == 0
+        assert 'price_percent' not in kpi
         assert len(kpi['items']) == 4
         assert any('CSV' in i['description'] for i in kpi['items'] if i['name'] == 'Exportación de reportes')
 
@@ -452,7 +453,7 @@ class TestGetDefaultSections:
         assert len(regular_groups) == 9
         for g in regular_groups:
             assert g['selected'] is True, f"Group {g['id']} should have selected=True"
-            assert g['price_percent'] == 0, f"Group {g['id']} should have price_percent=0"
+            assert 'price_percent' not in g, f"Group {g['id']} exposes retired pricing"
 
     def test_all_additional_modules_have_selected_false(self):
         """Verify additional modules default to selected=False.
@@ -477,7 +478,8 @@ class TestGetDefaultSections:
         for es_g, en_g in zip(es_fr['content_json']['groups'], en_fr['content_json']['groups']):
             assert es_g['id'] == en_g['id'], f"group order mismatch: {es_g['id']} vs {en_g['id']}"
             assert es_g['selected'] == en_g['selected'], f"selected mismatch for {es_g['id']}"
-            assert es_g['price_percent'] == en_g['price_percent'], f"price_percent mismatch for {es_g['id']}"
+            assert 'price_percent' not in es_g, f"ES group {es_g['id']} exposes retired pricing"
+            assert 'price_percent' not in en_g, f"EN group {en_g['id']} exposes retired pricing"
 
     def test_i18n_module_has_5_items_and_15_percent(self):
         """Verify i18n_module: 5 items, price_percent 15."""
@@ -487,7 +489,7 @@ class TestGetDefaultSections:
         assert len(i18n['items']) == 5
         assert i18n['is_calculator_module'] is True
         assert i18n['default_selected'] is False
-        assert i18n['price_percent'] == 15
+        assert 'price_percent' not in i18n
 
     def test_gift_cards_module_has_5_items_and_20_percent(self):
         """Verify gift_cards_module: 5 items, price_percent 20, is_visible False."""
@@ -497,7 +499,7 @@ class TestGetDefaultSections:
         assert len(gc['items']) == 5
         assert gc['is_calculator_module'] is False
         assert gc['default_selected'] is False
-        assert gc['price_percent'] == 20
+        assert 'price_percent' not in gc
         assert gc['is_visible'] is False
 
     def test_all_groups_have_is_visible(self):
@@ -576,7 +578,7 @@ class TestGetDefaultSections:
         assert len(dm['items']) == 5
         assert dm['is_calculator_module'] is True
         assert dm['default_selected'] is False
-        assert dm['price_percent'] == 20
+        assert 'price_percent' not in dm
         assert dm['is_visible'] is True
 
     def test_live_chat_module_has_6_items_and_40_percent(self):
@@ -587,7 +589,7 @@ class TestGetDefaultSections:
         assert len(lc['items']) == 6
         assert lc['is_calculator_module'] is True
         assert lc['default_selected'] is False
-        assert lc['price_percent'] == 40
+        assert 'price_percent' not in lc
         assert lc['is_visible'] is True
 
     def test_integration_titles_have_api_postfix_es(self):
@@ -742,7 +744,7 @@ class TestSendProposal:
     @patch('content.services.proposal_snapshot_service.prepare_proposal_snapshots')
     @patch('content.utils.validate_email_domain_mx', return_value=True)
     def test_missing_email_intro_blocks_before_snapshot(
-        self, _mock_mx, mock_prepare,
+        self, mock_mx, mock_prepare,
     ):
         proposal = BusinessProposal.objects.create(
             title='Missing Message',
@@ -872,7 +874,7 @@ class TestResendProposal:
     @patch('content.services.proposal_snapshot_service.prepare_proposal_snapshots')
     @patch('content.utils.validate_email_domain_mx', return_value=True)
     def test_blank_replacement_keeps_saved_message(
-        self, _mock_mx, mock_prepare,
+        self, mock_mx, mock_prepare,
     ):
         proposal = BusinessProposal.objects.create(
             title='Resend Guard',
@@ -901,11 +903,11 @@ class TestResendProposal:
     @patch('content.utils.validate_email_domain_mx', return_value=True)
     def test_replacement_is_saved_before_delivery(
         self,
-        _mock_mx,
+        mock_mx,
         mock_prepare,
         mock_finalize,
         mock_send,
-        _mock_schedule,
+        mock_schedule,
     ):
         snapshot = object()
         mock_prepare.return_value = [snapshot]
@@ -990,7 +992,7 @@ class TestSendMultiProposalMessageGuard:
     @patch('content.services.proposal_snapshot_service.prepare_proposal_snapshots')
     @patch('content.utils.validate_email_domain_mx', return_value=True)
     def test_missing_message_blocks_every_proposal_before_snapshot(
-        self, _mock_mx, mock_prepare,
+        self, mock_mx, mock_prepare,
     ):
         ready = BusinessProposal.objects.create(
             title='Fase lista',
@@ -1276,7 +1278,7 @@ class TestNormalizeHostingPlanFreeMonths:
         assert result['freeMonthsVisible'] is True
 
     @pytest.mark.parametrize(
-        'stored_months,expected',
+        ('stored_months', 'expected'),
         [(1, True), (3, True), ('2', True), (0, False), ('0', False),
          ('', False), (None, False)],
     )
@@ -1304,7 +1306,7 @@ class TestNormalizeHostingPlanFreeMonths:
     # --- copy ---
 
     @pytest.mark.parametrize(
-        'lang,fragment',
+        ('lang', 'fragment'),
         [('es', 'hosting es gratis'), ('en', 'hosting is free')],
     )
     def test_empty_note_is_filled_with_the_language_default(self, lang, fragment):

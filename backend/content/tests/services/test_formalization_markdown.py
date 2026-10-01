@@ -66,12 +66,13 @@ def _export(proposal, kind):
     )
 
 
-def test_commercial_markdown_keeps_text_inside_retained_sections(formal_markdown_proposal):
+def test_commercial_markdown_uses_formal_commercial_content(formal_markdown_proposal):
     export = _export(formal_markdown_proposal, 'commercial')
 
     assert export['title'] == 'Formal commercial proposal'
     assert 'Orders' in export['markdown']
-    assert 'SALES\\_SENTINEL' in export['markdown']
+    assert '100% on delivery' in export['markdown']
+    assert 'SALES\\_SENTINEL' not in export['markdown']
     assert 'UNSELECTED' not in export['markdown']
     assert 'ROI' not in export['markdown']
     assert 'Texto extraído del PDF' in export['warnings'][0]

@@ -14,7 +14,7 @@ import copy
 from datetime import datetime, timedelta
 from datetime import timezone as dt_tz
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 from django.urls import reverse
@@ -1001,10 +1001,10 @@ class TestHeatScoreEdgeCases:
 # content/views/proposal.py — calculator interaction admin skip
 # ═══════════════════════════════════════════════════════════════════
 
-class TestCalculatorInteractionAdminSkip:
+class TestCalculatorInteractionRetired:
 
-    def test_staff_user_gets_skipped_response(self, admin_user, db):
-        """Falla si un clic interno crea un evento del calculador aunque responda omitido."""
+    def test_staff_user_receives_retired_response_without_creating_log(self, admin_user, db):
+        """Falla si la ruta retirada vuelve a aceptar eventos del calculador."""
         import json as _json
 
         from django.test import Client
@@ -1024,8 +1024,11 @@ class TestCalculatorInteractionAdminSkip:
             data=_json.dumps({'event': 'confirmed', 'selected': []}),
             content_type='application/json',
         )
-        assert response.status_code == 200
-        assert _json.loads(response.content)['status'] == 'skipped'
+        assert response.status_code == 410
+        assert _json.loads(response.content) == {
+            'error': 'The investment calculator has been retired.',
+            'code': 'calculator_retired',
+        }
         assert ProposalChangeLog.objects.filter(proposal=p).count() == 0
 
 

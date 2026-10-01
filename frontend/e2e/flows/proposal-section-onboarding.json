@@ -6,9 +6,10 @@
     "guest"
   ],
   "priority": "P3",
-  "description": "Per-section spotlight onboarding tutorials (Investment, Requirements, Executive Investment) that trigger on first visit to each section.",
+  "description": "Per-section tutorials explain the additional-modules catalog and commercial interests, expandable requirements, and access to detailed investment.",
   "expectedSpecs": 1,
   "outcomes": [
+    "display",
     "success"
   ]
 }

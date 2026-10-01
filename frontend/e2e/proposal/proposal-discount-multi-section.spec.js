@@ -1,8 +1,8 @@
 /**
  * E2E tests for discount badge visibility across multiple proposal sections.
  *
- * Covers: discount badge in Investment section, calculator modal footer,
- * and ProposalClosing panel when proposal has an active discount.
+ * Covers discount badges in the investment section and ProposalClosing panel
+ * when a proposal has an active discount.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -37,9 +37,6 @@ const mockProposalWithDiscount = {
         currency: 'COP',
         whatsIncluded: [],
         paymentOptions: [{ label: 'Pago único', description: '$10.000.000' }],
-        modules: [
-          { id: 'mod-core', name: 'Módulo Core', price: 5000000, is_required: true },
-        ],
         valueReasons: [],
       },
     },
@@ -79,6 +76,7 @@ test.describe('Proposal Discount Multi-Section', () => {
   test('discount badge is visible in Investment section when proposal has active discount', {
     tag: [...PROPOSAL_DISCOUNT_MULTI_SECTION, '@role:guest', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (the guest's shared proposal URL is the entry point; the investment panel is reached through navigation)
     await setupMock(page, mockProposalWithDiscount);
     await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
 

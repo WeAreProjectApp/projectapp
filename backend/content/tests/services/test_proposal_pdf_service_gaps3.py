@@ -257,16 +257,14 @@ class TestRenderInvestmentLinearLayout:
         assert '50% Inicio' in draw_ops
         assert 'Dise' in draw_ops
 
-    def test_linear_layout_with_adjusted_total_recalculates_option_desc(
+    def test_linear_layout_preserves_manual_payment_amount(
         self, pdf_canvas, proposal,
     ):
-        """Fails if the linear layout skips a recalculated payment option."""
+        """The linear layout derives payment from the agreed manual total."""
         ps = {
             'num': 1,
             'client': 'Test',
             'selected_modules': ['web'],
-            '_fr_items': [],
-            '_calc_module_items': [],
             'base_weeks': 0,
         }
         data = {
@@ -281,8 +279,8 @@ class TestRenderInvestmentLinearLayout:
                 {'title': 'Soporte', 'description': 'Incluido'},
             ],
             'modules': [
-                {'id': 'web', 'name': 'Web', 'price': 3000000},
-                {'id': 'seo', 'name': 'SEO', 'price': 2000000},
+                {'id': 'web', 'name': 'Web'},
+                {'id': 'seo', 'name': 'SEO'},
             ],
         }
 
@@ -294,8 +292,8 @@ class TestRenderInvestmentLinearLayout:
         assert 'Formas de Pago' in draw_ops
         assert '50% Inicio' in draw_ops
         assert 'Soporte' in draw_ops
-        assert '$1.500.000' in draw_ops
-        assert '$2.500.000' not in draw_ops
+        assert '$2.500.000' in draw_ops
+        assert '$1.500.000' not in draw_ops
 
 
 # ---------------------------------------------------------------------------

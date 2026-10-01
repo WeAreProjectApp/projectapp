@@ -1,3 +1,4 @@
+from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
@@ -538,6 +539,7 @@ urlpatterns = [
     path('proposals/<uuid:proposal_uuid>/respond/', respond_to_proposal, name='respond-to-proposal'),
     path('proposals/<uuid:proposal_uuid>/comment/', comment_on_proposal, name='comment-on-proposal'),
     path('proposals/<uuid:proposal_uuid>/track/', track_proposal_engagement, name='track-proposal-engagement'),
+    path('proposals/<uuid:proposal_uuid>/module-interests/', proposal_module_interests, name='proposal-module-interests'),
     path('proposals/<uuid:proposal_uuid>/track-calculator/', track_calculator_interaction, name='track-calculator-interaction'),
     path('proposals/<uuid:proposal_uuid>/track-requirement-click/', track_requirement_click, name='track-requirement-click'),
     path('proposals/<uuid:proposal_uuid>/share/', create_share_link, name='create-share-link'),

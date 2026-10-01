@@ -126,6 +126,12 @@ export async function assertResponsiveScenario(page, testInfo, scenario, options
 
 export const test = base.extend({
   page: async ({ page }, use, testInfo) => {
+    // The gateway guide is intentionally shown once per browser for real
+    // visitors. Existing gateway specs exercise their own target, so keep the
+    // one-time guide out of their way unless a guide-specific test removes it.
+    await page.addInitScript(() => {
+      localStorage.setItem('projectapp-proposal-gateway-guide-v1', 'true');
+    });
     if (shouldLogErrors) {
       page.on("pageerror", (err) => {
         console.error("[e2e:pageerror]", err);

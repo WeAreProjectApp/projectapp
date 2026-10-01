@@ -31,9 +31,6 @@
                 <span class="text-xl">{{ group.icon || '🧩' }}</span>
               </div>
               <h3 class="text-lg font-medium text-text-brand">{{ group.title }}</h3>
-              <span v-if="groupPrice(group) && group.is_calculator_module" class="ml-auto text-[11px] font-bold text-text-brand bg-primary-soft border border-emerald-200 px-2 py-0.5 rounded-full whitespace-nowrap">
-                💰 {{ group.is_calculator_module ? '+' : '' }}{{ formatPrice(groupPrice(group)) }}
-              </span>
               <span v-if="isGroupDeselected(group)" class="ml-auto text-[10px] font-medium text-text-subtle bg-surface-raised border border-border-default px-2 py-0.5 rounded-full whitespace-nowrap">
                 No incluido
               </span>
@@ -92,10 +89,6 @@ const props = defineProps({
     type: Array,
     default: () => [],
   },
-  calculatorModulePrices: {
-    type: Object,
-    default: () => ({}),
-  },
   currency: {
     type: String,
     default: 'COP',
@@ -143,22 +136,13 @@ const allGroups = computed(() => {
 // Check if a regular group is deselected (dimmed display)
 function isGroupDeselected(group) {
   if (group.is_calculator_module) return false;
-  if ((group.price_percent ?? 0) === 0) return false; // Zero-percent groups are always "included"
+  if (group.is_always_included !== false) return false;
   const groupId = `group-${group.id}`;
   return props.selectedCalculatorModules.length > 0 && !props.selectedCalculatorModules.includes(groupId);
 }
 
 const modalVisible = ref(false);
 const selectedGroup = ref({});
-
-function groupPrice(group) {
-  return props.calculatorModulePrices[group.id] || 0;
-}
-
-function formatPrice(value) {
-  if (!value) return '';
-  return '$' + Number(value).toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
-}
 
 function openModal(group) {
   selectedGroup.value = group;

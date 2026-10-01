@@ -29,11 +29,10 @@ def unseeded_template():
 def test_migrated_default_holds_the_standalone_service_contract():
     """Fails if a fresh database cannot close a deal with two documents."""
     service = ContractTemplate.get_default().service_content_markdown
-    # 0267 only adds Paragraph Ten; without it the text is exactly the seed.
-    seeded = service.replace(f'\n\n{paragraph_ten.SERVICE_CONTRACT_PARAGRAPH}', '', 1)
-
-    assert seeded == migration.SERVICE_CONTRACT_MARKDOWN
-    assert seeded != service
+    # Later migrations add provider dependencies and move economics into this contract.
+    assert paragraph_ten.SERVICE_CONTRACT_PARAGRAPH in service
+    assert '{service_conditions}' in service
+    assert 'Documento Propuesta Comercial' not in service
     assert service.startswith('Entre las partes, por un lado **{client_full_name}**')
     assert '## CLÁUSULA DÉCIMA SÉPTIMA — MÉRITO EJECUTIVO' in service
     assert 'duración inicial de {service_initial_term}' in service

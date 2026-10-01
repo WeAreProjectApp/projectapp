@@ -11,7 +11,7 @@ class TestManualModule:
         sections = ProposalService.get_default_sections('es')
         fr = next(s for s in sections if s['section_type'] == 'functional_requirements')
         manual = next(g for g in fr['content_json']['groups'] if g['id'] == 'manual_module')
-        assert manual['price_percent'] == 0
+        assert 'price_percent' not in manual
         assert manual['selected'] is True
         assert manual.get('is_calculator_module', False) is False
         assert len(manual['items']) >= 4
@@ -20,7 +20,7 @@ class TestManualModule:
         sections = ProposalService.get_default_sections('en')
         fr = next(s for s in sections if s['section_type'] == 'functional_requirements')
         manual = next(g for g in fr['content_json']['groups'] if g['id'] == 'manual_module')
-        assert manual['price_percent'] == 0
+        assert 'price_percent' not in manual
         assert manual['selected'] is True
         assert 'Interactive User Manual' in manual['title']
 

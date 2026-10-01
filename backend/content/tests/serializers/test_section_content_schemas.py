@@ -64,7 +64,7 @@ class TestFunctionalRequirementsSchema:
         group = {
             'id': 'views',
             'title': 'Vistas',
-            'price_percent': None,
+            'is_always_included': True,
             'is_calculator_module': False,
             'selected': True,
             'is_visible': True,
@@ -75,20 +75,19 @@ class TestFunctionalRequirementsSchema:
         group.update(overrides)
         return group
 
-    def test_price_percent_accepts_none_int_and_numeric_string(self):
-        for price_percent in (None, 25, 12.5, '25', '12.5'):
-            errors = validate_section_content('functional_requirements', {
-                'groups': [self._group(price_percent=price_percent)],
-            })
-            assert errors == [], f'price_percent={price_percent!r}: {errors}'
-
-    def test_rejects_non_numeric_price_percent_and_item_price(self):
+    def test_is_always_included_accepts_boolean_value(self):
         errors = validate_section_content('functional_requirements', {
-            'groups': [self._group(price_percent='gratis')],
+            'groups': [self._group(is_always_included=True)],
+        })
+        assert errors == []
+
+    def test_rejects_non_boolean_inclusion_flag_and_item_price(self):
+        errors = validate_section_content('functional_requirements', {
+            'groups': [self._group(is_always_included='gratis')],
             'additionalModules': [self._group(items=[{'name': 'X', 'price': ['nope']}])],
         })
         assert errors == [
-            'El campo «functional_requirements.groups[0].price_percent» debe ser numérico.',
+            'El campo «functional_requirements.groups[0].is_always_included» debe ser booleano.',
             'El campo «functional_requirements.additionalModules[0].items[0].price» debe ser numérico.',
         ]
 

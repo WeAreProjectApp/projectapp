@@ -68,3 +68,9 @@ class ProposalDefaultConfig(models.Model):
 
     def __str__(self):
         return f'ProposalDefaultConfig ({self.get_language_display()})'
+
+
+    def save(self, *args, **kwargs):
+        from content.services.proposal_content_cleanup import without_module_percentages
+        self.sections_json = without_module_percentages(self.sections_json)
+        return super().save(*args, **kwargs)

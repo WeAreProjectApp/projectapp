@@ -161,6 +161,7 @@ def reorder_catalog(*, expected_revision, category_ids, module_groups):
 def _localized_module(module, language):
     suffix = 'en' if language == 'en' else 'es'
     return {
+        'id': module.pk,
         'slug': module.slug,
         'icon': module.icon,
         'name': getattr(module, f'name_{suffix}'),

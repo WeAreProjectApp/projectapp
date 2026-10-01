@@ -1,4 +1,4 @@
-"""Capture original proposal sections; formal annexes only exclude whole sections."""
+"""Capture original proposal sections; the PDF renderers apply annex exclusions."""
 from copy import deepcopy
 from dataclasses import dataclass
 

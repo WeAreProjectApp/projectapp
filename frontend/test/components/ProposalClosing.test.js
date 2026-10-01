@@ -45,7 +45,7 @@ describe('ProposalClosing', () => {
     const wrapper = mountProposalClosing();
 
     const acceptBtn = wrapper.findAll('button').find(b => b.text().includes('Acepto'));
-    expect(acceptBtn).toBeTruthy();
+    expect(acceptBtn.text()).toBe('Acepto la propuesta');
   });
 
   it('renders the validity notice when validityMessage is provided', () => {
@@ -118,6 +118,19 @@ describe('ProposalClosing', () => {
     });
 
     expect(wrapper.text()).toMatch(/\$1\.490\.000\s*COP\s*\+ IVA/);
+  });
+
+  test.each([
+    ['the supplied agreed investment', 2750000, /\$2\.750\.000\s*COP\s*\+ IVA/],
+    ['the proposal investment when no agreed total is supplied', null, /\$1\.490\.000\s*COP\s*\+ IVA/],
+  ])('shows %s in the closing payment total', (_source, investmentTotal, expectedTotal) => {
+    // Falla si el cierre deja vacío el total acordado o vuelve a mostrar un cálculo retirado.
+    const wrapper = mountProposalClosing({
+      investmentTotal,
+      paymentOptions: [{ label: '40% al inicio', description: '$1.100.000 COP + IVA' }],
+    });
+
+    expect(wrapper.text()).toMatch(expectedTotal);
   });
 
   it('shows IVA on every 40/30/30 payment', () => {
@@ -229,7 +242,10 @@ describe('ProposalClosing modal flows', () => {
     await sendBtn.trigger('click');
     await flushPromises();
 
-    expect(mockProposalActions.commentOnProposal).toHaveBeenCalled();
+    expect(mockProposalActions.commentOnProposal).toHaveBeenCalledWith(
+      sentProposal.uuid,
+      'Tengo una duda sobre el alcance',
+    );
   });
 
   // ── Reject modal ──────────────────────────────────────────────────────────

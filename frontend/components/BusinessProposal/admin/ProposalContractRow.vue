@@ -4,9 +4,12 @@
       <div class="text-sm font-medium text-text-default dark:text-white">{{ variant.label }}</div>
       <div v-if="variant.subtitle" class="text-xs text-text-muted mt-0.5">{{ variant.subtitle }}</div>
       <div class="text-xs text-text-subtle dark:text-text-subtle mt-0.5">
-        <template v-if="doc">PDF · Generado el {{ formatDate(doc.created_at) }}</template>
+        <template v-if="doc">PDF · Generado el {{ formatDate(doc.updated_at || doc.created_at) }}</template>
         <template v-else>PDF · No generado</template>
       </div>
+      <p v-if="doc?.needs_regeneration" class="mt-1 text-xs text-warning-strong" role="status" data-testid="proposal-service-contract-stale">
+        Las condiciones del servicio cambiaron. Regenera y revisa el contrato antes de enviarlo.
+      </p>
     </div>
     <div class="flex items-center gap-2 flex-wrap">
       <template v-if="doc">
@@ -20,7 +23,7 @@
         <PanelDownloadLink :url="pdfUrl" filename="contrato.pdf" />
         <PanelDownloadLink :url="draftPdfUrl" filename="borrador.pdf" :label="t('pwa.download.draft')" />
         <BaseButton variant="secondary" size="sm" :disabled="actionsDisabled" disabled-reason="El contrato ya no se puede editar en el estado actual de la propuesta." @click="$emit('edit')">
-          Editar parámetros
+          {{ doc.needs_regeneration ? 'Regenerar contrato' : 'Editar parámetros' }}
         </BaseButton>
       </template>
       <BaseButton variant="secondary" size="sm" v-else-if="!actionsDisabled" :data-testid="`proposal-generate-contract-${variant.key}`" @click="$emit('generate')">

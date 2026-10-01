@@ -74,6 +74,8 @@
         />
       </Transition>
 
+      <GatewayGuide v-if="!viewMode" :language="pLang" />
+
       <!-- Proposal sections: shown after view mode is chosen -->
       <template v-if="viewMode">
         <!-- UX overlay elements -->
@@ -95,7 +97,6 @@
         <!-- PDF download + Share -->
         <PdfDownloadButton
           :view-mode="viewMode"
-          :selected-module-ids="pdfSelectedModuleIds"
         />
         <ShareProposalButton
           v-if="proposal?.uuid"
@@ -344,6 +345,7 @@ import {
   ValueAddedModules,
   RoiProjection,
 } from '~/components/BusinessProposal';
+import GatewayGuide from '~/components/BusinessProposal/GatewayGuide.vue';
 import PersonalizedVideo from '~/components/BusinessProposal/PersonalizedVideo.vue';
 import ProposalIndex from '~/components/BusinessProposal/ProposalIndex.vue';
 import SectionCounter from '~/components/BusinessProposal/SectionCounter.vue';
@@ -488,7 +490,7 @@ const hasConfirmedModuleSelection = ref(false);
 
 function effectiveSelectedModuleIdsForTechnical() {
   if (!hasConfirmedModuleSelection.value) return null;
-  const fromUi = [...selectedCalculatorModuleIds.value];
+  const fromUi = [...selectedScopeModuleIds.value];
   if (fromUi.length) return fromUi;
   const persisted = proposal.value?.selected_modules;
   if (Array.isArray(persisted)) return [...persisted];
@@ -497,7 +499,7 @@ function effectiveSelectedModuleIdsForTechnical() {
 
 // Technical document as the client should see it, in two layers so the
 // (deep-copying) normalization only re-runs when the section content
-// changes, while the filter reacts to the calculator selection.
+// changes, while the filter reflects persisted contracted scope.
 const normalizedTechnicalDocument = computed(() => {
   const tech = enabledSections.value.find((s) => s.section_type === 'technical_document');
   if (!tech || !tech.content_json || typeof tech.content_json !== 'object') return null;
@@ -517,8 +519,7 @@ const filteredTechnicalDocument = computed(() => {
 });
 
 // Item → technical requirements map for the commercial nested modal.
-// Filtered by the client's module selection so deselected calculator
-// modules never leak requirements into the commercial view.
+// Filtered by contracted scope so excluded modules do not add requirements.
 const itemRequirementsMap = computed(() => (
   filteredTechnicalDocument.value
     ? buildItemRequirementsMap(filteredTechnicalDocument.value)
@@ -691,11 +692,7 @@ watch(currentPanel, (panel) => {
 }, { immediate: true });
 
 // Investment onboarding: detect if investment section has modules (customize button)
-const investmentHasModules = computed(() => {
-  const inv = enabledSections.value.find(s => s.section_type === 'investment');
-  const modules = inv?.content_json?.modules || [];
-  return modules.length > 0 || allGroupCalculatorItems.value.length > 0;
-});
+const investmentHasModules = computed(() => Boolean(proposal.value?.uuid));
 
 // Trigger investment onboarding when user navigates to investment section
 let investmentOnboardingTriggered = false;
@@ -767,90 +764,30 @@ const extractedWhatsappLink = computed(() => {
   return '';
 });
 
-// Unified calculator items: every FR group with price_percent becomes a toggleable calculator item
-const allGroupCalculatorItems = computed(() => {
-  const frSection = enabledSections.value.find(s => s.section_type === 'functional_requirements');
-  if (!frSection) return [];
-  const investmentSection = enabledSections.value.find(s => s.section_type === 'investment');
-  const investContent = investmentSection?.content_json || {};
-  const baseTotal = parseInt(String(investContent.totalInvestment || '').replace(/[^\d]/g, ''), 10) || 0;
-  const cj = frSection.content_json || {};
-  const allGroups = [...(cj.groups || []), ...(cj.additionalModules || [])].filter(g => {
-    if (g.is_visible === false) return false;
-    return g.is_calculator_module === true;
-  });
-  const items = [];
-  for (const group of allGroups) {
-    const isCalcModule = group.is_calculator_module === true;
-    const pricePercent = group.price_percent ?? 0;
-    const price = pricePercent > 0 ? Math.round(baseTotal * pricePercent / 100) : 0;
-    // `selected` is the source of truth (the "Seleccionado" checkbox in the
-    // admin panel); `default_selected` is only a fallback for legacy data that
-    // never got an explicit `selected` value. Same rule the backend uses for
-    // the effective total (admin_default_calculator_group_ids) and PDF scope.
-    const defaultSelected = group.selected ?? group.default_selected ?? !isCalcModule;
-    items.push({
-      id: isCalcModule ? `module-${group.id}` : `group-${group.id}`,
-      name: `${group.icon || ''} ${group.title}`.trim(),
-      groupId: group.id,
-      price,
-      included: true,
-      is_required: pricePercent === 0 && !group.is_invite,
-      default_selected: defaultSelected,
-      // Admin explicitly pinned this module ("selected" checkbox in the panel):
-      // it is forced into the client's selection even after a confirmation.
+// Contracted scope is owned by the seller; legacy selections remain readable.
+const optionalScopeModules = computed(() => {
+  const content = enabledSections.value.find(s => s.section_type === 'functional_requirements')?.content_json || {};
+  return [...(content.groups || []), ...(content.additionalModules || [])]
+    .filter(group => group.is_visible !== false && group.is_calculator_module === true)
+    .map(group => ({
+      id: `module-${group.id}`, groupId: group.id,
+      default_selected: group.selected ?? group.default_selected ?? false,
       pinned: group.selected === true,
-      is_calculator_module: isCalcModule,
-      is_invite: group.is_invite || false,
-      invite_note: group.invite_note || '',
-      _source: isCalcModule ? 'calculator_module' : 'functional_requirements',
-      description: group.description || '',
-      detailItems: group.items || [],
-    });
-  }
-  return items;
+    }));
 });
 
-const selectedCalculatorModuleIds = ref(new Set());
-const customizedTotal = ref(null);
-const effectiveInvestment = ref(null);
-
-// Client-facing total: client's customization wins, then backend effective
-// (base + admin-default additional modules), then plain base as last resort.
-const resolvedInvestmentTotal = computed(() =>
-  customizedTotal.value
-  ?? effectiveInvestment.value
-  ?? Number(proposal.value?.total_investment || 0),
-);
-
-// PDF download includes the current in-memory selection only when the client
-// has actively confirmed a customization; otherwise the backend-stored
-// selected_modules are used server-side.
-const pdfSelectedModuleIds = computed(() => {
-  if (!hasConfirmedModuleSelection.value) return null;
-  const ids = [...selectedCalculatorModuleIds.value];
-  return ids.length ? ids : null;
-});
-
-const effectiveBaselineTotal = computed(() =>
-  Number(effectiveInvestment.value || proposal.value?.total_investment || 0),
-);
-
-const isInvestmentCustomized = computed(() =>
-  customizedTotal.value != null
-  && Number(customizedTotal.value) !== effectiveBaselineTotal.value,
-);
+const selectedScopeModuleIds = ref(new Set());
+const resolvedInvestmentTotal = computed(() => Number(proposal.value?.total_investment || 0));
 
 const confirmedModuleCount = computed(() =>
-  hasConfirmedModuleSelection.value ? selectedCalculatorModuleIds.value.size : null,
+  hasConfirmedModuleSelection.value ? selectedScopeModuleIds.value.size : null,
 );
 
 // Mirror of Investment.vue computedPaymentOptions: derive each amount from
-// the label percentage × the current displayed total. baseTotalStr is kept
-// in the signature for callsite compatibility but no longer used.
-function recomputePaymentOptions(paymentOptions, baseTotalStr, customTotal) {
-  if (customTotal == null || !paymentOptions?.length) return paymentOptions;
-  const target = Number(customTotal) || 0;
+// the label percentage × the current displayed total.
+function recomputePaymentOptions(paymentOptions, agreedTotal) {
+  if (agreedTotal == null || !paymentOptions?.length) return paymentOptions;
+  const target = Number(agreedTotal) || 0;
   if (target <= 0) return paymentOptions;
   return paymentOptions.map(opt => {
     const pctMatch = String(opt.label || '').match(/(\d+)\s*%/);
@@ -875,14 +812,11 @@ const nextPanelTitle = computed(() => {
   return next?.title || '';
 });
 
-// Effective total comes from the backend so admin, client view, and PDF
-// stay aligned; ``customizedTotal`` is reserved for real client changes that
-// the client makes during this page session (calculator confirm). Page
-// reload always returns to the backend baseline — no localStorage rehydration.
+// Preserve previously contracted selections; new client interests live separately.
 function computeInitialSelection() {
   if (!proposal.value) return;
 
-  const calcItems = allGroupCalculatorItems.value;
+  const calcItems = optionalScopeModules.value;
   const investmentSection = enabledSections.value.find(s => s.section_type === 'investment');
   const investmentModules = investmentSection?.content_json?.modules || [];
 
@@ -891,7 +825,7 @@ function computeInitialSelection() {
     ? proposal.value.selected_modules
     : [];
   const persisted = normalizePersistedSelectedIds(persistedRaw, calcItems);
-  // Calculator modules the admin pinned explicitly ("selected" in the panel)
+  // Optional modules the admin included explicitly ("selected" in the panel)
   // are always part of the initial selection, even over a prior confirmation.
   const adminPinnedIds = calcItems.filter(m => m.pinned === true).map(m => m.id);
 
@@ -911,13 +845,10 @@ function computeInitialSelection() {
     selectedIds = new Set(derived);
   }
 
-  selectedCalculatorModuleIds.value = new Set(selectedIds);
+  selectedScopeModuleIds.value = new Set(selectedIds);
   hasConfirmedModuleSelection.value = hasConfirmed;
-  customizedTotal.value = null;
 
-  const base = Number(proposal.value.total_investment || 0);
-  const backendEffective = Number(proposal.value.effective_total_investment || 0);
-  effectiveInvestment.value = backendEffective > 0 ? backendEffective : base;
+
 }
 
 // --- Fetch proposal on mount ---
@@ -974,9 +905,8 @@ function getSectionProps(section, displayIndex) {
       expiresAt: section._expiresAt || '',
       language: proposal.value?.language || 'es',
       whatsappLink: extractedWhatsappLink.value,
-      paymentOptions: recomputePaymentOptions(rawPaymentOptions, investContent.totalInvestment, displayTotal),
-      customizedTotal: displayTotal,
-      selectedModuleIds: effectiveSelectedModuleIdsForTechnical() || [],
+      paymentOptions: recomputePaymentOptions(rawPaymentOptions, displayTotal),
+      investmentTotal: displayTotal,
       viewMode: viewMode.value || 'detailed',
       ctaMessage: section._ctaMessage || '',
       primaryCTA: section._primaryCTA || {},
@@ -1023,18 +953,8 @@ function getSectionProps(section, displayIndex) {
     // content_json is the only source: the legacy requirement_groups tables
     // were dropped after shipping zero rows in production.
     const groups = content.groups || [];
-    // Build a price map for all groups with price_percent so FR cards can show price badges
-    const investmentSection = enabledSections.value.find(s => s.section_type === 'investment');
-    const investContent = investmentSection?.content_json || {};
-    const baseTotal = parseInt(String(investContent.totalInvestment || '').replace(/[^\d]/g, ''), 10) || 0;
-    const groupPriceMap = {};
-    for (const g of [...(content.additionalModules || []), ...groups]) {
-      if (g.price_percent != null && g.price_percent > 0) {
-        groupPriceMap[g.id] = Math.round(baseTotal * g.price_percent / 100);
-      }
-    }
-    // Unified selected IDs: combine calculator module selections + group selections
-    const allSelectedIds = [...selectedCalculatorModuleIds.value];
+    // Persisted scope selections remain independent of commercial interests.
+    const allSelectedIds = [...selectedScopeModuleIds.value];
     // Hide groups already showcased in the value_added_modules section (when enabled)
     // to avoid visual duplication. Their canonical data stays in FR.groups[] as catalog.
     const vamSection = enabledSections.value.find(
@@ -1052,8 +972,7 @@ function getSectionProps(section, displayIndex) {
       },
       language: proposal.value?.language || 'es',
       selectedCalculatorModules: allSelectedIds,
-      calculatorModulePrices: groupPriceMap,
-      currency: investContent.currency || proposal.value?.currency || 'COP',
+      currency: proposal.value?.currency || 'COP',
       proposalUuid: proposal.value?.uuid || '',
       valueAddedModuleIds,
       itemRequirementsMap: itemRequirementsMap.value,
@@ -1062,13 +981,6 @@ function getSectionProps(section, displayIndex) {
 
   // For investment: inject discount data from proposal
   if (section.section_type === 'investment') {
-    const investmentModules = (content.modules || []).map(m => ({ ...m, _source: 'investment' }));
-    const allCalculatorItems = [...investmentModules, ...allGroupCalculatorItems.value];
-    // Extract baseWeeks from timeline section's totalDuration
-    const timelineSection = enabledSections.value.find(s => s.section_type === 'timeline');
-    const totalDuration = timelineSection?.content_json?.totalDuration || '';
-    const weeksMatch = totalDuration.match(/(\d+)\s*(semana|week)/i);
-    const baseWeeks = weeksMatch ? parseInt(weeksMatch[1], 10) : 0;
     // Always use proposal.total_investment as the source of truth for display
     const proposalTotal = Number(proposal.value?.total_investment || 0);
     const proposalCurrency = proposal.value?.currency || content.currency || 'COP';
@@ -1089,17 +1001,14 @@ function getSectionProps(section, displayIndex) {
       language: proposal.value?.language || 'es',
       discountPercent: proposal.value?.discount_percent || 0,
       discountedInvestment: proposal.value?.discounted_investment || '',
+      discountOriginalInvestment: proposal.value?.discount_original_investment || '',
       expiresAt: proposal.value?.expires_at || '',
       proposalStatus: proposal.value?.status || '',
-      modules: allCalculatorItems,
+      preview: isPreviewMode.value,
       proposalUuid: proposal.value?.uuid || '',
       whatsappLink: extractedWhatsappLink.value,
-      baseWeeks,
-      sentAt: proposal.value?.sent_at || '',
       viewMode: viewMode.value || 'detailed',
-      effectiveTotal: resolvedInvestmentTotal.value || effectiveBaselineTotal.value,
-      isCustomized: isInvestmentCustomized.value,
-      selectedModuleIds: [...selectedCalculatorModuleIds.value],
+      effectiveTotal: resolvedInvestmentTotal.value,
     };
   }
 
@@ -1111,30 +1020,24 @@ function getSectionProps(section, displayIndex) {
     };
   }
 
-  // For proposal_summary: inject proposal-level data + investment info for calculator sync
+  // For proposal_summary: inject the agreed investment and contracted scope.
   if (section.section_type === 'proposal_summary') {
     const timelineSection = enabledSections.value.find(s => s.section_type === 'timeline');
     const timelineDuration = timelineSection?.content_json?.totalDuration || '';
     const investmentSection = enabledSections.value.find(s => s.section_type === 'investment');
     const investContent = investmentSection?.content_json || {};
     const investmentModules = (investContent.modules || []).map(m => ({ ...m, _source: 'investment' }));
-    const allCalculatorItems = [...investmentModules, ...allGroupCalculatorItems.value];
+    const contractedModules = [...investmentModules, ...optionalScopeModules.value];
     const effectiveTotal = resolvedInvestmentTotal.value;
-    const formattedSummaryTotal = effectiveTotal > 0
-      ? '$' + effectiveTotal.toLocaleString('es-CO', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
-      : investContent.totalInvestment || '';
     const rawPaymentOptions = investContent.paymentOptions || [];
     return {
       content: { ...content, index: paddedIndex },
       proposal: proposal.value,
       timelineDuration,
       language: proposal.value?.language || 'es',
-      proposalUuid: proposal.value?.uuid || '',
-      investmentModules: allCalculatorItems,
-      rawTotalInvestment: formattedSummaryTotal,
-      paymentOptions: recomputePaymentOptions(rawPaymentOptions, investContent.totalInvestment, effectiveTotal),
-      customizedTotal: effectiveTotal,
-      isCustomized: isInvestmentCustomized.value,
+      investmentModules: contractedModules,
+      paymentOptions: recomputePaymentOptions(rawPaymentOptions, effectiveTotal),
+      investmentTotal: effectiveTotal,
       selectedModuleCount: confirmedModuleCount.value,
     };
   }
@@ -1179,9 +1082,6 @@ function getSectionListeners(section) {
   const listeners = {};
   if (type === 'investment') {
     listeners.navigateToRequirements = handleNavigateToRequirements;
-    listeners.updateCalculatorModules = onCalculatorModulesUpdate;
-    listeners.updateCustomTotal = onCustomTotalUpdate;
-    listeners.selectionConfirmed = onModuleSelectionConfirmed;
     listeners.switchToDetailed = handleSwitchToDetailed;
   }
   if (type === 'technical_document_public') {
@@ -1253,7 +1153,7 @@ function handleNavigateToRequirements() {
 
 // Jumps from the technical cover index. Resolved by fragment key rather than by
 // position, so the jump stays correct when filterTechnicalDocumentByModules
-// drops fragments the client deselected in the calculator.
+// omits fragments outside the persisted contracted scope.
 function handleNavigateToFragment(fragment) {
   const idx = displayPanels.value.findIndex(p => p._technicalFragment === fragment);
   if (idx !== -1) navigateTo(idx);
@@ -1329,26 +1229,6 @@ function handleBackToGateway() {
   switchMode('gateway', null, { scrollToTop: true, beforeSwitch: flushTracking });
 }
 
-function onCustomTotalUpdate(total) {
-  customizedTotal.value = total;
-}
-
-function onCalculatorModulesUpdate(selectedIds) {
-  if (!Array.isArray(selectedIds)) return;
-  // Store the full live selection — both investment-type and calculator-type
-  // module IDs — so the modal can reopen in the same state after the user
-  // navigates between sections, even if they didn't explicitly confirm.
-  selectedCalculatorModuleIds.value = new Set(selectedIds);
-}
-
-function onModuleSelectionConfirmed({ selectedIds, total } = {}) {
-  hasConfirmedModuleSelection.value = true;
-  if (total != null) customizedTotal.value = total;
-  selectedCalculatorModuleIds.value = new Set(
-    Array.isArray(selectedIds) ? selectedIds : [],
-  );
-}
-
 function goNext() {
   navigateTo(currentIndex.value + 1);
 }
@@ -1359,6 +1239,7 @@ function goPrev() {
 
 // --- Keyboard navigation ---
 function handleKeydown(e) {
+  if (document.querySelector('[aria-modal="true"]')) return;
   const tag = document.activeElement?.tagName;
   if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
   if (e.key === 'ArrowRight') { e.preventDefault(); goNext(); }
@@ -1903,5 +1784,5 @@ onBeforeUnmount(() => {
   background-color: rgba(255, 255, 255, 0.10) !important;
 }
 
-/* Teleported modals (requirements, calculator) set their own :data-theme — see InvestmentCalculatorModal pattern. */
+/* Teleported requirement and interest modals carry their local theme. */
 </style>

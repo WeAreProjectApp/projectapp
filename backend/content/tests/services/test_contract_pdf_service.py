@@ -17,6 +17,7 @@ from content.services.contract_pdf_service import (
     _render_block,
     _substitute_placeholders,
     generate_contract_pdf,
+    resolve_contract_content,
 )
 from content.services.contract_variants import SERVICE_PARAM_KEYS, template_markdown
 from content.services.pdf_utils import CONTENT_W, MARGIN_T, PAGE_H, _font
@@ -357,7 +358,7 @@ class TestContractSpecialChars:
 
 
 class TestDefaultTemplateIntegrity:
-    """Ensure the default ContractTemplate uses every placeholder that _build_params provides."""
+    """The default templates resolve their party data and service conditions."""
 
     @pytest.fixture(autouse=True)
     def _load_default_template(self):
@@ -374,23 +375,28 @@ class TestDefaultTemplateIntegrity:
         assert not missing, f'Placeholders missing from the {variant} text: {missing}'
 
     @pytest.mark.parametrize('variant', CONTRACT_TEXTS)
-    def test_has_no_unknown_placeholders(self, variant):
-        known_keys = set(_build_params({}).keys())
+    def test_has_no_unknown_placeholders(self, variant, negotiating_proposal):
+        resolved = resolve_contract_content(negotiating_proposal, variant=variant)
+        known_keys = set(resolved['params'])
         found = set(re.findall(r'\{(\w+)\}', _default_text(variant)))
         unknown = found - known_keys
-        assert not unknown, f'Unknown placeholders in the {variant} text (not in _build_params): {unknown}'
+        assert 'client_full_name' in found
+        assert not unknown, f'Unknown placeholders in the {variant} text: {unknown}'
 
     @pytest.mark.parametrize('variant', CONTRACT_TEXTS)
-    def test_format_succeeds_with_all_params(self, variant):
-        markdown = _default_text(variant)
-        params = _build_params({
+    def test_format_succeeds_with_all_params(self, variant, negotiating_proposal):
+        negotiating_proposal.contract_params = {
             'client_full_name': 'Test Client',
             'client_cedula': '123',
             'contractor_full_name': 'Test Contractor',
             'contractor_nit': '456',
-        })
-        result = markdown.format(**params)
-        assert '{' not in result or '{{' in markdown
+        }
+
+        result = resolve_contract_content(negotiating_proposal, variant=variant)['markdown']
+
+        assert 'Test Client' in result
+        assert 'Test Contractor' in result
+        assert re.findall(r'\{(\w+)\}', result) == []
 
     def test_has_source_code_delivery_clause(self):
         """Source code and repository access are withheld until the contract is fully paid."""

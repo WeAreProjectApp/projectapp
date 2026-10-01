@@ -410,6 +410,7 @@ MCP_MODEL_CONTRACTS = {
                 'last_activity_at view_count first_viewed_at sent_at responded_at '
                 'engagement_declining cached_heat_score deliverable '
                 'platform_onboarding_completed_at platform_onboarding_status '
+                'module_interests module_interests_updated_at '
                 'created_at updated_at'
             ),
             read_write=(
@@ -438,6 +439,10 @@ MCP_MODEL_CONTRACTS = {
                 | _excluded(
                     'Respuesta privada del cliente; se gestiona en el flujo público.',
                     'rejection_reason rejection_comment',
+                )
+                | _excluded(
+                    'Instantánea interna de precios históricos; sólo la migración y la edición financiera la gestionan.',
+                    'legacy_pricing_snapshot',
                 )
             ),
         ),

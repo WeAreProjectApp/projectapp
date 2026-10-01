@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "During negotiation the admin chooses one contract or separate product and service contracts. Service terms offer global presets plus editable custom wording beneath each dropdown. Literal wording survives save and reload; historical text remains editable. Validation or server failures retain the draft for correction and retry. Pending saves block repeated submissions and closing; failed settings loads offer retry. Create and edit share compact two-column forms, stacked on phones. Service terms use floating keyboard-accessible listboxes, with Escape dismissing options before the modal.",
+  "description": "During negotiation the admin chooses one contract or separate product and service contracts. Service terms offer global presets plus editable custom wording beneath each dropdown. Literal wording survives save and reload; historical text remains editable. Validation or server failures retain the draft for correction and retry. Pending saves block repeated submissions and closing; failed settings loads offer retry. Create and edit share compact two-column forms, stacked on phones. Service terms use floating keyboard-accessible listboxes, with Escape dismissing options before the modal. Split service contracts automatically include hosting economics and renewal terms, including custom contracts; the commercial annex retains product terms. A stale service warning opens regeneration for the service variant before formalization.",
   "outcomes": [
     "success",
     "error",

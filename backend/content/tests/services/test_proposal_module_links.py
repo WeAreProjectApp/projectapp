@@ -89,17 +89,25 @@ class TestBuildProposalModuleLinkCatalog:
         )
         assert 'group-g1' in result['always_included_ids']
 
-    def test_non_calculator_group_with_nonzero_price_is_not_always_included(self):
+    def test_non_calculator_group_can_be_explicitly_optional(self):
         result = build_proposal_module_link_catalog(
-            [_fr({'groups': [{'id': 'g1', 'title': 'G', 'price_percent': 10}]})]
+            [_fr({'groups': [{
+                'id': 'g1',
+                'title': 'G',
+                'is_always_included': False,
+            }]})]
         )
         assert 'group-g1' not in result['always_included_ids']
 
-    def test_calculator_module_with_zero_price_and_no_invite_is_always_included(self):
+    def test_calculator_module_defaults_to_optional(self):
         result = build_proposal_module_link_catalog(
-            [_fr({'groups': [{'id': 'g1', 'title': 'Calc', 'price_percent': 0, 'is_calculator_module': True, 'is_invite': False}]})]
+            [_fr({'groups': [{
+                'id': 'g1',
+                'title': 'Calc',
+                'is_calculator_module': True,
+            }]})]
         )
-        assert 'module-g1' in result['always_included_ids']
+        assert 'module-g1' not in result['always_included_ids']
 
     def test_calculator_module_with_invite_flag_is_not_always_included(self):
         result = build_proposal_module_link_catalog(

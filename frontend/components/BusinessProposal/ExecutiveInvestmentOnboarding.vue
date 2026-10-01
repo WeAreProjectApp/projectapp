@@ -132,10 +132,10 @@ const arrowComputedStyle = ref({});
 
 const stepsI18n = {
   es: [
-    { target: '.switch-to-detailed-btn', title: 'Descubre la propuesta completa', description: 'Este botón te lleva a la versión detallada donde encontrarás todos los módulos de tu proyecto, una calculadora interactiva para personalizar tu inversión, y mucho más.', prefer: 'bottom' },
+    { target: '.switch-to-detailed-btn', title: 'Descubre la propuesta completa', description: 'Este botón te lleva a la versión detallada donde encontrarás todos los módulos de tu proyecto, un catálogo de módulos adicionales para explorar y guardar tu interés, y mucho más.', prefer: 'bottom' },
   ],
   en: [
-    { target: '.switch-to-detailed-btn', title: 'Discover the full proposal', description: 'This button takes you to the detailed version where you\'ll find all your project modules, an interactive calculator to customize your investment, and much more.', prefer: 'bottom' },
+    { target: '.switch-to-detailed-btn', title: 'Discover the full proposal', description: 'This button takes you to the detailed version where you\'ll find all your project modules, an additional-module catalog to explore and save your interests, and much more.', prefer: 'bottom' },
   ],
 };
 const steps = computed(() => stepsI18n[props.language] || stepsI18n.es);

@@ -9,7 +9,10 @@ from pypdf import PdfReader
 from content.models import ProposalSection
 from content.services.formalization_content import FormalContent
 from content.services.formalization_pdf import generate_formal_pdf
-from content.services.proposal_pdf_service import ProposalPdfService, default_selected_modules_from_content
+from content.services.proposal_pdf_service import (
+    ProposalPdfService,
+    default_selected_modules_from_content,
+)
 from content.services.technical_document_pdf import generate_technical_document_pdf
 
 pytestmark = pytest.mark.django_db
@@ -34,19 +37,26 @@ def pdf_text(raw):
 
 
 def original_commercial_text(proposal):
-    # Independent reference: the normal PDF with precisely the agreed five sections disabled.
+    # Independent reference: remove the agreed content from the test data,
+    # then use the public renderer's defaults. Restore the source afterwards.
     excluded = proposal.sections.filter(is_enabled=True, section_type__in=[
         'context_diagnostic', 'roi_projection', 'development_stages',
         'final_note', 'next_steps',
     ])
     ids = list(excluded.values_list('pk', flat=True))
     excluded.update(is_enabled=False)
+    investment = proposal.sections.get(section_type='investment')
+    original = investment.content_json
+    investment.content_json = {key: value for key, value in original.items() if key != 'valueReasons'}
+    investment.save(update_fields=['content_json'])
     try:
         return pdf_text(ProposalPdfService.generate(
             proposal, selected_modules=default_selected_modules_from_content(proposal),
         ))
     finally:
         proposal.sections.filter(pk__in=ids).update(is_enabled=True)
+        investment.content_json = original
+        investment.save(update_fields=['content_json'])
 
 
 def original_technical_text(proposal):
@@ -71,7 +81,7 @@ def render(proposal, kind='commercial'):
     'context_diagnostic', 'roi_projection', 'development_stages',
     'final_note', 'next_steps',
 ])
-def test_commercial_annex_excludes_only_the_agreed_whole_sections(formal_proposal, section_type):
+def test_commercial_annex_excludes_the_agreed_whole_sections(formal_proposal, section_type):
     formal_proposal.sections.update_or_create(
         section_type=section_type,
         defaults={'title': section_type, 'order': 20, 'content_json': {
@@ -84,22 +94,21 @@ def test_commercial_annex_excludes_only_the_agreed_whole_sections(formal_proposa
 
     assert 'EXCLUDED_SALES_SECTION' in original
     assert 'EXCLUDED_SALES_SECTION' not in rendered
-    assert 'SALES_SENTINEL' in rendered  # Part of investment: no field-level curation.
     assert rendered == original_commercial_text(formal_proposal)
 
 
-def test_commercial_annex_inherits_unselected_item_pricing(formal_proposal):
+def test_commercial_annex_preserves_manual_total_for_unselected_item(formal_proposal):
     requirements = formal_proposal.sections.get(section_type='functional_requirements')
     requirements.content_json['groups'][0]['items'].append({
         'id': 'campaigns', 'name': 'Módulo opcional',
-        'description': 'OPTIONAL_SALES_SCOPE', 'price': '5000', 'is_required': False,
+        'description': 'OPTIONAL_SALES_SCOPE', 'is_required': False,
     })
     requirements.save(update_fields=['content_json'])
 
     rendered = render(formal_proposal)
 
     assert 'OPTIONAL_SALES_SCOPE' not in rendered
-    assert '10.000' in rendered
+    assert '$15.000' in rendered
     assert rendered == original_commercial_text(formal_proposal)
 
 

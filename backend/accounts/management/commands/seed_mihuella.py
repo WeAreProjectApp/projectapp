@@ -464,7 +464,7 @@ class Command(BaseCommand):
                         'title': 'Plataforma Pública (19 vistas)',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': 'Todas las vistas accesibles sin autenticación: landing, exploración de animales, refugios, campañas, blog y páginas institucionales.',
                         'items': [
                             {'icon': '🏠', 'name': 'Landing / Home', 'description': 'Hero, carrusel de animales destacados, carrusel de campañas activas y spotlight de refugios verificados.'},
@@ -487,7 +487,7 @@ class Command(BaseCommand):
                         'title': 'Módulo de Adopción',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': 'Flujo completo de adopción: desde el formulario wizard hasta el seguimiento del estado por parte del adoptante y la gestión por el refugio.',
                         'items': [
                             {'icon': '📝', 'name': 'Formulario de adopción wizard (3 pasos)', 'description': 'Paso 1: datos personales. Paso 2: hogar y estilo de vida. Paso 3: revisión y confirmación. Incluye validación y guardado parcial.'},
@@ -501,7 +501,7 @@ class Command(BaseCommand):
                         'title': 'Pagos y Donaciones Wompi',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': 'Integración completa con la pasarela Wompi (Colombia) para donaciones únicas y apadrinamientos recurrentes.',
                         'items': [
                             {'icon': '💳', 'name': 'Integración Wompi', 'description': 'Tarjeta de crédito/débito, PSE y Nequi. Webhooks para confirmación asíncrona de pagos.'},
@@ -518,7 +518,7 @@ class Command(BaseCommand):
                         'title': 'Panel de Refugio (9 vistas)',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': 'Panel completo para administradores de refugio: gestión de animales, campañas, solicitudes, donaciones y actualizaciones.',
                         'items': [
                             {'icon': '📊', 'name': 'Dashboard del refugio (/shelter/dashboard)', 'description': 'KPIs: animales activos, solicitudes pendientes, donaciones del mes. Accesos directos a todas las secciones.'},
@@ -535,7 +535,7 @@ class Command(BaseCommand):
                         'title': 'Panel de Administración (9 vistas)',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': 'Panel para el equipo de Mi Huella: aprobación de refugios, moderación, métricas, auditoría de pagos y gestión del blog.',
                         'items': [
                             {'icon': '📊', 'name': 'Dashboard admin (/admin/dashboard)', 'description': 'KPIs globales: total usuarios, refugios activos, animales, solicitudes, donaciones del mes.'},
@@ -552,7 +552,7 @@ class Command(BaseCommand):
                         'title': 'Sistema de Notificaciones',
                         'is_visible': True,
                         'selected': True,
-                        'price_percent': 0,
+                        'is_always_included': True,
                         'description': '12 eventos transaccionales enviados por email y/o in-app según preferencias del usuario.',
                         'items': [
                             {'icon': '📬', 'name': 'Notificaciones de adopción', 'description': 'Solicitud enviada, cambio de estado, entrevista agendada, información solicitada.'},

@@ -58,6 +58,7 @@ def duplicate_proposal(source, *, via_mcp=False):
         slug='',
         language=source.language,
         total_investment=source.total_investment,
+        legacy_pricing_snapshot=deepcopy(source.legacy_pricing_snapshot),
         currency=source.currency,
         nationality=source.nationality,
         hosting_percent=source.hosting_percent,
@@ -1119,7 +1120,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Vistas',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Cada vista es una pantalla o sección del sitio. Su propósito es guiar al visitante '
                         'para conocer la propuesta de valor y facilitar el contacto o la acción deseada.'
@@ -1146,7 +1146,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Componentes',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Los componentes son elementos visuales o funcionales que se reutilizan en varias '
                         'secciones del sitio. Esto mantiene una experiencia coherente y optimiza el desarrollo.'
@@ -1165,7 +1164,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Funcionalidades Específicas',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Las funcionalidades son acciones o comportamientos interactivos del sitio web. '
                         'Le dan vida y dinamismo a la página, permitiendo que funcione de forma práctica y útil.'
@@ -1185,7 +1183,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Funcionalidades Transversales',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Capacidades de calidad que atraviesan varias vistas, componentes y flujos. '
                         'Este catálogo es un punto de partida: debe adaptarse al negocio, la etapa '
@@ -1207,7 +1204,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Módulo Administrativo',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'El módulo administrativo permite gestionar el contenido y la operación del sitio '
                         'sin depender de desarrollo técnico. El alcance cubre únicamente los gestores '
@@ -1227,7 +1223,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Módulo de Analítica',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Dashboard de reportes inteligentes y métricas en tiempo real para entender '
                         'el comportamiento de los visitantes y tomar decisiones basadas en datos. '
@@ -1295,7 +1290,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Dashboard de KPIs y Métricas',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Panel de control complementario al módulo de analítica, con indicadores '
                         'clave de rendimiento en tiempo real para monitorear la salud de tu '
@@ -1315,7 +1309,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Manual de Usuario Interactivo',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Manual/wiki interactivo no técnico, con índice navegable y buscador, '
                         'que describe los procesos, flujos, dependencias, roles y responsabilidades '
@@ -1337,7 +1330,6 @@ DEFAULT_SECTIONS = [
                     'title': 'Automatización con Asistente de IA',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Tomamos un (1) proceso que hoy realizas de forma manual y lo automatizamos '
                         'conectándolo a un asistente de IA (Claude o ChatGPT). Desde el chat podrás '
@@ -1367,7 +1359,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 60,
                     'is_invite': False,
                     'items': [
                         {'icon': '📄', 'name': 'Generación de comprobantes electrónicos', 'description': 'Creación automática de facturas, notas crédito/débito y documentos soporte desde los flujos operativos del negocio.'},
@@ -1389,7 +1380,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'is_invite': False,
                     'items': [
                         {'icon': '💳', 'name': 'PayU', 'description': 'Una de las más usadas en Colombia, permite pagos con tarjeta, PSE, Efecty, Baloto, Nequi, Daviplata.'},
@@ -1409,7 +1399,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'is_invite': False,
                     'items': [
                         {'icon': '💳', 'name': 'Stripe', 'description': 'Ideal para recibir pagos con tarjeta de crédito/débito, muy usada a nivel mundial. Soporta suscripciones, pagos únicos y múltiples divisas.'},
@@ -1429,7 +1418,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 40,
                     'items': [
                         {'icon': '📲', 'name': 'Instalación en dispositivo', 'description': 'Los usuarios pueden instalar tu sitio como una app en su celular o computador, con acceso directo desde la pantalla de inicio.'},
                         {'icon': '📡', 'name': 'Funcionamiento offline', 'description': 'El sitio sigue siendo accesible sin conexión a internet, mostrando contenido previamente cargado y sincronizando datos al reconectarse.'},
@@ -1452,7 +1440,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': True,
                     'selected': True,
-                    'price_percent': 35,
                     'items': [
                         {'icon': '✉️', 'name': 'Correos transaccionales con identidad corporativa', 'description': 'Plantillas HTML con logo, colores, tipografía y firma de marca aplicadas en todos los correos del sistema — bienvenida, confirmaciones, alertas, recuperación de contraseña y notificaciones — en lugar de correos en texto plano o genéricos.'},
                         {'icon': '📄', 'name': 'PDFs y exportables con branding', 'description': 'Facturas, reportes, certificados, recibos y descargas Excel/CSV generados desde el sistema con encabezado con logo, paleta corporativa y pie de marca. Cada documento que sale de la plataforma refuerza la imagen profesional del negocio.'},
@@ -1473,7 +1460,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 Te invitamos a una llamada personalizada donde exploraremos '
@@ -1509,7 +1495,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 Te invitamos a una llamada donde analizaremos tu estrategia '
@@ -1540,7 +1525,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 Te invitamos a una llamada donde definimos juntos el alcance de la '
@@ -1574,7 +1558,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 30,
                     'items': [
                         {'icon': '📍', 'name': 'Registro de sesiones y aperturas', 'description': 'Captura cada sesión de uso: cuándo entra el usuario, desde qué dispositivo y si es su primera visita o está regresando. Todo de primera mano (first-party), sin cookies de terceros ni herramientas externas.'},
                         {'icon': '🖥️', 'name': 'Vistas abiertas y tiempo por vista', 'description': 'Registra qué vistas o secciones abre cada usuario y cuántos segundos permanece en cada una. Cubre hasta 15 vistas del sistema, definidas junto al cliente al inicio del proyecto.'},
@@ -1597,7 +1580,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '📧', 'name': 'Reportes automáticos por correo', 'description': 'Recibe resúmenes periódicos con las métricas clave de tu negocio directamente en tu bandeja de entrada, sin tener que entrar al sistema.'},
                         {'icon': '🔔', 'name': 'Alertas personalizadas', 'description': 'Configura notificaciones para eventos importantes: nuevas ventas, registros de usuarios, stock bajo, o cualquier métrica que definas.'},
@@ -1619,7 +1601,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 10,
                     'items': [
                         {'icon': '📬', 'name': 'Captura de leads', 'description': 'Formularios optimizados y pop-ups inteligentes para capturar emails de visitantes interesados en tu contenido o productos.'},
                         {'icon': '🔄', 'name': 'Automatizaciones de email', 'description': 'Secuencias automáticas de bienvenida, carritos abandonados, seguimiento post-compra y re-engagement de usuarios inactivos.'},
@@ -1642,7 +1623,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 25,
                     'items': [
                         {'icon': '⚡', 'name': 'Generación instantánea', 'description': 'Crea códigos QR desde URLs, textos, contactos vCard, redes WiFi, números de WhatsApp o cualquier flujo interno de la plataforma — en segundos.'},
                         {'icon': '🎨', 'name': 'Personalización con tu marca', 'description': 'Aplica los colores corporativos, agrega tu logo al centro y elige formatos (PNG, SVG, PDF) listos para imprimir en alta resolución sin perder calidad.'},
@@ -1667,7 +1647,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 30,
                     'items': [
                         {'icon': '🤖', 'name': 'Redacción asistida con IA', 'description': 'Generación de borradores de blogs, newsletters, emails y posts a partir de un brief simple. Ajusta tono, extensión y formato con un par de clics.'},
                         {'icon': '🎙️', 'name': 'Voz de marca y plantillas', 'description': 'Define tu identidad editorial una vez (tono, estilo, palabras prohibidas, llamados a la acción) y la IA respeta esa voz en cada pieza que genera.'},
@@ -1692,7 +1671,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 15,
                     'items': [
                         {'icon': '🌐', 'name': 'Soporte multi-idioma nativo', 'description': 'Estructura preparada para servir todo el contenido del sitio en dos o más idiomas, con selector de idioma visible y persistencia de preferencia del usuario.'},
                         {'icon': '💱', 'name': 'Formatos regionales de moneda y fecha', 'description': 'Adaptación automática de formatos numéricos, monedas y fechas según la región del visitante o el idioma seleccionado.'},
@@ -1716,7 +1694,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 40,
                     'items': [
                         {'icon': '🔌', 'name': 'Widget de chat embebido', 'description': 'Componente flotante integrado en el sitio web que permite al visitante iniciar una conversación en tiempo real sin salir de la página que está navegando.'},
                         {'icon': '🖥️', 'name': 'Panel de agente en el admin', 'description': 'Los agentes atienden las conversaciones directamente desde el panel administrativo del sitio, sin necesidad de aplicaciones externas ni cuentas adicionales.'},
@@ -1739,7 +1716,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '🎨', 'name': 'Paleta de colores dual', 'description': 'Diseño de dos sistemas de color completos (claro y oscuro) con variables CSS que se alternan de forma instantánea, manteniendo coherencia visual en ambos modos.'},
                         {'icon': '⚙️', 'name': 'Detección automática de preferencia del sistema', 'description': 'El sitio detecta la preferencia de tema del sistema operativo del usuario (prefers-color-scheme) y aplica el modo correspondiente desde la primera visita.'},
@@ -1762,7 +1738,6 @@ DEFAULT_SECTIONS = [
                     'is_calculator_module': False,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '💳', 'name': 'Creación y venta de gift cards', 'description': 'Los clientes pueden comprar tarjetas de regalo digitales con saldo configurable directamente desde tu sitio web, con proceso de pago integrado.'},
                         {'icon': '✅', 'name': 'Canje en checkout con código único', 'description': 'Cada gift card genera un código único verificable que el destinatario puede aplicar durante el proceso de compra como método de pago parcial o total.'},
@@ -2491,7 +2466,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Views',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Each view is a screen or section of the website. Its purpose is to guide the visitor '
                         'to understand the value proposition and facilitate contact or the desired action.'
@@ -2518,7 +2492,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Components',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Components are visual or functional elements reused across multiple sections '
                         'of the site. This ensures a coherent experience and optimizes development.'
@@ -2537,7 +2510,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Specific Features',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Features are interactive actions or behaviors of the website. '
                         'They bring life and dynamism, making the page practical and useful.'
@@ -2557,7 +2529,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Cross-cutting Features',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Quality capabilities that span multiple views, components, and flows. '
                         'This catalog is a starting point and must be adapted to the business, '
@@ -2579,7 +2550,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Admin Module',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'The admin module allows managing the site content and operations '
                         'without depending on technical development. The scope covers only the '
@@ -2599,7 +2569,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Analytics Module',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Smart reporting dashboard with real-time metrics to understand '
                         'visitor behavior and make data-driven decisions. Includes up to '
@@ -2668,7 +2637,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'KPI Dashboard & Metrics',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'Control panel complementary to the analytics module, with real-time '
                         'key performance indicators to monitor the health of your business '
@@ -2688,7 +2656,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'Interactive User Manual',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'A non-technical interactive manual/wiki, with a navigable index and search, '
                         'that describes the processes, flows, dependencies, roles and responsibilities '
@@ -2710,7 +2677,6 @@ DEFAULT_SECTIONS_EN = [
                     'title': 'AI Assistant Automation',
                     'is_visible': True,
                     'selected': True,
-                    'price_percent': 0,
                     'description': (
                         'We take one (1) process you do manually today and automate it by connecting it to '
                         'an AI assistant (Claude or ChatGPT). From the chat you can control the process '
@@ -2739,7 +2705,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 60,
                     'is_invite': False,
                     'items': [
                         {'icon': '📄', 'name': 'Electronic Receipt Generation', 'description': 'Automatic creation of invoices, credit/debit notes, and support documents from business operational flows.'},
@@ -2761,7 +2726,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'is_invite': False,
                     'items': [
                         {'icon': '💳', 'name': 'PayU', 'description': 'One of the most used in Colombia, supports card, PSE, Efecty, Baloto, Nequi, Daviplata.'},
@@ -2781,7 +2745,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'is_invite': False,
                     'items': [
                         {'icon': '💳', 'name': 'Stripe', 'description': 'Ideal for credit/debit card payments, widely used worldwide. Supports subscriptions, one-time payments, and multiple currencies.'},
@@ -2801,7 +2764,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 40,
                     'items': [
                         {'icon': '📲', 'name': 'Device Installation', 'description': 'Users can install your site as an app on their phone or computer, with direct access from the home screen.'},
                         {'icon': '📡', 'name': 'Offline Functionality', 'description': 'The site remains accessible without an internet connection, showing previously loaded content and syncing data upon reconnection.'},
@@ -2824,7 +2786,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': True,
                     'selected': True,
-                    'price_percent': 35,
                     'items': [
                         {'icon': '✉️', 'name': 'Branded Transactional Emails', 'description': 'HTML templates with logo, colors, typography and brand signature applied across all system emails — welcome, confirmations, alerts, password recovery and notifications — instead of plain-text or generic messages.'},
                         {'icon': '📄', 'name': 'PDFs & Exports with Branding', 'description': 'Invoices, reports, certificates, receipts and Excel/CSV downloads generated from the system with branded headers, corporate color palette and brand footers. Every document that leaves the platform reinforces the business\'s professional image.'},
@@ -2845,7 +2806,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 We invite you to a personalized call where we\'ll explore together '
@@ -2880,7 +2840,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 We invite you to a call where we\'ll analyze your current '
@@ -2911,7 +2870,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 0,
                     'is_invite': True,
                     'invite_note': (
                         '🤝 We invite you to a call where we\'ll define together the scope of '
@@ -2945,7 +2903,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 30,
                     'items': [
                         {'icon': '📍', 'name': 'Session & Open Tracking', 'description': 'Captures every usage session: when the user enters, from which device, and whether it is a first visit or a return. Fully first-party — no third-party cookies or external tools.'},
                         {'icon': '🖥️', 'name': 'Views Opened & Time per View', 'description': 'Records which views or sections each user opens and how many seconds they stay on each one. Covers up to 15 system views, defined with the client at project kickoff.'},
@@ -2968,7 +2925,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '📧', 'name': 'Automated Email Reports', 'description': 'Receive periodic summaries with key business metrics directly in your inbox, without having to log into the system.'},
                         {'icon': '🔔', 'name': 'Custom Alerts', 'description': 'Set up notifications for important events: new sales, user registrations, low stock, or any metric you define.'},
@@ -2990,7 +2946,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 10,
                     'items': [
                         {'icon': '📬', 'name': 'Lead Capture', 'description': 'Optimized forms and smart pop-ups to capture emails from visitors interested in your content or products.'},
                         {'icon': '🔄', 'name': 'Email Automations', 'description': 'Automatic welcome sequences, abandoned carts, post-purchase follow-up and re-engagement of inactive users.'},
@@ -3013,7 +2968,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 25,
                     'items': [
                         {'icon': '⚡', 'name': 'Instant Generation', 'description': 'Create QR codes from URLs, text, vCard contacts, WiFi networks, WhatsApp numbers, or any internal platform flow — in seconds.'},
                         {'icon': '🎨', 'name': 'Branded Customization', 'description': 'Apply your corporate colors, place your logo at the center, and pick formats (PNG, SVG, PDF) ready for high-resolution printing without quality loss.'},
@@ -3038,7 +2992,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 30,
                     'items': [
                         {'icon': '🤖', 'name': 'AI-Assisted Writing', 'description': 'Draft blog posts, newsletters, emails, and social posts from a simple brief. Tweak tone, length, and format with a couple of clicks.'},
                         {'icon': '🎙️', 'name': 'Brand Voice & Templates', 'description': 'Define your editorial identity once (tone, style, banned words, calls to action) and the AI honors that voice in every piece it generates.'},
@@ -3063,7 +3016,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 15,
                     'items': [
                         {'icon': '🌐', 'name': 'Native Multi-language Support', 'description': 'Structure ready to serve all site content in two or more languages, with a visible language selector and user preference persistence.'},
                         {'icon': '💱', 'name': 'Regional Currency & Date Formats', 'description': 'Automatic adaptation of numeric formats, currencies, and dates based on the visitor\'s region or selected language.'},
@@ -3086,7 +3038,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 40,
                     'items': [
                         {'icon': '🔌', 'name': 'Embedded Chat Widget', 'description': 'Floating component integrated into the website that allows the visitor to start a real-time conversation without leaving the page they are browsing.'},
                         {'icon': '🖥️', 'name': 'Agent Panel in Admin', 'description': 'Agents handle conversations directly from the site\'s admin panel, without needing external applications or additional accounts.'},
@@ -3108,7 +3059,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': True,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '🎨', 'name': 'Dual Color Palette', 'description': 'Design of two complete color systems (light and dark) with CSS variables that switch instantly, maintaining visual coherence in both modes.'},
                         {'icon': '⚙️', 'name': 'Automatic System Preference Detection', 'description': 'The site detects the user\'s OS theme preference (prefers-color-scheme) and applies the corresponding mode from the first visit.'},
@@ -3131,7 +3081,6 @@ DEFAULT_SECTIONS_EN = [
                     'is_calculator_module': False,
                     'default_selected': False,
                     'selected': False,
-                    'price_percent': 20,
                     'items': [
                         {'icon': '💳', 'name': 'Gift Card Creation & Sales', 'description': 'Customers can purchase digital gift cards with configurable balance directly from your website, with an integrated payment process.'},
                         {'icon': '✅', 'name': 'Checkout Redemption with Unique Code', 'description': 'Each gift card generates a unique verifiable code that the recipient can apply during checkout as a partial or full payment method.'},
@@ -4920,11 +4869,10 @@ def delete_section_from_proposal(section):
     section.delete()
 
     if is_fr:
-        # Payment options were scaled on calculator modules that no longer
-        # exist; rebuild them on the base total.
+        # Keep payment copy aligned with the manually agreed investment.
         from content.services.proposal_totals_service import (
-            resync_investment_from_modules,
+            sync_manual_investment,
         )
-        resync_investment_from_modules(proposal, None)
+        sync_manual_investment(proposal)
 
     return info

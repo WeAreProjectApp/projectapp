@@ -335,9 +335,9 @@ class Command(BaseCommand):
             if status in ('sent', 'viewed', 'rejected', 'expired') and random.random() < 0.4:
                 self._create_alerts(proposal, now)
 
-            # --- Generate calculator interaction logs ---
+            # --- Generate commercial module interests ---
             if status in ('viewed', 'accepted', 'negotiating') and random.random() < 0.5:
-                self._create_calculator_logs(proposal)
+                self._create_module_interests(proposal, now)
 
             # --- Generate seller activity logs ---
             if status in ('viewed', 'accepted', 'negotiating', 'rejected') and random.random() < 0.6:
@@ -611,42 +611,30 @@ class Command(BaseCommand):
             alert_date=now - timedelta(days=random.randint(0, 5)),
         )
 
-    def _create_calculator_logs(self, proposal):
-        """Generate calculator interaction change logs."""
+    def _create_module_interests(self, proposal, now):
+        """Seed catalog interests without changing the agreed price or scope."""
         import json
-        modules = [
-            'pwa_module', 'ai_module', 'reports_alerts_module',
-            'kpi_dashboard_module', 'email_marketing_module',
-            'conversion_tracking_module', 'i18n_module', 'gift_cards_module',
-        ]
-        selected = random.sample(modules, k=random.randint(2, 4))
-        # kpi_dashboard_module is free and selected by default
-        if 'kpi_dashboard_module' not in selected:
-            selected.append('kpi_dashboard_module')
-        deselected = [m for m in modules if m not in selected]
+        from content.models import AdditionalModule
 
-        # Confirmed interaction
-        ProposalChangeLog.objects.create(
-            proposal=proposal,
-            change_type='calc_confirmed',
-            description=json.dumps({
-                'selected': selected,
-                'deselected': deselected,
-                'total': float(proposal.total_investment),
-            }),
+        modules = list(AdditionalModule.objects.filter(
+            is_active=True, category__is_active=True,
+        ).select_related('category').order_by('id'))
+        if not modules:
+            return
+        selected = random.sample(modules, k=min(2, len(modules)))
+        proposal.module_interests = [{
+            'id': module.pk, 'slug': module.slug,
+            'name_es': module.name_es, 'name_en': module.name_en,
+            'category_es': module.category.name_es,
+            'category_en': module.category.name_en,
+        } for module in selected]
+        proposal.module_interests_updated_at = now
+        proposal.save(update_fields=['module_interests', 'module_interests_updated_at'])
+        log = ProposalChangeLog.objects.create(
+            proposal=proposal, change_type='module_interests', actor_type='client',
+            description=json.dumps(proposal.module_interests, ensure_ascii=False),
         )
-
-        # 30% chance of also having an abandoned interaction before confirming
-        if random.random() < 0.3:
-            ProposalChangeLog.objects.create(
-                proposal=proposal,
-                change_type='calc_abandoned',
-                description=json.dumps({
-                    'selected': modules,
-                    'deselected': [],
-                    'total': float(proposal.total_investment),
-                }),
-            )
+        ProposalChangeLog.objects.filter(pk=log.pk).update(created_at=now)
 
     def _create_seller_activity_logs(self, proposal, now):
         """Generate seller activity change logs (call, meeting, followup, note)."""

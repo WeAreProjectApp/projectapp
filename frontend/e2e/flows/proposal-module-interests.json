@@ -1,0 +1,16 @@
+{
+  "id": "proposal-module-interests",
+  "name": "Proposal Module Interests",
+  "module": "proposal",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "From detailed Investment, the client reviews the public catalog by category without prices and saves interests without changing contracted scope, investment, timeline or PDF.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

@@ -21,15 +21,20 @@
           <form :id="modalFormId" class="px-6 py-5 space-y-4" @submit.prevent="handleSubmit">
             <fieldset :disabled="saving" class="min-w-0 space-y-4">
             <!-- Source toggle -->
-            <BaseSegmented
-              v-model="contractSource"
-              class="max-w-md"
-              full-width
-              :options="[
-                { value: 'default', label: 'Contrato por defecto' },
-                { value: 'custom', label: 'Contrato personalizado' },
-              ]"
-            />
+            <div class="space-y-1">
+              <BaseSegmented
+                v-model="contractSource"
+                class="max-w-md"
+                full-width
+                :options="[
+                  { value: 'default', label: 'Contrato por defecto' },
+                  { value: 'custom', label: 'Contrato personalizado' },
+                ]"
+              />
+              <p v-if="variant === 'service'" class="text-xs text-text-muted" data-testid="contract-service-conditions-note">
+                Al generar el contrato se incorporan automáticamente la infraestructura, cobertura, cortesías, precios, descuentos y renovación configurados en la propuesta, también si usas un texto personalizado.
+              </p>
+            </div>
 
             <!-- DEFAULT MODE: contract params form -->
             <template v-if="contractSource === 'default'">
