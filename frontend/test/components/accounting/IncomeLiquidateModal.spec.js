@@ -671,6 +671,9 @@ describe('covered period of a hosting charge', () => {
   it('sends the completed window alongside the settlement', async () => {
     const wrapper = mountModal({ record: legacyHosting });
     await wrapper
+      .find('[data-testid="income-liquidate-period"]')
+      .setValue('2026-11-17');
+    await wrapper
       .find('[data-testid="income-liquidate-period-cadence"]')
       .setValue('semiannual');
 
@@ -682,7 +685,7 @@ describe('covered period of a hosting charge', () => {
       period_cadence: 'semiannual',
     });
     // The payment keeps its own date: the window describes the charge.
-    expect(payload.period_date).not.toBe('2026-10-01');
+    expect(payload.period_date).toBe('2026-11-17');
   });
 
   it('settles with no window at all when the block is left untouched', async () => {
