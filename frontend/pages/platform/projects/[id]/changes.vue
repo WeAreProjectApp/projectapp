@@ -444,6 +444,7 @@
                         <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" admin id="change-response-evidence" />
+                      <IssueContractReply v-model="contractReply" :project-id="projectId" kind="change" :ticket="detailCR" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
                       <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                       <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -457,7 +458,7 @@
                       </div>
                       <div class="flex justify-end gap-2">
                         <BaseButton variant="ghost" size="sm" @click="showEvaluateForm = false">Cancelar</BaseButton>
-                        <BaseButton variant="accent" size="sm" :disabled="crStore.isUpdating" @click="handleEvaluate">
+                        <BaseButton variant="accent" size="sm" :loading="crStore.isUpdating" :disabled="!!contractReply && !contractReply.human_reviewed" :disabled-reason="t('platformIssues.reply.humanRequired')" @click="handleEvaluate">
                           {{ crStore.isUpdating ? 'Guardando...' : 'Guardar evaluación' }}
                         </BaseButton>
                       </div>
@@ -553,6 +554,7 @@ import IssueSourcePicker from '~/components/platform/issues/IssueSourcePicker.vu
 import IssueHistory from '~/components/platform/issues/IssueHistory.vue'
 import IssueAttachments from '~/components/platform/issues/IssueAttachments.vue'
 import IssueEvidenceFields from '~/components/platform/issues/IssueEvidenceFields.vue'
+import IssueContractReply from '~/components/platform/issues/IssueContractReply.vue'
 import { usePlatformDeliveryStore } from '~/stores/platform-delivery'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
@@ -573,6 +575,8 @@ const projectsStore = usePlatformProjectsStore()
 const issueStore = usePlatformIssueReportsStore()
 const sourceError = ref('')
 const responseEvidence = ref({ contract_id: null, document_ids: [] })
+const contractReply = ref(null)
+let evaluationRetry = null
 const commentEvidence = ref({ document_ids: [] })
 const deliveryStore = usePlatformDeliveryStore()
 const isConvertOpen = ref(false)
@@ -773,6 +777,8 @@ async function openDetailModal(cr) {
 }
 
 function openEvaluateForm() {
+  contractReply.value = null
+  evaluationRetry = null
   evalForm.status = detailCR.value?.status || 'evaluating'
   evalForm.admin_response = ''
   responseEvidence.value = { contract_id: detailCR.value?.origin_context?.contract_id || null, document_ids: [] }
@@ -783,9 +789,11 @@ function openEvaluateForm() {
 
 async function handleEvaluate() {
   if (!detailCR.value) return
-  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailCR.value.version, request_id: crypto.randomUUID() }
+  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailCR.value.version, ...(contractReply.value ? { contract_reply: contractReply.value } : {}) }
   if (!payload.estimated_cost) payload.estimated_cost = null
-  const result = await crStore.evaluateChangeRequest(projectId.value, detailCR.value.id, payload)
+  const fingerprint = JSON.stringify(payload)
+  if (evaluationRetry?.fingerprint !== fingerprint) evaluationRetry = { fingerprint, requestId: crypto.randomUUID() }
+  const result = await crStore.evaluateChangeRequest(projectId.value, detailCR.value.id, { ...payload, request_id: evaluationRetry.requestId })
   if (result.success) {
     detailCR.value = result.data
     showEvaluateForm.value = false

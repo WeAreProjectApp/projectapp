@@ -1,6 +1,9 @@
 """Additive ticket payloads shared by existing REST serializers and MCP."""
 from rest_framework import serializers
 
+from accounts.serializers_delivery import (
+    ReplyClassificationSerializer, ReplyPayloadSerializer, SourceReferenceSerializer, StrictSerializer,
+)
 from accounts.services.delivery_access import is_admin
 from accounts.services.issue_context import original_context
 
@@ -21,9 +24,25 @@ class IssueMessageFields(IssueWriteFields):
     )
 
 
+class IssueContractReplyFields(StrictSerializer):
+    context_id = serializers.UUIDField()
+    expected_version = serializers.IntegerField(min_value=0)
+    expected_ticket_version = serializers.IntegerField(min_value=0)
+    human_reviewed = serializers.BooleanField()
+    classifications = ReplyClassificationSerializer(many=True, allow_empty=False, max_length=100)
+    source_references = SourceReferenceSerializer(many=True, max_length=100)
+
+
+class IssueReplyPreviewFields(StrictSerializer):
+    expected_version = serializers.IntegerField(min_value=0)
+    expected_ticket_version = serializers.IntegerField(min_value=0)
+    payload = ReplyPayloadSerializer()
+
+
 class IssueEvaluationFields(IssueMessageFields):
     is_internal = serializers.BooleanField(default=False)
     contract_id = serializers.IntegerField(min_value=1, allow_null=True, required=False)
+    contract_reply = IssueContractReplyFields(required=False)
 
 
 class IssueCommentFields(IssueMessageFields):
@@ -71,6 +90,7 @@ class IssueDetailFields(IssueReadFields):
     history = serializers.SerializerMethodField()
 
     def get_responses(self, obj):
+        from accounts.services.issue_contract_reply import public_review_evidence
         admin = bool(_actor(self.context) and is_admin(_actor(self.context)))
         rows = getattr(obj, '_issue_responses', None)
         if rows is None:
@@ -79,7 +99,9 @@ class IssueDetailFields(IssueReadFields):
             'id': row.pk, 'message': row.message, 'status': row.status,
             'is_internal': row.is_internal, 'actor_name': row.actor.get_full_name() or row.actor.email,
             'contract_id': row.contract_id, 'scope_result': row.scope_result,
-            'review_evidence': row.review_evidence,
+            'review_evidence': public_review_evidence(row.review_evidence),
+            **({'review_context_id': row.review_evidence.get('private', {}).get('context_id')}
+               if admin and isinstance(row.review_evidence, dict) else {}),
             'created_at': row.created_at.isoformat(),
             'attachments': [attachment_data(item) for item in row.attachments.all()],
         } for row in rows if admin or not row.is_internal]

@@ -122,7 +122,7 @@ def _run(project_id, actor, kind, action, data, change, *, ticket_id=None, admin
             previous_status=previous_status, status=ticket.status,
             is_internal=receipt.pop('is_internal', bool(values.get('is_internal'))) and previous_status == ticket.status,
             request_id=request_id, fingerprint=fingerprint,
-            receipt={'ticket_id': ticket.pk, **receipt}, **{RELATIONS[kind]: ticket},
+            receipt={'ticket_id': ticket.pk, 'ticket_version': ticket.version, **receipt}, **{RELATIONS[kind]: ticket},
         )
         return ticket, {'ticket_id': ticket.pk, **receipt}
 
@@ -158,10 +158,12 @@ def create_ticket(project_id, actor, kind, data):
 
 def evaluate_ticket(project_id, actor, kind, ticket_id, data):
     def change(project, ticket, values):
+        from accounts.services.issue_contract_reply import validate_reply
         fields = ('status', 'linked_bug_id') if kind == 'bug' else ('status', 'estimated_cost', 'estimated_time')
         if not any(key in values for key in (*fields, 'admin_response')):
             fail('Indica un estado o una respuesta.', 'issue_empty_response')
         contract = applicable_contract(project, ticket, values.get('contract_id'))
+        reviewed = validate_reply(project, actor, kind, ticket, values)
         changed_status = values.get('status', ticket.status) != ticket.status
         for field in fields:
             if field in values:
@@ -173,7 +175,7 @@ def evaluate_ticket(project_id, actor, kind, ticket_id, data):
         if message:
             response = IssueResponse.objects.create(
                 actor=actor, message=message, status=ticket.status,
-                is_internal=internal, contract=contract, **{RELATIONS[kind]: ticket},
+                is_internal=internal, contract=contract, **(reviewed or {}), **{RELATIONS[kind]: ticket},
             )
             attach_documents(project, actor, ticket, values.get('document_ids', []),
                              public=not internal, response=response, contract=contract)
@@ -181,7 +183,7 @@ def evaluate_ticket(project_id, actor, kind, ticket_id, data):
                 ticket.admin_response = message
         if changed_status or (message and not internal) or 'status' in values:
             _notify(ticket, actor, kind)
-        return ticket, {}
+        return ticket, {'response_id': response.pk} if message else {}
     return _run(project_id, actor, kind, 'evaluate', data, change, ticket_id=ticket_id, admin=True)[0]
 
 

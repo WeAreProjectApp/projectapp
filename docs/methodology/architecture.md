@@ -8,7 +8,12 @@ existentes quedan delgados. `IssueContext` conserva el origen publicado,
 `IssueAttachment` guarda PDFs históricos privados. El bug general no depende
 de contrato o guía. «Resuelto por equipo» admite reapertura del cliente sin
 modificar aprobaciones. Se reutilizan almacenamiento e índices de documentos de
-entregas; la revisión contractual del destino ticket depende del adaptador P3.
+entregas. `issue_contract_reply` delega fuentes/citas a P3 y proporciona identidad,
+origen congelado y conversación pública real. Publicar revalida dueño, actor,
+destino, versiones y hashes bajo `_run`; el JSON guarda procedencia privada y
+el serializer expone una allowlist pública. El guard propio impide transferencias
+con historia de tickets, después del guard de entregas. `0073` combina `0068`
+y `0071` sin operaciones.
 Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
 
 > **Seguimiento contractual — 2026-10-01:** `ProjectContract` y

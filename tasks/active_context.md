@@ -3,9 +3,11 @@
 Implementación en validación en `platform-bugs-context`: bug general sin guías,
 captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
 y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
-Dependencia publicada P3 `dea9403` incorporada; P0 reservó `0068_issue_reports`
-con parent `0067_explicit_delivery_authoring_context`. Pendiente de integración:
-adaptador de revisión contractual P3 y hojas paralelas coordinadas por P0. Detalles en
+El adaptador REST/MCP/UI usa P3 publicado `30fd7ab9`, con revisión humana y
+procedencia privada. El guard protege bugs generales y se compone con entregas.
+P0 reservó `0068` y la no-op `0073` (padres `0068` + `0071`); no se alteran
+migraciones publicadas. El fixture comprueba MAILERS en memoria antes de crear datos.
+QA focal del adaptador y CI del head propio siguen en cierre. Detalles en
 `docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
 
 # Alcance y entregas en Platform (2026-10-01)

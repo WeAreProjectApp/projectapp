@@ -29,18 +29,30 @@ privado de P3; cada adjunto conserva bytes PDF, título y SHA-256 propios, aunqu
 luego cambie la fuente. La descarga exige autenticación y devuelve
 `private, no-store`. No se publican ni modifican documentos fuente.
 
-El equipo puede seleccionar el contrato aplicable al responder. El resultado
-contractual sigue `indeterminate`: el adaptador de tickets al motor compartido
-de revisión está pendiente de P3. No hay un motor paralelo ni citas inventadas.
+El equipo puede seleccionar el contrato aplicable al responder.
+`issue_contract_reply` delega preparación, preview y citas al motor publicado de
+P3. Sin selección explícita el alcance queda `indeterminate`; la ausencia de una
+guía no prueba que el defecto esté fuera de alcance.
 `issue_review_context.build_ticket_review_input` prepara la entrada del dominio:
 origen congelado, conversación pública y referencias a adjuntos obtenidos en el
 servidor, más `ticket_version` y `request_id`. No acepta una conversación enviada
 por el cliente. Sin selección explícita, el contrato queda ausente.
 Las respuestas vinculadas a otro contrato se excluyen de esa entrada; el historial
 del ticket se conserva completo.
-P1 conectará sus wrappers/UI/MCP cuando P0 publique la interfaz estable; P3 conserva el
-provider, schema, captura de fuentes y validación de citas. La preparación por
-sí sola no genera, publica ni aplica respuestas.
+`contract_reply_target` proporciona identidad, dueño, versión, origen congelado
+y conversación pública real. Publicar valida dueño, actor, destino, versiones y
+hashes dentro de `_run`, bajo locks Project → ticket. P3 conserva el schema y
+la captura/validación de fuentes; preparar/preview no llama IA ni publica.
+
+Guardar el borrador requiere `contract_reply` con contexto, clasificaciones,
+citas verificadas, versiones independientes de workspace/ticket y
+`human_reviewed: true`. Editar JSON o texto final invalida la confirmación en la UI.
+`inside_scope` se traduce a `within_scope`; decisiones mixtas son indeterminadas.
+El campo existente `IssueResponse.review_evidence` conserva un envelope
+`public`/`private` para auditoría, sin otra migración de esquema. El serializer
+filtra el DTO por allowlist, también para JSON legado. El cliente no recibe
+contextos, citas, fragments, prompts ni fuentes privadas. Sólo admin recibe
+`review_context_id` y puede consultar/descargar ese contexto capturado.
 Convertir una solicitud aprobada exige una etapa editable del contrato original;
 el servicio compartido crea una guía pendiente sin aprobarla o publicarla.
 
@@ -70,6 +82,8 @@ usan `usePlatformApi`.
 | Opciones de origen/evidencia | Publicadas, propias | Publicadas para respuesta pública | `projects/{id}/issue-reports/context-options/` |
 | Descargar evidencia | Adjuntos públicos propios, ticket activo | Incluye internos y archivados | `issue-reports/attachments/{id}/` |
 | Convertir solicitud | No | Aprobada, etapa editable | `change-requests/{id}/convert/` |
+| Fuentes, preparación y preview de respuesta | No | Sí | `issue-reports/{kind}/{ticket_id}/reply/options/`, `contexts/`, `preview/` |
+| Auditoría y copia de fuente de respuesta | No | Destino propio del contexto | `reply/contexts/{uuid}/`, `sources/{key}/` |
 
 `source_publication_id` y `source_requirement_version` fijan el origen. Sin una
 publicación explícita se captura la última ronda publicada; una versión
@@ -85,7 +99,7 @@ texto cuando acompañan una respuesta.
 
 ## Administración MCP
 
-Once tools del conector `projects` llaman a los mismos servicios REST:
+Dieciséis tools del conector `projects` llaman a los mismos servicios REST:
 
 | Tools | Acción |
 |---|---|
@@ -96,6 +110,9 @@ Once tools del conector `projects` llaman a los mismos servicios REST:
 | `archive_issue_report` | Confirmación, conserva historia |
 | `convert_change_request` | Confirmación y versiones de ticket/entrega |
 | `download_issue_attachment` | Artefacto privado de la credencial y proyecto indicado |
+| `get_issue_reply_options`, `prepare_issue_reply` | Fuentes seleccionables y captura real del ticket |
+| `get_issue_reply_context`, `preview_issue_reply` | Auditoría privada y preview sin escrituras |
+| `download_issue_reply_source` | Fuente capturada como artefacto exclusivo de la credencial |
 
 Las capturas usan uploads de imagen completos mediante `screenshot_asset_id`.
 El asset temporal conserva el plazo del servicio de uploads para reintentos y
@@ -106,11 +123,13 @@ directamente.
 ## Bloques de integración
 
 Base main `cce8e694`, dependencia publicada P3
-`dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbida mediante merge en la rama
+`30fd7ab9af55aa8436a4d82927ea099d046cd8df` absorbida mediante merge en la rama
 propia. P0 reservó `0068_issue_reports`, dependiente de
 `0067_explicit_delivery_authoring_context`; se conserva la dependencia
-`content.0273_merge_document_provenance_and_proposal_owner`. P0 coordina las
-hojas paralelas de otros frentes y P3 final. Esta sesión no ejecuta migraciones
+`content.0273_merge_document_provenance_and_proposal_owner`. La no-op propia
+`0073_p1_delivery_issues_merge` combina `0071_delivery_followup` y `0068` sin
+operaciones. P0 coordina hojas posteriores; esta rama no absorbe P2/0072.
+Esta sesión no ejecuta migraciones
 ni mergea su PR a main.
 
 | Bloque compartido reservado | Dueño | Dependencia |
@@ -125,8 +144,9 @@ ni mergea su PR a main.
 | Catálogos/shards bugs/changes y documentos derivados | P1 | UX y generador de registro |
 | CI: job `frontend-issue-tests` | P1 | SQLite/settings_test y navegador real |
 | Memoria: secciones de bugs/solicitudes | P1 | Comportamiento verificado |
-| Entrada de ticket y wrappers de revisión | P1 | Provider/interfaz publicados por P3/P0 |
-| Provider, schema, fuentes y citas contractuales | P3 | Followup core coordinado por P0 |
+| Provider de identidad/origen/conversación y wrappers de ticket | P1 | Motor publicado P3 `30fd7ab9` |
+| Motor, schema, fuentes y citas contractuales | P3 | Integrar PR460 antes de PR464 |
+| `0073_p1_delivery_issues_merge` | P1 | `0071` publicado + `0068`; operaciones vacías |
 
 Cada sesión aplica sus bloques en su worktree/PR. Se conserva la navegación
 existente. Cobros, hosting, ideas, accesos, enlaces seguros y correos de cierre
@@ -138,6 +158,9 @@ Los tests focales cubren captura histórica, versiones, permisos, aislamiento,
 reintentos, reapertura y conservación de aprobaciones. MCP comprueba contratos,
 confirmaciones y artefactos aislados. El navegador usa APIs y JWT reales con
 SQLite/media desechables en loopback 4212/4213: no lee `.env` ni envía correos
-reales. Ejecutar sólo archivos del dominio y hasta veinte casos por lote.
+reales. El fixture propio fuerza `MAILERS` en memoria para todos los aliases,
+sin opciones SMTP, y comprueba el backend efectivo antes de DB/fixtures. Cuatro
+regresiones prueban envíos al outbox memoria y rechazos sin outbox.
+Ejecutar sólo archivos del dominio y hasta veinte casos por lote.
 `npm run e2e:issues` valida los recorridos nuevos. Los mapas se registran en
 `docs/user-flows/platform-bug-reports.md` y `platform-change-requests.md`.

@@ -6,6 +6,8 @@ from django.db import transaction
 from rest_framework.exceptions import APIException
 
 from accounts.services import issue_reports as issues
+from accounts.services import issue_contract_reply as replies
+from accounts.services.delivery_authoring import CITATION_SCHEMA, reply_schema
 from accounts.services.delivery_access import is_admin, project_for_actor
 from accounts.services.issue_evidence import attachment_for_actor
 from accounts.views_issue_reports import context_options, ticket_response
@@ -25,6 +27,17 @@ DOCUMENTS = {'type': 'array', 'items': ID, 'maxItems': 10, 'uniqueItems': True}
 COMMON = {'expected_version': VERSION, 'request_id': RETRY}
 SOURCE = {'source_requirement_id': ID, 'source_publication_id': ID, 'source_requirement_version': VERSION}
 MESSAGES = {**COMMON, 'document_ids': DOCUMENTS, 'is_internal': BOOL}
+CLASSIFICATIONS = reply_schema()['properties']['classifications']
+CONTRACT_REPLY = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {
+        'context_id': RETRY, 'expected_version': VERSION, 'expected_ticket_version': VERSION,
+        'human_reviewed': BOOL, 'classifications': CLASSIFICATIONS,
+        'source_references': {'type': 'array', 'maxItems': 100, 'items': CITATION_SCHEMA},
+    },
+    'required': ['context_id', 'expected_version', 'expected_ticket_version', 'human_reviewed',
+                 'classifications', 'source_references'],
+}
 
 
 def _actor():
@@ -114,6 +127,18 @@ def _download(arguments, actor):
     return store_artifact(connector=context.connector, credential=context.credential,
                           filename=f'issue-evidence-{item.pk}.pdf', content_type='application/pdf',
                           content=body, request=context.request)
+
+
+def _reply_source(arguments, actor):
+    context = current_mcp_context()
+    if not context or not context.credential:
+        raise ToolError('La descarga requiere una credencial MCP.', code='FORBIDDEN')
+    body, filename, content_type = replies.reply_source_file(
+        arguments['project_id'], actor, arguments['kind'], arguments['ticket_id'],
+        arguments['context_id'], arguments['source_key'],
+    )
+    return store_artifact(connector=context.connector, credential=context.credential,
+                          filename=filename, content_type=content_type, content=body, request=context.request)
 
 
 def _api_errors(operation):
@@ -216,9 +241,10 @@ ISSUE_TOOLS = [
               **SOURCE, 'request_id': RETRY, 'screenshot_asset_id': RETRY, 'title': TEXT, 'description': TEXT, 'module_or_screen': TEXT,
               'suggested_priority': {'type': 'string', 'enum': ['critical', 'high', 'medium', 'low']}, 'is_urgent': BOOL,
           }, ('title', 'source_requirement_id'))}, ('payload',), risk='write'),
-    _tool('evaluate_issue_report', 'Cambia el estado o responde con documentos opcionales. Resuelto por equipo no es conformidad del cliente. El alcance permanece indeterminado sin revisión compartida.',
+    _tool('evaluate_issue_report', 'Cambia estado o responde con documentos. Resuelto por equipo no es conformidad del cliente. contract_reply exige contexto, citas verificadas y revisión humana explícita; sin él el alcance sigue indeterminado.',
           _evaluate, {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
-              **MESSAGES, 'status': TEXT, 'admin_response': TEXT, 'contract_id': ID,
+              **MESSAGES, 'status': TEXT, 'admin_response': TEXT, 'contract_id': {'type': ['integer', 'null'], 'minimum': 1},
+              'contract_reply': CONTRACT_REPLY,
               'linked_bug_id': {'type': ['integer', 'null'], 'minimum': 1},
               'estimated_cost': {'type': ['number', 'string', 'null']}, 'estimated_time': TEXT,
           }, ('expected_version',))}, ('kind', 'ticket_id', 'payload'), risk='write'),
@@ -229,7 +255,8 @@ ISSUE_TOOLS = [
     _tool('bulk_evaluate_issue_reports', 'Evalúa hasta 500 tickets, con resultado y error independiente por ticket.',
           lambda args, actor: issues.bulk_evaluate(args['project_id'], actor, args['kind'], args['items']),
           {'kind': KIND, 'items': {'type': 'array', 'maxItems': 500, 'items': _payload_schema({
-              **MESSAGES, 'id': ID, 'status': TEXT, 'admin_response': TEXT, 'contract_id': ID,
+              **MESSAGES, 'id': ID, 'status': TEXT, 'admin_response': TEXT, 'contract_id': {'type': ['integer', 'null'], 'minimum': 1},
+              'contract_reply': CONTRACT_REPLY,
               'linked_bug_id': {'type': ['integer', 'null'], 'minimum': 1},
               'estimated_cost': {'type': ['number', 'string', 'null']}, 'estimated_time': TEXT,
           }, ('id', 'expected_version'))}}, ('kind', 'items'), risk='write'),
@@ -241,4 +268,33 @@ ISSUE_TOOLS = [
           }, ('stage_id', 'expected_version', 'issue_version'))}, ('ticket_id', 'payload'), risk='sensitive'),
     _tool('download_issue_attachment', 'Descarga los bytes históricos privados de un documento del ticket.',
           _download, {'attachment_id': ID}, ('attachment_id',)),
+    _tool('get_issue_reply_options', 'Obtiene fuentes seleccionables y versiones para preparar una respuesta contractual del ticket; no elige contrato.',
+          lambda args, actor: replies.reply_options(args['project_id'], actor, args['kind'], args['ticket_id']),
+          {'kind': KIND, 'ticket_id': ID}, ('kind', 'ticket_id')),
+    _tool('prepare_issue_reply', 'Captura origen y conversación públicos reales del ticket con fuentes del motor compartido. Contrato nulo conserva alcance indeterminado. No llama IA ni publica.',
+          lambda args, actor: replies.prepare_reply(args['project_id'], actor, args['kind'], args['ticket_id'], _payload(args)),
+          {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
+              'expected_version': VERSION, 'expected_ticket_version': VERSION, 'request_id': RETRY,
+              'contract_id': {'type': ['integer', 'null'], 'minimum': 1},
+              'amendment_ids': {'type': 'array', 'items': ID, 'maxItems': 30},
+              'sources': {'type': 'array', 'maxItems': 30, 'items': _payload_schema({
+                  'document_id': ID, 'proposal_document_id': ID,
+                  'role': {'type': 'string', 'enum': ['contractual_annex', 'reference']},
+                  'applicability_note': TEXT,
+              }, ('role', 'applicability_note'))},
+              'missing_sources': {'type': 'array', 'items': TEXT, 'maxItems': 30},
+              'uncertainties': {'type': 'array', 'items': TEXT, 'maxItems': 30}, 'instructions': TEXT,
+          }, ('expected_version', 'expected_ticket_version', 'request_id'))},
+          ('kind', 'ticket_id', 'payload'), risk='write'),
+    _tool('get_issue_reply_context', 'Lee el contexto privado de autoría del ticket para revisión y auditoría administrativas.',
+          lambda args, actor: replies.get_reply_context(args['project_id'], actor, args['kind'], args['ticket_id'], args['context_id']),
+          {'kind': KIND, 'ticket_id': ID, 'context_id': RETRY}, ('kind', 'ticket_id', 'context_id')),
+    _tool('preview_issue_reply', 'Verifica JSON v2, citas, dueño, destino y versiones sin cambiar ticket, guías o respuestas.',
+          lambda args, actor: replies.preview_reply(args['project_id'], actor, args['kind'], args['ticket_id'], _payload(args)),
+          {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
+              'expected_version': VERSION, 'expected_ticket_version': VERSION, 'payload': reply_schema(),
+          }, ('expected_version', 'expected_ticket_version', 'payload'))}, ('kind', 'ticket_id', 'payload')),
+    _tool('download_issue_reply_source', 'Descarga una fuente privada capturada del ticket como artefacto exclusivo de la credencial MCP.',
+          _reply_source, {'kind': KIND, 'ticket_id': ID, 'context_id': RETRY, 'source_key': TEXT},
+          ('kind', 'ticket_id', 'context_id', 'source_key')),
 ]

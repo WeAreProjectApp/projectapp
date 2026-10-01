@@ -490,10 +490,11 @@
                         <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" admin id="bug-response-evidence" />
+                      <IssueContractReply v-model="contractReply" :project-id="projectId" kind="bug" :ticket="detailBug" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
                       <p v-if="bugStore.error" role="alert" class="text-xs text-danger-strong">{{ bugStore.error }}</p>
                       <div class="flex justify-end gap-2">
                         <BaseButton variant="ghost" size="sm" @click="showEvaluateForm = false">Cancelar</BaseButton>
-                        <BaseButton variant="accent" size="sm" :disabled="bugStore.isUpdating" @click="handleEvaluate">
+                        <BaseButton variant="accent" size="sm" :loading="bugStore.isUpdating" :disabled="!!contractReply && !contractReply.human_reviewed" :disabled-reason="t('platformIssues.reply.humanRequired')" @click="handleEvaluate">
                           {{ bugStore.isUpdating ? 'Guardando...' : 'Guardar' }}
                         </BaseButton>
                       </div>
@@ -569,6 +570,7 @@ import IssueSourcePicker from '~/components/platform/issues/IssueSourcePicker.vu
 import IssueHistory from '~/components/platform/issues/IssueHistory.vue'
 import IssueAttachments from '~/components/platform/issues/IssueAttachments.vue'
 import IssueEvidenceFields from '~/components/platform/issues/IssueEvidenceFields.vue'
+import IssueContractReply from '~/components/platform/issues/IssueContractReply.vue'
 import IssueReopenForm from '~/components/platform/issues/IssueReopenForm.vue'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
@@ -585,6 +587,8 @@ const projectsStore = usePlatformProjectsStore()
 const issueStore = usePlatformIssueReportsStore()
 const sourceError = ref('')
 const responseEvidence = ref({ contract_id: null, document_ids: [] })
+const contractReply = ref(null)
+let evaluationRetry = null
 const commentEvidence = ref({ document_ids: [] })
 
 const { isMobile } = useIsMobile()
@@ -775,6 +779,8 @@ async function openDetailModal(bug) {
 }
 
 function openEvaluateForm() {
+  contractReply.value = null
+  evaluationRetry = null
   evalForm.status = detailBug.value?.status || 'confirmed'
   evalForm.admin_response = ''
   responseEvidence.value = { contract_id: detailBug.value?.origin_context?.contract_id || null, document_ids: [] }
@@ -783,7 +789,10 @@ function openEvaluateForm() {
 
 async function handleEvaluate() {
   if (!detailBug.value) return
-  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...evalForm, ...responseEvidence.value, expected_version: detailBug.value.version, request_id: crypto.randomUUID() })
+  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailBug.value.version, ...(contractReply.value ? { contract_reply: contractReply.value } : {}) }
+  const fingerprint = JSON.stringify(payload)
+  if (evaluationRetry?.fingerprint !== fingerprint) evaluationRetry = { fingerprint, requestId: crypto.randomUUID() }
+  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...payload, request_id: evaluationRetry.requestId })
   if (result.success) { detailBug.value = result.data; showEvaluateForm.value = false }
 }
 

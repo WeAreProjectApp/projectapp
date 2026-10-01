@@ -11,7 +11,7 @@
       <article v-for="response in ticket.responses" :key="response.id" class="rounded-xl border border-border-default p-3">
         <p class="text-xs text-text-muted">{{ response.actor_name }} · {{ formatDate(response.created_at) }} <span v-if="response.is_internal">· {{ t('platformIssues.internal') }}</span></p>
         <p class="mt-1 whitespace-pre-wrap break-words text-sm text-text-default">{{ response.message }}</p>
-        <p class="mt-1 text-xs text-text-muted">{{ t(`platformIssues.status.${response.status}`) }} · {{ t(`platformIssues.scope.${response.scope_result || 'indeterminate'}`) }}</p>
+        <p class="mt-1 text-xs text-text-muted" data-testid="issue-review-evidence">{{ t(`platformIssues.status.${response.status}`) }} · {{ t(`platformIssues.scope.${response.scope_result || 'indeterminate'}`) }}</p>
         <IssueAttachments :attachments="response.attachments" />
       </article>
     </section>

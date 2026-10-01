@@ -7,6 +7,29 @@ from pathlib import Path
 from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
+MEMORY_MAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+
+def memory_mailers(settings):
+    """Replace every configured alias; never retain SMTP options or credentials."""
+    aliases = {'default', *getattr(settings, 'MAILERS', {})}
+    return {alias: {'BACKEND': MEMORY_MAIL_BACKEND} for alias in aliases}
+
+
+def assert_memory_mailers():
+    """Fail closed before database setup or fixture code can send anything."""
+    from django.conf import settings
+    from django.core import mail
+    from django.core.mail.backends.locmem import EmailBackend
+    aliases = getattr(settings, 'MAILERS', {})
+    if not isinstance(aliases, dict) or 'default' not in aliases or any(
+        not isinstance(config, dict) or config.get('BACKEND') != MEMORY_MAIL_BACKEND or config.get('OPTIONS')
+        for config in aliases.values()
+    ):
+        raise SystemExit('Issue browser fixtures require memory-only MAILERS for every alias.')
+    if any(type(mail.mailers[alias]) is not EmailBackend for alias in aliases):
+        raise SystemExit('The effective issue browser mail backend must be locmem.')
+
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
@@ -43,9 +66,11 @@ def main():
 
     with override_settings(ALLOWED_HOSTS=['localhost', '127.0.0.1', 'testserver'],
                            CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:4213'],
-                           EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+                           MAILERS=memory_mailers(settings),
                            RECAPTCHA_ENABLED=False,
                            MIGRATION_MODULES={config.label: None for config in apps.get_app_configs()}):
+        assert_memory_mailers()
+        print('Issue browser mail sink: all aliases use locmem.', flush=True)
         databases = setup_databases(verbosity=0, interactive=False)
         try:
             from accounts.models import DeliveryPublication, Project
@@ -58,7 +83,13 @@ def main():
                 path = environ.get('PATH_INFO')
                 if path == '/__issues_ready__':
                     response = HttpResponse('ready')
+                elif path == '/__issues_mailbox__':
+                    from django.core import mail
+                    assert_memory_mailers()
+                    response = JsonResponse({'backend': 'locmem', 'aliases': sorted(settings.MAILERS),
+                                             'count': len(getattr(mail, 'outbox', []))})
                 elif path == '/__issues_fixture__' and environ.get('REQUEST_METHOD') == 'POST':
+                    assert_memory_mailers()
                     size = min(int(environ.get('CONTENT_LENGTH') or 0), 4096)
                     key = json.loads(environ['wsgi.input'].read(size) or '{}').get('key', 'issues')
                     if key not in fixtures:
