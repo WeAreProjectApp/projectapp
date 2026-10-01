@@ -3,9 +3,10 @@ import json
 from urllib.parse import urlsplit
 
 from django.core import signing
+from django.core.exceptions import ImproperlyConfigured
 from django.db import transaction
 from django.utils.crypto import salted_hmac
-from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
+from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from accounts.models import ProjectAdminAccess
 from accounts.models_project_client_access import ProjectClientAccessEvent, ProjectClientAccessPolicy
@@ -15,6 +16,12 @@ from accounts.services.credential_cipher import decrypt_secret
 from accounts.services.project_collaboration_access import CollaborationConflict, check_version, paginate, project_for_actor
 
 TOKEN_SALT = 'project-client-access-preview-v1'
+
+
+class ClientCredentialUnavailable(APIException):
+    status_code = 503
+    default_detail = 'Este dato de acceso no está disponible. Solicita al equipo que lo revise.'
+    default_code = 'project_client_access_unavailable'
 
 
 def empty_matrix():
@@ -218,7 +225,12 @@ def reveal_credential(project_id, actor, environment, field, data):
     if not _effective(project, policy, sources)[environment][field]:
         raise PermissionDenied('Este dato de acceso no está habilitado.')
     value = sources[environment][field]
-    secret = decrypt_secret(value) if field == 'admin_password' else value
+    try:
+        secret = decrypt_secret(value) if field == 'admin_password' else value
+    except ImproperlyConfigured:
+        raise ClientCredentialUnavailable() from None
+    if not secret:
+        raise ClientCredentialUnavailable()
     _event(project, actor, 'credential_revealed', [f'{environment}.{field}'], policy.version)
     return {'secret': secret}
 

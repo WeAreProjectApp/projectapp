@@ -131,3 +131,38 @@ def test_bulk_credential_reversal_requires_a_new_grant():
     ProjectAdminAccess.objects.filter(pk=source.pk).update(admin_password_encrypted=encrypt_secret('changed-secret'))
     ProjectAdminAccess.objects.filter(pk=source.pk).update(admin_password_encrypted=original)
     assert access.client_access(c.project.pk, c.client)['environments'] == []
+
+
+def test_unreadable_password_returns_a_safe_uncached_error(monkeypatch):
+    """Fails if a damaged ciphertext is reported as a successful reveal."""
+    from cryptography.fernet import Fernet
+
+    from accounts.services import credential_cipher
+    c = context()
+    sources(c)
+    enable(c, 'production.admin_password')
+    monkeypatch.setenv('PROJECT_ACCESS_CIPHER_KEY', Fernet.generate_key().decode())
+    credential_cipher._get_cipher.cache_clear()
+    response = api(c.client).post(url(c, 'client-access/environments/production/credentials/admin_password/reveal/'), {}, format='json')
+    credential_cipher._get_cipher.cache_clear()
+    assert response.status_code == 503
+    assert response['Cache-Control'] == 'no-store, max-age=0'
+    assert 'production-secret' not in response.content.decode()
+    assert c.project.client_access_events.filter(action='credential_revealed').count() == 0
+
+
+def test_missing_cipher_configuration_discloses_no_internal_detail(monkeypatch):
+    """Fails if unavailable cipher configuration leaks through the client API."""
+    from accounts.services import credential_cipher
+    c = context()
+    sources(c)
+    enable(c, 'production.admin_password')
+    monkeypatch.setenv('PROJECT_ACCESS_CIPHER_KEY', '')
+    credential_cipher._get_cipher.cache_clear()
+    response = api(c.client).post(url(c, 'client-access/environments/production/credentials/admin_password/reveal/'), {}, format='json')
+    credential_cipher._get_cipher.cache_clear()
+    assert response.status_code == 503
+    assert response['Cache-Control'] == 'no-store, max-age=0'
+    assert 'PROJECT_ACCESS_CIPHER_KEY' not in response.content.decode()
+    assert 'production-secret' not in response.content.decode()
+    assert c.project.client_access_events.filter(action='credential_revealed').count() == 0

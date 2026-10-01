@@ -25,10 +25,13 @@ test('client reveals a password only after an explicit action', { tag: ['@flow:p
   await expect(credential.getByTestId('client-credential-value')).toHaveCount(0)
 })
 
-test('revocation denies a fresh credential request', { tag: ['@flow:platform-project-client-access', '@outcome:error'], timeout: 120_000 }, async ({ page, request }, testInfo) => {
+test('revocation denies a fresh credential request', { tag: ['@flow:platform-project-client-access', '@outcome:error'] }, async ({ page, request }, testInfo) => {
+  test.setTimeout(120_000)
   const data = await fixture(request, testInfo, ['production.admin_password'])
   await authenticate(page, request, data)
   await openAccess(page, data)
+  const credential = page.getByTestId('client-credential-production-admin_password')
+  await expect(credential.getByTestId('client-credential-toggle')).toHaveText('Mostrar')
   const adminLogin = await request.post(`${frontendUrl}/api/accounts/login/`, { data: data.admin })
   const admin = await adminLogin.json()
   const headers = { Authorization: `Bearer ${admin.tokens.access}` }
@@ -38,7 +41,9 @@ test('revocation denies a fresh credential request', { tag: ['@flow:platform-pro
     headers, data: { expected_version: policy.version, source_token: policy.source_token,
       permissions: { production: { site_url: false, admin_url: false, admin_username: false, admin_password: false }, staging: { site_url: false, admin_url: false, admin_username: false, admin_password: false } } } })
   expect(revoked.status()).toBe(200)
-  await page.getByTestId('client-credential-production-admin_password').getByRole('button', { name: 'Mostrar', exact: true }).click()
+  const denied = page.waitForResponse((response) => response.url().endsWith('/credentials/admin_password/reveal/') && response.status() === 403)
+  await credential.getByTestId('client-credential-toggle').click()
+  expect((await denied).status()).toBe(403)
   await expect(page.getByTestId('project-client-access')).toContainText('No hay accesos habilitados')
   await expect(page.getByTestId('client-credential-value')).toHaveCount(0)
 })
@@ -69,7 +74,8 @@ test('hidden access defaults preserve the other project modules', { tag: ['@flow
   await expect(page.getByTestId('project-client-access')).toContainText('No hay accesos habilitados')
 })
 
-test('admin enables one URL through the policy editor', { tag: ['@flow:admin-project-client-access-policy', '@outcome:success'], timeout: 120_000 }, async ({ page, request, browser }, testInfo) => {
+test('admin enables one URL through the policy editor', { tag: ['@flow:admin-project-client-access-policy', '@outcome:success'] }, async ({ page, request, browser }, testInfo) => {
+  test.setTimeout(120_000)
   const data = await fixture(request, testInfo)
   await authenticate(page, request, data, 'admin')
   await openAccess(page, data)

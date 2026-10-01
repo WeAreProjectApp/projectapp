@@ -76,4 +76,35 @@ describe('usePlatformIdeasStore', () => {
     expect(store.error).toBe('Versión obsoleta')
     expect(selected).toEqual([{ id: 4, version: 2 }, { id: 9, version: 7 }])
   })
+
+  it('discards a late mutation from a previous session in the same project', async () => {
+    // Falla si cambiar de cuenta dentro del mismo proyecto restaura ideas de la sesión anterior.
+    const first = deferred()
+    const previousApi = {
+      create: jest.fn(() => first.promise),
+      list: jest.fn().mockResolvedValue({ results: [{ id: 1, text: 'Cuenta anterior' }], count: 1, page: 1 }),
+    }
+    const currentApi = { list: jest.fn().mockResolvedValue({ results: [{ id: 2, text: 'Cuenta actual' }], count: 1, page: 1 }) }
+    store.reset(12)
+    const previousMutation = store.mutate(previousApi, 'create', { text: 'Cuenta anterior' })
+    store.reset(12)
+    await store.load(12, currentApi)
+    first.resolve({ id: 1, text: 'Cuenta anterior' })
+
+    expect(await previousMutation).toBeNull()
+    expect(previousApi.list).not.toHaveBeenCalled()
+    expect(store.items).toEqual([{ id: 2, text: 'Cuenta actual' }])
+  })
+
+  it('discards a late write error after changing session in the same project', async () => {
+    // Falla si la cuenta actual recibe el error de una escritura de la cuenta anterior.
+    const first = deferred()
+    store.reset(12)
+    const previousMutation = store.mutate({ create: jest.fn(() => first.promise) }, 'create', { text: 'Otra cuenta' })
+    store.reset(12)
+    first.reject({ response: { data: { detail: 'Error de la cuenta anterior' } } })
+    await previousMutation
+
+    expect(store.error).toBe('')
+  })
 })

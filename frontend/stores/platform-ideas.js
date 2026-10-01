@@ -50,6 +50,7 @@ export const usePlatformIdeasStore = defineStore('platformIdeas', {
     },
     async mutate(api, operation, { text, idea, selected, title } = {}) {
       const projectId = this.projectId
+      const requestContext = this.pendingRequests
       this.busy = true
       this.error = ''
       try {
@@ -59,18 +60,19 @@ export const usePlatformIdeasStore = defineStore('platformIdeas', {
           const signature = `${projectId}:${operation}:${JSON.stringify(body)}`
           const requestId = this.pendingRequests[signature] ||= newRequestId()
           result = await api[operation]({ ...body, request_id: requestId })
-          if (projectId !== this.projectId) return null
+          if (projectId !== this.projectId || requestContext !== this.pendingRequests) return null
           delete this.pendingRequests[signature]
         } else {
           result = await api[operation](idea.id, { expected_version: idea.version, ...(operation === 'edit' ? { text } : {}) })
         }
-        if (projectId !== this.projectId) return null
+        if (projectId !== this.projectId || requestContext !== this.pendingRequests) return null
         await this.load(projectId, api, this.page)
+        if (projectId !== this.projectId || requestContext !== this.pendingRequests) return null
         return result
       } catch (error) {
-        if (projectId === this.projectId) this.error = normalizeApiError(error).message
+        if (projectId === this.projectId && requestContext === this.pendingRequests) this.error = normalizeApiError(error).message
         return null
-      } finally { if (projectId === this.projectId) this.busy = false }
+      } finally { if (projectId === this.projectId && requestContext === this.pendingRequests) this.busy = false }
     },
   },
 })
