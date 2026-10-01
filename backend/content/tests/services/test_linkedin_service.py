@@ -326,10 +326,10 @@ class TestRefreshFailureClassification:
             result = linkedin_service._refresh_access_token()
 
             token = LinkedInToken.load()
-        assert result is None
-        assert token.get_access_token() is None
-        assert token.get_refresh_token() is None
-        assert token.profile_name == ''
+            assert result is None
+            assert token.get_access_token() is None
+            assert token.get_refresh_token() is None
+            assert token.profile_name == ''
 
     @freeze_time(FROZEN_NOW)
     @override_settings(**LINKEDIN_SETTINGS)
@@ -347,9 +347,9 @@ class TestRefreshFailureClassification:
             second = linkedin_service._refresh_access_token()
 
             token = LinkedInToken.load()
-        assert first is None
-        assert second == 'recovered-access'
-        assert token.get_access_token() == 'recovered-access'
+            assert first is None
+            assert second == 'recovered-access'
+            assert token.get_access_token() == 'recovered-access'
 
     @freeze_time(FROZEN_NOW)
     @override_settings(**LINKEDIN_SETTINGS)
