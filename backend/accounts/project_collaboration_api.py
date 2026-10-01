@@ -10,7 +10,7 @@ from accounts.authentication import SessionJWTAuthentication
 
 def endpoint(methods, *, channel='platform'):
     def decorate(function):
-        authentication = SessionAuthentication if channel == 'panel' else JWTAuthentication
+        authentication = SessionAuthentication if channel == 'panel' else SessionJWTAuthentication
         permission = IsAdminUser if channel == 'panel' else IsAuthenticated
         view = api_view(methods)(authentication_classes([authentication])(permission_classes([permission])(function)))
 
