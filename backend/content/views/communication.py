@@ -1,4 +1,5 @@
 from django.core.paginator import Paginator
+from django.db.models import Count, Q, Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -125,8 +126,9 @@ def communication_thread_tab_counts(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    counts = {}
-    for spec in specs:
+    aggregates = {}
+    tab_keys = []
+    for index, spec in enumerate(specs):
         tab_id = spec.get('id') if isinstance(spec, dict) else None
         valid_id = (
             isinstance(tab_id, int) and not isinstance(tab_id, bool)
@@ -153,8 +155,14 @@ def communication_thread_tab_counts(request):
         queryset = communication_query_service.apply_filters(
             CommunicationThread.objects.all(), filters,
         )
-        counts[str(tab_id)] = queryset.count()
+        alias = f'tab_{index}'
+        aggregates[alias] = Count(
+            'pk', filter=Q(pk__in=Subquery(queryset.order_by().values('pk'))),
+        )
+        tab_keys.append((str(tab_id), alias))
 
+    totals = CommunicationThread.objects.aggregate(**aggregates) if aggregates else {}
+    counts = {tab_id: totals[alias] for tab_id, alias in tab_keys}
     return Response({'counts': counts})
 
 

@@ -8,6 +8,7 @@ suspended and the client + admins are notified.
 """
 
 import logging
+from functools import partial
 
 from huey import crontab
 from huey.contrib.djhuey import periodic_task, task
@@ -211,6 +212,7 @@ def _onboard_due_phases():
     from decimal import Decimal
 
     from dateutil.relativedelta import relativedelta
+    from django.db import transaction
 
     from accounts.models import HostingSubscription, Payment, ProjectPhase
     from accounts.services.hosting_billing import prorated_amount, project_billing_amount
@@ -233,48 +235,59 @@ def _onboard_due_phases():
 
     onboarded = 0
     for phase in due_phases:
-        sub = phase.project.hosting_subscription
-        if not sub.next_billing_date:
-            continue
+        try:
+            sub = phase.project.hosting_subscription
+            if not sub.next_billing_date:
+                continue
 
-        months = sub.billing_months
-        cycle_end = sub.next_billing_date - relativedelta(days=1)
-        cycle_start = sub.next_billing_date - relativedelta(months=months)
-        join_date = max(phase.hosting_start_date, cycle_start)
+            months = sub.billing_months
+            cycle_end = sub.next_billing_date - relativedelta(days=1)
+            cycle_start = sub.next_billing_date - relativedelta(months=months)
+            join_date = max(phase.hosting_start_date, cycle_start)
 
-        prorated = prorated_amount(phase, sub.plan, join_date, cycle_start, cycle_end)
+            prorated = prorated_amount(phase, sub.plan, join_date, cycle_start, cycle_end)
 
-        phase.hosting_activated_at = today
-        phase.save(update_fields=['hosting_activated_at'])
+            with transaction.atomic():
+                phase.hosting_activated_at = today
+                phase.save(update_fields=['hosting_activated_at'])
 
-        prorated_payment = None
-        if prorated > 0:
-            prorated_payment = Payment.objects.create(
-                subscription=sub,
-                amount=prorated,
-                description=(
-                    f'Hosting fase {phase.order} (prorrateado) — '
-                    f'{join_date} a {cycle_end}'
-                ),
-                billing_period_start=join_date,
-                billing_period_end=cycle_end,
-                due_date=today,
-                status=Payment.STATUS_PENDING,
+                prorated_payment = None
+                if prorated > 0:
+                    prorated_payment = Payment.objects.create(
+                        subscription=sub,
+                        amount=prorated,
+                        description=(
+                            f'Hosting fase {phase.order} (prorrateado) — '
+                            f'{join_date} a {cycle_end}'
+                        ),
+                        billing_period_start=join_date,
+                        billing_period_end=cycle_end,
+                        due_date=today,
+                        status=Payment.STATUS_PENDING,
+                    )
+
+                new_amount = project_billing_amount(phase.project, sub.plan)
+                sub.billing_amount = new_amount
+                sub.effective_monthly_amount = round(new_amount / Decimal(months), 2)
+                sub.save(update_fields=['billing_amount', 'effective_monthly_amount', 'updated_at'])
+
+                # Recurring payments for the next cycle onward grow to the new total.
+                Payment.objects.filter(
+                    subscription=sub,
+                    status=Payment.STATUS_PENDING,
+                    billing_period_start__gte=sub.next_billing_date,
+                ).update(amount=new_amount)
+
+                transaction.on_commit(
+                    partial(_notify_phase_onboarded, phase, sub, prorated_payment, new_amount),
+                    robust=True,
+                )
+        except Exception as exc:
+            logger.error(
+                'Phase hosting onboarding failed phase_id=%s error_type=%s',
+                phase.pk, type(exc).__name__,
             )
-
-        new_amount = project_billing_amount(phase.project, sub.plan)
-        sub.billing_amount = new_amount
-        sub.effective_monthly_amount = round(new_amount / Decimal(months), 2)
-        sub.save(update_fields=['billing_amount', 'effective_monthly_amount', 'updated_at'])
-
-        # Recurring payments for the next cycle onward grow to the new total.
-        Payment.objects.filter(
-            subscription=sub,
-            status=Payment.STATUS_PENDING,
-            billing_period_start__gte=sub.next_billing_date,
-        ).update(amount=new_amount)
-
-        _notify_phase_onboarded(phase, sub, prorated_payment, new_amount)
+            continue
         onboarded += 1
 
     if onboarded:

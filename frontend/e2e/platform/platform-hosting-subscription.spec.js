@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-09-01 — app_reachable=no)
 /**
  * E2E tests for platform hosting subscription flow.
  *
@@ -142,12 +141,12 @@ function setupMocksUnifiedPaymentsPage(page, { user, subscriptions }) {
 async function navigateFromProjectListToHosting(page) {
   await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
 
-  const projectRow = page.getByTestId('project-row-1');
-  await expect(projectRow).toContainText('E-commerce Platform');
-  await projectRow.click();
+  const projectEntry = page.getByText('E-commerce Platform', { exact: true });
+  await expect(projectEntry).toHaveText('E-commerce Platform');
+  await projectEntry.click();
   await expect(page).toHaveURL(/\/platform\/projects\/1$/);
 
-  await page.getByRole('link', { name: 'Hosting' }).click();
+  await page.getByRole('link', { name: 'Hosting', exact: true }).click();
   await expect(page).toHaveURL(/\/platform\/projects\/1\/payments$/);
 }
 
@@ -177,7 +176,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
     tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
   }, async ({ page }) => {
     await setupMocksNoSubscription(page, { user: mockPlatformClient });
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromProjectListToHosting(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Trimestral' }).click();
@@ -190,7 +189,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
     tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
   }, async ({ page }) => {
     await setupMocksNoSubscription(page, { user: mockPlatformClient });
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromProjectListToHosting(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Cada 9 meses', exact: true }).click();
@@ -237,7 +236,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
       return null;
     });
 
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromProjectListToHosting(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Trimestral' }).click();
@@ -294,17 +293,8 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
       return null;
     });
 
-    // quality: allow-deep-link (arrives via projects list -> project row click -> Hosting tab click, mirroring platform-client-documents.spec.js's accepted entry pattern; not a deep link straight to /payments)
-    await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
-    const projectRow = page.getByTestId('project-row-1');
-    await expect(projectRow).toBeVisible();
-    const projectDetailNavigation = page.waitForURL(/\/platform\/projects\/1$/, {
-      waitUntil: 'domcontentloaded',
-    });
-    await projectRow.click();
-    await projectDetailNavigation;
-    await page.getByRole('link', { name: 'Hosting' }).click();
-    await page.waitForURL(/\/platform\/projects\/1\/payments/, { waitUntil: 'domcontentloaded' });
+    // quality: allow-deep-link (the authenticated platform root lands on the project list; this journey then opens the project and its Hosting tab through the UI)
+    await navigateFromProjectListToHosting(page);
     await page.getByRole('heading', { name: /hosting trimestral/i }).waitFor({ state: 'visible', timeout: 30000 });
 
     // Unlike the active-subscription display test below, the frequency
@@ -381,6 +371,7 @@ test.describe('Platform Hosting Subscription — /platform/payments redirect', (
   }, async ({ page }) => {
     await setPlatformAuth(page, { user: mockPlatformClient });
     await setupMocksUnifiedPaymentsPage(page, { user: mockPlatformClient, subscriptions: [] });
+    // quality: allow-no-interaction (the legacy route contract is the automatic redirect itself; the page exposes no control to activate it)
     await page.goto('/platform/payments', { waitUntil: 'domcontentloaded' });
     await page.waitForURL('**/platform/projects**', { timeout: 30000 });
     await expect(page).toHaveURL(/\/platform\/projects/);

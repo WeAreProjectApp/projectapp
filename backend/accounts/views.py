@@ -159,6 +159,8 @@ def verify_view(request):
     try:
         jwt_auth = JWTAuthentication()
         validated_token = jwt_auth.get_validated_token(token_str)
+        if validated_token.get('purpose') != 'verification':
+            raise TokenError('Token purpose mismatch.')
         user = jwt_auth.get_user(validated_token)
     except Exception:
         return Response(
@@ -214,6 +216,8 @@ def resend_code_view(request):
     try:
         jwt_auth = JWTAuthentication()
         validated_token = jwt_auth.get_validated_token(token_str)
+        if validated_token.get('purpose') != 'verification':
+            raise TokenError('Token purpose mismatch.')
         user = jwt_auth.get_user(validated_token)
     except Exception:
         return Response(

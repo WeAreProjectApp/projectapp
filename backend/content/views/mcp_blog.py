@@ -11,6 +11,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as tz
@@ -83,6 +84,7 @@ from content.permissions import IsSuperUser
 logger = logging.getLogger(__name__)
 
 LAST_USED_TOUCH_SECONDS = 60
+MAX_MCP_RECENT_EVENTS = 10
 
 # Existing connector registries are compatibility surfaces. Canonical area
 # connectors below compose them with the Panel parity adapters.
@@ -700,6 +702,14 @@ mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handle
 
 def _connector_payload(connector):
     tools = TOOLS_BY_SLUG.get(connector.slug, [])
+    if hasattr(connector, '_panel_recent_events'):
+        recent_events = connector._panel_recent_events
+    else:
+        recent_events = connector.request_logs.select_related('credential')[:MAX_MCP_RECENT_EVENTS]
+    if hasattr(connector, '_panel_credentials'):
+        connector_credentials = connector._panel_credentials
+    else:
+        connector_credentials = connector.credentials.select_related('actor').all()
     recent = [
         {
             'event': e.event,
@@ -716,7 +726,7 @@ def _connector_payload(connector):
             ),
             'created_at': e.created_at.isoformat(),
         }
-        for e in connector.request_logs.all()[:10]
+        for e in recent_events
     ]
     if not recent:
         connection_status = 'none'
@@ -746,7 +756,7 @@ def _connector_payload(connector):
                 if credential.last_used_at else None
             ),
         }
-        for credential in connector.credentials.select_related('actor').all()
+        for credential in connector_credentials
     ]
     return {
         'slug': connector.slug,
@@ -785,7 +795,19 @@ def list_mcp_connectors(request):
     """List MCP connectors for /panel/mcps."""
     connectors = (
         McpConnector.objects
-        .prefetch_related('request_logs__credential', 'credentials__actor')
+        .prefetch_related(
+            Prefetch(
+                'request_logs',
+                queryset=McpRequestLog.objects.select_related('credential')
+                .order_by('-created_at', '-id')[:MAX_MCP_RECENT_EVENTS],
+                to_attr='_panel_recent_events',
+            ),
+            Prefetch(
+                'credentials',
+                queryset=McpCredential.objects.select_related('actor'),
+                to_attr='_panel_credentials',
+            ),
+        )
         .all()
         .order_by('slug')
     )
