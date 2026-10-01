@@ -40,6 +40,7 @@ EXPECTED_CHANNELS = (
     ('proposal_formalization', DOCUMENTS_MANUAL),
     ('branded_email', DOCUMENTS_MANUAL),
     ('proposal_email', DOCUMENTS_MANUAL),
+    ('delivery_stage_approved_client', DOCUMENTS_MANUAL),
     ('collection_account_sent', COLLECTIONS),
     ('document_signed_client', PLATFORM),
 )

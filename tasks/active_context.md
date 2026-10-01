@@ -14,7 +14,7 @@ guía incompleta no demuestra que un pedido esté fuera del contrato. Los textos
 ilegibles, faltantes, contradictorios o recortados requieren revisión humana.
 La corrección de guías conserva sus citas; el contrato u otrosí debe sustentar
 el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
-administrativo de preparaciones y descarga de copias exactas. UI y las 46
+administrativo de preparaciones y descarga de copias exactas. UI y las 52
 herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
 El incremento coordinado P3 redacta guías desde los recorridos del producto
 del cliente: roles sólo con respaldo de fuentes, acciones permitidas y
@@ -35,10 +35,17 @@ La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
 capturas de tickets y los modelos de evidencia de correo del siguiente
 incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
 ninguna migración desde el worktree.
-Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
-alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
-correo manual del registro de una etapa aprobada, con vista previa y copia
-exacta del envío; no se implementa ni se envía en este incremento.
+La compatibilidad con tickets legados admite versión 0 sin alterar los tickets;
+un cambio posterior sigue invalidando la preparación (dos pruebas verdes).
+El correo manual de cierre ya tiene preparación inmutable, vista previa,
+confirmación, historial privado y reenvío explícito. Sólo habilita etapas
+completamente aprobadas; conserva las rondas, decisiones y conversación pública
+hasta la operación de cierre, incluido su último mensaje. Distingue revisor
+original, registrador y fechas de conformidades externas. Capturas fallidas
+limpian archivos, y la captura común opta por almacenamiento privado conservado
+tras recarga y reenvío. Validación focal en curso; el estado final de CI se
+consulta en el PR. Bugs y cuentas de cobro avanzan en frentes propios coordinados
+por P0. No se aplican migraciones ni se envían correos reales.
 Operación y JSON vigente:
 [PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
 

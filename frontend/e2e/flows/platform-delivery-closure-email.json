@@ -1,0 +1,9 @@
+{
+  "id": "platform-delivery-closure-email",
+  "name": "Platform Delivery Closure Email",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "Prepare an exact private closure-email preview for a fully approved stage, confirm a manual send, inspect delivery history and explicitly prepare a resend with the same frozen evidence.",
+  "outcomes": ["success", "error", "failure", "display"]
+}

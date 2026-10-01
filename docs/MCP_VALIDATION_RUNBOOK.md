@@ -1096,7 +1096,7 @@ El conector `projects` cubre la administración de contratos, otrosíes, alcance
 fases de ejecución, etapas y guías de validación desde el primer incremento.
 La [matriz de paridad](PLATFORM_DELIVERY_MCP_MATRIX.md) relaciona cada acción de
 Platform con su herramienta y regla de negocio compartida. El catálogo añade
-46 herramientas de entrega y habilita los uploads temporales del conector.
+52 herramientas de entrega y habilita los uploads temporales del conector.
 
 Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
 20 casos. No invocar estas pruebas contra un conector activo de producción.
@@ -1141,7 +1141,7 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
     la evidencia, pero no constituir por sí solo el fundamento contractual.
 12. Preparar `create_delivery_reply_prompt` desde una etapa publicada y validar
     `preview_delivery_reply`. No crea mensajes. Fuentes faltantes/parciales o
-    incertidumbre bloquean `outside_scope`. Compartir con `add_delivery_message`
+    incertidumbre exigen alcance indeterminado. Compartir con `add_delivery_message`
     exige `human_reviewed: true`, contexto, citas y clasificaciones; una nueva
     observación pública desde la captura obliga a preparar otro contexto.
 13. Intentar eliminar en el panel una referencia o anexo seleccionado de
@@ -1150,6 +1150,20 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
     mantiene su eliminación normal. La clasificación de fake data excluye las
     capturas/fuentes de la generación automática; se crean solo por selección
     administrativa explícita.
+14. Preparar `prepare_delivery_stage_closure_email` sólo con una etapa publicada
+    completamente aprobada. Consultar destinatario, asunto, cuerpo y adjuntos
+    mediante `get_delivery_stage_closure_email`, sin transporte. Una etapa
+    parcial, un cliente ajeno o una credencial distinta deben fallar.
+15. Enviar `send_delivery_stage_closure_email` con confirmación sensible,
+    versión vigente, hash de la preparación y revisión humana. Comprobar que
+    intento y snapshot persisten antes de SMTP y que repetir la confirmación o
+    petición conserva un solo envío. Un fallo posterior a SMTP debe conservar
+    resultado desconocido sin reenvío automático.
+16. Consultar `list_delivery_stage_closure_emails` y descargar los bytes exactos
+    mediante `download_delivery_stage_closure_email_attachment`. Recargar las
+    filas desde la base no debe cambiar su almacenamiento privado ni crear una
+    URL pública. `prepare_delivery_stage_closure_email_resend` conserva cuerpo,
+    archivos y relación con el original; sólo prepara otra vista revisable.
 
 Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
 `content/tests/views/test_mcp_delivery_contracts.py` (20 casos),
@@ -1157,6 +1171,8 @@ Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
 verificaciones específicas de `projects` en `test_mcp_contracts.py`.
 La autoría seleccionada se cubre en
 `content/tests/views/test_mcp_delivery_authoring.py` (20 casos).
+El correo de cierre se cubre en
+`content/tests/views/test_mcp_delivery_closure_email.py` (17 casos).
 La revisión de modelos incluye todos los campos nuevos, con exclusiones
 explícitas de almacenamiento privado, captura de IP/navegador de la firma y
 recibos internos de idempotencia, huella de captura, instantánea interna de origen

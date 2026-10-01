@@ -3,14 +3,33 @@ import uuid
 from pathlib import Path
 
 from django.db import models
+from django.db.models.fields.files import FieldFile
 from django.utils.text import get_valid_filename
+
+from content.storage import get_private_storage
+
+
+PRIVATE_ATTACHMENT_PREFIX = 'private-email-history/'
+
+
+class EmailAttachmentFieldFile(FieldFile):
+    """Resolve retained private files without relocating historical media."""
+
+    def __init__(self, instance, field, name):
+        super().__init__(instance, field, name)
+        if str(name or '').startswith(PRIVATE_ATTACHMENT_PREFIX):
+            self.storage = get_private_storage()
 
 
 def email_attachment_upload_to(instance, filename):
     """Keep immutable mail evidence outside user-controlled media paths."""
     safe_name = get_valid_filename(Path(filename or 'adjunto').name) or 'adjunto'
+    prefix = (
+        PRIVATE_ATTACHMENT_PREFIX
+        if getattr(instance, '_private_attachments', False) else 'email-history/'
+    )
     return (
-        f'email-history/{instance.snapshot.delivery_id}/'
+        f'{prefix}{instance.snapshot.delivery_id}/'
         f'{uuid.uuid4().hex}-{safe_name}'
     )
 
@@ -78,6 +97,8 @@ class EmailAttachmentSnapshot(models.Model):
         related_name='attachments',
     )
     file = models.FileField(upload_to=email_attachment_upload_to, max_length=500)
+    # Runtime-only routing keeps the concrete FileField and its migrations intact.
+    file.attr_class = EmailAttachmentFieldFile
     filename = models.CharField(max_length=255)
     mime_type = models.CharField(
         max_length=255,

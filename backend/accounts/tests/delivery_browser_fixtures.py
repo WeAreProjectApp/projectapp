@@ -23,7 +23,7 @@ def guide(title):
     }
 
 
-def create_browser_fixture(key):
+def create_browser_fixture(key, *, mode=None):
     """Create independent projects; publication passes through the real API."""
     suffix = secrets.token_hex(6)
     password = secrets.token_urlsafe(24)
@@ -91,6 +91,19 @@ def create_browser_fixture(key):
     workspace = api.get(base)
     if workspace.status_code != 200:
         raise RuntimeError(f'Fixture overview failed: {workspace.data}')
+    if mode in {'closure-approved', 'closure-smtp-failure'}:
+        public_document = Document.objects.create(
+            document_type=document_type, title='Guía pública del cierre',
+            content_markdown='# Guía pública\nValidar el traslado entre sucursales.',
+            project=project, client_user=client, is_client_visible=True,
+        )
+        linked = api.post(base + 'documents/', {
+            'expected_version': workspace.data['version'], 'level': 'stage',
+            'target_id': stage.pk, 'document_id': public_document.pk,
+        }, format='json')
+        if linked.status_code not in (200, 201):
+            raise RuntimeError(f'Fixture document failed: {linked.data}')
+        workspace = api.get(base)
     publication = api.post(
         base + f'stages/{stage.id}/publish/',
         {'expected_version': workspace.data['version'], 'request_id': f'publish-{suffix}'},
@@ -98,6 +111,18 @@ def create_browser_fixture(key):
     )
     if publication.status_code not in (200, 201):
         raise RuntimeError(f'Fixture publication failed: {publication.data}')
+    if mode in {'closure-approved', 'closure-smtp-failure'}:
+        api.force_authenticate(client)
+        reviewed = api.post(base + f'stages/{stage.pk}/review/', {
+            'expected_version': publication.data['version'], 'request_id': f'close-{suffix}',
+            'decisions': [
+                {'requirement_id': item.pk, 'version': item.version, 'decision': 'approved'}
+                for item in (transfer, mail)
+            ],
+            'message': 'Conformidad registrada desde la revisión.',
+        }, format='json')
+        if reviewed.status_code != 200:
+            raise RuntimeError(f'Fixture approval failed: {reviewed.data}')
     return {
         'project': {'id': project.id, 'name': project.name},
         'contract_id': contract.id, 'scope_id': scope.id, 'phase_id': phase.id,

@@ -9,6 +9,8 @@ import os
 import sys
 from pathlib import Path
 from socketserver import ThreadingMixIn
+from unittest.mock import patch
+from urllib.parse import parse_qs
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 
@@ -49,6 +51,8 @@ def main():
     from django.test.utils import setup_databases, teardown_databases
     from projectapp.tests.isolation import collect_storage_locations, settings_refusals, storage_refusals
     from accounts.tests.delivery_browser_fixtures import create_browser_fixture
+    from accounts.models_delivery_email import DeliveryEvidenceEmail
+    from django.core import mail
 
     reasons = settings_refusals(settings, os.environ) + storage_refusals(
         settings.TEST_FILE_ROOT, settings.BASE_DIR, collect_storage_locations(),
@@ -78,21 +82,61 @@ def main():
         try:
             application = get_wsgi_application()
             fixtures = {}
+            smtp_failures = set()
+
+            def request_data(environ):
+                size = int(environ.get('CONTENT_LENGTH') or 0)
+                return json.loads(environ['wsgi.input'].read(min(size, 4096)) or '{}')
+
+            def evidence_probe(key):
+                fixture = fixtures.get(key)
+                if fixture is None:
+                    return JsonResponse({'error': 'Fixture not found'}, status=404)
+                emails = []
+                for email in DeliveryEvidenceEmail.objects.filter(project_id=fixture['project']['id']):
+                    attempts = list(email.attempts.order_by('created_at', 'id'))
+                    latest = attempts[-1] if attempts else None
+                    emails.append({
+                        'id': str(email.pk), 'status': latest.status if latest else 'prepared',
+                        'attempt_count': len(attempts), 'subject': email.subject,
+                        'to': email.to_recipients,
+                        'error_message': latest.error_message if latest else '',
+                        'resend_of_id': str(email.resend_of_id) if email.resend_of_id else None,
+                    })
+                outbox = [
+                    message for message in getattr(mail, 'outbox', [])
+                    if message.subject.startswith(fixture['project']['name'] + ':')
+                    and message.to == [fixture['client']['email']]
+                ]
+                return JsonResponse({'outbox_count': len(outbox), 'emails': emails})
 
             def test_application(environ, start_response):
                 path = environ.get('PATH_INFO')
                 if path == '/__delivery_ready__':
                     response = HttpResponse('ready')
                 elif path == '/__delivery_fixture__' and environ.get('REQUEST_METHOD') == 'POST':
-                    size = int(environ.get('CONTENT_LENGTH') or 0)
-                    payload = json.loads(environ['wsgi.input'].read(min(size, 4096)) or '{}')
+                    payload = request_data(environ)
                     key = payload.get('key', 'fixture')
                     if key not in fixtures:
-                        fixtures[key] = create_browser_fixture(key)
+                        fixtures[key] = create_browser_fixture(key, mode=payload.get('mode'))
+                        if payload.get('mode') == 'closure-smtp-failure':
+                            smtp_failures.add(fixtures[key]['project']['id'])
                     response = JsonResponse(fixtures[key])
+                elif path == '/__delivery_fixture_probe__':
+                    payload = request_data(environ) if environ.get('REQUEST_METHOD') == 'POST' else {
+                        'key': parse_qs(environ.get('QUERY_STRING', '')).get('key', [''])[0],
+                    }
+                    response = evidence_probe(payload.get('key'))
                 else:
+                    project_prefix = '/api/accounts/projects/'
+                    if path.startswith(project_prefix) and path.endswith('/send/') and environ.get('REQUEST_METHOD') == 'POST':
+                        project_id = path[len(project_prefix):].split('/', 1)[0]
+                        if project_id.isdigit() and int(project_id) in smtp_failures:
+                            smtp_failures.remove(int(project_id))
+                            with patch('django.core.mail.message.EmailMessage.send', side_effect=RuntimeError('SMTP de prueba no disponible')):
+                                return application(environ, start_response)
                     return application(environ, start_response)
-                start_response(f'{response.status_code} OK', list(response.items()))
+                start_response(f'{response.status_code} {response.reason_phrase}', list(response.items()))
                 return [response.content]
 
             with make_server(
