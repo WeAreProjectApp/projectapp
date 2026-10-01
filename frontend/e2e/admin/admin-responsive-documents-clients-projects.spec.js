@@ -491,7 +491,8 @@ for (const viewport of COMPACT_PROJECT_VIEWPORTS) {
       await page.getByTestId('project-actions-12').click();
       const actions = page.getByTestId('project-actions-modal');
       await expect(actions.getByTestId('project-actions-edit')).toBeVisible();
-      await actions.getByRole('button', { name: 'Cerrar' }).click();
+      await page.keyboard.press('Escape');
+      await expect(actions).toHaveCount(0);
       await expectNoViewportOverflow(page);
     });
   });
