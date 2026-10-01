@@ -135,8 +135,7 @@ def test_general_reply_stays_indeterminate_without_changing_guide_approvals(cont
 
     report.refresh_from_db()
     assert response.status_code == 200
-    assert IssueResponse.objects.filter(bug_report=report).count() == 1
-    assert IssueResponse.objects.get(bug_report=report).scope_result == 'indeterminate'
+    assert list(IssueResponse.objects.filter(bug_report=report).values_list('scope_result', flat=True)) == ['indeterminate']
     assert report.admin_response == payload['admin_response']
     context.first.refresh_from_db()
     assert context.first.review_status == before_status
@@ -303,7 +302,8 @@ def test_change_request_reply_keeps_its_published_origin_without_conversion(cont
     request = issues.create_ticket(context.project.pk, context.client, 'change', {
         'title': 'Add export', 'module_or_screen': 'Reports', 'source_requirement_id': source.pk,
     })
-    before_status = source.review_status
+    origin = (source.stage.publications.get().pk, request.issue_context.snapshot)
+    approvals = (source.review_status, RequirementReview.objects.count())
     prepared = prepare(context, request, contract_id=context.contract.pk,
                        request_id='40000000-0000-4000-8000-000000000011', kind='change')
     values = publish_payload(context, request, prepared, True, reply_payload(prepared), kind='change')
@@ -314,9 +314,6 @@ def test_change_request_reply_keeps_its_published_origin_without_conversion(cont
     source.refresh_from_db()
     stored = IssueResponse.objects.get(change_request=request)
     assert response.status_code == 200
-    assert stored.scope_result == 'within_scope'
-    assert request.issue_context.publication_id == source.stage.publications.get().pk
-    assert request.issue_context.snapshot['requirement_title'] == source.title
-    assert request.linked_requirement_id is None
-    assert source.review_status == before_status
-    assert RequirementReview.objects.count() == 0
+    assert (stored.scope_result, request.linked_requirement_id) == ('within_scope', None)
+    assert (request.issue_context.publication_id, request.issue_context.snapshot) == origin
+    assert (source.review_status, RequirementReview.objects.count()) == approvals

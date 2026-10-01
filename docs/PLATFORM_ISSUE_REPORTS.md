@@ -164,8 +164,8 @@ sin opciones SMTP, y comprueba el backend efectivo antes de DB/fixtures. Cuatro
 regresiones prueban envíos al outbox memoria y rechazos sin outbox.
 QA focal del adaptador: 17 casos REST (incluida CR), 12 casos MCP, 4 casos de
 aislamiento de correo y 3 unitarias de UI pasaron en sus lotes correspondientes.
-La auditoría de calidad no detectó errores y cerró sus observaciones; conserva
-dos warnings baselineados de pruebas previas. Los dos flujos del dominio cubren
+La auditoría de calidad cerró sus observaciones. La ejecución de los gates y
+la disponibilidad del lint externo se informan junto al CI del head publicado. Los dos flujos del dominio cubren
 éxito, error, fallo y presentación. CI del head publicado se informa por separado.
 Ejecutar sólo archivos del dominio y hasta veinte casos por lote.
 `npm run e2e:issues` valida los recorridos nuevos. Los mapas se registran en
