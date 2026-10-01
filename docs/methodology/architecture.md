@@ -6,6 +6,11 @@
 > respuestas y copias documentales conservan el contenido entregado. JWT y MCP
 > comparten `delivery_workflow`, `delivery_documents` y validación de pertenencia,
 > versión y congelamiento. `ProjectPhase` mantiene su función comercial/hosting;
+> `delivery_authoring` captura `DeliveryPromptContext` y `DeliveryPromptSource`
+> inmutables por selección explícita, con archivos privados exactos, fragmentos
+> y límites visibles. Guías y respuestas conservan contexto y citas; el servidor
+> verifica las referencias, y la interpretación requiere revisión humana.
+> Descubrir fuentes, previsualizar o consultar no publica ni envía contenido.
 > `technical_resources_sync` sólo refleja recursos y datos. La purga autorizada
 > retira las tarjetas antiguas, conserva bugs/cambios y anula sus referencias.
 > [Reglas y superficies vigentes](../PLATFORM_DELIVERY.md).

@@ -1058,7 +1058,7 @@ export const viewCatalogSections = [
         group: 'Proyectos',
         file: 'frontend/pages/platform/projects/[id]/delivery.vue',
         reference: 'contratos, otrosíes, alcances, fases, etapas y guías de validación del proyecto',
-        notes: 'El equipo prepara e importa borradores y publica etapas. El cliente responde por requerimiento; los documentos heredan la publicación y las conformidades permanecen entre rondas.',
+        notes: 'El equipo crea guías o prepara respuestas con un contrato y sus fuentes seleccionadas, conserva copias y verifica las citas del JSON antes de aplicar borradores. La respuesta necesita revisión y envío manual. El cliente responde por requerimiento; los documentos heredan la publicación y las conformidades permanecen entre rondas.',
         audience: 'client',
         viewType: 'detail',
       },

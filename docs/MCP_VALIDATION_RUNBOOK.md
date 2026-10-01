@@ -1096,12 +1096,12 @@ El conector `projects` cubre la administración de contratos, otrosíes, alcance
 fases de ejecución, etapas y guías de validación desde el primer incremento.
 La [matriz de paridad](PLATFORM_DELIVERY_MCP_MATRIX.md) relaciona cada acción de
 Platform con su herramienta y regla de negocio compartida. El catálogo añade
-40 herramientas de entrega y habilita los uploads temporales del conector.
+46 herramientas de entrega y habilita los uploads temporales del conector.
 
 Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
 20 casos. No invocar estas pruebas contra un conector activo de producción.
 
-1. Consultar prompt/esquema y espacio; crear/leer/editar cada entidad; rechazar
+1. Consultar opciones/esquemas y espacio; crear/leer/editar cada entidad; rechazar
    un otrosí cuyo contrato pertenece a otro proyecto. Las fases de ejecución
    nunca deben facturar ni alterar el hosting comercial.
 2. Previsualizar JSON sin escribir; aplicar mediante `confirm_action`; rechazar
@@ -1124,14 +1124,43 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
    usar `link_id` para un documento asociado. Los dos orígenes son excluyentes.
    Editar la fuente después de registrar la conformidad no debe cambiar los
    bytes, título ni hash de su respaldo. Un proyecto ajeno falla sin crear artefactos.
+9. Consultar `get_delivery_authoring_contract`: devuelve opciones y esquemas,
+   sin textos ni contrato seleccionado. Crear guías con
+   `create_delivery_guide_prompt`, eligiendo contrato, otrosíes, referencias y
+   anexos. No debe incluir contratos hermanos, notas privadas ni fuentes no
+   elegidas. La asociación de un anexo no prueba su incorporación jurídica.
+10. Reintentar la captura con el mismo `request_id`: conserva un solo contexto
+    y no incrementa la versión del espacio. Consultar historial/reabrir mediante
+    `list_delivery_prompt_contexts`/`get_delivery_prompt_context` y descargar
+    `download_delivery_prompt_source`; el archivo conserva sus bytes y MIME
+    originales después de editar el origen. Contextos ajenos deben fallar.
+11. Importar guías v2 con contexto y citas verificadas; rechazar citas vacías o
+    inexistentes y retirar la procedencia de un requerimiento trazado. V1 manual
+    no debe sobrescribir una guía v2; estados y firmas siguen fuera del JSON.
+    El fundamento requiere citar contrato/otrosí; un anexo puede complementar
+    la evidencia, pero no constituir por sí solo el fundamento contractual.
+12. Preparar `create_delivery_reply_prompt` desde una etapa publicada y validar
+    `preview_delivery_reply`. No crea mensajes. Fuentes faltantes/parciales o
+    incertidumbre bloquean `outside_scope`. Compartir con `add_delivery_message`
+    exige `human_reviewed: true`, contexto, citas y clasificaciones; una nueva
+    observación pública desde la captura obliga a preparar otro contexto.
+13. Intentar eliminar en el panel una referencia o anexo seleccionado de
+    `Document`/`ProposalDocument`: respuesta 409 `document_used_in_delivery`,
+    mensaje de conservación y original intacto. Un PDF de propuesta no retenido
+    mantiene su eliminación normal. La clasificación de fake data excluye las
+    capturas/fuentes de la generación automática; se crean solo por selección
+    administrativa explícita.
 
 Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
 `content/tests/views/test_mcp_delivery_contracts.py` (20 casos),
 `content/tests/views/test_mcp_delivery_guards.py` (9 casos), más cuatro
 verificaciones específicas de `projects` en `test_mcp_contracts.py`.
+La autoría seleccionada se cubre en
+`content/tests/views/test_mcp_delivery_authoring.py` (20 casos).
 La revisión de modelos incluye todos los campos nuevos, con exclusiones
 explícitas de almacenamiento privado, captura de IP/navegador de la firma y
-recibos internos de idempotencia. La metadata conserva método y hashes de firma;
+recibos internos de idempotencia, huella de captura, instantánea interna de origen
+y rutas privadas de fuentes. Contexto y fuente son inmutables. La metadata conserva método y hashes de firma;
 la evidencia de aprobación conserva el mensaje original y su procedencia.
 
 Resultados focales ejecutados en el worktree de implementación:
@@ -1140,11 +1169,20 @@ Resultados focales ejecutados en el worktree de implementación:
 | --- | --- | --- |
 | `test_mcp_delivery.py` | **19/19 verdes**; repetido con `--nomigrations` tras congelar todos los campos contractuales firmados | Creación real de seis entidades, guías, importación, confirmaciones, publicación, PDF externo, respuestas y errores. |
 | `test_mcp_delivery_contracts.py` | **20/20 verdes**, con migraciones reales hasta `0065` | Lecturas por entidad, propiedad de documentos/assets, credencial limitada, descargas, replay y procedencia entrante. |
+| Regresión de `test_mcp_delivery_contracts.py` tras autoría seleccionada | **20/20 verdes**, con `--nomigrations` tras `0067` | Discovery de opciones sin textos ni selección automática, compatibilidad documental y confirmaciones existentes. |
 | `test_mcp_delivery_guards.py` | **3/3 verdes**, con `--nomigrations` | Firma privada, contrato firmado inmutable antes de publicar y rechazo de una constancia externa que declara método Portal. |
 | Nuevas descargas de respaldo en `test_mcp_delivery_guards.py` | **6/6 verdes**, con `--nomigrations` tras `0066` | PDF histórico exacto después de reescribir la fuente, pertenencia al proyecto y cuatro selectores incompletos/ambiguos rechazados. |
-| Contratos existentes de `projects` | **4/4 verdes**, con `--nomigrations`; clasificación de campos repetida tras `0066` | Todos los campos clasificados, metadata accionable, confirmación sensible y adaptadores HTTP coherentes. |
+| Contratos existentes de `projects` | **4/4 verdes**, con `--nomigrations`; repetidos tras `0067` | Todos los campos clasificados, incluidas capturas y procedencia; metadata accionable, confirmación sensible y adaptadores HTTP coherentes. |
+| `test_mcp_delivery_authoring.py` | **20/20 verdes**, con `--nomigrations` tras `0067` | Fuentes elegidas, contextos retenidos/idempotentes, descarga exacta PDF/JSON, citas, faltantes/lectura parcial, importación v2 y respuesta manual revisada. Calidad estricta **100/100**, sin errores, avisos ni sugerencias. |
+| Integración de eliminación y clasificación | **11/11 verdes**, con migraciones reales hasta `0067` | Cinco casos de `test_delivery_source_deletion.py` conservan referencias/anexos originales y el borrado normal; seis regresiones comprueban catálogo fake, eliminaciones de propuesta/documento y protección de comunicaciones. Calidad estricta de los cinco casos nuevos **100/100**, sin hallazgos. |
 
-Son **48 casos nuevos** y **4 verificaciones de contrato existentes**, en lotes
+Son **68 casos nuevos** y **4 verificaciones de contrato existentes**, en lotes
 separados de hasta 20 casos. Se verificó el transporte real de uploads y las
 confirmaciones MCP; no se ejecutaron suites completas ni pruebas mutantes contra
 datos de producción.
+
+Los once casos de integración se ejecutaron con migraciones reales para incluir
+el catálogo Markdown que consumen los fixtures existentes. No se modificaron
+esos fixtures. La clasificación registra `DeliveryPromptContext` y
+`DeliveryPromptSource` como exentos de generación automática: las capturas solo
+nacen de una selección administrativa explícita.

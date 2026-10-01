@@ -64,24 +64,6 @@ def validated_pdf_bytes(file):
     return pdf
 
 
-def signed_pdf_text(evidence):
-    """Bounded authoring context from the exact external agreement, not a draft."""
-    try:
-        with evidence.file.open('rb') as source:
-            reader = PdfReader(io.BytesIO(source.read(MAX_PDF_BYTES + 1)))
-        parts = []
-        size = 0
-        for page in reader.pages[:50]:
-            text = (page.extract_text() or '')[:60_000 - size]
-            parts.append(text)
-            size += len(text)
-            if size >= 60_000:
-                break
-        return '\n'.join(parts)
-    except (OSError, ValueError):
-        fail('No se pudo leer el contrato firmado para preparar el prompt.', 'pdf_unavailable')
-
-
 def _raw_pdf(doc):
     if doc.generated_file:
         try:
@@ -258,7 +240,7 @@ def document_options(project_id, actor):
     documents = Document.objects.filter(is_archived=False).filter(
         Q(project=project, client_user__isnull=True) | Q(project=project, client_user_id=project.client_id)
         | Q(project__isnull=True, client_user_id=project.client_id),
-    ).exclude(document_type__code='collection_account')
+    ).exclude(document_type__code='collection_account').only('id', 'uuid', 'title', 'requires_signature')
     proposal_documents = ProposalDocument.objects.filter(
         Q(proposal__project_phases__project=project) | Q(proposal__deliverable__project=project),
     ).distinct()

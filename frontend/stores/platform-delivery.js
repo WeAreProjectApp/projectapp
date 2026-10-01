@@ -64,9 +64,21 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
         return { success: true }
       } catch (error) { return apiFailure(error) }
     },
-    async fetchPrompt() {
+    async fetchPromptOptions() {
       try {
-        const response = await usePlatformApi().get(this.base('prompt/'))
+        const response = await usePlatformApi().get(this.base('prompt/options/'))
+        return { success: true, data: response.data }
+      } catch (error) { return apiFailure(error) }
+    },
+    async fetchPromptContext(id) {
+      try {
+        const response = await usePlatformApi().get(this.base(`prompt/${id}/`))
+        return { success: true, data: response.data }
+      } catch (error) { return apiFailure(error) }
+    },
+    async fetchPromptContexts() {
+      try {
+        const response = await usePlatformApi().get(this.base('prompt/contexts/'))
         return { success: true, data: response.data }
       } catch (error) { return apiFailure(error) }
     },
@@ -109,6 +121,8 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
     deleteEntity(type, id) { return this.mutate(`${type}/${id}/`, {}, 'DELETE') },
     previewImport(payload) { return this.mutate('import/preview/', { payload }, 'POST', { refresh: false }) },
     applyImport(payload) { return this.mutate('import/apply/', { payload }) },
+    preparePrompt(selection) { return this.mutate('prompt/', selection, 'POST', { refresh: false }) },
+    previewReply(payload) { return this.mutate('reply/preview/', { payload }, 'POST', { refresh: false }) },
     publishStage(id) { return this.mutate(`stages/${id}/publish/`) },
     reviewStage(id, payload) { return this.mutate(`stages/${id}/review/`, payload) },
     recordHistoricalApprovals(id, payload) { return this.mutate(`stages/${id}/historical-approvals/`, payload) },
@@ -116,6 +130,25 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
     recordExternalSignature(type, id, payload) { return this.mutate(`${type}/${id}/signature-external/`, payload) },
     linkDocument(payload) { return this.mutate('documents/', payload) },
     unlinkDocument(id) { return this.mutate(`documents/${id}/`, {}, 'DELETE') },
+    async downloadPromptSource(source) {
+      try {
+        const response = await usePlatformApi().get(source.file_url || source.download_url, { responseType: 'blob', baseURL: '' })
+        const mimeType = response.headers?.['content-type'] || source.content_type || 'application/octet-stream'
+        const objectUrl = URL.createObjectURL(new Blob([response.data], { type: mimeType }))
+        const link = window.document.createElement('a')
+        link.href = objectUrl
+        const headerFilename = response.headers?.['content-disposition']?.match(/filename="([^"]+)"/)?.[1]
+        link.download = (source.filename || headerFilename || source.title || 'source').replace(/[\\/]/g, '-')
+        window.document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(objectUrl)
+        return { success: true }
+      } catch (error) {
+        const failure = await normalizeBlobApiError(error, '')
+        return { success: false, message: failure.message }
+      }
+    },
     async downloadDocument(document) {
       try {
         const response = await usePlatformApi().get(document.pdf_url, {

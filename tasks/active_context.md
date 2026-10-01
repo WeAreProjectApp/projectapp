@@ -7,8 +7,20 @@ externo, conformidades históricas con evidencia entrante y documentos por nivel
 conservan contenido y autoría; las conformidades aprobadas sobreviven a otra ronda.
 El Kanban de clientes y su sincronización se retiran mediante purga autorizada;
 propuestas, fases comerciales, hosting, finanzas, recursos y bugs/cambios permanecen.
+El refinamiento autorizado anterior a bugs está implementado en validación: «Crear guías»
+y «Preparar respuesta» seleccionan un contrato, sus otrosíes aplicables y anexos
+con procedencia explícita; conservan fuentes y verifican citas del JSON. Una
+guía incompleta no demuestra que un pedido esté fuera del contrato. Los textos
+ilegibles, faltantes, contradictorios o recortados requieren revisión humana.
+La corrección de guías conserva sus citas; el contrato u otrosí debe sustentar
+el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
+administrativo de preparaciones y descarga de copias exactas. UI y las 46
+herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
 Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
-alcances posteriores, incrementalmente en el mismo PR. Operación y JSON vigente:
+alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
+correo manual del registro de una etapa aprobada, con vista previa y copia
+exacta del envío; no se implementa ni se envía en este incremento.
+Operación y JSON vigente:
 [PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
 
 # Espaciado de los PDF comercial y técnico (2026-09-29)

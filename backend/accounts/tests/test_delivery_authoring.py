@@ -7,7 +7,7 @@ from rest_framework.exceptions import NotFound, PermissionDenied, ValidationErro
 
 from accounts.models import DeliveryScope, Project, ProjectContract, Requirement
 from accounts.services import delivery_workflow as delivery
-from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, publish, version
+from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, prepare_prompt, publish, version
 from content.models import Document
 
 pytestmark = pytest.mark.django_db
@@ -60,10 +60,10 @@ def test_repeated_apply_keeps_one_tree(context):
 
 
 def test_authoring_prompt_includes_human_contract_context(context):
-    response = delivery.authoring_prompt(context.project.pk, context.admin)
+    response = prepare_prompt(context)
 
     assert 'Alcance acordado.' in response['prompt']
-    assert response['schema']['properties']['schema_version']['const'] == 1
+    assert response['schema']['properties']['schema_version']['const'] == 2
     assert response['schema']['additionalProperties'] is False
 
 
