@@ -72,7 +72,8 @@ anterior queda revocado. No se reactiva un enlace ya sustituido.
 Escrituras administradas bloquean Project antes de SecureLink. MCP usa el mismo
 orden para revalidar etags bajo confirmación. El índice owner/project/fecha y la
 restricción única owner/request_id evitan búsquedas completas y duplicados. La
-creación usa savepoint para resolver carreras del UUID; la relación OneToOne
+creación usa savepoint y reconsulta bloqueante para resolver carreras del UUID,
+incluso entre proyectos diferentes del mismo propietario; la relación OneToOne
 también tiene unicidad en DB. Reveal público conserva su bloqueo de fila y
 rechazo de segundo consumo. No hay locks de Redis ni envíos externos.
 
@@ -120,3 +121,48 @@ responsive owner/flow y shards de flujos propios; secciones de memoria. No se
 modifican contratos/prompts/guías, hosting/cobros ni políticas de otros frentes.
 P3 revisa diseño; P0 coordina final P3 y orden de integración. Esta sesión entrega
 PR a main y no hace merge ni deploy.
+
+## Evidencia de validación
+
+Las pruebas se ejecutaron desde el worktree P5, exclusivamente con
+`projectapp.settings_test` y SQLite. El dominio tiene 55 casos: API (16),
+idempotencia (11), ciclo de vida (13), ownership (7), MCP (7) y presupuesto de
+consultas (1). También pasaron 32 regresiones del servicio/Panel/MCP legacy y
+dos verificaciones de contratos/registro MCP. Las ejecuciones focales posteriores
+repiten únicamente los casos afectados por cada ajuste.
+
+P0 reservó también la compatibilidad de `accounts/tests/test_delivery_migration.py`:
+su corte histórico se deriva del grafo y excluye descendientes de migraciones
+accounts posteriores a 0063 en cualquier app, conservando las hojas compatibles
+y 0063 como target explícito para que Django revierta el esquema, no sólo el estado.
+El finally restaura latest aunque falle la preparación/get_model. Los tres casos
+originales de purga y conservación pasaron sin skip/xfail; no se modificó el
+esquema ni la migración 0064. El lote combinado de esos tres casos y el backfill
+legacy pasó 4/4 en el mismo proceso SQLite, verificando la restauración efectiva.
+
+Frontend: 13 pruebas unitarias dedicadas y una verificación del catálogo existente.
+Dos casos reprodujeron respuestas tardías de catálogo entre proyectos y pasaron
+después de corregir la generación de carga del workspace. Los tres flujos nuevos
+declaran display/success/error/failure; el mapa derivado está fresco. La validación
+de navegador usa Nuxt real con la frontera HTTP simulada: no demuestra integración
+contra una API desplegada. Las pruebas SQLite comprueban el contrato backend real.
+
+Los 15 E2E dedicados se ejecutaron: diez funcionales y cinco perfiles responsive
+(412, 835 vertical, 1195, 1440 y 2560). Después de alinear el fixture HTTP con el
+catálogo real, nueve funcionales pasaron directamente y creación pasó en retry;
+esa creación se revalidó sola y luego dos veces con retries=0/trazas, ambas verdes.
+Hubo un timeout local de 60 segundos cuyo artefacto no quedó recuperable: su causa
+no está determinada y las revalidaciones no prueban qué lo produjo. El dev Nuxt
+tuvo fallos IPC; la repetición final usó el build propio servido en loopback.
+
+El build Nuxt final terminó correctamente. Los guards de catálogo, responsive y
+tokens de diseño pasaron; Ruff se ejecutó realmente desde el venv aislado del
+worktree. La validación de concurrencia MySQL sigue pendiente del harness aislado
+permitido. El piloto de mutación del toolkit no admite este clon no registrado;
+no se alteraron sus guards ni projects.yml para hacerlo pasar. El CI y la absorción
+final de P3 se verifican por SHA en el PR, separados de estas pruebas locales.
+
+QA local: APPROVED. El gate final de los 15 archivos de pruebas/helpers tuvo
+0 errores y 0 warnings (7 backend, 4 unitarios, 3 E2E; helper revisado manualmente).
+El engine retiró su marker. La auditoría concluyó KEEP para todo el alcance;
+el reporte local y las trazas viven fuera de archivos versionados.

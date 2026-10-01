@@ -2,7 +2,8 @@
 
 Secret reads require an explicit credential grant and an ephemeral confirmation.
 Create/update arguments and reveal results never enter persisted MCP payloads.
-Ordinary reads remain metadata-only; URLs are only returned at creation.
+Ordinary reads remain metadata-only; URLs require creation, reactivation or an
+explicit confirmed lookup.
 """
 
 from django.core.paginator import Paginator

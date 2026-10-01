@@ -4,7 +4,7 @@ Security contract:
 - the URL token is random, travels in the URL fragment and is only stored as
   a SHA-256 lookup hash plus a Fernet copy that lets staff copy the link again;
 - the payload is Fernet-encrypted JSON and is only decrypted by an explicit
-  reveal (recipient) or an audited panel view (staff);
+  reveal (recipient) or an audited staff read (Panel/MCP);
 - a recipient reveal is atomic: the row is locked, the status re-checked and
   the consumption stored in the same transaction.
 """

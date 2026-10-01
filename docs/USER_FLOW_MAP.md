@@ -8202,7 +8202,7 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** Crear una vez limpia el contenido del formulario; la URL se muestra sólo en el modal y copiar exige un clic.
 - **Error:** Campos requeridos bloquean el envío; entrada inválida o UUID con otros datos muestran un error seguro. Replay idéntico no vuelve a entregar URL.
 - **Failure:** Catálogo/listado permiten reintentar. Una falla de creación conserva el borrador y su UUID sin mostrar la entrada en el error.
-- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure. Las pruebas backend SQLite verifican autorización, cifrado e idempotencia reales.
 
 ### FLOW: `platform-secure-link-manage`
 
@@ -8212,7 +8212,7 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** Cambiar etiqueta, consultar URL explícita, revocar idempotentemente o reactivar un enlace elegible rotando URL y conservando eventos anteriores.
 - **Error:** Una revisión obsoleta o estado inválido devuelve error; no hay lectura del secreto, borrado ni edición de contenido en Platform.
 - **Failure:** Fallas de listado/historial/operaciones muestran un error recuperable; no se afirma una transición que falló.
-- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure y `frontend/e2e/responsive/platform-secure-links.spec.js` verifica cinco perfiles. API SQLite y pruebas unitarias comprueban ownership, auditoría, revisiones y descarte de respuestas tardías.
 
 ### FLOW: `platform-secure-link-replace`
 
@@ -8222,7 +8222,7 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** Confirmar revoca, abre formulario sin secreto y crea un sucesor enlazado que entrega su nueva URL una vez.
 - **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
 - **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
-- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
 
 ### FLOW: `proposal-closing-contact`
 

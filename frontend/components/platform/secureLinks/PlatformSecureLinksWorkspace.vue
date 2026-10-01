@@ -20,20 +20,25 @@ const creating = ref(false)
 const selected = ref(null)
 const replaces = ref(null)
 const catalogError = ref(false)
+let loadGeneration = 0
 async function refresh(page = store.page) {
   if (auth.isClient) await store.fetchLinks(props.projectId, { page, search: search.value, ...(status.value ? { status: status.value } : {}) })
 }
 async function load() {
+  const attempt = ++loadGeneration
   creating.value = false; selected.value = null; replaces.value = null
+  catalogError.value = false
   store.clear()
   if (!auth.isClient) return
   await refresh(1)
+  if (attempt !== loadGeneration) return
   const result = await store.fetchTypes()
-  catalogError.value = !result.success
+  if (attempt !== loadGeneration) return
+  catalogError.value = !result.success && !result.stale
 }
 watch(() => props.projectId, load, { immediate: true })
 watch(() => [auth.isClient, auth.user?.id], load)
-onBeforeUnmount(() => store.clear())
+onBeforeUnmount(() => { loadGeneration += 1; store.clear() })
 function replace(link) { selected.value = null; replaces.value = link; creating.value = true }
 function closeForm() { creating.value = false; replaces.value = null }
 </script>
@@ -45,7 +50,7 @@ function closeForm() { creating.value = false; replaces.value = null }
     <template v-else>
       <p class="text-sm text-text-muted">{{ t('platformSecureLinks.teamOnly') }}</p>
       <p class="text-sm text-text-muted">{{ t('platformSecureLinks.noFiles') }}</p>
-      <BaseAlert v-if="catalogError" variant="danger">{{ t('platformSecureLinks.errors.failed') }} <BaseButton variant="ghost" @click="load">{{ t('platformSecureLinks.retry') }}</BaseButton></BaseAlert>
+      <BaseAlert v-if="catalogError" variant="danger" data-testid="platform-secure-catalog-error">{{ t('platformSecureLinks.errors.failed') }} <BaseButton variant="ghost" @click="load">{{ t('platformSecureLinks.retry') }}</BaseButton></BaseAlert>
       <BaseButton v-if="store.types.length" data-testid="platform-secure-new" @click="creating = true">{{ t('platformSecureLinks.create') }}</BaseButton>
       <form class="flex flex-wrap items-end gap-3" @submit.prevent="refresh(1)">
         <BaseFormField class="min-w-0 flex-1" :label="t('platformSecureLinks.search')" for="platform-secure-search">

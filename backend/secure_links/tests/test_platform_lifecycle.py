@@ -12,6 +12,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_client_cannot_open_the_secret(create_owned):
+    """A client cannot reveal a managed link's credential payload."""
     link, url, _ = create_owned()
 
     with pytest.raises(services.SecureLinkError) as error:
@@ -23,6 +24,7 @@ def test_client_cannot_open_the_secret(create_owned):
 
 
 def test_staff_consumes_owned_link_once(create_owned, staff_user):
+    """Staff can reveal a managed link once and records one reveal event."""
     link, url, _ = create_owned()
     services.reveal(token_from(url), staff=True, actor=staff_user)
 
@@ -34,6 +36,7 @@ def test_staff_consumes_owned_link_once(create_owned, staff_user):
 
 
 def test_revoke_is_idempotent(platform_client, project, create_owned):
+    """Repeating revoke preserves one timestamp and one audit event."""
     link, _, _ = create_owned()
     first = platform_client.post(f'{base(project)}{link.pk}/revoke/', {}, format='json')
 
@@ -45,6 +48,7 @@ def test_revoke_is_idempotent(platform_client, project, create_owned):
 
 
 def test_reactivation_invalidates_the_old_token(platform_client, project, create_owned, staff_user):
+    """Reactivation rotates the URL while preserving the consumed evidence."""
     link, old_url, _ = create_owned()
     services.reveal(token_from(old_url), staff=True, actor=staff_user)
     link.refresh_from_db()
@@ -64,6 +68,7 @@ def test_reactivation_invalidates_the_old_token(platform_client, project, create
 
 
 def test_stale_reactivation_cannot_rotate_twice(platform_client, project, create_owned):
+    """A stale revision cannot trigger a second token rotation."""
     link, _, _ = create_owned()
     link = services.revoke(link, actor=link.created_by)
     data = {'expected_updated_at': link.updated_at.isoformat(), 'validity_days': 7}
@@ -77,6 +82,7 @@ def test_stale_reactivation_cannot_rotate_twice(platform_client, project, create
 
 
 def test_replacement_preserves_previous_ciphertext(create_owned, client_profile):
+    """Replacing a revoked link retains predecessor ciphertext and audit evidence."""
     previous, _, _ = create_owned()
     ciphertext = previous.payload_encrypted
     services.revoke(previous, actor=client_profile.user)
@@ -91,6 +97,7 @@ def test_replacement_preserves_previous_ciphertext(create_owned, client_profile)
 
 
 def test_replacement_requires_revocation(create_owned):
+    """An active link cannot be selected as a replacement predecessor."""
     previous, _, _ = create_owned()
 
     with pytest.raises(services.SecureLinkError) as error:
@@ -101,6 +108,7 @@ def test_replacement_requires_revocation(create_owned):
 
 
 def test_replaced_link_cannot_reactivate(create_owned, client_profile):
+    """A superseded predecessor stays revoked after replacement."""
     previous, _, _ = create_owned()
     services.revoke(previous, actor=client_profile.user)
     create_owned(replaces=previous.pk)
@@ -114,6 +122,7 @@ def test_replaced_link_cannot_reactivate(create_owned, client_profile):
 
 
 def test_only_one_direct_replacement_is_allowed(create_owned, client_profile):
+    """A predecessor cannot gain a second direct replacement link."""
     previous, _, _ = create_owned()
     services.revoke(previous, actor=client_profile.user)
     create_owned(replaces=previous.pk)
@@ -126,6 +135,7 @@ def test_only_one_direct_replacement_is_allowed(create_owned, client_profile):
 
 
 def test_unavailable_link_url_is_rejected(platform_client, project, create_owned):
+    """A revoked link cannot issue a fresh explicit URL response."""
     link, _, _ = create_owned()
     services.revoke(link, actor=link.created_by)
 
@@ -136,6 +146,7 @@ def test_unavailable_link_url_is_rejected(platform_client, project, create_owned
 
 
 def test_explicit_url_access_is_audited(platform_client, project, create_owned):
+    """Copying an active URL creates redacted platform audit metadata."""
     link, url, _ = create_owned()
 
     response = platform_client.post(f'{base(project)}{link.pk}/link/', {}, format='json')
@@ -147,6 +158,7 @@ def test_explicit_url_access_is_audited(platform_client, project, create_owned):
 
 
 def test_staff_cannot_move_a_managed_link(create_owned, staff_user):
+    """Staff updates cannot change a managed link's ownership scope."""
     link, _, _ = create_owned()
 
     with pytest.raises(services.SecureLinkError) as error:
@@ -156,6 +168,7 @@ def test_staff_cannot_move_a_managed_link(create_owned, staff_user):
 
 
 def test_staff_reactivation_always_rotates_managed_link(create_owned, staff_user):
+    """Staff reactivation rotates a managed URL even when rotation is disabled."""
     link, url, _ = create_owned()
     services.revoke(link, actor=staff_user)
 

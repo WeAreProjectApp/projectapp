@@ -57,7 +57,7 @@ def create_owned_link(*, owner_id, project_id, request_id, title, secret_type, f
         'secret_type': secret_type, 'fields': fields, 'language': language,
         'validity_days': days, 'replaces': replaces,
     }
-    existing = SecureLink.objects.filter(owner=owner, creation_request_id=request_id).first()
+    existing = SecureLink.objects.select_for_update().filter(owner=owner, creation_request_id=request_id).first()
     if existing:
         return _replay(existing, normalized, owner, project)
     previous = None
@@ -83,7 +83,9 @@ def create_owned_link(*, owner_id, project_id, request_id, title, secret_type, f
             if previous:
                 services.log_event(previous, SecureLinkEvent.Kind.REPLACED, actor=actor, meta=meta, replacement_id=link.pk)
     except IntegrityError:
-        existing = SecureLink.objects.filter(owner=owner, creation_request_id=request_id).first()
+        # A locking read sees the winning request after a uniqueness race,
+        # including when the two submissions name different owned projects.
+        existing = SecureLink.objects.select_for_update().filter(owner=owner, creation_request_id=request_id).first()
         if existing:
             return _replay(existing, normalized, owner, project)
         raise services.SecureLinkError('El enlace ya tiene una sustitución.', code='invalid_replacement', status=409) from None

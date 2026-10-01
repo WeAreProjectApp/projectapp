@@ -1,6 +1,7 @@
 """Ownership changes, archived accounts and replacement boundaries fail closed."""
 
 import importlib
+from datetime import datetime, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -16,6 +17,7 @@ pytestmark = pytest.mark.django_db
 
 @pytest.mark.parametrize('path', ['', 'events/', 'link/', 'revoke/'])
 def test_reassigned_project_hides_old_owned_link(platform_client, project, create_owned, staff_user, path):
+    """A client loses every managed-link route after its project is reassigned."""
     link, _, _ = create_owned()
     project.client = staff_user
     project.save(update_fields=['client'])
@@ -26,9 +28,8 @@ def test_reassigned_project_hides_old_owned_link(platform_client, project, creat
 
 
 def test_archived_owner_loses_access(platform_client, project, client_profile):
-    from django.utils import timezone
-
-    client_profile.archived_at = timezone.now()
+    """An archived client profile cannot access its managed-link collection."""
+    client_profile.archived_at = datetime(2026, 1, 15, 12, 0, tzinfo=timezone.utc)
     client_profile.save(update_fields=['archived_at'])
 
     response = platform_client.get(base(project))
@@ -37,6 +38,7 @@ def test_archived_owner_loses_access(platform_client, project, client_profile):
 
 
 def test_replacement_cannot_cross_project(create_owned, project, client_profile):
+    """A replacement predecessor must belong to the selected project."""
     from accounts.models import Project
 
     previous, _, _ = create_owned()
@@ -51,6 +53,7 @@ def test_replacement_cannot_cross_project(create_owned, project, client_profile)
 
 
 def test_backfill_keeps_legacy_tokens_and_no_owner(make_link):
+    """Ownership backfill preserves legacy ciphertext and leaves its owner empty."""
     legacy, _ = make_link()
     old = SecureLink.objects.values().get(pk=legacy.pk)
     SecureLink.objects.filter(pk=legacy.pk).update(audience='team')

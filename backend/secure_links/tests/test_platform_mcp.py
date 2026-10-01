@@ -13,9 +13,14 @@ from .test_mcp_tools import call_tool, error_code, list_tools, result, text
 
 pytestmark = pytest.mark.django_db
 
+REQUEST_ID_CREATE = uuid.UUID('00000000-0000-4000-8000-000000000101')
+REQUEST_ID_REUSED = uuid.UUID('00000000-0000-4000-8000-000000000102')
+REQUEST_ID_LOG_REDACTION = uuid.UUID('00000000-0000-4000-8000-000000000103')
+
 
 @pytest.fixture
 def platform_mcp_token():
+    """Return an active Communications connector token for MCP requests."""
     connector, _ = McpConnector.objects.get_or_create(slug='communications', defaults={'name': 'Comunicaciones'})
     connector.is_active = True
     connector.save(update_fields=['is_active'])
@@ -23,8 +28,9 @@ def platform_mcp_token():
 
 
 def test_mcp_create_enforces_the_owner_project(api_client, platform_mcp_token, project, client_profile, platform_client):
+    """MCP creation scopes a managed link to the requested client project."""
     response = call_tool(api_client, platform_mcp_token, 'create_platform_secure_link', {
-        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(uuid.uuid4()),
+        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(REQUEST_ID_CREATE),
         'secret_type': 'credentials', 'title': 'Portal', 'fields': CREDENTIALS,
     })
 
@@ -37,8 +43,9 @@ def test_mcp_create_enforces_the_owner_project(api_client, platform_mcp_token, p
 
 
 def test_mcp_reused_request_with_other_input_conflicts(api_client, platform_mcp_token, project, client_profile, platform_client):
+    """MCP rejects a request ID when its new input has changed."""
     arguments = {
-        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(uuid.uuid4()),
+        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(REQUEST_ID_REUSED),
         'secret_type': 'credentials', 'title': 'Portal', 'fields': CREDENTIALS,
     }
     call_tool(api_client, platform_mcp_token, 'create_platform_secure_link', arguments)
@@ -50,6 +57,7 @@ def test_mcp_reused_request_with_other_input_conflicts(api_client, platform_mcp_
 
 
 def test_general_grant_does_not_include_url(api_client, platform_mcp_token):
+    """A general MCP grant cannot expose the explicit URL tool."""
     response = list_tools(api_client, platform_mcp_token)
 
     names = {tool['name'] for tool in result(response)['tools']}
@@ -59,6 +67,7 @@ def test_general_grant_does_not_include_url(api_client, platform_mcp_token):
 
 
 def test_url_result_is_ephemeral(api_client, platform_mcp_token, create_owned):
+    """Confirmed MCP URL output is single-use and absent from persisted logs."""
     link, url, _ = create_owned()
     credential = McpConnector.objects.get(slug='communications').credentials.get(label='Default')
     credential.allowed_tools = ['get_secure_link_url']
@@ -77,6 +86,7 @@ def test_url_result_is_ephemeral(api_client, platform_mcp_token, create_owned):
 
 
 def test_mcp_owner_filter_omits_unowned_legacy_links(api_client, platform_mcp_token, create_owned, client_profile, make_link):
+    """MCP owner filtering excludes unowned legacy links and URL data."""
     owned, _, _ = create_owned()
     make_link(client=client_profile)
 
@@ -88,6 +98,7 @@ def test_mcp_owner_filter_omits_unowned_legacy_links(api_client, platform_mcp_to
 
 
 def test_mcp_url_history_contains_no_token(api_client, platform_mcp_token, create_owned, client_profile):
+    """MCP history exposes URL access metadata without credentials or tokens."""
     link, url, _ = create_owned()
     from secure_links import services
 
@@ -102,8 +113,9 @@ def test_mcp_url_history_contains_no_token(api_client, platform_mcp_token, creat
 
 
 def test_creation_field_names_cannot_leak_into_mcp_logs(api_client, platform_mcp_token, project, client_profile, platform_client):
+    """Rejected MCP field names are absent from replies and stored logs."""
     response = call_tool(api_client, platform_mcp_token, 'create_platform_secure_link', {
-        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(uuid.uuid4()),
+        'owner_id': client_profile.pk, 'project_id': project.pk, 'request_id': str(REQUEST_ID_LOG_REDACTION),
         'secret_type': 'credentials', 'title': 'Portal', 'fields': {CREDENTIALS['password']: 'bad'},
     })
 

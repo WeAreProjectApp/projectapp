@@ -10,7 +10,7 @@ pytestmark = pytest.mark.django_db
 
 
 def test_metadata_list_query_budget_is_bounded(platform_client, project, create_owned):
-    """Detecta una consulta por fila al consultar sucesores/capacidades."""
+    """Listing replacement metadata avoids a database query per result row."""
     for number in range(26):
         create_owned(title=f'Credencial {number}')
 
