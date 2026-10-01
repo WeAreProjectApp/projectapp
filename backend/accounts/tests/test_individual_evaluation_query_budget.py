@@ -16,6 +16,8 @@ from accounts.models import (
     BugReport,
     ChangeRequest,
     ChangeRequestComment,
+    IssueEvent,
+    IssueResponse,
     Project,
     ProjectPhase,
     Requirement,
@@ -53,6 +55,8 @@ def _independent_author_reads(queries, owner_model, comment_model):
         for query in _table_selects(queries, User)
         if not _exact_table(query, owner_model)
         and not _exact_table(query, comment_model)
+        and not _exact_table(query, IssueResponse)
+        and not _exact_table(query, IssueEvent)
     ]
 
 
@@ -133,8 +137,44 @@ def _comments(model, parent_field, parent, count, *, start):
     return authors
 
 
+def _conversation_records(parent_field, ticket, authors):
+    IssueResponse.objects.bulk_create([
+        IssueResponse(
+            **{parent_field: ticket}, actor=author, message=f'Response {author.pk}',
+            status=ticket.status, is_internal=number % 2 == 0,
+        )
+        for number, author in enumerate(authors)
+    ])
+    IssueEvent.objects.bulk_create([
+        IssueEvent(
+            **{parent_field: ticket}, project=ticket.project, actor=author,
+            action='comment', status=ticket.status, is_internal=number % 2 == 0,
+        )
+        for number, author in enumerate(authors)
+    ])
+
+
 def _evaluate_url(project, kind, item):
     return f"/api/accounts/projects/{project.pk}/{kind}/{item.pk}/evaluate/"
+
+
+def _evaluate_conversation_pair(context, factory, kind, status, comment_model, parent_field):
+    client, headers, project, phase, requirement, owner = context
+    one = factory(project, phase, requirement, owner, 'one')
+    fifty = factory(project, phase, requirement, owner, 'fifty')
+    one_authors = _comments(comment_model, parent_field, one, 1, start=1)
+    fifty_authors = _comments(comment_model, parent_field, fifty, 50, start=100)
+    _conversation_records(parent_field, one, one_authors)
+    _conversation_records(parent_field, fifty, fifty_authors)
+    with CaptureQueriesContext(connection) as one_queries:
+        one_response = client.post(
+            _evaluate_url(project, kind, one), {'status': status}, format='json', **headers,
+        )
+    with CaptureQueriesContext(connection) as fifty_queries:
+        fifty_response = client.post(
+            _evaluate_url(project, kind, fifty), {'status': status}, format='json', **headers,
+        )
+    return one_response, fifty_response, one_queries, fifty_queries, fifty_authors
 
 
 @pytest.mark.django_db
@@ -142,29 +182,10 @@ def test_admin_change_request_evaluation_keeps_comment_queries_constant(
     evaluation_context, record_property
 ):
     """Fails if evaluating change requests reloads source relations or comment authors per row."""
-    client, headers, project, phase, requirement, owner = evaluation_context
-    one_request = _change_request(project, phase, requirement, owner, "one")
-    fifty_request = _change_request(project, phase, requirement, owner, "fifty")
-    _comments(ChangeRequestComment, "change_request", one_request, 1, start=1)
-    fifty_authors = _comments(
-        ChangeRequestComment, "change_request", fifty_request, 50, start=100
+    one_response, fifty_response, one_queries, fifty_queries, fifty_authors = _evaluate_conversation_pair(
+        evaluation_context, _change_request, 'change-requests', 'evaluating',
+        ChangeRequestComment, 'change_request',
     )
-
-    with CaptureQueriesContext(connection) as one_queries:
-        one_response = client.post(
-            _evaluate_url(project, "change-requests", one_request),
-            {"status": "evaluating"},
-            format="json",
-            **headers,
-        )
-    with CaptureQueriesContext(connection) as fifty_queries:
-        fifty_response = client.post(
-            _evaluate_url(project, "change-requests", fifty_request),
-            {"status": "evaluating"},
-            format="json",
-            **headers,
-        )
-
     one_body, fifty_body = one_response.json(), fifty_response.json()
     record_property("query_count_change_request_one", len(one_queries))
     record_property("query_count_change_request_fifty", len(fifty_queries))
@@ -179,21 +200,25 @@ def test_admin_change_request_evaluation_keeps_comment_queries_constant(
         one_body["source_requirement"]["title"],
         one_body["source_requirement"]["phase_title"],
         len(one_body["comments"]),
-    ) == (owner.email, "Evaluation source", "Evaluation budget proposal", 1)
+    ) == (evaluation_context[-1].email, "Evaluation source", "Evaluation budget proposal", 1)
     assert (
         fifty_body["created_by_email"],
         len(fifty_body["comments"]),
         [comment["user_email"] for comment in fifty_body["comments"]],
+        [row['actor_name'] for row in fifty_body['responses']],
+        [row['actor_name'] for row in fifty_body['history'][:-1]],
     ) == (
-        owner.email,
+        evaluation_context[-1].email,
         50,
         [author.email for author in fifty_authors],
+        [author.first_name for author in fifty_authors],
+        [author.first_name for author in fifty_authors],
     )
     assert len(one_queries) == len(fifty_queries)
-    assert (
-        len(_table_selects(one_queries, ChangeRequestComment)),
-        len(_table_selects(fifty_queries, ChangeRequestComment)),
-    ) == (1, 1)
+    assert tuple(
+        (len(_table_selects(one_queries, model)), len(_table_selects(fifty_queries, model)))
+        for model in (ChangeRequestComment, IssueResponse, IssueEvent)
+    ) == ((1, 1), (1, 1), (1, 1))
     assert tuple(
         _independent_selects(fifty_queries, model, ChangeRequest)
         for model in (Requirement, ProjectPhase, BusinessProposal)
@@ -209,27 +234,9 @@ def test_admin_bug_evaluation_keeps_comment_queries_constant(
     evaluation_context, record_property
 ):
     """Fails if evaluating bugs reloads source relations or comment authors per row."""
-    client, headers, project, phase, requirement, owner = evaluation_context
-    one_bug = _bug_report(project, phase, requirement, owner, "one")
-    fifty_bug = _bug_report(project, phase, requirement, owner, "fifty")
-    _comments(BugComment, "bug_report", one_bug, 1, start=1)
-    fifty_authors = _comments(BugComment, "bug_report", fifty_bug, 50, start=100)
-
-    with CaptureQueriesContext(connection) as one_queries:
-        one_response = client.post(
-            _evaluate_url(project, "bug-reports", one_bug),
-            {"status": "confirmed"},
-            format="json",
-            **headers,
-        )
-    with CaptureQueriesContext(connection) as fifty_queries:
-        fifty_response = client.post(
-            _evaluate_url(project, "bug-reports", fifty_bug),
-            {"status": "confirmed"},
-            format="json",
-            **headers,
-        )
-
+    one_response, fifty_response, one_queries, fifty_queries, fifty_authors = _evaluate_conversation_pair(
+        evaluation_context, _bug_report, 'bug-reports', 'confirmed', BugComment, 'bug_report',
+    )
     one_body, fifty_body = one_response.json(), fifty_response.json()
     record_property("query_count_bug_one", len(one_queries))
     record_property("query_count_bug_fifty", len(fifty_queries))
@@ -244,21 +251,25 @@ def test_admin_bug_evaluation_keeps_comment_queries_constant(
         one_body["source_requirement"]["title"],
         one_body["source_requirement"]["phase_title"],
         len(one_body["comments"]),
-    ) == (owner.email, "Evaluation source", "Evaluation budget proposal", 1)
+    ) == (evaluation_context[-1].email, "Evaluation source", "Evaluation budget proposal", 1)
     assert (
         fifty_body["reported_by_email"],
         len(fifty_body["comments"]),
         [comment["user_email"] for comment in fifty_body["comments"]],
+        [row['actor_name'] for row in fifty_body['responses']],
+        [row['actor_name'] for row in fifty_body['history'][:-1]],
     ) == (
-        owner.email,
+        evaluation_context[-1].email,
         50,
         [author.email for author in fifty_authors],
+        [author.first_name for author in fifty_authors],
+        [author.first_name for author in fifty_authors],
     )
     assert len(one_queries) == len(fifty_queries)
-    assert (
-        len(_table_selects(one_queries, BugComment)),
-        len(_table_selects(fifty_queries, BugComment)),
-    ) == (1, 1)
+    assert tuple(
+        (len(_table_selects(one_queries, model)), len(_table_selects(fifty_queries, model)))
+        for model in (BugComment, IssueResponse, IssueEvent)
+    ) == ((1, 1), (1, 1), (1, 1))
     assert tuple(
         _independent_selects(fifty_queries, model, BugReport)
         for model in (Requirement, ProjectPhase, BusinessProposal)
