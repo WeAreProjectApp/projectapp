@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
+import { backendUrl, frontendUrl } from './ports.js'
 import { expect } from '../helpers/test.js'
 import { setPlatformAuth } from '../helpers/platform-auth.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
-export const backendUrl = 'http://127.0.0.1:3212'
-export const frontendUrl = 'http://127.0.0.1:3213'
+export { backendUrl, frontendUrl }
 export async function fixture(request, testInfo, grants = []) {
   const response = await request.post(`${backendUrl}/__p4_fixture__`, {
     data: { key: `${testInfo.title.replace(/[^a-z0-9]/gi, '-').slice(0, 90)}-${randomUUID()}`, grants } })

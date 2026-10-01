@@ -1,9 +1,6 @@
 name: Project ideas and client access
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
+  workflow_call:
 permissions:
   contents: read
 concurrency:
@@ -45,6 +42,14 @@ jobs:
         run: npx playwright test --config=playwright.project-collaboration.config.js project-collaboration/ideas.spec.js project-collaboration/client-access.spec.js
         env:
           CI: 'true'
+      - name: Upload P4 blob report for the shared flow aggregate
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-project-collaboration
+          path: frontend/blob-report/
+          if-no-files-found: error
+          retention-days: 5
       - name: Upload P4 browser results
         if: always()
         uses: actions/upload-artifact@v4

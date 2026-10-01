@@ -50,6 +50,13 @@ def main(argv=None):
         help='Certify isolation without preparing a database, fixtures or HTTP server',
     )
     args = parser.parse_args(argv)
+    try:
+        backend_port = int(os.environ.get('PROJECT_COLLABORATION_BACKEND_PORT', '3212'))
+        frontend_port = int(os.environ.get('PROJECT_COLLABORATION_FRONTEND_PORT', '3213'))
+    except ValueError:
+        raise SystemExit('Invalid isolated P4 browser port') from None
+    if not all(1024 <= port <= 65535 for port in (backend_port, frontend_port)):
+        raise SystemExit('Invalid isolated P4 browser port')
     backend = Path(__file__).resolve().parents[2]
     if '.wt' not in backend.parts and not os.environ.get('CI'):
         raise SystemExit('P4 browser validation requires a session worktree or CI')
@@ -71,7 +78,7 @@ def main(argv=None):
         SETTINGS_MODULE='projectapp.settings_test',
         ALLOWED_HOSTS=['localhost', '127.0.0.1', 'testserver'],
         DEBUG=True,
-        CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3213'],
+        CSRF_TRUSTED_ORIGINS=[f'http://127.0.0.1:{frontend_port}'],
         RECAPTCHA_ENABLED=False,
         PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
         MAILERS={'default': {'BACKEND': LOCMEM_BACKEND}},
@@ -151,7 +158,7 @@ def main(argv=None):
 
                 with make_server(
                     '127.0.0.1',
-                    3212,
+                    backend_port,
                     test_application,
                     server_class=Server,
                     handler_class=Quiet,

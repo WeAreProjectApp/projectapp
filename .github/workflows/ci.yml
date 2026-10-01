@@ -569,9 +569,15 @@ jobs:
   # E2E — Merge sharded results + flow coverage
   # flow-coverage.json: see docs/E2E_FLOW_COVERAGE_REPORT_STANDARD.md
   # ───────────────────────────────────────────
+  # P4 real API specs contribute to this run's mandatory flow aggregate.
+  frontend-project-collaboration-tests:
+    uses: ./.github/workflows/project-collaboration.yml
+    permissions:
+      contents: read
+
   e2e-merge-reports:
     if: always()
-    needs: [frontend-e2e-tests, frontend-pwa-tests, login-captcha-tests, frontend-delivery-tests, frontend-issue-tests]
+    needs: [frontend-e2e-tests, frontend-pwa-tests, login-captcha-tests, frontend-delivery-tests, frontend-issue-tests, frontend-project-collaboration-tests]
     runs-on: ubuntu-latest
     defaults:
       run:
