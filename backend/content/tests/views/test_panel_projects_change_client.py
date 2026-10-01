@@ -177,29 +177,51 @@ class TestApplyEndpoint:
         owner = make_client_profile()
         target = make_client_profile()
         project = make_project(owner)
-        hosting = make_hosting(owner, project)
         income = make_income(owner, project)
 
         response = admin_client.post(apply_url(project.pk), {
             'client_profile_id': target.pk,
             'mode': 'move',
-            'hosting_ids': [hosting.pk],
+            'hosting_ids': [],
             'income_ids': [income.pk],
             'communication_thread_ids': thread_ids(project),
         }, format='json')
 
         assert response.status_code == 200, response.data
         assert response.data['moved'] == {
-            'hostings': 1, 'incomes': 1, 'draft_accounts': 0,
+            'hostings': 0, 'incomes': 1, 'draft_accounts': 0,
             'project_folders': 5,
         }
         row = response.data['project']
         assert row['client']['profile_id'] == target.pk
-        # The annotated counts answer for the move: the records came along.
-        assert row['hostings_count'] == 1
+        # The annotated counts answer for the permitted income move.
+        assert row['hostings_count'] == 0
         assert row['incomes_count'] == 1
+
+    def test_hosting_history_rejects_move_before_endpoint_writes(
+        self, admin_client, make_client_profile,
+    ):
+        """Falla si el endpoint mueve un hosting legado antes de bloquear el proyecto."""
+        owner = make_client_profile()
+        target = make_client_profile()
+        project = make_project(owner)
+        hosting = make_hosting(owner, project)
+
+        response = admin_client.post(apply_url(project.pk), {
+            'client_profile_id': target.pk,
+            'mode': 'move',
+            'hosting_ids': [hosting.pk],
+            'income_ids': [],
+            'communication_thread_ids': thread_ids(project),
+        }, format='json')
+
+        assert response.status_code == 400
+        assert 'historia financiera' in response.data['detail']
+        project.refresh_from_db()
         hosting.refresh_from_db()
-        assert hosting.client_id == target.pk
+        assert project.client_id == owner.user_id
+        assert hosting.client_id == owner.pk
+        assert hosting.project_id == project.pk
 
     def test_detach_leaves_the_records_with_their_client(
         self, admin_client, make_client_profile,
