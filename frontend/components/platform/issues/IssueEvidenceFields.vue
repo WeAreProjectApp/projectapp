@@ -1,7 +1,7 @@
 <template>
   <div class="space-y-3">
     <p v-if="loading" class="text-xs text-text-muted">{{ t('platformIssues.loading') }}</p>
-    <p v-if="error" role="alert" class="text-xs text-error">{{ error }}</p>
+    <p v-if="error" role="alert" class="text-xs text-danger-strong">{{ error }}</p>
     <div v-if="admin">
       <label :for="`${id}-contract`" class="mb-1 block text-xs text-text-muted">{{ t('platformIssues.contract') }}</label>
       <select :id="`${id}-contract`" :value="modelValue.contract_id ?? ''" class="w-full rounded-xl border border-border-default bg-surface px-3 py-2 text-sm text-text-default" @change="selectContract">

@@ -919,7 +919,9 @@ class DeliveryPromptContext(ImmutablePromptRecord):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
-    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='prompt_contexts')
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_client_contexts')
+    destination = models.JSONField(default=dict, blank=True)
     scope = models.ForeignKey(DeliveryScope, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
     stage = models.ForeignKey(DeliveryStage, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
     mode = models.CharField(max_length=12, choices=[('guides', 'Crear guías'), ('reply', 'Preparar respuesta')])
@@ -1889,4 +1891,8 @@ from accounts.billing_models import (  # noqa: E402,F401
 # Ticket domain models; imports keep the public accounts.models surface stable.
 from accounts.models_issue_reports import (  # noqa: E402,F401
     IssueAttachment, IssueContext, IssueEvent, IssueResponse,
+)
+
+from accounts.models_delivery_email import (  # noqa: E402,F401
+    DeliveryEvidenceEmail, DeliveryEvidenceEmailAttempt, DeliveryEvidenceEmailFile,
 )

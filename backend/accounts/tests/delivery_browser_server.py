@@ -12,6 +12,21 @@ from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 
+def assert_memory_mailers():
+    """Refuse any configured or resolved transport outside process memory."""
+    from django.conf import settings
+    from django.core.mail import mailers
+    from django.core.mail.backends.locmem import EmailBackend
+
+    memory_backend = 'django.core.mail.backends.locmem.EmailBackend'
+    # Django 6 makes EMAIL_BACKEND unavailable when MAILERS is explicit.
+    config = settings.MAILERS
+    if config.get('default', {}).get('BACKEND') != memory_backend or any(
+        entry.get('BACKEND') != memory_backend for entry in config.values()
+    ) or any(type(mailers[alias]) is not EmailBackend for alias in config):
+        raise SystemExit('Delivery browser tests require memory-only mailers')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=3202)
@@ -52,11 +67,13 @@ def main():
         ALLOWED_HOSTS=['localhost', '127.0.0.1', 'testserver'], DEBUG=True,
         CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3203'],
         EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
+        MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}},
         RECAPTCHA_ENABLED=False,
         # Browser tests exercise the runtime model schema. Dedicated migration
         # tests separately verify the historical purge and preservation rules.
         MIGRATION_MODULES={config.label: None for config in apps.get_app_configs()},
     ):
+        assert_memory_mailers()
         databases = setup_databases(verbosity=0, interactive=False)
         try:
             application = get_wsgi_application()

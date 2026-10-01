@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Client reports a general project bug without a guide or captures the original published requirement. Team resolution, responses, private evidence and client reopening preserve history without changing guide approvals.",
+  "description": "Client reports a general project bug without a guide or captures the original published requirement. Team replies use server-owned public conversation, selected sources, verified citations and explicit human review; no contract keeps scope indeterminate. Private provenance, team resolution and reopening preserve history without changing guide approvals.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

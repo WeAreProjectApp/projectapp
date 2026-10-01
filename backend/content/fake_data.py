@@ -149,6 +149,9 @@ SEEDED_MODELS = {
 
 DERIVED_MODELS = {
     'accounts.BugComment', 'accounts.ChangeRequestComment',
+    # Captured by ticket operations, never fabricated as independent history.
+    'accounts.IssueContext', 'accounts.IssueResponse',
+    'accounts.IssueAttachment', 'accounts.IssueEvent',
     'accounts.DeliverableClientFolder', 'accounts.DeliverableClientUpload',
     'accounts.DeliverableFile', 'accounts.DeliverableVersion',
     'accounts.PaymentHistory', 'accounts.ProjectPhase',
@@ -201,6 +204,10 @@ EXEMPT_MODELS = {
     # source selection, never fabricated by automatic demo-data generation.
     # Authorized fake resets dissolve its protected graph in dependency order.
     'accounts.DeliveryPromptContext', 'accounts.DeliveryPromptSource',
+    # Closure-email previews/files/attempts require an explicit administrator
+    # preparation and reviewed transport action, never automatic demo sending.
+    'accounts.DeliveryEvidenceEmail', 'accounts.DeliveryEvidenceEmailFile',
+    'accounts.DeliveryEvidenceEmailAttempt',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP

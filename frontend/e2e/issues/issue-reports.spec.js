@@ -1,5 +1,26 @@
 import { test, expect } from '../helpers/test.js'
-import { apiPost, fixture, login, open, openFromDelivery } from './helpers.js'
+import { apiPost, backendUrl, fixture, login, open, openFromDelivery } from './helpers.js'
+
+async function mailboxCount(request) {
+  const response = await request.get(`${backendUrl}/__issues_mailbox__`)
+  expect(response.ok()).toBeTruthy()
+  const mailbox = await response.json()
+  expect(mailbox.backend).toBe('locmem')
+  expect(mailbox.aliases.length).toBeGreaterThan(0)
+  return mailbox.count
+}
+
+async function prepareReviewedGeneralReply(page) {
+  const reply = page.getByTestId('issue-contract-reply')
+  await reply.getByText('Preparar respuesta con fuentes', { exact: true }).click()
+  await expect(reply).toContainText('Sin contrato seleccionado')
+  await reply.getByRole('button', { name: 'Preparar contexto y prompt', exact: true }).click()
+  await expect(reply.getByTestId('issue-reply-json')).toHaveValue(/"context_id"/)
+  await reply.getByRole('button', { name: 'Verificar borrador y citas', exact: true }).click()
+  await expect(reply).toContainText('Alcance indeterminado')
+  await reply.getByTestId('issue-reply-human-reviewed').getByRole('checkbox').check()
+  return reply
+}
 
 test.describe('Tickets reales de proyecto', () => {
   test.setTimeout(60_000)
@@ -62,6 +83,7 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that exposed an internal team response in the client's ticket history.
   test('cliente no ve la respuesta interna del equipo', { tag: ['@flow:platform-bug-reports', '@outcome:display'] }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated project list is the documented entry; project, Bugs and ticket are opened through UI)
     const data = await fixture(request, testInfo)
     const admin = await login(request, data.admin)
     const secret = 'Nota interna: revisar el registro privado antes de responder.'
@@ -71,7 +93,7 @@ test.describe('Tickets reales de proyecto', () => {
     })
 
     await open(page, request, data, data.general_project.id)
-    await page.getByText('Error con nota interna', { exact: true }).click()
+    await page.getByRole('button', { name: 'Error con nota interna', exact: true }).press('Enter')
     await expect(page.getByTestId('issue-history')).toContainText('Resuelto por equipo')
     await expect(page.getByTestId('issue-history')).not.toContainText(secret)
   })
@@ -97,6 +119,7 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that preserved a request's origin only in its create response, not its detail UI.
   test('solicitud conserva el contexto de la entrega', { tag: ['@flow:platform-change-requests', '@outcome:success', '@outcome:display'] }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated project list is the documented entry; project, Solicitudes and ticket are opened through UI)
     const data = await fixture(request, testInfo)
     await open(page, request, data, data.project.id, 'changes')
     await page.getByRole('button', { name: 'Nueva solicitud', exact: true }).click()
@@ -109,7 +132,7 @@ test.describe('Tickets reales de proyecto', () => {
     const ticket = await response.json()
     expect(ticket.origin_context.publication_id).toBe(data.publication_id)
     expect(ticket.origin_context.requirement_id).toBe(data.requirement_ids[0])
-    await page.getByText('Ampliar el traslado', { exact: true }).click()
+    await page.getByRole('button', { name: 'Ampliar el traslado', exact: true }).press('Enter')
     await expect(page.getByTestId('issue-history')).toContainText('Ronda 1')
   })
 
@@ -153,5 +176,65 @@ test.describe('Tickets reales de proyecto', () => {
     await page.getByRole('button', { name: 'Guardar evaluación', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText('Servicio temporalmente no disponible.')
     await expect(page.getByRole('button', { name: 'Guardar evaluación', exact: true })).toBeVisible()
+  })
+
+  // Catches the regression that treated a general bug as contractual or exposed private review provenance to the client.
+  test('revisión humana de bug general publica sólo alcance indeterminado', { tag: ['@flow:platform-bug-reports', '@outcome:success'] }, async ({ page, request }, testInfo) => {
+    const initialMailboxCount = await mailboxCount(request)
+    const data = await fixture(request, testInfo)
+    const admin = await login(request, data.admin)
+    const ticket = await apiPost(request, admin, `projects/${data.general_project.id}/bug-reports/`, {
+      title: 'Bug general revisado con fuentes',
+    })
+
+    await open(page, request, data, data.general_project.id, 'bugs', '', 'admin')
+    await page.getByRole('button', { name: ticket.title, exact: true }).press('Enter')
+    await page.getByRole('button', { name: 'Evaluar', exact: true }).click()
+    await prepareReviewedGeneralReply(page)
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+
+    await open(page, request, data, data.general_project.id)
+    await page.getByRole('button', { name: ticket.title, exact: true }).press('Enter')
+    const evidence = page.getByTestId('issue-review-evidence')
+    await expect(evidence).toContainText('Alcance indeterminado')
+    await expect(evidence).not.toContainText('context_id')
+    await expect(evidence).not.toContainText('source_references')
+    await expect(evidence).not.toContainText('prompt')
+    await expect(evidence).not.toContainText('private')
+    expect(await mailboxCount(request)).toBe(initialMailboxCount)
+  })
+
+  // Catches the regression that accepted a reviewed reply after another admin had changed the ticket.
+  test('publicación contractual rechaza la revisión cuando cambió el ticket', { tag: ['@flow:platform-bug-reports', '@outcome:error'] }, async ({ page, request }, testInfo) => {
+    const initialMailboxCount = await mailboxCount(request)
+    const data = await fixture(request, testInfo)
+    const admin = await login(request, data.admin)
+    const ticket = await apiPost(request, admin, `projects/${data.general_project.id}/bug-reports/`, {
+      title: 'Bug general con versión vencida',
+    })
+
+    await open(page, request, data, data.general_project.id, 'bugs', '', 'admin')
+    await page.getByRole('button', { name: ticket.title, exact: true }).press('Enter')
+    await page.getByRole('button', { name: 'Evaluar', exact: true }).click()
+    await prepareReviewedGeneralReply(page)
+
+    const concurrentAdmin = await login(request, data.admin)
+    await apiPost(request, concurrentAdmin, `projects/${data.general_project.id}/bug-reports/${ticket.id}/evaluate/`, {
+      status: 'confirmed', expected_version: ticket.version,
+    })
+    const rejected = page.waitForResponse((response) => (
+      response.url().endsWith(`/bug-reports/${ticket.id}/evaluate/`) && response.request().method() === 'POST'
+    ))
+    await page.getByRole('button', { name: 'Guardar', exact: true }).click()
+    expect((await rejected).status()).toBe(409)
+    await expect(page.getByText('El ticket cambió. Actualiza antes de responder.', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Guardar', exact: true })).toBeVisible()
+
+    const detail = await request.get(`${backendUrl}/api/accounts/projects/${data.general_project.id}/bug-reports/${ticket.id}/`, {
+      headers: { Authorization: `Bearer ${concurrentAdmin.tokens.access}` },
+    })
+    expect(detail.ok()).toBeTruthy()
+    expect((await detail.json()).responses).toHaveLength(0)
+    expect(await mailboxCount(request)).toBe(initialMailboxCount)
   })
 })

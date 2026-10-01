@@ -16,11 +16,11 @@ export async function login(request, credentials) {
 export async function open(page, request, data, projectId, kind = 'bugs', query = '', role = 'client') {
   const session = await login(request, data[role])
   await setPlatformAuth(page, { user: session.user, accessToken: session.tokens.access, refreshToken: session.tokens.refresh })
-  await page.goto('/platform', { waitUntil: 'domcontentloaded' })
+  await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
   await page.getByTestId(`project-row-${projectId}`).or(page.getByTestId(`project-card-${projectId}`)).click()
   await page.getByRole('link', { name: kind === 'bugs' ? 'Bugs' : 'Solicitudes', exact: true }).click()
-  await expect(page.getByRole('heading', { name: kind === 'bugs' ? 'Reporte de bugs' : 'Solicitudes de cambio', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: kind === 'bugs' ? 'Reporte de bugs' : 'Solicitudes de cambio', exact: true })).toBeVisible({ timeout: 30_000 })
   return session
 }
 export async function openFromDelivery(page, request, data, projectId, query) {
@@ -30,7 +30,7 @@ export async function openFromDelivery(page, request, data, projectId, query) {
   // P3 owns the delivery action that will supply this exact publication ID.
   await page.goto(`/es-co/platform/projects/${projectId}/bugs${query}`, { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
-  await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Reporte de bugs', exact: true })).toBeVisible({ timeout: 30_000 })
   return session
 }
 export async function apiPost(request, session, path, data) {

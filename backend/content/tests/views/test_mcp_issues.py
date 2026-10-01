@@ -3,14 +3,26 @@ import io
 
 import pytest
 from django.core.files.base import ContentFile
+from django.test import override_settings
 from pypdf import PdfWriter
 
-from accounts.models import BugReport, IssueResponse, Project, RequirementReview
+from accounts.models import BugReport, DeliveryPromptSource, IssueResponse, Project, RequirementReview
 from accounts.services import issue_reports as issues
+from accounts.tests.delivery_authoring_helpers import build_authoring_context
 from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
+from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 from content.models import Document, McpConnector, McpUpload
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture(autouse=True)
+def memory_only_mail(settings, mailoutbox):
+    with override_settings(MAILERS=memory_mailers(settings)):
+        assert_memory_mailers()
+        yield
+        assert_memory_mailers()
+        assert mailoutbox == []
 
 
 @pytest.fixture
@@ -152,3 +164,97 @@ def test_mcp_list_returns_origin_context(call, project):
 
     assert result['structuredContent']['tickets'][0]['id'] == ticket['id']
     assert result['structuredContent']['tickets'][0]['origin_context']['origin_kind'] == 'general'
+
+
+def test_mcp_reply_pipeline_rejects_unreviewed_publish_without_writing(call, project):
+    """Falla si MCP publica una respuesta contractual sin revisión humana explícita."""
+    ticket = create(call, project)
+    options = call('get_issue_reply_options', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+    })['structuredContent']
+    prepared = call('prepare_issue_reply', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+        'payload': {
+            'expected_version': options['version'], 'expected_ticket_version': ticket['version'],
+            'request_id': '50000000-0000-4000-8000-000000000001', 'contract_id': None,
+        },
+    })['structuredContent']
+    preview = call('preview_issue_reply', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+        'payload': {
+            'expected_version': options['version'], 'expected_ticket_version': ticket['version'],
+            'payload': prepared['template'],
+        },
+    })['structuredContent']
+
+    rejected = call('evaluate_issue_report', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+        'payload': {
+            'expected_version': ticket['version'], 'admin_response': prepared['template']['response_text'],
+            'contract_id': None,
+            'contract_reply': {
+                'context_id': prepared['id'], 'expected_version': options['version'],
+                'expected_ticket_version': ticket['version'], 'human_reviewed': False,
+                'classifications': prepared['template']['classifications'],
+                'source_references': preview['source_references'],
+            },
+        },
+    })
+
+    assert rejected['isError'] is True
+    assert rejected['structuredContent']['error']['code'] == 'HUMAN_REVIEW_REQUIRED'
+    assert BugReport.objects.get(pk=ticket['id']).version == ticket['version']
+    assert not IssueResponse.objects.filter(bug_report_id=ticket['id']).exists()
+
+
+def test_mcp_reply_context_rejects_a_different_ticket(call, project):
+    """Falla si un contexto MCP preparado para un ticket puede leerse desde otro."""
+    first = create(call, project)
+    options = call('get_issue_reply_options', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': first['id'],
+    })['structuredContent']
+    prepared = call('prepare_issue_reply', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': first['id'],
+        'payload': {
+            'expected_version': options['version'], 'expected_ticket_version': first['version'],
+            'request_id': '50000000-0000-4000-8000-000000000002', 'contract_id': None,
+        },
+    })['structuredContent']
+    second = create(call, project)
+
+    result = call('get_issue_reply_context', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': second['id'], 'context_id': prepared['id'],
+    })
+
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'CONTEXT_DESTINATION'
+
+
+def test_mcp_downloads_captured_reply_source_as_a_private_artifact(call, superuser):
+    """Falla si MCP no entrega los bytes congelados de una fuente contractual propia."""
+    context = build_authoring_context()
+    report = issues.create_ticket(context.project.pk, context.client, 'bug', {
+        'title': 'General contractual incident',
+    })
+    options = call('get_issue_reply_options', {
+        'project_id': context.project.pk, 'kind': 'bug', 'ticket_id': report.pk,
+    })['structuredContent']
+    prepared = call('prepare_issue_reply', {
+        'project_id': context.project.pk, 'kind': 'bug', 'ticket_id': report.pk,
+        'payload': {
+            'expected_version': options['version'], 'expected_ticket_version': report.version,
+            'request_id': '50000000-0000-4000-8000-000000000003', 'contract_id': context.contract.pk,
+        },
+    })['structuredContent']
+    source = DeliveryPromptSource.objects.get(context_id=prepared['id'], role='contract')
+
+    result = call('download_issue_reply_source', {
+        'project_id': context.project.pk, 'kind': 'bug', 'ticket_id': report.pk,
+        'context_id': prepared['id'], 'source_key': source.source_key,
+    })['structuredContent']
+
+    artifact = McpUpload.objects.get(pk=result['asset_id'])
+    with source.file.open('rb') as captured, artifact.file.open('rb') as downloaded:
+        assert downloaded.read() == captured.read()
+    assert artifact.expected_sha256 == source.sha256
+    assert artifact.credential.connector.slug == 'projects'

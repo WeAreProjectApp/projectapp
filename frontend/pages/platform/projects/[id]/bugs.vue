@@ -22,20 +22,12 @@
             width="w-56"
           >
             <template #trigger>
-              <button
-                type="button"
-                :class="[
-                  'flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition',
-                  selectedPhaseId
-                    ? 'border-primary/40 bg-primary/5 text-text-brand dark:border-lemon/30 dark:bg-lemon/5 dark:text-accent'
-                    : 'border-border-default bg-surface text-green-light hover:text-text-default hover:bg-surface-raised',
-                ]"
-              >
+              <BaseButton variant="secondary" size="sm">
                 <span class="max-w-[140px] truncate">{{ selectedPhaseLabel }}</span>
                 <svg class="h-3 w-3 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-              </button>
+              </BaseButton>
             </template>
           </BaseDropdown>
           <template v-if="authStore.isAdmin">
@@ -57,6 +49,7 @@
 
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
+        <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
@@ -91,14 +84,13 @@
             <tr
               v-for="bug in filteredBugs"
               :key="bug.id"
-              class="cursor-pointer border-t border-border-muted transition hover:bg-primary-soft"
+              class="border-t border-border-muted"
               :class="bug.is_archived ? 'opacity-70' : ''"
-              @click="openDetailModal(bug)"
             >
               <td class="px-4 py-3">
                 <div class="min-w-0">
                   <div class="flex flex-wrap items-center gap-1.5">
-                    <p class="truncate font-medium text-text-default">{{ bug.title }}</p>
+                    <BaseButton variant="link" size="sm" class="min-w-0 truncate text-left" @click="openDetailModal(bug)">{{ bug.title }}</BaseButton>
                     <span v-if="bug.is_recurring" class="rounded-full bg-purple-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-purple-600 dark:text-purple-400">Recurrente</span>
                     <span v-if="bug.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivado</span>
                     <svg v-if="bug.screenshot_url" class="h-3 w-3 shrink-0 text-green-light/40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
@@ -149,6 +141,7 @@
 
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
+        <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
         <button
           v-for="bug in filteredBugs"
           :key="bug.id"
@@ -206,7 +199,7 @@
 
               <form class="space-y-4" @submit.prevent="handleCreate">
                 <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="bug-source" />
-                <p v-if="sourceError" role="alert" class="text-xs text-error">{{ sourceError }}</p>
+                <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
                   <input v-model="createForm.title" type="text" required placeholder="¿Qué está fallando?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
@@ -296,7 +289,7 @@
                   </div>
                 </div>
 
-                <p v-if="bugStore.error" role="alert" class="text-xs text-error">{{ bugStore.error }}</p>
+                <p v-if="bugStore.error" role="alert" class="text-xs text-danger-strong">{{ bugStore.error }}</p>
                 <div class="flex justify-end gap-3 pt-2">
                   <BaseButton variant="ghost" size="md" @click="isCreateOpen = false">Cancelar</BaseButton>
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!createForm.title.trim() || bugStore.isUpdating">
@@ -497,10 +490,11 @@
                         <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" admin id="bug-response-evidence" />
-                      <p v-if="bugStore.error" role="alert" class="text-xs text-error">{{ bugStore.error }}</p>
+                      <IssueContractReply v-model="contractReply" :project-id="projectId" kind="bug" :ticket="detailBug" :contract-id="responseEvidence.contract_id" :message="evalForm.admin_response" @draft="evalForm.admin_response = $event" />
+                      <p v-if="bugStore.error" role="alert" class="text-xs text-danger-strong">{{ bugStore.error }}</p>
                       <div class="flex justify-end gap-2">
                         <BaseButton variant="ghost" size="sm" @click="showEvaluateForm = false">Cancelar</BaseButton>
-                        <BaseButton variant="accent" size="sm" :disabled="bugStore.isUpdating" @click="handleEvaluate">
+                        <BaseButton variant="accent" size="sm" :loading="bugStore.isUpdating" :disabled="!!contractReply && !contractReply.human_reviewed" :disabled-reason="t('platformIssues.reply.humanRequired')" @click="handleEvaluate">
                           {{ bugStore.isUpdating ? 'Guardando...' : 'Guardar' }}
                         </BaseButton>
                       </div>
@@ -548,7 +542,7 @@
                   </BaseButton>
                 </form>
                 <IssueEvidenceFields v-if="!detailBug.is_archived" v-model="commentEvidence" :project-id="projectId" kind="bug" :ticket-id="detailBug.id" id="bug-comment-evidence" />
-                <p v-if="bugStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-error">{{ bugStore.error }}</p>
+                <p v-if="bugStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ bugStore.error }}</p>
                 <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)
@@ -576,6 +570,7 @@ import IssueSourcePicker from '~/components/platform/issues/IssueSourcePicker.vu
 import IssueHistory from '~/components/platform/issues/IssueHistory.vue'
 import IssueAttachments from '~/components/platform/issues/IssueAttachments.vue'
 import IssueEvidenceFields from '~/components/platform/issues/IssueEvidenceFields.vue'
+import IssueContractReply from '~/components/platform/issues/IssueContractReply.vue'
 import IssueReopenForm from '~/components/platform/issues/IssueReopenForm.vue'
 import { formatDate } from '~/utils/formatDate'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
@@ -592,6 +587,8 @@ const projectsStore = usePlatformProjectsStore()
 const issueStore = usePlatformIssueReportsStore()
 const sourceError = ref('')
 const responseEvidence = ref({ contract_id: null, document_ids: [] })
+const contractReply = ref(null)
+let evaluationRetry = null
 const commentEvidence = ref({ document_ids: [] })
 
 const { isMobile } = useIsMobile()
@@ -782,6 +779,8 @@ async function openDetailModal(bug) {
 }
 
 function openEvaluateForm() {
+  contractReply.value = null
+  evaluationRetry = null
   evalForm.status = detailBug.value?.status || 'confirmed'
   evalForm.admin_response = ''
   responseEvidence.value = { contract_id: detailBug.value?.origin_context?.contract_id || null, document_ids: [] }
@@ -790,7 +789,10 @@ function openEvaluateForm() {
 
 async function handleEvaluate() {
   if (!detailBug.value) return
-  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...evalForm, ...responseEvidence.value, expected_version: detailBug.value.version, request_id: crypto.randomUUID() })
+  const payload = { ...evalForm, ...responseEvidence.value, expected_version: detailBug.value.version, ...(contractReply.value ? { contract_reply: contractReply.value } : {}) }
+  const fingerprint = JSON.stringify(payload)
+  if (evaluationRetry?.fingerprint !== fingerprint) evaluationRetry = { fingerprint, requestId: crypto.randomUUID() }
+  const result = await bugStore.evaluateBugReport(projectId.value, detailBug.value.id, { ...payload, request_id: evaluationRetry.requestId })
   if (result.success) { detailBug.value = result.data; showEvaluateForm.value = false }
 }
 

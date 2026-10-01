@@ -1,7 +1,7 @@
 <template>
   <div v-if="attachments.length" class="mt-2 space-y-1">
     <BaseButton v-for="item in attachments" :key="item.id" variant="ghost" size="sm" :disabled="busy === item.id" @click="download(item)">{{ t('platformIssues.download', { title: item.title }) }}</BaseButton>
-    <p v-if="error" role="alert" class="text-xs text-error">{{ error }}</p>
+    <p v-if="error" role="alert" class="text-xs text-danger-strong">{{ error }}</p>
   </div>
 </template>
 

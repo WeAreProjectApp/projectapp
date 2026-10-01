@@ -3,9 +3,11 @@
 Implementación en validación en `platform-bugs-context`: bug general sin guías,
 captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
 y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
-Dependencia publicada P3 `dea9403` incorporada; P0 reservó `0068_issue_reports`
-con parent `0067_explicit_delivery_authoring_context`. Pendiente de integración:
-adaptador de revisión contractual P3 y hojas paralelas coordinadas por P0. Detalles en
+El adaptador REST/MCP/UI usa P3 publicado `edfff19c` (provider `30fd7ab9`), con revisión humana y
+procedencia privada. El guard protege bugs generales y se compone con entregas.
+P0 reservó `0068` y la no-op `0073` (padres `0068` + `0071`); no se alteran
+migraciones publicadas. El fixture comprueba MAILERS en memoria antes de crear datos.
+QA focal de REST/MCP/UI y aislamiento de correo pasó; CI del head propio sigue en cierre. Detalles en
 `docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
 
 # Alcance y entregas en Platform (2026-10-01)
@@ -32,6 +34,19 @@ bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
 Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
 distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
 inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
+P3 publica la frontera contractual reutilizable de tickets en
+`accounts.services.delivery_contract_reply`: proveedor estrecho del dominio
+P1, origen/conversación congelados, versiones independientes de ticket y
+workspace, citas verificadas, preview sin publicación y DTO público separado
+de fuentes privadas. Sin contrato o fuentes completas, alcance indeterminado.
+Validación: 16 casos nuevos + 3 regresiones inmediatas verdes; gate 100/100.
+La guarda de transferencia conserva la historia del cliente anterior y no
+modifica accesos ni filas al rechazar el cambio; 16 casos verdes, gate 100/100.
+Contrato de integración: [DELIVERY_CONTRACT_REPLY_ADAPTER](../docs/DELIVERY_CONTRACT_REPLY_ADAPTER.md).
+La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
+capturas de tickets y los modelos de evidencia de correo del siguiente
+incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
+ninguna migración desde el worktree.
 Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
 alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
 correo manual del registro de una etapa aprobada, con vista previa y copia

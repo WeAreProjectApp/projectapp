@@ -764,7 +764,7 @@ DELIVERY_CONTRACTS = (
     _contract(
         'accounts.DeliveryPromptContext',
         read_only=(
-            'id contract scope stage mode captured_version amendment_ids '
+            'id contract client destination scope stage mode captured_version amendment_ids '
             'missing_sources uncertainties warnings complete prompt template schema '
             'conversation manifest_sha256 created_at'
         ),
@@ -809,6 +809,82 @@ DELIVERY_CONTRACTS = (
                 'Fecha interna de la fila de fuente; la lectura devuelve la '
                 'fecha del origen y la creación del contexto que retuvo la copia.',
                 'created_at',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmail',
+        read_only=(
+            'id project stage to_recipients from_email subject html_body text_body '
+            'captured_version manifest_sha256 created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Titular capturado para revalidar el destinatario del proyecto; '
+                'el DTO expone To y el cuerpo revisado, nunca permite reasignar '
+                'al cliente ni editar evidencia preparada.',
+                'client',
+            ) | _excluded(
+                'Propiedad y canal asignados por actor y credencial actuales. '
+                'La preparación es personal e inmutable; no admite identidad '
+                'enviada por el llamador ni acceso desde otro canal.',
+                'prepared_by mcp_credential',
+            ) | _excluded(
+                'Recibo interno de preparación; request_id se recibe al crear '
+                'para repetir de forma idempotente, nunca para editar la captura.',
+                'request_id',
+            ) | _excluded(
+                'Fundamento conservado de la composición y conformidades. '
+                'La herramienta devuelve su proyección pública revisada y '
+                'archivos autorizados, nunca permite editar estas capturas.',
+                'snapshot_payload closure_history',
+            ) | _excluded(
+                'Vínculo de auditoría asignado al preparar un reenvío explícito. '
+                'No se acepta ni se modifica como relación CRUD; se observa '
+                'la nueva preparación mediante el resultado de la acción.',
+                'resend_of',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmailFile',
+        read_only='id filename mime_type size_bytes sha256',
+        excluded=(
+            _excluded(
+                'La preparación autorizada determina el correo propietario y '
+                'la posición del adjunto en el manifest; no existe CRUD de archivos.',
+                'email position',
+            ) | _excluded(
+                'Origen interno de la copia pública exacta. La lectura expone '
+                'versión y hash del adjunto, sin permitir cambiar su origen.',
+                'delivery_snapshot',
+            ) | _excluded(
+                'Ruta de almacenamiento privado: la descarga propia entrega '
+                'bytes autorizados como artefacto temporal, nunca la ruta.',
+                'file',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmailAttempt',
+        read_only=(
+            'id request_id status error_message claimed_at sent_at finished_at created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Correo propietario y actor/credencial son implícitos en la '
+                'preparación propia confirmada; nunca se aceptan para suplantar '
+                'la identidad del intento.',
+                'email actor mcp_credential',
+            ) | _excluded(
+                'Enlaces internos al transporte y al intento original. '
+                'El historial común conserva la evidencia; los estados sólo '
+                'los escribe el servicio después de reclamar durablemente el envío.',
+                'gateway_snapshot email_log resend_of',
+            ) | _excluded(
+                'Marca interna de actualización del recibo mutable; la lectura '
+                'expone fechas de reclamación y finalización, sin edición directa.',
+                'updated_at',
             )
         ),
     ),
