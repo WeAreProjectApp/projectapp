@@ -6109,10 +6109,12 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
 | `admin-project-access-secrets` | admin | P1 | display,success,failure | — |
+| `admin-project-actions-menu` | admin | P1 | display | 3 |
 | `admin-project-brand` | admin | P2 | success,error,failure,display | — |
 | `admin-project-change-client` | admin | P2 | display,success | 2 |
 | `admin-project-change-history` | admin | P1 | display,success,failure | — |
 | `admin-project-client-access-policy` | admin | P1 | success,error,failure,display | — |
+| `admin-project-delete` | admin | P1 | success,error,failure | 10 |
 | `admin-project-fly-create` | admin | P2 | success,error | 4 |
 | `admin-project-idea-collection` | admin | P1 | success,error,failure,display | — |
 | `admin-project-inline-assign-offer` | admin | P2 | success | 1 |

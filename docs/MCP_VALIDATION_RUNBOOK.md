@@ -1269,3 +1269,10 @@ confirmaciones y adaptadores de `projects` y `accounting-billing` en
 `content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
 `financial_effect: none`; la emisión conserva el adaptador contable existente.
 No ejecutar validaciones mutantes contra conectores activos de producción.
+### Proyectos: eliminación de referencias vacías (2026-10-01)
+
+- `preview_project_delete` devuelve la misma lista de dependencias y cantidades que el modal del panel.
+- `delete_project` es sensible: su preview incluye `can_delete` y `blockers`, y no borra antes de `confirm_action`.
+- Confirmar un proyecto vacío devuelve `deleted: true` y `project_id`; elimina la estructura automática vacía y conserva auditoría.
+- Si se agrega información entre preview y confirmación, devuelve `PROJECT_DELETE_BLOCKED` con `details.blockers`, conservando proyecto y referencias.
+- Casos focales: `content/tests/views/test_mcp_project_deletion.py`; el contrato de campos del conector `projects` no cambia.

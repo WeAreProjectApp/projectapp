@@ -24,10 +24,35 @@ OPERATIONS_TOOLS = [
 ]
 
 
+_PROJECT_DELETE_PREVIEW = _op(
+    'preview_project_delete',
+    'Comprueba si el proyecto está vacío y lista las dependencias que impiden eliminarlo.',
+    'panel-projects-delete-preview', path=('project_id',),
+)
+_PROJECT_DELETE = _op(
+    'delete_project',
+    'Elimina definitivamente un proyecto vacío. Revalida todas las dependencias; si tiene información relacionada exige conservarla mediante Cambiar estado.',
+    'panel-projects-delete', 'DELETE', ('project_id',), 'sensitive', True,
+)
+_delete_project_handler = _PROJECT_DELETE['handler']
+
+
+def _delete_project_result(arguments):
+    _delete_project_handler(arguments)
+    return {'deleted': True, 'project_id': arguments['project_id']}
+
+
+_PROJECT_DELETE['handler'] = _delete_project_result
+_PROJECT_DELETE['impact_builder'] = lambda arguments: _PROJECT_DELETE_PREVIEW['handler'](
+    {'project_id': arguments['project_id']},
+)
+
 PROJECT_TOOLS = [
     _op('list_projects', 'Lista proyectos y sus indicadores por estado.', 'panel-projects-list'),
     _op('create_project', 'Crea un proyecto con las validaciones del Panel.', 'panel-projects-create', 'POST', risk='write'),
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
+    _PROJECT_DELETE_PREVIEW,
+    _PROJECT_DELETE,
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto.', 'panel-projects-unlinked-records', path=('project_id',)),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
     _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),

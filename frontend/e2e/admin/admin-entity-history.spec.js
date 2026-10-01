@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /**
  * Per-record history journeys for documents, proposals, projects, clients and
  * accounting snapshots. Each assertion protects the operator-facing audit
@@ -187,8 +188,7 @@ async function openProposalHistory(page) {
 async function openProjectHistory(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click();
-  await expect(page.getByTestId('project-detail-1')).toBeVisible();
-  await page.getByTestId('project-detail-1').click();
+  await openProjectAction(page, 1, 'detail');
   await expect(page.getByTestId('project-access-modal')).toBeVisible();
   await page.getByRole('tab', { name: 'Historial', exact: true }).click();
   await expect(page.getByTestId('entity-history')).toBeVisible();

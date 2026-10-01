@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue'
-import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue'
 import ProjectStateHelpBadge from '~/components/panel/projects/ProjectStateHelpBadge.vue'
 import { stateBadgeVariant } from '~/utils/documentState'
 import { formatDate } from '~/utils/formatDate'
@@ -11,7 +10,7 @@ const props = defineProps({
   highlighted: { type: Boolean, default: false },
 })
 
-const emit = defineEmits(['actions', 'assign', 'change-state', 'detail'])
+const emit = defineEmits(['actions', 'assign', 'change-state'])
 
 const statusTone = computed(() => stateBadgeVariant(props.project.current_state))
 const isTerminal = computed(() => ['completed', 'decommissioned'].includes(
@@ -116,40 +115,15 @@ const unlinkedTotal = computed(() => (
       {{ unlinkedTotal }} {{ unlinkedTotal === 1 ? 'registro' : 'registros' }} sin proyecto
     </BaseButton>
 
-    <div class="mt-auto flex items-center justify-end gap-2 pt-4">
+    <div class="mt-auto flex items-center justify-start pt-4">
       <BaseActionButton
-        action="view"
-        variant="secondary"
+        action="more"
+        variant="ghost"
         size="md"
-        :label="`Ver detalle de ${project.name}`"
-        :data-testid="`project-detail-${project.id}`"
-        @click="emit('detail', project)"
-      />
-      <BaseButton
-        as="NuxtLink"
-        :to="{ path: '/panel/communications', query: { project: project.id } }"
-        variant="secondary"
-        size="md"
-        class="min-h-11"
-        :data-testid="`project-communications-${project.id}`"
-      >
-        Comunicaciones
-      </BaseButton>
-      <ProjectSpaceLink
-        :project-id="project.id"
-        :data-testid="`project-space-${project.id}`"
-        class="min-h-11 min-w-11"
-      />
-      <BaseButton
-        variant="secondary"
-        size="md"
-        class="min-h-11"
-        :aria-label="`Acciones de ${project.name}`"
+        :label="$t('projectAccess.projectActions.label', { name: project.name })"
         :data-testid="`project-actions-${project.id}`"
         @click="emit('actions', project)"
-      >
-        Acciones
-      </BaseButton>
+      />
     </div>
   </article>
 </template>

@@ -24,6 +24,9 @@
 > incremento no envía correos reales. [Reglas y esquema](../docs/PLATFORM_DELIVERY.md).
 
 > **2026-09-29 — Formulario y estados de enlaces seguros:** implementación
+
+> **2026-10-01 — acciones de proyectos:** unificar tabla y tarjetas con menú de tres puntos; permitir borrar proyectos vacíos tras confirmar; mostrar dependencias y cantidades en una tabla cuando se bloquea, ofreciendo el ciclo de estado existente. Cierre con pruebas focales de interfaz, API y MCP, mapas actualizados y PR abierto con CI verde.
+
 > en `feat/29092026-secure-links-simple-states`: dropdown compartido, plantilla
 > inicial de mensaje, opcionales plegables, marca de envío manual y cinco estados.
 > API anterior compatible; migración `secure_links.0003` y comprobación de cifrado

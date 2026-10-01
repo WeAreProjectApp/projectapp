@@ -67,9 +67,11 @@ from content.views.panel_projects import (
     assign_project_unlinked_records,
     change_project_client,
     create_panel_project,
+    delete_panel_project,
     list_panel_projects,
     list_project_unlinked_records,
     preview_project_client_change,
+    preview_panel_project_delete,
     unarchive_panel_project,
     update_panel_project,
 )
@@ -561,6 +563,8 @@ urlpatterns = [
     path('projects/', list_panel_projects, name='panel-projects-list'),
     path('projects/create/', create_panel_project, name='panel-projects-create'),
     path('projects/<int:project_id>/update/', update_panel_project, name='panel-projects-update'),
+    path('projects/<int:project_id>/delete-preview/', preview_panel_project_delete, name='panel-projects-delete-preview'),
+    path('projects/<int:project_id>/delete/', delete_panel_project, name='panel-projects-delete'),
     path(
         'projects/<int:project_id>/access/',
         panel_project_access_detail,

@@ -489,9 +489,10 @@ for (const viewport of COMPACT_PROJECT_VIEWPORTS) {
       await expect(page.getByTestId('project-pending-indicator-drawer')).toHaveCount(0);
 
       await page.getByTestId('project-actions-12').click();
-      const actions = page.getByTestId('project-actions-drawer');
-      await expect(actions.getByRole('button', { name: 'Editar proyecto' })).toBeVisible();
-      await actions.getByRole('button', { name: 'Cerrar' }).click();
+      const actions = page.getByTestId('project-actions-modal');
+      await expect(actions.getByTestId('project-actions-edit')).toBeVisible();
+      await page.keyboard.press('Escape');
+      await expect(actions).toHaveCount(0);
       await expectNoViewportOverflow(page);
     });
   });
