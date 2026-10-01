@@ -1,6 +1,9 @@
 <script setup>
+import { computed, ref, watch } from 'vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
+import BaseModal from '~/components/base/BaseModal.vue'
+import DeliveryClosureEmail from './DeliveryClosureEmail.vue'
 import DeliveryDocuments from './DeliveryDocuments.vue'
 import DeliveryRequirementGuide from './DeliveryRequirementGuide.vue'
 import DeliveryReviewHistory from './DeliveryReviewHistory.vue'
@@ -13,6 +16,9 @@ const emit = defineEmits(['author', 'remove', 'publish', 'review', 'historical',
 const { t, locale } = useI18n()
 const localePath = useLocalePath()
 const route = useRoute()
+const closureEmailOpen = ref(false)
+const closureEmailAvailable = computed(() => props.isAdmin && props.stage.status === 'approved' && !!props.stage.publication_id && props.stage.requirements.length > 0 && props.stage.requirements.every((item) => item.review_status === 'approved'))
+watch(closureEmailAvailable, (available) => { if (!available) closureEmailOpen.value = false })
 const stageLink = () => localePath({ path: `/platform/projects/${props.projectId}/delivery`, query: { stage: props.stage.id } })
 const isFrozen = () => props.stage.status === 'approved'
 const reviewAvailable = () => !!props.stage.publication_id && props.stage.requirements.some((item) => item.review_status === 'in_review')
@@ -47,6 +53,7 @@ const formattedDate = (value) => value ? new Intl.DateTimeFormat(locale.value, {
         <BaseButton v-if="!isAdmin && reviewAvailable()" size="sm" :data-testid="`delivery-review-open-${stage.id}`" @click="emit('review', stage)">{{ t('platformDelivery.review') }}</BaseButton>
         <BaseButton v-if="isAdmin || stage.publication_id" variant="secondary" size="sm" :data-testid="`delivery-report-open-${stage.id}`" @click="emit('report', stage)">{{ t('platformDelivery.report') }}</BaseButton>
         <BaseButton v-if="isAdmin && stage.publication_id" variant="secondary" size="sm" :data-testid="`delivery-prepare-reply-${stage.id}`" @click="emit('prepare-reply', stage)">{{ t('platformDelivery.promptAuthoring.prepareReply') }}</BaseButton>
+        <BaseButton v-if="closureEmailAvailable" variant="secondary" size="sm" :disabled="busy" :disabled-reason="t('platformDelivery.closureEmail.busy')" :data-testid="`delivery-closure-email-open-${stage.id}`" @click="closureEmailOpen = true">{{ t('platformDelivery.closureEmail.open') }}</BaseButton>
         <BaseButton variant="ghost" size="sm" @click="emit('copy', stage)">{{ t('platformDelivery.copyLink') }}</BaseButton>
       </div>
     </header>
@@ -83,5 +90,11 @@ const formattedDate = (value) => value ? new Intl.DateTimeFormat(locale.value, {
         <DeliveryDocuments v-if="message.documents?.length" :documents="message.documents" @download="emit('download', $event)" />
       </article>
     </section>
+    <BaseModal v-if="closureEmailOpen && closureEmailAvailable" v-model="closureEmailOpen" kind="detail" :close-on-backdrop="!busy" :close-on-esc="!busy">
+      <div class="min-w-0 space-y-5 p-4 panel-portrait:p-6">
+        <h2 class="break-words text-lg font-semibold text-text-default">{{ t('platformDelivery.closureEmail.title') }} · {{ stage.title }}</h2>
+        <DeliveryClosureEmail :stage="stage" :is-admin="isAdmin" @cancel="closureEmailOpen = false" />
+      </div>
+    </BaseModal>
   </section>
 </template>

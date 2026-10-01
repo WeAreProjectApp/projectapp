@@ -1081,7 +1081,7 @@ export const viewCatalogSections = [
         group: 'Proyectos',
         file: 'frontend/pages/platform/projects/[id]/delivery.vue',
         reference: 'contratos, otrosíes, alcances, fases, etapas y guías de validación del proyecto',
-        notes: 'El equipo crea guías o prepara respuestas con un contrato y sus fuentes seleccionadas, conserva copias y verifica las citas del JSON antes de aplicar borradores. La respuesta necesita revisión y envío manual. El cliente responde por requerimiento; los documentos heredan la publicación y las conformidades permanecen entre rondas.',
+        notes: 'El equipo redacta guías por los roles reales del producto cuando las fuentes los acreditan, conserva copias y verifica citas antes de aplicar borradores. El cliente responde por requerimiento y conserva sus conformidades entre rondas. Para una etapa totalmente aprobada, el administrador puede preparar, revisar y enviar manualmente un correo de constancia con documentos públicos opcionales; consulta su historial privado y prepara un reenvío explícito.',
         audience: 'client',
         viewType: 'detail',
       },

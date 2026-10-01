@@ -1,4 +1,5 @@
 """Thin JWT endpoints over the shared delivery services."""
+from django.db import transaction
 from django.http import HttpResponse
 from django.utils.text import slugify
 from django.utils.http import content_disposition_header
@@ -12,6 +13,7 @@ from accounts.services import delivery_workflow as delivery
 from accounts.services.delivery_access import fail
 from accounts.services.delivery_review_evidence import list_review_evidence, review_evidence_pdf
 from accounts.services import delivery_authoring as authoring
+from accounts.services import delivery_closure_email as closure_email
 from accounts.serializers_delivery import VersionedSerializer
 
 
@@ -167,3 +169,53 @@ def delivery_contract_pdf(request, project_id, kind, node_id):
 def delivery_signature(request, project_id, kind, node_id):
     data = {key: request.data.get(key) for key in request.data if key != 'file'}
     return Response(delivery.attest_signature(project_id, request.user, kind, node_id, data, request.FILES.get('file')))
+
+
+def _closure_response(data, *, status=200):
+    response = Response(data, status=status)
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@delivery_endpoint(['POST'])
+def delivery_closure_email_prepare(request, project_id, stage_id):
+    return _closure_response(closure_email.prepare_stage_email(
+        project_id, request.user, stage_id, request.data,
+    ), status=201)
+
+
+@delivery_endpoint(['GET'])
+def delivery_closure_email_history(request, project_id, stage_id):
+    return _closure_response(closure_email.list_stage_emails(project_id, request.user, stage_id))
+
+
+@delivery_endpoint(['GET'])
+def delivery_closure_email_detail(request, project_id, preparation_id):
+    return _closure_response(closure_email.get_preparation(project_id, request.user, preparation_id))
+
+
+@transaction.non_atomic_requests
+@delivery_endpoint(['POST'])
+def delivery_closure_email_send(request, project_id, preparation_id):
+    return _closure_response(closure_email.send_stage_email(
+        project_id, request.user, preparation_id, request.data,
+    ))
+
+
+@delivery_endpoint(['POST'])
+def delivery_closure_email_resend_prepare(request, project_id, preparation_id):
+    return _closure_response(closure_email.prepare_stage_email_resend(
+        project_id, request.user, preparation_id, request.data,
+    ), status=201)
+
+
+@delivery_endpoint(['GET'])
+def delivery_closure_email_attachment(request, project_id, preparation_id, file_id):
+    raw, filename, content_type = closure_email.download_attachment(
+        project_id, request.user, preparation_id, file_id,
+    )
+    response = HttpResponse(raw, content_type=content_type)
+    response['Content-Disposition'] = content_disposition_header(True, filename)
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response

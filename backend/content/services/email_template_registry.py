@@ -1355,6 +1355,11 @@ EMAIL_TEMPLATE_REGISTRY = {
         'description': 'Correo compuesto por el vendedor desde la pestaña Enviar correo. Se registra como actividad de la propuesta.',
         **_composed_email_base(),
     },
+    'delivery_stage_approved_client': {
+        'name': 'Cierre de Etapa Aprobada',
+        'description': 'Constancia manual revisada por el administrador cuando el cliente aprueba todos los requerimientos de una etapa.',
+        **_composed_email_base(),
+    },
 }
 
 
