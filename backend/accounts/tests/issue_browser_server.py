@@ -4,7 +4,6 @@ import json
 import os
 import sys
 from pathlib import Path
-from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 MEMORY_MAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
@@ -57,9 +56,6 @@ def main():
     if reasons:
         raise SystemExit('\n'.join(reasons))
 
-    class ThreadedServer(ThreadingMixIn, WSGIServer):
-        daemon_threads = True
-
     class QuietHandler(WSGIRequestHandler):
         def log_message(self, format, *args):
             pass
@@ -105,8 +101,11 @@ def main():
                 start_response(f'{response.status_code} OK', list(response.items()))
                 return [response.content]
 
+            # Shared in-memory SQLite cannot wait on concurrent table locks.
+            # Serialize this disposable harness; production locks remain in
+            # the domain services, not in this fixture-only server.
             with make_server('127.0.0.1', args.port, test_application,
-                             server_class=ThreadedServer, handler_class=QuietHandler) as server:
+                             server_class=WSGIServer, handler_class=QuietHandler) as server:
                 server.serve_forever()
         finally:
             teardown_databases(databases, verbosity=0)

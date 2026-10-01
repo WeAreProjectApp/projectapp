@@ -87,7 +87,7 @@ def _run(project_id, actor, kind, action, data, change, *, ticket_id=None, admin
         # The project lock also serializes creation retries before the ticket exists.
         project = project_for_actor(project_id, actor, lock=True)
         ticket = _load_ticket(project_id, actor, kind, ticket_id, lock=True,
-                              include_archived=action == 'archive') if ticket_id else None
+                              include_archived=action in ('archive', 'converted')) if ticket_id else None
         if ticket:
             ticket.project = project
         if action in ('create', 'evaluate', 'comment'):
@@ -110,6 +110,8 @@ def _run(project_id, actor, kind, action, data, change, *, ticket_id=None, admin
             result = get_ticket(project_id, actor, kind, previous.receipt['ticket_id'], include_archived=True)
             return result, previous.receipt
         if ticket and ticket.is_archived:
+            if action == 'converted':
+                fail('No se puede convertir una solicitud archivada.', 'issue_convert_state')
             raise NotFound('Ticket no encontrado.')
         if ticket and values.get('expected_version', ticket.version) != ticket.version:
             raise DeliveryConflict('El ticket cambió. Actualiza antes de responder.')
@@ -268,7 +270,9 @@ def convert_request(project_id, actor, ticket_id, data):
 
     require_admin(actor)
     # Preserve the legacy not-found response before validating conversion fields.
-    get_ticket(project_id, actor, 'change', ticket_id)
+    ticket = get_ticket(project_id, actor, 'change', ticket_id, include_archived=True)
+    if ticket.is_archived:
+        fail('No se puede convertir una solicitud archivada.', 'issue_convert_state')
     payload = ConversionSerializer(data=data)
     payload.is_valid(raise_exception=True)
     values = payload.validated_data

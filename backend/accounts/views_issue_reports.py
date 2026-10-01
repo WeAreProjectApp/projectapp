@@ -24,6 +24,9 @@ def ticket_response(ticket, kind, request, *, status=200, detail=True):
         ('bug', True): BugReportDetailSerializer, ('bug', False): BugReportListSerializer,
         ('change', True): ChangeRequestDetailSerializer, ('change', False): ChangeRequestListSerializer,
     }[(kind, detail)]
+    if detail:
+        from accounts.services.issue_reads import ticket_detail
+        ticket = ticket_detail(ticket, kind)
     return Response(serializer(ticket, context={'request': request}).data, status=status)
 
 

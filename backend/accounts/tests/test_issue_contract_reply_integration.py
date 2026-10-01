@@ -3,12 +3,11 @@
 import pytest
 from django.contrib.auth import get_user_model
 from django.test import override_settings
-from freezegun import freeze_time
 
 from accounts.models import DeliveryWorkspace, IssueResponse, RequirementReview, UserProfile
 from accounts.services import issue_reports as issues
 from accounts.tests.delivery_authoring_helpers import api_for, build_authoring_context, reply_payload
-from accounts.tests.delivery_helpers import RECORDED_AT, version
+from accounts.tests.delivery_helpers import version
 from accounts.tests._delivery_fixtures import make_requirement
 from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 
@@ -26,8 +25,7 @@ def memory_only_mail(settings, mailoutbox):
 
 @pytest.fixture
 def context():
-    with freeze_time(RECORDED_AT):
-        yield build_authoring_context()
+    return build_authoring_context()
 
 
 def ticket(context, **values):
