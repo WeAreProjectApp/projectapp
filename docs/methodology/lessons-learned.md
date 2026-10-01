@@ -1883,3 +1883,7 @@ answering the global Esc listener while they are open.
 ## P4 — Revocación independiente del retorno al valor anterior
 
 Comparar huellas de fuentes bloquea datos distintos, pero por sí solo permite reactivar un permiso si una escritura masiva restaura el valor original. El historial existente informa los campos cambiados: un receptor propio revoca los permisos de forma permanente, sin duplicar lógica de historial ni inspeccionar sus valores sensibles. En saves parciales, sólo los campos persistidos por update_fields pueden revocar.
+
+## P4 — Certificar correo antes de preparar fixtures
+
+Con MAILERS, un override del setting legacy no certifica el transporte efectivo. El harness propio fuerza locmem antes de iniciar Django y rechaza cualquier alias sin backend explícito de memoria; además comprueba las instancias reales, incluido default. La certificación se repite antes de DB/fixtures y su modo preflight evita ambas escrituras. Los errores sólo informan la causa de rechazo, nunca opciones, credenciales o destinos reales. La corrección de otro harness conserva su dueño y se absorbe mediante su commit publicado.

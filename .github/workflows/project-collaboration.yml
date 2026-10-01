@@ -33,6 +33,10 @@ jobs:
           npm --prefix frontend ci
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Certify mail isolation before database and fixtures
+        run: python backend/accounts/tests/project_collaboration_browser_server.py --check-isolation
+        env:
+          CI: 'true'
       - name: Install Chromium
         working-directory: frontend
         run: npx playwright install --with-deps chromium
