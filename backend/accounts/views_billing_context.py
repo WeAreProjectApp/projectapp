@@ -2,7 +2,7 @@
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import SessionJWTAuthentication
 
 from accounts.serializers_billing_context import (
     BillingContextAssignmentSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
@@ -17,28 +17,28 @@ from accounts.services.hosting_context import hosting_inventory, reconcile_evide
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def billing_options_view(request, project_id):
     return Response(project_billing_options(project_id, request.user))
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def hosting_list_view(request):
     return Response(project_hosting_list(request.user))
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def hosting_read_view(request, project_id):
     return Response(project_hosting_read(project_id, request.user))
 
 
 @api_view(['GET', 'PATCH'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def account_context_view(request, account_id):
     if request.method == 'GET':
@@ -51,7 +51,7 @@ def account_context_view(request, account_id):
 
 
 @api_view(['GET', 'POST'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def hosting_reconciliation_view(request, project_id):
     require_billing_admin(request.user)
@@ -64,7 +64,7 @@ def hosting_reconciliation_view(request, project_id):
 
 
 @api_view(['POST'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def hosting_evidence_view(request, project_id):
     require_billing_admin(request.user)

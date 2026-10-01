@@ -5,7 +5,7 @@ from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import SessionJWTAuthentication
 
 
 def endpoint(methods, *, channel='platform'):

@@ -7,7 +7,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import SessionJWTAuthentication
 
 from accounts.services import delivery_workflow as delivery
 from accounts.services.delivery_access import fail
@@ -19,7 +19,7 @@ from accounts.serializers_delivery import VersionedSerializer
 
 def delivery_endpoint(methods):
     def decorate(view):
-        return api_view(methods)(authentication_classes([JWTAuthentication])(permission_classes([IsAuthenticated])(view)))
+        return api_view(methods)(authentication_classes([SessionJWTAuthentication])(permission_classes([IsAuthenticated])(view)))
     return decorate
 
 

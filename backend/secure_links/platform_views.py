@@ -7,7 +7,7 @@ from django.db.models import Count
 from rest_framework.decorators import api_view, authentication_classes, permission_classes, throttle_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework_simplejwt.authentication import JWTAuthentication
+from accounts.authentication import SessionJWTAuthentication
 
 from . import platform_services
 from .catalog import CatalogError, catalog_payload
@@ -31,7 +31,7 @@ def client_api(methods, *, throttles=()):
                 # CatalogError can echo unknown input keys; never return it raw.
                 return Response({'detail': 'Revisa los campos del tipo seleccionado.', 'code': 'invalid_content'}, status=400)
 
-        endpoint = api_view(methods)(authentication_classes([JWTAuthentication])(
+        endpoint = api_view(methods)(authentication_classes([SessionJWTAuthentication])(
             permission_classes([IsAuthenticated, IsActiveSecureLinkClient])(throttle_classes(list(throttles))(errors))))
 
         @wraps(endpoint)
