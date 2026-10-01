@@ -83,9 +83,13 @@ directamente.
 
 ## Bloques de integración
 
-Base main `cce8e694`, dependencia publicada P3 `abcffaf9`. P0 coordina el número
-y dependencia definitivos de la migración después de P3 final. Esta sesión no
-ejecuta migraciones ni mergea su PR.
+Base main `cce8e694`, dependencia publicada P3
+`dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbida mediante merge en la rama
+propia. P0 reservó `0068_issue_reports`, dependiente de
+`0067_explicit_delivery_authoring_context`; se conserva la dependencia
+`content.0273_merge_document_provenance_and_proposal_owner`. P0 coordina las
+hojas paralelas de otros frentes y P3 final. Esta sesión no ejecuta migraciones
+ni mergea su PR a main.
 
 | Bloque compartido reservado | Dueño | Dependencia |
 |---|---|---|
