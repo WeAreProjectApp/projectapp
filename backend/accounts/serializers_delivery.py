@@ -14,6 +14,12 @@ class StrictSerializer(serializers.Serializer):
 
 class GuideSerializer(StrictSerializer):
     role = serializers.CharField(required=False, allow_blank=True, max_length=300)
+    access = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    allowed_actions = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    blocked_actions = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    blocked_steps = serializers.ListField(child=serializers.CharField(max_length=3000), required=False, max_length=100)
+    blocked_result = serializers.CharField(required=False, allow_blank=True, max_length=20000)
+    dependencies = serializers.CharField(required=False, allow_blank=True, max_length=20000)
     environment = serializers.CharField(required=False, allow_blank=True, max_length=500)
     preparation = serializers.CharField(required=False, allow_blank=True, max_length=20000)
     data = serializers.CharField(required=False, allow_blank=True, max_length=20000)

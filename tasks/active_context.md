@@ -16,6 +16,12 @@ La corrección de guías conserva sus citas; el contrato u otrosí debe sustenta
 el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
 administrativo de preparaciones y descarga de copias exactas. UI y las 46
 herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
+El incremento coordinado P3 redacta guías desde los recorridos del producto
+del cliente: roles sólo con respaldo de fuentes, acciones permitidas y
+bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
+Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
+distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
+inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
 Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
 alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
 correo manual del registro de una etapa aprobada, con vista previa y copia

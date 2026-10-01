@@ -92,18 +92,38 @@ datos o detalles de programación. Cada guía tiene estos campos:
 
 | Campo | Pregunta que debe responder |
 | --- | --- |
-| `role` | ¿Quién debe hacer la prueba y con qué tipo de cuenta? |
+| `role` | Nombre real del rol del producto del cliente, sólo si las fuentes lo acreditan. |
+| `access` | ¿Con qué acceso o cuenta de prueba entra esa persona? |
 | `environment` | ¿Dónde se hace la prueba? |
 | `preparation` | ¿Qué debe estar listo antes de empezar? |
 | `data` | ¿Qué datos o registros se necesitan? Si no hacen falta, decirlo. |
 | `steps` | ¿Qué acciones se hacen, en orden? Una acción concreta por paso. |
 | `expected_result` | ¿Qué resultado visible confirma que funcionó? |
 | `failure_signals` | ¿Qué permite reconocer un fallo y describirlo al equipo? |
+| `allowed_actions` | ¿Qué ve y qué puede hacer con ese acceso? |
+| `blocked_actions` | ¿Qué no debe ver o qué no puede hacer? |
+| `blocked_steps` | ¿Cómo se intenta una acción bloqueada, en orden? |
+| `blocked_result` | ¿Qué resultado confirma que el bloqueo funciona? |
+| `dependencies` | ¿Qué etapa anterior debe completar otra persona y qué datos se reutilizan? |
 
-Para publicar se exigen quién prueba, ambiente, pasos, resultado esperado y
+Para publicar se exigen ambiente, pasos, resultado esperado y
 señales de fallo. La preparación y los datos también deben explicarse cuando
 la prueba los necesita. Evitar instrucciones como «validar el módulo»; indicar,
 por ejemplo, qué registro crear, dónde buscarlo y qué debe aparecer.
+
+Las etapas se basan en los recorridos reales del sistema del cliente. Si las
+fuentes definen roles, se agrupan preferentemente por responsabilidad y acceso;
+una guía explica un caso permitido y otro bloqueado. No se duplican los
+requerimientos para agrupar por rol: se referencian las etapas previas en
+`dependencies`. Si no hay roles acreditados, se omite esa separación y `role`;
+Platform oculta los campos vacíos al cliente. Administrador y cliente de
+Platform no son roles del producto que se valida.
+
+En JSON v2, un rol nuevo debe aparecer por su nombre en una cita seleccionada
+del contrato, otrosí, anexo o referencia. La comprobación acredita procedencia;
+el equipo sigue validando que esa fuente define realmente el perfil y sus
+permisos. Las guías manuales v1 conservan compatibilidad y lo aprobado no se
+reescribe. La generación ya no propone «Cliente» como rol por defecto.
 
 ## Firmas y conformidades anteriores
 
