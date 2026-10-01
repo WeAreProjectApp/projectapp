@@ -623,157 +623,82 @@ class UpdateProjectSerializer(serializers.Serializer):
 
 
 # =========================================================================
-# Requirement serializers
+# Published delivery requirement selectors
 # =========================================================================
 
-from accounts.models import Requirement, RequirementComment, RequirementHistory  # noqa: E402
-
-
-class RequirementCommentSerializer(serializers.ModelSerializer):
-    user_email = serializers.EmailField(source='user.email', read_only=True)
-    user_name = serializers.SerializerMethodField()
-
-    class Meta:
-        model = RequirementComment
-        fields = ['id', 'content', 'is_internal', 'user_email', 'user_name', 'created_at']
-
-    def get_user_name(self, obj):
-        u = obj.user
-        return f'{u.first_name} {u.last_name}'.strip() or u.email
-
-
-class RequirementHistorySerializer(serializers.ModelSerializer):
-    changed_by_email = serializers.EmailField(source='changed_by.email', read_only=True, default='')
-
-    class Meta:
-        model = RequirementHistory
-        fields = ['id', 'from_status', 'to_status', 'changed_by_email', 'created_at']
+from accounts.models import Requirement  # noqa: E402
 
 
 class RequirementListSerializer(serializers.ModelSerializer):
-    comments_count = serializers.SerializerMethodField()
-    phase_title = serializers.SerializerMethodField()
-    scope_item_name = serializers.SerializerMethodField()
-    scope_item_group_id = serializers.SerializerMethodField()
+    stage_title = serializers.CharField(source='stage.title', read_only=True)
+    phase_id = serializers.IntegerField(source='stage.phase_id', read_only=True)
+    phase_title = serializers.CharField(source='stage.phase.title', read_only=True)
+    scope_id = serializers.IntegerField(source='stage.phase.scope_id', read_only=True)
+    scope_title = serializers.CharField(source='stage.phase.scope.title', read_only=True)
 
     class Meta:
         model = Requirement
         fields = [
-            'id', 'phase_id', 'phase_title',
-            'title', 'description', 'configuration', 'flow',
-            'status', 'priority', 'order',
-            'source_epic_key', 'source_epic_title', 'source_flow_key', 'synced_from_proposal',
-            'scope_item_id', 'scope_item_name', 'scope_item_group_id',
-            'is_archived', 'archived_at',
-            'comments_count', 'created_at', 'updated_at',
+            'id', 'stage_id', 'stage_title', 'phase_id', 'phase_title',
+            'scope_id', 'scope_title', 'key', 'title', 'description', 'guide',
+            'order', 'version', 'review_status', 'created_at', 'updated_at',
         ]
-
-    def get_comments_count(self, obj):
-        if hasattr(obj, '_comments_count'):
-            return obj._comments_count
-        return obj.comments.count()
-
-    def get_phase_title(self, obj):
-        ph = getattr(obj, 'phase', None)
-        if ph is None:
-            return ''
-        bp = getattr(ph, 'business_proposal', None)
-        return getattr(bp, 'title', '') if bp else f'Fase {ph.order}'
-
-    def get_scope_item_name(self, obj):
-        return obj.scope_item.name if obj.scope_item_id else ''
-
-    def get_scope_item_group_id(self, obj):
-        return obj.scope_item.group_id if obj.scope_item_id else ''
 
 
 class _SourceRequirementSerializer(serializers.Serializer):
-    """Read-only nested view of a source Requirement for CR/Bug list+detail."""
+    """Published context for bugs and change requests, separate from commercial phases."""
     id = serializers.IntegerField()
     title = serializers.CharField()
-    status = serializers.CharField()
-    phase_id = serializers.IntegerField()
-    phase_title = serializers.SerializerMethodField()
-
-    def get_phase_title(self, obj):
-        ph = getattr(obj, 'phase', None)
-        if ph is None:
-            return ''
-        bp = getattr(ph, 'business_proposal', None)
-        return getattr(bp, 'title', '') if bp else f'Fase {ph.order}'
+    review_status = serializers.CharField()
+    stage_id = serializers.IntegerField()
+    stage_title = serializers.CharField(source='stage.title')
+    phase_id = serializers.IntegerField(source='stage.phase_id')
+    phase_title = serializers.CharField(source='stage.phase.title')
 
 
-class RequirementDetailSerializer(serializers.ModelSerializer):
-    comments = serializers.SerializerMethodField()
-    history = RequirementHistorySerializer(many=True, read_only=True)
-    scope_item_name = serializers.SerializerMethodField()
-    scope_item_group_id = serializers.SerializerMethodField()
+def published_requirement_rows(project_id, actor):
+    """Flatten the common client snapshot view, never expose live draft edits."""
+    from accounts.services.delivery_workflow import overview
 
-    class Meta:
-        model = Requirement
-        fields = [
-            'id', 'phase_id', 'title', 'description', 'configuration', 'flow',
-            'status', 'priority', 'order',
-            'source_epic_key', 'source_epic_title', 'source_flow_key', 'synced_from_proposal',
-            'scope_item_id', 'scope_item_name', 'scope_item_group_id',
-            'is_archived', 'archived_at',
-            'comments', 'history',
-            'created_at', 'updated_at',
-        ]
+    rows = []
+    for scope in overview(project_id, actor)['scopes']:
+        for phase in scope['phases']:
+            for stage in phase['stages']:
+                for snapshot in stage['requirements']:
+                    row = dict(snapshot)
+                    row.update({
+                        'stage_id': stage['id'], 'stage_title': stage['title'],
+                        'phase_id': phase['id'], 'phase_title': phase['title'],
+                        'scope_id': scope['id'], 'scope_title': scope['title'],
+                    })
+                    rows.append(row)
+    return rows
 
-    def get_scope_item_name(self, obj):
-        return obj.scope_item.name if obj.scope_item_id else ''
 
-    def get_scope_item_group_id(self, obj):
-        return obj.scope_item.group_id if obj.scope_item_id else ''
-
-    def get_comments(self, obj):
+class _SourceRequirementVisibilityMixin:
+    def get_source_requirement(self, obj):
+        if not obj.source_requirement_id:
+            return None
         request = self.context.get('request')
-        profile = getattr(request.user, 'profile', None) if request else None
-        if hasattr(obj, '_detail_comments'):
-            comments = obj._detail_comments
-            if not profile or not profile.is_admin:
-                comments = [comment for comment in comments if not comment.is_internal]
-            return RequirementCommentSerializer(comments, many=True).data
-        qs = obj.comments.select_related('user').all()
-        if not profile or not profile.is_admin:
-            qs = qs.filter(is_internal=False)
-        return RequirementCommentSerializer(qs, many=True).data
-
-
-class CreateRequirementSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=300)
-    description = serializers.CharField(required=False, default='', allow_blank=True)
-    configuration = serializers.CharField(required=False, default='', allow_blank=True)
-    flow = serializers.CharField(required=False, default='', allow_blank=True)
-    phase_id = serializers.IntegerField(required=False, allow_null=True)
-    status = serializers.ChoiceField(
-        choices=Requirement.STATUS_CHOICES, default=Requirement.STATUS_BACKLOG,
-    )
-    priority = serializers.ChoiceField(
-        choices=Requirement.PRIORITY_CHOICES, default=Requirement.PRIORITY_MEDIUM,
-    )
-
-
-class UpdateRequirementSerializer(serializers.Serializer):
-    title = serializers.CharField(max_length=300, required=False)
-    description = serializers.CharField(required=False, allow_blank=True)
-    configuration = serializers.CharField(required=False, allow_blank=True)
-    flow = serializers.CharField(required=False, allow_blank=True)
-    status = serializers.ChoiceField(choices=Requirement.STATUS_CHOICES, required=False)
-    priority = serializers.ChoiceField(choices=Requirement.PRIORITY_CHOICES, required=False)
-    order = serializers.IntegerField(min_value=0, required=False)
-    is_archived = serializers.BooleanField(required=False)
-
-
-class MoveRequirementSerializer(serializers.Serializer):
-    status = serializers.ChoiceField(choices=Requirement.STATUS_CHOICES)
-    order = serializers.IntegerField(min_value=0, default=0)
-
-
-class CreateCommentSerializer(serializers.Serializer):
-    content = serializers.CharField()
-    is_internal = serializers.BooleanField(default=False)
+        if request is None:
+            return None
+        profile = getattr(request.user, 'profile', None)
+        if profile and profile.is_admin:
+            return _SourceRequirementSerializer(obj.source_requirement).data
+        cache = getattr(request, '_delivery_visible_requirement_rows', None)
+        if cache is None:
+            cache = {}
+            request._delivery_visible_requirement_rows = cache
+        if obj.project_id not in cache:
+            cache[obj.project_id] = {
+                row['id']: row for row in published_requirement_rows(obj.project_id, request.user)
+            }
+        row = cache[obj.project_id].get(obj.source_requirement_id)
+        if row is None:
+            return None
+        return {key: row[key] for key in (
+            'id', 'title', 'review_status', 'stage_id', 'stage_title', 'phase_id', 'phase_title',
+        )}
 
 
 # =========================================================================
@@ -796,12 +721,12 @@ class ChangeRequestCommentSerializer(serializers.ModelSerializer):
         return f'{u.first_name} {u.last_name}'.strip() or u.email
 
 
-class ChangeRequestListSerializer(serializers.ModelSerializer):
+class ChangeRequestListSerializer(_SourceRequirementVisibilityMixin, serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     created_by_email = serializers.EmailField(source='created_by.email', read_only=True)
     comments_count = serializers.SerializerMethodField()
     screenshot_url = serializers.SerializerMethodField()
-    source_requirement = _SourceRequirementSerializer(read_only=True)
+    source_requirement = serializers.SerializerMethodField()
 
     class Meta:
         model = ChangeRequest
@@ -810,7 +735,7 @@ class ChangeRequestListSerializer(serializers.ModelSerializer):
             'suggested_priority', 'is_urgent', 'status',
             'admin_response', 'estimated_cost', 'estimated_time',
             'linked_requirement_id', 'screenshot_url',
-            'source_requirement', 'phase_id',
+            'source_requirement',
             'is_archived', 'archived_at',
             'created_by_name', 'created_by_email',
             'comments_count', 'created_at', 'updated_at',
@@ -835,12 +760,12 @@ class ChangeRequestListSerializer(serializers.ModelSerializer):
         return url
 
 
-class ChangeRequestDetailSerializer(serializers.ModelSerializer):
+class ChangeRequestDetailSerializer(_SourceRequirementVisibilityMixin, serializers.ModelSerializer):
     created_by_name = serializers.SerializerMethodField()
     created_by_email = serializers.EmailField(source='created_by.email', read_only=True)
     comments = serializers.SerializerMethodField()
     screenshot_url = serializers.SerializerMethodField()
-    source_requirement = _SourceRequirementSerializer(read_only=True)
+    source_requirement = serializers.SerializerMethodField()
 
     class Meta:
         model = ChangeRequest
@@ -897,9 +822,14 @@ class CreateChangeRequestSerializer(serializers.Serializer):
         project = self.context.get('project')
         if project is None:
             raise serializers.ValidationError('Contexto de proyecto requerido.')
-        if not Requirement.objects.filter(pk=value, phase__project=project).exists():
+        request = self.context.get('request')
+        if request is None:
+            raise serializers.ValidationError('Contexto de usuario requerido.')
+        from accounts.services.delivery_workflow import visible_requirements
+
+        if not visible_requirements(project.pk, request.user).filter(pk=value).exists():
             raise serializers.ValidationError(
-                'Requerimiento no encontrado o no pertenece a este proyecto.',
+                'Requerimiento no encontrado o no está publicado para este proyecto.',
             )
         return value
 
@@ -938,12 +868,12 @@ class BugCommentSerializer(serializers.ModelSerializer):
         return f'{u.first_name} {u.last_name}'.strip() or u.email
 
 
-class BugReportListSerializer(serializers.ModelSerializer):
+class BugReportListSerializer(_SourceRequirementVisibilityMixin, serializers.ModelSerializer):
     reported_by_name = serializers.SerializerMethodField()
     reported_by_email = serializers.EmailField(source='reported_by.email', read_only=True)
     comments_count = serializers.SerializerMethodField()
     screenshot_url = serializers.SerializerMethodField()
-    source_requirement = _SourceRequirementSerializer(read_only=True)
+    source_requirement = serializers.SerializerMethodField()
 
     class Meta:
         model = BugReport
@@ -953,7 +883,7 @@ class BugReportListSerializer(serializers.ModelSerializer):
             'environment', 'device_browser', 'is_recurring',
             'steps_to_reproduce', 'expected_behavior', 'actual_behavior',
             'admin_response', 'linked_bug_id', 'screenshot_url',
-            'source_requirement', 'phase_id',
+            'source_requirement',
             'is_archived', 'archived_at',
             'reported_by_name', 'reported_by_email',
             'comments_count', 'created_at', 'updated_at',
@@ -978,12 +908,12 @@ class BugReportListSerializer(serializers.ModelSerializer):
         return url
 
 
-class BugReportDetailSerializer(serializers.ModelSerializer):
+class BugReportDetailSerializer(_SourceRequirementVisibilityMixin, serializers.ModelSerializer):
     reported_by_name = serializers.SerializerMethodField()
     reported_by_email = serializers.EmailField(source='reported_by.email', read_only=True)
     comments = serializers.SerializerMethodField()
     screenshot_url = serializers.SerializerMethodField()
-    source_requirement = _SourceRequirementSerializer(read_only=True)
+    source_requirement = serializers.SerializerMethodField()
 
     class Meta:
         model = BugReport
@@ -1049,9 +979,14 @@ class CreateBugReportSerializer(serializers.Serializer):
         project = self.context.get('project')
         if project is None:
             raise serializers.ValidationError('Contexto de proyecto requerido.')
-        if not Requirement.objects.filter(pk=value, phase__project=project).exists():
+        request = self.context.get('request')
+        if request is None:
+            raise serializers.ValidationError('Contexto de usuario requerido.')
+        from accounts.services.delivery_workflow import visible_requirements
+
+        if not visible_requirements(project.pk, request.user).filter(pk=value).exists():
             raise serializers.ValidationError(
-                'Requerimiento no encontrado o no pertenece a este proyecto.',
+                'Requerimiento no encontrado o no está publicado para este proyecto.',
             )
         return value
 
@@ -1093,7 +1028,6 @@ from accounts.models import (  # noqa: E402
     DeliverableFile,
     DeliverableVersion,
     ProjectDataModelEntity,
-    ProjectScopeItem,
 )
 
 
@@ -1275,28 +1209,6 @@ class ProjectDataModelEntityItemSerializer(serializers.Serializer):
 
 class ProjectDataModelUploadSerializer(serializers.Serializer):
     entities = ProjectDataModelEntityItemSerializer(many=True)
-
-
-class ProjectScopeItemSerializer(serializers.ModelSerializer):
-    """Platform mirror of a proposal's vista/componente/funcionalidad."""
-
-    requirements_count = serializers.SerializerMethodField()
-
-    class Meta:
-        model = ProjectScopeItem
-        fields = [
-            'id', 'phase_id', 'source_item_id',
-            'origin', 'group_id', 'group_title', 'group_icon',
-            'group_order', 'group_is_visible',
-            'name', 'description', 'icon', 'item_order',
-            'requirements_count', 'is_archived', 'archived_at',
-            'created_at', 'updated_at',
-        ]
-
-    def get_requirements_count(self, obj):
-        if hasattr(obj, '_requirements_count'):
-            return obj._requirements_count
-        return obj.requirements.filter(is_archived=False).count()
 
 
 class DeliverableDetailSerializer(DeliverableListSerializer):

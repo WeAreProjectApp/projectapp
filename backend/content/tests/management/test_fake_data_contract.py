@@ -318,10 +318,79 @@ def test_platform_seed_reaches_the_per_list_volume_target():
     )
     project = Project.objects.order_by('pk').first()
 
-    assert Requirement.objects.filter(phase__project=project).count() == 60
+    assert Requirement.objects.filter(stage__phase__scope__contract__project=project).count() == 60
     assert Deliverable.objects.filter(project=project).count() == 60
     assert ChangeRequest.objects.filter(project=project).count() == 60
     assert BugReport.objects.filter(project=project).count() == 60
+
+
+@pytest.fixture
+def seeded_review_workflow():
+    """Representative contract, amendment, partial reviews and internal drafts."""
+    run_command(
+        'seed_platform_data', '--skip-collection-accounts',
+        '--seed', '19', '--anchor-date', '2026-08-26',
+    )
+    return Project.objects.order_by('pk').first()
+
+
+def test_platform_seed_links_current_scope_to_signed_contract_amendment(seeded_review_workflow):
+    from accounts.models import DeliveryScope
+    from accounts.services.delivery_workflow import signature_state
+    scope = DeliveryScope.objects.get(contract__project=seeded_review_workflow, is_current=True)
+
+    assert scope.amendment.contract_id == scope.contract_id
+    assert signature_state(scope.contract)['signature_status'] == 'portal'
+    assert signature_state(scope.amendment)['signature_status'] == 'external'
+
+
+def test_platform_seed_preserves_partial_client_decisions(seeded_review_workflow):
+    from accounts.models import RequirementReview
+    decisions = set(RequirementReview.objects.filter(
+        requirement__stage__phase__scope__contract__project=seeded_review_workflow,
+    ).values_list('decision', flat=True))
+
+    assert decisions == {'approved', 'objected', 'rejected'}
+
+
+def test_platform_seed_hides_internal_draft_stage_from_client(seeded_review_workflow):
+    from accounts.models import DeliveryStage
+    from accounts.services.delivery_workflow import overview
+    project = seeded_review_workflow
+    draft = DeliveryStage.objects.get(phase__scope__contract__project=project, key='demo-draft')
+
+    body = overview(project.pk, project.client)
+
+    client_stage_ids = {
+        stage['id'] for scope in body['scopes'] for phase in scope['phases'] for stage in phase['stages']
+    }
+    assert draft.pk not in client_stage_ids
+    assert draft.requirements.exists()
+
+
+def test_platform_fake_reset_clears_protected_review_graph(seeded_review_workflow):
+    from django.core.files.base import ContentFile
+    from accounts.management.commands._seed_helpers import _demo_pdf
+    from accounts.models import (
+        DeliveryPublication, DeliveryReviewDocumentEvidence, ProjectContract,
+        RequirementReview,
+    )
+    review = RequirementReview.objects.filter(
+        publication__stage__phase__scope__contract__project=seeded_review_workflow,
+    ).first()
+    evidence = DeliveryReviewDocumentEvidence.objects.create(
+        review=review, document=review.publication.stage.document_links.first().document,
+        title='Respaldo de conformidad externa', sha256='f' * 64,
+    )
+    evidence.file.save('approval-evidence.pdf', ContentFile(_demo_pdf(evidence.title)))
+    storage, filename = evidence.file.storage, evidence.file.name
+
+    run_command('delete_fake_data', '--confirm')
+
+    assert not ProjectContract.objects.exists()
+    assert not DeliveryPublication.objects.exists()
+    assert not DeliveryReviewDocumentEvidence.objects.exists()
+    assert not storage.exists(filename)
 
 
 def test_platform_seed_configures_communication_preferences():

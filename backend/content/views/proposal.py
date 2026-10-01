@@ -1843,7 +1843,7 @@ def preview_sync_section(request, section_id):
     """
     from django.db import transaction as _tx
     from accounts.models import Project
-    from accounts.services.technical_requirements_sync import (
+    from accounts.services.technical_resources_sync import (
         compute_sync_diff,
         filtered_technical_doc_for_sync,
     )
@@ -1887,11 +1887,11 @@ def preview_sync_section(request, section_id):
 @permission_classes([IsAdminUser])
 def apply_sync_section(request, section_id):
     """
-    Save the submitted content_json to the section and sync project requirements
+    Save the submitted content_json to the section and sync project resources
     (with soft-deletion of records removed from the JSON). Transactional.
     """
     from django.db import transaction as _tx
-    from accounts.services.technical_requirements_sync import sync_technical_requirements_for_deliverable
+    from accounts.services.technical_resources_sync import sync_technical_resources_for_deliverable
 
     section = get_object_or_404(ProposalSection, pk=section_id)
     if section.section_type != ProposalSection.SectionType.TECHNICAL_DOCUMENT:
@@ -1919,7 +1919,7 @@ def apply_sync_section(request, section_id):
         serializer.save()
 
         deliverable = proposal.deliverable
-        sync_result = sync_technical_requirements_for_deliverable(
+        sync_result = sync_technical_resources_for_deliverable(
             deliverable, request.user, delete_removed=True,
         )
 

@@ -1,11 +1,11 @@
 """
-Seed Mi Huella demo project with realistic Kanban data.
+Seed Mi Huella demo project with realistic guías de validación data.
 
 Creates:
-  - 1 client: Laura Blanco (laura@entre-especies.com / LauraEntre2026!)
+  - 1 client: Laura Blanco (laura@entre-especies.com; optional SEED_MIHUELLA_PASSWORD)
   - 1 business proposal: Mi Huella — status accepted, all 15 sections with platform content
   - 1 project: Mi Huella — Plataforma de Adopción Animal
-  - 55 requirements grouped by 9 epics across backlog → done
+  - Client-readable validation guides with published partial reviews and private drafts
   - 9 bug reports (fictional but coherent with the platform)
   - 6 change requests
   - 8 deliverables with epic assignments
@@ -16,6 +16,7 @@ Usage:
   python manage.py seed_mihuella --flush
 """
 
+import os
 from copy import deepcopy
 from datetime import date, timedelta
 from decimal import Decimal
@@ -24,25 +25,27 @@ from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
-from accounts.management.commands._seed_helpers import ensure_phase
+from accounts.management.commands._seed_helpers import seed_validation_guides, clear_fake_delivery
 from accounts.models import (
     BugComment, BugReport, ChangeRequest, ChangeRequestComment,
     Deliverable, DeliverableVersion, HostingSubscription, Payment,
     Project, Requirement, UserProfile,
 )
+from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.models import BusinessProposal, ProposalSection
 from content.services.proposal_service import ProposalService
 
 User = get_user_model()
 
 CLIENT_EMAIL = 'laura@entre-especies.com'
-CLIENT_PASSWORD = 'LauraEntre2026!'
+CLIENT_PASSWORD = os.environ.get('SEED_MIHUELLA_PASSWORD')
 PROJECT_NAME = 'Mi Huella — Plataforma de Adopción Animal'
 PROPOSAL_INVESTMENT = Decimal('38000000')
 
 # ---------------------------------------------------------------------------
 # Epic definitions
 # ---------------------------------------------------------------------------
+
 EPICS = {
     'AUTH':          'Autenticación y Acceso',
     'LANDING':       'Plataforma Pública',
@@ -56,71 +59,62 @@ EPICS = {
 }
 
 # fmt: off
-REQUIREMENTS = [
-    # ── DONE (10) — Foundation & core auth ─────────────────────────────────
-    {"title": "Registro de usuario con email y contraseña", "description": "Pantalla de registro donde nuevos usuarios crean una cuenta proporcionando nombre, email y contraseña. Al registrarse, se asigna automáticamente el rol 'adopter'.", "configuration": "Todos los usuarios no autenticados (guests).", "flow": "Usuario abre /sign-up → completa nombre, email y contraseña → el sistema valida campos → crea cuenta con rol adopter → emite tokens JWT → redirige al home.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Inicio de sesión con email y contraseña", "description": "Pantalla de autenticación donde usuarios existentes inician sesión con sus credenciales de email y contraseña.", "configuration": "Todos los usuarios no autenticados.", "flow": "Usuario abre /sign-in → ingresa email y contraseña → click en Iniciar sesión → el sistema valida credenciales → emite tokens JWT → redirige al home.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Inicio de sesión con Google OAuth", "description": "Autenticación alternativa mediante cuenta de Google. Si el usuario no existe, se crea automáticamente con rol adopter.", "configuration": "Todos los usuarios no autenticados.", "flow": "Usuario abre /sign-in → click en 'Iniciar con Google' → flujo OAuth de Google → el sistema crea o vincula usuario → emite tokens JWT → redirige al home.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Recuperación de contraseña por email", "description": "Flujo de restablecimiento de contraseña mediante envío de código de verificación al email registrado del usuario.", "configuration": "Todos los usuarios registrados.", "flow": "Usuario abre /forgot-password → ingresa email → el sistema genera PasswordCode y envía email → usuario ingresa código → establece nueva contraseña → redirige a /sign-in.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Cierre de sesión", "description": "Permite al usuario cerrar su sesión activa, eliminando tokens de autenticación del navegador.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario click en 'Cerrar sesión' en menú de usuario → tokens eliminados de localStorage → redirige a /sign-in.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Persistencia de sesión con refresh de tokens", "description": "Renovación automática del token de acceso JWT cuando expira, permitiendo sesiones continuas sin re-autenticación.", "configuration": "Todos los usuarios autenticados.", "flow": "Token de acceso expira → interceptor Axios detecta 401 → envía refresh token → el sistema emite nuevos tokens → la solicitud original se reintenta automáticamente.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Redirección de rutas protegidas", "description": "Los usuarios no autenticados que intentan acceder a rutas protegidas son redirigidos automáticamente a la pantalla de inicio de sesión.", "configuration": "Usuarios no autenticados intentando acceder a rutas que requieren autenticación.", "flow": "Usuario no autenticado navega a ruta protegida → middleware detecta ausencia de token → redirige a /sign-in → tras login, redirige a la ruta original.", "priority": "critical", "status": "done", "epic": "AUTH"},
-    {"title": "Página de inicio (landing)", "description": "Página principal de la plataforma con sección hero, carrusel de animales destacados, carrusel de campañas activas y spotlight de refugios.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario abre / → ve sección hero con CTA principal → navega carrusel de animales destacados → ve carrusel de campañas activas → ve spotlight de refugio → puede navegar a cualquier sección desde los CTAs.", "priority": "high", "status": "done", "epic": "LANDING"},
-    {"title": "Navegación principal (header)", "description": "Barra de navegación con enlaces a secciones principales, selector de idioma, campana de notificaciones, toggle de tema y menú de usuario.", "configuration": "Visible para todos los usuarios. Menú de usuario y notificaciones solo para autenticados.", "flow": "Usuario ve header → links visibles: Animales, Refugios, Campañas, Busco Adoptar, Blog → click para navegar → si autenticado: ve campana de notificaciones y menú de usuario.", "priority": "high", "status": "done", "epic": "LANDING"},
-    {"title": "Menú móvil responsive", "description": "Navegación adaptada para dispositivos móviles con menú hamburguesa que despliega sidebar con todos los enlaces.", "configuration": "Todos los usuarios en dispositivos móviles.", "flow": "Usuario en móvil → click en ícono hamburguesa → sidebar se despliega con todos los enlaces de navegación → click en enlace → navega y sidebar se cierra.", "priority": "medium", "status": "done", "epic": "LANDING"},
-
-    # ── IN REVIEW (5) — Ready for QA ───────────────────────────────────────
-    {"title": "Catálogo de animales con filtros", "description": "Listado paginado de todos los animales disponibles para adopción, con filtros por especie, tamaño, edad y género.", "configuration": "Visible para todos los usuarios (autenticados y guests).", "flow": "Usuario navega a /animales → ve grid de tarjetas de animales → aplica filtros (perro/gato, pequeño/mediano/grande, cachorro/joven/adulto, macho/hembra) → resultados se actualizan en tiempo real.", "priority": "high", "status": "in_review", "epic": "LANDING"},
-    {"title": "Detalle de animal con galería", "description": "Página de perfil completo del animal mostrando nombre, descripción, historial médico, necesidades especiales, galería de imágenes y CTAs de adopción/apadrinamiento.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario click en tarjeta de animal → navega a /animales/{id} → ve información completa → puede recorrer galería (Swiper) → ve botones de Adoptar, Apadrinar y Donar.", "priority": "high", "status": "in_review", "epic": "LANDING"},
-    {"title": "Directorio de refugios", "description": "Listado público de todos los refugios verificados en la plataforma con tarjetas informativas.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a /refugios → ve grid de tarjetas de refugios (nombre, logo, ubicación) → click en refugio → navega a perfil del refugio.", "priority": "high", "status": "in_review", "epic": "LANDING"},
-    {"title": "Perfil público del refugio", "description": "Página de detalle del refugio mostrando información completa, galería, animales disponibles y campañas activas.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario click en refugio → ve /refugios/{id} → ve descripción, galería, contacto → sección de animales del refugio → sección de campañas activas.", "priority": "high", "status": "in_review", "epic": "LANDING"},
-    {"title": "Modo oscuro/claro", "description": "Toggle de tema visual que permite alternar entre modo oscuro y modo claro en toda la aplicación.", "configuration": "Todos los usuarios.", "flow": "Usuario click en toggle de tema en header → toda la aplicación cambia a modo oscuro/claro → preferencia persistida.", "priority": "low", "status": "in_review", "epic": "LANDING"},
-
-    # ── IN PROGRESS (8) — Actively being developed ─────────────────────────
-    {"title": "Formulario de solicitud de adopción (wizard)", "description": "Formulario de adopción en 3 pasos con 6 preguntas por sección, cubriendo información personal, hogar/estilo de vida, y revisión final antes de enviar.", "configuration": "Solo usuarios autenticados con rol adopter. Requiere seleccionar un animal específico.", "flow": "Usuario en detalle de animal → click 'Adoptar' → Paso 1: info personal (6 preguntas) → Paso 2: hogar y estilo de vida (6 preguntas) → Paso 3: revisión y confirmación → envía → solicitud creada con status 'submitted'.", "priority": "high", "status": "in_progress", "epic": "ADOPTION"},
-    {"title": "Seguimiento de solicitudes de adopción", "description": "Pantalla donde el adoptante ve todas sus solicitudes de adopción con su estado actual (enviada, en revisión, entrevista, aprobada, rechazada).", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /mis-solicitudes → ve lista de solicitudes con nombre del animal, fecha y badge de estado → puede click en cada una para ver detalles.", "priority": "high", "status": "in_progress", "epic": "ADOPTION"},
-    {"title": "Listado de campañas de donación", "description": "Página con todas las campañas de recaudación activas y completadas, mostrando progreso de cada una.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a /campanas → ve tarjetas con título, barra de progreso, meta y monto recaudado → puede alternar entre pestañas Activas/Completadas.", "priority": "high", "status": "in_progress", "epic": "CAMPAIGNS"},
-    {"title": "Detalle de campaña con progreso", "description": "Página completa de una campaña mostrando descripción, meta, monto recaudado, porcentaje de progreso y CTA para donar.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario click en campaña → ve /campanas/{id} → ve descripción completa, barra de progreso, porcentaje, galería de evidencia → click en 'Donar'.", "priority": "high", "status": "in_progress", "epic": "CAMPAIGNS"},
-    {"title": "Checkout de donación", "description": "Flujo de pago para realizar una donación a un refugio o campaña específica, con montos preestablecidos y método de pago.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /checkout/donacion → selecciona monto → elige método de pago (tarjeta/PSE/Nequi) → agrega mensaje opcional → confirma → pago procesado vía Wompi → redirige a confirmación.", "priority": "high", "status": "in_progress", "epic": "CAMPAIGNS"},
-    {"title": "Integración de pagos con Wompi", "description": "Procesamiento de pagos mediante la pasarela colombiana Wompi, soportando tarjeta de crédito, PSE y Nequi como métodos de pago.", "configuration": "Usuarios autenticados que realizan donaciones o apadrinamientos. Requiere configuración de API keys de Wompi.", "flow": "Usuario en checkout → selecciona método de pago → sistema crea payment intent vía Wompi API → usuario completa pago en widget → webhook de Wompi confirma transacción.", "priority": "critical", "status": "in_progress", "epic": "CAMPAIGNS"},
-    {"title": "Registro de refugio (onboarding)", "description": "Formulario de registro para organizaciones de refugio que desean publicar animales en la plataforma. El refugio queda en estado pendiente de verificación.", "configuration": "Usuarios autenticados con rol shelter_admin.", "flow": "Shelter admin navega a /refugio/onboarding → completa formulario (nombre, logo, cover, ubicación, descripción, contacto) → envía → Shelter creado con verification_status=pending.", "priority": "high", "status": "in_progress", "epic": "SHELTER_PANEL"},
-    {"title": "Gestión de animales del refugio (CRUD)", "description": "Panel completo para crear, ver, editar y archivar animales del refugio, incluyendo carga de galería de imágenes.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/animales → ve lista paginada con filtros → click 'Crear' → completa formulario con galería drag-drop → guarda → animal publicado.", "priority": "high", "status": "in_progress", "epic": "SHELTER_PANEL"},
-
-    # ── TODO (12) — Planned for next sprints ───────────────────────────────
-    {"title": "Marcar animal como favorito", "description": "Permite a usuarios autenticados guardar animales en su lista de favoritos mediante un ícono de corazón.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario autenticado → click en ícono de corazón en tarjeta o detalle de animal → favorito creado en BD → ícono cambia a lleno → animal aparece en /favoritos.", "priority": "medium", "status": "todo", "epic": "PROFILE"},
-    {"title": "Lista de animales favoritos", "description": "Página dedicada donde el usuario ve todos los animales que ha marcado como favoritos.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /favoritos → ve grid con todos los animales favoritos → puede click en cualquiera para ver detalle → puede quitar favorito.", "priority": "medium", "status": "todo", "epic": "PROFILE"},
-    {"title": "Revisión de solicitudes por refugio", "description": "Panel donde el administrador del refugio revisa las solicitudes de adopción recibidas y puede cambiar su estado.", "configuration": "Solo usuarios con rol shelter_admin, limitado a solicitudes de animales de su refugio.", "flow": "Shelter admin navega a /refugio/solicitudes → ve lista de solicitudes → click en una → ve info del solicitante y respuestas → selecciona nuevo estado → guarda.", "priority": "high", "status": "todo", "epic": "ADOPTION"},
-    {"title": "Confirmación de pago", "description": "Página de confirmación mostrada después de un pago exitoso, con resumen del recibo.", "configuration": "Solo usuarios autenticados que acaban de completar un pago.", "flow": "Usuario completa checkout → sistema procesa pago → redirige a /checkout/confirmation → ve mensaje de agradecimiento con detalles (monto, destinatario, fecha, referencia).", "priority": "high", "status": "todo", "epic": "CAMPAIGNS"},
-    {"title": "Checkout de apadrinamiento", "description": "Flujo de pago para apadrinar un animal con opción de frecuencia mensual o única, selección de monto y método de pago.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /checkout/apadrinamiento → selecciona animal → elige frecuencia → selecciona monto → elige método de pago → confirma → Sponsorship y Payment creados.", "priority": "high", "status": "todo", "epic": "CAMPAIGNS"},
-    {"title": "Dashboard del panel de refugio", "description": "Panel de navegación central para administradores de refugio con accesos directos a todas las secciones de gestión.", "configuration": "Solo usuarios con rol shelter_admin.", "flow": "Shelter admin navega a /refugio → ve dashboard con enlaces a: animales, solicitudes, campañas, donaciones, updates, configuración.", "priority": "high", "status": "todo", "epic": "SHELTER_PANEL"},
-    {"title": "Gestión de campañas del refugio", "description": "Panel para crear y administrar campañas de recaudación de fondos del refugio, con seguimiento de progreso.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/campanas → ve campañas activas y completadas → click 'Crear' → completa formulario → publica → ve progreso de recaudación.", "priority": "high", "status": "todo", "epic": "SHELTER_PANEL"},
-    {"title": "Dashboard de administración de plataforma", "description": "Panel principal del administrador con métricas resumidas: total de usuarios, refugios, animales, solicitudes, donaciones y apadrinamientos.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/dashboard → ve tarjetas resumen con KPIs de la plataforma.", "priority": "high", "status": "todo", "epic": "ADMIN"},
-    {"title": "Aprobación y verificación de refugios", "description": "Cola de aprobación donde el administrador revisa y aprueba o rechaza refugios que se han registrado en la plataforma.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/refugios/aprobar → ve lista de refugios con status pending → click en refugio → revisa información → click Aprobar o Rechazar.", "priority": "high", "status": "todo", "epic": "ADMIN"},
-    {"title": "Cambio de idioma (español/inglés)", "description": "Selector de idioma en el header que permite cambiar toda la interfaz entre español e inglés usando next-intl.", "configuration": "Todos los usuarios.", "flow": "Usuario click en toggle ES/EN en header → toda la página se re-renderiza en el idioma seleccionado → preferencia guardada.", "priority": "medium", "status": "todo", "epic": "LANDING"},
-    {"title": "Campana de notificaciones con contador", "description": "Ícono de campana en el header que muestra la cantidad de notificaciones no leídas y un dropdown con las más recientes.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario ve ícono de campana con badge numérico → click → se despliega dropdown con 5 notificaciones recientes → puede marcar todas como leídas.", "priority": "medium", "status": "todo", "epic": "PROFILE"},
-    {"title": "Listado de posts del blog (público)", "description": "Página pública del blog con listado de artículos publicados, imagen destacada, título, extracto y fecha.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a /blog → ve lista de posts publicados con imagen, título, extracto, autor y fecha → puede filtrar por categoría → click en post para leer.", "priority": "medium", "status": "todo", "epic": "BLOG"},
-
-    # ── BACKLOG (20) — Not yet planned ─────────────────────────────────────
-    {"title": "Historial de donaciones del usuario", "description": "Página donde el usuario ve todas las donaciones que ha realizado, con monto, destinatario y fecha.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /mis-donaciones → ve lista cronológica de donaciones (monto, refugio/campaña, fecha, estado).", "priority": "medium", "status": "backlog", "epic": "PROFILE"},
-    {"title": "Lista de apadrinamientos activos", "description": "Página donde el usuario ve todos sus apadrinamientos activos con animal, monto, frecuencia y estado de suscripción.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /mis-apadrinamientos → ve lista de apadrinamientos (animal, monto, frecuencia, próximo cobro).", "priority": "medium", "status": "backlog", "epic": "PROFILE"},
-    {"title": "Gestión de suscripción de apadrinamiento", "description": "Permite pausar, reanudar o cancelar un apadrinamiento mensual activo.", "configuration": "Solo usuarios autenticados con rol adopter que tienen apadrinamientos mensuales activos.", "flow": "Usuario en /mis-apadrinamientos → click en apadrinamiento → ve opciones de gestión → click Pausar/Reanudar/Cancelar → confirma acción.", "priority": "medium", "status": "backlog", "epic": "CAMPAIGNS"},
-    {"title": "Crear/actualizar intención de adopción", "description": "Perfil de preferencias de adopción donde el usuario publica qué tipo de animal busca, permitiendo que refugios lo descubran.", "configuration": "Solo usuarios autenticados con rol adopter.", "flow": "Usuario navega a /mi-intencion → selecciona preferencias (especie, tamaño, edad) → agrega descripción → elige visibilidad → guarda.", "priority": "medium", "status": "backlog", "epic": "ADOPTER"},
-    {"title": "Explorar intenciones de adopción públicas", "description": "Listado de adoptantes que han publicado sus preferencias de adopción, permitiendo a refugios descubrir posibles adoptantes.", "configuration": "Visible para todos los usuarios autenticados.", "flow": "Usuario navega a /busco-adoptar → ve tarjetas de adoptantes con sus preferencias → puede filtrar por tipo de animal.", "priority": "medium", "status": "backlog", "epic": "ADOPTER"},
-    {"title": "Enviar invitación a adoptante desde refugio", "description": "Permite al administrador de un refugio invitar a un adoptante interesado a conocer los animales del refugio.", "configuration": "Solo usuarios con rol shelter_admin.", "flow": "Shelter admin en /busco-adoptar → ve intención de adoptante → click 'Enviar invitación' → ShelterInvite creado → notificación enviada.", "priority": "medium", "status": "backlog", "epic": "ADOPTER"},
-    {"title": "Gestión de perfil de usuario", "description": "Pantalla donde el usuario puede ver y editar su información personal (nombre, ciudad, avatar).", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario navega a /mi-perfil → ve información actual → edita nombre, ciudad o avatar → click Guardar → datos actualizados.", "priority": "medium", "status": "backlog", "epic": "PROFILE"},
-    {"title": "Preferencias de notificaciones", "description": "Pantalla donde el usuario configura qué notificaciones desea recibir por email y/o en la aplicación.", "configuration": "Todos los usuarios autenticados.", "flow": "Usuario navega a /my-profile/notifications → ve lista de eventos → activa/desactiva canal email e in-app por evento → guarda.", "priority": "low", "status": "backlog", "epic": "PROFILE"},
-    {"title": "Configuración del perfil del refugio", "description": "Pantalla de ajustes donde el administrador del refugio puede actualizar la información de su organización.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/configuracion → edita nombre, descripción, logo, cover, contacto → guarda.", "priority": "medium", "status": "backlog", "epic": "SHELTER_PANEL"},
-    {"title": "Vista de donaciones recibidas por refugio", "description": "Listado de todas las donaciones recibidas por el refugio, con detalle de donante, monto y fecha.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/donaciones → ve tabla de donaciones (monto, donante, fecha, campaña asociada).", "priority": "medium", "status": "backlog", "epic": "SHELTER_PANEL"},
-    {"title": "Publicar post de actualización del refugio", "description": "Permite al refugio publicar actualizaciones sobre animales o campañas para mantener informados a donantes y adoptantes.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/updates → click 'Crear' → completa formulario → publica → post visible públicamente.", "priority": "medium", "status": "backlog", "epic": "SHELTER_PANEL"},
-    {"title": "Editar post de actualización del refugio", "description": "Permite modificar un post de actualización previamente publicado por el refugio.", "configuration": "Solo usuarios con rol shelter_admin del refugio correspondiente.", "flow": "Shelter admin navega a /refugio/updates → click en post existente → edita contenido → guarda.", "priority": "low", "status": "backlog", "epic": "SHELTER_PANEL"},
-    {"title": "Lectura de artículo del blog", "description": "Página de detalle de un post del blog con contenido completo, barra de progreso de lectura, bio del autor y botones de compartir.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario click en post → ve /blog/{slug} → lee contenido completo → barra de progreso indica avance → ve bio del autor → puede compartir.", "priority": "medium", "status": "backlog", "epic": "BLOG"},
-    {"title": "Administración de posts del blog (CRUD)", "description": "Panel de administración del blog para crear, editar, duplicar y gestionar artículos con contenido JSON, categorías, SEO y soporte bilingüe.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/blog → ve lista de posts → click 'Crear' → completa formulario → publica o guarda como borrador.", "priority": "medium", "status": "backlog", "epic": "ADMIN"},
-    {"title": "Calendario editorial del blog", "description": "Vista de calendario mensual que muestra la distribución de publicaciones del blog, con conteo por día y colores por estado.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/blog/calendario → ve calendario mensual → cada día muestra cantidad de posts → click en día para ver/crear.", "priority": "low", "status": "backlog", "epic": "BLOG"},
-    {"title": "Métricas detalladas de la plataforma", "description": "Panel analítico con estadísticas financieras y de adopción: tasa de adopción, totales de donación, ingresos por mes/refugio.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/metricas → ve gráficos y tablas con: tasa de adopción, totales de donaciones, apadrinamientos recurrentes.", "priority": "medium", "status": "backlog", "epic": "ADMIN"},
-    {"title": "Moderación de contenido publicado", "description": "Vista de moderación donde el administrador revisa animales, posts de actualización y posts de blog para detectar contenido inapropiado.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/moderacion → ve contenido publicado → items flaggeados resaltados → puede tomar acción.", "priority": "high", "status": "backlog", "epic": "ADMIN"},
-    {"title": "Auditoría de pagos", "description": "Tabla completa de todos los pagos procesados en la plataforma con fuente, estado y detalles de transacción.", "configuration": "Solo usuarios con rol admin.", "flow": "Admin navega a /admin/pagos → ve tabla con: ID de pago, monto, fuente, refugio, usuario, fecha, estado.", "priority": "high", "status": "backlog", "epic": "ADMIN"},
-    {"title": "Página de preguntas frecuentes (FAQ)", "description": "Página con preguntas frecuentes organizadas por temas en formato acordeón expandible.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a /faq → ve temas organizados → click en pregunta → respuesta se expande en acordeón.", "priority": "low", "status": "backlog", "epic": "LANDING"},
-    {"title": "Páginas institucionales", "description": "Páginas estáticas de Acerca de nosotros, Términos y condiciones, Trabaja con nosotros y Aliados estratégicos.", "configuration": "Visible para todos los usuarios.", "flow": "Usuario navega a la página correspondiente desde el footer → lee contenido informativo.", "priority": "low", "status": "backlog", "epic": "LANDING"},
+VALIDATION_GUIDES = [
+    {'title': 'Registro de usuario con email y contraseña', 'description': "Pantalla de registro donde nuevos usuarios crean una cuenta proporcionando nombre, email y contraseña. Al registrarse, se asigna automáticamente el rol 'adopter'.", 'role': 'Todos los usuarios no autenticados (guests).', 'steps': ['Usuario abre /sign-up', 'completa nombre, email y contraseña', 'el sistema valida campos', 'crea cuenta con rol adopter', 'emite tokens JWT', 'redirige al home'], 'review_status': 'approved', 'draft': False},
+    {'title': 'Inicio de sesión con email y contraseña', 'description': 'Pantalla de autenticación donde usuarios existentes inician sesión con sus credenciales de email y contraseña.', 'role': 'Todos los usuarios no autenticados.', 'steps': ['Usuario abre /sign-in', 'ingresa email y contraseña', 'click en Iniciar sesión', 'el sistema valida credenciales', 'emite tokens JWT', 'redirige al home'], 'review_status': 'objected', 'draft': False},
+    {'title': 'Inicio de sesión con Google OAuth', 'description': 'Autenticación alternativa mediante cuenta de Google. Si el usuario no existe, se crea automáticamente con rol adopter.', 'role': 'Todos los usuarios no autenticados.', 'steps': ['Usuario abre /sign-in', "click en 'Iniciar con Google'", 'flujo OAuth de Google', 'el sistema crea o vincula usuario', 'emite tokens JWT', 'redirige al home'], 'review_status': 'rejected', 'draft': False},
+    {'title': 'Recuperación de contraseña por email', 'description': 'Flujo de restablecimiento de contraseña mediante envío de código de verificación al email registrado del usuario.', 'role': 'Todos los usuarios registrados.', 'steps': ['Usuario abre /forgot-password', 'ingresa email', 'el sistema genera PasswordCode y envía email', 'usuario ingresa código', 'establece nueva contraseña', 'redirige a /sign-in'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Cierre de sesión', 'description': 'Permite al usuario cerrar su sesión activa, eliminando tokens de autenticación del navegador.', 'role': 'Todos los usuarios autenticados.', 'steps': ["Usuario click en 'Cerrar sesión' en menú de usuario", 'tokens eliminados de localStorage', 'redirige a /sign-in'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Persistencia de sesión con refresh de tokens', 'description': 'Renovación automática del token de acceso JWT cuando expira, permitiendo sesiones continuas sin re-autenticación.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Token de acceso expira', 'interceptor Axios detecta 401', 'envía refresh token', 'el sistema emite nuevos tokens', 'la solicitud original se reintenta automáticamente'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Redirección de rutas protegidas', 'description': 'Los usuarios no autenticados que intentan acceder a rutas protegidas son redirigidos automáticamente a la pantalla de inicio de sesión.', 'role': 'Usuarios no autenticados intentando acceder a rutas que requieren autenticación.', 'steps': ['Usuario no autenticado navega a ruta protegida', 'middleware detecta ausencia de token', 'redirige a /sign-in', 'tras login, redirige a la ruta original'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Página de inicio (landing)', 'description': 'Página principal de la plataforma con sección hero, carrusel de animales destacados, carrusel de campañas activas y spotlight de refugios.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario abre /', 've sección hero con CTA principal', 'navega carrusel de animales destacados', 've carrusel de campañas activas', 've spotlight de refugio', 'puede navegar a cualquier sección desde los CTAs'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Navegación principal (header)', 'description': 'Barra de navegación con enlaces a secciones principales, selector de idioma, campana de notificaciones, toggle de tema y menú de usuario.', 'role': 'Visible para todos los usuarios. Menú de usuario y notificaciones solo para autenticados.', 'steps': ['Usuario ve header', 'links visibles: Animales, Refugios, Campañas, Busco Adoptar, Blog', 'click para navegar', 'si autenticado: ve campana de notificaciones y menú de usuario'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Menú móvil responsive', 'description': 'Navegación adaptada para dispositivos móviles con menú hamburguesa que despliega sidebar con todos los enlaces.', 'role': 'Todos los usuarios en dispositivos móviles.', 'steps': ['Usuario en móvil', 'click en ícono hamburguesa', 'sidebar se despliega con todos los enlaces de navegación', 'click en enlace', 'navega y sidebar se cierra'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Catálogo de animales con filtros', 'description': 'Listado paginado de todos los animales disponibles para adopción, con filtros por especie, tamaño, edad y género.', 'role': 'Visible para todos los usuarios (autenticados y guests).', 'steps': ['Usuario navega a /animales', 've grid de tarjetas de animales', 'aplica filtros (perro/gato, pequeño/mediano/grande, cachorro/joven/adulto, macho/hembra)', 'resultados se actualizan en tiempo real'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Detalle de animal con galería', 'description': 'Página de perfil completo del animal mostrando nombre, descripción, historial médico, necesidades especiales, galería de imágenes y CTAs de adopción/apadrinamiento.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario click en tarjeta de animal', 'navega a /animales/{id}', 've información completa', 'puede recorrer galería (Swiper)', 've botones de Adoptar, Apadrinar y Donar'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Directorio de refugios', 'description': 'Listado público de todos los refugios verificados en la plataforma con tarjetas informativas.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a /refugios', 've grid de tarjetas de refugios (nombre, logo, ubicación)', 'click en refugio', 'navega a perfil del refugio'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Perfil público del refugio', 'description': 'Página de detalle del refugio mostrando información completa, galería, animales disponibles y campañas activas.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario click en refugio', 've /refugios/{id}', 've descripción, galería, contacto', 'sección de animales del refugio', 'sección de campañas activas'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Modo oscuro/claro', 'description': 'Toggle de tema visual que permite alternar entre modo oscuro y modo claro en toda la aplicación.', 'role': 'Todos los usuarios.', 'steps': ['Usuario click en toggle de tema en header', 'toda la aplicación cambia a modo oscuro/claro', 'preferencia persistida'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Formulario de solicitud de adopción (wizard)', 'description': 'Formulario de adopción en 3 pasos con 6 preguntas por sección, cubriendo información personal, hogar/estilo de vida, y revisión final antes de enviar.', 'role': 'Solo usuarios autenticados con rol adopter. Requiere seleccionar un animal específico.', 'steps': ['Usuario en detalle de animal', "click 'Adoptar'", 'Paso 1: info personal (6 preguntas)', 'Paso 2: hogar y estilo de vida (6 preguntas)', 'Paso 3: revisión y confirmación', 'envía', "solicitud creada con status 'submitted'"], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Seguimiento de solicitudes de adopción', 'description': 'Pantalla donde el adoptante ve todas sus solicitudes de adopción con su estado actual (enviada, en revisión, entrevista, aprobada, rechazada).', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /mis-solicitudes', 've lista de solicitudes con nombre del animal, fecha y badge de estado', 'puede click en cada una para ver detalles'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Listado de campañas de donación', 'description': 'Página con todas las campañas de recaudación activas y completadas, mostrando progreso de cada una.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a /campanas', 've tarjetas con título, barra de progreso, meta y monto recaudado', 'puede alternar entre pestañas Activas/Completadas'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Detalle de campaña con progreso', 'description': 'Página completa de una campaña mostrando descripción, meta, monto recaudado, porcentaje de progreso y CTA para donar.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario click en campaña', 've /campanas/{id}', 've descripción completa, barra de progreso, porcentaje, galería de evidencia', "click en 'Donar'"], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Checkout de donación', 'description': 'Flujo de pago para realizar una donación a un refugio o campaña específica, con montos preestablecidos y método de pago.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /checkout/donacion', 'selecciona monto', 'elige método de pago (tarjeta/PSE/Nequi)', 'agrega mensaje opcional', 'confirma', 'pago procesado vía Wompi', 'redirige a confirmación'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Integración de pagos con Wompi', 'description': 'Procesamiento de pagos mediante la pasarela colombiana Wompi, soportando tarjeta de crédito, PSE y Nequi como métodos de pago.', 'role': 'Usuarios autenticados que realizan donaciones o apadrinamientos. Requiere configuración de API keys de Wompi.', 'steps': ['Usuario en checkout', 'selecciona método de pago', 'sistema crea payment intent vía Wompi API', 'usuario completa pago en widget', 'webhook de Wompi confirma transacción'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Registro de refugio (onboarding)', 'description': 'Formulario de registro para organizaciones de refugio que desean publicar animales en la plataforma. El refugio queda en estado pendiente de verificación.', 'role': 'Usuarios autenticados con rol shelter_admin.', 'steps': ['Shelter admin navega a /refugio/onboarding', 'completa formulario (nombre, logo, cover, ubicación, descripción, contacto)', 'envía', 'Shelter creado con verification_status=pending'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de animales del refugio (CRUD)', 'description': 'Panel completo para crear, ver, editar y archivar animales del refugio, incluyendo carga de galería de imágenes.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/animales', 've lista paginada con filtros', "click 'Crear'", 'completa formulario con galería drag-drop', 'guarda', 'animal publicado'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Marcar animal como favorito', 'description': 'Permite a usuarios autenticados guardar animales en su lista de favoritos mediante un ícono de corazón.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario autenticado', 'click en ícono de corazón en tarjeta o detalle de animal', 'favorito creado en BD', 'ícono cambia a lleno', 'animal aparece en /favoritos'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Lista de animales favoritos', 'description': 'Página dedicada donde el usuario ve todos los animales que ha marcado como favoritos.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /favoritos', 've grid con todos los animales favoritos', 'puede click en cualquiera para ver detalle', 'puede quitar favorito'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Revisión de solicitudes por refugio', 'description': 'Panel donde el administrador del refugio revisa las solicitudes de adopción recibidas y puede cambiar su estado.', 'role': 'Solo usuarios con rol shelter_admin, limitado a solicitudes de animales de su refugio.', 'steps': ['Shelter admin navega a /refugio/solicitudes', 've lista de solicitudes', 'click en una', 've info del solicitante y respuestas', 'selecciona nuevo estado', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Confirmación de pago', 'description': 'Página de confirmación mostrada después de un pago exitoso, con resumen del recibo.', 'role': 'Solo usuarios autenticados que acaban de completar un pago.', 'steps': ['Usuario completa checkout', 'sistema procesa pago', 'redirige a /checkout/confirmation', 've mensaje de agradecimiento con detalles (monto, destinatario, fecha, referencia)'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Checkout de apadrinamiento', 'description': 'Flujo de pago para apadrinar un animal con opción de frecuencia mensual o única, selección de monto y método de pago.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /checkout/apadrinamiento', 'selecciona animal', 'elige frecuencia', 'selecciona monto', 'elige método de pago', 'confirma', 'Sponsorship y Payment creados'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Dashboard del panel de refugio', 'description': 'Panel de navegación central para administradores de refugio con accesos directos a todas las secciones de gestión.', 'role': 'Solo usuarios con rol shelter_admin.', 'steps': ['Shelter admin navega a /refugio', 've dashboard con enlaces a: animales, solicitudes, campañas, donaciones, updates, configuración'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de campañas del refugio', 'description': 'Panel para crear y administrar campañas de recaudación de fondos del refugio, con seguimiento de progreso.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/campanas', 've campañas activas y completadas', "click 'Crear'", 'completa formulario', 'publica', 've progreso de recaudación'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Dashboard de administración de plataforma', 'description': 'Panel principal del administrador con métricas resumidas: total de usuarios, refugios, animales, solicitudes, donaciones y apadrinamientos.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/dashboard', 've tarjetas resumen con KPIs de la plataforma'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Aprobación y verificación de refugios', 'description': 'Cola de aprobación donde el administrador revisa y aprueba o rechaza refugios que se han registrado en la plataforma.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/refugios/aprobar', 've lista de refugios con status pending', 'click en refugio', 'revisa información', 'click Aprobar o Rechazar'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Cambio de idioma (español/inglés)', 'description': 'Selector de idioma en el header que permite cambiar toda la interfaz entre español e inglés usando next-intl.', 'role': 'Todos los usuarios.', 'steps': ['Usuario click en toggle ES/EN en header', 'toda la página se re-renderiza en el idioma seleccionado', 'preferencia guardada'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Campana de notificaciones con contador', 'description': 'Ícono de campana en el header que muestra la cantidad de notificaciones no leídas y un dropdown con las más recientes.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario ve ícono de campana con badge numérico', 'click', 'se despliega dropdown con 5 notificaciones recientes', 'puede marcar todas como leídas'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Listado de posts del blog (público)', 'description': 'Página pública del blog con listado de artículos publicados, imagen destacada, título, extracto y fecha.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a /blog', 've lista de posts publicados con imagen, título, extracto, autor y fecha', 'puede filtrar por categoría', 'click en post para leer'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Historial de donaciones del usuario', 'description': 'Página donde el usuario ve todas las donaciones que ha realizado, con monto, destinatario y fecha.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /mis-donaciones', 've lista cronológica de donaciones (monto, refugio/campaña, fecha, estado)'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Lista de apadrinamientos activos', 'description': 'Página donde el usuario ve todos sus apadrinamientos activos con animal, monto, frecuencia y estado de suscripción.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /mis-apadrinamientos', 've lista de apadrinamientos (animal, monto, frecuencia, próximo cobro)'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de suscripción de apadrinamiento', 'description': 'Permite pausar, reanudar o cancelar un apadrinamiento mensual activo.', 'role': 'Solo usuarios autenticados con rol adopter que tienen apadrinamientos mensuales activos.', 'steps': ['Usuario en /mis-apadrinamientos', 'click en apadrinamiento', 've opciones de gestión', 'click Pausar/Reanudar/Cancelar', 'confirma acción'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Crear/actualizar intención de adopción', 'description': 'Perfil de preferencias de adopción donde el usuario publica qué tipo de animal busca, permitiendo que refugios lo descubran.', 'role': 'Solo usuarios autenticados con rol adopter.', 'steps': ['Usuario navega a /mi-intencion', 'selecciona preferencias (especie, tamaño, edad)', 'agrega descripción', 'elige visibilidad', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Explorar intenciones de adopción públicas', 'description': 'Listado de adoptantes que han publicado sus preferencias de adopción, permitiendo a refugios descubrir posibles adoptantes.', 'role': 'Visible para todos los usuarios autenticados.', 'steps': ['Usuario navega a /busco-adoptar', 've tarjetas de adoptantes con sus preferencias', 'puede filtrar por tipo de animal'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Enviar invitación a adoptante desde refugio', 'description': 'Permite al administrador de un refugio invitar a un adoptante interesado a conocer los animales del refugio.', 'role': 'Solo usuarios con rol shelter_admin.', 'steps': ['Shelter admin en /busco-adoptar', 've intención de adoptante', "click 'Enviar invitación'", 'ShelterInvite creado', 'notificación enviada'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Gestión de perfil de usuario', 'description': 'Pantalla donde el usuario puede ver y editar su información personal (nombre, ciudad, avatar).', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario navega a /mi-perfil', 've información actual', 'edita nombre, ciudad o avatar', 'click Guardar', 'datos actualizados'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Preferencias de notificaciones', 'description': 'Pantalla donde el usuario configura qué notificaciones desea recibir por email y/o en la aplicación.', 'role': 'Todos los usuarios autenticados.', 'steps': ['Usuario navega a /my-profile/notifications', 've lista de eventos', 'activa/desactiva canal email e in-app por evento', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Configuración del perfil del refugio', 'description': 'Pantalla de ajustes donde el administrador del refugio puede actualizar la información de su organización.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/configuracion', 'edita nombre, descripción, logo, cover, contacto', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Vista de donaciones recibidas por refugio', 'description': 'Listado de todas las donaciones recibidas por el refugio, con detalle de donante, monto y fecha.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/donaciones', 've tabla de donaciones (monto, donante, fecha, campaña asociada)'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Publicar post de actualización del refugio', 'description': 'Permite al refugio publicar actualizaciones sobre animales o campañas para mantener informados a donantes y adoptantes.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/updates', "click 'Crear'", 'completa formulario', 'publica', 'post visible públicamente'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Editar post de actualización del refugio', 'description': 'Permite modificar un post de actualización previamente publicado por el refugio.', 'role': 'Solo usuarios con rol shelter_admin del refugio correspondiente.', 'steps': ['Shelter admin navega a /refugio/updates', 'click en post existente', 'edita contenido', 'guarda'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Lectura de artículo del blog', 'description': 'Página de detalle de un post del blog con contenido completo, barra de progreso de lectura, bio del autor y botones de compartir.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario click en post', 've /blog/{slug}', 'lee contenido completo', 'barra de progreso indica avance', 've bio del autor', 'puede compartir'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Administración de posts del blog (CRUD)', 'description': 'Panel de administración del blog para crear, editar, duplicar y gestionar artículos con contenido JSON, categorías, SEO y soporte bilingüe.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/blog', 've lista de posts', "click 'Crear'", 'completa formulario', 'publica o guarda como borrador'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Calendario editorial del blog', 'description': 'Vista de calendario mensual que muestra la distribución de publicaciones del blog, con conteo por día y colores por estado.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/blog/calendario', 've calendario mensual', 'cada día muestra cantidad de posts', 'click en día para ver/crear'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Métricas detalladas de la plataforma', 'description': 'Panel analítico con estadísticas financieras y de adopción: tasa de adopción, totales de donación, ingresos por mes/refugio.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/metricas', 've gráficos y tablas con: tasa de adopción, totales de donaciones, apadrinamientos recurrentes'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Moderación de contenido publicado', 'description': 'Vista de moderación donde el administrador revisa animales, posts de actualización y posts de blog para detectar contenido inapropiado.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/moderacion', 've contenido publicado', 'items flaggeados resaltados', 'puede tomar acción'], 'review_status': 'in_review', 'draft': False},
+    {'title': 'Auditoría de pagos', 'description': 'Tabla completa de todos los pagos procesados en la plataforma con fuente, estado y detalles de transacción.', 'role': 'Solo usuarios con rol admin.', 'steps': ['Admin navega a /admin/pagos', 've tabla con: ID de pago, monto, fuente, refugio, usuario, fecha, estado'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Página de preguntas frecuentes (FAQ)', 'description': 'Página con preguntas frecuentes organizadas por temas en formato acordeón expandible.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a /faq', 've temas organizados', 'click en pregunta', 'respuesta se expande en acordeón'], 'review_status': 'in_review', 'draft': True},
+    {'title': 'Páginas institucionales', 'description': 'Páginas estáticas de Acerca de nosotros, Términos y condiciones, Trabaja con nosotros y Aliados estratégicos.', 'role': 'Visible para todos los usuarios.', 'steps': ['Usuario navega a la página correspondiente desde el footer', 'lee contenido informativo'], 'review_status': 'in_review', 'draft': True},
 ]
 # fmt: on
 
@@ -134,8 +128,11 @@ class Command(BaseCommand):
             action='store_true',
             help='Remove existing Laura Blanco seed data first.',
         )
+        add_seed_arguments(parser)
 
     def handle(self, *args, **options):
+        ensure_fake_data_allowed('seed_mihuella')
+        self.seed_context = seed_context(options, 'mihuella')
         if options['flush']:
             self._flush()
 
@@ -149,21 +146,16 @@ class Command(BaseCommand):
         self._create_bug_reports(project, client, admin)
         self._create_subscription(project)
 
-        # Compute progress from statuses
-        req_qs = Requirement.objects.filter(phase__project=project)
-        total = req_qs.count()
-        done = req_qs.filter(status=Requirement.STATUS_DONE).count()
-        project.progress = round((done / total) * 100) if total else 0
-        project.save(update_fields=['progress'])
+        req_qs = Requirement.objects.filter(stage__phase__scope__contract__project=project)
 
         self.stdout.write('')
         self.stdout.write(self.style.SUCCESS('Mi Huella seed data created:'))
-        self.stdout.write(f'  Client  → {CLIENT_EMAIL} / {CLIENT_PASSWORD}')
+        self.stdout.write(f'  Client  → {CLIENT_EMAIL} / password supplied through environment or disabled')
         self.stdout.write(f'  Proposal → Mi Huella (accepted, all sections)')
         self.stdout.write(f'  Project → {PROJECT_NAME}')
 
-        for status, label in Requirement.STATUS_CHOICES:
-            count = req_qs.filter(status=status).count()
+        for status, label in Requirement.ReviewStatus.choices:
+            count = req_qs.filter(review_status=status).count()
             self.stdout.write(f'    {label:<15} {count}')
 
         self.stdout.write(f'  Progress         → {project.progress}%')
@@ -182,6 +174,7 @@ class Command(BaseCommand):
     def _flush(self):
         user = User.objects.filter(email=CLIENT_EMAIL).first()
         if user:
+            clear_fake_delivery(Project.objects.filter(client=user))
             # Delete payments → subscriptions → projects (ProtectedFKs)
             for project in Project.objects.filter(client=user):
                 for sub in HostingSubscription.objects.filter(project=project):
@@ -226,7 +219,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Proposal already exists for {CLIENT_EMAIL}')
             return
 
-        now = timezone.now()
+        now = self.seed_context.anchor_now
 
         proposal = BusinessProposal.objects.create(
             title='Propuesta Mi Huella — Plataforma de Adopción Animal',
@@ -648,7 +641,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Project already exists: {PROJECT_NAME}')
             return existing
 
-        today = date.today()
+        today = self.seed_context.anchor_date
         project = Project.objects.create(
             name=PROJECT_NAME,
             description=(
@@ -668,34 +661,7 @@ class Command(BaseCommand):
         return project
 
     def _create_requirements(self, project):
-        if Requirement.objects.filter(phase__project=project).exists():
-            self.stdout.write(f'  Requirements already exist for {project.name}')
-            return
-
-        phase = ensure_phase(project)
-
-        order_counters = {}
-        objs = []
-        for req_data in REQUIREMENTS:
-            status = req_data['status']
-            order_counters.setdefault(status, 0)
-            epic_key = req_data.get('epic', '')
-            objs.append(Requirement(
-                phase=phase,
-                title=req_data['title'],
-                description=req_data.get('description', ''),
-                configuration=req_data.get('configuration', ''),
-                flow=req_data.get('flow', ''),
-                status=status,
-                priority=req_data.get('priority', 'medium'),
-                order=order_counters[status],
-                source_epic_key=epic_key,
-                source_epic_title=EPICS.get(epic_key, ''),
-            ))
-            order_counters[status] += 1
-
-        Requirement.objects.bulk_create(objs)
-        self.stdout.write(self.style.SUCCESS(f'  Created {len(objs)} requirements across {len(EPICS)} epics'))
+        seed_validation_guides(project, VALIDATION_GUIDES, anchor_now=self.seed_context.anchor_now)
 
     def _create_change_requests(self, project, client, admin):
         if ChangeRequest.objects.filter(project=project).exists():
@@ -792,7 +758,6 @@ class Command(BaseCommand):
             self.stdout.write(f'  Bug reports already exist for {project.name}')
             return
 
-        phase = ensure_phase(project)
 
         bugs = [
             {
@@ -962,7 +927,6 @@ class Command(BaseCommand):
         for bug_data in bugs:
             bug = BugReport.objects.create(
                 project=project,
-                phase=phase,
                 reported_by=client,
                 title=bug_data['title'],
                 description=bug_data['description'],
@@ -1085,7 +1049,7 @@ class Command(BaseCommand):
             self.stdout.write(f'  Subscription already exists for {project.name}')
             return
 
-        today = date.today()
+        today = self.seed_context.anchor_date
 
         sub = HostingSubscription.objects.create(
             project=project,
@@ -1108,7 +1072,7 @@ class Command(BaseCommand):
             billing_period_end=today + timedelta(days=44),
             due_date=today - timedelta(days=45),
             status=Payment.STATUS_PAID,
-            paid_at=timezone.now() - timedelta(days=43),
+            paid_at=self.seed_context.anchor_now - timedelta(days=43),
         )
 
         # Next quarter — pending

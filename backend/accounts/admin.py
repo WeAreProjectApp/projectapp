@@ -6,9 +6,6 @@ from .models import (
     UserProfile,
     VerificationCode,
     Project,
-    Requirement,
-    RequirementComment,
-    RequirementHistory,
     ChangeRequest,
     ChangeRequestComment,
     BugReport,
@@ -57,9 +54,6 @@ class ProjectAdmin(admin.ModelAdmin):
 admin_site.register(UserProfile)
 admin_site.register(VerificationCode)
 admin_site.register(Project, ProjectAdmin)
-admin_site.register(Requirement)
-admin_site.register(RequirementComment)
-admin_site.register(RequirementHistory)
 admin_site.register(ChangeRequest)
 admin_site.register(ChangeRequestComment)
 admin_site.register(BugReport)

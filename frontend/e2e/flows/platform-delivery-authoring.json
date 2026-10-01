@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-authoring",
+  "name": "Platform Delivery Authoring",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "Prepare contracts, scopes, independent execution phases, stages and validation requirements; publish a stage only with complete guides and signed applicable agreements.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error", "failure"]
+}

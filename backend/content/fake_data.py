@@ -121,6 +121,8 @@ SEEDED_MODELS = {
     'accounts.Notification', 'accounts.Payment', 'accounts.Project',
     'accounts.ProjectAccessNote', 'accounts.ProjectAdminAccess',
     'accounts.ProjectDataModelEntity', 'accounts.Requirement',
+    'accounts.ProjectContract', 'accounts.ContractAmendment',
+    'accounts.DeliveryScope', 'accounts.DeliveryPhase', 'accounts.DeliveryStage',
     'accounts.SavedFilterTab', 'accounts.UserProfile',
     'content.AdsSpendRecord', 'content.BlogPost', 'content.BusinessProposal',
     'content.AdditionalModuleShareLink',
@@ -149,8 +151,12 @@ DERIVED_MODELS = {
     'accounts.DeliverableClientFolder', 'accounts.DeliverableClientUpload',
     'accounts.DeliverableFile', 'accounts.DeliverableVersion',
     'accounts.PaymentHistory', 'accounts.ProjectPhase',
-    'accounts.ProjectScopeItem', 'accounts.RequirementComment',
-    'accounts.RequirementHistory', 'content.AccountingChangeLog',
+    'accounts.DeliveryWorkspace', 'accounts.DeliveryPublication',
+    'accounts.ContractSignatureEvidence', 'accounts.RequirementReview',
+    'accounts.DeliveryReviewDocumentEvidence',
+    'accounts.DeliveryDocumentLink', 'accounts.DeliveryDocumentSnapshot',
+    'accounts.DeliveryMessage',
+    'content.AccountingChangeLog',
     'content.ClientDocumentNumberSequence', 'content.CommunicationAttachment',
     'content.CommunicationMessageDateCorrection',
     'content.CommunicationMessageRevision',
@@ -192,6 +198,8 @@ EXEMPT_MODELS = {
     'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
     # credentials must never be fabricated as reusable demo secrets.
+    # Runtime replay receipts are produced by real administrative actions.
+    'accounts.DeliveryOperation',
     'accounts.VerificationCode', 'content.LinkedInToken',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.McpActionIntent', 'content.McpCredential', 'content.McpUpload',

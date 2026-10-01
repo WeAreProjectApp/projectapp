@@ -3,7 +3,7 @@
 All "invalid project_id" tests trigger _get_project_or_403 error path (return err).
 
 Covers:
-- deliverable_sync_technical_requirements_view: invalid project (line 758)
+- deliverable_sync_technical_resources_view: invalid project (line 758)
 - requirement_bulk_upload_view: invalid project (line 956)
 - requirement_detail_view: invalid project (line 1021), deliverable_id mismatch (1031), not visible (1034)
 - requirement_move_view: DoesNotExist (1096-1097), deliverable_id mismatch (1100), not visible (1103)
@@ -130,63 +130,13 @@ def bug_report(project, client_user):
 
 
 # ===========================================================================
-# deliverable_sync_technical_requirements_view — invalid project (line 758)
+# deliverable_sync_technical_resources_view — invalid project (line 758)
 # ===========================================================================
 
 class TestSyncTechnicalRequirementsInvalidProject:
     def test_invalid_project_returns_404(self, api_client, admin_headers):
-        url = '/api/accounts/projects/99999/deliverables/1/sync-technical-requirements/'
+        url = '/api/accounts/projects/99999/deliverables/1/sync-technical-resources/'
         resp = api_client.post(url, **admin_headers)
-
-        assert resp.status_code == 404
-
-
-# ===========================================================================
-# requirement_bulk_upload_view — invalid project (line 956)
-# ===========================================================================
-
-class TestRequirementBulkUploadInvalidProject:
-    def test_invalid_project_returns_404(self, api_client, admin_headers):
-        url = '/api/accounts/projects/99999/requirements/bulk/'
-        resp = api_client.post(url, [], format='json', **admin_headers)
-
-        assert resp.status_code == 404
-
-
-# ===========================================================================
-# requirement_detail_view — invalid project + archived not visible
-# ===========================================================================
-
-class TestRequirementDetailGaps:
-    def test_invalid_project_returns_404(self, api_client, client_headers):
-        """_get_project_or_403 returns error for non-existent project."""
-        url = '/api/accounts/projects/99999/requirements/1/'
-        resp = api_client.get(url, **client_headers)
-
-        assert resp.status_code == 404
-
-    def test_archived_requirement_not_visible_to_client(self, api_client, client_headers, project):
-        """Archived requirement returns 404 for client (not visible)."""
-        from accounts.models import ProjectPhase, Requirement
-        from content.models.business_proposal import BusinessProposal
-        bp = BusinessProposal.objects.create(title='Gap', client_name='c')
-        phase = ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
-        req = Requirement.objects.create(phase=phase, title='Archived Req', is_archived=True)
-
-        url = f'/api/accounts/projects/{project.id}/requirements/{req.id}/'
-        resp = api_client.get(url, **client_headers)
-
-        assert resp.status_code == 404
-
-
-# ===========================================================================
-# requirement_comment_view — invalid project
-# ===========================================================================
-
-class TestRequirementCommentInvalidProject:
-    def test_invalid_project_returns_404(self, api_client, client_headers):
-        url = '/api/accounts/projects/99999/requirements/1/comments/'
-        resp = api_client.post(url, {'text': 'hi'}, format='json', **client_headers)
 
         assert resp.status_code == 404
 
@@ -488,17 +438,3 @@ class TestExtractProposalFallbackTiers:
         assert 'nine_month' in tier_frequencies
         assert 'quarterly' in tier_frequencies
         assert 'semiannual' in tier_frequencies
-
-
-# ===========================================================================
-# _pick_default_deliverable_for_requirements — first deliverable (line 825)
-# ===========================================================================
-
-class TestPickDefaultDeliverableFirstDeliverable:
-    def test_returns_first_non_archived_deliverable_when_no_bp(self, project, deliverable):
-        """When no deliverable has a business_proposal, the first non-archived one is returned."""
-        from accounts.views import _pick_default_deliverable_for_requirements
-
-        result = _pick_default_deliverable_for_requirements(project)
-
-        assert result.id == deliverable.id

@@ -423,6 +423,53 @@ jobs:
           path: frontend/test-results/
           retention-days: 7
 
+  # Delivery decisions run against real JWT APIs and a disposable test database.
+  frontend-delivery-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+      - name: Install backend system dependencies
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq pkg-config default-libmysqlclient-dev
+      - name: Install backend dependencies
+        run: pip install -r backend/requirements.txt
+      - name: Install frontend dependencies
+        run: npm --prefix frontend ci
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      - name: Install Chromium
+        working-directory: frontend
+        run: npx playwright install --with-deps chromium
+      - name: Exercise contractual delivery with real admin and client APIs
+        working-directory: frontend
+        run: npm run e2e:delivery -- --reporter=blob
+        env:
+          CI: 'true'
+      - name: Upload delivery blob report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-blob-delivery
+          path: frontend/blob-report/
+          retention-days: 1
+      - name: Upload delivery failure traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-traces-delivery
+          path: frontend/test-results/
+          retention-days: 7
+
   # Worker registration and offline navigation require the real Django build.
   frontend-pwa-tests:
     runs-on: ubuntu-latest
@@ -478,7 +525,7 @@ jobs:
   # ───────────────────────────────────────────
   e2e-merge-reports:
     if: always()
-    needs: [frontend-e2e-tests, frontend-pwa-tests, login-captcha-tests]
+    needs: [frontend-e2e-tests, frontend-pwa-tests, login-captcha-tests, frontend-delivery-tests]
     runs-on: ubuntu-latest
     defaults:
       run:

@@ -661,6 +661,115 @@ PROJECT_CONTRACTS = (
 )
 
 
+DELIVERY_CONTRACTS = (
+    _contract(
+        'accounts.DeliveryWorkspace',
+        read_only='project version',
+        excluded=_excluded(
+            'Clave interna del espacio: el cliente MCP usa project_id y la '
+            'versión compartida, nunca el identificador de esta fila.',
+            'id',
+        ),
+    ),
+    _contract(
+        'accounts.ProjectContract',
+        read_only='id project version created_at updated_at',
+        read_write='key title document proposal_document client_visible',
+    ),
+    _contract(
+        'accounts.ContractAmendment',
+        read_only='id version created_at updated_at',
+        read_write='key title contract document proposal_document client_visible',
+    ),
+    _contract(
+        'accounts.DeliveryScope',
+        read_only='id version created_at updated_at',
+        read_write='key title contract amendment description is_current',
+    ),
+    _contract(
+        'accounts.DeliveryPhase',
+        read_only='id version created_at updated_at',
+        read_write='key title scope commercial_phase description order',
+    ),
+    _contract(
+        'accounts.DeliveryStage',
+        read_only='id version editorial_status created_at updated_at',
+        read_write='key title phase description order',
+    ),
+    _contract(
+        'accounts.Requirement',
+        read_only='id version review_status created_at updated_at',
+        read_write='key title stage description guide order',
+    ),
+    _contract(
+        'accounts.DeliveryPublication',
+        read_only='id stage round payload published_by created_at',
+    ),
+    _contract(
+        'accounts.DeliveryDocumentLink',
+        read_only='id project created_by created_at',
+        read_write='document level contract amendment scope phase stage requirement',
+    ),
+    _contract(
+        'accounts.DeliveryDocumentSnapshot',
+        read_only='id publication link title sha256 created_at',
+        excluded=_excluded(
+            'Ruta privada del PDF congelado; la descarga autorizada entrega un '
+            'artefacto temporal ligado a la credencial, nunca la ruta.',
+            'file',
+        ),
+    ),
+    _contract(
+        'accounts.ContractSignatureEvidence',
+        read_only='id sha256 method source_sha256 attested_by created_at',
+        read_write='contract amendment signer_name signed_at attestation',
+        excluded=(_excluded(
+            'PDF firmado en almacenamiento privado. La constancia consume un '
+            'asset PDF validado y la descarga autorizada nunca expone la ruta.',
+            'file',
+        ) | _excluded(
+            'Instantánea interna de la firma portal con datos de red y '
+            'verificación. MCP solo expone método, actor, fecha y huellas; la '
+            'copia contractual exacta se descarga por el servicio autorizado.',
+            'source_snapshot',
+        )),
+    ),
+    _contract(
+        'accounts.RequirementReview',
+        read_only=(
+            'id publication requirement actor requirement_version '
+            'content_snapshot decision message environment is_external '
+            'client_statement original_reviewer reviewed_at source_message '
+            'source_snapshot evidence_document_ids created_at'
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryReviewDocumentEvidence',
+        read_only='id review document title sha256 created_at',
+        excluded=_excluded(
+            'Copia privada e inmutable del documento que respalda la conformidad. '
+            'La descarga autorizada entrega un artefacto temporal mediante '
+            'review_id y evidence_id, nunca su ruta de almacenamiento.',
+            'file',
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryMessage',
+        read_only='id project actor created_at',
+        read_write='level target_id requirements documents message is_internal',
+    ),
+    _contract(
+        'accounts.DeliveryOperation',
+        excluded=_excluded(
+            'Recibo interno de idempotencia: la operación acepta request_id y '
+            'devuelve su resultado, pero no expone ni permite editar el registro '
+            'de control, su huella o respuestas históricas internas.',
+            'id project request_id actor fingerprint response created_at',
+        ),
+    ),
+)
+
+
 COMMERCIAL_CATALOG_CONTRACTS = (
     _contract(
         'content.AdditionalModuleCategory',
@@ -884,7 +993,7 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
     ),
-    'projects': PROJECT_CONTRACTS,
+    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS,
     'content': (
         MCP_MODEL_CONTRACTS['blog']
         + MCP_MODEL_CONTRACTS['linkedin-personal']

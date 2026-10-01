@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-import",
+  "name": "Platform Delivery JSON Import",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "Copy the authoring prompt, preview a strict versioned JSON hierarchy, then apply drafts atomically. Reject malformed JSON, imported approvals and edits to already published content.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error", "failure"]
+}

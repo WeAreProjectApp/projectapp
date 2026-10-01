@@ -1,0 +1,308 @@
+# Alcance y entregas en Platform
+
+Implementación del primer alcance de seguimiento contractual, preparada el
+2026-10-01. La integración y el despliegue se consultan en el PR de la sesión;
+este documento describe el comportamiento del código, sin declarar un despliegue.
+
+En **Proyectos → Entregas**, el equipo prepara las instrucciones que el cliente
+usará para comprobar una entrega. La ruta es
+`/platform/projects/<id>/delivery`. El panel conserva la ficha comercial,
+propuestas y documentos; Platform concentra la preparación y la revisión de
+las entregas. La aprobación del cliente queda asociada al contenido que probó.
+
+## Qué se organiza
+
+```mermaid
+flowchart TD
+    P[Proyecto] --> C[Contrato original]
+    C --> A[Otrosí, cuando aplica]
+    C --> S[Alcance]
+    A -. modifica .-> S
+    S --> F[Fases de ejecución]
+    F --> E[Etapas]
+    E --> R[Requerimientos con guía de validación]
+    R --> V[Publicación y resultados del cliente]
+```
+
+| Nivel | Qué representa |
+| --- | --- |
+| Contrato | La base contractual, con un documento existente o un PDF de propuesta como fuente. |
+| Otrosí | Una modificación del mismo contrato, con su propia fuente y firma. |
+| Alcance | Lo acordado bajo ese contrato y, cuando corresponde, su otrosí. Se conserva el alcance anterior y se identifica el vigente por contrato. |
+| Fase | Un conjunto de etapas de ejecución comprensible para el cliente. |
+| Etapa | El conjunto de requerimientos que se publica para una revisión. |
+| Requerimiento | Una acción o resultado que el cliente puede probar mediante instrucciones sencillas. |
+
+Las fases comerciales existentes (`ProjectPhase`) continúan sustentando las
+propuestas y el hosting. Una fase de entrega puede referenciarlas mediante
+`commercial_phase_id`; esa referencia no altera cobros, suscripciones ni
+activaciones. Las guías se redactan por separado del detalle técnico y comercial.
+
+## Preparar, publicar y revisar
+
+1. El administrador registra el contrato y los otrosí aplicables, selecciona
+   una sola fuente documental para cada uno y habilita su consulta al cliente.
+2. Redacta el alcance, sus fases, etapas y requerimientos mediante formularios
+   o mediante el prompt y la importación JSON. Este contenido queda en borrador.
+3. Revisa las guías y los documentos asociados. **Publicar para revisión** hace
+   visible la etapa y crea una copia de la versión entregada. El contrato y el
+   otrosí aplicable deben estar firmados antes de publicar.
+4. El cliente abre la etapa, prueba los requerimientos y registra resultados
+   sólo para los que comprobó. Puede **aprobar**, **objetar** o **rechazar** cada
+   uno; los demás continúan en revisión. Objetar o rechazar exige explicar el motivo.
+5. El equipo consulta los resultados y las respuestas, corrige lo pendiente y
+   publica otra ronda cuando el cliente pueda volver a probarlo.
+
+La revisión editorial y la conformidad tienen estados distintos:
+
+| Aspecto | Estados y efecto |
+| --- | --- |
+| Preparación de la etapa | `draft`: borrador interno; `published`: versión publicada para el cliente. |
+| Requerimiento | `pending`: preparado internamente; `in_review`: disponible para probar; `approved`, `objected` o `rejected`: resultado registrado. |
+| Etapa y fase | El resumen se deriva de sus requerimientos y etapas. La etapa queda aprobada cuando todos sus requerimientos están aprobados; la fase, cuando todas sus etapas lo están. |
+
+Guardar una redacción interna no acredita conformidad del cliente. El JSON no
+puede importar estados de revisión, publicaciones, firmas ni aprobaciones.
+El administrador tampoco puede usar la revisión ordinaria para responder como
+si fuera el cliente. Una sesión de acceso delegado (`impersonated_by`) puede
+consultar el portal, pero no firmar documentos ni registrar resultados como
+cliente; esas decisiones requieren iniciar sesión con la cuenta propia.
+
+### Conformidad parcial y segunda ronda
+
+Si el cliente aprueba dos de tres requerimientos, esas dos conformidades se
+conservan. El equipo puede corregir el tercero mientras el cliente sigue
+consultando la última versión publicada. Hasta su nueva publicación, la versión
+modificada no se puede revisar como si fuera la anterior.
+
+Publicar otra ronda vuelve a poner los requerimientos sin aprobar en revisión.
+Los aprobados conservan su contenido, versión y conformidad. La respuesta
+anterior mantiene el autor, la fecha, el ambiente, la decisión y el contenido
+exacto revisado. Una objeción o rechazo necesita una nueva publicación antes de
+otro resultado para ese requerimiento.
+
+La guía aprobada y las etapas o fases completamente aprobadas quedan congeladas.
+Una ampliación se prepara en otra etapa o fase editable, respaldada por el
+alcance y los otrosí que correspondan. No se reescribe lo que el cliente aprobó.
+
+## Cómo redactar una guía
+
+El cliente debe poder ejecutar la prueba sin interpretar archivos, bases de
+datos o detalles de programación. Cada guía tiene estos campos:
+
+| Campo | Pregunta que debe responder |
+| --- | --- |
+| `role` | ¿Quién debe hacer la prueba y con qué tipo de cuenta? |
+| `environment` | ¿Dónde se hace la prueba? |
+| `preparation` | ¿Qué debe estar listo antes de empezar? |
+| `data` | ¿Qué datos o registros se necesitan? Si no hacen falta, decirlo. |
+| `steps` | ¿Qué acciones se hacen, en orden? Una acción concreta por paso. |
+| `expected_result` | ¿Qué resultado visible confirma que funcionó? |
+| `failure_signals` | ¿Qué permite reconocer un fallo y describirlo al equipo? |
+
+Para publicar se exigen quién prueba, ambiente, pasos, resultado esperado y
+señales de fallo. La preparación y los datos también deben explicarse cuando
+la prueba los necesita. Evitar instrucciones como «validar el módulo»; indicar,
+por ejemplo, qué registro crear, dónde buscarlo y qué debe aparecer.
+
+## Firmas y conformidades anteriores
+
+**Firma en Platform.** El cliente propietario puede leer y aceptar el documento
+habilitado para firma desde Entregas o Mis documentos, con las reglas existentes
+de identidad y correo validado. Se conserva el nombre, la fecha, el contenido
+de origen y una copia privada del PDF firmado.
+
+**Firma externa.** El administrador adjunta el PDF firmado al contrato u otrosí,
+indica firmante y fecha y explica cómo constató la identidad y la firma. El
+servidor exige un PDF legible, sin contraseña, de hasta 10 MiB y 500 páginas;
+conserva el archivo y su huella. Esa constatación administrativa se identifica
+como externa y queda congelada. No se acepta una fecha futura.
+
+**Conformidad histórica del cliente.** El administrador publica primero la
+guía que representa lo validado y usa **Registrar conformidad externa** para
+requerimientos concretos. Sólo admite aprobaciones expresas y distingue la
+fecha de conformidad de la fecha y el administrador que la registraron.
+La evidencia puede provenir de:
+
+- Una comunicación **entrante**, recibida y no anulada del cliente del
+  proyecto, o de su hilo general. El texto transcrito debe citar el contenido
+  recibido; se conservan la fuente, el contenido y su huella, el autor y la fecha.
+- Un documento con esa conformidad, acompañado del nombre del cliente que
+  aprobó, la fecha, el canal y una referencia de origen. Se exige adjuntar la
+  evidencia y confirmar que contiene la declaración del cliente.
+
+Una constancia o reporte saliente del equipo no acredita aceptación del cliente.
+El registro histórico tampoco permite importar aprobaciones a través del JSON
+de redacción. El MCP administrativo utiliza las mismas reglas y actúa como el
+administrador; las decisiones ordinarias pertenecen al cliente autenticado.
+
+Los documentos presentados como respaldo de una conformidad histórica se
+copian a un PDF privado exacto para esa revisión. `DeliveryReviewDocumentEvidence`
+conserva título, archivo y huella; el respaldo queda separado de los documentos
+de la guía. El historial muestra esos archivos y su descarga autenticada por
+JWT conserva lo registrado aunque cambie el documento de origen.
+
+## Documentos y respuestas
+
+Se pueden asociar documentos existentes a proyecto, contrato, otrosí, alcance,
+fase, etapa o requerimiento. El catálogo comprueba su pertenencia al proyecto
+o cliente; las cuentas de cobro mantienen su superficie financiera.
+
+Los contratos habilitados pueden leerse y firmarse antes de publicar una etapa.
+Los documentos de alcance, fase, etapa y requerimiento requieren publicación:
+una marca antigua de visibilidad en Documentos no permite abrir un borrador.
+Al publicar se guardan copias privadas de los PDF relacionados, incluidos los
+documentos de niveles superiores que aplican a esa etapa. Las descargas del
+cliente usan esas copias; los anexos de un requerimiento aprobado conservan
+la copia de la ronda en que fue aprobado.
+
+Las respuestas pueden referirse a un nivel concreto y a uno o varios
+requerimientos de ese nivel, con documentos asociados. Un reporte del equipo
+comunica qué se atendió; la decisión del cliente se registra por separado.
+Las notas internas sólo las ve el equipo. Una respuesta pública no puede
+exponer requerimientos en borrador, y las asociaciones documentales ya
+publicadas se conservan como evidencia.
+
+## Prompt e importación JSON
+
+**Copiar prompt** devuelve el contexto del proyecto, contratos y modificaciones,
+alcances actuales, instrucciones de lenguaje sencillo, plantilla y esquema.
+El administrador lo utiliza con su herramienta de redacción o IA y pega el
+JSON resultante en **Importar JSON**. Platform valida el resultado; no genera
+automáticamente las guías al copiar el prompt.
+
+Primero se debe **Previsualizar** y revisar el resumen. **Aplicar borradores**
+guarda la jerarquía de forma atómica. Si cambia el JSON, se requiere otra
+previsualización. La importación identifica cada elemento por su `key` dentro
+del padre: puede crear o actualizar borradores nunca publicados y no elimina
+elementos omitidos. Puede incluir ancestros publicados si sus campos enviados
+son idénticos, para agregar descendientes nuevos en borrador sin reescribir
+el contexto. Rechaza cambiar contenido publicado y agregar requerimientos a
+una etapa aprobada o etapas a una fase aprobada. Para corregir una guía ya
+publicada que sigue pendiente de conformidad se usan sus formularios y una
+nueva ronda.
+
+Este ejemplo cumple la estructura `schema_version: 1`. Los IDs `101` y `202`
+son ilustrativos: antes de usarlo deben sustituirse por el contrato existente
+del proyecto y un otrosí que pertenezca a ese contrato. Si no aplica otrosí,
+usar `amendment_id: null`. Los IDs de fases, etapas y requerimientos se resuelven
+por la jerarquía y sus claves, no se incluyen en el JSON.
+
+```json
+{
+  "schema_version": 1,
+  "scopes": [
+    {
+      "key": "alcance-operacion-inicial",
+      "title": "Registro y consulta de solicitudes",
+      "description": "El cliente puede registrar una solicitud y consultar su información.",
+      "contract_id": 101,
+      "amendment_id": 202,
+      "is_current": true,
+      "phases": [
+        {
+          "key": "fase-solicitudes",
+          "title": "Fase 1: solicitudes",
+          "order": 0,
+          "stages": [
+            {
+              "key": "etapa-registro",
+              "title": "Etapa 1: registrar una solicitud",
+              "order": 0,
+              "requirements": [
+                {
+                  "key": "crear-solicitud",
+                  "title": "Registrar una solicitud con sus datos",
+                  "description": "La solicitud queda disponible para consultarla después.",
+                  "order": 0,
+                  "guide": {
+                    "role": "Persona encargada de registrar solicitudes, con cuenta de prueba.",
+                    "environment": "Sitio de pruebas indicado por el equipo.",
+                    "preparation": "Iniciar sesión con la cuenta de prueba y abrir Solicitudes.",
+                    "data": "Usar el nombre Prueba de registro y la descripción Solicitud ficticia.",
+                    "steps": [
+                      "Elegir Nueva solicitud.",
+                      "Completar nombre y descripción con los datos de prueba.",
+                      "Guardar y volver a la lista de solicitudes.",
+                      "Buscar Prueba de registro y abrir la solicitud."
+                    ],
+                    "expected_result": "La solicitud aparece una sola vez y conserva el nombre y la descripción escritos.",
+                    "failure_signals": "No se puede guardar, la solicitud no aparece, se duplica o cambia algún dato. Indicar el paso y adjuntar una captura."
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+```
+
+Se admiten hasta 100 elementos en cada lista y 1000 elementos totales por
+operación. Las claves desconocidas, los identificadores repetidos bajo un mismo
+padre y las referencias de otro proyecto se rechazan. La aplicación incluye
+la versión vigente del seguimiento (`expected_version`) y un identificador
+estable de petición (`request_id`); un cambio concurrente exige actualizar la
+versión, y un reintento de la misma operación no la duplica.
+
+## API y servicios compartidos
+
+La API usa JWT bajo `/api/accounts/projects/<id>/delivery/`. La interfaz y el
+MCP administrativo reutilizan `delivery_workflow`, `delivery_documents` y los
+serializers estrictos; los permisos se comprueban también en esos servicios.
+
+| Ruta relativa | Uso |
+| --- | --- |
+| raíz, `prompt/` | Consultar el seguimiento; obtener el prompt y su esquema como administrador. |
+| `import/preview/`, `import/apply/` | Validar el JSON y guardar borradores. |
+| `contracts/`, `amendments/`, `scopes/`, `phases/`, `stages/`, `requirements/` | Crear elementos; editar o eliminar por su ID cuando sus reglas lo permiten. |
+| `stages/<id>/publish/`, `stages/<id>/review/` | Publicar una ronda y registrar la revisión del cliente. |
+| `stages/<id>/historical-approvals/` | Registrar conformidades externas con evidencia, como administrador. |
+| `contracts/<id>/signature-external/`, `amendments/<id>/signature-external/` | Constatar una firma externa. |
+| `documents/`, `documents/<id>/pdf/`, `messages/` | Asociaciones, descargas autenticadas y respuestas. |
+| `reviews/<id>/evidence/`, `reviews/<id>/evidence/<evidence_id>/pdf/` | Consultar y descargar el respaldo privado de una revisión autorizada. |
+
+La herramienta MCP `download_delivery_document_pdf` descarga el mismo PDF:
+recibe `link_id` para un documento asociado, o el par `review_id` y `evidence_id`
+para un respaldo de revisión. Las dos alternativas son excluyentes y siempre
+requieren el contexto del proyecto.
+
+Contratos y otrosí se crean por sus formularios o herramientas administrativas,
+antes de importar un alcance. El selector legado `GET .../requirements/`
+permanece para bugs y solicitudes de cambio, con los requerimientos visibles de
+la nueva jerarquía; ya no existe la escritura de tarjetas Kanban por esa ruta.
+
+## Retiro del modelo anterior y continuidad
+
+La purga de tarjetas antiguas fue autorizada como parte de este cambio. La
+migración `accounts.0064_delivery_review_workflow` borra los requerimientos
+Kanban anteriores, sus comentarios e historial y los agrupadores
+`ProjectScopeItem`. No los transforma en guías ni infiere conformidades; el
+paso de purga no reconstruye esas filas al revertirse.
+
+Se conservan proyectos, clientes, fases comerciales, propuestas, documentos,
+recursos y archivos, modelos de datos, comunicaciones, bugs, solicitudes de
+cambio, cobros, pagos y hosting. Las referencias de bugs y solicitudes a las
+tarjetas eliminadas quedan vacías; sus registros permanecen. La fase de una
+fuente nueva se obtiene desde su etapa de entrega.
+
+`technical_resources_sync` conserva la sincronización de recursos y modelos
+de datos desde propuestas. Ya no crea guías, grupos de alcance ni recalcula
+el progreso por tarjetas; su endpoint es `sync-technical-resources/`.
+El relanzamiento de onboarding no elimina un proyecto con seguimiento
+contractual. `accounts.0066_delivery_review_document_evidence` incorpora el
+respaldo privado por revisión. Las migraciones corresponden al despliegue,
+nunca al worktree.
+
+Los seeds de pruebas incluyen contrato, otrosí con evidencia externa,
+conformidades parciales y una etapa privada. Su reinicio puede limpiar el grafo
+protegido únicamente bajo la capacidad explícita de fake data; esa limpieza
+no es una operación del cliente ni del workflow productivo.
+
+El reporte de bugs y las solicitudes existentes conservan su integración con
+los requerimientos publicados. Una solicitud aprobada puede convertirse en una
+guía nueva pendiente dentro de una etapa editable, sin aprobarla por el cliente.
+La ampliación del flujo de bugs y los vacíos de cuentas de cobro siguen como
+alcances posteriores para trabajar incrementalmente en el mismo PR.

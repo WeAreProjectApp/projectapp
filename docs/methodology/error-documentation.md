@@ -1,3 +1,14 @@
+## 2026-10-01 — Compatibilidad del seguimiento contractual
+
+Las tarjetas Kanban, `ProjectScopeItem`, comentarios e historial de tarjetas se
+retiran mediante la purga autorizada; no equivalen a conformidades históricas.
+Los consumidores deben usar etapa → fase de entrega → alcance → contrato y las
+rutas nuevas. Una guía cambiada exige otra publicación antes de recibir resultados;
+un conflicto de versión exige actualizar el seguimiento. Las conformidades
+aprobadas y los PDF capturados no se sobrescriben. El reset fake debe limpiar
+el grafo protegido antes de sus fuentes, bajo la capacidad explícita de pruebas.
+Reglas y errores de dominio: [PLATFORM_DELIVERY](../PLATFORM_DELIVERY.md).
+
 ## 2026-09-29 — Anexos con contenido distinto a la propuesta revisada
 
 - **Causa:** la formalización proyectaba campos permitidos, renombraba secciones,

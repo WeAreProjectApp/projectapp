@@ -253,34 +253,10 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-project-create.spec.js`
 
-### 8.4 Kanban Board
+### 8.4 Alcances y entregas
 
-#### FLOW: `platform-kanban-board`
+La revisión sigue contrato → alcance → fases de ejecución → etapas → guías de validación. Los flujos de autoría, revisión, importación y respuestas se describen en los archivos `platform-delivery-*.md`.
 
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P1
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `GET /api/accounts/projects/:id/deliverables/`, `GET|POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/`, `POST .../requirements/:id/move/`, `GET .../requirements/:id/` (requirements are scoped to a deliverable).
-- **Description:** 3-column kanban board with drag & drop, card detail modal, and completed checklist.
-- **Steps:**
-  1. User navigates to `/platform/projects/:id/board`.
-  2. Back link to project detail renders with project name.
-  3. Progress pill renders with percentage and completed count.
-  4. Three kanban columns render: "Por hacer" (todo), "En progreso" (in_progress), "En revisión" (in_review).
-  5. Requirement cards render in their respective columns with priority dot, scope-item label (the vista/componente/funcionalidad from the proposal; falls back to the legacy "Módulo"/epic for older cards), title, and comment count.
-  6. Collapsible "Completados" section renders below columns with done cards as a checklist.
-- **Branches:**
-  - [Branch A — Admin drag & drop] Admin drags a card from one column to another → `POST .../move/` API updates status → card moves to target column.
-  - [Branch B — Admin create card] Admin clicks "Card" button → create modal opens with title, description, priority, column, module, hours → submit creates requirement.
-  - [Branch C — Complete card] Admin (or client for in_review) clicks checkmark → card moves to "done" column.
-  - [Branch D — Card detail] User clicks any card → detail modal opens showing description, meta (status, scope item, created date), history timeline, and comments section.
-  - [Branch E — Client approval] Client sees "Aprobar requerimiento" button for cards in approval status → clicking approves and moves to done.
-  - [Branch F — Toggle completed] User clicks "Completados" bar → expands/collapses the done cards list.
-  - [Branch G — Scope filter] User picks a vista/componente/funcionalidad (or "Sin agrupar") from the "Alcance" selector → columns and backlog show only cards linked to that scope item. Populated from `GET /api/accounts/projects/:id/scope-items/`.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-board.spec.js`
-- **Related:** Scope items and cards are auto-created on proposal acceptance — see `platform-proposal-auto-onboarding`.
 
 #### FLOW: `platform-proposal-auto-onboarding` *(system-triggered, no browser E2E)*
 
@@ -292,51 +268,12 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Steps (backend):**
   1. Acceptance enqueues `run_platform_onboarding` (with the task's acceptance email suppressed; the view owns the client email).
   2. `handle_proposal_accepted_for_platform` ensures the client `User`, `Project`, root `Deliverable`, and (via the sync) a `ProjectPhase`.
-  3. `functional_requirements` items (vistas/componentes/funcionalidades) are mirrored as `ProjectScopeItem` rows keyed by `source_item_id`.
-  4. `technical_document` epics/requirements are upserted as Kanban `Requirement` cards keyed by `(phase, source_flow_key)`, each linked to its primary scope item via `linked_item_ids`.
-- **Re-sync policy:** preserves client-owned state (`status`, `order`, comments); overwrites proposal-authored content unless the card was manually edited (`content_overridden`); archives scope items removed from the proposal and resurrects re-added ones.
+  3. La sincronización conserva las referencias comerciales, recursos y el modelo de datos.
+  4. Las etapas y guías para el cliente se redactan y publican explícitamente en Entregas; no se crean a partir del detalle técnico.
+- **Re-sync policy:** La sincronización comercial no altera las guías ni las decisiones del cliente.
 - **Coverage:** Backend tests (`accounts/tests/test_proposal_scope_sync.py`, `test_proposal_platform_onboarding.py`, `content/tests/views/test_proposal_status_and_pdf.py`). No Playwright journey (`roles: ["system"]`, `expectedSpecs: 0`).
 
-#### FLOW: `platform-unified-board`
 
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P2
-- **Routes:** `/platform/board`
-- **API:** `GET /api/accounts/projects/`, then per deliverable `GET .../deliverables/:deliverableId/requirements/`
-- **Description:** Cross-project view showing active requirement cards grouped by project.
-- **Steps:**
-  1. User navigates to `/platform/board`.
-  2. Page fetches all projects and their active requirements.
-  3. Cards render grouped by project with project name headers and summary pills (todo/in_progress/in_review counts).
-  4. Each card shows priority dot, title, and module tag.
-- **Branches:**
-  - [Branch A — Project link] User clicks project name → navigates to `/platform/projects/:id`.
-  - [Branch B — Board link] User clicks "Ver tablero" → navigates to `/platform/projects/:id/board`.
-  - [Branch C — Empty state] No active requirements → empty state message.
-  - [Branch D — Loading] Skeleton/spinner renders while fetching data.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-unified-board.spec.js`
-
-#### FLOW: `platform-kanban-card-comments`
-
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P3
-- **Routes:** `/platform/projects/:id/board` (card detail modal)
-- **API:** `POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/:id/comments/`
-- **Description:** Add public or internal (admin-only) comments on requirement cards.
-- **Steps:**
-  1. User opens card detail modal (from kanban board flow).
-  2. Comments section renders with existing comments (author, date, content).
-  3. User types a comment in the input field and clicks "Enviar".
-  4. API creates the comment and it appears in the list.
-- **Branches:**
-  - [Branch A — Internal comment] Admin checks "Comentario interno" checkbox → comment saves with `is_internal: true` → rendered with amber border and "Interno" label (only visible to admins).
-  - [Branch B — Client comment] Client can only post public comments (no internal checkbox visible).
-  - [Branch C — Empty comment] Submit button disabled when input is empty.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-comments.spec.js`
 
 ### 8.5 Client Management (Admin-only)
 
@@ -568,41 +505,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-notifications.spec.js`
 
-### 8.10 Kanban Enhancements
-
-#### FLOW: `platform-kanban-json-upload`
-
-- **Module:** platform
-- **Role:** platform-admin
-- **Priority:** P2
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/bulk/`
-- **Description:** Admin bulk-creates requirements by uploading a JSON file. Includes downloadable example template.
-- **Steps:**
-  1. Admin clicks "Ejemplo" button → downloads `requerimientos-ejemplo.json` template.
-  2. Admin prepares JSON with requirements (title, description, configuration, flow).
-  3. Admin clicks "Subir JSON" → file picker opens → selects JSON file.
-  4. API creates requirements in bulk → success alert with count.
-  5. Backlog section updates with new cards.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-json-upload.spec.js`
-
-#### FLOW: `platform-requirement-client-review`
-
-- **Module:** platform
-- **Role:** platform-client
-- **Priority:** P2
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `GET .../deliverables/:deliverableId/requirements/`, `GET .../requirements/:id/`, `POST .../requirements/:id/move/`
-- **Description:** Client reviews completed requirements. Clicking a done card shows: Approve, Request Change, or Report Bug.
-- **Steps:**
-  1. Client clicks a completed requirement in the "Completados" section.
-  2. Card detail modal opens showing description, configuration, flow, and review actions.
-  3. Client clicks "Aprobar" → requirement accepted.
-  4. Client clicks "Solicitar cambio" → navigates to change requests with pre-filled data.
-  5. Client clicks "Reportar bug" → navigates to bug reports with pre-filled data.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-requirement-client-review.spec.js`
 
 ### 8.11 Collection Accounts & Deliverable Detail
 
@@ -786,7 +688,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-login` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-login.spec.js` |
 | `platform-verify-onboarding` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-verify.spec.js` |
 | `platform-complete-profile` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-complete-profile.spec.js` |
-| `platform-kanban-board` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-kanban-board.spec.js` |
 | `platform-hosting-subscription` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-hosting-subscription.spec.js` |
 | `platform-hosting-card-setup` | platform | platform-client | P1 | ✅ Covered | `e2e/platform/platform-hosting-card-setup.spec.js` |
 | `platform-hosting-card-delete` | platform | platform-client | P2 | ✅ Covered | `e2e/platform/platform-hosting-card-delete.spec.js` |
@@ -794,7 +695,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-sidebar-navigation` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-sidebar.spec.js` |
 | `platform-project-list` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-project-list.spec.js` |
 | `platform-project-detail` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-project-detail.spec.js` |
-| `platform-unified-board` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-unified-board.spec.js` |
 | `platform-admin-client-list` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-admin-client-list.spec.js` |
 | `platform-admin-client-detail` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-admin-client-detail.spec.js` |
 | `platform-profile-edit` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-profile.spec.js` |
@@ -803,8 +703,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-bug-reports` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-bug-reports.spec.js` |
 | `platform-deliverables` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-deliverables.spec.js` |
 | `platform-notifications` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-notifications.spec.js` |
-| `platform-kanban-json-upload` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-kanban-json-upload.spec.js` |
-| `platform-requirement-client-review` | platform | platform-client | P2 | ✅ Covered | `e2e/platform/platform-requirement-client-review.spec.js` |
 | `platform-collection-accounts-list` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
 | `platform-collection-account-detail` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
 | `platform-project-collection-accounts` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
@@ -812,7 +710,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-project-data-model` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-data-model.spec.js` |
 | `platform-access-view` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-access.spec.js` |
 | `platform-admin-project-create` | platform | platform-admin | P3 | ✅ Covered | `e2e/platform/platform-project-create.spec.js` |
-| `platform-kanban-card-comments` | platform | platform-admin/client | P3 | ✅ Covered | `e2e/platform/platform-kanban-comments.spec.js` |
 
 ### Platform Coverage Summary
 
@@ -6454,12 +6351,13 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-dashboard` | platform | P2 | — | 0 |
 | `platform-deliverable-detail` | platform | P2 | success | 1 |
 | `platform-deliverables` | platform | P2 | success,error,display | 1 |
+| `platform-delivery-authoring` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-import` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-responses` | platform | P1 | success,error | 1 |
+| `platform-delivery-review` | platform | P1 | display,success,error | 1 |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
 | `platform-hosting-subscription` | platform | P1 | success,error,display | 1 |
-| `platform-kanban-board` | platform | P1 | success,display | 1 |
-| `platform-kanban-card-comments` | platform | P3 | success,display | 1 |
-| `platform-kanban-json-upload` | platform | P2 | success,error,display | 1 |
 | `platform-layout-title-mapping` | platform | P3 | display | 1 |
 | `platform-legacy-route-redirects` | platform | P2 | success | 1 |
 | `platform-login` | platform | P1 | success,error,failure | 1 |
@@ -6473,9 +6371,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-project-detail` | platform | P2 | success,display | 1 |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
-| `platform-requirement-client-review` | platform | P2 | success,display | 1 |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
-| `platform-unified-board` | platform | P2 | — | 0 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
 | `proposal-calculator-abandonment-tracking` | proposal | P2 | — | 0 |
 | `proposal-calculator-behavior-tracking-module` | proposal | P2 | success | 0 |
@@ -7615,6 +7511,48 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Outcomes:** display (recurso o ausencia al entrar por UI), success (carga/sustitución/baja/restauración), error (archivo ausente, inválido o mayor de 250 MiB), failure (consulta/carga fallida, cancelación o revisión desactualizada con consulta posterior).
 - **Evidencia:** `components/resources/VideoResourceManager.vue` y sus cuatro páginas huésped; `views/video_resources.py` y `services/video_resource_service.py`.
 - **E2E Spec:** `e2e/admin/admin-video-resources.spec.js`.
+
+
+## Section 33 — Platform Delivery Workflow (Oct 1, 2026)
+
+### Platform: preparar y publicar etapas
+
+Fuente: `DeliveryAuthoringForm.vue`, `DeliveryWorkspace.vue` y `accounts.services.delivery_workflow`.
+
+El administrador vincula el contrato original, sus otrosíes y el alcance; crea fases de ejecución independientes de los cobros y organiza sus etapas y requerimientos. Guarda borradores antes de publicar. Una etapa sin requerimientos, con guía incompleta o con contrato aplicable sin firmar no se puede publicar. Las ampliaciones de una etapa aprobada requieren otra etapa.
+
+`delivery-authoring.spec.js` cubre la preparación y publicación desde el formulario. La API comprueba también permisos, versiones y protección de aprobaciones.
+
+### Platform: prompt e importación de JSON
+
+Fuente: editor de importación en `DeliveryWorkspace.vue`.
+
+El administrador copia el prompt, redacta fuera de la aplicación y pega un JSON con `schema_version: 1`. Previsualiza antes de aplicar. Cambiar el texto invalida esa previsualización. La aplicación importa únicamente borradores y rechaza campos de estados, firmas o aprobaciones.
+
+`delivery-authoring.spec.js` prueba JSON inválido y la secuencia previsualizar → aplicar → consultar el borrador persistido. Las reglas de importación atómica y protección se verifican también por API y MCP.
+
+### Platform: validar una entrega
+
+Fuente: `DeliveryWorkspace.vue`, `DeliveryStage.vue`, `DeliveryReviewForm.vue` y `DeliveryReviewHistory.vue`.
+
+| Acción | Resultado | Evidencia |
+|---|---|---|
+| Abrir Entregas desde el proyecto | Mostrar guía publicada con datos y pasos; ocultar borradores | `delivery-review.spec.js` |
+| Aprobar solamente lo probado | Conservar conformidad parcial y dejar abiertos los demás casos | `delivery-review.spec.js` |
+| Objetar sin motivo | Pedir el motivo sin guardar una decisión | `delivery-review.spec.js` |
+| Corregir y republicar un caso pendiente | Mantener el caso aprobado y entregar otra versión del pendiente | `delivery-review.spec.js` |
+| Aprobar todos los requerimientos | Cerrar la etapa; una etapa en borrador impide cerrar la fase | `delivery-review.spec.js` |
+| Abrir el formulario en cinco anchos | Controles alcanzables sin desbordamiento horizontal | `delivery-authoring.spec.js` |
+
+Los conflictos de versión, permisos por proyecto y evidencia inmutable se comprueban además en las pruebas de API. El navegador usa JWT reales y una base temporal; no simula aprobaciones.
+
+### Platform: responder sobre una etapa
+
+Fuente: reporte contextual en `DeliveryWorkspace.vue` e historial en `DeliveryStage.vue`.
+
+Administrador y cliente escriben un mensaje, seleccionan los requerimientos tratados y pueden asociar documentos existentes. El mensaje es obligatorio; los adjuntos son opcionales. El cliente sólo puede responder en contenido publicado que pertenece a su proyecto.
+
+`delivery-review.spec.js` comprueba que una respuesta sin adjuntos persiste al volver. Las respuestas no otorgan conformidad ni sustituyen la decisión explícita del cliente.
 
 
 ## Unsectioned flows

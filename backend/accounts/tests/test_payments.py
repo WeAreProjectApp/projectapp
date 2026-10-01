@@ -790,7 +790,7 @@ class TestAutoCreateRequirements:
 
         assert resp.status_code == 201
         project = Project.objects.get(id=resp.json()['id'])
-        reqs = Requirement.objects.filter(phase__project=project)
+        reqs = Requirement.objects.filter(stage__phase__scope__contract__project=project)
 
         assert reqs.count() == 0
 
@@ -804,7 +804,7 @@ class TestAutoCreateRequirements:
         }, format='json', **admin_headers)
 
         project = Project.objects.get(id=resp.json()['id'])
-        assert Requirement.objects.filter(phase__project=project).count() == 0
+        assert Requirement.objects.filter(stage__phase__scope__contract__project=project).count() == 0
 
     def test_project_from_proposal_stores_milestones(
         self, api_client, admin_headers, client_user, proposal_with_sections,

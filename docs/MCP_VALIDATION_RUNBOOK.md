@@ -1089,3 +1089,62 @@ permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.
    usuario cuando corresponde; una sincronización no cambia la procedencia.
 5. Para Littigio seguir el [runbook de reparación](runbooks/littigio-folder-repair.md).
    No repetir ensayos mutantes contra documentos reales como prueba del conector.
+
+## Platform — revisión contractual de entregas
+
+El conector `projects` cubre la administración de contratos, otrosíes, alcances,
+fases de ejecución, etapas y guías de validación desde el primer incremento.
+La [matriz de paridad](PLATFORM_DELIVERY_MCP_MATRIX.md) relaciona cada acción de
+Platform con su herramienta y regla de negocio compartida. El catálogo añade
+40 herramientas de entrega y habilita los uploads temporales del conector.
+
+Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
+20 casos. No invocar estas pruebas contra un conector activo de producción.
+
+1. Consultar prompt/esquema y espacio; crear/leer/editar cada entidad; rechazar
+   un otrosí cuyo contrato pertenece a otro proyecto. Las fases de ejecución
+   nunca deben facturar ni alterar el hosting comercial.
+2. Previsualizar JSON sin escribir; aplicar mediante `confirm_action`; rechazar
+   campos de estado, fuentes ajenas o un espacio cambiado desde la vista previa.
+3. Publicar una etapa solo con firma real/constatada y guía completa. Repetir su
+   confirmación sin generar otra ronda. Editar pendientes sin alterar conformidades.
+4. Constatar firma usando `begin_upload` → `upload_asset_chunk` → `complete_upload`
+   y `asset_id`; comprobar PDF real hasta 10 MB y rechazo de assets de otra credencial.
+5. Registrar aprobación externa con comunicación entrante recibida y cita válida,
+   o documento, revisor original, fecha, canal y referencia explícitos. Guardar
+   por separado actor administrativo y revisor original; jamás inferir una
+   aprobación desde un mensaje saliente del equipo.
+6. Responder con requerimientos y documentos opcionales; consultar/asociar/retirar
+   documentos por nivel; descargar PDF autorizado como artefacto temporal. Los
+   borradores del cliente permanecen ocultos en lista, detalle y PDF.
+7. Restringir la credencial a lectura: ni herramientas directas ni confirmaciones
+   previas pueden ejecutar escrituras fuera de su permiso.
+8. Descargar el respaldo congelado de una revisión mediante
+   `download_delivery_document_pdf` con `review_id` y `evidence_id`; alternativamente
+   usar `link_id` para un documento asociado. Los dos orígenes son excluyentes.
+   Editar la fuente después de registrar la conformidad no debe cambiar los
+   bytes, título ni hash de su respaldo. Un proyecto ajeno falla sin crear artefactos.
+
+Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
+`content/tests/views/test_mcp_delivery_contracts.py` (20 casos),
+`content/tests/views/test_mcp_delivery_guards.py` (9 casos), más cuatro
+verificaciones específicas de `projects` en `test_mcp_contracts.py`.
+La revisión de modelos incluye todos los campos nuevos, con exclusiones
+explícitas de almacenamiento privado, captura de IP/navegador de la firma y
+recibos internos de idempotencia. La metadata conserva método y hashes de firma;
+la evidencia de aprobación conserva el mensaje original y su procedencia.
+
+Resultados focales ejecutados en el worktree de implementación:
+
+| Lote | Resultado | Evidencia del comportamiento |
+| --- | --- | --- |
+| `test_mcp_delivery.py` | **19/19 verdes**; repetido con `--nomigrations` tras congelar todos los campos contractuales firmados | Creación real de seis entidades, guías, importación, confirmaciones, publicación, PDF externo, respuestas y errores. |
+| `test_mcp_delivery_contracts.py` | **20/20 verdes**, con migraciones reales hasta `0065` | Lecturas por entidad, propiedad de documentos/assets, credencial limitada, descargas, replay y procedencia entrante. |
+| `test_mcp_delivery_guards.py` | **3/3 verdes**, con `--nomigrations` | Firma privada, contrato firmado inmutable antes de publicar y rechazo de una constancia externa que declara método Portal. |
+| Nuevas descargas de respaldo en `test_mcp_delivery_guards.py` | **6/6 verdes**, con `--nomigrations` tras `0066` | PDF histórico exacto después de reescribir la fuente, pertenencia al proyecto y cuatro selectores incompletos/ambiguos rechazados. |
+| Contratos existentes de `projects` | **4/4 verdes**, con `--nomigrations`; clasificación de campos repetida tras `0066` | Todos los campos clasificados, metadata accionable, confirmación sensible y adaptadores HTTP coherentes. |
+
+Son **48 casos nuevos** y **4 verificaciones de contrato existentes**, en lotes
+separados de hasta 20 casos. Se verificó el transporte real de uploads y las
+confirmaciones MCP; no se ejecutaron suites completas ni pruebas mutantes contra
+datos de producción.

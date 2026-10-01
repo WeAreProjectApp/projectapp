@@ -1,3 +1,4 @@
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -20,18 +21,12 @@ from accounts.models import (
     Project,
     ProjectDataModelEntity,
     ProjectPhase,
-    Requirement,
-    RequirementComment,
-    RequirementHistory,
     UserProfile,
     VerificationCode,
 )
 from content.models.business_proposal import BusinessProposal
 
 
-def _phase_for(project):
-    bp = BusinessProposal.objects.create(title='M', client_name='c')
-    return ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
 
 User = get_user_model()
 
@@ -195,54 +190,10 @@ class TestProjectModel:
         assert project.state_review_required is True
 
 
-@pytest.mark.django_db
-class TestRequirementModel:
-    def test_str_representation(self):
-        user = User.objects.create_user(username='rm@test.com', email='rm@test.com', password='pass')
-        project = Project.objects.create(name='P', client=user)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=user,
-        )
-        req = Requirement.objects.create(
-            phase=_phase_for(project), title='Login page', status=Requirement.STATUS_TODO,
-        )
-
-        assert str(req) == 'Login page [To do]'
 
 
-@pytest.mark.django_db
-class TestRequirementCommentModel:
-    def test_str_representation(self):
-        user = User.objects.create_user(username='rc@test.com', email='rc@test.com', password='pass')
-        project = Project.objects.create(name='P', client=user)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=user,
-        )
-        req = Requirement.objects.create(phase=_phase_for(project), title='R')
-        comment = RequirementComment.objects.create(requirement=req, user=user, content='Note')
-
-        result = str(comment)
-
-        assert 'rc@test.com' in result
 
 
-@pytest.mark.django_db
-class TestRequirementHistoryModel:
-    def test_str_representation(self):
-        user = User.objects.create_user(username='rh@test.com', email='rh@test.com', password='pass')
-        project = Project.objects.create(name='P', client=user)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=user,
-        )
-        req = Requirement.objects.create(phase=_phase_for(project), title='R')
-        history = RequirementHistory.objects.create(
-            requirement=req, from_status='todo', to_status='in_progress', changed_by=user,
-        )
-
-        assert str(history) == 'todo → in_progress'
 
 
 # ---------------------------------------------------------------------------
@@ -565,9 +516,7 @@ class TestUncoveredModelStrMethods:
     def test_requirement_project_property(self):
         user = self._make_user('req_proj@test.com')
         project = self._make_project(user)
-        req = Requirement.objects.create(
-            phase=_phase_for(project), title='Feature X',
-        )
+        req = make_requirement(make_delivery_stage(project), title='Feature X')
 
         assert req.project == project
         assert req.project_id == project.id

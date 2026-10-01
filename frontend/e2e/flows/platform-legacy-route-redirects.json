@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Compatibility aliases for retired platform surfaces redirect authenticated users to /platform/projects without a redirect loop.",
+  "description": "Retired global Platform routes redirect to projects; the former project board redirects to that project's delivery workspace.",
   "expectedSpecs": 1,
   "outcomes": [
     "success"

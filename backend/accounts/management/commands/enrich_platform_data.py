@@ -16,7 +16,7 @@ and ensures admin-settings singletons exist (``CompanySettings``,
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 
-from accounts.management.commands._seed_helpers import ensure_phase
+from accounts.management.commands._seed_helpers import ensure_delivery_stage, refresh_seed_publication
 from accounts.models import (
     BugReport,
     ChangeRequest,
@@ -113,35 +113,31 @@ class Command(BaseCommand):
             return
 
         target = max(1, target)
-        phase = ensure_phase(project)
+        stage = ensure_delivery_stage(project, anchor_now=context.anchor_now, actor=admin)
         client = project.client
 
-        requirement_statuses = [value for value, _ in Requirement.STATUS_CHOICES]
-        requirement_priorities = [value for value, _ in Requirement.PRIORITY_CHOICES]
-        requirement_count = Requirement.objects.filter(phase=phase).count()
+        requirement_count = Requirement.objects.filter(stage__phase__scope__contract__project=project).count()
         requirement_rows = []
         for index in range(requirement_count, target):
             title = f'[Volume] Requerimiento representativo {index + 1:03d}'
             if index == target - 1:
                 title = ('RequerimientoExtremoSinEspacios' * 12)[:300]
             requirement_rows.append(Requirement(
-                phase=phase,
-                title=title,
+                stage=stage, key=f'fake-volume-{index + 1:03d}', title=title,
                 description='Caso funcional para probar volumen, filtros y extremos.',
-                configuration='Visible según rol del cliente.',
-                flow='Cliente abre la vista, filtra el listado y revisa el detalle.',
-                status=requirement_statuses[index % len(requirement_statuses)],
-                priority=requirement_priorities[index % len(requirement_priorities)],
-                order=index,
-                source_flow_key=f'fake-volume-{index + 1:03d}',
-                source_epic_key=f'fake-volume-{index % 8:02d}',
-                source_epic_title=f'Módulo representativo {index % 8 + 1}',
-                is_archived=index % 17 == 0,
-                archived_at=(
-                    context.anchor_now if index % 17 == 0 else None
-                ),
+                guide={
+                    'role': 'Cliente responsable de validar',
+                    'environment': 'Ambiente demo',
+                    'preparation': 'Entrar con la cuenta ficticia asignada.',
+                    'data': 'Elegir un registro de demostración.',
+                    'steps': ['Abrir la vista', 'Filtrar el listado', 'Revisar el detalle'],
+                    'expected_result': 'El registro elegido aparece con sus datos completos.',
+                    'failure_signals': 'Si falta el registro, reportar el filtro utilizado.',
+                },
+                review_status=Requirement.ReviewStatus.IN_REVIEW, order=index,
             ))
         Requirement.objects.bulk_create(requirement_rows)
+        refresh_seed_publication(stage, actor=admin)
 
         categories = [value for value, _ in Deliverable.CATEGORY_CHOICES]
         deliverable_count = Deliverable.objects.filter(project=project).count()
@@ -179,7 +175,6 @@ class Command(BaseCommand):
                 status=change_statuses[index % len(change_statuses)],
                 estimated_cost=(index + 1) * 100000,
                 estimated_time=f'{index % 5 + 1} días',
-                phase=phase,
                 is_archived=index % 23 == 0,
                 archived_at=(
                     context.anchor_now if index % 23 == 0 else None
@@ -206,7 +201,6 @@ class Command(BaseCommand):
                 device_browser=f'Navegador demo {index % 6 + 1}',
                 is_recurring=index % 3 == 0,
                 status=bug_statuses[index % len(bug_statuses)],
-                phase=phase,
                 is_archived=index % 29 == 0,
                 archived_at=(
                     context.anchor_now if index % 29 == 0 else None
@@ -216,7 +210,7 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             '  Representative platform volume: '
-            f'{Requirement.objects.filter(phase=phase).count()} requirements, '
+            f'{Requirement.objects.filter(stage__phase__scope__contract__project=project).count()} requirements, '
             f'{Deliverable.objects.filter(project=project).count()} deliverables, '
             f'{ChangeRequest.objects.filter(project=project).count()} changes, '
             f'{BugReport.objects.filter(project=project).count()} bugs.',

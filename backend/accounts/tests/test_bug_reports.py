@@ -1,3 +1,4 @@
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 import io
 from datetime import datetime, timezone as datetime_timezone
 
@@ -14,8 +15,6 @@ from accounts.models import (
     BugReport,
     Deliverable,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 from content.models.business_proposal import BusinessProposal
@@ -93,8 +92,8 @@ def deliverable(project, client_user):
 @pytest.fixture
 def source_requirement(project):
     bp = BusinessProposal.objects.create(title='Bug proposal', client_name='Carlos')
-    phase = ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
-    return Requirement.objects.create(phase=phase, title='Source req')
+    phase = make_delivery_stage(project, phase_title=bp.title)
+    return make_requirement(phase, title='Source req')
 
 
 @pytest.fixture
@@ -143,47 +142,52 @@ def _detail_url(project_id, bug_id, suffix=''):
 
 
 def _create_bug_report_rows(project, user, count, *, start=0, add_comments=False):
-    proposals = [
-        BusinessProposal(
-            title=f'Bug budget proposal {index}', client_name='Carlos', slug=f'bug-budget-{index}',
+    requirements = [
+        make_requirement(
+            make_delivery_stage(project, phase_title=f'Bug budget proposal {index}'),
+            title=f'Bug budget source {index}', key=f'bug-budget-source-{index}',
         )
         for index in range(start, start + count)
     ]
-    persisted_proposals = BusinessProposal.objects.bulk_create(proposals)
-    phases = [
-        ProjectPhase(project=project, business_proposal=proposal, order=index + 10)
-        for index, proposal in enumerate(persisted_proposals, start=start)
-    ]
-    persisted_phases = ProjectPhase.objects.bulk_create(phases)
-    requirements = Requirement.objects.bulk_create([
-        Requirement(
-            phase=phase, title=f'Bug budget source {phase.id}',
-            source_flow_key=f'bug-budget-source-{phase.id}',
-        )
-        for phase in persisted_phases
-    ])
-    bugs = BugReport.objects.bulk_create([
-        BugReport(
-            project=project,
-            reported_by=user,
-            phase=phase,
-            source_requirement=requirement,
-            title=f'Bug budget report {requirement.id}',
-            description='Visible description',
-            steps_to_reproduce=['open', 'observe'],
-            expected_behavior='Expected result',
-            actual_behavior='Actual result',
-        )
-        for phase, requirement in zip(persisted_phases, requirements)
+    items = BugReport.objects.bulk_create([
+        BugReport(project=project, reported_by=user, source_requirement=requirement,
+            title=f'Bug budget request {requirement.id}', description='Visible description', steps_to_reproduce=['open', 'observe'], expected_behavior='Expected result', actual_behavior='Actual result',)
+        for requirement in requirements
     ])
     if add_comments:
         BugComment.objects.bulk_create([
-            BugComment(
-                bug_report=bug, user=user, content=f'Bug budget comment {bug.id}', is_internal=True,
-            )
-            for bug in bugs
+            BugComment(bug_report=item, user=user, content=f'Bug budget comment {item.id}', is_internal=True)
+            for item in items
         ])
-    return bugs
+    return items
+
+
+@pytest.mark.django_db
+def test_client_cannot_report_against_an_internal_draft(api_client, client_headers, project):
+    requirement = make_requirement(make_delivery_stage(project, published=False), published=False)
+
+    response = api_client.post(_url(project.id), {
+        'title': 'Draft must remain private', 'source_requirement_id': requirement.pk,
+    }, format='json', **client_headers)
+
+    assert response.status_code == 400
+    assert not BugReport.objects.filter(title='Draft must remain private').exists()
+
+
+@pytest.mark.django_db
+def test_client_bug_context_uses_the_published_title(api_client, client_headers, project, client_user):
+    requirement = make_requirement(make_delivery_stage(project), title='Published validation')
+    bug = BugReport.objects.create(
+        project=project, reported_by=client_user, source_requirement=requirement, title='Client report',
+    )
+    requirement.title = 'Private unfinished revision'
+    requirement.review_status = 'pending'
+    requirement.save(update_fields=['title', 'review_status'])
+
+    response = api_client.get(_detail_url(project.pk, bug.pk), **client_headers)
+
+    assert response.status_code == 200
+    assert response.json()['source_requirement']['title'] == 'Published validation'
 
 
 # =========================================================================
@@ -291,7 +295,7 @@ class TestBugReportList:
         """Fails if the phase filter returns bugs from another project phase."""
         target, _ = _create_bug_report_rows(project, client_user, 2)
 
-        response = api_client.get(f'{_url(project.id)}?phase_id={target.phase_id}', **admin_headers)
+        response = api_client.get(f'{_url(project.id)}?phase_id={target.source_requirement.stage.phase_id}', **admin_headers)
 
         assert response.status_code == 200
         assert [item['id'] for item in response.json()] == [target.id]
@@ -323,8 +327,10 @@ class TestBugReportList:
         assert by_id[source_bug.id]['source_requirement'] == {
             'id': source.id,
             'title': source.title,
-            'status': Requirement.STATUS_BACKLOG,
-            'phase_id': source.phase_id,
+            'review_status': source.review_status,
+            'stage_id': source.stage_id,
+            'stage_title': source.stage.title,
+            'phase_id': source.stage.phase_id,
             'phase_title': 'Bug budget proposal 0',
         }
         assert by_id[source_bug.id]['description'] == 'Visible description'
@@ -425,8 +431,8 @@ class TestBugReportCreate:
             name='Other', client=admin_user, status=Project.STATUS_ACTIVE,
         )
         bp = BusinessProposal.objects.create(title='Other proposal', client_name='c')
-        other_phase = ProjectPhase.objects.create(project=other, business_proposal=bp, order=1)
-        other_req = Requirement.objects.create(phase=other_phase, title='Foreign req')
+        other_phase = make_delivery_stage(other, phase_title=bp.title)
+        other_req = make_requirement(other_phase, title='Foreign req')
 
         resp = api_client.post(_url(project.id), {
             'source_requirement_id': other_req.id,

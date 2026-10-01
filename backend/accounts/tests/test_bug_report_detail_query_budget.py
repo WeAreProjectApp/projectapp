@@ -1,5 +1,6 @@
 """Response and query-budget contracts for bug-report detail."""
 
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from types import SimpleNamespace
 
 import pytest
@@ -13,8 +14,6 @@ from accounts.models import (
     BugComment,
     BugReport,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 from accounts.serializers import BugReportDetailSerializer
@@ -105,15 +104,9 @@ def bug_report(users_and_headers):
         title='Bug detail proposal',
         client_name='Bug detail client',
     )
-    phase = ProjectPhase.objects.create(project=project, business_proposal=proposal, order=1)
-    requirement = Requirement.objects.create(phase=phase, title='Source requirement')
-    bug = BugReport.objects.create(
-        project=project,
-        reported_by=client,
-        phase=phase,
-        source_requirement=requirement,
-        title='Bug report detail',
-    )
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title='Source requirement')
+    bug = BugReport.objects.create(project=project, reported_by=client, source_requirement=requirement, title='Bug report detail')
     return project, bug
 
 

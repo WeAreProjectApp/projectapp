@@ -1,5 +1,15 @@
 # Architecture — ProjectApp
 
+> **Seguimiento contractual — 2026-10-01:** `ProjectContract` y
+> `ContractAmendment` sustentan `DeliveryScope` → `DeliveryPhase` →
+> `DeliveryStage` → `Requirement`. Publicaciones, revisiones, evidencias de firma,
+> respuestas y copias documentales conservan el contenido entregado. JWT y MCP
+> comparten `delivery_workflow`, `delivery_documents` y validación de pertenencia,
+> versión y congelamiento. `ProjectPhase` mantiene su función comercial/hosting;
+> `technical_resources_sync` sólo refleja recursos y datos. La purga autorizada
+> retira las tarjetas antiguas, conserva bugs/cambios y anula sus referencias.
+> [Reglas y superficies vigentes](../PLATFORM_DELIVERY.md).
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no
@@ -551,7 +561,7 @@ flowchart TD
     URLRouter -->|/*| ServeNuxt["serve_nuxt (catch-all)"]
 
     AccountsURLs --> AuthViews["Auth Views (login, verify, refresh)"]
-    AccountsURLs --> PlatformViews["Platform Views (projects, clients, kanban)"]
+    AccountsURLs --> PlatformViews["Platform Views (projects, clients, delivery reviews)"]
 
     ContentURLs --> ProposalViews["Proposal Views (public + admin)"]
     ContentURLs --> BlogViews["Blog Views (public + admin)"]
@@ -675,12 +685,17 @@ erDiagram
     UserProfile ||--o{ VerificationCode : "has codes"
     UserProfile ||--o{ Document : "signs (optional)"
     Project ||--o{ ProjectPhase : "has phases"
-    ProjectPhase ||--o{ ProjectScopeItem : "has scope items"
-    ProjectScopeItem ||--o{ Requirement : "groups requirements"
-    Project ||--o{ Requirement : "has requirements"
+    Project ||--o{ ProjectContract : "sustenta contratos"
+    ProjectContract ||--o{ ContractAmendment : "tiene modificaciones"
+    ProjectContract ||--o{ DeliveryScope : "define alcances"
+    ContractAmendment o|--o{ DeliveryScope : "modifica alcance"
+    DeliveryScope ||--o{ DeliveryPhase : "organiza fases"
+    DeliveryPhase ||--o{ DeliveryStage : "organiza etapas"
+    DeliveryStage ||--o{ Requirement : "contiene guías"
+    DeliveryStage ||--o{ DeliveryPublication : "publica versiones"
+    DeliveryPublication ||--o{ RequirementReview : "recibe resultados"
+    Requirement ||--o{ RequirementReview : "conserva conformidades"
     Project ||--o{ ProjectDataModelEntity : "has data model entities"
-    Requirement ||--o{ RequirementComment : "has comments"
-    Requirement ||--o{ RequirementHistory : "has history"
     DataModelEntity ||--o{ ProjectDataModelEntity : "linked to projects"
     WebAppDiagnostic ||--o{ DiagnosticSection : "has sections"
     McpConnector ||--o{ McpRequestLog : "has activity"
@@ -769,13 +784,16 @@ branch before removing its now-empty parallel wrappers.
 | **Project** | Client project in platform with a real lifecycle | client_fk, name, description, current_state FK, state_review_required, compatibility status mirror (development/active/suspended/completed/decommissioned; archived only for legacy review), progress, dates, payment/hosting snapshots, production/staging/repository URLs and temporary legacy access fields |
 | **ProjectAdminAccess** | One Django-admin credential set per fixed project environment | project_fk, unique environment (`production`/`staging`), admin_url, admin_username, admin_password_encrypted, updated_by and timestamps |
 | **ProjectAccessNote** | Multiple encrypted operational notes per project | project_fk, title, content_encrypted, is_sensitive, created/updated actors and timestamps |
-| **ProjectPhase** | Execution phase of a project (from an accepted proposal) | project_fk, business_proposal_fk (unique per project), order, hosting_start_date, hosting_activated_at |
-| **ProjectScopeItem** | Scope grouping mirrored from proposal FR groups | phase_fk, title, description, kind, order, archived. Chain: Project → ProjectPhase → ProjectScopeItem → Requirement |
-| **Requirement** | Kanban board card | project_fk, phase_fk, **scope_item_fk**, title, description, status (backlog/todo/in_progress/in_review), priority, order, deliverable_fk, **content_overridden** |
-| **RequirementComment** | Comment on a requirement | requirement_fk, author_fk, text, created_at |
-| **RequirementHistory** | Audit trail for requirements | requirement_fk, field_name, old_value, new_value, changed_by |
-| **BugReport** | Bug reports per project | project_fk, title, description, status, priority, reported_by |
-| **ChangeRequest** | Change requests per project | project_fk, title, description, status, requested_by |
+| **ProjectPhase** | Referencia comercial y de hosting | project_fk, business_proposal_fk (unique per project), order, hosting_start_date, hosting_activated_at |
+| **ProjectContract / ContractAmendment** | Base contractual y sus modificaciones | project/contract FK, key, title, una fuente Document o ProposalDocument, client_visible, version |
+| **DeliveryScope / DeliveryPhase / DeliveryStage** | Alcance, fases y etapas de entrega | contrato/otrosí, jerarquía, key/title, version; alcance vigente, referencia comercial opcional, estado editorial de etapa |
+| **Requirement** | Guía comprobable por el cliente | stage FK, key, title, description, guide, order, version, review_status; proyecto derivado del contrato |
+| **DeliveryPublication / RequirementReview** | Versión publicada y resultado recibido | ronda, contenido exacto, actor, decisión, versión revisada, fecha/autor originales y evidencia de origen |
+| **DeliveryReviewDocumentEvidence** | Respaldo de la conformidad histórica, separado de la guía | revisión/documento protegidos, título y PDF privado exacto, huella; descarga autenticada del archivo registrado |
+| **ContractSignatureEvidence / DeliveryDocumentLink / DeliveryDocumentSnapshot** | Firma y documentos por nivel | método portal/externo, PDF privado, huella y origen; asociaciones jerárquicas y copias publicadas |
+| **DeliveryMessage / DeliveryWorkspace / DeliveryOperation** | Respuestas y control de escrituras | nivel, autor, requerimientos/documentos relacionados, nota interna; versión global y comprobante de reintento |
+| **BugReport** | Reportes por proyecto | project FK, source_requirement FK nullable, title, description, status, severity, reported_by; fase de entrega derivada de la etapa fuente |
+| **ChangeRequest** | Solicitudes por proyecto | project FK, source_requirement/linked_requirement FK nullable, title, description, status, created_by; conversión a guía pendiente en etapa editable |
 | **Deliverable** | Project deliverables tracking | project_fk, title, description, status, due_date |
 | **Notification** | In-platform notifications | user_fk, message, type, is_read, created_at |
 | **HostingSubscription** | Hosting billing subscription | project_fk, plan (`quarterly`/`semiannual`/`nine_month`; legacy monthly/annual readable), status, start_date, billing amounts, next_billing_date |
@@ -1098,10 +1116,9 @@ flowchart TD
         PlatformVerify["/platform/verify"]
         PlatformProfile["/platform/complete-profile"]
         PlatformDashboard["/platform/dashboard"]
-        PlatformBoard["/platform/board"]
         PlatformProjects["/platform/projects"]
         PlatformProjectDetail["/platform/projects/:id"]
-        PlatformProjectBoard["/platform/projects/:id/board"]
+        PlatformProjectDelivery["/platform/projects/:id/delivery"]
         PlatformProjectBugs["/platform/projects/:id/bugs"]
         PlatformProjectChanges["/platform/projects/:id/changes"]
         PlatformProjectDeliverables["/platform/projects/:id/deliverables"]
@@ -1214,7 +1231,7 @@ flowchart LR
         PlatformClients["platform-clients.js"]
         PlatformProjects["platform-projects.js"]
         ProjectAccessTransport["services/projectAccessApi.js"]
-        PlatformRequirements["platform-requirements.js"]
+        PlatformDelivery["platform-delivery.js"]
         PlatformBugReports["platform-bug-reports.js"]
         PlatformChangeRequests["platform-change-requests.js"]
         PlatformDeliverables["platform-deliverables.js"]
@@ -1243,7 +1260,7 @@ flowchart LR
     PlatformClients --> PlatformHTTP
     PlatformProjects --> PlatformHTTP
     ProjectAccessTransport --> PlatformHTTP
-    PlatformRequirements --> PlatformHTTP
+    PlatformDelivery --> PlatformHTTP
     PlatformBugReports --> PlatformHTTP
     PlatformChangeRequests --> PlatformHTTP
     PlatformDeliverables --> PlatformHTTP

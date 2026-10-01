@@ -105,17 +105,17 @@ test.describe('Platform Project Detail — Admin', () => {
     await expect(page).toHaveURL(/\/platform\/projects$/);
   });
 
-  test('renders project nav with Tablero link to board', {
+  test('renders the project delivery navigation link', {
     tag: ['@outcome:display', ...PLATFORM_PROJECT_DETAIL, '@role:platform-admin'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (display — the project nav exposes the board link with its href)
+    // quality: allow-no-interaction (display — the project nav exposes its delivery destination)
     await setupDetailMocks(page, { user: mockPlatformAdmin });
     await gotoProjectDetail(page);
 
-    const boardLink = page.getByRole('link', { name: 'Tablero', exact: true });
+    const boardLink = page.getByRole('link', { name: 'Entregas', exact: true });
     await expect(boardLink).toBeVisible();
     // i18n prefix strategy adds locale prefix to all hrefs
-    await expect(boardLink).toHaveAttribute('href', /\/platform\/projects\/1\/board$/);
+    await expect(boardLink).toHaveAttribute('href', /\/platform\/projects\/1\/delivery$/);
   });
 
   test('admin jumps back to the commercial record in a new tab (PA-50)', {

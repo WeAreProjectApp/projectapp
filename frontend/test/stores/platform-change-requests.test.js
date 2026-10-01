@@ -134,7 +134,8 @@ describe('usePlatformChangeRequestsStore', () => {
   it('convertToRequirement updates list entry', async () => {
     store.changeRequests = [{ id: 5, status: 'pending' }]
     mockPost.mockResolvedValueOnce({ data: { id: 5, status: 'converted' } })
-    const result = await store.convertToRequirement(1, 5)
+    const result = await store.convertToRequirement(1, 5, { stage_id: 11, expected_version: 4 })
+    expect(mockPost).toHaveBeenCalledWith('projects/1/change-requests/5/convert/', { stage_id: 11, expected_version: 4 })
     expect(result.success).toBe(true)
     expect(store.changeRequests[0].status).toBe('converted')
   })

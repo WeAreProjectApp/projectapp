@@ -217,7 +217,7 @@
                       {{ projectRequirements.length ? 'Selecciona el requerimiento' : 'El proyecto no tiene requerimientos' }}
                     </option>
                     <option v-for="req in projectRequirements" :key="req.id" :value="req.id">
-                      {{ req.phase_title ? req.phase_title + ' — ' : '' }}{{ req.title }}
+                      {{ req.stage_title ? req.stage_title + ' — ' : '' }}{{ req.title }}
                     </option>
                   </select>
                   <p class="mt-1 text-[10px] text-green-light/60">¿De qué requerimiento es este bug?</p>
@@ -409,10 +409,10 @@
                   Fase: {{ detailBug.source_requirement.phase_title }}
                 </p>
                 <NuxtLink
-                  :to="localePath(`/platform/projects/${projectId}/board?phase_id=${detailBug.source_requirement.phase_id}`)"
+                  :to="localePath(`/platform/projects/${projectId}/delivery?stage=${detailBug.source_requirement.stage_id}#requirement-${detailBug.source_requirement.id}`)"
                   class="mt-2 inline-flex items-center gap-1 text-xs font-medium text-text-brand underline decoration-text-brand/30 transition hover:decoration-text-brand dark:text-accent dark:decoration-accent/30 dark:hover:decoration-accent"
                 >
-                  Ver en el tablero
+                  {{ t('platformDelivery.seeDelivery') }}
                   <svg class="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7-7 7M5 12h16" /></svg>
                 </NuxtLink>
               </div>
@@ -583,6 +583,7 @@ usePageEntrance('#platform-bugs')
 
 const route = useRoute()
 const localePath = useLocalePath()
+const { t } = useI18n()
 const authStore = usePlatformAuthStore()
 const bugStore = usePlatformBugReportsStore()
 const projectsStore = usePlatformProjectsStore()
@@ -608,28 +609,20 @@ const statusTabs = computed(() => [
   { value: 'duplicate', label: 'Duplicado' },
 ])
 
-const phases = ref([])
 const selectedPhaseId = ref(null)
-const phaseOptions = computed(() =>
-  phases.value.map((p) => ({ id: p.id, order: p.order, title: p.proposal?.title || `Fase ${p.order}` }))
-)
-const selectedPhaseLabel = computed(() => {
-  if (!selectedPhaseId.value) return 'Todas las fases'
-  const found = phaseOptions.value.find((p) => p.id === selectedPhaseId.value)
-  return found ? `Fase ${found.order} · ${found.title}` : 'Todas las fases'
-})
+const phaseOptions = computed(() => [...new Map(projectRequirements.value
+  .filter((requirement) => requirement.phase_id)
+  .map((requirement) => [requirement.phase_id, { id: requirement.phase_id, title: requirement.phase_title }])).values()])
+const selectedPhaseLabel = computed(() => phaseOptions.value.find((phase) => phase.id === selectedPhaseId.value)?.title || 'Todas las fases')
 const phaseDropdownItems = computed(() => [
   { label: 'Todas las fases', onClick: () => { selectedPhaseId.value = null } },
-  ...phaseOptions.value.map((opt) => ({
-    label: `Fase ${opt.order} · ${opt.title}`,
-    onClick: () => { selectedPhaseId.value = opt.id },
-  })),
+  ...phaseOptions.value.map((phase) => ({ label: phase.title, onClick: () => { selectedPhaseId.value = phase.id } })),
 ])
 
 const filteredBugs = computed(() => {
   let list = bugStore.filteredByStatus(activeFilter.value)
   if (selectedPhaseId.value) {
-    list = list.filter((b) => b.phase_id === selectedPhaseId.value)
+    list = list.filter((b) => b.source_requirement?.phase_id === selectedPhaseId.value)
   }
   return list
 })
@@ -706,7 +699,7 @@ function openCreateModal() {
   createForm.is_recurring = false; createForm.steps_to_reproduce = ['']
   createForm.expected_behavior = ''; createForm.actual_behavior = ''
   screenshotFile.value = null; screenshotPreview.value = null
-  // Honor ?from_req=X&title=Y from board.vue deep-link
+  // Honor ?from_req=X&title=Y from delivery.vue deep-link
   const fromReq = Number(route.query.from_req)
   const req = projectRequirements.value.find((r) => r.id === fromReq)
   if (req) {
@@ -873,14 +866,6 @@ async function handleImportResponses() {
   }
 }
 
-async function loadPhases() {
-  try {
-    const list = await projectsStore.loadPhases(projectId.value)
-    phases.value = Array.isArray(list) ? list : []
-  } catch {
-    phases.value = []
-  }
-}
 
 async function loadBugsAndDeliverables() {
   await bugStore.fetchBugReports(projectId.value, null, false)
@@ -901,7 +886,6 @@ onMounted(async () => {
   await Promise.all([
     loadBugsAndDeliverables(),
     loadProjectRequirements(),
-    loadPhases(),
     projectsStore.currentProject?.id !== Number(projectId.value) ? projectsStore.fetchProject(projectId.value) : Promise.resolve(),
   ])
   if (!authStore.isAdmin && route.query.from_req && projectRequirements.value.length) {
@@ -912,7 +896,6 @@ onMounted(async () => {
 watch(projectId, () => {
   loadBugsAndDeliverables()
   loadProjectRequirements()
-  loadPhases()
 })
 </script>
 

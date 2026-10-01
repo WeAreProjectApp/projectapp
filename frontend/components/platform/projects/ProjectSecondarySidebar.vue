@@ -57,7 +57,7 @@ const items = computed(() => {
   const base = `/platform/projects/${props.projectId}`
   const navigationItems = [
     { label: 'Resumen',           href: localePath(base) },
-    { label: 'Tablero',           href: localePath(`${base}/board`) },
+    { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`) },
     { label: 'Solicitudes',       href: localePath(`${base}/changes`) },
     { label: 'Bugs',              href: localePath(`${base}/bugs`) },
     { label: 'Recursos',          href: localePath(`${base}/deliverables`) },

@@ -1,3 +1,16 @@
+# Alcance y entregas en Platform (2026-10-01)
+
+Primer incremento implementado en `platform-review-workflow`, en validación:
+contrato/otrosí → alcance → fases → etapas → guías simples, con borradores,
+prompt/JSON, publicación y decisiones parciales del cliente. Firmas portal o PDF
+externo, conformidades históricas con evidencia entrante y documentos por nivel
+conservan contenido y autoría; las conformidades aprobadas sobreviven a otra ronda.
+El Kanban de clientes y su sincronización se retiran mediante purga autorizada;
+propuestas, fases comerciales, hosting, finanzas, recursos y bugs/cambios permanecen.
+Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
+alcances posteriores, incrementalmente en el mismo PR. Operación y JSON vigente:
+[PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto
@@ -324,6 +337,18 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+**2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
+`feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
+alcance, fases de ejecución, etapas y guías de validación. Publicación por etapa,
+conformidades parciales por requerimiento, evidencia de firma y rondas de revisión
+son reglas independientes. Los ejemplos documentales 137/138/181 y los hilos 2/3/7
+de Comunicaciones respaldan ese flujo; Vástago y TORRIOS pertenecen al mismo
+proyecto. El operador autorizó descartar las tarjetas de seguimiento antiguas,
+preservando bugs/solicitudes y los datos comerciales, documentales y financieros.
+La entrega incluye autoría por prompt/JSON y paridad administrativa MCP; cuentas
+de cobro, mejoras de bugs y accesos del cliente permanecen incrementos posteriores.
+No hay despliegue ni migraciones contra la base del clon principal en esta sesión.
 
 **2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
 con Comercial para ajustes, contratos personalizados y documentos. Formalización
