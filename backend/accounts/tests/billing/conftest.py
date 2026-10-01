@@ -4,23 +4,7 @@ import pytest
 from accounts.models import HostingSubscription, Payment, ProjectContract
 from content.models import Document, DocumentCollectionAccount, HostingRecord
 from content.services.document_type_utils import get_collection_account_document_type
-from accounts.tests.billing.mail_safety import LOCMEM_BACKEND, assert_billing_mailers_isolated
-
-
-@pytest.fixture(scope='session', autouse=True)
-def billing_mailer_isolation(django_test_environment):
-    from django.conf import settings
-    from django.test import override_settings
-    aliases = {alias: {'BACKEND': LOCMEM_BACKEND} for alias in settings.MAILERS}
-    aliases['default'] = {'BACKEND': LOCMEM_BACKEND}
-    with override_settings(MAILERS=aliases):
-        assert_billing_mailers_isolated()
-        yield
-
-
-@pytest.fixture(scope='session')
-def django_db_setup(billing_mailer_isolation, django_db_setup):
-    return django_db_setup
+from accounts.tests.billing.mail_safety import billing_mailer_isolation, django_db_setup
 
 
 @pytest.fixture

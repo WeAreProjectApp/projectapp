@@ -2372,6 +2372,9 @@ hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por 
 contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
 No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
 contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.
-La no-op autorizada `0072` reúne las hojas `0068`/`0069`. `0074` espera los padres
-publicados `0072`/`0073`; P4 conserva su reserva de revocación después de guardas.
+La no-op autorizada `0072` reúne las hojas `0068`/`0069`; `0074` reúne `0072`/`0073`
+tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
+`ebbf331d76fedb5f89f3b440f2fdeb50c148e977`. P4 conserva su reserva de revocación
+después de guardas. Un origen financiero eliminado antes del descubrimiento
+rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
 SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.

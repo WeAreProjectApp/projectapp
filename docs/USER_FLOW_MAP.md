@@ -8311,6 +8311,7 @@ Código: `frontend/pages/platform/projects/[id]/changes.vue`, componentes
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
 ### Platform: enviar una constancia de etapa aprobada
 
 Fuente: `DeliveryStage.vue`, `DeliveryClosureEmail.vue` y las acciones del store `platform-delivery.js`.

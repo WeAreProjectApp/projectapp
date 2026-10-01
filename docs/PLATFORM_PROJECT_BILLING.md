@@ -44,9 +44,11 @@ migraciones a una base de servicio. La dependencia P3 absorbida por merge es
 `dea940345fc37c361f8749d30e1a96ac2bba73ee`. P1 publicado
 `b25ad2e080597b7708126b5d865d7ba805253478` (PR #464) se absorbió mediante merge.
 La no-op P2 `0072_p2_issues_billing_bridge` depende de `0068_issue_reports` y
-`0069_p2_project_billing_context`. La futura `0074_p2_platform_billing_merge`
-dependerá de `0072` y de la hoja `0073` de P1 cuando ambos padres estén publicados;
-no se genera antes. P3 todavía no se considera entrega final verde.
+`0069_p2_project_billing_context`. La no-op `0074_p2_platform_billing_merge`
+reúne `0072` y `0073_p1_delivery_issues_merge`, dejando una sola hoja de accounts.
+P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
+`ebbf331d76fedb5f89f3b440f2fdeb50c148e977` se absorbieron por merge en esta rama,
+conservando sus implementaciones y aislamiento efectivo de correo.
 
 ## Conciliación y emisión
 
@@ -107,6 +109,8 @@ este dominio. Los escritores financieros existentes reciben puentes mínimos.
 | `project_service.change_client_apply` | Lock del proyecto → finanzas P2 → delivery P3 → tickets P1 → revocación P4 → dueño/cascada. Las tres guardas están compuestas; la lógica P4 se conserva al absorber su commit publicado. |
 | `ProjectAdmin` y `forms_billing` | Formulario y recheck bajo lock, con proyecto original y actor del request; componen finanzas → delivery → tickets y muestran errores DRF con rollback. P4 integra revocación después de estas guardas. |
 | `accounts/migrations/0072_p2_issues_billing_bridge` | No-op autorizada por P0 que reúne las hojas `0068` de P1 y `0069` de P2; no altera migraciones anteriores. |
+| `accounts/migrations/0074_p2_platform_billing_merge` | No-op reservada, padres publicados `0072` y `0073`; una sola hoja en esta rama, sin operaciones ni aplicación a DB. |
+| `accounting_settlement_service` / `accounting_service` | Reserva acotada a las dos entradas de liquidación y escritores directos de ingreso/hosting: Project antes de origen; sin cambios de cálculo, Bolsillo ni automatismos. |
 | `delivery_workflow._validate_relations` | Excepción directa acotada: rechazar reparentar un otrosí con cuentas mediante helper P2. P3 mantiene el resto del núcleo. |
 
 `ProjectContract.project` continúa inmutable en REST/MCP. Un otrosí sin cobros
@@ -146,6 +150,12 @@ Los journeys de navegador usan APIs simuladas y nunca cobran ni contactan a
 clientes. Los resultados concretos y CI se registran en el PR.
 SQLite valida estados y rollback; no certifica exclusión real ni ausencia de
 carreras en MySQL. No se inició un harness MySQL.
+El descubrimiento exige encontrar todos los IDs solicitados. Si un ingreso o
+hosting fue eliminado antes de esta lectura, la actualización validada contra
+la instancia antigua devuelve conflicto 409, sin recrear la fila ni añadir
+auditoría parcial. Las dos pruebas realizan primero un DELETE permitido real,
+y después ejercitan el escritor con la instancia/serializer ya obsoletos; no
+simulan ni certifican una carrera de bloqueo entre conexiones MySQL.
 El servidor local de navegador usa APIs simuladas contra un backend inexistente.
 La fixture pytest dedicada configura `MAILERS.default` y todos los aliases con
 locmem, comprueba el backend efectivo y exige ese guard antes de preparar su DB.
@@ -159,7 +169,16 @@ la navegación por proyecto. El build Nuxt pasó; el gate estricto focal registr
 hosting cubiertas, sin brechas de resultados. Son verificaciones locales: no
 sustituyen el CI del head que finalmente se publique.
 
-Pendientes de integración: P0 coordina P3 final, el merge de hojas y el orden
-de PRs. La revocación de accesos P4 se absorbe por commit publicado; no se copia
+Sobre las dependencias P1/P3 publicadas se verificaron 55 casos backend
+distintos: escritores, desaparición de orígenes, correo, Admin, liquidación y
+compatibilidad de emisión. Los cinco perfiles del preview de cuenta pasaron
+(uno antes de reiniciar el servidor propio, cuatro después). Los casos fallidos
+por conexión local rechazada se repitieron sin cambiar comportamiento de UI.
+El gate estricto de los cuatro archivos del cierre pasó: 97/100, sin errores ni
+advertencias; conserva nueve sugerencias de docstrings existentes. La hoja de
+accounts es únicamente `0074`; Django check y makemigrations dry-run no muestran
+problemas ni drift. Registro de flows, catálogo y contrato responsivo coherentes.
+
+Pendientes de integración: P0 coordina el tren de PRs y la composición P4. La revocación de accesos P4 se absorbe por commit publicado; no se copia
 desde su worktree. No se cambian el fallo contable ajeno de P3, guías por roles,
 prompt/core, enlaces seguros, correos ni políticas de publicación documental.

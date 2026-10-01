@@ -22,7 +22,11 @@ class LockedBillingRows:
 
 
 def _discover(model, ids, fields):
-    return {row['id']: row for row in model.objects.filter(pk__in=ids).values('id', *fields)}
+    requested = set(ids)
+    rows = {row['id']: row for row in model.objects.filter(pk__in=requested).values('id', *fields)}
+    if rows.keys() != requested:
+        raise BillingConflict()
+    return rows
 
 
 def _lock_current(model, discovered, fields, projects):
