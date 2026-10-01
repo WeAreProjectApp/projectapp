@@ -198,6 +198,10 @@ EXEMPT_MODELS = {
     # source selection, never fabricated by automatic demo-data generation.
     # Authorized fake resets dissolve its protected graph in dependency order.
     'accounts.DeliveryPromptContext', 'accounts.DeliveryPromptSource',
+    # Closure-email previews/files/attempts require an explicit administrator
+    # preparation and reviewed transport action, never automatic demo sending.
+    'accounts.DeliveryEvidenceEmail', 'accounts.DeliveryEvidenceEmailFile',
+    'accounts.DeliveryEvidenceEmailAttempt',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP

@@ -108,11 +108,22 @@ def prompt_options(project_id, actor):
     }
 
 
-def _selection(project, values):
+def _selection(project, values, destination_snapshot=None):
     from accounts.services.delivery_workflow import _node
     stage = None
     scope = None
-    if values['mode'] == 'reply':
+    if destination_snapshot is not None:
+        if values.get('stage_id') or values.get('scope_id'):
+            fail('La respuesta del ticket usa su origen congelado; no selecciones otra etapa o alcance.', 'context_destination')
+        contract = _node(project, 'contracts', values['contract_id']) if values.get('contract_id') else None
+        origin = destination_snapshot['origin']
+        if contract and origin.get('contract_id') and origin['contract_id'] != contract.pk:
+            fail('Conserva el contrato del origen publicado del ticket.', 'context_scope')
+        if contract and origin.get('amendment_id') and origin['amendment_id'] not in values['amendment_ids']:
+            fail('Selecciona el otrosí del origen publicado del ticket.', 'context_scope')
+        if not contract and (values['amendment_ids'] or values['sources']):
+            fail('Selecciona un contrato antes de argumentar con otrosíes o anexos.', 'context_contract_required')
+    elif values['mode'] == 'reply':
         if not values.get('stage_id'):
             fail('Selecciona la etapa cuya respuesta vas a preparar.', 'context_stage_required')
         stage = _node(project, 'stages', values['stage_id'])
@@ -141,7 +152,7 @@ def _selection(project, values):
     amendments = []
     for node_id in ids:
         node = _node(project, 'amendments', node_id)
-        if node.contract_id != contract.pk:
+        if not contract or node.contract_id != contract.pk:
             fail('El otrosí pertenece a otro contrato.', 'context_scope')
         amendments.append(node)
     return contract, amendments, scope, stage
@@ -402,7 +413,7 @@ def _build_prompt(context, sources, instructions):
             'No inventes perfiles, permisos, pantallas ni restricciones; pide aclaración si las fuentes no los determinan. '
             'Si no existen roles acreditados, omite role y la separación por roles; no agregues texto de perfiles supuesto. '
             'No reformules ni alteres guías que ya fueron aprobadas.') if context.mode == 'guides' else (
-        'Prepara una respuesta borrador a las observaciones de esta etapa. Clasifica cada solicitud como '
+        'Prepara una respuesta borrador a las observaciones del destino capturado. Clasifica cada solicitud como '
         'inside_scope, outside_scope o indeterminate. Que una función no figure en la guía no prueba que esté fuera del contrato. '
         'Para inside_scope, reconoce el pedido y propone atenderlo o completar la guía pendiente, sin alterar lo aprobado. '
         'Para outside_scope, justifica con fuentes seleccionadas y propone una ampliación separada. '
@@ -427,9 +438,11 @@ def _build_prompt(context, sources, instructions):
     )
 
 
-def create_prompt_context(project_id, actor, data):
+def create_prompt_context(project_id, actor, data, *, target_provider=None):
     require_admin(actor)
-    values = _validate(PromptContextSerializer, data)
+    from accounts.serializers_delivery import ContractReplyContextSerializer
+    destination_reply = target_provider is not None
+    values = _validate(ContractReplyContextSerializer if destination_reply else PromptContextSerializer, data)
     fingerprint = hashlib.sha256(_json_bytes({key: value for key, value in values.items() if key != 'expected_version'})).hexdigest()
     with artifact_scope(), transaction.atomic():
         project = project_for_actor(project_id, actor, lock=True)
@@ -437,18 +450,25 @@ def create_prompt_context(project_id, actor, data):
         if existing:
             if existing.actor_id != actor.pk or existing.fingerprint != fingerprint:
                 raise DeliveryConflict('El identificador ya corresponde a otra preparación.')
+            if existing.client_id and existing.client_id != project.client_id:
+                raise DeliveryConflict('El propietario cambió; esta preparación pertenece al cliente anterior.')
             return get_prompt_context(project_id, actor, existing.pk)
         if values['expected_version'] != _workspace_version(project):
             raise DeliveryConflict()
-        contract, amendments, scope, stage = _selection(project, values)
+        destination_snapshot = None
+        if destination_reply:
+            from accounts.services.delivery_contract_reply import capture_destination
+            destination_snapshot = capture_destination(project, actor, values, target_provider, lock=True)
+        contract, amendments, scope, stage = _selection(project, values, destination_snapshot)
         context = DeliveryPromptContext(
-            project=project, actor=actor, contract=contract, scope=scope, stage=stage,
+            project=project, client=project.client, actor=actor, contract=contract, scope=scope, stage=stage,
             mode=values['mode'], request_id=values['request_id'], fingerprint=fingerprint,
             captured_version=values['expected_version'], amendment_ids=[node.pk for node in amendments],
             missing_sources=values['missing_sources'], uncertainties=values['uncertainties'],
-            conversation=_conversation(stage) if stage else {},
+            conversation=destination_snapshot['content'] if destination_snapshot else (_conversation(stage) if stage else {}),
+            destination=destination_snapshot['identity'] if destination_snapshot else {},
         )
-        sources = [_node_source(context, contract, 'contract', actor)]
+        sources = [_node_source(context, contract, 'contract', actor)] if contract else []
         sources.extend(_node_source(context, node, 'amendment', actor) for node in amendments)
         seen = {(source.origin, source.source_id) for source in sources}
         for item in values['sources']:
@@ -479,8 +499,24 @@ def create_prompt_context(project_id, actor, data):
                 title='Decisiones y observaciones públicas de la etapa', role='conversation',
                 content_json={key: value for key, value in context.conversation.items() if key in ('reviews', 'messages', 'attachment_note')},
             ))
+        if destination_snapshot:
+            target = context.destination
+            sources.append(_capture_source(
+                context, key=f"ticket-origin-{target['kind']}-{target['id']}", origin='ticket_origin',
+                source_id=target['id'], title='Origen publicado del ticket (evidencia, no contrato)',
+                role='published_guides', version=target['ticket_version'], version_kind='ticket',
+                content_json=destination_snapshot['origin'],
+            ))
+            sources.append(_capture_source(
+                context, key=f"ticket-conversation-{target['kind']}-{target['id']}", origin='ticket_conversation',
+                source_id=target['id'], title='Reporte y conversación pública del ticket (no contrato)',
+                role='conversation', version=target['ticket_version'], version_kind='ticket',
+                content_json=context.conversation,
+            ))
         context.warnings = ['La interpretación del alcance necesita revisión humana; comprobar una cita no acredita esa interpretación.']
         context.warnings.extend(f'{source.title}: {warning}' for source in sources for warning in source.warnings)
+        if contract is None:
+            context.uncertainties.append('No se seleccionó un contrato: el reporte se conserva, pero el alcance queda indeterminado.')
         for source in sources:
             if source.role in ('contract', 'amendment') and not source.signature_evidence_id:
                 context.uncertainties.append(f'No consta evidencia firmada de {source.title}.')
@@ -492,7 +528,10 @@ def create_prompt_context(project_id, actor, data):
         context.complete = all(source.status == 'included' for source in sources) and not context.missing_sources and not context.uncertainties
         context.template = _template(context, sources)
         context.schema = guides_schema() if context.mode == 'guides' else reply_schema()
-        context.manifest_sha256 = hashlib.sha256(_json_bytes({'sources': [_source_data(source) for source in sources], 'conversation': context.conversation})).hexdigest()
+        context.manifest_sha256 = hashlib.sha256(_json_bytes({
+            'sources': [_source_data(source) for source in sources], 'conversation': context.conversation,
+            **({'destination': context.destination} if context.destination else {}),
+        })).hexdigest()
         context.prompt = _build_prompt(context, sources, values['instructions'])
         if len(_json_bytes(_context_data(context, sources, context.captured_version))) > MAX_CONTEXT_RESPONSE_BYTES:
             fail('El contexto completo supera 256 KB. Reduce la selección o las instrucciones; no se guardó un contexto parcial.', 'context_too_large')
@@ -522,6 +561,7 @@ def _context_data(context, sources, version):
         'missing_sources': context.missing_sources, 'complete': context.complete,
         'conversation': context.conversation, 'manifest_sha256': context.manifest_sha256,
         'created_at': context.created_at.isoformat() if context.created_at else None,
+        **({'destination': context.destination} if context.destination else {}),
     }
 
 
@@ -533,7 +573,7 @@ def get_prompt_context(project_id, actor, context_id):
 def list_prompt_contexts(project_id, actor):
     require_admin(actor)
     project = project_for_actor(project_id, actor)
-    rows = list(DeliveryPromptContext.objects.filter(project=project).order_by('-created_at').values(
+    rows = list(DeliveryPromptContext.objects.filter(project=project, destination={}).order_by('-created_at').values(
         'id', 'mode', 'contract_id', 'scope_id', 'stage_id', 'amendment_ids',
         'complete', 'captured_version', 'created_at',
     )[:50])
@@ -707,15 +747,20 @@ def requirement_provenance(project, stage, values, existing=None):
 def preview_reply(project_id, actor, payload, expected_version=None):
     values = _validate(ReplyPayloadSerializer, payload)
     context = _context_for_actor(project_id, actor, values['context_id'])
-    if context.mode != 'reply':
+    if context.mode != 'reply' or not context.stage_id or context.destination:
         fail('Selecciona un contexto de respuesta de etapa.', 'context_mode')
     version = _workspace_version(context.project)
     if expected_version is not None and expected_version != version:
         raise DeliveryConflict()
+    return _preview_contract_reply(context, values, version)
+
+
+def _preview_contract_reply(context, values, version):
+    """Shared citation/scope validation for stages and external destinations."""
     classifications = []
     references = []
     for item in values['classifications']:
-        if item['classification'] == 'outside_scope' and not context.complete:
+        if item['classification'] != 'indeterminate' and not context.complete:
             fail('Las fuentes están incompletas o presentan incertidumbre. Clasifica como indeterminate y pide aclaración.', 'scope_indeterminate')
         item['citations'] = validate_references(context, item.get('citations', []), normative=item['classification'] != 'indeterminate')
         classifications.append(item)

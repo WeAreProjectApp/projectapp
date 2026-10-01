@@ -22,6 +22,19 @@ bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
 Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
 distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
 inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
+P3 publica la frontera contractual reutilizable de tickets en
+`accounts.services.delivery_contract_reply`: proveedor estrecho del dominio
+P1, origen/conversación congelados, versiones independientes de ticket y
+workspace, citas verificadas, preview sin publicación y DTO público separado
+de fuentes privadas. Sin contrato o fuentes completas, alcance indeterminado.
+Validación: 16 casos nuevos + 3 regresiones inmediatas verdes; gate 100/100.
+La guarda de transferencia conserva la historia del cliente anterior y no
+modifica accesos ni filas al rechazar el cambio; 16 casos verdes, gate 100/100.
+Contrato de integración: [DELIVERY_CONTRACT_REPLY_ADAPTER](../docs/DELIVERY_CONTRACT_REPLY_ADAPTER.md).
+La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
+capturas de tickets y los modelos de evidencia de correo del siguiente
+incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
+ninguna migración desde el worktree.
 Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
 alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
 correo manual del registro de una etapa aprobada, con vista previa y copia
