@@ -26,7 +26,7 @@ del save; el formulario ProjectAdmin y su recheck pertenecen a P2.
 El puente de P1 en `content.services.project_service.change_client_apply` toma
 `Project.select_for_update()`, llama al guard publicado de entregas de P3 y
 comprueba después el guard de tickets antes de toda escritura. La dependencia
-P3 `30fd7ab9` está absorbida, sin copiar código mutable.
+P3 `edfff19c` (incluye el provider `30fd7ab9`) está absorbida, sin copiar código mutable.
 P0 coordina los bloques publicados en este orden:
 
 `lock → financiero P2 → delivery P3 → issues P1 → access-revoke P4 → save`.

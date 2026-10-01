@@ -123,7 +123,7 @@ directamente.
 ## Bloques de integración
 
 Base main `cce8e694`, dependencia publicada P3
-`30fd7ab9af55aa8436a4d82927ea099d046cd8df` absorbida mediante merge en la rama
+`edfff19c2c56790398020a492e05df8c8a358872` absorbida mediante merge en la rama
 propia. P0 reservó `0068_issue_reports`, dependiente de
 `0067_explicit_delivery_authoring_context`; se conserva la dependencia
 `content.0273_merge_document_provenance_and_proposal_owner`. La no-op propia
@@ -158,9 +158,15 @@ Los tests focales cubren captura histórica, versiones, permisos, aislamiento,
 reintentos, reapertura y conservación de aprobaciones. MCP comprueba contratos,
 confirmaciones y artefactos aislados. El navegador usa APIs y JWT reales con
 SQLite/media desechables en loopback 4212/4213: no lee `.env` ni envía correos
-reales. El fixture propio fuerza `MAILERS` en memoria para todos los aliases,
+reales. La dependencia `edfff19c` fija el mailer de test antes de `django.setup`;
+el fixture propio fuerza `MAILERS` en memoria para todos los aliases,
 sin opciones SMTP, y comprueba el backend efectivo antes de DB/fixtures. Cuatro
 regresiones prueban envíos al outbox memoria y rechazos sin outbox.
+QA focal del adaptador: 17 casos REST (incluida CR), 12 casos MCP, 4 casos de
+aislamiento de correo y 3 unitarias de UI pasaron en sus lotes correspondientes.
+La auditoría de calidad no detectó errores y cerró sus observaciones; conserva
+dos warnings baselineados de pruebas previas. Los dos flujos del dominio cubren
+éxito, error, fallo y presentación. CI del head publicado se informa por separado.
 Ejecutar sólo archivos del dominio y hasta veinte casos por lote.
 `npm run e2e:issues` valida los recorridos nuevos. Los mapas se registran en
 `docs/user-flows/platform-bug-reports.md` y `platform-change-requests.md`.
