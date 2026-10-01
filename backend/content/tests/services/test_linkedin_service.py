@@ -3,6 +3,7 @@
 Covers: token exchange, encrypted storage, auto-refresh, publish,
 connection status, and encryption round-trip.
 """
+import logging
 from datetime import datetime, timedelta
 from datetime import timezone as dt_tz
 from unittest.mock import MagicMock, patch
@@ -10,6 +11,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from django.test import override_settings
 from freezegun import freeze_time
+from requests.exceptions import Timeout
 
 from content.models import LinkedInToken
 from content.services import linkedin_service
@@ -235,6 +237,7 @@ class TestRefreshAccessToken:
             mock_resp = MagicMock()
             mock_resp.status_code = 401
             mock_resp.text = 'invalid_token'
+            mock_resp.json.side_effect = ValueError
             mock_post.return_value = mock_resp
 
             result = linkedin_service._refresh_access_token()
@@ -243,6 +246,149 @@ class TestRefreshAccessToken:
             mock_post.assert_called_once()
             token = LinkedInToken.load()
             assert token.get_access_token() is None
+
+
+def _stored_token_state():
+    token = LinkedInToken.load()
+    return (
+        token.access_token_encrypted,
+        token.refresh_token_encrypted,
+        token.expires_at,
+        token.refresh_token_expires_at,
+        token.obtained_at,
+        token.member_sub,
+        token.profile_name,
+        token.profile_email,
+    )
+
+
+def _json_failure(status, payload):
+    response = MagicMock()
+    response.status_code = status
+    response.json.return_value = payload
+    return response
+
+
+def _text_failure(status, body):
+    response = MagicMock()
+    response.status_code = status
+    response.text = body
+    response.json.side_effect = ValueError
+    return response
+
+
+class TestRefreshFailureClassification:
+    @pytest.mark.parametrize('response_factory', [
+        lambda: _text_failure(429, 'rate limited'),
+        lambda: _text_failure(500, 'upstream error'),
+        lambda: _text_failure(503, 'maintenance'),
+        lambda: _text_failure(504, 'gateway timeout'),
+        lambda: _text_failure(400, '<html>unknown error</html>'),
+        lambda: _json_failure(400, ['unexpected']),
+        lambda: _json_failure(400, {'error': 'invalid_request'}),
+        lambda: _json_failure(401, {'error': 'invalid_client'}),
+    ])
+    @freeze_time(FROZEN_NOW)
+    @override_settings(**LINKEDIN_SETTINGS)
+    @patch('content.services.linkedin_service.requests.post')
+    def test_unclassified_refresh_failure_preserves_connection(
+        self, mock_post, fernet_key, token_with_refresh, response_factory,
+    ):
+        """Fails if a temporary or ambiguous OAuth response disconnects LinkedIn."""
+        mock_post.return_value = response_factory()
+        settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}
+        with override_settings(**settings_override):
+            before = _stored_token_state()
+            result = linkedin_service._refresh_access_token()
+
+            after = _stored_token_state()
+        assert result is None
+        assert after == before
+
+    @pytest.mark.parametrize('response_factory', [
+        lambda: _json_failure(400, {'error': 'invalid_grant'}),
+        lambda: _json_failure(401, {'error': 'invalid_token'}),
+        lambda: _json_failure(400, {
+            'error': 'invalid_request',
+            'error_description': 'The  provided authorization grant or refresh token is invalid, expired or revoked',
+        }),
+    ])
+    @freeze_time(FROZEN_NOW)
+    @override_settings(**LINKEDIN_SETTINGS)
+    @patch('content.services.linkedin_service.requests.post')
+    def test_explicit_credential_rejection_clears_connection(
+        self, mock_post, fernet_key, token_with_refresh, response_factory,
+    ):
+        """Fails if an explicit OAuth credential rejection leaves a dead token stored."""
+        mock_post.return_value = response_factory()
+        settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}
+        with override_settings(**settings_override):
+            result = linkedin_service._refresh_access_token()
+
+            token = LinkedInToken.load()
+        assert result is None
+        assert token.get_access_token() is None
+        assert token.get_refresh_token() is None
+        assert token.profile_name == ''
+
+    @freeze_time(FROZEN_NOW)
+    @override_settings(**LINKEDIN_SETTINGS)
+    @patch('content.services.linkedin_service.requests.post')
+    def test_refresh_recovers_after_temporary_provider_failure(
+        self, mock_post, fernet_key, token_with_refresh,
+    ):
+        """Fails if a retained refresh token cannot recover on the next successful call."""
+        unavailable = _text_failure(503, 'maintenance')
+        refreshed = _json_failure(200, {'access_token': 'recovered-access', 'expires_in': 3600})
+        mock_post.side_effect = [unavailable, refreshed]
+        settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}
+        with override_settings(**settings_override):
+            first = linkedin_service._refresh_access_token()
+            second = linkedin_service._refresh_access_token()
+
+            token = LinkedInToken.load()
+        assert first is None
+        assert second == 'recovered-access'
+        assert token.get_access_token() == 'recovered-access'
+
+    @freeze_time(FROZEN_NOW)
+    @override_settings(**LINKEDIN_SETTINGS)
+    @patch('content.services.linkedin_service.requests.post')
+    def test_refresh_diagnostic_excludes_oauth_secrets(
+        self, mock_post, caplog, fernet_key, token_with_refresh,
+    ):
+        """Fails if a failed refresh logs token values or provider response bodies."""
+        mock_post.return_value = _text_failure(503, 'provider-body-sentinel')
+        settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}
+        with override_settings(**settings_override), caplog.at_level(
+            logging.ERROR, logger='content.services.linkedin_service',
+        ):
+            result = linkedin_service._refresh_access_token()
+
+        messages = caplog.text
+        assert result is None
+        assert 'status=503' in messages
+        assert 'category=transient' in messages
+        assert 'expired-access-token' not in messages
+        assert 'valid-refresh-token' not in messages
+        assert 'provider-body-sentinel' not in messages
+
+    @freeze_time(FROZEN_NOW)
+    @override_settings(**LINKEDIN_SETTINGS)
+    @patch('content.services.linkedin_service.requests.post')
+    def test_refresh_timeout_preserves_connection(
+        self, mock_post, fernet_key, token_with_refresh,
+    ):
+        """Fails if a transport timeout clears OAuth credentials before it propagates."""
+        mock_post.side_effect = Timeout('timeout')
+        settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}
+        with override_settings(**settings_override):
+            before = _stored_token_state()
+            with pytest.raises(Timeout, match='timeout'):
+                linkedin_service._refresh_access_token()
+            after = _stored_token_state()
+
+        assert after == before
 
 
 # ---------------------------------------------------------------------------

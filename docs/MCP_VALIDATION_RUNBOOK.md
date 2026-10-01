@@ -23,6 +23,14 @@ Validar consulta → begin_upload → PUT firmado (o bloques) → complete_uploa
 
 ## Plataforma operativa común
 
+Revisión focal LinkedIn (2026-10-01): refresh conserva credenciales ante
+429/5xx y respuestas ambiguas; sólo un rechazo explícito admitido las borra.
+El contrato MCP mantiene metadata de `LinkedInToken` en sólo lectura y excluye
+ambos secretos cifrados. Validar los dos contratos de `linkedin-personal` en
+`test_mcp_contracts.py`, junto con crear, leer, editar, publicar/error y estado
+de conexión de `test_mcp_linkedin.py`; simular el proveedor, sin llamadas reales.
+La retención y recuperación de tokens se comprueban en las pruebas del servicio.
+
 - El endpoint canónico acepta `Authorization: Bearer <credencial>` en
   `/api/mcp/<slug>/`. La URL histórica `/api/mcp/<slug>/<token>/` permanece
   disponible para no romper conectores instalados.
