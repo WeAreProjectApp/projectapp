@@ -2,7 +2,7 @@
 
 **Estado:** obligatorio
 
-**Cobertura automatizada:** 119 vistas × 5 perfiles = 595 celdas
+**Cobertura automatizada:** 121 vistas × 5 perfiles = 605 celdas
 
 **Fuente de verdad:** `frontend/config/viewCatalog.js`, `frontend/config/responsive.js` y `frontend/e2e/responsive/catalog-scenarios.js`
 
@@ -21,7 +21,7 @@ pasa el gate de calidad de `$qa`.
 | `desktop` | 1440 × 900 | regresión del portátil habitual |
 | `wide` | 2560 × 1440 | contenido centrado con máximo de 1400 px |
 
-El catálogo vigente contiene 100 vistas renderizables y 19 redirects. Las
+El catálogo vigente contiene 102 vistas renderizables y 19 redirects. Las
 primeras producen 500 resultados visuales; los redirects producen 95 resultados
 de compatibilidad y nunca acreditan layout, tablas o modales.
 
@@ -141,7 +141,7 @@ Cada batch de matriz contiene como máximo cuatro vistas y, por tanto, veinte
 pruebas (cuatro escenarios × cinco perfiles). Los batches especiales también
 se parten al llegar a veinte casos. Todos corren con cero reintentos; CI ejecuta
 sólo los batches de los módulos afectados en PR, mientras que el comando
-completo y la programación mensual recorren las 595 celdas más los especiales.
+completo y la programación mensual recorren las 605 celdas más los especiales.
 
 ## Reporte y criterio de cierre
 
@@ -151,7 +151,7 @@ El reporter responsive emite una fila por `catalogKey × profile` con:
 | --- | --- | --- | --- | --- | --- |
 | módulo dueño | archivo/ruta | alias y viewport | visual/redirect | `cumple`, `no cumple` o `cumple distinto` | test, error y artefacto |
 
-Una ejecución completa exige 595 filas únicas, cero omitidas, cero duplicadas,
+Una ejecución completa exige 605 filas únicas, cero omitidas, cero duplicadas,
 cero reintentos flaky, cero `draft-unvalidated`, cero junk-only y gate `$qa` limpio. Una variante
 funcional se reporta como `cumple distinto` y no se convierte silenciosamente
 en el estándar.

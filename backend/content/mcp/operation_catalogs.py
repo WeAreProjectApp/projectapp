@@ -7,6 +7,8 @@ business logic.
 """
 from content.mcp.document_tools import _FOLDER_FIELDS
 from content.mcp.delivery_tools import DELIVERY_TOOLS
+from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
+from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
@@ -39,7 +41,7 @@ PROJECT_TOOLS = [
     _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',)),
     _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True),
     _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',)),
-] + DELIVERY_TOOLS
+] + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}

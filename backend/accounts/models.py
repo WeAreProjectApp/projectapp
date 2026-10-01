@@ -1790,3 +1790,8 @@ class SavedFilterTab(models.Model):
 
     def __str__(self):
         return f'{self.user_id}/{self.view}/{self.name}'
+
+
+# Project ideas and explicit client access (P4 domain).
+from accounts.models_project_ideas import ProjectIdea, ProjectIdeaRevision, ProjectIdeaCollection, ProjectIdeaCollectionItem  # noqa: E402,F401
+from accounts.models_project_client_access import ProjectClientAccessPolicy, ProjectClientAccessEvent  # noqa: E402,F401

@@ -661,6 +661,16 @@ PROJECT_CONTRACTS = (
 )
 
 
+# P4: immutable suggestion evidence and explicit visibility administration.
+PROJECT_COLLABORATION_CONTRACTS = (
+    _contract('accounts.ProjectIdea', read_only='id project recipient author author_label origin revision_number version archived_at archived_by created_at updated_at', read_write='text request_id'),
+    _contract('accounts.ProjectIdeaRevision', read_only='id idea number text editor editor_label created_at'),
+    _contract('accounts.ProjectIdeaCollection', read_only='id project recipient created_by creator_label created_at', read_write='title request_id'),
+    _contract('accounts.ProjectIdeaCollectionItem', read_only='id collection idea revision_number source_version position text author_label idea_created_at'),
+    _contract('accounts.ProjectClientAccessPolicy', read_only='id project version recipient updated_by created_at updated_at', read_write='permissions', excluded=_excluded('Huellas internas de autorización: nunca se consultan ni escriben por MCP.', 'bindings')),
+    _contract('accounts.ProjectClientAccessEvent', read_only='id project recipient actor action fields policy_version created_at'),
+)
+
 DELIVERY_CONTRACTS = (
     _contract(
         'accounts.DeliveryWorkspace',
@@ -993,7 +1003,7 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
     ),
-    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS,
+    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS,
     'content': (
         MCP_MODEL_CONTRACTS['blog']
         + MCP_MODEL_CONTRACTS['linkedin-personal']

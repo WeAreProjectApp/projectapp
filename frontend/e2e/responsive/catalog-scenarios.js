@@ -86,6 +86,11 @@ const REDIRECT_OUTCOME_BY_URL = Object.freeze({
   '/platform/admin-login': 'error',
 });
 
+const PROJECT_COLLABORATION_FLOW_BY_URL = Object.freeze({
+  '/platform/projects/:id/ideas': 'platform-project-ideas',
+  '/panel/projects/:id/ideas': 'admin-project-idea-collection',
+});
+
 function resolveCatalogUrl(url) {
   return url
     .replace(':deliverableId', '1')
@@ -128,7 +133,8 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     label: view.label,
     reference: view.reference,
     flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
-      : view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review' : OWNER_FLOW[owner],
+      : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+        ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review' : OWNER_FLOW[owner]),
     outcome: kind === 'redirect' ? (REDIRECT_OUTCOME_BY_URL[view.url] ?? 'success') : 'display',
     profiles: RESPONSIVE_PROFILES,
     quality: kind === 'redirect' ? 'allow-deep-link' : 'allow-deep-link',

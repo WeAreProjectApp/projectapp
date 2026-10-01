@@ -2,8 +2,16 @@
   "id": "platform-project-access-detail",
   "name": "Platform Project Access Detail",
   "module": "platform",
-  "roles": ["platform-admin", "platform-client"],
+  "roles": [
+    "platform-admin",
+    "platform-client"
+  ],
   "priority": "P1",
-  "description": "A platform admin opens the project-scoped access editor from project navigation and can save changes through JWT APIs; load failures are recoverable and client profiles are redirected away.",
-  "outcomes": ["display", "success", "error", "failure"]
+  "description": "An admin edits access data via JWT; the client stays on a limited empty projection until fields are explicitly enabled. Load failures remain recoverable.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
 }

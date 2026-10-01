@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.99.1
+// Registry version: 2.100.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -198,7 +198,9 @@ export const ADMIN_PROJECT_ACCESS_SECRETS = ['@flow:admin-project-access-secrets
 export const ADMIN_PROJECT_BRAND = ['@flow:admin-project-brand', '@module:admin', '@priority:P2'];
 export const ADMIN_PROJECT_CHANGE_CLIENT = ['@flow:admin-project-change-client', '@module:admin', '@priority:P2'];
 export const ADMIN_PROJECT_CHANGE_HISTORY = ['@flow:admin-project-change-history', '@module:admin', '@priority:P1'];
+export const ADMIN_PROJECT_CLIENT_ACCESS_POLICY = ['@flow:admin-project-client-access-policy', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_FLY_CREATE = ['@flow:admin-project-fly-create', '@module:admin', '@priority:P2'];
+export const ADMIN_PROJECT_IDEA_COLLECTION = ['@flow:admin-project-idea-collection', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_INLINE_ASSIGN_OFFER = ['@flow:admin-project-inline-assign-offer', '@module:admin', '@priority:P2'];
 export const ADMIN_PROJECT_LIFECYCLE_STATES = ['@flow:admin-project-lifecycle-states', '@module:admin', '@priority:P1'];
 export const ADMIN_PROJECT_STATE_CATALOG = ['@flow:admin-project-state-catalog', '@module:admin', '@priority:P1'];
@@ -356,9 +358,11 @@ export const PLATFORM_PASSWORD_RESET = ['@flow:platform-password-reset', '@modul
 export const PLATFORM_PROFILE_AVATAR_PICKER = ['@flow:platform-profile-avatar-picker', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROFILE_EDIT = ['@flow:platform-profile-edit', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROJECT_ACCESS_DETAIL = ['@flow:platform-project-access-detail', '@module:platform', '@priority:P1'];
+export const PLATFORM_PROJECT_CLIENT_ACCESS = ['@flow:platform-project-client-access', '@module:platform', '@priority:P1'];
 export const PLATFORM_PROJECT_COLLECTION_ACCOUNTS = ['@flow:platform-project-collection-accounts', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROJECT_DATA_MODEL = ['@flow:platform-project-data-model', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROJECT_DETAIL = ['@flow:platform-project-detail', '@module:platform', '@priority:P2'];
+export const PLATFORM_PROJECT_IDEAS = ['@flow:platform-project-ideas', '@module:platform', '@priority:P1'];
 export const PLATFORM_PROJECT_LIST = ['@flow:platform-project-list', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROPOSAL_AUTO_ONBOARDING = ['@flow:platform-proposal-auto-onboarding', '@module:platform', '@priority:P1'];
 export const PLATFORM_SIDEBAR_NAVIGATION = ['@flow:platform-sidebar-navigation', '@module:platform', '@priority:P2'];

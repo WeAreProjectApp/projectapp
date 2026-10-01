@@ -1872,3 +1872,12 @@ Los resultados de movimientos rechazados también tienen `results` en la raíz.
 `DocumentFolder.creation_operation` identifica el camino de creación sin
 reescribir historia durante sincronizaciones. La reparación operativa usa
 huellas y el historial existente; no hereda cliente/proyecto al devolver documentos.
+
+
+## P4 — Fronteras de ideas y accesos (2026-10-01)
+
+Los modelos de `accounts/models_project_ideas.py` conservan ideas, revisiones y recopilaciones; `models_project_client_access.py` conserva política y eventos sin valores sensibles. Servicios dedicados son la autoridad común de JWT Platform, sesión/CSRF Panel y herramientas MCP administrativas. Las fuentes siguen siendo Project y ProjectAdminAccess.
+
+Los grants se vinculan al destinatario y fuente mediante HMAC. Guardar, borrar o mover fuentes revoca los campos afectados; cambiar propietario revoca todos. El receptor propio de EntityRevision consume sólo nombres de campos y cubre updates masivos del historial existente. En la transferencia, el guard financiero de P2 debe rechazar antes de revocar y reasignar. ProjectAdmin pertenece a P2.
+
+Las credenciales sólo se revelan con POST explícito y grant vigente, permanecen 30 segundos en estado local del componente y no viajan en listados, stores ni auditoría. Las colecciones listan resúmenes; snapshots completos se cargan bajo demanda.

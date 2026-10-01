@@ -1,0 +1,16 @@
+{
+  "id": "platform-project-client-access",
+  "name": "Explicit client access",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "A client sees only approved project/environment fields, explicitly reveals a granted credential and loses that action when revoked. Default hidden access preserves other modules.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

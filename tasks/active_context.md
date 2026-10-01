@@ -2305,3 +2305,10 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 `secure_links_unavailable`; la revisión de la clave efectiva de producción
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
+
+
+## P4 — Ideas y política de accesos (2026-10-01)
+
+Worktree propio `platform-ideas-access`, rama `feat/01102026-platform-ideas-access`, base main cce8e694 más merge del P3 publicado abcffaf9. Dominio implementado: ideas versionadas/archivo reversible, recopilaciones internas congeladas, exposición de ocho datos por proyecto y revocación por propietario/fuente. Guías por rol y núcleo Delivery son propiedad P3.
+
+Cierre en curso: pruebas focales backend/unit, navegador con APIs reales, cinco perfiles responsive, mapas y CI propio. P0 conserva orden y reservas, y confirma migración definitiva. P2 posee guard financiero y ProjectAdmin; P4 posee revoke_grants después del guard. No despliegue, migración aplicada ni self-merge. Contrato: `docs/platform/project-ideas-access.md`.

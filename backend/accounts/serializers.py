@@ -422,6 +422,12 @@ class ProjectListSerializer(serializers.ModelSerializer):
 
 
 class ProjectDetailSerializer(ProjectListSerializer):
+    can_view_client_access = serializers.SerializerMethodField()
+
+    def get_can_view_client_access(self, obj):
+        from accounts.services.project_client_access import can_view_client_access
+        return can_view_client_access(obj)
+
     _ADMIN_ONLY_FIELDS = (
         'payment_milestones',
         'production_url', 'staging_url', 'repository_url',
@@ -437,7 +443,7 @@ class ProjectDetailSerializer(ProjectListSerializer):
 
     class Meta(ProjectListSerializer.Meta):
         fields = ProjectListSerializer.Meta.fields + [
-            'payment_milestones', 'hosting_tiers', 'has_subscription',
+            'payment_milestones', 'hosting_tiers', 'has_subscription', 'can_view_client_access',
             'production_url', 'staging_url', 'repository_url',
             'has_admin_password',
         ]

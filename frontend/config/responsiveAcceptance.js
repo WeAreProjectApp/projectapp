@@ -264,7 +264,7 @@ export function responsiveOwnerForView(sectionId, view) {
 
   if (url === '/panel/login' || url === '/panel/styleguide') return 'foundation';
   if (url === '/panel/clients') return 'clients';
-  if (url === '/panel/projects' || url === '/panel/projects/statuses' || url === '/panel/monitoring') return 'projects';
+  if (url === '/panel/projects' || url === '/panel/projects/statuses' || url === '/panel/projects/:id/ideas' || url === '/panel/monitoring') return 'projects';
   if (url === '/panel/documents' || url === '/panel/documents/statuses') return 'documents';
   if (url === '/panel/communications' || url === '/panel/secure-links') return 'communications';
   if (file === 'frontend/pages/panel/documents/create.vue' || file === 'frontend/pages/panel/documents/[id]/edit.vue') return 'canvas';

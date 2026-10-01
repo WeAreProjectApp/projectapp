@@ -1531,3 +1531,10 @@ contra producción. La validación se realiza exclusivamente con settings_test.
 Migración aditiva `content.0258_communication_folders`: hilos existentes quedan con `folder=NULL`. REST expone `GET/POST communications/folders/`, `PATCH/DELETE communications/folders/:id/`; hilos aceptan `folder` y publican `folder_id/folder_name`. MCP incorpora list/create/update/delete_folder y `folder_id` en create/update_thread. Sólo cambiar carpeta está permitido en hilos cerrados. Contexto de carpeta inmutable; padre compatible, sin ciclos; no hay archivado de carpetas. Cambiar propietario de proyecto desasocia las carpetas históricas del proyecto y retira la ubicación de sus hilos sin cambiar el cliente original.
 
 `record_id_search` interpreta `#123` como PK exacto y `123` como unión PK/texto; respeta permisos y demás filtros. El modal usa su propio scroll y respeta reduced-motion. `BaseCollapse` conserva el estado del formulario mientras lo deja fuera del tab order al plegar. No cambia el contenido público ni los PDF.
+
+
+## P4 — Contrato técnico de colaboración (2026-10-01)
+
+Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
+
+El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. El workflow propio ejecuta dos specs. La migración aditiva de P4 requiere que P0 confirme hoja/número tras P3 final; no editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente.

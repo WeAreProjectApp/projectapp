@@ -309,6 +309,9 @@ def change_client_apply(project, new_profile, mode, user):
     old_project_values = accounting_service.snapshot_values(
         project, EntityType.PROJECT,
     )
+    if project.client_id != new_profile.user_id:
+        from accounts.services.project_client_access import revoke_grants
+        revoke_grants(project, actor=user)
     project.client = new_profile.user
     project.save(update_fields=['client', 'updated_at'])
     _log_diff(EntityType.PROJECT, project, old_project_values, user)
