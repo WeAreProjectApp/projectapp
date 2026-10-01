@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-reply-prompt",
+  "name": "Platform Response Prompt Sources",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "Prepare a stage response using retained contractual sources and public review history, verify request classifications and citations, then review the final message before manually sending it with optional documents; incomplete sources cannot establish outside scope.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error", "failure", "display"]
+}

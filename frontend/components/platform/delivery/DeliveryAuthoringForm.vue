@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue'
 import BaseFormField from '~/components/base/BaseFormField.vue'
@@ -30,11 +30,17 @@ const proposalOptions = computed(() => [{ value: '', label: t('platformDelivery.
 const commercialOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...props.commercialPhases.map((item) => ({ value: item.id, label: item.proposal?.title || item.title }))])
 const idOrNull = (value) => value ? Number(value) : null
 const isContract = computed(() => ['contracts', 'amendments'].includes(props.entity))
+const hasProvenance = computed(() => props.entity === 'requirements' && !!props.initial.context_id)
+const provenanceReviewed = ref(false)
+watch(() => [form.title, form.description, form.guide, form.stepsText], () => {
+  provenanceReviewed.value = false
+}, { deep: true })
 function submit() {
   Object.keys(fieldErrors).forEach((key) => delete fieldErrors[key])
   for (const key of ['key', 'title']) if (!form[key]?.trim()) fieldErrors[key] = t('platformDelivery.fieldRequired')
   if (['amendments', 'scopes'].includes(props.entity) && !form.contract_id) fieldErrors.contract_id = t('platformDelivery.fieldRequired')
   if (!Number.isFinite(Number(form.order)) || Number(form.order) < 0) fieldErrors.order = t('platformDelivery.numericOrder')
+  if (hasProvenance.value && !provenanceReviewed.value) fieldErrors.provenance = t('platformDelivery.promptSources.guideReviewRequired')
   if (Object.keys(fieldErrors).length) return
   const payload = { key: form.key.trim(), title: form.title.trim() }
   if (!isContract.value) payload.description = form.description.trim()
@@ -51,6 +57,10 @@ function submit() {
   if (props.entity === 'requirements') Object.assign(payload, {
     stage_id: form.stage_id,
     guide: { ...form.guide, steps: form.stepsText.split('\n').map((line) => line.trim()).filter(Boolean) },
+  })
+  if (hasProvenance.value) Object.assign(payload, {
+    context_id: props.initial.context_id,
+    source_references: (props.initial.source_references || []).map((reference) => ({ ...reference })),
   })
   emit('submit', payload)
 }
@@ -112,10 +122,20 @@ function submit() {
       <BaseFormField :label="t('platformDelivery.steps')" :hint="t('platformDelivery.stepsHint')" for="delivery-author-steps">
         <BaseTextarea id="delivery-author-steps" v-model="form.stepsText" :rows="5" />
       </BaseFormField>
+      <section v-if="hasProvenance" class="min-w-0 space-y-3 rounded-xl border border-border-default p-4" data-testid="delivery-authoring-provenance">
+        <h3 class="text-sm font-semibold text-text-default">{{ t('platformDelivery.promptSources.guideCitations') }}</h3>
+        <p class="text-sm text-text-muted">{{ t('platformDelivery.promptSources.guideCorrectionHint') }}</p>
+        <blockquote v-for="(reference, index) in initial.source_references" :key="index" class="min-w-0 space-y-1 rounded-lg bg-surface-raised p-3">
+          <p class="break-words text-xs text-text-muted">{{ reference.source_key }} · {{ reference.locator }}</p>
+          <p class="whitespace-pre-line break-words text-sm text-text-default">{{ reference.quote }}</p>
+        </blockquote>
+        <BaseAlert v-if="fieldErrors.provenance" variant="danger">{{ fieldErrors.provenance }}</BaseAlert>
+        <BaseCheckbox v-model="provenanceReviewed" data-testid="delivery-guide-human-reviewed">{{ t('platformDelivery.promptSources.guideReviewed') }}</BaseCheckbox>
+      </section>
     </template>
     <BaseModalActions>
       <BaseButton variant="ghost" @click="emit('cancel')">{{ t('platformDelivery.cancel') }}</BaseButton>
-      <BaseButton type="submit" :loading="loading" data-testid="delivery-authoring-save">{{ t('platformDelivery.save') }}</BaseButton>
+      <BaseButton type="submit" :loading="loading" :disabled="hasProvenance && !provenanceReviewed" :disabled-reason="t('platformDelivery.promptSources.guideReviewRequired')" data-testid="delivery-authoring-save">{{ t('platformDelivery.save') }}</BaseButton>
     </BaseModalActions>
   </form>
 </template>

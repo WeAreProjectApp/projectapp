@@ -12,6 +12,7 @@ from django.db import transaction
 from django.utils import timezone
 from rest_framework.exceptions import APIException
 
+from accounts.services import delivery_authoring as authoring
 from accounts.services import delivery_workflow as delivery
 from accounts.services.delivery_access import is_admin
 from content.mcp.actor import mcp_actor
@@ -25,6 +26,32 @@ from content.models import McpUpload
 ID = {'type': 'integer', 'minimum': 1}
 NULLABLE_ID = {'type': ['integer', 'null'], 'minimum': 1}
 TEXT = {'type': 'string'}
+CONTEXT_ID = {'type': 'string', 'format': 'uuid', 'minLength': 1}
+CITATION_SCHEMA = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {
+        'source_key': {**TEXT, 'minLength': 1, 'maxLength': 100},
+        'locator': {**TEXT, 'minLength': 1, 'maxLength': 1000},
+        'quote': {**TEXT, 'minLength': 1, 'maxLength': 20000},
+    },
+    'required': ['source_key', 'locator', 'quote'],
+}
+SOURCE_REFERENCES = {'type': 'array', 'items': CITATION_SCHEMA, 'maxItems': 100}
+CLASSIFICATIONS = {
+    'type': 'array', 'minItems': 1, 'maxItems': 100,
+    'items': {
+        'type': 'object', 'additionalProperties': False,
+        'properties': {
+            'request': {**TEXT, 'minLength': 1, 'maxLength': 5000},
+            'classification': {'type': 'string', 'enum': [
+                'inside_scope', 'outside_scope', 'indeterminate',
+            ]},
+            'rationale': {**TEXT, 'minLength': 1, 'maxLength': 10000},
+            'citations': SOURCE_REFERENCES,
+        },
+        'required': ['request', 'classification', 'rationale'],
+    },
+}
 VERSION = {
     'type': 'integer', 'minimum': 0,
     'description': 'Versión del espacio obtenida con get_delivery_overview.',
@@ -73,6 +100,8 @@ NODE_FIELDS = {
     'requirements': {
         **COMMON_FIELDS, 'description': TEXT, 'stage_id': ID,
         'guide': GUIDE_SCHEMA, 'order': {'type': 'integer', 'minimum': 0},
+        'context_id': {**CONTEXT_ID, 'type': ['string', 'null']},
+        'source_references': SOURCE_REFERENCES,
     },
 }
 
@@ -117,6 +146,10 @@ def _validate(arguments, schema):
         field_type = field.get('type')
         if field_type == 'object' and not isinstance(value, dict):
             raise ToolError(f'{name} debe ser un objeto JSON.')
+        if field_type == 'array' and not isinstance(value, list):
+            raise ToolError(f'{name} debe ser una lista JSON.')
+        if field_type == 'boolean' and not isinstance(value, bool):
+            raise ToolError(f'{name} debe ser verdadero o falso.')
         if field_type == 'integer' and (
             isinstance(value, bool) or not isinstance(value, int)
             or value < field.get('minimum', 0)
@@ -169,6 +202,21 @@ def _import(arguments, actor, *, apply):
     )
 
 
+def _create_prompt(arguments, actor, mode):
+    data = {name: deepcopy(value) for name, value in arguments.items()
+            if name != 'project_id'}
+    data['mode'] = mode
+    return _call(authoring.create_prompt_context, arguments['project_id'], actor, data)
+
+
+def _prompt_source(arguments, actor):
+    body, filename, content_type = _call(
+        authoring.prompt_source_file, arguments['project_id'], actor,
+        arguments['context_id'], arguments['source_key'],
+    )
+    return _artifact(body, filename, filename, content_type=content_type)
+
+
 def _publish(arguments, actor):
     return _call(delivery.publish_stage, arguments['project_id'], actor,
                  arguments['stage_id'], _lifecycle_data(arguments))
@@ -218,7 +266,7 @@ def _read_document(arguments, actor):
     raise ToolError('Documento no disponible en este proyecto.', code='NOT_FOUND')
 
 
-def _artifact(body, title, filename):
+def _artifact(body, title, filename, *, content_type='application/pdf'):
     context = current_mcp_context()
     if context is None or context.credential is None:
         raise ToolError('La descarga requiere una credencial MCP.', code='FORBIDDEN')
@@ -226,7 +274,7 @@ def _artifact(body, title, filename):
         'title': title,
         **store_artifact(
             connector=context.connector, credential=context.credential,
-            filename=filename, content_type='application/pdf', content=body,
+            filename=filename, content_type=content_type, content=body,
             request=context.request,
         ),
     }
@@ -363,16 +411,77 @@ DECISION_SCHEMA = {
 }
 CONTRACT_KIND = {'type': 'string', 'enum': ['contracts', 'amendments']}
 DOCUMENT_IDS = {'type': 'array', 'items': ID, 'uniqueItems': True}
+PROMPT_SELECTION = {
+    'expected_version': VERSION, 'request_id': REQUEST_ID,
+    'contract_id': ID, 'amendment_ids': {**DOCUMENT_IDS, 'maxItems': 30},
+    'scope_id': NULLABLE_ID,
+    'sources': {
+        'type': 'array', 'maxItems': 30,
+        'items': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {
+                'document_id': ID, 'proposal_document_id': ID,
+                'role': {'type': 'string', 'enum': ['contractual_annex', 'reference']},
+                'applicability_note': {**TEXT, 'minLength': 1, 'maxLength': 5000},
+            },
+            'required': ['role', 'applicability_note'],
+            'oneOf': [
+                {'required': ['document_id'], 'not': {'required': ['proposal_document_id']}},
+                {'required': ['proposal_document_id'], 'not': {'required': ['document_id']}},
+            ],
+        },
+    },
+    'missing_sources': {'type': 'array', 'maxItems': 30,
+                        'items': {**TEXT, 'maxLength': 1000}},
+    'uncertainties': {'type': 'array', 'maxItems': 30,
+                      'items': {**TEXT, 'maxLength': 2000}},
+    'instructions': {**TEXT, 'maxLength': 10000},
+}
+REPLY_PAYLOAD = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {
+        'schema_version': {'type': 'integer', 'const': 2}, 'context_id': CONTEXT_ID,
+        'response_text': {**TEXT, 'minLength': 1, 'maxLength': 20000},
+        'classifications': CLASSIFICATIONS,
+    },
+    'required': ['schema_version', 'context_id', 'response_text', 'classifications'],
+}
 DELIVERY_TOOLS = [
     _tool('get_delivery_overview',
           'Consulta contratos, otrosíes, alcances, fases, etapas, guías y versiones de Platform.',
           _overview),
     _tool('get_delivery_authoring_contract',
-          'Obtiene el prompt y el esquema JSON vigente de Platform para redactar guías fuera del sistema.',
-          lambda args, actor: _call(delivery.authoring_prompt, args['project_id'], actor)),
+          'Consulta opciones y esquemas de autoría sin leer textos ni seleccionar automáticamente un contrato.',
+          lambda args, actor: _call(authoring.prompt_options, args['project_id'], actor)),
+    _tool('create_delivery_guide_prompt',
+          'Captura las fuentes elegidas y prepara un prompt con JSON v2 citado para guías; conserva copias privadas e inmutables.',
+          lambda args, actor: _create_prompt(args, actor, 'guides'),
+          PROMPT_SELECTION, ('expected_version', 'request_id', 'contract_id'), risk='write'),
+    _tool('create_delivery_reply_prompt',
+          'Prepara un borrador de respuesta para una etapa publicada con fuentes seleccionadas y conversación pública capturada.',
+          lambda args, actor: _create_prompt(args, actor, 'reply'),
+          {**PROMPT_SELECTION, 'stage_id': ID},
+          ('expected_version', 'request_id', 'stage_id'), risk='write'),
+    _tool('list_delivery_prompt_contexts',
+          'Lista hasta cincuenta capturas de autoría del proyecto con su selección y estado, sin cargar textos de fuentes.',
+          lambda args, actor: _call(authoring.list_prompt_contexts, args['project_id'], actor)),
+    _tool('get_delivery_prompt_context',
+          'Reabre una captura inmutable con prompt, plantilla, esquema, citas y fuentes elegidas para el proyecto autorizado.',
+          lambda args, actor: _call(authoring.get_prompt_context, args['project_id'], actor,
+                                   args['context_id']),
+          {'context_id': CONTEXT_ID}, ('context_id',)),
+    _tool('download_delivery_prompt_source',
+          'Descarga la copia exacta capturada de una fuente como artefacto privado temporal ligado a la credencial MCP.',
+          _prompt_source, {'context_id': CONTEXT_ID, 'source_key': {**TEXT, 'minLength': 1}},
+          ('context_id', 'source_key')),
+    _tool('preview_delivery_reply',
+          'Valida JSON v2, citas y clasificación contractual sin compartir mensajes; exige aclaración si las fuentes están incompletas.',
+          lambda args, actor: _call(authoring.preview_reply, args['project_id'], actor,
+                                   args['payload'], expected_version=args.get('expected_version')),
+          {'payload': REPLY_PAYLOAD, 'expected_version': VERSION}, ('payload',)),
     *[tool for kind, singular in NODE_NAMES.items() for tool in _node_tools(kind, singular)],
     _tool('preview_delivery_import',
-          'Valida el JSON de alcance y previsualiza la importación atómica sobre borradores sin guardar cambios.',
+          'Valida JSON v1 manual o v2 con contexto y citas; previsualiza borradores sin guardar ni omitir su trazabilidad.',
           lambda args, actor: _import(args, actor, apply=False),
           {'payload': {'type': 'object'}, 'expected_version': VERSION},
           ('payload', 'expected_version')),
@@ -404,12 +513,14 @@ DELIVERY_TOOLS = [
           'Consulta mensajes entrantes recibidos del cliente y proyecto para citar una aprobación externa verificable.',
           lambda args, actor: _call(delivery.evidence_options, args['project_id'], actor)),
     _tool('add_delivery_message',
-          'Responde en Platform con un mensaje, requerimientos tratados y documentos opcionales; conserva autoría administrativa.',
+          'Comparte manualmente un mensaje en Platform; un borrador citado exige contexto, clasificaciones y revisión humana explícita.',
           _message, {
               'expected_version': VERSION, 'request_id': REQUEST_ID,
               'level': {'type': 'string', 'enum': list(LEVELS)}, 'target_id': ID,
               'requirement_ids': DOCUMENT_IDS, 'message': TEXT,
               'document_ids': DOCUMENT_IDS, 'is_internal': {'type': 'boolean', 'default': False},
+              'context_id': CONTEXT_ID, 'source_references': SOURCE_REFERENCES,
+              'classifications': CLASSIFICATIONS, 'human_reviewed': {'type': 'boolean'},
           }, ('expected_version', 'request_id', 'level', 'target_id', 'message'), risk='write'),
     _tool('list_delivery_document_options',
           'Lista documentos del proyecto autorizados para vincular a contratos, alcances, etapas o requerimientos.',

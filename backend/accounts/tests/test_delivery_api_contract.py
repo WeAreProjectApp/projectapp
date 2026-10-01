@@ -138,15 +138,16 @@ def test_stale_authoring_version_cannot_create_a_node(context):
     assert version(context) == 0
 
 
-def test_prompt_route_returns_the_actual_contract_schema(context):
-    """Fails if the HTTP authoring prompt loses contract context or becomes a write."""
+def test_prompt_discovery_requires_an_explicit_source_selection(context):
+    """Fails if discovery collects contractual text before the admin selects it."""
     api = api_for(context.admin)
 
     response = api.get(endpoint(context, 'prompt/'))
 
     assert response.status_code == 200
-    assert 'Alcance acordado.' in response.data['prompt']
-    assert response.data['schema']['properties']['schema_version']['const'] == 1
+    assert response.data['contracts'][0]['id'] == context.contract.pk
+    assert 'prompt' not in response.data
+    assert response.data['schema']['properties']['schema_version']['const'] == 2
     assert DeliveryWorkspace.objects.count() == 0
 
 

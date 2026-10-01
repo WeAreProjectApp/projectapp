@@ -13,7 +13,7 @@ from reportlab.pdfgen.canvas import Canvas
 
 from accounts.models import DeliveryDocumentLink, DeliveryDocumentSnapshot, DeliveryMessage, DeliveryPhase, Requirement
 from accounts.services import delivery_workflow as delivery
-from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, decisions, publish, version
+from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, decisions, prepare_prompt, publish, version
 from content.models import Document
 
 pytestmark = pytest.mark.django_db
@@ -76,7 +76,7 @@ def test_prompt_uses_signed_content_after_source_edit(context):
     context.document.content_markdown = '# Un borrador que el cliente no firmó'
     context.document.save(update_fields=['content_markdown'])
 
-    prompt = delivery.authoring_prompt(context.project.pk, context.admin)['prompt']
+    prompt = prepare_prompt(context)['prompt']
 
     assert 'Alcance acordado.' in prompt
     assert 'Un borrador que el cliente no firmó' not in prompt

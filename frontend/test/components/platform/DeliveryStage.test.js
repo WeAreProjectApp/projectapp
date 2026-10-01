@@ -53,4 +53,15 @@ describe('Published delivery stage', () => {
     expect(wrapper.find('[data-testid="delivery-edit-requirement-20"]').exists()).toBe(false)
     expect(wrapper.text()).toContain('Este requerimiento está aprobado.')
   })
+
+  it('offers response preparation for an approved stage to the administrator', async () => {
+    const wrapper = renderStage({ isAdmin: true, stage: createStage({ status: 'approved' }) })
+    await wrapper.get('[data-testid="delivery-prepare-reply-11"]').trigger('click')
+    expect(wrapper.emitted('prepare-reply')[0][0].id).toBe(11)
+  })
+
+  it('keeps response preparation out of client actions', () => {
+    const wrapper = renderStage()
+    expect(wrapper.find('[data-testid="delivery-prepare-reply-11"]').exists()).toBe(false)
+  })
 })

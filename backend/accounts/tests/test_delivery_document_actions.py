@@ -15,7 +15,7 @@ from accounts.models import (
 from accounts.services import delivery_documents as documents
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_helpers import (
-    RECORDED_AT, build_delivery_context, decisions, publish, version,
+    RECORDED_AT, build_delivery_context, decisions, prepare_prompt, publish, version,
 )
 from content.models import BusinessProposal, Document, DocumentType, ProposalDocument
 
@@ -115,7 +115,7 @@ def test_authoring_prompt_uses_the_exact_external_agreement(context):
     context.document.content_markdown = '# Borrador privado que no firmó el cliente'
     context.document.save(update_fields=['content_markdown'])
 
-    response = delivery.authoring_prompt(context.project.pk, context.admin)
+    response = prepare_prompt(context)
 
     assert 'Client agreed to validate invoice totals.' in response['prompt']
     assert 'Borrador privado que no firmó el cliente' not in response['prompt']
@@ -123,25 +123,29 @@ def test_authoring_prompt_uses_the_exact_external_agreement(context):
 
 @pytest.mark.parametrize('texts,prefix,excluded', [
     (('A' * 60_000 + 'EXCLUDED-AFTER-TEXT-LIMIT',), 'A' * 20, 'EXCLUDED-AFTER-TEXT-LIMIT'),
-    (tuple(f'Agreed page {number}' for number in range(1, 51)) + ('EXCLUDED-PAGE-51',), 'Agreed page 1', 'EXCLUDED-PAGE-51'),
+    (tuple(f'Agreed page {number}' for number in range(1, 101)) + ('EXCLUDED-PAGE-101',), 'Agreed page 1', 'EXCLUDED-PAGE-101'),
 ], ids=['text-limit', 'page-limit'])
 def test_external_agreement_context_limits_untrusted_pdf_content(context, texts, prefix, excluded):
-    evidence = attest(context, pdf_bytes(*texts))
+    attest(context, pdf_bytes(*texts))
 
-    text = documents.signed_pdf_text(evidence)
+    response = prepare_prompt(context)
 
-    assert text.startswith(prefix)
-    assert excluded not in text
+    source = response['sources'][0]
+    assert source['status'] == 'partial'
+    assert source['fragments'][0]['text'].startswith(prefix)
+    assert excluded not in response['prompt']
+    assert response['complete'] is False
 
 
 def test_authoring_prompt_reports_a_missing_signed_pdf(context):
     evidence = attest(context, AGREEMENT_PDF)
     evidence.file.storage.delete(evidence.file.name)
 
-    with pytest.raises(ValidationError) as rejected:
-        delivery.authoring_prompt(context.project.pk, context.admin)
+    response = prepare_prompt(context)
 
-    assert rejected.value.detail['code'] == 'pdf_unavailable'
+    assert response['sources'][0]['status'] == 'unreadable'
+    assert response['sources'][0]['fragments'] == []
+    assert response['complete'] is False
 
 
 @pytest.fixture
