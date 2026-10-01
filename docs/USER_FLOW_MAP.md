@@ -6371,6 +6371,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-project-detail` | platform | P2 | success,display | 1 |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
+| `platform-secure-link-create` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-manage` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
 | `proposal-calculator-abandonment-tracking` | proposal | P2 | — | 0 |
@@ -8190,6 +8193,36 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** guarda mediante PATCH de company-settings y las siguientes aperturas del modal reciben la configuración.
 - **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
 - **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
+
+### FLOW: `platform-secure-link-create`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El cliente llega desde su proyecto, ve el límite sólo equipo y texto/credenciales, y la vista vacía o metadatos de sus enlaces.
+- **Success:** Crear una vez limpia el contenido del formulario; la URL se muestra sólo en el modal y copiar exige un clic.
+- **Error:** Campos requeridos bloquean el envío; entrada inválida o UUID con otros datos muestran un error seguro. Replay idéntico no vuelve a entregar URL.
+- **Failure:** Catálogo/listado permiten reintentar. Una falla de creación conserva el borrador y su UUID sin mostrar la entrada en el error.
+- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
+
+### FLOW: `platform-secure-link-manage`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** Listado y filtros de metadatos; historial con evento, fecha, clase de actor y referencias permitidas.
+- **Success:** Cambiar etiqueta, consultar URL explícita, revocar idempotentemente o reactivar un enlace elegible rotando URL y conservando eventos anteriores.
+- **Error:** Una revisión obsoleta o estado inválido devuelve error; no hay lectura del secreto, borrado ni edición de contenido en Platform.
+- **Failure:** Fallas de listado/historial/operaciones muestran un error recuperable; no se afirma una transición que falló.
+- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
+
+### FLOW: `platform-secure-link-replace`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El detalle muestra las referencias anterior/sucesor; el modal de confirmación explica que corregir revoca primero y conserva auditoría.
+- **Success:** Confirmar revoca, abre formulario sin secreto y crea un sucesor enlazado que entrega su nueva URL una vez.
+- **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
+- **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
+- **Cobertura:** pendiente de validación de las pruebas dedicadas del dominio.
 
 ### FLOW: `proposal-closing-contact`
 

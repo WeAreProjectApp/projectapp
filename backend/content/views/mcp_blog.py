@@ -69,6 +69,7 @@ from content.mcp.protocol import (
 )
 from content.mcp.registry import infer_risk, normalize_tools
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
+from content.mcp.platform_secure_link_tools import PLATFORM_SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
 from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
@@ -128,7 +129,7 @@ RAW_TOOLS_BY_SLUG = {
         DOCUMENT_TOOLS + DOCUMENT_THREAD_TOOLS + DOCUMENT_PARITY_TOOLS
     ),
     'communications': _canonical_tools(
-        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS
+        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS + PLATFORM_SECURE_LINK_TOOLS
     ),
     'tasks': _canonical_tools(TASK_TOOLS),
     'operations': OPERATIONS_TOOLS,
@@ -326,10 +327,10 @@ def _tool_call_object_refs(connector, credential, tool_name, params):
     if not isinstance(params, dict):
         return []
     arguments = params.get('arguments') or {}
-    if tool_name in {tool['name'] for tool in SECURE_LINK_TOOLS}:
+    if tool_name in {tool['name'] for tool in SECURE_LINK_TOOLS + PLATFORM_SECURE_LINK_TOOLS}:
         return [
             {'field': key, 'value': arguments[key]}
-            for key in ('link_id', 'client_id', 'project_id')
+            for key in ('link_id', 'client_id', 'project_id', 'owner_id', 'replaces')
             if isinstance(arguments, dict) and type(arguments.get(key)) is int
         ]
     refs = []

@@ -2305,3 +2305,7 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 `secure_links_unavailable`; la revisión de la clave efectiva de producción
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
+
+## P5 — enlaces seguros propios en Platform (2026-10-01)
+
+MVP sólo cliente→equipo, catálogo de texto/credenciales existente; archivos, terceros e importación de accesos quedan fuera. API JWT separada de Panel, owner explícito + proyecto propio; metadatos/historial sin secreto ni URL. Crear usa UUID/HMAC para replay idéntico sin URL y conflicto con entrada distinta. Revocar conserva evidencia; reactivar rota siempre token; corregir revoca y crea sustitución. Pruebas focales SQLite verificaron aislamiento, idempotencia, ciclo y MCP. QA frontend/E2E en curso; no hay despliegue ni merge de sesión. P0 confirmó secure_links/0004 con parents 0003 y accounts/0066; backfill sólo audience legacy, sin owners inferidos ni rewrites de cifrado. Contrato técnico: docs/platform-secure-links.md.

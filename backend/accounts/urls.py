@@ -114,6 +114,7 @@ from accounts.views import (
 )
 
 urlpatterns = [
+    path('projects/<int:project_id>/secure-links/', include('secure_links.platform_urls')),
     path('projects/<int:project_id>/delivery/', include('accounts.delivery_urls')),
     # Auth
     path('session-token-bridge/', session_token_bridge, name='platform-session-bridge'),

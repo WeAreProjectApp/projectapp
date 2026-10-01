@@ -1,0 +1,16 @@
+{
+  "id": "platform-secure-link-manage",
+  "name": "Platform Client Secure Link Manage",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Client lists and filters only their own project links, views safe history, renames, explicitly retrieves an active URL, revokes, or explicitly reactivates with a rotated token for 1/3/7 days. No secret-content read, content overwrite, deletion, files, third parties or internal-access imports.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

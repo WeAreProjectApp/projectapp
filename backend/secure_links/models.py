@@ -48,6 +48,11 @@ class SecureLink(models.Model):
         PANEL = 'panel', 'Equipo (panel)'
         MCP = 'mcp', 'Asistente (MCP)'
         PUBLIC = 'public', 'Cliente (página pública)'
+        PLATFORM = 'platform', 'Cliente (Platform)'
+
+    class Audience(models.TextChoices):
+        TEAM = 'team', 'Equipo de ProjectApp'
+        BEARER = 'bearer', 'Destinatario del enlace'
 
     class Language(models.TextChoices):
         ES = 'es', 'Español'
@@ -78,6 +83,16 @@ class SecureLink(models.Model):
         'accounts.Project', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='secure_links',
     )
+    owner = models.ForeignKey(
+        'accounts.UserProfile', null=True, blank=True, on_delete=models.SET_NULL,
+        related_name='owned_secure_links',
+    )
+    audience = models.CharField(max_length=10, choices=Audience.choices, default=Audience.TEAM)
+    replaces = models.OneToOneField(
+        'self', null=True, blank=True, on_delete=models.SET_NULL, related_name='replaced_by',
+    )
+    creation_request_id = models.UUIDField(null=True, blank=True)
+    creation_request_fingerprint = models.CharField(max_length=64, blank=True)
     validity_days = models.PositiveSmallIntegerField(default=7)
     expires_at = models.DateTimeField()
     consumed_at = models.DateTimeField(null=True, blank=True)
@@ -100,6 +115,10 @@ class SecureLink(models.Model):
         indexes = [
             models.Index(fields=['origin', 'consumed_at'], name='secure_link_origin_consumed'),
             models.Index(fields=['expires_at'], name='secure_link_expires'),
+            models.Index(fields=['owner', 'project', 'created_at'], name='secure_link_owner_project'),
+        ]
+        constraints = [
+            models.UniqueConstraint(fields=['owner', 'creation_request_id'], name='secure_link_owner_request'),
         ]
 
     def __str__(self):
@@ -129,7 +148,7 @@ class SecureLink(models.Model):
     @property
     def team_only(self):
         """Links created by clients are addressed to the team only."""
-        return self.origin == self.Origin.PUBLIC
+        return self.audience == self.Audience.TEAM or self.origin in (self.Origin.PUBLIC, self.Origin.PLATFORM)
 
 
 class SecureLinkEvent(models.Model):
@@ -144,6 +163,8 @@ class SecureLinkEvent(models.Model):
         MARKED_SENT = 'marked_sent', 'Marcado como enviado por el equipo'
         PANEL_VIEWED = 'panel_viewed', 'Contenido visto en el panel'
         MCP_VIEWED = 'mcp_viewed', 'Contenido consultado desde MCP'
+        REPLACED = 'replaced', 'Sustituido por otro enlace'
+        URL_ACCESSED = 'url_accessed', 'URL consultada explícitamente'
 
     link = models.ForeignKey(SecureLink, on_delete=models.CASCADE, related_name='events')
     kind = models.CharField(max_length=20, choices=Kind.choices)

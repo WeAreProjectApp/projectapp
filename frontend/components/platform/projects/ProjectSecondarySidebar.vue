@@ -65,6 +65,12 @@ const items = computed(() => {
     { label: 'Cuentas de cobro',  href: localePath(`${base}/collection-accounts`), disabled: true },
     { label: 'Modelo de datos',   href: localePath(`${base}/data-model`), disabled: true },
   ]
+  if (authStore.isClient) {
+    navigationItems.push({
+      label: t('platformSecureLinks.navigation'),
+      href: localePath(`${base}/secure-links`),
+    })
+  }
   if (authStore.isAdmin) {
     navigationItems.push({
       label: t('projectAccess.navigation'),

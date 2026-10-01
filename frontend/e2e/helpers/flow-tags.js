@@ -361,6 +361,9 @@ export const PLATFORM_PROJECT_DATA_MODEL = ['@flow:platform-project-data-model',
 export const PLATFORM_PROJECT_DETAIL = ['@flow:platform-project-detail', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROJECT_LIST = ['@flow:platform-project-list', '@module:platform', '@priority:P2'];
 export const PLATFORM_PROPOSAL_AUTO_ONBOARDING = ['@flow:platform-proposal-auto-onboarding', '@module:platform', '@priority:P1'];
+export const PLATFORM_SECURE_LINK_CREATE = ['@flow:platform-secure-link-create', '@module:platform', '@priority:P1'];
+export const PLATFORM_SECURE_LINK_MANAGE = ['@flow:platform-secure-link-manage', '@module:platform', '@priority:P1'];
+export const PLATFORM_SECURE_LINK_REPLACE = ['@flow:platform-secure-link-replace', '@module:platform', '@priority:P1'];
 export const PLATFORM_SIDEBAR_NAVIGATION = ['@flow:platform-sidebar-navigation', '@module:platform', '@priority:P2'];
 export const PLATFORM_VERIFY_ONBOARDING = ['@flow:platform-verify-onboarding', '@module:platform', '@priority:P1'];
 

@@ -318,6 +318,11 @@ const platformCapabilities = [
     'Materiales, versiones y resultados compartidos durante el proyecto.',
     'Mantiene las entregas localizables y conectadas con el trabajo que las produjo.',
     [
+      feature('platform-client-secure-links', 'Compartir información confidencial con el equipo',
+        'El cliente crea enlaces propios de texto o credenciales ligados a su proyecto; gestiona estados e historial sin leer el secreto guardado.',
+        'Conserva el cifrado, el uso único y la auditoría. Reactivar rota la URL; corregir crea una sustitución tras revocar el anterior. Sin archivos, terceros ni accesos internos.',
+        ['/platform/projects/:id/secure-links'],
+        { icon: 'file', actors: ['client'], stage: 'Entrega' }),
       feature('platform-deliverable-library', 'Consultar entregables',
         'Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega.',
         'Ofrece un punto estable para encontrar y validar los recursos recibidos.',

@@ -85,7 +85,7 @@ def link_list(request):
     if data.get('origin'):
         query = query.filter(origin=data['origin'])
     if data.get('received'):
-        query = query.filter(origin=SecureLink.Origin.PUBLIC)
+        query = query.filter(audience=SecureLink.Audience.TEAM)
     for field in ('client', 'project'):
         if field in data:
             query = query.filter(**{f'{field}_id': data[field]})
@@ -183,7 +183,7 @@ def link_content(request, pk):
 @admin_api(['POST'])
 def link_url(request, pk):
     try:
-        url = services.link_url(_link(pk))
+        url = services.audited_link_url(_link(pk), actor=request.user, meta=services.RequestMeta.from_request(request))
     except services.SecureLinkError as exc:
         return _service_error(exc)
     return private(Response({'url': url}))

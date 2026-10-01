@@ -882,6 +882,16 @@ export const viewCatalogSections = [
     description: 'Vistas del portal autenticado para clientes y administradores de proyecto.',
     views: [
       {
+        label: 'Enlaces seguros propios del proyecto',
+        url: '/platform/projects/:id/secure-links',
+        group: 'Información confidencial',
+        file: 'frontend/pages/platform/projects/[id]/secure-links.vue',
+        reference: 'enlaces de texto o credenciales que el cliente comparte sólo con el equipo',
+        audience: 'client',
+        viewType: 'list',
+        notes: 'Crear, consultar metadatos e historial, copiar URL explícitamente, revocar y reactivar rotando token. Corregir revoca y crea una sustitución; conserva auditoría, sin lectura histórica del secreto ni archivos.',
+      },
+      {
         label: 'Entrada de plataforma (redirect)',
         url: '/platform',
         group: 'Acceso',

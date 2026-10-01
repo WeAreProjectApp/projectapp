@@ -71,3 +71,30 @@ def make_link(staff_user):
 
 def token_from(url):
     return url.split('#', 1)[1]
+
+
+@pytest.fixture
+def platform_client(client_profile):
+    from rest_framework_simplejwt.tokens import AccessToken
+
+    client_profile.is_onboarded = True
+    client_profile.save(update_fields=['is_onboarded'])
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(client_profile.user)}')
+    return client
+
+
+@pytest.fixture
+def create_owned(client_profile, project, platform_client):
+    import uuid
+
+    from secure_links.platform_services import create_owned_link
+
+    def factory(**changes):
+        return create_owned_link(**{
+            'owner_id': client_profile.pk, 'project_id': project.pk,
+            'actor': client_profile.user, 'request_id': uuid.uuid4(),
+            'title': 'Acceso para el equipo', 'secret_type': 'credentials',
+            'fields': dict(CREDENTIALS), **changes,
+        })
+    return factory

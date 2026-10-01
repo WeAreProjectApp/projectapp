@@ -1,0 +1,16 @@
+{
+  "id": "platform-secure-link-create",
+  "name": "Platform Client Secure Link Create",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Client creates a team-only link from the existing text/credential catalog in their own project. No files, third-party recipients, or internal-access imports. Sensitive input and URL remain in the modal. Repeated request_id with identical normalized input returns metadata without URL; changed input conflicts and offers an explicit new identifier.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

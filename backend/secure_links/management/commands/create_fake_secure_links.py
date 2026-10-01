@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from secure_links import services
 from secure_links.models import SecureLink
+from secure_links.platform_seed import create_platform_samples
 
 SAMPLES = [
     ('credentials', 'Admin Django producción — demo', {'service': 'Django admin', 'url': 'https://demo.projectapp.co/admin/', 'username': 'admin', 'password': 'demo-Pa55-no-real'}),
@@ -44,4 +45,5 @@ class Command(BaseCommand):
             elif state == 'revoked':
                 link.revoked_at = now - timedelta(hours=index)
             link.save()
+        create_platform_samples()
         self.stdout.write('Enlaces seguros de ejemplo disponibles.')

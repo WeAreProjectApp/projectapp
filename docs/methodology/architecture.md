@@ -1872,3 +1872,9 @@ Los resultados de movimientos rechazados también tienen `results` en la raíz.
 `DocumentFolder.creation_operation` identifica el camino de creación sin
 reescribir historia durante sincronizaciones. La reparación operativa usa
 huellas y el historial existente; no hereda cliente/proyecto al devolver documentos.
+
+## Enlaces seguros propios del cliente (P5)
+
+`secure_links.platform_*` aporta acceso por objeto, servicios compartidos, serializers de metadatos y FBVs JWT para `/api/accounts/projects/{project_id}/secure-links/`. No usa SessionAuthentication ni el cliente HTTP Panel. Owner (UserProfile) y Project.client actual deben coincidir; legacy no se adopta. El servicio reutiliza Fernet y revelación de uso único existentes, bloquea proyecto antes de enlace y compara solicitudes por HMAC de entrada normalizada. MCP administrativo usa el mismo dominio; get_secure_link_url exige permiso explícito y confirmación efímera, independiente de la lectura de contenido.
+
+El frontend nuevo mantiene borradores/URL en componentes efímeros y sólo metadatos en Pinia. Corrección conserva origen cifrado + historia y crea un sucesor OneToOne; reactivación cliente rota token. Modelos/hojas y permisos están detallados en docs/platform-secure-links.md. Las guías de roles y núcleo delivery siguen bajo P3.
