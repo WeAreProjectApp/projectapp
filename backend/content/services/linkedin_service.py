@@ -89,6 +89,40 @@ def _clear_token() -> None:
     logger.info('LinkedIn token cleared.')
 
 
+def _classify_refresh_failure(response) -> str:
+    """Only explicit credential rejection permits clearing stored OAuth data."""
+    if response.status_code == 429 or 500 <= response.status_code <= 599:
+        return 'transient'
+    if response.status_code not in (400, 401):
+        return 'unclassified'
+
+    rejected_errors = ('invalid_grant', 'invalid_token')
+    try:
+        body = response.json()
+    except ValueError:
+        return (
+            'credential_rejected'
+            if response.text in rejected_errors
+            else 'unclassified'
+        )
+
+    if not isinstance(body, dict):
+        return 'unclassified'
+    error = body.get('error')
+    if isinstance(error, str) and error in rejected_errors:
+        return 'credential_rejected'
+    description = body.get('error_description')
+    if (
+        error == 'invalid_request'
+        and isinstance(description, str)
+        and ' '.join(description.split()) == (
+            'The provided authorization grant or refresh token is invalid, expired or revoked'
+        )
+    ):
+        return 'credential_rejected'
+    return 'unclassified'
+
+
 def _refresh_access_token() -> str | None:
     """
     Attempt to refresh the access token using the stored refresh token.
@@ -118,8 +152,13 @@ def _refresh_access_token() -> str | None:
     )
 
     if resp.status_code != 200:
-        logger.error('LinkedIn token refresh failed: %s %s', resp.status_code, resp.text)
-        _clear_token()
+        category = _classify_refresh_failure(resp)
+        logger.error(
+            'LinkedIn token refresh failed: status=%s category=%s',
+            resp.status_code, category,
+        )
+        if category == 'credential_rejected':
+            _clear_token()
         return None
 
     data = resp.json()

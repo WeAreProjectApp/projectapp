@@ -1,3 +1,17 @@
+# Autenticación y recuperación de hosting/LinkedIn (2026-10-01)
+
+La ronda amplía el PR #458 en su worktree propio. Los tokens previos a OTP o
+limitados a recuperar contraseña ya no se aceptan como sesión privada; los
+flujos legítimos conservan sus rutas y formatos. Hosting confirma por fase
+la activación, prorrateo y cuotas futuras como una unidad, y envía avisos tras
+confirmar. LinkedIn conserva credenciales ante fallos temporales; sólo un
+rechazo explícito permite borrarlas, con logs sin cuerpos ni tokens.
+La validación requiere rechazos sin efectos, rollback/reintento y recuperación
+OAuth. Sus resultados y la entrega se registran en el PR y el reporte de ronda.
+Sin migraciones ni deploy. Adjuntos de propuestas siguen bloqueados por su
+contrato de listado; rendimiento contable y responsividad de Documentos quedan
+pendientes por cupo, sin declaración de suficiencia global.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto

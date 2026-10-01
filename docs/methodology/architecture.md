@@ -1,5 +1,15 @@
 # Architecture — ProjectApp
 
+> **Autenticación y recuperación de fallos — 2026-10-01:** la autenticación
+> JWT de sesión usa `SessionJWTAuthentication` y rechaza todo token con `purpose`.
+> Los tokens de verificación sólo pueden usarse en verificar/reemitir OTP;
+> los de recuperación conservan sus endpoints específicos. El panel mantiene
+> sesión Django y CSRF. Incorporar una fase de hosting confirma activación,
+> prorrateo y cuotas futuras en una transacción por fase; los avisos ocurren
+> después del commit. Refresh de LinkedIn conserva credenciales ante 429/5xx
+> y respuestas desconocidas, y sólo las borra ante rechazo explícito admitido.
+> No hay nuevos contratos públicos ni garantías de concurrencia.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no
