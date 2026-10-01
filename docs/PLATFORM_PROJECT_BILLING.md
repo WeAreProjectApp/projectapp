@@ -107,6 +107,28 @@ puede cambiar de contrato si las guardas existentes permiten editarlo; uno con
 cuentas conserva su contrato. Los cambios de cliente fallidos no dejan cascada,
 desprendimiento ni historia parcial.
 
+## Fronteras de escritura y concurrencia
+
+Los escritores reservados toman primero `Project`, después los orígenes
+financieros y finalmente `Document`/contexto. Las lecturas iniciales sólo
+descubren IDs; las relaciones y el dueño se comprueban otra vez con las filas
+actuales bloqueadas. Los bloqueos de origen/documento no usan joins anulables.
+La emisión conserva el PDF y la numeración existentes, y un segundo intento
+sobre una instancia obsoleta encuentra el estado vigente antes de emitir.
+
+La reserva ampliada incluye únicamente las entradas `settle_expected_income`
+y `bulk_settle_expected_incomes` y la frontera de `create_record(INCOME)`.
+Comprueban cliente/proyecto y saldo actual antes de crear movimientos. El orden
+de asignaciones del usuario, los importes, el split, Bolsillo, los automatismos
+y los snapshots conservan sus reglas existentes.
+
+Admin valida el cliente con el proyecto original bajo lock y vuelve a
+comprobarlo antes del save. Un rechazo tardío sale de la transacción, revierte
+las escrituras y vuelve a mostrar el formulario con el error en el campo; no
+expone una excepción DRF como respuesta 500. La integración de las guardas
+publicadas de delivery/tickets y de la revocación P4 conserva este orden:
+proyecto → finanzas → delivery → tickets → revocación → save.
+
 ## Verificación y límites
 
 Las pruebas dedicadas usan SQLite/settings_test y datos propios: aislamiento
@@ -115,6 +137,8 @@ razón/version, PDF conservado, conciliación explícita, obligaciones periódic
 reparentado y rollback de dueño. Panel/MCP ejercitan los escritores reales.
 Los journeys de navegador usan APIs simuladas y nunca cobran ni contactan a
 clientes. Los resultados concretos y CI se registran en el PR.
+SQLite valida estados y rollback; no certifica exclusión real ni ausencia de
+carreras en MySQL. No se inició un harness MySQL.
 
 Pendientes de integración: P0 coordina P3 final, el merge de hojas y el orden
 de PRs. La revocación de accesos P4 se absorbe por commit publicado; no se copia

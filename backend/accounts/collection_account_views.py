@@ -98,10 +98,11 @@ def collection_account_list_create_view(request):
     data = ser.validated_data
     project_id = data.get('project_id')
     client_user_id = data.get('client_user_id')
-    if project_id and not client_user_id:
+    if project_id:
         try:
-            proj = Project.objects.get(pk=project_id)
-            client_user_id = proj.client_id
+            proj = Project.objects.select_for_update().get(pk=project_id)
+            if not client_user_id:
+                client_user_id = proj.client_id
         except Project.DoesNotExist:
             return Response(
                 {'project_id': 'Invalid project.'},
@@ -179,19 +180,21 @@ def collection_account_detail_view(request, account_id):
             {'detail': 'Only administrators can update collection accounts.'},
             status=status.HTTP_403_FORBIDDEN,
         )
-
-    try:
-        assert_draft_for_mutation(doc)
-    except CollectionAccountError as e:
-        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
     ser = CollectionAccountUpdateSerializer(data=request.data, partial=True)
     if not ser.is_valid():
         return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
     payload = ser.validated_data
+    from accounts.services.billing_locks import lock_billing_document
+    doc = lock_billing_document(account_id, project_ids=[payload.get('project_id')])
+    if doc is None:
+        return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        assert_draft_for_mutation(doc)
+    except CollectionAccountError as e:
+        return Response({'detail': str(e)}, status=status.HTTP_400_BAD_REQUEST)
     from accounts.services.billing_reassignment import validate_document_reassignment
     relation_changes = {key: payload[key] for key in ('project_id', 'client_user_id') if key in payload}
-    validate_document_reassignment(doc, changes=relation_changes)
+    validate_document_reassignment(doc, changes=relation_changes, lock=True)
 
     # Draft moves of client/project alter per-client figures like any
     # reassignment; the diff-and-log at the end makes them reconstructable.

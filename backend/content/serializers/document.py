@@ -1,5 +1,6 @@
 from accounts.models import Project, UserProfile
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from rest_framework import serializers
 
 from content.models import (
@@ -532,7 +533,22 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
         return document
 
     @historical_write
+    @transaction.atomic
     def update(self, instance, validated_data):
+        if getattr(instance.document_type, 'code', None) == 'collection_account':
+            from accounts.services.billing_locks import lock_billing_document
+            target = validated_data.get('project')
+            instance = lock_billing_document(instance.pk, project_ids=[target.pk if target else None])
+            if not instance:
+                raise serializers.ValidationError({'detail': 'Cuenta de cobro no encontrada.'})
+            if target:
+                validated_data['project'] = instance.project if target.pk == instance.project_id else Project.objects.select_for_update().get(pk=target.pk)
+            self.instance = instance
+            validated_data = self.validate(dict(validated_data))
+            from accounts.services.billing_reassignment import validate_document_reassignment
+            validate_document_reassignment(instance, changes={
+                key: validated_data[key] for key in ('project', 'client_user') if key in validated_data
+            }, lock=True)
         tag_ids = validated_data.pop('tag_ids', None)
         document = super().update(instance, validated_data)
         if tag_ids is not None:

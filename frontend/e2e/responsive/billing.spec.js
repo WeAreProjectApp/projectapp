@@ -29,6 +29,7 @@ async function exerciseBillingView(page, view) {
   } else {
     await setupPlatformBilling(page);
     await page.goto(view.path, { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
   }
 
   if (view.key.endsWith('collection-accounts/index.vue')) {
@@ -68,7 +69,7 @@ async function exerciseBillingView(page, view) {
     await page.getByTestId('project-hosting-context').getByRole('link', { name: 'View hosting accounts' }).click();
     await expect(page.getByRole('link', { name: hostingAccount.public_number, exact: true })).toHaveCount(1);
     await page.goBack();
-    const source = page.getByTestId('project-hosting-context').getByText('aurora.test', { exact: true });
+    const source = page.getByTestId('project-hosting-context').getByRole('heading', { name: 'aurora.test · #30', exact: true });
     await expect(source).toHaveCount(1);
     return source;
   }

@@ -178,7 +178,7 @@ def _reassign(entity_type, record, new_user, user):
     changes = {'client_user': new_user}
     if record.project_id and record.project.client_id != new_user.pk:
         changes['project'] = None
-    validate_document_reassignment(record, changes=changes)
+    validate_document_reassignment(record, changes=changes, lock=True)
     record.client_user = new_user
     if record.project_id and record.project.client_id != new_user.pk:
         record.project = None
@@ -197,6 +197,13 @@ def change_client_apply(folder, new_profile, mode, user):
     no puede dejar un log diciendo que ocurrió — y ninguna notifica por correo.
     """
     sets = linked_sets(folder)
+    # Lock the financial descendants before saving a folder. A draft account
+    # must not be moved using an owner read before a competing project move.
+    from accounts.services.billing_locks import lock_billing_rows
+    account_ids = [doc.pk for doc in sets['documents_move']
+                   if getattr(doc.document_type, 'code', None) == 'collection_account']
+    locked = lock_billing_rows(document_ids=account_ids)
+    sets['documents_move'] = [locked.documents.get(doc.pk, doc) for doc in sets['documents_move']]
     new_user = new_profile.user
 
     _reassign(EntityType.DOCUMENT_FOLDER, folder, new_user, user)

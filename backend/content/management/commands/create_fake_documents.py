@@ -563,8 +563,9 @@ class Command(BaseCommand):
         if DocumentThread.objects.exists():
             return DocumentThread.objects.count()
 
+        sources = Document.objects.filter(metadata__billing_fixture='source').values('pk')
         available = list(
-            Document.objects.select_related('document_type')
+            Document.objects.exclude(pk__in=sources).select_related('document_type')
             .order_by('id')
         )
         used = set()
@@ -604,6 +605,13 @@ class Command(BaseCommand):
             and document.document_type.code == MARKDOWN
             and not document.is_archived
         ), None)
+        if ordinary is None:
+            ordinary = next((
+                document for document in available
+                if document.pk not in used
+                and document.document_type
+                and document.document_type.code == MARKDOWN
+            ), None)
         if generated and ordinary:
             scenarios.append(('Soporte de entrega y cuenta emitida', [ordinary, generated]))
             used.update((ordinary.pk, generated.pk))

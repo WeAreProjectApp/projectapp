@@ -7,7 +7,7 @@ from django.test import RequestFactory
 from rest_framework.exceptions import ValidationError
 
 from accounts.admin import ProjectAdmin
-from accounts.forms_billing import BillingProjectAdminForm
+from accounts.forms_billing import BillingProjectAdminConflict, BillingProjectAdminForm
 from accounts.models import (
     CollectionAccountContext, ContractAmendment, DeliveryWorkspace,
     Project, ProjectContract, ProjectHosting, UserProfile,
@@ -106,7 +106,7 @@ def test_admin_save_cannot_bypass_financial_owner_validation(project, account, n
     project.client = new_client
     administrator = ProjectAdmin(Project, admin_site)
 
-    with pytest.raises(ValidationError, match='historia financiera'):
+    with pytest.raises(BillingProjectAdminConflict, match='historia financiera'):
         administrator.save_model(RequestFactory().post('/admin/'), project, None, change=True)
 
     project.refresh_from_db()

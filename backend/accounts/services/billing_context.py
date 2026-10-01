@@ -6,9 +6,10 @@ from accounts.models import (
     ProjectHosting,
 )
 from accounts.services.billing_access import (
-    BillingConflict, billing_project, invalid, require_billing_admin,
+    BillingConflict, invalid, require_billing_admin,
 )
 from content.models import Document
+from accounts.services.billing_locks import lock_billing_document
 
 
 def context_data(context):
@@ -40,7 +41,7 @@ def validate_document_ownership(document):
             invalid('El origen financiero pertenece a otro cliente.')
 
 
-def resolve_context(document, data):
+def resolve_context(document, data, *, lock_relations=False):
     if not document.project_id:
         if any(data.get(key) is not None for key in (
             'billing_nature', 'contract_id', 'amendment_id', 'project_hosting_id', 'hosting_payment_id',
@@ -57,7 +58,8 @@ def resolve_context(document, data):
             invalid('Selecciona un contrato del proyecto de la cuenta.')
         amendment = None
         if data.get('amendment_id'):
-            amendment = ContractAmendment.objects.filter(pk=data['amendment_id'], contract=contract).first()
+            amendments = ContractAmendment.objects.select_for_update() if lock_relations else ContractAmendment.objects
+            amendment = amendments.filter(pk=data['amendment_id'], contract=contract).first()
             if not amendment:
                 invalid('El otrosí debe pertenecer al contrato seleccionado.')
         return {'nature': nature, 'contract': contract, 'amendment': amendment, 'hosting': None}
@@ -82,33 +84,40 @@ def validate_account_context(document):
         if CollectionAccountContext.objects.filter(document=document).exists():
             invalid('No se puede desvincular el proyecto de una cuenta ya asociada.')
         return
-    context = CollectionAccountContext.objects.select_related('contract', 'amendment', 'hosting').filter(document=document).first()
+    context = _lock_context(document)
     if not context:
         invalid('Cuenta pendiente de asociar: fija su contrato/otrosí o hosting antes de emitir.')
     resolve_context(document, {
         'billing_nature': context.nature, 'contract_id': context.contract_id,
         'amendment_id': context.amendment_id, 'project_hosting_id': context.hosting_id,
-    })
+    }, lock_relations=True)
     if context.hosting_id:
         from accounts.services.hosting_context import validate_hosting_account_evidence
         validate_hosting_account_evidence(document, context.hosting)
 
 
+def _lock_context(document, *, selected_amendment_id=None):
+    # Amendment writers lock their own row before checking associated contexts.
+    # Discover IDs, then lock amendments before contexts to keep that order too.
+    previous = CollectionAccountContext.objects.filter(document=document).values('amendment_id').first()
+    ids = {selected_amendment_id, previous['amendment_id'] if previous else None} - {None}
+    list(ContractAmendment.objects.select_for_update().filter(pk__in=ids).order_by('pk'))
+    context = CollectionAccountContext.objects.select_for_update().filter(document=document).first()
+    if context and context.amendment_id and context.amendment_id not in ids:
+        raise BillingConflict()
+    return context
+
+
 @transaction.atomic
 def associate_account(document_id, actor, data, *, creating=False):
     require_billing_admin(actor)
-    document = Document.objects.select_for_update().select_related(
-        'project', 'client_user', 'hosting_record__client', 'income_record__client',
-        'deliverable', 'document_type',
-    ).filter(pk=document_id).first()
+    document = lock_billing_document(document_id)
     if not document or not document.document_type_id or document.document_type.code != 'collection_account':
         invalid('Cuenta de cobro no encontrada.')
-    if document.project_id:
-        billing_project(document.project_id, actor, lock=True)
-    context = CollectionAccountContext.objects.select_for_update().select_related('contract', 'amendment', 'hosting').filter(document=document).first()
+    context = _lock_context(document, selected_amendment_id=data.get('amendment_id'))
     if not creating and data['expected_version'] != (context.version if context else 0):
         raise BillingConflict()
-    fields = resolve_context(document, data)
+    fields = resolve_context(document, data, lock_relations=True)
     if fields is None:
         return None
     if not creating and not data.get('reason', '').strip():

@@ -5,7 +5,8 @@ import pytest
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
-from accounts.models import Project, UserProfile
+from accounts.models import Project, ProjectContract, UserProfile
+from content.models import Document
 from content.models.document_collection_account import DocumentCollectionAccount
 
 User = get_user_model()
@@ -144,17 +145,25 @@ class TestCreateCollectionAccount:
         assert response.status_code == 400
 
     def test_create_with_valid_project_id_uses_project_client(self, admin_client, project):
+        source = Document.objects.create(title='Contrato emitido', project=project, client_user=project.client)
+        contract = ProjectContract.objects.create(project=project, title='Contrato', key='api-create', document=source)
         response = admin_client.post(
             BASE_URL,
             data={
                 'title': 'Project Invoice',
                 'payment_term_type': DocumentCollectionAccount.PaymentTermType.AGAINST_DELIVERY,
                 'project_id': project.id,
+                'billing_nature': 'contract',
+                'contract_id': contract.pk,
             },
             format='json',
         )
 
         assert response.status_code == 201
+
+        document = Document.objects.get(pk=response.json()['id'])
+        assert document.client_user_id == project.client_id
+        assert document.billing_context.contract_id == contract.pk
 
     def test_create_with_invalid_project_id_returns_400(self, admin_client, client_user_obj):
         response = admin_client.post(

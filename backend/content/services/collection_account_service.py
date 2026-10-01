@@ -238,7 +238,10 @@ def issue_collection_account(
     ``number_allocator`` (optional zero-arg callable) overrides the default
     per-issuer series — the income flow passes the per-client allocator.
     """
-    if not is_collection_account(document):
+    original_document = document
+    from accounts.services.billing_locks import lock_billing_document
+    document = lock_billing_document(document.pk)
+    if document is None or not is_collection_account(document):
         raise CollectionAccountError('Document is not a collection account.')
     if document.commercial_status != Document.CommercialStatus.DRAFT:
         raise CollectionAccountError('Only draft documents can be issued.')
@@ -298,8 +301,10 @@ def issue_collection_account(
     document.save()
     ext.save()
     _log_status_transition(document, old_values, acting_user)
-
-    return document
+    # Preserve the public service's in-memory update contract for callers that
+    # archive the PDF from the supplied instance. This is a current read too.
+    original_document.refresh_from_db(from_queryset=Document.objects.select_for_update())
+    return original_document
 
 
 def _status_snapshot(document):

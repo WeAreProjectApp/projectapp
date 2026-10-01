@@ -265,7 +265,7 @@ test.describe('Platform billing centre', () => {
     await page.getByTestId('billing-hosting-list').getByRole('link', { name: project.name, exact: true }).click();
     await expect(page.getByTestId('project-hosting-context').getByText('One hosting per project, independent of its contracts.')).toHaveCount(1);
     await expect(page.getByTestId('project-hosting-context').getByText(/aurora\.test/)).toHaveCount(1);
-    await expect(page.getByTestId('project-hosting-context').getByText(/2026-10-01 — 2027-04-01/)).toHaveCount(1);
+    await expect(page.getByTestId('project-hosting-context').getByText(/^2026-10-01 — 2027-04-01 · Semiannual/)).toHaveCount(1);
     await page.getByTestId('project-hosting-context').getByRole('link', { name: 'View hosting accounts' }).click();
     await expect(page.getByRole('link', { name: 'PA-AUR-H-002', exact: true })).toHaveCount(1);
   });
@@ -277,7 +277,7 @@ test.describe('Platform billing centre', () => {
     // quality: allow-deep-link (the localized platform shell is the authenticated entry; visible project and Hosting links reach this context).
     await arrangePlatform(page);
     await enterProjectBilling(page, 'Hosting');
-    await expect(page.getByTestId('project-hosting-context').getByText('semiannual', { exact: true })).toHaveCount(1);
+    await expect(page.getByTestId('project-hosting-context').getByText(/Semiannual/)).toHaveCount(1);
     await expect(page.getByTestId('project-hosting-context').getByText('Operational source', { exact: true })).toHaveCount(1);
   });
 

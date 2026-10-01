@@ -121,11 +121,10 @@ def _create_income_collection_account(
     # Row lock: serializes concurrent creates over the same income, making
     # the one-non-cancelled-cuenta guard race-safe (MySQL cannot express it
     # as a conditional unique constraint).
-    income = (
-        IncomeRecord.objects.select_for_update()
-        .filter(pk=data['income_record_id'])
-        .first()
-    )
+    from accounts.services.billing_locks import lock_billing_rows
+    locked = lock_billing_rows(income_ids=[data['income_record_id']],
+                               include_income_children=True, include_origin_documents=True)
+    income = locked.incomes.get(data['income_record_id'])
     if income is None:
         raise CollectionAccountError('El ingreso seleccionado no existe.')
     if income.kind == IncomeRecord.Kind.LOST:
@@ -150,6 +149,8 @@ def _create_income_collection_account(
             'El ingreso seleccionado pertenece a otro cliente. Revisa el '
             'ingreso o cambia el cliente de la cuenta.',
         )
+    if income.project_id and income.project.client_id != client.pk:
+        raise CollectionAccountError('El proyecto del ingreso pertenece a otro cliente.')
     if income.client_id is None:
         accounting_service.bulk_assign_client(
             accounting_service.EntityType.INCOME, [income.pk], profile,

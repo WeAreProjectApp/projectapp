@@ -83,6 +83,12 @@ def _default_issuer():
 @transaction.atomic
 def create_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
     """Draft Document + extension + line item + default payment methods."""
+    from accounts.services.billing_locks import lock_billing_rows
+    hosting = lock_billing_rows(hosting_ids=[hosting.pk]).hostings.get(hosting.pk)
+    if not hosting:
+        raise HostingBillingError('El hosting seleccionado no existe.')
+    if hosting.project_id and (not hosting.client_id or hosting.client.user_id != hosting.project.client_id):
+        raise HostingBillingError('El origen hosting y el proyecto deben pertenecer al mismo cliente.')
     period_from, period_to = next_billing_period(hosting)
     # What is being hosted, not who pays for it: with no domain the project
     # names the service ("hosting Kore"), the client half never did.
@@ -134,9 +140,8 @@ def create_hosting_collection_account(hosting, *, acting_user=None, hosting_paym
     return document
 
 
-def send_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
-    """Create + issue + email the cuenta de cobro. Returns
-    {'document': Document, 'email_sent': bool}."""
+def _prepare_hosting_collection_account(hosting):
+    """Validate and snapshot the current origin inside its writer transaction."""
     from content.services.project_state_service import project_allows_billing
 
     if hosting.project_id and not project_allows_billing(hosting.project):
@@ -190,9 +195,25 @@ def send_hosting_collection_account(hosting, *, acting_user=None, hosting_paymen
             '',
             hosting.client_contact_name,
         )
+    return issuer, allocator, {
+        'name': legal_name, 'email': recipient,
+        'identification': hosting.client_identification or legal_id,
+        'identification_type': legal_id_type,
+        'contact_name': hosting.client_contact_name or contact,
+        'project_name': hosting.project.name if hosting.project_id else '',
+    }
+
+
+def send_hosting_collection_account(hosting, *, acting_user=None, hosting_payment_id=None):
+    """Create + issue + archive atomically; email keeps the existing boundary."""
     stored = None
     try:
         with transaction.atomic():
+            from accounts.services.billing_locks import lock_billing_rows
+            hosting = lock_billing_rows(hosting_ids=[hosting.pk]).hostings.get(hosting.pk)
+            if not hosting:
+                raise HostingBillingError('El hosting seleccionado no existe.')
+            issuer, allocator, customer = _prepare_hosting_collection_account(hosting)
             document = create_hosting_collection_account(
                 hosting, acting_user=acting_user, hosting_payment_id=hosting_payment_id,
             )
@@ -200,16 +221,7 @@ def send_hosting_collection_account(hosting, *, acting_user=None, hosting_paymen
                 document,
                 issuer=issuer,
                 acting_user=acting_user,
-                customer={
-                    'name': legal_name,
-                    'email': recipient,
-                    'identification': hosting.client_identification or legal_id,
-                    'identification_type': legal_id_type,
-                    'contact_name': hosting.client_contact_name or contact,
-                    'project_name': (
-                        hosting.project.name if hosting.project_id else ''
-                    ),
-                },
+                customer=customer,
                 number_allocator=allocator,
             )
 
@@ -221,6 +233,11 @@ def send_hosting_collection_account(hosting, *, acting_user=None, hosting_paymen
                 .get(pk=document.pk)
             )
             stored = persist_collection_account_pdf(document)
+            # Serialize this period's idempotency marker with its issued PDF,
+            # before releasing the origin lock to another emission request.
+            HostingRecord.objects.filter(pk=hosting.pk).update(
+                billing_requested_at=timezone.now(), expiry_notice_target=F('valid_to'),
+            )
     except (CollectionAccountError, CollectionAccountSnapshotError) as exc:
         discard_stored_collection_account_pdf(stored)
         raise HostingBillingError(str(exc)) from exc
@@ -230,12 +247,6 @@ def send_hosting_collection_account(hosting, *, acting_user=None, hosting_paymen
 
     email_sent = _send_client_email(document, hosting=hosting)
 
-    # Silence the expiry cadence for this period even if the email failed:
-    # the document is issued and can be re-sent from Cobros.
-    HostingRecord.objects.filter(pk=hosting.pk).update(
-        billing_requested_at=timezone.now(),
-        expiry_notice_target=F('valid_to'),
-    )
     return {'document': document, 'email_sent': email_sent}
 
 

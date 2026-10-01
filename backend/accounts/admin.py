@@ -29,12 +29,38 @@ class ProjectAdmin(admin.ModelAdmin):
     from .forms_billing import BillingProjectAdminForm
     form = BillingProjectAdminForm
 
+    def get_form(self, request, obj=None, **kwargs):
+        form_class = super().get_form(request, obj, **kwargs)
+        conflict = getattr(request, '_billing_project_conflict', None)
+        if not conflict:
+            return form_class
+        from django import forms
+        class RejectedBillingForm(form_class):
+            def clean_client(self):
+                raise forms.ValidationError(conflict)
+        return RejectedBillingForm
+
+    def changeform_view(self, request, object_id=None, form_url='', extra_context=None):
+        from .forms_billing import BillingProjectAdminConflict
+        try:
+            return super().changeform_view(request, object_id, form_url, extra_context)
+        except BillingProjectAdminConflict as exc:
+            # super() has rolled its POST transaction back. The second render
+            # binds the same input but must be invalid, never a write retry.
+            request._billing_project_conflict = str(exc)
+            return super().changeform_view(request, object_id, form_url, extra_context)
+
     @transaction.atomic
     def save_model(self, request, obj, form, change):
         if change:
+            from rest_framework.exceptions import ValidationError
+            from .forms_billing import BillingProjectAdminConflict, billing_validation_message
             from .services.billing_reassignment import validate_project_billing_reassignment
             original = Project.objects.select_for_update().get(pk=obj.pk)
-            validate_project_billing_reassignment(original, obj.client)
+            try:
+                validate_project_billing_reassignment(original, obj.client)
+            except ValidationError as exc:
+                raise BillingProjectAdminConflict(billing_validation_message(exc)) from exc
         super().save_model(request, obj, form, change)
 
     list_display = (

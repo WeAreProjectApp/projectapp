@@ -78,13 +78,13 @@ def _resolve_identity(project, hosting, data):
     if 'subscription_id' in data:
         if subscription and data['subscription_id'] != subscription.pk:
             invalid('No se puede reemplazar una suscripción con historia; concilia sus evidencias.')
-        subscription = HostingSubscription.objects.filter(pk=data['subscription_id'], project=project).first() if data['subscription_id'] else None
+        subscription = HostingSubscription.objects.select_for_update().filter(pk=data['subscription_id'], project=project).first() if data['subscription_id'] else None
         if data['subscription_id'] and not subscription:
             invalid('La suscripción debe pertenecer al proyecto.')
     record_ids = data.get('hosting_record_ids', [])
     if len(set(record_ids)) != len(record_ids):
         invalid('No repitas registros contables.')
-    records = list(HostingRecord.objects.select_for_update().select_related('client').filter(pk__in=record_ids))
+    records = list(HostingRecord.objects.select_for_update().filter(pk__in=record_ids).order_by('pk'))
     if len(records) != len(record_ids):
         invalid('Registro contable inexistente.')
     for record in records:
@@ -97,7 +97,7 @@ def _resolve_identity(project, hosting, data):
     if selected and selected not in record_ids and (not hosting or not hosting.accounting_sources.filter(hosting_record_id=selected).exists()):
         invalid('El origen operativo debe ser un registro asociado explícitamente.')
     if selected:
-        selected_record = HostingRecord.objects.select_related('client').get(pk=selected)
+        selected_record = HostingRecord.objects.select_for_update().get(pk=selected)
         if _source_errors(selected_record, project):
             invalid('El origen operativo tiene relaciones contradictorias.')
     return subscription, records
@@ -107,7 +107,7 @@ def _resolve_identity(project, hosting, data):
 def reconcile_hosting(project_id, actor, data, *, preview=False):
     require_billing_admin(actor)
     project = billing_project(project_id, actor, lock=True)
-    hosting = ProjectHosting.objects.select_for_update().select_related('subscription', 'operational_accounting_source').filter(project=project).first()
+    hosting = ProjectHosting.objects.select_for_update().filter(project=project).first()
     subscription, records = _resolve_identity(project, hosting, data)
     before = _identity(hosting) if hosting else None
     proposal = {'subscription_id': subscription.pk if subscription else None,
@@ -228,7 +228,7 @@ def link_account_payment(document, hosting, payment_id, actor, reason):
 
 
 def validate_hosting_account_evidence(document, hosting):
-    hosting = ProjectHosting.objects.select_for_update().select_related('operational_accounting_source').get(pk=hosting.pk)
+    hosting = ProjectHosting.objects.select_for_update().get(pk=hosting.pk)
     subscription = HostingSubscription.objects.filter(project_id=hosting.project_id).first()
     if subscription and hosting.subscription_id != subscription.pk:
         invalid('La suscripción del proyecto está pendiente de asociar al hosting; concilia antes de emitir.')

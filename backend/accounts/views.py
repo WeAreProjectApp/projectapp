@@ -2989,6 +2989,8 @@ def _create_subscription_multi_phase(project, plan):
     left for the billing cron to onboard (prorated) when their date arrives.
     Returns None when no phase has started yet.
     """
+    # Identity creation shares the same project-first boundary as accounts.
+    project = Project.objects.select_for_update().get(pk=project.pk)
     from datetime import date
     from decimal import Decimal
 
