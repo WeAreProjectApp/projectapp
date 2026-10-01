@@ -148,6 +148,9 @@ SEEDED_MODELS = {
 
 DERIVED_MODELS = {
     'accounts.BugComment', 'accounts.ChangeRequestComment',
+    # Captured by ticket operations, never fabricated as independent history.
+    'accounts.IssueContext', 'accounts.IssueResponse',
+    'accounts.IssueAttachment', 'accounts.IssueEvent',
     'accounts.DeliverableClientFolder', 'accounts.DeliverableClientUpload',
     'accounts.DeliverableFile', 'accounts.DeliverableVersion',
     'accounts.PaymentHistory', 'accounts.ProjectPhase',

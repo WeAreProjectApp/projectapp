@@ -12,12 +12,15 @@ from rest_framework_simplejwt.tokens import AccessToken
 from accounts.models import (
     BugComment,
     BugReport,
+    IssueEvent,
     Project,
     UserProfile,
 )
 
 User = get_user_model()
-MAX_BUG_REPORT_ARCHIVE_QUERIES = 8
+# The archive transaction now locks project/ticket and persists a history receipt.
+# The ceiling stays constant from one to fifty comments, with no comment SELECTs.
+MAX_BUG_REPORT_ARCHIVE_QUERIES = 12
 
 
 def _detail_url(project_id, bug_id):
@@ -139,6 +142,7 @@ def test_admin_archive_keeps_comment_reads_constant_as_comments_grow(
         {'detail': 'Reporte de bug archivado.'},
     )
     assert (one_comment_bug.is_archived, fifty_comment_bug.is_archived) == (True, True)
+    assert IssueEvent.objects.filter(action='archive', project=project).count() == 2
     assert len(one_comment_queries) == len(fifty_comment_queries)
     assert len(fifty_comment_queries) <= MAX_BUG_REPORT_ARCHIVE_QUERIES
     assert _collection_selects(one_comment_queries) == []

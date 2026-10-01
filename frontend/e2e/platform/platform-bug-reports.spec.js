@@ -101,7 +101,7 @@ test.describe('Platform Bug Reports — Client', () => {
 
     await page.getByRole('button', { name: /reportar bug/i }).click();
     await page.getByPlaceholder('¿Qué está fallando?').fill('New bug report');
-    await page.getByLabel('Entrega de origen (opcional)', { exact: true }).selectOption('501');
+    await page.getByTestId('issue-source').selectOption('501');
     await page.getByRole('button', { name: /reportar bug/i }).last().click();
 
     // On a successful submit the create form closes.

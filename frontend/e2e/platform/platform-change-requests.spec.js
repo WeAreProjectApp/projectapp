@@ -101,7 +101,7 @@ test.describe('Platform Change Requests — Client', () => {
     await page.getByRole('button', { name: /nueva solicitud/i }).click();
     await page.getByPlaceholder('¿Qué cambio necesitas?').fill('New change request');
     // A change request now requires a source requirement — pick the first option.
-    await page.locator('select[required]').selectOption({ index: 1 });
+    await page.getByTestId('issue-source').selectOption({ index: 1 });
     await page.getByRole('button', { name: /crear solicitud/i }).click();
 
     // On a successful submit the create form closes.

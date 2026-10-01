@@ -5,6 +5,9 @@ elige una entrega, el ticket conserva contrato, otrosí, alcance, fase, etapa,
 publicación, ronda y versión del requerimiento originales. Los datos, pasos,
 resultado esperado/real, entorno, pantallazo y comentarios permanecen en el ticket.
 
+Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
+la pestaña Bugs y el ticket mediante la interfaz.
+
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |

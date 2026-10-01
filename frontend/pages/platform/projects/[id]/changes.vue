@@ -22,20 +22,12 @@
             width="w-56"
           >
             <template #trigger>
-              <button
-                type="button"
-                :class="[
-                  'flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium transition',
-                  selectedPhaseId
-                    ? 'border-primary/40 bg-primary/5 text-text-brand dark:border-lemon/30 dark:bg-lemon/5 dark:text-accent'
-                    : 'border-border-default bg-surface text-green-light hover:text-text-default hover:bg-surface-raised',
-                ]"
-              >
+              <BaseButton variant="secondary" size="sm">
                 <span class="max-w-[140px] truncate">{{ selectedPhaseLabel }}</span>
                 <svg class="h-3 w-3 shrink-0 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                 </svg>
-              </button>
+              </BaseButton>
             </template>
           </BaseDropdown>
           <!-- Admin bulk tools -->
@@ -59,6 +51,7 @@
 
       <!-- Status filter tabs -->
       <div class="mb-5 flex gap-1.5 overflow-x-auto pb-1" data-enter>
+        <!-- design-tokens: allow-raw-button (native status filter tabs select the current list) -->
         <button
           v-for="tab in statusTabs"
           :key="tab.value"
@@ -92,15 +85,14 @@
             <tr
               v-for="cr in filteredRequests"
               :key="cr.id"
-              class="cursor-pointer border-t border-border-muted transition hover:bg-primary-soft"
+              class="border-t border-border-muted"
               :class="cr.is_archived ? 'opacity-70' : ''"
-              @click="openDetailModal(cr)"
             >
               <td class="px-4 py-3">
                 <div class="flex items-start gap-2">
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-1.5">
-                      <p class="truncate font-medium text-text-default">{{ cr.title }}</p>
+                    <BaseButton variant="link" size="sm" class="min-w-0 truncate text-left" @click="openDetailModal(cr)">{{ cr.title }}</BaseButton>
                       <span v-if="cr.is_urgent" class="rounded-full bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-red-600 dark:text-red-400">Urgente</span>
                       <span v-if="cr.is_archived" class="rounded-full bg-surface-raised px-1.5 py-0.5 text-[9px] font-semibold uppercase text-text-muted dark:text-text-subtle">Archivada</span>
                       <span v-if="cr.linked_requirement_id" class="rounded-full bg-emerald-500/15 px-1.5 py-0.5 text-[9px] font-semibold text-text-brand">Convertida</span>
@@ -150,6 +142,7 @@
 
       <!-- Cards (mobile) -->
       <div v-else class="space-y-3" data-enter>
+        <!-- design-tokens: allow-raw-button (selectable ticket card opens the detail dialog in place) -->
         <button
           v-for="cr in filteredRequests"
           :key="cr.id"
@@ -211,7 +204,7 @@
 
               <form class="space-y-4" @submit.prevent="handleCreate">
                 <IssueSourcePicker v-model="createForm.source_requirement_id" :options="projectRequirements" id="change-source" required />
-                <p v-if="sourceError" role="alert" class="text-xs text-error">{{ sourceError }}</p>
+                <p v-if="sourceError" role="alert" class="text-xs text-danger-strong">{{ sourceError }}</p>
                 <div>
                   <label class="mb-1.5 block text-xs font-medium text-esmerald/70 dark:text-white/70">Título <span class="text-red-400">*</span></label>
                   <input v-model="createForm.title" type="text" required placeholder="¿Qué cambio necesitas?" class="w-full rounded-xl border border-border-default bg-surface-muted/40 px-4 py-3 text-sm text-text-default outline-none transition placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
@@ -263,7 +256,7 @@
                   </div>
                 </div>
 
-                <p v-if="crStore.error" role="alert" class="text-xs text-error">{{ crStore.error }}</p>
+                <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                 <div class="flex justify-end gap-3 pt-2">
                   <BaseButton variant="ghost" size="md" @click="isCreateOpen = false">Cancelar</BaseButton>
                   <BaseButton variant="accent" size="md" type="submit" :disabled="!createForm.title.trim() || crStore.isUpdating">
@@ -451,7 +444,7 @@
                         <textarea v-model="evalForm.admin_response" rows="2" :placeholder="t('platformIssues.responsePlaceholder')" class="w-full resize-none rounded-xl border border-border-default bg-surface-muted/40 px-4 py-2.5 text-sm text-text-default outline-none placeholder:text-green-light/50 focus:border-border-default dark:bg-primary-strong dark:text-white dark:placeholder:text-white/30 dark:focus:border-lemon/40" />
                       </div>
                       <IssueEvidenceFields v-model="responseEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" admin id="change-response-evidence" />
-                      <p v-if="crStore.error" role="alert" class="text-xs text-error">{{ crStore.error }}</p>
+                      <p v-if="crStore.error" role="alert" class="text-xs text-danger-strong">{{ crStore.error }}</p>
                       <div class="grid grid-cols-2 gap-3">
                         <div>
                           <label class="mb-1 block text-xs font-medium text-esmerald/70 dark:text-white/70">Tiempo estimado</label>
@@ -521,7 +514,7 @@
                   </BaseButton>
                 </form>
                 <IssueEvidenceFields v-if="!detailCR.is_archived" v-model="commentEvidence" :project-id="projectId" kind="change" :ticket-id="detailCR.id" id="change-comment-evidence" />
-                <p v-if="crStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-error">{{ crStore.error }}</p>
+                <p v-if="crStore.error && !showEvaluateForm" role="alert" class="mt-2 text-xs text-danger-strong">{{ crStore.error }}</p>
                 <label v-if="authStore.isAdmin" class="mt-2 flex items-center gap-2 text-xs text-green-light/60">
                   <input v-model="commentInternal" type="checkbox" class="rounded border-border-default" />
                   Comentario interno (solo admins)

@@ -4,6 +4,9 @@ El cliente crea una solicitud sobre un requerimiento publicado. El origen conser
 contrato, otrosí, alcance, fase, etapa, publicación, ronda y versión. Las respuestas
 y documentos del equipo se guardan separados de las guías y sus aprobaciones.
 
+Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
+la pestaña Solicitudes y el ticket mediante la interfaz.
+
 | Resultado | Interacción | Evidencia esperada |
 |---|---|---|
 | display | Abrir Solicitudes de cambio desde el proyecto. | Estado, prioridad, origen congelado, comentarios, respuestas y adjuntos. |

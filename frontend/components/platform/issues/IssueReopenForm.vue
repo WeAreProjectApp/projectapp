@@ -5,8 +5,8 @@
     <label for="issue-reopen-message" class="block text-xs text-text-muted">{{ t('platformIssues.reopenLabel') }}</label>
     <textarea id="issue-reopen-message" v-model="content" required rows="3" class="w-full rounded-xl border border-border-default bg-surface px-3 py-2 text-sm text-text-default" />
     <IssueEvidenceFields v-model="evidence" :project-id="projectId" kind="bug" :ticket-id="ticket.id" id="issue-reopen-evidence" />
-    <p v-if="error" role="alert" class="text-xs text-error">{{ error }}</p>
-    <BaseButton variant="accent" type="submit" :disabled="busy || !content.trim()">{{ t(busy ? 'platformIssues.sending' : 'platformIssues.reopenSubmit') }}</BaseButton>
+    <p v-if="error" role="alert" class="text-xs text-danger-strong">{{ error }}</p>
+    <BaseButton variant="accent" type="submit" :loading="busy" :disabled="!content.trim()" :disabled-reason="!content.trim() ? t('platformIssues.messageRequired') : ''">{{ t(busy ? 'platformIssues.sending' : 'platformIssues.reopenSubmit') }}</BaseButton>
   </form>
 </template>
 

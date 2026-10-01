@@ -5,17 +5,17 @@ from types import SimpleNamespace
 
 from django.db import transaction
 from django.utils import timezone
-from rest_framework.exceptions import NotFound
+from rest_framework.exceptions import NotFound, PermissionDenied
 
 from accounts.models import (
     BugComment, BugReport, ChangeRequest, ChangeRequestComment, DeliveryStage,
-    IssueEvent, IssueResponse, Notification, ProjectContract,
+    IssueEvent, IssueResponse, Notification,
 )
 from accounts.services.delivery_access import (
     DeliveryConflict, fail, is_admin, project_for_actor, require_admin,
 )
 from accounts.services.delivery_documents import artifact_scope
-from accounts.services.issue_context import capture_context, original_context, save_context
+from accounts.services.issue_context import applicable_contract, capture_context, original_context, save_context
 from accounts.services.issue_evidence import attach_documents
 from accounts.services.notifications import notify_project_admins, notify_project_client
 
@@ -161,14 +161,7 @@ def evaluate_ticket(project_id, actor, kind, ticket_id, data):
         fields = ('status', 'linked_bug_id') if kind == 'bug' else ('status', 'estimated_cost', 'estimated_time')
         if not any(key in values for key in (*fields, 'admin_response')):
             fail('Indica un estado o una respuesta.', 'issue_empty_response')
-        contract = None
-        if values.get('contract_id'):
-            contract = ProjectContract.objects.filter(pk=values['contract_id'], project=project).first()
-            if not contract:
-                fail('El contrato debe pertenecer al proyecto del ticket.', 'issue_contract_context')
-            origin = original_context(ticket)
-            if origin.get('contract_id') and origin['contract_id'] != contract.pk:
-                fail('Selecciona el contrato de la entrega original.', 'issue_contract_context')
+        contract = applicable_contract(project, ticket, values.get('contract_id'))
         changed_status = values.get('status', ticket.status) != ticket.status
         for field in fields:
             if field in values:
@@ -216,6 +209,9 @@ def comment_ticket(project_id, actor, kind, ticket_id, data):
 
 
 def archive_ticket(project_id, actor, kind, ticket_id, data):
+    if not is_admin(actor):
+        raise PermissionDenied('Solo los administradores pueden eliminar '
+                               + ('reportes de bugs.' if kind == 'bug' else 'solicitudes de cambio.'))
     def change(project, ticket, values):
         ticket.is_archived, ticket.archived_at = True, timezone.now()
         return ticket, {}
@@ -268,6 +264,9 @@ def convert_request(project_id, actor, ticket_id, data):
         issue_version = serializers.IntegerField(min_value=0, required=False)
         request_id = serializers.UUIDField(required=False)
 
+    require_admin(actor)
+    # Preserve the legacy not-found response before validating conversion fields.
+    get_ticket(project_id, actor, 'change', ticket_id)
     payload = ConversionSerializer(data=data)
     payload.is_valid(raise_exception=True)
     values = payload.validated_data

@@ -21,8 +21,10 @@ administrador. Los comentarios existentes añaden documentos opcionales.
 
 Un documento debe pertenecer al proyecto o al cliente del proyecto y respetar el
 contrato y el contexto del ticket. Las asociaciones a otros proyectos o contextos
-incompatibles se rechazan. Una respuesta pública sólo adjunta documentos
-publicados para ese cliente. Se reutilizan los índices y el almacenamiento
+incompatibles se rechazan. Una respuesta pública exige publicación visible cuando
+el documento está vinculado a entregas. El equipo puede adjuntar explícitamente
+un PDF del proyecto sin vínculo de entrega; el cliente sólo elige documentos
+visibles para él. Se reutilizan los índices y el almacenamiento
 privado de P3; cada adjunto conserva bytes PDF, título y SHA-256 propios, aunque
 luego cambie la fuente. La descarga exige autenticación y devuelve
 `private, no-store`. No se publican ni modifican documentos fuente.
@@ -30,8 +32,28 @@ luego cambie la fuente. La descarga exige autenticación y devuelve
 El equipo puede seleccionar el contrato aplicable al responder. El resultado
 contractual sigue `indeterminate`: el adaptador de tickets al motor compartido
 de revisión está pendiente de P3. No hay un motor paralelo ni citas inventadas.
+`issue_review_context.build_ticket_review_input` prepara la entrada del dominio:
+origen congelado, conversación pública y referencias a adjuntos obtenidos en el
+servidor, más `ticket_version` y `request_id`. No acepta una conversación enviada
+por el cliente. Sin selección explícita, el contrato queda ausente.
+Las respuestas vinculadas a otro contrato se excluyen de esa entrada; el historial
+del ticket se conserva completo.
+P1 conectará sus wrappers/UI/MCP cuando P0 publique la interfaz estable; P3 conserva el
+provider, schema, captura de fuentes y validación de citas. La preparación por
+sí sola no genera, publica ni aplica respuestas.
 Convertir una solicitud aprobada exige una etapa editable del contrato original;
 el servicio compartido crea una guía pendiente sin aprobarla o publicarla.
+
+`issue_client_transfer.assert_issue_client_transfer_safe(project, new_client)`
+recibe el User de destino y consulta el dueño persistido, incluso si un formulario
+ya cambió la instancia en memoria. Cualquier bug o solicitud, también archivados
+o reportados por staff, bloquea cambiar de dueño con 409 y código
+`issue_client_transfer_history`. El mismo dueño y los proyectos sin tickets se
+permiten. El guard no modifica historia ni destinatarios. El puente en
+`content.services.project_service.change_client_apply` bloquea la fila del proyecto
+antes de comprobarlo y conserva ese lock hasta el save. P0 integra el orden
+lock → financiero P2 → entregas P3 → tickets P1 → revocación P4 → save.
+El formulario y recheck de ProjectAdmin corresponden a P2.
 
 ## API y permisos
 
@@ -96,12 +118,15 @@ ni mergea su PR a main.
 | `accounts/models.py`: versión BugReport/ChangeRequest e import del dominio | P1 | Publicaciones/modelos P3 |
 | `accounts/serializers.py`, `views.py`: sólo bloques BugReport/ChangeRequest | P1 | Servicios dedicados de tickets |
 | `accounts/urls.py`: include `issue_report_urls` | P1 | Vistas dedicadas |
+| `content/services/project_service.py`: lock y guard de transferencia de tickets | P1 | Orden de guards/revocación coordinado por P0 |
 | MCP: registros `ISSUE_TOOLS` / `build_issue_contracts` | P1 | Servicios dedicados y registro P3 |
+| `content/fake_data.py`: clasificación derivada de los cuatro modelos Issue | P1 | Historia creada por operaciones de tickets |
 | i18n: namespace `platformIssues` | P1 | Locales nuevos del dominio |
 | Catálogos/shards bugs/changes y documentos derivados | P1 | UX y generador de registro |
 | CI: job `frontend-issue-tests` | P1 | SQLite/settings_test y navegador real |
 | Memoria: secciones de bugs/solicitudes | P1 | Comportamiento verificado |
-| Adaptador del destino ticket a revisión contractual | P3 | Contrato de integración final P3/P0 |
+| Entrada de ticket y wrappers de revisión | P1 | Provider/interfaz publicados por P3/P0 |
+| Provider, schema, fuentes y citas contractuales | P3 | Followup core coordinado por P0 |
 
 Cada sesión aplica sus bloques en su worktree/PR. Se conserva la navegación
 existente. Cobros, hosting, ideas, accesos, enlaces seguros y correos de cierre

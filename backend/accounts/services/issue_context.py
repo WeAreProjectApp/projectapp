@@ -1,7 +1,7 @@
 """Read delivery evidence and freeze a ticket's original context without writes."""
 from copy import deepcopy
 
-from accounts.models import DeliveryPublication, IssueContext, Requirement, RequirementReview
+from accounts.models import DeliveryPublication, IssueContext, ProjectContract, Requirement, RequirementReview
 from accounts.services.delivery_access import DeliveryConflict, fail, is_admin
 
 
@@ -66,3 +66,16 @@ def original_context(ticket):
     return context.snapshot if context else {
         'origin_kind': 'legacy_unknown', 'project_id': ticket.project_id,
     }
+
+
+def applicable_contract(project, ticket, contract_id):
+    """Selection is explicit, project-owned and consistent with the frozen origin."""
+    if not contract_id:
+        return None
+    contract = ProjectContract.objects.filter(pk=contract_id, project=project).first()
+    if contract is None:
+        fail('El contrato debe pertenecer al proyecto del ticket.', 'issue_contract_context')
+    origin = original_context(ticket)
+    if origin.get('contract_id') and origin['contract_id'] != contract.pk:
+        fail('Selecciona el contrato de la entrega original.', 'issue_contract_context')
+    return contract

@@ -62,6 +62,7 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that exposed an internal team response in the client's ticket history.
   test('cliente no ve la respuesta interna del equipo', { tag: ['@flow:platform-bug-reports', '@outcome:display'] }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated project list is the documented entry; project, Bugs and ticket are opened through UI)
     const data = await fixture(request, testInfo)
     const admin = await login(request, data.admin)
     const secret = 'Nota interna: revisar el registro privado antes de responder.'
@@ -71,7 +72,7 @@ test.describe('Tickets reales de proyecto', () => {
     })
 
     await open(page, request, data, data.general_project.id)
-    await page.getByText('Error con nota interna', { exact: true }).click()
+    await page.getByRole('button', { name: 'Error con nota interna', exact: true }).press('Enter')
     await expect(page.getByTestId('issue-history')).toContainText('Resuelto por equipo')
     await expect(page.getByTestId('issue-history')).not.toContainText(secret)
   })
@@ -97,6 +98,7 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that preserved a request's origin only in its create response, not its detail UI.
   test('solicitud conserva el contexto de la entrega', { tag: ['@flow:platform-change-requests', '@outcome:success', '@outcome:display'] }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated project list is the documented entry; project, Solicitudes and ticket are opened through UI)
     const data = await fixture(request, testInfo)
     await open(page, request, data, data.project.id, 'changes')
     await page.getByRole('button', { name: 'Nueva solicitud', exact: true }).click()
@@ -109,7 +111,7 @@ test.describe('Tickets reales de proyecto', () => {
     const ticket = await response.json()
     expect(ticket.origin_context.publication_id).toBe(data.publication_id)
     expect(ticket.origin_context.requirement_id).toBe(data.requirement_ids[0])
-    await page.getByText('Ampliar el traslado', { exact: true }).click()
+    await page.getByRole('button', { name: 'Ampliar el traslado', exact: true }).press('Enter')
     await expect(page.getByTestId('issue-history')).toContainText('Ronda 1')
   })
 
