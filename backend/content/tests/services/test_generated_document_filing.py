@@ -2,7 +2,8 @@ from datetime import date
 from decimal import Decimal
 
 import pytest
-from accounts.models import Project, UserProfile
+from accounts.models import Project, ProjectContract, UserProfile
+from accounts.services.billing_context import associate_account
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from freezegun import freeze_time
@@ -70,7 +71,16 @@ def issuer():
     )
 
 
-def make_account(*, client_user=None, project=None, concept='Desarrollo web'):
+@pytest.fixture
+def billing_admin():
+    return User.objects.create_superuser(
+        username='filing-billing-admin',
+        email='filing-billing-admin@example.com',
+        password='pass12345',
+    )
+
+
+def make_account(*, client_user=None, project=None, concept='Desarrollo web', acting_user=None):
     document = Document.objects.create(
         title=f'Cuenta de cobro — {concept}',
         document_type=get_collection_account_document_type(),
@@ -91,6 +101,24 @@ def make_account(*, client_user=None, project=None, concept='Desarrollo web'):
         unit_price=Decimal('100000'),
         line_total=Decimal('100000'),
     )
+    if project:
+        source_document = Document.objects.create(
+            title=f'Contrato fuente — {concept}',
+            project=project,
+            client_user=project.client,
+        )
+        contract = ProjectContract.objects.create(
+            project=project,
+            key=f'filing-contract-{document.pk}',
+            title=f'Contrato — {concept}',
+            document=source_document,
+        )
+        associate_account(document.pk, acting_user, {
+            'billing_nature': 'contract',
+            'contract_id': contract.pk,
+            'expected_version': 0,
+            'reason': 'Contexto contractual de la cuenta generada.',
+        })
     return document
 
 
@@ -102,8 +130,8 @@ def folder_path(document):
 
 
 @freeze_time('2026-08-14 15:00:00')
-def test_issue_files_under_project_month(issuer, project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_issue_files_under_project_month(issuer, project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
 
     issue_collection_account(document, issuer=issuer)
     document.refresh_from_db()
@@ -140,11 +168,12 @@ def test_project_filing_requires_a_reviewed_managed_root(project, client_user):
 
 
 @freeze_time('2026-08-14 15:00:00')
-def test_issue_applies_account_title_convention(issuer, project, client_user):
+def test_issue_applies_account_title_convention(issuer, project, client_user, billing_admin):
     document = make_account(
         client_user=client_user,
         project=project,
         concept='Desarrollo del portal',
+        acting_user=billing_admin,
     )
 
     issue_collection_account(
@@ -160,8 +189,8 @@ def test_issue_applies_account_title_convention(issuer, project, client_user):
 
 
 @freeze_time('2026-08-14 15:00:00')
-def test_repeated_filing_reuses_hierarchy(issuer, project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_repeated_filing_reuses_hierarchy(issuer, project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
     issue_collection_account(document, issuer=issuer)
     initial_folder_count = DocumentFolder.objects.count()
 
@@ -172,8 +201,8 @@ def test_repeated_filing_reuses_hierarchy(issuer, project, client_user):
 
 
 @freeze_time('2026-08-14 15:00:00')
-def test_repeated_filing_repairs_managed_folder(issuer, project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_repeated_filing_repairs_managed_folder(issuer, project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
     issue_collection_account(document, issuer=issuer)
     month_folder = document.folder
     month_folder.name = 'Mes alterado'
@@ -198,7 +227,7 @@ def test_repeated_filing_repairs_managed_folder(issuer, project, client_user):
 
 @freeze_time('2026-08-14 15:00:00')
 def test_filing_reparents_a_legacy_project_branch(
-    issuer, project, client_user,
+    issuer, project, client_user, billing_admin,
 ):
     root = project.document_root_folder
     root.children.all().delete()
@@ -219,7 +248,7 @@ def test_filing_reparents_a_legacy_project_branch(
         project=project,
         client_user=client_user,
     )
-    document = make_account(client_user=client_user, project=project)
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
 
     issue_collection_account(document, issuer=issuer)
 
@@ -267,8 +296,8 @@ def test_issue_without_project_uses_client_branch(issuer, client_user):
 
 
 @freeze_time('2026-08-14 15:00:00')
-def test_cancelled_issue_moves_to_cancelled_branch(issuer, project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_cancelled_issue_moves_to_cancelled_branch(issuer, project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
     issue_collection_account(document, issuer=issuer)
 
     mark_collection_account_cancelled(document)
@@ -277,8 +306,8 @@ def test_cancelled_issue_moves_to_cancelled_branch(issuer, project, client_user)
     assert folder_path(document)[-3:] == ['2026', '08 - Agosto', 'Anuladas']
 
 
-def test_cancelled_draft_uses_unissued_branch(project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_cancelled_draft_uses_unissued_branch(project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
 
     mark_collection_account_cancelled(document)
     document.refresh_from_db()
@@ -299,8 +328,8 @@ def test_assigning_project_keeps_unissued_draft_unfiled(project, client_user):
 
 
 @freeze_time('2026-09-01 02:00:00')
-def test_issue_uses_bogota_calendar_date(issuer, project, client_user):
-    document = make_account(client_user=client_user, project=project)
+def test_issue_uses_bogota_calendar_date(issuer, project, client_user, billing_admin):
+    document = make_account(client_user=client_user, project=project, acting_user=billing_admin)
 
     issue_collection_account(document, issuer=issuer)
     document.refresh_from_db()

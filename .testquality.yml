@@ -17,6 +17,7 @@ max_timeout_ms: 100
 
 py_allowed_folders:
   - "."
+  - "billing"
   - "commands"
   - "management"
   - "models"

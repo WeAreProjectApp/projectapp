@@ -357,6 +357,7 @@ from content.views.entity_history import (
 
 urlpatterns = [
     path('projects/<int:project_id>/', include('content.project_collaboration_urls')),
+    path('admin/billing-context/', include('content.billing_urls')),
     path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),
     path('video-resources/admin/proposals/<int:proposal_id>/', admin_proposal_video, name='admin-proposal-video'),
     path('video-resources/<uuid:resource_id>/<int:revision>/<str:kind>/', public_video_file, name='public-video-file'),

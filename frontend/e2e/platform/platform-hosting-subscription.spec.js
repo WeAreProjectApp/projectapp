@@ -1,10 +1,9 @@
-// qa: draft-unvalidated (2026-09-01 — app_reachable=no)
 /**
  * E2E tests for platform hosting subscription flow.
  *
  * @flow:platform-hosting-subscription
  * Covers: hosting plan selection (client), subscription activation, payment via mocked Wompi,
- *         Netflix-style active state, admin read-only view, unified payments page.
+ *         Netflix-style active state, admin read-only view.
  *         Wompi payment endpoints are mocked — no real transactions.
  */
 import { test, expect } from '../helpers/test.js';
@@ -84,6 +83,9 @@ function setupMocksNoSubscription(page, { user }) {
     if (apiPath === 'accounts/projects/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([mockProject]) };
     }
+    if (apiPath === 'accounts/hosting/' && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify([mockProject]) };
+    }
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockPhases) };
     }
@@ -109,6 +111,9 @@ function setupMocksWithSubscription(page, { user }) {
     if (apiPath === 'accounts/projects/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
     }
+    if (apiPath === 'accounts/hosting/' && method === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
+    }
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockPhases) };
     }
@@ -125,30 +130,14 @@ function setupMocksWithSubscription(page, { user }) {
   });
 }
 
-/** `/platform/payments` — only `fetchSubscriptions()` (GET subscriptions list). */
-function setupMocksUnifiedPaymentsPage(page, { user, subscriptions }) {
-  return mockApi(page, async ({ apiPath, method }) => {
-    if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(user);
-    if (apiPath === 'accounts/subscriptions/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(subscriptions) };
-    }
-    if (apiPath === 'accounts/notifications/unread-count/' && method === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify({ unread_count: 0 }) };
-    }
-    return null;
-  });
-}
-
-async function navigateFromProjectListToHosting(page) {
-  await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
-
-  const projectRow = page.getByTestId('project-row-1');
-  await expect(projectRow).toContainText('E-commerce Platform');
-  await projectRow.click();
-  await expect(page).toHaveURL(/\/platform\/projects\/1$/);
-
-  await page.getByRole('link', { name: 'Hosting' }).click();
-  await expect(page).toHaveURL(/\/platform\/projects\/1\/payments$/);
+async function navigateFromGlobalHostingToProject(page) {
+  await page.goto('/en-us/platform/projects', { waitUntil: 'domcontentloaded' });
+  await page.getByRole('link', { name: 'Hosting', exact: true }).click();
+  await expect(page).toHaveURL(/\/en-us\/platform\/payments$/);
+  const projectLink = page.getByTestId('billing-hosting-list').getByRole('link', { name: 'E-commerce Platform', exact: true });
+  await expect(projectLink).toHaveCount(1);
+  await projectLink.click();
+  await expect(page).toHaveURL(/\/en-us\/platform\/projects\/1\/payments$/);
 }
 
 test.describe('Platform Hosting Subscription — Client selects plan', () => {
@@ -165,7 +154,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
   }, async ({ page }) => {
     await setupMocksNoSubscription(page, { user: mockPlatformClient });
     // quality: allow-deep-link (the authenticated platform root lands on the project list; this journey then clicks the project row and Hosting link through the UI)
-    await navigateFromProjectListToHosting(page);
+    await navigateFromGlobalHostingToProject(page);
 
     await expect(page.getByRole('heading', { name: 'Activa tu plan de hosting' })).toHaveText('Activa tu plan de hosting');
     await expect(page.getByRole('button', { name: 'Trimestral', exact: true })).toHaveText('Trimestral');
@@ -177,7 +166,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
     tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
   }, async ({ page }) => {
     await setupMocksNoSubscription(page, { user: mockPlatformClient });
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromGlobalHostingToProject(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Trimestral' }).click();
@@ -190,7 +179,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
     tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
   }, async ({ page }) => {
     await setupMocksNoSubscription(page, { user: mockPlatformClient });
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromGlobalHostingToProject(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Cada 9 meses', exact: true }).click();
@@ -221,6 +210,9 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
       if (apiPath === 'accounts/projects/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([mockProject]) };
       }
+      if (apiPath === 'accounts/hosting/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([mockProject]) };
+      }
       if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(mockPhases) };
       }
@@ -237,7 +229,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
       return null;
     });
 
-    await page.goto('/platform/projects/1/payments', { waitUntil: 'domcontentloaded' });
+    await navigateFromGlobalHostingToProject(page);
     await page.getByRole('heading', { name: 'Activa tu plan de hosting' }).waitFor({ state: 'visible', timeout: 30000 });
 
     await page.getByRole('button', { name: 'Trimestral' }).click();
@@ -273,6 +265,9 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
       if (apiPath === 'accounts/projects/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
       }
+      if (apiPath === 'accounts/hosting/' && method === 'GET') {
+        return { status: 200, contentType: 'application/json', body: JSON.stringify([{ ...mockProject, has_subscription: true }]) };
+      }
       if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(mockPhases) };
       }
@@ -295,16 +290,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
     });
 
     // quality: allow-deep-link (arrives via projects list -> project row click -> Hosting tab click, mirroring platform-client-documents.spec.js's accepted entry pattern; not a deep link straight to /payments)
-    await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
-    const projectRow = page.getByTestId('project-row-1');
-    await expect(projectRow).toBeVisible();
-    const projectDetailNavigation = page.waitForURL(/\/platform\/projects\/1$/, {
-      waitUntil: 'domcontentloaded',
-    });
-    await projectRow.click();
-    await projectDetailNavigation;
-    await page.getByRole('link', { name: 'Hosting' }).click();
-    await page.waitForURL(/\/platform\/projects\/1\/payments/, { waitUntil: 'domcontentloaded' });
+    await navigateFromGlobalHostingToProject(page);
     await page.getByRole('heading', { name: /hosting trimestral/i }).waitFor({ state: 'visible', timeout: 30000 });
 
     // Unlike the active-subscription display test below, the frequency
@@ -330,7 +316,7 @@ test.describe('Platform Hosting Subscription — Client selects plan', () => {
   }, async ({ page }) => {
     await setupMocksWithSubscription(page, { user: mockPlatformClient });
     // quality: allow-deep-link (the authenticated platform root lands on the project list; this journey then clicks the project row and Hosting link through the UI)
-    await navigateFromProjectListToHosting(page);
+    await navigateFromGlobalHostingToProject(page);
 
     await expect(page.getByRole('heading', { name: 'Hosting Trimestral' })).toHaveText('Hosting Trimestral');
     await expect(page.getByText('Activa', { exact: true })).toHaveText('Activa');
@@ -349,7 +335,7 @@ test.describe('Platform Hosting Subscription — Admin view', () => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
     await setupMocksNoSubscription(page, { user: mockPlatformAdmin });
     // quality: allow-deep-link (the authenticated platform root lands on the project list; this journey then clicks the project row and Hosting link through the UI)
-    await navigateFromProjectListToHosting(page);
+    await navigateFromGlobalHostingToProject(page);
 
     await expect(page.getByRole('cell', { name: 'Trimestral', exact: true })).toHaveText('Trimestral');
     await expect(page.getByText('El cliente aún no ha activado su plan de hosting.')).toHaveText('El cliente aún no ha activado su plan de hosting.');
@@ -364,25 +350,9 @@ test.describe('Platform Hosting Subscription — Admin view', () => {
     await setPlatformAuth(page, { user: mockPlatformAdmin });
     await setupMocksWithSubscription(page, { user: mockPlatformAdmin });
     // quality: allow-deep-link (the authenticated platform root lands on the project list; this journey then clicks the project row and Hosting link through the UI)
-    await navigateFromProjectListToHosting(page);
+    await navigateFromGlobalHostingToProject(page);
 
     await expect(page.getByRole('heading', { name: 'Hosting Trimestral' })).toHaveText('Hosting Trimestral');
     await expect(page.getByText('Activa', { exact: true })).toHaveText('Activa');
-  });
-});
-
-// The standalone /platform/payments view was removed in the platform IA
-// refactor — subscriptions are now project-scoped and the route redirects.
-test.describe('Platform Hosting Subscription — /platform/payments redirect', () => {
-  test.setTimeout(60_000);
-
-  test('client visiting /platform/payments is redirected to projects', {
-    tag: [...PLATFORM_HOSTING_SUBSCRIPTION, '@role:platform-client'],
-  }, async ({ page }) => {
-    await setPlatformAuth(page, { user: mockPlatformClient });
-    await setupMocksUnifiedPaymentsPage(page, { user: mockPlatformClient, subscriptions: [] });
-    await page.goto('/platform/payments', { waitUntil: 'domcontentloaded' });
-    await page.waitForURL('**/platform/projects**', { timeout: 30000 });
-    await expect(page).toHaveURL(/\/platform\/projects/);
   });
 });

@@ -1538,3 +1538,15 @@ Migración aditiva `content.0258_communication_folders`: hilos existentes quedan
 Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
 
 El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. Su servidor fuerza `MAILERS.default` a locmem antes de iniciar Django y verifica cada alias declarado y backend efectivo antes de preparar DB o crear fixtures; configuración incompleta, backend distinto o constructor inválido abortan sin divulgar opciones. `--check-isolation` permite certificar settings/motor/aliases sin DB/fixtures/HTTP; el workflow P4 lo ejecuta antes de sus dos specs. La migración propia 0070 depende de P3 0067; P0 reservó la no-op 0075 con padres 0074 P2 y 0070, aún no creada hasta absorber el SHA final P2. No editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente. La corrección del servidor Delivery pertenece a P3 y llegará mediante la cadena publicada P2.
+### Billing P2: lecturas y conciliación (2026-10-01)
+
+Las nuevas lecturas usan DTO públicos con relaciones precargadas y aislamiento
+servidor. Las mutaciones de contexto usan transacciones, lock del proyecto,
+versión esperada y razón; no escriben dinero ni regeneran documentos emitidos.
+La creación/emisión contable exige vínculos explícitos para cuentas de proyecto.
+`frontend/playwright.billing.config.js` limita la validación local a journeys y
+matriz responsive de billing, con API simulada y sin automatismos externos.
+P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
+P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
+sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
+`docs/PLATFORM_PROJECT_BILLING.md`.

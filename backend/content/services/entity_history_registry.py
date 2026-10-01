@@ -121,6 +121,7 @@ def roots_for(instance):
         'content.ProposalSection': ('proposal', 'proposal_id'),
         'content.DocumentNote': ('document', 'document_id'),
         'content.DocumentCollectionAccount': ('document', 'document_id'),
+        'accounts.CollectionAccountContext': ('document', 'document_id'),
         'content.DocumentItem': ('document', 'document_id'),
         'content.DocumentPaymentMethod': ('document', 'document_id'),
         'content.DocumentThreadItem': ('document', 'document_id'),
@@ -217,7 +218,7 @@ def snapshot_entity(kind, pk):
         data['document_notes'] = child_values(obj.document_notes.all(), [
             'title', 'content', 'order', 'status', 'resolution_note', 'resolved_at', 'deleted_at',
         ])
-        for relation in ('collection_account',):
+        for relation in ('collection_account', 'billing_context'):
             child = getattr(obj, relation, None)
             if child:
                 data[relation] = record_values(child, [f.name for f in child._meta.fields

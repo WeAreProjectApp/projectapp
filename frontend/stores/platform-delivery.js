@@ -89,6 +89,32 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
         return { success: true }
       } catch (error) { return apiFailure(error) }
     },
+    retainClosureEmailVersion(data) {
+      if (this.workspace && Number.isInteger(data?.version) && data.version >= this.version) this.workspace.version = data.version
+    },
+    async fetchClosureEmailHistory(stageId) {
+      try {
+        const response = await usePlatformApi().get(this.base(`stages/${stageId}/closure-email/history/`))
+        this.retainClosureEmailVersion(response.data)
+        return { success: true, data: response.data }
+      } catch (error) { return apiFailure(error) }
+    },
+    async fetchClosureEmail(id) {
+      try {
+        const response = await usePlatformApi().get(this.base(`closure-emails/${id}/`))
+        this.retainClosureEmailVersion(response.data)
+        return { success: true, data: response.data }
+      } catch (error) { return apiFailure(error) }
+    },
+    async mutateClosureEmail(path, payload = {}) {
+      const result = await this.mutate(path, payload, 'POST', { refresh: false })
+      if (result.success) this.retainClosureEmailVersion(result.data)
+      return result
+    },
+    prepareClosureEmail(stageId, payload) { return this.mutateClosureEmail(`stages/${stageId}/closure-email/prepare/`, payload) },
+    sendClosureEmail(id, payload) { return this.mutateClosureEmail(`closure-emails/${id}/send/`, payload) },
+    prepareClosureEmailResend(id) { return this.mutateClosureEmail(`closure-emails/${id}/resend/prepare/`) },
+    downloadClosureEmailAttachment(attachment) { return this.downloadPromptSource(attachment) },
     async mutate(path, payload = {}, method = 'POST', { refresh = true } = {}) {
       this.isUpdating = true
       this.error = ''

@@ -92,18 +92,38 @@ datos o detalles de programación. Cada guía tiene estos campos:
 
 | Campo | Pregunta que debe responder |
 | --- | --- |
-| `role` | ¿Quién debe hacer la prueba y con qué tipo de cuenta? |
+| `role` | Nombre real del rol del producto del cliente, sólo si las fuentes lo acreditan. |
+| `access` | ¿Con qué acceso o cuenta de prueba entra esa persona? |
 | `environment` | ¿Dónde se hace la prueba? |
 | `preparation` | ¿Qué debe estar listo antes de empezar? |
 | `data` | ¿Qué datos o registros se necesitan? Si no hacen falta, decirlo. |
 | `steps` | ¿Qué acciones se hacen, en orden? Una acción concreta por paso. |
 | `expected_result` | ¿Qué resultado visible confirma que funcionó? |
 | `failure_signals` | ¿Qué permite reconocer un fallo y describirlo al equipo? |
+| `allowed_actions` | ¿Qué ve y qué puede hacer con ese acceso? |
+| `blocked_actions` | ¿Qué no debe ver o qué no puede hacer? |
+| `blocked_steps` | ¿Cómo se intenta una acción bloqueada, en orden? |
+| `blocked_result` | ¿Qué resultado confirma que el bloqueo funciona? |
+| `dependencies` | ¿Qué etapa anterior debe completar otra persona y qué datos se reutilizan? |
 
-Para publicar se exigen quién prueba, ambiente, pasos, resultado esperado y
+Para publicar se exigen ambiente, pasos, resultado esperado y
 señales de fallo. La preparación y los datos también deben explicarse cuando
 la prueba los necesita. Evitar instrucciones como «validar el módulo»; indicar,
 por ejemplo, qué registro crear, dónde buscarlo y qué debe aparecer.
+
+Las etapas se basan en los recorridos reales del sistema del cliente. Si las
+fuentes definen roles, se agrupan preferentemente por responsabilidad y acceso;
+una guía explica un caso permitido y otro bloqueado. No se duplican los
+requerimientos para agrupar por rol: se referencian las etapas previas en
+`dependencies`. Si no hay roles acreditados, se omite esa separación y `role`;
+Platform oculta los campos vacíos al cliente. Administrador y cliente de
+Platform no son roles del producto que se valida.
+
+En JSON v2, un rol nuevo debe aparecer por su nombre en una cita seleccionada
+del contrato, otrosí, anexo o referencia. La comprobación acredita procedencia;
+el equipo sigue validando que esa fuente define realmente el perfil y sus
+permisos. Las guías manuales v1 conservan compatibilidad y lo aprobado no se
+reescribe. La generación ya no propone «Cliente» como rol por defecto.
 
 ## Firmas y conformidades anteriores
 
@@ -141,6 +161,46 @@ copian a un PDF privado exacto para esa revisión. `DeliveryReviewDocumentEviden
 conserva título, archivo y huella; el respaldo queda separado de los documentos
 de la guía. El historial muestra esos archivos y su descarga autenticada por
 JWT conserva lo registrado aunque cambie el documento de origen.
+
+## Constancia por correo al cerrar una etapa
+
+Cuando todos los requerimientos de una etapa publicada están aprobados, el
+administrador puede abrir **Correo de conformidad**. Aprobar la etapa no envía
+ningún correo. Primero se prepara una copia con el destinatario del proyecto,
+asunto y cuerpo exactos; después se confirma expresamente su envío.
+
+El registro conserva rondas públicas, versiones de las guías, decisiones,
+autores y fechas, y conversaciones hasta la operación que cerró la revisión.
+Incluye el mensaje público de esa última revisión. Las conformidades externas
+distinguen al cliente que aprobó y al administrador que registró la evidencia,
+con su canal y fecha original. La trazabilidad identifica contrato, otrosí
+aplicable, alcance, fase y etapa. Las notas internas, prompts y contextos
+administrativos, y fuentes privadas no se incorporan al correo ni al resumen.
+
+Los adjuntos son opcionales: se puede enviar únicamente el mensaje. El
+administrador puede agregar un resumen PDF de la conformidad o seleccionar
+copias exactas de los documentos públicos disponibles en la etapa. El servidor
+conserva los archivos y sus huellas; no vuelve a generar un documento cambiado
+para enviar o reenviar una evidencia anterior. La vista previa y sus descargas
+requieren el mismo administrador y canal que prepararon el correo.
+
+Enviar utiliza `EmailDeliveryGateway` y la plantilla
+`delivery_stage_approved_client`, con snapshots y auditoría comunes. La captura
+persiste antes de SMTP y los adjuntos usan almacenamiento privado, incluso al
+recargar desde la base o reenviar desde el historial común. No se agregan rutas
+públicas de media para estas evidencias. Si falla una captura, se revierten sus
+filas y archivos antes de cualquier transporte.
+
+El historial muestra preparado, enviando, enviado, fallido o desconocido, junto
+con cada intento. Un doble clic o una petición repetida no duplica el envío.
+Un error posterior a la aceptación de SMTP se identifica como desconocido.
+Reintentar una decisión fallida o desconocida exige **Preparar reenvío**,
+revisar otra copia y confirmar de nuevo. Un proceso interrumpido puede conservar
+el estado enviando; esa incertidumbre tampoco habilita un reintento automático.
+
+Las seis acciones REST tienen equivalentes MCP: preparar, listar historial,
+consultar la copia, descargar adjuntos, enviar y preparar reenvío. Sólo enviar
+es sensible y consume una confirmación de la vista exacta antes del transporte.
 
 ## Documentos y respuestas
 
@@ -382,7 +442,7 @@ guía nueva pendiente dentro de una etapa editable, sin aprobarla por el cliente
 La ampliación del flujo de bugs y los vacíos de cuentas de cobro siguen como
 alcances posteriores para trabajar incrementalmente en el mismo PR.
 
-## Incrementos pendientes
+## Estado de los incrementos
 
 El refinamiento de los prompts del primer alcance está implementado para
 validación en el mismo PR: «Crear guías» sin etapa previa y «Preparar respuesta»
@@ -391,23 +451,13 @@ CI se consultan en el PR. `accounts.0067_explicit_delivery_authoring_context`
 incorpora las capturas inmutables y su vínculo con guías y respuestas; sólo el
 deploy aplica esa migración.
 
-Después siguen el reporte general y seguimiento de bugs y la consulta de cuentas
-de cobro por el cliente. El registro por correo de una etapa aprobada se mantiene
-como incremento futuro independiente, con estos criterios:
+El incremento coordinado incluye roles acreditados por fuentes, una frontera
+contractual reutilizable para tickets y la constancia manual de etapa aprobada.
+`accounts.0071_delivery_followup`, hija de `0067`, conserva el contexto del
+destino ticket y las evidencias privadas de correo. No se modifican migraciones
+anteriores ni se aplican migraciones desde el worktree.
 
-- Acción manual administrativa disponible únicamente para una etapa aprobada,
-  con consulta y vista previa completas antes de enviar.
-- Registro de las versiones aceptadas de etapa y requerimientos, rondas,
-  decisiones, autores, fechas, mensajes públicos y documentos pertinentes;
-  exclusión de notas internas y contenido de otros contratos.
-- Copia inmutable del asunto, cuerpo y adjuntos efectivamente enviados, junto
-  con destinatario, fecha, resultado e historial consultable.
-- Clave de operación para evitar duplicados en reintentos. Un reenvío exige una
-  acción explícita y conserva el vínculo con la copia anterior.
-- Paridad UI/MCP para consultar, preparar la vista previa, enviar y ver el
-  historial. La vista previa no envía ni altera la aprobación.
-
-El envío futuro puede reutilizar `EmailDeliveryGateway`, `EmailDeliverySnapshot`
-y `EmailAttachmentSnapshot`; necesita su propia preparación duradera ligada a la
-etapa y no debe usar una preparación comercial que expire. Este incremento sólo
-registra el backlog; no implementa ni envía correos reales.
+El seguimiento general de bugs y las cuentas de cobro pertenecen a otros frentes
+coordinados. Su integración la conduce P0; esta rama publica el núcleo y sus
+contratos sin absorber sus ramas. Las pruebas de correo usan almacenamiento
+temporal y transporte en memoria, sin enviar mensajes reales al cliente.

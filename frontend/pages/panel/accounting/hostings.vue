@@ -396,13 +396,10 @@
       @close="noteRow = null"
     />
 
-    <ConfirmModal
+    <HostingAccountEmissionModal
       v-model="billingConfirmOpen"
-      title="Enviar cuenta de cobro"
+      :record="billingRow"
       :message="billingConfirmMessage"
-      confirm-text="Enviar al cliente"
-      cancel-text="Cancelar"
-      variant="primary"
       @confirm="sendBilling"
       @cancel="billingRow = null"
     />
@@ -428,6 +425,7 @@ import AccountingStatusSelect from '~/components/accounting/AccountingStatusSele
 import AccountingInlineCell from '~/components/accounting/AccountingInlineCell.vue';
 import HostingCyclesModal from '~/components/accounting/HostingCyclesModal.vue';
 import HostingActionsModal from '~/components/accounting/HostingActionsModal.vue';
+import HostingAccountEmissionModal from '~/components/accounting/billing/HostingAccountEmissionModal.vue';
 import HostingFormModal from '~/components/accounting/HostingFormModal.vue';
 import BulkAssignBar from '~/components/accounting/BulkAssignBar.vue';
 import ProjectAssignUnlinkedModal from '~/components/panel/projects/ProjectAssignUnlinkedModal.vue';
@@ -972,12 +970,12 @@ function askSendBilling(row) {
   billingConfirmOpen.value = true;
 }
 
-async function sendBilling() {
+async function sendBilling(context = {}) {
   const row = billingRow.value;
   billingRow.value = null;
   if (!row) return;
   billingId.value = row.id;
-  const result = await store.sendHostingCollectionAccount(row.id);
+  const result = await store.sendHostingCollectionAccount(row.id, context);
   billingId.value = null;
   if (result.success) {
     const number = result.data?.document?.public_number || '';

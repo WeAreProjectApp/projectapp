@@ -1,3 +1,15 @@
+# Bugs y solicitudes contextualizadas — P1 (2026-10-01)
+
+Implementación en validación en `platform-bugs-context`: bug general sin guías,
+captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
+y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
+El adaptador REST/MCP/UI usa P3 publicado `edfff19c` (provider `30fd7ab9`), con revisión humana y
+procedencia privada. El guard protege bugs generales y se compone con entregas.
+P0 reservó `0068` y la no-op `0073` (padres `0068` + `0071`); no se alteran
+migraciones publicadas. El fixture comprueba MAILERS en memoria antes de crear datos.
+QA focal de REST/MCP/UI y aislamiento de correo pasó; CI del head propio sigue en cierre. Detalles en
+`docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
+
 # Alcance y entregas en Platform (2026-10-01)
 
 Primer incremento implementado en `platform-review-workflow`, en validación:
@@ -14,12 +26,38 @@ guía incompleta no demuestra que un pedido esté fuera del contrato. Los textos
 ilegibles, faltantes, contradictorios o recortados requieren revisión humana.
 La corrección de guías conserva sus citas; el contrato u otrosí debe sustentar
 el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
-administrativo de preparaciones y descarga de copias exactas. UI y las 46
+administrativo de preparaciones y descarga de copias exactas. UI y las 52
 herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
-Falta concluir revisión y CI del PR; bugs y vacíos de cuentas de cobro siguen como
-alcances posteriores, incrementalmente en el mismo PR. Se añadió al backlog el
-correo manual del registro de una etapa aprobada, con vista previa y copia
-exacta del envío; no se implementa ni se envía en este incremento.
+El incremento coordinado P3 redacta guías desde los recorridos del producto
+del cliente: roles sólo con respaldo de fuentes, acciones permitidas y
+bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
+Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
+distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
+inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
+P3 publica la frontera contractual reutilizable de tickets en
+`accounts.services.delivery_contract_reply`: proveedor estrecho del dominio
+P1, origen/conversación congelados, versiones independientes de ticket y
+workspace, citas verificadas, preview sin publicación y DTO público separado
+de fuentes privadas. Sin contrato o fuentes completas, alcance indeterminado.
+Validación: 16 casos nuevos + 3 regresiones inmediatas verdes; gate 100/100.
+La guarda de transferencia conserva la historia del cliente anterior y no
+modifica accesos ni filas al rechazar el cambio; 16 casos verdes, gate 100/100.
+Contrato de integración: [DELIVERY_CONTRACT_REPLY_ADAPTER](../docs/DELIVERY_CONTRACT_REPLY_ADAPTER.md).
+La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
+capturas de tickets y los modelos de evidencia de correo del siguiente
+incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
+ninguna migración desde el worktree.
+La compatibilidad con tickets legados admite versión 0 sin alterar los tickets;
+un cambio posterior sigue invalidando la preparación (dos pruebas verdes).
+El correo manual de cierre ya tiene preparación inmutable, vista previa,
+confirmación, historial privado y reenvío explícito. Sólo habilita etapas
+completamente aprobadas; conserva las rondas, decisiones y conversación pública
+hasta la operación de cierre, incluido su último mensaje. Distingue revisor
+original, registrador y fechas de conformidades externas. Capturas fallidas
+limpian archivos, y la captura común opta por almacenamiento privado conservado
+tras recarga y reenvío. Validación focal en curso; el estado final de CI se
+consulta en el PR. Bugs y cuentas de cobro avanzan en frentes propios coordinados
+por P0. No se aplican migraciones ni se envían correos reales.
 Operación y JSON vigente:
 [PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
 
@@ -2328,3 +2366,24 @@ Cierre en curso: pruebas focales backend/unit, navegador con APIs reales, cinco 
 Control de correo P4: el servidor mantiene MAILERS.default locmem, aplicado antes de django.setup. Guard fail-closed certifica todos los aliases y sus backends efectivos antes de DB/fixtures, sin consultar el setting legacy ni leer .env. Preflight sin DB/fixtures/HTTP y 14 casos focales pasan, incluidos alias secundario, transporte implícito/SMTP rechazado, drift del backend efectivo y mensajes sólo en outbox de memoria. Gate canónico: 0 errores/0 warnings. El workflow propio incorpora el preflight antes del navegador; el fix Delivery permanece en P3 y llegará por la cadena P2 publicada.
 
 QA local adicional: 2 flujos de ideas/accesos con APIs reales pasan tras certificar el servidor. La traza del fallo responsive publicado identifica una recarga de Vite al compilar por primera vez el detalle durante el click; el warmup P4 ahora prepara lista/detalle/Ideas y las fixtures de política/listas conservan sus shapes completos. Lote desde Nuxt recién iniciado: 20/20 celdas, sin retries/flakes ni errores de render no manejados; gate y mapas correctos. Commits propios locales, sin push hasta absorber la corrección publicada del servidor Delivery mediante P2; el pipeline heredado todavía configura su setting legacy. P0 conserva la coordenada final y la reserva 0075, aún no creada.
+### P2 — cuentas y hosting por proyecto (2026-10-01)
+
+En implementación en rama propia `feat/01102026-platform-client-billing`, desde
+`origin/main=cce8e694`, con dependencia P3 inicial `abcffaf9` y actualización
+publicada `dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbidas mediante merge.
+Se absorbieron también P3 `4c6e132281554de14a2b303fe7a3b05f012910bf` y P1
+`b25ad2e080597b7708126b5d865d7ba805253478`; Admin compone sus guardas después
+de finanzas usando proyecto original/actual y actor del request, con error visible
+y rollback. Los escritores reservados de cobros y las dos entradas de liquidación
+toman Project antes de origen/documento y revalidan dueño/relaciones vigentes.
+P0 fijó migración P2 `0069_p2_project_billing_context`, padre P3 `0067`; las
+hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por proyecto, cuentas excluyentes
+contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
+No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
+contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.
+La no-op autorizada `0072` reúne las hojas `0068`/`0069`; `0074` reúne `0072`/`0073`
+tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
+`ebbf331d76fedb5f89f3b440f2fdeb50c148e977`. P4 conserva su reserva de revocación
+después de guardas. Un origen financiero eliminado antes del descubrimiento
+rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
+SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.

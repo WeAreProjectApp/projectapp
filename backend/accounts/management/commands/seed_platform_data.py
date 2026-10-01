@@ -184,6 +184,8 @@ class Command(BaseCommand):
         from content.models import Document
         from content.services.document_type_codes import COLLECTION_ACCOUNT
 
+        from accounts.management.commands._billing_seed_helpers import clear_fake_billing
+        clear_fake_billing(Project.objects.filter(client__email__in=[ADMIN_EMAIL, CLIENT_EMAIL]))
         clear_fake_delivery(Project.objects.filter(client__email__in=[ADMIN_EMAIL, CLIENT_EMAIL]))
         seed_docs = Document.objects.filter(title__startswith=SEED_PREFIX).delete()
         if seed_docs[0]:
@@ -1275,6 +1277,7 @@ class Command(BaseCommand):
 
         today = self.seed_context.anchor_date
 
+        billing_fixture_index = 0
         def new_draft(
             title,
             project,
@@ -1284,6 +1287,7 @@ class Command(BaseCommand):
             due_date=None,
             support_ref='',
         ):
+            nonlocal billing_fixture_index
             doc = Document.objects.create(
                 uuid=self.seed_context.uuid(f'platform-collection-{title}'),
                 title=title,
@@ -1309,6 +1313,11 @@ class Command(BaseCommand):
                 payment_term_days=None if due_date else payment_term_days,
                 support_reference=support_ref or f'DEMO-PROJ-{project.id}',
             )
+            from accounts.management.commands._billing_seed_helpers import collection_context_for_seed
+            from accounts.services.billing_context import associate_account
+            payload = collection_context_for_seed(project, billing_fixture_index, context=self.seed_context, actor=admin_user)
+            billing_fixture_index += 1
+            associate_account(doc.pk, admin_user, payload, creating=True)
             return doc
 
         def issue_demo_collection_account(doc):

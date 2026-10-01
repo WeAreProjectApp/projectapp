@@ -1,5 +1,21 @@
 # Architecture — ProjectApp
 
+### Bugs y solicitudes contextualizadas — 2026-10-01
+
+`issue_reports` comparte el ciclo de vida entre REST y MCP; los adaptadores
+existentes quedan delgados. `IssueContext` conserva el origen publicado,
+`IssueResponse` agrega respuestas, `IssueEvent` conserva estados/recibos y
+`IssueAttachment` guarda PDFs históricos privados. El bug general no depende
+de contrato o guía. «Resuelto por equipo» admite reapertura del cliente sin
+modificar aprobaciones. Se reutilizan almacenamiento e índices de documentos de
+entregas. `issue_contract_reply` delega fuentes/citas a P3 y proporciona identidad,
+origen congelado y conversación pública real. Publicar revalida dueño, actor,
+destino, versiones y hashes bajo `_run`; el JSON guarda procedencia privada y
+el serializer expone una allowlist pública. El guard propio impide transferencias
+con historia de tickets, después del guard de entregas. `0073` combina `0068`
+y `0071` sin operaciones.
+Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
+
 > **Seguimiento contractual — 2026-10-01:** `ProjectContract` y
 > `ContractAmendment` sustentan `DeliveryScope` → `DeliveryPhase` →
 > `DeliveryStage` → `Requirement`. Publicaciones, revisiones, evidencias de firma,
@@ -11,6 +27,13 @@
 > y límites visibles. Guías y respuestas conservan contexto y citas; el servidor
 > verifica las referencias, y la interpretación requiere revisión humana.
 > Descubrir fuentes, previsualizar o consultar no publica ni envía contenido.
+> `delivery_contract_reply` extiende la misma autoría mediante un proveedor de
+> tickets, con propietario, origen y conversación congelados y dos versiones
+> independientes; publicar requiere revalidación bajo lock. `delivery_closure_email`
+> conserva la constancia y sus intentos privados. REST y MCP envían sólo tras
+> revisar una preparación y confirmar manualmente, fuera de la transacción de
+> petición, usando snapshots privados del gateway común antes de SMTP. La
+> captura fallida limpia archivos; un reenvío requiere otra preparación explícita.
 > `technical_resources_sync` sólo refleja recursos y datos. La purga autorizada
 > retira las tarjetas antiguas, conserva bugs/cambios y anula sus referencias.
 > [Reglas y superficies vigentes](../PLATFORM_DELIVERY.md).
@@ -1886,3 +1909,17 @@ Los modelos de `accounts/models_project_ideas.py` conservan ideas, revisiones y 
 Los grants se vinculan al destinatario y fuente mediante HMAC. Guardar, borrar o mover fuentes revoca los campos afectados; cambiar propietario revoca todos. El receptor propio de EntityRevision consume sólo nombres de campos y cubre updates masivos del historial existente. En la transferencia y Django Admin, el guard financiero de P2 debe rechazar antes de revocar y reasignar/guardar. P4 reserva únicamente la revocación en ProjectAdmin.save_model contra el proyecto original bloqueado; formulario y guard son de P2. La transacción revierte revocación y eventos si falla el guardado.
 
 Las credenciales sólo se revelan con POST explícito y grant vigente, permanecen 30 segundos en estado local del componente y no viajan en listados, stores ni auditoría. Las colecciones listan resúmenes; snapshots completos se cargan bajo demanda.
+### Cuentas y hosting por proyecto — P2 (2026-10-01)
+
+`accounts/billing_models.py` añade contexto de cuenta exclusivo contrato/otrosí
+o hosting, identidad única de hosting por proyecto, equivalencias explícitas de
+evidencias y auditoría. Los servicios `billing_*`/`hosting_context` se comparten
+entre JWT, Panel con sesión/CSRF y MCP. Las representaciones financieras
+existentes conservan pagos, ciclos, fases comerciales y automatismos; ninguna
+relación histórica se deduce ni se vuelve a emitir un PDF al reclasificar.
+
+El cambio real de cliente bloquea el proyecto y valida su historia financiera
+antes de dueño/cascada; Django Admin utiliza el mismo guard. El puente acotado
+de delivery impide mover un otrosí con cuentas a otro contrato. El contrato de
+integración con P4 conserva el orden guard financiero → revocación → cambio.
+Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`.

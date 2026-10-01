@@ -1,15 +1,16 @@
 """The change-client cascade: preview buckets, the two apply modes, and the
 hard-delete blockers.
 
-The rules pinned here ARE the ticket's requirements 4-6: issued documents
-are never rewritten, incomes with an active cuenta never change client
-(they detach instead), drafts follow their income or their project, liquid
-children follow their parent, and every touched record leaves an audit row.
+The rules pinned here preserve financial history before any client cascade:
+projects with issued or classified accounts, or hosting history, stay with
+their owner. Projects without that history still move their incomes, drafts,
+folders, and liquid children through the established audited flow.
 """
 from decimal import Decimal
 
 import pytest
 from accounts.models import Project
+from rest_framework.exceptions import ValidationError
 
 from content.models import (
     AccountingChangeLog,
@@ -145,14 +146,13 @@ class TestPreview:
 
 
 class TestApplyMove:
-    def test_move_refreshes_linked_records(
+    def test_move_refreshes_linked_income_records(
         self, superuser, make_client_profile,
     ):
-        """Falla si mover un proyecto deja registros operativos con el cliente previo."""
+        """Falla si mover un proyecto sin historia deja ingresos con el cliente previo."""
         old = make_client_profile()
         new = make_client_profile()
         project = make_project(old)
-        hosting = make_hosting(old, project)
         expected = make_income(old, project)
         liquid = make_income(
             old, project, kind=IncomeRecord.Kind.LIQUID,
@@ -164,13 +164,9 @@ class TestApplyMove:
         )
 
         project.refresh_from_db()
-        hosting.refresh_from_db()
         expected.refresh_from_db()
         liquid.refresh_from_db()
         assert project.client_id == new.user_id
-        assert hosting.client_id == new.pk
-        # The billing snapshot follows the new owner (wrong-inbox rule).
-        assert hosting.client_email == (new.user.email or '')
         assert expected.client_id == new.pk
         # The child follows its parent through the cascade — it is never
         # processed as an independent row, so the count names parents only.
@@ -199,14 +195,13 @@ class TestApplyMove:
             .values_list('project_id', 'client_user_id')
         ) == [(project.id, new.user_id)] * len(folder_ids)
 
-    def test_move_audits_changed_records(
+    def test_move_audits_changed_income_records(
         self, superuser, make_client_profile,
     ):
-        """Falla si mover registros deja de registrar su auditoría contable."""
+        """Falla si mover ingresos permitidos deja de registrar su auditoría."""
         old = make_client_profile()
         new = make_client_profile()
         project = make_project(old)
-        hosting = make_hosting(old, project)
         expected = make_income(old, project)
         liquid = make_income(
             old, project, kind=IncomeRecord.Kind.LIQUID,
@@ -218,7 +213,6 @@ class TestApplyMove:
         )
 
         assert audit_rows(EntityType.PROJECT, project.pk).count() == 1
-        assert audit_rows(EntityType.HOSTING, hosting.pk).count() == 1
         assert audit_rows(EntityType.INCOME, expected.pk).count() == 1
         assert audit_rows(EntityType.INCOME, liquid.pk).count() == 1
 
@@ -253,9 +247,10 @@ class TestApplyMove:
         assert result['detached']['incomes'] == 1
         assert result['detached']['draft_accounts'] == 1
 
-    def test_an_issued_cuenta_is_untouched_and_a_project_draft_follows(
+    def test_issued_account_blocks_client_change_before_draft_cascade(
         self, superuser, make_client_profile,
     ):
+        """Falla si un cobro emitido permite cambiar dueño o reescribir su draft vecino."""
         old = make_client_profile()
         new = make_client_profile()
         project = make_project(old)
@@ -266,42 +261,42 @@ class TestApplyMove:
             project, status=Document.CommercialStatus.DRAFT, title='Draft',
         )
 
-        project_service.change_client_apply(
-            project, new, project_service.MODE_MOVE, superuser,
-        )
+        with pytest.raises(ValidationError, match='historia financiera'):
+            project_service.change_client_apply(
+                project, new, project_service.MODE_MOVE, superuser,
+            )
 
+        project.refresh_from_db()
         issued.refresh_from_db()
         following.refresh_from_db()
+        assert project.client_id == old.user_id
         assert issued.project_id == project.pk
         assert issued.client_user_id == old.user_id
         assert issued.collection_account.customer_name == 'Cliente Viejo'
         assert audit_rows(EntityType.COLLECTION_ACCOUNT, issued.pk).count() == 0
-        # The ownerless draft rides with the project: new client, fresh
-        # provisional snapshot, project kept.
         assert following.project_id == project.pk
-        assert following.client_user_id == new.user_id
-        assert following.collection_account.customer_name != 'Cliente Viejo'
-        assert audit_rows(
-            EntityType.COLLECTION_ACCOUNT, following.pk,
-        ).count() == 1
+        assert following.client_user_id == old.user_id
+        assert following.collection_account.customer_name == 'Cliente Viejo'
+        assert audit_rows(EntityType.COLLECTION_ACCOUNT, following.pk).count() == 0
 
-    def test_a_clientless_row_is_kept_and_reported(
-        self, superuser, make_client_profile,
+    @pytest.mark.parametrize('mode', [project_service.MODE_MOVE, project_service.MODE_DETACH])
+    def test_clientless_hosting_blocks_both_change_modes_before_writes(
+        self, superuser, make_client_profile, mode,
     ):
+        """Falla si un hosting legado sin cliente se mueve o desvincula por cascada."""
         old = make_client_profile()
         new = make_client_profile()
         project = make_project(old)
         loose = make_hosting(None, project, client_name='Sin dueño')
 
-        result = project_service.change_client_apply(
-            project, new, project_service.MODE_MOVE, superuser,
-        )
+        with pytest.raises(ValidationError, match='historia financiera'):
+            project_service.change_client_apply(project, new, mode, superuser)
 
+        project.refresh_from_db()
         loose.refresh_from_db()
+        assert project.client_id == old.user_id
         assert loose.project_id == project.pk
         assert loose.client_id is None
-        assert result['skipped']['clientless'] == 1
-
 
 class TestApplyDetach:
     def test_every_record_keeps_its_client_and_loses_the_project(
@@ -312,7 +307,6 @@ class TestApplyDetach:
         project = make_project(old)
         root = project.document_root_folder
         folder_ids = [root.id, *root.children.values_list('id', flat=True)]
-        hosting = make_hosting(old, project)
         expected = make_income(old, project)
         child = make_income(
             old, project, kind=IncomeRecord.Kind.LIQUID,
@@ -327,17 +321,15 @@ class TestApplyDetach:
         )
 
         project.refresh_from_db()
-        hosting.refresh_from_db()
         expected.refresh_from_db()
         child.refresh_from_db()
         draft.refresh_from_db()
         assert project.client_id == new.user_id
-        assert hosting.project_id is None and hosting.client_id == old.pk
         assert expected.project_id is None and expected.client_id == old.pk
         assert child.project_id is None
         assert draft.project_id is None
         assert result['detached'] == {
-            'hostings': 1, 'incomes': 1, 'draft_accounts': 1,
+            'hostings': 0, 'incomes': 1, 'draft_accounts': 1,
         }
         assert list(
             DocumentFolder.objects.filter(pk__in=folder_ids)

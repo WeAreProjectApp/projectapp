@@ -5,7 +5,7 @@ from decimal import Decimal
 from types import SimpleNamespace
 
 import pytest
-from accounts.models import Project, UserProfile
+from accounts.models import CollectionAccountContext, Project, ProjectContract, UserProfile
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from freezegun import freeze_time
@@ -115,7 +115,15 @@ def _ca_document(**kwargs):
         'total': Decimal('0'),
     }
     defaults.update(kwargs)
-    return Document.objects.create(**defaults)
+    document = Document.objects.create(**defaults)
+    project = defaults.get('project')
+    if project:
+        source = Document.objects.create(title='Contrato de prueba', project=project, client_user=project.client)
+        contract = ProjectContract.objects.create(
+            project=project, key=f'account-service-{document.pk}', title='Contrato de prueba', document=source,
+        )
+        CollectionAccountContext.objects.create(document=document, nature='contract', contract=contract)
+    return document
 
 
 def test_commercial_is_overdue_returns_false_for_non_collection_account_document():

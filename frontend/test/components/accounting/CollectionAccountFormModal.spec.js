@@ -37,6 +37,13 @@ const IncomeFormModalStub = {
   template: '<div v-if="open" data-testid="income-form-stub" />',
 };
 
+const CollectionAccountProjectContextStub = {
+  name: 'CollectionAccountProjectContext',
+  props: ['projectId', 'modelValue'],
+  emits: ['update:modelValue', 'valid'],
+  template: '<div data-testid="collection-account-project-context-stub" />',
+};
+
 const clientFixture = {
   id: 5,
   name: 'Ana Pérez',
@@ -222,6 +229,7 @@ function mountModal(props = {}) {
         },
         ClientAutocomplete: ClientAutocompleteStub,
         IncomeFormModal: IncomeFormModalStub,
+        CollectionAccountProjectContext: CollectionAccountProjectContextStub,
       },
     },
   });

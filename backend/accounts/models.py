@@ -919,7 +919,9 @@ class DeliveryPromptContext(ImmutablePromptRecord):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
-    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='prompt_contexts')
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_client_contexts')
+    destination = models.JSONField(default=dict, blank=True)
     scope = models.ForeignKey(DeliveryScope, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
     stage = models.ForeignKey(DeliveryStage, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
     mode = models.CharField(max_length=12, choices=[('guides', 'Crear guías'), ('reply', 'Preparar respuesta')])
@@ -1023,6 +1025,7 @@ class ChangeRequest(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_PENDING,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     estimated_cost = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True,
         help_text='Estimated additional cost in project currency.',
@@ -1124,7 +1127,7 @@ class BugReport(models.Model):
         (STATUS_CONFIRMED, 'Confirmado'),
         (STATUS_FIXING, 'En corrección'),
         (STATUS_QA, 'En QA'),
-        (STATUS_RESOLVED, 'Resuelto'),
+        (STATUS_RESOLVED, 'Resuelto por equipo'),
         (STATUS_NOT_REPRODUCIBLE, 'No reproducible'),
         (STATUS_WONT_FIX, 'No se corregirá'),
         (STATUS_DUPLICATE, 'Duplicado'),
@@ -1166,6 +1169,7 @@ class BugReport(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_REPORTED,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     linked_bug = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='duplicates',
@@ -1882,3 +1886,17 @@ class SavedFilterTab(models.Model):
 # Project ideas and explicit client access (P4 domain).
 from accounts.models_project_ideas import ProjectIdea, ProjectIdeaRevision, ProjectIdeaCollection, ProjectIdeaCollectionItem  # noqa: E402,F401
 from accounts.models_project_client_access import ProjectClientAccessPolicy, ProjectClientAccessEvent  # noqa: E402,F401
+# Project billing domain (identity/context only; existing financial engines stay authoritative).
+from accounts.billing_models import (  # noqa: E402,F401
+    BillingContextEvent, CollectionAccountContext, HostingEvidence,
+    HostingEvidenceGroup, ProjectHosting, ProjectHostingAccountingSource,
+)
+
+# Ticket domain models; imports keep the public accounts.models surface stable.
+from accounts.models_issue_reports import (  # noqa: E402,F401
+    IssueAttachment, IssueContext, IssueEvent, IssueResponse,
+)
+
+from accounts.models_delivery_email import (  # noqa: E402,F401
+    DeliveryEvidenceEmail, DeliveryEvidenceEmailAttempt, DeliveryEvidenceEmailFile,
+)
