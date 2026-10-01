@@ -1,5 +1,7 @@
 # Technical Documentation — ProjectApp
 
+> **Eliminación de proyectos — 2026-10-01:** `GET /api/projects/<id>/delete-preview/` retorna `project`, `can_delete` y `blockers` (`key`, `label`, `count`). `DELETE /api/projects/<id>/delete/` retorna 204 o 409 `project_delete_blocked` con la vista previa actualizada. Ambas FBV conservan `IsAdminUser` y el cliente de sesión/CSRF del panel. El servicio usa bloqueos de proyecto y dependencias para leer datos vigentes en MySQL, incluye registros archivados y sólo limpia estructura automática sin contenido. Los endpoints legacy de DELETE/archive mantienen 410.
+
 > **Enlaces seguros — 2026-09-29:** `secure_links.0003` agrega `sent_at`,
 > `sent_by` y el evento `marked_sent`. API/MCP mantienen `status` y agregan
 > `lifecycle_status`; el listado del panel suma `lifecycle_counts` con un único

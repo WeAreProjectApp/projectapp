@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /**
  * E2E tests for PA-50/PA-51 on /panel/projects: the jump to the platform
  * space and the assign-unlinked flow.
@@ -251,7 +252,7 @@ test.describe('Admin Panel Projects — space link and assign flow', () => {
     await gotoProjects(page);
 
     const popupPromise = page.context().waitForEvent('page');
-    await page.getByTestId('project-space-1').click();
+    await openProjectAction(page, 1, 'space');
     const popup = await popupPromise;
 
     await popup.waitForURL(/\/platform\/projects\/1/, { timeout: 25_000 });
@@ -267,7 +268,7 @@ test.describe('Admin Panel Projects — space link and assign flow', () => {
     await gotoProjects(page);
 
     const popupPromise = page.context().waitForEvent('page');
-    await page.getByTestId('project-space-1').click();
+    await openProjectAction(page, 1, 'space');
     const popup = await popupPromise;
 
     await popup.waitForURL(/\/platform\/login/, { timeout: 25_000 });

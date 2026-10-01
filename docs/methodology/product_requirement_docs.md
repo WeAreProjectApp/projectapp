@@ -1,5 +1,7 @@
 # Product Requirements Document — ProjectApp
 
+> **Proyectos — 2026-10-01:** el operador accede a las acciones desde tres puntos al inicio de la tabla, sin título en esa columna, y desde el mismo menú en tarjetas. Puede eliminar definitivamente un proyecto vacío tras confirmar. Si contiene información, una tabla enumera qué dependencias lo impiden y sus cantidades; puede continuar por Cambiar estado conservando el historial. La eliminación nunca fuerza cascadas ni desvincula documentos, ingresos, comunicaciones, accesos o datos de ejecución.
+
 > **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
 
 > **Corrección 2026-09-26 — validación en Documentos:** Nuevo documento ya no

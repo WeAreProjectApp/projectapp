@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /** R-projects-01: project actions and the state catalog must not disappear at a responsive breakpoint. */
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -67,7 +68,7 @@ for (const profile of RESPONSIVE_PROFILES) {
       await setupProjects(page);
       // quality: allow-deep-link (the authenticated panel home is the shell entry; this test reaches Projects through the visible responsive navigation)
       await enterProjects(page, profile);
-      await page.getByTestId('project-detail-9').click();
+      await openProjectAction(page, 9, 'detail');
       const modal = page.getByTestId('project-access-modal');
       await expect(modal).toContainText('https://kore.example.test');
       const production = await page.getByTestId('project-access-environment-production').boundingBox();
@@ -101,7 +102,7 @@ test.describe('projects responsive special', () => {
     });
     // quality: allow-deep-link (the catalog test covers sidebar entry; this isolates the guided cascade special)
     await page.goto('/en-us/panel/projects', { waitUntil: 'domcontentloaded' });
-    await page.getByTestId('project-edit-1').click();
+    await openProjectAction(page, 1, 'edit');
     await page.getByTestId('project-form-change-client').click();
     const dialog = page.getByRole('dialog', { name: 'Cambiar el cliente de "Vastago"', exact: true });
     await expect(dialog).toBeVisible();

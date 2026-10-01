@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /**
  * E2E tests for the guided change-client cascade on /panel/projects.
  *
@@ -144,7 +145,7 @@ async function openCascadeModal(page) {
   await expect(
     page.getByRole('heading', { name: 'Proyectos', exact: true }),
   ).toBeVisible({ timeout: 25_000 });
-  await page.getByTestId('project-edit-1').click();
+  await openProjectAction(page, 1, 'edit');
   await page.getByTestId('project-form-change-client').click();
   await expect(page.getByTestId('project-change-client-modal')).toBeVisible();
   await page.getByTestId('project-change-client-picker').fill('Juanito');

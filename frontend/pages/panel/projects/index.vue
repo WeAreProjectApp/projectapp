@@ -237,14 +237,14 @@
             @assign="openAssign"
             @actions="projectActionTarget = $event"
             @change-state="openStateTransition"
-            @detail="openAccessDetail"
           />
         </div>
       </div>
 
       <AccountingTable
         v-else
-        :show-actions="false"
+        :show-default-actions="false"
+        row-actions-layout="menu-start"
         :loading="store.isLoading"
         :highlight-id="lastMutatedId ?? queryHighlightId"
         :columns="columns"
@@ -321,57 +321,14 @@
           </NuxtLink>
           <span v-else class="tabular-nums text-text-muted">{{ row.incomes_count }}</span>
         </template>
-        <template #cell-row_actions="{ row }">
-          <BaseActionButton action="folders" variant="ghost" size="sm" :label="$t('projectBrand.title')" :tooltip="$t('projectBrand.title')" :data-testid="`project-brand-${row.id}`" @click.stop="brandProject = row" />
+        <template #row-actions="{ row }">
           <BaseActionButton
-            action="view"
+            action="more"
             variant="ghost"
             size="sm"
-            label="Ver detalle del proyecto"
-            tooltip="Consultar URLs, accesos y notas"
-            :data-testid="`project-detail-${row.id}`"
-            @click.stop="openAccessDetail(row)"
-          />
-          <!-- The platform space remains available for every historical row. -->
-          <ProjectSpaceLink
-            :project-id="row.id"
-            :data-testid="`project-space-${row.id}`"
-          />
-          <BaseActionButton
-            action="communications"
-            as="NuxtLink"
-            :to="{ path: '/panel/communications', query: { project: row.id } }"
-            variant="ghost"
-            size="sm"
-            label="Ver comunicaciones"
-            tooltip="Ver comunicaciones de este proyecto"
-            :data-testid="`project-communications-${row.id}`"
-            @click.stop
-          />
-          <BaseActionButton
-            action="edit"
-            variant="ghost"
-            size="sm"
-            label="Editar proyecto"
-            :data-testid="`project-edit-${row.id}`"
-            @click.stop="openEditModal(row)"
-          />
-          <BaseActionButton
-            action="change-status"
-            variant="ghost"
-            size="sm"
-            label="Cambiar estado"
-            tooltip="Revisar consecuencias y cambiar estado"
-            :data-testid="`project-change-state-${row.id}`"
-            @click.stop="openStateTransition(row)"
-          />
-          <BaseActionButton
-            action="list"
-            variant="ghost"
-            size="sm"
-            label="Ver histórico de estados"
-            :data-testid="`project-state-history-${row.id}`"
-            @click.stop="openStateHistory(row)"
+            :label="$t('projectAccess.projectActions.label', { name: row.name })"
+            :data-testid="`project-actions-${row.id}`"
+            @click.stop="projectActionTarget = row"
           />
         </template>
       </AccountingTable>
@@ -502,59 +459,17 @@
       </div>
     </BaseDrawer>
 
-    <BaseDrawer
-      v-model="showProjectActions"
-      placement="bottom"
-      :title="projectActionTarget?.name || 'Acciones del proyecto'"
-      test-id="project-actions-drawer"
-    >
-      <div v-if="projectActionTarget" class="space-y-2 p-4 panel-portrait:p-6">
-        <BaseButton variant="secondary" size="md" class="min-h-11 w-full justify-start" data-testid="project-actions-brand" @click="brandProject = projectActionTarget; showProjectActions = false">
-          {{ $t('projectBrand.title') }}
-        </BaseButton>
-        <BaseButton
-          variant="secondary"
-          size="md"
-          class="min-h-11 w-full justify-start"
-          data-testid="project-actions-detail"
-          @click="detailProjectFromActions"
-        >
-          Ver detalle
-        </BaseButton>
-        <BaseButton
-          variant="secondary"
-          size="md"
-          class="min-h-11 w-full justify-start"
-          @click="editProjectFromActions"
-        >
-          Editar proyecto
-        </BaseButton>
-        <BaseButton
-          variant="secondary"
-          size="md"
-          class="min-h-11 w-full justify-start"
-          @click="communicationsFromActions"
-        >
-          Ver comunicaciones
-        </BaseButton>
-        <BaseButton
-          variant="secondary"
-          size="md"
-          class="min-h-11 w-full justify-start"
-          @click="stateProjectFromActions"
-        >
-          Cambiar estado…
-        </BaseButton>
-        <BaseButton
-          variant="secondary"
-          size="md"
-          class="min-h-11 w-full justify-start"
-          @click="historyProjectFromActions"
-        >
-          Ver histórico de estados
-        </BaseButton>
-      </div>
-    </BaseDrawer>
+    <ProjectActionsModal
+      :project="projectActionTarget"
+      @close="projectActionTarget = null"
+      @action="handleProjectAction"
+    />
+    <ProjectDeleteModal
+      :project="deleteProjectTarget"
+      @close="deleteProjectTarget = null"
+      @deleted="onProjectDeleted"
+      @change-state="deleteProjectTarget = null; openStateTransition($event)"
+    />
 
     <!-- Create/edit modal -->
     <ProjectFormModal
@@ -675,7 +590,9 @@ import ProjectAccessModal from '~/components/panel/projects/ProjectAccessModal.v
 import ProjectCard from '~/components/panel/projects/ProjectCard.vue';
 import ProjectChangeClientModal from '~/components/panel/projects/ProjectChangeClientModal.vue';
 import ProjectFormModal from '~/components/panel/projects/ProjectFormModal.vue';
-import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue';
+import ProjectActionsModal from '~/components/panel/projects/ProjectActionsModal.vue';
+import ProjectDeleteModal from '~/components/panel/projects/ProjectDeleteModal.vue';
+import { usePanelToPlatformBridge } from '~/composables/usePanelToPlatformBridge';
 import ProjectStateHelpBadge from '~/components/panel/projects/ProjectStateHelpBadge.vue';
 import ProjectStateHistoryModal from '~/components/panel/projects/ProjectStateHistoryModal.vue';
 import ProjectStateTransitionModal from '~/components/panel/projects/ProjectStateTransitionModal.vue';
@@ -905,7 +822,6 @@ const columns = computed(() => [
   { key: 'created_at', label: 'Creado', sortable: true, size: 'date' },
   { key: 'hostings_count', label: 'Hostings', sortable: true, size: 'text', align: 'right' },
   { key: 'incomes_count', label: 'Ingresos', sortable: true, size: 'text', align: 'right' },
-  { key: 'row_actions', label: 'Acciones', size: 'icons', align: 'center' },
 ]);
 
 function setMobileSortKey(key) {
@@ -936,46 +852,31 @@ function isTerminal(project) {
 }
 
 const projectActionTarget = ref(null);
-const showProjectActions = computed({
-  get: () => Boolean(projectActionTarget.value),
-  set: (isOpen) => {
-    if (!isOpen) projectActionTarget.value = null;
-  },
-});
+const deleteProjectTarget = ref(null);
+const { goToPlatform } = usePanelToPlatformBridge();
+const { t } = useI18n();
 
-function editProjectFromActions() {
-  const row = projectActionTarget.value;
+function handleProjectAction(action, row) {
   projectActionTarget.value = null;
-  if (row) openEditModal(row);
+  const handlers = {
+    brand: () => { brandProject.value = row; },
+    detail: () => openAccessDetail(row),
+    space: () => goToPlatform(`/platform/projects/${row.id}`),
+    edit: () => openEditModal(row),
+    communications: () => navigateTo({ path: '/panel/communications', query: { project: String(row.id) } }),
+    state: () => openStateTransition(row),
+    history: () => openStateHistory(row),
+    delete: () => { deleteProjectTarget.value = row; },
+  };
+  handlers[action]?.();
 }
 
-function detailProjectFromActions() {
-  const row = projectActionTarget.value;
-  projectActionTarget.value = null;
-  if (row) openAccessDetail(row);
-}
-
-function communicationsFromActions() {
-  const row = projectActionTarget.value;
-  projectActionTarget.value = null;
-  if (row) {
-    navigateTo({
-      path: '/panel/communications',
-      query: { project: String(row.id) },
-    });
+function onProjectDeleted(result) {
+  deleteProjectTarget.value = null;
+  notify.success({ title: t('projectAccess.deletion.success') });
+  if (result.refreshFailed) {
+    notify.warning({ title: t('projectAccess.deletion.refreshError') });
   }
-}
-
-function stateProjectFromActions() {
-  const row = projectActionTarget.value;
-  projectActionTarget.value = null;
-  if (row) openStateTransition(row);
-}
-
-function historyProjectFromActions() {
-  const row = projectActionTarget.value;
-  projectActionTarget.value = null;
-  if (row) openStateHistory(row);
 }
 
 // ── Secure access detail ──

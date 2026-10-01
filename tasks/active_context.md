@@ -1,5 +1,7 @@
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
+**2026-10-01 — acciones y eliminación protegida de proyectos:** menú común de tres puntos en primera columna sin título y en tarjetas; confirmación de eliminación sólo para proyectos vacíos; tabla de dependencias/cantidades y alternativa explícita de cambio de estado. Servicio transaccional con revalidación y limpieza de estructura automática vacía, auditoría duradera y paridad MCP con confirmación. Verificación focal y entrega por PR de sesión; sin migraciones ni despliegue.
+
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto
 real del título y de su prioridad, con separación compacta de 6 pt. Los badges
 externos tienen 30 pt de margen y las filas extensas continúan sin perder

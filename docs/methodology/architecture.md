@@ -1,5 +1,7 @@
 # Architecture — ProjectApp
 
+> **Acciones y eliminación de proyectos — 2026-10-01:** `/panel/projects` usa la columna inicial `menu-start` sin título visible y comparte un menú modal de tres puntos con las tarjetas. El servicio de eliminación inventaría todas las relaciones y muestra dependencias con cantidades; sólo permite proyectos sin información operativa o relacionada. La estructura automática vacía se elimina sin dejar huérfanos. La confirmación revalida con lecturas bloqueantes dentro de una transacción y conserva la auditoría duradera. MCP reutiliza las mismas vistas, ofrece la misma vista previa y requiere confirmación sensible. No se agregan estados ni migraciones.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no

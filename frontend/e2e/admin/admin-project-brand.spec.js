@@ -33,7 +33,7 @@ async function setup(page, { uploadError = false, loadError = false } = {}) {
 
 async function openLibrary(page) {
   if (page.viewportSize().width < 1195) {
-    await page.getByRole('button', { name: 'Acciones de Brand project' }).click()
+    await page.getByTestId('project-actions-1').click()
     await page.getByTestId('project-actions-brand').click()
   } else {
     await page.getByTestId('project-brand-1').click()

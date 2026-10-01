@@ -164,7 +164,7 @@ const panelCapabilities = [
     'Convierte una venta cerrada en una iniciativa gobernada y visible.',
     [
       feature('panel-project-portfolio', 'Administrar proyectos',
-        'Relaciona cada proyecto con su cliente, accesos y Linktrees; organiza documentos y assets privados de branding y diseño. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Relaciona cada proyecto con su cliente, accesos y Linktrees; organiza documentos y assets privados de branding y diseño. Reúne las acciones en tres puntos y permite eliminar proyectos vacíos con confirmación; muestra dependencias y cantidades al bloquear el borrado. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Crea una referencia común entre el panel y la plataforma del cliente.', ['/panel/projects'],
         { icon: 'folder', stage: 'Ejecución' }),
       feature('panel-project-lifecycle', 'Gobernar el ciclo del proyecto',
