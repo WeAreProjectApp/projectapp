@@ -368,7 +368,9 @@ def test_platform_seed_hides_internal_draft_stage_from_client(seeded_review_work
     assert draft.requirements.exists()
 
 
-def test_platform_fake_reset_clears_protected_review_graph(seeded_review_workflow):
+def test_platform_fake_reset_clears_protected_review_graph(
+    seeded_review_workflow, django_capture_on_commit_callbacks,
+):
     from django.core.files.base import ContentFile
     from accounts.management.commands._seed_helpers import _demo_pdf
     from accounts.models import (
@@ -385,7 +387,8 @@ def test_platform_fake_reset_clears_protected_review_graph(seeded_review_workflo
     evidence.file.save('approval-evidence.pdf', ContentFile(_demo_pdf(evidence.title)))
     storage, filename = evidence.file.storage, evidence.file.name
 
-    run_command('delete_fake_data', '--confirm')
+    with django_capture_on_commit_callbacks(execute=True):
+        run_command('delete_fake_data', '--confirm')
 
     assert not ProjectContract.objects.exists()
     assert not DeliveryPublication.objects.exists()

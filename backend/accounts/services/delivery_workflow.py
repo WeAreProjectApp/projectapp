@@ -10,6 +10,7 @@ from collections import defaultdict
 
 from django.db import IntegrityError, transaction
 from django.db.models import Q
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied
 
@@ -219,6 +220,8 @@ def _validate_relations(project, kind, values, node):
         parent = _node(project, 'stages', values.get('stage_id', getattr(node, 'stage_id', None)))
         if _stage_approved(parent):
             fail('La etapa aprobada está congelada.', 'approved_frozen')
+        from accounts.services.delivery_authoring import requirement_provenance
+        requirement_provenance(project, parent, values, node)
     if node and kind in ('contracts', 'amendments') and signature_state(node)['signature_status'] != 'unsigned':
         if any(field in values and values[field] != getattr(node, field, None) for field in ('document_id', 'proposal_document_id', 'contract_id', 'key', 'title')):
             fail('La fuente del contrato firmado y su identidad están congeladas.', 'signed_source_frozen')
@@ -249,7 +252,10 @@ def mutate_node(project_id, actor, kind, data, node_id=None, delete=False):
             stage = node.stage if kind == 'requirements' else None
             if kind in ('contracts', 'amendments') and node.signature_evidence.exists():
                 fail('No puedes eliminar evidencia de firma.')
-            node.delete()
+            try:
+                node.delete()
+            except ProtectedError:
+                fail('Este contenido sustenta un contexto o evidencia que debe conservarse.', 'context_retained')
             if stage:
                 _mark_draft(stage)
             return result
@@ -321,7 +327,9 @@ def _requirement_payload(req):
     return {'id': req.pk, 'key': req.key, 'title': req.title, 'description': req.description,
             'created_at': req.created_at.isoformat(), 'updated_at': req.updated_at.isoformat(),
             'guide': req.guide, 'order': req.order, 'version': req.version,
-            'review_status': req.review_status}
+            'review_status': req.review_status,
+            'context_id': str(req.context_id) if req.context_id else None,
+            'source_references': req.source_references}
 
 
 def _validate_guide(req):
@@ -462,8 +470,10 @@ def _message(project, actor, values):
         from accounts.services.delivery_documents import document_can_be_shared
         if any(not document_can_be_shared(project, doc) for doc in docs):
             fail('Un documento asociado a contenido privado necesita publicarse antes de compartirse.', 'document_unpublished')
+    from accounts.services.delivery_authoring import message_provenance
+    provenance = message_provenance(project, actor, values)
     msg = DeliveryMessage.objects.create(project=project, actor=actor, level=level, target_id=target_id,
-                                         message=values['message'], is_internal=internal)
+                                         message=values['message'], is_internal=internal, **provenance)
     msg.requirements.set(reqs)
     msg.documents.set(docs)
     if docs and not internal:
@@ -712,6 +722,9 @@ def overview(project_id, actor):
             'message': message.message, 'requirement_ids': [req.pk for req in message.requirements.all()],
             'documents': visible_message_documents(project, actor, message, index=document_index),
             'is_internal': message.is_internal, 'created_at': message.created_at.isoformat(),
+            **({'context_id': str(message.context_id) if message.context_id else None,
+                'source_references': message.source_references,
+                'classifications': message.reply_classifications} if admin else {}),
         })
 
     def add_attachments(result, level, node_id):
@@ -768,6 +781,8 @@ def overview(project_id, actor):
         if not admin:
             client_requirements = []
             for snapshot in result.get('requirements', []):
+                snapshot.pop('context_id', None)
+                snapshot.pop('source_references', None)
                 snapshot['review_status'] = ('approved' if snapshot.get('review_status') == 'approved' else review_states.get(
                     (snapshot['id'], snapshot['version'], publication.pk), 'in_review',
                 ))
@@ -820,7 +835,7 @@ IMPORT_FIELDS = {
 IMPORT_CHILDREN = {'scopes': 'phases', 'phases': 'stages', 'stages': 'requirements'}
 
 
-def _validate_import(project, payload):
+def _validate_import(project, payload, *, allow_provenance=False):
     if not isinstance(payload, dict) or set(payload) != {'schema_version', 'scopes'} or type(payload['schema_version']) is not int or payload['schema_version'] != 1:
         fail('El JSON debe incluir schema_version: 1 y scopes.', 'import_schema')
     count = {'scopes': 0, 'phases': 0, 'stages': 0, 'requirements': 0}
@@ -830,7 +845,8 @@ def _validate_import(project, payload):
             fail('Cada nivel debe ser una lista de hasta 100 elementos.')
         keys = set()
         for item in items:
-            if not isinstance(item, dict) or set(item) - IMPORT_FIELDS[kind]:
+            allowed_fields = IMPORT_FIELDS[kind] | ({'context_id', 'source_references'} if allow_provenance and kind == 'requirements' else set())
+            if not isinstance(item, dict) or set(item) - allowed_fields:
                 fail('El JSON contiene campos no permitidos. No importes estados, firmas ni aprobaciones.', 'import_fields')
             child_kind = IMPORT_CHILDREN.get(kind)
             values = {key: value for key, value in item.items() if key != child_kind}
@@ -849,6 +865,8 @@ def _validate_import(project, payload):
             elif parent:
                 query = NODE_MODELS[kind].objects.filter(**{parent_field: parent.pk, 'key': validated['key']})
             node = query.first() if query is not None else None
+            if node and kind == 'requirements' and node.context_id and not allow_provenance:
+                fail('La guía conserva sus fuentes. Usa JSON v2 con contexto y citas para actualizarla.', 'context_required')
             if node and _has_publication(kind, node):
                 provided_fields = {key: validated[key] for key in item if key != child_kind}
                 if any(getattr(node, key) != value for key, value in provided_fields.items()):
@@ -873,15 +891,27 @@ def import_payload(project_id, actor, payload, expected_version, apply=False, re
     require_admin(actor)
     project = project_for_actor(project_id, actor)
     values = _validate(VersionedSerializer, {'expected_version': expected_version, **({'request_id': request_id} if request_id else {})})
+
+    def prepared(locked_project):
+        cited = isinstance(payload, dict) and payload.get('schema_version') == 2
+        if cited:
+            from accounts.services.delivery_authoring import validate_guides_payload
+            normalized = validate_guides_payload(locked_project, actor, payload)
+        else:
+            normalized = payload
+        return normalized, cited
+
     if not apply:
         if values['expected_version'] != _workspace_version(project):
             raise DeliveryConflict()
-        summary = _validate_import(project, payload)
+        normalized, cited = prepared(project)
+        summary = _validate_import(project, normalized, allow_provenance=cited)
         return {'valid': True, 'summary': summary, 'payload': payload, 'version': values['expected_version']}
     values['payload'] = payload
 
     def change(locked_project):
-        _validate_import(locked_project, payload)
+        normalized, cited = prepared(locked_project)
+        _validate_import(locked_project, normalized, allow_provenance=cited)
         def walk(kind, items, parent=None):
             child_kind = IMPORT_CHILDREN.get(kind)
             for position, item in enumerate(items):
@@ -899,69 +929,22 @@ def import_payload(project_id, actor, payload, expected_version, apply=False, re
                     )
                     node.version += 1
                     node.save(update_fields=['version', 'updated_at'])
+                    if kind == 'requirements':
+                        _mark_draft(node.stage)
                 if kind == 'scopes' and node.is_current:
                     DeliveryScope.objects.filter(contract=node.contract, is_current=True).exclude(pk=node.pk).update(is_current=False)
                 if child_kind:
                     walk(child_kind, item.get(child_kind, []), node)
-        walk('scopes', payload['scopes'])
-        return {'kind': 'import', 'summary': _validate_import(locked_project, payload)}
+        walk('scopes', normalized['scopes'])
+        return {'kind': 'import', 'summary': _validate_import(locked_project, normalized, allow_provenance=cited)}
 
     return _perform(project_id, actor, 'import', values, change, idempotent=True)
 
 
 def authoring_prompt(project_id, actor):
-    require_admin(actor)
-    project = project_for_actor(project_id, actor)
-    contract_nodes = list(ProjectContract.objects.filter(project=project).select_related('document', 'proposal_document').prefetch_related('signature_evidence', 'amendments__document', 'amendments__proposal_document', 'amendments__signature_evidence'))
-    def context_entry(node):
-        source = node.document if node.document_id else node.proposal_document
-        evidence = next(iter(node.signature_evidence.all()), None)
-        if evidence and evidence.method == 'portal':
-            saved = evidence.source_snapshot
-            text = saved.get('markdown', '')
-            blocks = saved.get('json') if not text else None
-            source_title = saved.get('title', source.title)
-        elif evidence:
-            from accounts.services.delivery_documents import signed_pdf_text
-            text = signed_pdf_text(evidence)
-            blocks = None
-            source_title = evidence.title
-        else:
-            text = source.content_markdown
-            blocks = source.content_json if node.document_id and not source.content_markdown else None
-            source_title = source.title
-        return {'id': node.pk, 'title': node.title, 'source_title': source_title,
-                'contract_text': text, 'source_blocks': blocks}
-    contracts = [{**context_entry(node), 'amendments': [context_entry(amendment) for amendment in node.amendments.all()]}
-                 for node in contract_nodes]
-    current_scopes = list(DeliveryScope.objects.filter(contract__project=project, is_current=True).values('id', 'title', 'description', 'contract_id', 'amendment_id'))
-    template = {'schema_version': 1, 'scopes': [{
-        'key': 'alcance-1', 'title': 'Alcance acordado', 'description': '',
-        'contract_id': contracts[0]['id'] if contracts else None, 'amendment_id': None,
-        'phases': [{'key': 'fase-1', 'title': 'Primera fase', 'stages': [{
-            'key': 'etapa-1', 'title': 'Primera etapa', 'requirements': [{
-                'key': 'validacion-1', 'title': 'Qué podrá comprobar el cliente', 'description': '',
-                'guide': {'role': 'Cliente', 'environment': 'Staging', 'preparation': '',
-                          'data': '', 'steps': ['Abrir la pantalla indicada'],
-                          'expected_result': 'Describir el resultado visible esperado',
-                          'failure_signals': 'Describir cómo reconocer que no funcionó'},
-            }],
-        }]}],
-    }]}
-    prompt = (
-        f'Prepara guías de validación para el proyecto {project.name}. '
-        'Usa lenguaje sencillo, sin nombres de archivos, tablas de base de datos ni detalles de programación. '
-        'Respeta exclusivamente el alcance contratado y sus modificaciones. '
-        'Separa alcance, fases, etapas y requerimientos comprobables. Para cada requerimiento indica '
-        'quién prueba, ambiente, preparación, datos, pasos, resultado esperado y señales de fallo. '
-        'Devuelve únicamente JSON con schema_version 1 siguiendo esta plantilla. '
-        'No declares firmas, publicaciones, aprobaciones ni otros estados. '
-        f'Descripción del proyecto: {project.description}. '
-        f'Contratos y modificaciones disponibles: {json.dumps(contracts, ensure_ascii=False)}. '
-        f'Alcances redactados actualmente: {json.dumps(current_scopes, ensure_ascii=False)}. '
-        f'Plantilla: {json.dumps(template, ensure_ascii=False)}'
-    )
-    return {'prompt': prompt, 'template': template, 'schema': import_schema(), 'version': _workspace_version(project)}
+    """Discover explicit selections without loading any source body."""
+    from accounts.services.delivery_authoring import prompt_options
+    return prompt_options(project_id, actor)
 
 
 def evidence_options(project_id, actor):

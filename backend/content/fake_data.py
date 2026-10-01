@@ -197,6 +197,10 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Retained authoring proof is created only by explicit administrative
+    # source selection, never fabricated by automatic demo-data generation.
+    # Authorized fake resets dissolve its protected graph in dependency order.
+    'accounts.DeliveryPromptContext', 'accounts.DeliveryPromptSource',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
