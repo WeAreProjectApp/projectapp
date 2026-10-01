@@ -1878,3 +1878,8 @@ return target and then the menu's close unlocks the page underneath it. Emit
 first modal of the page. Nested menus (a row menu inside the client emails
 modal) must also leave the scroll lock to the outer modal and tell it to stop
 answering the global Esc listener while they are open.
+
+
+## P4 — Revocación independiente del retorno al valor anterior
+
+Comparar huellas de fuentes bloquea datos distintos, pero por sí solo permite reactivar un permiso si una escritura masiva restaura el valor original. El historial existente informa los campos cambiados: un receptor propio revoca los permisos de forma permanente, sin duplicar lógica de historial ni inspeccionar sus valores sensibles. En saves parciales, sólo los campos persistidos por update_fields pueden revocar.

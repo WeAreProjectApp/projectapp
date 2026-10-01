@@ -43,6 +43,11 @@ const RESPONSIVE_SPECIAL_WARMUP_ROUTES = Object.freeze({
   'accounting-special-4': ['/en-us/panel/accounting'],
   'canvas-special': ['/en-us/panel/documents/1/edit'],
   'clients-special': ['/en-us/panel/clients'],
+  'clients-special-2': [
+    '/es-co/platform/projects',
+    '/es-co/platform/projects/1',
+    '/es-co/platform/projects/1/access',
+  ],
   'commercial-special': ['/en-us/panel/proposals'],
   'communications-special': ['/en-us/panel/communications'],
   'documents-special': ['/en-us/panel/documents'],
@@ -118,6 +123,23 @@ function warmupApiFixture({ apiPath, method }) {
   }
   if (apiPath === 'accounts/projects/1/' && method === 'GET') {
     return json({ id: 1, name: 'Warmup project', status_label: 'Activo', current_state: { color: 'emerald', operational_effect: 'operating' } });
+  }
+  if (apiPath === 'accounts/projects/1/access/' && method === 'GET') {
+    return json({
+      project: { id: 1, name: 'Warmup project', client_name: 'Warmup client' },
+      repository_url: '', legacy_access: null, notes: [],
+      environments: ['production', 'staging'].map((environment) => ({
+        environment, label: environment, site_url: '', admin_url: '',
+        admin_username: '', has_password: false, updated_at: null, updated_by: '',
+      })),
+    });
+  }
+  if (apiPath === 'accounts/projects/1/access/client-policy/' && method === 'GET') {
+    const permissions = Object.fromEntries(['production', 'staging'].map((environment) => (
+      [environment, { site_url: false, admin_url: false, admin_username: false, admin_password: false }]
+    )));
+    return json({ project_id: 1, version: 0, permissions, effective_permissions: permissions,
+      available_fields: permissions, source_token: 'warmup' });
   }
   if (/^accounts\/projects\/1\/(?:phases|requirements|bug-reports|change-requests|collection-accounts|data-model-entities|deliverables)\/$/.test(apiPath) && method === 'GET') {
     return json([]);

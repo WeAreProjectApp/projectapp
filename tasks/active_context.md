@@ -2418,3 +2418,8 @@ tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
 después de guardas. Un origen financiero eliminado antes del descubrimiento
 rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
 SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.
+## P4 — Ideas y política de accesos (2026-10-01)
+
+Worktree propio `platform-ideas-access`, rama `feat/01102026-platform-ideas-access`, base main cce8e694 más merge del P3 publicado `dea940345fc37c361f8749d30e1a96ac2bba73ee`. Migración P4 `0070_platform_ideas_access` sobre P3 `0067_explicit_delivery_authoring_context`, no aplicada. P0 fijó el orden P3 → P1 → P2 → P4 → P5 y reservó la nueva hoja sin operaciones `0075_p4_platform_domains_merge`, padres `0074_p2_platform_billing_merge` y `0070_platform_ideas_access`; no crearla hasta recibir y mergear el SHA final publicado de P2. Dominio implementado: ideas versionadas/archivo reversible, recopilaciones internas congeladas, exposición de ocho datos por proyecto y revocación por propietario/fuente. Guías por rol y núcleo Delivery son propiedad P3.
+
+Cierre en curso: pruebas focales backend/unit, navegador con APIs reales, cinco perfiles responsive, mapas y CI propio. P0 conserva orden y reservas. P2 posee formulario, validación, helper core/tickets y guard financiero de ProjectAdmin. P4 conserva su revocación en save_model contra el proyecto original bloqueado, después de todos los guards P2 y antes de guardar; change_client_apply mantiene el mismo orden antes de reasignar/cascadear. Regresión financiera conjunta pendiente de absorber P2 bajo coordenada P0. No despliegue, migración aplicada ni self-merge. Contrato: `docs/platform/project-ideas-access.md`.

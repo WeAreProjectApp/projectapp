@@ -21,8 +21,8 @@ pasa el gate de calidad de `$qa`.
 | `desktop` | 1440 × 900 | regresión del portátil habitual |
 | `wide` | 2560 × 1440 | contenido centrado con máximo de 1400 px |
 
-El catálogo vigente contiene 105 vistas renderizables y 16 redirects. Las
-primeras producen 525 resultados visuales; los redirects producen 80 resultados
+El catálogo vigente contiene 107 vistas renderizables y 16 redirects. Las
+primeras producen 535 resultados visuales; los redirects producen 80 resultados
 de compatibilidad y nunca acreditan layout, tablas o modales.
 
 ## Preparación determinista

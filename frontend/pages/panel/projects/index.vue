@@ -322,6 +322,7 @@
           <span v-else class="tabular-nums text-text-muted">{{ row.incomes_count }}</span>
         </template>
         <template #cell-row_actions="{ row }">
+          <NuxtLink :to="projectIdeasLocalePath(`/panel/projects/${row.id}/ideas`)" class="inline-flex min-h-11 items-center px-2 text-sm text-text-brand underline" :data-testid="`project-ideas-${row.id}`" @click.stop>{{ $t('projectIdeas.navigation') }}</NuxtLink>
           <BaseActionButton action="folders" variant="ghost" size="sm" :label="$t('projectBrand.title')" :tooltip="$t('projectBrand.title')" :data-testid="`project-brand-${row.id}`" @click.stop="brandProject = row" />
           <BaseActionButton
             action="view"
@@ -509,6 +510,7 @@
       test-id="project-actions-drawer"
     >
       <div v-if="projectActionTarget" class="space-y-2 p-4 panel-portrait:p-6">
+        <NuxtLink :to="projectIdeasLocalePath(`/panel/projects/${projectActionTarget.id}/ideas`)" class="flex min-h-11 items-center px-3 text-text-brand underline" data-testid="project-actions-ideas" @click="showProjectActions = false">{{ $t('projectIdeas.navigation') }}</NuxtLink>
         <BaseButton variant="secondary" size="md" class="min-h-11 w-full justify-start" data-testid="project-actions-brand" @click="brandProject = projectActionTarget; showProjectActions = false">
           {{ $t('projectBrand.title') }}
         </BaseButton>
@@ -1129,6 +1131,7 @@ async function loadRecords() {
 // ── Deep link from the platform space (PA-50 return path) ──
 
 const route = useRoute();
+const projectIdeasLocalePath = useLocalePath();
 const queryHighlightId = Number.parseInt(route.query.highlight, 10) || null;
 
 /**

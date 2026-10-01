@@ -6112,7 +6112,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-project-brand` | admin | P2 | success,error,failure,display | — |
 | `admin-project-change-client` | admin | P2 | display,success | 2 |
 | `admin-project-change-history` | admin | P1 | display,success,failure | — |
+| `admin-project-client-access-policy` | admin | P1 | success,error,failure,display | — |
 | `admin-project-fly-create` | admin | P2 | success,error | 4 |
+| `admin-project-idea-collection` | admin | P1 | success,error,failure,display | — |
 | `admin-project-inline-assign-offer` | admin | P2 | success | 1 |
 | `admin-project-lifecycle-states` | admin | P1 | display,success,error,failure | 7 |
 | `admin-project-state-catalog` | admin | P1 | display,success,error,failure | 9 |
@@ -6256,10 +6258,12 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-profile-avatar-picker` | platform | P2 | success | 1 |
 | `platform-profile-edit` | platform | P2 | success,error,display | 1 |
 | `platform-project-access-detail` | platform | P1 | display,success,error,failure | — |
+| `platform-project-client-access` | platform | P1 | success,error,failure,display | — |
 | `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
 | `platform-project-detail` | platform | P2 | success,display | 1 |
 | `platform-project-hosting-context` | platform | P1 | display,success,error | — |
+| `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
@@ -7239,7 +7243,7 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Interaction:** An admin reaches Accesos through project navigation and uses the shared editor over JWT transport.
 - **Display outcome:** The scoped project detail renders both environments and masked credentials.
 - **Success outcome:** An explicit field save updates the response through the platform endpoint.
-- **Error outcome:** A client profile is redirected before the protected editor renders.
+- **Error outcome:** A client remains on an empty limited access view and never receives the administrative editor.
 - **Failure outcome:** An API load failure appears with a retry control.
 - **Coverage:** `e2e/platform/platform-project-access-detail.spec.js` and the five responsive platform profiles.
 
@@ -7863,6 +7867,32 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Failure outcome:** Fallos de API muestran una recuperación explícita y no revelan valores protegidos ni comparaciones obsoletas.
 - **Coverage:** Display, success y failure validados en `admin/admin-entity-history.spec.js`.
 
+### FLOW: `admin-project-client-access-policy`
+
+- **Module:** admin
+- **Roles:** admin, platform-admin
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/access`
+- **Interaction:** Admin explicitly enables each available project/access datum, saves a source-bound version and previews the limited client projection, handling stale values and load failures.
+- **Coverage:** `frontend/e2e/project-collaboration/client-access.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### FLOW: `admin-project-idea-collection`
+
+- **Module:** admin
+- **Roles:** admin
+- **Priority:** P1
+- **Route:** `/panel/projects/:id/ideas`
+- **Interaction:** Admin selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.
+- **Coverage:** `frontend/e2e/project-collaboration/ideas.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
 ### FLOW: `admin-project-lifecycle-states`
 
 - **Module:** admin
@@ -8280,6 +8310,19 @@ consulta de la conversación pública que originó el prompt.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
+### FLOW: `platform-project-client-access`
+
+- **Module:** platform
+- **Roles:** platform-client
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/access`
+- **Interaction:** A client sees only approved project/environment fields, explicitly reveals a granted credential and loses that action when revoked. Default hidden access preserves other modules.
+- **Coverage:** `frontend/e2e/project-collaboration/client-access.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
 ### FLOW: `platform-project-collection-accounts`
 
 - **Módulo:** platform
@@ -8299,6 +8342,19 @@ consulta de la conversación pública que originó el prompt.
 - **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
 - **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
 - **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-ideas`
+
+- **Module:** platform
+- **Roles:** platform-client, platform-admin
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/ideas`
+- **Interaction:** The current client writes or corrects suggestions with preserved authorship and revision history, with object isolation and recoverable failed submissions.
+- **Coverage:** `frontend/e2e/project-collaboration/ideas.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
 
 ### FLOW: `proposal-closing-contact`
 

@@ -1543,3 +1543,9 @@ P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
 P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
 sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
 `docs/PLATFORM_PROJECT_BILLING.md`.
+
+## P4 — Contrato técnico de colaboración (2026-10-01)
+
+Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
+
+El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. El workflow propio ejecuta dos specs. La migración aditiva de P4 requiere que P0 confirme hoja/número tras P3 final; no editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente.
