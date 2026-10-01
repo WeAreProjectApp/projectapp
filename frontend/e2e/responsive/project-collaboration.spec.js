@@ -8,6 +8,7 @@ import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { setPlatformAuth, mockPlatformClient } from '../helpers/platform-auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
@@ -105,7 +106,7 @@ async function setupPanel(page) {
 
 const platformProjectEntry = Object.freeze({
   compact: (page) => page.getByTestId('project-card-1').click(),
-  portrait: (page) => page.getByTestId('project-row-1').click(),
+  portrait: (page) => page.getByTestId('project-card-1').click(),
   landscape: (page) => page.getByTestId('project-row-1').click(),
   desktop: (page) => page.getByTestId('project-row-1').click(),
   wide: (page) => page.getByTestId('project-row-1').click(),
@@ -130,6 +131,7 @@ const panelIdeasEntry = Object.freeze({
 async function openPlatformProject(page, profile) {
   // quality: allow-deep-link (the authenticated project list is the shell entry; the display flow reaches the project space through its record)
   await page.goto('/es-co/platform/projects', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
   await expect(page.getByRole('heading', { name: 'Mis proyectos', exact: true })).toHaveText('Mis proyectos');
   await platformProjectEntry[profile](page);
   await expect(page.getByRole('heading', { name: project.name, exact: true })).toHaveText(project.name);

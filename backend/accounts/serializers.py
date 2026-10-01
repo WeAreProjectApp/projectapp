@@ -425,6 +425,9 @@ class ProjectDetailSerializer(ProjectListSerializer):
     can_view_client_access = serializers.SerializerMethodField()
 
     def get_can_view_client_access(self, obj):
+        request = self.context.get('request')
+        if request is None or request.user.pk != obj.client_id:
+            return False
         from accounts.services.project_client_access import can_view_client_access
         return can_view_client_access(obj)
 

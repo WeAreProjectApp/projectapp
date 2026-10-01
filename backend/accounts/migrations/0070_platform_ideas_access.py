@@ -9,7 +9,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0066_delivery_review_document_evidence'),
+        ('accounts', '0067_explicit_delivery_authoring_context'),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 

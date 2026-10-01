@@ -1,6 +1,6 @@
 # Ideas por proyecto y exposición de accesos — P4
 
-Incremento propio sobre la dependencia publicada P3 `abcffaf9a34791d2bc0673334371208e0736c845`. El PR apunta a `main`; P0 reserva el orden y la numeración final de migraciones. No aplica migraciones ni despliegue.
+Incremento propio sobre la dependencia publicada e inmutable P3 `dea940345fc37c361f8749d30e1a96ac2bba73ee`, absorbida mediante merge en la rama propia. El PR apunta a `main`; P0 reserva el orden de integración. Migración propia `0070_platform_ideas_access` con padre P3 `0067_explicit_delivery_authoring_context` y dependencia del modelo de usuario; P0 coordina las futuras hojas paralelas. No aplica migraciones ni despliegue. Esta referencia publicada de P3 todavía no constituye su entrega verde/final.
 
 ## Acuerdos recibidos directamente del operador
 
@@ -24,7 +24,7 @@ Las fuentes siguen siendo `Project.production_url/staging_url` y `ProjectAdminAc
 ## Permisos y secretos
 
 - Panel usa sesión Django + CSRF y exige staff; Platform JWT exige perfil admin para administración o propietario actual para lectura limitada/revelación.
-- Listas, detalle normal, previsualización y eventos omiten valores de usuario/contraseña. El detalle normal añade únicamente `can_view_client_access`.
+- Listas, detalle normal, previsualización y eventos omiten valores de usuario/contraseña. El detalle normal añade únicamente `can_view_client_access`, calculada para la cuenta propietaria que consulta; el administrador conserva su editor por rol, sin consultar grants ajenos para esa capability.
 - Credenciales requieren un POST por ambiente/campo autorizado. Cada revelación/copia vuelve a comprobar propietario, grant y fuente; respuestas de éxito y error llevan `Cache-Control: no-store` y `Pragma: no-cache`.
 - Un cifrado ilegible o configuración de cifrado no disponible devuelve 503 controlado, sin detalles internos y sin registrar una revelación exitosa.
 - El valor revelado vive sólo en el componente, sin Pinia/storage/historial. Se elimina al ocultar la pestaña, cambiar contexto/sesión, desmontar o cumplir 30 segundos. Copiar es una acción explícita del usuario y el portapapeles del sistema queda bajo su control.
@@ -61,7 +61,7 @@ Accesos muestra al cliente sólo ambientes/datos efectivos. Su enlace aparece co
 
 | Bloque compartido reservado a P4 | Cambio mínimo | Dependencia/orden P0 |
 |---|---|---|
-| `accounts/models.py`, `apps.py` | Imports de modelos propios y registro de hooks | P3 publicado antes; hoja propia definitiva después del aviso final |
+| `accounts/models.py`, `apps.py` | Imports de modelos propios y registro de hooks | P3 publicado antes; migración propia 0070 sobre 0067, sin hoja merge de otras sesiones |
 | `accounts/urls.py`, `content/urls.py` | Include de rutas de dominio | Modelos/servicios propios |
 | `accounts/serializers.py` | Capability de acceso en detalle; conserva redacción previa | Política y fuente existentes |
 | `project_access.py`, `project_service.py` | Locks/revocación por edición y transferencia | Orden: proyecto bloqueado → guard financiero P2 sin writes al rechazar → revoke_grants P4 → reasignación/cascada. P2 mantiene ProjectAdmin; P4 no edita ese puente |
@@ -77,4 +77,4 @@ Archivos propios: modelos/serializers/services/views/hooks/urls en `accounts` co
 
 Deben pasar autoría/revisiones/archivo; idempotencia; recopilación congelada y atomicidad; permisos granulares/default deny; revocación por fuente/propietario; aislamiento de proyectos/clientes; ausencia de secretos en listas/preview/audit; JWT frente a sesión/CSRF; paridad MCP y confirmaciones obsoletas; UI con borradores y revelación efímera; navegación y cinco anchos canónicos.
 
-Las pruebas usan SQLite y settings_test, límites <=20 por lote y <=2 specs E2E. Los locks de producción MySQL conservan el orden proyecto → acceso/política; SQLite no demuestra contención concurrente MySQL. Migraciones se generan pero nunca se aplican desde el worktree. P0 decide orden/hoja final; P3 revisa diseño central al terminar. PR abierto, CI propio y revisión de integración son la entrega; no self-merge.
+Las pruebas usan SQLite y settings_test, límites <=20 por lote y <=2 specs E2E. Los locks de producción MySQL conservan el orden proyecto → acceso/política; SQLite no demuestra contención concurrente MySQL. La migración 0070 es nueva, propia y no aplicada; P0 coordina las hojas merge sin operaciones al integrar otros PRs. P3 revisa diseño central al terminar. PR abierto, CI propio y revisión de integración son la entrega; no self-merge.

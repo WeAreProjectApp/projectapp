@@ -3,6 +3,8 @@
 from uuid import uuid4
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -126,6 +128,19 @@ def test_project_detail_preserves_access_redaction():
     assert 'Internal operations message' not in response.content.decode()
     assert 'production-user' not in response.content.decode()
     assert 'production-secret' not in response.content.decode()
+
+
+def test_administrator_detail_does_not_load_client_grants():
+    """Fails if the admin's detail reads grants for someone else's account."""
+    c = context()
+    sources(c)
+    enable(c, 'production.admin_password')
+    client = api(c.admin)
+    with CaptureQueriesContext(connection) as queries:
+        response = client.get(url(c, ''))
+    assert response.status_code == 200
+    assert response.json()['can_view_client_access'] is False
+    assert len(queries) <= 4
 
 
 def test_client_cannot_read_access_events():

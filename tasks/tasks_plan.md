@@ -650,5 +650,5 @@
 
 - Dominio implementado en archivos propios; los agregadores reciben sólo registros/entradas reservados de ideas/client_access.
 - Verificar navegador real y responsive, aislamiento, revocación permanente y ausencia de secretos; entregar PR separado hacia main con CI verde.
-- P0 confirma hoja/numeración de migración y orden de integración tras P3 final. Preservar en change_client_apply el orden proyecto bloqueado → guard financiero P2 → revoke_grants P4 → reasignación/cascada.
+- P0 fijó `0070_platform_ideas_access`, padre P3 `0067_explicit_delivery_authoring_context`; conserva el orden de integración y las futuras hojas merge entre PRs. Preservar en change_client_apply el orden proyecto bloqueado → guard financiero P2 → revoke_grants P4 → reasignación/cascada.
 - No ejecutar deploy/migrate ni mergear desde esta sesión. P3 conserva núcleo y guías; P2 conserva ProjectAdmin.
