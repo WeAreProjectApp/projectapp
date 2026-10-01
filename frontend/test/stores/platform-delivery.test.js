@@ -97,4 +97,26 @@ describe('Platform delivery actions', () => {
     expect(store.documentOptions[0].title).toBe('Contract PDF')
     expect(store.proposalDocumentOptions[0].title).toBe('Proposal contract')
   })
+
+  it('leaves the hierarchy unchanged when retaining prompt sources', async () => {
+    api.request.mockResolvedValue({ data: { id: 'retained-context', complete: true } })
+    const result = await store.preparePrompt({ mode: 'guides', contract_id: 3 })
+    expect(result.data.id).toBe('retained-context')
+    expect(store.workspace).toEqual(createWorkspace())
+  })
+
+  it('loads a retained source context independently of the hierarchy', async () => {
+    api.get.mockResolvedValue({ data: { id: 'retained-context', sources: [{ title: 'Signed source' }] } })
+    const result = await store.fetchPromptContext('retained-context')
+    expect(result.data.sources[0].title).toBe('Signed source')
+    expect(api.get).toHaveBeenCalledWith('projects/7/delivery/prompt/retained-context/')
+    expect(store.workspace).toEqual(createWorkspace())
+  })
+
+  it('preserves the hierarchy when previewing a response', async () => {
+    api.request.mockResolvedValue({ data: { valid: true, response_text: 'We will attend the request.' } })
+    await store.previewReply({ context_id: 'retained-context', response_text: 'We will attend the request.' })
+    expect(store.workspace).toEqual(createWorkspace())
+    expect(api.request.mock.calls[0][0].url).toBe('projects/7/delivery/reply/preview/')
+  })
 })

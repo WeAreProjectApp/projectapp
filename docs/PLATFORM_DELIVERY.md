@@ -165,11 +165,46 @@ publicadas se conservan como evidencia.
 
 ## Prompt e importación JSON
 
-**Copiar prompt** devuelve el contexto del proyecto, contratos y modificaciones,
-alcances actuales, instrucciones de lenguaje sencillo, plantilla y esquema.
-El administrador lo utiliza con su herramienta de redacción o IA y pega el
-JSON resultante en **Importar JSON**. Platform valida el resultado; no genera
-automáticamente las guías al copiar el prompt.
+**Crear guías** permite empezar sin una etapa previa. El administrador selecciona
+un contrato, opcionalmente uno de sus alcances, los otrosíes pertinentes y los
+anexos o documentos de referencia necesarios. No se incluye automáticamente todo
+el proyecto ni se sustituye el documento firmado por el detalle comercial o
+técnico actual. Cambiar de alcance conserva sólo su otrosí; los otrosíes
+adicionales deben seleccionarse de nuevo.
+
+**Preparar respuesta** parte de una etapa publicada y fija su contrato y alcance.
+Además de las fuentes elegidas, incluye las guías y versiones publicadas, todas
+las rondas, decisiones y observaciones públicas pertinentes, con autor y fecha.
+Los documentos públicos de esa conversación se identifican; su contenido sólo
+se incorpora si se selecciona expresamente como fuente. Las notas internas no
+se incluyen en el prompt.
+
+**Preparar y conservar las fuentes** guarda una selección inmutable, con
+identidad, título, procedencia, versión conocida, fecha, huella, copia privada y
+fragmentos localizables. El prompt, la plantilla y el esquema forman parte de
+esa misma captura. **Historial de prompts** muestra las 50 preparaciones más
+recientes; las anteriores siguen ligadas a las guías y respuestas que las usan.
+La descarga devuelve la copia original conservada, con su tipo de archivo;
+preparar o consultar un prompt no publica guías ni envía mensajes.
+
+Una asociación administrativa o una nota de aplicabilidad no prueba la
+incorporación jurídica de un anexo. El contrato u otrosí debe sustentar las
+conclusiones de alcance; los anexos pueden aportar respaldo adicional. La
+versión o precedencia desconocida, los documentos faltantes y las lecturas
+ilegibles o parciales se muestran como advertencias. Un PDF escaneado sin texto
+no permite inferir qué incluye o excluye el contrato. Cada fuente tiene límites
+de extracción explícitos; exceder el límite global de 100 KB de contexto o
+256 KB de respuesta rechaza la captura completa, sin guardar una selección
+silenciosamente recortada.
+
+El administrador usa **Copiar prompt** con su herramienta de redacción o IA y
+pega el resultado en la preparación abierta. El JSON vigente usa
+`schema_version: 2`, el `context_id` devuelto y `source_references` en cada
+requerimiento. Cada referencia contiene `source_key`, `locator` y `quote`
+obtenidos de los fragmentos conservados. El servidor verifica su pertenencia,
+ubicación y cita exacta; esa verificación no sustituye la revisión humana de su
+interpretación. La salida no puede cambiar el contrato ni el otrosí de un
+alcance seleccionado.
 
 Primero se debe **Previsualizar** y revisar el resumen. **Aplicar borradores**
 guarda la jerarquía de forma atómica. Si cambia el JSON, se requiere otra
@@ -182,7 +217,41 @@ una etapa aprobada o etapas a una fase aprobada. Para corregir una guía ya
 publicada que sigue pendiente de conformidad se usan sus formularios y una
 nueva ronda.
 
-Este ejemplo cumple la estructura `schema_version: 1`. Los IDs `101` y `202`
+Al corregir una guía trazada desde su formulario se muestran las citas que se
+conservarán. El administrador confirma que siguen sustentando el texto final;
+cambiarlo revoca esa confirmación. El servidor exige el contexto y las citas
+explícitos y no permite eliminarlos mediante un JSON manual o una actualización
+directa. Las guías ya aprobadas siguen congeladas.
+
+### Respuestas propuestas y revisión manual
+
+El JSON de respuesta contiene `schema_version: 2`, `context_id`,
+`response_text` y una lista `classifications`. Cada entrada identifica el pedido,
+su clasificación, fundamento y citas:
+
+| Clasificación | Tratamiento que pide el prompt |
+| --- | --- |
+| `inside_scope` | Reconocer y atender lo pactado; agregar la guía faltante en una etapa editable si hace falta, sin cambiar una guía aceptada. |
+| `outside_scope` | Justificar con contrato u otrosí y preparar por separado una posible ampliación. No se admite esta conclusión con fuentes incompletas o inciertas. |
+| `indeterminate` | Explicar qué fuente o definición falta para determinar el alcance. |
+
+Que algo no figure en una guía no demuestra que esté fuera del contrato.
+Las guías y conversaciones conservadas dan contexto de entrega, sin funcionar
+como un otrosí. **Previsualizar** valida la propuesta sin compartirla.
+**Revisar borrador para enviar** abre el formulario existente, donde el
+administrador puede editarla y debe confirmar su revisión antes de enviarla;
+adjuntar un documento es opcional. Cambiar las observaciones públicas de la
+etapa exige preparar de nuevo el contexto antes del envío. La respuesta
+conserva su contexto, citas y clasificación, y puede consultarse desde su
+historial. No hay envío automático.
+
+### JSON manual compatible
+
+**Importar JSON** conserva la estructura manual `schema_version: 1`, identificada
+como **sin trazabilidad de fuentes**. No degrada ni reescribe una guía trazada.
+Para una nueva guía con fuentes se utiliza la plantilla v2 devuelta por su
+preparación. Este ejemplo corresponde únicamente a la estructura manual.
+Los IDs `101` y `202`
 son ilustrativos: antes de usarlo deben sustituirse por el contrato existente
 del proyecto y un otrosí que pertenezca a ese contrato. Si no aplica otrosí,
 usar `amendment_id: null`. Los IDs de fases, etapas y requerimientos se resuelven
@@ -250,12 +319,18 @@ versión, y un reintento de la misma operación no la duplica.
 ## API y servicios compartidos
 
 La API usa JWT bajo `/api/accounts/projects/<id>/delivery/`. La interfaz y el
-MCP administrativo reutilizan `delivery_workflow`, `delivery_documents` y los
+MCP administrativo reutilizan `delivery_workflow`, `delivery_authoring`,
+`delivery_source_extraction`, `delivery_documents` y los
 serializers estrictos; los permisos se comprueban también en esos servicios.
 
 | Ruta relativa | Uso |
 | --- | --- |
-| raíz, `prompt/` | Consultar el seguimiento; obtener el prompt y su esquema como administrador. |
+| `GET` raíz | Consultar el seguimiento. |
+| `GET prompt/options/` (o `GET prompt/`) | Descubrir contratos, otrosíes, fuentes seleccionables y esquemas; no obtiene textos automáticamente. |
+| `POST prompt/` | Conservar una preparación de guías o respuesta, con selección explícita e identificador de petición estable. |
+| `GET prompt/contexts/`, `GET prompt/<uuid>/` | Listar preparaciones recientes y consultar una captura administrativa inmutable. |
+| `GET prompt/<uuid>/sources/<key>/download/` | Descargar la copia exacta de una fuente conservada. |
+| `POST reply/preview/` | Validar texto, clasificación y citas sin enviar una respuesta. |
 | `import/preview/`, `import/apply/` | Validar el JSON y guardar borradores. |
 | `contracts/`, `amendments/`, `scopes/`, `phases/`, `stages/`, `requirements/` | Crear elementos; editar o eliminar por su ID cuando sus reglas lo permiten. |
 | `stages/<id>/publish/`, `stages/<id>/review/` | Publicar una ronda y registrar la revisión del cliente. |
@@ -306,3 +381,33 @@ los requerimientos publicados. Una solicitud aprobada puede convertirse en una
 guía nueva pendiente dentro de una etapa editable, sin aprobarla por el cliente.
 La ampliación del flujo de bugs y los vacíos de cuentas de cobro siguen como
 alcances posteriores para trabajar incrementalmente en el mismo PR.
+
+## Incrementos pendientes
+
+El refinamiento de los prompts del primer alcance está implementado para
+validación en el mismo PR: «Crear guías» sin etapa previa y «Preparar respuesta»
+con fuentes conservadas, citas verificadas y revisión manual. Su integración y
+CI se consultan en el PR. `accounts.0067_explicit_delivery_authoring_context`
+incorpora las capturas inmutables y su vínculo con guías y respuestas; sólo el
+deploy aplica esa migración.
+
+Después siguen el reporte general y seguimiento de bugs y la consulta de cuentas
+de cobro por el cliente. El registro por correo de una etapa aprobada se mantiene
+como incremento futuro independiente, con estos criterios:
+
+- Acción manual administrativa disponible únicamente para una etapa aprobada,
+  con consulta y vista previa completas antes de enviar.
+- Registro de las versiones aceptadas de etapa y requerimientos, rondas,
+  decisiones, autores, fechas, mensajes públicos y documentos pertinentes;
+  exclusión de notas internas y contenido de otros contratos.
+- Copia inmutable del asunto, cuerpo y adjuntos efectivamente enviados, junto
+  con destinatario, fecha, resultado e historial consultable.
+- Clave de operación para evitar duplicados en reintentos. Un reenvío exige una
+  acción explícita y conserva el vínculo con la copia anterior.
+- Paridad UI/MCP para consultar, preparar la vista previa, enviar y ver el
+  historial. La vista previa no envía ni altera la aprobación.
+
+El envío futuro puede reutilizar `EmailDeliveryGateway`, `EmailDeliverySnapshot`
+y `EmailAttachmentSnapshot`; necesita su propia preparación duradera ligada a la
+etapa y no debe usar una preparación comercial que expire. Este incremento sólo
+registra el backlog; no implementa ni envía correos reales.

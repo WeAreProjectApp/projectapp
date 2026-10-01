@@ -129,7 +129,17 @@ def test_mcp_document_unlink_removes_an_editable_association(call_projects, draf
     assert not DeliveryDocumentLink.objects.filter(pk=link_id).exists()
 
 
+def external_signature_arguments(call, draft, asset_id):
+    return {
+        'project_id': draft.project.pk, 'kind': 'contracts', 'node_id': draft.contract.pk,
+        'expected_version': current_version(call, draft.project),
+        'request_id': 'foreign-pdf', 'asset_id': str(asset_id), 'signer_name': 'Cliente titular',
+        'signed_at': '2026-09-30T09:00:00Z', 'attestation': 'PDF del cliente.',
+    }
+
+
 def test_mcp_signed_asset_is_bound_to_its_credential(call_projects, draft):
+    """Falla si una credencial constata una firma usando el asset privado de otra."""
     connector = McpConnector.objects.get(slug='projects')
     foreign_credential = McpCredential.objects.create(
         connector=connector, label='Other', token_hash='a' * 64,
@@ -143,12 +153,8 @@ def test_mcp_signed_asset_is_bound_to_its_credential(call_projects, draft):
     )
     upload.file.save('signed.pdf', ContentFile(SIGNED_PDF), save=True)
 
-    error = confirm(call_projects, 'attest_external_delivery_signature', {
-        'project_id': draft.project.pk, 'kind': 'contracts', 'node_id': draft.contract.pk,
-        'expected_version': current_version(call_projects, draft.project),
-        'request_id': 'foreign-pdf', 'asset_id': str(upload.pk), 'signer_name': 'Cliente titular',
-        'signed_at': '2026-09-30T09:00:00Z', 'attestation': 'PDF del cliente.',
-    }, expect_error=True)
+    error = confirm(call_projects, 'attest_external_delivery_signature',
+                    external_signature_arguments(call_projects, draft, upload.pk), expect_error=True)
 
     assert error['code'] == 'NOT_FOUND'
     assert not ContractSignatureEvidence.objects.filter(contract=draft.contract).exists()
@@ -194,12 +200,16 @@ def test_mcp_document_detail_preserves_its_delivery_level(call_projects, draft):
     assert result['document']['target_id'] == draft.requirement.pk
 
 
-def test_mcp_authoring_contract_exposes_a_structured_json_schema(call_projects, draft):
+def test_mcp_authoring_contract_discovers_sources_without_selecting_them(call_projects, draft):
+    """Falla si consultar opciones vuelve a copiar el contenido global del proyecto."""
     result = call_projects('get_delivery_authoring_contract', {'project_id': draft.project.pk})
 
-    assert result['schema']['required'] == ['schema_version', 'scopes']
-    assert result['schema']['properties']['schema_version'] == {'const': 1}
-    assert result['template']['scopes'][0]['contract_id'] == draft.contract.pk
+    assert result['schema']['required'] == ['schema_version', 'scopes', 'context_id']
+    assert result['schema']['properties']['schema_version'] == {'const': 2}
+    assert result['contracts'][0]['id'] == draft.contract.pk
+    assert result['schemas']['guides_v1']['properties']['schema_version'] == {'const': 1}
+    assert 'prompt' not in result
+    assert 'template' not in result
 
 
 def test_mcp_import_cannot_declare_approval(call_projects, draft):

@@ -1,5 +1,6 @@
 import secrets
 import string
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -742,6 +743,8 @@ class Requirement(DeliveryNode):
     guide = models.JSONField(default=dict, blank=True)
     order = models.PositiveIntegerField(default=0)
     review_status = models.CharField(max_length=20, choices=ReviewStatus.choices, default=ReviewStatus.PENDING)
+    context = models.ForeignKey('DeliveryPromptContext', on_delete=models.PROTECT, null=True, blank=True, related_name='requirements')
+    source_references = models.JSONField(default=list, blank=True)
 
     class Meta(DeliveryNode.Meta):
         ordering = ['order', 'id']
@@ -869,6 +872,9 @@ class DeliveryMessage(models.Model):
     documents = models.ManyToManyField('content.Document', blank=True, related_name='delivery_messages')
     message = models.TextField()
     is_internal = models.BooleanField(default=False)
+    context = models.ForeignKey('DeliveryPromptContext', on_delete=models.PROTECT, null=True, blank=True, related_name='messages')
+    source_references = models.JSONField(default=list, blank=True)
+    reply_classifications = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -885,6 +891,87 @@ class DeliveryOperation(models.Model):
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=['project', 'request_id'], name='delivery_operation_key')]
+
+
+class ImmutablePromptQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError('Captured authoring context cannot be edited.')
+
+    def bulk_update(self, objs, fields, **kwargs):
+        raise ValueError('Captured authoring context cannot be edited.')
+
+
+class ImmutablePromptRecord(models.Model):
+    objects = ImmutablePromptQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('Captured authoring context cannot be edited.')
+        kwargs['force_insert'] = True
+        return super().save(*args, **kwargs)
+
+
+class DeliveryPromptContext(ImmutablePromptRecord):
+    """An explicit, durable authoring selection, independent of draft stages."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='prompt_contexts')
+    scope = models.ForeignKey(DeliveryScope, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    stage = models.ForeignKey(DeliveryStage, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    mode = models.CharField(max_length=12, choices=[('guides', 'Crear guías'), ('reply', 'Preparar respuesta')])
+    request_id = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64)
+    captured_version = models.PositiveIntegerField()
+    amendment_ids = models.JSONField(default=list)
+    missing_sources = models.JSONField(default=list)
+    uncertainties = models.JSONField(default=list)
+    warnings = models.JSONField(default=list)
+    complete = models.BooleanField(default=False)
+    prompt = models.TextField()
+    template = models.JSONField(default=dict)
+    schema = models.JSONField(default=dict)
+    conversation = models.JSONField(default=dict)
+    manifest_sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['project', 'request_id'], name='delivery_prompt_request_unique')]
+
+
+class DeliveryPromptSource(ImmutablePromptRecord):
+    """Exact private source bytes, identity and extracted fragments for citations."""
+    context = models.ForeignKey(DeliveryPromptContext, on_delete=models.PROTECT, related_name='sources')
+    source_key = models.CharField(max_length=100)
+    title = models.CharField(max_length=300)
+    origin = models.CharField(max_length=32)
+    source_id = models.CharField(max_length=100)
+    role = models.CharField(max_length=32)
+    applicability_note = models.TextField(blank=True, default='')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_sources')
+    proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_sources')
+    signature_evidence = models.ForeignKey(ContractSignatureEvidence, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_sources')
+    version = models.PositiveIntegerField(null=True, blank=True)
+    version_kind = models.CharField(max_length=30, default='unknown')
+    date = models.DateTimeField(null=True, blank=True)
+    file = models.FileField(storage=get_private_storage, upload_to='delivery/prompt-sources/%Y/%m/', max_length=500, blank=True)
+    filename = models.CharField(max_length=300, blank=True, default='')
+    content_type = models.CharField(max_length=100, blank=True, default='')
+    sha256 = models.CharField(max_length=64, blank=True, default='')
+    snapshot = models.JSONField(default=dict)
+    fragments = models.JSONField(default=list)
+    status = models.CharField(max_length=16, choices=[('included', 'Incluida'), ('missing', 'Faltante'), ('unreadable', 'Ilegible'), ('partial', 'Parcial')])
+    warnings = models.JSONField(default=list)
+    limits = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [models.UniqueConstraint(fields=['context', 'source_key'], name='delivery_prompt_source_unique')]
 
 
 class ChangeRequest(models.Model):

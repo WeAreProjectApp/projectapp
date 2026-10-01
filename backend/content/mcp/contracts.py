@@ -709,7 +709,7 @@ DELIVERY_CONTRACTS = (
     _contract(
         'accounts.Requirement',
         read_only='id version review_status created_at updated_at',
-        read_write='key title stage description guide order',
+        read_write='key title stage description guide order context source_references',
     ),
     _contract(
         'accounts.DeliveryPublication',
@@ -766,7 +766,61 @@ DELIVERY_CONTRACTS = (
     _contract(
         'accounts.DeliveryMessage',
         read_only='id project actor created_at',
-        read_write='level target_id requirements documents message is_internal',
+        read_write=(
+            'level target_id requirements documents message is_internal '
+            'context source_references reply_classifications'
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryPromptContext',
+        read_only=(
+            'id contract scope stage mode captured_version amendment_ids '
+            'missing_sources uncertainties warnings complete prompt template schema '
+            'conversation manifest_sha256 created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Proyecto implícito en project_id; la captura se lee exclusivamente '
+                'dentro de ese proyecto y no admite cambio de propietario.',
+                'project',
+            ) | _excluded(
+                'Actor de auditoría asignado por la credencial; no se acepta '
+                'suplantación ni se modifica una captura inmutable.',
+                'actor',
+            ) | _excluded(
+                'Control interno de reintentos: crear recibe request_id, pero '
+                'la lectura no expone el recibo ni su huella y no permite editarlo.',
+                'request_id fingerprint',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryPromptSource',
+        read_only=(
+            'source_key title origin source_id role applicability_note document '
+            'proposal_document signature_evidence version version_kind date '
+            'filename content_type sha256 fragments status warnings limits'
+        ),
+        excluded=(
+            _excluded(
+                'Fila interna de la fuente; MCP usa context_id y source_key '
+                'para consultar la captura inmutable y descargar su copia.',
+                'id context',
+            ) | _excluded(
+                'Ruta privada de la copia exacta. La descarga autorizada '
+                'devuelve un artefacto temporal de la misma credencial.',
+                'file',
+            ) | _excluded(
+                'Instantánea interna del origen, que puede contener notas y '
+                'metadata de firma. Solo se exponen fragmentos verificables '
+                'y metadatos autorizados, nunca esta captura interna.',
+                'snapshot',
+            ) | _excluded(
+                'Fecha interna de la fila de fuente; la lectura devuelve la '
+                'fecha del origen y la creación del contexto que retuvo la copia.',
+                'created_at',
+            )
+        ),
     ),
     _contract(
         'accounts.DeliveryOperation',

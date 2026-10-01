@@ -32,6 +32,19 @@ class NodeSerializer(VersionedSerializer):
     title = serializers.CharField(max_length=300)
 
 
+class SourceReferenceSerializer(StrictSerializer):
+    source_key = serializers.CharField(max_length=100)
+    locator = serializers.CharField(max_length=2048)
+    quote = serializers.CharField(max_length=20000)
+
+
+class ReplyClassificationSerializer(StrictSerializer):
+    request = serializers.CharField(max_length=5000)
+    classification = serializers.ChoiceField(choices=['inside_scope', 'outside_scope', 'indeterminate'])
+    rationale = serializers.CharField(max_length=10000)
+    citations = SourceReferenceSerializer(many=True, required=False)
+
+
 class ContractSerializer(NodeSerializer):
     document_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     proposal_document_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
@@ -67,6 +80,8 @@ class RequirementSerializer(NodeSerializer):
     description = serializers.CharField(required=False, allow_blank=True, max_length=20000)
     guide = GuideSerializer(required=False)
     order = serializers.IntegerField(min_value=0, required=False)
+    context_id = serializers.UUIDField(required=False, allow_null=True)
+    source_references = SourceReferenceSerializer(many=True, required=False)
 
 
 class PublishSerializer(VersionedSerializer):
@@ -111,6 +126,41 @@ class MessageSerializer(PublishSerializer):
     message = serializers.CharField(max_length=20000)
     document_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False, max_length=20)
     is_internal = serializers.BooleanField(required=False)
+    context_id = serializers.UUIDField(required=False)
+    source_references = SourceReferenceSerializer(many=True, required=False)
+    classifications = ReplyClassificationSerializer(many=True, required=False)
+    human_reviewed = serializers.BooleanField(required=False)
+
+
+class PromptAttachmentSerializer(StrictSerializer):
+    document_id = serializers.IntegerField(min_value=1, required=False)
+    proposal_document_id = serializers.IntegerField(min_value=1, required=False)
+    role = serializers.ChoiceField(choices=['contractual_annex', 'reference'])
+    applicability_note = serializers.CharField(max_length=5000)
+
+    def validate(self, data):
+        if bool(data.get('document_id')) == bool(data.get('proposal_document_id')):
+            raise serializers.ValidationError('Selecciona exactamente un documento de origen.')
+        return data
+
+
+class PromptContextSerializer(PublishSerializer):
+    mode = serializers.ChoiceField(choices=['guides', 'reply'])
+    contract_id = serializers.IntegerField(min_value=1, required=False)
+    amendment_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), max_length=30, required=False, default=list)
+    scope_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    stage_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    sources = PromptAttachmentSerializer(many=True, max_length=30, required=False, default=list)
+    missing_sources = serializers.ListField(child=serializers.CharField(max_length=1000), max_length=30, required=False, default=list)
+    uncertainties = serializers.ListField(child=serializers.CharField(max_length=2000), max_length=30, required=False, default=list)
+    instructions = serializers.CharField(max_length=10000, required=False, allow_blank=True, default='')
+
+
+class ReplyPayloadSerializer(StrictSerializer):
+    schema_version = serializers.IntegerField(min_value=2, max_value=2)
+    context_id = serializers.UUIDField()
+    response_text = serializers.CharField(max_length=20000)
+    classifications = ReplyClassificationSerializer(many=True, allow_empty=False, max_length=100)
 
 
 class SignatureSerializer(PublishSerializer):

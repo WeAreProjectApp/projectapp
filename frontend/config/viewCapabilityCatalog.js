@@ -299,8 +299,8 @@ const platformCapabilities = [
     'Distingue lo aprobado y lo pendiente de revisión sin mezclarlo con la facturación.',
     [
       feature('platform-project-board', 'Validar las entregas del alcance',
-        'Organiza contratos y otrosíes, alcances, fases, etapas y requerimientos con sus documentos y rondas de revisión.',
-        'Permite al equipo preparar guías por prompt y JSON, y al cliente aprobar, objetar o rechazar cada requerimiento conservando sus conformidades.',
+        'Organiza contratos y otrosíes, alcances, fases, etapas y requerimientos con sus documentos y rondas de revisión. Crear guías y preparar respuestas son modos separados con fuentes explícitas conservadas y avisos de lectura incompleta.',
+        'Permite al equipo revisar citas contra las copias usadas, aplicar borradores y enviar respuestas revisadas manualmente. El cliente aprueba, objeta o rechaza cada requerimiento conservando sus conformidades; una guía no modifica el contrato.',
         ['/platform/projects/:id/delivery', '/platform/projects/:id/board', '/platform/board'],
         { icon: 'board', actors: ['client', 'team'], stage: 'Seguimiento' }),
       feature('platform-bug-follow-up', 'Reportar y seguir bugs',

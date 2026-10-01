@@ -4,8 +4,15 @@
 > entrante, documentos por nivel y paridad MCP. Retiro autorizado del Kanban de
 > clientes; fases comerciales, bugs/cambios, documentos, recursos y finanzas
 > preservados. Validación focal realizada; falta el cierre del PR con CI verde.
-> Después continúan bugs y vacíos de cuentas de cobro incrementalmente en ese
-> mismo PR. [Reglas y esquema](../docs/PLATFORM_DELIVERY.md).
+> Antes de bugs se implementó para validación el refinamiento autorizado de «Crear
+> guías» y «Preparar respuesta»: contrato y otrosíes seleccionados, anexos con
+> procedencia explícita, copias de las fuentes usadas y avisos de lectura
+> incompleta; las citas del JSON se verifican contra esas copias y las correcciones
+> conservan su trazabilidad. Las 46 herramientas MCP comparten el mismo servicio. Después
+> continúan bugs y vacíos de cuentas de cobro incrementalmente en ese mismo PR.
+> El correo manual del registro de una etapa aprobada queda en el backlog,
+> con vista previa, copia exacta del envío e historial y paridad MCP; este
+> incremento no envía correos reales. [Reglas y esquema](../docs/PLATFORM_DELIVERY.md).
 
 > **2026-09-29 — Formulario y estados de enlaces seguros:** implementación
 > en `feat/29092026-secure-links-simple-states`: dropdown compartido, plantilla
