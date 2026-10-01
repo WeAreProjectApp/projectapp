@@ -139,6 +139,7 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
       : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
         ?? BILLING_FLOW_BY_URL[view.url]
+        ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
         ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review' : OWNER_FLOW[owner]),
     outcome: kind === 'redirect' ? (REDIRECT_OUTCOME_BY_URL[view.url] ?? 'success') : 'display',
     profiles: RESPONSIVE_PROFILES,

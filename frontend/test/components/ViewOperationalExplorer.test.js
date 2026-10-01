@@ -59,7 +59,7 @@ describe('ViewOperationalExplorer', () => {
     expect(wrapper.text()).toContain('Panel interno')
     expect(wrapper.text()).toContain('Plataforma de clientes')
     expect(wrapper.text()).toContain('Experiencias públicas')
-    expect(wrapper.text()).toContain('121 vistas relacionadas')
+    expect(wrapper.text()).toContain('124 vistas relacionadas')
   })
 
   it('selects a space from the orbit', async () => {

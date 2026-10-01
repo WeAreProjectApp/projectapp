@@ -6,32 +6,54 @@ from django.db.migrations.executor import MigrationExecutor
 
 @pytest.fixture(scope='module')
 def migrated_snapshot(django_db_setup, django_db_blocker):
+    """Build legacy rows, migrate them, and return their observable outcome."""
     with django_db_blocker.unblock():
         return _migrate_legacy_fixture()
 
 
+def _legacy_targets(graph):
+    """Return compatible migration leaves with accounts held at migration 0063."""
+    cutoff = ('accounts', '0063_projectaccessnote_projectadminaccess')
+    later_accounts = {
+        node for node in graph.nodes
+        if node[0] == 'accounts' and node != cutoff and cutoff in graph.forwards_plan(node)
+    }
+    incompatible = {
+        node for node in graph.nodes
+        if any(later_account in graph.forwards_plan(node) for later_account in later_accounts)
+    }
+    compatible = set(graph.nodes) - incompatible
+    compatible_leaves = {
+        node for node in compatible
+        if not any(child.key in compatible for child in graph.node_map[node].children)
+    }
+    return sorted(compatible_leaves | {cutoff})
+
+
 def _migrate_legacy_fixture():
+    """Exercise the legacy migration boundary and always restore latest schema."""
     executor = MigrationExecutor(connection)
     latest = executor.loader.graph.leaf_nodes()
-    old_target = [target for target in latest if target[0] != 'accounts'] + [('accounts', '0063_projectaccessnote_projectadminaccess')]
-    executor.migrate(old_target)
-    old = executor.loader.project_state(old_target).apps
-    User = old.get_model('auth', 'User')
-    Project = old.get_model('accounts', 'Project')
-    Phase = old.get_model('accounts', 'ProjectPhase')
-    Proposal = old.get_model('content', 'BusinessProposal')
-    ScopeItem = old.get_model('accounts', 'ProjectScopeItem')
-    Requirement = old.get_model('accounts', 'Requirement')
-    Comment = old.get_model('accounts', 'RequirementComment')
-    History = old.get_model('accounts', 'RequirementHistory')
-    Bug = old.get_model('accounts', 'BugReport')
-    Change = old.get_model('accounts', 'ChangeRequest')
-    Document = old.get_model('content', 'Document')
-    Deliverable = old.get_model('accounts', 'Deliverable')
-    DataModel = old.get_model('accounts', 'ProjectDataModelEntity')
-    Income = old.get_model('content', 'IncomeRecord')
-    Hosting = old.get_model('content', 'HostingRecord')
     try:
+        old_target = _legacy_targets(executor.loader.graph)
+        executor.migrate(old_target)
+        old = executor.loader.project_state(old_target).apps
+        User = old.get_model('auth', 'User')
+        Project = old.get_model('accounts', 'Project')
+        Phase = old.get_model('accounts', 'ProjectPhase')
+        Proposal = old.get_model('content', 'BusinessProposal')
+        ScopeItem = old.get_model('accounts', 'ProjectScopeItem')
+        Requirement = old.get_model('accounts', 'Requirement')
+        Comment = old.get_model('accounts', 'RequirementComment')
+        History = old.get_model('accounts', 'RequirementHistory')
+        Bug = old.get_model('accounts', 'BugReport')
+        Change = old.get_model('accounts', 'ChangeRequest')
+        Document = old.get_model('content', 'Document')
+        Deliverable = old.get_model('accounts', 'Deliverable')
+        DataModel = old.get_model('accounts', 'ProjectDataModelEntity')
+        Income = old.get_model('content', 'IncomeRecord')
+        Hosting = old.get_model('content', 'HostingRecord')
+
         user = User.objects.create(username='migration-client', email='migration@example.test')
         project = Project.objects.create(name='Migration project', client=user)
         proposal = Proposal.objects.create(title='Commercial proposal', client_name='Client', client_email=user.email)
@@ -76,11 +98,13 @@ def _migrate_legacy_fixture():
 
 
 def test_purge_preserves_report_content(migrated_snapshot):
+    """The migration preserves bug and change request titles."""
     assert migrated_snapshot['bug']['title'] == 'Bug survives'
     assert migrated_snapshot['change']['title'] == 'Request survives'
 
 
 def test_purge_clears_legacy_card_references(migrated_snapshot):
+    """The migration removes card references and legacy card tables."""
     assert migrated_snapshot['bug']['source'] is None
     assert migrated_snapshot['change']['source'] is None
     assert migrated_snapshot['change']['linked'] is None
@@ -91,6 +115,7 @@ def test_purge_clears_legacy_card_references(migrated_snapshot):
 
 
 def test_purge_preserves_shared_project_records(migrated_snapshot):
+    """The migration preserves project records outside the removed card graph."""
     assert migrated_snapshot['phase_hosting_date'] == '2026-09-30'
     assert migrated_snapshot['proposal_exists'] is True
     assert migrated_snapshot['document_exists'] is True

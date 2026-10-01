@@ -1946,3 +1946,8 @@ antes de dueño/cascada; Django Admin utiliza el mismo guard. El puente acotado
 de delivery impide mover un otrosí con cuentas a otro contrato. El contrato de
 integración con P4 conserva el orden guard financiero → revocación → cambio.
 Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`.
+## Enlaces seguros propios del cliente (P5)
+
+`secure_links.platform_*` aporta acceso por objeto, servicios compartidos, serializers de metadatos y FBVs JWT para `/api/accounts/projects/{project_id}/secure-links/`. No usa SessionAuthentication ni el cliente HTTP Panel. Owner (UserProfile) y Project.client actual deben coincidir; legacy no se adopta. El servicio reutiliza Fernet y revelación de uso único existentes, bloquea proyecto antes de enlace y compara solicitudes por HMAC de entrada normalizada. MCP administrativo usa el mismo dominio; get_secure_link_url exige permiso explícito y confirmación efímera, independiente de la lectura de contenido.
+
+El frontend nuevo mantiene borradores/URL en componentes efímeros y sólo metadatos en Pinia. Corrección conserva origen cifrado + historia y crea un sucesor OneToOne; reactivación cliente rota token. Modelos/hojas y permisos están detallados en docs/platform-secure-links.md. Las guías de roles y núcleo delivery siguen bajo P3.

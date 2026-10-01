@@ -6266,6 +6266,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
+| `platform-secure-link-create` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-manage` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
 | `proposal-closing-contact` | proposal | P2 | display | 1 |
@@ -8355,6 +8358,36 @@ consulta de la conversación pública que originó el prompt.
 - **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
 - **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
 - **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### FLOW: `platform-secure-link-create`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El cliente llega desde su proyecto, ve el límite sólo equipo y texto/credenciales, y la vista vacía o metadatos de sus enlaces.
+- **Success:** Crear una vez limpia el contenido del formulario; la URL se muestra sólo en el modal y copiar exige un clic.
+- **Error:** Campos requeridos bloquean el envío; entrada inválida o UUID con otros datos muestran un error seguro. Replay idéntico no vuelve a entregar URL.
+- **Failure:** Catálogo/listado permiten reintentar. Una falla de creación conserva el borrador y su UUID sin mostrar la entrada en el error.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure. Las pruebas backend SQLite verifican autorización, cifrado e idempotencia reales.
+
+### FLOW: `platform-secure-link-manage`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** Listado y filtros de metadatos; historial con evento, fecha, clase de actor y referencias permitidas.
+- **Success:** Cambiar etiqueta, consultar URL explícita, revocar idempotentemente o reactivar un enlace elegible rotando URL y conservando eventos anteriores.
+- **Error:** Una revisión obsoleta o estado inválido devuelve error; no hay lectura del secreto, borrado ni edición de contenido en Platform.
+- **Failure:** Fallas de listado/historial/operaciones muestran un error recuperable; no se afirma una transición que falló.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure y `frontend/e2e/responsive/platform-secure-links.spec.js` verifica cinco perfiles. API SQLite y pruebas unitarias comprueban ownership, auditoría, revisiones y descarte de respuestas tardías.
+
+### FLOW: `platform-secure-link-replace`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El detalle muestra las referencias anterior/sucesor; el modal de confirmación explica que corregir revoca primero y conserva auditoría.
+- **Success:** Confirmar revoca, abre formulario sin secreto y crea un sucesor enlazado que entrega su nueva URL una vez.
+- **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
+- **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
 
 ### FLOW: `proposal-closing-contact`
 

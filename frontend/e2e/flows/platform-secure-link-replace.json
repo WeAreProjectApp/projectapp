@@ -1,0 +1,16 @@
+{
+  "id": "platform-secure-link-replace",
+  "name": "Platform Client Secure Link Replace",
+  "module": "platform",
+  "roles": [
+    "platform-client"
+  ],
+  "priority": "P1",
+  "description": "Client confirms correction, revoking the source while preserving ciphertext and audit history, then creates a linked replacement with blank sensitive fields. Creation failure leaves the source revoked. One direct successor is allowed; substituted sources cannot reactivate. No old-secret read, in-place edit, deletion, files, third parties or internal-access imports.",
+  "outcomes": [
+    "display",
+    "success",
+    "error",
+    "failure"
+  ]
+}

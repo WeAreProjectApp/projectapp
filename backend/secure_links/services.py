@@ -4,7 +4,7 @@ Security contract:
 - the URL token is random, travels in the URL fragment and is only stored as
   a SHA-256 lookup hash plus a Fernet copy that lets staff copy the link again;
 - the payload is Fernet-encrypted JSON and is only decrypted by an explicit
-  reveal (recipient) or an audited panel view (staff);
+  reveal (recipient) or an audited staff read (Panel/MCP);
 - a recipient reveal is atomic: the row is locked, the status re-checked and
   the consumption stored in the same transaction.
 """
@@ -173,8 +173,10 @@ def content_for(link, language=None):
 @transaction.atomic
 def create_link(*, secret_type, title, fields, origin, actor=None, client=None,
                 project=None, language=SecureLink.Language.ES, validity_days=None,
-                creator_name='', creator_email='', meta=None):
-    allowed = PUBLIC_VALIDITY_CHOICES if origin == SecureLink.Origin.PUBLIC else VALIDITY_CHOICES
+                creator_name='', creator_email='', meta=None, owner=None, audience=None,
+                creation_request_id=None, creation_request_fingerprint='', replaces=None):
+    client_origin = origin in (SecureLink.Origin.PUBLIC, SecureLink.Origin.PLATFORM)
+    allowed = PUBLIC_VALIDITY_CHOICES if client_origin else VALIDITY_CHOICES
     days = _validity(validity_days, allowed=allowed)
     payload = clean_fields(secret_type, fields)
     title = _title(title)
@@ -194,6 +196,11 @@ def create_link(*, secret_type, title, fields, origin, actor=None, client=None,
         creator_ip=(meta.ip if meta and origin == SecureLink.Origin.PUBLIC else None),
         client=client,
         project=project,
+        owner=owner,
+        audience=SecureLink.Audience.TEAM if client_origin else (audience or SecureLink.Audience.BEARER),
+        creation_request_id=creation_request_id,
+        creation_request_fingerprint=creation_request_fingerprint,
+        replaces=replaces,
         validity_days=days,
         expires_at=timezone.now() + timedelta(days=days),
     )
@@ -215,7 +222,7 @@ def _not_found():
 
 
 def sender_label(link):
-    if link.origin == SecureLink.Origin.PUBLIC:
+    if link.origin in (SecureLink.Origin.PUBLIC, SecureLink.Origin.PLATFORM):
         return link.creator_name or 'Cliente'
     return 'ProjectApp'
 
@@ -270,10 +277,29 @@ def reveal(token, *, staff=False, actor=None, meta=None):
 
 
 def _locked_link(link):
+    # Common lock order: project, then link. MCP confirmation uses this too.
+    # Legacy links need only their link lock. Never lock nullable joined rows.
+    if link.origin == SecureLink.Origin.PLATFORM and link.project_id:
+        from accounts.models import Project
+
+        Project.objects.select_for_update().filter(pk=link.project_id).first()
     current = SecureLink.objects.select_for_update().filter(pk=link.pk).first()
     if current is None:
         raise _not_found()
     return current
+
+
+@transaction.atomic
+def audited_link_url(link, *, actor, meta=None, channel='panel', credential_id=None):
+    link = _locked_link(link)
+    if link.origin == SecureLink.Origin.PLATFORM and link.status != 'active':
+        raise SecureLinkError('Reactiva el enlace antes de consultar su URL.', code='invalid_link_state', status=409)
+    url = link_url(link)
+    details = {'channel': channel}
+    if credential_id is not None:
+        details['credential_id'] = credential_id
+    log_event(link, SecureLinkEvent.Kind.URL_ACCESSED, actor=actor, meta=meta, **details)
+    return url
 
 
 @transaction.atomic
@@ -303,7 +329,12 @@ def delete_link(link):
 @transaction.atomic
 def reactivate(link, *, actor, validity_days=None, rotate=False, meta=None):
     link = _locked_link(link)
-    days = _validity(validity_days)
+    managed = link.origin == SecureLink.Origin.PLATFORM
+    if managed:
+        if link.status == 'active' or SecureLink.objects.filter(replaces=link).exists():
+            raise SecureLinkError('Este enlace no se puede reactivar.', code='invalid_reactivation', status=409)
+        rotate = True
+    days = _validity(validity_days, allowed=PUBLIC_VALIDITY_CHOICES if managed else VALIDITY_CHOICES)
     url = None
     if rotate:
         token, link.token_hash, link.token_encrypted = _new_token()
@@ -360,6 +391,11 @@ def update_link(link, *, actor, meta=None, **changes):
         link.title = _title(changes['title'])
         changed.append('title')
     if 'client' in changes or 'project' in changes:
+        if link.origin == SecureLink.Origin.PLATFORM and (
+            getattr(changes.get('client', link.client), 'pk', None) != link.client_id
+            or getattr(changes.get('project', link.project), 'pk', None) != link.project_id
+        ):
+            raise SecureLinkError('La propiedad y el proyecto del enlace no se pueden cambiar.', code='immutable_ownership', status=409)
         client = changes.get('client', link.client)
         project = changes.get('project', link.project)
         link.client, link.project = _association(client, project)
@@ -378,5 +414,5 @@ def update_link(link, *, actor, meta=None, **changes):
 
 def unopened_received_count():
     return SecureLink.objects.filter(
-        origin=SecureLink.Origin.PUBLIC, consumed_at__isnull=True, revoked_at__isnull=True,
+        audience=SecureLink.Audience.TEAM, consumed_at__isnull=True, revoked_at__isnull=True,
     ).count()

@@ -227,8 +227,8 @@ if (matrixRows.length !== expectedMatrixSize || uniqueMatrixKeys.size !== expect
 
 const visualCount = responsiveCatalogScenarios.filter((scenario) => scenario.kind === 'visual').length;
 const redirectCount = responsiveCatalogScenarios.filter((scenario) => scenario.kind === 'redirect').length;
-if (visualCount !== 107 || redirectCount !== 16) {
-  throw new Error(`La matriz debe separar 107 vistas visuales y 16 redirects; recibidas ${visualCount}/${redirectCount}`);
+if (visualCount !== 108 || redirectCount !== 16) {
+  throw new Error(`La matriz debe separar 108 vistas visuales y 16 redirects; recibidas ${visualCount}/${redirectCount}`);
 }
 
 console.log(`Contrato responsivo OK: ${pages.length} vistas (${visualCount} visuales + ${redirectCount} redirects), ${RESPONSIVE_MODULE_NAMES.length} módulos, ${RESPONSIVE_VIEWPORT_NAMES.length} perfiles, ${matrixRows.length} celdas.`);

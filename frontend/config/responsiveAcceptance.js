@@ -105,6 +105,8 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Consultar el historial y sus estados.',
   ]),
   communications: module('communications', [
+    'frontend/pages/platform/projects/[id]/secure-links.vue',
+    'frontend/components/platform/secureLinks/',
     'frontend/components/communications/',
     'frontend/composables/useCommunicationFilters.js',
     'frontend/pages/panel/communications/',
@@ -112,6 +114,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/secureLinks/',
   ], [
     'Identificar varios hilos compactos sin desplazamiento horizontal.',
+    'Crear y gestionar enlaces seguros propios del proyecto, confirmando revocación y reactivación, sin revelar el secreto histórico ni desbordar sus modales.',
     'Cambiar el orden, volver al listado y conservar el criterio activo.',
     'Leer mensajes entrantes y salientes con estado, fecha y adjuntos.',
     'Registrar un mensaje y completar las acciones de auditoría.',
@@ -256,6 +259,7 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url === '/platform/projects/:id/secure-links') return 'communications';
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';
   if (sectionId === 'panel-accounting') return 'accounting';

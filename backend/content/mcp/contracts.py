@@ -559,7 +559,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'secure_links.SecureLink',
-            read_only='id origin expires_at consumed_at revoked_at sent_at sent_by activation_count created_at',
+            read_only='id origin audience owner replaces expires_at consumed_at revoked_at sent_at sent_by activation_count created_at updated_at',
             read_write='secret_type title language client project validity_days',
             excluded=(
                 _excluded(
@@ -574,18 +574,18 @@ MCP_MODEL_CONTRACTS = {
                     'Datos de red y de contacto del creador o destinatario; sólo en el panel.',
                     'creator_name creator_email creator_ip consumed_ip consumed_user_agent',
                 )
-                | _excluded(_AUDIT_INTERNAL, 'created_by updated_at')
+                | _excluded(_AUDIT_INTERNAL, 'created_by creation_request_id creation_request_fingerprint')
             ),
         ),
         _contract(
             'secure_links.SecureLinkEvent',
-            read_only='kind created_at',
+            read_only='id kind created_at',
             excluded=(
                 _excluded(
                     'Auditoría del panel: IP, navegador y actor se revisan sólo allí.',
                     'actor ip_address user_agent details',
                 )
-                | _excluded('Relación implícita en get_secure_link.', 'id link')
+                | _excluded('Relación implícita en get_secure_link.', 'link')
             ),
         ),
     ),
