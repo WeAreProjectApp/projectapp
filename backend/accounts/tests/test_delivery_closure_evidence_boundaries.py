@@ -133,6 +133,137 @@ def normalized_pdf_text(content):
     return ' '.join(' '.join(page.extract_text() for page in reader.pages).split())
 
 
+def close_with_public_history(context, *, objection='No puedo editar el registro.', closing='Apruebo la etapa completa.'):
+    context.client.first_name = 'Wilson'
+    context.client.last_name = 'Rojas'
+    context.client.save(update_fields=['first_name', 'last_name'])
+    context.admin.first_name = 'Elena'
+    context.admin.last_name = 'Equipo'
+    context.admin.save(update_fields=['first_name', 'last_name'])
+    publish(context)
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=1))
+    delivery.add_message(context.project.pk, context.admin, {
+        'expected_version': version(context), 'request_id': 'public-before-review',
+        'level': 'stage', 'target_id': context.stage.pk,
+        'message': 'Revisa el registro publicado.',
+    })
+    delivery.add_message(context.project.pk, context.admin, {
+        'expected_version': version(context), 'request_id': 'private-before-review',
+        'level': 'stage', 'target_id': context.stage.pk,
+        'message': 'PRIVATE_TEAM_NOTE', 'is_internal': True,
+    })
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=2))
+    response = decisions(context, (context.first, 'approved'), (context.second, 'objected'))
+    response['decisions'][1]['message'] = objection
+    delivery.review_stage(context.project.pk, context.client, context.stage.pk, response)
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=3))
+    delivery.mutate_node(context.project.pk, context.admin, 'requirements', {
+        'expected_version': version(context), 'title': 'Editar registro corregido',
+    }, context.second.pk)
+    context.second.refresh_from_db()
+    publish(context, 'corrected-round')
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=4))
+    response = decisions(context, (context.second, 'approved'), request_id='closing-review')
+    response['message'] = closing
+    delivery.review_stage(context.project.pk, context.client, context.stage.pk, response)
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=5))
+    delivery.add_message(context.project.pk, context.client, {
+        'expected_version': version(context), 'request_id': 'after-closing-review',
+        'level': 'stage', 'target_id': context.stage.pk, 'message': 'POST_CLOSURE_MESSAGE',
+    })
+
+
+def send_email(context, preparation, request_id='send-public-record'):
+    return closure_email.send_stage_email(context.project.pk, context.admin, preparation['id'], {
+        'expected_version': version(context), 'request_id': request_id,
+        'preview_sha256': preparation['manifest_sha256'], 'human_reviewed': True,
+    })
+
+
+def test_delivered_email_contains_the_public_closure_record(context, mailoutbox):
+    """Fails if a message without attachments delivers a summary instead of public evidence."""
+    close_with_public_history(context)
+    prepared = prepare_email(context, message='')
+    reloaded = closure_email.get_preparation(context.project.pk, context.admin, prepared['id'])
+
+    result = send_email(context, reloaded)
+
+    assert result['status'] == 'sent'
+    assert prepared['attachments'] == []
+    assert len(mailoutbox) == 1
+    assert mailoutbox[0].body == prepared['text_body'] == reloaded['text_body']
+    assert mailoutbox[0].alternatives[0].content == prepared['html_body'] == reloaded['html_body']
+    assert 'No puedo editar el registro.' in mailoutbox[0].body
+    assert 'Apruebo la etapa completa.' in mailoutbox[0].body
+    assert 'No puedo editar el registro.' in mailoutbox[0].alternatives[0].content
+    assert 'Apruebo la etapa completa.' in mailoutbox[0].alternatives[0].content
+    assert 'Wilson Rojas' in mailoutbox[0].body
+    assert 'Elena Equipo' in mailoutbox[0].body
+    assert (RECORDED_AT + timedelta(minutes=2)).isoformat() in mailoutbox[0].body
+    assert (RECORDED_AT + timedelta(minutes=4)).isoformat() in mailoutbox[0].body
+    assert 'Editar registro (v1, ronda 1)' in mailoutbox[0].body
+    assert 'Editar registro corregido (v2, ronda 2)' in mailoutbox[0].body
+    assert mailoutbox[0].body.index('Revisa el registro publicado.') < mailoutbox[0].body.index('No puedo editar el registro.')
+    assert 'PRIVATE_TEAM_NOTE' not in mailoutbox[0].body + mailoutbox[0].alternatives[0].content
+    assert 'POST_CLOSURE_MESSAGE' not in mailoutbox[0].body + mailoutbox[0].alternatives[0].content
+
+
+def test_closure_html_escapes_public_conversation_text(context):
+    """Fails if client-authored markup becomes executable HTML in the prepared message."""
+    close_with_public_history(context, objection='<script>alert("objeción")</script>', closing='<b>Apruebo</b>')
+
+    prepared = prepare_email(context)
+
+    assert '<script>alert("objeción")</script>' in prepared['text_body']
+    assert '<b>Apruebo</b>' in prepared['text_body']
+    assert '&lt;script&gt;alert(&quot;objeción&quot;)&lt;/script&gt;' in prepared['html_body']
+    assert '&lt;b&gt;Apruebo&lt;/b&gt;' in prepared['html_body']
+    assert '<script>alert(' not in prepared['html_body']
+    assert '<b>Apruebo</b>' not in prepared['html_body']
+
+
+def test_resent_email_keeps_the_original_conversation_record(context, mailoutbox):
+    """Fails if a resend rebuilds the record from a renamed author instead of the frozen preview."""
+    close_with_public_history(context)
+    prepared = prepare_email(context)
+    send_email(context, prepared)
+    context.client.first_name = 'NEW_AUTHOR_NAME'
+    context.client.save(update_fields=['first_name'])
+    resent = closure_email.prepare_stage_email_resend(context.project.pk, context.admin, prepared['id'], {
+        'expected_version': version(context), 'request_id': 'resend-public-record',
+    })
+
+    result = send_email(context, resent, 'send-frozen-resend')
+
+    assert result['status'] == 'sent'
+    assert len(mailoutbox) == 2
+    assert mailoutbox[1].body == mailoutbox[0].body == prepared['text_body']
+    assert mailoutbox[1].alternatives[0].content == mailoutbox[0].alternatives[0].content == prepared['html_body']
+    assert resent['closure_history'] == prepared['closure_history']
+    assert resent['manifest_sha256'] == prepared['manifest_sha256']
+    assert 'No puedo editar el registro.' in mailoutbox[1].body
+    assert 'Apruebo la etapa completa.' in mailoutbox[1].body
+    assert 'NEW_AUTHOR_NAME' not in mailoutbox[1].body
+
+
+def test_closure_record_shows_an_equivalent_decision_message_once(context):
+    """Fails if the same client's simultaneous review repeats its shared message."""
+    publish(context)
+    context.clock.move_to(RECORDED_AT + timedelta(minutes=1))
+    request = decisions(context, (context.first, 'approved'), (context.second, 'approved'))
+    request['decisions'][0]['message'] = 'Conforme con los dos casos.'
+    request['decisions'][1]['message'] = 'Conforme con los dos casos.'
+    request['message'] = 'Conforme con los dos casos.'
+    delivery.review_stage(context.project.pk, context.client, context.stage.pk, request)
+
+    prepared = prepare_email(context)
+
+    assert prepared['text_body'].count('Conforme con los dos casos.') == 1
+    assert prepared['html_body'].count('Conforme con los dos casos.') == 1
+    assert 'Guardar registro (v1, ronda 1)' in prepared['text_body']
+    assert 'Editar registro (v1, ronda 1)' in prepared['text_body']
+
+
 def test_closure_includes_the_final_review_message(context):
     """Fails if the closing operation loses its message or includes later discussion."""
     publish(context)
@@ -184,7 +315,8 @@ def test_historical_closure_preserves_the_original_reviewer(context):
         context.project.pk, context.admin, context.stage.pk, request, historical=True,
     )
 
-    history = prepare_email(context)['closure_history']
+    prepared = prepare_email(context)
+    history = prepared['closure_history']
 
     assert publication_ids(history) == [publication.pk]
     assert review_provenance(history) == [
@@ -198,6 +330,10 @@ def test_historical_closure_preserves_the_original_reviewer(context):
     assert 'source_message' not in serialized
     assert 'PRIVATE_ARCHIVE_TEXT' not in serialized
     assert 'PRIVATE_ARCHIVE_SUBJECT' not in serialized
+    assert 'Wilson Rojas' in prepared['text_body']
+    assert occurred_at.isoformat() in prepared['text_body']
+    assert 'PRIVATE_ARCHIVE_TEXT' not in prepared['text_body'] + prepared['html_body']
+    assert 'PRIVATE_ARCHIVE_SUBJECT' not in prepared['text_body'] + prepared['html_body']
 
 
 def test_preparation_cleans_files_after_the_second_storage_write_fails(context, approved_attachment):
@@ -260,8 +396,8 @@ def test_listing_preparations_has_constant_query_cost(context, approved_attachme
     assert len(ten_queries) == len(single_queries)
 
 
-def test_summary_pdf_preserves_the_complete_approval_trace(context):
-    """Fails if the optional PDF truncates the title or omits the approver and contractual trace."""
+def test_record_pdf_preserves_the_complete_public_closure_trace(context):
+    """Fails if the PDF omits a public objection, closing message or contractual trace."""
     context.stage.title = (
         'Validacion de registros para el cliente '
         + 'recorrido de acceso y revision ' * 5
@@ -271,7 +407,7 @@ def test_summary_pdf_preserves_the_complete_approval_trace(context):
     context.client.first_name = 'Wilson'
     context.client.last_name = 'Rojas'
     context.client.save(update_fields=['first_name', 'last_name'])
-    approve_stage(context)
+    close_with_public_history(context)
     prepared = prepare_email(context, include_record_pdf=True)
 
     content, filename, content_type = closure_email.download_attachment(
@@ -284,5 +420,10 @@ def test_summary_pdf_preserves_the_complete_approval_trace(context):
     assert 'Wilson Rojas' in text
     assert RECORDED_AT.isoformat() in text
     assert 'v1, ronda 1' in text
+    assert 'No puedo editar el registro.' in text
+    assert 'Apruebo la etapa completa.' in text
+    assert 'Editar registro corregido (v2, ronda 2)' in text
+    assert 'PRIVATE_TEAM_NOTE' not in text
+    assert 'POST_CLOSURE_MESSAGE' not in text
     assert filename == 'constancia-cierre-etapa.pdf'
     assert content_type == 'application/pdf'

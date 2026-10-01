@@ -171,14 +171,16 @@ asunto y cuerpo exactos; después se confirma expresamente su envío.
 
 El registro conserva rondas públicas, versiones de las guías, decisiones,
 autores y fechas, y conversaciones hasta la operación que cerró la revisión.
-Incluye el mensaje público de esa última revisión. Las conformidades externas
+El cuerpo del correo, en texto y HTML, incluye ese registro completo aunque no
+se seleccionen adjuntos, incluido el mensaje público de la última revisión.
+Las conformidades externas
 distinguen al cliente que aprobó y al administrador que registró la evidencia,
 con su canal y fecha original. La trazabilidad identifica contrato, otrosí
 aplicable, alcance, fase y etapa. Las notas internas, prompts y contextos
-administrativos, y fuentes privadas no se incorporan al correo ni al resumen.
+administrativos, y fuentes privadas no se incorporan al correo ni a la constancia.
 
 Los adjuntos son opcionales: se puede enviar únicamente el mensaje. El
-administrador puede agregar un resumen PDF de la conformidad o seleccionar
+administrador puede agregar una constancia PDF con el mismo registro público o seleccionar
 copias exactas de los documentos públicos disponibles en la etapa. El servidor
 conserva los archivos y sus huellas; no vuelve a generar un documento cambiado
 para enviar o reenviar una evidencia anterior. La vista previa y sus descargas

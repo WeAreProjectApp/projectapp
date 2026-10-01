@@ -1154,6 +1154,9 @@ Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
     completamente aprobada. Consultar destinatario, asunto, cuerpo y adjuntos
     mediante `get_delivery_stage_closure_email`, sin transporte. Una etapa
     parcial, un cliente ajeno o una credencial distinta deben fallar.
+    El cuerpo en texto y HTML debe incluir conversaciones y decisiones públicas,
+    autores, fechas, versiones y rondas, también sin adjuntos. Verificar la objeción
+    previa y el mensaje de cierre; las notas internas y fuentes privadas no salen.
 15. Enviar `send_delivery_stage_closure_email` con confirmación sensible,
     versión vigente, hash de la preparación y revisión humana. Comprobar que
     intento y snapshot persisten antes de SMTP y que repetir la confirmación o

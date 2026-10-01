@@ -266,6 +266,7 @@ def test_cited_import_preserves_an_approved_guide(context):
     payload = existing_tree_payload(context, prepared)
     new_requirement = copy.deepcopy(guide_leaf(payload))
     new_requirement.update(key='new-pending-guide', title='New pending validation')
+    new_requirement['guide'].pop('role')
     payload['scopes'][0]['phases'][0]['stages'][0]['requirements'].append(new_requirement)
 
     apply(context, payload)
