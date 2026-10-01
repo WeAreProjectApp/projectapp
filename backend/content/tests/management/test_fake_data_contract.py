@@ -557,7 +557,11 @@ def test_document_seed_honors_a_small_volume_target():
         '--seed', '19', '--anchor-date', '2026-08-26',
     )
 
-    assert Document.objects.count() == 2
+    # Required contractual sources are supporting documents, separate from
+    # the requested markdown/account fixture volume.
+    sources = Document.objects.filter(metadata__billing_fixture='source').values('pk')
+    assert Document.objects.exclude(pk__in=sources).count() == 2
+    assert Document.objects.get(document_type__code='collection_account').billing_context.contract_id
 
 
 def test_communication_seed_distributes_thread_lengths(seeded_communications):

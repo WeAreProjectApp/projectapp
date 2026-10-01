@@ -1530,3 +1530,16 @@ contra producción. La validación se realiza exclusivamente con settings_test.
 Migración aditiva `content.0258_communication_folders`: hilos existentes quedan con `folder=NULL`. REST expone `GET/POST communications/folders/`, `PATCH/DELETE communications/folders/:id/`; hilos aceptan `folder` y publican `folder_id/folder_name`. MCP incorpora list/create/update/delete_folder y `folder_id` en create/update_thread. Sólo cambiar carpeta está permitido en hilos cerrados. Contexto de carpeta inmutable; padre compatible, sin ciclos; no hay archivado de carpetas. Cambiar propietario de proyecto desasocia las carpetas históricas del proyecto y retira la ubicación de sus hilos sin cambiar el cliente original.
 
 `record_id_search` interpreta `#123` como PK exacto y `123` como unión PK/texto; respeta permisos y demás filtros. El modal usa su propio scroll y respeta reduced-motion. `BaseCollapse` conserva el estado del formulario mientras lo deja fuera del tab order al plegar. No cambia el contenido público ni los PDF.
+
+### Billing P2: lecturas y conciliación (2026-10-01)
+
+Las nuevas lecturas usan DTO públicos con relaciones precargadas y aislamiento
+servidor. Las mutaciones de contexto usan transacciones, lock del proyecto,
+versión esperada y razón; no escriben dinero ni regeneran documentos emitidos.
+La creación/emisión contable exige vínculos explícitos para cuentas de proyecto.
+`frontend/playwright.billing.config.js` limita la validación local a journeys y
+matriz responsive de billing, con API simulada y sin automatismos externos.
+P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
+P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
+sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
+`docs/PLATFORM_PROJECT_BILLING.md`.

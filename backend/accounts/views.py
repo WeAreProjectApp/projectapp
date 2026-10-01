@@ -2551,6 +2551,7 @@ def _extract_proposal_financial_data(proposal):
     return payment_milestones, hosting_tiers
 
 
+@transaction.atomic
 def _create_subscription_multi_phase(project, plan):
     """
     Create a HostingSubscription billing the sum of the project's started
@@ -2559,6 +2560,8 @@ def _create_subscription_multi_phase(project, plan):
     left for the billing cron to onboard (prorated) when their date arrives.
     Returns None when no phase has started yet.
     """
+    # Identity creation shares the same project-first boundary as accounts.
+    project = Project.objects.select_for_update().get(pk=project.pk)
     from datetime import date
     from decimal import Decimal
 
@@ -2604,6 +2607,8 @@ def _create_subscription_multi_phase(project, plan):
         next_billing_date=billing_end + relativedelta(days=1),
     )
     sub.save()
+    from accounts.services.hosting_context import register_new_hosting_origin
+    register_new_hosting_origin(sub, None, subscription=True)
 
     Payment.objects.create(
         subscription=sub,

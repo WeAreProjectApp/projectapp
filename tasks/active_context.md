@@ -2395,3 +2395,26 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 `secure_links_unavailable`; la revisión de la clave efectiva de producción
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
+
+
+### P2 — cuentas y hosting por proyecto (2026-10-01)
+
+En implementación en rama propia `feat/01102026-platform-client-billing`, desde
+`origin/main=cce8e694`, con dependencia P3 inicial `abcffaf9` y actualización
+publicada `dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbidas mediante merge.
+Se absorbieron también P3 `4c6e132281554de14a2b303fe7a3b05f012910bf` y P1
+`b25ad2e080597b7708126b5d865d7ba805253478`; Admin compone sus guardas después
+de finanzas usando proyecto original/actual y actor del request, con error visible
+y rollback. Los escritores reservados de cobros y las dos entradas de liquidación
+toman Project antes de origen/documento y revalidan dueño/relaciones vigentes.
+P0 fijó migración P2 `0069_p2_project_billing_context`, padre P3 `0067`; las
+hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por proyecto, cuentas excluyentes
+contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
+No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
+contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.
+La no-op autorizada `0072` reúne las hojas `0068`/`0069`; `0074` reúne `0072`/`0073`
+tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
+`ebbf331d76fedb5f89f3b440f2fdeb50c148e977`. P4 conserva su reserva de revocación
+después de guardas. Un origen financiero eliminado antes del descubrimiento
+rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
+SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.

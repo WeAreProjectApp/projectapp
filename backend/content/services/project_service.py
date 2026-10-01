@@ -293,12 +293,14 @@ def change_client_apply(project, new_profile, mode, user):
     email — the bulk convention.
     """
     from accounts.models import Project
+    from accounts.services.billing_reassignment import validate_project_billing_reassignment
     from accounts.services.delivery_client_transfer import assert_delivery_client_transfer_safe
     from accounts.services.issue_client_transfer import assert_issue_client_transfer_safe
-
+    original_project = project
     project = Project.objects.select_for_update().get(pk=project.pk)
     # P0 integrates finance -> delivery -> issues -> access revoke -> save.
-    project = assert_delivery_client_transfer_safe(project, new_profile.user, actor=user)
+    validate_project_billing_reassignment(project, new_profile.user)
+    project = assert_delivery_client_transfer_safe(original_project, new_profile.user, actor=user)
     assert_issue_client_transfer_safe(project, new_profile.user)
     sets = linked_sets(project)
     blocked = sets['blocked_income_pks']

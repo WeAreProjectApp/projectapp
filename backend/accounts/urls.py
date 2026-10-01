@@ -114,6 +114,7 @@ from accounts.views import (
 )
 
 urlpatterns = [
+    path('', include('accounts.billing_urls')),
     path('', include('accounts.issue_report_urls')),
     path('projects/<int:project_id>/delivery/', include('accounts.delivery_urls')),
     # Auth

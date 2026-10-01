@@ -196,7 +196,10 @@ def _validate_relations(project, kind, values, node):
         _document_source(project, values, node)
     if kind in ('amendments', 'scopes'):
         contract_id = values.get('contract_id', getattr(node, 'contract_id', None))
-        _node(project, 'contracts', contract_id)
+        contract = _node(project, 'contracts', contract_id)
+        if kind == 'amendments' and node is not None:
+            from accounts.services.billing_reassignment import validate_amendment_billing_reassignment
+            validate_amendment_billing_reassignment(node, contract)
         if kind == 'scopes':
             amendment_id = values.get('amendment_id', getattr(node, 'amendment_id', None))
             if amendment_id:

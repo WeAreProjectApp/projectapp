@@ -5925,8 +5925,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-ads` | admin | P3 | display,success,error | 4 |
 | `admin-accounting-card-catalog` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-cards` | admin | P2 | display,success,error | 10 |
-| `admin-accounting-collection-create` | admin | P1 | display,failure,error,success | 11 |
-| `admin-accounting-collection-detail` | admin | P1 | display,success | — |
+| `admin-accounting-collection-context` | admin | P1 | display,success,error,failure | — |
+| `admin-accounting-collection-create` | admin | P1 | display,success,error,failure | 11 |
+| `admin-accounting-collection-detail` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-collection-grouping` | admin | P2 | display,success,failure | 4 |
 | `admin-accounting-collections` | admin | P2 | display,success,failure | 9 |
 | `admin-accounting-dashboard` | admin | P1 | display,success | 8 |
@@ -5937,7 +5938,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-history` | admin | P2 | display,success | 6 |
 | `admin-accounting-history-diagnosis` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-history-filters` | admin | P2 | display,success | 7 |
-| `admin-accounting-hosting-billing` | admin | P1 | display,success,failure | 3 |
+| `admin-accounting-hosting-billing` | admin | P1 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
@@ -5950,6 +5951,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-pocket` | admin | P2 | display,success,error | 7 |
 | `admin-accounting-project-bulk-assign` | admin | P1 | success,failure | 3 |
 | `admin-accounting-project-coherence` | admin | P1 | success | 1 |
+| `admin-accounting-project-hosting-reconciliation` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-receivables` | admin | P1 | display,success,failure | 11 |
 | `admin-accounting-record-history` | admin | P1 | display,success,failure | — |
 | `admin-accounting-recurring` | admin | P2 | display,success,error,failure | 27 |
@@ -6229,8 +6231,8 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-client-document-portal` | platform | P1 | success,display | 1 |
 | `platform-client-document-sign` | platform | P1 | success,error | 1 |
 | `platform-client-email-validation` | platform | P1 | success,error | 1 |
-| `platform-collection-account-detail` | platform | P2 | — | 0 |
-| `platform-collection-accounts-list` | platform | P2 | — | 0 |
+| `platform-collection-account-detail` | platform | P1 | display,success,error | 0 |
+| `platform-collection-accounts-list` | platform | P1 | display,success,error | 0 |
 | `platform-complete-profile` | platform | P1 | success,error | 1 |
 | `platform-dashboard` | platform | P2 | — | 0 |
 | `platform-deliverable-detail` | platform | P2 | success | 1 |
@@ -6244,6 +6246,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-delivery-review` | platform | P1 | display,success,error | 1 |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
+| `platform-hosting-project-list` | platform | P2 | display,success,error | — |
 | `platform-hosting-subscription` | platform | P1 | success,error,display | 1 |
 | `platform-layout-title-mapping` | platform | P3 | display | 1 |
 | `platform-legacy-route-redirects` | platform | P2 | success | 1 |
@@ -6253,9 +6256,10 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-profile-avatar-picker` | platform | P2 | success | 1 |
 | `platform-profile-edit` | platform | P2 | success,error,display | 1 |
 | `platform-project-access-detail` | platform | P1 | display,success,error,failure | — |
-| `platform-project-collection-accounts` | platform | P2 | display | 1 |
+| `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
 | `platform-project-detail` | platform | P2 | success,display | 1 |
+| `platform-project-hosting-context` | platform | P1 | display,success,error | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
@@ -6672,13 +6676,16 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Role:** superuser admin
 - **Priority:** P1
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Send a client the cuenta de cobro from a hosting row. The row menu's "Enviar cuenta de cobro" entry (disabled without client email, its reason shown under the label) opens a ConfirmModal previewing amount and recipient; confirm POSTs `/api/accounting/hostings/:id/send-collection-account/`, which issues the Document (public number PA-YYYY-NNNN, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the Spanish PDF attached and stamps `billing_requested_at` (pauses the expiry notices; a "Cobro enviado" badge appears on the row). If the email fails the document stays issued and a warning toast points to Cuentas de cobro for re-send. Since PA-25 the recipient and the numbering come from the linked client (see `admin-accounting-hosting-client`): the action gates on `billing_email` (hosting override, else the client's address), and a linked hosting issues on that client's series.
+- **Description:** Send a client the cuenta de cobro from a hosting row. The row menu's "Enviar cuenta de cobro" entry (disabled without client email, its reason shown under the label) opens the hosting emission modal previewing amount and recipient with explicit project context; confirm POSTs `/api/accounting/hostings/:id/send-collection-account/`, which issues the Document (public number PA-YYYY-NNNN, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the Spanish PDF attached and stamps `billing_requested_at` (pauses the expiry notices; a "Cobro enviado" badge appears on the row). If the email fails the document stays issued and a warning toast points to Cuentas de cobro for re-send. Since PA-25 the recipient and the numbering come from the linked client (see `admin-accounting-hosting-client`): the action gates on `billing_email` (hosting override, else the client's address), and a linked hosting issues on that client's series.
 - **Steps:**
   1. Superuser opens `/panel/accounting/hostings` and opens the row's three-dots menu and chooses "Enviar cuenta de cobro" on a hosting with client email.
-  2. ConfirmModal previews `payment_per_cycle` and the recipient; confirm fires the POST.
+  2. The emission modal previews `payment_per_cycle` and the recipient. For a project hosting it requires the mapped operational accounting source and an existing subscription obligation when applicable; confirm fires the POST with its explicit payment reference.
   3. Success toast (with "Ver en Cuentas de cobro" action) and the row shows the "Cobro enviado" badge.
 - **Coverage:** ✅ Covered (email gate, confirm + POST + badge, email-failure warning)
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
+
+
+**Contexto de cobros de proyecto (P2):** La modal requiere origen operativo asociado al hosting único y obligación existente de suscripción cuando corresponda. Los orígenes pendientes permiten abrir la conciliación del proyecto; la asociación no registra pagos ni cambia automatismos.
 
 ### FLOW: `admin-accounting-collections`
 
@@ -6713,6 +6720,9 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered (columns separated, detail + settlement history, inline document embed, the exit landing on a non-filtering tab)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`
 
+
+**Contexto de cobros de proyecto (P2):** El detalle permite asociar o corregir contrato/otrosí o hosting mediante motivo y versión; los históricos se muestran pendientes hasta decisión. El PDF, snapshot e importes se conservan.
+
 ### FLOW: `admin-accounting-collection-create`
 
 - **Module:** admin
@@ -6727,6 +6737,9 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
   4. "Confirmar y enviar" creates+issues+emails; the row appears and the income flags as linked.
 - **Coverage:** ✅ Covered (create-through-preview with payload assertions; selector warning for a client without email; complete visible blocker list; invalid inline email; explicit canonical email save preserving the draft; floating income list outside the clipping panel; alcance/estado chips with their counts + focus retention + explicit empty state + "Ver todos" widening + click-outside close; Liquidar routing on mark-paid; generate icon opens locked modal; linked row navigates focused)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
+
+
+**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 
@@ -7425,6 +7438,16 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 
 ## Unsectioned flows
 
+### FLOW: `admin-accounting-collection-context`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Asocia una cuenta de proyecto a contrato y otrosí opcional del mismo contrato, o al único hosting, con razón, control de versión y validación de coherencia; conserva snapshot, PDF, importes y pagos.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
 ### FLOW: `admin-accounting-income-reminder-mute`
 
 - **Module:** admin
@@ -7437,6 +7460,16 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Branches:** a date that is empty, today or earlier is blocked inline; a failed request preserves the prior state; paid, liquid and lost rows do not expose the action.
 - **Coverage:** ✅ Covered — display, dated and indefinite success, manual reactivation, validation error and server failure.
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
+
+### FLOW: `admin-accounting-project-hosting-reconciliation`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
 ### FLOW: `admin-accounting-record-history`
 
@@ -8145,6 +8178,26 @@ alcance; los demás casos permanecen indeterminados. `/platform/changes` redirig
 Código: `frontend/pages/platform/projects/[id]/changes.vue`, componentes
 `frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
 
+### FLOW: `platform-collection-account-detail`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta snapshot, importes, líneas, instrucciones de pago y contexto explícito de una cuenta permitida; descarga el PDF emitido y recupera errores del documento o archivo sin modificarlo.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-collection-accounts-list`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta cuentas emitidas del cliente con agrupación y filtros explícitos por proyecto, naturaleza, contrato, otrosí y estado; navega al detalle y ofrece vacío y reintento de lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
 ### Platform: enviar una constancia de etapa aprobada
 
 Fuente: `DeliveryStage.vue`, `DeliveryClosureEmail.vue` y las acciones del store `platform-delivery.js`.
@@ -8216,6 +8269,36 @@ del cliente permanecen intactas.
 `delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
 editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
 consulta de la conversación pública que originó el prompt.
+
+### FLOW: `platform-hosting-project-list`
+
+- **Módulo:** platform
+- **Prioridad:** P2
+- **Descripción:** Lista los proyectos con hosting en /platform/payments y abre cada proyecto mediante una fila real; ofrece vacío y reintento de lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-collection-accounts`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta las cuentas del proyecto con agrupación y filtros de contrato, otrosí, hosting y estado, sin incorporar cuentas de otro proyecto; abre el detalle y permite reintentar la lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-hosting-context`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta el único contexto de hosting del proyecto, fuentes contables, suscripción, pagos, ciclos y grupos de evidencia. Identifica fuentes pendientes sin sumarlas ni crear cobros; navega a cuentas de hosting y permite reintentar la lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
 ### FLOW: `proposal-closing-contact`
 

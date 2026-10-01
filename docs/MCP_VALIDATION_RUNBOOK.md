@@ -1237,3 +1237,35 @@ el catálogo Markdown que consumen los fixtures existentes. No se modificaron
 esos fixtures. La clasificación registra `DeliveryPromptContext` y
 `DeliveryPromptSource` como exentos de generación automática: las capturas solo
 nacen de una selección administrativa explícita.
+
+## Cuentas y hosting por proyecto — P2
+
+Las operaciones nuevas de `projects` son `get_project_billing_options`,
+`get_project_hosting`, `get_project_hosting_inventory`,
+`get_collection_account_context`, `associate_collection_account_context`,
+`preview_project_hosting_reconciliation`, `reconcile_project_hosting`,
+`preview_hosting_evidence` y `reconcile_hosting_evidence`.
+
+Validar en settings_test, por lotes de hasta 20 casos:
+
+1. Leer una cuenta pendiente y sus opciones sin exponer notas, metadata, secretos
+   o documentos contractuales. Un proyecto ajeno falla sin escritura.
+2. Asociar exclusivamente contrato/otrosí del proyecto o su hosting con razón y
+   versión; rechazar otrosí de otro contrato, doble naturaleza y cliente ajeno.
+3. Previsualizar identidad/evidencias sin persistir. Confirmar con el principal
+   real, y rechazar una versión que cambió después de la vista previa.
+4. Consultar varios orígenes históricos sin sumarlos ni seleccionar uno por
+   texto/importe. Elegir origen operativo y equivalencias expresamente; verificar
+   que no se crearon `Payment`, `HostingCycle` ni movimientos contables.
+5. Emitir desde ingreso con contexto, o desde hosting con pago existente cuando
+   hay suscripción. La obligación ya emitida rechaza duplicación; dos obligaciones
+   diferentes admiten dos cuentas. Conservar numeración, snapshot y bytes PDF al
+   reclasificar una cuenta histórica.
+6. Rechazar mover un otrosí con cuentas; permitir el cambio sin cuentas si lo
+   permiten las guardas de delivery. `ProjectContract.project` sigue inmutable.
+
+Pruebas dedicadas: `accounts/tests/billing/`, más las clasificaciones, metadata,
+confirmaciones y adaptadores de `projects` y `accounting-billing` en
+`content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
+`financial_effect: none`; la emisión conserva el adaptador contable existente.
+No ejecutar validaciones mutantes contra conectores activos de producción.

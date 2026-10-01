@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils';
 
 global.useLocalePath = jest.fn(() => (path) => path);
+global.useI18n = jest.fn(() => ({ t: (key) => key }));
 global.useRoute = jest.fn(() => ({ fullPath: '/', name: 'index', path: '/' }));
 
 jest.mock('../../stores/platform-auth', () => ({
@@ -28,6 +29,7 @@ function mountPlatformSidebar(props = {}) {
     global: {
       stubs: {
         SidebarItem: { template: '<div class="sidebar-item-stub" />' },
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
       },
       provide: {
         toggleSidebar: jest.fn(),

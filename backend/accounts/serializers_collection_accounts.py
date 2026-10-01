@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from accounts.services.billing_context import context_data
+from accounts.serializers_billing_context import BillingContextFields
 
 from content.models import (
     Document,
@@ -126,6 +128,12 @@ class DocumentPaymentMethodWriteSerializer(serializers.ModelSerializer):
 
 
 class CollectionAccountListSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source='project.name', default='')
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     document_type = DocumentTypeBriefSerializer(read_only=True)
     is_overdue = serializers.SerializerMethodField()
     project_id = serializers.IntegerField(read_only=True)
@@ -134,6 +142,7 @@ class CollectionAccountListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context', 'project_name',
             'id',
             'uuid',
             'document_type',
@@ -156,6 +165,12 @@ class CollectionAccountListSerializer(serializers.ModelSerializer):
 
 
 class CollectionAccountDetailSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source='project.name', default='')
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     document_type = DocumentTypeBriefSerializer(read_only=True)
     collection_account = serializers.SerializerMethodField()
     items = DocumentItemSerializer(many=True, read_only=True)
@@ -168,6 +183,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context', 'project_name',
             'id',
             'uuid',
             'document_type',
@@ -217,7 +233,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
         return commercial_is_overdue(obj)
 
 
-class CollectionAccountCreateSerializer(serializers.Serializer):
+class CollectionAccountCreateSerializer(BillingContextFields):
     title = serializers.CharField(max_length=255)
     project_id = serializers.IntegerField(required=False, allow_null=True)
     deliverable_id = serializers.IntegerField(required=False, allow_null=True)

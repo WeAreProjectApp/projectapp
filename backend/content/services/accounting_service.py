@@ -523,6 +523,22 @@ def create_record(entity_type, serializer, user, notify=True, *,
     mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
     register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
     with transaction.atomic():
+        if entity_type in (EntityType.HOSTING, EntityType.INCOME):
+            from accounts.services.billing_locks import lock_billing_rows
+            from content.serializers.accounting import validate_project_client_match
+            proposed_project = serializer.validated_data.get('project')
+            expected = serializer.validated_data.get('expected_income') if entity_type == EntityType.INCOME else None
+            locked = lock_billing_rows(project_ids=[proposed_project.pk if proposed_project else None],
+                                       income_ids=[expected.pk] if expected else [])
+            if proposed_project:
+                serializer.validated_data['project'] = locked.projects[proposed_project.pk]
+                validate_project_client_match(locked.projects[proposed_project.pk], serializer.validated_data.get('client'))
+            if expected:
+                if expected.pk not in locked.incomes:
+                    from accounts.services.billing_access import BillingConflict
+                    raise BillingConflict()
+                serializer.validated_data['expected_income'] = locked.incomes[expected.pk]
+            serializer._validated_data = serializer.validate(dict(serializer.validated_data))
         if shared_pocket_movement is not None:
             instance = serializer.save(
                 created_by=user, pocket_movement=shared_pocket_movement,
@@ -535,6 +551,9 @@ def create_record(entity_type, serializer, user, notify=True, *,
             )
             if entity_type == EntityType.POCKET:
                 _sync_from_pocket(instance, mirror_ledger, user, is_create=True)
+        if entity_type == EntityType.HOSTING:
+            from accounts.services.hosting_context import register_new_hosting_origin
+            register_new_hosting_origin(instance, user)
     new_values = snapshot_values(instance, entity_type)
     changes = compute_changes(entity_type, {}, new_values)
     change_log = log_accounting_change(
@@ -563,10 +582,26 @@ def update_record(entity_type, instance, serializer, user, notify=True):
     _ensure_shared_child_update_allowed(entity_type, instance, serializer)
     mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
     register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
-    old_values = snapshot_values(instance, entity_type)
-    old_client_id = getattr(instance, 'client_id', None)
-    old_project_id = getattr(instance, 'project_id', None)
     with transaction.atomic():
+        if entity_type in (EntityType.HOSTING, EntityType.INCOME):
+            from accounts.services.billing_locks import lock_billing_rows
+            from accounts.services.billing_reassignment import validate_financial_reassignment
+            target = serializer.validated_data.get('project')
+            locked = lock_billing_rows(
+                income_ids=[instance.pk] if entity_type == EntityType.INCOME else [],
+                hosting_ids=[instance.pk] if entity_type == EntityType.HOSTING else [],
+                project_ids=[target.pk if target else None],
+                include_income_children=True, include_origin_documents=True,
+            )
+            instance = (locked.incomes if entity_type == EntityType.INCOME else locked.hostings)[instance.pk]
+            serializer.instance = instance
+            if target:
+                serializer.validated_data['project'] = locked.projects[target.pk]
+            serializer._validated_data = serializer.validate(dict(serializer.validated_data))
+            validate_financial_reassignment(instance, serializer.validated_data)
+        old_values = snapshot_values(instance, entity_type)
+        old_client_id = getattr(instance, 'client_id', None)
+        old_project_id = getattr(instance, 'project_id', None)
         instance = serializer.save()
         _sync_pocket(
             entity_type, instance, user,
@@ -712,16 +747,24 @@ def bulk_assign_client(entity_type, record_ids, client, user):
     re-picks explicitly if the move was intentional.
     """
     model = ENTITY_MODELS[entity_type]
-    records = list(
-        model.objects
-        .select_related('client__user', 'project')
-        .filter(pk__in=record_ids),
-    )
+    if entity_type in (EntityType.INCOME, EntityType.HOSTING):
+        from accounts.services.billing_locks import lock_billing_rows
+        locked = lock_billing_rows(
+            income_ids=record_ids if entity_type == EntityType.INCOME else [],
+            hosting_ids=record_ids if entity_type == EntityType.HOSTING else [],
+            include_income_children=True, include_origin_documents=True,
+        )
+        selected = locked.incomes if entity_type == EntityType.INCOME else locked.hostings
+        records = [row for pk, row in selected.items() if pk in record_ids]
+    else:
+        records = list(model.objects.select_related('client__user', 'project').filter(pk__in=record_ids))
     updated = []
     for record in records:
         if record.client_id == (client.pk if client else None):
             continue
         old_values = snapshot_values(record, entity_type)
+        from accounts.services.billing_reassignment import validate_financial_reassignment
+        validate_financial_reassignment(record, {'client': client})
         record.client = client
         update_fields = ['client', 'updated_at']
         project_cleared = False
@@ -815,8 +858,10 @@ def _sync_project_to_draft_cuentas(record, user):
     drafts = record.collection_documents.filter(
         commercial_status=Document.CommercialStatus.DRAFT,
     ).exclude(project_id=record.project_id)
-    for document in drafts.select_related('project', 'client_user__profile'):
+    for document in drafts.select_for_update().order_by('pk'):
         old_values = snapshot_values(document, EntityType.COLLECTION_ACCOUNT)
+        from accounts.services.billing_reassignment import validate_document_reassignment
+        validate_document_reassignment(document, changes={'project': record.project}, lock=True)
         document.project = record.project
         document.save(update_fields=['project', 'updated_at'])
         log_entity_diff(
@@ -838,15 +883,30 @@ def bulk_assign_project(entity_type, record_ids, project, user):
     validated and the service stays mechanical.
     """
     model = ENTITY_MODELS[entity_type]
-    records = list(
-        model.objects.select_related('project').filter(pk__in=record_ids),
-    )
+    if entity_type in (EntityType.INCOME, EntityType.HOSTING):
+        from accounts.services.billing_locks import lock_billing_rows
+        from content.serializers.accounting import validate_project_client_match
+        locked = lock_billing_rows(
+            income_ids=record_ids if entity_type == EntityType.INCOME else [],
+            hosting_ids=record_ids if entity_type == EntityType.HOSTING else [],
+            project_ids=[project.pk if project else None],
+            include_income_children=True, include_origin_documents=True,
+        )
+        project = locked.projects.get(project.pk) if project else None
+        selected = locked.incomes if entity_type == EntityType.INCOME else locked.hostings
+        records = [row for pk, row in selected.items() if pk in record_ids]
+        for record in records:
+            validate_project_client_match(project, record.client)
+    else:
+        records = list(model.objects.select_related('project').filter(pk__in=record_ids))
     target_id = project.pk if project else None
     updated = []
     for record in records:
         if record.project_id == target_id:
             continue
         old_values = snapshot_values(record, entity_type)
+        from accounts.services.billing_reassignment import validate_financial_reassignment
+        validate_financial_reassignment(record, {'project': project})
         record.project = project
         record.save(update_fields=['project', 'updated_at'])
         changes = compute_changes(
@@ -871,6 +931,7 @@ def bulk_assign_project(entity_type, record_ids, project, user):
     return updated
 
 
+@transaction.atomic
 def assign_project_to_documents(document_ids, project, user):
     """Documents flavour of :func:`bulk_assign_project` — cuentas included.
 
@@ -883,6 +944,9 @@ def assign_project_to_documents(document_ids, project, user):
     document stays the fact it is). One audit row per document, entity-typed
     cuenta-vs-document the same way the folder cascade does.
     """
+    from accounts.services.billing_locks import lock_billing_rows
+    locked = lock_billing_rows(document_ids=document_ids, project_ids=[project.pk if project else None])
+    project = locked.projects.get(project.pk) if project else None
     documents = list(
         Document.objects
         .annotate(
@@ -899,6 +963,9 @@ def assign_project_to_documents(document_ids, project, user):
     target_id = project.pk if project else None
     updated = []
     for document in documents:
+        current = locked.documents[document.pk]
+        current.thread_document_count = document.thread_document_count
+        document = current
         if document.project_id == target_id:
             continue
         entity_type = (
@@ -907,6 +974,8 @@ def assign_project_to_documents(document_ids, project, user):
             else EntityType.DOCUMENT
         )
         old_values = snapshot_values(document, entity_type)
+        from accounts.services.billing_reassignment import validate_document_reassignment
+        validate_document_reassignment(document, changes={'project': project}, lock=True)
         document.project = project
         document.save(update_fields=['project', 'updated_at'])
         if (

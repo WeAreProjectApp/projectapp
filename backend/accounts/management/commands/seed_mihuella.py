@@ -178,6 +178,8 @@ class Command(BaseCommand):
         user = User.objects.filter(email=CLIENT_EMAIL).first()
         if user:
             projects = Project.objects.filter(client=user, name=PROJECT_NAME)
+            from accounts.management.commands._billing_seed_helpers import clear_fake_billing
+            clear_fake_billing(projects)
             clear_fake_delivery(projects)
             Document.objects.filter(
                 client_user=user, project__in=projects, title__startswith='[Seed]',

@@ -7,6 +7,7 @@ business logic.
 """
 from content.mcp.document_tools import _FOLDER_FIELDS
 from content.mcp.delivery_tools import DELIVERY_TOOLS
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
@@ -40,7 +41,7 @@ PROJECT_TOOLS = [
     _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',)),
     _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True),
     _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',)),
-] + DELIVERY_TOOLS + ISSUE_TOOLS
+] + DELIVERY_TOOLS + ISSUE_TOOLS + PLATFORM_BILLING_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
@@ -228,6 +229,7 @@ LEDGER_PARITY_TOOLS = [
 
 
 BILLING_PARITY_TOOLS = [
+    _op('send_hosting_collection_account', 'Emite el cobro del hosting con su contexto explícito y conserva el PDF.', 'send-hosting-collection-account', 'POST', ('record_id',), 'sensitive', True, payload_schema={'type': 'object', 'additionalProperties': False, 'properties': {'hosting_payment_id': {'type': ['integer', 'null'], 'minimum': 1}}}),
     _op('bulk_assign_hosting_client', 'Asigna cliente a una selección de hostings.', 'bulk-assign-hosting-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_hosting_project', 'Asigna proyecto a una selección de hostings.', 'bulk-assign-hosting-project', 'POST', risk='sensitive', confirm=True),
     _op('list_hosting_cycles', 'Lista ciclos facturados de un hosting.', 'list-hosting-cycles', path=('record_id',)),

@@ -62,7 +62,7 @@ const items = computed(() => {
     { label: 'Bugs',              href: localePath(`${base}/bugs`) },
     { label: 'Recursos',          href: localePath(`${base}/deliverables`) },
     { label: 'Hosting',           href: localePath(`${base}/payments`) },
-    { label: 'Cuentas de cobro',  href: localePath(`${base}/collection-accounts`), disabled: true },
+    { label: t('platformBilling.accounts'), href: localePath(`${base}/collection-accounts`) },
     { label: 'Modelo de datos',   href: localePath(`${base}/data-model`), disabled: true },
   ]
   if (authStore.isAdmin) {

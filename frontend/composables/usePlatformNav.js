@@ -13,6 +13,7 @@ import { usePlatformNotificationsStore } from '~/stores/platform-notifications'
  */
 export function usePlatformNav() {
   const localePath = useLocalePath()
+  const { t } = useI18n()
   const route = useRoute()
   const authStore = usePlatformAuthStore()
   const notifStore = usePlatformNotificationsStore()
@@ -22,6 +23,8 @@ export function usePlatformNav() {
     const items = [
       { label: 'Notificaciones', href: lp('/platform/notifications'), icon: 'bell', badge: notifStore.unreadCount },
       { label: 'Proyectos',      href: lp('/platform/projects'),      icon: 'folder' },
+      { label: t('platformBilling.accounts'), href: lp('/platform/collection-accounts'), icon: 'file' },
+      { label: t('platformBilling.hosting'), href: lp('/platform/payments'), icon: 'credit-card' },
     ]
     if (authStore.isClient) {
       // Client-facing document portal (view/download/sign). Admins use /panel/documents.
