@@ -156,6 +156,20 @@ la instancia antigua devuelve conflicto 409, sin recrear la fila ni añadir
 auditoría parcial. Las dos pruebas realizan primero un DELETE permitido real,
 y después ejercitan el escritor con la instancia/serializer ya obsoletos; no
 simulan ni certifican una carrera de bloqueo entre conexiones MySQL.
+
+`bulk_assign_client` conserva el contrato interno de ignorar IDs que ya no
+existían al descubrir el alcance. Las vistas de asignación de ingreso/hosting
+usan `strict_ids=True`: mantienen el 409 con los IDs ausentes del precheck y
+rechazan también una desaparición posterior antes de escribir. El helper de
+locks continúa estricto sobre las filas descubiertas, con Project antes del
+origen, y conserva las guardas de contexto y el rollback del lote. Las pruebas
+del intervalo insertan un borrado real después del precheck real; verifican
+respuesta HTTP y estado/historia, sin certificar concurrencia MySQL.
+El fix tiene 36 casos focales aprobados en lotes de 20 y 16: CRUD contable,
+compatibilidad interna y borrado tras precheck en ambos modelos, vistas de
+asignación y rechazo de PATCH obsoleto. El gate del archivo nuevo pasó 100/100,
+sin errores ni advertencias, con todos los MAILERS aislados en locmem.
+
 El servidor local de navegador usa APIs simuladas contra un backend inexistente.
 La fixture pytest dedicada configura `MAILERS.default` y todos los aliases con
 locmem, comprueba el backend efectivo y exige ese guard antes de preparar su DB.
