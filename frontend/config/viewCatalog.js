@@ -765,7 +765,7 @@ export const viewCatalogSections = [
         reference: 'vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones. Al emitir cuentas de ingresos con proyecto exige contrato con otrosí opcional o hosting explícito; el flujo contable de ingresos sin proyecto se conserva.',
+        notes: 'Captura base o total incluido y muestra IVA por ingreso; conserva el cálculo actual de utilidad y reparto. Historial por registro con fecha, autor, valores anteriores y consulta de versiones. Al emitir cuentas de ingresos con proyecto exige contrato con otrosí opcional o hosting explícito; el flujo contable de ingresos sin proyecto se conserva.',
       },
       {
         label: 'Contabilidad — Gastos',
@@ -775,7 +775,7 @@ export const viewCatalogSections = [
         reference: 'vista de gastos del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Desglose opcional de IVA sin clasificación automática de IVA descontable. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Hostings',
@@ -785,7 +785,7 @@ export const viewCatalogSections = [
         reference: 'vista de hostings activos por cliente del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.',
+        notes: 'IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial y ciclos conservados. Antes de emitir una cuenta del proyecto exige origen operativo asociado al único hosting y, cuando existe suscripción, selección explícita de la obligación. Acceso a conciliación administrativa.',
       },
       {
         label: 'Contabilidad — Bolsillo',
@@ -845,7 +845,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Detalle, emisión, PDF y contabilidad actuales conservados. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa.',
+        notes: 'Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',

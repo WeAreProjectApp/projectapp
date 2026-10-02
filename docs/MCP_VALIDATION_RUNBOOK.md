@@ -1276,3 +1276,14 @@ No ejecutar validaciones mutantes contra conectores activos de producción.
 - Confirmar un proyecto vacío devuelve `deleted: true` y `project_id`; elimina la estructura automática vacía y conserva auditoría.
 - Si se agrega información entre preview y confirmación, devuelve `PROJECT_DELETE_BLOCKED` con `details.blockers`, conservando proyecto y referencias.
 - Casos focales: `content/tests/views/test_mcp_project_deletion.py`; el contrato de campos del conector `projects` no cambia.
+
+### IVA contable (2026-10-01)
+
+`create/update_income`, `create/update_expense` y `create/update_hosting`
+aceptan `vat_rate` y captura `amount` + `amount_mode` (`before_vat` o
+`vat_included`). No combinar captura con el importe financiero anterior
+(`total_amount`, o `payment_per_cycle` en hosting). Los reads devuelven
+`base_amount`, `vat_amount` y tasa junto al total incluido. Tasa nula indica
+histórico sin registrar y cero indica Sin IVA. Panel y MCP comparten
+serializers, restricciones de documentos emitidos y auditoría. Liquidaciones
+heredan tasa; las retenciones mantienen el flujo de deducciones actual.

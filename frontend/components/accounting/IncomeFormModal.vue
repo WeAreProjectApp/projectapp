@@ -1,6 +1,7 @@
 <script setup>
 import { useId, computed, ref, watch } from 'vue'
 import PartnerSplitInput from './PartnerSplitInput.vue'
+import VatAmountInput from './VatAmountInput.vue'
 import PeriodDateField from './PeriodDateField.vue'
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue'
 import ProjectSelect from '~/components/accounting/ProjectSelect.vue'
@@ -89,6 +90,8 @@ function defaultForm() {
     period_end: '',
     period_cadence: '',
     total_amount: '',
+    vat_rate: 19,
+    vat_capture: null,
     gustavo_amount: '',
     carlos_amount: '',
     notes: '',
@@ -100,6 +103,9 @@ const form = ref(defaultForm())
 const exactDate = ref(true)
 
 const isPersonal = computed(() => form.value.ledger !== 'company')
+watch(() => form.value.ledger, (ledger) => {
+  if (!props.record && !form.value.vat_capture) form.value.vat_rate = ledger === 'company' ? 19 : 0
+})
 // Hosting is a service window, not a point payment: the date block swaps to
 // start + end + cadence, and the backend derives period_date from the start.
 const isHosting = computed(() => form.value.origin === 'hosting')
@@ -328,6 +334,8 @@ function applyRecord(source) {
     period_end: source.period_end ?? '',
     period_cadence: source.period_cadence ?? '',
     total_amount: source.total_amount ?? '',
+        vat_rate: source.vat_rate ?? null,
+        vat_capture: null,
     gustavo_amount: source.gustavo_amount ?? '',
     carlos_amount: source.carlos_amount ?? '',
     notes: source.notes ?? '',
@@ -444,6 +452,7 @@ function onSubmit() {
         : 'partners',
     ledger: form.value.ledger,
     total_amount: form.value.total_amount,
+    vat_rate: form.value.vat_rate,
     // Always sent, null included: that is what lets an edit UNLINK a client
     // (same reason `notes` is always sent).
     client: form.value.client,
@@ -464,6 +473,10 @@ function onSubmit() {
     payload.period_start = null
     payload.period_end = null
     payload.period_cadence = ''
+  }
+  if (form.value.vat_capture) {
+    delete payload.total_amount
+    Object.assign(payload, form.value.vat_capture)
   }
   if (!isPersonal.value) {
     payload.gustavo_amount = form.value.gustavo_amount
@@ -725,13 +738,17 @@ const modalFormId = useId();
 
       <PartnerSplitInput
         v-if="!isPersonal"
+        show-vat
+        v-model:vat-rate="form.vat_rate"
+        :vat-reset-key="open"
+        @vat-capture="form.vat_capture = $event"
         v-model:total="form.total_amount"
         v-model:gustavoAmount="form.gustavo_amount"
         v-model:carlosAmount="form.carlos_amount"
       />
 
       <BaseFormField v-else label="Valor" required>
-        <BaseCurrencyInput v-model="form.total_amount" required />
+        <VatAmountInput v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
       </BaseFormField>
 
       <BaseFormField label="Notas">

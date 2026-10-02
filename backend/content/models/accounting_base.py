@@ -3,6 +3,7 @@ from decimal import Decimal
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.core.validators import MinValueValidator, MaxValueValidator
 
 from content.models.history_tracked import HistoryTrackedModel
 
@@ -129,3 +130,25 @@ class PartnerSplitMixin(models.Model):
                 raise ValidationError(
                     'Un movimiento personal debe asignarse 100% al socio dueño.'
                 )
+
+
+class VatBreakdownMixin(models.Model):
+    """Nullable rate distinguishes unclassified history from an explicit 0%."""
+    vat_rate = models.DecimalField(
+        max_digits=5, decimal_places=2, null=True, blank=True,
+        validators=[MinValueValidator(Decimal('0')), MaxValueValidator(Decimal('100'))],
+    )
+    vat_total_field = 'total_amount'
+
+    class Meta:
+        abstract = True
+
+    @property
+    def base_amount(self):
+        from content.services.accounting_vat import vat_breakdown
+        return vat_breakdown(getattr(self, self.vat_total_field), self.vat_rate)[0]
+
+    @property
+    def vat_amount(self):
+        from content.services.accounting_vat import vat_breakdown
+        return vat_breakdown(getattr(self, self.vat_total_field), self.vat_rate)[1]

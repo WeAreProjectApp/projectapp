@@ -2,6 +2,7 @@
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
 import { useId, computed, ref, watch } from 'vue'
 import PartnerSplitInput from './PartnerSplitInput.vue'
+import VatAmountInput from './VatAmountInput.vue'
 import PeriodDateField from './PeriodDateField.vue'
 import { todayISO } from '~/utils/periodDates'
 
@@ -34,6 +35,8 @@ function defaultForm() {
     category: 'business',
     ledger: 'company',
     total_amount: '',
+    vat_rate: 0,
+    vat_capture: null,
     gustavo_amount: '',
     carlos_amount: '',
     register_in_pocket: true,
@@ -68,6 +71,8 @@ watch(
         category: props.record.category ?? 'business',
         ledger: props.record.ledger ?? 'company',
         total_amount: props.record.total_amount ?? '',
+        vat_rate: props.record.vat_rate ?? null,
+        vat_capture: null,
         gustavo_amount: props.record.gustavo_amount ?? '',
         carlos_amount: props.record.carlos_amount ?? '',
         register_in_pocket: props.record.pocket_movement != null,
@@ -88,6 +93,11 @@ function onSubmit() {
     category: form.value.category,
     ledger: form.value.ledger,
     total_amount: form.value.total_amount,
+    vat_rate: form.value.vat_rate,
+  }
+  if (form.value.vat_capture) {
+    delete payload.total_amount
+    Object.assign(payload, form.value.vat_capture)
   }
   if (!isPersonal.value) {
     payload.gustavo_amount = form.value.gustavo_amount
@@ -135,13 +145,17 @@ const modalFormId = useId();
 
       <PartnerSplitInput
         v-if="!isPersonal"
+        show-vat
+        v-model:vat-rate="form.vat_rate"
+        :vat-reset-key="open"
+        @vat-capture="form.vat_capture = $event"
         v-model:total="form.total_amount"
         v-model:gustavoAmount="form.gustavo_amount"
         v-model:carlosAmount="form.carlos_amount"
       />
 
       <BaseFormField v-else label="Valor" required>
-        <BaseCurrencyInput v-model="form.total_amount" required />
+        <VatAmountInput v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
       </BaseFormField>
 
       <div

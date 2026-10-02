@@ -1887,3 +1887,13 @@ Comparar huellas de fuentes bloquea datos distintos, pero por sí solo permite r
 ## P4 — Certificar correo antes de preparar fixtures
 
 Con MAILERS, un override del setting legacy no certifica el transporte efectivo. El harness propio fuerza locmem antes de iniciar Django y rechaza cualquier alias sin backend explícito de memoria; además comprueba las instancias reales, incluido default. La certificación se repite antes de DB/fixtures y su modo preflight evita ambas escrituras. Los errores sólo informan la causa de rechazo, nunca opciones, credenciales o destinos reales. La corrección de otro harness conserva su dueño y se absorbe mediante su commit publicado.
+
+### IVA contable: distinguir desconocido y cero (2026-10-01)
+
+El total incluido sigue siendo la fuente contable: agregar una tasa no permite
+reinterpretar importes históricos. `vat_rate=null` conserva IVA sin registrar;
+`0` es una decisión explícita Sin IVA. Normalizar captura antes del reparto,
+heredar la tasa al liquidar y congelar el desglose documental evita divergencias
+entre ingreso, cuenta, PDF y correo. La previsualización comparte la transacción
+de emisión y revierte todos sus cambios; los pagos y la emisión comparten el
+lock del ingreso para impedir cambios financieros simultáneos.

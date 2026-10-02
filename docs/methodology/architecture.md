@@ -58,6 +58,15 @@ Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
 > herramienta, aceptan enlaces anteriores y se actualizan con `replaceState`
 > preservando otros parámetros y fragmentos, sin repetir `admin-auth`.
 
+> **Arquitectura — IVA contable, 2026-10-01:** el importe canónico permanece
+> como total incluido. Captura antes de IVA/total incluido normalizada con
+> Decimal en backend y tasa por ingreso, gasto, hosting y cuenta. Tasa nula
+> significa sin registrar; cero significa Sin IVA. Documentos congelan base,
+> impuesto y total al emitir; PDF y correo consumen esos mismos valores.
+> Utilidad, reparto y tratamiento de retenciones conservan sus reglas actuales
+> por decisión explícita del operador. La sincronización cuenta–ingreso sólo
+> cambia finanzas antes de pagos/deducciones y dentro de la emisión atómica.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no

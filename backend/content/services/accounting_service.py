@@ -79,6 +79,7 @@ TRACKED_FIELDS = {
         ('period_date', 'Período'),
         ('destination', 'Destino'),
         ('total_amount', 'Monto total'),
+        ('vat_rate', 'IVA (%)'),
         ('gustavo_amount', 'Monto Gustavo'),
         ('carlos_amount', 'Monto Carlos'),
         ('expected_income', 'Ingreso esperado'),
@@ -94,6 +95,7 @@ TRACKED_FIELDS = {
         ('period_date', 'Período'),
         ('category', 'Categoría'),
         ('total_amount', 'Monto total'),
+        ('vat_rate', 'IVA (%)'),
         ('gustavo_amount', 'Monto Gustavo'),
         ('carlos_amount', 'Monto Carlos'),
         ('notes', 'Notas'),
@@ -113,6 +115,7 @@ TRACKED_FIELDS = {
         ('valid_to', 'Vigente hasta'),
         ('cycles_count', 'Ciclos'),
         ('payment_per_cycle', 'Pago por ciclo'),
+        ('vat_rate', 'IVA (%)'),
         ('total_paid', 'Total pagado'),
         ('is_active', 'Activo'),
         ('notes', 'Notas'),
@@ -139,6 +142,9 @@ TRACKED_FIELDS = {
         ('project', 'Proyecto'),
         ('folder', 'Carpeta'),
         ('commercial_status', 'Estado comercial'),
+        ('subtotal', 'Valor antes de IVA'),
+        ('tax_total', 'IVA'),
+        ('total', 'Total con IVA'),
     ],
     EntityType.DOCUMENT_FOLDER: [
         ('name', 'Nombre'),
@@ -578,10 +584,6 @@ def update_record(entity_type, instance, serializer, user, notify=True):
 
     See ``create_record`` for why ``notify=False`` exists.
     """
-    _ensure_pocket_update_allowed(entity_type, instance, serializer)
-    _ensure_shared_child_update_allowed(entity_type, instance, serializer)
-    mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
-    register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
     with transaction.atomic():
         if entity_type in (EntityType.HOSTING, EntityType.INCOME):
             from accounts.services.billing_locks import lock_billing_rows
@@ -599,6 +601,19 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                 serializer.validated_data['project'] = locked.projects[target.pk]
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
             validate_financial_reassignment(instance, serializer.validated_data)
+        if (
+            entity_type == EntityType.INCOME
+            and {'total_amount', 'vat_rate'} & serializer.validated_data.keys()
+        ):
+            from content.serializers.accounting_vat import validate_income_vat_change
+            validate_income_vat_change(
+                instance, serializer.validated_data,
+                serializer.context.get('settlement'),
+            )
+        _ensure_pocket_update_allowed(entity_type, instance, serializer)
+        _ensure_shared_child_update_allowed(entity_type, instance, serializer)
+        mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
+        register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
         old_values = snapshot_values(instance, entity_type)
         old_client_id = getattr(instance, 'client_id', None)
         old_project_id = getattr(instance, 'project_id', None)

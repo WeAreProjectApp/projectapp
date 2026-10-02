@@ -26,6 +26,7 @@ class DocumentCollectionAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentCollectionAccount
         fields = (
+            'vat_rate',
             'billing_concept',
             'payment_term_type',
             'payment_term_days',
@@ -167,6 +168,7 @@ class CollectionAccountListSerializer(serializers.ModelSerializer):
 class CollectionAccountDetailSerializer(serializers.ModelSerializer):
     context = serializers.SerializerMethodField()
     project_name = serializers.CharField(source='project.name', default='')
+    vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True)
 
     def get_context(self, obj):
         return context_data(getattr(obj, 'billing_context', None))
@@ -194,6 +196,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
             'due_date',
             'city',
             'currency',
+            'vat_rate',
             'subtotal',
             'discount_total',
             'tax_total',
@@ -234,6 +237,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
 
 
 class CollectionAccountCreateSerializer(BillingContextFields):
+    vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     title = serializers.CharField(max_length=255)
     project_id = serializers.IntegerField(required=False, allow_null=True)
     deliverable_id = serializers.IntegerField(required=False, allow_null=True)
@@ -274,6 +278,7 @@ class CollectionAccountCreateSerializer(BillingContextFields):
 
 
 class CollectionAccountUpdateSerializer(serializers.Serializer):
+    vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     title = serializers.CharField(max_length=255, required=False)
     project_id = serializers.IntegerField(required=False, allow_null=True)
     client_user_id = serializers.IntegerField(required=False, allow_null=True)

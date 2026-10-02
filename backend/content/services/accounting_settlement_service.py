@@ -263,6 +263,7 @@ def _create_liquid_child(income, data, user):
         'period_date': data['period_date'],
         'destination': data['destination'],
         'ledger': income.ledger,
+        'vat_rate': income.vat_rate,
         'total_amount': data['total_amount'],
         'expected_income': income.pk,
         # Inherited from the projection: without this the collected money
@@ -305,6 +306,7 @@ def _create_deduction(income, data, deduction, user):
             'period_date': data['period_date'],
             'category': ExpenseRecord.Category.BUSINESS,
             'ledger': income.ledger,
+        'vat_rate': Decimal('0'),
             'total_amount': deduction['amount'],
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
@@ -336,6 +338,7 @@ def _create_follow_up(income, follow_up, user):
             'period_date': follow_up['period_date'],
             'destination': income.destination,
             'ledger': income.ledger,
+            'vat_rate': income.vat_rate,
             'total_amount': follow_up['amount'],
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
@@ -367,7 +370,7 @@ def _reduce_parent(income, new_total, user):
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
         },
-        partial=True,
+        partial=True, context={'settlement': True},
     )
     serializer.is_valid(raise_exception=True)
     return accounting_service.update_record(
@@ -414,6 +417,7 @@ def _create_abono_child(income, amount, data, movement, user):
             'period_date': data['period_date'],
             'destination': IncomeRecord.Destination.POCKET,
             'ledger': income.ledger,
+            'vat_rate': income.vat_rate,
             'total_amount': amount,
             'expected_income': income.pk,
             'client': income.client_id,

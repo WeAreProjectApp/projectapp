@@ -288,6 +288,7 @@ def build_income_duplicate_draft(income):
         'project_name': income.project.name if income.project_id else None,
         'origin': income.origin,
         'total_amount': money_str(income.total_amount),
+        'vat_rate': income.vat_rate,
         'gustavo_amount': money_str(income.gustavo_amount),
         'carlos_amount': money_str(income.carlos_amount),
         'notes': income.notes,

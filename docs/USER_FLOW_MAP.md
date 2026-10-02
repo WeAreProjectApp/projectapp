@@ -6477,6 +6477,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered — all four outcome classes, including the default and persisted Mes/Total ordering, the five-width indicator header, its filtering actions, the settlement's deduction, follow-up income, over-allocation block and backend rejection, y el borrado recalculando totales sin recargar ni mover la página.
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
 
+#### IVA opcional
+
+IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
@@ -6509,6 +6513,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered — display, success and error (backend 400 keeps the modal open with the Spanish toast).
 - **E2E Spec:** `e2e/admin/admin-accounting-expenses-hostings.spec.js`
 
+#### IVA opcional
+
+IVA opcional con 0 por defecto: captura de total incluido o base antes del impuesto y desglose base/IVA/total en edición. No calcula IVA descontable ni cambia utilidad o reparto.
+
 ### FLOW: `admin-accounting-hostings`
 
 - **Module:** admin
@@ -6519,6 +6527,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Responsive acceptance:** At 412×915, 835×1195, 1195×835, 1440×900 and 2560×1440, both validity dates remain complete without overlapping Ciclos. The range may wrap between dates, retaining partial/missing-date placeholders. Grouped values remain accessible on narrow screens and the cycle count still opens the selected hosting’s history.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-expenses-hostings.spec.js`
+
+#### IVA opcional
+
+IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido por defecto o base antes del impuesto; las siguientes cuentas heredan el porcentaje y muestran el desglose sin recalcular ciclos históricos.
 
 ### FLOW: `admin-accounting-pocket`
 
@@ -6736,6 +6748,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 
 **Contexto de cobros de proyecto (P2):** El detalle permite asociar o corregir contrato/otrosí o hosting mediante motivo y versión; los históricos se muestran pendientes hasta decisión. El PDF, snapshot e importes se conservan.
 
+#### IVA opcional
+
+El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.
+
 ### FLOW: `admin-accounting-collection-create`
 
 - **Module:** admin
@@ -6753,6 +6769,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 
 
 **Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
+
+#### IVA opcional
+
+Hereda IVA del ingreso, acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 

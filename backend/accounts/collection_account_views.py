@@ -5,7 +5,7 @@ from decimal import Decimal
 
 from django.db import transaction
 from django.db.models import Q
-from rest_framework import status
+from rest_framework import status, serializers
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -128,6 +128,7 @@ def collection_account_list_create_view(request):
         associate_account(doc.pk, request.user, data, creating=True)
     DocumentCollectionAccount.objects.create(
         document=doc,
+        vat_rate=data.get('vat_rate', Decimal('19')),
         billing_concept=data.get('billing_concept', ''),
         payment_term_type=data['payment_term_type'],
         payment_term_days=data.get('payment_term_days'),
@@ -226,6 +227,8 @@ def collection_account_detail_view(request, account_id):
     ext = getattr(doc, 'collection_account', None)
     if ext is None:
         ext = DocumentCollectionAccount.objects.create(document=doc)
+    if 'vat_rate' in payload:
+        ext.vat_rate = payload['vat_rate']
     if 'billing_concept' in payload:
         ext.billing_concept = payload['billing_concept']
     if 'payment_term_type' in payload:
@@ -282,6 +285,16 @@ def collection_account_detail_view(request, account_id):
                 is_primary=row.get('is_primary', False),
             )
 
+    if ext.vat_rate is not None and ('items' in payload or 'vat_rate' in payload):
+        from content.services.accounting_vat import vat_breakdown, quantize_money
+        for item in doc.items.all():
+            base = quantize_money(item.quantity * item.unit_price - item.discount_amount)
+            try:
+                _, item.tax_amount, item.line_total = vat_breakdown(base, ext.vat_rate, 'before_vat')
+            except ValueError as exc:
+                # All draft financial writes are atomic, including replacement items.
+                raise serializers.ValidationError({'items': str(exc)}) from exc
+            item.save(update_fields=['tax_amount', 'line_total'])
     recalculate_document_totals(doc)
     doc.save()
     doc = _base_collection_qs().get(pk=doc.pk)

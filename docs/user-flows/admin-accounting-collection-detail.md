@@ -10,3 +10,7 @@
 
 
 **Contexto de cobros de proyecto (P2):** El detalle permite asociar o corregir contrato/otrosí o hosting mediante motivo y versión; los históricos se muestran pendientes hasta decisión. El PDF, snapshot e importes se conservan.
+
+#### IVA opcional
+
+El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.
