@@ -311,7 +311,7 @@ def test_copy_failure_does_not_prevent_later_copy_recipient():
     assert result == 1
     assert primary.status == EmailLog.Status.SENT
     assert copy_attempts == [
-        ('audit-a@example.com', EmailLog.Status.FAILED, 'audit-a unavailable'),
+        ('audit-a@example.com', EmailLog.Status.FAILED, 'No se pudo completar la copia del correo.'),
         ('audit-b@example.com', EmailLog.Status.SENT, ''),
     ]
     assert smtp_send.call_count == 3
