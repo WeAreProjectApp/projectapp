@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_FOLDER_HIERARCHY } from '../helpers/flow-tags.js';
+import { viewportUse } from '../helpers/viewports.js';
 
 test.setTimeout(60_000);
 
@@ -280,3 +281,52 @@ test.describe('Admin Document Folder Hierarchy', () => {
     await expect(page.getByText('Enviada', { exact: true }).first()).toBeVisible();
   });
 });
+
+for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+  test.describe(`Folder breadcrumb recovery — ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
+    test.use(viewportUse(profile));
+
+    test(`returns to the chosen ancestor without clipping its breadcrumb target at ${profile}`, {
+      // Bug this catches: a nested-folder breadcrumb is too small for touch or
+      // no longer restores the ancestor selected by the administrator.
+      tag: [...ADMIN_DOCUMENT_FOLDER_HIERARCHY, '@role:admin', '@outcome:success', '@responsive:documents'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-viewport contract: folder breadcrumb recovery)
+      const requestedUrls = [];
+      await mockApi(page, async ({ apiPath, route }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'document-folders/') return jsonOk(ALL_FOLDERS);
+        if (apiPath === 'document-tags/') return jsonOk([]);
+        if (apiPath.startsWith('documents/')) {
+          const requestUrl = route.request().url();
+          requestedUrls.push(requestUrl);
+          return jsonOk(documentsForFolder(new URL(requestUrl).searchParams.get('folder')));
+        }
+        return null;
+      });
+
+      await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
+      await sidebar(page).getByRole('button', { name: /^Raiz A/ }).click();
+      await page.getByRole('table').getByText('Subcarpeta Uno').click();
+      await page.getByRole('table').getByText('Sub Sub').click();
+
+      const breadcrumb = page.getByRole('navigation', { name: 'Ruta de carpetas' });
+      const ancestor = breadcrumb.getByTestId(`folder-breadcrumb-${FOLDER_ROOT.id}`);
+      await expect(ancestor).toHaveText(FOLDER_ROOT.name);
+      const targetGeometry = await breadcrumb.getByRole('button').evaluateAll((elements) => elements.map((element) => ({
+        declared: element.hasAttribute('data-responsive-touch-target'),
+        scrollWidth: element.scrollWidth,
+        clientWidth: element.clientWidth,
+        width: element.getBoundingClientRect().width,
+        height: element.getBoundingClientRect().height,
+      })));
+      const needsTouchTarget = ['compact', 'portrait', 'landscape'].includes(profile);
+      expect(targetGeometry.every((target) => target.declared && target.scrollWidth <= target.clientWidth
+        && (!needsTouchTarget || (target.width >= 43.5 && target.height >= 43.5)))).toBe(true);
+
+      await ancestor.click();
+      await expect.poll(() => requestedUrls.some((url) => url.includes(`folder=${FOLDER_ROOT.id}`))).toBe(true);
+      await expect(page.getByRole('table').getByText('Doc En Raiz')).toHaveText('Doc En Raiz');
+    });
+  });
+}

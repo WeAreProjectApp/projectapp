@@ -70,6 +70,7 @@ def auto_charge_due_subscriptions():
     from django.utils import timezone
 
     from accounts.models import HostingSubscription, Payment, PaymentHistory
+    from accounts.services.wompi_payment_binding import WompiPaymentBindingError
     from accounts.views import _charge_payment_with_source
 
     # Incorporate phases whose hosting_start_date arrived (prorated) before
@@ -107,14 +108,17 @@ def auto_charge_due_subscriptions():
     charged = 0
     failed = 0
     for payment in due:
-        payment.charge_attempts += 1
         try:
             _charge_payment_with_source(payment, PaymentHistory.SOURCE_SYSTEM)
+        except WompiPaymentBindingError as exc:
+            logger.warning('Auto-charge binding rejected for payment %s: %s', payment.id, exc.reason)
+            continue
         except Exception as e:
             logger.error('Auto-charge error for payment %s: %s', payment.id, e)
             payment.status = Payment.STATUS_FAILED
             payment.last_charge_error = str(e)[:300]
 
+        payment.charge_attempts += 1
         if payment.status in (Payment.STATUS_PAID, Payment.STATUS_PROCESSING):
             payment.next_retry_at = None
             payment.save(update_fields=['charge_attempts', 'next_retry_at'])
@@ -352,6 +356,10 @@ def _reverify_processing_payments():
     from accounts.models import Payment, PaymentHistory
     from accounts.services.payment_history import record_payment_status_change
     from accounts.services.wompi import verify_transaction
+    from accounts.services.wompi_payment_binding import (
+        WompiPaymentBindingError,
+        validate_transaction_binding,
+    )
     from accounts.views import _handle_payment_approved
 
     stuck = (
@@ -364,6 +372,12 @@ def _reverify_processing_payments():
     for payment in stuck:
         try:
             data = verify_transaction(payment.wompi_transaction_id)
+            validate_transaction_binding(
+                payment, data, expected_transaction_id=payment.wompi_transaction_id,
+            )
+        except WompiPaymentBindingError as exc:
+            logger.warning('Re-verify binding rejected for payment %s: %s', payment.id, exc.reason)
+            continue
         except Exception as e:
             logger.warning('Re-verify error for payment %s: %s', payment.id, e)
             continue

@@ -69,8 +69,8 @@
                 >
                   <div class="flex items-start justify-between gap-3">
                     <div class="min-w-0">
-                      <p class="truncate text-sm font-medium text-text-default">{{ member.document.title }}</p>
-                      <p class="mt-0.5 truncate text-xs text-text-subtle">{{ metadataLine(member.document) }}</p>
+                      <p class="whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-text-default">{{ member.document.title }}</p>
+                      <p class="mt-0.5 whitespace-normal [overflow-wrap:anywhere] text-xs text-text-subtle">{{ metadataLine(member.document) }}</p>
                       <BaseBadge v-if="member.document.is_archived" variant="warning" size="sm" class="mt-2">
                         Archivado
                       </BaseBadge>
@@ -134,8 +134,8 @@
                 :data-testid="`thread-candidate-${row.candidate.id}`"
                 @click="addCandidate(row.candidate)"
               >
-                <span class="block truncate text-sm font-medium text-text-default">{{ row.candidate.title }}</span>
-                <span class="mt-0.5 block truncate text-xs text-text-subtle">{{ metadataLine(row.candidate) }}</span>
+                <span class="block whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-text-default">{{ row.candidate.title }}</span>
+                <span class="mt-0.5 block whitespace-normal [overflow-wrap:anywhere] text-xs text-text-subtle">{{ metadataLine(row.candidate) }}</span>
                 <span
                   v-if="row.candidate.thread_summary || row.candidate.is_archived"
                   class="mt-2 flex flex-wrap items-center gap-1"

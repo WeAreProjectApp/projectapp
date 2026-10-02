@@ -1,3 +1,15 @@
+# Vinculación de pagos y lectura de destinos — en validación (2026-10-02)
+
+La ronda `improvement-payments-documents` vincula cada respuesta Wompi con el
+pago local antes de actualizar su estado. Comprueba ID, importe, moneda y
+referencia o link, también en webhook, tarjeta y tareas. El webhook consulta
+los datos canónicos; las pruebas simulan la frontera del proveedor sin cobros
+reales. En Documentos, la reproducción táctil de 835×1195 encontró botones
+de 28 px y un destino largo recortado. Se aplicaron el mínimo táctil de 44 px
+y la lectura multilínea en los tres selectores; su matriz de navegador sigue
+en validación. El reporte de ronda y el PR conservarán la evidencia final. Sin
+migraciones ni despliegue.
+
 # Aprobación y vinculación de propuestas (2026-10-02)
 
 Implementación y pruebas focales completas en `feat/02102026-proposal-project-linking`, sobre la
