@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from freezegun import freeze_time
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 from accounts.models import DataModelEntity, Deliverable, Project, UserProfile
@@ -209,6 +210,9 @@ def test_private_file_download_returns_confirmed_bytes(reviewed_proposal, approv
     row = ProposalApprovalFile.objects.get(source_key='custom-0')
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(approval_client.user)}')
+    detail_response = client.get(reverse('platform-deliverable-detail', kwargs={'project_id': row.project_id, 'deliverable_id': row.deliverable_id}))
+    assert detail_response.status_code == 200
+    assert [item['id'] for item in detail_response.json()['approval_files']] == list(ProposalApprovalFile.objects.filter(deliverable_id=row.deliverable_id).order_by('id').values_list('id', flat=True))
     response = client.get(reverse('platform-approval-file-download', kwargs={'project_id': row.project_id, 'file_id': row.pk}))
     assert response.status_code == 200
     assert b''.join(response.streaming_content) == b'%PDF-1.4 contract'
@@ -373,15 +377,14 @@ def test_inactive_canonical_client_confirmation_returns_current_workflow(reviewe
     reviewed_proposal.refresh_from_db()
     profile.user.refresh_from_db()
     assert reviewed_proposal.deliverable.project.client_id == profile.user_id
-    assert get_user_model().objects.count() == users_before
-    assert profile.user.is_active is False
-    assert profile.user.has_usable_password() is False
+    assert (get_user_model().objects.count(), profile.user.is_active, profile.user.has_usable_password()) == (users_before, False, False)
     assert sorted(row['document_type'] for row in result['confirmed_files']) == ['commercial', 'contract', 'technical']
     assert result['proposal']['platform_onboarding_completed_at'] == reviewed_proposal.platform_onboarding_completed_at.isoformat()
     assert result['proposal']['available_transitions'] == reviewed_proposal.available_transitions == ['finished']
 
 
 @pytest.mark.parametrize('ineligible', ['archived', 'staff'])
+@freeze_time('2026-10-02T00:00:00Z')
 def test_confirmation_rejects_ineligible_client_profiles(reviewed_proposal, approval_client, admin_user, ineligible):
     from django.utils import timezone
     from rest_framework.exceptions import ValidationError
@@ -437,3 +440,362 @@ def test_manual_commercial_catalog_change_preserves_pact(reviewed_proposal, appr
     assert 'Agreed package' in rendered
     assert '12.000' in rendered
     assert '99.999' not in rendered
+
+
+
+def _review_uploads(client, proposal, values, files):
+    return client.post(
+        reverse('proposal-approval', kwargs={'proposal_id': proposal.pk}),
+        {'payload': json.dumps(values), 'custom_files[]': files},
+        format='multipart',
+    )
+
+
+def _private_blob_names():
+    from pathlib import Path
+    storage = ProposalApprovalFile._meta.get_field('file').storage
+    root = Path(storage.location)
+    return sorted(str(path.relative_to(root)) for path in root.rglob('*') if path.is_file())
+
+
+@pytest.fixture
+def private_blob_baseline():
+    return _private_blob_names()
+
+
+def _assert_unconfirmed(proposal, blobs_before):
+    proposal.refresh_from_db()
+    assert (proposal.status, proposal.deliverable_id, proposal.platform_approval_manifest, proposal.platform_onboarding_status, proposal.platform_onboarding_completed_at) == ('negotiating', None, {}, None, None)
+    assert ProposalApprovalFile.objects.count() == 0
+    assert _private_blob_names() == blobs_before
+
+
+def _invalid_docx_without_document():
+    from io import BytesIO
+    from zipfile import ZipFile
+    content = BytesIO()
+    with ZipFile(content, 'w') as archive:
+        archive.writestr('[Content_Types].xml', '<Types/>')
+        archive.writestr('word/styles.xml', '<styles/>')
+    return content.getvalue()
+
+
+def test_confirmation_rejects_nonexistent_project(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if selecting an absent project silently creates a replacement."""
+    values = payload(reviewed_proposal, approval_client)
+    values.pop('new_project')
+    values['project_id'] = 999999
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'project_id': 'Ese proyecto no existe.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert reviewed_proposal.client_id == approval_client.pk
+    assert Project.objects.count() == 0
+
+
+def test_confirmation_rejects_foreign_client_project(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if review adopts a different client's project or overwrites its finances."""
+    owner = get_user_model().objects.create_user(username='foreign-project-owner', email='foreign-project@example.com')
+    UserProfile.objects.create(user=owner, role='client')
+    project = Project.objects.create(client=owner, name='Foreign operation', progress=67, payment_milestones=[{'amount': 910}], hosting_tiers=[{'months': 6}])
+    values = payload(reviewed_proposal, approval_client)
+    values.pop('new_project')
+    values['project_id'] = project.pk
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'project_id': 'El proyecto debe pertenecer al cliente seleccionado.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    project.refresh_from_db()
+    assert (project.client_id, project.name, project.progress, project.payment_milestones, project.hosting_tiers) == (owner.pk, 'Foreign operation', 67, [{'amount': 910}], [{'months': 6}])
+    assert reviewed_proposal.client_id == approval_client.pk
+    assert Project.objects.count() == 1
+
+
+def test_confirmation_rejects_legacy_project_substitution(admin_client, reviewed_proposal, approval_client, admin_user):
+    """Fails if a first packet review replaces its already linked operational project."""
+    from accounts.models import DeliverableFile
+    original = Project.objects.create(client=approval_client.user, name='Linked operation', progress=81, payment_milestones=[{'amount': 620}], hosting_tiers=[{'months': 9}])
+    root = Deliverable.objects.create(project=original, category='documents', title='Retained documents', uploaded_by=admin_user)
+    attachment = DeliverableFile.objects.create(deliverable=root, title='Legacy retained copy', uploaded_by=admin_user)
+    attachment.file.save('retained-copy.pdf', ContentFile(b'%PDF-1.4 retained copy'))
+    reviewed_proposal.deliverable = root
+    reviewed_proposal.save(update_fields=['deliverable'])
+    replacement = Project.objects.create(client=approval_client.user, name='Forbidden replacement')
+    values = payload(reviewed_proposal, approval_client)
+    values.pop('new_project')
+    values['project_id'] = replacement.pk
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 409
+    assert response.json()['code'] == 'immutable_link'
+    reviewed_proposal.refresh_from_db()
+    original.refresh_from_db()
+    attachment.refresh_from_db()
+    assert (reviewed_proposal.deliverable_id, reviewed_proposal.client_id, reviewed_proposal.platform_approval_manifest) == (root.pk, approval_client.pk, {})
+    assert (original.client_id, original.name, original.progress, original.payment_milestones, original.hosting_tiers) == (approval_client.user_id, 'Linked operation', 81, [{'amount': 620}], [{'months': 9}])
+    assert attachment.file.read() == b'%PDF-1.4 retained copy'
+    assert (DeliverableFile.objects.filter(deliverable=root).count(), ProposalApprovalFile.objects.count(), Project.objects.count()) == (1, 0, 2)
+
+
+@pytest.mark.parametrize('selection', ['foreign-annex', 'contract'], ids=['foreign-annex', 'contract'])
+def test_optional_selection_rejects_invalid_original(admin_client, reviewed_proposal, approval_client, selection, private_blob_baseline):
+    """Fails if the optional selector can copy another proposal's annex or bypass the contract switch."""
+    from content.models import BusinessProposal
+    other = BusinessProposal.objects.create(title='Other proposal', client=approval_client)
+    proposals = {'foreign-annex': other, 'contract': reviewed_proposal}
+    types = {'foreign-annex': 'legal_annex', 'contract': 'contract'}
+    original = ProposalDocument.objects.create(proposal=proposals[selection], document_type=types[selection], title='Retained source')
+    original.file.save('selected-original.pdf', ContentFile(b'%PDF-1.4 original evidence'))
+    values = payload(reviewed_proposal, approval_client)
+    values['selected_document_ids'] = [original.pk]
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'selected_document_ids': 'Selecciona únicamente anexos de esta propuesta; los contratos usan el switch principal.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    original.refresh_from_db()
+    assert original.file.read() == b'%PDF-1.4 original evidence'
+    assert original.proposal_id == proposals[selection].pk
+    assert Project.objects.count() == 0
+
+
+def test_missing_optional_blob_rejects_confirmation(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if an already missing optional blob is treated as a valid reviewable attachment."""
+    original = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='legal_annex', title='Missing legal annex')
+    original.file.save('missing-legal-annex.pdf', ContentFile(b'%PDF-1.4 retained legal annex'))
+    original_name = original.file.name
+    assert original.file.read() == b'%PDF-1.4 retained legal annex'
+    original.file.storage.delete(original_name)
+    assert original.file.storage.exists(original_name) is False
+    preview_response = admin_client.get(reverse('proposal-approval', kwargs={'proposal_id': reviewed_proposal.pk}))
+    assert (preview_response.status_code, preview_response.json()['optional_documents']) == (200, [{'id': original.pk, 'title': 'Missing legal annex', 'document_type': 'legal_annex'}])
+    values = payload(reviewed_proposal, approval_client)
+    values['source_hash'] = preview_response.json()['source_hash']
+    values['selected_document_ids'] = [original.pk]
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert (response.status_code, response.json()) == (400, {'files': 'No se pudo leer uno de los archivos.'})
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    original.refresh_from_db()
+    assert (original.file.name, original.file.storage.exists(original_name), source_hash(reviewed_proposal)) == (original_name, False, preview_response.json()['source_hash'])
+    assert ProposalDocument.objects.filter(pk=original.pk).count() == 1
+    assert Project.objects.count() == 0
+
+
+def test_missing_private_blob_download_preserves_receipt(reviewed_proposal, approval_client, admin_user, private_blob_baseline):
+    """Fails if a missing confirmed blob returns success or destroys its retained receipt/link."""
+    confirm(reviewed_proposal, approval_client, admin_user)
+    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    retained = (row.pk, row.sha256, row.size, row.file.name, row.project_id, row.deliverable_id)
+    row.file.storage.delete(row.file.name)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(approval_client.user)}')
+
+    response = client.get(reverse('platform-approval-file-download', kwargs={'project_id': row.project_id, 'file_id': row.pk}))
+
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'El archivo no está disponible.'}
+    row.refresh_from_db()
+    reviewed_proposal.refresh_from_db()
+    assert (row.pk, row.sha256, row.size, row.file.name, row.project_id, row.deliverable_id) == retained
+    assert reviewed_proposal.deliverable_id == row.deliverable_id
+    assert reviewed_proposal.platform_approval_manifest['project_id'] == row.project_id
+    assert ProposalApprovalFile.objects.count() == 3
+    assert len(_private_blob_names()) == len(private_blob_baseline) + 2
+
+
+def test_archived_deliverable_hides_private_packet(reviewed_proposal, approval_client, admin_user, private_blob_baseline):
+    """Fails if clients can download an archived root's retained private packet."""
+    confirm(reviewed_proposal, approval_client, admin_user)
+    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    root = row.deliverable
+    root.is_archived = True
+    root.save(update_fields=['is_archived'])
+    retained = (row.sha256, row.size, row.project_id, row.deliverable_id)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(approval_client.user)}')
+
+    response = client.get(reverse('platform-approval-file-download', kwargs={'project_id': row.project_id, 'file_id': row.pk}))
+
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'El archivo no está disponible.'}
+    row.refresh_from_db()
+    reviewed_proposal.refresh_from_db()
+    assert (row.sha256, row.size, row.project_id, row.deliverable_id) == retained
+    assert row.file.read() == b'%PDF-1.4 contract'
+    assert reviewed_proposal.deliverable_id == root.pk
+    assert ProposalApprovalFile.objects.count() == 3
+    assert len(_private_blob_names()) == len(private_blob_baseline) + 3
+
+
+def test_second_private_write_failure_rolls_back_confirmation(reviewed_proposal, approval_client, admin_user, private_blob_baseline):
+    """Fails if storage failure after one real write leaks a blob or partially provisions the review."""
+    storage = ProposalApprovalFile._meta.get_field('file').storage
+    real_save = storage.save
+    writes = {}
+
+    def save_first(name, content, max_length=None):
+        stored = real_save(name, content, max_length=max_length)
+        writes['name'] = stored
+        with storage.open(stored, 'rb') as stream:
+            writes['bytes'] = stream.read()
+        return stored
+
+    def fail_second(name, content, max_length=None):
+        raise OSError('private write unavailable')
+
+    actions = iter((save_first, fail_second))
+
+    def save_boundary(name, content, max_length=None):
+        return next(actions)(name, content, max_length=max_length)
+
+    values = payload(reviewed_proposal, approval_client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Rollback customer', 'email': 'rollback-customer@example.com'}
+    users_before = get_user_model().objects.count()
+    profiles_before = UserProfile.objects.count()
+    original = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='legal_annex', title='Source retained')
+    original.file.save('rollback-source.pdf', ContentFile(b'%PDF-1.4 source retained'))
+    values['source_hash'] = source_hash(reviewed_proposal)
+
+    with patch.object(storage, 'save', side_effect=save_boundary):
+        with pytest.raises(OSError, match='private write unavailable'):
+            review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
+
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert writes['bytes'] == b'%PDF-1.4 contract'
+    assert storage.exists(writes['name']) is False
+    assert (get_user_model().objects.count(), UserProfile.objects.count(), reviewed_proposal.client_id) == (users_before, profiles_before, approval_client.pk)
+    assert (Project.objects.count(), Deliverable.objects.count()) == (0, 0)
+    original.refresh_from_db()
+    assert original.file.read() == b'%PDF-1.4 source retained'
+
+
+@pytest.mark.parametrize('content', [b'PK\x03\x04corrupt', _invalid_docx_without_document()], ids=['corrupt-zip', 'missing-document'])
+def test_invalid_docx_rejects_confirmation(admin_client, reviewed_proposal, approval_client, content, private_blob_baseline):
+    """Fails if PK-prefixed garbage or a ZIP lacking the Word document can become a confirmed contract."""
+    upload = SimpleUploadedFile('invalid.docx', content, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+    values = payload(reviewed_proposal, approval_client)
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [upload])
+
+    assert response.status_code == 400
+    assert response.json() == {'custom_files': 'El documento Office no es válido.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert Project.objects.count() == 0
+
+
+def test_oversized_packet_rejects_confirmation(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if individually allowed uploads can exceed the aggregate 36 MB packet limit."""
+    content = b'%PDF-1.4\n' + b'x' * (13 * 1024 * 1024 - len(b'%PDF-1.4\n'))
+    uploads = [pdf('contract.pdf', content), pdf('annex.pdf', content), pdf('amendment.pdf', content)]
+    values = payload(reviewed_proposal, approval_client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Oversized rollback', 'email': 'oversized-rollback@example.com'}
+    values['custom_documents'] = [{'title': 'Contract', 'document_type': 'contract'}, {'title': 'Annex', 'document_type': 'legal_annex'}, {'title': 'Amendment', 'document_type': 'amendment'}]
+    users_before = get_user_model().objects.count()
+    profiles_before = UserProfile.objects.count()
+    assert tuple(upload.size for upload in uploads) == (13 * 1024 * 1024,) * 3
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, uploads)
+
+    assert response.status_code == 400
+    assert response.json() == {'files': 'El paquete supera el máximo de 36 MB.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert get_user_model().objects.count() == users_before
+    assert UserProfile.objects.count() == profiles_before
+    assert reviewed_proposal.client_id == approval_client.pk
+    assert Project.objects.count() == 0
+
+
+def test_retry_before_confirmation_requires_review(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if retry can provision an unreviewed proposal or mark it completed."""
+    response = admin_client.post(reverse('proposal-approval', kwargs={'proposal_id': reviewed_proposal.pk}), {'action': 'retry'}, format='json')
+
+    assert response.status_code == 409
+    assert response.json()['code'] == 'review_required'
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert reviewed_proposal.client_id == approval_client.pk
+    assert reviewed_proposal.platform_onboarding_status is None
+    assert Project.objects.count() == 0
+
+
+@pytest.mark.parametrize('selection', ['client', 'project'], ids=['client', 'project'])
+def test_confirmation_rejects_ambiguous_selection(admin_client, reviewed_proposal, approval_client, selection, private_blob_baseline):
+    """Fails if simultaneous existing/new selection is accepted instead of a field error."""
+    project = Project.objects.create(client=approval_client.user, name='Keep existing project')
+    values = payload(reviewed_proposal, approval_client)
+    additions = {'client': {'new_client': {'name': 'Do not create', 'email': 'ambiguous@example.com'}}, 'project': {'project_id': project.pk}}
+    fields = {'client': 'client_profile_id', 'project': 'project_id'}
+    messages = {'client': 'Selecciona un cliente o crea uno nuevo.', 'project': 'Selecciona un proyecto o crea uno nuevo.'}
+    values.update(additions[selection])
+    users_before = get_user_model().objects.count()
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {fields[selection]: [messages[selection]]}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert get_user_model().objects.count() == users_before
+    project.refresh_from_db()
+    assert (project.client_id, project.name) == (approval_client.user_id, 'Keep existing project')
+    assert Project.objects.count() == 1
+
+
+def test_defer_rejects_uploaded_document(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if uploading during deferral accepts the proposal before rejecting its file."""
+    response = _review_uploads(admin_client, reviewed_proposal, {'action': 'defer'}, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'custom_files': 'Posponer no guarda adjuntos.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert reviewed_proposal.client_id == approval_client.pk
+    assert Project.objects.count() == 0
+
+
+def test_original_contract_switch_rejects_custom_upload(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if the original-contract switch allows an additional custom contract packet."""
+    original = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='contract', title='Retained original contract', is_generated=True)
+    original.file.save('retained-original-contract.pdf', ContentFile(b'%PDF-1.4 original contract'))
+    original_name = original.file.name
+    values = payload(reviewed_proposal, approval_client)
+    values['use_proposal_contracts'] = True
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
+
+    assert response.status_code == 400
+    assert response.json() == {'custom_files': 'Desactiva los contratos de la propuesta para adjuntar documentos personalizados.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert Project.objects.count() == 0
+
+    original.refresh_from_db()
+    assert (original.file.name, original.proposal_id) == (original_name, reviewed_proposal.pk)
+    assert original.file.read() == b'%PDF-1.4 original contract'
+    assert reviewed_proposal.client_id == approval_client.pk
+
+
+def test_disallowed_extension_rejects_confirmation(admin_client, reviewed_proposal, approval_client, private_blob_baseline):
+    """Fails if a forbidden filename extension enters the durable approval packet."""
+    original = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='contract', title='Retained original contract', is_generated=True)
+    original.file.save('retained-original-contract.pdf', ContentFile(b'%PDF-1.4 original contract'))
+    original_name = original.file.name
+    values = payload(reviewed_proposal, approval_client)
+
+    response = _review_uploads(admin_client, reviewed_proposal, values, [pdf('contract.exe')])
+
+    assert response.status_code == 400
+    assert response.json() == {'custom_files': 'Formato no permitido. Usa PDF, Word, Excel o imágenes.'}
+    _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
+    assert Project.objects.count() == 0
+
+    original.refresh_from_db()
+    assert (original.file.name, original.proposal_id) == (original_name, reviewed_proposal.pk)
+    assert original.file.read() == b'%PDF-1.4 original contract'
+    assert reviewed_proposal.client_id == approval_client.pk
