@@ -2378,3 +2378,12 @@ tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
 después de guardas. Un origen financiero eliminado antes del descubrimiento
 rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
 SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.
+
+Corrección acotada P2 del 2026-10-02: el caller interno `bulk_assign_client`
+conserva su tolerancia documentada a IDs ya ausentes; las dos vistas contables
+exigen el alcance completo con `strict_ids=True`. Los IDs descubiertos siguen
+siendo obligatorios durante los locks actuales, sin cambiar cálculos, snapshots
+ni guardas de evidencia. P6 conserva IVA y sus otros bloques de contabilidad;
+P2 reserva sólo este callsite y su frontera de validación hasta publicar el fix.
+QA focal: 36 casos aprobados en lotes de 20/16 y gate estricto del archivo nuevo
+100/100, sin errores ni advertencias; settings_test/SQLite y MAILERS locmem.
