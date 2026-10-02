@@ -47,7 +47,7 @@ test('admin completes a sourced role guide after publication rejects its blocked
   await expect(page.getByTestId(`delivery-stage-${stage.id}`)).toContainText('Etapa de inventario por rol')
   await page.getByTestId(`delivery-publish-${stage.id}`).click()
   await page.getByTestId('delivery-confirm-action').click()
-  await expect(page.getByRole('alert')).toContainText('Completa el resultado esperado del caso bloqueado')
+  await expect(page.getByRole('alert').filter({ hasText: 'Completa el resultado esperado del caso bloqueado' })).toBeVisible()
   await expect(page.getByTestId(`delivery-stage-${stage.id}`)).toContainText('Validar el inventario por rol')
   await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
   await page.getByTestId(`delivery-edit-requirement-${requirement.id}`).click()
