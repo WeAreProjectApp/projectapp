@@ -1532,6 +1532,12 @@ Migración aditiva `content.0258_communication_folders`: hilos existentes quedan
 
 `record_id_search` interpreta `#123` como PK exacto y `123` como unión PK/texto; respeta permisos y demás filtros. El modal usa su propio scroll y respeta reduced-motion. `BaseCollapse` conserva el estado del formulario mientras lo deja fuera del tab order al plegar. No cambia el contenido público ni los PDF.
 
+
+## P4 — Contrato técnico de colaboración (2026-10-01)
+
+Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
+
+El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. Su servidor fuerza `MAILERS.default` a locmem antes de iniciar Django y verifica cada alias declarado y backend efectivo antes de preparar DB o crear fixtures; configuración incompleta, backend distinto o constructor inválido abortan sin divulgar opciones. `--check-isolation` permite certificar settings/motor/aliases sin DB/fixtures/HTTP; el workflow P4 lo ejecuta antes de sus dos specs. La migración propia 0070 depende de P3 0067; la nueva no-op 0075 une 0074 P2 y 0070 después de absorber P2 fae1e361 y P3 cecb5b93, sin aplicar migraciones. No editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente. La corrección del servidor Delivery pertenece a P3 y ya está contenida en la cadena publicada P2. El workflow P4 es reutilizable desde CI; su blob y dependencia explícita alimentan el agregado de cobertura del mismo run. Puertos propios alternativos se configuran mediante PROJECT_COLLABORATION_BACKEND_PORT y PROJECT_COLLABORATION_FRONTEND_PORT, siempre sobre loopback, sin reutilizar servidores ajenos.
 ### Billing P2: lecturas y conciliación (2026-10-01)
 
 Las nuevas lecturas usan DTO públicos con relaciones precargadas y aislamiento
@@ -1544,9 +1550,3 @@ P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
 P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
 sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
 `docs/PLATFORM_PROJECT_BILLING.md`.
-
-## P4 — Contrato técnico de colaboración (2026-10-01)
-
-Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
-
-El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. El workflow propio ejecuta dos specs. La migración aditiva de P4 requiere que P0 confirme hoja/número tras P3 final; no editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente.

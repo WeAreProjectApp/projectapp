@@ -65,6 +65,9 @@ class ProjectAdmin(admin.ModelAdmin):
                 validate_project_admin_client_transfer(original, obj.client, actor=request.user)
             except APIException as exc:
                 raise BillingProjectAdminConflict(billing_validation_message(exc)) from exc
+            # P4 revocation follows every transfer guard inside the same lock.
+            from .services.project_client_access import revoke_project_edits
+            revoke_project_edits(original, obj, actor=request.user)
         super().save_model(request, obj, form, change)
 
     list_display = (
@@ -91,16 +94,6 @@ class ProjectAdmin(admin.ModelAdmin):
             ),
         }),
     )
-
-    @transaction.atomic
-    def save_model(self, request, obj, form, change):
-        if change:
-            previous = Project.objects.select_for_update().get(pk=obj.pk)
-            # The P2 financial guard must reject before this P4 revocation.
-            from .services.project_client_access import revoke_project_edits
-            revoke_project_edits(previous, obj, actor=request.user)
-        super().save_model(request, obj, form, change)
-
 
 admin_site.register(UserProfile)
 admin_site.register(VerificationCode)

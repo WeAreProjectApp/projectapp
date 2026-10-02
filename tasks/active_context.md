@@ -2399,6 +2399,16 @@ está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
 
 
+## P4 — Ideas y política de accesos (2026-10-01)
+
+Worktree propio `platform-ideas-access`, rama `feat/01102026-platform-ideas-access`, PR #462 hacia main. Referencias publicadas P2 `fae1e3610bb38da0da8dd62864c1c763928dd85a` y P3 `cecb5b93d8cfd0b968fec3a71239323c48c7018f` absorbidas mediante merge; P2 incluye P1 `bc403871a92258c2b77247aca6533fde0677b357`. Migración propia 0070 sobre P3 0067 y nueva no-op 0075 con padres 0074 P2 + 0070: una sola hoja accounts, sin aplicar operaciones. P0 conserva orden y reservas; P3 conserva Delivery y guías.
+
+ProjectAdmin mantiene el formulario/helper de P2 y un único save_model: proyecto bloqueado → financiero → Delivery → incidencias → revocación P4 → guardado. change_client_apply conserva el mismo orden antes de cascada. Pasan 15 casos propios de revocación/composición, las 8 regresiones Admin P2 y 13 casos de MCP/límites de consulta. Rechazos preservan dueño, fuentes, grants, finanzas, historial y auditoría; una edición inocua sigue permitida. Contrato: `docs/platform/project-ideas-access.md`.
+
+Control de correo: MAILERS locmem aplicado antes de Django, cada alias/configuración/backend efectivo certificado antes de DB/fixtures, sin .env ni lectura legacy. Preflight y 14 casos focales pasan. El fix Delivery publicado está absorbido; los puertos propios alternativos 3472/3473 permiten QA sin tocar el servidor de integración ajeno. El caso contable corregido por P3 también pasa, sin editar ese dominio desde P4.
+
+El workflow P4 es reutilizable desde CI, sube `playwright-blob-project-collaboration` y alimenta el agregado del mismo run con una dependencia explícita. Se mantiene prioridad P1 y resultados exigidos del flujo de política. Los artefactos blob se excluyen de Git. La regresión de menú se acota al proyecto tras el nuevo Hosting general de P2, comprobando enlaces concretos. Los 20 tests del catálogo pasan; registro/sync correcto, 430 flows y 123 vistas (107 visuales + 16 redirects). Blob real: política P1 covered, sus cuatro resultados aprobados y 7 casos focales sin skips/retries tras reinicio del host. Responsive: 20 casos aprobados en cinco perfiles; retorno final del proceso 1, sin fallos ni errores generales en JSON, pendiente de confirmar en CI. P0 autoriza publicar con estos controles focales sin esperar CI completo; el delta P1 6a95dc93 queda para P0/P5. No merge, deploy ni migración real.
+
 ### P2 — cuentas y hosting por proyecto (2026-10-01)
 
 En implementación en rama propia `feat/01102026-platform-client-billing`, desde
@@ -2420,11 +2430,6 @@ tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
 después de guardas. Un origen financiero eliminado antes del descubrimiento
 rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
 SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.
-## P4 — Ideas y política de accesos (2026-10-01)
-
-Worktree propio `platform-ideas-access`, rama `feat/01102026-platform-ideas-access`, base main cce8e694 más merge del P3 publicado `dea940345fc37c361f8749d30e1a96ac2bba73ee`. Migración P4 `0070_platform_ideas_access` sobre P3 `0067_explicit_delivery_authoring_context`, no aplicada. P0 fijó el orden P3 → P1 → P2 → P4 → P5 y reservó la nueva hoja sin operaciones `0075_p4_platform_domains_merge`, padres `0074_p2_platform_billing_merge` y `0070_platform_ideas_access`; no crearla hasta recibir y mergear el SHA final publicado de P2. Dominio implementado: ideas versionadas/archivo reversible, recopilaciones internas congeladas, exposición de ocho datos por proyecto y revocación por propietario/fuente. Guías por rol y núcleo Delivery son propiedad P3.
-
-Cierre en curso: pruebas focales backend/unit, navegador con APIs reales, cinco perfiles responsive, mapas y CI propio. P0 conserva orden y reservas. P2 posee formulario, validación, helper core/tickets y guard financiero de ProjectAdmin. P4 conserva su revocación en save_model contra el proyecto original bloqueado, después de todos los guards P2 y antes de guardar; change_client_apply mantiene el mismo orden antes de reasignar/cascadear. Regresión financiera conjunta pendiente de absorber P2 bajo coordenada P0. No despliegue, migración aplicada ni self-merge. Contrato: `docs/platform/project-ideas-access.md`.
 ## P5 — enlaces seguros propios en Platform (2026-10-01)
 
 MVP sólo cliente→equipo, catálogo de texto/credenciales existente; archivos, terceros e importación de accesos quedan fuera. API JWT separada de Panel, owner explícito + proyecto propio; metadatos/historial sin secreto ni URL. Crear usa UUID/HMAC para replay idéntico sin URL y conflicto con entrada distinta. Revocar conserva evidencia; reactivar rota siempre token; corregir revoca y crea sustitución. QA local aprobada: 55 casos del dominio SQLite, 13 unitarios propios, 15 E2E y gate sin errores; creación E2E revalidada 2/2 sin retries tras un timeout de causa no determinada. P0 reservó la corrección del fixture histórico de Delivery por la nueva dependencia: corte coherente del grafo + target 0063 explícito y restauración latest; lote de 3 casos y backfill 4/4 verde. PR #461 a main: absorbida por merge la referencia publicada P3 dea940345fc37c361f8749d30e1a96ac2bba73ee; CI del nuevo head pendiente. P0 conserva el gate de cierre final P3 y la integración. No hay despliegue ni merge del PR de sesión. P0 confirmó secure_links/0004 con parents 0003 y accounts/0066; backfill sólo audience legacy, sin owners inferidos ni rewrites de cifrado. Contrato técnico y límites: docs/platform-secure-links.md.

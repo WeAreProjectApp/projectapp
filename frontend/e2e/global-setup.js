@@ -19,6 +19,15 @@ const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
     '/en-us/panel/documents',
     '/en-us/panel/documents/statuses',
   ],
+  'frontend/pages/platform/projects/[id]/ideas.vue': [
+    '/es-co/platform/projects',
+    '/es-co/platform/projects/1',
+    '/es-co/platform/projects/1/ideas',
+  ],
+  'frontend/pages/panel/projects/[id]/ideas.vue': [
+    '/en-us/panel/projects',
+    '/en-us/panel/projects/1/ideas',
+  ],
   'frontend/pages/portfolio-works/[slug].vue': [
     '/en-us/portfolio-works',
     '/en-us/portfolio-works/responsive-fixture',
@@ -123,6 +132,9 @@ function warmupApiFixture({ apiPath, method }) {
   }
   if (apiPath === 'accounts/projects/1/' && method === 'GET') {
     return json({ id: 1, name: 'Warmup project', status_label: 'Activo', current_state: { color: 'emerald', operational_effect: 'operating' } });
+  }
+  if (/^(?:accounts\/)?projects\/1\/(?:ideas|idea-collections)\/$/.test(apiPath) && method === 'GET') {
+    return json({ results: [], count: 0, page: 1, page_size: 20, total_pages: 1 });
   }
   if (apiPath === 'accounts/projects/1/access/' && method === 'GET') {
     return json({
