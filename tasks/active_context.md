@@ -2426,6 +2426,8 @@ Control de correo: MAILERS locmem aplicado antes de Django, cada alias/configura
 
 El workflow P4 es reutilizable desde CI, sube `playwright-blob-project-collaboration` y alimenta el agregado del mismo run con una dependencia explícita. Se mantiene prioridad P1 y resultados exigidos del flujo de política. Los artefactos blob se excluyen de Git. La regresión de menú se acota al proyecto tras el nuevo Hosting general de P2, comprobando enlaces concretos. Los 20 tests del catálogo pasan; registro/sync correcto, 430 flows y 123 vistas (107 visuales + 16 redirects). Blob real: política P1 covered, sus cuatro resultados aprobados y 7 casos focales sin skips/retries tras reinicio del host. Responsive: 20 casos aprobados en cinco perfiles; retorno final del proceso 1, sin fallos ni errores generales en JSON, pendiente de confirmar en CI. P0 autoriza publicar con estos controles focales sin esperar CI completo; el delta P1 6a95dc93 queda para P0/P5. No merge, deploy ni migración real.
 
+Cierre de fuente (2026-10-02): merges P1 `6a95dc93` y P3 test-only `54b8156b`; 0075 intacta, sin fixes comunes P0. Pin Explorer actualizado a las 123 vistas verificadas: 16/16 pruebas pasan. Once regresiones de evaluación/consulta/budgets/CR archivada y una navegación real a Bugs pasan. Servidor de incidencias certificado con MAILERS efectivos locmem antes de DB/fixtures. P1 cobertura final y P2 fix lenient de bulk_assign_client aún pendientes de publicación; no acreditado CI verde. La falla previa del agregado fue stream de artifact truncado, sin rebajar cobertura.
+
 ### P2 — cuentas y hosting por proyecto (2026-10-01)
 
 En implementación en rama propia `feat/01102026-platform-client-billing`, desde
