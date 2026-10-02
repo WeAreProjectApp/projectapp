@@ -258,7 +258,7 @@ test.describe('Admin accounting VAT', () => {
     await page.getByTestId('collection-form-income').click();
     await page.getByTestId('collection-form-income-option-8').click();
     await expect(page.getByTestId('collection-form-amount')).toHaveValue('1.190.000');
-    await expect(page.getByTestId('vat-rate')).toHaveValue('19');
+    await expect(page.getByTestId('vat-rate')).toHaveValue('19.00');
 
     await page.getByTestId('collection-form-preview').click();
     await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-ACME-001');
@@ -271,8 +271,8 @@ test.describe('Admin accounting VAT', () => {
     const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
     expect(previewCall.body).toMatchObject({
       income_record_id: 8,
-      vat_rate: 19,
-      items: [{ amount: 1190000, amount_mode: 'vat_included' }],
+      vat_rate: '19.00',
+      items: [{ amount: '1190000', amount_mode: 'vat_included' }],
     });
   });
 });

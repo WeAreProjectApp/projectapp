@@ -27,7 +27,12 @@ from content.services.email_delivery_service import (
     EmailDeliveryGateway,
     EmailMultiAlternatives,
 )
-from content.utils import format_bogota_date, format_cop_email
+from content.utils import format_bogota_date, format_cop_email as _format_whole_cop_email
+from content.services.accounting_vat import format_vat_money
+
+def format_cop_email(value):
+    return format_vat_money(value, _format_whole_cop_email)
+
 
 logger = logging.getLogger(__name__)
 

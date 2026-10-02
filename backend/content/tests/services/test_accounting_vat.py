@@ -215,8 +215,25 @@ def test_legacy_item_price_syncs_an_uncollected_income_with_known_tax_rate(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    'base, tax, total, pdf_base, pdf_tax, pdf_total, email_base, '
+    'email_tax, email_total, words',
+    [
+        (
+            Decimal('1000000.00'), Decimal('190000.00'), Decimal('1190000.00'),
+            '$1.000.000', '$190.000', '$1.190.000',
+            "$1'000.000", '$190.000', "$1'190.000", 'pesos M/CTE',
+        ),
+        (
+            Decimal('100.05'), Decimal('19.01'), Decimal('119.06'),
+            '$100,05', '$19,01', '$119,06',
+            '$100,05', '$19,01', '$119,06', 'con 06/100 M/CTE',
+        ),
+    ],
+)
 def test_collection_pdf_and_email_publish_the_same_vat_breakdown(
-    make_client_profile,
+    make_client_profile, base, tax, total, pdf_base, pdf_tax, pdf_total,
+    email_base, email_tax, email_total, words,
 ):
     """Falla si PDF y correo dejan de explicar la misma base, IVA y total."""
     client = make_client_profile(company='Factura IVA SAS')
@@ -233,9 +250,9 @@ def test_collection_pdf_and_email_publish_the_same_vat_breakdown(
         issuer=issuer,
         public_number='PA-IVA-001',
         issue_date=date(2026, 10, 1),
-        subtotal=Decimal('1000000.00'),
-        tax_total=Decimal('190000.00'),
-        total=Decimal('1190000.00'),
+        subtotal=base,
+        tax_total=tax,
+        total=total,
         currency='COP',
     )
     DocumentCollectionAccount.objects.create(
@@ -245,20 +262,21 @@ def test_collection_pdf_and_email_publish_the_same_vat_breakdown(
     )
     DocumentItem.objects.create(
         document=document, position=0, description='Servicio',
-        quantity=Decimal('1'), unit_price=Decimal('1000000.00'),
-        tax_amount=Decimal('190000.00'), line_total=Decimal('1190000.00'),
+        quantity=Decimal('1'), unit_price=base,
+        tax_amount=tax, line_total=total,
     )
 
     pdf = CollectionAccountPdfService.generate(document)
     pdf_text = ''.join(page.extract_text() for page in PdfReader(io.BytesIO(pdf)).pages)
     email = build_collection_account_email(document)
 
-    assert 'Valor antes de IVA: $1.000.000' in pdf_text
-    assert 'IVA (19 %): $190.000' in pdf_text
-    assert 'Total (COP): $1.190.000' in pdf_text
-    assert 'Valor antes de IVA: $1\'000.000 COP.' in email['text_body']
-    assert 'IVA (19 %): $190.000 COP.' in email['text_body']
-    assert 'Valor a pagar: $1\'190.000 COP.' in email['text_body']
+    assert f'Valor antes de IVA: {pdf_base}' in pdf_text
+    assert f'IVA (19 %): {pdf_tax}' in pdf_text
+    assert f'Total (COP): {pdf_total}' in pdf_text
+    assert f'Valor antes de IVA: {email_base} COP.' in email['text_body']
+    assert f'IVA (19 %): {email_tax} COP.' in email['text_body']
+    assert f'Valor a pagar: {email_total} COP.' in email['text_body']
+    assert words in pdf_text
 
 
 @pytest.mark.django_db

@@ -34,3 +34,12 @@ def vat_breakdown(amount, rate, mode='vat_included'):
     if total > MAX_MONEY:
         raise ValueError('El total con IVA supera el importe máximo permitido.')
     return base, vat, total
+
+
+def format_vat_money(value, format_whole):
+    """Keep cents from VAT rounding while retaining the existing COP separators."""
+    amount = quantize_money(value)
+    whole = int(amount)
+    cents = abs(int((amount - whole) * 100))
+    formatted = format_whole(whole)
+    return f'{formatted},{cents:02d}' if cents else formatted
