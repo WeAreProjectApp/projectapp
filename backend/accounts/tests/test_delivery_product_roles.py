@@ -6,7 +6,7 @@ from django.core.files.base import ContentFile
 from freezegun import freeze_time
 from rest_framework.exceptions import ValidationError
 
-from accounts.models import DeliveryStage, Requirement
+from accounts.models import DeliveryPublication, DeliveryStage, Requirement
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_authoring_helpers import (
     build_authoring_context, captured_citation, guide_leaf, guides_payload, manual_payload, pdf_bytes,
@@ -113,6 +113,48 @@ def test_sources_without_product_roles_publish_without_inventing_client_role(con
     assert 'role' not in prepared['template']['scopes'][0]['phases'][0]['stages'][0]['requirements'][0]['guide']
     assert 'role' not in published['requirements'][0]['guide']
     assert published['requirements'][0]['guide']['blocked_steps'] == []
+
+
+@pytest.mark.parametrize(('field', 'missing_value'), [
+    ('access', ''),
+    ('allowed_actions', ''),
+    ('blocked_actions', ''),
+    ('blocked_steps', []),
+    ('blocked_result', ''),
+])
+def test_publish_rejects_sourced_role_guide_missing_access_case(
+    context, field, missing_value,
+):
+    """Fails if publishing accepts a sourced role guide without one access-case field."""
+    prepared = prepare_roles(context)
+    payload = role_payload(prepared)
+    payload['scopes'][0]['phases'][0]['stages'][0]['requirements'][0]['guide'][field] = missing_value
+    apply(context, payload)
+    stage = DeliveryStage.objects.get(key='operator-stage')
+    requirement = stage.requirements.get()
+    before = (
+        stage.editorial_status,
+        stage.version,
+        requirement.review_status,
+        requirement.version,
+        DeliveryPublication.objects.count(),
+        version(context),
+    )
+
+    with pytest.raises(ValidationError, match='Completa') as caught:
+        publish_stage(context, 'operator-stage')
+
+    stage.refresh_from_db()
+    requirement.refresh_from_db()
+    assert str(caught.value.detail['code']) == 'guide_incomplete'
+    assert (
+        stage.editorial_status,
+        stage.version,
+        requirement.review_status,
+        requirement.version,
+        DeliveryPublication.objects.count(),
+        version(context),
+    ) == before
 
 
 @pytest.mark.parametrize('role', ['Cliente', 'Platform administrator'])

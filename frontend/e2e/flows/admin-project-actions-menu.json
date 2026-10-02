@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Desde Proyectos, la primera columna de la tabla no tiene título visible y contiene el botón de tres puntos. Tabla y tarjetas comparten un modal que conserva detalle, plataforma, edición, marca, comunicaciones, estado e historial, y ofrece eliminar. Escape cierra el menú y devuelve el foco al botón.",
+  "description": "Desde Proyectos, la primera columna de la tabla no tiene título visible y contiene el botón de tres puntos. Tabla y tarjetas comparten un modal que conserva Ideas, detalle, plataforma, edición, marca, comunicaciones, estado e historial, y ofrece eliminar. Escape cierra el menú y devuelve el foco al botón.",
   "expectedSpecs": 3,
   "outcomes": [
     "display"

@@ -1,5 +1,6 @@
 import { test, expect } from '../helpers/test.js'
 import { addRequirement, authenticate, fixture, openWorkspace, publish } from './helpers.js'
+import { preparePrompt, roleGuidePayload } from './prompt-helpers.js'
 import { PANEL_VIEWPORTS } from '../../config/responsive.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
 
@@ -20,6 +21,47 @@ test('admin publishes a prepared internal stage', {
   await openWorkspace(clientPage, data)
   await expect(clientPage.getByTestId(`delivery-stage-${data.hidden_stage_id}`)).toContainText('Validar el resumen del inventario')
   await context.close()
+})
+
+// Fails if publication discards a sourced role-guide draft after its completeness error,
+// or if the completed guide is announced without becoming visible to the client.
+test('admin completes a sourced role guide after publication rejects its blocked case', {
+  tag: ['@flow:platform-delivery-authoring', ...tags, '@outcome:error', '@outcome:success'],
+}, async ({ page, request, browser }, testInfo) => {
+  const data = await fixture(request, testInfo, 'role-guide')
+  await authenticate(page, request, data, 'admin')
+  await openWorkspace(page, data)
+  await page.getByTestId('delivery-create-guides').click()
+  await page.getByTestId('delivery-prompt-contract').selectOption(String(data.contract_id))
+  const context = await preparePrompt(page)
+  const payload = roleGuidePayload(context, data.contract_id)
+  delete payload.scopes[0].phases[0].stages[0].requirements[0].guide.blocked_result
+  await page.getByTestId('delivery-prompt-json').fill(JSON.stringify(payload))
+  await page.getByTestId('delivery-prompt-preview').click()
+  await expect(page.getByTestId('delivery-prompt-apply')).toBeEnabled()
+  const importedPromise = page.waitForResponse((response) => response.url().endsWith('/delivery/import/apply/'))
+  await page.getByTestId('delivery-prompt-apply').click()
+  const imported = await (await importedPromise).json()
+  const stage = imported.scopes.find((scope) => scope.key === 'source-based-scope').phases[0].stages[0]
+  const requirement = stage.requirements[0]
+  await expect(page.getByTestId(`delivery-stage-${stage.id}`)).toContainText('Etapa de inventario por rol')
+  await page.getByTestId(`delivery-publish-${stage.id}`).click()
+  await page.getByTestId('delivery-confirm-action').click()
+  await expect(page.getByRole('alert')).toContainText('Completa el resultado esperado del caso bloqueado')
+  await expect(page.getByTestId(`delivery-stage-${stage.id}`)).toContainText('Validar el inventario por rol')
+  await page.getByRole('button', { name: 'Cancelar', exact: true }).click()
+  await page.getByTestId(`delivery-edit-requirement-${requirement.id}`).click()
+  await page.getByTestId('delivery-author-blocked_result').fill('La modificación permanece bloqueada.')
+  await page.getByTestId('delivery-guide-human-reviewed').getByRole('checkbox').check()
+  await page.getByTestId('delivery-authoring-save').click()
+  await expect(page.getByTestId('delivery-authoring-form')).toHaveCount(0)
+  await publish(page, stage.id)
+  const clientContext = await browser.newContext()
+  const clientPage = await clientContext.newPage()
+  await authenticate(clientPage, request, data)
+  await openWorkspace(clientPage, data)
+  await expect(clientPage.getByTestId(`delivery-stage-${stage.id}`)).toContainText('Validar el inventario por rol')
+  await clientContext.close()
 })
 
 test('a draft requires a name before saving', {

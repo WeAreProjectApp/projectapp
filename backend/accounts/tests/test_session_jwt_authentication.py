@@ -5,7 +5,13 @@ from django.contrib.auth import get_user_model
 from django.core import mail
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import ProjectAdminAccess, UserProfile, VerificationCode
+from accounts.models import (
+    DeliveryMessage,
+    DeliveryPublication,
+    ProjectAdminAccess,
+    UserProfile,
+    VerificationCode,
+)
 from accounts.services.credential_cipher import decrypt_secret, encrypt_secret
 from accounts.services.tokens import (
     get_password_reset_request_token,
@@ -23,6 +29,14 @@ def _purpose_token(user, purpose):
     token = AccessToken.for_user(user)
     token['purpose'] = purpose
     return str(token)
+
+
+PLATFORM_READ_ENDPOINTS = (
+    '/api/accounts/projects/{project_id}/delivery/',
+    '/api/accounts/projects/{project_id}/billing-options/',
+    '/api/accounts/projects/{project_id}/ideas/',
+    '/api/accounts/projects/{project_id}/secure-links/types/',
+)
 
 
 @pytest.fixture
@@ -114,6 +128,68 @@ def test_purpose_claim_cannot_reveal_project_password(
     assert response.status_code == 401
     assert project_access.admin_password_encrypted == before
     assert decrypt_secret(project_access.admin_password_encrypted) == 'production-secret'
+
+
+@pytest.mark.parametrize('purpose', [
+    'verification',
+    'password_reset_request',
+    'password_reset_verified',
+])
+@pytest.mark.parametrize('endpoint', PLATFORM_READ_ENDPOINTS)
+def test_purpose_claim_cannot_read_platform_project_adapters(
+    api_client, client_user, project, endpoint, purpose,
+):
+    """Fails if a challenge JWT reaches any project-scoped Platform adapter."""
+    mail.outbox = []
+    before = (DeliveryMessage.objects.count(), DeliveryPublication.objects.count())
+
+    response = api_client.get(
+        endpoint.format(project_id=project.pk),
+        HTTP_AUTHORIZATION=f'Bearer {_purpose_token(client_user, purpose)}',
+    )
+
+    assert response.status_code == 401
+    assert (DeliveryMessage.objects.count(), DeliveryPublication.objects.count()) == before
+    assert mail.outbox == []
+
+
+@pytest.mark.parametrize('endpoint', PLATFORM_READ_ENDPOINTS)
+def test_regular_owner_token_reads_platform_project_adapters(
+    api_client, client_user, project, endpoint,
+):
+    """Fails if the session guard rejects the project owner's ordinary JWT."""
+    response = api_client.get(
+        endpoint.format(project_id=project.pk),
+        HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(client_user)["access"]}',
+    )
+
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize('endpoint', PLATFORM_READ_ENDPOINTS)
+def test_other_client_token_cannot_read_platform_project_adapters(
+    api_client, admin_user, project, endpoint,
+):
+    """Fails if an ordinary client JWT can read another client's project adapter."""
+    other_client = User.objects.create_user(
+        username='other-platform-client@example.test',
+        email='other-platform-client@example.test',
+        password='pass12345',
+    )
+    UserProfile.objects.create(
+        user=other_client,
+        role=UserProfile.ROLE_CLIENT,
+        is_onboarded=True,
+        profile_completed=True,
+        created_by=admin_user,
+    )
+
+    response = api_client.get(
+        endpoint.format(project_id=project.pk),
+        HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(other_client)["access"]}',
+    )
+
+    assert response.status_code == 404
 
 
 def test_normal_access_token_reads_profile(api_client, admin_headers):

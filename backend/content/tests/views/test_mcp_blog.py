@@ -1,4 +1,6 @@
 """Tests for the Blog Publisher MCP HTTP endpoint."""
+import json
+import logging
 import pytest
 
 from content.models import BlogPost, McpConnector, McpRequestLog
@@ -227,7 +229,7 @@ class TestMcpActivityLog:
         api_client.post(
             _url(token), _rpc('ping'), format='json', HTTP_ORIGIN='https://evil.example',
         )
-        assert ('origin_rejected', False, 'https://evil.example') in self._events()
+        assert ('origin_rejected', False, 'origin_rejected') in self._events()
 
     def test_trail_is_pruned_to_keep_limit(self, blog_connector):
         connector, _ = blog_connector
@@ -313,6 +315,47 @@ class TestMcpEndpointFlow:
         assert response.status_code == 200
         assert response.data['result']['isError'] is True
         assert 'title_en' in response.data['result']['content'][0]['text']
+
+    def test_failed_tool_call_keeps_only_declared_reference_in_audit(
+        self, api_client, blog_connector, blog_post, caplog,
+    ):
+        """Fails if an undeclared tool argument reaches MCP logs or its audit row."""
+        _, token = blog_connector
+        marker = 'SYNTHETIC_PRIVATE_P5_20261001'
+        with caplog.at_level(logging.INFO, logger='content.mcp.protocol'):
+            response = api_client.post(
+                _url(token),
+                _rpc('tools/call', {
+                    'name': 'delete_blog_post',
+                    'arguments': {'post_id': blog_post.pk, 'private_id': marker},
+                }),
+                format='json',
+            )
+
+        result = response.data['result']
+        error = result['structuredContent']['error']
+        audit = McpRequestLog.objects.get(event='tool_call')
+        serialized_response = json.dumps(response.data, ensure_ascii=False)
+        assert response.status_code == 200
+        assert error == {
+            'code': 'VALIDATION_ERROR',
+            'message': 'Este post está publicado. Despublícalo primero con update_blog_post (is_published=false) o elimínalo desde el panel.',
+            'details': {},
+        }
+        assert marker not in f'{serialized_response}{caplog.text}'
+        assert {
+            'object_refs': audit.object_refs,
+            'detail': audit.detail,
+            'error_code': audit.error_code,
+            'request_id': audit.request_id,
+            'has_duration': audit.duration_ms >= 0,
+        } == {
+            'object_refs': [{'field': 'post_id', 'value': blog_post.pk}],
+            'detail': 'delete_blog_post: VALIDATION_ERROR',
+            'error_code': 'VALIDATION_ERROR',
+            'request_id': result['_meta']['requestId'],
+            'has_duration': True,
+        }
 
 
 @pytest.fixture

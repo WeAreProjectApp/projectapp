@@ -7409,7 +7409,7 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 
 Fuente: `DeliveryAuthoringForm.vue`, `DeliveryWorkspace.vue` y `accounts.services.delivery_workflow`.
 
-El administrador vincula el contrato original, sus otrosíes y el alcance; crea fases de ejecución independientes de los cobros y organiza sus etapas y requerimientos. Guarda borradores antes de publicar. Una etapa sin requerimientos, con guía incompleta o con contrato aplicable sin firmar no se puede publicar. Las ampliaciones de una etapa aprobada requieren otra etapa.
+El administrador vincula el contrato original, sus otrosíes y el alcance; crea fases de ejecución independientes de los cobros y organiza sus etapas y requerimientos. Guarda borradores antes de publicar. Una etapa sin requerimientos, con guía incompleta o con contrato aplicable sin firmar no se puede publicar. Si una guía basada en fuentes nombra un rol del producto, debe explicar acceso y datos, acciones permitidas y bloqueadas, y los pasos y resultados para verificar ambos casos. El rechazo conserva el borrador; se completa la guía y sólo entonces se publica para el cliente. Las ampliaciones de una etapa aprobada requieren otra etapa.
 
 `delivery-authoring.spec.js` cubre la preparación y publicación desde el formulario. La API comprueba también permisos, versiones y protección de aprobaciones.
 
@@ -7891,12 +7891,12 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Roles:** admin
 - **Priority:** P1
 - **Route:** `/panel/projects/:id/ideas`
-- **Interaction:** Admin selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.
+- **Interaction:** Admin opens the idea workspace from the selected project three-point menu, selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.
 - **Coverage:** `frontend/e2e/project-collaboration/ideas.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
 - **Success:** operación explícita persistida y resultado observado en UI.
 - **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
 - **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
-- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+- **Display:** navegación desde el menú de tres puntos del proyecto seleccionado, texto real o dato habilitado de la fixture.
 
 ### FLOW: `admin-project-lifecycle-states`
 

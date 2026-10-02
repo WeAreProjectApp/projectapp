@@ -5,9 +5,12 @@ import { waitForNuxtApp } from '../helpers/navigation.js'
 export const backendUrl = 'http://127.0.0.1:3202'
 export const frontendUrl = 'http://127.0.0.1:3203'
 
-export async function fixture(request, testInfo) {
+export async function fixture(request, testInfo, mode) {
   const response = await request.post(`${backendUrl}/__delivery_fixture__`, {
-    data: { key: testInfo.title.replace(/[^a-z0-9]/gi, '-').slice(0, 100) },
+    data: {
+      key: testInfo.title.replace(/[^a-z0-9]/gi, '-').slice(0, 100),
+      ...(mode ? { mode } : {}),
+    },
   })
   expect(response.ok()).toBeTruthy()
   return response.json()

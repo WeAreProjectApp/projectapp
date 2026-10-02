@@ -14,7 +14,7 @@ from accounts.models import (
 from accounts.services import delivery_closure_email as closure_email
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_helpers import build_delivery_context, decisions, publish, version
-from content.models import Document, EmailDeliverySnapshot, McpConnector, McpCredential
+from content.models import Document, EmailDeliverySnapshot, EmailLog, McpConnector, McpCredential
 
 
 pytestmark = pytest.mark.django_db
@@ -271,14 +271,22 @@ def test_failed_send_needs_an_explicit_resend_preparation(context):
     _approved(context)
     prepared = _prepare(context)
 
-    with patch('content.services.email_delivery_service.EmailDeliveryGateway.send', side_effect=RuntimeError('SMTP down')) as gateway:
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
+    with patch('content.services.email_delivery_service.EmailDeliveryGateway.send', side_effect=RuntimeError(marker)) as gateway:
         failed = _send(context, prepared)
         replay = _send(context, prepared, request_id='closure-send-retry')
 
-    assert failed['status'] == 'failed'
-    assert replay['status'] == 'failed'
-    assert replay['error_message'] == 'SMTP down'
-    assert gateway.call_count == 1
+    attempt = DeliveryEvidenceEmail.objects.get(pk=prepared['id']).attempts.get()
+    log = EmailLog.objects.get(template_key='delivery_stage_approved_client')
+    assert (
+        failed['status'], replay['status'], replay['error_message'],
+        attempt.error_message, log.error_message,
+        marker not in f'{failed}{replay}', gateway.call_count,
+    ) == (
+        'failed', 'failed', 'No se pudo completar el envío de correo.',
+        'No se pudo completar el envío de correo.',
+        'No se pudo completar el envío de correo.', True, 1,
+    )
 
 
 def test_post_smtp_audit_error_marks_delivery_unknown_without_resending(context):

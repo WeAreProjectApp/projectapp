@@ -1640,7 +1640,7 @@ def test_activity_log_failure_does_not_break_transport(
     )
 
     assert response.status_code == 200
-    assert 'failed to record handshake event' in caplog.text
+    assert 'MCP_AUDIT_UNAVAILABLE' in caplog.text
 
 
 def test_invalid_confirmation_identifier_returns_not_found(
@@ -1662,8 +1662,8 @@ def test_invalid_confirmation_identifier_returns_not_found(
     assert error['code'] == 'NOT_FOUND'
 
 
-def test_unknown_tool_audit_caps_object_references(api_client, tasks_connector):
-    """Falla si una llamada inválida puede desbordar las referencias de auditoría."""
+def test_unknown_tool_audit_discards_undeclared_object_references(api_client, tasks_connector):
+    """Falla si una herramienta no registrada conserva argumentos en auditoría."""
     connector, token = tasks_connector
     arguments = {f'resource_{index}_id': index for index in range(30)}
 
@@ -1679,7 +1679,7 @@ def test_unknown_tool_audit_caps_object_references(api_client, tasks_connector):
     assert response.data['error']['code'] == -32602
     assert event.ok is False
     assert event.error_code == '-32602'
-    assert len(event.object_refs) == 25
+    assert event.object_refs == []
 
 
 def test_array_tool_params_are_audited_as_invalid(api_client, tasks_connector):

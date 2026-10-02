@@ -1,10 +1,13 @@
 """Private retention through the common capture, history and resend paths."""
 import hashlib
+import logging
 from pathlib import Path
+from unittest.mock import patch
 from uuid import UUID
 
 import pytest
 from django.core import mail
+from django.core.files.storage import FileSystemStorage
 from django.urls import reverse
 
 from content.email_copy_families import PLATFORM
@@ -187,6 +190,27 @@ def test_snapshot_failure_blocks_private_delivery(settings):
     assert EmailAttachmentSnapshot.objects.count() == 0
     assert list(Path(settings.PRIVATE_MEDIA_ROOT).rglob('*.pdf')) == []
     assert list(Path(settings.MEDIA_ROOT).rglob('*')) == []
+
+
+def test_snapshot_capture_failure_hides_storage_exception(settings, caplog):
+    """Fails if a storage exception leaks into frozen evidence or the gateway log."""
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
+
+    with caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'):
+        with patch.object(
+            FileSystemStorage, '_save', side_effect=RuntimeError(marker),
+        ):
+            with pytest.raises(EmailSnapshotCaptureError, match='archivar el correo exacto'):
+                EmailDeliveryGateway.send(
+                    evidence_message(), template_key=TEMPLATE_KEY,
+                    private_attachments=True,
+                )
+
+    assert marker not in caplog.text
+    assert mail.outbox == []
+    assert EmailDeliverySnapshot.objects.count() == 0
+    assert EmailAttachmentSnapshot.objects.count() == 0
+    assert list(Path(settings.PRIVATE_MEDIA_ROOT).rglob('*')) == []
 
 
 def test_missing_private_attachment_never_reads_public_file(settings):

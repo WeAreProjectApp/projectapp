@@ -4,7 +4,7 @@
   "module": "platform",
   "roles": ["platform-admin"],
   "priority": "P1",
-  "description": "Prepare contracts, scopes, independent execution phases, stages and validation requirements; publish a stage only with complete guides and signed applicable agreements.",
+  "description": "Prepare contracts, scopes, independent execution phases, stages and validation requirements; publish a stage only with complete guides and signed applicable agreements. A source-backed guide that names a product role must state access/data, allowed and blocked actions, permitted and blocked verification steps and expected results; a rejected publication preserves the draft until it is completed.",
   "expectedSpecs": 1,
   "outcomes": ["success", "error", "failure"]
 }

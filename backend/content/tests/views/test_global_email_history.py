@@ -493,10 +493,11 @@ def test_resend_returns_service_unavailable_when_snapshot_capture_fails(admin_cl
 
 def test_resend_records_failed_log_when_gateway_raises(admin_client):
     log = make_snapshot_log(attachment_bytes=b'pdf-original')
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
     with patch(
         'content.services.email_delivery_service.EmailDeliveryGateway.send',
-        side_effect=RuntimeError('SMTP down'),
+        side_effect=RuntimeError(marker),
     ):
         response = admin_client.post(
             reverse('resend-standalone-email', kwargs={'log_id': log.pk}),
@@ -506,7 +507,8 @@ def test_resend_records_failed_log_when_gateway_raises(admin_client):
 
     assert response.status_code == 502
     failed = EmailLog.objects.exclude(pk=log.pk).get(status=EmailLog.Status.FAILED)
-    assert failed.error_message == 'SMTP down'
+    assert failed.error_message == 'No se pudo completar el envío de correo.'
+    assert marker not in str(response.data)
 
 
 def test_resend_records_failed_log_when_gateway_returns_zero(admin_client):

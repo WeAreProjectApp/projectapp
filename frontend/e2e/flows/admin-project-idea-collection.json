@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.",
+  "description": "Admin opens the idea workspace from the selected project three-point menu, selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.",
   "outcomes": [
     "success",
     "error",

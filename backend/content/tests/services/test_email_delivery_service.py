@@ -1,3 +1,4 @@
+import logging
 from smtplib import SMTPException
 from unittest.mock import patch
 
@@ -208,66 +209,82 @@ def test_client_copy_preserves_rendered_content():
     assert copy_message.attachments == primary.attachments
 
 
-def test_primary_failure_records_primary_without_copy():
+def test_primary_failure_records_primary_without_copy(caplog):
+    """Fails if transport exception text is persisted or logged with email history."""
     ClientEmailCopyRecipient.objects.create(email='audit@example.com')
     message = build_message()
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with patch(
-        'content.services.email_delivery_service.EmailMessage.send',
-        side_effect=SMTPException('primary unavailable'),
-    ) as smtp_send:
-        with pytest.raises(SMTPException, match='primary unavailable'):
-            EmailDeliveryGateway.send(
-                message, template_key='proposal_sent_client',
-            )
+    with caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'):
+        with patch(
+            'content.services.email_delivery_service.EmailMessage.send',
+            side_effect=SMTPException(marker),
+        ) as smtp_send:
+            with pytest.raises(SMTPException):
+                EmailDeliveryGateway.send(
+                    message, template_key='proposal_sent_client',
+                )
 
-    smtp_send.assert_called_once_with()
     primary = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.PRIMARY)
-    assert primary.status == EmailLog.Status.FAILED
-    assert primary.error_message == 'primary unavailable'
-    assert not EmailLog.objects.filter(
-        delivery_role=EmailLog.DeliveryRole.COPY,
-    ).exists()
+    assert (
+        smtp_send.call_count, primary.status, primary.error_message,
+        marker not in f'{primary.error_message}{caplog.text}', len(mail.outbox),
+        EmailLog.objects.filter(delivery_role=EmailLog.DeliveryRole.COPY).exists(),
+    ) == (
+        1, EmailLog.Status.FAILED, 'No se pudo completar el envío de correo.',
+        True, 0, False,
+    )
 
 
-def test_primary_smtp_failure_is_suppressed_when_requested():
+def test_primary_smtp_failure_is_suppressed_when_requested(caplog):
+    """Fails if suppressed transport failures retain their original exception text."""
     message = build_message()
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with patch(
-        'content.services.email_delivery_service.EmailMessage.send',
-        side_effect=SMTPException('primary unavailable'),
-    ) as smtp_send:
-        result = EmailDeliveryGateway.send(
-            message,
-            template_key='proposal_sent_client',
-            fail_silently=True,
-        )
+    with caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'):
+        with patch(
+            'content.services.email_delivery_service.EmailMessage.send',
+            side_effect=SMTPException(marker),
+        ) as smtp_send:
+            result = EmailDeliveryGateway.send(
+                message,
+                template_key='proposal_sent_client',
+                fail_silently=True,
+            )
 
     smtp_send.assert_called_once_with()
     primary = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.PRIMARY)
     assert result == 0
     assert primary.status == EmailLog.Status.FAILED
-    assert primary.error_message == 'primary unavailable'
+    assert primary.error_message == 'No se pudo completar el envío de correo.'
+    assert marker not in primary.error_message
+    assert marker not in caplog.text
 
 
-def test_copy_failure_preserves_primary_status():
+def test_copy_failure_preserves_primary_status(caplog):
+    """Fails if a copy exception leaks while the primary delivery remains sent."""
     ClientEmailCopyRecipient.objects.create(email='audit@example.com')
     message = build_message()
+    marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with patch(
-        'content.services.email_delivery_service.EmailMessage.send',
-        side_effect=[1, SMTPException('copy unavailable')],
-    ):
-        result = EmailDeliveryGateway.send(
-            message, template_key='proposal_sent_client',
-        )
+    with caplog.at_level(logging.WARNING, logger='content.services.email_delivery_service'):
+        with patch(
+            'content.services.email_delivery_service.EmailMessage.send',
+            side_effect=[1, SMTPException(marker)],
+        ) as smtp_send:
+            result = EmailDeliveryGateway.send(
+                message, template_key='proposal_sent_client',
+            )
     primary = record_primary()
 
     copy_log = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.COPY)
     assert result == 1
     assert primary.status == EmailLog.Status.SENT
     assert copy_log.status == EmailLog.Status.FAILED
-    assert copy_log.error_message == 'copy unavailable'
+    assert copy_log.error_message == 'No se pudo completar la copia del correo.'
+    assert marker not in copy_log.error_message
+    assert marker not in caplog.text
+    assert smtp_send.call_count == 2
 
 
 def test_copy_failure_does_not_prevent_later_copy_recipient():

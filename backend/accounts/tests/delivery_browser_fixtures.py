@@ -50,9 +50,16 @@ def create_browser_fixture(key, *, mode=None):
     document_type, _ = DocumentType.objects.get_or_create(
         code='markdown', defaults={'name': 'Markdown'},
     )
+    contract_text = '# Contrato\nAlcance acordado para las pruebas.'
+    if mode == 'role-guide':
+        contract_text += (
+            '\n\nEl Operador de inventario puede consultar el inventario de su '
+            'sucursal con una cuenta habilitada. No puede modificar registros '
+            'de otras sucursales.'
+        )
     contract_document = Document.objects.create(
         document_type=document_type, title=f'Contrato firmado {key}',
-        content_markdown='# Contrato\nAlcance acordado para las pruebas.',
+        content_markdown=contract_text,
         project=project, client_user=client, requires_signature=True,
         signed_at=timezone.now(), signed_by=client, signature_name='Cliente Delivery',
         is_client_visible=True,

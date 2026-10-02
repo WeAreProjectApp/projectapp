@@ -1,8 +1,8 @@
 import { expect } from '../helpers/test.js'
 
-export function citationFrom(context) {
+export function citationFrom(context, text = '') {
   const source = context.sources.find((item) => item.fragments?.length && item.role === 'contract')
-  const fragment = source.fragments[0]
+  const fragment = source.fragments.find((item) => item.text.includes(text)) || source.fragments[0]
   return { source_key: source.source_key, locator: fragment.locator, quote: fragment.text }
 }
 
@@ -35,6 +35,26 @@ export function guidePayload(context, contractId) {
       }] }],
     }],
   }
+}
+
+export function roleGuidePayload(context, contractId) {
+  const payload = guidePayload(context, contractId)
+  const stage = payload.scopes[0].phases[0].stages[0]
+  stage.key = 'inventory-role-stage'
+  stage.title = 'Etapa de inventario por rol'
+  const requirement = stage.requirements[0]
+  requirement.key = 'inventory-role-check'
+  requirement.title = 'Validar el inventario por rol'
+  requirement.guide = {
+    ...requirement.guide,
+    role: 'Operador de inventario',
+    access: 'Ingresar con una cuenta habilitada de la sucursal.',
+    allowed_actions: 'Consultar el inventario de su sucursal.',
+    blocked_actions: 'No modificar registros de otras sucursales.',
+    blocked_steps: ['Intentar modificar un registro de otra sucursal.'],
+  }
+  requirement.source_references = [citationFrom(context, 'Operador de inventario')]
+  return payload
 }
 
 export function replyPayload(context, classification = 'inside_scope') {
