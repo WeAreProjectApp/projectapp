@@ -12,7 +12,7 @@ from accounts.tests.delivery_authoring_helpers import (
     guides_payload, malformed_guides, manual_payload, other_contract, reference,
     signed_amendment, source_document, trace_first,
 )
-from accounts.tests.delivery_helpers import GUIDE, RECORDED_AT, decisions, prepare_prompt, publish, version
+from accounts.tests.delivery_helpers import RECORDED_AT, decisions, prepare_prompt, publish, version
 
 pytestmark = pytest.mark.django_db
 
@@ -26,6 +26,23 @@ def context():
 def apply(context, payload, request_id='apply-cited-guides'):
     return delivery.import_payload(context.project.pk, context.admin, payload, version(context),
                                    apply=True, request_id=request_id)
+
+
+def trace_first_with_complete_role_guide(context, prepared):
+    """Prepare the cited v2 version that the client will actually approve."""
+    guide = {
+        **context.first.guide,
+        'access': 'Use the existing client test account.',
+        'allowed_actions': 'View the validation screen and save the record.',
+        'blocked_actions': 'Cannot change another client record.',
+        'blocked_steps': ['Open another client record with the same account.'],
+        'blocked_result': 'The other client record remains unavailable.',
+    }
+    delivery.mutate_node(context.project.pk, context.admin, 'requirements', {
+        'expected_version': version(context), 'context_id': prepared['id'],
+        'source_references': [citation(prepared)], 'guide': guide,
+    }, context.first.pk)
+    context.first.refresh_from_db()
 
 
 def test_cited_preview_writes_no_delivery_rows(context):
@@ -259,7 +276,8 @@ def test_cited_scope_cannot_swap_its_captured_amendment(context):
 def test_cited_import_preserves_an_approved_guide(context):
     """Fails if new draft guides change an approved requirement or the prior client publication."""
     prepared = prepare_prompt(context)
-    trace_first(context, prepared)
+    trace_first_with_complete_role_guide(context, prepared)
+    approved_guide = copy.deepcopy(context.first.guide)
     publish(context)
     delivery.review_stage(context.project.pk, context.client, context.stage.pk,
                           decisions(context, (context.first, 'approved'), (context.second, 'objected')))
@@ -274,7 +292,7 @@ def test_cited_import_preserves_an_approved_guide(context):
     context.first.refresh_from_db()
     pending = Requirement.objects.get(key='new-pending-guide')
     assert context.first.review_status == 'approved'
-    assert context.first.guide == GUIDE
+    assert context.first.guide == approved_guide
     assert str(context.first.context_id) == prepared['id']
     assert pending.review_status == 'pending'
     assert pending.stage.editorial_status == 'draft'
@@ -285,7 +303,7 @@ def test_cited_import_preserves_an_approved_guide(context):
 def test_cited_import_cannot_rewrite_an_approved_title(context):
     """Fails if a cited import rewrites the identity of an approved requirement."""
     prepared = prepare_prompt(context)
-    trace_first(context, prepared)
+    trace_first_with_complete_role_guide(context, prepared)
     publish(context)
     delivery.review_stage(context.project.pk, context.client, context.stage.pk,
                           decisions(context, (context.first, 'approved'), (context.second, 'objected')))
