@@ -747,7 +747,7 @@ def missing_record_ids(entity_type, record_ids):
 
 @historical_write
 @transaction.atomic
-def bulk_assign_client(entity_type, record_ids, client, user):
+def bulk_assign_client(entity_type, record_ids, client, user, *, strict_ids=False):
     """Assign (or clear, with ``client=None``) the client of several records.
 
     The completion tool for rows created before the client link existed,
@@ -760,10 +760,16 @@ def bulk_assign_client(entity_type, record_ids, client, user):
     same write — the bulk mirror of the single-record serializer rule: a
     record must never point at someone else's project, and the operator
     re-picks explicitly if the move was intentional.
+
+    ``strict_ids=True`` requires the whole requested scope. The default
+    ignores ids absent before discovery; discovered rows remain mandatory
+    through the current locking reads.
     """
     model = ENTITY_MODELS[entity_type]
     if entity_type in (EntityType.INCOME, EntityType.HOSTING):
         from accounts.services.billing_locks import lock_billing_rows
+        if not strict_ids:
+            record_ids = list(model.objects.filter(pk__in=record_ids).values_list('pk', flat=True))
         locked = lock_billing_rows(
             income_ids=record_ids if entity_type == EntityType.INCOME else [],
             hosting_ids=record_ids if entity_type == EntityType.HOSTING else [],

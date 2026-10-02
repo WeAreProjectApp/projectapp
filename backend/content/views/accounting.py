@@ -1212,6 +1212,7 @@ def bulk_assign_income_client(request):
         income_ids,
         serializer.validated_data.get('client'),
         request.user,
+        strict_ids=True,
     )
     return Response({
         'updated': len(updated),
@@ -1281,6 +1282,7 @@ def bulk_assign_hosting_client(request):
         hosting_ids,
         serializer.validated_data.get('client'),
         request.user,
+        strict_ids=True,
     )
     return Response({
         'updated': len(updated),
