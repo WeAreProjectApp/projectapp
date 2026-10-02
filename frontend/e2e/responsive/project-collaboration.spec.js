@@ -123,9 +123,9 @@ const panelProjectsEntry = Object.freeze({
 const panelIdeasEntry = Object.freeze({
   compact: async (page) => { await page.getByTestId('project-actions-1').click(); await page.getByTestId('project-actions-ideas').click(); },
   portrait: async (page) => { await page.getByTestId('project-actions-1').click(); await page.getByTestId('project-actions-ideas').click(); },
-  landscape: (page) => page.getByTestId('project-ideas-1').click(),
-  desktop: (page) => page.getByTestId('project-ideas-1').click(),
-  wide: (page) => page.getByTestId('project-ideas-1').click(),
+  landscape: async (page) => { await page.getByTestId('project-actions-1').click(); await page.getByTestId('project-actions-ideas').click(); },
+  desktop: async (page) => { await page.getByTestId('project-actions-1').click(); await page.getByTestId('project-actions-ideas').click(); },
+  wide: async (page) => { await page.getByTestId('project-actions-1').click(); await page.getByTestId('project-actions-ideas').click(); },
 });
 
 async function openPlatformProject(page, profile) {
