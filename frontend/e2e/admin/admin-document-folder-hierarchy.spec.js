@@ -103,6 +103,26 @@ function documentsForFolder(folder) {
   return [DOC_IN_ROOT, DOC_IN_SUB, ...DOCS_IN_SUBSUB];
 }
 
+async function openRootFolderFromDrawer(page) {
+  await page.getByTestId('folder-drawer-trigger').click();
+  await page.getByTestId('folder-drawer')
+    .getByTestId('manual-folder-section')
+    .getByRole('button', { name: /^Raiz A/ }).click();
+}
+
+function openRootFolderFromPanel(page) {
+  return page.getByTestId('manual-folder-section')
+    .getByRole('button', { name: /^Raiz A/ }).click();
+}
+
+const openRootFolderByProfile = Object.freeze({
+  compact: openRootFolderFromDrawer,
+  portrait: openRootFolderFromDrawer,
+  landscape: openRootFolderFromPanel,
+  desktop: openRootFolderFromPanel,
+  wide: openRootFolderFromPanel,
+});
+
 test.describe('Admin Document Folder Hierarchy', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
@@ -306,9 +326,9 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
       });
 
       await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-      await sidebar(page).getByRole('button', { name: /^Raiz A/ }).click();
-      await page.getByRole('table').getByText('Subcarpeta Uno').click();
-      await page.getByRole('table').getByText('Sub Sub').click();
+      await openRootFolderByProfile[profile](page);
+      await page.getByRole('link', { name: FOLDER_SUB.name, exact: true }).click();
+      await page.getByRole('link', { name: FOLDER_SUBSUB.name, exact: true }).click();
 
       const breadcrumb = page.getByRole('navigation', { name: 'Ruta de carpetas' });
       const ancestor = breadcrumb.getByTestId(`folder-breadcrumb-${FOLDER_ROOT.id}`);
@@ -326,7 +346,7 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
 
       await ancestor.click();
       await expect.poll(() => requestedUrls.some((url) => url.includes(`folder=${FOLDER_ROOT.id}`))).toBe(true);
-      await expect(page.getByRole('table').getByText('Doc En Raiz')).toHaveText('Doc En Raiz');
+      await expect(page.getByText(DOC_IN_ROOT.title, { exact: true })).toBeVisible();
     });
   });
 }

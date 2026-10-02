@@ -280,8 +280,7 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
       });
 
       await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
-      const row = page.getByRole('row', { name: /Brief de Proyecto/i });
-      await row.getByRole('button', { name: /^Acciones de / }).click();
+      await page.getByRole('button', { name: `Acciones de ${DOC.title}`, exact: true }).click();
       await page.getByRole('button', { name: 'Mover a carpeta' }).click();
       const option = page.getByTestId(`move-folder-option-${LONG_DESTINATION.id}`);
       await expect(option).toContainText(LONG_DESTINATION.name);

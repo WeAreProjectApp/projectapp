@@ -455,7 +455,7 @@ class TestPaymentChargeStored:
                        'currency': 'COP',
                        'reference': f'PA{pending_payment.id}P{project.id}T1700000000',
                    }), \
-             patch('accounts.views.time.time', return_value=1700000000), \
+             patch('time.time', return_value=1700000000), \
              patch('time.sleep'):
             resp = api_client.post(self._url(project, pending_payment), {}, **client_headers)
         assert resp.status_code == 200
@@ -489,7 +489,7 @@ class TestPaymentChargeStored:
             'accounts.services.wompi.verify_transaction',
             return_value=poll_response,
         ) as mock_verify, patch(
-            'accounts.views.time.time', return_value=1700000000,
+            'time.time', return_value=1700000000,
         ), patch('time.sleep'):
             response = api_client.post(self._url(project, pending_payment), {}, **client_headers)
 
