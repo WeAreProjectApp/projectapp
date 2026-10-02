@@ -19,6 +19,12 @@ Las respuestas son nuevas entradas de historia; `admin_response` conserva la
 borra esa respuesta. Las notas internas y sus adjuntos sólo son visibles para el
 administrador. Los comentarios existentes añaden documentos opcionales.
 
+El detalle devuelto por las escrituras REST y las tools MCP carga en bloque
+reportero, origen, comentarios, respuestas, eventos, autores y adjuntos mediante
+`issue_reads.ticket_detail`. La conversión de una solicitud archivada devuelve
+400 para el administrador, sin modificarla; un ticket de otro proyecto conserva
+el rechazo por objeto.
+
 Un documento debe pertenecer al proyecto o al cliente del proyecto y respetar el
 contrato y el contexto del ticket. Las asociaciones a otros proyectos o contextos
 incompatibles se rechazan. Una respuesta pública exige publicación visible cuando
@@ -123,7 +129,7 @@ directamente.
 ## Bloques de integración
 
 Base main `cce8e694`, dependencia publicada P3
-`edfff19c2c56790398020a492e05df8c8a358872` absorbida mediante merge en la rama
+`cecb5b93d8cfd0b968fec3a71239323c48c7018f` absorbida mediante merge exacto en la rama
 propia. P0 reservó `0068_issue_reports`, dependiente de
 `0067_explicit_delivery_authoring_context`; se conserva la dependencia
 `content.0273_merge_document_provenance_and_proposal_owner`. La no-op propia
@@ -164,6 +170,27 @@ sin opciones SMTP, y comprueba el backend efectivo antes de DB/fixtures. Cuatro
 regresiones prueban envíos al outbox memoria y rechazos sin outbox.
 QA focal del adaptador: 17 casos REST (incluida CR), 12 casos MCP, 4 casos de
 aislamiento de correo y 3 unitarias de UI pasaron en sus lotes correspondientes.
+Tras absorber M3, pasaron ocho regresiones REST/MCP en el mismo lote, los cuatro
+guards de correo propios y tres recorridos reales de origen/publicación/conflicto.
+El fixture de navegador serializa sus solicitudes para evitar locks de tablas de
+SQLite en memoria; la preparación precarga las rutas y los escenarios conservan
+sus clics reales. Los tests contractuales no congelan el reloj global al importar
+el transporte MCP.
+La regresión de los cinco fallos de backend4 pasó: bugs y solicitudes mantienen
+19 consultas con una o cincuenta entradas de cada colección (comentarios,
+respuestas e historia). El control conserva dos lecturas independientes de
+autores; distingue los joins de `IssueResponse`/`IssueEvent` y exige una lectura
+por colección. Las fuentes nulas siguen siendo nulas y la conversión archivada
+no crea una guía ni un evento. La revisión contractual y su transporte MCP
+pasaron juntos en un lote de dieciocho casos después de esta corrección.
+La regresión de conversión y transporte MCP pasó veinte casos, y los detalles
+GET de bugs/solicitudes pasaron quince casos. La última verificación de los seis
+contratos de CI propios pasó después de simplificar sus fixtures de consultas.
+El contrato GET de bugs admite ocho consultas acotadas: las cinco originales,
+las dos colecciones nuevas de historia y una lectura conjunta de evidencia de
+comentarios, igual que el contrato GET de solicitudes. Sigue exigiendo el mismo
+costo con uno y cincuenta comentarios (ocho consultas en ambos) y los campos
+públicos correctos.
 La auditoría de calidad cerró sus observaciones. La ejecución de los gates y
 la disponibilidad del lint externo se informan junto al CI del head publicado. Los dos flujos del dominio cubren
 éxito, error, fallo y presentación. CI del head publicado se informa por separado.
