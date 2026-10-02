@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.utils import timezone
 
-from accounts.models import Deliverable, Project, UserProfile
+from accounts.models import Deliverable, Project, ProjectIdea, UserProfile
 from accounts.services.proposal_platform_onboarding import (
     _acting_user_for_sync,
     _find_client_user_by_email,
@@ -20,7 +20,7 @@ from accounts.services.proposal_platform_onboarding import (
 from accounts.services.technical_resources_sync import (
     sync_technical_resources_for_deliverable,
 )
-from content.models import BusinessProposal, ProposalSection
+from content.models import BusinessProposal, IncomeRecord, ProposalSection
 
 User = get_user_model()
 
@@ -390,6 +390,70 @@ def test_teardown_clears_platform_onboarding_completed_at(proposal_with_delivera
 
     proposal_with_deliverable.refresh_from_db()
     assert proposal_with_deliverable.platform_onboarding_completed_at is None
+
+
+@pytest.mark.django_db
+def test_teardown_blocks_archived_project_idea_without_unlinking_proposal(
+    proposal_with_deliverable, admin_user,
+):
+    """Fails if archived client ideas allow a relaunch to delete Platform evidence."""
+    from rest_framework.exceptions import ValidationError
+    from accounts.services.proposal_platform_onboarding import PlatformRelaunchConflict
+
+    proposal = proposal_with_deliverable
+    project = proposal.deliverable.project
+    deliverable_id = proposal.deliverable_id
+    completed_at = timezone.now()
+    proposal.platform_onboarding_completed_at = completed_at
+    proposal.save(update_fields=['platform_onboarding_completed_at'])
+    idea = ProjectIdea.objects.create(
+        project=project, author=admin_user, author_label='Equipo', origin='team',
+        text='Conservar esta idea archivada.', archived_at=completed_at,
+        archived_by=admin_user,
+    )
+
+    with pytest.raises(PlatformRelaunchConflict) as caught:
+        teardown_platform_for_proposal(proposal)
+
+    proposal.refresh_from_db()
+    idea.refresh_from_db()
+    assert isinstance(caught.value, ValidationError)
+    assert caught.value.status_code == 409
+    assert (
+        Project.objects.filter(pk=project.pk).exists(), idea.project_id,
+        idea.archived_at, proposal.deliverable_id,
+        proposal.platform_onboarding_completed_at,
+    ) == (True, project.pk, completed_at, deliverable_id, completed_at)
+
+
+@pytest.mark.django_db
+def test_teardown_blocks_project_income_without_nulling_its_foreign_key(
+    proposal_with_deliverable,
+):
+    """Fails if relaunch deletes a project and turns linked accounting income into SET_NULL."""
+    from accounts.services.proposal_platform_onboarding import PlatformRelaunchConflict
+
+    proposal = proposal_with_deliverable
+    project = proposal.deliverable.project
+    deliverable_id = proposal.deliverable_id
+    completed_at = timezone.now()
+    proposal.platform_onboarding_completed_at = completed_at
+    proposal.save(update_fields=['platform_onboarding_completed_at'])
+    income = IncomeRecord.objects.create(
+        project=project, client=project.client.profile, concept='Development',
+        period_date='2026-10-02', total_amount=Decimal('100000'),
+        gustavo_amount=Decimal('50000'), carlos_amount=Decimal('50000'),
+    )
+
+    with pytest.raises(PlatformRelaunchConflict):
+        teardown_platform_for_proposal(proposal)
+
+    proposal.refresh_from_db()
+    income.refresh_from_db()
+    assert (
+        Project.objects.filter(pk=project.pk).exists(), income.project_id,
+        proposal.deliverable_id, proposal.platform_onboarding_completed_at,
+    ) == (True, project.pk, deliverable_id, completed_at)
 
 
 # -- _sync_proposal_documents_to_deliverable ---------------------------------

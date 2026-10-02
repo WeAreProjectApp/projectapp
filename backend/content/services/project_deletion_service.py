@@ -182,6 +182,51 @@ def deletion_preview(project):
     }
 
 
+def ensure_unused_onboarding_project(project, *, proposal, deliverable):
+    """Retain all business data before retiring the proposal's empty stub.
+
+    The caller holds the project and deliverable locks. Only the original
+    empty onboarding row and its own proposal reference may be removed.
+    Unknown future relations block the operation just like panel deletion.
+    """
+    blockers, _, _ = _dependency_inventory(project, lock=True)
+    empty_stub = (
+        deliverable.project_id == project.pk
+        and proposal.deliverable_id == deliverable.pk
+        and deliverable.category == deliverable.CATEGORY_DOCUMENTS
+        and not deliverable.file
+        and not deliverable.description
+        and not deliverable.source_epic_key
+        and not deliverable.source_epic_title
+        and deliverable.current_version == 1
+        and not deliverable.is_archived
+        and not deliverable.archived_at
+    )
+    if empty_stub:
+        for relation in deliverable._meta.related_objects:
+            model = relation.related_model
+            queryset = model._base_manager.filter(
+                **{relation.field.name: deliverable.pk},
+            )
+            if model is type(proposal) and relation.field.name == 'deliverable':
+                queryset = queryset.exclude(pk=proposal.pk)
+            if _count(queryset, True):
+                empty_stub = False
+                break
+    if empty_stub:
+        blockers = [
+            {**item, 'count': item['count'] - 1}
+            if item['key'] == 'deliverables' else item
+            for item in blockers
+        ]
+        blockers = [item for item in blockers if item['count']]
+    if blockers:
+        raise ProjectDeleteBlocked({
+            'project': {'id': project.pk, 'name': project.name},
+            'can_delete': False, 'blockers': blockers,
+        })
+
+
 @historical_write
 @transaction.atomic
 def delete_empty_project(project_id, *, actor):

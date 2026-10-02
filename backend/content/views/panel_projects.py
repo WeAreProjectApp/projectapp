@@ -32,7 +32,8 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
@@ -71,6 +72,7 @@ _SCOPES = ('active', 'archived', 'all')
 
 
 @api_view(['GET'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def preview_panel_project_delete(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
@@ -78,6 +80,7 @@ def preview_panel_project_delete(request, project_id):
 
 
 @api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def delete_panel_project(request, project_id):
     try:

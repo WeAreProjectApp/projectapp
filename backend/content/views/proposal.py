@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
     api_view,
     authentication_classes,
@@ -1466,6 +1467,7 @@ def update_proposal_status(request, proposal_id):
 
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def launch_to_platform(request, proposal_id):
     """
@@ -1473,8 +1475,8 @@ def launch_to_platform(request, proposal_id):
     Body: { "force": true }  (required for re-launch when already onboarded)
 
     Creates project, deliverable, requirements, syncs documents, and sends
-    acceptance email on first launch. Re-launch deletes existing data first
-    and skips the email.
+    acceptance email on first launch. Re-launch retires only an unused
+    onboarding graph and skips the email; related information is retained.
     """
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
 
@@ -1506,7 +1508,7 @@ def launch_to_platform(request, proposal_id):
                 teardown_platform_for_proposal,
             )
 
-            teardown_platform_for_proposal(proposal)
+            teardown_platform_for_proposal(proposal, acting_user=request.user)
             proposal.refresh_from_db()
 
         proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING

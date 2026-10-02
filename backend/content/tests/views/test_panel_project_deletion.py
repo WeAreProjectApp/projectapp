@@ -4,6 +4,8 @@ from decimal import Decimal
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.test import Client
+from rest_framework_simplejwt.tokens import AccessToken
 
 from accounts.models import Project, UserProfile
 from content.models import (
@@ -220,6 +222,31 @@ def test_client_cannot_access_deletion(api_client, unused_project, method, suffi
 
     assert response.status_code == 403
     assert Project.objects.filter(pk=unused_project.pk).exists()
+
+
+@pytest.mark.parametrize(('method', 'url_factory'), [
+    ('get', preview_url),
+    ('delete', delete_url),
+])
+def test_staff_jwt_cannot_access_panel_project_deletion(
+    api_client, admin_user, unused_project, method, url_factory,
+):
+    """Fails if a complete Platform JWT is accepted by a session-only Panel endpoint."""
+    api_client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(admin_user)}')
+
+    response = getattr(api_client, method)(url_factory(unused_project))
+
+    assert (response.status_code, Project.objects.filter(pk=unused_project.pk).exists()) == (403, True)
+
+
+def test_session_delete_without_csrf_keeps_panel_project(admin_user, unused_project):
+    """Fails if a session-authenticated destructive Panel request bypasses CSRF."""
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(admin_user)
+
+    response = client.delete(delete_url(unused_project))
+
+    assert (response.status_code, Project.objects.filter(pk=unused_project.pk).exists()) == (403, True)
 
 
 def test_missing_project_returns_not_found(admin_client):

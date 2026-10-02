@@ -1968,3 +1968,7 @@ antes de dueño/cascada; Django Admin utiliza el mismo guard. El puente acotado
 de delivery impide mover un otrosí con cuentas a otro contrato. El contrato de
 integración con P4 conserva el orden guard financiero → revocación → cambio.
 Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`.
+
+## Conservación al relanzar propuestas y autenticación de eliminación
+
+El relanzamiento forzado sólo puede retirar el stub inicial vacío de la propia propuesta. Bloquea Project antes de leer propuesta y Deliverable vigentes; el inventario de eliminación incluye relaciones archivadas y desconocidas, además de hijos del stub con _base_manager. Cualquier información conserva el grafo y devuelve 409, incluso si aparece durante la revalidación final: el conflicto sale de la transacción y revierte la desvinculación. El retiro vacío reutiliza delete_empty_project y su auditoría; no hay borrado directo ni purga. La vista de lanzamiento y las dos vistas de eliminación del Panel fijan SessionAuthentication y mantienen IsAdminUser y CSRF. El puente MCP mantiene su propio contexto y confirmación sensible.

@@ -1565,3 +1565,7 @@ P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
 P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
 sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
 `docs/PLATFORM_PROJECT_BILLING.md`.
+
+## Guardas de integración de proyectos (2026-10-02)
+
+`ensure_unused_onboarding_project` comparte el inventario bloqueante de eliminación. Sólo descuenta el stub propio sin archivo, descripción, claves de epic, archivo lógico, versiones ni hijos salvo su BusinessProposal exacta. Documentos con proyecto distinto o nulo también bloquean por su relación al Deliverable. `teardown_platform_for_proposal` valida el vínculo vigente antes de escribir y convierte ambos rechazos del inventario en `PlatformRelaunchConflict` (409), propagados fuera de atomic. `launch_to_platform` exige sesión Panel; preview/DELETE de proyectos no aceptan JWT como sesión. No se aplicaron migraciones ni cambios a bases del servicio.

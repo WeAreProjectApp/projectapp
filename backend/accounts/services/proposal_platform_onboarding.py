@@ -10,7 +10,9 @@ from typing import Any, Literal
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.utils import timezone
+from rest_framework.exceptions import ValidationError
 
 from accounts.models import Deliverable, Project, UserProfile
 from accounts.services.technical_resources_sync import (
@@ -105,21 +107,46 @@ def ensure_deliverable_for_accepted_proposal(
     return d
 
 
-def teardown_platform_for_proposal(proposal) -> None:
-    """Retire an unused onboarding graph; contractual delivery evidence is retained."""
+class PlatformRelaunchConflict(ValidationError):
+    status_code = 409
+
+
+@transaction.atomic
+def teardown_platform_for_proposal(proposal, *, acting_user=None) -> None:
+    """Retire only an empty onboarding graph, preserving all business data."""
     if not proposal.deliverable_id:
         return
-    deliverable = proposal.deliverable
-    project = deliverable.project
-    if project.delivery_contracts.exists():
-        from rest_framework.exceptions import ValidationError
-        raise ValidationError({
-            'detail': 'Este proyecto tiene seguimiento contractual. Gestiona la nueva entrega desde Platform sin reiniciar el proyecto.',
+    from content.services.project_deletion_service import (
+        ProjectDeleteBlocked, delete_empty_project, ensure_unused_onboarding_project,
+    )
+
+    deliverable_id = proposal.deliverable_id
+    project_id = Deliverable.objects.get(pk=deliverable_id).project_id
+    project = Project.objects.select_for_update().get(pk=project_id)
+    locked_proposal = type(proposal).objects.select_for_update().get(pk=proposal.pk)
+    if locked_proposal.deliverable_id != deliverable_id:
+        raise PlatformRelaunchConflict({
+            'detail': 'La vinculación de la propuesta cambió. Actualiza la página antes de continuar.',
         })
-    proposal.deliverable = None
-    proposal.platform_onboarding_completed_at = None
-    proposal.save(update_fields=['deliverable_id', 'platform_onboarding_completed_at'])
-    project.delete()
+    deliverable = Deliverable.objects.select_for_update().get(
+        pk=deliverable_id, project=project,
+    )
+    try:
+        ensure_unused_onboarding_project(
+            project, proposal=locked_proposal, deliverable=deliverable,
+        )
+        actor = acting_user or deliverable.uploaded_by
+        locked_proposal.deliverable = None
+        locked_proposal.platform_onboarding_completed_at = None
+        locked_proposal.save(update_fields=['deliverable_id', 'platform_onboarding_completed_at'])
+        deliverable.delete()
+        delete_empty_project(project.pk, actor=actor)
+    except ProjectDeleteBlocked as exc:
+        raise PlatformRelaunchConflict({
+            'detail': 'Este proyecto tiene información relacionada. Gestiona la entrega desde Platform sin reiniciar el proyecto.',
+            'code': 'project_delete_blocked',
+            'blockers': exc.preview['blockers'],
+        }) from exc
 
 
 def handle_proposal_accepted_for_platform(
