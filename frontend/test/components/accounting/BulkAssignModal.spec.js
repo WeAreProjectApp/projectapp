@@ -290,6 +290,8 @@ describe('BulkAssignModal — client creation from an empty search', () => {
       phone: '',
       company: '',
       nit: '',
+      cedula: '',
+      address: '',
       billing_code: '',
     });
     expect(hint(wrapper)).toBe('Cliente enlazado: Nueva Cliente (#88)');

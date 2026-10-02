@@ -151,23 +151,43 @@ test.describe('Admin Client Edit Modal', () => {
 
     await page.getByTestId('client-edit-301').click();
     await expect(page.getByTestId('clients-edit-nit')).toBeVisible({ timeout: 5_000 });
+    const dialog = page.getByRole('dialog', { name: 'Editar cliente' });
+    await expect(dialog).toHaveCSS('opacity', '1');
 
-    const nitLabelLocator = page.getByText('C.C. / NIT', { exact: true });
-    const codeLabelLocator = page.getByText('Código de facturación', { exact: true });
-    const nitLabel = await nitLabelLocator.boundingBox();
+    const typeLabelLocator = dialog.getByText('Tipo de identificación', { exact: true });
+    const numberLabelLocator = dialog.getByText('Número de identificación', { exact: true });
+    const addressLabelLocator = dialog.getByText('Dirección', { exact: true });
+    const codeLabelLocator = dialog.getByText('Código de facturación', { exact: true });
+    const typeLabel = await typeLabelLocator.boundingBox();
+    const numberLabel = await numberLabelLocator.boundingBox();
+    const addressLabel = await addressLabelLocator.boundingBox();
     const codeLabel = await codeLabelLocator.boundingBox();
-    expect(await nitLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace))
-      .toBe('nowrap');
-    expect(await codeLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace))
-      .toBe('nowrap');
-    expect(Math.abs(nitLabel.height - codeLabel.height)).toBeLessThanOrEqual(1);
+    const labelWhiteSpaces = await Promise.all([
+      typeLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace),
+      numberLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace),
+      addressLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace),
+      codeLabelLocator.evaluate((label) => getComputedStyle(label).whiteSpace),
+    ]);
+    expect(labelWhiteSpaces).toEqual(['nowrap', 'nowrap', 'nowrap', 'nowrap']);
+    expect(Math.max(
+      Math.abs(typeLabel.height - numberLabel.height),
+      Math.abs(addressLabel.height - codeLabel.height),
+    )).toBeLessThanOrEqual(1);
 
-    const nit = await page.getByTestId('clients-edit-nit').boundingBox();
+    const type = await page.getByTestId('clients-edit-identification-type').boundingBox();
+    const number = await page.getByTestId('clients-edit-nit').boundingBox();
+    const address = await page.getByTestId('clients-edit-address').boundingBox();
     const code = await page.getByTestId('clients-edit-billing-code').boundingBox();
-    expect(Math.abs(nit.y - code.y)).toBeLessThanOrEqual(1);
-    // Still side by side, i.e. aligned by the shared bands and not by stacking.
-    expect(Math.abs(nit.height - code.height)).toBeLessThanOrEqual(1);
-    expect(code.x).toBeGreaterThan(nit.x);
+    expect(Math.max(
+      Math.abs(type.y - number.y),
+      Math.abs(address.y - code.y),
+    )).toBeLessThanOrEqual(1);
+    expect(Math.max(
+      Math.abs(type.width - number.width),
+      Math.abs(address.width - code.width),
+    )).toBeLessThanOrEqual(1);
+    expect(Math.abs(address.height - code.height)).toBeLessThanOrEqual(1);
+    expect(number.x > type.x && code.x > address.x).toBe(true);
   });
 
   test('stacks the billing fields in reading order on a narrow screen', {
@@ -184,15 +204,29 @@ test.describe('Admin Client Edit Modal', () => {
     const actions = page.getByTestId('client-actions-drawer');
     await actions.getByRole('button', { name: 'Editar cliente' }).click();
     await expect(page.getByTestId('clients-edit-nit')).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('dialog', { name: 'Editar cliente' })).toHaveCSS('opacity', '1');
 
-    const nit = await page.getByTestId('clients-edit-nit').boundingBox();
+    const type = await page.getByTestId('clients-edit-identification-type').boundingBox();
+    const number = await page.getByTestId('clients-edit-nit').boundingBox();
+    const address = await page.getByTestId('clients-edit-address').boundingBox();
     const code = await page.getByTestId('clients-edit-billing-code').boundingBox();
 
-    // One column: same left edge, billing code below NIT, and no band of empty
-    // space left reserved between them beyond the row gap plus its label.
-    expect(Math.abs(nit.x - code.x)).toBeLessThanOrEqual(1);
-    expect(code.y).toBeGreaterThan(nit.y + nit.height);
-    expect(code.y - (nit.y + nit.height)).toBeLessThan(60);
+    const leftEdgeDrift = Math.max(
+      Math.abs(type.x - number.x),
+      Math.abs(number.x - address.x),
+      Math.abs(address.x - code.x),
+    );
+    const verticalGaps = [
+      number.y - (type.y + type.height),
+      address.y - (number.y + number.height),
+      code.y - (address.y + address.height),
+    ];
+
+    // One column: every adjacent field follows the complete reading order,
+    // without a blank band between the legal identity, address and code.
+    expect(leftEdgeDrift).toBeLessThanOrEqual(1);
+    expect(Math.min(...verticalGaps)).toBeGreaterThan(0);
+    expect(Math.max(...verticalGaps)).toBeLessThan(60);
   });
 
   test('surfaces server error when update returns 400', {

@@ -855,7 +855,7 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     expect(calls[0].body).toMatchObject({
       amount: 1400000,
       amount_mode: 'vat_included',
-      vat_rate: 0,
+      vat_rate: 19,
     });
     expect(calls[0].body.total_amount).toBeUndefined();
     expect(calls[0].body.gustavo_amount).toBeUndefined();

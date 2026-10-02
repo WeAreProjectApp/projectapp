@@ -297,10 +297,10 @@ describe('CollectionAccountFormModal', () => {
     delete window.matchMedia;
   });
 
-  it('uses the wizard width for the form step', () => {
+  it('uses the compact form width before preview', () => {
     const wrapper = mountModal();
 
-    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('wizard');
+    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
   });
 
   it('uses the workspace width for the preview step', async () => {
