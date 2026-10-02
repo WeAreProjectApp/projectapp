@@ -177,10 +177,12 @@ def _create_income_collection_account(
                 base = total if base is None else base
         except ValueError as exc:
             raise CollectionAccountError(str(exc)) from exc
+        line_total = quantize_money(total * quantity)
+        line_base = quantize_money(base * quantity)
         prepared_items.append({
             **item, 'quantity': quantity, 'unit_price': base,
-            'tax_amount': quantize_money((tax or Decimal('0')) * quantity),
-            'line_total': quantize_money(total * quantity),
+            'tax_amount': line_total - line_base,
+            'line_total': line_total,
         })
     document_total = sum((item['line_total'] for item in prepared_items), Decimal('0'))
     try:

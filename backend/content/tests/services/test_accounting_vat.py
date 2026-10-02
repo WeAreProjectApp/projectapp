@@ -100,6 +100,30 @@ def test_income_vat_read_properties_do_not_query_per_row(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize('quantity', [Decimal('0.5'), Decimal('1.3333')])
+def test_collection_account_preserves_gross_with_fractional_quantities(
+    make_client_profile, make_income, quantity,
+):
+    """Falla si el redondeo de una cantidad fraccionaria altera el cobro."""
+    client = make_client_profile(company='IVA Fraction SAS', nit='900123456')
+    income = make_income(
+        client=client, total_amount=Decimal('100.00'), vat_rate=Decimal('19'),
+        gustavo_amount=Decimal('50.00'), carlos_amount=Decimal('50.00'),
+    )
+
+    document = create_income_collection_account_draft({
+        'client_profile_id': client.pk,
+        'income_record_id': income.pk,
+        'billing_concept': 'Servicio fraccionado',
+        'items': [{'description': 'Servicio', 'amount': Decimal('100.00'),
+                   'amount_mode': 'vat_included', 'quantity': quantity}],
+    })
+
+    assert document.total == (Decimal('100.00') * quantity).quantize(Decimal('0.01'))
+    assert document.subtotal + document.tax_total == document.total
+
+
+@pytest.mark.django_db
 def test_collection_preview_updates_the_response_without_persisting_the_income(
     super_client, make_client_profile, make_income,
 ):
