@@ -86,7 +86,7 @@ def customer_snapshot_defaults(profile):
         'identification': identification,
         'identification_type': identification_type,
         'contact_name': full_name,
-        'address': '',
+        'address': profile.address or '',
     }
 
 

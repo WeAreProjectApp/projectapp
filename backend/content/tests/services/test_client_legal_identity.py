@@ -16,19 +16,22 @@ from content.services.collection_account_create_service import (
     legal_name_for,
 )
 from content.services.collection_account_numbering import derive_billing_code
+from content.services.collection_account_service import _fill_customer_from_user
+from content.models.document_collection_account import DocumentCollectionAccount
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
 
 
 def make_profile(*, first='', last='', company='', nit='', cedula='',
-                 email='cliente@example.com'):
+                 address='', email='cliente@example.com'):
     user = User.objects.create_user(
         username=email, email=email, password='pass12345',
         first_name=first, last_name=last,
     )
     return UserProfile.objects.create(
         user=user, company_name=company, nit=nit, cedula=cedula,
+        address=address,
     )
 
 
@@ -92,6 +95,52 @@ class TestSnapshotPrefill:
         # The person stays reachable as the contact either way; what changed
         # is which field the DOCUMENT prints as the party being charged.
         assert snapshot['contact_name'] == 'Daniel Corredor'
+
+    def test_snapshot_uses_the_complete_client_billing_identity(self):
+        """Fails if a new cuenta de cobro drops identity or address from its client."""
+        profile = make_profile(
+            first='Laura', last='Ramírez', cedula='1049654583',
+            email='laura@example.com', address='Carrera 7 # 72-41, Bogotá',
+        )
+
+        snapshot = customer_snapshot_defaults(profile)
+
+        assert snapshot['identification_type'] == 'CC'
+        assert snapshot['identification'] == '1049654583'
+        assert snapshot['email'] == 'laura@example.com'
+        assert snapshot['address'] == 'Carrera 7 # 72-41, Bogotá'
+
+    def test_snapshot_keeps_nit_over_cedula_when_the_profile_has_both(self):
+        """Fails if a business account changes from NIT to C.C. in the billing prefill."""
+        profile = make_profile(
+            company='Servicios Ejemplo S.A.S.', nit='901234567-1',
+            cedula='1049654583', address='Calle 80 # 10-20, Bogotá',
+        )
+
+        snapshot = customer_snapshot_defaults(profile)
+
+        assert snapshot['identification_type'] == 'NIT'
+        assert snapshot['identification'] == '901234567-1'
+        assert snapshot['address'] == 'Calle 80 # 10-20, Bogotá'
+
+
+class TestPlatformIssueSnapshot:
+    def test_platform_issue_uses_the_canonical_customer_snapshot(self):
+        """Fails if platform-issued documents omit a client's address or legal identity."""
+        profile = make_profile(
+            first='Laura', last='Ramírez', cedula='1049654583',
+            email='laura@example.com', address='Carrera 7 # 72-41, Bogotá',
+        )
+        extension = DocumentCollectionAccount()
+
+        _fill_customer_from_user(extension, profile.user)
+
+        assert extension.customer_name == 'Laura Ramírez'
+        assert extension.customer_email == 'laura@example.com'
+        assert extension.customer_identification == '1049654583'
+        assert extension.customer_identification_type == 'CC'
+        assert extension.customer_contact_name == 'Laura Ramírez'
+        assert extension.customer_address == 'Carrera 7 # 72-41, Bogotá'
 
 
 class TestBillingCodeDerivation:

@@ -799,7 +799,6 @@
     "frontend/test/components/ViewMapLegend.spec.js::tautological_selector::renders one badge per audience option",
     "frontend/test/components/accounting/ExpectedIncomeDetailModal.spec.js::mock_only_assertion::does not fetch while closed",
     "frontend/test/components/accounting/ExpectedIncomeDetailModal.spec.js::negation_only_assertion::does not fetch while closed",
-    "frontend/test/components/accounting/IncomeFormModal.spec.js::weak_assertion::offers Perdido as a kind",
     "frontend/test/components/accounting/IncomeLiquidateModal.spec.js::weak_assertion::emits close when Cancelar is clicked",
     "frontend/test/components/accounting/PartnerSplitInput.spec.js::weak_assertion::disables partner inputs while auto mode is on",
     "frontend/test/components/accounting/PocketMovementFormModal.spec.js::negation_only_assertion::hides the ledger selector when editing an unlinked movement",

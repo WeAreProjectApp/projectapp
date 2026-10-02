@@ -657,6 +657,36 @@ class TestSearchProposalClients:
         assert response.status_code == 200
         assert response.data[0]['id'] == profile.pk
 
+    def test_search_returns_the_complete_billing_profile(
+        self, admin_client, make_client_profile,
+    ):
+        """Fails if the client picker loses billing data before a cuenta de cobro edit."""
+        profile = make_client_profile(
+            first_name='Laura',
+            last_name='Ramírez',
+            email='picker-laura@example.com',
+            cedula='1049654583',
+            address='Carrera 7 # 72-41, Bogotá',
+            billing_code='LAURARAM',
+        )
+
+        response = admin_client.get(
+            reverse('search-proposal-clients'), {'q': 'picker-laura'},
+        )
+
+        assert response.status_code == 200
+        row = response.data[0]
+        assert row['id'] == profile.pk
+        assert row['billing_code'] == 'LAURARAM'
+        assert row['billing_customer'] == {
+            'name': 'Laura Ramírez',
+            'email': 'picker-laura@example.com',
+            'identification': '1049654583',
+            'identification_type': 'CC',
+            'contact_name': 'Laura Ramírez',
+            'address': 'Carrera 7 # 72-41, Bogotá',
+        }
+
 
 # ---------------------------------------------------------------------------
 # Retrieve detail
@@ -803,6 +833,52 @@ class TestCreateProposalClient:
         assert profile.nit == '901234567-1'
         assert profile.billing_code == 'G&M'
 
+    def test_create_returns_the_canonical_billing_customer(self, admin_client):
+        """Fails if a created client's billing projection loses its C.C. or address."""
+        request_data = {
+            'name': 'Laura Ramírez',
+            'email': 'laura.ramirez@example.com',
+            'cedula': '1049654583',
+            'address': 'Carrera 7 # 72-41, Bogotá',
+        }
+
+        response = admin_client.post(
+            reverse('create-proposal-client'), request_data, format='json',
+        )
+
+        assert response.status_code == 201
+        profile = UserProfile.objects.get(pk=response.data['id'])
+        assert profile.cedula == '1049654583'
+        assert profile.address == 'Carrera 7 # 72-41, Bogotá'
+        assert response.data['billing_customer'] == {
+            'name': 'Laura Ramírez',
+            'email': 'laura.ramirez@example.com',
+            'identification': '1049654583',
+            'identification_type': 'CC',
+            'contact_name': 'Laura Ramírez',
+            'address': 'Carrera 7 # 72-41, Bogotá',
+        }
+
+    def test_create_rejects_an_address_longer_than_the_billing_limit(
+        self, admin_client,
+    ):
+        """Fails if an overlong address reaches a profile after API validation rejects it."""
+        request_data = {
+            'name': 'Dirección Muy Larga',
+            'email': 'direccion-larga@example.com',
+            'address': 'A' * 513,
+        }
+
+        response = admin_client.post(
+            reverse('create-proposal-client'), request_data, format='json',
+        )
+
+        assert response.status_code == 400
+        assert 'address' in response.data
+        assert not UserProfile.objects.filter(
+            user__email='direccion-larga@example.com',
+        ).exists()
+
     def test_create_without_a_code_stores_null_not_blank(self, admin_client):
         # `billing_code` is unique, so a second '' would hit the constraint.
         first = admin_client.post(
@@ -902,6 +978,61 @@ class TestUpdateProposalClient:
         assert response.status_code == 200
         assert response.data['id'] == real_client_with_proposal.pk
         assert response.data['phone'] == real_client_with_proposal.phone
+
+    def test_update_refreshes_the_canonical_billing_customer(
+        self, admin_client, real_client_with_proposal,
+    ):
+        """Fails if editing a client leaves its next cuenta de cobro with old details."""
+        request_data = {
+            'cedula': '1049654583',
+            'address': 'Avenida 19 # 103-22, Bogotá',
+        }
+
+        response = admin_client.patch(
+            reverse('update-proposal-client', args=[real_client_with_proposal.pk]),
+            request_data,
+            format='json',
+        )
+
+        assert response.status_code == 200
+        real_client_with_proposal.refresh_from_db()
+        assert real_client_with_proposal.cedula == '1049654583'
+        assert real_client_with_proposal.address == 'Avenida 19 # 103-22, Bogotá'
+        assert response.data['billing_customer'] == {
+            'name': 'Activa Mendoza',
+            'email': 'activa@gmail.com',
+            'identification': '1049654583',
+            'identification_type': 'CC',
+            'contact_name': 'Activa Mendoza',
+            'address': 'Avenida 19 # 103-22, Bogotá',
+        }
+
+    def test_update_keeps_billing_identity_when_the_new_email_conflicts(
+        self, admin_client, real_client_with_proposal,
+    ):
+        """Fails if a rejected email change partially saves the new billing identity."""
+        User.objects.create_user(
+            username='ocupado@example.com',
+            email='ocupado@example.com',
+            password='pass12345',
+        )
+        request_data = {
+            'email': 'ocupado@example.com',
+            'cedula': '1049654583',
+            'address': 'Avenida 19 # 103-22, Bogotá',
+        }
+
+        response = admin_client.patch(
+            reverse('update-proposal-client', args=[real_client_with_proposal.pk]),
+            request_data,
+            format='json',
+        )
+
+        assert response.status_code == 400
+        assert response.data['error'] == 'update_conflict'
+        real_client_with_proposal.refresh_from_db()
+        assert real_client_with_proposal.cedula == ''
+        assert real_client_with_proposal.address == ''
 
     @patch('content.views.proposal_clients.proposal_client_service.update_client_profile')
     def test_update_returns_conflict_payload_when_service_rejects_change(

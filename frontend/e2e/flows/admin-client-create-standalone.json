@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Create a new client profile from /panel/clients via the modal form, with and without email.",
+  "description": "Create a new client profile from /panel/clients via the compact modal form, with and without email. The canonical profile stores contact name, company/legal name, real or placeholder email, phone, NIT or personal C.C., address and billing code. The selected document type saves a C.C. in cedula instead of nit. These fields supply the same billing_customer projection consumed by new cuentas de cobro.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

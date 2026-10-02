@@ -103,9 +103,6 @@ const form = ref(defaultForm())
 const exactDate = ref(true)
 
 const isPersonal = computed(() => form.value.ledger !== 'company')
-watch(() => form.value.ledger, (ledger) => {
-  if (!props.record && !form.value.vat_capture) form.value.vat_rate = ledger === 'company' ? 19 : 0
-})
 // Hosting is a service window, not a point payment: the date block swaps to
 // start + end + cadence, and the backend derives period_date from the start.
 const isHosting = computed(() => form.value.origin === 'hosting')
@@ -498,7 +495,7 @@ const modalFormId = useId();
 </script>
 
 <template>
-  <BaseModal :model-value="open" kind="form-wide" title-id="income-form-title" @close="emit('close')">
+  <BaseModal :model-value="open" kind="form" title-id="income-form-title" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
       <h3 id="income-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>
@@ -747,9 +744,7 @@ const modalFormId = useId();
         v-model:carlosAmount="form.carlos_amount"
       />
 
-      <BaseFormField v-else label="Valor" required>
-        <VatAmountInput v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
-      </BaseFormField>
+      <VatAmountInput v-else v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
 
       <BaseFormField label="Notas">
         <BaseTextarea v-model="form.notes" :rows="3" />

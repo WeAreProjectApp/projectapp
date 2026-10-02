@@ -136,6 +136,7 @@ function buildHandler({
   rows, calls, createStatus = 201, meta = {}, listFetches = { count: 0 },
   savedTabs = [], duplicateDraftStatus = 200,
   muteStatus = 200,
+  collectionProjectContext = null,
   // Landing mode the mocked backend setting dictates. Production defaults to
   // 'grouped'; the mock pins 'classic' because almost every test in this file
   // exercises the classic presentation or its pagination — without this
@@ -167,6 +168,55 @@ function buildHandler({
   },
 }) {
   return async ({ route, apiPath, method }) => {
+    if (collectionProjectContext && apiPath === `admin/billing-context/projects/${collectionProjectContext.project.id}/options/` && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          project_id: collectionProjectContext.project.id,
+          project_name: collectionProjectContext.project.name,
+          hosting_id: null,
+          contracts: [collectionProjectContext.contract],
+        }),
+      };
+    }
+    if (collectionProjectContext && apiPath === `admin/billing-context/projects/${collectionProjectContext.project.id}/hosting/` && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ overview: { subscription: null, accounting_sources: [], evidence_groups: [] } }),
+      };
+    }
+    if (collectionProjectContext && apiPath === `proposals/client-profiles/${collectionProjectContext.client.id}/` && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(collectionProjectContext.client),
+      };
+    }
+    if (collectionProjectContext && apiPath.startsWith('accounting/collection-accounts/next-number/') && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ suggested_number: 'PA-KORE-001', billing_code: 'KORE', issuer_city: 'Bogotá' }),
+      };
+    }
+    if (collectionProjectContext && apiPath === 'accounting/collection-accounts/preview/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ method, apiPath, body });
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          subject: 'Cuenta de cobro PA-KORE-001 — Kore - Inicio 40%',
+          customer_email: collectionProjectContext.client.email,
+          public_number: 'PA-KORE-001',
+          total: '1160000.00',
+          pdf_url: '/api/accounting/collection-accounts/preview/e2e/PA-KORE-001.pdf',
+          html_body: '<p>Cuenta de cobro de prueba</p>',
+        }),
+      };
+    }
     if (apiPath === 'auth/check/') {
       return {
         status: 200,
@@ -1834,6 +1884,59 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
       .toContainText('Kore - Inicio 40%');
     await expect(page.getByTestId('collection-form-concept'))
       .toHaveValue('Kore - Inicio 40%');
+  });
+
+  // Bug caught: a project income opened the cuenta form without an editable
+  // contract or hosting link, leaving the operator with a generic blocker.
+  test('a project collection requires its nature before previewing', {
+    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const calls = [];
+    const project = { id: 10, name: 'Kore' };
+    const contract = { id: 44, title: 'Contrato Kore', amendments: [] };
+    const client = {
+      id: 5,
+      name: 'Ana Pérez',
+      company: 'Acme Soluciones',
+      email: 'ana@acme.co',
+      phone: '',
+      nit: '901234567',
+      cedula: '',
+      is_email_placeholder: false,
+    };
+    await mockApi(page, buildHandler({
+      rows: [incomeRow({
+        has_collection_account: false,
+        client: client.id,
+        client_name: client.name,
+        project: project.id,
+        project_name: project.name,
+      })],
+      calls,
+      collectionProjectContext: { project, contract, client },
+    }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-1').click();
+    await page.getByTestId('income-action-generate-collection-1').click();
+    await expect(page.getByTestId('collection-form-project-context')).toContainText('Cobro del proyecto');
+
+    await page.getByTestId('collection-form-preview').click();
+    await expect(page.getByTestId('collection-form-project-context-error')).toHaveText(
+      'En «Cobro del proyecto», elige si cobras un contrato o el hosting.',
+    );
+    expect(calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/')).toHaveLength(0);
+
+    await page.getByTestId('billing-nature').selectOption('contract');
+    await page.getByTestId('billing-contract').selectOption(String(contract.id));
+    await page.getByTestId('collection-form-preview').click();
+    await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-KORE-001');
+
+    const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
+    expect(previewCall.body).toMatchObject({
+      billing_nature: 'contract',
+      contract_id: contract.id,
+    });
   });
 
   test('a linked income swaps to Ver cuenta de cobro and navigates focused', {

@@ -164,6 +164,31 @@ class TestClientsMcpReads:
             },
         }
 
+    def test_get_client_returns_the_canonical_billing_customer(self, api_client, clients_connector):
+        """Fails if the MCP client read drops billing identity or address used by cobros."""
+        profile = proposal_client_service.get_or_create_client_for_proposal(
+            name='Laura Ramírez',
+            email='mcp-laura@example.com',
+            cedula='1049654583',
+            address='Carrera 7 # 72-41, Bogotá',
+            billing_code='LAURARAM',
+        )
+        _, token = clients_connector
+
+        response = _call(api_client, token, 'get_client', {'client_id': profile.pk})
+
+        assert response.data['result']['isError'] is False
+        payload = json.loads(response.data['result']['content'][0]['text'])
+        assert payload['billing_code'] == 'LAURARAM'
+        assert payload['billing_customer'] == {
+            'name': 'Laura Ramírez',
+            'email': 'mcp-laura@example.com',
+            'identification': '1049654583',
+            'identification_type': 'CC',
+            'contact_name': 'Laura Ramírez',
+            'address': 'Carrera 7 # 72-41, Bogotá',
+        }
+
     def test_get_missing_client_errors(self, api_client, clients_connector):
         _, token = clients_connector
         response = _call(api_client, token, 'get_client', {'client_id': 999999})

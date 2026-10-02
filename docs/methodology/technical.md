@@ -1,5 +1,17 @@
 # Technical Documentation — ProjectApp
 
+> **Formularios contables y cliente — 2026-10-02:** las cuentas nuevas consumen
+> `billing_customer`, la misma proyección canónica que usa la emisión: nombre
+> legal según NIT/cédula, número y tipo, contacto, correo real y dirección.
+> Las respuestas completas y de búsqueda incluyen esta proyección y el código
+> de facturación; la ficha puede editarse explícitamente desde el modal, sin
+> perder el borrador ni su consecutivo. `accounts.0076` agrega la dirección al
+> cliente; el deploy aplica la migración. La actualización de ficha es atómica
+> y conserva el historial de documentos ya emitidos. Nuevos formularios con IVA
+> empiezan en 19%; al editar se respeta la tasa guardada, incluido cero o null.
+> Las cuentas de ingresos con pagos conservan saldo y tasa. «Cobro del proyecto»
+> se muestra desde ambas entradas y señala contrato, hosting o período pendiente.
+
 > **Entregas de Platform — 2026-10-01:** `/api/accounts/projects/:id/delivery/`
 > expone autoría, importación `schema_version: 1`, publicaciones, revisiones,
 > documentos y firmas sobre servicios compartidos con MCP. `expected_version`

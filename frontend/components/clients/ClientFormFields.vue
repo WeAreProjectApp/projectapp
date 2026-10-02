@@ -11,13 +11,15 @@
  * Only `name` is required; the panel convention marks required fields with an
  * asterisk, so the absence of that marker already communicates optionality.
  */
+import { computed } from 'vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
 import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
+import BaseSelect from '~/components/base/BaseSelect.vue';
 import { BILLING_CODE_MAX_LENGTH } from '~/utils/billingCode';
 
 const props = defineProps({
-  /** `{ name, email, phone, company, nit, billing_code, is_archived }` */
+  /** Shared identity, contact and billing fields. */
   modelValue: { type: Object, required: true },
   /**
    * Show the archive control. Off by default so the three inline "crear al
@@ -33,13 +35,20 @@ const props = defineProps({
   editing: { type: Boolean, default: false },
   /** Prefix for each field's data-testid, e.g. `clients-new` -> `clients-new-name`. */
   testidPrefix: { type: String, required: true },
-  /** Compact 3-column strip for the inline panels; stacked otherwise. */
+  /** Compact input sizing for inline creation. */
   dense: { type: Boolean, default: false },
   /** Field-scoped validation returned by the local form or the API. */
   errors: { type: Object, default: () => ({}) },
 });
 
 const emit = defineEmits(['update:modelValue', 'clear-error', 'request-archive']);
+const identificationOptions = [
+  { value: 'NIT', label: 'NIT · Empresa' },
+  { value: 'CC', label: 'C.C. · Persona natural' },
+];
+const identificationType = computed(() => props.modelValue.identification_type
+  || (props.modelValue.nit ? 'NIT' : (props.modelValue.cedula ? 'CC' : 'NIT')));
+const identificationField = computed(() => identificationType.value === 'CC' ? 'cedula' : 'nit');
 
 function update(field, value) {
   emit('update:modelValue', { ...props.modelValue, [field]: value });
@@ -68,7 +77,7 @@ function errorFor(field) {
 
 <template>
   <div :class="dense ? 'space-y-3' : 'space-y-4'">
-    <BaseFormRow :cols="dense ? 3 : 1" :gap="dense ? 3 : 4">
+    <BaseFormRow :cols="2" :gap="dense ? 3 : 4">
       <BaseFormField
         v-slot="{ invalid, errorId }"
         label="Nombre"
@@ -123,24 +132,41 @@ function errorFor(field) {
       </BaseFormField>
     </BaseFormRow>
 
-    <!-- Billing identity: what the cuenta de cobro needs to name and number
-         the document. Paired because they are filled together or not at all.
-         The row is what keeps both inputs starting at the same height, since
-         the billing-code label can be longer than "C.C. / NIT". The label
-         names both documents the field accepts: most
-         clients are personas naturales whose cédula goes here, and "NIT"
-         alone made them second-guess it. -->
+    <!-- The type and number are one legal identity, shared with billing. -->
     <BaseFormRow>
-      <BaseFormField v-slot="{ invalid, errorId }" label="C.C. / NIT" :error="errorFor('nit')" :size="dense ? 'sm' : 'md'">
+      <BaseFormField label="Tipo de identificación" :size="dense ? 'sm' : 'md'">
+        <BaseSelect
+          :model-value="identificationType"
+          :options="identificationOptions"
+          :size="dense ? 'sm' : 'md'"
+          :data-testid="`${testidPrefix}-identification-type`"
+          @update:model-value="update('identification_type', $event)"
+        />
+      </BaseFormField>
+      <BaseFormField v-slot="{ invalid, errorId }" label="Número de identificación" :error="errorFor(identificationField)" :size="dense ? 'sm' : 'md'">
         <BaseInput
-          :model-value="modelValue.nit"
+          :model-value="modelValue[identificationField]"
           type="text"
           :error="invalid"
           :aria-describedby="errorId"
           :size="dense ? 'sm' : 'md'"
           placeholder="Para cuentas de cobro"
-          :data-testid="`${testidPrefix}-nit`"
-          @update:model-value="update('nit', $event)"
+          :maxlength="identificationType === 'CC' ? 20 : 32"
+          :data-testid="`${testidPrefix}-${identificationField}`"
+          @update:model-value="update(identificationField, $event)"
+        />
+      </BaseFormField>
+    </BaseFormRow>
+    <BaseFormRow>
+      <BaseFormField v-slot="{ invalid, errorId }" label="Dirección" :error="errorFor('address')" :size="dense ? 'sm' : 'md'">
+        <BaseInput
+          :model-value="modelValue.address"
+          :maxlength="512"
+          :error="invalid"
+          :aria-describedby="errorId"
+          :size="dense ? 'sm' : 'md'"
+          :data-testid="`${testidPrefix}-address`"
+          @update:model-value="update('address', $event)"
         />
       </BaseFormField>
       <BaseFormField v-slot="{ invalid, errorId }" label="Código de facturación" :error="errorFor('billing_code')" :size="dense ? 'sm' : 'md'">

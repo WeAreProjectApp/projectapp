@@ -86,7 +86,7 @@ def _resolve_existing_user(normalized_email):
 
 @transaction.atomic
 def get_or_create_client_for_proposal(*, name='', email='', phone='', company='',
-                                      nit='', billing_code=None):
+                                      nit='', cedula='', address='', billing_code=None):
     """
     Get-or-create a ``UserProfile`` (role=client) used as the FK target of a
     ``BusinessProposal``. Never sends invitation emails.
@@ -115,6 +115,8 @@ def get_or_create_client_for_proposal(*, name='', email='', phone='', company=''
     company = (company or '').strip()
     phone = (phone or '').strip()[:30]
     nit = (nit or '').strip()[:32]
+    cedula = (cedula or '').strip()[:20]
+    address = (address or '').strip()[:512]
     billing_code = billing_code or None
 
     if normalized:
@@ -130,6 +132,8 @@ def get_or_create_client_for_proposal(*, name='', email='', phone='', company=''
                     company_name=company,
                     phone=phone,
                     nit=nit,
+                    cedula=cedula,
+                    address=address,
                     billing_code=billing_code,
                 )
                 _maybe_fill_user_names(existing_user, first_name, last_name)
@@ -138,7 +142,7 @@ def get_or_create_client_for_proposal(*, name='', email='', phone='', company=''
                 # Reuse — opportunistically fill missing fields.
                 _fill_missing_fields(
                     existing_profile, company=company, phone=phone,
-                    nit=nit, billing_code=billing_code,
+                    nit=nit, cedula=cedula, address=address, billing_code=billing_code,
                 )
                 _maybe_fill_user_names(existing_user, first_name, last_name)
                 return existing_profile
@@ -163,6 +167,8 @@ def get_or_create_client_for_proposal(*, name='', email='', phone='', company=''
                 company_name=company,
                 phone=phone,
                 nit=nit,
+                cedula=cedula,
+                address=address,
                 billing_code=billing_code,
             )
             return profile
@@ -174,12 +180,14 @@ def get_or_create_client_for_proposal(*, name='', email='', phone='', company=''
         company=company,
         phone=phone,
         nit=nit,
+        cedula=cedula,
+        address=address,
         billing_code=billing_code,
     )
 
 
 def _create_placeholder_profile(*, first_name, last_name, company, phone,
-                                nit='', billing_code=None):
+                                nit='', cedula='', address='', billing_code=None):
     """Two-step save to embed the new profile id in the placeholder email."""
     temp_token = secrets.token_hex(8)
     temp_username = f'pending_{temp_token}'
@@ -198,6 +206,8 @@ def _create_placeholder_profile(*, first_name, last_name, company, phone,
         company_name=company,
         phone=phone,
         nit=nit,
+        cedula=cedula,
+        address=address,
         billing_code=billing_code,
     )
 
@@ -209,7 +219,7 @@ def _create_placeholder_profile(*, first_name, last_name, company, phone,
     return profile
 
 
-def _fill_missing_fields(profile, *, company, phone, nit='', billing_code=None):
+def _fill_missing_fields(profile, *, company, phone, nit='', cedula='', address='', billing_code=None):
     """Fill empty profile fields without overwriting existing data."""
     dirty = []
     if company and not profile.company_name:
@@ -221,6 +231,12 @@ def _fill_missing_fields(profile, *, company, phone, nit='', billing_code=None):
     if nit and not profile.nit:
         profile.nit = nit
         dirty.append('nit')
+    if cedula and not profile.cedula:
+        profile.cedula = cedula
+        dirty.append('cedula')
+    if address and not profile.address:
+        profile.address = address
+        dirty.append('address')
     if billing_code and not profile.billing_code:
         profile.billing_code = billing_code
         dirty.append('billing_code')
@@ -245,7 +261,8 @@ def _maybe_fill_user_names(user, first_name, last_name):
 @transaction.atomic
 @historical_write
 def update_client_profile(profile, *, name=None, email=None, phone=None,
-                          company=None):
+                          company=None, nit=None, cedula=None, address=None,
+                          billing_code=None):
     """
     Update the canonical client identity (User + UserProfile) and cascade
     the new values to all linked proposals' snapshots.
@@ -304,6 +321,17 @@ def update_client_profile(profile, *, name=None, email=None, phone=None,
         if profile.company_name != company:
             profile.company_name = company
             profile_dirty.append('company_name')
+
+    for field, value in (('nit', nit), ('cedula', cedula), ('address', address),
+                         ('billing_code', billing_code)):
+        if value is None:
+            continue
+        value = (value or '').strip()
+        if field == 'billing_code':
+            value = value or None
+        if getattr(profile, field) != value:
+            setattr(profile, field, value)
+            profile_dirty.append(field)
 
     snapshot_dirty = bool(user_dirty) or any(
         field in ('phone', 'company_name') for field in profile_dirty

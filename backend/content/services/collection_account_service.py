@@ -197,7 +197,7 @@ def _fill_customer_from_user(extension, user, project=None):
     panel-issued one for the same client.
     """
     from content.services.collection_account_create_service import (
-        client_legal_identity,
+        customer_snapshot_defaults,
     )
 
     profile = getattr(user, 'profile', None)
@@ -209,14 +209,7 @@ def _fill_customer_from_user(extension, user, project=None):
         extension.customer_identification_type = ''
         extension.customer_contact_name = full_name
     else:
-        name, identification, identification_type, contact_name = (
-            client_legal_identity(profile)
-        )
-        extension.customer_name = name
-        extension.customer_email = user.email or ''
-        extension.customer_identification = identification
-        extension.customer_identification_type = identification_type
-        extension.customer_contact_name = contact_name
+        _fill_customer_from_data(extension, customer_snapshot_defaults(profile))
     extension.customer_project_name = project.name if project else ''
 
 

@@ -1,3 +1,17 @@
+# Formularios contables y datos del cliente (2026-10-02)
+
+Implementado en `fix/02102026-accounting-modals-client-data`, sobre
+`origin/main`: formularios contables compactos, consecutivo junto al concepto
+y valor/IVA en un bloque propio. Los formularios nuevos proponen 19% en
+cualquier contabilidad; editar conserva la tasa guardada. Las cuentas reciben
+nombre legal, NIT/cédula y tipo, contacto, correo y dirección de la ficha,
+editable desde la cuenta sin perder su borrador. `accounts.0076` añade dirección
+y la aplica el deploy. «Cobro del proyecto» aparece también al abrir desde el
+ingreso y explica qué vínculo falta; volver de preview conserva la selección.
+Se conserva la evidencia de documentos emitidos. Pruebas focales de backend,
+interfaz y navegador en verde; mapas de vistas/recorridos actualizados y
+auditoría independiente aprobada. Entrega de PR y CI en verificación.
+
 # Compatibilidad MySQL antes del deploy (2026-10-02)
 
 El ensayo del deploy encontró el error 3780 en `accounts/0067`: la tabla

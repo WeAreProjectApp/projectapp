@@ -4400,7 +4400,7 @@ Two transitions that were previously bundled into other flows now have their own
 - **Description:** Create a new client profile standalone (without a proposal) from the clients page via the "+ Nuevo cliente" modal. Email is optional — if omitted the backend generates a placeholder `cliente_<id>@temp.example.com` and the client shows a placeholder badge.
 - **Steps:**
   1. Admin clicks "+ Nuevo cliente" button (data-testid: `clients-new-button`).
-  2. Modal opens with name, email, phone, company fields.
+  2. Modal opens with name, email, phone, company, identification type (NIT / C.C.), identification number, address and billing code. Short fields share rows when space permits.
   3. Admin fills the form (email is optional).
   4. Admin clicks "Crear cliente" (data-testid: `clients-new-submit`).
   5. API call to `POST /api/proposals/client-profiles/create/` — backend calls `proposal_client_service.get_or_create_client_for_proposal`.
@@ -4411,6 +4411,11 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-mini-crm-clients.spec.js`
 - **Backend Tests:** `content/tests/views/test_proposal_clients_views.py::TestCreateProposalClient`
+
+La ficha guarda por separado NIT y cédula: una cédula no se convierte en NIT.
+La cuenta nueva toma nombre legal, identificación y tipo, contacto, correo y
+dirección de esa misma ficha. La edición de estos datos está disponible en
+Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 ### FLOW: `admin-client-delete-orphan`
 
@@ -6480,7 +6485,7 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 
 #### IVA opcional
 
-IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
+Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar de empresa a personal conserva el porcentaje elegido. Se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. Al editar se respeta la tasa guardada. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
 
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
@@ -6516,7 +6521,7 @@ IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o bas
 
 #### IVA opcional
 
-IVA opcional con 0 por defecto: captura de total incluido o base antes del impuesto y desglose base/IVA/total en edición. No calcula IVA descontable ni cambia utilidad o reparto.
+Los gastos nuevos empiezan con IVA del 19%, tanto en contabilidad de empresa como personal. Se puede elegir «Sin IVA» (0%) o dejar la tasa sin registrar. Al editar se conserva la tasa del registro, incluido cero o null. La captura acepta total incluido o base antes del impuesto y muestra base/IVA/total. No calcula IVA descontable ni cambia utilidad o reparto.
 
 ### FLOW: `admin-accounting-hostings`
 
@@ -6769,11 +6774,19 @@ El resumen muestra base, IVA registrado y total de la cuenta, además del desglo
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
 
 
-**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
+**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto fija contrato y otrosí opcional del mismo contrato o un hosting explícito. El bloque «Cobro del proyecto» aparece tanto desde el botón de nueva cuenta como desde la acción del ingreso, aunque el ingreso esté bloqueado. Los mensajes indican qué falta: tipo de cobro, contrato, hosting o período de hosting. Volver de previsualización conserva la selección revisada; cambiar de proyecto la limpia. El servidor rechaza relaciones de otro cliente/proyecto.
+
+**Datos del cliente y distribución (2026-10-02):** La proyección canónica
+`billing_customer` completa nombre legal, NIT/cédula y tipo, contacto, correo y
+dirección. «Editar ficha del cliente» guarda esos datos por PATCH y actualiza
+la cuenta manteniendo el consecutivo manual y el resto del borrador; un error
+de guardado conserva la edición. La ficha y las cuentas emitidas mantienen su
+historial. Consecutivo comparte fila con concepto; el bloque de valor/IVA ocupa
+su propia fila y las fechas se agrupan sin reservar una columna vacía.
 
 #### IVA opcional
 
-Hereda IVA del ingreso, acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
+Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propone 19%. Acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 
