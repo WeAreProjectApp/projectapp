@@ -186,6 +186,17 @@ pasaron juntos en un lote de dieciocho casos después de esta corrección.
 La regresión de conversión y transporte MCP pasó veinte casos, y los detalles
 GET de bugs/solicitudes pasaron quince casos. La última verificación de los seis
 contratos de CI propios pasó después de simplificar sus fixtures de consultas.
+El complemento final de pruebas del dominio cubre 52 casos de opciones REST,
+evidencia por nivel contractual, rechazo de contextos incompatibles, conservación
+de bytes/ronda originales, rollback sin respuesta parcial, permisos de descarga
+y redacción de JSON legado. Pasaron en lotes de hasta veinte casos con SQLite
+temporal, `--nomigrations` y todos los mailers en memoria; el grafo de migraciones
+se había comprobado por separado. El gate focal estricto de estos tests terminó
+sin errores ni advertencias. No añade reglas de negocio ni cambia el piso de CI.
+El CI histórico de `6a95dc9` terminó con 83 checks aprobados y sólo el agregador
+de cobertura fallido (92,2085 % frente a 92,5 %); la base P3 `cecb5b93` también
+quedó por debajo de ese piso (92,4497 %). P0 conserva la validación final del
+contenido integrado; estos resultados no declaran verde ese nuevo contenido.
 El contrato GET de bugs admite ocho consultas acotadas: las cinco originales,
 las dos colecciones nuevas de historia y una lectura conjunta de evidencia de
 comentarios, igual que el contrato GET de solicitudes. Sigue exigiendo el mismo
