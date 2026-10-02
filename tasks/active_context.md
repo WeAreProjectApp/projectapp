@@ -1,3 +1,16 @@
+# Compatibilidad MySQL antes del deploy (2026-10-02)
+
+El ensayo del deploy encontró el error 3780 en `accounts/0067`: la tabla
+histórica de guías conserva `utf8mb4_0900_ai_ci`, pero la base y las tablas
+nuevas usan `utf8mb4_unicode_ci`. La producción no recibió migraciones.
+Se añade un reemplazo compatible de `0067`, conservando el archivo publicado
+y reconociendo su historial si ya fue aplicado. Sólo ajusta el DEFAULT de la
+tabla histórica antes de agregar la relación UUID; no convierte columnas ni
+reescribe los textos existentes. Pasaron cuatro pruebas focales SQLite
+(compatibilidad del historial y purga autorizada), la revisión de cambios
+pendientes en modelos y el gate focal de calidad (100/100). La prueba aislada
+MySQL 8.4 queda pendiente de CI; el deploy exige repetir el ensayo completo.
+
 # Enlaces de carpetas antes del deploy (2026-10-02)
 
 Corregida la dirección publicada por las subcarpetas del Gestor Documental:
