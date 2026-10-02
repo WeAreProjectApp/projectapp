@@ -9,6 +9,7 @@ const props = defineProps({
   disabled: { type: Boolean, default: false },
   disabledReason: { type: String, default: '' },
   required: { type: Boolean, default: true },
+  error: { type: String, default: '' },
   resetKey: { type: [Boolean, Number, String], default: null },
 })
 const emit = defineEmits(['update:modelValue', 'update:rate', 'capture'])
@@ -65,8 +66,8 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
       <BaseSegmented :model-value="mode" @update:model-value="changeMode($event)" :options="modeOptions" full-width :disabled="disabled" :disabled-reason="disabledReason" />
     </BaseFormField>
     <BaseFormRow :cols="2">
-      <BaseFormField :label="mode === 'before_vat' ? 'Valor antes de IVA' : 'Total con IVA incluido'" :required="required">
-        <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" @update:model-value="capture($event)" />
+      <BaseFormField :label="mode === 'before_vat' ? 'Valor antes de IVA' : 'Total con IVA incluido'" :required="required" :error="error" v-slot="{ errorId, invalid }">
+        <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="errorId" @update:model-value="capture($event)" />
       </BaseFormField>
       <BaseFormField label="IVA (%)" hint="Usa 0 para Sin IVA; vacío significa sin registrar.">
         <BaseInput :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled" :disabled-reason="disabledReason" @update:model-value="changeRate($event)" />

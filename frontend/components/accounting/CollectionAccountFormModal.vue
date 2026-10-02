@@ -1309,6 +1309,7 @@ const modalFormId = useId();
           />
         </BaseFormField>
         <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
+          :error="amountValidationError"
           input-test-id="collection-form-amount" :disabled="selectedIncome?.kind === 'liquid' || Number(selectedIncome?.paid_amount || 0) > 0"
           disabled-reason="Este ingreso ya tiene pagos; se conservan su saldo y su IVA." @capture="form.vat_capture = $event" />
       </BaseFormRow>
