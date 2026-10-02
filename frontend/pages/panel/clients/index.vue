@@ -1,5 +1,12 @@
 <template>
   <div :class="PAGE_MAX_WIDTH" data-testid="clients-page">
+    <ProposalApprovalModal
+      :visible="Boolean(approvalProposal)"
+      :proposal="approvalProposal || {}"
+      :accept-proposal="approvalAccept"
+      @close="approvalProposal = null"
+      @completed="handleClientApprovalCompleted"
+    />
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
       <div>
@@ -474,6 +481,15 @@
                           :updating="updatingProposalStatusId === p.id"
                           @change="(s) => onProposalStatusSelect(client, p, s)"
                         />
+                        <BaseButton
+                          v-if="p.project_review_required"
+                          variant="link"
+                          size="sm"
+                          :data-testid="`client-approval-review-${p.id}`"
+                          @click.stop="openClientApproval(client, p, false)"
+                        >
+                          {{ approvalText.pending }}
+                        </BaseButton>
                       </td>
                       <td class="px-4 py-3 text-text-muted/60 tabular-nums" data-label="Inversión">
                         ${{ Number(p.total_investment).toLocaleString() }} {{ p.currency }}
@@ -1080,6 +1096,8 @@ import ViewSettingsPanel from '~/components/panel/ViewSettingsPanel.vue';
 import BasePagination from '~/components/base/BasePagination.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
+import ProposalApprovalModal from '~/components/BusinessProposal/admin/ProposalApprovalModal.vue';
+import { useProposalApproval } from '~/composables/useProposalApproval';
 import ProposalStatusSelect from '~/components/panel/proposal/ProposalStatusSelect.vue';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { useProposalStatusChange } from '~/composables/useProposalStatusChange';
@@ -1125,10 +1143,31 @@ const notify = usePanelNotify();
 // Inline status change for the nested proposal rows. No onNegotiate here:
 // natural negotiating PATCHes directly; the contract flow lives in the
 // proposal edit view.
+const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+const approvalClientId = ref(null);
 const { updatingId: updatingProposalStatusId, changeStatus: changeProposalStatus } =
-  useProposalStatusChange({ requestConfirm });
+  useProposalStatusChange({ requestConfirm, onAccept: (proposal) => openApproval(proposal, true) });
+
+function openClientApproval(client, proposal, accept = true) {
+  approvalClientId.value = client.id;
+  openApproval(proposal, accept);
+}
+
+async function handleClientApprovalCompleted(result) {
+  const sourceClientId = approvalClientId.value;
+  const selectedClientId = result.client?.profile_id;
+  approvalCompleted(result);
+  if (sourceClientId != null) await refreshClientDetail(sourceClientId);
+  // A proposal may be linked to another existing client. Refresh that visible
+  // cache as well, without editing either client's global identity fields.
+  if (selectedClientId && selectedClientId !== sourceClientId && detailCache[selectedClientId]) {
+    const refreshed = await clientsStore.fetchClient(selectedClientId);
+    if (refreshed.success) detailCache[selectedClientId] = refreshed.data;
+  }
+}
 
 async function onProposalStatusSelect(client, proposal, newStatus) {
+  approvalClientId.value = client.id;
   const result = await changeProposalStatus(proposal, newStatus);
   // Refresh on success AND failure: the nested row may be stale either way.
   if (result) await refreshClientDetail(client.id);

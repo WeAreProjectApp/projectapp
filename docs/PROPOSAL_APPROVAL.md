@@ -7,7 +7,8 @@ clientes automáticamente.
 
 ## Recorrido del equipo
 
-Desde el listado, el estado en línea o el editor, **Aprobar** abre el mismo
+Desde el listado, el estado en línea, el editor o una propuesta expandida en
+Clientes, **Aprobar** abre el mismo
 modal. Una propuesta aceptada sin proyecto muestra **Pendiente de revisión**
 y permite retomar la revisión. El equipo puede seleccionar cliente y proyecto
 existentes o preparar su creación en el formulario; se guardan al confirmar.
@@ -41,7 +42,9 @@ firma electrónica ni crea un contrato de seguimiento de entregas.
 
 `GET /api/proposals/:id/approval/` devuelve cliente, proyecto vinculado,
 resumen comercial, modalidad y documentos disponibles, archivos confirmados
-y `source_hash`. `POST` usa las acciones `confirm`, `defer` y `retry`.
+y `source_hash`. La respuesta incluye la fecha de sincronización y las
+transiciones vigentes para actualizar el siguiente paso del editor sin recargar.
+`POST` usa las acciones `confirm`, `defer` y `retry`.
 
 Para confirmar se envían `client_profile_id` o `new_client`, `project_id` o
 `new_project`, `use_proposal_contracts`, `selected_document_ids`, `source_hash`
@@ -50,7 +53,9 @@ su descripción como `custom_documents`. En multipart la metadata se envía
 en el campo JSON `payload`.
 
 El servidor valida cliente, pertenencia del proyecto, documentos y versión
-antes de guardar. La confirmación atómica conserva un manifiesto y copias
+antes de guardar, incluidas las condiciones automáticas resueltas desde el
+catálogo de horas. Los clientes comerciales no archivados pueden vincularse
+sin activar sus cuentas de acceso. La confirmación atómica conserva un manifiesto y copias
 privadas duraderas, junto con el cliente y las condiciones comerciales
 confirmadas. Editar la propuesta después no modifica ese paquete. Un reintento reutiliza el mismo vínculo y paquete, sin
 duplicar proyectos, clientes, archivos ni correos de aceptación. Los recursos

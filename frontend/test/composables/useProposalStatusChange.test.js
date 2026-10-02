@@ -151,8 +151,16 @@ describe('useProposalStatusChange', () => {
   it('keeps approval closed when forced acceptance is cancelled', async () => {
     requestConfirm.mockResolvedValue(false);
     const onAccept = jest.fn();
-    const { changeStatus } = useProposalStatusChange({ requestConfirm, onAccept });
-    await changeStatus(buildProposal({ status: 'draft' }), 'accepted');
+    const { changeStatus, updatingId } = useProposalStatusChange({ requestConfirm, onAccept });
+    const result = await changeStatus(buildProposal({ status: 'draft' }), 'accepted');
+    expect(requestConfirm).toHaveBeenCalledWith({
+      title: 'Forzar cambio de estado',
+      message: 'La propuesta pasará de «Borrador» a «Aceptada» fuera del flujo normal. No se enviarán correos ni se ejecutarán automatizaciones.',
+      variant: 'warning',
+      confirmText: 'Forzar cambio',
+    });
+    expect(result).toBeNull();
+    expect(updatingId.value).toBeNull();
     expect(onAccept).not.toHaveBeenCalled();
     expect(mockUpdateProposalStatus).not.toHaveBeenCalled();
   });

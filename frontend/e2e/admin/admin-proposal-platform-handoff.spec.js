@@ -28,7 +28,7 @@ function makeAcceptedProposal(overrides = {}) {
 
 function makeState() {
   return {
-    proposal: makeAcceptedProposal(), submissions: [], legacyLaunches: [],
+    proposal: makeAcceptedProposal(), submissions: [], legacyLaunches: [], detailReads: 0,
     client: { profile_id: 201, name: 'Cliente Aceptado', email: 'cliente@example.com' },
     project: { id: 81, name: 'Proyecto Aceptado', client: { profile_id: 201 }, client_profile_id: 201 },
   };
@@ -40,14 +40,25 @@ function approvalPreview(state) {
     commercial_summary: { title: state.proposal.title, total_investment: '15000000', currency: 'COP', payment_milestones: [], hosting_tiers: [] },
     contracts: { modality: 'single', available: true, documents: [{ id: 901, title: 'Contrato acordado', document_type: 'contract' }], error: null },
     optional_documents: [], confirmed: !!state.proposal.linked_project, confirmed_files: [],
-    proposal: { ...state.proposal },
+    proposal: {
+      id: state.proposal.id,
+      status: state.proposal.status,
+      platform_onboarding_status: state.proposal.platform_onboarding_status,
+      platform_onboarding_completed_at: state.proposal.platform_onboarding_completed_at,
+      available_transitions: state.proposal.available_transitions,
+      project_review_required: state.proposal.project_review_required,
+      linked_project: state.proposal.linked_project,
+    },
   };
 }
 
 async function setupReviewApi(page, state, { fail = false } = {}) {
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
-    if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) return json({ ...state.proposal });
+    if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
+      state.detailReads += 1;
+      return json({ ...state.proposal });
+    }
     if (apiPath === 'projects/') return json({ results: [state.project], meta: { total: 1 } });
     if (apiPath === 'project-states/' || apiPath === 'project-state-groups/') return json([]);
     if (apiPath === `proposals/${PROPOSAL_ID}/approval/` && method === 'GET') return json(approvalPreview(state));
@@ -138,6 +149,12 @@ test.describe('Admin Proposal — Platform Handoff Review', () => {
     await expect(page.getByText('Project linked; packet confirmed.', { exact: true })).toHaveCount(1);
     await expect(page.getByTestId('proposal-next-action-launch')).toHaveCount(0);
     await expect(page.getByTestId('proposal-next-action-finish')).toHaveText('Marcar como finalizada');
+    const statusSelect = page.getByRole('combobox', { name: 'Cambiar estado de la propuesta', exact: true });
+    await expect(statusSelect.locator('optgroup[label="Flujo normal"] option')).toHaveAttribute('value', 'finished');
+    await expect(statusSelect.locator('optgroup[label="Flujo normal"] option')).toHaveText('Finalizada');
+    expect(state.detailReads).toBe(1);
+    expect(state.submissions).toHaveLength(1);
+    expect(state.legacyLaunches).toEqual([]);
   });
 
   test('failed editor handoff leaves the sticky review entry usable', {

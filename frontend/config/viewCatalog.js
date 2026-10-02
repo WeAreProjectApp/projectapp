@@ -451,7 +451,7 @@ export const viewCatalogSections = [
         reference: 'vista de clientes del panel',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite posponer sin crear proyecto.',
       },
       {
         label: 'Blog del panel',
