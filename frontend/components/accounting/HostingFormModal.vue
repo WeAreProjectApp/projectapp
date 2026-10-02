@@ -1,4 +1,5 @@
 <script setup>
+import VatAmountInput from './VatAmountInput.vue'
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
 import { useId, computed, ref, watch } from 'vue'
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue'
@@ -62,6 +63,8 @@ function defaultForm() {
     valid_from: '',
     valid_to: '',
     payment_per_cycle: '',
+    vat_rate: 19,
+    vat_capture: null,
     is_active: true,
     notes: '',
   }
@@ -89,6 +92,8 @@ watch(
         valid_from: props.record.valid_from ?? '',
         valid_to: props.record.valid_to ?? '',
         payment_per_cycle: props.record.payment_per_cycle ?? '',
+        vat_rate: props.record.vat_rate ?? null,
+        vat_capture: null,
         is_active: props.record.is_active ?? true,
         notes: props.record.notes ?? '',
       }
@@ -209,7 +214,9 @@ function onSubmit() {
   payload.notes = form.value.notes
   payload.valid_from = form.value.valid_from || null
   payload.valid_to = form.value.valid_to || null
-  addIfFilled(payload, 'payment_per_cycle', form.value.payment_per_cycle)
+  payload.vat_rate = form.value.vat_rate
+  if (form.value.vat_capture) Object.assign(payload, form.value.vat_capture)
+  else addIfFilled(payload, 'payment_per_cycle', form.value.payment_per_cycle)
   emit('submit', payload)
 }
 
@@ -381,7 +388,7 @@ const modalFormId = useId();
         label="Pago por ciclo"
         hint="Si lo dejas vacío al crear, se calcula desde la modalidad"
       >
-        <BaseCurrencyInput v-model="form.payment_per_cycle" data-testid="hosting-form-per-cycle" />
+        <VatAmountInput v-model="form.payment_per_cycle" v-model:rate="form.vat_rate" :reset-key="open" :required="false" input-test-id="hosting-form-per-cycle" @capture="form.vat_capture = $event" />
       </BaseFormField>
 
       <p v-if="isEdit" class="text-xs text-text-muted">

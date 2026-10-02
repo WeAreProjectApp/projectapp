@@ -231,6 +231,7 @@ MCP_MODEL_CONTRACTS = {
                 'reminder_last_sent_at reminder_count'
             ),
             read_write=(
+                'vat_rate '
                 'notes ledger total_amount gustavo_amount carlos_amount concept '
                 'kind client project origin period_date period_start period_end '
                 'period_cadence destination expected_income reminders_muted '
@@ -245,6 +246,7 @@ MCP_MODEL_CONTRACTS = {
                 'id created_at updated_at deduction_type source_income pocket_movement'
             ),
             read_write=(
+                'vat_rate '
                 'notes ledger total_amount gustavo_amount carlos_amount concept '
                 'period_date category'
             ),
@@ -257,6 +259,7 @@ MCP_MODEL_CONTRACTS = {
                 'expiry_notice_last_sent_at expiry_notice_count billing_requested_at'
             ),
             read_write=(
+                'vat_rate '
                 'notes client project client_name client_email client_contact_name '
                 'client_identification domain_url monthly_value payment_modality '
                 'benefit valid_from valid_to cycles_count payment_per_cycle '
@@ -838,7 +841,7 @@ BILLING_CATALOG_CONTRACTS = (
         'content.DocumentCollectionAccount',
         read_only='document created_at updated_at',
         read_write=(
-            'billing_concept payment_term_type payment_term_days payer_name '
+            'vat_rate billing_concept payment_term_type payment_term_days payer_name '
             'payer_identification payer_identification_type payer_address payer_phone '
             'payer_email customer_name customer_identification '
             'customer_identification_type customer_contact_name customer_email '

@@ -32,3 +32,7 @@
   - [Branch K] (Ago 2026) Una mutación **refresca en sitio**. Al eliminar, la fila deja su grupo de inmediato y el contador del grupo, el conteo de resultados y los totales de la cabecera (Total esperado / líquido / perdido) se recalculan solos, porque derivan del set filtrado. Dos cosas que hacían que eso *pareciera* una recarga se corrigieron con el mismo cambio, y valen para las seis vistas de contabilidad: las tablas pintan skeleton **sólo cuando todavía no hay nada en pantalla**, no encima de datos ya visibles, y la paginación vuelve a la página 1 cuando cambian los **filtros**, no cada vez que se reconstruyen las filas — borrar una fila desde la página 3 ya no deja al lector en la 1.
 - **Coverage:** ✅ Covered — all four outcome classes, including the default and persisted Mes/Total ordering, the five-width indicator header, its filtering actions, the settlement's deduction, follow-up income, over-allocation block and backend rejection, y el borrado recalculando totales sin recargar ni mover la página.
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
+
+#### IVA opcional
+
+IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.

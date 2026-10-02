@@ -1869,3 +1869,13 @@ return target and then the menu's close unlocks the page underneath it. Emit
 first modal of the page. Nested menus (a row menu inside the client emails
 modal) must also leave the scroll lock to the outer modal and tell it to stop
 answering the global Esc listener while they are open.
+
+### IVA contable: distinguir desconocido y cero (2026-10-01)
+
+El total incluido sigue siendo la fuente contable: agregar una tasa no permite
+reinterpretar importes históricos. `vat_rate=null` conserva IVA sin registrar;
+`0` es una decisión explícita Sin IVA. Normalizar captura antes del reparto,
+heredar la tasa al liquidar y congelar el desglose documental evita divergencias
+entre ingreso, cuenta, PDF y correo. La previsualización comparte la transacción
+de emisión y revierte todos sus cambios; los pagos y la emisión comparten el
+lock del ingreso para impedir cambios financieros simultáneos.

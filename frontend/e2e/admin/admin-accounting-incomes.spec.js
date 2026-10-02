@@ -789,13 +789,18 @@ test.describe('Admin Accounting Incomes CRUD', () => {
 
     // Personal ledger swaps the partner split for a single value input.
     await expect(page.getByTestId('partner-split-total')).toHaveCount(0);
-    await page.locator('form input[inputmode="numeric"]').fill('1400000');
+    await page.getByTestId('vat-amount').fill('1400000');
     await page.getByTestId('income-form-submit').click();
 
     await expect(page.getByText('Ingreso creado')).toBeVisible();
     expect(calls).toHaveLength(1);
     expect(calls[0].body.ledger).toBe('gustavo');
-    expect(Number(calls[0].body.total_amount)).toBe(1400000);
+    expect(calls[0].body).toMatchObject({
+      amount: 1400000,
+      amount_mode: 'vat_included',
+      vat_rate: 0,
+    });
+    expect(calls[0].body.total_amount).toBeUndefined();
     expect(calls[0].body.gustavo_amount).toBeUndefined();
     expect(calls[0].body.carlos_amount).toBeUndefined();
   });
@@ -837,7 +842,12 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     await expect(page.getByText('Ingreso actualizado')).toBeVisible();
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe('PATCH');
-    expect(Number(calls[0].body.total_amount)).toBe(2000000);
+    expect(calls[0].body).toMatchObject({
+      amount: 2000000,
+      amount_mode: 'vat_included',
+      vat_rate: null,
+    });
+    expect(calls[0].body.total_amount).toBeUndefined();
     expect(calls[0].body.origin).toBe('development');
   });
 

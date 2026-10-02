@@ -47,6 +47,7 @@
         class="flex-1 min-h-0 overflow-y-auto px-6 py-5 space-y-6"
         data-testid="collection-detail-tab-summary"
       >
+        <VatBreakdown :total="record?.total" :rate="record?.vat_rate ?? null" :tax="record?.vat_rate != null || Number(record?.tax_total) > 0 ? record.tax_total : null" :currency="record?.currency || 'COP'" />
         <!-- Cliente y proyecto -->
         <section class="grid gap-4 sm:grid-cols-3">
           <div>
@@ -162,6 +163,7 @@
           </p>
 
           <div v-else-if="income" class="space-y-4" data-testid="collection-detail-income">
+            <VatBreakdown :total="income.total_amount" :rate="income.vat_rate" />
             <div class="grid gap-4 sm:grid-cols-4">
               <div>
                 <p class="text-xs uppercase tracking-wider text-text-subtle">Concepto</p>
@@ -323,6 +325,7 @@
 </template>
 
 <script setup>
+import VatBreakdown from './VatBreakdown.vue';
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
 import { computed, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';

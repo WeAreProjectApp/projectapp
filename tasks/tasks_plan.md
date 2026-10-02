@@ -27,6 +27,13 @@
 
 # Task Plan — ProjectApp
 
+> **2026-10-01 — IVA contable:** implementación y validación focal en
+> `feat/01102026-accounting-vat`. Captura base/total incluido; desglose en
+> ingresos, gastos, Hosting, cuentas de cobro, PDF, correo y exportaciones.
+> Históricos sin inferencia fiscal; utilidad y reparto conservados.
+> Entrega mediante PR abierto y CI verde; migración sólo en despliegue.
+
+
 > **Recursos comerciales y MCPs — 2026-09-28:** implementación en PR #440: conectores Alianza/Módulos adicionales; videos generales y personalizado de propuesta cargables desde panel/MCP. Validación focal y recorridos de navegador aprobados; estado de integración consultable en el PR. Activación de servidor posterior por deploy.
 
 > **2026-09-26 — modalidad de cierre de contratos:** Documentos elige en

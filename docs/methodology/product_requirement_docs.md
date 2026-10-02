@@ -1,5 +1,14 @@
 # Product Requirements Document — ProjectApp
 
+> **Requerimiento — IVA contable, 2026-10-01:** el importe canónico permanece
+> como total incluido. Captura antes de IVA/total incluido normalizada con
+> Decimal en backend y tasa por ingreso, gasto, hosting y cuenta. Tasa nula
+> significa sin registrar; cero significa Sin IVA. Documentos congelan base,
+> impuesto y total al emitir; PDF y correo consumen esos mismos valores.
+> Utilidad, reparto y tratamiento de retenciones conservan sus reglas actuales
+> por decisión explícita del operador. La sincronización cuenta–ingreso sólo
+> cambia finanzas antes de pagos/deducciones y dentro de la emisión atómica.
+
 > **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
 
 > **Corrección 2026-09-26 — validación en Documentos:** Nuevo documento ya no

@@ -47,6 +47,7 @@ from content.services.document_type_utils import (
     get_collection_account_document_type,
 )
 from content.utils import add_months, today_bogota
+from content.services.accounting_vat import vat_breakdown
 
 __all__ = [
     'HostingBillingError',
@@ -82,6 +83,7 @@ def _default_issuer():
 
 def create_hosting_collection_account(hosting, *, acting_user=None):
     """Draft Document + extension + line item + default payment methods."""
+    base, tax, total = vat_breakdown(hosting.payment_per_cycle, hosting.vat_rate)
     period_from, period_to = next_billing_period(hosting)
     # What is being hosted, not who pays for it: with no domain the project
     # names the service ("hosting Kore"), the client half never did.
@@ -99,6 +101,7 @@ def create_hosting_collection_account(hosting, *, acting_user=None):
     )
     DocumentCollectionAccount.objects.create(
         document=document,
+        vat_rate=hosting.vat_rate,
         billing_concept=f'Servicio de hosting {label}',
         payment_term_type=DocumentCollectionAccount.PaymentTermType.DAYS_AFTER_ISSUE,
         payment_term_days=PAYMENT_TERM_DAYS,
@@ -112,8 +115,9 @@ def create_hosting_collection_account(hosting, *, acting_user=None):
             f'{period_from:%d/%m/%Y} a {period_to:%d/%m/%Y}'
         ),
         quantity=1,
-        unit_price=hosting.payment_per_cycle,
-        line_total=hosting.payment_per_cycle,
+        unit_price=base if base is not None else total,
+        tax_amount=tax or 0,
+        line_total=total,
         period_start=period_from,
         period_end=period_to,
         reference_type='hosting_record',

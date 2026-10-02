@@ -32,6 +32,8 @@ from content.models import (
     RecurringPayment,
 )
 
+from content.serializers.accounting_vat import VatReadMixin, VatWriteMixin
+
 PERSONAL_LEDGER_OWNER = {
     Ledger.GUSTAVO: ('gustavo_amount', 'carlos_amount'),
     Ledger.CARLOS: ('carlos_amount', 'gustavo_amount'),
@@ -199,7 +201,7 @@ def payment_status_for(paid, total):
     return 'pending' if paid <= 0 else 'partial'
 
 
-class IncomeRecordSerializer(PeriodReadMixin, serializers.ModelSerializer):
+class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSerializer):
     kind_label = serializers.CharField(source='get_kind_display', read_only=True)
     destination_label = serializers.CharField(
         source='get_destination_display', read_only=True,
@@ -241,6 +243,7 @@ class IncomeRecordSerializer(PeriodReadMixin, serializers.ModelSerializer):
     class Meta:
         model = IncomeRecord
         fields = (
+            'vat_rate', 'base_amount', 'vat_amount',
             'id', 'concept', 'kind', 'kind_label',
             'period', 'period_label', 'period_date',
             'period_start', 'period_end',
@@ -374,8 +377,10 @@ def validate_project_client_match(project, client):
 
 
 class IncomeRecordCreateUpdateSerializer(
-    PartnerSplitWriteMixin, serializers.ModelSerializer,
+    VatWriteMixin, PartnerSplitWriteMixin, serializers.ModelSerializer,
 ):
+    vat_default = Decimal('19')
+    total_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0'), required=False)
     # required=False because hosting incomes derive it from `period_start` in
     # validate(); every other origin still has to send it (checked there too).
     period_date = FlexiblePeriodField(required=False)
@@ -404,6 +409,7 @@ class IncomeRecordCreateUpdateSerializer(
     class Meta:
         model = IncomeRecord
         fields = (
+            'vat_rate', 'amount', 'amount_mode',
             'concept', 'kind', 'period_date', 'destination', 'ledger',
             'client', 'project', 'origin',
             'is_receivable_candidate', 'collection_confidence',
@@ -871,7 +877,7 @@ class HostingProjectBulkAssignSerializer(serializers.Serializer):
 
 # ── Expense ──
 
-class ExpenseRecordSerializer(PeriodReadMixin, serializers.ModelSerializer):
+class ExpenseRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSerializer):
     category_label = serializers.CharField(
         source='get_category_display', read_only=True,
     )
@@ -889,6 +895,7 @@ class ExpenseRecordSerializer(PeriodReadMixin, serializers.ModelSerializer):
     class Meta:
         model = ExpenseRecord
         fields = (
+            'vat_rate', 'base_amount', 'vat_amount',
             'id', 'concept',
             'period', 'period_label', 'period_date',
             'category', 'category_label',
@@ -912,8 +919,9 @@ class ExpenseRecordSerializer(PeriodReadMixin, serializers.ModelSerializer):
 
 
 class ExpenseRecordCreateUpdateSerializer(
-    PartnerSplitWriteMixin, serializers.ModelSerializer,
+    VatWriteMixin, PartnerSplitWriteMixin, serializers.ModelSerializer,
 ):
+    total_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0'), required=False)
     period_date = FlexiblePeriodField()
     # Not a model field: the service pops it. Checked by default — unchecked
     # covers paper adjustments and personal expenses that never touched the
@@ -925,6 +933,7 @@ class ExpenseRecordCreateUpdateSerializer(
     class Meta:
         model = ExpenseRecord
         fields = (
+            'vat_rate', 'amount', 'amount_mode',
             'concept', 'period_date', 'category', 'ledger',
             'deduction_type',
             'total_amount', 'gustavo_amount', 'carlos_amount', 'notes',
@@ -994,7 +1003,7 @@ class ExpenseRecordCreateUpdateSerializer(
 
 # ── Hosting ──
 
-class HostingRecordSerializer(serializers.ModelSerializer):
+class HostingRecordSerializer(VatReadMixin, serializers.ModelSerializer):
     payment_modality_label = serializers.CharField(
         read_only=True,
     )
@@ -1011,6 +1020,7 @@ class HostingRecordSerializer(serializers.ModelSerializer):
     class Meta:
         model = HostingRecord
         fields = (
+            'vat_rate', 'base_amount', 'vat_amount',
             'id', 'client', 'client_display_name', 'billing_email',
             'project', 'project_name', 'display_label',
             'client_name', 'client_email', 'client_contact_name',
@@ -1037,7 +1047,9 @@ class HostingRecordSerializer(serializers.ModelSerializer):
         return build_client_display_name(obj.client)
 
 
-class HostingRecordCreateUpdateSerializer(serializers.ModelSerializer):
+class HostingRecordCreateUpdateSerializer(VatWriteMixin, serializers.ModelSerializer):
+    vat_total_field = 'payment_per_cycle'
+    vat_default = Decimal('19')
     monthly_value = serializers.DecimalField(
         max_digits=14, decimal_places=2, min_value=Decimal('0'),
     )
@@ -1061,6 +1073,7 @@ class HostingRecordCreateUpdateSerializer(serializers.ModelSerializer):
         # history (HostingCycle) is the source of truth and the service
         # recalculates the denormalized columns.
         fields = (
+            'vat_rate', 'amount', 'amount_mode',
             'client', 'project', 'client_name', 'client_email',
             'client_contact_name',
             'client_identification', 'domain_url', 'monthly_value',

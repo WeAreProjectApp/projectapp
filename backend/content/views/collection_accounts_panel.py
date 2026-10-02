@@ -195,6 +195,10 @@ def preview_collection_account_view(request):
                 'html_body': email['html_body'],
                 'public_number': document.public_number,
                 'total': str(document.total),
+                'subtotal': str(document.total - document.tax_total),
+                'tax_total': str(document.tax_total),
+                'vat_rate': str(document.collection_account.vat_rate) if document.collection_account.vat_rate is not None else None,
+                'income_total': str(document.income_record.total_amount),
                 'due_date': (
                     document.due_date.isoformat() if document.due_date else None
                 ),

@@ -1,6 +1,6 @@
 from django.db import models
 
-from .accounting_base import AccountingRecordBase, PartnerSplitMixin
+from .accounting_base import AccountingRecordBase, PartnerSplitMixin, VatBreakdownMixin
 from .history_tracked import HistoryQuerySet
 
 
@@ -16,7 +16,7 @@ class ExpenseRecordQuerySet(HistoryQuerySet):
         return self.exclude(deduction_type='')
 
 
-class ExpenseRecord(PartnerSplitMixin, AccountingRecordBase):
+class ExpenseRecord(VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
     """
     Expense entry of the accounting module.
 

@@ -2,10 +2,10 @@ from decimal import Decimal
 
 from django.db import models
 
-from .accounting_base import AccountingRecordBase
+from .accounting_base import AccountingRecordBase, VatBreakdownMixin
 
 
-class HostingRecord(AccountingRecordBase):
+class HostingRecord(VatBreakdownMixin, AccountingRecordBase):
     """
     Client hosting subscription registry (accounting view).
 
@@ -13,6 +13,8 @@ class HostingRecord(AccountingRecordBase):
     (Wompi-billed platform hosting). Hosting income itself is registered as
     IncomeRecord rows; this table tracks the per-client contract parameters.
     """
+
+    vat_total_field = 'payment_per_cycle'
 
     class Modality(models.TextChoices):
         QUARTERLY = 'quarterly', 'Trimestral'

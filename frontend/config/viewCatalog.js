@@ -755,7 +755,7 @@ export const viewCatalogSections = [
         reference: 'vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Captura base o total incluido y muestra IVA por ingreso; conserva el cálculo actual de utilidad y reparto. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Gastos',
@@ -765,7 +765,7 @@ export const viewCatalogSections = [
         reference: 'vista de gastos del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Desglose opcional de IVA sin clasificación automática de IVA descontable. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Hostings',
@@ -775,7 +775,7 @@ export const viewCatalogSections = [
         reference: 'vista de hostings activos por cliente del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'IVA configurable por hosting, heredado en nuevas cuentas de cobro sin aumentar automáticamente la tarifa. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Bolsillo',
@@ -835,7 +835,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Historial',

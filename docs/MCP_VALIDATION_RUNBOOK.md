@@ -1089,3 +1089,15 @@ permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.
    usuario cuando corresponde; una sincronización no cambia la procedencia.
 5. Para Littigio seguir el [runbook de reparación](runbooks/littigio-folder-repair.md).
    No repetir ensayos mutantes contra documentos reales como prueba del conector.
+
+
+### IVA contable (2026-10-01)
+
+`create/update_income`, `create/update_expense` y `create/update_hosting`
+aceptan `vat_rate` y captura `amount` + `amount_mode` (`before_vat` o
+`vat_included`). No combinar captura con el importe financiero anterior
+(`total_amount`, o `payment_per_cycle` en hosting). Los reads devuelven
+`base_amount`, `vat_amount` y tasa junto al total incluido. Tasa nula indica
+histórico sin registrar y cero indica Sin IVA. Panel y MCP comparten
+serializers, restricciones de documentos emitidos y auditoría. Liquidaciones
+heredan tasa; las retenciones mantienen el flujo de deducciones actual.

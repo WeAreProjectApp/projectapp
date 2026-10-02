@@ -325,6 +325,14 @@ Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Cliente
 
 # Active Context — ProjectApp
 
+**2026-10-01 — IVA contable implementado:** desglose explícito en ingresos,
+gastos, hostings y cuentas de cobro, con captura base/total incluido y porcentaje
+editable. Nuevos ingresos de empresa y hostings ofrecen 19 %; gastos ofrecen
+0 %. Históricos conservan importes y tasa desconocida. Utilidad y reparto se
+mantienen por decisión del operador. Retenciones se registran al liquidar.
+Rama de sesión: `feat/01102026-accounting-vat`; sin migraciones productivas ni
+envíos reales desde esta sesión.
+
 **2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
 con Comercial para ajustes, contratos personalizados y documentos. Formalización
 prepara paquetes privados por credencial y confirma el envío con comprobante

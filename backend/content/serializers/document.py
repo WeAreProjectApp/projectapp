@@ -380,6 +380,7 @@ class DocumentDetailSerializer(
     movable = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     billing_notes = serializers.CharField(source='notes', read_only=True)
+    vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True, default=None)
     collection_account_observations = serializers.CharField(
         source='collection_account.observations', read_only=True, default='',
     )
@@ -397,7 +398,7 @@ class DocumentDetailSerializer(
             'document_type_code', 'commercial_status',
             'display_state', 'is_generated_snapshot', 'is_contract_mirror', 'movable',
             'source_proposal_id', 'source_version',
-            'public_number', 'issue_date', 'due_date', 'currency', 'total',
+            'public_number', 'issue_date', 'due_date', 'currency', 'total', 'subtotal', 'tax_total', 'vat_rate',
             'billing_notes', 'collection_account_observations',
             'language', 'cover_type', 'template_style',
             'include_portada', 'include_subportada', 'include_contraportada',

@@ -179,6 +179,7 @@ class Command(BaseCommand):
             elif not is_lost and index % 8 == 7:
                 is_receivable_candidate = True
             income = IncomeRecord.objects.create(
+                vat_rate=Decimal('19') if index % 3 == 0 else Decimal('0') if index % 3 == 1 else None,
                 concept=concept,
                 kind=(
                     IncomeRecord.Kind.LOST if is_lost
@@ -239,6 +240,7 @@ class Command(BaseCommand):
                 gustavo_amount=Decimal('0') if to_pocket else paid_gustavo,
                 carlos_amount=Decimal('0') if to_pocket else paid_carlos,
                 expected_income=income,
+                vat_rate=income.vat_rate,
                 pocket_movement=movement,
                 client=client,
                 origin=origin,
@@ -333,6 +335,7 @@ class Command(BaseCommand):
             modality_months = HostingRecord.MODALITY_MONTHS[modality]
             payment_per_cycle = monthly * modality_months
             hosting = HostingRecord.objects.create(
+                vat_rate=Decimal('19') if index % 2 == 0 else Decimal('0'),
                 client=hosting_client,
                 project=project_for(hosting_client, index),
                 client_name=client_name,
@@ -408,6 +411,7 @@ class Command(BaseCommand):
                 source_ref=FAKE_REF,
             )
             ExpenseRecord.objects.create(
+                vat_rate=Decimal('19') if shape == 1 and index % 2 == 0 else Decimal('0'),
                 concept=concept,
                 period_date=movement_date.replace(day=1),
                 ledger=Ledger.COMPANY,

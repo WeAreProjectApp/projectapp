@@ -1,11 +1,11 @@
 from django.db import models
 from django.db.models import Q
 
-from .accounting_base import AccountingRecordBase, PartnerSplitMixin
+from .accounting_base import AccountingRecordBase, PartnerSplitMixin, VatBreakdownMixin
 from .recurring_payment import RecurringPayment
 
 
-class IncomeRecord(PartnerSplitMixin, AccountingRecordBase):
+class IncomeRecord(VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
     """
     Income entry of the accounting module.
 

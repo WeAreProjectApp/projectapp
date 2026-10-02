@@ -410,8 +410,16 @@ class CollectionAccountPdfService:
                 y -= 11
             y -= 3
 
-        # Only the Total: nothing carries itemised tax, so Subtotal always
-        # repeated this same figure.
+        if ext.vat_rate is not None or document.tax_total:
+            rate_label = f' ({ext.vat_rate.normalize():f} %)' if ext.vat_rate is not None else ''
+            ensure_space(64)
+            c.setFont(_font('regular'), 9)
+            c.setFillColor(GRAY_700)
+            c.drawRightString(right_x, y, f'Valor antes de IVA: {_format_cop(document.total - document.tax_total)}')
+            y -= 14
+            c.drawRightString(right_x, y, f'IVA{rate_label}: {_format_cop(document.tax_total)}')
+            y -= 14
+
         y -= 9
         ensure_space(34)
         c.setFont(_font('bold'), 10)

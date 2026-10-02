@@ -38,6 +38,7 @@
         </p>
 
         <template v-else-if="income">
+          <VatBreakdown :total="income.total_amount" :rate="income.vat_rate" />
           <!-- Cifras -->
           <section class="grid gap-4 sm:grid-cols-4">
             <div>
@@ -219,6 +220,7 @@
 </template>
 
 <script setup>
+import VatBreakdown from './VatBreakdown.vue';
 import EntityHistorySection from '~/components/history/EntityHistorySection.vue';
 import { computed, ref, watch } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';

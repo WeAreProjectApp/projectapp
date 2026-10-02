@@ -94,6 +94,10 @@ def build_collection_account_email(document, *, resend=False):
     if item and item.period_start and item.period_end:
         period = f'{item.period_start:%d/%m/%Y} a {item.period_end:%d/%m/%Y}'
         markdown_sections.append(f'Período facturado: **{period}**.')
+    if extension.vat_rate is not None or document.tax_total:
+        rate_label = f' ({extension.vat_rate.normalize():f} %)' if extension.vat_rate is not None else ''
+        markdown_sections.append(f'Valor antes de IVA: **${format_cop_email(document.total - document.tax_total)} COP**.')
+        markdown_sections.append(f'IVA{rate_label}: **${format_cop_email(document.tax_total)} COP**.')
     markdown_sections.append(f'Valor a pagar: **${total} COP**.')
     if document.due_date:
         # Its own line. Sharing the amount's line buried the one date the
