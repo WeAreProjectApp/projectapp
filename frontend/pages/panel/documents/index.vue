@@ -1594,7 +1594,7 @@ function folderToFor(sub) {
   else query.project = String(filters.project);
   if (filters.client == null) delete query.client;
   else query.client = String(filters.client);
-  return localePath({ path: route.path, query });
+  return localePath({ path: '/panel/documents', query });
 }
 
 function handleEditDoc(doc) {

@@ -1,3 +1,12 @@
+## 2026-10-02 — Prefijo de idioma duplicado en enlaces de carpetas
+
+`folderToFor` volvía a localizar `route.path`, que ya incluía el idioma, y
+publicaba direcciones como `/en-us/en-us/panel/documents?folder=9`. El clic
+simple usaba el store y ocultaba el defecto; abrir el enlace aparte lo exponía.
+La corrección localiza `/panel/documents` una sola vez y conserva la query.
+El E2E valida la dirección completa y la carpeta mostrada en español e inglés;
+buscar sólo `folder=9` admitía la dirección inválida.
+
 ## 2026-10-01 — Compatibilidad del seguimiento contractual
 
 Las tarjetas Kanban, `ProjectScopeItem`, comentarios e historial de tarjetas se
