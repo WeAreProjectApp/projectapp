@@ -7995,6 +7995,8 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js`.
 Ejecución focal: los ocho casos de este archivo pasaron con un worker, API
 simulada en el límite externo y sin servicios reales; incluyen 412 y 835 px.
 Las siete regresiones de estados en línea pasaron en el mismo lote.
+El delta final verifica Clientes (1/1) y las cuatro regresiones de handoff,
+incluido el siguiente paso y las transiciones actualizadas sin recargar (4/4).
 Los resultados finales de integración se registran en el PR.
 
 ### FLOW: `admin-proposal-change-history`
