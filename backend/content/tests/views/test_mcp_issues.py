@@ -1,17 +1,23 @@
 """MCP ticket parity uses real connector transport and shared domain writes."""
 import io
+import hashlib
+from datetime import timedelta
 
 import pytest
 from django.core.files.base import ContentFile
 from django.test import override_settings
+from freezegun import freeze_time
+from PIL import Image
 from pypdf import PdfWriter
 
-from accounts.models import BugReport, DeliveryPromptSource, IssueResponse, Project, RequirementReview
+from accounts.models import BugReport, DeliveryPromptSource, DeliveryStage, IssueResponse, Project, Requirement, RequirementReview
 from accounts.services import issue_reports as issues
 from accounts.tests.delivery_authoring_helpers import build_authoring_context
 from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
+from accounts.tests.delivery_helpers import RECORDED_AT
+from accounts.tests.delivery_helpers import publish, version
 from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
-from content.models import Document, McpConnector, McpUpload
+from content.models import Document, McpActionIntent, McpConnector, McpUpload
 
 pytestmark = pytest.mark.django_db
 
@@ -155,6 +161,108 @@ def test_mcp_archive_requires_owned_confirmation(call, project):
 
     assert preview['structuredContent']['confirmation_id']
     assert BugReport.objects.get(pk=ticket['id']).is_archived is False
+
+
+def test_mcp_archive_confirmation_lists_the_archived_ticket(call, project):
+    """Falla si confirmar un archivo borra historia o la lista archivada mezcla tickets distractores."""
+    ticket = create(call, project)
+    distractor = create(call, project)
+    call('evaluate_issue_report', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': distractor['id'],
+        'payload': {'status': 'resolved', 'admin_response': 'Otro caso resuelto.',
+                    'expected_version': distractor['version']},
+    })
+    preview = call('archive_issue_report', {
+        'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'], 'expected_version': ticket['version'],
+    })
+    confirmed = call('confirm_action', {'confirmation_id': preview['structuredContent']['confirmation_id']})
+
+    listed = call('list_issue_reports', {
+        'project_id': project.pk, 'kind': 'bug', 'include_archived': True, 'status': 'reported',
+    })['structuredContent']
+    archived = BugReport.objects.get(pk=ticket['id'])
+    assert confirmed['structuredContent']['result']['archived'] is True
+    assert (archived.is_archived, archived.version, archived.title) == (True, ticket['version'] + 1, 'General failure')
+    assert [row['id'] for row in listed['tickets']] == [ticket['id']]
+    assert McpActionIntent.objects.count() == 1
+
+
+def _completed_png():
+    stream = io.BytesIO()
+    Image.new('RGB', (2, 2), color='white').save(stream, format='PNG')
+    return stream.getvalue()
+
+
+@freeze_time(RECORDED_AT)
+def test_mcp_bug_report_preserves_completed_screenshot_asset(call, project):
+    """Falla si un bug pierde la captura normalizada o modifica su asset PNG original."""
+    body = _completed_png()
+    credential = McpConnector.objects.get(slug='projects').credentials.get(label='Default')
+    asset = McpUpload.objects.create(connector=credential.connector, credential=credential, filename='bug.png', content_type='image/png', expected_size=len(body), received_size=len(body), expected_sha256=hashlib.sha256(body).hexdigest(), status=McpUpload.STATUS_COMPLETE, expires_at=RECORDED_AT + timedelta(minutes=5))
+    asset.file.save('bug.png', ContentFile(body), save=True)
+
+    result = call('create_bug_report', {'project_id': project.pk, 'payload': {'title': 'PNG issue', 'screenshot_asset_id': str(asset.pk)}})['structuredContent']
+    report = BugReport.objects.get(pk=result['id'])
+    with report.screenshot.open('rb') as source:
+        screenshot = Image.open(io.BytesIO(source.read()))
+        assert (screenshot.format, screenshot.size, screenshot.mode) == ('JPEG', (2, 2), 'RGB')
+        assert screenshot.getpixel((0, 0)) == (255, 255, 255)
+    asset.refresh_from_db()
+    with asset.file.open('rb') as source:
+        assert source.read() == body
+    assert (asset.status, RequirementReview.objects.count()) == (McpUpload.STATUS_COMPLETE, 0)
+
+
+@freeze_time(RECORDED_AT)
+def test_mcp_bug_report_rejects_a_completed_screenshot_over_five_megabytes(call, project):
+    """Falla si una captura completada mayor de 5 MiB crea un ticket o consume el asset."""
+    body = _completed_png() + b'x' * (5 * 1024 * 1024)
+    credential = McpConnector.objects.get(slug='projects').credentials.get(label='Default')
+    asset = McpUpload.objects.create(connector=credential.connector, credential=credential, filename='large.png', content_type='image/png', expected_size=len(body), received_size=len(body), expected_sha256=hashlib.sha256(body).hexdigest(), status=McpUpload.STATUS_COMPLETE, expires_at=RECORDED_AT + timedelta(minutes=5))
+    asset.file.save('large.png', ContentFile(body), save=True)
+
+    result = call('create_bug_report', {'project_id': project.pk, 'payload': {'title': 'Large PNG', 'screenshot_asset_id': str(asset.pk)}})
+    asset.refresh_from_db()
+    assert result['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
+    assert (BugReport.objects.count(), asset.status, bool(asset.file)) == (0, McpUpload.STATUS_COMPLETE, True)
+
+
+def test_mcp_confirmed_change_conversion_creates_pending_requirement(call):
+    """Falla si convertir una solicitud aprobada no crea una guía pendiente sin aprobación del cliente."""
+    context = build_authoring_context()
+    publish(context)
+    source = context.first
+    target = DeliveryStage.objects.create(phase=context.phase, key='ampliacion', title='Ampliación editable')
+    request = issues.create_ticket(context.project.pk, context.client, 'change', {'title': 'Nueva guía', 'module_or_screen': 'Portal', 'source_requirement_id': source.pk})
+    request.status = 'approved'
+    request.save(update_fields=['status'])
+    before = Requirement.objects.count()
+    preview = call('convert_change_request', {'project_id': context.project.pk, 'ticket_id': request.pk, 'payload': {'expected_version': version(context), 'issue_version': request.version, 'stage_id': target.pk}})
+    assert Requirement.objects.count() == before
+    confirmed = call('confirm_action', {'confirmation_id': preview['structuredContent']['confirmation_id']})
+    replay = call('confirm_action', {'confirmation_id': preview['structuredContent']['confirmation_id']})
+    request.refresh_from_db()
+    requirement = Requirement.objects.get(pk=confirmed['structuredContent']['result']['linked_requirement_id'])
+    assert (requirement.review_status, request.linked_requirement_id) == ('pending', requirement.pk)
+    assert replay['structuredContent']['result']['linked_requirement_id'] == requirement.pk
+    assert Requirement.objects.count() == before + 1
+    assert RequirementReview.objects.count() == 0
+
+
+def test_mcp_downloads_historical_issue_attachment_after_source_edit(call, project, superuser):
+    """Falla si descargar un adjunto histórico lee la fuente editada en vez de sus bytes congelados."""
+    ticket = create(call, project)
+    document = Document.objects.create(title='Historia PDF', project=project, client_user=project.client, created_by=superuser)
+    original = pdf_bytes()
+    document.generated_file.save('history.pdf', ContentFile(original), save=True)
+    issues.evaluate_ticket(project.pk, superuser, 'bug', ticket['id'], {'admin_response': 'Adjunto histórico.', 'document_ids': [document.pk]})
+    attachment = IssueResponse.objects.get().attachments.get()
+    document.generated_file.save('edited.pdf', ContentFile(pdf_bytes() + b'changed'), save=True)
+    result = call('download_issue_attachment', {'project_id': project.pk, 'attachment_id': attachment.pk})['structuredContent']
+    artifact = McpUpload.objects.get(pk=result['asset_id'])
+    with artifact.file.open('rb') as source:
+        assert source.read() == original
+    assert (artifact.expected_sha256, artifact.credential.connector.slug) == (hashlib.sha256(original).hexdigest(), 'projects')
 
 
 def test_mcp_list_returns_origin_context(call, project):

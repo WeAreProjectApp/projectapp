@@ -7,8 +7,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from freezegun import freeze_time
 from rest_framework.test import APIClient
 
-from accounts.models import ContractSignatureEvidence, DeliveryDocumentLink, DeliveryWorkspace, Requirement, RequirementReview
+from accounts.models import (
+    ContractSignatureEvidence, DeliveryDocumentLink, DeliveryMessage, DeliveryOperation,
+    DeliveryStage, DeliveryWorkspace, Notification, Requirement, RequirementReview,
+)
 from accounts.services.delivery_documents import _raw_pdf
+from accounts.services import delivery_workflow as delivery
 from accounts.services.tokens import get_tokens_for_user
 from accounts.tests.delivery_helpers import GUIDE, RECORDED_AT, build_delivery_context, decisions, version
 from content.models import CommunicationMessage, CommunicationThread, Document
@@ -224,6 +228,68 @@ def test_customer_reply_route_preserves_requirement_references(context):
     assert response.status_code == 201
     assert message['message'] == 'Necesito confirmar los datos de prueba.'
     assert message['requirement_ids'] == [context.first.pk]
+
+
+def test_customer_reply_preserves_readable_document_evidence(context):
+    """Fails if a client reply loses its readable attachment or changes guide approval state."""
+    publish_http(context, api_for(context.admin))
+    doc = attachment(context)
+    doc.is_client_visible = True
+    doc.save(update_fields=['is_client_visible'])
+    expected_pdf = _raw_pdf(doc)
+    doc.generated_file.save('client-reply.pdf', SimpleUploadedFile(
+        'client-reply.pdf', expected_pdf, content_type='application/pdf',
+    ), save=True)
+    context.first.refresh_from_db()
+    before = (context.first.review_status, context.first.version, version(context))
+
+    response = api_for(context.client).post(endpoint(context, 'messages/'), {
+        'expected_version': version(context), 'request_id': 'http-client-document-reply',
+        'level': 'stage', 'target_id': context.stage.pk,
+        'requirement_ids': [context.first.pk], 'message': 'Adjunto la evidencia que revisé.',
+        'document_ids': [doc.pk],
+    }, format='json')
+
+    assert response.status_code == 201
+    message = response.data['scopes'][0]['phases'][0]['stages'][0]['messages'][0]
+    link = DeliveryDocumentLink.objects.get(document=doc)
+    listed = api_for(context.client).get(endpoint(context, f'documents/?level=stage&target_id={context.stage.pk}'))
+    downloaded = api_for(context.client).get(endpoint(context, f'documents/{link.pk}/pdf/'))
+    context.first.refresh_from_db()
+    assert message['documents'][0]['document_id'] == doc.pk
+    assert listed.data['documents'][0]['title'] == 'Guía HTTP'
+    assert downloaded.status_code == 200
+    assert downloaded.content == expected_pdf
+    assert downloaded['Cache-Control'] == 'private, no-store'
+    assert (context.first.review_status, context.first.version, version(context)) == (
+        before[0], before[1], before[2] + 1,
+    )
+
+
+def test_customer_reply_rejects_private_guide_document(context):
+    """Fails if a customer can attach a document that belongs to an unpublished guide."""
+    publish_http(context, api_for(context.admin))
+    doc = attachment(context)
+    doc.is_client_visible = True
+    doc.save(update_fields=['is_client_visible'])
+    private_stage = DeliveryStage.objects.create(phase=context.phase, key='private-evidence', title='Evidencia privada')
+    delivery.link_document(context.project.pk, context.admin, {
+        'expected_version': version(context), 'level': 'stage', 'target_id': private_stage.pk, 'document_id': doc.pk,
+    })
+    before = (DeliveryMessage.objects.count(), Notification.objects.count(), DeliveryDocumentLink.objects.count(),
+              DeliveryOperation.objects.count(), version(context))
+
+    response = api_for(context.client).post(endpoint(context, 'messages/'), {
+        'expected_version': version(context), 'request_id': 'http-private-document-reply',
+        'level': 'stage', 'target_id': context.stage.pk,
+        'requirement_ids': [context.first.pk], 'message': 'Intento adjuntar una fuente privada.',
+        'document_ids': [doc.pk],
+    }, format='json')
+
+    assert response.status_code == 404
+    assert response.data['detail'] == 'Documento no disponible para este cliente.'
+    assert (DeliveryMessage.objects.count(), Notification.objects.count(), DeliveryDocumentLink.objects.count(),
+            DeliveryOperation.objects.count(), version(context)) == before
 
 
 def test_admin_document_picker_can_remove_a_draft_attachment(context):
