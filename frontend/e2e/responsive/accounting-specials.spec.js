@@ -90,7 +90,7 @@ async function setup(page) {
         subject: `Cuenta de cobro CC-RESP-001 — ${body.billing_concept}`,
         html_body: `<p>${body.billing_concept}</p>`,
         public_number: 'CC-RESP-001',
-        total: body.items[0].unit_price,
+        total: body.items[0].amount,
         due_date: '2026-09-09',
         customer_email: body.customer.email,
         pdf_url: collectionPreviewPdf,
@@ -467,7 +467,9 @@ for (const profile of RESPONSIVE_PROFILES) {
       const hostingCall = calls.find(({ apiPath }) => apiPath === 'accounting/hostings/create/');
       expect(hostingCall.body.client_name).toBe(inlineClient.company);
       expect(hostingCall.body.payment_modality).toBe('nine_month');
-      expect(hostingCall.body.payment_per_cycle).toBe(345000);
+      expect(hostingCall.body).toMatchObject({
+        amount: 345000, amount_mode: 'vat_included', vat_rate: 19,
+      });
     });
 
     test('draft statement preserves the added purchase', { tag: ['@flow:admin-accounting-statements', '@outcome:success', '@responsive-special:accounting', `@viewport:${profile}`, '@responsive-batch:accounting-special-3'] }, async ({ page }) => {

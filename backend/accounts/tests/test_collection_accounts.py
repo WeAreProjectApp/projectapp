@@ -550,7 +550,6 @@ def test_admin_patch_items_auto_calculates_line_total(
                     'unit_price': '50000.00',
                     'discount_amount': '0',
                     'tax_amount': '0',
-                    # line_total omitted — should be auto-calculated as 2 * 50000 = 100000
                 },
             ],
         },
@@ -561,7 +560,8 @@ def test_admin_patch_items_auto_calculates_line_total(
     assert resp.status_code == 200
     items = resp.json()['items']
     assert len(items) == 1
-    assert float(items[0]['line_total']) == 100000.0
+    assert Decimal(items[0]['line_total']) == Decimal('119000.00')
+    assert Decimal(items[0]['tax_amount']) == Decimal('19000.00')
 
 
 @pytest.mark.django_db

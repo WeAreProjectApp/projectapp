@@ -100,7 +100,9 @@ class TestClientFilter:
 
         body = response.content.decode('utf-8-sig')
         # Appended, so the historical column order is untouched.
-        assert body.splitlines()[0].endswith('Cliente vinculado,Proyecto')
+        assert body.splitlines()[0].endswith(
+            'Cliente vinculado,Proyecto,Valor antes de IVA,IVA (%),IVA',
+        )
         assert build_client_display_name(profile) in body
 
 
