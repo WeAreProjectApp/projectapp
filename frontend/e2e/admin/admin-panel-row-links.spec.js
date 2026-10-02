@@ -191,24 +191,28 @@ test.describe('Filas navegables · carpetas de Documentos', () => {
 
   // La dirección `?folder=` ya existía y era restaurable; lo que faltaba era
   // que alguna fila la publicara.
-  test('Documentos: la carpeta publica su dirección y ctrl+clic la abre aparte', {
-    tag: [...ADMIN_DOCUMENT_LIST, '@role:admin', '@outcome:success'],
-  }, async ({ page, context }) => {
-    await mockApi(context, handlers.documents);
-    // Parado dentro de «Clientes», que es donde vive la fila de subcarpeta.
-    await page.goto('/panel/documents?folder=5', { waitUntil: 'domcontentloaded' });
+  for (const locale of ['en-us', 'es-co']) {
+    test(`Documentos: ctrl+clic abre la carpeta en ${locale}`, {
+      tag: [...ADMIN_DOCUMENT_LIST, '@role:admin', '@outcome:success'],
+    }, async ({ page, context }) => {
+      await mockApi(context, handlers.documents);
+      // Parado dentro de «Clientes», que es donde vive la fila de subcarpeta.
+      await page.goto(`/${locale}/panel/documents?folder=5`, { waitUntil: 'domcontentloaded' });
 
-    const folder = page.getByTestId('folder-open-9').first();
-    await expect(folder).toHaveAttribute('href', /folder=9/, { timeout: 20_000 });
+      const folder = page.getByTestId('folder-open-9').first();
+      await expect(folder).toHaveAttribute('href', `/${locale}/panel/documents?folder=9&by=project`, { timeout: 20_000 });
 
-    const popupPromise = context.waitForEvent('page');
-    await folder.click({ modifiers: ['ControlOrMeta'] });
-    const popup = await popupPromise;
+      const popupPromise = context.waitForEvent('page');
+      await folder.click({ modifiers: ['ControlOrMeta'] });
+      const popup = await popupPromise;
+      await popup.bringToFront();
 
-    await popup.waitForURL(/folder=9/, { timeout: 25_000 });
-    // El listado de origen se quedó donde estaba.
-    await expect(page).toHaveURL(/folder=5/);
-  });
+      await expect(popup).toHaveURL(new RegExp(`/${locale}/panel/documents\\?folder=9&by=project$`), { timeout: 25_000 });
+      await expect(popup.getByRole('heading', { name: 'Contratos 2024', exact: true })).toBeVisible();
+      // El listado de origen se quedó donde estaba.
+      await expect(page).toHaveURL(new RegExp(`/${locale}/panel/documents\\?folder=5&by=project$`));
+    });
+  }
 });
 
 test.describe('Filas navegables · menú de acciones', () => {

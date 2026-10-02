@@ -1,3 +1,13 @@
+# Enlaces de carpetas antes del deploy (2026-10-02)
+
+Corregida la dirección publicada por las subcarpetas del Gestor Documental:
+se localiza la ruta canónica una sola vez, evitando `/en-us/en-us/` y su
+equivalente en español. Se conservan carpeta, modo de navegación y filtros.
+Los casos focales de ctrl+clic pasan en ambos idiomas, verificando dirección,
+contenido de la carpeta abierta y permanencia del listado original (2/2).
+La pestaña nueva se activa antes de verificar su contenido. La entrega sigue
+en `fix/02102026-deploy-folder-links`; CI y deploy se verifican por separado.
+
 # Aprobación y vinculación de propuestas (2026-10-02)
 
 Implementación y pruebas focales completas en `feat/02102026-proposal-project-linking`, sobre la
