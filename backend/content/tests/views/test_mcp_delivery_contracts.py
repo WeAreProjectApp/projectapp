@@ -184,7 +184,7 @@ def test_admin_without_mcp_credential_cannot_export_delivery_pdf(draft, superuse
     with use_mcp_context(context, atomic_history=False), pytest.raises(ToolError) as rejected:
         tool['handler']({'project_id': draft.project.pk, 'link_id': public_document_snapshot.link_id})
 
-    assert (rejected.value.code, rejected.value.message) == ('FORBIDDEN', 'La descarga requiere una credencial MCP.')
+    assert (rejected.value.code, str(rejected.value)) == ('FORBIDDEN', 'La descarga requiere una credencial MCP.')
     assert McpUpload.objects.count() == before
 
 
