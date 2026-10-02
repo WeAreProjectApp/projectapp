@@ -1,11 +1,11 @@
 {
   "id": "platform-proposal-auto-onboarding",
-  "name": "Proposal Acceptance Auto-Onboarding",
+  "name": "Proposal Acceptance Awaiting Internal Review",
   "module": "platform",
   "roles": [
     "system"
   ],
   "priority": "P1",
-  "description": "When a proposal becomes accepted (client response or admin inline), an async task provisions the client's platform project: creates the project/phase, mirrors the functional_requirements items as ProjectScopeItem rows, and upserts Kanban Requirement cards from the technical_document, linked to their scope item. Idempotent (runs once) and preserves client-owned Kanban state on re-sync. Backend-triggered; not a browser E2E journey.",
+  "description": "Public acceptance and administrative status changes record the commercial decision without provisioning clients or projects. Only explicit internal approval binds the reviewed client/project and retains the selected private document package. Synchronization and retries use the same confirmed association while preserving existing resources. Backend invariants are covered by API/service tests; the browser journey is registered as admin-proposal-approval. The legacy flow id is retained for registry compatibility.",
   "expectedSpecs": 0
 }

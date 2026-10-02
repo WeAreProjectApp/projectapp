@@ -1,3 +1,4 @@
+from content.views.proposal_approval import approval_review, approval_file_download
 from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
 
@@ -665,6 +666,8 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/resend/', resend_proposal, name='resend-proposal'),
     path('proposals/<int:proposal_id>/toggle-active/', toggle_proposal_active, name='toggle-proposal-active'),
     path('proposals/<int:proposal_id>/update-status/', update_proposal_status, name='update-proposal-status'),
+    path('proposals/<int:proposal_id>/approval/', approval_review, name='proposal-approval'),
+    path('proposals/<int:proposal_id>/approval/files/<int:file_id>/', approval_file_download, name='proposal-approval-file-download'),
     path('proposals/<int:proposal_id>/launch-to-platform/', launch_to_platform, name='launch-to-platform'),
     path('proposals/<int:proposal_id>/scorecard/', proposal_scorecard, name='proposal-scorecard'),
     path('proposals/<int:proposal_id>/reorder-sections/', bulk_reorder_sections, name='reorder-sections'),

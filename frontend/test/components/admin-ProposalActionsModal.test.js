@@ -13,6 +13,7 @@ function mountModal(proposal = {}, extra = {}) {
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
+        NuxtLink: { template: '<a><slot /></a>' },
       },
     },
   });
@@ -80,7 +81,7 @@ describe('ProposalActionsModal', () => {
     });
     const launch = wrapper.find('[data-testid="proposal-action-launch"]');
     expect(launch.exists()).toBe(true);
-    expect(launch.text()).toContain('Re-lanzar a Plataforma');
+    expect(launch.text()).toContain('Completar revisión');
     expect(wrapper.find('[data-testid="proposal-action-finish"]').exists()).toBe(true);
   });
 
@@ -91,7 +92,7 @@ describe('ProposalActionsModal', () => {
     });
     const launch = wrapper.find('[data-testid="proposal-action-launch"]');
     expect(launch.exists()).toBe(true);
-    expect(launch.text()).toContain('Lanzar a Plataforma');
+    expect(launch.text()).toContain('Completar revisión');
   });
 
   it('shows the discount-offer action when a discount is set and there is a client email', () => {

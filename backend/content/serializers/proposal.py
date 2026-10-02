@@ -121,6 +121,8 @@ class ProposalListSerializer(serializers.ModelSerializer):
     days_remaining = serializers.SerializerMethodField()
     is_expired = serializers.SerializerMethodField()
     available_transitions = serializers.SerializerMethodField()
+    project_review_required = serializers.ReadOnlyField()
+    linked_project = serializers.ReadOnlyField()
     client = ProposalClientSerializer(read_only=True)
 
     class Meta:
@@ -136,7 +138,7 @@ class ProposalListSerializer(serializers.ModelSerializer):
             'cached_heat_score', 'engagement_declining',
             'available_transitions', 'language', 'sent_at',
             'email_intro',
-            'client',
+            'client', 'project_review_required', 'linked_project',
         )
 
     def get_days_remaining(self, obj):
@@ -167,7 +169,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
         'email_intro', 'email_features', 'email_method_phases', 'email_signed_by',
         'view_count', 'first_viewed_at', 'last_activity_at', 'responded_at',
         'available_transitions', 'proposal_documents',
-        'platform_onboarding_completed_at', 'platform_onboarding_status',
+        'platform_onboarding_completed_at', 'platform_onboarding_status', 'project_review_required', 'linked_project',
         'first_view_notification', 'contract_modality',
         'module_interests', 'module_interests_updated_at',
     )
@@ -189,6 +191,8 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
     first_view_notification = serializers.SerializerMethodField()
     # Slim on purpose: the client aggregates cost ~8-10 unannotated queries and
     # no proposal surface reads them. See ProposalNestedClientSerializer.
+    project_review_required = serializers.ReadOnlyField()
+    linked_project = serializers.ReadOnlyField()
     client = ProposalNestedClientSerializer(read_only=True)
 
     module_interests = serializers.JSONField(read_only=True)
@@ -223,7 +227,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'platform_onboarding_completed_at',
             'platform_onboarding_status',
             'first_view_notification',
-            'client',
+            'client', 'project_review_required', 'linked_project',
         )
 
     def get_fields(self):

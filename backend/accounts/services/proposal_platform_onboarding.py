@@ -1,6 +1,7 @@
-"""
-When a BusinessProposal becomes accepted (client response or admin panel), provision
-platform resources if needed, sync resources from technical_document, and send welcome email (via ProposalEmailService).
+"""Compatibility helpers for confirmed platform packages and safe empty teardown.
+
+Commercial acceptance never creates clients/projects. New bindings are reviewed
+through the shared proposal approval service; legacy tasks require that manifest.
 """
 
 from __future__ import annotations
@@ -42,69 +43,8 @@ def ensure_deliverable_for_accepted_proposal(
     proposal,
     acting_user,
 ) -> Deliverable | None:
-    """
-    Return deliverable linked to proposal, creating project/deliverable if needed.
-    """
-    if proposal.deliverable_id:
-        return proposal.deliverable
-
-    email = (proposal.client_email or '').strip()
-    user = _find_client_user_by_email(email)
-
-    if not user and getattr(settings, 'AUTO_PROVISION_CLIENT_FROM_PROPOSAL', False) and email:
-        from accounts.services.onboarding import create_client
-
-        raw = (proposal.client_name or 'Cliente').strip()
-        parts = raw.split(None, 1)
-        first = parts[0] if parts else 'Cliente'
-        last = parts[1] if len(parts) > 1 else ''
-        try:
-            user, _temp_pw = create_client(
-                email=email,
-                first_name=first[:150],
-                last_name=last[:150],
-                company_name='',
-            )
-        except ValueError:
-            logger.warning('Could not auto-provision client for proposal %s (duplicate email).', proposal.pk)
-            user = _find_client_user_by_email(email)
-
-    if not user:
-        logger.info(
-            'Proposal %s accepted without platform deliverable: no client user for email %s',
-            proposal.pk, email or '(empty)',
-        )
-        return None
-
-    profile = getattr(user, 'profile', None)
-    if not profile or profile.role != UserProfile.ROLE_CLIENT:
-        logger.info('Proposal %s: user %s is not a platform client; skipping auto project.', proposal.pk, user.pk)
-        return None
-
-    from accounts.views import _extract_proposal_financial_data
-
-    payment_milestones, hosting_tiers = _extract_proposal_financial_data(proposal)
-
-    uploader = acting_user if acting_user and getattr(acting_user, 'is_authenticated', False) else user
-
-    project = Project.objects.create(
-        name=(proposal.title or 'Nuevo proyecto')[:200],
-        description='',
-        client=user,
-        payment_milestones=payment_milestones,
-        hosting_tiers=hosting_tiers,
-    )
-    d = Deliverable.objects.create(
-        project=project,
-        category=Deliverable.CATEGORY_DOCUMENTS,
-        title=(proposal.title or 'Propuesta comercial')[:300],
-        description='',
-        file=None,
-        uploaded_by=uploader,
-    )
-    proposal.deliverable = d
-    proposal.save(update_fields=['deliverable_id'])
-    return d
+    """Existing association only: neither acceptance nor old tasks create projects."""
+    return proposal.deliverable if proposal.deliverable_id else None
 
 
 class PlatformRelaunchConflict(ValidationError):
@@ -156,57 +96,15 @@ def handle_proposal_accepted_for_platform(
     acting_user=None,
     send_email: bool = True,
 ) -> dict[str, Any]:
-    """
-    Idempotent: skips if platform_onboarding_completed_at is set.
-    Ensures deliverable (optional), runs technical sync, sends acceptance email with PDFs.
-    """
-    _ = source  # reserved for logging / future policy
-
-    if proposal.platform_onboarding_completed_at:
-        return {'skipped': True, 'reason': 'already_completed'}
-
-    d = ensure_deliverable_for_accepted_proposal(proposal, acting_user)
-    proposal.refresh_from_db(fields=['deliverable_id'])
-    sync_result: dict[str, Any] = {'ok': True, 'detail': 'no_deliverable_skip_sync'}
-
+    """Synchronize only an explicitly confirmed frozen package; never send mail."""
+    if not proposal.deliverable_id or not proposal.platform_approval_manifest:
+        return {'skipped': True, 'reason': 'review_required'}
+    from content.services.proposal_approval_service import _sync
     actor = _acting_user_for_sync(acting_user)
-    if d:
-        from content.services.generated_document_filing_service import (
-            move_proposal_snapshots_to_project,
-        )
-
-        move_proposal_snapshots_to_project(
-            proposal,
-            d.project,
-            acting_user=actor,
-        )
-    if d and actor:
-        sync_result = sync_technical_resources_for_deliverable(d, actor)
-        if not sync_result.get('ok'):
-            logger.warning(
-                'Technical sync after acceptance failed for proposal %s: %s',
-                proposal.pk, sync_result.get('detail'),
-            )
-
-    # Sync proposal documents (contract, uploaded annexes) to deliverable
-    if d and actor:
-        _sync_proposal_documents_to_deliverable(proposal, d, actor)
-
-    if send_email:
-        from content.services.proposal_email_service import ProposalEmailService
-
-        ProposalEmailService.send_acceptance_confirmation(proposal)
-
-    _ensure_project_stages(proposal)
-
-    proposal.platform_onboarding_completed_at = timezone.now()
-    proposal.save(update_fields=['platform_onboarding_completed_at'])
-
-    return {
-        'skipped': False,
-        'deliverable_id': d.id if d else None,
-        'sync': sync_result,
-    }
+    if actor is None:
+        raise ValidationError('No hay un administrador disponible para sincronizar.')
+    _sync(proposal, actor)
+    return {'skipped': False, 'deliverable_id': proposal.deliverable_id}
 
 
 def _ensure_project_stages(proposal) -> None:

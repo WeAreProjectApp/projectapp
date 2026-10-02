@@ -168,7 +168,7 @@ def retrieve_public_proposal(request, proposal_uuid):
     """Retrieve a proposal by UUID for client viewing."""
     proposal = get_object_or_404(
         BusinessProposal.objects
-        .select_related('client__user')
+        .select_related('client__user', 'deliverable__project__client__profile')
         .prefetch_related('sections'),
         uuid=proposal_uuid,
     )
@@ -181,7 +181,7 @@ def retrieve_public_proposal_by_slug(request, proposal_slug):
     """Retrieve a proposal by its editable slug for client viewing."""
     proposal = get_object_or_404(
         BusinessProposal.objects
-        .select_related('client__user')
+        .select_related('client__user', 'deliverable__project__client__profile')
         .prefetch_related('sections'),
         slug=proposal_slug,
     )
@@ -357,7 +357,7 @@ def list_proposals(request):
     Supports ?status= and ?client_id= query parameters for filtering.
     Includes heat_score (1-10) for active non-draft proposals.
     """
-    qs = BusinessProposal.objects.select_related('client__user').all()
+    qs = BusinessProposal.objects.select_related('client__user', 'deliverable__project__client__profile').all()
     status_filter = request.query_params.get('status')
     if status_filter:
         qs = qs.filter(status=status_filter)
@@ -480,7 +480,7 @@ def retrieve_proposal(request, proposal_id):
     """
     proposal = get_object_or_404(
         BusinessProposal.objects
-        .select_related('client__user')
+        .select_related('client__user', 'deliverable__project__client__profile')
         .prefetch_related(
             'project_stages',
             'sections',
@@ -1470,77 +1470,16 @@ def update_proposal_status(request, proposal_id):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def launch_to_platform(request, proposal_id):
-    """
-    Manually trigger platform onboarding for an accepted proposal.
-    Body: { "force": true }  (required for re-launch when already onboarded)
-
-    Creates project, deliverable, requirements, syncs documents, and sends
-    acceptance email on first launch. Re-launch retires only an unused
-    onboarding graph and skips the email; related information is retained.
-    """
-    proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
-
-    if proposal.status not in (
-        BusinessProposal.Status.ACCEPTED,
-        BusinessProposal.Status.NEGOTIATING,
-    ):
-        return Response(
-            {'error': 'La propuesta debe estar aceptada o en negociación para lanzar a plataforma.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    already_onboarded = proposal.platform_onboarding_completed_at is not None
-
-    if already_onboarded and not request.data.get('force'):
-        return Response(
-            {
-                'warning': 'already_onboarded',
-                'onboarded_at': str(proposal.platform_onboarding_completed_at),
-            },
-            status=status.HTTP_409_CONFLICT,
-        )
-
-    from django.db import transaction
-
-    with transaction.atomic():
-        if already_onboarded:
-            from accounts.services.proposal_platform_onboarding import (
-                teardown_platform_for_proposal,
-            )
-
-            teardown_platform_for_proposal(proposal, acting_user=request.user)
-            proposal.refresh_from_db()
-
-        proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING
-        proposal.save(update_fields=['platform_onboarding_status'])
-
-        ProposalChangeLog.objects.create(
-            proposal=proposal,
-            change_type=ProposalChangeLog.ChangeType.PLATFORM_LAUNCH,
-            field_name='platform_onboarding_status',
-            new_value='pending',
-            actor_type='seller',
-            description='Re-launched to platform.' if already_onboarded else 'Launched to platform.',
-        )
-
-    from content.tasks import run_platform_onboarding
-
-    try:
-        run_platform_onboarding(
-            proposal.id,
-            acting_user_id=request.user.id,
-            is_relaunch=already_onboarded,
-        )
-    except Exception:
-        logger.exception('Failed to queue platform onboarding for proposal %s.', proposal_id)
-        proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_FAILED
-        proposal.save(update_fields=['platform_onboarding_status'])
-
-    proposal.refresh_from_db()
-    detail = ProposalDetailSerializer(
-        proposal, context={'request': request, 'is_admin': True}
-    )
-    return Response(detail.data, status=status.HTTP_200_OK)
+    """Compatibility route; an explicit review replaces automatic provisioning."""
+    from content.views.proposal_approval import decode_payload
+    from content.services.proposal_approval_service import review_proposal
+    get_object_or_404(BusinessProposal, pk=proposal_id)
+    payload = decode_payload(request)
+    payload.setdefault('action', 'confirm')
+    if payload['action'] != 'retry':
+        payload.setdefault('accept_proposal', False)
+    files = request.FILES.getlist('custom_files[]') or request.FILES.getlist('custom_files')
+    return Response(review_proposal(proposal_id, payload, actor=request.user, files=files))
 
 
 @api_view(['GET'])
@@ -2118,8 +2057,7 @@ def respond_to_proposal(request, proposal_uuid):
         ProposalEmailService.send_negotiation_confirmation(proposal)
     elif action == 'accepted':
         ProposalEmailService.send_acceptance_confirmation(proposal)
-        # Auto-provision the client's platform project (idempotent, async).
-        _enqueue_onboarding_on_accept(proposal, acting_user_id=None)
+        # Acceptance waits for explicit internal project review.
 
     return Response(
         {'status': action, 'message': f'Proposal {action} successfully.'},

@@ -145,8 +145,8 @@ const actions = computed(() => {
     list.push({
       key: 'launch',
       action: 'launch',
-      label: p.platform_onboarding_completed_at ? 'Re-lanzar a Plataforma' : 'Lanzar a Plataforma',
-      description: 'Ejecuta el onboarding: crea proyecto, entregables y requerimientos.',
+      label: p.linked_project ? 'Revisar vinculación' : 'Completar revisión',
+      description: 'Valida cliente, proyecto y documentos antes de sincronizar. Permite revisar después.',
       dotClass: 'bg-primary',
     });
   }

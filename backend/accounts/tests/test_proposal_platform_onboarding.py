@@ -1,4 +1,4 @@
-"""Tests for proposal acceptance → platform onboarding (sync + idempotency)."""
+"""Compatibility guards for internal review and preservation of platform evidence."""
 
 from decimal import Decimal
 from unittest.mock import MagicMock, patch
@@ -134,7 +134,7 @@ def test_relaunch_keeps_a_project_with_contractual_delivery(proposal_with_delive
     'content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation',
     return_value=True,
 )
-def test_handle_first_run_sets_platform_onboarding_timestamp(
+def test_legacy_link_requires_review_before_sync(
     _mock_send, proposal_with_deliverable, admin_user,
 ):
     proposal_with_deliverable.platform_onboarding_completed_at = None
@@ -144,11 +144,11 @@ def test_handle_first_run_sets_platform_onboarding_timestamp(
         proposal_with_deliverable, source='admin_panel', acting_user=admin_user,
     )
     proposal_with_deliverable.refresh_from_db()
-    assert proposal_with_deliverable.platform_onboarding_completed_at is not None
+    assert proposal_with_deliverable.platform_onboarding_completed_at is None
 
 
 @pytest.mark.django_db
-def test_handle_moves_proposal_snapshots_to_accepted_project(
+def test_acceptance_preserves_original_document_locations_without_review(
     proposal_with_deliverable, admin_user,
 ):
     proposal_with_deliverable.platform_onboarding_completed_at = None
@@ -173,11 +173,8 @@ def test_handle_moves_proposal_snapshots_to_accepted_project(
             acting_user=admin_user,
         )
 
-    move_snapshots.assert_called_once_with(
-        proposal_with_deliverable,
-        proposal_with_deliverable.deliverable.project,
-        acting_user=admin_user,
-    )
+    move_snapshots.assert_not_called()
+    assert not proposal_with_deliverable.platform_approval_manifest
 
 
 # -- _acting_user_for_sync helpers -------------------------------------------
@@ -261,10 +258,10 @@ def test_ensure_deliverable_returns_none_when_user_is_not_client(admin_user):
 
 @pytest.mark.django_db
 @patch('accounts.views._extract_proposal_financial_data', return_value=([], []))
-def test_ensure_deliverable_creates_project_and_deliverable_for_client_user(
+def test_acceptance_does_not_create_project_for_existing_client(
     _mock_extract, client_user, admin_user,
 ):
-    """Creates project and deliverable when client user is found."""
+    """An existing client email never implicitly authorizes project creation."""
     proposal = BusinessProposal.objects.create(
         title='New Project BP',
         client_name='Test Client',
@@ -276,11 +273,10 @@ def test_ensure_deliverable_creates_project_and_deliverable_for_client_user(
 
     result = ensure_deliverable_for_accepted_proposal(proposal, admin_user)
 
-    assert result is not None
-    assert result.project.client == client_user
-    assert result.project.name == 'New Project BP'
+    assert result is None
+    assert not Project.objects.filter(client=client_user).exists()
     proposal.refresh_from_db()
-    assert proposal.deliverable_id == result.id
+    assert proposal.deliverable_id is None
 
 
 # -- handle_proposal_accepted_for_platform edge cases -----------------------
@@ -289,8 +285,8 @@ def test_ensure_deliverable_creates_project_and_deliverable_for_client_user(
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_handle_logs_warning_when_sync_fails(_mock_sync, _mock_email, proposal_with_deliverable, admin_user):
-    """Logs a warning but continues when sync_technical_resources_for_deliverable returns ok=False."""
+def test_unreviewed_acceptance_skips_resource_sync(_mock_sync, _mock_email, proposal_with_deliverable, admin_user):
+    """An unreviewed proposal never invokes the resource synchronization path."""
     _mock_sync.return_value = {'ok': False, 'error': 'no_technical_section', 'detail': 'No section'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
@@ -299,8 +295,8 @@ def test_handle_logs_warning_when_sync_fails(_mock_sync, _mock_email, proposal_w
         proposal_with_deliverable, source='admin_panel', acting_user=admin_user,
     )
 
-    assert result['skipped'] is False
-    assert result['sync']['ok'] is False
+    assert result == {'skipped': True, 'reason': 'review_required'}
+    _mock_sync.assert_not_called()
 
 
 # -- _ensure_project_stages -------------------------------------------------
@@ -309,10 +305,10 @@ def test_handle_logs_warning_when_sync_fails(_mock_sync, _mock_email, proposal_w
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_handle_creates_design_and_development_stages(
+def test_unreviewed_acceptance_does_not_create_internal_stages(
     _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
 ):
-    """Acceptance creates exactly two empty ProposalProjectStage rows."""
+    """Unreviewed acceptance leaves internal stage tracking untouched."""
     from content.models import ProposalProjectStage
 
     _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
@@ -324,18 +320,16 @@ def test_handle_creates_design_and_development_stages(
     )
 
     stages = ProposalProjectStage.objects.filter(proposal=proposal_with_deliverable)
-    assert stages.count() == 2
-    keys = set(stages.values_list('stage_key', flat=True))
-    assert keys == {'design', 'development'}
+    assert stages.count() == 0
 
 
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_handle_does_not_duplicate_stages_on_re_run(
+def test_repeated_unreviewed_acceptance_leaves_internal_stages_empty(
     _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
 ):
-    """Calling handle a second time does not create duplicate stage rows."""
+    """Repeated unreviewed acceptance cannot initialize internal execution stages."""
     from content.models import ProposalProjectStage
 
     _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
@@ -354,7 +348,7 @@ def test_handle_does_not_duplicate_stages_on_re_run(
 
     assert ProposalProjectStage.objects.filter(
         proposal=proposal_with_deliverable,
-    ).count() == 2
+    ).count() == 0
 
 
 # -- teardown_platform_for_proposal ------------------------------------------
@@ -612,7 +606,7 @@ def test_ensure_deliverable_returns_none_when_user_has_no_profile():
 
 @pytest.mark.django_db
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_handle_accepted_sets_timestamp_when_send_email_is_false(
+def test_unreviewed_acceptance_does_not_mark_completed(
     _mock_sync, proposal_with_deliverable, admin_user,
 ):
     _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
@@ -624,12 +618,12 @@ def test_handle_accepted_sets_timestamp_when_send_email_is_false(
     )
 
     proposal_with_deliverable.refresh_from_db()
-    assert proposal_with_deliverable.platform_onboarding_completed_at is not None
+    assert proposal_with_deliverable.platform_onboarding_completed_at is None
 
 
 @pytest.mark.django_db
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_handle_accepted_returns_not_skipped_when_send_email_is_false(
+def test_unreviewed_acceptance_stays_pending_for_review(
     _mock_sync, proposal_with_deliverable, admin_user,
 ):
     _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
@@ -640,4 +634,4 @@ def test_handle_accepted_returns_not_skipped_when_send_email_is_false(
         proposal_with_deliverable, source='admin_panel', acting_user=admin_user, send_email=False,
     )
 
-    assert result['skipped'] is False
+    assert result == {'skipped': True, 'reason': 'review_required'}

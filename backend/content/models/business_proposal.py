@@ -364,7 +364,7 @@ class BusinessProposal(HistoryTrackedModel):
     platform_onboarding_completed_at = models.DateTimeField(
         null=True,
         blank=True,
-        help_text='Set when acceptance onboarding (sync + welcome email) completed; prevents duplicate runs.',
+        help_text='Set when the confirmed project package finished resource synchronization.',
     )
 
     ONBOARDING_PENDING = 'pending'
@@ -382,6 +382,19 @@ class BusinessProposal(HistoryTrackedModel):
         blank=True,
         help_text='Tracks async onboarding: pending (in progress), completed, failed.',
     )
+
+    platform_approval_manifest = models.JSONField(default=dict, blank=True)
+
+    @property
+    def project_review_required(self):
+        return self.status == self.Status.ACCEPTED and not self.deliverable_id
+
+    @property
+    def linked_project(self):
+        if not self.deliverable_id:
+            return None
+        project = self.deliverable.project
+        return {"id": project.pk, "name": project.name, "client_profile_id": getattr(getattr(project.client, "profile", None), "pk", None)}
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

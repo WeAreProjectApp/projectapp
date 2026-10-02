@@ -7,6 +7,7 @@ jest.mock('vue-router', () => ({
 }));
 
 import { mount, flushPromises } from '@vue/test-utils';
+import { ref } from 'vue';
 import PanelClientsIndex from '../../pages/panel/clients/index.vue';
 
 const mockStore = {
@@ -61,6 +62,9 @@ function mountPage() {
   return mount(PanelClientsIndex, {
     global: {
       stubs: {
+        // These existing cases cover the client forms; approval is exercised
+        // with its real modal and stores in PanelClientsProposalApproval.spec.js.
+        ProposalApprovalModal: true,
         Teleport: true,
         ConfirmModal: {
           template: '<div />',
@@ -102,6 +106,7 @@ const LONG_CLIENT = {
 
 describe('panel/clients index page', () => {
   beforeEach(() => {
+    global.useI18n = () => ({ locale: ref('es-co') });
     mockStore.clients = [];
     mockStore.statusCounts = {};
     mockStore.isLoading = false;
@@ -115,6 +120,7 @@ describe('panel/clients index page', () => {
   });
 
   afterEach(() => {
+    delete global.useI18n;
     jest.useRealTimers();
   });
 

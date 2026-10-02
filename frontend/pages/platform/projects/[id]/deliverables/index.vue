@@ -251,6 +251,11 @@
                 <span class="text-xs font-medium text-text-brand">Descargar</span>
               </a>
 
+              <ProposalApprovalFiles
+                :project-id="projectId"
+                :files="detailItem.approval_files || []"
+              />
+
               <!-- Meta -->
               <div class="mb-5 grid grid-cols-3 gap-3">
                 <div class="rounded-xl border border-border-muted p-3">
@@ -350,6 +355,7 @@ import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformDeliverablesStore } from '~/stores/platform-deliverables'
 import { usePlatformProjectsStore } from '~/stores/platform-projects'
 import { formatDate } from '~/utils/formatDate'
+import ProposalApprovalFiles from '~/components/platform/projects/ProposalApprovalFiles.vue'
 import ProjectShell from '~/components/platform/projects/ProjectShell.vue'
 
 definePageMeta({ layout: 'platform', middleware: ['platform-auth'] })

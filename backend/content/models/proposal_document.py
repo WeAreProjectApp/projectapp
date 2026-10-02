@@ -9,8 +9,8 @@ class ProposalDocument(models.Model):
     and cannot be deleted by the user. User-uploaded documents (annexes,
     client docs) have is_generated=False.
 
-    On proposal acceptance, these documents are synced to the platform
-    deliverable as DeliverableFile attachments.
+    Internal project review explicitly selects which originals belong in its
+    private approved package; commercial acceptance alone copies no documents.
     """
 
     DOC_TYPE_CONTRACT = 'contract'

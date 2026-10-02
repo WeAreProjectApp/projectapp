@@ -143,3 +143,5 @@ from .linktree_asset import LinktreeAsset
 
 from .communication_folder import CommunicationFolder
 from .video_resource import VideoResource
+
+from .proposal_approval_file import ProposalApprovalFile

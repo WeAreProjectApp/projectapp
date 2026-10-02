@@ -312,7 +312,7 @@ test.describe('Admin Proposal Contract Generate', () => {
     });
 
     // The next action follows the new status.
-    await expect(page.getByTestId('proposal-next-action-launch')).toHaveText('Lanzar a Plataforma');
+    await expect(page.getByTestId('proposal-next-action-launch')).toHaveText('Completar revisión');
     await expect(page.getByTestId('proposal-next-action-negotiate')).toHaveCount(0);
   });
 });

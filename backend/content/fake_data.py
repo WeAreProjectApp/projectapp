@@ -212,6 +212,9 @@ EXEMPT_MODELS = {
     'accounts.DeliveryEvidenceEmailAttempt',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
+    # Immutable private packet copies require explicit real proposal review;
+    # seeds must never fabricate approval, signatures or these retained files.
+    'content.ProposalApprovalFile',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
     # credentials must never be fabricated as reusable demo secrets.
     # Runtime replay receipts are produced by real administrative actions.

@@ -1244,6 +1244,7 @@ class DeliverableDetailSerializer(DeliverableListSerializer):
     proposal_id = serializers.SerializerMethodField()
     proposal_title = serializers.SerializerMethodField()
     attachment_files = serializers.SerializerMethodField()
+    approval_files = serializers.SerializerMethodField()
     pdf_download_paths = serializers.SerializerMethodField()
     client_folders = serializers.SerializerMethodField()
     client_uploads = serializers.SerializerMethodField()
@@ -1256,7 +1257,7 @@ class DeliverableDetailSerializer(DeliverableListSerializer):
             'has_business_proposal',
             'proposal_id',
             'proposal_title',
-            'attachment_files',
+            'attachment_files', 'approval_files',
             'pdf_download_paths',
             'source_epic_key',
             'source_epic_title',
@@ -1293,6 +1294,12 @@ class DeliverableDetailSerializer(DeliverableListSerializer):
     def get_attachment_files(self, obj):
         qs = obj.attachment_files.select_related('uploaded_by').all()
         return DeliverableFileSerializer(qs, many=True, context=self.context).data
+
+    def get_approval_files(self, obj):
+        if getattr(obj, '_has_approval_files', None) is False:
+            return []
+        from content.services.proposal_approval_service import file_summary
+        return [file_summary(row, platform=True) for row in obj.proposal_approval_files.all()]
 
     def get_pdf_download_paths(self, obj):
         pid = obj.project_id

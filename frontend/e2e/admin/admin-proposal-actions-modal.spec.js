@@ -220,8 +220,8 @@ test.describe('Admin Proposal Actions Modal', () => {
 
 /**
  * The edit page (/panel/proposals/:id/edit) mounts a different actions modal
- * (BusinessProposal/admin/ProposalActionsModal.vue) whose "Lanzar a Plataforma"
- * action was widened to show for `negotiating` proposals, not only `accepted`.
+ * (BusinessProposal/admin/ProposalActionsModal.vue) whose review action remains
+ * available for `negotiating` proposals as well as `accepted` proposals.
  */
 const futureDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -254,6 +254,9 @@ const mockEditProposal = (overrides = {}) => ({
 function setupEditMocks(page, proposal) {
   return mockApi(page, async ({ apiPath }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
+    if (apiPath === 'proposals/') return json([proposal]);
+    if (apiPath === 'proposals/dashboard/') return json({ total: 1, conversion_rate: 0 });
+    if (apiPath === 'proposals/alerts/') return json([]);
     if (apiPath === `proposals/${proposal.id}/detail/`) return json(proposal);
     return null;
   });
@@ -269,19 +272,23 @@ test.describe('Proposal Actions Modal — edit page launch action', () => {
     });
   });
 
-  test('launch-to-platform action is available while the proposal is negotiating', {
+  test('review action is available while the proposal is negotiating', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_ACTIONS_MODAL, '@role:admin'],
   }, async ({ page }) => {
     const proposal = mockEditProposal({ status: 'negotiating' });
     await setupEditMocks(page, proposal);
 
-    await page.goto(`/panel/proposals/${proposal.id}/edit`, { waitUntil: 'domcontentloaded' });
-
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
+    await expect(page.getByTestId(`proposal-open-${proposal.id}`)).toContainText(proposal.client_name);
+    await page.getByTestId(`proposal-actions-${proposal.id}`).click();
+    await page.getByRole('link', { name: /Editar propuesta/ }).click();
+    await expect(page).toHaveURL(new RegExp(`/panel/proposals/${proposal.id}/edit$`));
     await page.getByTestId('proposal-actions-menu').click();
 
     const launch = page.getByTestId('proposal-action-launch');
     await expect(launch).toBeVisible({ timeout: 15000 });
-    await expect(launch).toContainText('Lanzar a Plataforma');
+    await expect(launch).toContainText('Completar revisión');
   });
 
   test('public preview action opens the proposal view', {

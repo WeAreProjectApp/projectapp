@@ -40,7 +40,7 @@ export function getProposalNextAction(proposal) {
     if (!proposal.platform_onboarding_completed_at) {
       return {
         key: 'launch',
-        label: 'Lanzar a Plataforma',
+        label: 'Completar revisión',
         colorClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
       };
     }
@@ -58,7 +58,7 @@ export function getProposalNextAction(proposal) {
     if (!proposal.platform_onboarding_completed_at) {
       return {
         key: 'launch',
-        label: 'Lanzar a Plataforma',
+        label: 'Completar revisión',
         colorClass: 'bg-indigo-600 text-white hover:bg-indigo-700',
       };
     }
