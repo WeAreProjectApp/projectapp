@@ -2415,6 +2415,9 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
 
+## P5 — enlaces seguros propios en Platform (2026-10-01)
+
+MVP sólo cliente→equipo, catálogo de texto/credenciales existente; archivos, terceros e importación de accesos quedan fuera. API JWT separada de Panel, owner explícito + proyecto propio; metadatos/historial sin secreto ni URL. Crear usa UUID/HMAC para replay idéntico sin URL y conflicto con entrada distinta. Revocar conserva evidencia; reactivar rota siempre token; corregir revoca y crea sustitución. QA original aprobada: 55 casos del dominio SQLite, 13 unitarios propios, 15 E2E y gate sin errores; creación E2E revalidada 2/2 sin retries tras un timeout de causa no determinada. P0 reservó la corrección del fixture histórico de Delivery por la nueva dependencia: corte coherente del grafo + target 0063 explícito y restauración latest; lote de 3 casos y backfill 4/4 verde. PR #461 a main: incorporadas por merge las referencias publicadas P4 38f65b8016dad055f39354c6e29cd5701d77cfaf, P1 6a95dc933c227ec8777bcb1cd853a6597423eede y P3 54b8156b437936848da1fa9c637d88cc336537f7; CI del nuevo head pendiente. Accounts conserva la hoja 0075 P4; P0 lleva las tres correcciones comunes en su propio PR, último del tren, y conserva la QA integrada y el merge. No hay despliegue ni merge del PR de sesión. P0 confirmó secure_links/0004 con parents 0003 y accounts/0066; backfill sólo audience legacy, sin owners inferidos ni rewrites de cifrado. Contrato técnico y límites: docs/platform-secure-links.md.
 
 ## P4 — Ideas y política de accesos (2026-10-01)
 
@@ -2449,10 +2452,6 @@ tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
 después de guardas. Un origen financiero eliminado antes del descubrimiento
 rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
 SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.
-## P5 — enlaces seguros propios en Platform (2026-10-01)
-
-MVP sólo cliente→equipo, catálogo de texto/credenciales existente; archivos, terceros e importación de accesos quedan fuera. API JWT separada de Panel, owner explícito + proyecto propio; metadatos/historial sin secreto ni URL. Crear usa UUID/HMAC para replay idéntico sin URL y conflicto con entrada distinta. Revocar conserva evidencia; reactivar rota siempre token; corregir revoca y crea sustitución. QA local aprobada: 55 casos del dominio SQLite, 13 unitarios propios, 15 E2E y gate sin errores; creación E2E revalidada 2/2 sin retries tras un timeout de causa no determinada. P0 reservó la corrección del fixture histórico de Delivery por la nueva dependencia: corte coherente del grafo + target 0063 explícito y restauración latest; lote de 3 casos y backfill 4/4 verde. PR #461 a main: absorbida por merge la referencia publicada P3 dea940345fc37c361f8749d30e1a96ac2bba73ee; CI del nuevo head pendiente. P0 conserva el gate de cierre final P3 y la integración. No hay despliegue ni merge del PR de sesión. P0 confirmó secure_links/0004 con parents 0003 y accounts/0066; backfill sólo audience legacy, sin owners inferidos ni rewrites de cifrado. Contrato técnico y límites: docs/platform-secure-links.md.
-
 Corrección acotada P2 del 2026-10-02: el caller interno `bulk_assign_client`
 conserva su tolerancia documentada a IDs ya ausentes; las dos vistas contables
 exigen el alcance completo con `strict_ids=True`. Los IDs descubiertos siguen

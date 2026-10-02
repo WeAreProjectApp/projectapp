@@ -123,13 +123,19 @@ P3 revisa diseño; P0 coordina final P3 y orden de integración. Esta sesión en
 PR a main y no hace merge ni deploy.
 
 Base inicial verificada: `origin/main=cce8e6949b080269cf603b8013a97876604b63a5`.
-La dependencia publicada P3 `dea940345fc37c361f8749d30e1a96ac2bba73ee`
-se absorbió por merge en la rama P5, después de publicar los commits propios,
-sin copiar el worktree mutable. El único conflicto fue el mapa derivado de flujos;
-se regeneró desde los shards y documentos de ambos dominios. La referencia
-publicada no se presenta como cierre final/verde de P3: P0 conserva ese gate
-y coordina la integración. `secure_links/0004` sigue dependiendo de accounts/0066,
-aunque la hoja accounts publicada sea ahora 0067; no se renumera ni aplica a DB real.
+La base publicada incorporada para el cierre de P5 es P4
+`38f65b8016dad055f39354c6e29cd5701d77cfaf`, seguida de P1
+`6a95dc933c227ec8777bcb1cd853a6597423eede` y P3
+`54b8156b437936848da1fa9c637d88cc336537f7`, mediante merges en la rama propia.
+P4 ya incluye P2 `fae1e3610bb38da0da8dd62864c1c763928dd85a` y P3
+`cecb5b93d8cfd0b968fec3a71239323c48c7018f`. La hoja accounts es
+`0075_p4_platform_domains_merge`, sin operaciones, con padres 0074 P2 y 0070 P4.
+`secure_links/0004` conserva sus padres confirmados 0003 y accounts/0066:
+no se renumera ni aplica a una base real. Los conflictos de agregadores conservan
+las entradas de cada dominio; el mapa se regenera desde los shards y documentos.
+Las tres correcciones comunes seleccionadas por P0 pertenecen a su PR separado,
+último del tren, y no se incorporan a #461. La QA integrada y el merge de los PR
+permanecen bajo P0, separados del cierre original de P5.
 
 ## Evidencia de validación
 
@@ -156,6 +162,17 @@ del registro/contrato MCP. El pin de catálogo pasó 1/1. Se revalidaron catálo
 (394 referencias/424 definiciones) y frescura del mapa; los tres flujos P5
 siguen covered para display/success/error/failure. No se repitió toda la QA ni
 se ejecutaron pruebas contra MySQL.
+
+Después de incorporar P4 38f65b80, P1 6a95dc93 y P3 54b8156b, pasan los 13 casos
+focales del cruce: fixture histórico (3), backfill (1), MCP propio (7) y contratos
+de campos/herramientas del conector communications (2). El pin unitario pasa 1/1.
+Catálogo (124 vistas), responsive (108 visuales + 16 redirects, 620 celdas),
+flow-sync (403 referencias/433 definiciones) y registro derivado fresco pasan.
+Antes de abrir la DB, el wrapper verificó settings_test, SQLite y todos los
+aliases MAILERS en locmem, con guardas fail-closed de DB/red/SMTP. El lote terminó
+con cero intentos de red y SMTP. No se repitieron los E2E, la suite original,
+el diagnóstico observability ni su reproducción sintética; P0 conserva la QA
+única del contenido integrado y las correcciones comunes de su PR separado.
 
 Frontend: 13 pruebas unitarias dedicadas y una verificación del catálogo existente.
 Dos casos reprodujeron respuestas tardías de catálogo entre proyectos y pasaron
