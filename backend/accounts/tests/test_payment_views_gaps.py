@@ -343,19 +343,33 @@ class TestWompiWebhookAdditionalPaths:
 
         assert resp.status_code == 400
 
-    def test_missing_reference_returns_400(self, api_client, subscription):
-        """Missing reference in webhook payload returns 400."""
-        resp = api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_123',
-                'status': 'APPROVED',
-                'reference': '',
-            }),
-            format='json',
+    def test_missing_reference_returns_400(self, api_client, pending_payment):
+        """Missing reference in canonical provider data returns 400."""
+        before_history = PaymentHistory.objects.filter(payment=pending_payment).count()
+        canonical_transaction = _binding_transaction(
+            pending_payment, 'txn_123', 'APPROVED', reference='',
         )
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=canonical_transaction,
+        ) as mock_verify:
+            resp = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({
+                    'id': 'txn_123',
+                    'status': 'APPROVED',
+                    'reference': 'untrusted-event-reference',
+                }),
+                format='json',
+            )
 
         assert resp.status_code == 400
+        mock_verify.assert_called_once_with('txn_123')
+        pending_payment.refresh_from_db()
+        assert pending_payment.status == Payment.STATUS_PENDING
+        assert pending_payment.wompi_transaction_id == ''
+        assert pending_payment.paid_at is None
+        assert PaymentHistory.objects.filter(payment=pending_payment).count() == before_history
 
     def test_pa_pattern_reference_finds_payment(
         self, api_client, subscription, pending_payment,
