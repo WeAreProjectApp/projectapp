@@ -455,6 +455,7 @@ jobs:
         run: npm run e2e:delivery -- --reporter=blob
         env:
           CI: 'true'
+          PLAYWRIGHT_BLOB_OUTPUT_NAME: report-delivery.zip
       - name: Upload delivery blob report
         if: always()
         uses: actions/upload-artifact@v4
@@ -501,6 +502,7 @@ jobs:
         run: npm run e2e:issues -- --reporter=blob
         env:
           CI: 'true'
+          PLAYWRIGHT_BLOB_OUTPUT_NAME: report-issues.zip
       - name: Upload issue blob report
         if: always()
         uses: actions/upload-artifact@v4
