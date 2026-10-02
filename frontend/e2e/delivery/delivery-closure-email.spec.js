@@ -147,9 +147,9 @@ test('admin sees a retained closure delivery failure', {
   await page.getByTestId('delivery-closure-send').click()
 
   await expect(page.getByTestId('delivery-closure-status')).toHaveText('Envío fallido')
-  await expect(page.getByTestId('delivery-closure-preview').getByRole('alert')).toContainText('SMTP de prueba no disponible')
+  await expect(page.getByTestId('delivery-closure-preview').getByRole('alert')).toContainText('No se pudo completar el envío de correo.')
   const probe = await closureProbe(request, testInfo)
   expect(probe.outbox_count).toBe(0)
   expect(probe.emails).toHaveLength(1)
-  expect(probe.emails[0]).toMatchObject({ status: 'failed', attempt_count: 1, error_message: 'SMTP de prueba no disponible' })
+  expect(probe.emails[0]).toMatchObject({ status: 'failed', attempt_count: 1, error_message: 'No se pudo completar el envío de correo.' })
 })
