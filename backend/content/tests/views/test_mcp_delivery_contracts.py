@@ -5,6 +5,7 @@ from types import SimpleNamespace
 
 import pytest
 from django.core.files.base import ContentFile
+from freezegun import freeze_time
 
 from accounts.models import (
     ContractAmendment, ContractSignatureEvidence, DeliveryDocumentLink,
@@ -18,7 +19,7 @@ from content.models import (
 )
 from content.tests.views.test_mcp_delivery import (
     SIGNED_PDF, call_projects as call_projects, confirm, current_version,
-    draft as draft, historical_arguments, import_json, published as published,
+    draft as draft, historical_arguments, import_json, published as published, sign_contract,
 )
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
@@ -114,6 +115,51 @@ def test_mcp_pdf_download_rejects_a_foreign_document_link(call_projects, draft, 
     assert error['code'] == 'NOT_FOUND'
 
 
+def test_mcp_downloads_the_frozen_delivery_document_as_private_artifact(call_projects, draft, superuser):
+    """Falla si descargar un documento publicado vuelve a leer la fuente editorial modificada."""
+    sign_contract(draft, superuser)
+    linked = call_projects('link_delivery_document', {
+        'project_id': draft.project.pk, 'level': 'stage', 'target_id': draft.stage.pk,
+        'document_id': draft.document.pk, 'expected_version': current_version(call_projects, draft.project),
+    })
+    link_id = linked['result']['id']
+    confirm(call_projects, 'publish_delivery_stage', {
+        'project_id': draft.project.pk, 'stage_id': draft.stage.pk,
+        'expected_version': current_version(call_projects, draft.project), 'request_id': 'frozen-mcp-document',
+    })
+    draft.stage.refresh_from_db()
+    assert draft.stage.editorial_status == 'published'
+    snapshot = DeliveryDocumentLink.objects.get(pk=link_id).snapshots.latest('id')
+    with snapshot.file.open('rb') as source:
+        frozen = source.read()
+    draft.document.content_markdown = '# Edición posterior'
+    draft.document.save(update_fields=['content_markdown', 'updated_at'])
+
+    result = call_projects('download_delivery_document_pdf', {
+        'project_id': draft.project.pk, 'link_id': link_id,
+    })
+
+    artifact = McpUpload.objects.get(pk=result['asset_id'])
+    with artifact.file.open('rb') as source:
+        assert source.read() == frozen
+    assert (artifact.expected_sha256, artifact.credential.connector.slug) == (snapshot.sha256, 'projects')
+
+
+def test_mcp_document_detail_hides_foreign_link_metadata(call_projects, draft, superuser):
+    """Falla si leer un link ajeno filtra metadatos pese a existir un link legítimo."""
+    legitimate = DeliveryDocumentLink.objects.create(project=draft.project, document=draft.document, level='project', created_by=superuser)
+    other = Project.objects.create(name='Proyecto metadata ajena', client=draft.client)
+    foreign = DeliveryDocumentLink.objects.create(project=other, document=draft.document, level='project', created_by=superuser)
+
+    error = call_projects('get_delivery_document', {
+        'project_id': draft.project.pk, 'link_id': foreign.pk,
+    }, expect_error=True)
+
+    assert error['code'] == 'NOT_FOUND'
+    assert str(foreign.pk) not in str(error)
+    assert DeliveryDocumentLink.objects.filter(pk=legitimate.pk).exists()
+
+
 def test_mcp_document_unlink_removes_an_editable_association(call_projects, draft):
     linked = call_projects('link_delivery_document', {
         'project_id': draft.project.pk, 'level': 'stage', 'target_id': draft.stage.pk,
@@ -158,6 +204,21 @@ def test_mcp_signed_asset_is_bound_to_its_credential(call_projects, draft):
 
     assert error['code'] == 'NOT_FOUND'
     assert not ContractSignatureEvidence.objects.filter(contract=draft.contract).exists()
+
+
+@freeze_time(RECORDED_AT)
+def test_mcp_signature_rejects_a_completed_pdf_over_ten_megabytes(call_projects, draft):
+    """Falla si confirmar una firma acepta un PDF completado que supera el límite contractual."""
+    body = SIGNED_PDF + b'x' * (10 * 1024 * 1024)
+    credential = McpCredential.objects.get(connector__slug='projects', label='Default')
+    asset = McpUpload.objects.create(connector=credential.connector, credential=credential, filename='large.pdf', content_type='application/pdf', expected_size=len(body), received_size=len(body), expected_sha256=hashlib.sha256(body).hexdigest(), status=McpUpload.STATUS_COMPLETE, expires_at=RECORDED_AT + timedelta(days=1))
+    asset.file.save('large.pdf', ContentFile(body), save=True)
+    before = current_version(call_projects, draft.project)
+
+    error = confirm(call_projects, 'attest_external_delivery_signature', external_signature_arguments(call_projects, draft, asset.pk), expect_error=True)
+    asset.refresh_from_db()
+    assert error['code'] == 'VALIDATION_ERROR'
+    assert (asset.status, ContractSignatureEvidence.objects.count(), current_version(call_projects, draft.project)) == (McpUpload.STATUS_COMPLETE, 0, before)
 
 
 def test_mcp_publication_confirmation_is_replayed_without_another_round(call_projects, draft, superuser):
