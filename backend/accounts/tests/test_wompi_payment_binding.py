@@ -53,11 +53,14 @@ def _transaction_without(field):
         (_transaction_without('currency'), None, 'currency-mismatch'),
         (_transaction(id=None), None, 'invalid-id'),
         (_transaction(id=17), None, 'invalid-id'),
+        (_transaction_without('reference'), None, 'invalid-reference'),
+        (_transaction(reference=17), None, 'invalid-reference'),
     ],
     ids=[
         'malformed-payload', 'other-transaction-id', 'other-payment-reference',
         'other-project-reference', 'other-amount', 'other-currency', 'other-payment-link',
         'missing-amount', 'missing-currency', 'missing-id', 'non-string-id',
+        'missing-reference', 'non-string-reference',
     ],
 )
 def test_binding_rejects_unrelated_transaction_without_mutating_payment(
@@ -93,6 +96,16 @@ def test_binding_accepts_transaction_with_matching_local_payment_link(payment_do
 def test_binding_accepts_card_reference_for_matching_payment_project_pair(payment_double):
     """Fails if a card transaction for the same payment and project is rejected."""
     transaction = _transaction(reference='PA17P88T1700000000')
+    original_payment = payment_double.__dict__.copy()
+
+    validate_transaction_binding(payment_double, transaction)
+
+    assert payment_double.__dict__ == original_payment
+
+
+def test_binding_accepts_historical_numeric_payment_reference(payment_double):
+    """Fails if valid legacy numeric payment references stop being accepted."""
+    transaction = _transaction(reference=str(payment_double.id))
     original_payment = payment_double.__dict__.copy()
 
     validate_transaction_binding(payment_double, transaction)

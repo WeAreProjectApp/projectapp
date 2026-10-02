@@ -371,6 +371,30 @@ class TestWompiWebhookAdditionalPaths:
         assert pending_payment.paid_at is None
         assert PaymentHistory.objects.filter(payment=pending_payment).count() == before_history
 
+    def test_provider_verification_failure_leaves_webhook_payment_unchanged(
+        self, api_client, pending_payment,
+    ):
+        """Fails if a provider outage writes a local webhook payment outcome."""
+        before_history = PaymentHistory.objects.filter(payment=pending_payment).count()
+        event = signed_transaction_event({
+            'id': 'txn-provider-unavailable',
+            'status': 'APPROVED',
+            'reference': str(pending_payment.id),
+            'amount_in_cents': int(pending_payment.amount * 100),
+        })
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            side_effect=Exception('provider unavailable'),
+        ):
+            response = api_client.post('/api/accounts/webhooks/wompi/', event, format='json')
+
+        assert response.status_code == 502
+        pending_payment.refresh_from_db()
+        assert pending_payment.status == Payment.STATUS_PENDING
+        assert pending_payment.wompi_transaction_id == ''
+        assert pending_payment.paid_at is None
+        assert PaymentHistory.objects.filter(payment=pending_payment).count() == before_history
+
     def test_pa_pattern_reference_finds_payment(
         self, api_client, subscription, pending_payment,
     ):
