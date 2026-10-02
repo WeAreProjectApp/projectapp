@@ -235,6 +235,10 @@ class TestChangeRequestConvertArchivedCr:
         resp = api_client.post(url, **admin_headers)
 
         assert resp.status_code == 400
+        cr.refresh_from_db()
+        assert cr.is_archived is True
+        assert cr.linked_requirement_id is None
+        assert cr.issue_events.count() == 0
 
 
 # ===========================================================================
