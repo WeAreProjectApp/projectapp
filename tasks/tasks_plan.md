@@ -4,7 +4,8 @@
 > posposición y paquete contractual original o personalizado. Copias privadas,
 > reintentos conservadores y paridad MCP. Migración nueva `content/0278` de P0;
 > backend/MCP/componentes y navegador focal verificados; mapas actualizados.
-> Publicación del PR independiente y CI en cierre, integración a cargo de P0. Contrato:
+> PR #469 publicado; cuatro hallazgos de revisión cerrados con backend10/10,
+> Clientes/store19/19 y delta navegador5/5. CI e integración a cargo de P0. Contrato:
 > [PROPOSAL_APPROVAL](../docs/PROPOSAL_APPROVAL.md).
 
 > **2026-09-29 — condiciones del servicio, PR #457:** traslado del bloque completo

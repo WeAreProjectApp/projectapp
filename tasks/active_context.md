@@ -11,7 +11,11 @@ asignada por P0, hija de `0277_merge_vat_and_economic_conditions`; sin aplicaci�
 desde el worktree. Backend, MCP y componentes verificados con aislamiento de
 pruebas; los ocho casos nuevos, siete regresiones inline, cinco de editor/menú y una
 de entrada contractual pasaron en navegador.
-PR independiente y CI en cierre; integración y despliegue bajo coordinación de P0.
+PR #469 publicado. La revisión de P0 se cerró con la entrada de Clientes,
+clientes canónicos inactivos, condiciones automáticas en la huella y respuesta
+del siguiente paso: backend 10/10, Clientes/store/fixtures 19/19, navegador
+Clientes 1/1 y handoff 4/4. CI y combinación del fix común de cierre de correo
+continúan bajo coordinación de P0; sin self-merge ni despliegue.
 Contrato y validación: [PROPOSAL_APPROVAL](../docs/PROPOSAL_APPROVAL.md).
 
 # Anexo comercial sin justificación de inversión (2026-09-29)

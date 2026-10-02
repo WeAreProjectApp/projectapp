@@ -49,7 +49,15 @@ def source_hash(proposal):
         documents.append([doc.pk, doc.document_type, doc.title, doc.file.name, digest])
     profile = proposal.client
     canonical_client = None if profile is None else {'id': profile.pk, 'user_id': profile.user_id, 'name': build_client_display_name(profile), 'email': profile.user.email, 'company': profile.company_name, 'phone': profile.phone, 'nit': profile.nit, 'billing_code': profile.billing_code, 'archived_at': profile.archived_at}
-    value = {'proposal': {key: getattr(proposal, key) for key in fields}, 'canonical_client': canonical_client, 'confirmed_selection': proposal.has_confirmed_module_selection, 'sections': list(proposal.sections.values('id', 'section_type', 'title', 'content_json', 'is_enabled', 'order')), 'documents': documents}
+    from content.services.hour_package_service import seed_commercial_conditions_from_catalog
+    sections = list(proposal.sections.values('id', 'section_type', 'title', 'content_json', 'is_enabled', 'order'))
+    resolved_commercial_conditions = [
+        seed_commercial_conditions_from_catalog(section['content_json'] or {}, nationality=proposal.nationality, language='en' if proposal.language == 'en' else 'es')
+        for section in sections
+        if section['is_enabled'] and section['section_type'] == 'commercial_conditions'
+        and (section['content_json'] or {}).get('hourPackagesMode') != 'manual'
+    ]
+    value = {'proposal': {key: getattr(proposal, key) for key in fields}, 'canonical_client': canonical_client, 'confirmed_selection': proposal.has_confirmed_module_selection, 'sections': sections, 'resolved_commercial_conditions': resolved_commercial_conditions, 'documents': documents}
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -86,7 +94,7 @@ def preview(proposal):
         error = str(exc.detail['use_proposal_contracts'])
         if isinstance(exc.detail['use_proposal_contracts'], list):
             error = ' '.join(str(message) for message in exc.detail['use_proposal_contracts'])
-    summary = {'id': proposal.pk, 'status': proposal.status, 'platform_onboarding_status': proposal.platform_onboarding_status, 'project_review_required': proposal.project_review_required, 'linked_project': proposal.linked_project}
+    summary = {'id': proposal.pk, 'status': proposal.status, 'platform_onboarding_status': proposal.platform_onboarding_status, 'platform_onboarding_completed_at': proposal.platform_onboarding_completed_at.isoformat() if proposal.platform_onboarding_completed_at else None, 'available_transitions': proposal.available_transitions, 'project_review_required': proposal.project_review_required, 'linked_project': proposal.linked_project}
     return {'source_hash': source_hash(proposal), 'client': client, 'linked_project': proposal.linked_project, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in proposal.approval_files.all()], 'proposal': summary}
 
 
@@ -246,9 +254,9 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
             if proposal.deliverable_id and data.get('project_id') != project.pk:
                 raise ApprovalConflict({'detail': 'La propuesta ya tiene proyecto. No se puede reemplazar el vínculo.', 'code': 'immutable_link'})
             if data.get('client_profile_id'):
-                profile = UserProfile.objects.clients().select_related('user').filter(pk=data['client_profile_id'], user__is_active=True, archived_at__isnull=True).first()
+                profile = UserProfile.objects.clients().select_related('user').filter(pk=data['client_profile_id'], archived_at__isnull=True).first()
                 if profile is None:
-                    raise ValidationError({'client_profile_id': 'Selecciona un cliente activo.'})
+                    raise ValidationError({'client_profile_id': 'Selecciona un cliente existente no archivado.'})
             else:
                 values = data['new_client']
                 # Reusing an existing email must never silently edit its identity.

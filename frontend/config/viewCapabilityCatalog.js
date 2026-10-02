@@ -95,7 +95,7 @@ const panelCapabilities = [
         ['/panel/partnership-program', '/panel/partnership-program/new', '/panel/partnership-program/:id', '/panel/financing', '/panel/financing/new', '/panel/financing/:id'],
         { icon: 'credit-card', stage: 'Venta' }),
       feature('panel-clients-offers', 'Administrar clientes y paquetes',
-        'Centraliza identidades comerciales y ofertas de horas reutilizables. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Centraliza identidades comerciales y ofertas de horas reutilizables. Incluye historial por registro con fecha, autor y consulta de versiones; aprobar desde la ficha de un cliente abre la misma revisión de cliente, proyecto y documentos.',
         'Evita duplicar contexto al preparar nuevas oportunidades.',
         ['/panel/clients', '/panel/hour-packages', '/panel/hour-packages/create', '/panel/hour-packages/:id/edit'],
         { icon: 'users', stage: 'Relación' }),

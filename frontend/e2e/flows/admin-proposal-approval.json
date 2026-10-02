@@ -2,8 +2,15 @@
   "id": "admin-proposal-approval",
   "name": "Revisar la aprobación y vincular una propuesta",
   "module": "admin",
-  "roles": ["admin"],
+  "roles": [
+    "admin"
+  ],
   "priority": "P1",
-  "description": "El equipo revisa cliente, proyecto y documentos al aprobar o retomar una propuesta aceptada. Puede posponer la vinculación, seleccionar existentes o crear cliente y proyecto al confirmar, e incluir contratos de la modalidad vigente o varios adjuntos personalizados manteniendo el detalle comercial y técnico. Los errores conservan el formulario y los reintentos mantienen el mismo vínculo.",
-  "outcomes": ["success", "error", "failure", "display"]
+  "description": "El equipo revisa cliente, proyecto y documentos al aprobar o retomar una propuesta aceptada desde Propuestas o su ficha en Clientes. Puede posponer la vinculación, seleccionar existentes o crear cliente y proyecto al confirmar, e incluir contratos de la modalidad vigente o varios adjuntos personalizados manteniendo el detalle comercial y técnico. Los errores conservan el formulario y los reintentos mantienen el mismo vínculo.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
 }

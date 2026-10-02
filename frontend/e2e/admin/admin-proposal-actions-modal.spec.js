@@ -254,6 +254,9 @@ const mockEditProposal = (overrides = {}) => ({
 function setupEditMocks(page, proposal) {
   return mockApi(page, async ({ apiPath }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
+    if (apiPath === 'proposals/') return json([proposal]);
+    if (apiPath === 'proposals/dashboard/') return json({ total: 1, conversion_rate: 0 });
+    if (apiPath === 'proposals/alerts/') return json([]);
     if (apiPath === `proposals/${proposal.id}/detail/`) return json(proposal);
     return null;
   });
@@ -275,8 +278,12 @@ test.describe('Proposal Actions Modal — edit page launch action', () => {
     const proposal = mockEditProposal({ status: 'negotiating' });
     await setupEditMocks(page, proposal);
 
-    await page.goto(`/panel/proposals/${proposal.id}/edit`, { waitUntil: 'domcontentloaded' });
-
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page.getByRole('link', { name: 'Propuestas', exact: true }).click();
+    await expect(page.getByTestId(`proposal-open-${proposal.id}`)).toContainText(proposal.client_name);
+    await page.getByTestId(`proposal-actions-${proposal.id}`).click();
+    await page.getByRole('link', { name: /Editar propuesta/ }).click();
+    await expect(page).toHaveURL(new RegExp(`/panel/proposals/${proposal.id}/edit$`));
     await page.getByTestId('proposal-actions-menu').click();
 
     const launch = page.getByTestId('proposal-action-launch');

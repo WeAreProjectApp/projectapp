@@ -357,3 +357,83 @@ def test_confirmed_empty_selection_invalidates_review_source(reviewed_proposal, 
     assert reviewed_proposal.selected_modules == []
     assert reviewed_proposal.deliverable_id is None
     assert not Project.objects.exists()
+
+
+def test_inactive_canonical_client_confirmation_returns_current_workflow(reviewed_proposal, admin_user):
+    from accounts.services.proposal_client_service import get_or_create_client_for_proposal, sync_snapshot
+    profile = get_or_create_client_for_proposal(name='Canonical Customer', email='canonical@example.com')
+    reviewed_proposal.client = profile
+    reviewed_proposal.status = 'accepted'
+    sync_snapshot(reviewed_proposal)
+    reviewed_proposal.save()
+    assert profile.user.is_active is False
+    assert reviewed_proposal.platform_onboarding_completed_at is None
+    users_before = get_user_model().objects.count()
+    result = confirm(reviewed_proposal, profile, admin_user)
+    reviewed_proposal.refresh_from_db()
+    profile.user.refresh_from_db()
+    assert reviewed_proposal.deliverable.project.client_id == profile.user_id
+    assert get_user_model().objects.count() == users_before
+    assert profile.user.is_active is False
+    assert profile.user.has_usable_password() is False
+    assert sorted(row['document_type'] for row in result['confirmed_files']) == ['commercial', 'contract', 'technical']
+    assert result['proposal']['platform_onboarding_completed_at'] == reviewed_proposal.platform_onboarding_completed_at.isoformat()
+    assert result['proposal']['available_transitions'] == reviewed_proposal.available_transitions == ['finished']
+
+
+@pytest.mark.parametrize('ineligible', ['archived', 'staff'])
+def test_confirmation_rejects_ineligible_client_profiles(reviewed_proposal, approval_client, admin_user, ineligible):
+    from django.utils import timezone
+    from rest_framework.exceptions import ValidationError
+    profile = {'archived': approval_client, 'staff': UserProfile.objects.get_or_create(user=admin_user, defaults={'role': 'admin'})[0]}[ineligible]
+    archived_at = {'archived': timezone.now(), 'staff': None}[ineligible]
+    profile.archived_at = archived_at
+    profile.save(update_fields=['archived_at'])
+    with pytest.raises(ValidationError):
+        confirm(reviewed_proposal, profile, admin_user)
+    assert not Project.objects.exists()
+    assert not ProposalApprovalFile.objects.exists()
+
+
+@pytest.mark.parametrize('field,value', [('hourly_rate', 35000), ('hours', 12), ('discount_percent', 15), ('name_es', 'Renamed package'), ('note_es', 'Revised scope note')])
+def test_auto_commercial_catalog_change_invalidates_review(reviewed_proposal, admin_user, field, value):
+    from content.models import HourPackage
+    from content.services.proposal_approval_service import ApprovalConflict
+    package = HourPackage.objects.create(nationality=reviewed_proposal.nationality, name_es='Selected package', name_en='Selected package', hours=10, hourly_rate=30000)
+    ProposalSection.objects.create(proposal=reviewed_proposal, section_type='commercial_conditions', title='Conditions', content_json={'hourPackagesMode': 'auto'}, order=1)
+    values = payload(reviewed_proposal, reviewed_proposal.client)
+    values.pop('client_profile_id')
+    values['new_client'] = {'name': 'Must not create', 'email': 'not-created@example.com'}
+    users_before = get_user_model().objects.count()
+    profiles_before = UserProfile.objects.count()
+    setattr(package, field, value)
+    package.save(update_fields=[field])
+    with pytest.raises(ApprovalConflict) as caught:
+        review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
+    assert caught.value.detail['code'] == 'stale_source'
+    assert get_user_model().objects.count() == users_before
+    assert UserProfile.objects.count() == profiles_before
+    assert not Project.objects.exists()
+    assert not ProposalApprovalFile.objects.exists()
+
+
+def test_manual_commercial_catalog_change_preserves_pact(reviewed_proposal, approval_client, admin_user):
+    from content.models import HourPackage
+    package = HourPackage.objects.create(nationality=reviewed_proposal.nationality, name_es='Catalog package', name_en='Catalog package', hours=10, hourly_rate=30000)
+    section = ProposalSection.objects.create(proposal=reviewed_proposal, section_type='commercial_conditions', title='Conditions', content_json={'hourPackagesMode': 'manual', 'currency': 'COP', 'hourlyRate': 12000, 'packages': [{'name': 'Agreed package', 'hours': 4, 'hourlyRate': 12000}]}, order=1)
+    values = payload(reviewed_proposal, approval_client)
+    package.hourly_rate = 99999
+    package.save(update_fields=['hourly_rate'])
+    result = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
+    section.refresh_from_db()
+    assert result['confirmed'] is True
+    assert section.content_json['hourlyRate'] == 12000
+    assert section.content_json['packages'][0]['hourlyRate'] == 12000
+    from io import BytesIO
+    from pypdf import PdfReader
+    commercial = ProposalApprovalFile.objects.get(proposal=reviewed_proposal, document_type='commercial')
+    with commercial.file.open('rb') as stream:
+        rendered = ' '.join(page.extract_text() for page in PdfReader(BytesIO(stream.read())).pages)
+    assert 'Agreed package' in rendered
+    assert '12.000' in rendered
+    assert '99.999' not in rendered
