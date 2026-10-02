@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_ACTIVITY_LOG } from '../helpers/flow-tags.js';
 
@@ -60,12 +61,12 @@ test.describe('Admin Proposal Activity Log', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // Switch to activity tab
-    const activityTab = page.getByRole('tab', { name: /Actividad/i });
+    const activityTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true });
     await expect(activityTab).toBeVisible({ timeout: 15000 });
-    await activityTab.click();
+    await selectProposalDestination(page, 'tracking', 'activity');
 
     // Log form should be visible
     await expect(page.getByText('Registrar actividad')).toBeVisible({ timeout: 5000 });
@@ -87,11 +88,11 @@ test.describe('Admin Proposal Activity Log', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const activityTab = page.getByRole('tab', { name: /Actividad/i });
+    const activityTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true });
     await expect(activityTab).toBeVisible({ timeout: 15000 });
-    await activityTab.click();
+    await selectProposalDestination(page, 'tracking', 'activity');
     await expect(page.getByText('Registrar actividad')).toBeVisible({ timeout: 5000 });
 
     const submitBtn = page.getByRole('button', { name: /Agregar/i });
@@ -118,11 +119,11 @@ test.describe('Admin Proposal Activity Log', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const activityTab = page.getByRole('tab', { name: /Actividad/i });
+    const activityTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Seguimiento', exact: true });
     await expect(activityTab).toBeVisible({ timeout: 15000 });
-    await activityTab.click();
+    await selectProposalDestination(page, 'tracking', 'activity');
     await expect(page.getByText('Registrar actividad')).toBeVisible({ timeout: 5000 });
 
     // Fill description and submit

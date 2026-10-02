@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_SECTION_COMPLETENESS } from '../helpers/flow-tags.js';
 
@@ -57,17 +58,12 @@ test.describe('Admin Proposal Section Completeness', () => {
       return null;
     });
 
-    await page.goto('/panel/proposals/1/edit');
+    await page.goto('/es-co/panel/proposals/1/edit');
     await page.waitForResponse(resp => resp.url().includes('/detail/') && resp.status() === 200);
 
-    // Navigate to sections tab
-    const sectionsTab = page.getByRole('tab', { name: /Secciones/i });
-    if (await sectionsTab.isVisible().catch(() => false)) {
-      await sectionsTab.click();
-
-      // Completeness indicator should be visible
-      await expect(page.getByText('Completitud de secciones')).toBeVisible({ timeout: 5000 });
-    }
+    // Navigate to sections through its parent group.
+    await selectProposalDestination(page, 'proposal', 'sections');
+    await expect(page.getByText('Completitud de secciones')).toBeVisible({ timeout: 5000 });
   });
 
   test('partial content shows lower completeness percentage', {
@@ -83,15 +79,10 @@ test.describe('Admin Proposal Section Completeness', () => {
       return null;
     });
 
-    await page.goto('/panel/proposals/1/edit');
+    await page.goto('/es-co/panel/proposals/1/edit');
     await page.waitForResponse(resp => resp.url().includes('/detail/') && resp.status() === 200);
 
-    const sectionsTab = page.getByRole('tab', { name: /Secciones/i });
-    if (await sectionsTab.isVisible().catch(() => false)) {
-      await sectionsTab.click();
-
-      // Should show a percentage (exact value depends on empty content_json check)
-      await expect(page.getByText('Completitud de secciones')).toBeVisible({ timeout: 5000 });
-    }
+    await selectProposalDestination(page, 'proposal', 'sections');
+    await expect(page.getByText('Completitud de secciones')).toBeVisible({ timeout: 5000 });
   });
 });

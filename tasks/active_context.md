@@ -101,6 +101,15 @@ por P0. No se aplican migraciones ni se envían correos reales.
 Operación y JSON vigente:
 [PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
 
+# Navegación agrupada de propuestas (2026-10-01)
+
+El editor interno reúne las herramientas en General, Propuesta, Comunicación,
+Documentos, Proyecto y Seguimiento, con subpestañas visibles. Se conservan las
+restricciones por estado, los enlaces anteriores y las ediciones pendientes
+entre grupos, incluidas las cargas durante la consulta de Actividad.
+Trabajo aislado en `proposal-tab-groups`; sin cambios de API ni migraciones.
+La entrega y el resultado final de CI se registran en el PR de esta rama.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
 
 **2026-10-01 — acciones y eliminación protegida de proyectos:** menú común de tres puntos en primera columna sin título y en tarjetas; confirmación de eliminación sólo para proyectos vacíos; tabla de dependencias/cantidades y alternativa explícita de cambio de estado. Servicio transaccional con revalidación y limpieza de estructura automática vacía, auditoría duradera y paridad MCP con confirmación. Verificación focal y entrega por PR de sesión; sin migraciones ni despliegue.

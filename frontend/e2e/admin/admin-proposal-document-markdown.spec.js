@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { viewportUse } from '../helpers/viewports.js';
 
@@ -138,7 +139,7 @@ async function openDocumentsFromPanel(page) {
   await expect(page).toHaveURL(/\/panel\/proposals$/);
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click();
   await expect(page).toHaveURL(new RegExp(`/panel/proposals/${PROPOSAL_ID}/edit`));
-  await page.getByRole('tab', { name: 'Documentos' }).click();
+  await selectProposalDestination(page, 'documents', 'documents');
   await expect(page.getByText('Documentos adjuntos')).toHaveCount(1);
 }
 
@@ -147,7 +148,7 @@ async function openDocumentsFromCompactPanel(page) {
   await page.getByRole('button', { name: 'Abrir menú' }).click();
   await page.getByRole('dialog', { name: 'Menú principal' }).getByRole('link', { name: 'Propuestas', exact: true }).click();
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click();
-  await page.getByRole('combobox', { name: 'Secciones' }).selectOption('documents');
+  await selectProposalDestination(page, 'documents', 'documents');
   await expect(page.getByText('Documentos adjuntos')).toHaveCount(1);
 }
 

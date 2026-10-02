@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_PROPOSAL_SECTION_EDIT_PASTE,
@@ -128,10 +129,10 @@ function buildMockHandler(capturedUpdates) {
  */
 async function openSectionEditor(page, capturedUpdates, sectionType) {
   await mockApi(page, buildMockHandler(capturedUpdates));
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
   await page.waitForLoadState('domcontentloaded');
 
-  await page.getByRole('tab', { name: 'Secciones' }).click();
+  await selectProposalDestination(page, 'proposal', 'sections');
 
   await page.getByTestId(`section-header-${sectionType}`).click();
   await page.getByTestId('section-editor').waitFor({ state: 'visible' });
@@ -242,9 +243,9 @@ test.describe('Proposal Section Edit — Paste Content Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await selectProposalDestination(page, 'proposal', 'sections');
     await page.getByTestId('section-header-executive_summary').click();
 
     const editor = page.getByTestId('section-editor');
@@ -404,9 +405,9 @@ test.describe('Proposal Section Edit — Paste Content Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await selectProposalDestination(page, 'proposal', 'sections');
 
     // Expand executive_summary section
     await page.getByTestId('section-header-executive_summary').click();
@@ -490,9 +491,9 @@ test.describe('Proposal Section Edit — Paste Content Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await selectProposalDestination(page, 'proposal', 'sections');
     await page.getByText('🎨 Diseño UX').click();
     await page.getByTestId('section-editor').waitFor({ state: 'visible' });
 

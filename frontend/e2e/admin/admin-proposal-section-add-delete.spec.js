@@ -8,6 +8,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_SECTION_ADD_DELETE } from '../helpers/flow-tags.js';
 
@@ -93,8 +94,8 @@ function buildHandler({ captured = {}, deleteStatus = 200 } = {}) {
 }
 
 async function openSectionsTab(page) {
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-  await page.getByRole('tab', { name: 'Secciones' }).click();
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+  await selectProposalDestination(page, 'proposal', 'sections');
   await page.getByTestId('section-header-greeting').waitFor({ state: 'visible' });
 }
 

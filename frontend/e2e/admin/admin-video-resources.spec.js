@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
+import { selectProposalDestination } from '../helpers/proposal-navigation.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
 import { ADMIN_COMMERCIAL_VIDEO_RESOURCES } from '../helpers/flow-tags.js'
 import { financingProgramFixture } from '../helpers/financing-fixture.js'
@@ -139,7 +140,7 @@ async function openProposalGlobalResources(page) {
 async function openProposalPersonalizedResources(page) {
   await openProposals(page)
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click()
-  await page.getByRole('tab', { name: 'Recursos', exact: true }).click()
+  await selectProposalDestination(page, 'communication', 'resources')
   await expect(page.getByTestId('video-resource-manager')).toBeVisible()
 }
 

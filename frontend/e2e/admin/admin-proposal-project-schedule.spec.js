@@ -128,7 +128,7 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
     tag: [...ADMIN_PROPOSAL_PROJECT_SCHEDULE, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildApiHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.getByText('Cronograma del proyecto')).toBeVisible();
@@ -138,7 +138,7 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
     tag: [...ADMIN_PROPOSAL_PROJECT_SCHEDULE, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildApiHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
     await page.waitForLoadState('domcontentloaded');
 
     await expect(page.locator('[data-testid="stage-card-design"]')).toBeVisible();
@@ -154,7 +154,7 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
         received = { stageKey, body };
       },
     }));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
     await page.waitForLoadState('domcontentloaded');
 
     await page.locator('[data-testid="stage-start-design"]').fill('2026-04-01');
@@ -174,7 +174,7 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
     await mockApi(page, buildApiHandler({
       onUpdate: () => { updateCalled = true; },
     }));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
     await page.waitForLoadState('domcontentloaded');
 
     await page.locator('[data-testid="stage-start-design"]').fill('2026-04-20');
@@ -197,7 +197,7 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
       proposal,
       onComplete: (stageKey) => { completedKey = stageKey; },
     }));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit?tab=schedule`);
     await page.waitForLoadState('domcontentloaded');
 
     await page.locator('[data-testid="stage-complete-design"]').click();
@@ -211,10 +211,10 @@ test.describe('Admin Proposal Project Schedule (Cronograma)', () => {
   }, async ({ page }) => {
     const negotiating = buildAcceptedProposal({ status: 'negotiating' });
     await mockApi(page, buildApiHandler({ proposal: negotiating }));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.waitForLoadState('domcontentloaded');
 
-    // Tab should not exist
-    await expect(page.getByRole('tab', { name: 'Cronograma' })).toHaveCount(0);
+    // The Project group is unavailable before acceptance.
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Proyecto', exact: true })).toHaveCount(0);
   });
 });
