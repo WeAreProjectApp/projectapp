@@ -12,6 +12,7 @@ from urllib.parse import urlencode
 
 from django.conf import settings
 from django.core.cache import cache
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from accounts.services.tokens import get_tokens_for_user
 
@@ -66,7 +67,11 @@ def impersonate(actor, target):
             status_code=400,
         )
 
-    return get_tokens_for_user(target)
+    refresh = RefreshToken(get_tokens_for_user(target)['refresh'])
+    # Keep administrator access distinguishable after token refresh. Viewing
+    # the portal as a client must never create the client's signature/review.
+    refresh['impersonated_by'] = actor.pk
+    return {'access': str(refresh.access_token), 'refresh': str(refresh)}
 
 
 def create_exchange_code(tokens):

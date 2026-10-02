@@ -171,6 +171,9 @@ class Command(BaseCommand):
             client__profile__in=profiles,
         ).count()
         self._ensure_project_access(profiles, admin)
+        from accounts.management.commands._project_collaboration_seed import seed_project_collaboration
+        for project in Project.objects.filter(client__profile__in=profiles).select_related('client'):
+            seed_project_collaboration(project, context, admin)
         self.stdout.write(self.style.SUCCESS(
             f'Representative graph ready: {len(profiles)} clients, '
             f'{total_projects} projects ({created_projects} new).',

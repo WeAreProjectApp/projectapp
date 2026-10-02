@@ -1,4 +1,118 @@
+# Anexo comercial sin justificación de inversión (2026-09-29)
+
+El PDF comercial de Documentos omite la subsección «¿Por qué esta inversión?»
+en ambas modalidades e idiomas. Conserva importes y formas de pago; la propuesta
+pública y los datos guardados mantienen el contenido original. Vista previa,
+copia Markdown y nuevos adjuntos comparten la exclusión. Versión documental 6:
+las preparaciones anteriores requieren otra revisión, sin sustituir sus archivos.
+El cambio continúa en PR #457; la validación se registra allí.
+
+# Condiciones del servicio en contratos separados (2026-09-29)
+
+En modalidad producto + servicio, el anexo comercial conserva la inversión y
+los pagos del producto. Infraestructura, cobertura, cortesía, precios por 3/6/9
+meses, descuentos y renovación se incorporan al contrato de servicio, también
+cuando usa texto personalizado. El panel detecta cambios y ofrece regeneración;
+la formalización rechaza adjuntos obsoletos y conserva los archivos históricos.
+Se retiraron las ramas PDF de reescritura sin consumidores y los multiplicadores
+y avisos de la calculadora que permanecían en el panel. Los campos históricos de
+selección siguen activos para conservar el alcance contratado. Migración de
+plantilla `0276`, reservada al despliegue; procedimiento actualizado en
+`docs/PROPOSAL_FORMALIZATION.md`. Evidencia de pruebas e integración en PR #457.
+
+# Intereses en módulos de propuestas (2026-09-29)
+
+Nuevo modal del catálogo sin precios, intereses separados del alcance y edición manual de la inversión. La portada incluye guía y accesos a catálogo/alianza. Migraciones 0274–0275 conservan los importes históricos antes de retirar recargos. Verificación focal de API, migración, PDF, componentes y recorridos completada, con compilación Nuxt y revisión de calidad sin errores nuevos. Procedimiento y compatibilidad: `docs/PROPOSAL_MODULE_INTERESTS.md`; evidencia de integración y CI en el PR de esta rama.
+
+# Autenticación y recuperación de hosting/LinkedIn (2026-10-01)
+
+La ronda amplía el PR #458 en su worktree propio. Los tokens previos a OTP o
+limitados a recuperar contraseña ya no se aceptan como sesión privada; los
+flujos legítimos conservan sus rutas y formatos. Hosting confirma por fase
+la activación, prorrateo y cuotas futuras como una unidad, y envía avisos tras
+confirmar. LinkedIn conserva credenciales ante fallos temporales; sólo un
+rechazo explícito permite borrarlas, con logs sin cuerpos ni tokens.
+La validación requiere rechazos sin efectos, rollback/reintento y recuperación
+OAuth. Sus resultados y la entrega se registran en el PR y el reporte de ronda.
+Sin migraciones ni deploy. Adjuntos de propuestas siguen bloqueados por su
+contrato de listado; rendimiento contable y responsividad de Documentos quedan
+pendientes por cupo, sin declaración de suficiencia global.
+
+# Bugs y solicitudes contextualizadas — P1 (2026-10-01)
+
+Implementación en validación en `platform-bugs-context`: bug general sin guías,
+captura de ronda original, respuestas y PDFs históricos, «resuelto por equipo»
+y reapertura pública. REST/MCP comparten servicios; no se alteran aprobaciones.
+El adaptador REST/MCP/UI usa P3 publicado `edfff19c` (provider `30fd7ab9`), con revisión humana y
+procedencia privada. El guard protege bugs generales y se compone con entregas.
+P0 reservó `0068` y la no-op `0073` (padres `0068` + `0071`); no se alteran
+migraciones publicadas. El fixture comprueba MAILERS en memoria antes de crear datos.
+QA focal de REST/MCP/UI y aislamiento de correo pasó; CI del head propio sigue en cierre. Detalles en
+`docs/PLATFORM_ISSUE_REPORTS.md`. Sin migraciones aplicadas ni merge de sesión.
+
+# Alcance y entregas en Platform (2026-10-01)
+
+Primer incremento implementado en `platform-review-workflow`, en validación:
+contrato/otrosí → alcance → fases → etapas → guías simples, con borradores,
+prompt/JSON, publicación y decisiones parciales del cliente. Firmas portal o PDF
+externo, conformidades históricas con evidencia entrante y documentos por nivel
+conservan contenido y autoría; las conformidades aprobadas sobreviven a otra ronda.
+El Kanban de clientes y su sincronización se retiran mediante purga autorizada;
+propuestas, fases comerciales, hosting, finanzas, recursos y bugs/cambios permanecen.
+El refinamiento autorizado anterior a bugs está implementado en validación: «Crear guías»
+y «Preparar respuesta» seleccionan un contrato, sus otrosíes aplicables y anexos
+con procedencia explícita; conservan fuentes y verifican citas del JSON. Una
+guía incompleta no demuestra que un pedido esté fuera del contrato. Los textos
+ilegibles, faltantes, contradictorios o recortados requieren revisión humana.
+La corrección de guías conserva sus citas; el contrato u otrosí debe sustentar
+el alcance, y un anexo asociado por sí solo no lo establece. Hay historial
+administrativo de preparaciones y descarga de copias exactas. UI y las 52
+herramientas MCP comparten las guardas de pertenencia y contexto inmutable.
+El incremento coordinado P3 redacta guías desde los recorridos del producto
+del cliente: roles sólo con respaldo de fuentes, acciones permitidas y
+bloqueadas, accesos y dependencias entre etapas, sin duplicar requerimientos.
+Sin roles no los inventa ni exige uno para publicar. Verificado con dos roles
+distintos y sus negaciones, publicación sin roles, compatibilidad v1 e
+inmutabilidad: 12 casos backend y 19 frontend unit verdes, gate focal 100/100.
+P3 publica la frontera contractual reutilizable de tickets en
+`accounts.services.delivery_contract_reply`: proveedor estrecho del dominio
+P1, origen/conversación congelados, versiones independientes de ticket y
+workspace, citas verificadas, preview sin publicación y DTO público separado
+de fuentes privadas. Sin contrato o fuentes completas, alcance indeterminado.
+Validación: 16 casos nuevos + 3 regresiones inmediatas verdes; gate 100/100.
+La guarda de transferencia conserva la historia del cliente anterior y no
+modifica accesos ni filas al rechazar el cambio; 16 casos verdes, gate 100/100.
+Contrato de integración: [DELIVERY_CONTRACT_REPLY_ADAPTER](../docs/DELIVERY_CONTRACT_REPLY_ADAPTER.md).
+La nueva `accounts/0071_delivery_followup`, hija de `0067`, incluye las
+capturas de tickets y los modelos de evidencia de correo del siguiente
+incremento. Estado Django comprobado sin migraciones pendientes; no se aplicó
+ninguna migración desde el worktree.
+La compatibilidad con tickets legados admite versión 0 sin alterar los tickets;
+un cambio posterior sigue invalidando la preparación (dos pruebas verdes).
+El correo manual de cierre ya tiene preparación inmutable, vista previa,
+confirmación, historial privado y reenvío explícito. Sólo habilita etapas
+completamente aprobadas; conserva las rondas, decisiones y conversación pública
+hasta la operación de cierre, incluido su último mensaje. Distingue revisor
+original, registrador y fechas de conformidades externas. Capturas fallidas
+limpian archivos, y la captura común opta por almacenamiento privado conservado
+tras recarga y reenvío. Validación focal en curso; el estado final de CI se
+consulta en el PR. Bugs y cuentas de cobro avanzan en frentes propios coordinados
+por P0. No se aplican migraciones ni se envían correos reales.
+Operación y JSON vigente:
+[PLATFORM_DELIVERY](../docs/PLATFORM_DELIVERY.md). No se ejecutan migraciones desde el worktree.
+
+# Navegación agrupada de propuestas (2026-10-01)
+
+El editor interno reúne las herramientas en General, Propuesta, Comunicación,
+Documentos, Proyecto y Seguimiento, con subpestañas visibles. Se conservan las
+restricciones por estado, los enlaces anteriores y las ediciones pendientes
+entre grupos, incluidas las cargas durante la consulta de Actividad.
+Trabajo aislado en `proposal-tab-groups`; sin cambios de API ni migraciones.
+La entrega y el resultado final de CI se registran en el PR de esta rama.
+
 # Espaciado de los PDF comercial y técnico (2026-09-29)
+
+**2026-10-01 — acciones y eliminación protegida de proyectos:** menú común de tres puntos en primera columna sin título y en tarjetas; confirmación de eliminación sólo para proyectos vacíos; tabla de dependencias/cantidades y alternativa explícita de cambio de estado. Servicio transaccional con revalidación y limpieza de estructura automática vacía, auditoría duradera y paridad MCP con confirmación. Verificación focal y entrega por PR de sesión; sin migraciones ni despliegue.
 
 Corrección en `fix/29092026-proposal-pdf-spacing`: las tablas reservan el alto
 real del título y de su prioridad, con separación compacta de 6 pt. Los badges
@@ -324,6 +438,26 @@ Nivel 2 sobre `main` actualizado: paquetes ZIP/archivos, Mustache escapado, recu
 Se implementó la ficha aprobada para Documentos, Propuestas, Proyectos, Clientes y todo Contable: versiones consultables/comparables, autor, conservación sin vencimiento, PDFs históricos y secretos cifrados. Comunicaciones y restauración quedan fuera. Validación focal: 44 casos backend, 5 del visor y 15 E2E aprobados; regresiones de accesos, propuestas, CRUD contable, correo fallido, PWA, migración de credenciales y eliminación de alias aprobadas, al igual que el contrato de fake data y la compilación Nuxt. El despliegue requiere las migraciones 0250/0251 y el inicializador idempotente descrito en `docs/ENTITY_HISTORY.md`; no se ejecutaron contra una base real.
 
 # Active Context — ProjectApp
+
+**2026-10-01 — seguimiento contractual de Platform en implementación:** la rama
+`feat/01102026-platform-review-workflow` reemplaza el Kanban por contrato/otrosí,
+alcance, fases de ejecución, etapas y guías de validación. Publicación por etapa,
+conformidades parciales por requerimiento, evidencia de firma y rondas de revisión
+son reglas independientes. Los ejemplos documentales 137/138/181 y los hilos 2/3/7
+de Comunicaciones respaldan ese flujo; Vástago y TORRIOS pertenecen al mismo
+proyecto. El operador autorizó descartar las tarjetas de seguimiento antiguas,
+preservando bugs/solicitudes y los datos comerciales, documentales y financieros.
+La entrega incluye autoría por prompt/JSON y paridad administrativa MCP; cuentas
+de cobro, mejoras de bugs y accesos del cliente permanecen incrementos posteriores.
+No hay despliegue ni migraciones contra la base del clon principal en esta sesión.
+
+**2026-10-01 — IVA contable implementado:** desglose explícito en ingresos,
+gastos, hostings y cuentas de cobro, con captura base/total incluido y porcentaje
+editable. Nuevos ingresos de empresa y hostings ofrecen 19 %; gastos ofrecen
+0 %. Históricos conservan importes y tasa desconocida. Utilidad y reparto se
+mantienen por decisión del operador. Retenciones se registran al liquidar.
+Rama de sesión: `feat/01102026-accounting-vat`; sin migraciones productivas ni
+envíos reales desde esta sesión.
 
 **2026-09-28 — paridad MCP de Propuestas implementada:** catálogo compartido
 con Comercial para ajustes, contratos personalizados y documentos. Formalización
@@ -2280,3 +2414,49 @@ distingue listo/enviado/abierto/vencido/revocado. La creación real falla con
 `secure_links_unavailable`; la revisión de la clave efectiva de producción
 está pendiente de autenticación adicional de Tailscale. No rotar una clave
 sin verificar primero los datos cifrados de accesos de proyectos y enlaces.
+
+## P5 — enlaces seguros propios en Platform (2026-10-01)
+
+MVP sólo cliente→equipo, catálogo de texto/credenciales existente; archivos, terceros e importación de accesos quedan fuera. API JWT separada de Panel, owner explícito + proyecto propio; metadatos/historial sin secreto ni URL. Crear usa UUID/HMAC para replay idéntico sin URL y conflicto con entrada distinta. Revocar conserva evidencia; reactivar rota siempre token; corregir revoca y crea sustitución. QA original aprobada: 55 casos del dominio SQLite, 13 unitarios propios, 15 E2E y gate sin errores; creación E2E revalidada 2/2 sin retries tras un timeout de causa no determinada. P0 reservó la corrección del fixture histórico de Delivery por la nueva dependencia: corte coherente del grafo + target 0063 explícito y restauración latest; lote de 3 casos y backfill 4/4 verde. PR #461 a main: incorporadas por merge las referencias publicadas P4 38f65b8016dad055f39354c6e29cd5701d77cfaf, P1 6a95dc933c227ec8777bcb1cd853a6597423eede y P3 54b8156b437936848da1fa9c637d88cc336537f7; CI del nuevo head pendiente. Accounts conserva la hoja 0075 P4; P0 lleva las tres correcciones comunes en su propio PR, último del tren, y conserva la QA integrada y el merge. No hay despliegue ni merge del PR de sesión. P0 confirmó secure_links/0004 con parents 0003 y accounts/0066; backfill sólo audience legacy, sin owners inferidos ni rewrites de cifrado. Contrato técnico y límites: docs/platform-secure-links.md.
+
+## P4 — Ideas y política de accesos (2026-10-01)
+
+Worktree propio `platform-ideas-access`, rama `feat/01102026-platform-ideas-access`, PR #462 hacia main. Referencias publicadas P2 `fae1e3610bb38da0da8dd62864c1c763928dd85a` y P3 `cecb5b93d8cfd0b968fec3a71239323c48c7018f` absorbidas mediante merge; P2 incluye P1 `bc403871a92258c2b77247aca6533fde0677b357`. Migración propia 0070 sobre P3 0067 y nueva no-op 0075 con padres 0074 P2 + 0070: una sola hoja accounts, sin aplicar operaciones. P0 conserva orden y reservas; P3 conserva Delivery y guías.
+
+ProjectAdmin mantiene el formulario/helper de P2 y un único save_model: proyecto bloqueado → financiero → Delivery → incidencias → revocación P4 → guardado. change_client_apply conserva el mismo orden antes de cascada. Pasan 15 casos propios de revocación/composición, las 8 regresiones Admin P2 y 13 casos de MCP/límites de consulta. Rechazos preservan dueño, fuentes, grants, finanzas, historial y auditoría; una edición inocua sigue permitida. Contrato: `docs/platform/project-ideas-access.md`.
+
+Control de correo: MAILERS locmem aplicado antes de Django, cada alias/configuración/backend efectivo certificado antes de DB/fixtures, sin .env ni lectura legacy. Preflight y 14 casos focales pasan. El fix Delivery publicado está absorbido; los puertos propios alternativos 3472/3473 permiten QA sin tocar el servidor de integración ajeno. El caso contable corregido por P3 también pasa, sin editar ese dominio desde P4.
+
+El workflow P4 es reutilizable desde CI, sube `playwright-blob-project-collaboration` y alimenta el agregado del mismo run con una dependencia explícita. Se mantiene prioridad P1 y resultados exigidos del flujo de política. Los artefactos blob se excluyen de Git. La regresión de menú se acota al proyecto tras el nuevo Hosting general de P2, comprobando enlaces concretos. Los 20 tests del catálogo pasan; registro/sync correcto, 430 flows y 123 vistas (107 visuales + 16 redirects). Blob real: política P1 covered, sus cuatro resultados aprobados y 7 casos focales sin skips/retries tras reinicio del host. Responsive: 20 casos aprobados en cinco perfiles; retorno final del proceso 1, sin fallos ni errores generales en JSON, pendiente de confirmar en CI. P0 autoriza publicar con estos controles focales sin esperar CI completo; el delta P1 6a95dc93 queda para P0/P5. No merge, deploy ni migración real.
+
+Cierre de fuente (2026-10-02): merges P1 `6a95dc93` y P3 test-only `54b8156b`; 0075 intacta, sin fixes comunes P0. Pin Explorer actualizado a las 123 vistas verificadas: 16/16 pruebas pasan. Once regresiones de evaluación/consulta/budgets/CR archivada y una navegación real a Bugs pasan. Servidor de incidencias certificado con MAILERS efectivos locmem antes de DB/fixtures. P2 `7446898f243e5f8254ce4add9a265d8603412762` ya absorbido: asignación interna lenient, HTTP strict_ids=True; 20/20 regresiones de asignación/revocación/transferencia pasan, 0075/guards intactos. Pendiente cobertura final P1 y CI del nuevo head; no acreditado CI verde. La falla previa del agregado fue stream de artifact truncado, sin rebajar cobertura.
+
+### P2 — cuentas y hosting por proyecto (2026-10-01)
+
+En implementación en rama propia `feat/01102026-platform-client-billing`, desde
+`origin/main=cce8e694`, con dependencia P3 inicial `abcffaf9` y actualización
+publicada `dea940345fc37c361f8749d30e1a96ac2bba73ee` absorbidas mediante merge.
+Se absorbieron también P3 `4c6e132281554de14a2b303fe7a3b05f012910bf` y P1
+`b25ad2e080597b7708126b5d865d7ba805253478`; Admin compone sus guardas después
+de finanzas usando proyecto original/actual y actor del request, con error visible
+y rollback. Los escritores reservados de cobros y las dos entradas de liquidación
+toman Project antes de origen/documento y revalidan dueño/relaciones vigentes.
+P0 fijó migración P2 `0069_p2_project_billing_context`, padre P3 `0067`; las
+hojas paralelas las integra P0 sin operaciones. Identidad única de hosting por proyecto, cuentas excluyentes
+contrato/otrosí o hosting y conciliación explícita de evidencias existentes.
+No se ejecutan migraciones ni salidas reales al cliente. Los históricos sin
+contexto siguen visibles como pendientes de asociar, sin rehacer PDF ni dinero.
+La no-op autorizada `0072` reúne las hojas `0068`/`0069`; `0074` reúne `0072`/`0073`
+tras absorber P1 `bc403871a92258c2b77247aca6533fde0677b357` y P3 M3
+`ebbf331d76fedb5f89f3b440f2fdeb50c148e977`. P4 conserva su reserva de revocación
+después de guardas. Un origen financiero eliminado antes del descubrimiento
+rechaza la escritura obsoleta como conflicto, sin recrearlo ni añadir historia.
+SQLite comprueba estados/rollback, no exclusión real de locks en MySQL.
+Corrección acotada P2 del 2026-10-02: el caller interno `bulk_assign_client`
+conserva su tolerancia documentada a IDs ya ausentes; las dos vistas contables
+exigen el alcance completo con `strict_ids=True`. Los IDs descubiertos siguen
+siendo obligatorios durante los locks actuales, sin cambiar cálculos, snapshots
+ni guardas de evidencia. P6 conserva IVA y sus otros bloques de contabilidad;
+P2 reserva sólo este callsite y su frontera de validación hasta publicar el fix.
+QA focal: 36 casos aprobados en lotes de 20/16 y gate estricto del archivo nuevo
+100/100, sin errores ni advertencias; settings_test/SQLite y MAILERS locmem.

@@ -3,7 +3,7 @@
  *
  * @flow:platform-layout-title-mapping
  * Covers: static route, dynamic project base route, and nested dynamic route
- * (board within project) where more-specific regex must win over project base.
+ * (delivery within project), including an old board bookmark.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -47,15 +47,16 @@ test.describe('Platform Layout — Browser Tab Title', () => {
     await expect(page).toHaveTitle(/Project App \(Proyecto\)/, { timeout: 10_000 });
   });
 
-  test('shows "Tablero" on /platform/projects/:id/board — nested dynamic regex beats project base', {
+  test('shows the delivery title for a former board bookmark', {
     tag: ['@outcome:display', ...PLATFORM_LAYOUT_TITLE_MAPPING, '@role:platform-admin'],
   }, async ({ page }) => {
-    // quality: allow-no-interaction (routing/title-mapping — asserts the tab title for the nested board route)
+    // quality: allow-no-interaction (routing/title-mapping — an old bookmark must use the delivery destination's title)
+    // quality: allow-deep-link (a saved board bookmark is the entry point for this compatibility behavior)
     await mockApi(page, async ({ apiPath }) => {
       if (apiPath === 'accounts/me/') return meResponse;
       return null;
     });
     await page.goto('/platform/projects/1/board', { waitUntil: 'domcontentloaded' });
-    await expect(page).toHaveTitle(/Project App \(Tablero\)/, { timeout: 10_000 });
+    await expect(page).toHaveTitle('Scope and deliveries | Project App', { timeout: 10_000 });
   });
 });

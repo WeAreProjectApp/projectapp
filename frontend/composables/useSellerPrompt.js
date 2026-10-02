@@ -209,10 +209,9 @@ Sección de presentación que **agrupa los 5 módulos base sin costo extra** (ad
 |---|---|---|
 | \`is_visible\` | boolean | \`true\` para todos EXCEPTO \`gift_cards_module\` que tiene \`false\` por defecto. NO cambiar a menos que el contexto del cliente lo requiera explícitamente. |
 | \`_do_not_remove\` | boolean | **SIEMPRE \`true\`. NUNCA eliminar este campo ni el grupo que lo contiene.** |
-| \`is_calculator_module\` | boolean | \`true\` si el módulo tiene precio. NO cambiar el valor original de la plantilla. |
+| \`is_calculator_module\` | boolean | \`true\` si el módulo es opcional dentro del alcance. NO cambiar el valor original de la plantilla. |
 | \`default_selected\` | boolean | \`true\` SOLO para los módulos que el cliente seleccionó. El resto en \`false\`. |
-| \`price_percent\` | number | Porcentaje sobre el precio base del proyecto. **NO modificar.** Los valores son fijos en la plantilla. |
-| \`is_invite\` | boolean | \`true\` si el módulo no tiene precio fijo sino invitación a llamada. NO cambiar. |
+| \`is_invite\` | boolean | \`true\` si el módulo propone una conversación comercial. NO cambiar. |
 | \`invite_note\` | string | Texto de invitación. Personalizar con el nombre del negocio del cliente pero mantener tono y estructura similar. |
 
 **Regla contextual para \`cross_cutting_features\`:** esta tarjeta es un **catálogo inicial editable**, no una lista fija que se copia igual en todos los proyectos. Evalúa diseño responsivo, accesibilidad, usabilidad consistente, rendimiento, seguridad, privacidad de datos y compatibilidad entre navegadores contra el negocio, la etapa del producto, la audiencia y el alcance real. Conserva, reescribe, elimina o agrega items según exista sustento; el grupo debe conservar su \`id\`, su posición después de \`features\` y al menos un item aplicable. \`features\` contiene comportamientos propios de una pantalla o flujo de negocio; \`cross_cutting_features\` contiene cualidades que atraviesan varias vistas, componentes o flujos. No dupliques una capacidad entre ambos grupos. No prometas niveles de compliance, certificaciones, matrices de navegadores/versiones, controles de seguridad ni objetivos de rendimiento que el contexto no sustente.
@@ -233,25 +232,25 @@ Sección de presentación que **agrupa los 5 módulos base sin costo extra** (ad
 
 **Referencia: \`additionalModules[]\`** (17 módulos opcionales — orden obligatorio):
 
-| # | \`id\` | Tipo | \`price_percent\` |
-|---|---|---|---|
-| 0 | \`integration_electronic_invoicing\` | Opcional | 60% |
-| 1 | \`integration_regional_payments\` | Opcional | 20% |
-| 2 | \`integration_international_payments\` | Opcional | 20% |
-| 3 | \`pwa_module\` | Opcional | 40% |
-| 4 | \`corporate_branding_module\` | Opcional | 35% |
-| 5 | \`ai_module\` | Invitación | 0% |
-| 6 | \`integration_conversion_tracking\` | Invitación | 0% |
-| 7 | \`biometric_verification_module\` | Invitación | 0% |
-| 8 | \`behavior_tracking_module\` | Opcional | 30% |
-| 9 | \`reports_alerts_module\` | Opcional | 20% |
-| 10 | \`email_marketing_module\` | Opcional | 10% |
-| 11 | \`qr_generator_module\` | Opcional | 25% |
-| 12 | \`content_generator_module\` | Opcional | 30% |
-| 13 | \`i18n_module\` | Opcional | 15% |
-| 14 | \`live_chat_module\` | Opcional | 40% |
-| 15 | \`dark_mode_module\` | Opcional | 20% |
-| 16 | \`gift_cards_module\` | Opcional (oculto) | 20% |
+| # | \`id\` | Tipo |
+|---|---|---|
+| 0 | \`integration_electronic_invoicing\` | Opcional |
+| 1 | \`integration_regional_payments\` | Opcional |
+| 2 | \`integration_international_payments\` | Opcional |
+| 3 | \`pwa_module\` | Opcional |
+| 4 | \`corporate_branding_module\` | Opcional |
+| 5 | \`ai_module\` | Invitación |
+| 6 | \`integration_conversion_tracking\` | Invitación |
+| 7 | \`biometric_verification_module\` | Invitación |
+| 8 | \`behavior_tracking_module\` | Opcional |
+| 9 | \`reports_alerts_module\` | Opcional |
+| 10 | \`email_marketing_module\` | Opcional |
+| 11 | \`qr_generator_module\` | Opcional |
+| 12 | \`content_generator_module\` | Opcional |
+| 13 | \`i18n_module\` | Opcional |
+| 14 | \`live_chat_module\` | Opcional |
+| 15 | \`dark_mode_module\` | Opcional |
+| 16 | \`gift_cards_module\` | Opcional (oculto) |
 
 #### \`developmentStages\` 
 | Campo | Tipo | Restricción |
@@ -402,7 +401,7 @@ Sección de presentación que **agrupa los 5 módulos base sin costo extra** (ad
     - \`live_chat_module\` → chat en vivo, soporte en tiempo real, asesor en línea, widget de chat propio.
     - \`dark_mode_module\` → modo oscuro, dark mode, cambio de tema, theme switcher.
   - Cuando marques un módulo como seleccionado, **adapta** su \`description\` y reordena/reescribe sus \`items\` para que el texto refleje la terminología, proveedores y matices reales del brief (por ejemplo: si el cliente pidió "quiero recibir reportes por WhatsApp", deja el item de WhatsApp como primero en \`reports_alerts_module\` y menciona WhatsApp como canal principal en la \`description\`).
-  - No cambies el \`id\`, \`icon\`, \`price_percent\`, \`is_invite\` ni la posición del módulo en el array.
+  - No cambies el \`id\`, \`icon\`, \`is_invite\` ni la posición del módulo en el array.
   - Los \`invite_note\` de módulos de invitación (\`ai_module\`, \`integration_conversion_tracking\`, \`biometric_verification_module\`) deben personalizarse con el nombre del negocio del cliente.
 
 ### \`timeline\` 
@@ -453,7 +452,7 @@ Sección de presentación que **agrupa los 5 módulos base sin costo extra** (ad
 - No unas dos pantallas o capacidades distintas en un solo item ("… y …", "… e …", "…/…"). Sepáralas en items atómicos, cada uno con su propio \`id\` (regla de atomicidad en la tabla de restricciones).
 - No uses jerga técnica en secciones que lee el cliente (todo excepto \`_meta\` y \`_seller_prompt\`).
 - No hagas la propuesta más larga de lo necesario. Cada palabra debe justificar su existencia.
-- No cambies los valores de \`circleColor\`, \`statusColor\`, \`index\`, \`source\` (en cards), \`hostingPercent\`, \`price_percent\`, \`activeStep\`, ni datos de contacto del equipo.
+- No cambies los valores de \`circleColor\`, \`statusColor\`, \`index\`, \`source\` (en cards), \`hostingPercent\`, \`activeStep\`, ni datos de contacto del equipo.
 - No agregues keys nuevas que no existan en la plantilla.
 - No cambies tipos de datos (un array de strings debe seguir siendo un array de strings).
 - No rellenes \`sections.technicalDocument\` con arquitectura detallada ni texto comercial en este paso; déjalo en **estructura de plantilla** hasta completar el paso 2 en **Det. técnico → JSON** o en el archivo de importación.

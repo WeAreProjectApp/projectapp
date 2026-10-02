@@ -111,6 +111,7 @@ describe('ExpenseFormModal', () => {
       category: 'business',
       ledger: 'company',
       total_amount: '3000000',
+      vat_rate: 0,
       gustavo_amount: '1500000',
       carlos_amount: '1500000',
       register_in_pocket: true,
@@ -130,7 +131,7 @@ describe('ExpenseFormModal', () => {
     expect(wrapper.emitted('submit')[0][0].register_in_pocket).toBe(false);
   });
 
-  it('personal ledger hides split and omits split amounts', async () => {
+  it('personal ledger replaces split controls with a value field', async () => {
     const wrapper = mountModal();
 
     expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(true);
@@ -139,15 +140,27 @@ describe('ExpenseFormModal', () => {
 
     expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(false);
     expect(wrapper.text()).toContain('Valor');
+  });
+
+  it('personal ledger submits a VAT-aware amount capture', async () => {
+    // Fails if a personal expense reverts to total_amount instead of the server capture contract.
+    const wrapper = mountModal();
+
+    await segmentedButton(wrapper, 'Personal Gustavo').trigger('click');
 
     await wrapper.find('input[type="text"]').setValue('Aporte Carro Onix');
     await wrapper.find('[data-testid="expense-form-period"]').setValue('2026-06-15');
-    await wrapper.find('input[inputmode="numeric"]').setValue('3000000');
+    await wrapper.find('[data-testid="vat-amount"]').setValue('3000000');
     await wrapper.find('form').trigger('submit');
 
     const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.ledger).toBe('gustavo');
-    expect(payload.total_amount).toBe(3000000);
+    expect(payload).toMatchObject({
+      ledger: 'gustavo',
+      vat_rate: 0,
+      amount: 3000000,
+      amount_mode: 'vat_included',
+    });
+    expect(payload).not.toHaveProperty('total_amount');
     expect(payload).not.toHaveProperty('gustavo_amount');
     expect(payload).not.toHaveProperty('carlos_amount');
   });

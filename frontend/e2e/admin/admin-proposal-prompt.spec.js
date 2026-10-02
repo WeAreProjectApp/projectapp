@@ -9,6 +9,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_PROMPT } from '../helpers/flow-tags.js';
 
@@ -45,8 +46,8 @@ function setupMock(page) {
 }
 
 async function openPromptTab(page) {
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
-  await page.getByRole('tab', { name: 'Prompt' }).click();
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+  await selectProposalDestination(page, 'proposal', 'prompt');
   await expect(page.getByRole('button', { name: 'Editar', exact: true })).toBeVisible({ timeout: 15000 });
 }
 

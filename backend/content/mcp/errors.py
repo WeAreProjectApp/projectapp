@@ -77,7 +77,7 @@ def transport_exception_handler(exc, context):
 
     response = exception_handler(exc, context)
     if response is None:
-        logging.getLogger(__name__).exception("MCP transport failed", exc_info=exc)
+        logging.getLogger(__name__).error("MCP transport failed code=INTERNAL_ERROR")
         set_rollback()
         response = Response(status=500)
         code, message = "INTERNAL_ERROR", "Error interno del servidor."

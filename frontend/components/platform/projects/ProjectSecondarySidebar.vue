@@ -43,6 +43,7 @@
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
+import { usePlatformProjectsStore } from '~/stores/platform-projects'
 
 const props = defineProps({
   projectId: { type: [String, Number], required: true },
@@ -51,21 +52,29 @@ const props = defineProps({
 const localePath = useLocalePath()
 const route = useRoute()
 const authStore = usePlatformAuthStore()
+const projectStore = usePlatformProjectsStore()
 const { t } = useI18n()
 
 const items = computed(() => {
   const base = `/platform/projects/${props.projectId}`
   const navigationItems = [
     { label: 'Resumen',           href: localePath(base) },
-    { label: 'Tablero',           href: localePath(`${base}/board`) },
+    { label: t('platformDelivery.navigation'), href: localePath(`${base}/delivery`) },
+    { label: t('projectIdeas.navigation'), href: localePath(`${base}/ideas`) },
     { label: 'Solicitudes',       href: localePath(`${base}/changes`) },
     { label: 'Bugs',              href: localePath(`${base}/bugs`) },
     { label: 'Recursos',          href: localePath(`${base}/deliverables`) },
     { label: 'Hosting',           href: localePath(`${base}/payments`) },
-    { label: 'Cuentas de cobro',  href: localePath(`${base}/collection-accounts`), disabled: true },
+    { label: t('platformBilling.accounts'), href: localePath(`${base}/collection-accounts`) },
     { label: 'Modelo de datos',   href: localePath(`${base}/data-model`), disabled: true },
   ]
-  if (authStore.isAdmin) {
+  if (authStore.isClient) {
+    navigationItems.push({
+      label: t('platformSecureLinks.navigation'),
+      href: localePath(`${base}/secure-links`),
+    })
+  }
+  if (authStore.isAdmin || (String(projectStore.currentProject?.id) === String(props.projectId) && projectStore.currentProject?.can_view_client_access)) {
     navigationItems.push({
       label: t('projectAccess.navigation'),
       href: localePath(`${base}/access`),

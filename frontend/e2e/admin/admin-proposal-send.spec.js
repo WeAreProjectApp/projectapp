@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_SEND } from '../helpers/flow-tags.js';
 
@@ -52,7 +53,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     await expect(page.getByRole('button', { name: 'Enviar al Cliente' })).toBeVisible();
   });
@@ -76,7 +77,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // Click the send button — opens the pre-send checklist modal
     await page.getByRole('button', { name: 'Enviar al Cliente' }).first().click();
@@ -107,7 +108,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // For sent proposals, the resend action lives inside the actions menu.
     await page.getByTestId('proposal-actions-menu').click();
@@ -126,7 +127,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     await expect(page.getByRole('button', { name: 'Enviar al Cliente' })).not.toBeVisible();
   });
@@ -147,8 +148,8 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
-    await page.getByRole('tab', { name: 'Correos' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await selectProposalDestination(page, 'communication', 'emails');
 
     const intro = page.getByTestId('proposal-email-intro');
     await intro.waitFor({ state: 'visible', timeout: 15000 });
@@ -190,7 +191,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.getByRole('button', { name: 'Enviar al Cliente' }).first().click();
 
     await expect(
@@ -212,7 +213,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.getByRole('button', { name: 'Enviar al Cliente' }).first().click();
     await expect(page.getByText('Scorecard pre-envío')).toBeVisible();
     await Promise.all([
@@ -235,7 +236,7 @@ test.describe('Admin Proposal Send', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
     await page.getByRole('button', { name: 'Enviar al Cliente' }).first().click();
     await expect(page.getByText('Scorecard pre-envío')).toBeVisible();
     await Promise.all([

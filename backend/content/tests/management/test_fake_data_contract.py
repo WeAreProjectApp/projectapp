@@ -318,10 +318,136 @@ def test_platform_seed_reaches_the_per_list_volume_target():
     )
     project = Project.objects.order_by('pk').first()
 
-    assert Requirement.objects.filter(phase__project=project).count() == 60
+    assert Requirement.objects.filter(stage__phase__scope__contract__project=project).count() == 60
     assert Deliverable.objects.filter(project=project).count() == 60
     assert ChangeRequest.objects.filter(project=project).count() == 60
     assert BugReport.objects.filter(project=project).count() == 60
+
+
+@pytest.fixture
+def seeded_review_workflow():
+    """Representative contract, amendment, partial reviews and internal drafts."""
+    run_command(
+        'seed_platform_data', '--skip-collection-accounts',
+        '--seed', '19', '--anchor-date', '2026-08-26',
+    )
+    return Project.objects.order_by('pk').first()
+
+
+def test_platform_seed_links_current_scope_to_signed_contract_amendment(seeded_review_workflow):
+    from accounts.models import DeliveryScope
+    from accounts.services.delivery_workflow import signature_state
+    scope = DeliveryScope.objects.get(contract__project=seeded_review_workflow, is_current=True)
+
+    assert scope.amendment.contract_id == scope.contract_id
+    assert signature_state(scope.contract)['signature_status'] == 'portal'
+    assert signature_state(scope.amendment)['signature_status'] == 'external'
+
+
+def test_platform_seed_preserves_partial_client_decisions(seeded_review_workflow):
+    from accounts.models import RequirementReview
+    decisions = set(RequirementReview.objects.filter(
+        requirement__stage__phase__scope__contract__project=seeded_review_workflow,
+    ).values_list('decision', flat=True))
+
+    assert decisions == {'approved', 'objected', 'rejected'}
+
+
+def test_platform_seed_hides_internal_draft_stage_from_client(seeded_review_workflow):
+    from accounts.models import DeliveryStage
+    from accounts.services.delivery_workflow import overview
+    project = seeded_review_workflow
+    draft = DeliveryStage.objects.get(phase__scope__contract__project=project, key='demo-draft')
+
+    body = overview(project.pk, project.client)
+
+    client_stage_ids = {
+        stage['id'] for scope in body['scopes'] for phase in scope['phases'] for stage in phase['stages']
+    }
+    assert draft.pk not in client_stage_ids
+    assert draft.requirements.exists()
+
+
+def test_platform_fake_reset_clears_protected_review_graph(
+    seeded_review_workflow, django_capture_on_commit_callbacks,
+):
+    from django.core.files.base import ContentFile
+    from accounts.management.commands._seed_helpers import _demo_pdf
+    from accounts.models import (
+        DeliveryPublication, DeliveryReviewDocumentEvidence, ProjectContract,
+        RequirementReview,
+    )
+    review = RequirementReview.objects.filter(
+        publication__stage__phase__scope__contract__project=seeded_review_workflow,
+    ).first()
+    evidence = DeliveryReviewDocumentEvidence.objects.create(
+        review=review, document=review.publication.stage.document_links.first().document,
+        title='Respaldo de conformidad externa', sha256='f' * 64,
+    )
+    evidence.file.save('approval-evidence.pdf', ContentFile(_demo_pdf(evidence.title)))
+    storage, filename = evidence.file.storage, evidence.file.name
+
+    with django_capture_on_commit_callbacks(execute=True):
+        run_command('delete_fake_data', '--confirm')
+
+    assert not ProjectContract.objects.exists()
+    assert not DeliveryPublication.objects.exists()
+    assert not DeliveryReviewDocumentEvidence.objects.exists()
+    assert not storage.exists(filename)
+
+
+def test_mihuella_flush_replays_document_identity():
+    """Recreating the same seed must retain the documents' public identities."""
+    from accounts.management.commands.seed_mihuella import CLIENT_EMAIL
+
+    seed_args = ('--seed', '19', '--anchor-date', '2026-08-26')
+    run_command('seed_mihuella', *seed_args)
+    first_snapshot = list(Document.objects.filter(
+        client_user__email=CLIENT_EMAIL, title__startswith='[Seed]',
+    ).order_by('title').values_list('uuid', 'title'))
+
+    run_command('seed_mihuella', '--flush', *seed_args)
+
+    assert len(first_snapshot) == 4
+    assert list(Document.objects.filter(
+        client_user__email=CLIENT_EMAIL, title__startswith='[Seed]',
+    ).order_by('title').values_list('uuid', 'title')) == first_snapshot
+
+
+def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflow):
+    """Resetting this demo must preserve other agreements and client history."""
+    from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
+    from accounts.models import ProjectContract
+    from content.models import CommunicationThread
+
+    seed_args = ('--seed', '19', '--anchor-date', '2026-08-26')
+    run_command('seed_mihuella', *seed_args)
+    client = get_user_model().objects.get(email=CLIENT_EMAIL)
+    role = client.profile.role
+    client_thread = CommunicationThread.objects.get(client=client.profile, project__name=PROJECT_NAME)
+    document = Document.objects.create(
+        title='Contrato externo del cliente', client_user=client,
+    )
+    other_project = Project.objects.create(name='Proyecto fuera de Mi Huella', client=client)
+    other_document = Document.objects.create(
+        title='[Seed] Documento de otro proyecto', project=other_project, client_user=client,
+    )
+    other_proposal = BusinessProposal.objects.create(
+        title='Propuesta fuera de Mi Huella', client_email=CLIENT_EMAIL,
+    )
+    foreign_contract = ProjectContract.objects.get(
+        project=seeded_review_workflow, key='demo-contract',
+    )
+    preserved_ids = [document.pk, other_document.pk, foreign_contract.document_id]
+
+    run_command('seed_mihuella', '--flush', *seed_args)
+
+    assert Document.objects.filter(pk__in=preserved_ids).count() == 3
+    assert ProjectContract.objects.get(pk=foreign_contract.pk).document_id == foreign_contract.document_id
+    assert Project.objects.get(pk=other_project.pk).client_id == client.pk
+    assert BusinessProposal.objects.filter(pk=other_proposal.pk).exists()
+    assert get_user_model().objects.get(pk=client.pk).profile.role == role
+    assert CommunicationThread.objects.get(pk=client_thread.pk).client_id == client.profile.pk
 
 
 def test_platform_seed_configures_communication_preferences():
@@ -431,7 +557,11 @@ def test_document_seed_honors_a_small_volume_target():
         '--seed', '19', '--anchor-date', '2026-08-26',
     )
 
-    assert Document.objects.count() == 2
+    # Required contractual sources are supporting documents, separate from
+    # the requested markdown/account fixture volume.
+    sources = Document.objects.filter(metadata__billing_fixture='source').values('pk')
+    assert Document.objects.exclude(pk__in=sources).count() == 2
+    assert Document.objects.get(document_type__code='collection_account').billing_context.contract_id
 
 
 def test_communication_seed_distributes_thread_lengths(seeded_communications):

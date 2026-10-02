@@ -8,8 +8,6 @@ from accounts.models import (
     Deliverable,
     Project,
     ProjectPhase,
-    ProjectScopeItem,
-    Requirement,
     SavedFilterTab,
 )
 from content.models.business_proposal import BusinessProposal
@@ -38,36 +36,6 @@ def _phase(project, suffix):
         project=project,
         business_proposal=proposal,
         order=1,
-    )
-
-
-def _requirement_case(admin_user, client_user):
-    project_a, project_b = _projects(client_user)
-    phase_a = _phase(project_a, 'A')
-    phase_b = _phase(project_b, 'B')
-    return ConstraintCase(
-        create=lambda scope, key: Requirement.objects.create(
-            phase=scope,
-            title='Constraint requirement',
-            source_flow_key=key,
-        ),
-        first_scope=phase_a,
-        second_scope=phase_b,
-    )
-
-
-def _scope_item_case(admin_user, client_user):
-    project_a, project_b = _projects(client_user)
-    phase_a = _phase(project_a, 'A')
-    phase_b = _phase(project_b, 'B')
-    return ConstraintCase(
-        create=lambda scope, key: ProjectScopeItem.objects.create(
-            phase=scope,
-            name='Constraint scope item',
-            source_item_id=key,
-        ),
-        first_scope=phase_a,
-        second_scope=phase_b,
     )
 
 
@@ -123,13 +91,11 @@ def _saved_filter_tab_case(admin_user, client_user):
 
 @pytest.fixture(
     params=(
-        _requirement_case,
-        _scope_item_case,
         _deliverable_case,
         _data_model_entity_case,
         _saved_filter_tab_case,
     ),
-    ids=('requirement', 'scope-item', 'deliverable', 'data-model-entity', 'saved-filter-tab'),
+    ids=('deliverable', 'data-model-entity', 'saved-filter-tab'),
 )
 def constraint_case(request, admin_user, client_user):
     return request.param(admin_user, client_user)

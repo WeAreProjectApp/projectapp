@@ -39,6 +39,7 @@ from content.models import (
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.services import collection_account_service as ca_service
 from content.services import collection_account_create_service as ca_create_service
+from content.services.accounting_service import paid_amount_subquery
 from content.services.document_content import build_content_json
 from content.services.document_thread_service import create_document_thread
 from content.services.document_type_codes import COLLECTION_ACCOUNT, MARKDOWN
@@ -170,6 +171,20 @@ def _client_candidates():
     ]
 
 
+def _collection_income_candidates():
+    """Seed full-value accounts from incomes that have not received payments."""
+    return list(
+        IncomeRecord.objects.filter(
+            kind=IncomeRecord.Kind.EXPECTED,
+            client__isnull=False,
+            project__isnull=False,
+            collection_documents__isnull=True,
+        ).annotate(paid_amount=paid_amount_subquery())
+        .filter(paid_amount=0)
+        .select_related('client__user', 'project').order_by('pk')
+    )
+
+
 class Command(BaseCommand):
     help = 'Create a fake Document graph (issuer, folders, tags, markdown + collection accounts).'
 
@@ -213,30 +228,17 @@ class Command(BaseCommand):
         n_markdown = max(1, count // 3 - signable_count)
         n_collection = max(0, count - n_markdown - signable_count)
 
-        eligible_incomes = list(
-            IncomeRecord.objects.filter(
-                kind=IncomeRecord.Kind.EXPECTED,
-                client__isnull=False,
-                project__isnull=False,
-                collection_documents__isnull=True,
-            ).select_related('client__user', 'project').order_by('pk')
-        )
+        eligible_incomes = _collection_income_candidates()
         if len(eligible_incomes) < n_collection:
             call_command(
                 'create_fake_accounting',
-                '--count', str(max(count, 60)),
+                # Two unpaid rows in each 24-row cycle have a project.
+                '--count', str(max(count, 60, n_collection * 12 + 12)),
                 '--seed', str(self.seed_context.seed),
                 '--anchor-date', self.seed_context.anchor_date.isoformat(),
                 verbosity=0,
             )
-            eligible_incomes = list(
-                IncomeRecord.objects.filter(
-                    kind=IncomeRecord.Kind.EXPECTED,
-                    client__isnull=False,
-                    project__isnull=False,
-                    collection_documents__isnull=True,
-                ).select_related('client__user', 'project').order_by('pk')
-            )
+            eligible_incomes = _collection_income_candidates()
             clients = _client_candidates()
         if len(eligible_incomes) < n_collection:
             raise RuntimeError(
@@ -310,6 +312,8 @@ class Command(BaseCommand):
             created_md += 1
 
         # ── Collection accounts ───────────────────────────────────────────
+        from accounts.management.commands._billing_seed_helpers import billing_seed_actor, collection_context_for_seed
+        billing_actor = billing_seed_actor(admin)
         # Lifecycle buckets across the generated accounts.
         lifecycles = self._lifecycle_plan(n_collection)
 
@@ -320,7 +324,6 @@ class Command(BaseCommand):
             client_user = income.client.user
             concept = BILLING_CONCEPTS[i % len(BILLING_CONCEPTS)]
             currency = 'COP'
-            base_amount = income.total_amount
             account_data = {
                 'uuid': self.seed_context.uuid(f'collection-account-{i}'),
                 'client_profile_id': income.client_id,
@@ -336,13 +339,15 @@ class Command(BaseCommand):
                 'items': [{
                     'description': concept,
                     'quantity': Decimal('1'),
-                    'unit_price': base_amount,
+                    'amount': income.total_amount,
+                    'amount_mode': 'vat_included',
                 }],
             }
+            account_data.update(collection_context_for_seed(project, i, context=self.seed_context, actor=billing_actor))
             if lifecycle == 'draft':
                 doc = ca_create_service.create_income_collection_account_draft(
                     account_data,
-                    acting_user=admin,
+                    acting_user=billing_actor,
                 )
             else:
                 issue_age_days = {
@@ -351,7 +356,7 @@ class Command(BaseCommand):
                 }.get(lifecycle, rng.choice([15, 45, 90]))
                 doc = ca_create_service.create_income_collection_account(
                     account_data,
-                    acting_user=admin,
+                    acting_user=billing_actor,
                     issued_on=self.seed_context.anchor_date - timedelta(
                         days=issue_age_days,
                     ),
@@ -560,8 +565,9 @@ class Command(BaseCommand):
         if DocumentThread.objects.exists():
             return DocumentThread.objects.count()
 
+        sources = Document.objects.filter(metadata__billing_fixture='source').values('pk')
         available = list(
-            Document.objects.select_related('document_type')
+            Document.objects.exclude(pk__in=sources).select_related('document_type')
             .order_by('id')
         )
         used = set()
@@ -601,6 +607,13 @@ class Command(BaseCommand):
             and document.document_type.code == MARKDOWN
             and not document.is_archived
         ), None)
+        if ordinary is None:
+            ordinary = next((
+                document for document in available
+                if document.pk not in used
+                and document.document_type
+                and document.document_type.code == MARKDOWN
+            ), None)
         if generated and ordinary:
             scenarios.append(('Soporte de entrega y cuenta emitida', [ordinary, generated]))
             used.update((ordinary.pk, generated.pk))

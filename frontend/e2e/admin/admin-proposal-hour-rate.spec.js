@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { ADMIN_PROPOSAL_HOUR_RATE } from '../helpers/flow-tags.js';
 
 const PROPOSAL_ID = 1;
@@ -97,11 +98,11 @@ async function openTab(page, { proposal, captured = [] } = {}) {
     return null;
   });
 
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, {
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, {
     waitUntil: 'domcontentloaded',
   });
   // Reach the tab the way an admin does, so the tab itself stays covered.
-  await page.getByRole('tab', { name: 'Tarifa por hora' }).click();
+  await selectProposalDestination(page, 'proposal', 'hour-rate');
   await page.getByTestId('hour-rate-preview').waitFor({ state: 'visible' });
   return { captured, data };
 }
@@ -260,10 +261,10 @@ test.describe('Admin — proposal hourly rate', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, {
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, {
       waitUntil: 'domcontentloaded',
     });
-    await page.getByRole('tab', { name: 'Tarifa por hora' }).click();
+    await selectProposalDestination(page, 'proposal', 'hour-rate');
 
     await expect(page.getByTestId('hour-rate-no-section'))
       .toContainText('todavía no tiene la sección');

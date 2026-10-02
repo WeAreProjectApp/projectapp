@@ -1,5 +1,72 @@
 # Architecture — ProjectApp
 
+**2026-09-29 — intereses de módulos:** `BusinessProposal.module_interests` guarda instantáneas del catálogo independientemente de `selected_modules` (alcance contratado). El endpoint público idempotente sólo actualiza intereses; el total manual alimenta panel, web y PDF. La migración materializa recargos antiguos y conserva descuentos heredados. Véase `docs/PROPOSAL_MODULE_INTERESTS.md`.
+
+> **Autenticación y recuperación de fallos — 2026-10-01:** la autenticación
+> JWT de sesión usa `SessionJWTAuthentication` y rechaza todo token con `purpose`.
+> Los tokens de verificación sólo pueden usarse en verificar/reemitir OTP;
+> los de recuperación conservan sus endpoints específicos. El panel mantiene
+> sesión Django y CSRF. Incorporar una fase de hosting confirma activación,
+> prorrateo y cuotas futuras en una transacción por fase; los avisos ocurren
+> después del commit. Refresh de LinkedIn conserva credenciales ante 429/5xx
+> y respuestas desconocidas, y sólo las borra ante rechazo explícito admitido.
+> No hay nuevos contratos públicos ni garantías de concurrencia.
+
+### Bugs y solicitudes contextualizadas — 2026-10-01
+
+`issue_reports` comparte el ciclo de vida entre REST y MCP; los adaptadores
+existentes quedan delgados. `IssueContext` conserva el origen publicado,
+`IssueResponse` agrega respuestas, `IssueEvent` conserva estados/recibos y
+`IssueAttachment` guarda PDFs históricos privados. El bug general no depende
+de contrato o guía. «Resuelto por equipo» admite reapertura del cliente sin
+modificar aprobaciones. Se reutilizan almacenamiento e índices de documentos de
+entregas. `issue_contract_reply` delega fuentes/citas a P3 y proporciona identidad,
+origen congelado y conversación pública real. Publicar revalida dueño, actor,
+destino, versiones y hashes bajo `_run`; el JSON guarda procedencia privada y
+el serializer expone una allowlist pública. El guard propio impide transferencias
+con historia de tickets, después del guard de entregas. `0073` combina `0068`
+y `0071` sin operaciones.
+Contrato del dominio: [Bugs y solicitudes](../PLATFORM_ISSUE_REPORTS.md).
+
+> **Seguimiento contractual — 2026-10-01:** `ProjectContract` y
+> `ContractAmendment` sustentan `DeliveryScope` → `DeliveryPhase` →
+> `DeliveryStage` → `Requirement`. Publicaciones, revisiones, evidencias de firma,
+> respuestas y copias documentales conservan el contenido entregado. JWT y MCP
+> comparten `delivery_workflow`, `delivery_documents` y validación de pertenencia,
+> versión y congelamiento. `ProjectPhase` mantiene su función comercial/hosting;
+> `delivery_authoring` captura `DeliveryPromptContext` y `DeliveryPromptSource`
+> inmutables por selección explícita, con archivos privados exactos, fragmentos
+> y límites visibles. Guías y respuestas conservan contexto y citas; el servidor
+> verifica las referencias, y la interpretación requiere revisión humana.
+> Descubrir fuentes, previsualizar o consultar no publica ni envía contenido.
+> `delivery_contract_reply` extiende la misma autoría mediante un proveedor de
+> tickets, con propietario, origen y conversación congelados y dos versiones
+> independientes; publicar requiere revalidación bajo lock. `delivery_closure_email`
+> conserva la constancia y sus intentos privados. REST y MCP envían sólo tras
+> revisar una preparación y confirmar manualmente, fuera de la transacción de
+> petición, usando snapshots privados del gateway común antes de SMTP. La
+> captura fallida limpia archivos; un reenvío requiere otra preparación explícita.
+> `technical_resources_sync` sólo refleja recursos y datos. La purga autorizada
+> retira las tarjetas antiguas, conserva bugs/cambios y anula sus referencias.
+> [Reglas y superficies vigentes](../PLATFORM_DELIVERY.md).
+> **Acciones y eliminación de proyectos — 2026-10-01:** `/panel/projects` usa la columna inicial `menu-start` sin título visible y comparte un menú modal de tres puntos con las tarjetas. El servicio de eliminación inventaría todas las relaciones y muestra dependencias con cantidades; sólo permite proyectos sin información operativa o relacionada. La estructura automática vacía se elimina sin dejar huérfanos. La confirmación revalida con lecturas bloqueantes dentro de una transacción y conserva la auditoría duradera. MCP reutiliza las mismas vistas, ofrece la misma vista previa y requiere confirmación sensible. No se agregan estados ni migraciones.
+
+> **Navegación del editor de propuestas — 2026-10-01:** `proposalNavigation`
+> centraliza áreas, herramientas y estados permitidos; `useProposalNavigation`
+> conserva la herramienta activa, las últimas selecciones por área y el montaje
+> diferido por herramienta. Las URLs usan `tab` para el área y `section` para la
+> herramienta, aceptan enlaces anteriores y se actualizan con `replaceState`
+> preservando otros parámetros y fragmentos, sin repetir `admin-auth`.
+
+> **Arquitectura — IVA contable, 2026-10-01:** el importe canónico permanece
+> como total incluido. Captura antes de IVA/total incluido normalizada con
+> Decimal en backend y tasa por ingreso, gasto, hosting y cuenta. Tasa nula
+> significa sin registrar; cero significa Sin IVA. Documentos congelan base,
+> impuesto y total al emitir; PDF y correo consumen esos mismos valores.
+> Utilidad, reparto y tratamiento de retenciones conservan sus reglas actuales
+> por decisión explícita del operador. La sincronización cuenta–ingreso sólo
+> cambia finanzas antes de pagos/deducciones y dentro de la emisión atómica.
+
 > **Enlaces seguros — 2026-09-29:** el estado de entrega se deriva de las
 > fechas mediante `lifecycle_status`, sin cambiar `status`. Panel y MCP comparten
 > `mark_sent`, una marca manual idempotente con evento, fecha y actor que no
@@ -551,7 +618,7 @@ flowchart TD
     URLRouter -->|/*| ServeNuxt["serve_nuxt (catch-all)"]
 
     AccountsURLs --> AuthViews["Auth Views (login, verify, refresh)"]
-    AccountsURLs --> PlatformViews["Platform Views (projects, clients, kanban)"]
+    AccountsURLs --> PlatformViews["Platform Views (projects, clients, delivery reviews)"]
 
     ContentURLs --> ProposalViews["Proposal Views (public + admin)"]
     ContentURLs --> BlogViews["Blog Views (public + admin)"]
@@ -675,12 +742,17 @@ erDiagram
     UserProfile ||--o{ VerificationCode : "has codes"
     UserProfile ||--o{ Document : "signs (optional)"
     Project ||--o{ ProjectPhase : "has phases"
-    ProjectPhase ||--o{ ProjectScopeItem : "has scope items"
-    ProjectScopeItem ||--o{ Requirement : "groups requirements"
-    Project ||--o{ Requirement : "has requirements"
+    Project ||--o{ ProjectContract : "sustenta contratos"
+    ProjectContract ||--o{ ContractAmendment : "tiene modificaciones"
+    ProjectContract ||--o{ DeliveryScope : "define alcances"
+    ContractAmendment o|--o{ DeliveryScope : "modifica alcance"
+    DeliveryScope ||--o{ DeliveryPhase : "organiza fases"
+    DeliveryPhase ||--o{ DeliveryStage : "organiza etapas"
+    DeliveryStage ||--o{ Requirement : "contiene guías"
+    DeliveryStage ||--o{ DeliveryPublication : "publica versiones"
+    DeliveryPublication ||--o{ RequirementReview : "recibe resultados"
+    Requirement ||--o{ RequirementReview : "conserva conformidades"
     Project ||--o{ ProjectDataModelEntity : "has data model entities"
-    Requirement ||--o{ RequirementComment : "has comments"
-    Requirement ||--o{ RequirementHistory : "has history"
     DataModelEntity ||--o{ ProjectDataModelEntity : "linked to projects"
     WebAppDiagnostic ||--o{ DiagnosticSection : "has sections"
     McpConnector ||--o{ McpRequestLog : "has activity"
@@ -769,13 +841,16 @@ branch before removing its now-empty parallel wrappers.
 | **Project** | Client project in platform with a real lifecycle | client_fk, name, description, current_state FK, state_review_required, compatibility status mirror (development/active/suspended/completed/decommissioned; archived only for legacy review), progress, dates, payment/hosting snapshots, production/staging/repository URLs and temporary legacy access fields |
 | **ProjectAdminAccess** | One Django-admin credential set per fixed project environment | project_fk, unique environment (`production`/`staging`), admin_url, admin_username, admin_password_encrypted, updated_by and timestamps |
 | **ProjectAccessNote** | Multiple encrypted operational notes per project | project_fk, title, content_encrypted, is_sensitive, created/updated actors and timestamps |
-| **ProjectPhase** | Execution phase of a project (from an accepted proposal) | project_fk, business_proposal_fk (unique per project), order, hosting_start_date, hosting_activated_at |
-| **ProjectScopeItem** | Scope grouping mirrored from proposal FR groups | phase_fk, title, description, kind, order, archived. Chain: Project → ProjectPhase → ProjectScopeItem → Requirement |
-| **Requirement** | Kanban board card | project_fk, phase_fk, **scope_item_fk**, title, description, status (backlog/todo/in_progress/in_review), priority, order, deliverable_fk, **content_overridden** |
-| **RequirementComment** | Comment on a requirement | requirement_fk, author_fk, text, created_at |
-| **RequirementHistory** | Audit trail for requirements | requirement_fk, field_name, old_value, new_value, changed_by |
-| **BugReport** | Bug reports per project | project_fk, title, description, status, priority, reported_by |
-| **ChangeRequest** | Change requests per project | project_fk, title, description, status, requested_by |
+| **ProjectPhase** | Referencia comercial y de hosting | project_fk, business_proposal_fk (unique per project), order, hosting_start_date, hosting_activated_at |
+| **ProjectContract / ContractAmendment** | Base contractual y sus modificaciones | project/contract FK, key, title, una fuente Document o ProposalDocument, client_visible, version |
+| **DeliveryScope / DeliveryPhase / DeliveryStage** | Alcance, fases y etapas de entrega | contrato/otrosí, jerarquía, key/title, version; alcance vigente, referencia comercial opcional, estado editorial de etapa |
+| **Requirement** | Guía comprobable por el cliente | stage FK, key, title, description, guide, order, version, review_status; proyecto derivado del contrato |
+| **DeliveryPublication / RequirementReview** | Versión publicada y resultado recibido | ronda, contenido exacto, actor, decisión, versión revisada, fecha/autor originales y evidencia de origen |
+| **DeliveryReviewDocumentEvidence** | Respaldo de la conformidad histórica, separado de la guía | revisión/documento protegidos, título y PDF privado exacto, huella; descarga autenticada del archivo registrado |
+| **ContractSignatureEvidence / DeliveryDocumentLink / DeliveryDocumentSnapshot** | Firma y documentos por nivel | método portal/externo, PDF privado, huella y origen; asociaciones jerárquicas y copias publicadas |
+| **DeliveryMessage / DeliveryWorkspace / DeliveryOperation** | Respuestas y control de escrituras | nivel, autor, requerimientos/documentos relacionados, nota interna; versión global y comprobante de reintento |
+| **BugReport** | Reportes por proyecto | project FK, source_requirement FK nullable, title, description, status, severity, reported_by; fase de entrega derivada de la etapa fuente |
+| **ChangeRequest** | Solicitudes por proyecto | project FK, source_requirement/linked_requirement FK nullable, title, description, status, created_by; conversión a guía pendiente en etapa editable |
 | **Deliverable** | Project deliverables tracking | project_fk, title, description, status, due_date |
 | **Notification** | In-platform notifications | user_fk, message, type, is_read, created_at |
 | **HostingSubscription** | Hosting billing subscription | project_fk, plan (`quarterly`/`semiannual`/`nine_month`; legacy monthly/annual readable), status, start_date, billing amounts, next_billing_date |
@@ -1098,10 +1173,9 @@ flowchart TD
         PlatformVerify["/platform/verify"]
         PlatformProfile["/platform/complete-profile"]
         PlatformDashboard["/platform/dashboard"]
-        PlatformBoard["/platform/board"]
         PlatformProjects["/platform/projects"]
         PlatformProjectDetail["/platform/projects/:id"]
-        PlatformProjectBoard["/platform/projects/:id/board"]
+        PlatformProjectDelivery["/platform/projects/:id/delivery"]
         PlatformProjectBugs["/platform/projects/:id/bugs"]
         PlatformProjectChanges["/platform/projects/:id/changes"]
         PlatformProjectDeliverables["/platform/projects/:id/deliverables"]
@@ -1214,7 +1288,7 @@ flowchart LR
         PlatformClients["platform-clients.js"]
         PlatformProjects["platform-projects.js"]
         ProjectAccessTransport["services/projectAccessApi.js"]
-        PlatformRequirements["platform-requirements.js"]
+        PlatformDelivery["platform-delivery.js"]
         PlatformBugReports["platform-bug-reports.js"]
         PlatformChangeRequests["platform-change-requests.js"]
         PlatformDeliverables["platform-deliverables.js"]
@@ -1243,7 +1317,7 @@ flowchart LR
     PlatformClients --> PlatformHTTP
     PlatformProjects --> PlatformHTTP
     ProjectAccessTransport --> PlatformHTTP
-    PlatformRequirements --> PlatformHTTP
+    PlatformDelivery --> PlatformHTTP
     PlatformBugReports --> PlatformHTTP
     PlatformChangeRequests --> PlatformHTTP
     PlatformDeliverables --> PlatformHTTP
@@ -1816,6 +1890,17 @@ historical record.
 
 Los endpoints administrativos `proposals/{id}/formalization/` delegan en un servicio independiente. `FormalContent` captura las secciones originales habilitadas. `formalization_pdf` invoca los generadores originales sin contexto de reescritura: el comercial conserva los diez capítulos acordados, ordenados por tipo por `proposal_pdf_sections`, y el técnico sólo `stack`, `dataModel` y `epics`, después del filtro normal de selección. Los dos PDF comerciales tienen orden fijo independiente de la web; encabezados, subsecciones e índice se numeran según contenido visible. Los generadores ajustan el inicio del contenido a las páginas reales de presentación e índice, con enlaces por página del índice. El detalle técnico público sigue completo. `proposal_pdf_layout` comparte entre ambos generadores las medidas de filas, badges y párrafos: reserva real de prioridad, tablas compactas, márgenes exteriores y continuidad paginada. Los parámetros de saltos de párrafo de `pdf_utils` son optativos para conservar otros tipos de PDF. Las condiciones comerciales siguen las reglas originales del catálogo; Markdown extrae texto del PDF generado. Las preparaciones con anexos anteriores a esta versión requieren revisión nueva, sin modificar sus archivos ni los envíos históricos. Una preparación privada conserva payload, HTML/texto, huella de origen y bytes de adjuntos por 24 horas. El envío reclama la preparación mediante actualización condicional de estado y entrega esos mismos bytes al gateway existente, que conserva snapshots e historial. El envío no cambia el estado comercial. Los archivos temporales se eliminan por tarea diaria y también al borrar su propuesta.
 
+En modalidad separada, `proposal_hosting_terms` resuelve los importes y el
+contenido de hosting compartidos por PDF y contrato. El anexo comercial pasa
+`include_hosting=False`; `resolve_contract_content` incorpora las condiciones al
+servicio estándar o personalizado y guarda el mismo snapshot que se renderiza.
+`service_contract_freshness` compara ese texto durante negociación, sin escribir
+documentos al consultar. La lista calcula un snapshot por propuesta y entrega
+`needs_regeneration` a las filas; la formalización bloquea el servicio obsoleto.
+La huella de origen incluye los tres descuentos. No se reescriben paquetes
+preparados ni contratos de propuestas cerradas.
+
+
 ### Modalidad de cierre
 
 `BusinessProposal.contract_modality` decide si el negocio cierra con el contrato único o con dos documentos:
@@ -1855,3 +1940,35 @@ Los resultados de movimientos rechazados también tienen `results` en la raíz.
 `DocumentFolder.creation_operation` identifica el camino de creación sin
 reescribir historia durante sincronizaciones. La reparación operativa usa
 huellas y el historial existente; no hereda cliente/proyecto al devolver documentos.
+
+## Enlaces seguros propios del cliente (P5)
+
+`secure_links.platform_*` aporta acceso por objeto, servicios compartidos, serializers de metadatos y FBVs JWT para `/api/accounts/projects/{project_id}/secure-links/`. No usa SessionAuthentication ni el cliente HTTP Panel. Owner (UserProfile) y Project.client actual deben coincidir; legacy no se adopta. El servicio reutiliza Fernet y revelación de uso único existentes, bloquea proyecto antes de enlace y compara solicitudes por HMAC de entrada normalizada. MCP administrativo usa el mismo dominio; get_secure_link_url exige permiso explícito y confirmación efímera, independiente de la lectura de contenido.
+
+El frontend nuevo mantiene borradores/URL en componentes efímeros y sólo metadatos en Pinia. Corrección conserva origen cifrado + historia y crea un sucesor OneToOne; reactivación cliente rota token. Modelos/hojas y permisos están detallados en docs/platform-secure-links.md. Las guías de roles y núcleo delivery siguen bajo P3.
+
+## P4 — Fronteras de ideas y accesos (2026-10-01)
+
+Los modelos de `accounts/models_project_ideas.py` conservan ideas, revisiones y recopilaciones; `models_project_client_access.py` conserva política y eventos sin valores sensibles. Servicios dedicados son la autoridad común de JWT Platform, sesión/CSRF Panel y herramientas MCP administrativas. Las fuentes siguen siendo Project y ProjectAdminAccess.
+
+Los grants se vinculan al destinatario y fuente mediante HMAC. Guardar, borrar o mover fuentes revoca los campos afectados; cambiar propietario revoca todos. El receptor propio de EntityRevision consume sólo nombres de campos y cubre updates masivos del historial existente. En la transferencia y Django Admin, la composición preserva financiero → Delivery → incidencias antes de revocar y reasignar/guardar. P4 reserva únicamente la revocación en ProjectAdmin.save_model contra el proyecto original bloqueado; formulario y guard son de P2. La transacción revierte revocación y eventos si falla el guardado.
+
+Las credenciales sólo se revelan con POST explícito y grant vigente, permanecen 30 segundos en estado local del componente y no viajan en listados, stores ni auditoría. Las colecciones listan resúmenes; snapshots completos se cargan bajo demanda.
+### Cuentas y hosting por proyecto — P2 (2026-10-01)
+
+`accounts/billing_models.py` añade contexto de cuenta exclusivo contrato/otrosí
+o hosting, identidad única de hosting por proyecto, equivalencias explícitas de
+evidencias y auditoría. Los servicios `billing_*`/`hosting_context` se comparten
+entre JWT, Panel con sesión/CSRF y MCP. Las representaciones financieras
+existentes conservan pagos, ciclos, fases comerciales y automatismos; ninguna
+relación histórica se deduce ni se vuelve a emitir un PDF al reclasificar.
+
+El cambio real de cliente bloquea el proyecto y valida su historia financiera
+antes de dueño/cascada; Django Admin utiliza el mismo guard. El puente acotado
+de delivery impide mover un otrosí con cuentas a otro contrato. El contrato de
+integración con P4 conserva el orden guard financiero → revocación → cambio.
+Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`.
+
+## Conservación al relanzar propuestas y autenticación de eliminación
+
+El relanzamiento forzado sólo puede retirar el stub inicial vacío de la propia propuesta. Bloquea Project antes de leer propuesta y Deliverable vigentes; el inventario de eliminación incluye relaciones archivadas y desconocidas, además de hijos del stub con _base_manager. Cualquier información conserva el grafo y devuelve 409, incluso si aparece durante la revalidación final: el conflicto sale de la transacción y revierte la desvinculación. El retiro vacío reutiliza delete_empty_project y su auditoría; no hay borrado directo ni purga. La vista de lanzamiento y las dos vistas de eliminación del Panel fijan SessionAuthentication y mantienen IsAdminUser y CSRF. El puente MCP mantiene su propio contexto y confirmación sensible.

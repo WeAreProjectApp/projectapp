@@ -2,7 +2,8 @@
 
 Secret reads require an explicit credential grant and an ephemeral confirmation.
 Create/update arguments and reveal results never enter persisted MCP payloads.
-Ordinary reads remain metadata-only; URLs are only returned at creation.
+Ordinary reads remain metadata-only; URLs require creation, reactivation or an
+explicit confirmed lookup.
 """
 
 from django.core.paginator import Paginator
@@ -71,6 +72,11 @@ def _summary(link):
         'revoked_at': link.revoked_at.isoformat() if link.revoked_at else None,
         'activation_count': link.activation_count,
         'created_at': link.created_at.isoformat(),
+        'updated_at': link.updated_at.isoformat(),
+        'owner_id': link.owner_id,
+        'audience': link.audience,
+        'replaces': link.replaces_id,
+        'replaced_by': getattr(getattr(link, 'replaced_by', None), 'pk', None),
     }
 
 
@@ -148,12 +154,12 @@ def _prepare_link_action(arguments):
 
 def _link_etags(arguments):
     # During confirmation this lock lasts through the handler and receipt write.
-    query = SecureLink.objects.all()
+    link = _link_or_error(arguments)
     if connection.in_atomic_block:
-        query = query.select_for_update()
-    link = query.filter(pk=arguments['link_id']).first()
-    if link is None:
-        raise ToolError('El enlace seguro no existe o fue eliminado.', code='NOT_FOUND')
+        try:
+            link = services._locked_link(link)
+        except services.SecureLinkError as exc:
+            raise ToolError(exc.message, code=exc.code) from exc
     return {str(link.pk): link.updated_at.isoformat()}
 
 
@@ -186,10 +192,12 @@ def reveal_secure_link_content(arguments):
 
 def list_secure_links(arguments):
     arguments = arguments or {}
-    _reject_unknown(arguments, {'client_id', 'project_id', 'status', 'lifecycle_status', 'page', 'page_size'})
-    query = SecureLink.objects.all()
+    _reject_unknown(arguments, {'owner_id', 'client_id', 'project_id', 'status', 'lifecycle_status', 'page', 'page_size'})
+    query = SecureLink.objects.select_related('replaced_by')
     if arguments.get('client_id') not in (None, ''):
         query = query.filter(client_id=_int(arguments['client_id'], 'client_id'))
+    if arguments.get('owner_id') not in (None, ''):
+        query = query.filter(owner_id=_int(arguments['owner_id'], 'owner_id'))
     if arguments.get('project_id') not in (None, ''):
         query = query.filter(project_id=_int(arguments['project_id'], 'project_id'))
     status = arguments.get('status')
@@ -239,21 +247,27 @@ def mark_secure_link_sent(arguments):
 
 
 def _prepare_reactivation(arguments):
-    _reject_unknown(arguments, {'link_id', 'validity_days'})
+    _reject_unknown(arguments, {'link_id', 'validity_days', 'rotate'})
     link = _link_or_error(arguments)
+    rotate = arguments.get('rotate', False)
+    if not isinstance(rotate, bool):
+        raise ToolError('rotate debe ser booleano.')
     try:
-        days = services._validity(arguments.get('validity_days'))
+        days = services._validity(arguments.get('validity_days'), allowed=(
+            services.PUBLIC_VALIDITY_CHOICES if link.origin == SecureLink.Origin.PLATFORM else services.VALIDITY_CHOICES
+        ))
     except services.SecureLinkError as exc:
         raise ToolError(exc.message, code=exc.code) from exc
-    return {'link_id': link.pk, 'validity_days': days}
+    return {'link_id': link.pk, 'validity_days': days, 'rotate': rotate or link.origin == SecureLink.Origin.PLATFORM}
 
 
 def reactivate_secure_link(arguments):
-    _reject_unknown(arguments, {'link_id', 'validity_days'})
+    _reject_unknown(arguments, {'link_id', 'validity_days', 'rotate'})
     try:
         link, _url = services.reactivate(
             _link_or_error(arguments), actor=mcp_actor(),
             validity_days=arguments.get('validity_days'),
+            rotate=arguments.get('rotate', False),
         )
     except services.SecureLinkError as exc:
         raise ToolError(exc.message, code=exc.code) from exc
@@ -313,6 +327,7 @@ SECURE_LINK_TOOLS = [
             'type': 'object',
             'properties': {
                 'client_id': {'type': 'integer', 'minimum': 1},
+                'owner_id': {'type': 'integer', 'minimum': 1},
                 'project_id': {'type': 'integer', 'minimum': 1},
                 'status': {'type': 'string', 'enum': list(SecureLink.STATUSES)},
                 'lifecycle_status': {'type': 'string', 'enum': list(SecureLink.LIFECYCLE_STATUSES)},
@@ -406,7 +421,7 @@ SECURE_LINK_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
-            'properties': {**_LINK_ID, **_VALIDITY},
+            'properties': {**_LINK_ID, **_VALIDITY, 'rotate': {'type': 'boolean', 'default': False, 'description': 'Platform siempre rota; enlaces legacy permiten elegir.'}},
             'required': ['link_id'],
             'additionalProperties': False,
         },

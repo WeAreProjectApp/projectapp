@@ -26,6 +26,7 @@ from reportlab.pdfgen import canvas
 
 from content.services.contract_variants import (
     COMBINED,
+    SERVICE,
     SERVICE_PARAM_KEYS,
     VARIANTS,
     template_markdown,
@@ -35,6 +36,7 @@ from content.services.contractor_identity import (
     resolve_contractor_identity,
 )
 from content.services.markdown_parser import markdown_to_blocks
+from content.services.proposal_hosting_terms import append_service_conditions, service_conditions_markdown
 from content.services.pdf_utils import (
     ESMERALD,
     ESMERALD_80,
@@ -44,7 +46,6 @@ from content.services.pdf_utils import (
     MARGIN_L,
     MARGIN_T,
     PAGE_H,
-    PAGE_W,
     CONTENT_W,
     _check_y,
     _draw_footer,
@@ -397,9 +398,14 @@ def resolve_contract_content(proposal, draft=False, *, force_default=False, vari
     raw_params = getattr(proposal, 'contract_params', None) or {}
     source = 'default' if force_default else raw_params.get(spec.source_key, 'default')
     params = _build_params(raw_params, draft=draft)
+    if variant == SERVICE:
+        params['service_conditions'] = service_conditions_markdown(proposal)
     markdown = _get_contract_markdown(
         raw_params, params, force_default=force_default, variant=variant,
     )
+    if variant == SERVICE and markdown:
+        if source == 'custom' or params['service_conditions'] not in markdown:
+            markdown = append_service_conditions(markdown, params['service_conditions'])
     snapshot = markdown
     if source != 'custom' and markdown:
         client = literal(params.get('client_full_name', ''))

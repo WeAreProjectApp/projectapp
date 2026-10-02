@@ -56,6 +56,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Cambiar estado y filtros sin ocultar el primer cliente.',
     'Leer los datos prioritarios de una tarjeta de cliente.',
     'Abrir acciones y reasignación.',
+    'Preparar, publicar y revisar guías de entrega sin perder las conformidades anteriores.',
   ]),
   projects: module('projects', [
     'frontend/components/panel/projects/',
@@ -104,6 +105,8 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Consultar el historial y sus estados.',
   ]),
   communications: module('communications', [
+    'frontend/pages/platform/projects/[id]/secure-links.vue',
+    'frontend/components/platform/secureLinks/',
     'frontend/components/communications/',
     'frontend/composables/useCommunicationFilters.js',
     'frontend/pages/panel/communications/',
@@ -111,6 +114,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/secureLinks/',
   ], [
     'Identificar varios hilos compactos sin desplazamiento horizontal.',
+    'Crear y gestionar enlaces seguros propios del proyecto, confirmando revocación y reactivación, sin revelar el secreto histórico ni desbordar sus modales.',
     'Cambiar el orden, volver al listado y conservar el criterio activo.',
     'Leer mensajes entrantes y salientes con estado, fecha y adjuntos.',
     'Registrar un mensaje y completar las acciones de auditoría.',
@@ -255,6 +259,7 @@ export function modulesForChangedFiles(files) {
 
 /** Every catalog view has one accountable responsive module or dependency. */
 export function responsiveOwnerForView(sectionId, view) {
+  if (view.url === '/platform/projects/:id/secure-links') return 'communications';
   const { file, url } = view;
   if (sectionId.startsWith('public-') || view.audience === 'public') return 'public';
   if (sectionId === 'panel-accounting') return 'accounting';
@@ -263,7 +268,7 @@ export function responsiveOwnerForView(sectionId, view) {
 
   if (url === '/panel/login' || url === '/panel/styleguide') return 'foundation';
   if (url === '/panel/clients') return 'clients';
-  if (url === '/panel/projects' || url === '/panel/projects/statuses' || url === '/panel/monitoring') return 'projects';
+  if (url === '/panel/projects' || url === '/panel/projects/statuses' || url === '/panel/projects/:id/ideas' || url === '/panel/monitoring') return 'projects';
   if (url === '/panel/documents' || url === '/panel/documents/statuses') return 'documents';
   if (url === '/panel/communications' || url === '/panel/secure-links') return 'communications';
   if (file === 'frontend/pages/panel/documents/create.vue' || file === 'frontend/pages/panel/documents/[id]/edit.vue') return 'canvas';

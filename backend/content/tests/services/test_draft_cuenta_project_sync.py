@@ -10,7 +10,8 @@ PATCH now also cascades the project to liquid children (parity with bulk).
 from decimal import Decimal
 
 import pytest
-from accounts.models import Project
+from accounts.models import Project, ProjectContract
+from accounts.services.billing_context import associate_account
 
 from content.models import (
     AccountingChangeLog,
@@ -235,6 +236,23 @@ class TestIssueAfterSync:
             EntityType.INCOME, [income.pk], project, superuser,
         )
         draft.refresh_from_db()
+        source_document = Document.objects.create(
+            title='Contrato fuente del cobro sincronizado',
+            project=project,
+            client_user=profile.user,
+        )
+        contract = ProjectContract.objects.create(
+            project=project,
+            key='sync-contract',
+            title='Contrato sincronizado',
+            document=source_document,
+        )
+        associate_account(draft.pk, superuser, {
+            'billing_nature': 'contract',
+            'contract_id': contract.pk,
+            'expected_version': 0,
+            'reason': 'Contexto contractual tras sincronizar el proyecto.',
+        })
         issue_collection_account(draft, issuer=issuer, acting_user=superuser)
 
         extension = DocumentCollectionAccount.objects.get(document=draft)

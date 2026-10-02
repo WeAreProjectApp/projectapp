@@ -354,12 +354,12 @@ _FINAL_NOTE_DATA = {
 
 
 def _calculator_module_group(**overrides):
-    """Build a calculator module group with sensible defaults."""
+    """Build an optional proposal module group with sensible defaults."""
     base = {
         'id': 'pwa_module', 'title': 'PWA',
         'is_calculator_module': True,
+        'is_always_included': False,
         'default_selected': False,
-        'price_percent': 20,
         'is_visible': True,
         'description': 'Progressive Web App.',
         'items': [{'name': 'Offline', 'description': 'Works offline.'}],
@@ -1717,8 +1717,6 @@ class TestInvestmentHostingEdgeCases:
             'client': 'Test',
             'total': None,
             'selected_modules': None,
-            '_fr_items': [],
-            '_calc_module_items': [],
             'base_weeks': 0,
         }
         page_before = pdf_canvas.getPageNumber()
@@ -1761,7 +1759,7 @@ class TestInvestmentHostingEdgeCases:
 
 # ── Generate with FR items and selected_modules ──────────────
 
-class TestGenerateWithFRItems:
+class TestGenerateWithConfigurableScope:
     @patch(
         'content.services.proposal_pdf_service.COVER_PDF',
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
@@ -1770,10 +1768,10 @@ class TestGenerateWithFRItems:
         'content.services.proposal_pdf_service.BACK_COVER_PDF',
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
-    def test_fr_items_filtered_by_selected_modules(
+    def test_configurable_items_filtered_by_selected_modules(
         self, mock_back, mock_cover, proposal,
     ):
-        """FR configurable items are filtered when selected_modules is provided."""
+        """Configurable requirements follow the persisted proposal scope."""
         ProposalSection.objects.create(
             proposal=proposal,
             section_type='greeting',
@@ -1793,6 +1791,7 @@ class TestGenerateWithFRItems:
                     'items': [
                         {'name': 'Home', 'description': 'Landing.', 'is_required': True},
                         {'name': 'Blog', 'description': 'Blog.', 'is_required': False, 'price': 500000},
+                        {'name': 'Gallery', 'description': 'Photos.', 'price': 300000},
                     ],
                 }],
                 'additionalModules': [],
@@ -1814,6 +1813,13 @@ class TestGenerateWithFRItems:
 
         assert result is not None
         assert result[:5] == b'%PDF-'
+        text = '\n'.join(
+            page.extract_text() or ''
+            for page in PdfReader(io.BytesIO(result)).pages
+        )
+        assert 'Home' in text
+        assert 'Blog' in text
+        assert 'Gallery' not in text
         mock_cover.exists.assert_called()
 
     @patch(
@@ -2030,7 +2036,7 @@ class TestSectionRendererNoPsBreaks:
 
 # ── Phase 2d: Investment with selected_modules ────────────────
 
-class TestInvestmentSelectedModulesAdv:
+class TestInvestmentManualTotalWithScope:
     @pytest.fixture
     def proposal_obj(self, db):
         return BusinessProposal.objects.create(
@@ -2040,15 +2046,14 @@ class TestInvestmentSelectedModulesAdv:
             status='sent',
         )
 
-    def test_adjusted_total_recalculates_payment_options(self, pdf_canvas, proposal_obj):
-        """Fails if selected modules leave stale payment-option amounts in the PDF."""
+    def test_selected_module_preserves_manual_payment_amounts(
+        self, pdf_canvas, proposal_obj,
+    ):
         from content.services.proposal_pdf_service import _render_investment
 
         ps = {
             'num': 1, 'client': 'Test',
             'selected_modules': ['web'],
-            '_fr_items': [],
-            '_calc_module_items': [],
             'base_weeks': 0,
         }
         data = _investment_content_json(
@@ -2058,16 +2063,16 @@ class TestInvestmentSelectedModulesAdv:
                 {'label': '50% final', 'description': '$2.500.000'},
             ],
             modules=[
-                {'id': 'web', 'name': 'Web', 'price': 3000000},
-                {'id': 'seo', 'name': 'SEO', 'price': 2000000},
+                {'id': 'web', 'name': 'Web'},
+                {'id': 'seo', 'name': 'SEO'},
             ],
         )
         y = _render_investment(pdf_canvas, data, proposal_obj, ps=ps)
         draw_ops = '\n'.join(pdf_canvas._code)
         assert y < PAGE_H - MARGIN_T
         assert '50% inicio' in draw_ops
-        assert '$1.500.000' in draw_ops
-        assert '$2.500.000' not in draw_ops
+        assert '$2.500.000' in draw_ops
+        assert '$1.500.000' not in draw_ops
 
 
 # ── Helper unit tests ─────────────────────────────────────────
@@ -2083,8 +2088,8 @@ class TestPaymentPillDesc:
     def test_uses_label_pct_against_display_num(self):
         from content.services.proposal_pdf_service import _payment_pill_desc
 
-        # Backend stored `effective × pct` = 1.728.000; the helper must
-        # NOT scale it again — it must derive 40% of display_num.
+        # The stored description can be stale; derive 40% from the manual
+        # proposal total supplied as display_num.
         pill = _payment_pill_desc(
             label='40% al firmar el contrato',
             desc='$1.728.000 COP',
@@ -2125,14 +2130,11 @@ class TestPaymentPillDesc:
         assert pill == '$0'
 
 
-class TestInvestmentRendersAgainstEffectiveTotal:
-    """Integration: ensure _render_investment writes amounts derived from the backend effective total (base + admin defaults) when no client customization is present, matching the public view contract."""
+class TestInvestmentPaymentsUseManualTotal:
+    """Payment milestones derive from the proposal's manually agreed total."""
 
     @pytest.fixture
     def proposal_obj(self, db):
-        # Base 3.2M; backend ``effective_total_investment`` will equal base
-        # because no FR calculator modules are stored on this lightweight
-        # proposal — tests below stub _effective_total_for_proposal directly.
         return BusinessProposal.objects.create(
             title='Eff', client_name='Test',
             client_email='t@t.com', language='es',
@@ -2140,28 +2142,8 @@ class TestInvestmentRendersAgainstEffectiveTotal:
             status='sent',
         )
 
-    def test_payment_amounts_match_effective_total(
-        self, pdf_canvas, proposal_obj, monkeypatch,
-    ):
-        """When backend effective is 4.32M (base + 35% admin module), the PDF must render 40/30/30 against 4.32M, not against base 3.2M nor against the stored description amount."""
-        from decimal import Decimal as _D
-
+    def test_payment_amounts_match_manual_total(self, pdf_canvas, proposal_obj):
         from content.services import proposal_pdf_service as svc
-        from content.services import proposal_totals_service as totals_service
-
-        recorded_pills = []
-        original_pill = svc._payment_pill_desc
-
-        def recording_pill(label, desc, display_num, tax_suffix=''):
-            result = original_pill(label, desc, display_num, tax_suffix=tax_suffix)
-            recorded_pills.append((label, display_num, result))
-            return result
-
-        monkeypatch.setattr(svc, '_payment_pill_desc', recording_pill)
-        monkeypatch.setattr(
-            totals_service, 'effective_total_for_proposal',
-            lambda _p: _D('4320000'),
-        )
 
         data = _investment_content_json(
             totalInvestment='$3.200.000',
@@ -2171,114 +2153,26 @@ class TestInvestmentRendersAgainstEffectiveTotal:
                 {'label': '30% al desplegar', 'description': '$1.296.000 COP'},
             ],
         )
-        ps = {'num': 1, 'client': 'Test'}  # no selected_modules → use effective
+        ps = {'num': 1, 'client': 'Test'}
         svc._render_investment(pdf_canvas, data, proposal_obj, ps=ps)
-
-        # All three pills were derived against the effective total 4.32M.
-        assert all(display == 4_320_000 for _, display, _ in recorded_pills)
-        amounts = [pill for _, _, pill in recorded_pills]
-        assert any('1.728.000' in a for a in amounts)
-        assert sum('1.296.000' in a for a in amounts) == 2
-
-
-class TestInviteModuleAINote:
-    """Cover the new product rule: invite modules with a real ``price_percent`` no longer trigger the "we'll define this in a call" note, because the calculator already shows them with a price."""
-
-    @pytest.fixture
-    def proposal_obj(self, db):
-        return BusinessProposal.objects.create(
-            title='Invite', client_name='Test',
-            client_email='t@t.com', language='es',
-            total_investment=Decimal('5000000'), currency='COP',
-            status='sent',
+        pdf_canvas.save()
+        text = '\n'.join(
+            page.extract_text() or ''
+            for page in PdfReader(pdf_canvas._test_buf).pages
         )
 
-    def _captured_strings(self, pdf_canvas):
-        """Read all text written to the canvas regardless of the helper used."""
-        # Each draw* call in ReportLab emits the literal text via showString;
-        # easier to capture by patching c.drawString / c.drawCentredString /
-        # c.drawRightString directly through monkeypatch in the test body.
-        return getattr(pdf_canvas, '_captured', [])
-
-    def _patch_canvas_capture(self, monkeypatch, c):
-        captured = []
-        for name in ('drawString', 'drawCentredString', 'drawRightString'):
-            original = getattr(c, name)
-
-            def make_wrapper(orig):
-                def wrapper(*args, **kwargs):
-                    if args:
-                        text = args[-1]
-                        if isinstance(text, str):
-                            captured.append(text)
-                    return orig(*args, **kwargs)
-                return wrapper
-
-            monkeypatch.setattr(c, name, make_wrapper(original))
-        c._captured = captured
-        return captured
-
-    def test_invite_module_with_price_percent_does_not_emit_ai_note(
-        self, pdf_canvas, proposal_obj, monkeypatch,
-    ):
-        from content.services.proposal_pdf_service import _render_investment
-
-        captured = self._patch_canvas_capture(monkeypatch, pdf_canvas)
-        ps = {
-            'num': 1, 'client': 'Test',
-            'selected_modules': ['module-ai_module'],
-            '_fr_items': [],
-            '_calc_module_items': [
-                {'id': 'module-ai_module', 'group_id': 'ai_module',
-                 'price_percent': 80, 'price': 4000000, 'is_invite': True},
-            ],
-            'base_weeks': 0,
-        }
-        data = _investment_content_json(
-            totalInvestment='$5.000.000',
-            paymentOptions=[],
-            modules=[],
-        )
-        _render_investment(pdf_canvas, data, proposal_obj, ps=ps)
-
-        joined = ' '.join(captured)
-        assert 'definir' not in joined.lower()
-        assert 'llamada personalizada' not in joined.lower()
-
-    def test_invite_module_without_price_emits_ai_note(
-        self, pdf_canvas, proposal_obj, monkeypatch,
-    ):
-        from content.services.proposal_pdf_service import _render_investment
-
-        captured = self._patch_canvas_capture(monkeypatch, pdf_canvas)
-        ps = {
-            'num': 1, 'client': 'Test',
-            'selected_modules': ['module-meta_ads'],
-            '_fr_items': [],
-            '_calc_module_items': [
-                {'id': 'module-meta_ads', 'group_id': 'meta_ads',
-                 'price_percent': 0, 'price': 0, 'is_invite': True},
-            ],
-            'base_weeks': 0,
-        }
-        data = _investment_content_json(
-            totalInvestment='$5.000.000',
-            paymentOptions=[],
-            modules=[],
-        )
-        _render_investment(pdf_canvas, data, proposal_obj, ps=ps)
-
-        joined = ' '.join(captured)
-        assert 'llamada personalizada' in joined.lower()
+        assert '$3.200.000' in text
+        assert '$1.280.000' in text
+        assert text.count('$960.000') == 2
+        assert '$1.728.000' not in text
+        assert '$1.296.000' not in text
 
 
 class TestRenderInvestmentEndToEndAdminDefaults:
-    """Mirror the prop 86 scenario end-to-end through ProposalPdfService.generate so a proposal whose admin marked a module ``default_selected=True`` (without flipping ``selected=True``) renders against the same effective total the public client view shows."""
+    """Render admin-owned scope without changing the agreed investment."""
 
     @pytest.fixture
     def proposal_obj(self, db):
-        # Shared by the two legacy `test_adjusted_*` / `test_ai_scope_*`
-        # methods that live below as part of this class.
         return BusinessProposal.objects.create(
             title='InvSelMod', client_name='Test',
             client_email='t@t.com', language='es',
@@ -2286,7 +2180,7 @@ class TestRenderInvestmentEndToEndAdminDefaults:
             status='sent',
         )
 
-    def test_default_selected_only_module_counts_in_effective(self, db):
+    def test_default_selected_module_preserves_manual_investment(self, db):
         from content.services.proposal_pdf_service import (
             ProposalPdfService,
             default_selected_modules_from_content,
@@ -2305,7 +2199,6 @@ class TestRenderInvestmentEndToEndAdminDefaults:
             content_json=_fr_section_content_json(additionalModules=[
                 _calculator_module_group(
                     id='branding', default_selected=True,
-                    price_percent=35,
                 ),
             ]),
         )
@@ -2335,13 +2228,12 @@ class TestRenderInvestmentEndToEndAdminDefaults:
             (page.extract_text() or '')
             for page in PdfReader(_io.BytesIO(pdf)).pages
         )
-        # Effective = base 6M + 35% × 6M = 8.1M → 40% = 3.24M, 60% = 4.86M.
-        assert '$8.100.000' in text
-        assert '$3.240.000' in text
-        assert '$4.860.000' in text
+        assert '$6.000.000' in text
+        assert '$2.400.000' in text
+        assert '$3.600.000' in text
+        assert '$8.100.000' not in text
 
-    def test_explicit_selected_false_excludes_from_total_and_fr(self, db):
-        """Admin explicitly unchecked a module (``selected=False``), even though ``default_selected=True``. Under the 'selected is source of truth' rule, the module is excluded from both the effective total and the FR section."""
+    def test_explicit_selected_false_excludes_module_from_scope(self, db):
         from content.services.proposal_pdf_service import (
             ProposalPdfService,
             default_selected_modules_from_content,
@@ -2362,7 +2254,6 @@ class TestRenderInvestmentEndToEndAdminDefaults:
                     id='branding',
                     title='Identidad Visual',
                     default_selected=True, selected=False,
-                    price_percent=35,
                 ),
             ]),
         )
@@ -2380,7 +2271,6 @@ class TestRenderInvestmentEndToEndAdminDefaults:
         )
 
         sel = default_selected_modules_from_content(proposal)
-        # Explicit selected=False wins over default_selected=True — not counted.
         assert 'module-branding' not in sel
 
         pdf = ProposalPdfService.generate(proposal, selected_modules=sel)
@@ -2391,66 +2281,37 @@ class TestRenderInvestmentEndToEndAdminDefaults:
             (page.extract_text() or '')
             for page in PdfReader(_io.BytesIO(pdf)).pages
         )
-        # Base $6M renders (no module added to total).
-        assert '$6.000.000' in text
-        # FR section must NOT list the explicitly unchecked module.
         assert 'Identidad Visual' not in text
 
-    def test_adjusted_duration_renders_when_modules_deselected(self, pdf_canvas, proposal_obj):
-        """Fails if deselected modules do not emit the reduced duration tile."""
+    def test_manual_duration_renders_when_modules_deselected(
+        self, pdf_canvas, proposal_obj,
+    ):
         from content.services.proposal_pdf_service import _render_investment
 
         ps = {
             'num': 1, 'client': 'Test',
             'selected_modules': [],
-            '_fr_items': [
-                {'id': 'fr-views-home', 'price': 100000, 'groupId': 'views', '_source': ''},
-                {'id': 'fr-views-about', 'price': 100000, 'groupId': 'views', '_source': ''},
-                {'id': 'fr-views-contact', 'price': 100000, 'groupId': 'views', '_source': ''},
-            ],
-            '_calc_module_items': [],
             'base_weeks': 12,
         }
         data = _investment_content_json(
             totalInvestment='$5.000.000',
             paymentOptions=[],
             modules=[
-                {'id': 'mod1', 'name': 'Mod', 'price': 500000, '_source': 'investment'},
-                {'id': 'mod2', 'name': 'Mod2', 'price': 500000, '_source': 'investment'},
+                {'id': 'mod1', 'name': 'Mod'},
+                {'id': 'mod2', 'name': 'Mod2'},
             ],
         )
         y = _render_investment(pdf_canvas, data, proposal_obj, ps=ps)
         draw_ops = '\n'.join(pdf_canvas._code)
         assert y < PAGE_H - MARGIN_T
-        assert '9 semanas' in draw_ops
-        assert 'reducido de 12' in draw_ops
-
-    def test_ai_scope_note_renders_for_invite_module(self, pdf_canvas, proposal_obj):
-        """AI scope note renders when a calculator module with is_invite is selected."""
-        from content.services.proposal_pdf_service import _render_investment
-
-        ps = {
-            'num': 1, 'client': 'Test',
-            'selected_modules': ['module-ai_module'],
-            '_fr_items': [],
-            '_calc_module_items': [
-                {'id': 'module-ai_module', 'group_id': 'ai_module',
-                 'price_percent': None, 'price': 0, 'is_invite': True},
-            ],
-            'base_weeks': 0,
-        }
-        data = _investment_content_json(
-            totalInvestment='$5.000.000',
-            paymentOptions=[],
-            modules=[],
-        )
-        y = _render_investment(pdf_canvas, data, proposal_obj, ps=ps)
-        assert isinstance(y, (int, float))
+        assert '12 semanas' in draw_ops
+        assert '9 semanas' not in draw_ops
+        assert 'reducido de 12' not in draw_ops
 
 
-# ── Phase 2e: generate() with calculator modules + base_weeks ─
+# ── Generate with optional proposal scope ─
 
-class TestGenerateCalculatorModules:
+class TestGenerateContentModes:
     @patch(
         'content.services.proposal_pdf_service.COVER_PDF',
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
@@ -2459,10 +2320,9 @@ class TestGenerateCalculatorModules:
         'content.services.proposal_pdf_service.BACK_COVER_PDF',
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
-    def test_calculator_modules_collected_and_priced(
+    def test_selected_optional_module_renders_in_pdf(
         self, mock_back, mock_cover, proposal,
     ):
-        """Calculator module items are collected and prices computed from base total."""
         ProposalSection.objects.create(
             proposal=proposal,
             section_type='functional_requirements',
@@ -2479,23 +2339,18 @@ class TestGenerateCalculatorModules:
                 totalInvestment='$10.000.000',
             ),
         )
-        ProposalSection.objects.create(
-            proposal=proposal,
-            section_type='timeline',
-            title='Timeline', order=2, is_enabled=True,
-            content_json={
-                'index': '3', 'title': 'Cronograma',
-                'introText': '', 'totalDuration': '8 semanas',
-                'phases': [],
-            },
-        )
-
         result = ProposalPdfService.generate(
             proposal, selected_modules=['module-pwa_module'],
         )
 
         assert result is not None
         assert result[:5] == b'%PDF-'
+        text = '\n'.join(
+            page.extract_text() or ''
+            for page in PdfReader(io.BytesIO(result)).pages
+        )
+        assert 'PWA' in text
+        assert 'Offline' in text
         mock_cover.exists.assert_called()
 
     @patch(
@@ -2589,7 +2444,6 @@ class TestFinalNoteBadgeOverflow:
         data = _final_note_data(personalNote='', commitmentBadges=many_badges)
         ps = {'num': 1, 'client': 'Test', 'total': None}
         SECTION_RENDERERS['final_note'](pdf_canvas, data, proposal, ps=ps)
-        draw_ops = '\n'.join(pdf_canvas._code)
         first_badge_op = next(
             op for op in pdf_canvas._code
             if '(Very Long Badge Title Number 0)' in op
@@ -2622,8 +2476,9 @@ class TestRenderRawTextBoldLine:
 
 
 class TestInvestmentHostingRenewalContent:
-    """The renewal callout must actually put text in the generated PDF, not
-    just avoid crashing — proposal_pdf_service.py:1534-1560.
+    """Verify renewal content in the generated investment PDF.
+
+    The tests assert rendered copy instead of merely checking PDF creation.
     """
 
     def _proposal_with_investment(self, hosting_plan):
@@ -2650,11 +2505,9 @@ class TestInvestmentHostingRenewalContent:
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
     def test_custom_renewal_note_text_appears_in_generated_pdf(self, _mock_back, _mock_cover):  # quality: disable unverified_mock (file-path stubs prevent real disk I/O; PDF content is the contract)  # noqa: PT019
-        """Catches the renderer silently dropping/mangling the admin-written
-        renewalNote text instead of drawing it in the RENOVACIONES callout,
-        or dropping the hosting specs/pricing table rendered alongside it
-        (maximal hosting payload: specs grid + normalized 9/6/3 pricing
-        table + coverage callout, all sharing this SECTION_RENDERERS entry).
+        """Render an admin-written renewal note in the renewal callout.
+
+        The maximal hosting payload also retains its specs and tier table.
         """
         proposal = self._proposal_with_investment(_HOSTING_PLAN_WITH_SPECS | {
             'renewalNote': 'La renovación cada nueve meses queda fija en $987.654 COP durante el primer trienio.',
@@ -2682,9 +2535,9 @@ class TestInvestmentHostingRenewalContent:
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
     def test_default_smlmv_renewal_formula_appears_when_note_missing(self, _mock_back, _mock_cover):  # quality: disable unverified_mock (file-path stubs prevent real disk I/O; PDF content is the contract)  # noqa: PT019
-        """Catches the auto-generated SMLMV renewal formula being dropped or
-        replaced by empty output when a hosting title is set but no explicit
-        renewalNote was written.
+        """Render the default SMLMV formula when no custom note exists.
+
+        A hosting title without renewalNote still produces useful copy.
         """
         proposal = self._proposal_with_investment({
             'title': 'Starter',
@@ -2713,8 +2566,9 @@ class TestInvestmentHostingRenewalContent:
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
     def test_legacy_pricing_fields_render_current_tiers(self, _mock_back, _mock_cover):  # quality: disable unverified_mock (file-path stubs prevent real disk I/O; PDF content is the contract)  # noqa: PT019
-        """Catches active proposals with legacy monthly/annual price fields
-        rendering obsolete labels instead of the normalized 9/6/3 terms.
+        """Normalize legacy hosting fields to the current billing tiers.
+
+        Active proposals render 9/6/3 terms instead of obsolete labels.
         """
         proposal = self._proposal_with_investment({
             'title': 'Starter',
@@ -2796,30 +2650,6 @@ class TestDrawBannerBoxEmptyText:
         assert end_y < start_y
 
 
-class TestInvestmentDurationFeaturesReduction:
-    def test_features_group_deselection_reduces_duration(self, pdf_canvas, proposal):
-        """Deselected items with groupId='features' reduce adjusted weeks (L1291-1292)."""
-        from content.services.proposal_pdf_service import _render_investment
-
-        ps = {
-            'num': 1, 'client': 'Test',
-            'selected_modules': [],
-            '_fr_items': [
-                {'id': 'fr-feat-a', 'price': 0, 'groupId': 'features', '_source': ''},
-                {'id': 'fr-feat-b', 'price': 0, 'groupId': 'features', '_source': ''},
-                {'id': 'fr-feat-c', 'price': 0, 'groupId': 'features', '_source': ''},
-            ],
-            '_calc_module_items': [],
-            'base_weeks': 12,
-        }
-        data = _investment_content_json(
-            totalInvestment='$5.000.000',
-            paymentOptions=[], modules=[],
-        )
-        y = _render_investment(pdf_canvas, data, proposal, ps=ps)
-        assert isinstance(y, (int, float))
-
-
 class TestFinalNoteEmptyBadgeTitle:
     def test_badge_with_empty_title_is_skipped(self, pdf_canvas, proposal):
         """Badge with empty/None title is skipped in the loop."""
@@ -2855,93 +2685,6 @@ class TestNextStepsEmptyContactTitle:
         assert 'Email' in draw_ops
         assert 'team@test.com' in draw_ops
         assert 'skip@test.com' not in draw_ops
-
-
-class TestCalculatorModuleInvalidPricePercent:
-    @patch(
-        'content.services.proposal_pdf_service.COVER_PDF',
-        new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
-    )
-    @patch(
-        'content.services.proposal_pdf_service.BACK_COVER_PDF',
-        new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
-    )
-    def test_invalid_price_percent_falls_back_to_none(
-        self, mock_back, mock_cover, proposal,
-    ):
-        """Calculator module with non-numeric price_percent catches TypeError."""
-        ProposalSection.objects.create(
-            proposal=proposal,
-            section_type='functional_requirements',
-            title='Reqs', order=0, is_enabled=True,
-            content_json={
-                'index': '1', 'title': 'Requirements',
-                'intro': '',
-                'groups': [{
-                    'id': 'bad_module', 'title': 'Bad',
-                    'is_calculator_module': True,
-                    'price_percent': 'not-a-number',
-                    'is_visible': True,
-                    'description': 'Bad price.',
-                    'items': [{'name': 'X', 'description': 'Y.'}],
-                }],
-                'additionalModules': [],
-            },
-        )
-        ProposalSection.objects.create(
-            proposal=proposal,
-            section_type='investment',
-            title='Inv', order=1, is_enabled=True,
-            content_json=_investment_content_json(totalInvestment='$1.000.000'),
-        )
-
-        result = ProposalPdfService.generate(
-            proposal, selected_modules=['module-bad_module'],
-        )
-
-        assert result is not None
-        assert result[:5] == b'%PDF-'
-        mock_cover.exists.assert_called()
-
-    @patch(
-        'content.services.proposal_pdf_service.COVER_PDF',
-        new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
-    )
-    @patch(
-        'content.services.proposal_pdf_service.BACK_COVER_PDF',
-        new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
-    )
-    def test_all_configurable_items_deselected_skips_group(
-        self, mock_back, mock_cover, proposal,
-    ):
-        """FR group where all configurable items are deselected is skipped."""
-        ProposalSection.objects.create(
-            proposal=proposal,
-            section_type='functional_requirements',
-            title='Reqs', order=0, is_enabled=True,
-            content_json={
-                'index': '1', 'title': 'Requirements',
-                'intro': '',
-                'groups': [{
-                    'id': 'optional_only', 'title': 'Optional',
-                    'is_visible': True,
-                    'description': 'All optional.',
-                    'items': [
-                        {'name': 'A', 'description': 'A.', 'is_required': False, 'price': 100},
-                        {'name': 'B', 'description': 'B.', 'is_required': False, 'price': 200},
-                    ],
-                }],
-                'additionalModules': [],
-            },
-        )
-
-        result = ProposalPdfService.generate(
-            proposal, selected_modules=[],
-        )
-
-        assert result is not None
-        assert result[:5] == b'%PDF-'
-        mock_cover.exists.assert_called()
 
 
 # ── default_selected_modules_from_content tests ─────────────
@@ -3043,7 +2786,7 @@ class TestDefaultSelectedModulesFromContent:
         assert 'module-hidden' not in result
 
     def test_confirmed_persisted_selected_modules_wins_over_content_json(self):
-        """Once the client confirmed a selection, the persisted list is the source of truth and overrides the admin's content_json defaults — mirrors the frontend behaviour in pages/proposal/[uuid]/index.vue."""
+        """A legacy confirmed scope snapshot overrides older admin defaults."""
         proposal = self._make_proposal(
             fr_content=_fr_section_content_json(additionalModules=[
                 _calculator_module_group(id='pwa', selected=False),
@@ -3057,7 +2800,7 @@ class TestDefaultSelectedModulesFromContent:
         assert result == ['module-pwa']
 
     def test_confirmed_persisted_bare_ids_are_normalized_to_canonical_prefixed_form(self):
-        """Legacy payloads without the module-/group- prefix must still match the prefixed ids the PDF renderer builds internally; otherwise the additional-module prices never sum into the client-facing total."""
+        """Legacy bare IDs normalize to the canonical PDF scope identifiers."""
         proposal = self._make_proposal(
             fr_content=_fr_section_content_json(additionalModules=[
                 _calculator_module_group(id='pwa', selected=False),
@@ -3071,7 +2814,7 @@ class TestDefaultSelectedModulesFromContent:
         assert result == ['module-pwa']
 
     def test_confirmed_empty_selection_does_not_leak_default_selected_modules(self):
-        """When the client confirmed an empty selection, the PDF must not fall back to the admin's ``default_selected`` modules — the empty list is the literal source of truth (unless a module is explicitly pinned)."""
+        """A legacy confirmed empty scope does not restore admin defaults."""
         proposal = self._make_proposal(
             fr_content=_fr_section_content_json(additionalModules=[
                 _calculator_module_group(
@@ -3087,7 +2830,7 @@ class TestDefaultSelectedModulesFromContent:
         assert result == []
 
     def test_confirmed_empty_selection_still_includes_admin_pinned_modules(self):
-        """A calculator module the admin pinned explicitly (``selected=True``) is forced into the PDF scope even when the client confirmed an empty selection — "I checked it in the panel" wins."""
+        """An admin pin remains in scope over a legacy confirmed empty list."""
         proposal = self._make_proposal(
             fr_content=_fr_section_content_json(additionalModules=[
                 _calculator_module_group(id='pwa', selected=True),
@@ -3101,11 +2844,11 @@ class TestDefaultSelectedModulesFromContent:
         assert result == ['module-pwa']
 
     def test_confirmed_unions_persisted_with_admin_pinned_modules(self):
-        """The PDF scope = the client's confirmed list ∪ the admin's pins."""
+        """PDF scope combines legacy confirmed IDs with admin pins."""
         proposal = self._make_proposal(
             fr_content=_fr_section_content_json(additionalModules=[
-                _calculator_module_group(id='pwa', selected=False, price_percent=40),
-                _calculator_module_group(id='ai', selected=True, price_percent=80),
+                _calculator_module_group(id='pwa', selected=False),
+                _calculator_module_group(id='ai', selected=True),
             ]),
             persisted=['module-pwa'],
             confirmed=True,
@@ -3301,7 +3044,7 @@ class TestInvestmentModelTotalOverride:
 
 
 class TestValueAddedModulesSection:
-    """The PDF must render value_added_modules in its own section with the admin-written justifications, dedupe those IDs from functional_requirements, and exclude unselected calculator modules."""
+    """The PDF renders courtesy modules separately from optional scope."""
 
     def _proposal_with_value_added(self, *, selected_modules=None):
         p = BusinessProposal.objects.create(
@@ -3320,13 +3063,15 @@ class TestValueAddedModulesSection:
                 'groups': [
                     {
                         'id': 'admin_module', 'title': 'Panel administrativo',
-                        'icon': '🛠', 'is_visible': True, 'price_percent': 0,
+                        'icon': '🛠', 'is_visible': True,
+                        'is_always_included': True,
                         'description': 'Panel para gestionar contenido.',
                         'items': [],
                     },
                     {
                         'id': 'analytics_dashboard', 'title': 'Dashboard analítico',
-                        'icon': '📊', 'is_visible': True, 'price_percent': 0,
+                        'icon': '📊', 'is_visible': True,
+                        'is_always_included': True,
                         'description': 'Métricas de comportamiento.',
                         'items': [],
                     },
@@ -3335,7 +3080,8 @@ class TestValueAddedModulesSection:
                     {
                         'id': 'pwa_module', 'title': 'Aplicación PWA',
                         'icon': '📱', 'is_visible': True,
-                        'is_calculator_module': True, 'price_percent': 20,
+                        'is_calculator_module': True,
+                        'is_always_included': False,
                         'description': 'Convierte el sitio en PWA.',
                         'items': [],
                     },
@@ -3409,7 +3155,7 @@ class TestValueAddedModulesSection:
         'content.services.proposal_pdf_service.BACK_COVER_PDF',
         new_callable=lambda: MagicMock(exists=MagicMock(return_value=False)),
     )
-    def test_unselected_calculator_module_absent_from_pdf(self, _mock_back, _mock_cover):  # quality: disable unverified_mock (file-path stubs prevent real disk I/O; PDF content is the contract)  # noqa: PT019
+    def test_unselected_optional_module_absent_from_pdf(self, _mock_back, _mock_cover):  # quality: disable unverified_mock (file-path stubs prevent real disk I/O; PDF content is the contract)  # noqa: PT019
         proposal, _ = self._proposal_with_value_added()
         pdf_bytes = ProposalPdfService.generate(proposal, selected_modules=[])
 
@@ -3509,8 +3255,10 @@ class TestGenerateWithLinkedItemRequirements:
     def test_deselected_module_requirements_excluded(
         self, mock_back, mock_cover, proposal,
     ):
-        """Requirements linked to a deselected calculator module don't leak
-        into the group detail pages."""
+        """Exclude requirements for a deselected optional module.
+
+        Linked technical copy must not leak into the group detail pages.
+        """
         ProposalSection.objects.create(
             proposal=proposal,
             section_type='functional_requirements',
@@ -3524,7 +3272,8 @@ class TestGenerateWithLinkedItemRequirements:
                 }],
                 'additionalModules': [{
                     'id': 'billing_module', 'title': 'Facturación',
-                    'is_calculator_module': True, 'price_percent': 10,
+                    'is_calculator_module': True,
+                    'is_always_included': False,
                     'items': [{'name': 'Factura DIAN', 'description': 'Emisión.',
                                'id': 'item-billing_module-factura-dian'}],
                 }],
@@ -3564,9 +3313,10 @@ class TestGenerateWithLinkedItemRequirements:
     def test_messy_whitespace_and_bold_markers_normalized(
         self, mock_back, mock_cover, proposal,
     ):
-        """Tabs/newlines in item names and **bold**/<b> markers in linked
-        titles are collapsed before drawing instead of leaking as .notdef
-        glyphs or literal asterisks."""
+        """Normalize whitespace and bold markers in linked content.
+
+        Drawing does not leak .notdef glyphs or literal asterisks.
+        """
         item = {'name': 'Registro\tde\nusuario', 'description': 'Alta.',
                 'id': 'item-views-registro-de-usuario'}
         ProposalSection.objects.create(

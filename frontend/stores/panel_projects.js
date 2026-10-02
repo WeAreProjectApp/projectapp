@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia';
-import { get_request, create_request, patch_request } from './services/request_http';
+import { get_request, create_request, patch_request, delete_request } from './services/request_http';
 import { normalizeApiError } from './services/normalize_api_error';
 import { useAccountingStore } from './accounting';
 import { useDocumentStore } from './documents';
@@ -74,6 +74,37 @@ export const usePanelProjectsStore = defineStore('panel_projects', {
   }),
 
   actions: {
+    async previewDeletion(id) {
+      try {
+        const response = await get_request(`projects/${id}/delete-preview/`);
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, ...normalizeApiError(error, 'No se pudieron comprobar las dependencias del proyecto.') };
+      }
+    },
+
+    async deleteProject(id) {
+      this.isUpdating = true;
+      try {
+        await delete_request(`projects/${id}/delete/`);
+        // A successful DELETE is final even if the subsequent refresh fails.
+        // Remove the row locally first so retrying cannot submit it again.
+        this.records = this.records.filter((record) => record.id !== id);
+        invalidatePickerCache();
+        const refresh = await this.fetchProjects();
+        return { success: true, refreshFailed: !refresh.success };
+      } catch (error) {
+        return {
+          success: false,
+          ...normalizeApiError(error, 'No se pudo eliminar el proyecto.'),
+          preview: error?.response?.data?.code === 'project_delete_blocked'
+            ? error.response.data : null,
+        };
+      } finally {
+        this.isUpdating = false;
+      }
+    },
+
     async fetchProjects() {
       this.isLoading = true;
       this.error = null;

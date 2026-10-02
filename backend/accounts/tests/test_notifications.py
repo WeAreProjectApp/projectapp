@@ -1,3 +1,4 @@
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import connection
@@ -89,8 +90,8 @@ def deliverable(project, client_user):
 @pytest.fixture
 def source_requirement(project):
     bp = BusinessProposal.objects.create(title='Notif proposal', client_name='c')
-    phase = ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
-    return Requirement.objects.create(phase=phase, title='Notif req')
+    phase = make_delivery_stage(project, phase_title=bp.title)
+    return make_requirement(phase, title='Notif req')
 
 
 @pytest.fixture

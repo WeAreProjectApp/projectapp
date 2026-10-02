@@ -226,7 +226,7 @@ const props = defineProps({
 const valueAddedFreeGroups = computed(() => {
   const fr = (props.allSections || []).find((s) => s.section_type === 'functional_requirements');
   const groups = fr?.content_json?.groups || [];
-  return groups.filter((g) => g && g.id && (g.price_percent ?? 0) === 0);
+  return groups.filter((g) => g && g.id && (g.is_always_included ?? !g.is_calculator_module));
 });
 
 const valueAddedLabelById = computed(() => {

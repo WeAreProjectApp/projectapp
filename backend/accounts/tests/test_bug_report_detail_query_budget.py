@@ -1,5 +1,9 @@
-"""Response and query-budget contracts for bug-report detail."""
+"""Bug detail stays bounded with two history reads and batched comment evidence.
 
+These three additive reads extend the original five-query detail contract.
+"""
+
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from types import SimpleNamespace
 
 import pytest
@@ -13,14 +17,12 @@ from accounts.models import (
     BugComment,
     BugReport,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 from accounts.serializers import BugReportDetailSerializer
 
 User = get_user_model()
-MAX_BUG_REPORT_DETAIL_QUERIES = 5
+MAX_BUG_REPORT_DETAIL_QUERIES = 8
 
 
 def _detail_url(project_id, bug_id):
@@ -105,21 +107,15 @@ def bug_report(users_and_headers):
         title='Bug detail proposal',
         client_name='Bug detail client',
     )
-    phase = ProjectPhase.objects.create(project=project, business_proposal=proposal, order=1)
-    requirement = Requirement.objects.create(phase=phase, title='Source requirement')
-    bug = BugReport.objects.create(
-        project=project,
-        reported_by=client,
-        phase=phase,
-        source_requirement=requirement,
-        title='Bug report detail',
-    )
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title='Source requirement')
+    bug = BugReport.objects.create(project=project, reported_by=client, source_requirement=requirement, title='Bug report detail')
     return project, bug
 
 
 @pytest.mark.django_db
 def test_admin_detail_keeps_comment_queries_constant_as_comments_grow(
-    api_client, users_and_headers, bug_report,
+    api_client, users_and_headers, bug_report, record_property,
 ):
     """Falla si el detalle vuelve a consultar autores de comentarios a medida que crecen."""
     _, _, admin_headers, _ = users_and_headers
@@ -135,11 +131,12 @@ def test_admin_detail_keeps_comment_queries_constant_as_comments_grow(
 
     one_body = one_response.json()
     fifty_body = fifty_response.json()
+    record_property('query_count_bug_detail_one', len(one_comment_queries))
+    record_property('query_count_bug_detail_fifty', len(fifty_comment_queries))
 
-    assert one_response.status_code == 200
-    assert len(one_body['comments']) == 1
-    assert fifty_response.status_code == 200
-    assert len(fifty_body['comments']) == 50
+    assert (one_response.status_code, len(one_body['comments'])) == (200, 1)
+    assert (fifty_response.status_code, len(fifty_body['comments'])) == (200, 50)
+    assert (one_body['responses'], fifty_body['responses'], one_body['history'], fifty_body['history']) == ([], [], [], [])
     assert len(one_comment_queries) == len(fifty_comment_queries)
     assert len(fifty_comment_queries) <= MAX_BUG_REPORT_DETAIL_QUERIES
 

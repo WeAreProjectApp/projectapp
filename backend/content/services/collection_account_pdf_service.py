@@ -1,10 +1,9 @@
 """
 Generate a branded PDF for collection account documents from relational data.
 
-The page is cut to its content instead of forcing an A4 sheet: we bill three
-concepts (development, diagnostics, hosting), never by units and never with
-itemised taxes, so an A4 cuenta de cobro was half empty. Width is fixed at A5
-(148mm) and the height comes from measuring the content — see `generate`.
+The page is cut to its content instead of forcing an A4 sheet. Service charges
+show their base, optional IVA and total. Width is fixed at A5 (148mm) and the
+height comes from measuring the content — see `generate`.
 """
 import io
 import logging
@@ -22,11 +21,18 @@ from content.services.pdf_utils import (
     _draw_header_bar,
     _draw_logo_watermark,
     _font,
-    _format_cop,
+    _format_cop as _format_whole_cop,
     _register_fonts,
     amount_in_words_es,
     format_date_es,
 )
+
+from content.services.accounting_vat import format_vat_money, quantize_money
+
+
+def _format_cop(value):
+    return format_vat_money(value, _format_whole_cop)
+
 
 logger = logging.getLogger(__name__)
 
@@ -410,8 +416,16 @@ class CollectionAccountPdfService:
                 y -= 11
             y -= 3
 
-        # Only the Total: nothing carries itemised tax, so Subtotal always
-        # repeated this same figure.
+        if ext.vat_rate is not None or document.tax_total:
+            rate_label = f' ({ext.vat_rate.normalize():f} %)' if ext.vat_rate is not None else ''
+            ensure_space(64)
+            c.setFont(_font('regular'), 9)
+            c.setFillColor(GRAY_700)
+            c.drawRightString(right_x, y, f'Valor antes de IVA: {_format_cop(document.total - document.tax_total)}')
+            y -= 14
+            c.drawRightString(right_x, y, f'IVA{rate_label}: {_format_cop(document.tax_total)}')
+            y -= 14
+
         y -= 9
         ensure_space(34)
         c.setFont(_font('bold'), 10)
@@ -422,7 +436,11 @@ class CollectionAccountPdfService:
         )
         y -= 16
 
-        words = amount_in_words_es(document.total)
+        total = quantize_money(document.total)
+        words = amount_in_words_es(total)
+        cents = int((total - int(total)) * 100)
+        if cents:
+            words = words.replace(' M/CTE', f' con {cents:02d}/100 M/CTE')
         if words:
             paragraph(f'Son: {words}', 'regular', 8, GRAY_700, 11)
         y -= 10

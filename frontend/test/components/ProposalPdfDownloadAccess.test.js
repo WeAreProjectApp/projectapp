@@ -82,13 +82,14 @@ it('reports a network failure visibly', async () => {
   expect(wrapper.get('button').element.disabled).toBe(false);
 });
 
-it('keeps the selected scope in a technical download', async () => {
-  wrapper = mount(PdfDownloadButton, { props: { viewMode: 'technical', selectedModuleIds: ['module-a'] } });
+it('requests the technical document using the saved proposal scope', async () => {
+  proposal.selected_modules = ['module-a'];
+  wrapper = mount(PdfDownloadButton, { props: { viewMode: 'technical' } });
 
   await wrapper.get('button').trigger('click');
   await flushPromises();
 
-  expect(global.fetch).toHaveBeenCalledWith('/api/proposals/proposal-uuid/pdf/?selected_modules=module-a&doc=technical');
+  expect(global.fetch).toHaveBeenCalledWith('/api/proposals/proposal-uuid/pdf/?doc=technical');
   expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
 });
 
@@ -124,4 +125,17 @@ it('shows late expiry from the closing download', async () => {
 
   expect(wrapper.get('[role="status"]').text()).toBe(expiredMessage);
   expect(wrapper.get('a[download]').attributes('href')).toBeUndefined();
+});
+
+it('downloads the closing PDF from the persisted proposal', async () => {
+  // Fails if the closing action sends a client-side scope override to the retired API.
+  proposal.status = 'accepted';
+  proposal.selected_modules = ['module-a'];
+  wrapper = mount(ProposalClosing, { props: { proposal, viewMode: 'technical' } });
+
+  await wrapper.get('a[download]').trigger('click');
+  await flushPromises();
+
+  expect(global.fetch).toHaveBeenCalledWith('/api/proposals/proposal-uuid/pdf/?doc=technical');
+  expect(HTMLAnchorElement.prototype.click).toHaveBeenCalledTimes(1);
 });

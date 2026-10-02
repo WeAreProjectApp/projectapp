@@ -42,13 +42,11 @@ const REDIRECT_DESTINATIONS = Object.freeze({
   '/panel/diagnostics/defaults': '/panel/defaults?mode=diagnostic',
   '/platform/dashboard': '/platform/projects',
   '/platform/board': '/platform/projects',
+  '/platform/projects/:id/board': '/platform/projects/1/delivery',
   '/platform/bugs': '/platform/projects',
   '/platform/changes': '/platform/projects',
   '/platform/deliverables': '/platform/projects',
-  '/platform/payments': '/platform/projects',
   '/platform/access': '/platform/projects',
-  '/platform/collection-accounts': '/platform/projects',
-  '/platform/collection-accounts/:id': '/platform/projects',
   '/platform': '/platform/projects',
   '/platform/projects/:id/deliverables/:deliverableId': '/platform/projects/1/deliverables',
   '/platform/admin-login': '/platform/login',
@@ -68,20 +66,33 @@ const REDIRECT_FLOW_BY_URL = Object.freeze({
   '/panel/diagnostics/defaults': 'admin-defaults-unified',
   '/platform/dashboard': 'platform-legacy-route-redirects',
   '/platform/board': 'platform-legacy-route-redirects',
+  '/platform/projects/:id/board': 'platform-legacy-route-redirects',
   '/platform/bugs': 'platform-legacy-route-redirects',
   '/platform/changes': 'platform-legacy-route-redirects',
   '/platform/deliverables': 'platform-legacy-route-redirects',
-  '/platform/payments': 'platform-legacy-route-redirects',
   '/platform/access': 'platform-legacy-route-redirects',
-  '/platform/collection-accounts': 'platform-legacy-route-redirects',
-  '/platform/collection-accounts/:id': 'platform-legacy-route-redirects',
   '/platform': 'platform-legacy-route-redirects',
   '/platform/projects/:id/deliverables/:deliverableId': 'platform-deliverable-detail',
   '/platform/admin-login': 'admin-impersonate-user',
 });
 
+const BILLING_FLOW_BY_URL = Object.freeze({
+  '/platform/payments': 'platform-hosting-project-list',
+  '/platform/collection-accounts': 'platform-collection-accounts-list',
+  '/platform/collection-accounts/:id': 'platform-collection-account-detail',
+  '/platform/projects/:id/collection-accounts': 'platform-project-collection-accounts',
+  '/platform/projects/:id/payments': 'platform-project-hosting-context',
+  '/panel/accounting/collection-context/:id': 'admin-accounting-collection-context',
+  '/panel/accounting/project-hosting/:id': 'admin-accounting-project-hosting-reconciliation',
+});
+
 const REDIRECT_OUTCOME_BY_URL = Object.freeze({
   '/platform/admin-login': 'error',
+});
+
+const PROJECT_COLLABORATION_FLOW_BY_URL = Object.freeze({
+  '/platform/projects/:id/ideas': 'platform-project-ideas',
+  '/panel/projects/:id/ideas': 'admin-project-idea-collection',
 });
 
 function resolveCatalogUrl(url) {
@@ -125,7 +136,11 @@ const rawScenarios = viewCatalogSections.flatMap((section) => section.views.map(
     viewType: view.viewType,
     label: view.label,
     reference: view.reference,
-    flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url] : OWNER_FLOW[owner],
+    flowId: kind === 'redirect' ? REDIRECT_FLOW_BY_URL[view.url]
+      : PROJECT_COLLABORATION_FLOW_BY_URL[view.url]
+        ?? BILLING_FLOW_BY_URL[view.url]
+        ?? (view.url === '/platform/projects/:id/secure-links' ? 'platform-secure-link-manage' : null)
+        ?? (view.url === '/platform/projects/:id/delivery' ? 'platform-delivery-review' : OWNER_FLOW[owner]),
     outcome: kind === 'redirect' ? (REDIRECT_OUTCOME_BY_URL[view.url] ?? 'success') : 'display',
     profiles: RESPONSIVE_PROFILES,
     quality: kind === 'redirect' ? 'allow-deep-link' : 'allow-deep-link',

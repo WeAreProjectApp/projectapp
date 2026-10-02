@@ -67,7 +67,6 @@
             <span class="text-xl font-bold text-on-primary ml-2 tabular-nums">{{ formatCurrency(displayTotal) }}</span>
             <span class="text-sm text-on-primary/70 ml-1">{{ currency }}</span>
             <span class="text-sm font-semibold text-accent ml-1">{{ taxLabel }}</span>
-            <p v-if="isBadgeVisible" class="text-xs text-on-primary/50 mt-1">{{ t.customized }}</p>
           </div>
         </div>
 
@@ -76,7 +75,6 @@
           <div class="text-sm font-semibold uppercase tracking-wider mb-4 text-on-primary">{{ t.totalInvestment }}</div>
           <div class="text-3xl sm:text-4xl md:text-5xl font-bold mb-2 text-on-primary tabular-nums">{{ formatCurrency(displayTotal) }}</div>
           <div class="text-on-primary">{{ currency }} {{ taxLabel }}</div>
-          <p v-if="isBadgeVisible" class="text-xs text-on-primary/70 mt-2">{{ t.customized }}</p>
         </div>
 
         <!-- What's included grid -->
@@ -91,13 +89,13 @@
         <!-- Customize investment + Contact CTA buttons -->
         <div class="flex flex-col sm:flex-row items-center justify-center gap-3 mt-6">
           <button
-            v-if="modules && modules.length && props.viewMode !== 'executive'"
+            v-if="props.viewMode !== 'executive'"
             ref="customizeBtnRef"
             class="customize-investment-btn px-6 py-3 bg-accent text-text-brand rounded-xl font-bold text-sm hover:opacity-90 transition-all shadow-lg relative overflow-visible"
             :class="{ 'btn-pulse': btnPulse }"
-            @click="calculatorOpen = true"
+            @click="interestsOpen = true"
           >
-            🧮 {{ t.customizeBtn }}
+            🧩 {{ t.customizeBtn }}
           </button>
           <a
             v-if="whatsappLink"
@@ -135,7 +133,7 @@
                 {{ formatCurrency(discountedInvestment) }}
               </span>
               <span class="text-base text-on-primary/50 line-through tabular-nums">
-                {{ totalInvestment }}
+                {{ discountOriginalInvestment ? formatCurrency(discountOriginalInvestment) : totalInvestment }}
               </span>
               <span class="text-xs text-on-primary/70 font-medium">{{ currency }}</span>
               <span class="text-xs text-accent font-semibold">{{ taxLabel }}</span>
@@ -160,7 +158,7 @@
       </div>
 
       <!-- Hosting plan -->
-      <div v-if="hostingPlan.title" data-animate="fade-up" class="hosting-plan mt-12 mb-16 bg-surface p-5 sm:p-8 md:p-10 rounded-2xl border-2 border-primary/10">
+      <div v-if="hostingPlan?.title" data-animate="fade-up" class="hosting-plan mt-12 mb-16 bg-surface p-5 sm:p-8 md:p-10 rounded-2xl border-2 border-primary/10">
         <div class="flex items-center mb-4">
           <div class="w-12 h-12 bg-primary-soft rounded-xl flex items-center justify-center mr-4">
             <span class="text-2xl">☁️</span>
@@ -285,52 +283,42 @@
 
     </div>
 
-    <InvestmentCalculatorModal
-      :visible="calculatorOpen"
-      :modules="modules"
-      :currency="currency"
-      :proposalUuid="proposalUuid"
+    <ModuleInterestsModal
+      :visible="interestsOpen"
+      :proposal-uuid="proposalUuid"
       :language="language"
-      :totalInvestment="totalInvestment"
-      :effectiveTotal="effectiveNumber"
-      :baseWeeks="baseWeeks"
-      :sentAt="sentAt"
-      :discountPercent="discountPercent"
-      :discountedInvestment="discountedInvestment"
-      :selectedIds="selectedModuleIds"
-      @close="calculatorOpen = false"
-      @update:selection="onSelectionUpdate"
-      @navigateToRequirements="$emit('navigateToRequirements'); calculatorOpen = false"
-      @updateCalculatorModules="(ids) => $emit('updateCalculatorModules', ids)"
-      @selectionConfirmed="(payload) => $emit('selectionConfirmed', payload)"
+      :preview="preview"
+      @close="interestsOpen = false"
     />
   </section>
 </template>
 
 <script setup>
-import { ref, computed, toRef, onMounted, nextTick } from 'vue';
+import { ref, computed, toRef, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useSectionAnimations } from '~/composables/useSectionAnimations';
 import { useExpirationTimer } from '~/composables/useExpirationTimer';
 import { useAnimatedNumber } from '~/composables/useAnimatedNumber';
 import { useLinkify } from '~/composables/useLinkify';
 import { RESOLVED_PROPOSAL_STATUSES, DEFAULT_HOSTING_PERCENT, DEFAULT_BILLING_TIERS } from '~/stores/proposals_constants';
 import { ensureProposalTaxLabel, proposalTaxLabel } from '~/utils/proposalTax';
-import InvestmentCalculatorModal from './InvestmentCalculatorModal.vue';
+import ModuleInterestsModal from './ModuleInterestsModal.vue';
 import InvestmentDetailedTeaser from './InvestmentDetailedTeaser.vue';
 
 const { linkify } = useLinkify();
 
-const emit = defineEmits(['navigateToRequirements', 'updateCalculatorModules', 'switchToDetailed', 'updateCustomTotal', 'selectionConfirmed']);
+defineEmits(['navigateToRequirements', 'switchToDetailed']);
 
 const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const specsOpen = ref(false);
-const calculatorOpen = ref(false);
+const interestsOpen = ref(false);
 const customizeBtnRef = ref(null);
 const btnPulse = ref(false);
+let customizeObserver = null;
 
 const props = defineProps({
+  preview: { type: Boolean, default: false },
   language: {
     type: String,
     default: 'es',
@@ -409,6 +397,7 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  discountOriginalInvestment: { type: String, default: '' },
   discountedInvestment: {
     type: String,
     default: ''
@@ -421,23 +410,11 @@ const props = defineProps({
     type: String,
     default: ''
   },
-  modules: {
-    type: Array,
-    default: () => []
-  },
   proposalUuid: {
     type: String,
     default: ''
   },
   whatsappLink: {
-    type: String,
-    default: ''
-  },
-  baseWeeks: {
-    type: Number,
-    default: 0
-  },
-  sentAt: {
     type: String,
     default: ''
   },
@@ -449,14 +426,6 @@ const props = defineProps({
     type: Number,
     default: null
   },
-  isCustomized: {
-    type: Boolean,
-    default: false
-  },
-  selectedModuleIds: {
-    type: Array,
-    default: () => []
-  }
 });
 
 function parseInvestment(str) {
@@ -475,18 +444,15 @@ const effectiveNumber = computed(() => {
 const displayNumber = computed(() => effectiveNumber.value);
 const taxLabel = computed(() => proposalTaxLabel(props.currency));
 
-// Badge shows only for client-confirmed customization, not admin-default
-// modules (which are already reflected in the backend effective total).
-const isBadgeVisible = computed(() => props.isCustomized === true);
 
 const { animated: displayTotal } = useAnimatedNumber(displayNumber, 500);
 
 onMounted(() => {
-  if (props.modules?.length && props.viewMode !== 'executive') {
+  if (props.proposalUuid && props.viewMode !== 'executive') {
     nextTick(() => {
       const el = customizeBtnRef.value;
       if (!el) return;
-      const observer = new IntersectionObserver(
+      customizeObserver = new IntersectionObserver(
         ([entry]) => {
           if (entry.isIntersecting) {
             btnPulse.value = false;
@@ -498,17 +464,17 @@ onMounted(() => {
         },
         { rootMargin: '-55% 0px -10% 0px', threshold: 0 }
       );
-      observer.observe(el);
+      customizeObserver.observe(el);
     });
   }
 });
 
-function onSelectionUpdate({ total }) {
-  emit('updateCustomTotal', total);
-}
+
+
+onBeforeUnmount(() => customizeObserver?.disconnect());
 
 // Each payment option's amount is derived from its label percentage applied
-// to the currently displayed total (base, effective, or client-customized).
+// to the manually agreed total.
 // Source of truth is the label ("40% al firmar..."), not the stored
 // description — that avoids double-scaling against backend-rebuilt amounts.
 const computedPaymentOptions = computed(() => {
@@ -561,8 +527,7 @@ const i18n = {
     hostingPlans: 'Planes de hosting',
     whyWorthIt: '¿Por Qué Esta Inversión Vale la Pena?',
     viewTechSpecs: 'Ver especificaciones técnicas',
-    customizeBtn: 'Personalizar tu inversión',
-    customized: 'Precio personalizado según tu selección',
+    customizeBtn: 'Explorar módulos adicionales',
     contactCta: 'Comunícate con nosotros',
     whatsappCta: '¿Tienes dudas? Hablemos',
     coverageCards: [
@@ -595,8 +560,7 @@ const i18n = {
     hostingPlans: 'Hosting plans',
     whyWorthIt: 'Why Is This Investment Worth It?',
     viewTechSpecs: 'View technical specs',
-    customizeBtn: 'Customize your investment',
-    customized: 'Custom price based on your selection',
+    customizeBtn: 'Explore additional modules',
     contactCta: 'Get in touch with us',
     whatsappCta: 'Have questions? Let\'s talk',
     coverageCards: [
@@ -653,10 +617,7 @@ function formatCurrency(value) {
 
 const hostingTwelveMonthReference = computed(() => {
   const hp = props.hostingPlan;
-  // Hosting is a percentage of the same "Inversión Total" shown to the
-  // client — the effective total (base + admin-pre-selected modules) by
-  // default, or the client's customized total when they confirm changes
-  // in the calculator.
+  // Hosting follows the manually agreed investment.
   if (hp?.hostingPercent > 0) {
     const total = displayNumber.value;
     if (total > 0) return Math.round(total * hp.hostingPercent / 100);

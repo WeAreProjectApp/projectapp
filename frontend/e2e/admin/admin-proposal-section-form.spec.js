@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_PROPOSAL_SECTION_EDIT_FORM,
@@ -125,10 +126,10 @@ function buildMockHandler(capturedUpdates) {
  */
 async function openSectionEditor(page, capturedUpdates, sectionType) {
   await mockApi(page, buildMockHandler(capturedUpdates));
-  await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
   // Switch to Secciones tab
-  await page.getByRole('tab', { name: 'Secciones' }).click();
+  await selectProposalDestination(page, 'proposal', 'sections');
 
   // Find section header and expand it
   await page.getByTestId(`section-header-${sectionType}`).click();
@@ -148,10 +149,10 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     tag: [...ADMIN_PROPOSAL_SECTION_EDIT_FORM, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler(null));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     // Switch to sections tab
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await selectProposalDestination(page, 'proposal', 'sections');
 
     // Verify all section titles are visible
     await expect(page.getByText('Greeting', { exact: true })).toBeVisible();
@@ -256,8 +257,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
       }
       return baseHandler(ctx);
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'sections');
     await page.getByTestId('section-header-greeting').click();
     const editor = page.getByTestId('section-editor');
     await editor.waitFor({ state: 'visible' });
@@ -351,8 +352,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'sections');
 
     await page.getByTestId('section-header-investment').click();
     await page.getByTestId('section-editor').waitFor({ state: 'visible' });
@@ -394,8 +395,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
       return null;
     });
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: 'Secciones' }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'proposal', 'sections');
 
     await page.getByTestId('section-header-commercial_conditions').click();
     await page.getByTestId('section-editor').waitFor({ state: 'visible' });

@@ -130,6 +130,11 @@ def recalculate_document_totals(document):
     )
     tax_total = sum((li.tax_amount for li in lines), Decimal('0'))
     line_sum = sum((li.line_total for li in lines), Decimal('0'))
+    extension = getattr(document, 'collection_account', None)
+    if extension is not None and extension.vat_rate is not None:
+        # Rounded line bases keep fractional quantities consistent with the
+        # exact gross charge and its VAT, including cent-sized differences.
+        subtotal = line_sum - tax_total
     document.subtotal = subtotal
     document.tax_total = tax_total
     document.total = line_sum - document.discount_total
@@ -238,11 +243,21 @@ def issue_collection_account(
     ``number_allocator`` (optional zero-arg callable) overrides the default
     per-issuer series — the income flow passes the per-client allocator.
     """
-    if not is_collection_account(document):
+    original_document = document
+    from accounts.services.billing_locks import lock_billing_document
+    document = lock_billing_document(document.pk)
+    if document is None or not is_collection_account(document):
         raise CollectionAccountError('Document is not a collection account.')
     if document.commercial_status != Document.CommercialStatus.DRAFT:
         raise CollectionAccountError('Only draft documents can be issued.')
 
+    from accounts.services.billing_context import validate_account_context
+    from rest_framework.exceptions import ValidationError
+    try:
+        validate_account_context(document)
+    except ValidationError as exc:
+        detail = exc.detail.get('detail', exc.detail) if isinstance(exc.detail, dict) else exc.detail
+        raise CollectionAccountError(str(detail)) from exc
     ext, _ = DocumentCollectionAccount.objects.get_or_create(document=document)
 
     _fill_payer_from_issuer(ext, issuer)
@@ -291,8 +306,10 @@ def issue_collection_account(
     document.save()
     ext.save()
     _log_status_transition(document, old_values, acting_user)
-
-    return document
+    # Preserve the public service's in-memory update contract for callers that
+    # archive the PDF from the supplied instance. This is a current read too.
+    original_document.refresh_from_db(from_queryset=Document.objects.select_for_update())
+    return original_document
 
 
 def _status_snapshot(document):
@@ -413,6 +430,12 @@ def delete_collection_account(document, *, acting_user=None):
         raise CollectionAccountError(
             'Esta cuenta de cobro ya se envió al cliente. Anúlala en vez de '
             'eliminarla.',
+        )
+    from accounts.models import HostingEvidence
+    if HostingEvidence.objects.filter(document=document).exists():
+        raise CollectionAccountError(
+            'La cuenta tiene evidencia de hosting conciliada. Corrige su grupo '
+            'administrativo antes de eliminarla; los pagos y ciclos se conservan.',
         )
 
     from content.services import accounting_service

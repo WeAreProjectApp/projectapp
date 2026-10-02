@@ -17,6 +17,7 @@ max_timeout_ms: 100
 
 py_allowed_folders:
   - "."
+  - "billing"
   - "commands"
   - "management"
   - "models"
@@ -56,7 +57,7 @@ flow_definitions_dir: flows
 # performance_index_threshold_rows: 10000
 performance_paths:
   - "monitoring=backend/monitoring,frontend/pages/panel/monitoring,frontend/stores/monitoring.js"
-  - "platform=backend/accounts/views.py,backend/accounts/serializers.py"
+  - "platform=backend/accounts/views.py,backend/accounts/serializers.py,backend/accounts/services/delivery_workflow.py,backend/accounts/services/delivery_documents.py"
 # performance_exclude: ["module=razón de exclusión"]
 # performance_project_doc: docs/methodology/performance-standard.md
 # performance_host_override: vps-projectapp-staging
@@ -65,8 +66,7 @@ performance_budget_tests:
   - backend/monitoring/tests/test_retention.py
   - backend/monitoring/tests/test_observe_case_query_budget.py
   - backend/monitoring/tests/test_case_state_query_budget.py
-  - backend/accounts/tests/test_project_scope_items_endpoint.py
-  - backend/accounts/tests/test_requirements.py
+  - backend/accounts/tests/test_delivery_read_contract.py
   - backend/accounts/tests/test_payments.py
   - backend/accounts/tests/test_deliverables.py
   - backend/accounts/tests/test_change_requests.py
@@ -78,6 +78,9 @@ performance_budget_tests:
   - backend/accounts/tests/test_bulk_evaluation.py
   - backend/accounts/tests/test_detail_query_budgets.py
   - backend/accounts/tests/test_selector_query_budgets.py
+  - backend/content/tests/views/test_mcp_connector_query_budget.py
+  - backend/content/tests/views/test_statement_query_budget.py
+  - backend/content/tests/views/test_communication_tab_count_budget.py
 performance_silk_reports: backend/logs/monitoring
 
 # Responsive overrides consumed by the fleet's responsive ledger. ProjectApp

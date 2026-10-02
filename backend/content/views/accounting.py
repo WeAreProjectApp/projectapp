@@ -10,7 +10,7 @@ from datetime import date, timedelta
 from decimal import Decimal, InvalidOperation
 
 from django.db import transaction
-from django.db.models import Count, Exists, F, OuterRef, Q, Sum
+from django.db.models import Count, Exists, F, OuterRef, Q, Subquery, Sum
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -26,6 +26,7 @@ from content.models import (
     CardBalanceSnapshot,
     CreditCard,
     CreditCardStatement,
+    CreditCardTransaction,
     Document,
     EmailLog,
     ExpenseRecord,
@@ -434,6 +435,14 @@ def _apply_token_filter(queryset, field, raw_value, conditions, wrap=None):
     return queryset.filter(condition)
 
 
+_statement_transaction_totals = (
+    CreditCardTransaction.objects.filter(statement_id=OuterRef('pk'))
+    .order_by()
+    .values('statement_id')
+    .annotate(transaction_count=Count('pk'), transaction_sum=Sum('amount'))
+)
+
+
 _ENTITIES = {
     'income': {
         'entity_type': EntityType.INCOME,
@@ -580,6 +589,14 @@ _ENTITIES = {
         'amount_field': 'purchases_total',
         'search_fields': ('card_name', 'notes'),
         'choice_filters': ('status', 'card_name'),
+        'annotations': {
+            '_transactions_count': Subquery(
+                _statement_transaction_totals.values('transaction_count')[:1],
+            ),
+            '_transactions_sum': Subquery(
+                _statement_transaction_totals.values('transaction_sum')[:1],
+            ),
+        },
     },
     'merchant_alias': {
         'entity_type': EntityType.MERCHANT_ALIAS,
@@ -1195,6 +1212,7 @@ def bulk_assign_income_client(request):
         income_ids,
         serializer.validated_data.get('client'),
         request.user,
+        strict_ids=True,
     )
     return Response({
         'updated': len(updated),
@@ -1264,6 +1282,7 @@ def bulk_assign_hosting_client(request):
         hosting_ids,
         serializer.validated_data.get('client'),
         request.user,
+        strict_ids=True,
     )
     return Response({
         'updated': len(updated),

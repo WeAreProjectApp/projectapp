@@ -24,6 +24,7 @@ jest.mock('../../composables/useAnimatedNumber', () => ({
 }));
 
 import Investment from '../../components/BusinessProposal/Investment.vue';
+import { useAnimatedNumber } from '../../composables/useAnimatedNumber';
 
 const defaultProps = {
   title: 'Inversión y Formas de Pago',
@@ -38,7 +39,10 @@ function mountInvestment(props = {}) {
     props: { ...defaultProps, ...props },
     global: {
       stubs: {
-        InvestmentCalculatorModal: { template: '<div class="calculator-modal-stub" />' },
+        ModuleInterestsModal: {
+          props: ['visible'],
+          template: '<div data-testid="module-interests-modal-stub">{{ visible }}</div>',
+        },
         InvestmentDetailedTeaser: { template: '<div class="teaser-stub" />' },
         Transition: true,
       },
@@ -71,17 +75,14 @@ describe('Investment', () => {
     expect(wrapper.text()).toContain('COP + IVA');
   });
 
-  it('renders the customize investment button', () => {
-    const wrapper = mountInvestment({ modules: [{ id: 1, title: 'Module', optional: true }] });
-
-    const btn = wrapper.findAll('button').find(b => b.text().includes('Personalizar'));
-    expect(btn).toBeTruthy();
-  });
-
-  it('renders the InvestmentCalculatorModal stub', () => {
+  it('opens the module interests modal from the renamed trigger', async () => {
+    // Fails if the investment page still opens the removed price calculator.
     const wrapper = mountInvestment();
 
-    expect(wrapper.find('.calculator-modal-stub').exists()).toBe(true);
+    const trigger = wrapper.findAll('button').find((button) => button.text() === '🧩 Explorar módulos adicionales');
+    await trigger.trigger('click');
+
+    expect(wrapper.get('[data-testid="module-interests-modal-stub"]').text()).toBe('true');
   });
 
   describe('hosting billing tiers', () => {
@@ -100,6 +101,13 @@ describe('Investment', () => {
         billingTiers: tiers,
       };
     }
+
+    it('renders the investment when no hosting plan is configured', () => {
+      const wrapper = mountInvestment({ hostingPlan: null });
+
+      expect(wrapper.text()).toContain('Inversión y Formas de Pago');
+      expect(wrapper.find('.hosting-plan').exists()).toBe(false);
+    });
 
     it('recomputes the tier monthly-equivalent from hostingPlan.hostingPercent', () => {
       const at30 = mountInvestment({
@@ -153,11 +161,28 @@ describe('Investment', () => {
       discountedInvestment: '$1.266.500',
     };
 
-    it('renders the limited-time discount banner while the proposal is still open', () => {
-      const wrapper = mountInvestment({ ...discountProps, proposalStatus: 'sent' });
+  it('renders the limited-time discount banner while the proposal is still open', () => {
+    const wrapper = mountInvestment({ ...discountProps, proposalStatus: 'sent' });
 
-      expect(wrapper.find('.discount-banner').exists()).toBe(true);
+    expect(wrapper.find('.discount-banner').exists()).toBe(true);
+  });
+
+  it('keeps the migrated discount reference separate from the agreed total', () => {
+    // Fails if a migrated offer shows its old price as the proposal total instead of only as a discount reference.
+    useAnimatedNumber.mockImplementationOnce((value) => ({ animated: require('vue').ref(value.value) }));
+    const wrapper = mountInvestment({
+      totalInvestment: '$1.800.000',
+      paymentOptions: [],
+      discountPercent: 15,
+      discountedInvestment: '$1.530.000',
+      discountOriginalInvestment: '$2.400.000',
+      proposalStatus: 'sent',
     });
+
+    expect(wrapper.text()).toContain('$1.800.000');
+    expect(wrapper.text()).toContain('$1.530.000');
+    expect(wrapper.text()).toContain('$2.400.000');
+  });
 
     it.each(['accepted', 'rejected', 'finished'])(
       'hides the limited-time discount banner when status is %s',

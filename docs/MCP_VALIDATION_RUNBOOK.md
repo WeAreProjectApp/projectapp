@@ -1,5 +1,16 @@
 # Guion de validación y mantenimiento de MCP
 
+## Tickets de proyecto: bugs y solicitudes contextualizadas
+
+`projects` incorpora once acciones mediante los mismos servicios REST. Inventario,
+permisos, versiones, reintentos y dependencia de revisión contractual:
+[Bugs y solicitudes](PLATFORM_ISSUE_REPORTS.md). Validar bug general sin guía,
+origen con ronda publicada, respuesta pública o interna con PDF opcional,
+descarga aislada y reapertura «sigue fallando». Archivar y convertir exigen
+confirmación. Convertir sólo crea una guía pendiente en una etapa editable del
+contrato aplicable; las aprobaciones existentes permanecen intactas y el alcance
+sigue indeterminado hasta el adaptador compartido de P3.
+
 Las carpetas del conector de Documentos declaran `folder_kind`, proyecto y
 estado. `create_folder` hereda la asociación de su padre y `rename_folder`
 rechaza raíces automáticas de proyecto; estas protecciones se validan junto
@@ -15,6 +26,19 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
 
+## Intereses y contratos de propuestas (2026-09-29)
+
+En `proposals` y `commercial`, los intereses en módulos y su fecha son sólo de
+lectura: proceden de la elección pública del cliente, sin alterar alcance ni
+inversión. El snapshot del precio anterior queda excluido por ser respaldo
+interno de la migración. La formalización usa el mismo control de vigencia del
+contrato de servicio que el panel y rechaza adjuntos obsoletos; las descargas y
+preparaciones respetan la modalidad de cierre. Validar clasificación de campos,
+consulta de propuesta y errores de generación/preparación antes de publicar.
+El anexo comercial usa la misma exclusión de «¿Por qué esta inversión?» que
+Documentos, conservando importes y pagos. La versión documental 6 exige revisar
+las preparaciones previas sin reemplazar sus adjuntos; no cambia el esquema MCP.
+
 ## Videos y conectores comerciales (2026-09-28)
 
 Programa de Alianza (`partnership-program`) y Módulos adicionales (`additional-modules`) tienen conectores independientes; `proposals` incorpora videos general/personalizado. Todos permiten transferir un MP4 real, completar la carga y asignar/sustituir con `asset_id` y revisión. Guía y nombres exactos: [Recursos de video comerciales](COMMERCIAL_VIDEO_RESOURCES.md).
@@ -22,6 +46,14 @@ Programa de Alianza (`partnership-program`) y Módulos adicionales (`additional-
 Validar consulta → begin_upload → PUT firmado (o bloques) → complete_upload → set_*_video, luego repetir para reemplazar. Verificar rechazo de archivo corrupto, credencial ajena, carga incompleta, revisión vieja y límite de 250 MiB. Confirmar reproducción pública y conservación del anterior ante fallos. Los otros archivos mantienen su límite de 25 MiB y vencimiento de 15 minutos; videos vencen en una hora.
 
 ## Plataforma operativa común
+
+Revisión focal LinkedIn (2026-10-01): refresh conserva credenciales ante
+429/5xx y respuestas ambiguas; sólo un rechazo explícito admitido las borra.
+El contrato MCP mantiene metadata de `LinkedInToken` en sólo lectura y excluye
+ambos secretos cifrados. Validar los dos contratos de `linkedin-personal` en
+`test_mcp_contracts.py`, junto con crear, leer, editar, publicar/error y estado
+de conexión de `test_mcp_linkedin.py`; simular el proveedor, sin llamadas reales.
+La retención y recuperación de tokens se comprueban en las pruebas del servicio.
 
 - El endpoint canónico acepta `Authorization: Bearer <credencial>` en
   `/api/mcp/<slug>/`. La URL histórica `/api/mcp/<slug>/<token>/` permanece
@@ -1089,3 +1121,169 @@ permisos MCP. Ejecutar desde worktree y en lotes de hasta 20 tests.
    usuario cuando corresponde; una sincronización no cambia la procedencia.
 5. Para Littigio seguir el [runbook de reparación](runbooks/littigio-folder-repair.md).
    No repetir ensayos mutantes contra documentos reales como prueba del conector.
+
+## Platform — revisión contractual de entregas
+
+El conector `projects` cubre la administración de contratos, otrosíes, alcances,
+fases de ejecución, etapas y guías de validación desde el primer incremento.
+La [matriz de paridad](PLATFORM_DELIVERY_MCP_MATRIX.md) relaciona cada acción de
+Platform con su herramienta y regla de negocio compartida. El catálogo añade
+52 herramientas de entrega y habilita los uploads temporales del conector.
+
+Validar solo en un worktree con `projectapp.settings_test`, en lotes de hasta
+20 casos. No invocar estas pruebas contra un conector activo de producción.
+
+1. Consultar opciones/esquemas y espacio; crear/leer/editar cada entidad; rechazar
+   un otrosí cuyo contrato pertenece a otro proyecto. Las fases de ejecución
+   nunca deben facturar ni alterar el hosting comercial.
+2. Previsualizar JSON sin escribir; aplicar mediante `confirm_action`; rechazar
+   campos de estado, fuentes ajenas o un espacio cambiado desde la vista previa.
+3. Publicar una etapa solo con firma real/constatada y guía completa. Repetir su
+   confirmación sin generar otra ronda. Editar pendientes sin alterar conformidades.
+4. Constatar firma usando `begin_upload` → `upload_asset_chunk` → `complete_upload`
+   y `asset_id`; comprobar PDF real hasta 10 MB y rechazo de assets de otra credencial.
+5. Registrar aprobación externa con comunicación entrante recibida y cita válida,
+   o documento, revisor original, fecha, canal y referencia explícitos. Guardar
+   por separado actor administrativo y revisor original; jamás inferir una
+   aprobación desde un mensaje saliente del equipo.
+6. Responder con requerimientos y documentos opcionales; consultar/asociar/retirar
+   documentos por nivel; descargar PDF autorizado como artefacto temporal. Los
+   borradores del cliente permanecen ocultos en lista, detalle y PDF.
+7. Restringir la credencial a lectura: ni herramientas directas ni confirmaciones
+   previas pueden ejecutar escrituras fuera de su permiso.
+8. Descargar el respaldo congelado de una revisión mediante
+   `download_delivery_document_pdf` con `review_id` y `evidence_id`; alternativamente
+   usar `link_id` para un documento asociado. Los dos orígenes son excluyentes.
+   Editar la fuente después de registrar la conformidad no debe cambiar los
+   bytes, título ni hash de su respaldo. Un proyecto ajeno falla sin crear artefactos.
+9. Consultar `get_delivery_authoring_contract`: devuelve opciones y esquemas,
+   sin textos ni contrato seleccionado. Crear guías con
+   `create_delivery_guide_prompt`, eligiendo contrato, otrosíes, referencias y
+   anexos. No debe incluir contratos hermanos, notas privadas ni fuentes no
+   elegidas. La asociación de un anexo no prueba su incorporación jurídica.
+10. Reintentar la captura con el mismo `request_id`: conserva un solo contexto
+    y no incrementa la versión del espacio. Consultar historial/reabrir mediante
+    `list_delivery_prompt_contexts`/`get_delivery_prompt_context` y descargar
+    `download_delivery_prompt_source`; el archivo conserva sus bytes y MIME
+    originales después de editar el origen. Contextos ajenos deben fallar.
+11. Importar guías v2 con contexto y citas verificadas; rechazar citas vacías o
+    inexistentes y retirar la procedencia de un requerimiento trazado. V1 manual
+    no debe sobrescribir una guía v2; estados y firmas siguen fuera del JSON.
+    El fundamento requiere citar contrato/otrosí; un anexo puede complementar
+    la evidencia, pero no constituir por sí solo el fundamento contractual.
+12. Preparar `create_delivery_reply_prompt` desde una etapa publicada y validar
+    `preview_delivery_reply`. No crea mensajes. Fuentes faltantes/parciales o
+    incertidumbre exigen alcance indeterminado. Compartir con `add_delivery_message`
+    exige `human_reviewed: true`, contexto, citas y clasificaciones; una nueva
+    observación pública desde la captura obliga a preparar otro contexto.
+13. Intentar eliminar en el panel una referencia o anexo seleccionado de
+    `Document`/`ProposalDocument`: respuesta 409 `document_used_in_delivery`,
+    mensaje de conservación y original intacto. Un PDF de propuesta no retenido
+    mantiene su eliminación normal. La clasificación de fake data excluye las
+    capturas/fuentes de la generación automática; se crean solo por selección
+    administrativa explícita.
+14. Preparar `prepare_delivery_stage_closure_email` sólo con una etapa publicada
+    completamente aprobada. Consultar destinatario, asunto, cuerpo y adjuntos
+    mediante `get_delivery_stage_closure_email`, sin transporte. Una etapa
+    parcial, un cliente ajeno o una credencial distinta deben fallar.
+    El cuerpo en texto y HTML debe incluir conversaciones y decisiones públicas,
+    autores, fechas, versiones y rondas, también sin adjuntos. Verificar la objeción
+    previa y el mensaje de cierre; las notas internas y fuentes privadas no salen.
+15. Enviar `send_delivery_stage_closure_email` con confirmación sensible,
+    versión vigente, hash de la preparación y revisión humana. Comprobar que
+    intento y snapshot persisten antes de SMTP y que repetir la confirmación o
+    petición conserva un solo envío. Un fallo posterior a SMTP debe conservar
+    resultado desconocido sin reenvío automático.
+16. Consultar `list_delivery_stage_closure_emails` y descargar los bytes exactos
+    mediante `download_delivery_stage_closure_email_attachment`. Recargar las
+    filas desde la base no debe cambiar su almacenamiento privado ni crear una
+    URL pública. `prepare_delivery_stage_closure_email_resend` conserva cuerpo,
+    archivos y relación con el original; sólo prepara otra vista revisable.
+
+Pruebas focalizadas: `content/tests/views/test_mcp_delivery.py` (19 casos),
+`content/tests/views/test_mcp_delivery_contracts.py` (20 casos),
+`content/tests/views/test_mcp_delivery_guards.py` (9 casos), más cuatro
+verificaciones específicas de `projects` en `test_mcp_contracts.py`.
+La autoría seleccionada se cubre en
+`content/tests/views/test_mcp_delivery_authoring.py` (20 casos).
+El correo de cierre se cubre en
+`content/tests/views/test_mcp_delivery_closure_email.py` (17 casos).
+La revisión de modelos incluye todos los campos nuevos, con exclusiones
+explícitas de almacenamiento privado, captura de IP/navegador de la firma y
+recibos internos de idempotencia, huella de captura, instantánea interna de origen
+y rutas privadas de fuentes. Contexto y fuente son inmutables. La metadata conserva método y hashes de firma;
+la evidencia de aprobación conserva el mensaje original y su procedencia.
+
+Resultados focales ejecutados en el worktree de implementación:
+
+| Lote | Resultado | Evidencia del comportamiento |
+| --- | --- | --- |
+| `test_mcp_delivery.py` | **19/19 verdes**; repetido con `--nomigrations` tras congelar todos los campos contractuales firmados | Creación real de seis entidades, guías, importación, confirmaciones, publicación, PDF externo, respuestas y errores. |
+| `test_mcp_delivery_contracts.py` | **20/20 verdes**, con migraciones reales hasta `0065` | Lecturas por entidad, propiedad de documentos/assets, credencial limitada, descargas, replay y procedencia entrante. |
+| Regresión de `test_mcp_delivery_contracts.py` tras autoría seleccionada | **20/20 verdes**, con `--nomigrations` tras `0067` | Discovery de opciones sin textos ni selección automática, compatibilidad documental y confirmaciones existentes. |
+| `test_mcp_delivery_guards.py` | **3/3 verdes**, con `--nomigrations` | Firma privada, contrato firmado inmutable antes de publicar y rechazo de una constancia externa que declara método Portal. |
+| Nuevas descargas de respaldo en `test_mcp_delivery_guards.py` | **6/6 verdes**, con `--nomigrations` tras `0066` | PDF histórico exacto después de reescribir la fuente, pertenencia al proyecto y cuatro selectores incompletos/ambiguos rechazados. |
+| Contratos existentes de `projects` | **4/4 verdes**, con `--nomigrations`; repetidos tras `0067` | Todos los campos clasificados, incluidas capturas y procedencia; metadata accionable, confirmación sensible y adaptadores HTTP coherentes. |
+| `test_mcp_delivery_authoring.py` | **20/20 verdes**, con `--nomigrations` tras `0067` | Fuentes elegidas, contextos retenidos/idempotentes, descarga exacta PDF/JSON, citas, faltantes/lectura parcial, importación v2 y respuesta manual revisada. Calidad estricta **100/100**, sin errores, avisos ni sugerencias. |
+| Integración de eliminación y clasificación | **11/11 verdes**, con migraciones reales hasta `0067` | Cinco casos de `test_delivery_source_deletion.py` conservan referencias/anexos originales y el borrado normal; seis regresiones comprueban catálogo fake, eliminaciones de propuesta/documento y protección de comunicaciones. Calidad estricta de los cinco casos nuevos **100/100**, sin hallazgos. |
+
+Son **68 casos nuevos** y **4 verificaciones de contrato existentes**, en lotes
+separados de hasta 20 casos. Se verificó el transporte real de uploads y las
+confirmaciones MCP; no se ejecutaron suites completas ni pruebas mutantes contra
+datos de producción.
+
+Los once casos de integración se ejecutaron con migraciones reales para incluir
+el catálogo Markdown que consumen los fixtures existentes. No se modificaron
+esos fixtures. La clasificación registra `DeliveryPromptContext` y
+`DeliveryPromptSource` como exentos de generación automática: las capturas solo
+nacen de una selección administrativa explícita.
+
+## Cuentas y hosting por proyecto — P2
+
+Las operaciones nuevas de `projects` son `get_project_billing_options`,
+`get_project_hosting`, `get_project_hosting_inventory`,
+`get_collection_account_context`, `associate_collection_account_context`,
+`preview_project_hosting_reconciliation`, `reconcile_project_hosting`,
+`preview_hosting_evidence` y `reconcile_hosting_evidence`.
+
+Validar en settings_test, por lotes de hasta 20 casos:
+
+1. Leer una cuenta pendiente y sus opciones sin exponer notas, metadata, secretos
+   o documentos contractuales. Un proyecto ajeno falla sin escritura.
+2. Asociar exclusivamente contrato/otrosí del proyecto o su hosting con razón y
+   versión; rechazar otrosí de otro contrato, doble naturaleza y cliente ajeno.
+3. Previsualizar identidad/evidencias sin persistir. Confirmar con el principal
+   real, y rechazar una versión que cambió después de la vista previa.
+4. Consultar varios orígenes históricos sin sumarlos ni seleccionar uno por
+   texto/importe. Elegir origen operativo y equivalencias expresamente; verificar
+   que no se crearon `Payment`, `HostingCycle` ni movimientos contables.
+5. Emitir desde ingreso con contexto, o desde hosting con pago existente cuando
+   hay suscripción. La obligación ya emitida rechaza duplicación; dos obligaciones
+   diferentes admiten dos cuentas. Conservar numeración, snapshot y bytes PDF al
+   reclasificar una cuenta histórica.
+6. Rechazar mover un otrosí con cuentas; permitir el cambio sin cuentas si lo
+   permiten las guardas de delivery. `ProjectContract.project` sigue inmutable.
+
+Pruebas dedicadas: `accounts/tests/billing/`, más las clasificaciones, metadata,
+confirmaciones y adaptadores de `projects` y `accounting-billing` en
+`content/tests/views/test_mcp_contracts.py`. Las herramientas sensibles mantienen
+`financial_effect: none`; la emisión conserva el adaptador contable existente.
+No ejecutar validaciones mutantes contra conectores activos de producción.
+### Proyectos: eliminación de referencias vacías (2026-10-01)
+
+- `preview_project_delete` devuelve la misma lista de dependencias y cantidades que el modal del panel.
+- `delete_project` es sensible: su preview incluye `can_delete` y `blockers`, y no borra antes de `confirm_action`.
+- Confirmar un proyecto vacío devuelve `deleted: true` y `project_id`; elimina la estructura automática vacía y conserva auditoría.
+- Si se agrega información entre preview y confirmación, devuelve `PROJECT_DELETE_BLOCKED` con `details.blockers`, conservando proyecto y referencias.
+- Casos focales: `content/tests/views/test_mcp_project_deletion.py`; el contrato de campos del conector `projects` no cambia.
+
+### IVA contable (2026-10-01)
+
+`create/update_income`, `create/update_expense` y `create/update_hosting`
+aceptan `vat_rate` y captura `amount` + `amount_mode` (`before_vat` o
+`vat_included`). No combinar captura con el importe financiero anterior
+(`total_amount`, o `payment_per_cycle` en hosting). Los reads devuelven
+`base_amount`, `vat_amount` y tasa junto al total incluido. Tasa nula indica
+histórico sin registrar y cero indica Sin IVA. Panel y MCP comparten
+serializers, restricciones de documentos emitidos y auditoría. Liquidaciones
+heredan tasa; las retenciones mantienen el flujo de deducciones actual.

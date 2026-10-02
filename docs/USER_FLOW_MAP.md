@@ -73,7 +73,7 @@
 
 ### Backend-only and system-triggered flows (not browser E2E)
 
-Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-calculator-followup-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`, `proposal-calculator-abandonment-tracking`.
+Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 0` describe **automations** (Huey/cron, alert generation, digests). They remain in the registry for traceability to backend tests but are **out of scope** for Playwright user-journey coverage. Examples: `proposal-pre-expiration-discount-suggestion`, `admin-seller-inactivity-escalation`, `admin-daily-pipeline-digest`, `admin-high-engagement-alert`, `admin-whatsapp-suggestion`, `admin-auto-archive-zombie`, `admin-proposal-engagement-decay-alert`, `admin-proposal-post-rejection-revisit`.
 
 ---
 
@@ -253,34 +253,10 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-project-create.spec.js`
 
-### 8.4 Kanban Board
+### 8.4 Alcances y entregas
 
-#### FLOW: `platform-kanban-board`
+La revisión sigue contrato → alcance → fases de ejecución → etapas → guías de validación. Los flujos de autoría, revisión, importación y respuestas se describen en los archivos `platform-delivery-*.md`.
 
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P1
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `GET /api/accounts/projects/:id/deliverables/`, `GET|POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/`, `POST .../requirements/:id/move/`, `GET .../requirements/:id/` (requirements are scoped to a deliverable).
-- **Description:** 3-column kanban board with drag & drop, card detail modal, and completed checklist.
-- **Steps:**
-  1. User navigates to `/platform/projects/:id/board`.
-  2. Back link to project detail renders with project name.
-  3. Progress pill renders with percentage and completed count.
-  4. Three kanban columns render: "Por hacer" (todo), "En progreso" (in_progress), "En revisión" (in_review).
-  5. Requirement cards render in their respective columns with priority dot, scope-item label (the vista/componente/funcionalidad from the proposal; falls back to the legacy "Módulo"/epic for older cards), title, and comment count.
-  6. Collapsible "Completados" section renders below columns with done cards as a checklist.
-- **Branches:**
-  - [Branch A — Admin drag & drop] Admin drags a card from one column to another → `POST .../move/` API updates status → card moves to target column.
-  - [Branch B — Admin create card] Admin clicks "Card" button → create modal opens with title, description, priority, column, module, hours → submit creates requirement.
-  - [Branch C — Complete card] Admin (or client for in_review) clicks checkmark → card moves to "done" column.
-  - [Branch D — Card detail] User clicks any card → detail modal opens showing description, meta (status, scope item, created date), history timeline, and comments section.
-  - [Branch E — Client approval] Client sees "Aprobar requerimiento" button for cards in approval status → clicking approves and moves to done.
-  - [Branch F — Toggle completed] User clicks "Completados" bar → expands/collapses the done cards list.
-  - [Branch G — Scope filter] User picks a vista/componente/funcionalidad (or "Sin agrupar") from the "Alcance" selector → columns and backlog show only cards linked to that scope item. Populated from `GET /api/accounts/projects/:id/scope-items/`.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-board.spec.js`
-- **Related:** Scope items and cards are auto-created on proposal acceptance — see `platform-proposal-auto-onboarding`.
 
 #### FLOW: `platform-proposal-auto-onboarding` *(system-triggered, no browser E2E)*
 
@@ -292,51 +268,12 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Steps (backend):**
   1. Acceptance enqueues `run_platform_onboarding` (with the task's acceptance email suppressed; the view owns the client email).
   2. `handle_proposal_accepted_for_platform` ensures the client `User`, `Project`, root `Deliverable`, and (via the sync) a `ProjectPhase`.
-  3. `functional_requirements` items (vistas/componentes/funcionalidades) are mirrored as `ProjectScopeItem` rows keyed by `source_item_id`.
-  4. `technical_document` epics/requirements are upserted as Kanban `Requirement` cards keyed by `(phase, source_flow_key)`, each linked to its primary scope item via `linked_item_ids`.
-- **Re-sync policy:** preserves client-owned state (`status`, `order`, comments); overwrites proposal-authored content unless the card was manually edited (`content_overridden`); archives scope items removed from the proposal and resurrects re-added ones.
+  3. La sincronización conserva las referencias comerciales, recursos y el modelo de datos.
+  4. Las etapas y guías para el cliente se redactan y publican explícitamente en Entregas; no se crean a partir del detalle técnico.
+- **Re-sync policy:** La sincronización comercial no altera las guías ni las decisiones del cliente.
 - **Coverage:** Backend tests (`accounts/tests/test_proposal_scope_sync.py`, `test_proposal_platform_onboarding.py`, `content/tests/views/test_proposal_status_and_pdf.py`). No Playwright journey (`roles: ["system"]`, `expectedSpecs: 0`).
 
-#### FLOW: `platform-unified-board`
 
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P2
-- **Routes:** `/platform/board`
-- **API:** `GET /api/accounts/projects/`, then per deliverable `GET .../deliverables/:deliverableId/requirements/`
-- **Description:** Cross-project view showing active requirement cards grouped by project.
-- **Steps:**
-  1. User navigates to `/platform/board`.
-  2. Page fetches all projects and their active requirements.
-  3. Cards render grouped by project with project name headers and summary pills (todo/in_progress/in_review counts).
-  4. Each card shows priority dot, title, and module tag.
-- **Branches:**
-  - [Branch A — Project link] User clicks project name → navigates to `/platform/projects/:id`.
-  - [Branch B — Board link] User clicks "Ver tablero" → navigates to `/platform/projects/:id/board`.
-  - [Branch C — Empty state] No active requirements → empty state message.
-  - [Branch D — Loading] Skeleton/spinner renders while fetching data.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-unified-board.spec.js`
-
-#### FLOW: `platform-kanban-card-comments`
-
-- **Module:** platform
-- **Role:** platform-admin / platform-client
-- **Priority:** P3
-- **Routes:** `/platform/projects/:id/board` (card detail modal)
-- **API:** `POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/:id/comments/`
-- **Description:** Add public or internal (admin-only) comments on requirement cards.
-- **Steps:**
-  1. User opens card detail modal (from kanban board flow).
-  2. Comments section renders with existing comments (author, date, content).
-  3. User types a comment in the input field and clicks "Enviar".
-  4. API creates the comment and it appears in the list.
-- **Branches:**
-  - [Branch A — Internal comment] Admin checks "Comentario interno" checkbox → comment saves with `is_internal: true` → rendered with amber border and "Interno" label (only visible to admins).
-  - [Branch B — Client comment] Client can only post public comments (no internal checkbox visible).
-  - [Branch C — Empty comment] Submit button disabled when input is empty.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-comments.spec.js`
 
 ### 8.5 Client Management (Admin-only)
 
@@ -568,41 +505,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/platform/platform-notifications.spec.js`
 
-### 8.10 Kanban Enhancements
-
-#### FLOW: `platform-kanban-json-upload`
-
-- **Module:** platform
-- **Role:** platform-admin
-- **Priority:** P2
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `POST /api/accounts/projects/:projectId/deliverables/:deliverableId/requirements/bulk/`
-- **Description:** Admin bulk-creates requirements by uploading a JSON file. Includes downloadable example template.
-- **Steps:**
-  1. Admin clicks "Ejemplo" button → downloads `requerimientos-ejemplo.json` template.
-  2. Admin prepares JSON with requirements (title, description, configuration, flow).
-  3. Admin clicks "Subir JSON" → file picker opens → selects JSON file.
-  4. API creates requirements in bulk → success alert with count.
-  5. Backlog section updates with new cards.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-kanban-json-upload.spec.js`
-
-#### FLOW: `platform-requirement-client-review`
-
-- **Module:** platform
-- **Role:** platform-client
-- **Priority:** P2
-- **Routes:** `/platform/projects/:id/board`
-- **API:** `GET .../deliverables/:deliverableId/requirements/`, `GET .../requirements/:id/`, `POST .../requirements/:id/move/`
-- **Description:** Client reviews completed requirements. Clicking a done card shows: Approve, Request Change, or Report Bug.
-- **Steps:**
-  1. Client clicks a completed requirement in the "Completados" section.
-  2. Card detail modal opens showing description, configuration, flow, and review actions.
-  3. Client clicks "Aprobar" → requirement accepted.
-  4. Client clicks "Solicitar cambio" → navigates to change requests with pre-filled data.
-  5. Client clicks "Reportar bug" → navigates to bug reports with pre-filled data.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/platform/platform-requirement-client-review.spec.js`
 
 ### 8.11 Collection Accounts & Deliverable Detail
 
@@ -786,7 +688,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-login` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-login.spec.js` |
 | `platform-verify-onboarding` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-verify.spec.js` |
 | `platform-complete-profile` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-complete-profile.spec.js` |
-| `platform-kanban-board` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-kanban-board.spec.js` |
 | `platform-hosting-subscription` | platform | platform-admin/client | P1 | ✅ Covered | `e2e/platform/platform-hosting-subscription.spec.js` |
 | `platform-hosting-card-setup` | platform | platform-client | P1 | ✅ Covered | `e2e/platform/platform-hosting-card-setup.spec.js` |
 | `platform-hosting-card-delete` | platform | platform-client | P2 | ✅ Covered | `e2e/platform/platform-hosting-card-delete.spec.js` |
@@ -794,7 +695,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-sidebar-navigation` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-sidebar.spec.js` |
 | `platform-project-list` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-project-list.spec.js` |
 | `platform-project-detail` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-project-detail.spec.js` |
-| `platform-unified-board` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-unified-board.spec.js` |
 | `platform-admin-client-list` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-admin-client-list.spec.js` |
 | `platform-admin-client-detail` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-admin-client-detail.spec.js` |
 | `platform-profile-edit` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-profile.spec.js` |
@@ -803,8 +703,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-bug-reports` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-bug-reports.spec.js` |
 | `platform-deliverables` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-deliverables.spec.js` |
 | `platform-notifications` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-notifications.spec.js` |
-| `platform-kanban-json-upload` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-kanban-json-upload.spec.js` |
-| `platform-requirement-client-review` | platform | platform-client | P2 | ✅ Covered | `e2e/platform/platform-requirement-client-review.spec.js` |
 | `platform-collection-accounts-list` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
 | `platform-collection-account-detail` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
 | `platform-project-collection-accounts` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-collection-accounts.spec.js` |
@@ -812,7 +710,6 @@ Entries in `flow-definitions.json` with `roles: ["system"]` and `expectedSpecs: 
 | `platform-project-data-model` | platform | platform-admin/client | P2 | ✅ Covered | `e2e/platform/platform-data-model.spec.js` |
 | `platform-access-view` | platform | platform-admin | P2 | ✅ Covered | `e2e/platform/platform-access.spec.js` |
 | `platform-admin-project-create` | platform | platform-admin | P3 | ✅ Covered | `e2e/platform/platform-project-create.spec.js` |
-| `platform-kanban-card-comments` | platform | platform-admin/client | P3 | ✅ Covered | `e2e/platform/platform-kanban-comments.spec.js` |
 
 ### Platform Coverage Summary
 
@@ -1753,37 +1650,6 @@ No active browser flow is registered for client profile editing at this time.
   4. Proposal is rejected successfully and the UI moves to the rejection confirmation state.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-rejection-optional.spec.js`
-
-#### FLOW: `proposal-calculator-timeline`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Investment calculator changes the estimated delivery timeline dynamically as optional modules are toggled on or off.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Baseline weeks are visible before any changes.
-  3. Client selects or removes priced modules.
-  4. Estimated timeline updates immediately to reflect the module mix.
-  5. Confirming the selection preserves the new timeline in the closing state.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-timeline.spec.js`
-
-#### FLOW: `proposal-calculator-micro-feedback`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** Calculator toggles show transient micro-feedback badges such as positive or negative price deltas when the client adds or removes priced modules.
-- **Steps:**
-  1. Client opens the investment calculator modal.
-  2. Client toggles a module with a price impact.
-  3. A transient feedback badge appears near the interaction showing the delta.
-  4. Badge fades away while totals remain updated.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-micro-feedback.spec.js`
 
 #### FLOW: `proposal-payment-plan-closing`
 
@@ -3478,9 +3344,9 @@ Two transitions that were previously bundled into other flows now have their own
 - **Role:** guest (via shared UUID link)
 - **Priority:** P3
 - **Routes:** `/proposal/:uuid`
-- **Description:** First-visit tutorial overlay (ProposalOnboarding component) that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
+- **Description:** Inner-view tutorial overlay (ProposalOnboarding component), independent of the gateway guide, that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
 - **Steps:**
-  1. User opens the proposal for the first time.
+  1. User chooses detailed or executive view from the gateway.
   2. ProposalOnboarding overlay appears with first tooltip step.
   3. User clicks through each onboarding step.
   4. Onboarding completes and emits `@complete` event.
@@ -3499,9 +3365,9 @@ Two transitions that were previously bundled into other flows now have their own
 - **Routes:** `/proposal/:uuid`
 - **Description:** Per-section spotlight onboarding tutorials that trigger automatically the first time a client navigates to specific sections. Each section has its own component with a spotlight overlay (blur backdrop + cloned element), progress dots, and positioned tooltip card. Tutorials are skipped for returning visitors (localStorage flag per proposal UUID).
 - **Steps:**
-  1. Client navigates to the Investment section for the first time (detailed view, with calculator modules).
+  1. Client navigates to the Investment section for the first time (detailed view).
   2. InvestmentOnboarding component triggers after 800ms delay.
-  3. Spotlight highlights the "Personalizar tu inversión" button with a tooltip explaining the calculator.
+  3. Spotlight highlights the "Explorar módulos adicionales" button with a tooltip explaining the catalog and saving commercial interests.
   4. Client clicks through onboarding steps → completes → localStorage flag set.
   5. [Separate trigger] Client navigates to functional_requirements section.
   6. RequirementsOnboarding component triggers after 800ms delay.
@@ -3509,7 +3375,7 @@ Two transitions that were previously bundled into other flows now have their own
   8. [Separate trigger] Client in executive view navigates to investment section.
   9. ExecutiveInvestmentOnboarding triggers, highlighting the "Ver detalle" teaser button.
 - **Branches:**
-  - [Branch A — Detailed Investment] InvestmentOnboarding triggers only in detailed view when calculator modules exist.
+  - [Branch A — Detailed Investment] InvestmentOnboarding triggers only in detailed view for a public proposal.
   - [Branch B — Executive Investment] ExecutiveInvestmentOnboarding triggers only in executive view.
   - [Branch C — Requirements] RequirementsOnboarding triggers in both view modes.
   - [Branch D — Returning visitor] Each tutorial is skipped if already completed (per-UUID localStorage flag).
@@ -3672,6 +3538,47 @@ Two transitions that were previously bundled into other flows now have their own
 - **Outcomes:** display (sección opcional y título localizado tras navegación), success (reproducción dentro de ambas vistas), failure (error de carga con Reintentar). Error de validación no aplica: no hay formulario; enlaces desconocidos/expirados pertenecen a sus flujos existentes.
 - **Evidencia:** `pages/proposal/[uuid]/index.vue` y `components/BusinessProposal/PersonalizedVideo.vue`.
 - **E2E Spec:** `e2e/public/proposal-personalized-video.spec.js`.
+
+### FLOW: `proposal-gateway-guide`
+
+- **Module:** proposal
+- **Role:** guest (via shared UUID link)
+- **Priority:** P2
+- **Routes:** `/proposal/:uuid`
+- **Description:** La portada con video y tarjetas ofrece una guía inicial y dos accesos inferiores derechos a Módulos adicionales y Programa de alianza. Los accesos abren las vistas públicas existentes en pestañas nuevas y conservan el idioma de la propuesta.
+- **Steps:**
+  1. Abrir la propuesta en su portada.
+  2. Seguir u omitir la guía del video disponible, las tarjetas y los dos accesos.
+  3. Abrir cada recurso sin abandonar la pestaña de la propuesta.
+  4. Elegir una tarjeta; los accesos y la guía de portada desaparecen.
+  5. Volver a la portada y reiniciar la guía con su botón de ayuda.
+- **Branches:**
+  - Sin video, el recorrido omite ese paso.
+  - La guía no se abre automáticamente si ya fue vista; puede reiniciarse.
+  - Las vistas ejecutiva, detallada, técnica y legal mantienen sus acciones propias.
+- **E2E Spec:** `e2e/proposal/proposal-welcome-explainer.spec.js`
+- **Components:** `ProposalViewGateway.vue`, `GatewayGuide.vue`, `PublicGuidedTour.vue`
+
+### FLOW: `proposal-module-interests`
+
+- **Module:** proposal
+- **Role:** guest (via shared UUID link)
+- **Priority:** P1
+- **Routes:** `/proposal/:uuid`
+- **Description:** Desde Inversión, el cliente explora el catálogo vigente por categorías y registra módulos que le interesan conversar. El modal no muestra precios; guardar intereses no cambia el alcance contratado, el importe, los plazos ni el PDF.
+- **Steps:**
+  1. Elegir la vista detallada y abrir Inversión.
+  2. Pulsar «Explorar módulos adicionales»; se carga el catálogo y la selección guardada.
+  3. Ver el video disponible y desplegar categorías y detalles de módulos.
+  4. Marcar módulos y guardar; aparece una confirmación y la selección persiste al reabrir.
+- **Branches:**
+  - Si falla la carga, aparece Reintentar.
+  - Si falla el guardado, los cambios pendientes siguen visibles para reintentar.
+  - El catálogo vacío se informa sin precios ni una selección ficticia.
+  - Los intereses anteriores desactivados se conservan y pueden retirarse.
+  - La vista previa informa que no registra intereses.
+- **E2E Spec:** `e2e/proposal/proposal-module-interests.spec.js`
+- **Components:** `Investment.vue`, `ModuleInterestsModal.vue`, `AdditionalModules/ModuleDetails.vue`
 
 
 ## 6. Admin Flows
@@ -3968,7 +3875,7 @@ Two transitions that were previously bundled into other flows now have their own
 - **Role:** admin
 - **Priority:** P1
 - **Routes:** `/panel/proposals/:id/edit`
-- **Description:** Edit an existing business proposal.
+- **Description:** Edit an existing business proposal through grouped navigation: General, Propuesta, Comunicación, Documentos, Proyecto and Seguimiento. Document and project tools remain available according to the proposal status.
 - **Steps:**
   1. Admin navigates to `/panel/proposals/:id/edit`.
   2. Proposal data loads from API (`GET /api/proposals/:id/detail/`).
@@ -3978,11 +3885,15 @@ Two transitions that were previously bundled into other flows now have their own
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [Grouped navigation] Select a primary area and one of its visible secondary tools. Compact and portrait profiles use named selectors. Returning to an area restores its last tool and preserves unsaved content or a selected video file.
+  - [Shared links] Old `?tab=<tool>` links and new `?tab=<group>&section=<tool>` links open the corresponding tool after proposal data loads, preserving unrelated parameters and fragments. Unknown or unavailable destinations return to General.
+  - [Lifecycle changes] When an active tool becomes unavailable, select the first available tool in its area or return to General. Finished projects retain Cronograma but not Desarrollo.
+
   - [Branch A] Admin reorders sections → `POST /api/proposals/:id/reorder-sections/`.
   - [Branch B] Admin updates individual section → `PATCH /api/proposals/sections/:id/update/`.
-  - [Branch C — item traceability] In the Det. técnico tab, editor sections render collapsed by default (2026-08 perf round): the admin expands "Módulos del producto" (`technical-section-toggle-epics`), opens the requirement's "Vincular alcance/ítems (n)" disclosure (`technical-req-links-toggle`), and checks the commercial-item boxes (grouped by functional_requirements card, `technical-req-item-links`) that write `linked_item_ids`; saving (button always visible below the sections) persists them via the same section update endpoint. These links power the public nested requirements modal and the commercial PDF sub-rows. The JSON sub-tab mounts only when selected.
+  - [Branch C — item traceability] In Propuesta → Detalle técnico, editor sections render collapsed by default (2026-08 perf round): the admin expands "Módulos del producto" (`technical-section-toggle-epics`), opens the requirement's "Vincular alcance/ítems (n)" disclosure (`technical-req-links-toggle`), and checks the commercial-item boxes (grouped by functional_requirements card, `technical-req-item-links`) that write `linked_item_ids`; saving (button always visible below the sections) persists them via the same section update endpoint. These links power the public nested requirements modal and the commercial PDF sub-rows. The JSON sub-tab mounts only when selected.
 - **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test)
+- **E2E Spec:** `e2e/admin/admin-proposal-edit.spec.js` (includes linked_item_ids save test), `e2e/admin/admin-proposal-navigation.spec.js` (grouped navigation and compatible links)
 - **Known gaps:** The automations toggle now uses positive polarity (ON = automations running, 2026-07); no E2E asserts knob position / `aria-checked`, and the toggle has no `data-testid` (only `aria-label="Activar automatizaciones"`).
 
 ### FLOW: `admin-proposal-contract-terms-visibility`
@@ -4943,43 +4854,6 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered — `frontend/e2e/proposal/proposal-value-added-modules.spec.js` (card grid, condition badges, and terms modal)
 - **Known gaps:** The terms modal now renders `**bold**` via `renderInlineBold` (2026-07) but the spec's mock terms carry no `**` markers, so bold output is unasserted. The canonical card order (admin → manual → kpi_dashboard → analytics → ai_automation, 2026-07) is not asserted either.
 
-### FLOW: `proposal-calculator-modules`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Calculator modal displays core calculator modules in order: PWA (40%), AI (invite-only), Conversiones Inteligentes (invite-only), Facturación Electrónica (60%), Pasarela Internacional (20%), Pasarela Regional (20%), Email Marketing (10%), Reportes y Alertas (20%, selected by default), Multi-idioma (15%). An informational badge at the **top** of the modal explains items are optional. Selecting a calculator module **adds** ~1 week to the timeline.
-- **Steps:**
-  1. Client navigates to the Investment section and clicks "Personalizar tu inversión".
-  2. Calculator modal opens with informational badge at the top.
-  3. Modules appear in the specified order: PWA, AI, Smart Conversions, Electronic Invoicing, International Payments, Regional Payments, Email Marketing, Reports & Alerts, Multi-idioma.
-  4. PWA module appears unselected by default, with price as +40% of total.
-  5. AI module appears with "Agendar llamada" label instead of price and a purple creative invite note.
-  6. Reports & Alerts module appears selected by default with price as +20% of total.
-  7. Selecting a module adds ~1 week to estimated timeline; deselecting an investment module reduces ~1 week.
-  8. Client confirms selection → modal closes, total updates on Investment section.
-- **Branches:**
-  - [Branch A — AI invite] Client selects AI module → invite note visible, no cost added.
-  - [Branch B — FR integration] Selected calculator modules appear in Functional Requirements section.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-modules.spec.js`
-
-### FLOW: `proposal-calculator-selected-first`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** When the calculator modal opens, groups containing pre-selected (`default_selected`) modules are sorted to the top so the client sees included modules first without scrolling.
-- **Steps:**
-  1. Client opens the proposal and navigates to the Investment section.
-  2. Client clicks "Personalizar tu inversión".
-  3. Calculator modal opens with selected module groups sorted to the top.
-  4. Unselected module groups appear below.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-modules.spec.js`
-
 ### FLOW: `proposal-expired-graceful`
 
 - **Module:** proposal
@@ -5019,44 +4893,6 @@ Two transitions that were previously bundled into other flows now have their own
   - [Branch B — Network error] Submit fails; UI surfaces a retry message.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-magic-link-request.spec.js`
-
-### FLOW: `proposal-calculator-abandonment-tracking`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link) / system
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The calculator modal tracks whether the client confirms or abandons their module selection. On close without confirming, an `abandoned` event is sent. On confirm, a `confirmed` event is sent. Both are stored as `ProposalChangeLog` entries and aggregated in the admin dashboard as `calc_abandonment_rate` and `dropped_modules`.
-- **Steps:**
-  1. Client opens the calculator modal in the Investment section.
-  2. Client toggles modules (selects/deselects).
-  3. [Branch A — Confirm] Client clicks "Confirmar selección" → `confirmed` event sent via `POST /api/proposals/:uuid/track-calculator/`.
-  4. [Branch B — Abandon] Client closes modal without confirming → `abandoned` event sent automatically.
-  5. Backend creates `ProposalChangeLog` with `calc_confirmed` or `calc_abandoned` change type.
-  6. Dashboard aggregates data: `calc_abandonment_rate` = abandoned / (abandoned + confirmed), `dropped_modules` = most frequently deselected modules.
-- **Coverage:** ⚠️ Backend-only
-- **Backend Tests:** `content/tests/views/test_proposal_views.py`
-
-### FLOW: `proposal-investment-calculator`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **API:** (client-side only — no API call for toggling)
-- **Description:** Client reviews readable payment rows in the Investment section, opens the calculator modal, toggles optional feature modules on/off, sees dynamic total investment and estimated timeline update in real time, and confirms or cancels the selection.
-- **Outcomes:**
-  - `display` — at laptop width, every payment keeps amount, currency, and `+ IVA` together on one line.
-  - `success` — the client opens the calculator, changes optional modules, and confirms the resulting selection.
-- **Steps:**
-  1. Client views the proposal and navigates to the Investment section.
-  2. The payment list leaves room for its labels and keeps each complete tax-qualified amount together.
-  3. Client clicks "Personalizar tu inversión" to open the calculator modal.
-  4. Client toggles optional feature modules — total investment and timeline update dynamically.
-  5. Client clicks "Confirmar selección" → modal closes; closing section reflects updated total.
-  6. [Branch B — Abandon] Client closes modal without confirming → selection reverts.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-investment-calculator.spec.js`
 
 ### FLOW: `proposal-comment-from-closing`
 
@@ -5287,75 +5123,6 @@ Two transitions that were previously bundled into other flows now have their own
   5. Activity timeline refreshes with the new entry.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-log-activity.spec.js`
-
-### FLOW: `proposal-calculator-new-modules`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator displays additional default modules: Email Marketing (10%), i18n (15%), and Gift Cards (20%). KPI Dashboard has been removed from the calculator and is now included by default (like Analytics). Conversion Tracking moved to integrations (see `proposal-calculator-integrations`).
-- **Steps:**
-  1. Client opens the calculator modal.
-  2. Email Marketing module appears unselected with price as +10% of total.
-  3. i18n module appears unselected with price as +15% of total.
-  4. Gift Cards module appears unselected with price as +20% of total.
-  5. Client toggles modules → total investment and timeline update in real-time.
-  6. KPI Dashboard is NOT shown in the modal (included by default like Analytics module).
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-new-modules.spec.js`
-
-### FLOW: `proposal-calculator-biometric-module`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator exposes `biometric_verification_module` as a provider-billed integration: ID document reading + OCR, facial recognition, liveness detection, antifraud + KYC, frictionless digital onboarding, and a verifications panel. Because the integration provider invoices the end client directly, the module follows the `is_invite=True, price_percent=0` pattern (same as `ai_module` and `integration_conversion_tracking`). Two sibling modules — `qr_generator_module` (25%) and `content_generator_module` (30%, with editorial calendar + scheduling) — are added to the catalog at the same time but are regular non-invite calculator modules; their structural behavior is already covered by `proposal-calculator-modules` and `proposal-calculator-new-modules`.
-- **Steps:**
-  1. Client opens the calculator modal on a proposal that includes `biometric_verification_module`.
-  2. Module row renders with the bilingual title "🪪 Verificación y Validación Biométrica (Integración API)".
-  3. Module shows "Agendar llamada" badge instead of a price (because `is_invite=True, price_percent=0`).
-  4. Client clicks the module row → `invite_note` is revealed ("Te invitamos a una llamada... un proveedor especializado factura el servicio directamente al cliente final").
-  5. Selecting the module does NOT alter the total investment (provider-billed; verified at the unit level by `computeWeeksAddition — does not count invite modules`).
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-biometric-module.spec.js`
-
-### FLOW: `proposal-calculator-behavior-tracking-module`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator exposes `behavior_tracking_module` as a priced add-on (30% of the base investment, `default_selected: False`): first-party user behavior tracking installed in the client's own product — session/open registry, views opened + time per view (up to 15 tracked views), interest map, journey funnel with drop-off (1 main funnel), built-in behavior panel (up to 8 KPIs / 4 charts), device breakdown, and 12-month data retention with explicit exclusions (no screen recording, click heatmaps or cross-site tracking). It is the same capability the platform uses in its own proposal analytics tab, productized for clients.
-- **Steps:**
-  1. Client opens the calculator modal on a proposal that includes `behavior_tracking_module`.
-  2. Module row renders under the bilingual label "👣 Rastreo de Comportamiento" with `+30%` pricing over the base total (e.g. base $4.000.000 COP → +$1.200.000).
-  3. Client expands the module → 7 scope-closed items are listed.
-  4. Selecting the module raises the effective total by base×30% and rescales payment options.
-  5. In technical mode, an epic with `linked_module_ids: ["module-behavior_tracking_module"]` is hidden while the module is deselected and shown once selected (same gating as other additional modules).
-- **Coverage:** ⚠️ Pending (registered, E2E spec not yet implemented; catalog data verified by `backend/content/tests/services/test_proposal_service.py` and migration tests, calculator mechanics structurally covered by `proposal-calculator-modules` / `proposal-investment-calculator`)
-- **E2E Spec:** _suggested:_ `e2e/proposal/proposal-calculator-behavior-tracking-module.spec.js`
-
-### FLOW: `proposal-calculator-integrations`
-
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P2
-- **Routes:** `/proposal/:uuid`
-- **Description:** The investment calculator displays integration groups as individually toggleable calculator modules: International Payments (20%), Regional Payments Colombia (20%), Electronic Invoicing / DIAN (60%), and Conversion Tracking Meta & Google Ads (invite-only, 0%). Each was previously grouped under a single `integrations_api` group and now has its own pricing, selection state, and invite attributes.
-- **Steps:**
-  1. Client opens the calculator modal.
-  2. International Payments integration appears unselected with price as +20% of total.
-  3. Regional Payments (Colombia) integration appears unselected with price as +20% of total.
-  4. Electronic Invoicing integration appears unselected with price as +60% of total.
-  5. Conversion Tracking integration appears with "Agendar llamada" invite-only label and invite note.
-  6. Client selects International Payments → total investment increases by 20%.
-  7. Client selects Electronic Invoicing → total investment increases by 60%.
-- **Branches:**
-  - [Branch A — Conversion Tracking invite] Client sees invite note, no cost added.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-integrations.spec.js`
 
 ### FLOW: `admin-blog-list`
 
@@ -6136,6 +5903,24 @@ Two transitions that were previously bundled into other flows now have their own
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidencia:** `ProposalGeneralTab.vue`, `ProposalExplainerToggle.vue`, `pages/panel/proposals/[id]/edit.vue`.
 
+### FLOW: `admin-proposal-module-interests`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Routes:** `/panel/proposals/:id/edit`
+- **Description:** El vendedor consulta los intereses del cliente como información comercial. Su posterior acuerdo se incorpora manualmente al alcance y a la inversión.
+- **Steps:**
+  1. Abrir la propuesta en el panel y consultar General.
+  2. Leer la lista de módulos de interés y la fecha de su última actualización.
+  3. Abrir Actividad y consultar el registro automático de la selección o su retiro.
+- **Branches:**
+  - Sin selecciones previas no se muestra una fecha inventada.
+  - El retiro de todos los intereses queda registrado con fecha y actividad.
+  - Los nombres registrados se conservan aunque se edite o desactive el catálogo.
+- **E2E Spec:** `e2e/admin/admin-proposal-module-interests.spec.js`
+- **Components:** `ProposalGeneralTab.vue`, `ProposalActivityTab.vue`
+
 
 ## 7. E2E Coverage Index
 
@@ -6144,8 +5929,9 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-ads` | admin | P3 | display,success,error | 4 |
 | `admin-accounting-card-catalog` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-cards` | admin | P2 | display,success,error | 10 |
-| `admin-accounting-collection-create` | admin | P1 | display,failure,error,success | 11 |
-| `admin-accounting-collection-detail` | admin | P1 | display,success | — |
+| `admin-accounting-collection-context` | admin | P1 | display,success,error,failure | — |
+| `admin-accounting-collection-create` | admin | P1 | display,success,error,failure | 11 |
+| `admin-accounting-collection-detail` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-collection-grouping` | admin | P2 | display,success,failure | 4 |
 | `admin-accounting-collections` | admin | P2 | display,success,failure | 9 |
 | `admin-accounting-dashboard` | admin | P1 | display,success | 8 |
@@ -6156,7 +5942,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-history` | admin | P2 | display,success | 6 |
 | `admin-accounting-history-diagnosis` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-history-filters` | admin | P2 | display,success | 7 |
-| `admin-accounting-hosting-billing` | admin | P1 | display,success,failure | 3 |
+| `admin-accounting-hosting-billing` | admin | P1 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
@@ -6169,6 +5955,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-accounting-pocket` | admin | P2 | display,success,error | 7 |
 | `admin-accounting-project-bulk-assign` | admin | P1 | success,failure | 3 |
 | `admin-accounting-project-coherence` | admin | P1 | success | 1 |
+| `admin-accounting-project-hosting-reconciliation` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-receivables` | admin | P1 | display,success,failure | 11 |
 | `admin-accounting-record-history` | admin | P1 | display,success,failure | — |
 | `admin-accounting-recurring` | admin | P2 | display,success,error,failure | 27 |
@@ -6197,7 +5984,6 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-blog-list` | admin | P2 | display | 1 |
 | `admin-blog-overdue-detection` | admin | P2 | — | 0 |
 | `admin-blog-publish-mode` | admin | P2 | display,success | 1 |
-| `admin-calculator-followup-alert` | admin | P2 | — | 0 |
 | `admin-client-archived-tab` | admin | P2 | display,success,failure | 1 |
 | `admin-client-change-history` | admin | P2 | display,success,failure | — |
 | `admin-client-communications` | admin | P1 | display,success,error,failure | 15 |
@@ -6327,10 +6113,14 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-project-access-field-edit` | admin | P1 | success,error,failure | — |
 | `admin-project-access-notes` | admin | P2 | display,success,error,failure | — |
 | `admin-project-access-secrets` | admin | P1 | display,success,failure | — |
+| `admin-project-actions-menu` | admin | P1 | display | 3 |
 | `admin-project-brand` | admin | P2 | success,error,failure,display | — |
 | `admin-project-change-client` | admin | P2 | display,success | 2 |
 | `admin-project-change-history` | admin | P1 | display,success,failure | — |
+| `admin-project-client-access-policy` | admin | P1 | success,error,failure,display | — |
+| `admin-project-delete` | admin | P1 | success,error,failure | 10 |
 | `admin-project-fly-create` | admin | P2 | success,error | 4 |
+| `admin-project-idea-collection` | admin | P1 | success,error,failure,display | — |
 | `admin-project-inline-assign-offer` | admin | P2 | success | 1 |
 | `admin-project-lifecycle-states` | admin | P1 | display,success,error,failure | 7 |
 | `admin-project-state-catalog` | admin | P1 | display,success,error,failure | 9 |
@@ -6367,7 +6157,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-documents-send` | admin | P1 | — | 0 |
 | `admin-proposal-download-pdf` | admin | P2 | success | — |
 | `admin-proposal-duplicate` | admin | P2 | success | 1 |
-| `admin-proposal-edit` | admin | P1 | success,error | 1 |
+| `admin-proposal-edit` | admin | P1 | success,error,display | 1 |
 | `admin-proposal-engagement-decay-alert` | admin | P2 | — | 0 |
 | `admin-proposal-engagement-score` | admin | P2 | display | 1 |
 | `admin-proposal-explainer-preference` | admin | P2 | display,success,failure | 3 |
@@ -6384,6 +6174,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-log-activity` | admin | P2 | success,failure,display | 1 |
 | `admin-proposal-manual-alerts` | admin | P2 | success | 1 |
 | `admin-proposal-metrics-manual` | admin | P3 | display | 1 |
+| `admin-proposal-module-interests` | admin | P2 | display | 1 |
 | `admin-proposal-multi-send` | admin | P1 | success,error,failure | 1 |
 | `admin-proposal-platform-handoff` | admin | P1 | success,failure | 1 |
 | `admin-proposal-post-rejection-revisit` | admin | P2 | — | 0 |
@@ -6443,23 +6234,28 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-admin-client-detail` | platform | P2 | success,error,failure,display | 1 |
 | `platform-admin-client-list` | platform | P2 | success,error,display | 1 |
 | `platform-admin-project-create` | platform | P3 | success,error | 1 |
-| `platform-bug-reports` | platform | P2 | success,display | 1 |
-| `platform-change-requests` | platform | P2 | success,display | 1 |
+| `platform-bug-reports` | platform | P2 | success,error,failure,display | 1 |
+| `platform-change-requests` | platform | P2 | success,error,failure,display | 1 |
 | `platform-client-document-portal` | platform | P1 | success,display | 1 |
 | `platform-client-document-sign` | platform | P1 | success,error | 1 |
 | `platform-client-email-validation` | platform | P1 | success,error | 1 |
-| `platform-collection-account-detail` | platform | P2 | — | 0 |
-| `platform-collection-accounts-list` | platform | P2 | — | 0 |
+| `platform-collection-account-detail` | platform | P1 | display,success,error | 0 |
+| `platform-collection-accounts-list` | platform | P1 | display,success,error | 0 |
 | `platform-complete-profile` | platform | P1 | success,error | 1 |
 | `platform-dashboard` | platform | P2 | — | 0 |
 | `platform-deliverable-detail` | platform | P2 | success | 1 |
 | `platform-deliverables` | platform | P2 | success,error,display | 1 |
+| `platform-delivery-authoring` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-closure-email` | platform | P1 | success,error,failure,display | — |
+| `platform-delivery-guide-prompt` | platform | P1 | success,error,failure,display | 1 |
+| `platform-delivery-import` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
+| `platform-delivery-responses` | platform | P1 | success,error | 1 |
+| `platform-delivery-review` | platform | P1 | display,success,error | 1 |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
+| `platform-hosting-project-list` | platform | P2 | display,success,error | — |
 | `platform-hosting-subscription` | platform | P1 | success,error,display | 1 |
-| `platform-kanban-board` | platform | P1 | success,display | 1 |
-| `platform-kanban-card-comments` | platform | P3 | success,display | 1 |
-| `platform-kanban-json-upload` | platform | P2 | success,error,display | 1 |
 | `platform-layout-title-mapping` | platform | P3 | display | 1 |
 | `platform-legacy-route-redirects` | platform | P2 | success | 1 |
 | `platform-login` | platform | P1 | success,error,failure | 1 |
@@ -6468,25 +6264,19 @@ Two transitions that were previously bundled into other flows now have their own
 | `platform-profile-avatar-picker` | platform | P2 | success | 1 |
 | `platform-profile-edit` | platform | P2 | success,error,display | 1 |
 | `platform-project-access-detail` | platform | P1 | display,success,error,failure | — |
-| `platform-project-collection-accounts` | platform | P2 | display | 1 |
+| `platform-project-client-access` | platform | P1 | success,error,failure,display | — |
+| `platform-project-collection-accounts` | platform | P1 | display,success,error | 1 |
 | `platform-project-data-model` | platform | P2 | success,error,display | 1 |
 | `platform-project-detail` | platform | P2 | success,display | 1 |
+| `platform-project-hosting-context` | platform | P1 | display,success,error | — |
+| `platform-project-ideas` | platform | P1 | success,error,failure,display | — |
 | `platform-project-list` | platform | P2 | success,display | 1 |
 | `platform-proposal-auto-onboarding` | platform | P1 | — | 0 |
-| `platform-requirement-client-review` | platform | P2 | success,display | 1 |
+| `platform-secure-link-create` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-manage` | platform | P1 | display,success,error,failure | — |
+| `platform-secure-link-replace` | platform | P1 | display,success,error,failure | — |
 | `platform-sidebar-navigation` | platform | P2 | success,display | 1 |
-| `platform-unified-board` | platform | P2 | — | 0 |
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
-| `proposal-calculator-abandonment-tracking` | proposal | P2 | — | 0 |
-| `proposal-calculator-behavior-tracking-module` | proposal | P2 | success | 0 |
-| `proposal-calculator-biometric-module` | proposal | P2 | display | 1 |
-| `proposal-calculator-integrations` | proposal | P2 | success | 1 |
-| `proposal-calculator-micro-feedback` | proposal | P2 | display | 1 |
-| `proposal-calculator-modules` | proposal | P1 | success | 1 |
-| `proposal-calculator-new-modules` | proposal | P2 | success | 1 |
-| `proposal-calculator-reopen-after-nav` | proposal | P1 | success | 1 |
-| `proposal-calculator-selected-first` | proposal | P2 | display | 1 |
-| `proposal-calculator-timeline` | proposal | P1 | success | 1 |
 | `proposal-closing-contact` | proposal | P2 | display | 1 |
 | `proposal-comment-from-closing` | proposal | P2 | success | 1 |
 | `proposal-conditional-acceptance` | proposal | P2 | success | 1 |
@@ -6499,10 +6289,11 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-executive-to-detailed` | proposal | P2 | display | 1 |
 | `proposal-expired-graceful` | proposal | P1 | failure | 1 |
 | `proposal-functional-requirements-modal` | proposal | P2 | display | 1 |
+| `proposal-gateway-guide` | proposal | P2 | display,success | 1 |
 | `proposal-hosting-plan-terms` | proposal | P2 | display | 2 |
-| `proposal-investment-calculator` | proposal | P1 | success,display | 1 |
 | `proposal-kickoff-disclosure` | proposal | P2 | display | 1 |
 | `proposal-magic-link-request` | proposal | P1 | success | 1 |
+| `proposal-module-interests` | proposal | P1 | display,success,failure | 1 |
 | `proposal-negotiate` | proposal | P1 | success | 1 |
 | `proposal-og-meta-personalized` | proposal | P3 | display | 1 |
 | `proposal-onboarding-mobile-swipe` | proposal | P3 | display | 1 |
@@ -6516,7 +6307,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `proposal-respond` | proposal | P1 | success | 1 |
 | `proposal-roi-projection` | proposal | P1 | display | 1 |
 | `proposal-schedule-followup-reminder` | proposal | P2 | success | 1 |
-| `proposal-section-onboarding` | proposal | P3 | success | 1 |
+| `proposal-section-onboarding` | proposal | P3 | display,success | 1 |
 | `proposal-share` | proposal | P2 | success | 1 |
 | `proposal-slug-access` | proposal | P1 | display,failure | 3 |
 | `proposal-sticky-bar-accept` | proposal | P2 | — | 0 |
@@ -6686,6 +6477,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered — all four outcome classes, including the default and persisted Mes/Total ordering, the five-width indicator header, its filtering actions, the settlement's deduction, follow-up income, over-allocation block and backend rejection, y el borrado recalculando totales sin recargar ni mover la página.
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
 
+#### IVA opcional
+
+IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
@@ -6718,6 +6513,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered — display, success and error (backend 400 keeps the modal open with the Spanish toast).
 - **E2E Spec:** `e2e/admin/admin-accounting-expenses-hostings.spec.js`
 
+#### IVA opcional
+
+IVA opcional con 0 por defecto: captura de total incluido o base antes del impuesto y desglose base/IVA/total en edición. No calcula IVA descontable ni cambia utilidad o reparto.
+
 ### FLOW: `admin-accounting-hostings`
 
 - **Module:** admin
@@ -6728,6 +6527,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Responsive acceptance:** At 412×915, 835×1195, 1195×835, 1440×900 and 2560×1440, both validity dates remain complete without overlapping Ciclos. The range may wrap between dates, retaining partial/missing-date placeholders. Grouped values remain accessible on narrow screens and the cycle count still opens the selected hosting’s history.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-expenses-hostings.spec.js`
+
+#### IVA opcional
+
+IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido por defecto o base antes del impuesto; las siguientes cuentas heredan el porcentaje y muestran el desglose sin recalcular ciclos históricos.
 
 ### FLOW: `admin-accounting-pocket`
 
@@ -6898,13 +6701,16 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Role:** superuser admin
 - **Priority:** P1
 - **Routes:** `/panel/accounting/hostings`
-- **Description:** Send a client the cuenta de cobro from a hosting row. The row menu's "Enviar cuenta de cobro" entry (disabled without client email, its reason shown under the label) opens a ConfirmModal previewing amount and recipient; confirm POSTs `/api/accounting/hostings/:id/send-collection-account/`, which issues the Document (public number PA-YYYY-NNNN, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the Spanish PDF attached and stamps `billing_requested_at` (pauses the expiry notices; a "Cobro enviado" badge appears on the row). If the email fails the document stays issued and a warning toast points to Cuentas de cobro for re-send. Since PA-25 the recipient and the numbering come from the linked client (see `admin-accounting-hosting-client`): the action gates on `billing_email` (hosting override, else the client's address), and a linked hosting issues on that client's series.
+- **Description:** Send a client the cuenta de cobro from a hosting row. The row menu's "Enviar cuenta de cobro" entry (disabled without client email, its reason shown under the label) opens the hosting emission modal previewing amount and recipient with explicit project context; confirm POSTs `/api/accounting/hostings/:id/send-collection-account/`, which issues the Document (public number PA-YYYY-NNNN, one line item for the next modality period, issuer default payment methods), emails the client the branded message with the Spanish PDF attached and stamps `billing_requested_at` (pauses the expiry notices; a "Cobro enviado" badge appears on the row). If the email fails the document stays issued and a warning toast points to Cuentas de cobro for re-send. Since PA-25 the recipient and the numbering come from the linked client (see `admin-accounting-hosting-client`): the action gates on `billing_email` (hosting override, else the client's address), and a linked hosting issues on that client's series.
 - **Steps:**
   1. Superuser opens `/panel/accounting/hostings` and opens the row's three-dots menu and chooses "Enviar cuenta de cobro" on a hosting with client email.
-  2. ConfirmModal previews `payment_per_cycle` and the recipient; confirm fires the POST.
+  2. The emission modal previews `payment_per_cycle` and the recipient. For a project hosting it requires the mapped operational accounting source and an existing subscription obligation when applicable; confirm fires the POST with its explicit payment reference.
   3. Success toast (with "Ver en Cuentas de cobro" action) and the row shows the "Cobro enviado" badge.
 - **Coverage:** ✅ Covered (email gate, confirm + POST + badge, email-failure warning)
 - **E2E Spec:** `e2e/admin/admin-accounting-hosting-billing-cycles.spec.js`
+
+
+**Contexto de cobros de proyecto (P2):** La modal requiere origen operativo asociado al hosting único y obligación existente de suscripción cuando corresponda. Los orígenes pendientes permiten abrir la conciliación del proyecto; la asociación no registra pagos ni cambia automatismos.
 
 ### FLOW: `admin-accounting-collections`
 
@@ -6939,6 +6745,13 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered (columns separated, detail + settlement history, inline document embed, the exit landing on a non-filtering tab)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`
 
+
+**Contexto de cobros de proyecto (P2):** El detalle permite asociar o corregir contrato/otrosí o hosting mediante motivo y versión; los históricos se muestran pendientes hasta decisión. El PDF, snapshot e importes se conservan.
+
+#### IVA opcional
+
+El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.
+
 ### FLOW: `admin-accounting-collection-create`
 
 - **Module:** admin
@@ -6953,6 +6766,13 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
   4. "Confirmar y enviar" creates+issues+emails; the row appears and the income flags as linked.
 - **Coverage:** ✅ Covered (create-through-preview with payload assertions; selector warning for a client without email; complete visible blocker list; invalid inline email; explicit canonical email save preserving the draft; floating income list outside the clipping panel; alcance/estado chips with their counts + focus retention + explicit empty state + "Ver todos" widening + click-outside close; Liquidar routing on mark-paid; generate icon opens locked modal; linked row navigates focused)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
+
+
+**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
+
+#### IVA opcional
+
+Hereda IVA del ingreso, acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 
@@ -7055,7 +6875,7 @@ Management UI for remote MCP connectors that expose panel modules to Claude (cla
   3. Genera la principal o crea una limitada → recibe la URL una sola vez → la copia al cliente MCP.
   4. Edita alcance/vencimiento, rota o revoca una credencial individual; la revocación exige confirmación en el modal estándar del Panel.
   5. Activa o desactiva el conector con el toggle.
-  - [Display] La card y sus acordeones presentan inventario real, no sólo un contenedor visible.
+  - [Display] La card y sus acordeones presentan inventario real. En los cinco perfiles del Panel se leen etiquetas, actores e identificadores de petición largos sin desborde horizontal; en móvil y tableta vertical los acordeones ofrecen zonas táctiles de al menos 44 px. En tableta vertical se puede abrir la edición del alcance y cancelarla sin cambiar la credencial.
   - [Success] Crear, editar, rotar, revocar y activar producen el estado observable correspondiente.
   - [Error] Un staff no superusuario es redirigido; etiqueta vacía o alcance custom vacío permanecen bloqueados en cliente.
   - [Failure] Un 4xx/5xx conserva el formulario o estado anterior y muestra el detalle accionable.
@@ -7141,16 +6961,6 @@ Also registered/updated in this audit and documented in their home sections:
 - **Description:** When a pasted/imported proposal JSON does not resolve to an existing client, a client-picker prompts the admin to bind the imported proposal to a client before creating it.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-json-import-client-picker.spec.js`
-
-### FLOW: `proposal-calculator-reopen-after-nav`
-
-- **Module:** proposal
-- **Role:** guest
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** On the public proposal, reopening the investment calculator after navigating between sections preserves the previously selected modules and calculator state.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-calculator-reopen-after-nav.spec.js`
 
 ### FLOW: `proposal-slug-access`
 
@@ -7462,7 +7272,7 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Interaction:** An admin reaches Accesos through project navigation and uses the shared editor over JWT transport.
 - **Display outcome:** The scoped project detail renders both environments and masked credentials.
 - **Success outcome:** An explicit field save updates the response through the platform endpoint.
-- **Error outcome:** A client profile is redirected before the protected editor renders.
+- **Error outcome:** A client remains on an empty limited access view and never receives the administrative editor.
 - **Failure outcome:** An API load failure appears with a retry control.
 - **Coverage:** `e2e/platform/platform-project-access-detail.spec.js` and the five responsive platform profiles.
 
@@ -7617,7 +7427,59 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **E2E Spec:** `e2e/admin/admin-video-resources.spec.js`.
 
 
+## Section 33 — Platform Delivery Workflow (Oct 1, 2026)
+
+### Platform: preparar y publicar etapas
+
+Fuente: `DeliveryAuthoringForm.vue`, `DeliveryWorkspace.vue` y `accounts.services.delivery_workflow`.
+
+El administrador vincula el contrato original, sus otrosíes y el alcance; crea fases de ejecución independientes de los cobros y organiza sus etapas y requerimientos. Guarda borradores antes de publicar. Una etapa sin requerimientos, con guía incompleta o con contrato aplicable sin firmar no se puede publicar. Si una guía basada en fuentes nombra un rol del producto, debe explicar acceso y datos, acciones permitidas y bloqueadas, y los pasos y resultados para verificar ambos casos. El rechazo conserva el borrador; se completa la guía y sólo entonces se publica para el cliente. Las ampliaciones de una etapa aprobada requieren otra etapa.
+
+`delivery-authoring.spec.js` cubre la preparación y publicación desde el formulario. La API comprueba también permisos, versiones y protección de aprobaciones.
+
+### Platform: prompt e importación de JSON
+
+Fuente: editor de importación en `DeliveryWorkspace.vue`.
+
+El administrador copia el prompt, redacta fuera de la aplicación y pega un JSON con `schema_version: 1`. Previsualiza antes de aplicar. Cambiar el texto invalida esa previsualización. La aplicación importa únicamente borradores y rechaza campos de estados, firmas o aprobaciones.
+
+`delivery-authoring.spec.js` prueba JSON inválido y la secuencia previsualizar → aplicar → consultar el borrador persistido. Las reglas de importación atómica y protección se verifican también por API y MCP.
+
+### Platform: validar una entrega
+
+Fuente: `DeliveryWorkspace.vue`, `DeliveryStage.vue`, `DeliveryReviewForm.vue` y `DeliveryReviewHistory.vue`.
+
+| Acción | Resultado | Evidencia |
+|---|---|---|
+| Abrir Entregas desde el proyecto | Mostrar guía publicada con datos y pasos; ocultar borradores | `delivery-review.spec.js` |
+| Aprobar solamente lo probado | Conservar conformidad parcial y dejar abiertos los demás casos | `delivery-review.spec.js` |
+| Objetar sin motivo | Pedir el motivo sin guardar una decisión | `delivery-review.spec.js` |
+| Corregir y republicar un caso pendiente | Mantener el caso aprobado y entregar otra versión del pendiente | `delivery-review.spec.js` |
+| Aprobar todos los requerimientos | Cerrar la etapa; una etapa en borrador impide cerrar la fase | `delivery-review.spec.js` |
+| Abrir el formulario en cinco anchos | Controles alcanzables sin desbordamiento horizontal | `delivery-authoring.spec.js` |
+
+Los conflictos de versión, permisos por proyecto y evidencia inmutable se comprueban además en las pruebas de API. El navegador usa JWT reales y una base temporal; no simula aprobaciones.
+
+### Platform: responder sobre una etapa
+
+Fuente: reporte contextual en `DeliveryWorkspace.vue` e historial en `DeliveryStage.vue`.
+
+Administrador y cliente escriben un mensaje, seleccionan los requerimientos tratados y pueden asociar documentos existentes. El mensaje es obligatorio; los adjuntos son opcionales. El cliente sólo puede responder en contenido publicado que pertenece a su proyecto.
+
+`delivery-review.spec.js` comprueba que una respuesta sin adjuntos persiste al volver. Las respuestas no otorgan conformidad ni sustituyen la decisión explícita del cliente.
+
+
 ## Unsectioned flows
+
+### FLOW: `admin-accounting-collection-context`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Asocia una cuenta de proyecto a contrato y otrosí opcional del mismo contrato, o al único hosting, con razón, control de versión y validación de coherencia; conserva snapshot, PDF, importes y pagos.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
 ### FLOW: `admin-accounting-income-reminder-mute`
 
@@ -7631,6 +7493,16 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Branches:** a date that is empty, today or earlier is blocked inline; a failed request preserves the prior state; paid, liquid and lost rows do not expose the action.
 - **Coverage:** ✅ Covered — display, dated and indefinite success, manual reactivation, validation error and server failure.
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
+
+### FLOW: `admin-accounting-project-hosting-reconciliation`
+
+- **Módulo:** admin
+- **Prioridad:** P1
+- **Descripción:** Inventaría y asocia explícitamente suscripción y orígenes contables al único hosting del proyecto, elige origen operativo y concilia referencias financieras con preview, motivo y versión. No registra dinero ni elige por texto o importe.
+- **Resultados:** display, success, error, failure.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
 
 ### FLOW: `admin-accounting-record-history`
 
@@ -8024,6 +7896,32 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 - **Failure outcome:** Fallos de API muestran una recuperación explícita y no revelan valores protegidos ni comparaciones obsoletas.
 - **Coverage:** Display, success y failure validados en `admin/admin-entity-history.spec.js`.
 
+### FLOW: `admin-project-client-access-policy`
+
+- **Module:** admin
+- **Roles:** admin, platform-admin
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/access`
+- **Interaction:** Admin explicitly enables each available project/access datum, saves a source-bound version and previews the limited client projection, handling stale values and load failures.
+- **Coverage:** `frontend/e2e/project-collaboration/client-access.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### FLOW: `admin-project-idea-collection`
+
+- **Module:** admin
+- **Roles:** admin
+- **Priority:** P1
+- **Route:** `/panel/projects/:id/ideas`
+- **Interaction:** Admin opens the idea workspace from the selected project three-point menu, selects exact idea versions from one project and client, preserves internal snapshots for future evaluation and resolves stale or failed requests without changing contracts.
+- **Coverage:** `frontend/e2e/project-collaboration/ideas.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación desde el menú de tres puntos del proyecto seleccionado, texto real o dato habilitado de la fixture.
+
 ### FLOW: `admin-project-lifecycle-states`
 
 - **Module:** admin
@@ -8131,6 +8029,27 @@ Verificación: `admin-contract-modal-layout.spec.js` cubre creación y reapertur
 de las tres variantes, geometría y selección personalizada en los cinco
 viewports del panel. Los errores y reintentos siguen cubiertos por
 `admin-proposal-contract-modality.spec.js`.
+
+#### Condiciones económicas y regeneración
+
+En modalidad separada, Documentos explica que hosting, cobertura, cortesía,
+precios y renovación pertenecen al contrato de servicio. El anexo comercial
+queda centrado en el producto y su forma de pago. El modal de servicio avisa que
+las condiciones se incorporan automáticamente tanto con plantilla como con texto
+personalizado. Presenta los tres periodos disponibles sin elegir por el cliente.
+
+- **Success:** el aviso de contrato desactualizado permite abrir **Regenerar
+  contrato**, guardar la variante de servicio y recuperar el documento vigente.
+- **Error:** si faltan condiciones económicas para generar, el servidor lo
+  explica y el modal conserva los datos; no cambia parcialmente la modalidad.
+- **Failure:** un contrato de servicio obsoleto impide preparar su adjunto de
+  formalización hasta regenerarlo. Las preparaciones anteriores requieren revisión.
+- **Display:** el aviso pertenece sólo a la fila del servicio desactualizado.
+  Los documentos de propuestas cerradas conservan su historial.
+
+Verificación: `admin-proposal-contract-modality.spec.js` recorre el aviso y la
+regeneración; las pruebas backend verifican importes, ausencia del hosting en
+el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoletos.
 
 ### FLOW: `admin-proposal-document-markdown`
 
@@ -8252,6 +8171,249 @@ viewports del panel. Los errores y reintentos siguen cubiertos por
 - **Success:** guarda mediante PATCH de company-settings y las siguientes aperturas del modal reciben la configuración.
 - **Error:** impide listas vacías, duplicados, números fuera de 1–999 o preselecciones fuera de las opciones; muestra errores junto al control.
 - **Failure:** la carga ofrece Reintentar; un guardado rechazado conserva los valores editados y permite otro intento.
+
+### Platform: reportar y seguir bugs de proyecto
+
+El cliente puede reportar un bug general aunque no existan guías publicadas. Si
+elige una entrega, el ticket conserva contrato, otrosí, alcance, fase, etapa,
+publicación, ronda y versión del requerimiento originales. Los datos, pasos,
+resultado esperado/real, entorno, pantallazo y comentarios permanecen en el ticket.
+
+Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
+la pestaña Bugs y el ticket mediante la interfaz.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Abrir Bugs desde un proyecto y consultar el detalle. | Origen general, publicado o legado; respuestas, PDFs e historia visibles según el rol. |
+| success | Reportar con título, sin guía seleccionada. | Bug general reportado; no se exige contrato ni etapa. |
+| success | Reportar desde una entrega publicada. | La guía autocompleta los datos vacíos; queda congelada la publicación seleccionada. |
+| success | El equipo responde y marca «Resuelto por equipo». | Respuesta y documentos opcionales quedan en la historia; no cambia ninguna aprobación. |
+| success | Seleccionar fuentes, preparar y verificar borrador, revisar texto final y guardar. | Citas verificadas por el motor compartido; conclusión de alcance pública y procedencia privada conservada. |
+| success | El cliente explica «Sigue fallando». | Comentario público y reapertura a Reportado; se conservan respuestas anteriores. |
+| error | Enviar sin título o reabrir sin explicación. | Validación visible; el estado no cambia. |
+| error | Usar un documento, contrato o requerimiento de otro contexto. | Rechazo sin guardar respuesta, adjunto ni cambio de estado. |
+| error | Guardar sin revisión humana o con conversación/versiones antiguas. | No se crea respuesta ni cambia el estado; preparar un contexto actualizado. |
+| failure | Responder con una versión antigua o fallar la API/descarga. | Error visible y datos anteriores conservados; el cliente puede recargar y reintentar. |
+
+El administrador puede evaluar, comentar y archivar. El cliente sólo opera sus
+proyectos y no recibe notas ni adjuntos internos. Un PDF se descarga mediante JWT
+y conserva los bytes adjuntos aunque el documento fuente cambie después.
+
+La revisión contractual usa el motor de P3. Sin contrato o fuentes suficientes,
+el resultado sigue indeterminado; preparar no modifica estados. El cliente no
+recibe fuentes, citas ni contexto privado de autoría. La ruta global
+`/platform/bugs` redirige a proyectos.
+
+Código: `frontend/pages/platform/projects/[id]/bugs.vue`, componentes
+`frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
+
+### Platform: solicitudes de cambio contextualizadas
+
+El cliente crea una solicitud sobre un requerimiento publicado. El origen conserva
+contrato, otrosí, alcance, fase, etapa, publicación, ronda y versión. Las respuestas
+y documentos del equipo se guardan separados de las guías y sus aprobaciones.
+
+Entrada después de iniciar sesión: `/es-co/platform/projects`; abrir el proyecto,
+la pestaña Solicitudes y el ticket mediante la interfaz.
+
+| Resultado | Interacción | Evidencia esperada |
+|---|---|---|
+| display | Abrir Solicitudes de cambio desde el proyecto. | Estado, prioridad, origen congelado, comentarios, respuestas y adjuntos. |
+| success | Seleccionar una guía publicada y enviar título/descripción. | Solicitud pendiente con el contexto original. |
+| success | Evaluar o responder con documentos opcionales. | Historia y evidencia privada conservadas; no cambia la guía fuente. |
+| success | Preparar respuesta contractual y revisar el texto final y fuentes antes de guardar. | Citas verificadas por el core y conclusión de alcance pública, sin procedencia privada para el cliente. |
+| success | Convertir una solicitud aprobada. | Requerimiento nuevo y pendiente, vinculado a una etapa editable explícita del contrato aplicable. |
+| error | Crear sin título/requerimiento o convertir una solicitud ya vinculada. | Validación; no se duplica ninguna guía. |
+| error | Seleccionar etapa de otro contrato o documento de otro contexto. | Rechazo sin cambiar el ticket ni la entrega. |
+| error | Reutilizar preparación ajena o con conversación/versiones antiguas. | No se crea respuesta ni modifica el ticket; preparar evidencia actualizada. |
+| failure | API, descarga o conflicto de versión. | Error visible y estado anterior conservado; recargar antes de continuar. |
+
+El cliente sólo consulta solicitudes de sus proyectos. Los comentarios no amplían
+el alcance. La aprobación de una solicitud no constituye aceptación de una guía;
+la conversión no publica ni aprueba el nuevo requerimiento. El motor de P3 exige
+contrato, fuentes suficientes y revisión humana para concluir dentro/fuera del
+alcance; los demás casos permanecen indeterminados. `/platform/changes` redirige a proyectos.
+
+Código: `frontend/pages/platform/projects/[id]/changes.vue`, componentes
+`frontend/components/platform/issues/`, servicios `backend/accounts/services/issue_*.py`.
+
+### FLOW: `platform-collection-account-detail`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta snapshot, importes, líneas, instrucciones de pago y contexto explícito de una cuenta permitida; descarga el PDF emitido y recupera errores del documento o archivo sin modificarlo.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-collection-accounts-list`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta cuentas emitidas del cliente con agrupación y filtros explícitos por proyecto, naturaleza, contrato, otrosí y estado; navega al detalle y ofrece vacío y reintento de lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### Platform: enviar una constancia de etapa aprobada
+
+Fuente: `DeliveryStage.vue`, `DeliveryClosureEmail.vue` y las acciones del store `platform-delivery.js`.
+
+El administrador entra por Proyectos → Entregas y abre **Correo de conformidad** en una etapa cuyos requerimientos están aprobados. Puede escribir un mensaje, incluir un resumen PDF y seleccionar copias exactas de documentos públicos. Los adjuntos son opcionales. Preparar la vista previa conserva destinatario, asunto, cuerpo y archivos sin enviar.
+
+| Interacción | Resultado que se comprueba | Clase |
+| --- | --- | --- |
+| Preparar y confirmar el correo revisado | Se registra un envío al cliente de ese proyecto; repetir la misma preparación conserva un solo intento. | `success` |
+| Abrir una etapa parcial o usar una cuenta de cliente | La acción de correo de conformidad permanece inaccesible hasta que la etapa esté totalmente aprobada y actúe el administrador. | `error` |
+| Intentar enviar cuando falla SMTP | El error queda visible en el historial; consultar o repetir la petición no envía automáticamente. | `failure` |
+| Abrir el correo desde la navegación del proyecto | Se muestran el destinatario, la vista previa y su estado preparado sin envío en los cinco tamaños de pantalla. | `display` |
+
+La acción sólo corresponde al administrador. Una etapa parcial, objetada o rechazada no habilita el correo. Las conversaciones y decisiones se conservan hasta el cierre, incluidas las rondas anteriores y el mensaje de la última revisión. La fecha de una conformidad externa y quien la registró se distinguen del cliente que la otorgó. Notas internas, prompts y fuentes administrativas privadas se excluyen.
+
+La evidencia y sus descargas pertenecen al administrador y al canal que prepararon la copia. El historial común de correos conserva su autorización administrativa y los adjuntos permanecen en almacenamiento privado. Una pérdida de respuesta se muestra como resultado desconocido hasta consultar el estado conservado.
+
+Cambiar el mensaje o los adjuntos después de preparar invalida la vista y exige
+prepararla y confirmarla de nuevo; este bloqueo se verifica en las pruebas del componente.
+
+`delivery-closure-email.spec.js` ejecuta estas interacciones contra Django y JWT reales, una base temporal y correo en memoria. El fallo se introduce únicamente en la frontera SMTP del servidor de pruebas.
+
+### Platform: crear guías con fuentes conservadas
+
+Fuente: `DeliveryPromptWorkbench.vue`, `DeliveryPromptSources.vue` y
+`accounts.services.delivery_authoring`.
+
+El administrador elige un contrato, los otrosíes aplicables y anexos o referencias
+explícitos. Puede empezar sin una etapa previa. Cada fuente conserva su identidad,
+versión conocida, fecha, hash, copia y fragmentos citables; la selección de un anexo
+no demuestra su incorporación jurídica. Las fuentes faltantes, ilegibles o
+parciales y las incertidumbres aparecen antes de usar el prompt.
+
+El JSON con contexto y citas se valida contra las capturas del servidor. La
+previsualización no escribe; la aplicación prepara borradores y conserva guías
+aprobadas. Cambiar la selección invalida el prompt y cambiar el JSON exige otra
+previsualización. El JSON manual anterior se identifica como sin trazabilidad.
+Las correcciones muestran y conservan las citas originales y exigen revisar su
+aplicabilidad al texto final. El historial permite reabrir preparaciones y
+descargar las copias exactas.
+
+`delivery-guide-prompt.spec.js` cubre aplicar un borrador con cita verificada,
+contrato obligatorio, rechazo de una cita inventada y consulta de un anexo faltante
+después de navegar desde el proyecto.
+También cubre la corrección trazada, descarga comprobada por huella, consulta
+del historial y operación en los cinco tamaños de pantalla.
+
+### Platform: preparar y revisar una respuesta fundamentada
+
+Fuente: `DeliveryPromptWorkbench.vue`, `DeliveryWorkspace.vue` y
+`accounts.services.delivery_authoring`.
+
+El administrador abre «Preparar respuesta» en una etapa publicada. El contrato y
+alcance se obtienen de esa etapa; el prompt distingue las fuentes contractuales de
+las guías, rondas, decisiones y conversación pública. No aparecer en una guía no
+demuestra que un pedido esté fuera del contrato, y una conversación no modifica
+el acuerdo por sí sola.
+
+Cada pedido se clasifica como dentro, fuera o indeterminado, con citas que el
+servidor verifica contra las fuentes conservadas. Una fuente incompleta o una
+incertidumbre bloquea una conclusión definitiva fuera del alcance. Validar la
+cita acredita su existencia, no su interpretación.
+
+La respuesta es un borrador editable. Usarlo no envía un mensaje; el administrador
+revisa el texto final y lo envía mediante la acción manual existente, con documento
+opcional. Una edición posterior exige revisar de nuevo. Las firmas y conformidades
+del cliente permanecen intactas.
+
+`delivery-reply-prompt.spec.js` cubre envío manual sin adjuntos, revisión del texto
+editado, rechazo de una clasificación fuera del alcance con fuentes incompletas y
+consulta de la conversación pública que originó el prompt.
+
+### FLOW: `platform-hosting-project-list`
+
+- **Módulo:** platform
+- **Prioridad:** P2
+- **Descripción:** Lista los proyectos con hosting en /platform/payments y abre cada proyecto mediante una fila real; ofrece vacío y reintento de lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-client-access`
+
+- **Module:** platform
+- **Roles:** platform-client
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/access`
+- **Interaction:** A client sees only approved project/environment fields, explicitly reveals a granted credential and loses that action when revoked. Default hidden access preserves other modules.
+- **Coverage:** `frontend/e2e/project-collaboration/client-access.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### FLOW: `platform-project-collection-accounts`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta las cuentas del proyecto con agrupación y filtros de contrato, otrosí, hosting y estado, sin incorporar cuentas de otro proyecto; abre el detalle y permite reintentar la lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-hosting-context`
+
+- **Módulo:** platform
+- **Prioridad:** P1
+- **Descripción:** Consulta el único contexto de hosting del proyecto, fuentes contables, suscripción, pagos, ciclos y grupos de evidencia. Identifica fuentes pendientes sin sumarlas ni crear cobros; navega a cuentas de hosting y permite reintentar la lectura.
+- **Resultados:** display, success, error.
+- **Permisos:** cliente aislado por servidor y administrador Platform en lectura; sesión de superusuario y CSRF para asociación/conciliación Panel. MCP administrativo reutiliza las mismas validaciones.
+- **Invariantes:** no deducir contrato por proyecto o PDF; no confirmar pagos, duplicar ciclos ni reemplazar el PDF emitido al cambiar una asociación.
+- **Validación:** pruebas dedicadas de API y UI; la ejecución se declara en el PR, no por registrar tags.
+
+### FLOW: `platform-project-ideas`
+
+- **Module:** platform
+- **Roles:** platform-client, platform-admin
+- **Priority:** P1
+- **Route:** `/platform/projects/:id/ideas`
+- **Interaction:** The current client writes or corrects suggestions with preserved authorship and revision history, with object isolation and recoverable failed submissions.
+- **Coverage:** `frontend/e2e/project-collaboration/ideas.spec.js`; APIs reales JWT o sesión/CSRF en SQLite y almacenamiento temporales.
+- **Success:** operación explícita persistida y resultado observado en UI.
+- **Error:** permisos de objeto o versión/fuente obsoleta denegados sin escritura parcial.
+- **Failure:** fallo del servicio informado conservando borrador/selección y sin datos anteriores.
+- **Display:** navegación por el enlace de proyecto, texto real o dato habilitado de la fixture.
+
+### FLOW: `platform-secure-link-create`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El cliente llega desde su proyecto, ve el límite sólo equipo y texto/credenciales, y la vista vacía o metadatos de sus enlaces.
+- **Success:** Crear una vez limpia el contenido del formulario; la URL se muestra sólo en el modal y copiar exige un clic.
+- **Error:** Campos requeridos bloquean el envío; entrada inválida o UUID con otros datos muestran un error seguro. Replay idéntico no vuelve a entregar URL.
+- **Failure:** Catálogo/listado permiten reintentar. Una falla de creación conserva el borrador y su UUID sin mostrar la entrada en el error.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure. Las pruebas backend SQLite verifican autorización, cifrado e idempotencia reales.
+
+### FLOW: `platform-secure-link-manage`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** Listado y filtros de metadatos; historial con evento, fecha, clase de actor y referencias permitidas.
+- **Success:** Cambiar etiqueta, consultar URL explícita, revocar idempotentemente o reactivar un enlace elegible rotando URL y conservando eventos anteriores.
+- **Error:** Una revisión obsoleta o estado inválido devuelve error; no hay lectura del secreto, borrado ni edición de contenido en Platform.
+- **Failure:** Fallas de listado/historial/operaciones muestran un error recuperable; no se afirma una transición que falló.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links.spec.js` cubre display/success/error/failure y `frontend/e2e/responsive/platform-secure-links.spec.js` verifica cinco perfiles. API SQLite y pruebas unitarias comprueban ownership, auditoría, revisiones y descarte de respuestas tardías.
+
+### FLOW: `platform-secure-link-replace`
+
+- **Módulo / rol:** Platform / cliente.
+- **Ruta:** `/platform/projects/:id/secure-links`.
+- **Display:** El detalle muestra las referencias anterior/sucesor; el modal de confirmación explica que corregir revoca primero y conserva auditoría.
+- **Success:** Confirmar revoca, abre formulario sin secreto y crea un sucesor enlazado que entrega su nueva URL una vez.
+- **Error:** Contenido faltante, sustitución duplicada/cruzada/no revocada o conflicto del UUID no cambia el contenido anterior.
+- **Failure:** Si falla revocar no se abre el formulario. Si falla crear, el anterior permanece revocado y su historial conservado.
+- **Cobertura:** validada en Nuxt local con frontera API aislada; `frontend/e2e/platform/platform-secure-links-replace.spec.js` cubre display/success/error/failure. API SQLite verifica unicidad del sucesor, conservación del cifrado anterior y rechazo de asociaciones entre proyectos.
 
 ### FLOW: `proposal-closing-contact`
 

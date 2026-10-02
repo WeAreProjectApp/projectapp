@@ -231,6 +231,7 @@ MCP_MODEL_CONTRACTS = {
                 'reminder_last_sent_at reminder_count'
             ),
             read_write=(
+                'vat_rate '
                 'notes ledger total_amount gustavo_amount carlos_amount concept '
                 'kind client project origin period_date period_start period_end '
                 'period_cadence destination expected_income reminders_muted '
@@ -245,6 +246,7 @@ MCP_MODEL_CONTRACTS = {
                 'id created_at updated_at deduction_type source_income pocket_movement'
             ),
             read_write=(
+                'vat_rate '
                 'notes ledger total_amount gustavo_amount carlos_amount concept '
                 'period_date category'
             ),
@@ -257,6 +259,7 @@ MCP_MODEL_CONTRACTS = {
                 'expiry_notice_last_sent_at expiry_notice_count billing_requested_at'
             ),
             read_write=(
+                'vat_rate '
                 'notes client project client_name client_email client_contact_name '
                 'client_identification domain_url monthly_value payment_modality '
                 'benefit valid_from valid_to cycles_count payment_per_cycle '
@@ -410,6 +413,7 @@ MCP_MODEL_CONTRACTS = {
                 'last_activity_at view_count first_viewed_at sent_at responded_at '
                 'engagement_declining cached_heat_score deliverable '
                 'platform_onboarding_completed_at platform_onboarding_status '
+                'module_interests module_interests_updated_at '
                 'created_at updated_at'
             ),
             read_write=(
@@ -438,6 +442,10 @@ MCP_MODEL_CONTRACTS = {
                 | _excluded(
                     'Respuesta privada del cliente; se gestiona en el flujo público.',
                     'rejection_reason rejection_comment',
+                )
+                | _excluded(
+                    'Instantánea interna de precios históricos; sólo la migración y la edición financiera la gestionan.',
+                    'legacy_pricing_snapshot',
                 )
             ),
         ),
@@ -554,7 +562,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'secure_links.SecureLink',
-            read_only='id origin expires_at consumed_at revoked_at sent_at sent_by activation_count created_at',
+            read_only='id origin audience owner replaces expires_at consumed_at revoked_at sent_at sent_by activation_count created_at updated_at',
             read_write='secret_type title language client project validity_days',
             excluded=(
                 _excluded(
@@ -569,18 +577,18 @@ MCP_MODEL_CONTRACTS = {
                     'Datos de red y de contacto del creador o destinatario; sólo en el panel.',
                     'creator_name creator_email creator_ip consumed_ip consumed_user_agent',
                 )
-                | _excluded(_AUDIT_INTERNAL, 'created_by updated_at')
+                | _excluded(_AUDIT_INTERNAL, 'created_by creation_request_id creation_request_fingerprint')
             ),
         ),
         _contract(
             'secure_links.SecureLinkEvent',
-            read_only='kind created_at',
+            read_only='id kind created_at',
             excluded=(
                 _excluded(
                     'Auditoría del panel: IP, navegador y actor se revisan sólo allí.',
                     'actor ip_address user_agent details',
                 )
-                | _excluded('Relación implícita en get_secure_link.', 'id link')
+                | _excluded('Relación implícita en get_secure_link.', 'link')
             ),
         ),
     ),
@@ -656,6 +664,255 @@ PROJECT_CONTRACTS = (
         excluded=_excluded(
             'El Gestor de Proyectos opera únicamente episodios cuyo propietario es un proyecto.',
             'document',
+        ),
+    ),
+)
+
+
+# P4: immutable suggestion evidence and explicit visibility administration.
+PROJECT_COLLABORATION_CONTRACTS = (
+    _contract('accounts.ProjectIdea', read_only='id project recipient author author_label origin revision_number version archived_at archived_by created_at updated_at', read_write='text request_id'),
+    _contract('accounts.ProjectIdeaRevision', read_only='id idea number text editor editor_label created_at'),
+    _contract('accounts.ProjectIdeaCollection', read_only='id project recipient created_by creator_label created_at', read_write='title request_id'),
+    _contract('accounts.ProjectIdeaCollectionItem', read_only='id collection idea revision_number source_version position text author_label idea_created_at'),
+    _contract('accounts.ProjectClientAccessPolicy', read_only='id project version recipient updated_by created_at updated_at', read_write='permissions', excluded=_excluded('Huellas internas de autorización: nunca se consultan ni escriben por MCP.', 'bindings')),
+    _contract('accounts.ProjectClientAccessEvent', read_only='id project recipient actor action fields policy_version created_at'),
+)
+
+DELIVERY_CONTRACTS = (
+    _contract(
+        'accounts.DeliveryWorkspace',
+        read_only='project version',
+        excluded=_excluded(
+            'Clave interna del espacio: el cliente MCP usa project_id y la '
+            'versión compartida, nunca el identificador de esta fila.',
+            'id',
+        ),
+    ),
+    _contract(
+        'accounts.ProjectContract',
+        read_only='id project version created_at updated_at',
+        read_write='key title document proposal_document client_visible',
+    ),
+    _contract(
+        'accounts.ContractAmendment',
+        read_only='id version created_at updated_at',
+        read_write='key title contract document proposal_document client_visible',
+    ),
+    _contract(
+        'accounts.DeliveryScope',
+        read_only='id version created_at updated_at',
+        read_write='key title contract amendment description is_current',
+    ),
+    _contract(
+        'accounts.DeliveryPhase',
+        read_only='id version created_at updated_at',
+        read_write='key title scope commercial_phase description order',
+    ),
+    _contract(
+        'accounts.DeliveryStage',
+        read_only='id version editorial_status created_at updated_at',
+        read_write='key title phase description order',
+    ),
+    _contract(
+        'accounts.Requirement',
+        read_only='id version review_status created_at updated_at',
+        read_write='key title stage description guide order context source_references',
+    ),
+    _contract(
+        'accounts.DeliveryPublication',
+        read_only='id stage round payload published_by created_at',
+    ),
+    _contract(
+        'accounts.DeliveryDocumentLink',
+        read_only='id project created_by created_at',
+        read_write='document level contract amendment scope phase stage requirement',
+    ),
+    _contract(
+        'accounts.DeliveryDocumentSnapshot',
+        read_only='id publication link title sha256 created_at',
+        excluded=_excluded(
+            'Ruta privada del PDF congelado; la descarga autorizada entrega un '
+            'artefacto temporal ligado a la credencial, nunca la ruta.',
+            'file',
+        ),
+    ),
+    _contract(
+        'accounts.ContractSignatureEvidence',
+        read_only='id sha256 method source_sha256 attested_by created_at',
+        read_write='contract amendment signer_name signed_at attestation',
+        excluded=(_excluded(
+            'PDF firmado en almacenamiento privado. La constancia consume un '
+            'asset PDF validado y la descarga autorizada nunca expone la ruta.',
+            'file',
+        ) | _excluded(
+            'Instantánea interna de la firma portal con datos de red y '
+            'verificación. MCP solo expone método, actor, fecha y huellas; la '
+            'copia contractual exacta se descarga por el servicio autorizado.',
+            'source_snapshot',
+        )),
+    ),
+    _contract(
+        'accounts.RequirementReview',
+        read_only=(
+            'id publication requirement actor requirement_version '
+            'content_snapshot decision message environment is_external '
+            'client_statement original_reviewer reviewed_at source_message '
+            'source_snapshot evidence_document_ids created_at'
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryReviewDocumentEvidence',
+        read_only='id review document title sha256 created_at',
+        excluded=_excluded(
+            'Copia privada e inmutable del documento que respalda la conformidad. '
+            'La descarga autorizada entrega un artefacto temporal mediante '
+            'review_id y evidence_id, nunca su ruta de almacenamiento.',
+            'file',
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryMessage',
+        read_only='id project actor created_at',
+        read_write=(
+            'level target_id requirements documents message is_internal '
+            'context source_references reply_classifications'
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryPromptContext',
+        read_only=(
+            'id contract client destination scope stage mode captured_version amendment_ids '
+            'missing_sources uncertainties warnings complete prompt template schema '
+            'conversation manifest_sha256 created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Proyecto implícito en project_id; la captura se lee exclusivamente '
+                'dentro de ese proyecto y no admite cambio de propietario.',
+                'project',
+            ) | _excluded(
+                'Actor de auditoría asignado por la credencial; no se acepta '
+                'suplantación ni se modifica una captura inmutable.',
+                'actor',
+            ) | _excluded(
+                'Control interno de reintentos: crear recibe request_id, pero '
+                'la lectura no expone el recibo ni su huella y no permite editarlo.',
+                'request_id fingerprint',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryPromptSource',
+        read_only=(
+            'source_key title origin source_id role applicability_note document '
+            'proposal_document signature_evidence version version_kind date '
+            'filename content_type sha256 fragments status warnings limits'
+        ),
+        excluded=(
+            _excluded(
+                'Fila interna de la fuente; MCP usa context_id y source_key '
+                'para consultar la captura inmutable y descargar su copia.',
+                'id context',
+            ) | _excluded(
+                'Ruta privada de la copia exacta. La descarga autorizada '
+                'devuelve un artefacto temporal de la misma credencial.',
+                'file',
+            ) | _excluded(
+                'Instantánea interna del origen, que puede contener notas y '
+                'metadata de firma. Solo se exponen fragmentos verificables '
+                'y metadatos autorizados, nunca esta captura interna.',
+                'snapshot',
+            ) | _excluded(
+                'Fecha interna de la fila de fuente; la lectura devuelve la '
+                'fecha del origen y la creación del contexto que retuvo la copia.',
+                'created_at',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmail',
+        read_only=(
+            'id project stage to_recipients from_email subject html_body text_body '
+            'captured_version manifest_sha256 created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Titular capturado para revalidar el destinatario del proyecto; '
+                'el DTO expone To y el cuerpo revisado, nunca permite reasignar '
+                'al cliente ni editar evidencia preparada.',
+                'client',
+            ) | _excluded(
+                'Propiedad y canal asignados por actor y credencial actuales. '
+                'La preparación es personal e inmutable; no admite identidad '
+                'enviada por el llamador ni acceso desde otro canal.',
+                'prepared_by mcp_credential',
+            ) | _excluded(
+                'Recibo interno de preparación; request_id se recibe al crear '
+                'para repetir de forma idempotente, nunca para editar la captura.',
+                'request_id',
+            ) | _excluded(
+                'Fundamento conservado de la composición y conformidades. '
+                'La herramienta devuelve su proyección pública revisada y '
+                'archivos autorizados, nunca permite editar estas capturas.',
+                'snapshot_payload closure_history',
+            ) | _excluded(
+                'Vínculo de auditoría asignado al preparar un reenvío explícito. '
+                'No se acepta ni se modifica como relación CRUD; se observa '
+                'la nueva preparación mediante el resultado de la acción.',
+                'resend_of',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmailFile',
+        read_only='id filename mime_type size_bytes sha256',
+        excluded=(
+            _excluded(
+                'La preparación autorizada determina el correo propietario y '
+                'la posición del adjunto en el manifest; no existe CRUD de archivos.',
+                'email position',
+            ) | _excluded(
+                'Origen interno de la copia pública exacta. La lectura expone '
+                'versión y hash del adjunto, sin permitir cambiar su origen.',
+                'delivery_snapshot',
+            ) | _excluded(
+                'Ruta de almacenamiento privado: la descarga propia entrega '
+                'bytes autorizados como artefacto temporal, nunca la ruta.',
+                'file',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryEvidenceEmailAttempt',
+        read_only=(
+            'id request_id status error_message claimed_at sent_at finished_at created_at'
+        ),
+        excluded=(
+            _excluded(
+                'Correo propietario y actor/credencial son implícitos en la '
+                'preparación propia confirmada; nunca se aceptan para suplantar '
+                'la identidad del intento.',
+                'email actor mcp_credential',
+            ) | _excluded(
+                'Enlaces internos al transporte y al intento original. '
+                'El historial común conserva la evidencia; los estados sólo '
+                'los escribe el servicio después de reclamar durablemente el envío.',
+                'gateway_snapshot email_log resend_of',
+            ) | _excluded(
+                'Marca interna de actualización del recibo mutable; la lectura '
+                'expone fechas de reclamación y finalización, sin edición directa.',
+                'updated_at',
+            )
+        ),
+    ),
+    _contract(
+        'accounts.DeliveryOperation',
+        excluded=_excluded(
+            'Recibo interno de idempotencia: la operación acepta request_id y '
+            'devuelve su resultado, pero no expone ni permite editar el registro '
+            'de control, su huella o respuestas históricas internas.',
+            'id project request_id actor fingerprint response created_at',
         ),
     ),
 )
@@ -838,7 +1095,7 @@ BILLING_CATALOG_CONTRACTS = (
         'content.DocumentCollectionAccount',
         read_only='document created_at updated_at',
         read_write=(
-            'billing_concept payment_term_type payment_term_days payer_name '
+            'vat_rate billing_concept payment_term_type payment_term_days payer_name '
             'payer_identification payer_identification_type payer_address payer_phone '
             'payer_email customer_name customer_identification '
             'customer_identification_type customer_contact_name customer_email '
@@ -874,6 +1131,8 @@ BILLING_CATALOG_CONTRACTS = (
 )
 
 
+from content.mcp.issue_contracts import build_issue_contracts  # noqa: E402
+
 MCP_MODEL_CONTRACTS.update({
     # Read-only aggregate; every source model remains governed by its domain
     # connector contract instead of receiving a second mutation contract here.
@@ -884,7 +1143,7 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
     ),
-    'projects': PROJECT_CONTRACTS,
+    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS + build_issue_contracts(_contract),
     'content': (
         MCP_MODEL_CONTRACTS['blog']
         + MCP_MODEL_CONTRACTS['linkedin-personal']
@@ -969,3 +1228,20 @@ MCP_MODEL_CONTRACTS['proposals'] += (_contract(
     'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write='show_proposal_video',
     excluded=_excluded('Interruptor de otro módulo.', 'show_financing_video show_additional_modules_video'),
 ),)
+
+
+# P2: project billing identity/context. Mutations only via audited services.
+PROJECT_BILLING_CONTRACTS = (
+    _contract('accounts.HostingSubscription', read_only='id project plan base_monthly_amount discount_percent effective_monthly_amount billing_amount status start_date next_billing_date card_brand card_last_four created_at updated_at',
+              excluded=_excluded(_AUTOMATION_STATE, 'wompi_payment_source_id card_exp_month card_exp_year is_archived archived_at')),
+    _contract('accounts.Payment', read_only='id subscription amount description billing_period_start billing_period_end due_date status paid_at created_at',
+              excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at is_archived archived_at')),
+    _contract('accounts.ProjectHosting', read_only='id project version created_at updated_at', read_write='subscription operational_accounting_source'),
+    _contract('accounts.ProjectHostingAccountingSource', read_only='id created_at', read_write='hosting hosting_record'),
+    _contract('accounts.CollectionAccountContext', read_only='id document version updated_at', read_write='nature contract amendment hosting'),
+    _contract('accounts.HostingEvidenceGroup', read_only='id hosting created_at', read_write='label'),
+    _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
+    _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),
+)
+for _billing_connector in ('projects', 'accounting-billing'):
+    MCP_MODEL_CONTRACTS[_billing_connector] += PROJECT_BILLING_CONTRACTS

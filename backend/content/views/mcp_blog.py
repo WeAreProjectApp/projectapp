@@ -1,3 +1,4 @@
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 """
 Blog Publisher MCP: public JSON-RPC endpoint (token-authenticated) and
 the panel management endpoints backing /panel/mcps.
@@ -11,6 +12,7 @@ from urllib.parse import urlparse
 from django.conf import settings
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone as tz
@@ -69,6 +71,7 @@ from content.mcp.protocol import (
 )
 from content.mcp.registry import infer_risk, normalize_tools
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
+from content.mcp.platform_secure_link_tools import PLATFORM_SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
 from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
@@ -79,10 +82,12 @@ from content.models import (
     McpRequestLog,
 )
 from content.permissions import IsSuperUser
+from content.services.diagnostic_privacy import safe_mcp_error_code
 
 logger = logging.getLogger(__name__)
 
 LAST_USED_TOUCH_SECONDS = 60
+MAX_MCP_RECENT_EVENTS = 10
 
 # Existing connector registries are compatibility surfaces. Canonical area
 # connectors below compose them with the Panel parity adapters.
@@ -128,7 +133,7 @@ RAW_TOOLS_BY_SLUG = {
         DOCUMENT_TOOLS + DOCUMENT_THREAD_TOOLS + DOCUMENT_PARITY_TOOLS
     ),
     'communications': _canonical_tools(
-        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS
+        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS + PLATFORM_SECURE_LINK_TOOLS
     ),
     'tasks': _canonical_tools(TASK_TOOLS),
     'operations': OPERATIONS_TOOLS,
@@ -170,7 +175,7 @@ RAW_TOOLS_BY_SLUG = {
             'create_notification_recipient', 'update_notification_recipient',
             'delete_notification_recipient',
             exact=('get_settings', 'update_settings'),
-        ) + BILLING_PARITY_TOOLS
+        ) + BILLING_PARITY_TOOLS + PLATFORM_BILLING_TOOLS
     ),
     'accounting-cards': _canonical_tools(
         _accounting_tools(
@@ -193,7 +198,7 @@ COMMON_TOOL_SLUGS = {
 }
 UPLOAD_TOOL_SLUGS = {
     'partnership-program', 'additional-modules', 'proposals',
-    'commercial', 'documents', 'communications', 'content', 'accounting-cards',
+    'commercial', 'projects', 'documents', 'communications', 'content', 'accounting-cards',
 }
 
 TOOLS_BY_SLUG = {
@@ -260,9 +265,7 @@ def _origin_is_foreign(request):
     if origin in getattr(settings, 'MCP_ALLOWED_ORIGINS', []):
         return False
     if urlparse(origin).netloc != request.get_host():
-        # Record the exact rejected value: MCP clients' headers are not
-        # documented anywhere, so this log is how we learn what they send.
-        logger.warning('[MCP] rejected foreign Origin: %s', origin)
+        logger.warning('[MCP] origin_rejected code=FORBIDDEN')
         return True
     return False
 
@@ -295,26 +298,73 @@ def _record_event(connector, event, ok=True, detail='', **metadata):
             connector, event, ok=ok, detail=detail, **metadata,
         )
     except Exception:
-        logger.exception('[MCP] failed to record %s event for %s', event, connector.slug)
+        logger.error(
+            '[MCP] activity audit unavailable code=MCP_AUDIT_UNAVAILABLE '
+            'event=%s connector=%s requestId=%s',
+            event, connector.slug, metadata.get('request_id', ''),
+        )
 
 
-def _argument_object_refs(arguments, *, prefix='', limit=25):
-    """Extract stable resource identifiers without retaining request payloads."""
+def _canonical_reference_uuid(value):
+    if not isinstance(value, str) or len(value) != 36:
+        return None
+    try:
+        parsed = uuid.UUID(value)
+    except ValueError:
+        return None
+    return value if str(parsed) == value else None
+
+
+def _reference_value(value, schema):
+    if not isinstance(schema, dict):
+        return None
+    declared_types = schema.get('type', ())
+    if isinstance(declared_types, str):
+        declared_types = (declared_types,)
+    if not isinstance(declared_types, (list, tuple)):
+        return None
+    if 'integer' in declared_types and type(value) is int and value > 0:
+        return value
+    if 'string' in declared_types and schema.get('format') == 'uuid':
+        return _canonical_reference_uuid(value)
+    return None
+
+
+def _argument_object_refs(
+    arguments, *, schema=None, prefix='', limit=25, reference_fields=(),
+):
+    """Read only named, typed paths in the selected tool's trusted schema."""
     refs = []
-    if not isinstance(arguments, dict):
+    if not isinstance(arguments, dict) or not isinstance(schema, dict) or limit < 1:
         return refs
-    for key, value in arguments.items():
+    properties = schema.get('properties')
+    if not isinstance(properties, dict):
+        return refs
+    for key, field_schema in properties.items():
+        if not isinstance(field_schema, dict):
+            continue
+        if key not in arguments or key in {'request_id', 'requestId'}:
+            continue
+        value = arguments[key]
         field = f'{prefix}.{key}' if prefix else key
-        if key.endswith(('_id', '_ids')):
-            safe_value = value[:20] if isinstance(value, list) else value
-            if isinstance(safe_value, (str, int, float, bool, list)):
+        if key.endswith(('_id', '_ids')) or key in reference_fields:
+            safe_value = _reference_value(value, field_schema)
+            if field_schema.get('type') == 'array' and isinstance(value, list):
+                item_schema = field_schema.get('items', {})
+                safe_value = [
+                    reference for item in value[:20]
+                    if (reference := _reference_value(item, item_schema)) is not None
+                ] or None
+            if safe_value is not None:
                 refs.append({'field': field, 'value': safe_value})
-        elif isinstance(value, dict):
+        elif field_schema.get('type') == 'object' and isinstance(value, dict):
             refs.extend(
                 _argument_object_refs(
                     value,
+                    schema=field_schema,
                     prefix=field,
-                    limit=max(0, limit - len(refs)),
+                    limit=limit - len(refs),
+                    reference_fields=reference_fields,
                 )
             )
         if len(refs) >= limit:
@@ -322,20 +372,39 @@ def _argument_object_refs(arguments, *, prefix='', limit=25):
     return refs[:limit]
 
 
+def _registered_audit_tool(connector, tool_name):
+    return next(
+        (tool for tool in TOOLS_BY_SLUG.get(connector.slug, [])
+         if tool['name'] == tool_name),
+        None,
+    )
+
+
+def _tool_argument_refs(tool, arguments, *, limit=25):
+    secure_link_tool_names = {
+        tool['name'] for tool in SECURE_LINK_TOOLS + PLATFORM_SECURE_LINK_TOOLS
+    }
+    return _argument_object_refs(
+        arguments, schema=tool.get('input_schema'), limit=limit,
+        reference_fields=(
+            ('replaces',) if tool['name'] in secure_link_tool_names else ()
+        ),
+    )
+
+
 def _tool_call_object_refs(connector, credential, tool_name, params):
     if not isinstance(params, dict):
         return []
+    tool = _registered_audit_tool(connector, tool_name)
+    if tool is None:
+        return []
     arguments = params.get('arguments') or {}
-    if tool_name in {tool['name'] for tool in SECURE_LINK_TOOLS}:
-        return [
-            {'field': key, 'value': arguments[key]}
-            for key in ('link_id', 'client_id', 'project_id')
-            if isinstance(arguments, dict) and type(arguments.get(key)) is int
-        ]
+    if not isinstance(arguments, dict):
+        return []
     refs = []
     if tool_name not in {'confirm_action', 'cancel_action'}:
-        return _argument_object_refs(arguments)
-    confirmation_id = arguments.get('confirmation_id')
+        return _tool_argument_refs(tool, arguments)
+    confirmation_id = _canonical_reference_uuid(arguments.get('confirmation_id'))
     if not confirmation_id:
         return refs
     try:
@@ -348,8 +417,11 @@ def _tool_call_object_refs(connector, credential, tool_name, params):
         intent = None
     if intent is None:
         return refs
-    refs.append({'field': 'confirmed_tool', 'value': intent.tool_name})
-    refs.extend(_argument_object_refs(intent.arguments))
+    confirmed_tool = _registered_audit_tool(connector, intent.tool_name)
+    if confirmed_tool is None:
+        return refs
+    refs.append({'field': 'confirmed_tool', 'value': confirmed_tool['name']})
+    refs.extend(_tool_argument_refs(confirmed_tool, intent.arguments, limit=24))
     return refs[:25]
 
 
@@ -360,12 +432,12 @@ def _record_tools_call(
     tool_name = params.get('name', '?') if isinstance(params, dict) else '?'
     result = (payload or {}).get('result') or {}
     error = (payload or {}).get('error')
-    tool = next(
-        (candidate for candidate in TOOLS_BY_SLUG.get(connector.slug, [])
-         if candidate['name'] == tool_name),
-        {},
+    tool = _registered_audit_tool(connector, tool_name) or {}
+    tool_name = tool.get('name', 'unknown_tool')
+    structured = result.get('structuredContent')
+    structured_error = (
+        structured.get('error') if isinstance(structured, dict) else None
     )
-    structured_error = result.get('structuredContent', {}).get('error', {})
     metadata = {
         'credential': credential,
         'request_id': request_id,
@@ -377,22 +449,28 @@ def _record_tools_call(
         ),
     }
     if error:
+        error_code = safe_mcp_error_code(
+            error.get('code') if isinstance(error, dict) else None,
+        )
         _record_event(
             connector,
             'tool_call',
             ok=False,
-            detail=f'{tool_name}: {error.get("message", "")}',
-            error_code=str(error.get('code', '')),
+            detail=f'{tool_name}: {error_code}',
+            error_code=error_code,
             **metadata,
         )
     elif result.get('isError'):
-        text = (result.get('content') or [{}])[0].get('text', '')
+        error_code = safe_mcp_error_code(
+            structured_error.get('code')
+            if isinstance(structured_error, dict) else None,
+        )
         _record_event(
             connector,
             'tool_call',
             ok=False,
-            detail=f'{tool_name}: {text[:150]}',
-            error_code=structured_error.get('code', ''),
+            detail=f'{tool_name}: {error_code}',
+            error_code=error_code,
             **metadata,
         )
     else:
@@ -565,7 +643,7 @@ def mcp_endpoint(request, slug, token=None):
     if _origin_is_foreign(request):
         _record_event(
             connector_for_log, 'origin_rejected', ok=False,
-            detail=request.headers.get('Origin', ''),
+            detail='origin_rejected',
         )
         return Response(
             _jsonrpc_error(None, 'FORBIDDEN', 'El origen de la solicitud no está permitido.'),
@@ -700,6 +778,14 @@ mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handle
 
 def _connector_payload(connector):
     tools = TOOLS_BY_SLUG.get(connector.slug, [])
+    if hasattr(connector, '_panel_recent_events'):
+        recent_events = connector._panel_recent_events
+    else:
+        recent_events = connector.request_logs.select_related('credential')[:MAX_MCP_RECENT_EVENTS]
+    if hasattr(connector, '_panel_credentials'):
+        connector_credentials = connector._panel_credentials
+    else:
+        connector_credentials = connector.credentials.select_related('actor').all()
     recent = [
         {
             'event': e.event,
@@ -716,7 +802,7 @@ def _connector_payload(connector):
             ),
             'created_at': e.created_at.isoformat(),
         }
-        for e in connector.request_logs.all()[:10]
+        for e in recent_events
     ]
     if not recent:
         connection_status = 'none'
@@ -746,7 +832,7 @@ def _connector_payload(connector):
                 if credential.last_used_at else None
             ),
         }
-        for credential in connector.credentials.select_related('actor').all()
+        for credential in connector_credentials
     ]
     return {
         'slug': connector.slug,
@@ -785,7 +871,19 @@ def list_mcp_connectors(request):
     """List MCP connectors for /panel/mcps."""
     connectors = (
         McpConnector.objects
-        .prefetch_related('request_logs__credential', 'credentials__actor')
+        .prefetch_related(
+            Prefetch(
+                'request_logs',
+                queryset=McpRequestLog.objects.select_related('credential')
+                .order_by('-created_at', '-id')[:MAX_MCP_RECENT_EVENTS],
+                to_attr='_panel_recent_events',
+            ),
+            Prefetch(
+                'credentials',
+                queryset=McpCredential.objects.select_related('actor'),
+                to_attr='_panel_credentials',
+            ),
+        )
         .all()
         .order_by('slug')
     )

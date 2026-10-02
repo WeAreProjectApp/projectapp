@@ -1,13 +1,11 @@
 """Tests for uncovered branches in accounts/views.py — second batch.
 
 Covers:
-- requirement_bulk_upload_view: success, not-list, too-many, archived deliverable
-- deliverable_sync_technical_requirements_view: success, 404, archived, sync-error
+- deliverable_sync_technical_resources_view: success, 404, archived, sync-error
 - login_view: reCAPTCHA validation branches
 - project_list_view: creation with proposal_id
 - project_detail_view: non-owning client access denied
 """
-from decimal import Decimal
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -18,7 +16,6 @@ from rest_framework.test import APIClient
 from accounts.models import (
     Deliverable,
     Project,
-    ProjectPhase,
     UserProfile,
 )
 from content.models.business_proposal import BusinessProposal
@@ -92,10 +89,6 @@ def deliverable(project, admin_user):
     )
 
 
-@pytest.fixture
-def phase(project):
-    bp = BusinessProposal.objects.create(title='Gaps2 proposal', client_name='Carlos')
-    return ProjectPhase.objects.create(project=project, business_proposal=bp, order=1)
 
 
 @pytest.fixture
@@ -111,66 +104,17 @@ def archived_deliverable(project, admin_user):
 
 
 # ===========================================================================
-# requirement_bulk_upload_view
+# deliverable_sync_technical_resources_view
 # ===========================================================================
 
-class TestRequirementBulkUploadView:
-    def test_admin_bulk_creates_requirements(
-        self, api_client, admin_headers, project, phase,
-    ):
-        """Admin can bulk-create requirements from a JSON array."""
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/?phase_id={phase.id}'
-        payload = [
-            {'title': 'Req 1', 'description': 'First requirement'},
-            {'title': 'Req 2', 'priority': 'high'},
-            {'title': 'Req 3'},
-        ]
-        resp = api_client.post(url, payload, format='json', **admin_headers)
-
-        assert resp.status_code == 201
-        assert resp.json()['created'] == 3
-
-    def test_returns_400_when_payload_is_not_a_list(
-        self, api_client, admin_headers, project, phase,
-    ):
-        """Returns 400 when request body is not a JSON array."""
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/?phase_id={phase.id}'
-        resp = api_client.post(url, {'title': 'bad'}, format='json', **admin_headers)
-
-        assert resp.status_code == 400
-
-    def test_returns_400_when_too_many_items(
-        self, api_client, admin_headers, project, phase,
-    ):
-        """Returns 400 when more than 500 items are submitted."""
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/?phase_id={phase.id}'
-        payload = [{'title': f'Req {i}'} for i in range(501)]
-        resp = api_client.post(url, payload, format='json', **admin_headers)
-
-        assert resp.status_code == 400
-
-    def test_returns_400_when_phase_id_missing(
-        self, api_client, admin_headers, project,
-    ):
-        """Returns 400 when phase_id query param is missing."""
-        url = f'/api/accounts/projects/{project.id}/requirements/bulk/'
-        resp = api_client.post(url, [{'title': 'Req'}], format='json', **admin_headers)
-
-        assert resp.status_code == 400
-
-
-# ===========================================================================
-# deliverable_sync_technical_requirements_view
-# ===========================================================================
-
-class TestDeliverableSyncTechnicalRequirementsView:
+class TestDeliverableSyncTechnicalResourcesView:
     def test_returns_404_when_deliverable_not_found(
         self, api_client, admin_headers, project,
     ):
         """Returns 404 when deliverable_id does not exist in the project."""
         url = (
             f'/api/accounts/projects/{project.id}/deliverables/'
-            f'99999/sync-technical-requirements/'
+            f'99999/sync-technical-resources/'
         )
         resp = api_client.post(url, **admin_headers)
 
@@ -182,45 +126,59 @@ class TestDeliverableSyncTechnicalRequirementsView:
         """Returns 400 when deliverable is archived."""
         url = (
             f'/api/accounts/projects/{project.id}/deliverables/'
-            f'{archived_deliverable.id}/sync-technical-requirements/'
+            f'{archived_deliverable.id}/sync-technical-resources/'
         )
         resp = api_client.post(url, **admin_headers)
 
         assert resp.status_code == 400
 
-    @patch('accounts.services.technical_requirements_sync.sync_technical_requirements_for_deliverable')
     def test_returns_400_when_sync_returns_not_ok(
-        self, mock_sync, api_client, admin_headers, project, deliverable,
+        self, api_client, admin_headers, project, deliverable,
     ):
-        """Returns 400 when sync service returns {ok: False}."""
-        mock_sync.return_value = {'ok': False, 'detail': 'No hay secciones técnicas.'}
+        """A proposal without an enabled technical section cannot be synced."""
+        BusinessProposal.objects.create(
+            title='Missing technical section', client_name='Cliente', deliverable=deliverable,
+        )
         url = (
             f'/api/accounts/projects/{project.id}/deliverables/'
-            f'{deliverable.id}/sync-technical-requirements/'
+            f'{deliverable.id}/sync-technical-resources/'
         )
         resp = api_client.post(url, **admin_headers)
 
         assert resp.status_code == 400
-        assert 'No hay secciones' in resp.json()['detail']
+        assert 'No hay sección técnica' in resp.json()['detail']
 
-    @patch('accounts.services.technical_requirements_sync.sync_technical_requirements_for_deliverable')
     def test_success_returns_sync_result(
-        self, mock_sync, api_client, admin_headers, project, deliverable,
+        self, api_client, admin_headers, project, deliverable,
     ):
-        """Returns 200 with sync result when sync succeeds."""
-        mock_sync.return_value = {
-            'ok': True,
-            'created': 5,
-            'updated': 2,
-        }
+        """An admin can mirror proposal resources without authoring client guides."""
+        from accounts.models import Requirement
+        from content.models import ProposalSection
+        proposal = BusinessProposal.objects.create(
+            title='Resource proposal', client_name='Cliente', deliverable=deliverable,
+        )
+        ProposalSection.objects.create(
+            proposal=proposal, section_type='technical_document', title='Technical resources',
+            content_json={'epics': [{'epicKey': 'catalog', 'title': 'Catálogo', 'requirements': [{'title': 'Browse catalog'}]}]},
+        )
         url = (
             f'/api/accounts/projects/{project.id}/deliverables/'
-            f'{deliverable.id}/sync-technical-requirements/'
+            f'{deliverable.id}/sync-technical-resources/'
         )
         resp = api_client.post(url, **admin_headers)
 
         assert resp.status_code == 200
-        assert resp.json()['created'] == 5
+        assert resp.json()['deliverables_created'] == 1
+        assert Deliverable.objects.filter(project=project, source_epic_key='catalog', title='Catálogo').exists()
+        assert not Requirement.objects.filter(stage__phase__scope__contract__project=project).exists()
+
+    def test_client_cannot_sync_technical_resources(self, api_client, client_user, project, deliverable):
+        api_client.force_authenticate(client_user)
+        url = f'/api/accounts/projects/{project.id}/deliverables/{deliverable.id}/sync-technical-resources/'
+
+        resp = api_client.post(url)
+
+        assert resp.status_code == 403
 
 
 # ===========================================================================

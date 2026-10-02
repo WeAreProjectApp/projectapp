@@ -1,5 +1,6 @@
 import secrets
 import string
+import uuid
 
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -11,6 +12,7 @@ from django.db.models.functions import NullIf
 from django.utils import timezone
 
 from accounts.services.image_utils import optimize_avatar, optimize_image
+from content.storage import get_private_storage
 
 
 class UserProfileQuerySet(HistoryQuerySet):
@@ -626,226 +628,352 @@ class ProjectPhase(models.Model):
         return f'{self.project.name} — Fase {self.order}: {self.business_proposal.title}'
 
 
-class Requirement(models.Model):
-    """
-    A single requirement (card) on the project Kanban board.
-    """
+class DeliveryWorkspace(models.Model):
+    """Project-wide optimistic version; all delivery writes lock the project."""
 
-    STATUS_BACKLOG = 'backlog'
-    STATUS_TODO = 'todo'
-    STATUS_IN_PROGRESS = 'in_progress'
-    STATUS_IN_REVIEW = 'in_review'
-    STATUS_APPROVAL = 'approval'
-    STATUS_DONE = 'done'
-    STATUS_CHOICES = [
-        (STATUS_BACKLOG, 'Backlog'),
-        (STATUS_TODO, 'To do'),
-        (STATUS_IN_PROGRESS, 'In progress'),
-        (STATUS_IN_REVIEW, 'In review'),
-        (STATUS_APPROVAL, 'Aprobación'),
-        (STATUS_DONE, 'Done'),
-    ]
+    project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name='delivery_workspace')
+    version = models.PositiveIntegerField(default=0)
 
-    PRIORITY_CRITICAL = 'critical'
-    PRIORITY_HIGH = 'high'
-    PRIORITY_MEDIUM = 'medium'
-    PRIORITY_LOW = 'low'
-    PRIORITY_CHOICES = [
-        (PRIORITY_CRITICAL, 'Crítica'),
-        (PRIORITY_HIGH, 'Alta'),
-        (PRIORITY_MEDIUM, 'Media'),
-        (PRIORITY_LOW, 'Baja'),
-    ]
 
-    phase = models.ForeignKey(
-        'ProjectPhase', on_delete=models.CASCADE, related_name='requirements',
-        null=True, blank=True,
-        help_text='Phase of the project this requirement belongs to.',
-    )
+class DeliveryNode(models.Model):
+    key = models.SlugField(max_length=100)
     title = models.CharField(max_length=300)
-    description = models.TextField(blank=True, default='')
-    status = models.CharField(
-        max_length=20, choices=STATUS_CHOICES, default=STATUS_BACKLOG,
-    )
-    priority = models.CharField(
-        max_length=20, choices=PRIORITY_CHOICES, default=PRIORITY_MEDIUM,
-    )
-    configuration = models.TextField(
-        blank=True, default='',
-        help_text='Role/privilege context for this requirement (e.g. "Only for admin role").',
-    )
-    flow = models.TextField(
-        blank=True, default='',
-        help_text='User flow description within the software for this requirement.',
-    )
-    order = models.PositiveIntegerField(
-        default=0, help_text='Sort order within the column.',
-    )
-    source_epic_key = models.CharField(max_length=200, blank=True, default='', db_index=True)
-    source_epic_title = models.CharField(max_length=300, blank=True, default='')
-    source_flow_key = models.CharField(max_length=200, blank=True, default='', db_index=True)
-    scope_item = models.ForeignKey(
-        'ProjectScopeItem', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='requirements',
-        help_text='Primary client-facing scope item (from the first linked_item_id) '
-                  'used to group this card on the board.',
-    )
-    synced_from_proposal = models.BooleanField(default=False)
-    content_overridden = models.BooleanField(
-        default=False,
-        help_text='Admin manually edited descriptive fields; a proposal re-sync '
-                  'will not overwrite title/description/flow/configuration/priority.',
-    )
-    is_archived = models.BooleanField(
-        default=False,
-        db_index=True,
-        help_text='Hidden from default lists; row kept for audit.',
-    )
-    archived_at = models.DateTimeField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        ordering = ['order', '-created_at']
-        constraints = [
-            models.UniqueConstraint(
-                models.F('phase'),
-                NullIf(models.F('source_flow_key'), models.Value('')),
-                name='uniq_requirement_phase_flow_key',
-            ),
-        ]
+        abstract = True
+        ordering = ['id']
 
     def __str__(self):
-        return f'{self.title} [{self.get_status_display()}]'
+        return self.title
+
+
+class ProjectContract(DeliveryNode):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_contracts')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
+    proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
+    client_visible = models.BooleanField(default=False)
+
+    class Meta(DeliveryNode.Meta):
+        constraints = [
+            models.UniqueConstraint(fields=['project', 'key'], name='delivery_contract_key'),
+            models.CheckConstraint(condition=(models.Q(document__isnull=False, proposal_document__isnull=True) | models.Q(document__isnull=True, proposal_document__isnull=False)), name='delivery_contract_one_source'),
+        ]
+
+
+class ContractAmendment(DeliveryNode):
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='amendments')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_amendments')
+    proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_amendments')
+    client_visible = models.BooleanField(default=False)
+
+    class Meta(DeliveryNode.Meta):
+        constraints = [
+            models.UniqueConstraint(fields=['contract', 'key'], name='delivery_amendment_key'),
+            models.CheckConstraint(condition=(models.Q(document__isnull=False, proposal_document__isnull=True) | models.Q(document__isnull=True, proposal_document__isnull=False)), name='delivery_amendment_one_source'),
+        ]
 
     @property
     def project(self):
-        return self.phase.project if self.phase else None
-
-    @property
-    def project_id(self):
-        return self.phase.project_id if self.phase else None
+        return self.contract.project
 
 
-class ProjectScopeItem(models.Model):
-    """
-    Platform mirror of ONE commercial item (vista/componente/funcionalidad) from a
-    proposal's ``functional_requirements`` section. Acts as the client-facing
-    grouping backbone for the Kanban: ``Requirement`` cards point to a primary
-    ``ProjectScopeItem`` instead of the legacy epic ("Módulo") grouping.
-
-    Phase-scoped (like ``Requirement``) because commercial item ids are only
-    unique within a single proposal. Idempotently upserted by ``source_item_id``.
-    """
-
-    ORIGIN_GROUP = 'group'            # from content_json['groups']
-    ORIGIN_ADDITIONAL = 'additional'  # from content_json['additionalModules']
-    ORIGIN_CHOICES = [
-        (ORIGIN_GROUP, 'Grupo'),
-        (ORIGIN_ADDITIONAL, 'Módulo adicional'),
-    ]
-
-    phase = models.ForeignKey(
-        'ProjectPhase', on_delete=models.CASCADE, related_name='scope_items',
-    )
-
-    # --- identity / idempotency ---
-    source_item_id = models.CharField(
-        max_length=300, blank=True, default='', db_index=True,
-        help_text="Stable commercial item id ('item-<group>-<slug>') from the "
-                  'proposal, used for idempotent sync and requirement linking.',
-    )
-
-    # --- faithful group mirror (arbitrary group ids incl. additionalModules) ---
-    origin = models.CharField(
-        max_length=20, choices=ORIGIN_CHOICES, default=ORIGIN_GROUP,
-    )
-    group_id = models.CharField(
-        max_length=200, blank=True, default='', db_index=True,
-        help_text="Raw group id, e.g. 'views'/'components'/'features'/'admin_module'.",
-    )
-    group_title = models.CharField(max_length=300, blank=True, default='')
-    group_icon = models.CharField(max_length=50, blank=True, default='')
-    group_order = models.PositiveIntegerField(default=0)
-    group_is_visible = models.BooleanField(default=True)
-
-    # --- the item itself ---
-    name = models.CharField(max_length=300)
+class DeliveryScope(DeliveryNode):
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='scopes')
+    amendment = models.ForeignKey(ContractAmendment, on_delete=models.PROTECT, null=True, blank=True, related_name='scopes')
     description = models.TextField(blank=True, default='')
-    icon = models.CharField(max_length=50, blank=True, default='')
-    item_order = models.PositiveIntegerField(default=0)
+    is_current = models.BooleanField(default=True)
 
-    synced_from_proposal = models.BooleanField(default=True)
-    is_archived = models.BooleanField(
-        default=False, db_index=True,
-        help_text='Hidden from default lists; row kept for audit.',
-    )
-    archived_at = models.DateTimeField(null=True, blank=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ['group_order', 'item_order', 'id']
-        constraints = [
-            models.UniqueConstraint(
-                models.F('phase'),
-                NullIf(models.F('source_item_id'), models.Value('')),
-                name='uniq_scope_item_phase_source',
-            ),
-        ]
-
-    def __str__(self):
-        return f'{self.name} [{self.group_id}]'
+    class Meta(DeliveryNode.Meta):
+        constraints = [models.UniqueConstraint(fields=['contract', 'key'], name='delivery_scope_key')]
 
     @property
     def project(self):
-        return self.phase.project if self.phase else None
+        return self.contract.project
+
+
+class DeliveryPhase(DeliveryNode):
+    scope = models.ForeignKey(DeliveryScope, on_delete=models.CASCADE, related_name='phases')
+    commercial_phase = models.ForeignKey(ProjectPhase, on_delete=models.SET_NULL, null=True, blank=True, related_name='delivery_phases')
+    description = models.TextField(blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+
+    class Meta(DeliveryNode.Meta):
+        ordering = ['order', 'id']
+        constraints = [models.UniqueConstraint(fields=['scope', 'key'], name='delivery_phase_key')]
+
+    @property
+    def project(self):
+        return self.scope.project
+
+
+class DeliveryStage(DeliveryNode):
+    class EditorialStatus(models.TextChoices):
+        DRAFT = 'draft', 'Borrador'
+        PUBLISHED = 'published', 'Aprobado internamente'
+
+    phase = models.ForeignKey(DeliveryPhase, on_delete=models.CASCADE, related_name='stages')
+    description = models.TextField(blank=True, default='')
+    order = models.PositiveIntegerField(default=0)
+    editorial_status = models.CharField(max_length=20, choices=EditorialStatus.choices, default=EditorialStatus.DRAFT)
+
+    class Meta(DeliveryNode.Meta):
+        ordering = ['order', 'id']
+        constraints = [models.UniqueConstraint(fields=['phase', 'key'], name='delivery_stage_key')]
+
+    @property
+    def project(self):
+        return self.phase.project
+
+
+class Requirement(DeliveryNode):
+    """Client-readable validation guide; editorial drafts never imply approval."""
+
+    class ReviewStatus(models.TextChoices):
+        PENDING = 'pending', 'Pendiente de publicación'
+        IN_REVIEW = 'in_review', 'En revisión'
+        APPROVED = 'approved', 'Aprobado'
+        OBJECTED = 'objected', 'Objetado'
+        REJECTED = 'rejected', 'Rechazado'
+
+    stage = models.ForeignKey(DeliveryStage, on_delete=models.CASCADE, related_name='requirements')
+    description = models.TextField(blank=True, default='')
+    guide = models.JSONField(default=dict, blank=True)
+    order = models.PositiveIntegerField(default=0)
+    review_status = models.CharField(max_length=20, choices=ReviewStatus.choices, default=ReviewStatus.PENDING)
+    context = models.ForeignKey('DeliveryPromptContext', on_delete=models.PROTECT, null=True, blank=True, related_name='requirements')
+    source_references = models.JSONField(default=list, blank=True)
+
+    class Meta(DeliveryNode.Meta):
+        ordering = ['order', 'id']
+        constraints = [models.UniqueConstraint(fields=['stage', 'key'], name='delivery_requirement_key')]
+
+    @property
+    def project(self):
+        return self.stage.project
 
     @property
     def project_id(self):
-        return self.phase.project_id if self.phase else None
+        return self.stage.phase.scope.contract.project_id
 
 
-class RequirementComment(models.Model):
-    """Comment on a requirement card — can be internal (admin-only) or public."""
+class DeliveryPublication(models.Model):
+    """Immutable round, including the exact client-facing guide composition."""
 
-    requirement = models.ForeignKey(
-        Requirement, on_delete=models.CASCADE, related_name='comments',
-    )
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='requirement_comments',
-    )
-    content = models.TextField()
-    is_internal = models.BooleanField(
-        default=False, help_text='Internal comments are visible only to admins.',
-    )
+    stage = models.ForeignKey(DeliveryStage, on_delete=models.PROTECT, related_name='publications')
+    round = models.PositiveIntegerField()
+    payload = models.JSONField(default=dict)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_publications')
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ['created_at']
-
-    def __str__(self):
-        return f'Comment by {self.user.email} on {self.requirement_id}'
+        ordering = ['-round']
+        constraints = [models.UniqueConstraint(fields=['stage', 'round'], name='delivery_publication_round')]
 
 
-class RequirementHistory(models.Model):
-    """Tracks status changes of a requirement."""
+class DeliveryDocumentLink(models.Model):
+    """Exactly one delivery level owns this attachment; authorization is inherited."""
 
-    requirement = models.ForeignKey(
-        Requirement, on_delete=models.CASCADE, related_name='history',
-    )
-    from_status = models.CharField(max_length=20, choices=Requirement.STATUS_CHOICES)
-    to_status = models.CharField(max_length=20, choices=Requirement.STATUS_CHOICES)
-    changed_by = models.ForeignKey(
-        settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True,
-    )
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_documents')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, related_name='delivery_links')
+    level = models.CharField(max_length=20)
+    contract = models.ForeignKey(ProjectContract, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    amendment = models.ForeignKey(ContractAmendment, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    scope = models.ForeignKey(DeliveryScope, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    phase = models.ForeignKey(DeliveryPhase, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    stage = models.ForeignKey(DeliveryStage, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    requirement = models.ForeignKey(Requirement, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_document_links')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+
+
+class DeliveryDocumentSnapshot(models.Model):
+    publication = models.ForeignKey(DeliveryPublication, on_delete=models.PROTECT, related_name='document_snapshots')
+    link = models.ForeignKey(DeliveryDocumentLink, on_delete=models.PROTECT, related_name='snapshots')
+    title = models.CharField(max_length=300)
+    file = models.FileField(storage=get_private_storage, upload_to='delivery/snapshots/%Y/%m/', max_length=500)
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['publication', 'link'], name='delivery_document_snapshot_link')]
+
+
+class ContractSignatureEvidence(models.Model):
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, null=True, blank=True, related_name='signature_evidence')
+    amendment = models.ForeignKey(ContractAmendment, on_delete=models.PROTECT, null=True, blank=True, related_name='signature_evidence')
+    file = models.FileField(storage=get_private_storage, upload_to='delivery/signatures/%Y/%m/', max_length=500)
+    sha256 = models.CharField(max_length=64)
+    method = models.CharField(max_length=20, choices=[('portal', 'Platform'), ('external', 'Firma externa')], default='external')
+    source_sha256 = models.CharField(max_length=64, blank=True, default='')
+    source_snapshot = models.JSONField(default=dict)
+    signer_name = models.CharField(max_length=255)
+    signed_at = models.DateTimeField()
+    attestation = models.TextField()
+    attested_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_signature_attestations')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at', '-id']
+        constraints = [models.CheckConstraint(condition=(models.Q(contract__isnull=False, amendment__isnull=True) | models.Q(contract__isnull=True, amendment__isnull=False)), name='delivery_signature_one_parent')]
+
+    @property
+    def title(self):
+        return self.source_snapshot.get('title') or (self.contract.title if self.contract_id else self.amendment.title)
+
+
+class RequirementReview(models.Model):
+    publication = models.ForeignKey(DeliveryPublication, on_delete=models.PROTECT, related_name='reviews')
+    requirement = models.ForeignKey(Requirement, on_delete=models.PROTECT, related_name='reviews')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_reviews')
+    requirement_version = models.PositiveIntegerField()
+    content_snapshot = models.JSONField(default=dict)
+    decision = models.CharField(max_length=20, choices=Requirement.ReviewStatus.choices)
+    message = models.TextField(blank=True, default='')
+    environment = models.CharField(max_length=200, blank=True, default='')
+    is_external = models.BooleanField(default=False)
+    client_statement = models.TextField(blank=True, default='')
+    original_reviewer = models.CharField(max_length=300, blank=True, default='')
+    reviewed_at = models.DateTimeField(default=timezone.now)
+    source_message = models.ForeignKey('content.CommunicationMessage', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_approvals')
+    source_snapshot = models.JSONField(default=dict)
+    evidence_document_ids = models.JSONField(default=list)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+
+class DeliveryReviewDocumentEvidence(models.Model):
+    """The exact document supplied as proof for a recorded client decision."""
+    review = models.ForeignKey(RequirementReview, on_delete=models.PROTECT, related_name='document_evidence')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, related_name='delivery_review_evidence')
+    title = models.CharField(max_length=300)
+    file = models.FileField(storage=get_private_storage, upload_to='delivery/reviews/%Y/%m/', max_length=500)
+    sha256 = models.CharField(max_length=64)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [models.UniqueConstraint(fields=['review', 'document'], name='delivery_review_document_unique')]
+
+
+class DeliveryMessage(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_messages')
+    level = models.CharField(max_length=20)
+    target_id = models.PositiveBigIntegerField()
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_messages')
+    requirements = models.ManyToManyField(Requirement, blank=True, related_name='delivery_messages')
+    documents = models.ManyToManyField('content.Document', blank=True, related_name='delivery_messages')
+    message = models.TextField()
+    is_internal = models.BooleanField(default=False)
+    context = models.ForeignKey('DeliveryPromptContext', on_delete=models.PROTECT, null=True, blank=True, related_name='messages')
+    source_references = models.JSONField(default=list, blank=True)
+    reply_classifications = models.JSONField(default=list, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['created_at', 'id']
+
+
+class DeliveryOperation(models.Model):
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_operations')
+    request_id = models.CharField(max_length=100)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_operations')
+    fingerprint = models.CharField(max_length=64)
+    response = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['project', 'request_id'], name='delivery_operation_key')]
+
+
+class ImmutablePromptQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError('Captured authoring context cannot be edited.')
+
+    def bulk_update(self, objs, fields, **kwargs):
+        raise ValueError('Captured authoring context cannot be edited.')
+
+
+class ImmutablePromptRecord(models.Model):
+    objects = ImmutablePromptQuerySet.as_manager()
+
+    class Meta:
+        abstract = True
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError('Captured authoring context cannot be edited.')
+        kwargs['force_insert'] = True
+        return super().save(*args, **kwargs)
+
+
+class DeliveryPromptContext(ImmutablePromptRecord):
+    """An explicit, durable authoring selection, independent of draft stages."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_prompt_contexts')
+    contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    client = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_client_contexts')
+    destination = models.JSONField(default=dict, blank=True)
+    scope = models.ForeignKey(DeliveryScope, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    stage = models.ForeignKey(DeliveryStage, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_contexts')
+    mode = models.CharField(max_length=12, choices=[('guides', 'Crear guías'), ('reply', 'Preparar respuesta')])
+    request_id = models.CharField(max_length=100)
+    fingerprint = models.CharField(max_length=64)
+    captured_version = models.PositiveIntegerField()
+    amendment_ids = models.JSONField(default=list)
+    missing_sources = models.JSONField(default=list)
+    uncertainties = models.JSONField(default=list)
+    warnings = models.JSONField(default=list)
+    complete = models.BooleanField(default=False)
+    prompt = models.TextField()
+    template = models.JSONField(default=dict)
+    schema = models.JSONField(default=dict)
+    conversation = models.JSONField(default=dict)
+    manifest_sha256 = models.CharField(max_length=64)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [models.UniqueConstraint(fields=['project', 'request_id'], name='delivery_prompt_request_unique')]
 
-    def __str__(self):
-        return f'{self.from_status} → {self.to_status}'
+
+class DeliveryPromptSource(ImmutablePromptRecord):
+    """Exact private source bytes, identity and extracted fragments for citations."""
+    context = models.ForeignKey(DeliveryPromptContext, on_delete=models.PROTECT, related_name='sources')
+    source_key = models.CharField(max_length=100)
+    title = models.CharField(max_length=300)
+    origin = models.CharField(max_length=32)
+    source_id = models.CharField(max_length=100)
+    role = models.CharField(max_length=32)
+    applicability_note = models.TextField(blank=True, default='')
+    document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_sources')
+    proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_prompt_sources')
+    signature_evidence = models.ForeignKey(ContractSignatureEvidence, on_delete=models.PROTECT, null=True, blank=True, related_name='prompt_sources')
+    version = models.PositiveIntegerField(null=True, blank=True)
+    version_kind = models.CharField(max_length=30, default='unknown')
+    date = models.DateTimeField(null=True, blank=True)
+    file = models.FileField(storage=get_private_storage, upload_to='delivery/prompt-sources/%Y/%m/', max_length=500, blank=True)
+    filename = models.CharField(max_length=300, blank=True, default='')
+    content_type = models.CharField(max_length=100, blank=True, default='')
+    sha256 = models.CharField(max_length=64, blank=True, default='')
+    snapshot = models.JSONField(default=dict)
+    fragments = models.JSONField(default=list)
+    status = models.CharField(max_length=16, choices=[('included', 'Incluida'), ('missing', 'Faltante'), ('unreadable', 'Ilegible'), ('partial', 'Parcial')])
+    warnings = models.JSONField(default=list)
+    limits = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['id']
+        constraints = [models.UniqueConstraint(fields=['context', 'source_key'], name='delivery_prompt_source_unique')]
 
 
 class ChangeRequest(models.Model):
@@ -897,6 +1025,7 @@ class ChangeRequest(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_PENDING,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     estimated_cost = models.DecimalField(
         max_digits=12, decimal_places=2, null=True, blank=True,
         help_text='Estimated additional cost in project currency.',
@@ -914,11 +1043,6 @@ class ChangeRequest(models.Model):
         Requirement, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='change_requests_about',
         help_text='Requirement this change request is about (client picked when filing).',
-    )
-    phase = models.ForeignKey(
-        'ProjectPhase', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='phase_change_requests',
-        help_text='Phase this change request belongs to (auto-assigned from source_requirement).',
     )
     screenshot = models.ImageField(
         upload_to='change_requests/', null=True, blank=True,
@@ -1003,7 +1127,7 @@ class BugReport(models.Model):
         (STATUS_CONFIRMED, 'Confirmado'),
         (STATUS_FIXING, 'En corrección'),
         (STATUS_QA, 'En QA'),
-        (STATUS_RESOLVED, 'Resuelto'),
+        (STATUS_RESOLVED, 'Resuelto por equipo'),
         (STATUS_NOT_REPRODUCIBLE, 'No reproducible'),
         (STATUS_WONT_FIX, 'No se corregirá'),
         (STATUS_DUPLICATE, 'Duplicado'),
@@ -1045,6 +1169,7 @@ class BugReport(models.Model):
         max_length=25, choices=STATUS_CHOICES, default=STATUS_REPORTED,
     )
     admin_response = models.TextField(blank=True, default='')
+    version = models.PositiveIntegerField(default=0)
     linked_bug = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='duplicates',
@@ -1054,11 +1179,6 @@ class BugReport(models.Model):
         Requirement, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='bug_reports_about',
         help_text='Requirement this bug is about (client picked when filing).',
-    )
-    phase = models.ForeignKey(
-        'ProjectPhase', on_delete=models.SET_NULL, null=True, blank=True,
-        related_name='phase_bug_reports',
-        help_text='Phase this bug report belongs to (auto-assigned from source_requirement).',
     )
     screenshot = models.ImageField(
         upload_to='bug_reports/', null=True, blank=True,
@@ -1761,3 +1881,22 @@ class SavedFilterTab(models.Model):
 
     def __str__(self):
         return f'{self.user_id}/{self.view}/{self.name}'
+
+
+# Project ideas and explicit client access (P4 domain).
+from accounts.models_project_ideas import ProjectIdea, ProjectIdeaRevision, ProjectIdeaCollection, ProjectIdeaCollectionItem  # noqa: E402,F401
+from accounts.models_project_client_access import ProjectClientAccessPolicy, ProjectClientAccessEvent  # noqa: E402,F401
+# Project billing domain (identity/context only; existing financial engines stay authoritative).
+from accounts.billing_models import (  # noqa: E402,F401
+    BillingContextEvent, CollectionAccountContext, HostingEvidence,
+    HostingEvidenceGroup, ProjectHosting, ProjectHostingAccountingSource,
+)
+
+# Ticket domain models; imports keep the public accounts.models surface stable.
+from accounts.models_issue_reports import (  # noqa: E402,F401
+    IssueAttachment, IssueContext, IssueEvent, IssueResponse,
+)
+
+from accounts.models_delivery_email import (  # noqa: E402,F401
+    DeliveryEvidenceEmail, DeliveryEvidenceEmailAttempt, DeliveryEvidenceEmailFile,
+)

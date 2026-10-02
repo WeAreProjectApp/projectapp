@@ -120,7 +120,11 @@ SEEDED_MODELS = {
     'accounts.Deliverable', 'accounts.HostingSubscription',
     'accounts.Notification', 'accounts.Payment', 'accounts.Project',
     'accounts.ProjectAccessNote', 'accounts.ProjectAdminAccess',
+    'accounts.ProjectIdea', 'accounts.ProjectIdeaCollection', 'accounts.ProjectClientAccessPolicy',
     'accounts.ProjectDataModelEntity', 'accounts.Requirement',
+    'accounts.ProjectContract', 'accounts.ContractAmendment',
+    'accounts.ProjectHosting',
+    'accounts.DeliveryScope', 'accounts.DeliveryPhase', 'accounts.DeliveryStage',
     'accounts.SavedFilterTab', 'accounts.UserProfile',
     'content.AdsSpendRecord', 'content.BlogPost', 'content.BusinessProposal',
     'content.AdditionalModuleShareLink',
@@ -146,11 +150,21 @@ SEEDED_MODELS = {
 
 DERIVED_MODELS = {
     'accounts.BugComment', 'accounts.ChangeRequestComment',
+    # Captured by ticket operations, never fabricated as independent history.
+    'accounts.IssueContext', 'accounts.IssueResponse',
+    'accounts.IssueAttachment', 'accounts.IssueEvent',
     'accounts.DeliverableClientFolder', 'accounts.DeliverableClientUpload',
     'accounts.DeliverableFile', 'accounts.DeliverableVersion',
     'accounts.PaymentHistory', 'accounts.ProjectPhase',
-    'accounts.ProjectScopeItem', 'accounts.RequirementComment',
-    'accounts.RequirementHistory', 'content.AccountingChangeLog',
+    'accounts.ProjectIdeaRevision', 'accounts.ProjectIdeaCollectionItem', 'accounts.ProjectClientAccessEvent',
+    'accounts.DeliveryWorkspace', 'accounts.DeliveryPublication',
+    'accounts.ContractSignatureEvidence', 'accounts.RequirementReview',
+    'accounts.DeliveryReviewDocumentEvidence',
+    'accounts.DeliveryDocumentLink', 'accounts.DeliveryDocumentSnapshot',
+    'accounts.DeliveryMessage',
+    'accounts.CollectionAccountContext', 'accounts.ProjectHostingAccountingSource',
+    'accounts.HostingEvidenceGroup', 'accounts.HostingEvidence', 'accounts.BillingContextEvent',
+    'content.AccountingChangeLog',
     'content.ClientDocumentNumberSequence', 'content.CommunicationAttachment',
     'content.CommunicationMessageDateCorrection',
     'content.CommunicationMessageRevision',
@@ -188,10 +202,20 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Retained authoring proof is created only by explicit administrative
+    # source selection, never fabricated by automatic demo-data generation.
+    # Authorized fake resets dissolve its protected graph in dependency order.
+    'accounts.DeliveryPromptContext', 'accounts.DeliveryPromptSource',
+    # Closure-email previews/files/attempts require an explicit administrator
+    # preparation and reviewed transport action, never automatic demo sending.
+    'accounts.DeliveryEvidenceEmail', 'accounts.DeliveryEvidenceEmailFile',
+    'accounts.DeliveryEvidenceEmailAttempt',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
     # credentials must never be fabricated as reusable demo secrets.
+    # Runtime replay receipts are produced by real administrative actions.
+    'accounts.DeliveryOperation',
     'accounts.VerificationCode', 'content.LinkedInToken',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.McpActionIntent', 'content.McpCredential', 'content.McpUpload',

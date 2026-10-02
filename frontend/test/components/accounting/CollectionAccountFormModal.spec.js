@@ -37,6 +37,13 @@ const IncomeFormModalStub = {
   template: '<div v-if="open" data-testid="income-form-stub" />',
 };
 
+const CollectionAccountProjectContextStub = {
+  name: 'CollectionAccountProjectContext',
+  props: ['projectId', 'modelValue'],
+  emits: ['update:modelValue', 'valid'],
+  template: '<div data-testid="collection-account-project-context-stub" />',
+};
+
 const clientFixture = {
   id: 5,
   name: 'Ana Pérez',
@@ -222,6 +229,7 @@ function mountModal(props = {}) {
         },
         ClientAutocomplete: ClientAutocompleteStub,
         IncomeFormModal: IncomeFormModalStub,
+        CollectionAccountProjectContext: CollectionAccountProjectContextStub,
       },
     },
   });
@@ -817,7 +825,15 @@ describe('CollectionAccountFormModal', () => {
     expect(payload.public_number).toBeUndefined();
     expect(payload.client_profile_id).toBe(5);
     expect(payload.income_record_id).toBe(8);
-    expect(payload.items[0].unit_price).toBe('1490000');
+    expect(payload.vat_rate).toBeNull();
+    expect(payload.items[0]).toEqual({
+      description: '',
+      quantity: '1',
+      amount: '1490000',
+      amount_mode: 'vat_included',
+      period_start: null,
+      period_end: null,
+    });
   });
 
   it('sends a zero plazo as a real 0 rather than the default term', async () => {

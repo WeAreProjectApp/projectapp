@@ -166,6 +166,9 @@ EXPORT_SECTIONS = {
             ('Periodicidad', lambda r: (
                 r.get_period_cadence_display() if r.period_cadence else ''
             )),
+            ('Valor antes de IVA', 'base_amount'),
+            ('IVA (%)', 'vat_rate'),
+            ('IVA', 'vat_amount'),
         ],
     },
     'expense': {
@@ -185,6 +188,9 @@ EXPORT_SECTIONS = {
             ('Gustavo', 'gustavo_amount'),
             ('Carlos', 'carlos_amount'),
             ('Notas', 'notes'),
+            ('Valor antes de IVA', 'base_amount'),
+            ('IVA (%)', 'vat_rate'),
+            ('IVA', 'vat_amount'),
         ],
     },
     'hosting': {
@@ -205,6 +211,9 @@ EXPORT_SECTIONS = {
             # 'Cliente' above is the billing snapshot, this is the relation.
             ('Cliente vinculado', _hosting_client),
             ('Proyecto', _record_project),
+            ('Valor antes de IVA', 'base_amount'),
+            ('IVA (%)', 'vat_rate'),
+            ('IVA', 'vat_amount'),
         ],
     },
     'pocket': {

@@ -356,6 +356,7 @@ describe('IncomeFormModal', () => {
       destination: 'pocket',
       ledger: 'company',
       total_amount: '1500',
+      vat_rate: 19,
       gustavo_amount: '900',
       carlos_amount: '600',
       client: null,
@@ -515,6 +516,7 @@ describe('IncomeFormModal', () => {
       destination: 'partners',
       ledger: 'company',
       total_amount: '1200000.00',
+      vat_rate: null,
       gustavo_amount: '600000.00',
       carlos_amount: '600000.00',
       client: 7,
@@ -1022,21 +1024,26 @@ describe('IncomeFormModal', () => {
     expect(wrapper.text()).toContain('Valor');
   });
 
-  it('personal ledger submit omits the split amounts', async () => {
+  it('personal ledger submits its VAT-aware capture without split amounts', async () => {
     const wrapper = mountModal();
 
     await segmentedButton(wrapper, 'Líquido').trigger('click');
     await segmentedButton(wrapper, 'Personal Gustavo').trigger('click');
     await wrapper.find('input[type="text"]').setValue('Ingreso personal');
     await wrapper.find('[data-testid="income-form-period"]').setValue('2026-06-15');
-    await wrapper.find('input[inputmode="numeric"]').setValue('54099');
+    await wrapper.find('[data-testid="vat-amount"]').setValue('54099');
     await segmentedButton(wrapper, 'Otro').trigger('click');
     await wrapper.find('form').trigger('submit');
 
     const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.ledger).toBe('gustavo');
-    expect(payload.destination).toBe('partners');
-    expect(payload.total_amount).toBe(54099);
+    expect(payload).toMatchObject({
+      ledger: 'gustavo',
+      destination: 'partners',
+      vat_rate: 0,
+      amount: 54099,
+      amount_mode: 'vat_included',
+    });
+    expect(payload).not.toHaveProperty('total_amount');
     expect(payload).not.toHaveProperty('gustavo_amount');
     expect(payload).not.toHaveProperty('carlos_amount');
   });

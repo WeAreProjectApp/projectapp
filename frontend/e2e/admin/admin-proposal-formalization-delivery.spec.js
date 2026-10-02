@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_FORMALIZATION_DELIVERY } from '../helpers/flow-tags.js';
 
@@ -105,9 +106,9 @@ async function openDocumentsFromProposalList(page, { compact = false } = {}) {
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click();
   await expect(page).toHaveURL(new RegExp(`/panel/proposals/${PROPOSAL_ID}/edit`));
   if (compact) {
-    await page.getByRole('combobox', { name: 'Secciones' }).selectOption('documents');
+    await selectProposalDestination(page, 'documents', 'documents');
   } else {
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
   }
   await expect(page.getByTestId('proposal-formalization-open')).toBeVisible();
 }

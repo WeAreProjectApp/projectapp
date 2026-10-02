@@ -4,7 +4,9 @@ from unittest.mock import patch
 import pytest
 from freezegun import freeze_time
 from django.urls import reverse
+from django.utils import timezone
 
+from accounts.models import Deliverable, Project, ProjectIdea
 from content.models import ProposalChangeLog, ProposalDocument
 
 pytestmark = pytest.mark.django_db
@@ -323,6 +325,46 @@ class TestLaunchToPlatform:
         mock_task.assert_called_once()
         _, kwargs = mock_task.call_args
         assert kwargs['is_relaunch'] is True
+
+    def test_force_relaunch_with_platform_information_preserves_existing_onboarding(
+        self, admin_client, admin_user, accepted_proposal,
+    ):
+        """Fails if a blocked force relaunch unlinks evidence or enqueues background work."""
+        project = Project.objects.create(name='Relaunch evidence', client=admin_user)
+        deliverable = Deliverable.objects.create(
+            project=project, category=Deliverable.CATEGORY_DOCUMENTS,
+            title='Proposal evidence', uploaded_by=admin_user,
+        )
+        completed_at = timezone.now()
+        accepted_proposal.deliverable = deliverable
+        accepted_proposal.platform_onboarding_completed_at = completed_at
+        accepted_proposal.save(update_fields=[
+            'deliverable_id', 'platform_onboarding_completed_at',
+        ])
+        idea = ProjectIdea.objects.create(
+            project=project, author=admin_user, author_label='Equipo', origin='team',
+            text='Esta información impide el reinicio.', archived_at=completed_at,
+            archived_by=admin_user,
+        )
+
+        with patch('content.tasks.run_platform_onboarding') as onboarding_task, patch(
+            'content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation',
+        ) as acceptance_email:
+            response = admin_client.post(
+                self._url(accepted_proposal), {'force': True}, format='json',
+            )
+
+        accepted_proposal.refresh_from_db()
+        idea.refresh_from_db()
+        assert response.status_code == 409
+        assert (
+            accepted_proposal.deliverable_id,
+            accepted_proposal.platform_onboarding_completed_at,
+            Project.objects.filter(pk=project.pk).exists(),
+            idea.project_id,
+        ) == (deliverable.pk, completed_at, True, project.pk)
+        onboarding_task.assert_not_called()
+        acceptance_email.assert_not_called()
 
     def test_launch_to_platform_creates_changelog(self, admin_client, accepted_proposal):
         with patch('content.tasks.run_platform_onboarding'):

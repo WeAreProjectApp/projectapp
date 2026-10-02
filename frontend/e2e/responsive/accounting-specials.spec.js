@@ -83,6 +83,10 @@ async function setup(page) {
     if (apiPath === 'accounting/receivables/' && method === 'GET') return json({ results: receivableRows, summary: receivablesSummary });
     if (apiPath.startsWith('accounting/card-snapshots/') && method === 'GET') return json({ results: [], meta: {} });
     if (apiPath === 'accounting/collection-accounts/' && method === 'GET') return json({ results: [collection], meta: { pending_total: '123456789.00' } });
+    if (apiPath === 'admin/billing-context/projects/1/options/' && method === 'GET') {
+      return json({ project_id: 1, project_name: 'Proyecto fixture', hosting_id: null,
+        contracts: [{ id: 10, title: 'Contrato fixture', amendments: [] }] });
+    }
     if (apiPath.startsWith('accounting/collection-accounts/next-number/') && method === 'GET') return json({ suggested_number: 'CC-RESP-001', billing_code: 'RESP', issuer_city: 'Bogotá' });
     if (apiPath === 'accounting/collection-accounts/preview/' && method === 'POST') {
       const body = route.request().postDataJSON();
@@ -90,7 +94,7 @@ async function setup(page) {
         subject: `Cuenta de cobro CC-RESP-001 — ${body.billing_concept}`,
         html_body: `<p>${body.billing_concept}</p>`,
         public_number: 'CC-RESP-001',
-        total: body.items[0].unit_price,
+        total: body.items[0].amount,
         due_date: '2026-09-09',
         customer_email: body.customer.email,
         pdf_url: collectionPreviewPdf,
@@ -212,6 +216,8 @@ const longModalFlows = Object.freeze([
       await page.getByTestId('client-autocomplete-option-1').click();
       await page.getByTestId('collection-form-income').click();
       await page.getByTestId('collection-form-income-option-1').click();
+      await page.getByTestId('billing-nature').selectOption('contract');
+      await page.getByTestId('billing-contract').selectOption('10');
       await page.getByTestId('collection-form-amount').fill('123456789');
       await page.getByTestId('collection-form-concept').fill(longConcept);
       await page.getByTestId('collection-form-preview').click();
@@ -467,7 +473,9 @@ for (const profile of RESPONSIVE_PROFILES) {
       const hostingCall = calls.find(({ apiPath }) => apiPath === 'accounting/hostings/create/');
       expect(hostingCall.body.client_name).toBe(inlineClient.company);
       expect(hostingCall.body.payment_modality).toBe('nine_month');
-      expect(hostingCall.body.payment_per_cycle).toBe(345000);
+      expect(hostingCall.body).toMatchObject({
+        amount: 345000, amount_mode: 'vat_included', vat_rate: 19,
+      });
     });
 
     test('draft statement preserves the added purchase', { tag: ['@flow:admin-accounting-statements', '@outcome:success', '@responsive-special:accounting', `@viewport:${profile}`, '@responsive-batch:accounting-special-3'] }, async ({ page }) => {

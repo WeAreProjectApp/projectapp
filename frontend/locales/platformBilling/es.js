@@ -1,0 +1,17 @@
+export default {
+  accounts: 'Cuentas de cobro', account: 'Cuenta de cobro', hosting: 'Hosting', projectHosting: 'Hosting del proyecto', nonProjectAccount: 'Cobro ajeno a proyectos',
+  project: 'Proyecto', noProject: 'Sin proyecto', nature: 'Naturaleza', contract: 'Contrato', amendment: 'Otrosí', context: 'Asociación',
+  all: 'Todos', state: 'Estado', total: 'Total', issued: 'Emisión', due: 'Vencimiento',
+  loading: 'Cargando…', retry: 'Reintentar', noAccounts: 'No hay cuentas de cobro para estos filtros.',
+  noHosting: 'No hay hosting registrado para este proyecto.', noPayments: 'No hay pagos registrados.', noCycles: 'No hay ciclos pagados registrados.',
+  noHostingProjects: 'No tienes proyectos con hosting registrado.',
+  pendingAssociation: 'Pendiente de asociar', backAccounts: 'Volver a cuentas de cobro', downloadPdf: 'Descargar PDF', pdfError: 'No se pudo descargar el PDF.',
+  paymentInstructions: 'Instrucciones de pago', hostingAccounts: 'Ver cuentas del hosting', reconcile: 'Conciliar hosting',
+  hostingIndependent: 'Un hosting por proyecto, independiente de sus contratos.',
+  sourcesPending: 'Hay registros pendientes de asociación administrativa. Se conserva cada origen sin sumar importes cuya equivalencia no está confirmada.',
+  subscriptionPayments: 'Pagos de la suscripción', accountingOrigin: 'Origen contable', operationalOrigin: 'Origen operativo', historicalOrigin: 'Origen histórico asociado',
+  reconciledEvidence: 'Evidencias conciliadas', evidenceDifference: 'Las evidencias presentan importes o estados distintos; la asociación no confirma un pago.',
+  evidenceKinds: { payment: 'Pago', cycle: 'Ciclo pagado' },
+  modalities: { quarterly: 'Trimestral', semiannual: 'Semestral', nine_month: 'Cada 9 meses', monthly: 'Mensual (histórico)', annual: 'Anual (histórico)' },
+  states: { draft: 'Borrador', issued: 'Emitida', paid: 'Pagado', cancelled: 'Anulada', pending: 'Pendiente', processing: 'Procesando', overdue: 'Vencido', failed: 'Fallido', active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' },
+}

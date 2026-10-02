@@ -158,6 +158,14 @@ def settle_expected_income(income, data, user):
     ``ValueError`` with a Spanish message on any business-rule breach; the
     view turns it into a 400.
     """
+    from accounts.services.billing_locks import current_income_paid_total, lock_billing_rows
+    from content.serializers.accounting import validate_project_client_match
+    locked = lock_billing_rows(income_ids=[income.pk], include_income_children=True,
+                               include_origin_documents=True)
+    income = locked.incomes.get(income.pk)
+    if income is None:
+        raise ValueError('El ingreso seleccionado ya no existe. Actualiza la lista.')
+    validate_project_client_match(income.project, income.client)
     if income.kind != IncomeRecord.Kind.EXPECTED:
         raise ValueError('Solo se puede liquidar un ingreso esperado.')
 
@@ -167,7 +175,7 @@ def settle_expected_income(income, data, user):
     deducted = sum((d['amount'] for d in deductions), Decimal('0'))
     reexpected = sum((e['amount'] for e in follow_ups), Decimal('0'))
 
-    pending = income.total_amount - _paid_total(income)
+    pending = income.total_amount - current_income_paid_total(income)
     if pending <= 0:
         raise ValueError('Este ingreso esperado ya está completamente pagado.')
     if received <= 0 and not (deducted or reexpected):
@@ -255,6 +263,7 @@ def _create_liquid_child(income, data, user):
         'period_date': data['period_date'],
         'destination': data['destination'],
         'ledger': income.ledger,
+        'vat_rate': income.vat_rate,
         'total_amount': data['total_amount'],
         'expected_income': income.pk,
         # Inherited from the projection: without this the collected money
@@ -297,6 +306,7 @@ def _create_deduction(income, data, deduction, user):
             'period_date': data['period_date'],
             'category': ExpenseRecord.Category.BUSINESS,
             'ledger': income.ledger,
+        'vat_rate': Decimal('0'),
             'total_amount': deduction['amount'],
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
@@ -328,6 +338,7 @@ def _create_follow_up(income, follow_up, user):
             'period_date': follow_up['period_date'],
             'destination': income.destination,
             'ledger': income.ledger,
+            'vat_rate': income.vat_rate,
             'total_amount': follow_up['amount'],
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
@@ -359,7 +370,7 @@ def _reduce_parent(income, new_total, user):
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
         },
-        partial=True,
+        partial=True, context={'settlement': True},
     )
     serializer.is_valid(raise_exception=True)
     return accounting_service.update_record(
@@ -406,6 +417,7 @@ def _create_abono_child(income, amount, data, movement, user):
             'period_date': data['period_date'],
             'destination': IncomeRecord.Destination.POCKET,
             'ledger': income.ledger,
+            'vat_rate': income.vat_rate,
             'total_amount': amount,
             'expected_income': income.pk,
             'client': income.client_id,
@@ -488,13 +500,11 @@ def bulk_settle_expected_incomes(data, user):
     allocations = data['allocations']
     ids = [entry['income_id'] for entry in allocations]
     amounts = {entry['income_id']: entry['amount'] for entry in allocations}
-    incomes = {
-        income.pk: income
-        for income in IncomeRecord.objects
-        .select_for_update()
-        .select_related('client__user')
-        .filter(pk__in=ids)
-    }
+    from accounts.services.billing_locks import current_income_paid_total, lock_billing_rows
+    from content.serializers.accounting import validate_project_client_match
+    locked = lock_billing_rows(income_ids=ids, include_income_children=True,
+                               include_origin_documents=True)
+    incomes = {pk: locked.incomes[pk] for pk in ids if pk in locked.incomes}
     # Defensive re-check behind the view's 409: an abono is all-or-nothing,
     # silently skipping a vanished id would misdistribute the money.
     if len(incomes) != len(ids):
@@ -505,6 +515,7 @@ def bulk_settle_expected_incomes(data, user):
     parents = [incomes[pk] for pk in ids]
 
     for income in parents:
+        validate_project_client_match(income.project, income.client)
         if income.kind != IncomeRecord.Kind.EXPECTED:
             raise ValueError(
                 f'Solo se pueden abonar ingresos esperados '
@@ -516,7 +527,7 @@ def bulk_settle_expected_incomes(data, user):
                 'abonos: el Bolsillo ProjectApp solo maneja dinero de la '
                 'empresa.'
             )
-        pending = income.total_amount - _paid_total(income)
+        pending = income.total_amount - current_income_paid_total(income)
         if pending <= 0:
             raise ValueError(
                 f'El ingreso "{income.concept}" ya está completamente pagado.'

@@ -886,86 +886,10 @@ def detect_high_engagement_today():
         logger.info('Created %d high-engagement alerts.', created)
 
 
-@periodic_task(crontab(hour='*/2', minute='30'))
+@task()
 def check_calculator_abandonment_followup():
-    """
-    Periodic task (every 2 hours): if a client abandoned the calculator
-    (calc_abandoned logged) >24h ago, with no subsequent calc_confirmed,
-    proposal still viewed/sent, and no response — create follow-up alert.
-
-    Enhanced: also detects high-intent sessions where the client spent >5min
-    in the calculator before abandoning, and includes this in the alert message.
-    """
-    import json as _json
-    from datetime import timedelta
-
-    from content.models import BusinessProposal, ProposalAlert, ProposalChangeLog
-
-    now = timezone.now()
-    one_day_ago = now - timedelta(hours=24)
-
-    candidates = BusinessProposal.objects.filter(
-        status__in=['sent', 'viewed'],
-        is_active=True,
-        automations_paused=False,
-        calculator_followup_sent_at__isnull=True,
-        responded_at__isnull=True,
-    )
-
-    created = 0
-    for proposal in candidates:
-        abandoned_logs = ProposalChangeLog.objects.filter(
-            proposal=proposal,
-            change_type='calc_abandoned',
-            created_at__lt=one_day_ago,
-        ).order_by('-created_at')
-        if not abandoned_logs.exists():
-            continue
-
-        has_confirmed_after = ProposalChangeLog.objects.filter(
-            proposal=proposal,
-            change_type='calc_confirmed',
-            created_at__gt=one_day_ago,
-        ).exists()
-        if has_confirmed_after:
-            continue
-
-        # Check elapsed time from the most recent abandonment event
-        max_elapsed = 0
-        latest_log = abandoned_logs.first()
-        if latest_log and latest_log.description:
-            try:
-                data = _json.loads(latest_log.description)
-                max_elapsed = data.get('elapsed_seconds', 0)
-            except (ValueError, TypeError):
-                pass
-
-        high_intent = max_elapsed >= 300  # >5 minutes
-        if high_intent:
-            minutes = max_elapsed // 60
-            message = (
-                f'{proposal.client_name} pasó {minutes}+ min en el calculador '
-                f'sin confirmar (alta intención). Enviar: '
-                f'"¿Tienes dudas sobre los módulos? Puedo ajustar la selección contigo."'
-            )
-        else:
-            message = (
-                f'{proposal.client_name} abandonó el calculador hace >24h '
-                f'sin confirmar. Considera enviar seguimiento.'
-            )
-
-        ProposalAlert.objects.create(
-            proposal=proposal,
-            alert_type='calculator_followup',
-            message=message,
-            alert_date=now,
-        )
-        proposal.calculator_followup_sent_at = now
-        proposal.save(update_fields=['calculator_followup_sent_at'])
-        created += 1
-
-    if created > 0:
-        logger.info('Created %d calculator followup alerts.', created)
+    """Retired task kept as a no-op for jobs already queued before deployment."""
+    return None
 
 
 @periodic_task(crontab(hour='9', minute='30'))

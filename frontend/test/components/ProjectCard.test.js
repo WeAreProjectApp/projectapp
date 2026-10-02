@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
+import { createI18n } from 'vue-i18n';
 import ProjectCard from '../../components/panel/projects/ProjectCard.vue';
+import projectAccess from '../../locales/projectAccess/es';
 
 const PROJECT = {
   id: 12,
@@ -28,10 +30,10 @@ function mountCard(props = {}) {
   return mount(ProjectCard, {
     props: { project: PROJECT, ...props },
     global: {
+      plugins: [createI18n({ legacy: false, locale: 'es', messages: { es: { projectAccess } } })],
       stubs: {
         NuxtLink: { template: '<a><slot /></a>' },
         BaseBadge: { template: '<span><slot /></span>' },
-        ProjectSpaceLink: { template: '<a>Espacio</a>' },
       },
     },
   });
@@ -47,8 +49,6 @@ describe('ProjectCard', () => {
     expect(wrapper.text()).toContain('Hostings');
     expect(wrapper.text()).toContain('Ingresos');
     expect(wrapper.text()).toContain('4 registros sin proyecto');
-    expect(wrapper.get('[data-testid="project-communications-12"]').text())
-      .toContain('Comunicaciones');
   });
 
   it('puts status below an intrinsically contained unbroken project name', () => {
@@ -75,10 +75,12 @@ describe('ProjectCard', () => {
 
   it('opens the action menu for its project', async () => {
     const wrapper = mountCard();
+    const trigger = wrapper.get('[data-testid="project-actions-12"]');
 
-    await wrapper.get('[data-testid="project-actions-12"]').trigger('click');
+    await trigger.trigger('click');
 
     expect(wrapper.emitted('actions')).toEqual([[PROJECT]]);
+    expect(trigger.attributes('aria-label')).toBe('Acciones de Proyecto Atlas');
   });
 
   it('offers the touch fallback for unlinked records', async () => {

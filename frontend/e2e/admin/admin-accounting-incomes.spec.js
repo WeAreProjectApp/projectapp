@@ -447,6 +447,13 @@ async function gotoIncomes(page, query = '?accounting_incomeTab=all') {
   ).toBeVisible({ timeout: 40_000 });
 }
 
+async function gotoLocalizedIncomes(page) {
+  await page.goto('/es-co/panel/accounting/incomes?accounting_incomeTab=all', { waitUntil: 'domcontentloaded' });
+  await expect(
+    page.getByRole('heading', { name: 'Ingresos', exact: true }),
+  ).toBeVisible({ timeout: 40_000 });
+}
+
 async function visibleIncomeIds(page) {
   return page.locator('[data-testid^="accounting-row-"]').evaluateAll((rows) =>
     rows.map((row) => Number(row.getAttribute('data-testid').replace('accounting-row-', ''))));
@@ -777,7 +784,7 @@ test.describe('Admin Accounting Incomes CRUD', () => {
   }, async ({ page }) => {
     const calls = [];
     await mockApi(page, buildHandler({ rows: [], calls }));
-    await gotoIncomes(page);
+    await gotoLocalizedIncomes(page);
 
     await page.getByTestId('incomes-new-button').click();
     await expect(page.getByRole('heading', { name: 'Nuevo ingreso' })).toBeVisible();
@@ -789,13 +796,18 @@ test.describe('Admin Accounting Incomes CRUD', () => {
 
     // Personal ledger swaps the partner split for a single value input.
     await expect(page.getByTestId('partner-split-total')).toHaveCount(0);
-    await page.locator('form input[inputmode="numeric"]').fill('1400000');
+    await page.getByTestId('vat-amount').fill('1400000');
     await page.getByTestId('income-form-submit').click();
 
     await expect(page.getByText('Ingreso creado')).toBeVisible();
     expect(calls).toHaveLength(1);
     expect(calls[0].body.ledger).toBe('gustavo');
-    expect(Number(calls[0].body.total_amount)).toBe(1400000);
+    expect(calls[0].body).toMatchObject({
+      amount: 1400000,
+      amount_mode: 'vat_included',
+      vat_rate: 0,
+    });
+    expect(calls[0].body.total_amount).toBeUndefined();
     expect(calls[0].body.gustavo_amount).toBeUndefined();
     expect(calls[0].body.carlos_amount).toBeUndefined();
   });
@@ -821,7 +833,7 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     const calls = [];
     const rows = [incomeRow()];
     await mockApi(page, buildHandler({ rows, calls }));
-    await gotoIncomes(page);
+    await gotoLocalizedIncomes(page);
 
     await page.getByTestId('income-actions-1').click();
     await page.getByTestId('income-action-edit-1').click();
@@ -837,7 +849,12 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     await expect(page.getByText('Ingreso actualizado')).toBeVisible();
     expect(calls).toHaveLength(1);
     expect(calls[0].method).toBe('PATCH');
-    expect(Number(calls[0].body.total_amount)).toBe(2000000);
+    expect(calls[0].body).toMatchObject({
+      amount: 2000000,
+      amount_mode: 'vat_included',
+      vat_rate: null,
+    });
+    expect(calls[0].body.total_amount).toBeUndefined();
     expect(calls[0].body.origin).toBe('development');
   });
 

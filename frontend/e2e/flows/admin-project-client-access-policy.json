@@ -1,0 +1,17 @@
+{
+  "id": "admin-project-client-access-policy",
+  "name": "Project field visibility policy",
+  "module": "admin",
+  "roles": [
+    "admin",
+    "platform-admin"
+  ],
+  "priority": "P1",
+  "description": "Admin explicitly enables each available project/access datum, saves a source-bound version and previews the limited client projection, handling stale values and load failures.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

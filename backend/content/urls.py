@@ -1,9 +1,10 @@
+from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
 from content.views import linktree_template as lt_templates
-from django.urls import path
+from django.urls import include, path
 from content.views.accounting import (
     accounting_dashboard, accounting_stats, accounting_receivables,
     list_income_records, create_income_record, retrieve_income_record,
@@ -66,9 +67,11 @@ from content.views.panel_projects import (
     assign_project_unlinked_records,
     change_project_client,
     create_panel_project,
+    delete_panel_project,
     list_panel_projects,
     list_project_unlinked_records,
     preview_project_client_change,
+    preview_panel_project_delete,
     unarchive_panel_project,
     update_panel_project,
 )
@@ -356,6 +359,8 @@ from content.views.entity_history import (
 )
 
 urlpatterns = [
+    path('projects/<int:project_id>/', include('content.project_collaboration_urls')),
+    path('admin/billing-context/', include('content.billing_urls')),
     path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),
     path('video-resources/admin/proposals/<int:proposal_id>/', admin_proposal_video, name='admin-proposal-video'),
     path('video-resources/<uuid:resource_id>/<int:revision>/<str:kind>/', public_video_file, name='public-video-file'),
@@ -538,6 +543,7 @@ urlpatterns = [
     path('proposals/<uuid:proposal_uuid>/respond/', respond_to_proposal, name='respond-to-proposal'),
     path('proposals/<uuid:proposal_uuid>/comment/', comment_on_proposal, name='comment-on-proposal'),
     path('proposals/<uuid:proposal_uuid>/track/', track_proposal_engagement, name='track-proposal-engagement'),
+    path('proposals/<uuid:proposal_uuid>/module-interests/', proposal_module_interests, name='proposal-module-interests'),
     path('proposals/<uuid:proposal_uuid>/track-calculator/', track_calculator_interaction, name='track-calculator-interaction'),
     path('proposals/<uuid:proposal_uuid>/track-requirement-click/', track_requirement_click, name='track-requirement-click'),
     path('proposals/<uuid:proposal_uuid>/share/', create_share_link, name='create-share-link'),
@@ -557,6 +563,8 @@ urlpatterns = [
     path('projects/', list_panel_projects, name='panel-projects-list'),
     path('projects/create/', create_panel_project, name='panel-projects-create'),
     path('projects/<int:project_id>/update/', update_panel_project, name='panel-projects-update'),
+    path('projects/<int:project_id>/delete-preview/', preview_panel_project_delete, name='panel-projects-delete-preview'),
+    path('projects/<int:project_id>/delete/', delete_panel_project, name='panel-projects-delete'),
     path(
         'projects/<int:project_id>/access/',
         panel_project_access_detail,

@@ -1,3 +1,4 @@
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from datetime import date, datetime, timezone as datetime_timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, PropertyMock, patch
@@ -12,17 +13,11 @@ from accounts.models import (
     ChangeRequest,
     ChangeRequestComment,
     Deliverable,
-    DeliverableClientFolder,
-    DeliverableClientUpload,
-    DeliverableFile,
     DeliverableVersion,
     HostingSubscription,
     Payment,
     Project,
     ProjectPhase,
-    Requirement,
-    RequirementComment,
-    RequirementHistory,
     UserProfile,
 )
 from content.models.business_proposal import BusinessProposal
@@ -41,9 +36,7 @@ from accounts.serializers import (
     CreateAdminSerializer,
     CreateBugReportSerializer,
     CreateClientSerializer,
-    CreateCommentSerializer,
     CreateProjectSerializer,
-    CreateRequirementSerializer,
     DeliverableClientUploadSerializer,
     DeliverableFileSerializer,
     DeliverableListSerializer,
@@ -51,17 +44,11 @@ from accounts.serializers import (
     EvaluateBugReportSerializer,
     HostingSubscriptionListSerializer,
     LoginSerializer,
-    MoveRequirementSerializer,
     ProjectDetailSerializer,
     ProjectListSerializer,
-    RequirementCommentSerializer,
-    RequirementDetailSerializer,
-    RequirementHistorySerializer,
-    RequirementListSerializer,
     UpdateClientSerializer,
     UpdateProfileSerializer,
     UpdateProjectSerializer,
-    UpdateRequirementSerializer,
     UserProfileSerializer,
     VerifyOnboardingSerializer,
 )
@@ -353,97 +340,6 @@ class TestUpdateProjectSerializer:
 
 
 # =========================================================================
-# CreateRequirementSerializer
-# =========================================================================
-
-class TestCreateRequirementSerializer:
-    def test_valid_minimal_data(self):
-        serializer = CreateRequirementSerializer(data={'title': 'Build login page'})
-
-        assert serializer.is_valid() is True
-
-    def test_invalid_priority_fails(self):
-        serializer = CreateRequirementSerializer(data={
-            'title': 'Test',
-            'priority': 'ultra',
-        })
-
-        assert serializer.is_valid() is False
-        assert 'priority' in serializer.errors
-
-    def test_missing_title_fails(self):
-        serializer = CreateRequirementSerializer(data={'description': 'No title'})
-
-        assert serializer.is_valid() is False
-        assert 'title' in serializer.errors
-
-
-# =========================================================================
-# UpdateRequirementSerializer
-# =========================================================================
-
-class TestUpdateRequirementSerializer:
-    def test_partial_update_status(self):
-        serializer = UpdateRequirementSerializer(data={'status': 'in_progress'})
-
-        assert serializer.is_valid() is True
-
-    def test_invalid_status_fails(self):
-        serializer = UpdateRequirementSerializer(data={'status': 'invalid'})
-
-        assert serializer.is_valid() is False
-
-    def test_negative_order_fails(self):
-        serializer = UpdateRequirementSerializer(data={'order': -1})
-
-        assert serializer.is_valid() is False
-        assert 'order' in serializer.errors
-
-
-# =========================================================================
-# MoveRequirementSerializer
-# =========================================================================
-
-class TestMoveRequirementSerializer:
-    def test_valid_move(self):
-        serializer = MoveRequirementSerializer(data={'status': 'done', 'order': 0})
-
-        assert serializer.is_valid() is True
-
-    def test_missing_status_fails(self):
-        serializer = MoveRequirementSerializer(data={'order': 0})
-
-        assert serializer.is_valid() is False
-        assert 'status' in serializer.errors
-
-
-# =========================================================================
-# CreateCommentSerializer
-# =========================================================================
-
-class TestCreateCommentSerializer:
-    def test_valid_comment(self):
-        serializer = CreateCommentSerializer(data={'content': 'Hello'})
-
-        assert serializer.is_valid() is True
-        assert serializer.validated_data['is_internal'] is False
-
-    def test_internal_comment_flag(self):
-        serializer = CreateCommentSerializer(
-            data={'content': 'Internal note', 'is_internal': True},
-        )
-
-        assert serializer.is_valid() is True
-        assert serializer.validated_data['is_internal'] is True
-
-    def test_empty_content_fails(self):
-        serializer = CreateCommentSerializer(data={'content': ''})
-
-        assert serializer.is_valid() is False
-        assert 'content' in serializer.errors
-
-
-# =========================================================================
 # ClientListSerializer (ModelSerializer output)
 # =========================================================================
 
@@ -583,114 +479,6 @@ class TestProjectListSerializer:
 
 
 # =========================================================================
-# RequirementDetailSerializer — internal comment filtering
-# =========================================================================
-
-@pytest.mark.django_db
-class TestRequirementDetailSerializer:
-    @pytest.fixture
-    def setup_data(self):
-        admin = User.objects.create_user(
-            username='adm@test.com', email='adm@test.com', password='pass',
-        )
-        admin_profile = UserProfile.objects.create(
-            user=admin, role=UserProfile.ROLE_ADMIN,
-        )
-        client = User.objects.create_user(
-            username='cli@test.com', email='cli@test.com', password='pass',
-        )
-        client_profile = UserProfile.objects.create(
-            user=client, role=UserProfile.ROLE_CLIENT,
-        )
-        project = Project.objects.create(name='P', client=client)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=client,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='Card')
-        RequirementComment.objects.create(
-            requirement=req, user=admin, content='Public', is_internal=False,
-        )
-        RequirementComment.objects.create(
-            requirement=req, user=admin, content='Secret', is_internal=True,
-        )
-        return req, admin, client
-
-    def test_admin_sees_internal_comments(self, setup_data):
-        req, admin, _ = setup_data
-        request = factory.get('/')
-        request.user = admin
-
-        data = RequirementDetailSerializer(req, context={'request': request}).data
-
-        assert len(data['comments']) == 2
-
-    def test_client_does_not_see_internal_comments(self, setup_data):
-        req, _, client = setup_data
-        request = factory.get('/')
-        request.user = client
-
-        data = RequirementDetailSerializer(req, context={'request': request}).data
-
-        assert len(data['comments']) == 1
-        assert data['comments'][0]['content'] == 'Public'
-
-
-# =========================================================================
-# RequirementCommentSerializer
-# =========================================================================
-
-@pytest.mark.django_db
-class TestRequirementCommentSerializer:
-    def test_user_name_falls_back_to_email(self):
-        user = User.objects.create_user(
-            username='nofn@test.com', email='nofn@test.com', password='pass',
-        )
-        client = User.objects.create_user(
-            username='own2@test.com', email='own2@test.com', password='pass',
-        )
-        UserProfile.objects.create(user=client, role=UserProfile.ROLE_CLIENT)
-        project = Project.objects.create(name='P', client=client)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=client,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='R')
-        comment = RequirementComment.objects.create(
-            requirement=req, user=user, content='Note',
-        )
-
-        data = RequirementCommentSerializer(comment).data
-
-        assert data['user_name'] == 'nofn@test.com'
-
-    def test_serializes_comment_with_user_name(self):
-        user = User.objects.create_user(
-            username='cm@test.com', email='cm@test.com', password='pass',
-            first_name='Juan', last_name='Pérez',
-        )
-        client = User.objects.create_user(
-            username='owner@test.com', email='owner@test.com', password='pass',
-        )
-        UserProfile.objects.create(user=client, role=UserProfile.ROLE_CLIENT)
-        project = Project.objects.create(name='P', client=client)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=client,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='R')
-        comment = RequirementComment.objects.create(
-            requirement=req, user=user, content='Note',
-        )
-
-        data = RequirementCommentSerializer(comment).data
-
-        assert data['user_name'] == 'Juan Pérez'
-        assert data['user_email'] == 'cm@test.com'
-        assert data['content'] == 'Note'
-
-
-# =========================================================================
 # UserProfileSerializer (output)
 # =========================================================================
 
@@ -747,80 +535,6 @@ class TestUserProfileSerializer:
         data = UserProfileSerializer(profile, context={'request': request}).data
 
         assert data['avatar_display_url'] == 'https://cdn.example.com/pic.jpg'
-
-
-# =========================================================================
-# RequirementHistorySerializer (output)
-# =========================================================================
-
-@pytest.mark.django_db
-class TestRequirementHistorySerializer:
-    def test_serializes_history_entry(self):
-        admin = User.objects.create_user(
-            username='ha@test.com', email='ha@test.com', password='pass',
-        )
-        client = User.objects.create_user(
-            username='hc@test.com', email='hc@test.com', password='pass',
-        )
-        UserProfile.objects.create(user=client, role=UserProfile.ROLE_CLIENT)
-        project = Project.objects.create(name='P', client=client)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=client,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='R')
-        history = RequirementHistory.objects.create(
-            requirement=req, from_status='todo',
-            to_status='in_progress', changed_by=admin,
-        )
-
-        data = RequirementHistorySerializer(history).data
-
-        assert data['from_status'] == 'todo'
-        assert data['to_status'] == 'in_progress'
-        assert data['changed_by_email'] == 'ha@test.com'
-        assert 'created_at' in data
-
-
-# =========================================================================
-# RequirementListSerializer.get_comments_count
-# =========================================================================
-
-@pytest.mark.django_db
-class TestRequirementListSerializerCommentsCount:
-    def test_comments_count_reflects_actual_count(self):
-        user = User.objects.create_user(
-            username='cc@test.com', email='cc@test.com', password='pass',
-        )
-        UserProfile.objects.create(user=user, role=UserProfile.ROLE_CLIENT)
-        project = Project.objects.create(name='P', client=user)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=user,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='R')
-        RequirementComment.objects.create(requirement=req, user=user, content='A')
-        RequirementComment.objects.create(requirement=req, user=user, content='B')
-
-        data = RequirementListSerializer(req).data
-
-        assert data['comments_count'] == 2
-
-    def test_comments_count_zero_when_no_comments(self):
-        user = User.objects.create_user(
-            username='cc0@test.com', email='cc0@test.com', password='pass',
-        )
-        UserProfile.objects.create(user=user, role=UserProfile.ROLE_CLIENT)
-        project = Project.objects.create(name='P', client=user)
-        d = Deliverable.objects.create(
-            project=project, title='D', category=Deliverable.CATEGORY_OTHER,
-            file=None, uploaded_by=user,
-        )
-        req = Requirement.objects.create(phase=_make_phase(project), title='R')
-
-        data = RequirementListSerializer(req).data
-
-        assert data['comments_count'] == 0
 
 
 # =========================================================================
@@ -1171,11 +885,11 @@ class TestCreateBugReportSerializerValidation:
         project = Project.objects.create(name='P', client=client)
         other_project = Project.objects.create(name='Other', client=client)
         other_phase = _make_phase(other_project)
-        foreign_req = Requirement.objects.create(phase=other_phase, title='Foreign')
+        foreign_req = make_requirement(make_delivery_stage(other_phase.project), title='Foreign')
 
         serializer = CreateBugReportSerializer(
             data={'source_requirement_id': foreign_req.id, 'title': 'Bug'},
-            context={'project': project},
+            context={'project': project, 'request': type('RequestContext', (), {'user': client})()},
         )
 
         assert serializer.is_valid() is False

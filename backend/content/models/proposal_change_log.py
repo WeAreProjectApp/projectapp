@@ -27,6 +27,7 @@ class ProposalChangeLog(models.Model):
         FOLLOWUP = 'followup', 'Follow-up'
         NOTE = 'note', 'Note'
         CALCULATOR_CONFIRMED = 'calc_confirmed', 'Calculator Confirmed'
+        MODULE_INTERESTS = 'module_interests', 'Module interests updated'
         CALCULATOR_ABANDONED = 'calc_abandoned', 'Calculator Abandoned'
         AUTO_ARCHIVED = 'auto_archived', 'Auto Archived'
         STATUS_CHANGE = 'status_change', 'Status Change'

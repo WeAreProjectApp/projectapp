@@ -10,6 +10,7 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import status
+from rest_framework.authentication import SessionAuthentication
 from rest_framework.decorators import (
     api_view,
     authentication_classes,
@@ -48,12 +49,8 @@ from content.services.proposal_analytics_service import (
 )
 from content.services.proposal_totals_service import (
     build_effective_totals_map as _build_effective_totals_map,
-    calculate_effective_total_investment as _calculate_effective_total_investment,
-    calculator_price_percent_by_group_id as _calculator_price_percent_by_group_id,
     effective_total_for_proposal as _effective_total_for_proposal,
-    resync_investment_from_modules as _resync_investment_from_modules,
-    safe_decimal as _safe_decimal,
-    selected_group_ids_from_modules as _selected_group_ids_from_modules,
+    sync_manual_investment,
 )
 from content.throttles import (
     MagicLinkRequestThrottle,
@@ -310,28 +307,10 @@ def _proposal_pdf_response(request, proposal):
     )
 
     doc_variant = (request.query_params.get('doc') or '').strip().lower()
-    selected_modules_param = request.query_params.get('selected_modules', '')
-    selected_modules = (
-        [m.strip() for m in selected_modules_param.split(',') if m.strip()]
-        if selected_modules_param
-        else None
-    )
-    # Derive defaults from current content_json so admin toggles of
-    # additionalModules[i].selected propagate to the PDF even when the
-    # client never opened the calculator (localStorage empty).
-    if selected_modules is None:
-        selected_modules = default_selected_modules_from_content(proposal)
-    else:
-        # Legacy query payloads may arrive with bare group ids — match the
-        # canonical prefixed form the renderer uses.
-        from content.services.proposal_service import normalize_selected_module_ids
-        fr_section = proposal.sections.filter(
-            section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS,
-        ).only('content_json').first()
-        selected_modules = normalize_selected_module_ids(
-            selected_modules,
-            fr_section.content_json if fr_section else None,
-        )
+    # Selection is persisted administrative scope, never a public query override.
+    if 'selected_modules' in request.query_params:
+        return Response({'error': 'Module selection is managed by the proposal owner.'}, status=400)
+    selected_modules = default_selected_modules_from_content(proposal)
 
     if doc_variant == 'technical':
         from content.services.technical_document_pdf import generate_technical_document_pdf
@@ -929,7 +908,7 @@ def get_proposal_json_template(request):
             'reports_alerts_module leads the list and the description names WhatsApp as the '
             'primary channel). '
             'Never invent a match that is not supported by the requirements. When in doubt, '
-            'leave default_selected as false. Do NOT change the module id, icon, price_percent, '
+            'leave default_selected as false. Do NOT change the module id, icon, '
             'is_invite, or its position in the array.'
         ),
     }
@@ -1087,12 +1066,7 @@ def update_proposal(request, proposal_id):
                 or old_values.get('currency') != str(proposal.currency)
             )
             if investment_changed:
-                fr_section = proposal.sections.filter(
-                    section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS
-                ).first()
-                _resync_investment_from_modules(
-                    proposal, fr_section.content_json if fr_section else None
-                )
+                sync_manual_investment(proposal)
     except ValueError as exc:
         return Response(
             {'client_email': [str(exc)]},
@@ -1493,6 +1467,7 @@ def update_proposal_status(request, proposal_id):
 
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def launch_to_platform(request, proposal_id):
     """
@@ -1500,8 +1475,8 @@ def launch_to_platform(request, proposal_id):
     Body: { "force": true }  (required for re-launch when already onboarded)
 
     Creates project, deliverable, requirements, syncs documents, and sends
-    acceptance email on first launch. Re-launch deletes existing data first
-    and skips the email.
+    acceptance email on first launch. Re-launch retires only an unused
+    onboarding graph and skips the email; related information is retained.
     """
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
 
@@ -1533,7 +1508,7 @@ def launch_to_platform(request, proposal_id):
                 teardown_platform_for_proposal,
             )
 
-            teardown_platform_for_proposal(proposal)
+            teardown_platform_for_proposal(proposal, acting_user=request.user)
             proposal.refresh_from_db()
 
         proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING
@@ -1812,7 +1787,7 @@ def update_proposal_section(request, section_id):
 
     investment_section = None
     if section.section_type == ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS:
-        _resync_investment_from_modules(section.proposal, section.content_json)
+        sync_manual_investment(section.proposal)
         investment_section = section.proposal.sections.filter(
             section_type=ProposalSection.SectionType.INVESTMENT,
         ).first()
@@ -1843,7 +1818,7 @@ def preview_sync_section(request, section_id):
     """
     from django.db import transaction as _tx
     from accounts.models import Project
-    from accounts.services.technical_requirements_sync import (
+    from accounts.services.technical_resources_sync import (
         compute_sync_diff,
         filtered_technical_doc_for_sync,
     )
@@ -1887,11 +1862,11 @@ def preview_sync_section(request, section_id):
 @permission_classes([IsAdminUser])
 def apply_sync_section(request, section_id):
     """
-    Save the submitted content_json to the section and sync project requirements
+    Save the submitted content_json to the section and sync project resources
     (with soft-deletion of records removed from the JSON). Transactional.
     """
     from django.db import transaction as _tx
-    from accounts.services.technical_requirements_sync import sync_technical_requirements_for_deliverable
+    from accounts.services.technical_resources_sync import sync_technical_resources_for_deliverable
 
     section = get_object_or_404(ProposalSection, pk=section_id)
     if section.section_type != ProposalSection.SectionType.TECHNICAL_DOCUMENT:
@@ -1919,7 +1894,7 @@ def apply_sync_section(request, section_id):
         serializer.save()
 
         deliverable = proposal.deliverable
-        sync_result = sync_technical_requirements_for_deliverable(
+        sync_result = sync_technical_resources_for_deliverable(
             deliverable, request.user, delete_removed=True,
         )
 
@@ -2312,70 +2287,9 @@ def track_proposal_engagement(request, proposal_uuid):
 @permission_classes([AllowAny])
 @throttle_classes([TrackingAnonThrottle])
 def track_calculator_interaction(request, proposal_uuid):
-    """
-    Track calculator interactions: confirmed selections or abandonment.
-
-    Payload:
-        {
-            "event": "confirmed" | "abandoned",
-            "selected": [module_id, ...],
-            "deselected": [module_id, ...],
-            "total": 3500000
-        }
-    """
-    import json as _json
-
-    proposal = get_object_or_404(
-        BusinessProposal, uuid=proposal_uuid, is_active=True,
-    )
-
-    # Skip tracking for admin staff
-    if is_staff_session(request):
-        return Response({'status': 'skipped'}, status=status.HTTP_200_OK)
-
-    event = request.data.get('event', '')
-    if event not in ('confirmed', 'abandoned'):
-        return Response(
-            {'error': 'event must be "confirmed" or "abandoned".'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    selected = request.data.get('selected', [])
-    deselected = request.data.get('deselected', [])
-    total = request.data.get('total', 0)
-    elapsed_seconds = request.data.get('elapsed_seconds', 0)
-
-    change_type = (
-        ProposalChangeLog.ChangeType.CALCULATOR_CONFIRMED
-        if event == 'confirmed'
-        else ProposalChangeLog.ChangeType.CALCULATOR_ABANDONED
-    )
-
-    ProposalChangeLog.objects.create(
-        proposal=proposal,
-        change_type=change_type,
-        actor_type='client',
-        description=_json.dumps({
-            'selected': selected,
-            'deselected': deselected,
-            'total': total,
-            'elapsed_seconds': elapsed_seconds,
-        }),
-    )
-
-    # Persist confirmed selections so PDF can use them as fallback
-    if event == 'confirmed' and isinstance(selected, list):
-        fr_section = proposal.sections.filter(
-            section_type=ProposalSection.SectionType.FUNCTIONAL_REQUIREMENTS
-        ).first()
-        fr_content = fr_section.content_json if fr_section else None
-        proposal.selected_modules = _normalize_selected_module_ids(
-            selected, fr_content,
-        )
-        proposal.save(update_fields=['selected_modules', 'updated_at'])
-        _resync_investment_from_modules(proposal, fr_content)
-
-    return Response({'status': 'ok'}, status=status.HTTP_200_OK)
+    """Retired: client interests cannot mutate contracted scope or pricing."""
+    return Response({'error': 'The investment calculator has been retired.',
+                     'code': 'calculator_retired'}, status=status.HTTP_410_GONE)
 
 
 @api_view(['POST'])
@@ -3359,6 +3273,17 @@ def _merged_contract_params(proposal, incoming):
     return {**saved, **(incoming if isinstance(incoming, dict) else {})}
 
 
+def _service_conditions_error(proposal, params, variants):
+    from content.services.proposal_hosting_terms import ServiceConditionsError, service_conditions_markdown
+
+    if contract_variants.SERVICE in variants and contract_variants.can_generate(params, contract_variants.SERVICE):
+        try:
+            service_conditions_markdown(proposal)
+        except ServiceConditionsError as exc:
+            return Response({'error': str(exc), 'code': 'service_conditions_missing'}, status=422)
+    return None
+
+
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
 def save_contract_and_negotiate(request, proposal_id):
@@ -3379,6 +3304,9 @@ def save_contract_and_negotiate(request, proposal_id):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    error = _service_conditions_error(proposal, serializer.validated_data, contract_variants.active_variants(proposal))
+    if error is not None:
+        return error
     old_status = proposal.status
     proposal.contract_params = serializer.validated_data
     proposal.status = BusinessProposal.Status.NEGOTIATING
@@ -3455,6 +3383,9 @@ def update_contract_params(request, proposal_id):
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        error = _service_conditions_error(proposal, serializer.validated_data, contract_variants.active_variants(proposal))
+        if error is not None:
+            return error
         proposal.contract_params = serializer.validated_data
         proposal.save(update_fields=['contract_params', 'updated_at'])
 
@@ -3503,6 +3434,9 @@ def update_contract_modality(request, proposal_id):
                     },
                     status=status.HTTP_409_CONFLICT,
                 )
+            error = _service_conditions_error(proposal, proposal.contract_params, contract_variants.MODALITY_VARIANTS[new_value])
+            if error is not None:
+                return error
             proposal.contract_modality = new_value
             proposal.save(update_fields=['contract_modality', 'updated_at'])
             log_proposal_change(
@@ -3573,6 +3507,12 @@ def download_draft_contract_pdf(request, proposal_id):
     variant, error = _requested_variant(proposal, request.query_params.get('variant'))
     if error:
         return error
+    if variant == contract_variants.SERVICE:
+        from content.services.proposal_hosting_terms import ServiceConditionsError, service_conditions_markdown
+        try:
+            service_conditions_markdown(proposal)
+        except ServiceConditionsError as exc:
+            return Response({'error': str(exc), 'code': 'service_conditions_missing'}, status=422)
     from content.services.contract_pdf_service import generate_contract_pdf
     from content.services.pdf_utils import add_watermark_to_pdf
 
@@ -3625,8 +3565,10 @@ def get_default_contract_template(request):
 def list_proposal_documents(request, proposal_id):
     """List all documents attached to a proposal."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
-    docs = proposal.proposal_documents.all().order_by('-created_at')
-    return Response([serialize_proposal_document(d) for d in docs], status=status.HTTP_200_OK)
+    docs = list(proposal.proposal_documents.all().order_by('-created_at'))
+    from content.services.service_contract_freshness import current_service_snapshot
+    snapshot = current_service_snapshot(proposal) if any(d.document_type == 'contract_service' for d in docs) else None
+    return Response([serialize_proposal_document(d, proposal=proposal, service_snapshot=snapshot) for d in docs], status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -3693,8 +3635,18 @@ def delete_proposal_document(request, proposal_id, doc_id):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    try:
+        doc.delete()
+    except ProtectedError:
+        return error_response(
+            'Este documento forma parte de una fuente o evidencia contractual '
+            'retenida y no se puede eliminar.',
+            code='document_used_in_delivery',
+            hint='Conserva el original: las capturas de guías y respuestas son inmutables.',
+            status=status.HTTP_409_CONFLICT,
+        )
+    # Resolve all protected database references before removing the original.
     doc.file.delete(save=False)
-    doc.delete()
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 

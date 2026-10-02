@@ -43,14 +43,28 @@ test.describe('Admin proposal contract modality', () => {
   test('configured defaults generate numeric service terms', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    const state = { proposal: buildProposal({ contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT] }) };
+    const state = {
+      proposal: buildProposal({
+        contract_modality: 'split',
+        proposal_documents: [COMBINED, PRODUCT],
+        hosting_percent: 12,
+        hosting_discount_nine_month: 40,
+        hosting_discount_semiannual: 20,
+        hosting_discount_quarterly: 10,
+        sections: [{
+          id: 9111,
+          section_type: 'investment',
+          content_json: { hostingPlan: { title: 'Hosting administrado', coverageNote: 'Cobertura 24/7' } },
+        }],
+      }),
+    };
     let updatePayload = null;
     await mockApi(page, buildHandler(state, { onUpdate: payload => { updatePayload = payload; } }));
     await openDocuments(page);
 
     await page.getByTestId('proposal-generate-contract-service').click();
     const dialog = page.getByRole('dialog');
-    await expect(dialog.getByRole('heading', { name: 'Generar contrato de servicio' })).toBeVisible();
+    await expect(dialog.getByTestId('contract-service-conditions-note')).toHaveText('Al generar el contrato se incorporan automáticamente la infraestructura, cobertura, cortesías, precios, descuentos y renovación configurados en la propuesta, también si usas un texto personalizado.');
     await expect(dialog.getByRole('combobox', { name: 'Duración inicial' })).toHaveText('nueve (9) meses');
     await expect(dialog.getByRole('combobox', { name: 'Preaviso para no renovar (días calendario)' })).toHaveText('sesenta (60)');
     await expect(dialog.getByRole('combobox', { name: 'Preaviso de terminación del cliente (días calendario)' })).toHaveText('sesenta (60)');
@@ -64,6 +78,34 @@ test.describe('Admin proposal contract modality', () => {
       service_renewal_notice_days: 60,
       service_termination_notice_days: 60,
     });
+  });
+
+  test('a stale service contract regenerates through the service dialog', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Falla si el aviso de condiciones desactualizadas abre el contrato de producto.
+    const staleService = { ...SERVICE, needs_regeneration: true };
+    const state = {
+      proposal: buildProposal({
+        contract_modality: 'split',
+        proposal_documents: [PRODUCT, staleService],
+      }),
+    };
+    let updatePayload = null;
+    await mockApi(page, buildHandler(state, { onUpdate: payload => { updatePayload = payload; } }));
+    await openDocuments(page);
+
+    const serviceRow = page.getByTestId('proposal-contract-row-service');
+    await expect(serviceRow.getByTestId('proposal-service-contract-stale')).toHaveText('Las condiciones del servicio cambiaron. Regenera y revisa el contrato antes de enviarlo.');
+    await expect(page.getByTestId('proposal-contract-row-product').getByTestId('proposal-service-contract-stale')).toHaveCount(0);
+
+    await serviceRow.getByRole('button', { name: 'Regenerar contrato' }).click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Editar contrato de servicio' })).toBeVisible();
+    await dialog.getByRole('button', { name: 'Actualizar contrato', exact: true }).click();
+
+    await expect(dialog).toHaveCount(0);
+    expect(updatePayload.variant).toBe('service');
   });
 
   test('custom service wording survives reloading the proposal', {

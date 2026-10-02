@@ -1,0 +1,17 @@
+{
+  "id": "platform-project-ideas",
+  "name": "Project suggestions",
+  "module": "platform",
+  "roles": [
+    "platform-client",
+    "platform-admin"
+  ],
+  "priority": "P1",
+  "description": "The current client writes or corrects suggestions with preserved authorship and revision history, with object isolation and recoverable failed submissions.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure",
+    "display"
+  ]
+}

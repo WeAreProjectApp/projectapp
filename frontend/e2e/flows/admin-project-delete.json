@@ -1,0 +1,16 @@
+{
+  "id": "admin-project-delete",
+  "name": "Eliminación protegida de proyectos vacíos",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Eliminar abre un modal con nombre, cliente y comprobación de dependencias. Un proyecto vacío se elimina sólo al confirmar; cancelar no envía DELETE. Los proyectos con información muestran una tabla de dependencias y cantidades, sin botón de borrado, y ofrecen Cambiar estado con revisión de consecuencias. Los errores de vista previa y eliminación permiten reintentar. Si aparecen dependencias entre vista previa y confirmación se muestra la tabla actualizada sin eliminar. Verificado en teléfono, tableta vertical y escritorio.",
+  "expectedSpecs": 10,
+  "outcomes": [
+    "success",
+    "error",
+    "failure"
+  ]
+}

@@ -1,5 +1,34 @@
 # Technical Documentation — ProjectApp
 
+> **Entregas de Platform — 2026-10-01:** `/api/accounts/projects/:id/delivery/`
+> expone autoría, importación `schema_version: 1`, publicaciones, revisiones,
+> documentos y firmas sobre servicios compartidos con MCP. `expected_version`
+> detecta cambios concurrentes y `request_id` conserva reintentos de operaciones.
+> PDFs firmados, publicados y de evidencia histórica usan almacenamiento privado
+> y descarga autenticada; `0066` agrega `DeliveryReviewDocumentEvidence`.
+> Una sesión `impersonated_by` no puede firmar ni aprobar como cliente.
+> `accounts.0064_delivery_review_workflow` incluye la purga autorizada del Kanban;
+> las migraciones de esta entrega las aplica el deploy, nunca el worktree.
+> JSON conserva ancestros publicados idénticos y sólo escribe descendientes
+> editables. Seeds y reset protegidos siguen la capacidad explícita de fake data.
+> Esquema, límites y continuidad: [PLATFORM_DELIVERY](../PLATFORM_DELIVERY.md).
+> **Eliminación de proyectos — 2026-10-01:** `GET /api/projects/<id>/delete-preview/` retorna `project`, `can_delete` y `blockers` (`key`, `label`, `count`). `DELETE /api/projects/<id>/delete/` retorna 204 o 409 `project_delete_blocked` con la vista previa actualizada. Ambas FBV conservan `IsAdminUser` y el cliente de sesión/CSRF del panel. El servicio usa bloqueos de proyecto y dependencias para leer datos vigentes en MySQL, incluye registros archivados y sólo limpia estructura automática sin contenido. Los endpoints legacy de DELETE/archive mantienen 410.
+
+> **Editor de propuestas — 2026-10-01:** navegación responsive en dos niveles
+> mediante `BaseResponsiveTabs`, principal subrayado y herramientas en pill.
+> Los paneles se montan al primer acceso y permanecen montados para conservar
+> borradores y cargas; sus consultas no se disparan al abrir General. Se validan
+> destinos después de cargar la propuesta y al cambiar su estado.
+
+> **Contrato técnico — IVA contable, 2026-10-01:** el importe canónico permanece
+> como total incluido. Captura antes de IVA/total incluido normalizada con
+> Decimal en backend y tasa por ingreso, gasto, hosting y cuenta. Tasa nula
+> significa sin registrar; cero significa Sin IVA. Documentos congelan base,
+> impuesto y total al emitir; PDF y correo consumen esos mismos valores.
+> Utilidad, reparto y tratamiento de retenciones conservan sus reglas actuales
+> por decisión explícita del operador. La sincronización cuenta–ingreso sólo
+> cambia finanzas antes de pagos/deducciones y dentro de la emisión atómica.
+
 > **Enlaces seguros — 2026-09-29:** `secure_links.0003` agrega `sent_at`,
 > `sent_by` y el evento `marked_sent`. API/MCP mantienen `status` y agregan
 > `lifecycle_status`; el listado del panel suma `lifecycle_counts` con un único
@@ -505,7 +534,6 @@ python3 manage.py run_huey              # Requires Redis running
 | `delete_fake_data --settings=projectapp.settings_dev --confirm` | Reset development data while preserving staff/catalogs/manual accounting |
 | `cleanup_in_calculator` | Clean up stale in-calculator proposal states |
 | `update_hosting_specs` | Update hosting tier specifications |
-| `zero_group_price_percent` | Reset group price percentages |
 | `create_platform_admin` | Create a platform admin user |
 | `seed_demo_clients` | Seed demo client users for platform |
 | `seed_platform_data` | Seed full platform demo data (projects, requirements, etc.) |
@@ -1100,7 +1128,7 @@ description and preserves its credentials, active state and last-use timestamp.
 ### Backend Patterns
 
 - **Function-based views** (`@api_view`) — all DRF views are FBV, not class-based
-- **Service layer** — business logic in `content/services/` (47 modules: ProposalService, ProposalEmailService, ProposalPdfService, ProposalStageTracker, ContractPdfService, EmailTemplateRegistry, PdfUtils, DocumentPdfService, MarkdownParser, CollectionAccountService, CollectionAccountPdfService, TechnicalDocumentPdf, TechnicalDocumentFilter, PlatformOnboardingPdf, DiagnosticService, DiagnosticEmailService, DiagnosticPdfService, DiagnosticDocumentsService, AccountingService, AccountingExportService, AccountingEmailService, AccountingCardReminderService, plus the `content/mcp/` tool package) and in `accounts/services/` (19 modules: archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_requirements_sync, tokens, verification, wompi). Services are class-based with `@classmethod` static methods (matching `ProposalEmailService`), or function modules for stateless flows. `proposal_client_service` is the silent variant of `accounts/services/onboarding.create_client` — same User+UserProfile shape but **never sends invitation emails**, so the proposal admin panel can create/reuse clients without triggering platform onboarding.
+- **Service layer** — business logic in `content/services/` (47 modules: ProposalService, ProposalEmailService, ProposalPdfService, ProposalStageTracker, ContractPdfService, EmailTemplateRegistry, PdfUtils, DocumentPdfService, MarkdownParser, CollectionAccountService, CollectionAccountPdfService, TechnicalDocumentPdf, TechnicalDocumentFilter, PlatformOnboardingPdf, DiagnosticService, DiagnosticEmailService, DiagnosticPdfService, DiagnosticDocumentsService, AccountingService, AccountingExportService, AccountingEmailService, AccountingCardReminderService, plus the `content/mcp/` tool package) and in `accounts/services/` (delivery_workflow, delivery_documents, delivery_access, archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_resources_sync, tokens, verification, wompi). Services are class-based with `@classmethod` static methods (matching `ProposalEmailService`), or function modules for stateless flows. `proposal_client_service` is the silent variant of `accounts/services/onboarding.create_client` — same User+UserProfile shape but **never sends invitation emails**, so the proposal admin panel can create/reuse clients without triggering platform onboarding.
 - **Public proposal tracking** — document retrieval and commercial evidence are separate boundaries. `proposal_tracking_service.py` is the only writer for qualified proposal heartbeats; `proposal_tracking.py` validates the anonymous payload before any row changes. Drafts and staff previews return `skipped`.
 - **Model layer** — thin models with properties (`is_expired`, `days_remaining`, `public_url`)
 - **Huey tasks** — async operations: reminders, expiration, engagement-based emails, project-stage deadline scans, hosting recurring billing (`accounts/tasks.py::auto_charge_due_subscriptions` — daily 06:00 UTC, charges due hosting payments with the subscription's stored Wompi payment source)
@@ -1392,10 +1420,10 @@ Triggers: Push/PR to `main`/`master`. Concurrency group cancels in-progress runs
 ```
 projectapp/
 ├── backend/
-│   ├── accounts/               # Platform app (auth, onboarding, projects, kanban, bug reports, changes, deliverables, notifications, payments, collection accounts, quick-access)
-│   │   ├── models.py            # 24 models (UserProfile, VerificationCode, SavedFilterTab, Project, ProjectPhase, ProjectScopeItem, Requirement, RequirementComment, RequirementHistory, BugReport, BugComment, ChangeRequest, ChangeRequestComment, Deliverable, DeliverableVersion, DeliverableFile, DeliverableClientFolder, DeliverableClientUpload, DataModelEntity, ProjectDataModelEntity, Notification, HostingSubscription, Payment, PaymentHistory)
+│   ├── accounts/               # Platform app (auth, onboarding, projects, contractual delivery reviews, bug reports, changes, deliverables, notifications, payments, collection accounts, quick-access)
+│   │   ├── models.py            # Modelos de cuentas/proyectos, jerarquía contractual y evidencia, recursos, bugs, cambios y finanzas
 │   │   ├── admin.py             # ProjectAdmin — project metadata + product URLs; no credential writes
-│   │   ├── services/            # 19 service modules (archive, client_flow_notifications, credential_cipher, hosting_billing, image_utils, impersonation, notifications, onboarding, password_reset, payment_history, payment_notifications, project_access, project_phases, proposal_client_service, proposal_platform_onboarding, technical_requirements_sync, tokens, verification, wompi)
+│   │   ├── services/            # delivery_workflow/documents/access, technical_resources_sync y servicios existentes de cuentas/hosting
 │   │   ├── management/commands/ # 6 commands (create_platform_admin, seed_demo_clients, seed_platform_data, seed_mihuella, …)
 │   │   ├── document_views.py    # Client document portal (list/retrieve/pdf/sign) + email OTP verify (request/confirm)
 │   │   ├── tests/               # 67 test files
@@ -1419,7 +1447,7 @@ projectapp/
 ├── frontend/
 │   ├── pages/                   # Nuxt file-based routing (114 pages)
 │   │   ├── panel/               # Admin pages (proposals, diagnostics, blog, portfolio, clients, documents, admins, tasks, accounting/*, mcps, defaults, styleguide, views). Proposal edit page has Cronograma tab; `/panel/tasks` is the internal Kanban board; `/panel/accounting/*` and `/panel/mcps` are superuser-gated.
-│   │   ├── platform/            # Platform pages (login/verify/complete-profile, projects/*, board, bugs, changes, deliverables, collection-accounts, data-model, payments, notifications, clients, profile, documents — client document-signing portal)
+│   │   ├── platform/            # Platform pages (login/verify/complete-profile, projects/* (delivery reviews), bugs, changes, deliverables, collection-accounts, data-model, payments, notifications, clients, profile, documents — client document-signing portal)
 │   │   ├── blog/                # Blog listing + detail
 │   │   ├── portfolio-works/     # Portfolio listing + detail
 │   │   └── proposal/            # Client proposal view
@@ -1518,3 +1546,26 @@ contra producción. La validación se realiza exclusivamente con settings_test.
 Migración aditiva `content.0258_communication_folders`: hilos existentes quedan con `folder=NULL`. REST expone `GET/POST communications/folders/`, `PATCH/DELETE communications/folders/:id/`; hilos aceptan `folder` y publican `folder_id/folder_name`. MCP incorpora list/create/update/delete_folder y `folder_id` en create/update_thread. Sólo cambiar carpeta está permitido en hilos cerrados. Contexto de carpeta inmutable; padre compatible, sin ciclos; no hay archivado de carpetas. Cambiar propietario de proyecto desasocia las carpetas históricas del proyecto y retira la ubicación de sus hilos sin cambiar el cliente original.
 
 `record_id_search` interpreta `#123` como PK exacto y `123` como unión PK/texto; respeta permisos y demás filtros. El modal usa su propio scroll y respeta reduced-motion. `BaseCollapse` conserva el estado del formulario mientras lo deja fuera del tab order al plegar. No cambia el contenido público ni los PDF.
+
+
+## P4 — Contrato técnico de colaboración (2026-10-01)
+
+Rutas propias se montan bajo `/api/accounts/projects/<id>/` y `/api/projects/<id>/`; sólo Platform expone la proyección limitada y revelación individual. Versiones optimistas producen 409; UUIDs conservan idempotencia de altas/recopilaciones. Páginas de 20 filas, ideas de hasta 10.000 bytes UTF-8 y snapshots de hasta 190.000 bytes acotan respuestas.
+
+El harness `playwright.project-collaboration.config.js` usa APIs reales, SQLite/settings_test, almacenamiento temporal y cifrado efímero, sin leer .env ni aplicar migraciones. Su servidor fuerza `MAILERS.default` a locmem antes de iniciar Django y verifica cada alias declarado y backend efectivo antes de preparar DB o crear fixtures; configuración incompleta, backend distinto o constructor inválido abortan sin divulgar opciones. `--check-isolation` permite certificar settings/motor/aliases sin DB/fixtures/HTTP; el workflow P4 lo ejecuta antes de sus dos specs. La migración propia 0070 depende de P3 0067; la nueva no-op 0075 une 0074 P2 y 0070 después de absorber P2 fae1e361 y P3 cecb5b93, sin aplicar migraciones. No editar migraciones históricas. SQL manual o without_history requieren revocar grants explícitamente. La corrección del servidor Delivery pertenece a P3 y ya está contenida en la cadena publicada P2. El workflow P4 es reutilizable desde CI; su blob y dependencia explícita alimentan el agregado de cobertura del mismo run. Puertos propios alternativos se configuran mediante PROJECT_COLLABORATION_BACKEND_PORT y PROJECT_COLLABORATION_FRONTEND_PORT, siempre sobre loopback, sin reutilizar servidores ajenos.
+### Billing P2: lecturas y conciliación (2026-10-01)
+
+Las nuevas lecturas usan DTO públicos con relaciones precargadas y aislamiento
+servidor. Las mutaciones de contexto usan transacciones, lock del proyecto,
+versión esperada y razón; no escriben dinero ni regeneran documentos emitidos.
+La creación/emisión contable exige vínculos explícitos para cuentas de proyecto.
+`frontend/playwright.billing.config.js` limita la validación local a journeys y
+matriz responsive de billing, con API simulada y sin automatismos externos.
+P0 fijó la migración aditiva `accounts.0069_p2_project_billing_context`, padre
+P3 `0067_explicit_delivery_authoring_context`; coordina los merges de hojas
+sin operaciones. No ejecutar `migrate` desde el worktree. El runbook del dominio está en
+`docs/PLATFORM_PROJECT_BILLING.md`.
+
+## Guardas de integración de proyectos (2026-10-02)
+
+`ensure_unused_onboarding_project` comparte el inventario bloqueante de eliminación. Sólo descuenta el stub propio sin archivo, descripción, claves de epic, archivo lógico, versiones ni hijos salvo su BusinessProposal exacta. Documentos con proyecto distinto o nulo también bloquean por su relación al Deliverable. `teardown_platform_for_proposal` valida el vínculo vigente antes de escribir y convierte ambos rechazos del inventario en `PlatformRelaunchConflict` (409), propagados fuera de atomic. `launch_to_platform` exige sesión Panel; preview/DELETE de proyectos no aceptan JWT como sesión. No se aplicaron migraciones ni cambios a bases del servicio.

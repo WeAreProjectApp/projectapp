@@ -8,7 +8,7 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.utils import timezone
 
-from accounts.models import Deliverable, Project, UserProfile
+from accounts.models import Deliverable, Project, ProjectIdea, UserProfile
 from accounts.services.proposal_platform_onboarding import (
     _acting_user_for_sync,
     _find_client_user_by_email,
@@ -17,10 +17,10 @@ from accounts.services.proposal_platform_onboarding import (
     handle_proposal_accepted_for_platform,
     teardown_platform_for_proposal,
 )
-from accounts.services.technical_requirements_sync import (
-    sync_technical_requirements_for_deliverable,
+from accounts.services.technical_resources_sync import (
+    sync_technical_resources_for_deliverable,
 )
-from content.models import BusinessProposal, ProposalSection
+from content.models import BusinessProposal, IncomeRecord, ProposalSection
 
 User = get_user_model()
 
@@ -103,20 +103,30 @@ def test_handle_proposal_accepted_skips_when_already_completed(proposal_with_del
 
 
 @pytest.mark.django_db
-def test_sync_technical_requirements_for_deliverable_creates_requirement(
-    proposal_with_deliverable, admin_user,
-):
-    from accounts.models import ProjectPhase, Requirement
-
+def test_proposal_sync_creates_resources_without_delivery_reviews(proposal_with_deliverable, admin_user):
+    from accounts.models import Requirement
     d = proposal_with_deliverable.deliverable
-    result = sync_technical_requirements_for_deliverable(d, admin_user)
-    assert result['ok'] is True
-    assert result['requirements_created'] >= 1
-    # The sync auto-ensures a phase and attaches the card to it.
-    phase = ProjectPhase.objects.get(
-        project=d.project, business_proposal=proposal_with_deliverable,
-    )
-    assert Requirement.objects.filter(phase=phase, source_flow_key='f1').exists()
+
+    result = sync_technical_resources_for_deliverable(d, admin_user)
+
+    assert result['deliverables_created'] >= 1
+    assert not Requirement.objects.exists()
+
+
+@pytest.mark.django_db
+def test_relaunch_keeps_a_project_with_contractual_delivery(proposal_with_deliverable):
+    from accounts.tests._delivery_fixtures import make_delivery_stage
+    from rest_framework.exceptions import ValidationError
+    project = proposal_with_deliverable.deliverable.project
+    stage = make_delivery_stage(project)
+
+    with pytest.raises(ValidationError):
+        teardown_platform_for_proposal(proposal_with_deliverable)
+
+    proposal_with_deliverable.refresh_from_db()
+    assert proposal_with_deliverable.deliverable_id is not None
+    assert Project.objects.filter(pk=project.pk).exists()
+    assert stage.phase.scope.contract.scopes.exists()
 
 
 @pytest.mark.django_db
@@ -149,7 +159,7 @@ def test_handle_moves_proposal_snapshots_to_accepted_project(
             'content.services.generated_document_filing_service.move_proposal_snapshots_to_project',
         ) as move_snapshots,
         patch(
-            'accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable',
+            'accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable',
             return_value={'ok': True, 'detail': 'synced'},
         ),
         patch(
@@ -278,9 +288,9 @@ def test_ensure_deliverable_creates_project_and_deliverable_for_client_user(
 
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
-@patch('accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable')
+@patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_handle_logs_warning_when_sync_fails(_mock_sync, _mock_email, proposal_with_deliverable, admin_user):
-    """Logs a warning but continues when sync_technical_requirements_for_deliverable returns ok=False."""
+    """Logs a warning but continues when sync_technical_resources_for_deliverable returns ok=False."""
     _mock_sync.return_value = {'ok': False, 'error': 'no_technical_section', 'detail': 'No section'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
@@ -298,7 +308,7 @@ def test_handle_logs_warning_when_sync_fails(_mock_sync, _mock_email, proposal_w
 
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
-@patch('accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable')
+@patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_handle_creates_design_and_development_stages(
     _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
 ):
@@ -321,7 +331,7 @@ def test_handle_creates_design_and_development_stages(
 
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
-@patch('accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable')
+@patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_handle_does_not_duplicate_stages_on_re_run(
     _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
 ):
@@ -380,6 +390,70 @@ def test_teardown_clears_platform_onboarding_completed_at(proposal_with_delivera
 
     proposal_with_deliverable.refresh_from_db()
     assert proposal_with_deliverable.platform_onboarding_completed_at is None
+
+
+@pytest.mark.django_db
+def test_teardown_blocks_archived_project_idea_without_unlinking_proposal(
+    proposal_with_deliverable, admin_user,
+):
+    """Fails if archived client ideas allow a relaunch to delete Platform evidence."""
+    from rest_framework.exceptions import ValidationError
+    from accounts.services.proposal_platform_onboarding import PlatformRelaunchConflict
+
+    proposal = proposal_with_deliverable
+    project = proposal.deliverable.project
+    deliverable_id = proposal.deliverable_id
+    completed_at = timezone.now()
+    proposal.platform_onboarding_completed_at = completed_at
+    proposal.save(update_fields=['platform_onboarding_completed_at'])
+    idea = ProjectIdea.objects.create(
+        project=project, author=admin_user, author_label='Equipo', origin='team',
+        text='Conservar esta idea archivada.', archived_at=completed_at,
+        archived_by=admin_user,
+    )
+
+    with pytest.raises(PlatformRelaunchConflict) as caught:
+        teardown_platform_for_proposal(proposal)
+
+    proposal.refresh_from_db()
+    idea.refresh_from_db()
+    assert isinstance(caught.value, ValidationError)
+    assert caught.value.status_code == 409
+    assert (
+        Project.objects.filter(pk=project.pk).exists(), idea.project_id,
+        idea.archived_at, proposal.deliverable_id,
+        proposal.platform_onboarding_completed_at,
+    ) == (True, project.pk, completed_at, deliverable_id, completed_at)
+
+
+@pytest.mark.django_db
+def test_teardown_blocks_project_income_without_nulling_its_foreign_key(
+    proposal_with_deliverable,
+):
+    """Fails if relaunch deletes a project and turns linked accounting income into SET_NULL."""
+    from accounts.services.proposal_platform_onboarding import PlatformRelaunchConflict
+
+    proposal = proposal_with_deliverable
+    project = proposal.deliverable.project
+    deliverable_id = proposal.deliverable_id
+    completed_at = timezone.now()
+    proposal.platform_onboarding_completed_at = completed_at
+    proposal.save(update_fields=['platform_onboarding_completed_at'])
+    income = IncomeRecord.objects.create(
+        project=project, client=project.client.profile, concept='Development',
+        period_date='2026-10-02', total_amount=Decimal('100000'),
+        gustavo_amount=Decimal('50000'), carlos_amount=Decimal('50000'),
+    )
+
+    with pytest.raises(PlatformRelaunchConflict):
+        teardown_platform_for_proposal(proposal)
+
+    proposal.refresh_from_db()
+    income.refresh_from_db()
+    assert (
+        Project.objects.filter(pk=project.pk).exists(), income.project_id,
+        proposal.deliverable_id, proposal.platform_onboarding_completed_at,
+    ) == (True, project.pk, deliverable_id, completed_at)
 
 
 # -- _sync_proposal_documents_to_deliverable ---------------------------------
@@ -537,7 +611,7 @@ def test_ensure_deliverable_returns_none_when_user_has_no_profile():
 
 
 @pytest.mark.django_db
-@patch('accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable')
+@patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_handle_accepted_sets_timestamp_when_send_email_is_false(
     _mock_sync, proposal_with_deliverable, admin_user,
 ):
@@ -554,7 +628,7 @@ def test_handle_accepted_sets_timestamp_when_send_email_is_false(
 
 
 @pytest.mark.django_db
-@patch('accounts.services.proposal_platform_onboarding.sync_technical_requirements_for_deliverable')
+@patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_handle_accepted_returns_not_skipped_when_send_email_is_false(
     _mock_sync, proposal_with_deliverable, admin_user,
 ):

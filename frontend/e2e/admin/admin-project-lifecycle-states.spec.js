@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /**
  * E2E coverage for the real project lifecycle and its administrable catalog.
  *
@@ -215,15 +216,7 @@ async function openProjects(page) {
 }
 
 async function openStateTransition(page, projectId = 9) {
-  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
-    await page.getByTestId(`project-actions-${projectId}`).click();
-    const actionsDrawer = page.getByTestId('project-actions-drawer');
-    await expect(actionsDrawer).toBeVisible();
-    await actionsDrawer.getByRole('button', { name: 'Cambiar estado…' }).click();
-  } else {
-    await page.getByTestId(`project-change-state-${projectId}`).click();
-  }
-
+  await openProjectAction(page, projectId, 'state');
   await expect(page.getByTestId('project-state-transition-modal')).toBeVisible();
 }
 
@@ -283,7 +276,7 @@ test.describe('Admin project lifecycle states', () => {
     ));
 
     await openProjects(page);
-    await page.getByTestId('project-state-history-9').click();
+    await openProjectAction(page, 9, 'history');
 
     const history = page.getByTestId('project-state-history');
     await expect(history).toContainText('Suspendido');

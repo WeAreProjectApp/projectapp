@@ -598,6 +598,7 @@ class TestRefreshAccessTokenHttpPath:
         mock_resp = MagicMock()
         mock_resp.status_code = 400
         mock_resp.text = 'invalid_grant'
+        mock_resp.json.side_effect = ValueError
         mock_post.return_value = mock_resp
 
         settings_override = {**LINKEDIN_SETTINGS, 'LINKEDIN_ENCRYPTION_KEY': fernet_key}

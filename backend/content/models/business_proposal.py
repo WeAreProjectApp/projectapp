@@ -102,6 +102,11 @@ class BusinessProposal(HistoryTrackedModel):
     total_investment = models.DecimalField(
         max_digits=12, decimal_places=2, default=0
     )
+    # A one-time monetary snapshot preserves legacy discounts when module
+    # surcharges are folded into the manually managed investment.
+    legacy_pricing_snapshot = models.JSONField(default=dict, blank=True)
+    module_interests = models.JSONField(default=list, blank=True)
+    module_interests_updated_at = models.DateTimeField(null=True, blank=True)
     currency = models.CharField(
         max_length=3, choices=Currency.choices, default=Currency.COP
     )
@@ -322,7 +327,7 @@ class BusinessProposal(HistoryTrackedModel):
         help_text='Timestamp of the last automated email sent to the client. Used for 24h cooldown.',
     )
 
-    # Calculator selections (persisted from client browser)
+    # Historical contracted selections (retained after calculator retirement)
     selected_modules = models.JSONField(
         default=list, blank=True,
         help_text='List of module IDs selected by the client in the calculator (e.g. ["module-payments", "module-reservations"]).',
@@ -402,6 +407,18 @@ class BusinessProposal(HistoryTrackedModel):
         ).exists()
 
     def save(self, *args, **kwargs):
+        snapshot = self.legacy_pricing_snapshot
+        financial_fields = {'total_investment', 'discount_percent', 'currency'}
+        updating = kwargs.get('update_fields')
+        if snapshot and (updating is None or financial_fields.intersection(updating)):
+            from decimal import Decimal
+
+            if (Decimal(str(self.total_investment)) != Decimal(snapshot['total_investment'])
+                    or self.discount_percent != snapshot['discount_percent']
+                    or self.currency != snapshot['currency']):
+                self.legacy_pricing_snapshot = {}
+                if updating is not None:
+                    kwargs['update_fields'] = set(updating) | {'legacy_pricing_snapshot'}
         if not self.slug:
             from content.models.proposal_default_config import ProposalDefaultConfig
 

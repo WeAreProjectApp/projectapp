@@ -1,5 +1,6 @@
 from accounts.models import Project, UserProfile
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import transaction
 from rest_framework import serializers
 
 from content.models import (
@@ -380,6 +381,7 @@ class DocumentDetailSerializer(
     movable = serializers.SerializerMethodField()
     source_proposal_id = serializers.IntegerField(read_only=True)
     billing_notes = serializers.CharField(source='notes', read_only=True)
+    vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True, default=None)
     collection_account_observations = serializers.CharField(
         source='collection_account.observations', read_only=True, default='',
     )
@@ -397,7 +399,7 @@ class DocumentDetailSerializer(
             'document_type_code', 'commercial_status',
             'display_state', 'is_generated_snapshot', 'is_contract_mirror', 'movable',
             'source_proposal_id', 'source_version',
-            'public_number', 'issue_date', 'due_date', 'currency', 'total',
+            'public_number', 'issue_date', 'due_date', 'currency', 'total', 'subtotal', 'tax_total', 'vat_rate',
             'billing_notes', 'collection_account_observations',
             'language', 'cover_type', 'template_style',
             'include_portada', 'include_subportada', 'include_contraportada',
@@ -512,7 +514,16 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
             if self.instance is not None and self.instance.is_contract_mirror:
                 return attrs
             _inherit_from_folder(attrs, self.instance, adopt=adopt)
-        return apply_client_project_association(attrs, self.instance)
+        attrs = apply_client_project_association(attrs, self.instance)
+        kind = attrs.get('document_type') or getattr(self.instance, 'document_type', None)
+        if kind and kind.code == 'collection_account':
+            project = attrs.get('project', getattr(self.instance, 'project', None))
+            if project and (self.instance is None or self.instance.document_type_id != kind.pk):
+                raise serializers.ValidationError({'detail': 'Crea las cuentas de proyecto desde Contabilidad con naturaleza y vínculo explícitos.'})
+            if self.instance:
+                from accounts.services.billing_reassignment import validate_document_reassignment
+                validate_document_reassignment(self.instance, changes={key: attrs[key] for key in ('project', 'client_user') if key in attrs})
+        return attrs
 
     @historical_write
     def create(self, validated_data):
@@ -523,7 +534,22 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
         return document
 
     @historical_write
+    @transaction.atomic
     def update(self, instance, validated_data):
+        if getattr(instance.document_type, 'code', None) == 'collection_account':
+            from accounts.services.billing_locks import lock_billing_document
+            target = validated_data.get('project')
+            instance = lock_billing_document(instance.pk, project_ids=[target.pk if target else None])
+            if not instance:
+                raise serializers.ValidationError({'detail': 'Cuenta de cobro no encontrada.'})
+            if target:
+                validated_data['project'] = instance.project if target.pk == instance.project_id else Project.objects.select_for_update().get(pk=target.pk)
+            self.instance = instance
+            validated_data = self.validate(dict(validated_data))
+            from accounts.services.billing_reassignment import validate_document_reassignment
+            validate_document_reassignment(instance, changes={
+                key: validated_data[key] for key in ('project', 'client_user') if key in validated_data
+            }, lock=True)
         tag_ids = validated_data.pop('tag_ids', None)
         document = super().update(instance, validated_data)
         if tag_ids is not None:

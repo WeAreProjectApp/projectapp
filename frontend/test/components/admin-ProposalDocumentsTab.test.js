@@ -241,6 +241,23 @@ describe('ProposalDocumentsTab closing modality', () => {
     expect(wrapper.find('[data-testid="proposal-attachment-21"]').exists()).toBe(false);
   });
 
+  it('keeps stale service conditions in the service row of a split closing', () => {
+    // Falla si el administrador no ve que debe regenerar el servicio o si el producto hereda esa alerta.
+    const serviceDoc = {
+      id: 22, document_type: 'contract_service', document_type_display: 'Contrato de servicio',
+      title: 'Contrato de servicio', file: '/media/servicio.pdf', is_generated: true,
+      created_at: '2026-09-26T10:00:00Z', needs_regeneration: true,
+    };
+    const wrapper = mountProposalDocumentsTab({ proposal: split, documents: [productDoc, serviceDoc] });
+    const product = wrapper.get('[data-testid="proposal-contract-row-product"]');
+    const service = wrapper.get('[data-testid="proposal-contract-row-service"]');
+
+    expect(wrapper.text()).toContain('Hosting, mantenimiento, soporte, precios y renovación se incluyen en el contrato de servicio.');
+    expect(service.get('[data-testid="proposal-service-contract-stale"]').text())
+      .toBe('Las condiciones del servicio cambiaron. Regenera y revisa el contrato antes de enviarlo.');
+    expect(product.find('[data-testid="proposal-service-contract-stale"]').exists()).toBe(false);
+  });
+
   it('emits the document the admin wants to generate', async () => {
     // Falla si generar el contrato de servicio abre el formulario de otro documento.
     const wrapper = mountProposalDocumentsTab({ proposal: split, documents: [productDoc] });

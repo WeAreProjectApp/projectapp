@@ -150,7 +150,7 @@ _FR_GROUP = {
     'icon': str,
     'title': str,
     'description': str,
-    'price_percent': Nullable(NUMERIC),
+    'is_always_included': bool,
     'is_calculator_module': bool,
     'default_selected': bool,
     'selected': bool,

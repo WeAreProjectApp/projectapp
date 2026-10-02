@@ -5,6 +5,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_EDIT } from '../helpers/flow-tags.js';
 
@@ -155,27 +156,29 @@ test.describe('Admin Proposal Edit', () => {
     tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
   });
 
-  test('renders General and Secciones navigation tabs', {
+  test('renders General and Propuesta navigation tabs', {
     tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByRole('tab', { name: 'General' })).toBeVisible();
-    await expect(page.getByRole('tab', { name: 'Secciones' })).toBeVisible();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'General' })).toBeVisible();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Propuesta' })).toBeVisible();
+    await selectProposalDestination(page, 'proposal', 'sections');
+    await expect(page.getByTestId('proposal-secondary-navigation').getByRole('tab', { name: 'Secciones' })).toBeVisible();
   });
 
   test('shows client name field pre-filled in General tab', {
     tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
     await expect(page.getByTestId('edit-client-name')).toHaveValue('Cliente Edit E2E');
@@ -185,7 +188,7 @@ test.describe('Admin Proposal Edit', () => {
     tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
     await expect(page.locator('input[type="number"][min="1"][max="365"]')).toBeVisible();
@@ -209,7 +212,7 @@ test.describe('Admin Proposal Edit', () => {
       }
       return null;
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
     await page.locator('[data-testid="proposal-edit-submit"]').click();
@@ -244,7 +247,7 @@ test.describe('Admin Proposal Edit', () => {
       return null;
     });
 
-    await page.goto('/panel/proposals/1/edit');
+    await page.goto('/es-co/panel/proposals/1/edit');
 
     const financeSidebar = page.getByTestId('general-finance-sidebar');
     await expect(financeSidebar).toBeVisible();
@@ -290,9 +293,9 @@ test.describe('Admin Proposal Edit', () => {
       return null;
     });
 
-    await page.goto('/panel/proposals/1/edit');
+    await page.goto('/es-co/panel/proposals/1/edit');
 
-    await page.getByRole('tab', { name: 'JSON' }).click();
+    await selectProposalDestination(page, 'proposal', 'json');
     await expect(page.getByTestId('proposal-json-stats')).toContainText('Secciones:');
     await expect(page.getByTestId('proposal-json-stats')).toContainText('Progreso:');
     await expect(page.getByTestId('proposal-json-stats')).toContainText('Tamaño del JSON:');
@@ -300,7 +303,7 @@ test.describe('Admin Proposal Edit', () => {
     await expect(page.getByTestId('proposal-export-json-textarea')).toHaveAttribute('rows', '18');
     await expect(page.getByTestId('proposal-import-json-textarea')).toHaveAttribute('rows', '18');
 
-    await page.getByRole('tab', { name: 'Det. técnico' }).click();
+    await selectProposalDestination(page, 'proposal', 'technical');
     await expect(page.getByTestId('technical-purpose-textarea')).toBeVisible();
     // Sections are collapsed by default; Módulos del producto mounts on expand.
     await page.getByTestId('technical-section-toggle-epics').click();
@@ -339,7 +342,7 @@ test.describe('Admin Proposal Edit', () => {
       }
       return null;
     });
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
     await page.locator('[data-testid="proposal-edit-submit"]').click();
@@ -401,10 +404,10 @@ test.describe('Admin Proposal Edit', () => {
       return null;
     });
 
-    await page.goto('/panel/proposals/1/edit', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/proposals/1/edit', { waitUntil: 'domcontentloaded' });
     await expect(page.getByText('Edit Test')).toBeVisible({ timeout: 20_000 });
 
-    await page.getByRole('tab', { name: 'Det. técnico' }).click();
+    await selectProposalDestination(page, 'proposal', 'technical');
     // Sections are collapsed by default; expand the modules, then open the
     // requirement's link disclosure that now wraps the checkbox grids.
     await page.getByTestId('technical-section-toggle-epics').click();

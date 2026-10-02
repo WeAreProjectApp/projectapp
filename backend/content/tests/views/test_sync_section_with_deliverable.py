@@ -64,7 +64,7 @@ class TestPreviewSyncSectionWithProject:
         self, admin_client, technical_section_with_deliverable
     ):
         with patch(
-            'accounts.services.technical_requirements_sync.compute_sync_diff'
+            'accounts.services.technical_resources_sync.compute_sync_diff'
         ) as mock_diff:
             mock_diff.return_value = {'added': [], 'removed': [], 'unchanged': []}
             resp = admin_client.post(
@@ -85,7 +85,7 @@ class TestPreviewSyncSectionWithProject:
         self, admin_client, technical_section_with_deliverable
     ):
         with patch(
-            'accounts.services.technical_requirements_sync.compute_sync_diff'
+            'accounts.services.technical_resources_sync.compute_sync_diff'
         ) as mock_diff:
             mock_diff.return_value = {'added': [], 'removed': [], 'unchanged': []}
             resp = admin_client.post(
@@ -148,7 +148,7 @@ class TestApplySyncSection:
         self, admin_client, technical_section_with_deliverable
     ):
         with patch(
-            'accounts.services.technical_requirements_sync.sync_technical_requirements_for_deliverable'
+            'accounts.services.technical_resources_sync.sync_technical_resources_for_deliverable'
         ) as mock_sync:
             mock_sync.return_value = {'synced': 0, 'created': 0, 'updated': 0, 'deleted': 0}
             resp = admin_client.post(

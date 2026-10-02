@@ -1,3 +1,4 @@
+import { defineComponent, nextTick, ref } from 'vue';
 import { mount } from '@vue/test-utils';
 
 jest.mock('../../composables/useSmoothScroll', () => ({
@@ -8,7 +9,17 @@ jest.mock('../../composables/useSmoothScroll', () => ({
 import InvestmentOnboarding from '../../components/BusinessProposal/InvestmentOnboarding.vue';
 
 function mountInvestmentOnboarding(props = {}) {
-  return mount(InvestmentOnboarding, {
+  const Host = defineComponent({
+    components: { InvestmentOnboarding },
+    props: ['hasModules', 'language', 'proposalUuid'],
+    setup() {
+      const onboarding = ref(null);
+      const start = () => onboarding.value?.start();
+      return { onboarding, start };
+    },
+    template: '<button data-testid="start-onboarding" aria-label="Iniciar guía" @click="start" /><InvestmentOnboarding ref="onboarding" :has-modules="hasModules" :language="language" :proposal-uuid="proposalUuid" />',
+  });
+  return mount(Host, {
     props: { hasModules: true, ...props },
     global: {
       stubs: {
@@ -62,33 +73,33 @@ describe('InvestmentOnboarding', () => {
   it('shows the step title after start() when target element is in DOM', async () => {
     const wrapper = mountInvestmentOnboarding();
 
-    wrapper.vm.start();
+    await wrapper.get('[data-testid="start-onboarding"]').trigger('click');
     jest.runAllTimers();
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
-    expect(wrapper.text()).toContain('Personaliza tu inversión');
+    expect(wrapper.text()).toContain('Explora módulos adicionales');
   });
 
   it('shows English step title when language is en', async () => {
     const wrapper = mountInvestmentOnboarding({ language: 'en' });
 
-    wrapper.vm.start();
+    await wrapper.get('[data-testid="start-onboarding"]').trigger('click');
     jest.runAllTimers();
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
-    expect(wrapper.text()).toContain('Customize your investment');
+    expect(wrapper.text()).toContain('Explore additional modules');
   });
 
   it('emits complete when skip button is clicked', async () => {
     const wrapper = mountInvestmentOnboarding();
 
-    wrapper.vm.start();
+    await wrapper.get('[data-testid="start-onboarding"]').trigger('click');
     jest.runAllTimers();
-    await wrapper.vm.$nextTick();
+    await nextTick();
 
     const skipBtn = wrapper.findAll('button').find(b => b.text() === 'Omitir');
     await skipBtn.trigger('click');
 
-    expect(wrapper.emitted('complete')).toBeTruthy();
+    expect(wrapper.getComponent(InvestmentOnboarding).emitted('complete')).toEqual([[]]);
   });
 });

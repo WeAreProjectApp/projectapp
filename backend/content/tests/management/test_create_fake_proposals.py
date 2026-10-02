@@ -20,12 +20,18 @@ Business rules asserted:
   (both design + development marked `completed_at`)
 """
 import random
+from datetime import datetime, timezone
 
 import pytest
 from accounts.models import UserProfile
 from django.core.management import call_command
 
-from content.models import BusinessProposal, ProposalProjectStage
+from content.models import (
+    AdditionalModule,
+    BusinessProposal,
+    ProposalChangeLog,
+    ProposalProjectStage,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -84,6 +90,39 @@ class TestCreateFakeProposalsClientFk:
         assert total_proposals == 24
         # Fewer distinct clients than proposals means reuse happened.
         assert distinct_clients < total_proposals
+
+
+class TestCreateFakeProposalModuleInterests:
+    def test_interest_seed_keeps_manual_investment_and_scope(self):
+        """Falla si datos falsos vuelven a fabricar precio o alcance desde módulos."""
+        from content.management.commands.create_fake_proposals import Command
+
+        proposal = BusinessProposal.objects.create(
+            title='Interés demo',
+            client_name='Cliente demo',
+            status='viewed',
+            total_investment=1500000,
+            selected_modules=['module-existing-scope'],
+        )
+        now = datetime(2026, 9, 29, 18, tzinfo=timezone.utc)
+        Command()._create_module_interests(proposal, now)
+
+        proposal.refresh_from_db()
+        selected_ids = [interest['id'] for interest in proposal.module_interests]
+        assert len(selected_ids) == 2
+        assert AdditionalModule.objects.filter(
+            pk__in=selected_ids,
+            is_active=True,
+            category__is_active=True,
+        ).count() == 2
+        assert proposal.total_investment == 1500000
+        assert proposal.selected_modules == ['module-existing-scope']
+        assert proposal.module_interests_updated_at == now
+        assert ProposalChangeLog.objects.filter(
+            proposal=proposal,
+            change_type=ProposalChangeLog.ChangeType.MODULE_INTERESTS,
+            actor_type=ProposalChangeLog.ActorType.CLIENT,
+        ).count() == 1
 
 
 # ---------------------------------------------------------------------------

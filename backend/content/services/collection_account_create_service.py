@@ -17,6 +17,8 @@ from content.models import (
     IncomeRecord,
 )
 from content.services import accounting_service
+from content.services.accounting_vat import vat_breakdown, quantize_money
+from content.serializers.accounting import IncomeRecordCreateUpdateSerializer, paid_total_for_income, split_half
 from content.services.collection_account_numbering import allocate_client_number
 from content.services.collection_account_service import (
     CollectionAccountError,
@@ -121,11 +123,10 @@ def _create_income_collection_account(
     # Row lock: serializes concurrent creates over the same income, making
     # the one-non-cancelled-cuenta guard race-safe (MySQL cannot express it
     # as a conditional unique constraint).
-    income = (
-        IncomeRecord.objects.select_for_update()
-        .filter(pk=data['income_record_id'])
-        .first()
-    )
+    from accounts.services.billing_locks import lock_billing_rows
+    locked = lock_billing_rows(income_ids=[data['income_record_id']],
+                               include_income_children=True, include_origin_documents=True)
+    income = locked.incomes.get(data['income_record_id'])
     if income is None:
         raise CollectionAccountError('El ingreso seleccionado no existe.')
     if income.kind == IncomeRecord.Kind.LOST:
@@ -150,12 +151,61 @@ def _create_income_collection_account(
             'El ingreso seleccionado pertenece a otro cliente. Revisa el '
             'ingreso o cambia el cliente de la cuenta.',
         )
+    if income.project_id and income.project.client_id != client.pk:
+        raise CollectionAccountError('El proyecto del ingreso pertenece a otro cliente.')
     if income.client_id is None:
         accounting_service.bulk_assign_client(
             accounting_service.EntityType.INCOME, [income.pk], profile,
             acting_user,
         )
         income.client = profile
+
+    rate = data.get('vat_rate', income.vat_rate)
+    prepared_items = []
+    for item in data['items']:
+        quantity = item.get('quantity') or Decimal('1')
+        try:
+            if 'amount' in item:
+                base, tax, total = vat_breakdown(
+                    item['amount'], rate, item.get('amount_mode', 'vat_included'),
+                )
+                base = total if base is None else base
+            else:
+                base, tax, total = vat_breakdown(
+                    item['unit_price'], rate, 'before_vat' if rate is not None else 'vat_included',
+                )
+                base = total if base is None else base
+        except ValueError as exc:
+            raise CollectionAccountError(str(exc)) from exc
+        line_total = quantize_money(total * quantity)
+        line_base = quantize_money(base * quantity)
+        prepared_items.append({
+            **item, 'quantity': quantity, 'unit_price': base,
+            'tax_amount': line_total - line_base,
+            'line_total': line_total,
+        })
+    document_total = sum((item['line_total'] for item in prepared_items), Decimal('0'))
+    try:
+        vat_breakdown(document_total, rate)
+    except ValueError as exc:
+        raise CollectionAccountError(str(exc)) from exc
+    paid = paid_total_for_income(income) if income.kind == IncomeRecord.Kind.EXPECTED else income.total_amount
+    if rate is not None or 'vat_rate' in data or any('amount' in item for item in data['items']):
+        target = income.total_amount - paid if income.kind == IncomeRecord.Kind.EXPECTED else income.total_amount
+        financial_change = rate != income.vat_rate or document_total != target
+        if financial_change and paid:
+            raise CollectionAccountError('Este ingreso ya tiene pagos o deducciones. La cuenta debe conservar el IVA y el saldo del ingreso.')
+        if financial_change:
+            update = {'total_amount': document_total, 'vat_rate': rate}
+            # Retain the current partner proportions when the gross charge changes.
+            if income.total_amount:
+                update['gustavo_amount'] = quantize_money(document_total * income.gustavo_amount / income.total_amount)
+                update['carlos_amount'] = min(document_total - update['gustavo_amount'], quantize_money(document_total * income.carlos_amount / income.total_amount))
+            else:
+                update['gustavo_amount'], update['carlos_amount'] = split_half(document_total)
+            serializer = IncomeRecordCreateUpdateSerializer(instance=income, data=update, partial=True)
+            serializer.is_valid(raise_exception=True)
+            income = accounting_service.update_record(accounting_service.EntityType.INCOME, income, serializer, acting_user, notify=False)
 
     customer = _resolve_customer(profile, data.get('customer'))
     # The cuenta inherits the project from its income exactly as it inherits
@@ -187,6 +237,9 @@ def _create_income_collection_account(
     document = Document.objects.create(
         **document_fields,
     )
+    from accounts.services.billing_context import associate_account
+    if document.project_id:
+        associate_account(document.pk, acting_user, data, creating=True)
     due_date = data.get('due_date')
     if due_date:
         term_type = DocumentCollectionAccount.PaymentTermType.FIXED_DATE
@@ -203,12 +256,13 @@ def _create_income_collection_account(
             term_days = PAYMENT_TERM_DAYS
     DocumentCollectionAccount.objects.create(
         document=document,
+        vat_rate=rate,
         billing_concept=billing_concept,
         payment_term_type=term_type,
         payment_term_days=term_days,
         observations=data.get('observations') or '',
     )
-    for position, item in enumerate(data['items'], start=1):
+    for position, item in enumerate(prepared_items, start=1):
         quantity = item.get('quantity') or Decimal('1')
         unit_price = item['unit_price']
         DocumentItem.objects.create(
@@ -218,7 +272,8 @@ def _create_income_collection_account(
             description=(item.get('description') or '').strip() or billing_concept,
             quantity=quantity,
             unit_price=unit_price,
-            line_total=quantity * unit_price,
+            tax_amount=item['tax_amount'],
+            line_total=item['line_total'],
             period_start=item.get('period_start'),
             period_end=item.get('period_end'),
             reference_type='income_record',

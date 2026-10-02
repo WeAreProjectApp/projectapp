@@ -51,3 +51,9 @@ class ProposalSection(HistoryTrackedModel):
 
     def __str__(self):
         return f'{self.proposal.client_name} — {self.get_section_type_display()}'
+
+
+    def save(self, *args, **kwargs):
+        from content.services.proposal_content_cleanup import without_module_percentages
+        self.content_json = without_module_percentages(self.content_json)
+        return super().save(*args, **kwargs)

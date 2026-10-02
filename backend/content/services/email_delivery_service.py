@@ -19,6 +19,10 @@ from django.core.mail import EmailMessage, EmailMultiAlternatives
 from django.utils import timezone
 
 from content.services.client_email_inventory import CLIENT_EMAIL_CHANNELS
+from content.services.diagnostic_privacy import (
+    email_diagnostic_message,
+    safe_email_diagnostic,
+)
 from content.services.outbound_email_inventory import outbound_email_family
 
 logger = logging.getLogger(__name__)
@@ -147,6 +151,15 @@ def _persist_gateway_history(
     from content.models import EmailLog
 
     try:
+        primary_error = safe_email_diagnostic(primary_error)
+        trace.copy_error_message = safe_email_diagnostic(
+            trace.copy_error_message,
+            default_code='email_copy_configuration_failed',
+        )
+        for attempt in trace.copy_attempts:
+            attempt.error_message = safe_email_diagnostic(
+                attempt.error_message, default_code='email_copy_failed',
+            )
         delivery_metadata = {
             'outbound_delivery': {
                 'classification': trace.classification,
@@ -172,7 +185,7 @@ def _persist_gateway_history(
                 recipient=recipient,
                 subject=(getattr(message, 'subject', '') or '')[:500],
                 status=primary_status,
-                error_message=(primary_error or '')[:1000],
+                error_message=primary_error,
                 metadata=delivery_metadata,
                 body=trace.body,
                 snapshot=trace.snapshot,
@@ -212,9 +225,10 @@ def _persist_gateway_history(
     except Exception:
         # History is diagnostic. A database/logging failure after SMTP must
         # never reinterpret or retry a successful commercial send.
-        logger.exception(
-            'Could not persist outbound email history for %s.',
-            trace.template_key,
+        logger.error(
+            'Could not persist outbound email history '
+            'delivery_id=%s template=%s code=EMAIL_HISTORY_UNAVAILABLE.',
+            trace.delivery_id, trace.template_key,
         )
 
 
@@ -232,6 +246,7 @@ class EmailDeliveryGateway:
         primary_log_writes: int = 1,
         attachment_sources=None,
         resend_of=None,
+        private_attachments=False,
     ) -> int:
         family = outbound_email_family(template_key)
         if not family:
@@ -280,6 +295,7 @@ class EmailDeliveryGateway:
                 family=family,
                 attachment_sources=attachment_sources,
                 resend_of=resend_of,
+                private_attachments=private_attachments,
             )
             trace.body = trace.snapshot.body
             logger.info(
@@ -293,32 +309,32 @@ class EmailDeliveryGateway:
             )
         except Exception:
             _CURRENT_DELIVERY.set(None)
-            logger.exception(
+            logger.error(
                 'Blocked outbound email because snapshot capture failed '
-                'delivery_id=%s template=%s.',
+                'delivery_id=%s template=%s code=EMAIL_SNAPSHOT_CAPTURE_FAILED.',
                 trace.delivery_id,
                 template_key,
             )
             raise
         try:
             sent_count = message.send()
-        except (OSError, SMTPException) as exc:
+        except (OSError, SMTPException):
             _persist_gateway_history(
                 trace,
                 copy_source,
                 primary_status='failed',
-                primary_error=str(exc),
+                primary_error=email_diagnostic_message('email_transport_failed'),
             )
             _CURRENT_DELIVERY.set(trace)
             if fail_silently:
                 return 0
             raise
-        except Exception as exc:
+        except Exception:
             _persist_gateway_history(
                 trace,
                 copy_source,
                 primary_status='failed',
-                primary_error=str(exc),
+                primary_error=email_diagnostic_message('email_transport_failed'),
             )
             _CURRENT_DELIVERY.set(trace)
             raise
@@ -328,7 +344,7 @@ class EmailDeliveryGateway:
                 trace,
                 copy_source,
                 primary_status='failed',
-                primary_error='El backend de correo no aceptó el envío.',
+                primary_error=email_diagnostic_message('email_backend_rejected'),
             )
             _CURRENT_DELIVERY.set(trace)
             return sent_count
@@ -338,12 +354,13 @@ class EmailDeliveryGateway:
         except Exception:
             # A missing table during a rolling deploy or a transient database
             # error must never turn a successful customer send into a failure.
-            logger.exception(
-                'Could not resolve email copy recipients for %s.',
-                template_key,
+            logger.error(
+                'Could not resolve email copy recipients '
+                'delivery_id=%s template=%s code=EMAIL_COPY_CONFIGURATION_FAILED.',
+                trace.delivery_id, template_key,
             )
             trace.copy_error_message = (
-                'No se pudo resolver la configuración de copias.'
+                email_diagnostic_message('email_copy_configuration_failed')
             )
             recipients = []
 
@@ -358,7 +375,9 @@ class EmailDeliveryGateway:
             )
             if normalized in primary_recipients:
                 attempt.status = 'skipped'
-                attempt.error_message = 'Ya era destinatario del envío principal.'
+                attempt.error_message = email_diagnostic_message(
+                    'email_copy_already_primary',
+                )
                 trace.copy_attempts.append(attempt)
                 continue
             copy_message = copy.deepcopy(copy_source)
@@ -372,14 +391,15 @@ class EmailDeliveryGateway:
                 if not copy_sent:
                     attempt.status = 'failed'
                     attempt.error_message = (
-                        'El backend de correo no aceptó la copia.'
+                        email_diagnostic_message('email_copy_backend_rejected')
                     )
-            except Exception as exc:
+            except Exception:
                 attempt.status = 'failed'
-                attempt.error_message = str(exc)[:1000]
+                attempt.error_message = email_diagnostic_message('email_copy_failed')
                 logger.warning(
-                    'Client email copy failed for %s to %s: %s',
-                    template_key, normalized, exc,
+                    'Client email copy failed '
+                    'delivery_id=%s template=%s code=EMAIL_COPY_FAILED.',
+                    trace.delivery_id, template_key,
                 )
             trace.copy_attempts.append(attempt)
 

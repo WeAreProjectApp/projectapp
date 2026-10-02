@@ -1,4 +1,6 @@
 """Response and query-budget contracts for change-request detail."""
+
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 from decimal import Decimal
 
 import pytest
@@ -12,14 +14,14 @@ from accounts.models import (
     ChangeRequest,
     ChangeRequestComment,
     Project,
-    ProjectPhase,
-    Requirement,
     UserProfile,
 )
 from accounts.serializers import ChangeRequestDetailSerializer
 
 User = get_user_model()
-MAX_CHANGE_REQUEST_DETAIL_QUERIES = 5
+# Two history collections plus one batched comment-evidence query are additive;
+# author/evidence reads must still remain constant as comments grow.
+MAX_CHANGE_REQUEST_DETAIL_QUERIES = 8
 
 
 def _detail_url(project_id, change_request_id):
@@ -109,15 +111,9 @@ def change_request(users_and_headers):
         client_name='Change detail client',
         total_investment=Decimal(12000000),
     )
-    phase = ProjectPhase.objects.create(project=project, business_proposal=proposal, order=1)
-    requirement = Requirement.objects.create(phase=phase, title='Source requirement')
-    request = ChangeRequest.objects.create(
-        project=project,
-        phase=phase,
-        source_requirement=requirement,
-        created_by=client,
-        title='Change request detail',
-    )
+    phase = make_delivery_stage(project, phase_title=proposal.title)
+    requirement = make_requirement(phase, title='Source requirement')
+    request = ChangeRequest.objects.create(project=project, source_requirement=requirement, created_by=client, title='Change request detail')
     return project, request
 
 

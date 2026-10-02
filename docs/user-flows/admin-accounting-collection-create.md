@@ -12,3 +12,10 @@
   4. "Confirmar y enviar" creates+issues+emails; the row appears and the income flags as linked.
 - **Coverage:** ✅ Covered (create-through-preview with payload assertions; selector warning for a client without email; complete visible blocker list; invalid inline email; explicit canonical email save preserving the draft; floating income list outside the clipping panel; alcance/estado chips with their counts + focus retention + explicit empty state + "Ver todos" widening + click-outside close; Liquidar routing on mark-paid; generate icon opens locked modal; linked row navigates focused)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
+
+
+**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
+
+#### IVA opcional
+
+Hereda IVA del ingreso, acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.

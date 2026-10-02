@@ -1,5 +1,26 @@
 # Product Requirements Document — ProjectApp
 
+**2026-09-29 — propuesta consultiva:** los módulos adicionales se exploran sin precios y se guardan como interés pendiente. El equipo acuerda e incorpora alcance e inversión manualmente. La portada incorpora guía y accesos a catálogo y alianza en otra pestaña.
+
+> **Primer alcance de entregas — 2026-10-01:** Platform organiza contrato y
+> otrosí → alcance → fases → etapas → guías de validación en lenguaje sencillo.
+> El equipo prepara borradores por formulario o prompt/JSON y publica una
+> versión para el cliente; las conformidades parciales se conservan entre rondas.
+> La firma y la evidencia entrante del cliente se registran por separado de la
+> redacción. Sustituye el Kanban de clientes y su sincronización automática;
+> las fases comerciales y el hosting permanecen. Bugs y vacíos de cuentas de
+> cobro siguen como alcances posteriores del mismo PR. [Flujo](../PLATFORM_DELIVERY.md).
+> **Proyectos — 2026-10-01:** el operador accede a las acciones desde tres puntos al inicio de la tabla, sin título en esa columna, y desde el mismo menú en tarjetas. Puede eliminar definitivamente un proyecto vacío tras confirmar. Si contiene información, una tabla enumera qué dependencias lo impiden y sus cantidades; puede continuar por Cambiar estado conservando el historial. La eliminación nunca fuerza cascadas ni desvincula documentos, ingresos, comunicaciones, accesos o datos de ejecución.
+
+> **Requerimiento — IVA contable, 2026-10-01:** el importe canónico permanece
+> como total incluido. Captura antes de IVA/total incluido normalizada con
+> Decimal en backend y tasa por ingreso, gasto, hosting y cuenta. Tasa nula
+> significa sin registrar; cero significa Sin IVA. Documentos congelan base,
+> impuesto y total al emitir; PDF y correo consumen esos mismos valores.
+> Utilidad, reparto y tratamiento de retenciones conservan sus reglas actuales
+> por decisión explícita del operador. La sincronización cuenta–ingreso sólo
+> cambia finanzas antes de pagos/deducciones y dentro de la emisión atómica.
+
 > **Recursos comerciales de video — 2026-09-28:** Alianza y Módulos adicionales incorporan MCPs independientes. Panel y MCP comparten cargas MP4 hasta 250 MiB, validación antes de sustituir y almacenamiento privado. Propuestas administra un genérico por idioma y un personalizado opcional después de la bienvenida en ambas vistas comerciales. Contratos, permisos, operación y activación de infraestructura: [Recursos de video](../COMMERCIAL_VIDEO_RESOURCES.md).
 
 > **Corrección 2026-09-26 — validación en Documentos:** Nuevo documento ya no
@@ -262,7 +283,7 @@
 
 1. **Company website** — marketing pages, portfolio showcase, blog, and contact form
 2. **Business proposal & diagnostic CRM** — create, send, track, and close personalized proposals and web-app diagnostics for prospective clients
-3. **Client delivery platform** — post-sale client portal (`/platform/`) for projects, kanban, deliverables, payments/hosting, bug reports, change requests, and click-to-accept document signing
+3. **Client delivery platform** — post-sale client portal (`/platform/`) for projects, contractual delivery reviews, deliverables, payments/hosting, bug reports, change requests, and click-to-accept document signing
 4. **Internal operations** — admin panel for diagnostics + an internal Kanban, a superuser accounting module (personal ledgers, exports, card-debt reminders), and MCP connectors that expose panel modules to claude.ai
 
 The application is bilingual (English / Spanish) and targets two distinct user personas: the **Admin** (company seller/owner) and the **Client** (prospective customer, and — post-sale — platform user).
@@ -769,7 +790,12 @@ A second sales product alongside proposals: a structured **web-app diagnostic** 
 
 ### 3.9 Platform — Expanded Modules
 
-Building on the base Platform (auth, projects, kanban), these modules extend client collaboration:
+Building on the base Platform (auth, projects, contractual delivery reviews), these modules extend client collaboration:
+
+#### Alcance y entregas
+- `/platform/projects/:id/delivery`: contratos, otrosí, alcances, fases, etapas y guías.
+- Borrador interno, publicación explícita y revisión del cliente por requerimiento.
+- Conformidad parcial, nuevas rondas y evidencia externa; [contrato operativo](../PLATFORM_DELIVERY.md).
 
 #### Bug Reports
 - Client and admin can submit, track, and resolve bug reports per project
@@ -793,8 +819,7 @@ Building on the base Platform (auth, projects, kanban), these modules extend cli
 - Linked to proposal investment section (hosting tiers, payment milestones)
 - New hosting offers use exactly three prepaid periods: quarterly (10% discount), semiannual (20%), and every 9 months (40%). Monthly and annual remain readable only on historical records.
 
-#### Global Board + Profile
-- `/platform/board` — global kanban view across all projects
+#### Profile
 - `/platform/profile` — user profile management page
 
 ### 3.10 Marketing / Landing Pages
@@ -1019,7 +1044,7 @@ The canonical counts, commands and exceptions are maintained in
 10a. **Qualified first view**: loading a public proposal does not change commercial metrics. A non-draft, non-staff browser must remain visible for five seconds and submit a valid heartbeat. The `(proposal, session_id)` pair is idempotent; historical views without delivery evidence are never retroactively emailed.
 11. **Project stage notifications**: Stage rows are admin-managed (not auto-derived from JSON timeline). Warning fires once at 70% elapsed; overdue alert fires immediately when `today > end_date` and repeats every 3 days until `completed_at` is set. All day-level arithmetic uses Bogotá time (`today_bogota()` from `content/utils.py`). Internal team recipients live in `NOTIFICATION_EMAIL` CSV.
 12. **Proposal client identity**: `BusinessProposal.client` is a FK to `accounts.UserProfile` filtered to `role='client'` (`on_delete=PROTECT`). Legacy denormalized fields `client_name` / `client_email` / `client_phone` are kept as write-through snapshots, synced via `proposal_client_service.sync_snapshot()` after every FK assignment. Empty client emails get a placeholder `cliente_<profile_id>@temp.example.com` (RFC 2606 reserved TLD) generated via two-step save. Clients with placeholder emails are excluded from **all 13 client-facing email methods** in `ProposalEmailService` and from the 4 huey reminder/urgency/abandonment tasks via `_is_unsendable_client_email(email)`. Two candidate-selection querysets (`abandonment_candidates`, `interest_candidates`) also exclude placeholders directly via `.exclude(client_email__iendswith=UserProfile.PLACEHOLDER_EMAIL_DOMAIN)`. Shipped 2026-04-09.
-13. **Project scope items**: an accepted proposal's functional-requirement groups are mirrored into `ProjectScopeItem` rows (chain Project → ProjectPhase → ProjectScopeItem → Requirement) by `technical_requirements_sync`. Re-sync overwrites proposal-authored content unless an admin took over a card (`Requirement.content_overridden=True`); removed items are archived and re-added ones resurrected.
+13. **Seguimiento contractual:** las guías del cliente se redactan bajo contrato/otrosí → alcance → fase → etapa, se publican como una versión y reciben conformidades explícitas. El detalle técnico sólo sincroniza recursos y modelos de datos; no crea guías ni aprobaciones. Las conformidades previas se conservan entre rondas. [Reglas](../PLATFORM_DELIVERY.md).
 14. **Client document signing**: a client can only sign a `requires_signature` document after their email is verified via OTP. Signing records name/timestamp/IP/user-agent and is idempotent; it fires best-effort team milestone notifications (first login, email validated, document signed) that never block the client flow.
 15. **Accounting partner split**: every accounting record carries a total plus per-partner amounts; a record on a personal ledger (Gustavo/Carlos) must be 100% that partner's (the other partner's amount = 0), enforced at `clean()`. Company amount is derived, not stored.
 16. **Manual-only discount offer**: the discount/urgency email from the proposal actions menu is never sent automatically — it requires an explicit send and is only offered when a discount percentage is configured and the client has a real email.
@@ -1127,3 +1152,10 @@ El otrosí conserva su revisión jurídica previa a firma.
 ### Organización y lectura de comunicaciones (2026-09-25)
 
 El equipo puede organizar conversaciones completas en carpetas/subcarpetas por cliente/proyecto, identificar documentos e hilos por su ID y encontrarlos mediante búsqueda exacta. El lector permite saltar al inicio/final, plegar la redacción y sus detalles conservando datos, y copiar mensajes directamente. Los hilos madre mantienen su papel de entrada y la organización no modifica el histórico.
+
+
+## P4 — Ideas y accesos del cliente (2026-10-01)
+
+Cada proyecto conserva sugerencias simples con autor, fecha, correcciones y archivo reversible. El equipo recopila versiones seleccionadas en copias internas inmutables para estudiar un futuro contrato; recopilar nunca amplía alcances ni crea aprobaciones. Audio, IA y contratación automática quedan fuera.
+
+Oculto por defecto aplica exclusivamente a URLs y accesos: producción/QA y cada URL, usuario o contraseña Django se habilitan de forma independiente por proyecto. Bugs, hosting, cobros y entregas publicadas conservan su visibilidad. La API aplica la política aunque se acceda por URL directa. Contrato completo: `docs/platform/project-ideas-access.md`.

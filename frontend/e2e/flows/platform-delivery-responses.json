@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-responses",
+  "name": "Platform Delivery Responses",
+  "module": "platform",
+  "roles": ["platform-client", "platform-admin"],
+  "priority": "P1",
+  "description": "Send contextual responses on a published stage with a message and optional existing document links, then read the recorded response history.",
+  "expectedSpecs": 1,
+  "outcomes": ["success", "error"]
+}

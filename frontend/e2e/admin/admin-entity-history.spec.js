@@ -1,3 +1,4 @@
+import { openProjectAction } from '../helpers/projects.js';
 /**
  * Per-record history journeys for documents, proposals, projects, clients and
  * accounting snapshots. Each assertion protects the operator-facing audit
@@ -5,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_ACCOUNTING_RECORD_HISTORY,
@@ -180,15 +182,14 @@ async function openProposalHistory(page) {
   await expect(page.getByTestId('proposal-open-1')).toContainText('Propuesta Atlas');
   await page.getByTestId('proposal-open-1').click();
   await expect(page.getByText('Propuesta Atlas', { exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+  await selectProposalDestination(page, 'tracking', 'history');
   await expect(page.getByTestId('entity-history')).toBeVisible();
 }
 
 async function openProjectHistory(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click();
-  await expect(page.getByTestId('project-detail-1')).toBeVisible();
-  await page.getByTestId('project-detail-1').click();
+  await openProjectAction(page, 1, 'detail');
   await expect(page.getByTestId('project-access-modal')).toBeVisible();
   await page.getByRole('tab', { name: 'Historial', exact: true }).click();
   await expect(page.getByTestId('entity-history')).toBeVisible();

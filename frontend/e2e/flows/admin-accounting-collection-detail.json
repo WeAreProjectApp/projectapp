@@ -6,9 +6,11 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Superuser inspects one cuenta de cobro without leaving the tab: the row shows Cliente and Proyecto as separate columns, and the detail modal carries the linked income with its settlement history plus the emitted document in a Documento tab. Going to the income is the optional exit and must land on a tab that does not filter the focused row out. With a zero-day term there is no vencimiento, so the Emisión / Vence cell shrinks to Emisión over a single date instead of pairing it with an em-dash that reads as missing data. The Documento tab probes the inline PDF URL before embedding it — spinner while it resolves, and when the document cannot render, a message in the app's own words pointing at Descargar PDF instead of the browser's refused-connection page.",
+  "description": "Superuser inspects one cuenta de cobro without leaving the tab: the row shows Cliente and Proyecto as separate columns, and the detail modal carries the linked income with its settlement history plus the emitted document in a Documento tab. Going to the income is the optional exit and must land on a tab that does not filter the focused row out. With a zero-day term there is no vencimiento, so the Emisión / Vence cell shrinks to Emisión over a single date instead of pairing it with an em-dash that reads as missing data. The Documento tab probes the inline PDF URL before embedding it — spinner while it resolves, and when the document cannot render, a message in the app's own words pointing at Descargar PDF instead of the browser's refused-connection page. El detalle permite asociar o corregir el contexto contractual o hosting del proyecto con motivo y versión; la corrección mantiene PDF, snapshot, importes y pagos. IVA (2026-10): El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.",
   "outcomes": [
     "display",
-    "success"
+    "success",
+    "error",
+    "failure"
   ]
 }

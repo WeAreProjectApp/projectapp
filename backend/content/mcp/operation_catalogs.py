@@ -6,6 +6,11 @@ the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
 from content.mcp.document_tools import _FOLDER_FIELDS
+from content.mcp.delivery_tools import DELIVERY_TOOLS
+from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
+from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
+from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
@@ -19,10 +24,35 @@ OPERATIONS_TOOLS = [
 ]
 
 
+_PROJECT_DELETE_PREVIEW = _op(
+    'preview_project_delete',
+    'Comprueba si el proyecto está vacío y lista las dependencias que impiden eliminarlo.',
+    'panel-projects-delete-preview', path=('project_id',),
+)
+_PROJECT_DELETE = _op(
+    'delete_project',
+    'Elimina definitivamente un proyecto vacío. Revalida todas las dependencias; si tiene información relacionada exige conservarla mediante Cambiar estado.',
+    'panel-projects-delete', 'DELETE', ('project_id',), 'sensitive', True,
+)
+_delete_project_handler = _PROJECT_DELETE['handler']
+
+
+def _delete_project_result(arguments):
+    _delete_project_handler(arguments)
+    return {'deleted': True, 'project_id': arguments['project_id']}
+
+
+_PROJECT_DELETE['handler'] = _delete_project_result
+_PROJECT_DELETE['impact_builder'] = lambda arguments: _PROJECT_DELETE_PREVIEW['handler'](
+    {'project_id': arguments['project_id']},
+)
+
 PROJECT_TOOLS = [
     _op('list_projects', 'Lista proyectos y sus indicadores por estado.', 'panel-projects-list'),
     _op('create_project', 'Crea un proyecto con las validaciones del Panel.', 'panel-projects-create', 'POST', risk='write'),
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
+    _PROJECT_DELETE_PREVIEW,
+    _PROJECT_DELETE,
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto.', 'panel-projects-unlinked-records', path=('project_id',)),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
     _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),
@@ -38,7 +68,7 @@ PROJECT_TOOLS = [
     _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',)),
     _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True),
     _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',)),
-]
+] + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
@@ -226,6 +256,7 @@ LEDGER_PARITY_TOOLS = [
 
 
 BILLING_PARITY_TOOLS = [
+    _op('send_hosting_collection_account', 'Emite el cobro del hosting con su contexto explícito y conserva el PDF.', 'send-hosting-collection-account', 'POST', ('record_id',), 'sensitive', True, payload_schema={'type': 'object', 'additionalProperties': False, 'properties': {'hosting_payment_id': {'type': ['integer', 'null'], 'minimum': 1}}}),
     _op('bulk_assign_hosting_client', 'Asigna cliente a una selección de hostings.', 'bulk-assign-hosting-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_hosting_project', 'Asigna proyecto a una selección de hostings.', 'bulk-assign-hosting-project', 'POST', risk='sensitive', confirm=True),
     _op('list_hosting_cycles', 'Lista ciclos facturados de un hosting.', 'list-hosting-cycles', path=('record_id',)),

@@ -117,6 +117,7 @@ class TestDocumentDetailSerializer:
             'display_state', 'is_generated_snapshot', 'is_contract_mirror',
             'source_proposal_id', 'source_version',
             'public_number', 'issue_date', 'due_date', 'currency', 'total',
+            'subtotal', 'tax_total', 'vat_rate',
             'billing_notes', 'collection_account_observations',
             'language', 'cover_type', 'template_style',
             'include_portada', 'include_subportada',

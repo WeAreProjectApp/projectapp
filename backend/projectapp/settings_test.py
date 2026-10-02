@@ -29,6 +29,10 @@ from .settings import *  # noqa: E402, F401, F403
 
 RECAPTCHA_ENABLED = False  # Individual CAPTCHA tests explicitly enable it.
 
+# Bind the effective Django 6 transport before setup and model/task imports.
+# EMAIL_BACKEND alone cannot replace an explicitly configured MAILERS backend.
+MAILERS = {'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}}
+
 TEST_FILE_ROOT = Path(tempfile.mkdtemp(prefix='projectapp-pytest-'))
 atexit.register(shutil.rmtree, TEST_FILE_ROOT, ignore_errors=True)
 

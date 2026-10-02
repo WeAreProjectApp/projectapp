@@ -4,9 +4,9 @@
 - **Role:** guest (via shared UUID link)
 - **Priority:** P3
 - **Routes:** `/proposal/:uuid`
-- **Description:** First-visit tutorial overlay (ProposalOnboarding component) that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
+- **Description:** Inner-view tutorial overlay (ProposalOnboarding component), independent of the gateway guide, that shows step-by-step tooltips guiding the client through the proposal interface. After completion, a reading-time popup appears.
 - **Steps:**
-  1. User opens the proposal for the first time.
+  1. User chooses detailed or executive view from the gateway.
   2. ProposalOnboarding overlay appears with first tooltip step.
   3. User clicks through each onboarding step.
   4. Onboarding completes and emits `@complete` event.

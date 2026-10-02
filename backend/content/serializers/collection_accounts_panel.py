@@ -2,6 +2,8 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from accounts.services.billing_context import context_data
+from accounts.serializers_billing_context import BillingContextFields
 
 from content.models import Document, DocumentItem, DocumentPaymentMethod
 from content.services.collection_account_service import (
@@ -18,6 +20,12 @@ STATUS_LABELS = {
 
 
 class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+    vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True)
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     customer_name = serializers.CharField(
         source='collection_account.customer_name', read_only=True, default='',
     )
@@ -51,12 +59,13 @@ class CollectionAccountPanelListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context',
             'id', 'uuid', 'public_number', 'title',
             'billing_concept', 'customer_name', 'customer_email',
             'client', 'client_display_name', 'project_name',
             'origin', 'origin_label', 'hosting_record_id', 'project_id',
             'income_record_id', 'income_kind',
-            'subtotal', 'tax_total', 'total', 'currency',
+            'subtotal', 'tax_total', 'vat_rate', 'total', 'currency',
             'issue_date', 'due_date',
             'commercial_status', 'commercial_status_label', 'is_overdue',
             # The delete rule, resolved server-side: the panel must not have to
@@ -192,6 +201,15 @@ class CollectionAccountPanelDetailSerializer(CollectionAccountPanelListSerialize
 
 
 class _CreateItemSerializer(serializers.Serializer):
+    amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0.01'), required=False)
+    amount_mode = serializers.ChoiceField(choices=('before_vat', 'vat_included'), required=False)
+
+    def validate(self, data):
+        if ('amount' in data) == ('unit_price' in data):
+            raise serializers.ValidationError({'amount': 'Envía un único importe por concepto.'})
+        if 'amount_mode' in data and 'amount' not in data:
+            raise serializers.ValidationError({'amount': 'Escribe el importe.'})
+        return data
     # Unbounded on purpose: this is the "Descripción del concepto" the operator
     # writes in the form, several paragraphs long when the cuenta bills
     # attended requirements. Blank falls back to the concepto in the service.
@@ -203,7 +221,7 @@ class _CreateItemSerializer(serializers.Serializer):
         required=False, default=Decimal('1'),
     )
     unit_price = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal('0.01'),
+        max_digits=14, decimal_places=2, min_value=Decimal('0.01'), required=False,
     )
     period_start = serializers.DateField(required=False, allow_null=True)
     period_end = serializers.DateField(required=False, allow_null=True)
@@ -228,9 +246,10 @@ class _CustomerOverrideSerializer(serializers.Serializer):
     )
 
 
-class CollectionAccountCreateSerializer(serializers.Serializer):
+class CollectionAccountCreateSerializer(BillingContextFields):
     """Shared payload of the panel create and preview endpoints."""
 
+    vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     # UserProfile pk — what ClientAutocomplete / the clients module handle.
     client_profile_id = serializers.IntegerField()
     income_record_id = serializers.IntegerField()

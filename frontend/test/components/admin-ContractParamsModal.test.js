@@ -33,9 +33,7 @@ global.useMarkdownPreview = jest.fn(() => ({
 jest.mock('dompurify', () => ({ sanitize: jest.fn((val) => val) }));
 
 import ContractParamsModal from '../../components/BusinessProposal/admin/ContractParamsModal.vue';
-import BaseFormField from '../../components/base/BaseFormField.vue';
 
-// BaseFormField is not global in jest.setup; tests that read field errors pass it in.
 function mountContractParamsModal(props = {}, components = {}) {
   return mount(ContractParamsModal, {
     props: {
@@ -245,6 +243,24 @@ describe('ContractParamsModal — contratos separados', () => {
       service_renewal_notice_days: 60,
       service_termination_notice_days: 60,
     });
+  });
+
+  test.each([
+    ['por defecto', {}, true],
+    ['personalizado', {
+      service_contract_source: 'custom',
+      service_custom_contract_markdown: '# Servicio negociado',
+    }, false],
+  ])('explains automatic service conditions in %s mode', async (_mode, sourceParams, showsTerms) => {
+    // Falla si un contrato de servicio personalizado oculta que sus precios y renovación se incorporan al generarlo.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true, data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+    const wrapper = await openFor('service', { ...PARTIES, ...sourceParams });
+
+    expect(wrapper.get('[data-testid="contract-service-conditions-note"]').text())
+      .toBe('Al generar el contrato se incorporan automáticamente la infraestructura, cobertura, cortesías, precios, descuentos y renovación configurados en la propuesta, también si usas un texto personalizado.');
+    expect(wrapper.findAll('[data-testid="contract-service-terms"]')).toHaveLength(showsTerms ? 1 : 0);
   });
 
   it('serializes a custom service duration as literal text', async () => {

@@ -658,6 +658,7 @@
             <dd class="mt-1 whitespace-pre-wrap text-text-default">{{ documentStore.currentDocument.collection_account_observations }}</dd>
           </div>
         </dl>
+        <VatBreakdown v-if="isCollectionAccount" class="mb-4" :total="documentStore.currentDocument.total" :rate="documentStore.currentDocument.vat_rate" :tax="documentStore.currentDocument.vat_rate != null || documentStore.currentDocument.tax_total > 0 ? documentStore.currentDocument.tax_total : null" :currency="documentStore.currentDocument.currency" />
         <PdfPreviewPane
           class="h-[clamp(20rem,52vh,34rem)] min-h-0"
           :src="storedPdfSrc"
@@ -798,6 +799,7 @@
 </template>
 
 <script setup>
+import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { reactive, ref, computed, onMounted } from 'vue';
 import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewModal.vue';

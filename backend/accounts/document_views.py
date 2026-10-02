@@ -8,6 +8,7 @@ Every milestone (first login, email validated, signed) notifies the team.
 """
 import logging
 
+from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.utils import timezone
@@ -35,27 +36,37 @@ def _is_platform_admin(request):
 
 
 def _visible_docs_qs(request):
-    """Portal-visible documents available to the requesting user.
-
-    Excludes commercial collection accounts (those have their own portal).
-    Admins see every visible portal document; clients only their own.
-
-    Excluye lo archivado (decisión del operador, 13-ago-2026): archivar en el
-    panel retira el documento del portal — también cuando lo arrastra la
-    cascada de una carpeta. Restaurarlo lo devuelve tal cual. Este helper es
-    el único queryset del portal (lista/detalle/PDF/firma pasan por acá).
-    """
-    qs = (
-        Document.objects
-        .filter(is_client_visible=True, is_archived=False)
-        .exclude(document_type__code=COLLECTION_ACCOUNT)
-        .select_related('document_type', 'project', 'client_user', 'signed_by')
-    )
+    """One inherited authorization gate for global list, detail, PDF and signing."""
+    from accounts.services.delivery_documents import PortalDocumentIndex
+    qs = Document.objects.exclude(
+        document_type__code=COLLECTION_ACCOUNT,
+    ).select_related('document_type', 'project', 'client_user', 'signed_by')
     if _is_platform_admin(request):
-        return qs
-    return qs.filter(
-        Q(client_user=request.user) | Q(project__client=request.user),
+        return qs.filter(is_archived=False, is_client_visible=True)
+    qs = qs.filter(
+        Q(is_archived=False) | Q(delivery_links__snapshots__isnull=False)
+        | Q(delivery_contracts__signature_evidence__isnull=False)
+        | Q(delivery_amendments__signature_evidence__isnull=False),
     )
+    qs = qs.filter(Q(client_user=request.user) | Q(project__client=request.user)).filter(
+        Q(is_client_visible=True) | Q(delivery_links__isnull=False)
+        | Q(delivery_contracts__client_visible=True) | Q(delivery_amendments__client_visible=True),
+    ).distinct()
+    documents = list(qs)
+    index = PortalDocumentIndex(request.user, documents)
+    request._delivery_portal_index = index
+    visible_ids = [doc.pk for doc in documents if index.visible(doc)]
+    return qs.filter(pk__in=visible_ids)
+
+
+def _portal_document_data(request, doc):
+    from accounts.services.delivery_documents import snapshot_for_document
+    data = ClientDocumentSerializer(doc).data
+    index = getattr(request, '_delivery_portal_index', None)
+    snapshot = index.snapshot(doc) if index is not None else snapshot_for_document(request.user, doc)
+    if snapshot:
+        data['title'] = snapshot.title
+    return data
 
 
 def _ordered_docs(qs):
@@ -72,7 +83,7 @@ def client_document_list_view(request):
     return Response({
         'email': request.user.email or '',
         'email_verified': bool(profile and profile.email_verified),
-        'documents': ClientDocumentSerializer(docs, many=True).data,
+        'documents': [_portal_document_data(request, doc) for doc in docs],
     })
 
 
@@ -82,7 +93,7 @@ def client_document_detail_view(request, doc_uuid):
     doc = _visible_docs_qs(request).filter(uuid=doc_uuid).first()
     if not doc:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
-    return Response(ClientDocumentSerializer(doc).data)
+    return Response(_portal_document_data(request, doc))
 
 
 @api_view(['GET'])
@@ -92,16 +103,33 @@ def client_document_pdf_view(request, doc_uuid):
     if not doc:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
 
-    pdf_bytes = DocumentPdfService.generate(doc)
+    from accounts.services.delivery_documents import snapshot_for_document
+    index = getattr(request, '_delivery_portal_index', None)
+    snapshot = index.snapshot(doc) if index is not None else snapshot_for_document(request.user, doc)
+    if snapshot:
+        try:
+            with snapshot.file.open('rb') as source:
+                pdf_bytes = source.read()
+        except (OSError, ValueError):
+            return Response({'detail': 'Evidencia no disponible.'}, status=status.HTTP_404_NOT_FOUND)
+    elif doc.generated_file:
+        try:
+            with doc.generated_file.open('rb') as source:
+                pdf_bytes = source.read()
+        except (OSError, ValueError):
+            return Response({'detail': 'Documento no disponible.'}, status=status.HTTP_404_NOT_FOUND)
+    else:
+        pdf_bytes = DocumentPdfService.generate(doc)
     if not pdf_bytes:
         return Response(
             {'detail': 'Failed to generate PDF.'},
             status=status.HTTP_500_INTERNAL_SERVER_ERROR,
         )
 
-    filename = slugify(doc.title) or 'document'
+    filename = slugify(snapshot.title if snapshot else doc.title) or 'document'
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{filename}.pdf"'
+    response['Cache-Control'] = 'private, no-store'
     return response
 
 
@@ -109,9 +137,18 @@ def client_document_pdf_view(request, doc_uuid):
 @permission_classes([IsAuthenticated])
 def client_document_sign_view(request, doc_uuid):
     """Client accepts/signs a document (click-to-accept). Requires a verified email."""
+    if request.auth and request.auth.get('impersonated_by'):
+        return Response(
+            {'detail': 'Inicia sesión con tu propia cuenta de cliente para firmar.'},
+            status=status.HTTP_403_FORBIDDEN,
+        )
     doc = _visible_docs_qs(request).filter(uuid=doc_uuid).first()
     if not doc:
         return Response({'detail': 'Not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+    from accounts.services.delivery_access import is_admin
+    if is_admin(request.user):
+        return Response({'detail': 'La firma corresponde al cliente propietario.'}, status=status.HTTP_403_FORBIDDEN)
 
     if not doc.requires_signature:
         return Response(
@@ -128,27 +165,43 @@ def client_document_sign_view(request, doc_uuid):
 
     if doc.signed_at is not None:
         # Idempotent: already signed.
-        return Response(ClientDocumentSerializer(doc).data)
+        return Response(_portal_document_data(request, doc))
 
     serializer = DocumentSignSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
-    default_name = f'{request.user.first_name} {request.user.last_name}'.strip()
-    doc.signed_at = timezone.now()
-    doc.signed_by = request.user
-    doc.signature_name = serializer.validated_data.get('signature_name') or default_name or request.user.email
-    doc.signature_ip = get_client_ip(request)
-    doc.signature_user_agent = request.META.get('HTTP_USER_AGENT', '')
-    doc.save(update_fields=[
-        'signed_at', 'signed_by', 'signature_name',
-        'signature_ip', 'signature_user_agent', 'updated_at',
-    ])
+    from accounts.models import DeliveryWorkspace, Project
+    from accounts.services.delivery_documents import artifact_scope, capture_document_portal_signatures
+    # Project lock first, as in authoring/publication; the source document lock
+    # makes two simultaneous signature clicks produce one immutable fact.
+    with artifact_scope(), transaction.atomic():
+        projects = list(Project.objects.select_for_update().filter(
+            Q(delivery_contracts__document=doc) | Q(delivery_contracts__amendments__document=doc),
+        ).order_by('id').distinct())
+        doc = _visible_docs_qs(request).select_for_update().get(pk=doc.pk)
+        if doc.signed_at is not None:
+            return Response(_portal_document_data(request, doc))
+        default_name = f'{request.user.first_name} {request.user.last_name}'.strip()
+        doc.signed_at = timezone.now()
+        doc.signed_by = request.user
+        doc.signature_name = serializer.validated_data.get('signature_name') or default_name or request.user.email
+        doc.signature_ip = get_client_ip(request)
+        doc.signature_user_agent = request.META.get('HTTP_USER_AGENT', '')
+        doc.save(update_fields=[
+            'signed_at', 'signed_by', 'signature_name',
+            'signature_ip', 'signature_user_agent', 'updated_at',
+        ])
+        capture_document_portal_signatures(doc, request.user)
+        for project in projects:
+            workspace, _ = DeliveryWorkspace.objects.get_or_create(project=project)
+            workspace.version += 1
+            workspace.save(update_fields=['version'])
 
     from accounts.tasks import notify_team_document_signed_task
 
     notify_team_document_signed_task(doc.id)
 
-    return Response(ClientDocumentSerializer(doc).data)
+    return Response(_portal_document_data(request, doc))
 
 
 # ==========================================================================

@@ -12,9 +12,16 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     isLoading: false,
     isUpdating: false,
     error: '',
+    subscriptionRequest: 0,
+    phasesRequest: 0,
   }),
 
   getters: {
+    otherPayments() {
+      const currentId = this.currentPeriodPayment?.id
+      return this.payments.filter(payment => payment.id !== currentId)
+        .sort((a, b) => String(b.billing_period_start).localeCompare(String(a.billing_period_start)))
+    },
     /**
      * Payment that needs user action NOW:
      * - overdue or failed: always show
@@ -100,16 +107,21 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     },
 
     async fetchProjectSubscription(projectId) {
+      const request = ++this.subscriptionRequest
+      this.currentSubscription = null
+      this.payments = []
       this.isLoading = true
       this.error = ''
 
       try {
         const { get } = usePlatformApi()
         const response = await get(`projects/${projectId}/subscription/`)
+        if (request !== this.subscriptionRequest) return { success: false, stale: true }
         this.currentSubscription = response.data
         this.payments = response.data.payments || []
         return { success: true, data: response.data }
       } catch (error) {
+        if (request !== this.subscriptionRequest) return { success: false, stale: true }
         if (error.response?.status === 404) {
           this.currentSubscription = null
           this.payments = []
@@ -120,7 +132,7 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
         return { success: false, message }
       /* c8 ignore next 3 */
       } finally {
-        this.isLoading = false
+        if (request === this.subscriptionRequest) this.isLoading = false
       }
     },
 
@@ -277,12 +289,16 @@ export const usePlatformPaymentsStore = defineStore('platformPayments', {
     },
 
     async fetchProjectPhases(projectId) {
+      const request = ++this.phasesRequest
+      this.phases = []
       try {
         const { get } = usePlatformApi()
         const response = await get(`projects/${projectId}/phases/`)
+        if (request !== this.phasesRequest) return { success: false, stale: true }
         this.phases = response.data
         return { success: true, data: response.data }
       } catch (error) {
+        if (request !== this.phasesRequest) return { success: false, stale: true }
         return { success: false, message: error.response?.data?.detail || 'Error cargando fases.' }
       }
     },

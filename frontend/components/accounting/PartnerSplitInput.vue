@@ -1,6 +1,8 @@
 <template>
   <div class="space-y-4">
-    <div>
+    <VatAmountInput v-if="showVat" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
+      @update:model-value="onTotalInput" @update:rate="emit('update:vatRate', $event)" @capture="emit('vatCapture', $event)" />
+    <div v-else>
       <label class="block text-xs font-medium text-text-muted mb-1">Valor total</label>
       <BaseCurrencyInput
         :model-value="total"
@@ -69,17 +71,21 @@
 
 <script setup>
 import { computed, ref } from 'vue';
+import VatAmountInput from './VatAmountInput.vue';
 import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
 import BaseToggle from '~/components/base/BaseToggle.vue';
 import { formatMoney } from '~/utils/formatMoney';
 
 const props = defineProps({
+  showVat: { type: Boolean, default: false },
+  vatRate: { type: [Number, String], default: null },
+  vatResetKey: { type: [Boolean, Number, String], default: null },
   total: { type: [String, Number], default: '' },
   gustavoAmount: { type: [String, Number], default: '' },
   carlosAmount: { type: [String, Number], default: '' },
 });
 
-const emit = defineEmits(['update:total', 'update:gustavoAmount', 'update:carlosAmount']);
+const emit = defineEmits(['update:total', 'update:gustavoAmount', 'update:carlosAmount', 'update:vatRate', 'vatCapture']);
 
 const autoSplit = ref(true);
 

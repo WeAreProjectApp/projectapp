@@ -41,6 +41,7 @@ class SecureLinkSerializer(serializers.ModelSerializer):
             'created_by_name', 'creator_name', 'creator_email', 'validity_days', 'expires_at',
             'consumed_at', 'revoked_at', 'activation_count', 'created_at', 'updated_at',
             'lifecycle_status', 'sent_at', 'sent_by',
+            'owner', 'audience', 'replaces',
         )
 
     def get_type_label(self, obj):

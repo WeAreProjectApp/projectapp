@@ -7,7 +7,7 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Project detail hub with stats row (progress, client, dates), module cards (Tablero active, others 'Próximamente'), and admin edit modal for name, description, status, dates.",
+  "description": "Project summary with client and dates, navigation to delivery scopes/phases/stages, commercial references, and an admin edit modal.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

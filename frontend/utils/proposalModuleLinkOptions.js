@@ -63,10 +63,7 @@ export function buildProposalModuleLinkCatalog(sections) {
     const isCalc = g.is_calculator_module === true;
     const canonicalId = isCalc ? `module-${rawId}` : `group-${rawId}`;
     const label = `${g.icon || ''} ${g.title || rawId}`.trim();
-    const pricePercent = Number(g.price_percent ?? 0) || 0;
-    const isAlwaysIncluded = isCalc
-      ? pricePercent === 0 && !g.is_invite
-      : pricePercent === 0;
+    const isAlwaysIncluded = (g.is_always_included ?? !isCalc) === true;
 
     addOption(buildOption(canonicalId, label, [rawId], isAlwaysIncluded));
   }

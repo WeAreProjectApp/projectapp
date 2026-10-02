@@ -7,6 +7,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import {
   ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES,
@@ -86,28 +87,28 @@ test.describe('Admin Proposal — Documentos tab', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'draft' })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     await expect(page.getByRole('tab', { name: 'General' })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByRole('tab', { name: 'Documentos' })).not.toBeVisible();
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Documentos', exact: true })).not.toBeVisible();
   });
 
   test('Documentos tab is visible for sent proposals', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'sent' })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await expect(page.getByRole('tab', { name: 'Documentos' })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Documentos', exact: true })).toBeVisible({ timeout: 15000 });
   });
 
   test('documents tab renders unified list with contract, commercial and technical entries', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'negotiating' })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
 
     const docsList = page.getByRole('list').first();
     await expect(docsList.getByText('Contrato de desarrollo', { exact: true })).toBeVisible({ timeout: 10000 });
@@ -119,9 +120,9 @@ test.describe('Admin Proposal — Documentos tab', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'negotiating', proposal_documents: [] })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
 
     await expect(page.getByText('Generar contrato')).toBeVisible({ timeout: 10000 });
   });
@@ -130,9 +131,9 @@ test.describe('Admin Proposal — Documentos tab', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'negotiating' })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
 
     await expect(page.getByRole('heading', { name: 'Documentos adjuntos' })).toBeVisible({ timeout: 10000 });
     await expect(page.getByPlaceholder(/Ej: Anexo técnico/i)).toBeVisible();
@@ -142,9 +143,9 @@ test.describe('Admin Proposal — Documentos tab', () => {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, baseHandler(makeProposal({ status: 'negotiating' })));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
     await expect(page.getByText('Contrato de desarrollo')).toBeVisible({ timeout: 10000 });
 
     await expect(page.getByText('Enviar documentos al cliente')).not.toBeVisible();
@@ -158,9 +159,9 @@ test.describe('Admin Proposal — Documentos tab', () => {
       proposal_documents: [generatedContractDoc, uploadedDoc],
     });
     await mockApi(page, baseHandler(proposal));
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    await page.getByRole('tab', { name: 'Documentos' }).click();
+    await selectProposalDestination(page, 'documents', 'documents');
 
     await expect(page.getByText('Otrosí No. 1')).toBeVisible({ timeout: 10000 });
   });

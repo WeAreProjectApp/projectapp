@@ -4,6 +4,7 @@ import HostingFormModal from '../../../components/accounting/HostingFormModal.vu
 import { useProposalClientsStore } from '../../../stores/proposal_clients';
 import BaseFormField from '../../../components/base/BaseFormField.vue';
 import BaseInput from '../../../components/base/BaseInput.vue';
+import BaseSegmented from '../../../components/base/BaseSegmented.vue';
 
 jest.mock('../../../stores/services/request_http', () => ({
   get_request: jest.fn(),
@@ -57,7 +58,7 @@ function mountModal(props = {}) {
     props: { open: true, saving: false, ...props },
     global: {
       plugins: [pinia],
-      components: { BaseFormField, BaseInput },
+      components: { BaseFormField, BaseInput, BaseSegmented },
       stubs: {
         ClientAutocomplete: ClientAutocompleteStub,
         Teleport: { template: '<div><slot /></div>' },

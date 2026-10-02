@@ -49,6 +49,8 @@ async function setupPlatformAccess(page, { user = mockPlatformAdmin, accessStatu
     if (apiPath === 'accounts/me/' && method === 'GET') return json(user);
     if (apiPath === 'accounts/projects/' && method === 'GET') return json([project]);
     if (apiPath === 'accounts/projects/1/' && method === 'GET') return json(project);
+    if (apiPath === 'accounts/projects/1/client-access/' && method === 'GET') return json({ project_id: 1, environments: [] });
+    if (apiPath === 'accounts/projects/1/access/client-policy/' && method === 'GET') return json({ detail: 'Policy fixture omitted' }, 503);
     if (apiPath === 'accounts/projects/1/phases/' && method === 'GET') return json([]);
     if (apiPath === 'accounts/projects/1/access/' && method === 'GET') {
       return accessStatus === 200
@@ -116,15 +118,17 @@ test('shows a recoverable error when the scoped detail fails to load', {
   await expect(page.getByTestId('project-access-load-error').getByRole('button')).toBeVisible();
 });
 
-test('redirects a client away from the admin-only access route', {
+test('keeps the client on a limited empty access view', {
   tag: ['@outcome:error', ...PLATFORM_PROJECT_ACCESS_DETAIL, '@role:platform-client'],
 }, async ({ page }) => {
-  // quality: allow-no-interaction (access guard — client role redirected to dashboard, asserted by URL)
+  // quality: allow-deep-link (client authorization boundary on the former admin-only route; full navigation is covered by P4 live browser tests)
   await setupPlatformAccess(page, { user: mockPlatformClient });
 
   await page.goto('/platform/projects/1/access', { waitUntil: 'domcontentloaded' });
 
-  await page.waitForURL('**/platform/dashboard', { timeout: 30_000 });
-  await expect(page).toHaveURL(/\/platform\/dashboard$/);
+  await expect(page.getByTestId('project-client-access')).toContainText(/No (access|hay accesos)/);
+  await page.getByTestId('project-client-access').getByRole('button', { name: /Refresh|Actualizar/ }).click();
+  await expect(page.getByTestId('project-client-access').getByRole('link')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/platform\/projects\/1\/access$/);
   await expect(page.getByTestId('project-access-editor')).toHaveCount(0);
 });

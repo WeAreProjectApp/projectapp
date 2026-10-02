@@ -16,7 +16,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 1, title: 'G', is_visible: false, is_calculator_module: true, price_percent: 10 }],
+          groups: [{ id: 1, title: 'G', is_visible: false, is_calculator_module: true }],
         },
       },
     ]
@@ -27,7 +27,7 @@ describe('buildProposalModuleLinkOptions', () => {
     const sections = [
       {
         section_type: 'functional_requirements',
-        content_json: { groups: [{ id: 2, is_calculator_module: true, price_percent: 5 }] },
+        content_json: { groups: [{ id: 2, is_calculator_module: true }] },
       },
     ]
     expect(buildProposalModuleLinkOptions(sections)).toEqual([])
@@ -38,7 +38,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 3, title: 'T', is_calculator_module: false, price_percent: 0 }],
+          groups: [{ id: 3, title: 'T', is_calculator_module: false }],
         },
       },
     ]
@@ -52,7 +52,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 9, title: 'Calc', is_calculator_module: true, price_percent: 0 }],
+          groups: [{ id: 9, title: 'Calc', is_calculator_module: true, is_always_included: true }],
         },
       },
     ]
@@ -62,19 +62,19 @@ describe('buildProposalModuleLinkOptions', () => {
     ])
   })
 
-  it('emits group id for non-calculator with price', () => {
+  it('marks an explicit base group as included', () => {
     const sections = [
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 4, title: 'Pack', icon: '📦', is_calculator_module: false, price_percent: 10 }],
+          groups: [{ id: 4, title: 'Pack', icon: '📦', is_calculator_module: false, is_always_included: true }],
         },
       },
     ]
     const opts = buildProposalModuleLinkOptions(sections)
     expect(opts[0].id).toBe('group-4')
     expect(opts[0].label).toContain('Pack')
-    expect(opts[0].isAlwaysIncluded).toBe(false)
+    expect(opts[0].isAlwaysIncluded).toBe(true)
   })
 
   it('merges additionalModules into groups', () => {
@@ -84,7 +84,7 @@ describe('buildProposalModuleLinkOptions', () => {
         content_json: {
           groups: [],
           additionalModules: [
-            { id: 5, title: 'Add', is_calculator_module: true, price_percent: 1 },
+            { id: 5, title: 'Add', is_calculator_module: true },
           ],
         },
       },
@@ -116,7 +116,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 7, items: ['x'], is_calculator_module: true, price_percent: 0 }],
+          groups: [{ id: 7, items: ['x'], is_calculator_module: true }],
         },
       },
     ]
@@ -124,7 +124,7 @@ describe('buildProposalModuleLinkOptions', () => {
     expect(opts[0].label).toBe('7')
   })
 
-  it('falls back to 0 when price_percent is undefined', () => {
+  it('treats an optional group as not included by default', () => {
     const sections = [
       {
         section_type: 'functional_requirements',
@@ -135,7 +135,7 @@ describe('buildProposalModuleLinkOptions', () => {
     ]
     const opts = buildProposalModuleLinkOptions(sections)
     expect(opts[0].id).toBe('module-8')
-    expect(opts[0].isAlwaysIncluded).toBe(true)
+    expect(opts[0].isAlwaysIncluded).toBe(false)
   })
 
   it('uses module id as label when investment module has no title', () => {
@@ -151,8 +151,8 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 'views', title: 'Vistas', is_calculator_module: false, price_percent: 0 }],
-          additionalModules: [{ id: 'pwa_module', title: 'PWA', is_calculator_module: true, price_percent: 40 }],
+          groups: [{ id: 'views', title: 'Vistas', is_calculator_module: false }],
+          additionalModules: [{ id: 'pwa_module', title: 'PWA', is_calculator_module: true }],
         },
       },
     ]
@@ -170,8 +170,8 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 'views', title: 'Vistas', is_calculator_module: false, price_percent: 0 }],
-          additionalModules: [{ id: 'pwa_module', title: 'PWA', is_calculator_module: true, price_percent: 40 }],
+          groups: [{ id: 'views', title: 'Vistas', is_calculator_module: false }],
+          additionalModules: [{ id: 'pwa_module', title: 'PWA', is_calculator_module: true }],
         },
       },
     ]
@@ -197,7 +197,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [null, { id: 1, title: 'Valid', is_calculator_module: true, price_percent: 0 }],
+          groups: [null, { id: 1, title: 'Valid', is_calculator_module: true }],
         },
       },
     ]
@@ -210,7 +210,7 @@ describe('buildProposalModuleLinkOptions', () => {
       {
         section_type: 'functional_requirements',
         content_json: {
-          groups: [{ id: 2, items: ['a'], is_calculator_module: true, price_percent: 0 }],
+          groups: [{ id: 2, items: ['a'], is_calculator_module: true }],
         },
       },
     ]

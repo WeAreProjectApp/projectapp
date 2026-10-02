@@ -1184,11 +1184,11 @@ export const useAccountingStore = defineStore('accounting', {
      * sendHostingCollectionAccount: issue + email the cuenta de cobro of a
      * hosting. Returns {success, data: {document, email_sent}}.
      */
-    async sendHostingCollectionAccount(hostingId) {
+    async sendHostingCollectionAccount(hostingId, context = {}) {
       this.isUpdating = true;
       try {
         const response = await create_request(
-          `accounting/hostings/${hostingId}/send-collection-account/`, {},
+          `accounting/hostings/${hostingId}/send-collection-account/`, context,
         );
         return { success: true, data: response.data };
       } catch (error) {

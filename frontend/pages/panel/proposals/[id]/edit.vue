@@ -79,14 +79,6 @@
         <span v-if="proposal.total_investment > 0" class="text-sm sm:text-base font-light text-text-subtle whitespace-nowrap">
           ({{ formatInvestment(proposal.total_investment, proposal.currency) }})
         </span>
-        <span
-          v-if="hasCustomizedEffectiveTotal"
-          data-testid="general-finance-effective-total-badge"
-          class="text-xs px-2 py-0.5 rounded-full font-medium bg-warning-soft text-warning-strong whitespace-nowrap"
-          :title="`Total efectivo visible al cliente según módulos seleccionados`"
-        >
-          Cliente ve: {{ formatInvestment(effectiveTotalInvestment, proposal.currency) }}
-        </span>
         <ProposalStatusSelect
           :proposal="proposal"
           :updating="statusUpdatingId === proposal.id"
@@ -96,11 +88,11 @@
     </div>
 
     <!-- Loading -->
-    <div v-if="proposalStore.isLoading" class="text-center py-12 text-text-subtle text-sm">
+    <div v-if="proposalStore.isLoading && !isCurrentProposal" class="text-center py-12 text-text-subtle text-sm">
       Cargando...
     </div>
 
-    <template v-else-if="proposal">
+    <template v-else-if="isCurrentProposal">
       <!-- Sobre las pestañas: lo pendiente puede estar en una que no se está
            mirando, así que el aviso tiene que vivir fuera de todas. Nombra qué
            quedó sin guardar en vez de decir sólo que hay algo. -->
@@ -116,11 +108,25 @@
       />
 
       <!-- Tabs -->
-      <BaseTabs v-model="activeTab" :tabs="tabs" />
+      <div data-testid="proposal-primary-navigation">
+        <BaseResponsiveTabs v-model="activeGroup" :tabs="tabs" aria-label="Áreas de la propuesta" />
+      </div>
+      <div v-if="subTabs.length > 1" data-testid="proposal-secondary-navigation">
+        <BaseResponsiveTabs
+          v-model="activeTab"
+          :tabs="subTabs"
+          variant="pill"
+          :aria-label="`Herramientas de ${tabs.find(tab => tab.id === activeGroup)?.label}`"
+        />
+      </div>
 
-      <EntityHistoryPanel v-if="activeTab === 'history'" entity-type="proposal" :object-id="proposal.id" />
+      <div v-if="visitedTabs.has('history')" v-show="activeTab === 'history'">
+        <EntityHistoryPanel entity-type="proposal" :object-id="proposal.id" />
+      </div>
 
-      <VideoResourceManager v-if="activeTab === 'resources'" :proposal-id="proposal.id" :language="proposal.language" @updated="proposal.personalized_video = $event.video" />
+      <div v-if="visitedTabs.has('resources')" v-show="activeTab === 'resources'">
+        <VideoResourceManager :proposal-id="proposal.id" :language="proposal.language" @updated="proposal.personalized_video = $event.video" />
+      </div>
 
       <!-- Tab: General -->
       <div v-if="visitedTabs.has('general')" v-show="activeTab === 'general'">
@@ -129,8 +135,6 @@
           :form="form"
           :next-action="nextAction"
           :has-documents-tab="hasDocumentsTab"
-          :effective-total-investment="effectiveTotalInvestment"
-          :has-customized-effective-total="hasCustomizedEffectiveTotal"
           :investment-payment-percentages="investmentPaymentPercentages"
           :payment-amounts="paymentAmounts"
           @update="handleUpdate"
@@ -441,12 +445,10 @@
 </template>
 
 <script setup>
-import EntityHistoryPanel from '~/components/history/EntityHistoryPanel.vue';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 // General is the default tab: keep it static so the first paint needs no
 // extra round-trip. Every other tab panel is only mounted once visited
 // (see visitedTabs below), so deferring its chunk costs nothing up front.
-import VideoResourceManager from '~/components/resources/VideoResourceManager.vue';
 import ProposalGeneralTab from '~/components/panel/proposal/ProposalGeneralTab.vue';
 import TabPanelSkeleton from '~/components/panel/proposal/TabPanelSkeleton.vue';
 
@@ -457,6 +459,8 @@ const lazyTab = (loader) => defineAsyncComponent({
   loadingComponent: TabPanelSkeleton,
 });
 
+const EntityHistoryPanel = lazyTab(() => import('~/components/history/EntityHistoryPanel.vue'));
+const VideoResourceManager = lazyTab(() => import('~/components/resources/VideoResourceManager.vue'));
 const ProposalSectionsTab = lazyTab(() => import('~/components/panel/proposal/ProposalSectionsTab.vue'));
 const ProposalHourRateTab = lazyTab(() => import('~/components/panel/proposal/ProposalHourRateTab.vue'));
 import { DEFAULT_HOSTING_PERCENT, DEFAULT_METHOD_PHASES } from '~/stores/proposals_constants';
@@ -489,6 +493,8 @@ const ProposalActivityTab = lazyTab(() => import('~/components/panel/proposal/Pr
 const ProposalJsonTab = lazyTab(() => import('~/components/panel/proposal/ProposalJsonTab.vue'));
 const ProposalPromptTab = lazyTab(() => import('~/components/panel/proposal/ProposalPromptTab.vue'));
 import ProposalStatusSelect from '~/components/panel/proposal/ProposalStatusSelect.vue';
+import { useProposalNavigation } from '~/composables/useProposalNavigation';
+import BaseResponsiveTabs from '~/components/base/BaseResponsiveTabs.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useProposalStatusChange } from '~/composables/useProposalStatusChange';
 
@@ -509,6 +515,9 @@ const hourRateDirty = ref(false);
 const emailIntroDirty = ref(false);
 
 const proposal = computed(() => proposalStore.currentProposal);
+// Background refreshes must keep the visited editors mounted. A cached record
+// from another proposal must not render while this route is loading.
+const isCurrentProposal = computed(() => proposal.value && String(proposal.value.id) === String(route.params.id));
 
 
 const allSections = computed(() =>
@@ -523,29 +532,6 @@ const investmentSection = computed(() =>
   allSections.value.find(s => s.section_type === 'investment') || null
 );
 
-// Multiplier derived from the loaded proposal: effective / base. The backend
-// computes effective_total_investment as base + Σ(base * pct_module/100), so
-// the ratio is constant for a given module selection. Reusing it here keeps
-// the % logic in a single place (backend) while letting the live form base
-// drive the displayed effective total.
-const effectiveTotalsMultiplier = computed(() => {
-  const base = Number(proposal.value?.total_investment || 0);
-  const effective = Number(proposal.value?.effective_total_investment || 0);
-  if (base <= 0 || effective <= 0) return 1;
-  return effective / base;
-});
-
-const effectiveTotalInvestment = computed(() => {
-  const liveBase = Number(form.total_investment) || 0;
-  return Math.round(liveBase * effectiveTotalsMultiplier.value);
-});
-
-const hasCustomizedEffectiveTotal = computed(() => {
-  const liveBase = Number(form.total_investment) || 0;
-  const effective = effectiveTotalInvestment.value;
-  return liveBase > 0 && effective > 0 && Math.round(effective) !== Math.round(liveBase);
-});
-
 const technicalModuleLinkOptions = computed(() =>
   buildProposalModuleLinkOptions(proposal.value?.sections || []),
 );
@@ -554,43 +540,15 @@ const technicalItemLinkOptions = computed(() =>
   buildProposalItemLinkOptions(proposal.value?.sections || []),
 );
 
-const validTabs =['resources', 'general', 'emails', 'documents', 'schedule', 'development', 'sections', 'hour-rate', 'technical', 'prompt', 'json', 'activity', 'analytics'];
-const activeTab = ref(validTabs.includes(route.query.tab) ? route.query.tab : 'general');
+const { activeTab, activeGroup, tabs, subTabs, visitedTabs } = useProposalNavigation({
+  query: route.query,
+  status: computed(() => isCurrentProposal.value ? proposal.value.status : null),
+});
 const technicalSubTab = ref('editor');
 
-// Tabs mount on first visit and stay mounted afterwards. Before this, all 12
-// panels rendered eagerly behind v-show, so opening the view paid for every
-// tab's DOM (and for the requests the heavier tabs fire on mount) even when
-// the user only ever looked at General.
-//
-// Membership is never removed, which is what makes returning to a tab
-// instant: the panel keeps its component instance, so unsaved edits in
-// Secciones / Tarifa por hora survive a trip to another tab exactly as they
-// did under v-show. That is also why this is a plain v-if and not
-// <KeepAlive> — nothing ever unmounts, so there is nothing to cache.
-const visitedTabs = ref(new Set([activeTab.value]));
 const analyticsRefreshKey = ref(0);
 
 watch(activeTab, async (tab) => {
-  visitedTabs.value.add(tab);
-  // The tab was read from ?tab= on load but never written back, so a reload
-  // or a shared link always dropped the user on General.
-  //
-  // history.replaceState rather than router.replace: a router navigation
-  // re-runs the `admin-auth` middleware, which cost one auth/check request per
-  // tab switch (13 instead of 2 across the twelve tabs). Only the URL needs to
-  // change — `?tab=` is read once on mount, so a stale router query is fine.
-  // `general` es el aterrizaje por defecto y no se escribe: la URL limpia es la
-  // vista de reposo.
-  if (import.meta.client) {
-    const next = tab === 'general' ? null : tab;
-    if (new URLSearchParams(window.location.search).get('tab') !== next) {
-      const url = new URL(window.location.href);
-      if (next) url.searchParams.set('tab', next);
-      else url.searchParams.delete('tab');
-      window.history.replaceState(window.history.state, '', url);
-    }
-  }
   if (tab === 'analytics') {
     analyticsRefreshKey.value += 1;
   }
@@ -599,44 +557,8 @@ watch(activeTab, async (tab) => {
     hydrateFormFromProposal();
   }
 });
-const hasDocumentsTab = computed(() =>
-  ['sent', 'viewed', 'negotiating', 'accepted', 'rejected'].includes(proposal.value?.status),
-);
-const hasProposalDocuments = computed(() =>
-  ['sent', 'viewed', 'negotiating', 'accepted', 'rejected'].includes(proposal.value?.status),
-);
-const hasScheduleTab = computed(() =>
-  ['accepted', 'finished'].includes(proposal.value?.status),
-);
-const hasDevTab = computed(() => proposal.value?.status === 'accepted');
-
-const tabs = computed(() => {
-  const base = [
-    { id: 'general', label: 'General' },
-    { id: 'emails', label: 'Correos' },
-    { id: 'resources', label: 'Recursos' },
-  ];
-  if (hasDocumentsTab.value) {
-    base.push({ id: 'documents', label: 'Documentos' });
-  }
-  if (hasScheduleTab.value) {
-    base.push({ id: 'schedule', label: 'Cronograma' });
-  }
-  if (hasDevTab.value) {
-    base.push({ id: 'development', label: 'Desarrollo' });
-  }
-  base.push(
-    { id: 'sections', label: 'Secciones' },
-    { id: 'hour-rate', label: 'Tarifa por hora' },
-    { id: 'technical', label: 'Det. técnico' },
-    { id: 'prompt', label: 'Prompt Proposal' },
-    { id: 'json', label: 'JSON' },
-    { id: 'activity', label: 'Actividad' },
-    { id: 'history', label: 'Historial' },
-    { id: 'analytics', label: 'Analytics' },
-  );
-  return base;
-});
+const hasDocumentsTab = computed(() => tabs.value.some(tab => tab.id === 'documents'));
+const hasProposalDocuments = hasDocumentsTab;
 
 // ── Actions menu (modal) ──
 const showActionsModal = ref(false);
@@ -1107,7 +1029,7 @@ function replaceOrPrefixPercent(label, percent, index) {
 }
 
 function buildPaymentDescription(percent) {
-  const total = Number(effectiveTotalInvestment.value) || 0;
+  const total = Number(form.total_investment) || 0;
   const amount = Math.round(total * normalizePercent(percent) / 100);
   return `$${amount.toLocaleString('es-CO')} ${form.currency || 'COP'}`;
 }

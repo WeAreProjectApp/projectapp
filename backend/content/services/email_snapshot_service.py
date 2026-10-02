@@ -14,6 +14,8 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 
 from content.services.email_delivery_service import EmailMultiAlternatives
+from content.services.diagnostic_privacy import email_diagnostic_message
+from content.storage import get_private_storage
 
 logger = logging.getLogger(__name__)
 
@@ -95,7 +97,9 @@ def extract_body_links(text_body='', html_body=''):
         try:
             parser.feed(html_body)
         except Exception:
-            logger.warning('Could not fully parse email HTML links.', exc_info=True)
+            logger.warning(
+                'Could not fully parse email HTML links code=EMAIL_LINK_PARSE_FAILED.'
+            )
         candidates.extend(parser.links)
     for raw_url in _RAW_URL_RE.findall(text_body or ''):
         candidates.append((raw_url, ''))
@@ -222,17 +226,23 @@ def capture_delivery_snapshot(
     family,
     attachment_sources=None,
     resend_of=None,
+    private_attachments=False,
 ):
-    """Persist complete evidence before SMTP or raise without sending."""
+    """Persist exact evidence before SMTP; private resends cannot become public."""
     from content.models import (
         EmailAttachmentSnapshot,
         EmailBody,
         EmailDeliverySnapshot,
         EmailLinkSnapshot,
     )
+    from content.models.email_delivery_snapshot import PRIVATE_ATTACHMENT_PREFIX
 
     stored_files = []
     try:
+        private_attachments = private_attachments or (
+            resend_of is not None
+            and resend_of.attachments.filter(file__startswith=PRIVATE_ATTACHMENT_PREFIX).exists()
+        )
         mime_message = message.message()
         raw_message = mime_message.as_bytes()
         attachments = _mime_attachments(mime_message)
@@ -291,6 +301,10 @@ def capture_delivery_snapshot(
                     ),
                     **source_fields,
                 )
+                # This opt-in belongs to the server-side capture, never to an upload.
+                attachment._private_attachments = bool(private_attachments)
+                if private_attachments:
+                    attachment.file.storage = get_private_storage()
                 attachment.file.save(
                     item['filename'],
                     ContentFile(item['payload']),
@@ -316,7 +330,11 @@ def capture_delivery_snapshot(
             try:
                 storage.delete(name)
             except Exception:
-                logger.exception('Could not clean failed email snapshot file %s.', name)
+                logger.error(
+                    'Could not clean failed email snapshot file '
+                    'delivery_id=%s code=EMAIL_SNAPSHOT_CLEANUP_FAILED.',
+                    delivery_id,
+                )
         raise EmailSnapshotCaptureError(
             'No se pudo archivar el correo exacto antes de enviarlo.',
         ) from exc
@@ -401,7 +419,7 @@ def resend_email_log(log, recipients, cc_recipients=()):
         email_log_service.record_send(
             **common_log_fields,
             status=EmailLog.Status.FAILED,
-            error_message=str(exc)[:1000],
+            error_message=email_diagnostic_message('email_transport_failed'),
         )
         raise EmailSnapshotResendError(
             'El correo quedó archivado, pero el servidor no aceptó el reenvío.',

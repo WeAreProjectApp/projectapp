@@ -200,7 +200,7 @@
 
           <details class="group" :data-testid="`mcp-credentials-${connector.slug}`">
             <summary
-              class="flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
+              class="touch-target flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
               :data-testid="`mcp-credentials-toggle-${connector.slug}`"
             >
               <BaseActionIcon action="expand" class="transition-transform duration-200 group-open:rotate-180" />
@@ -219,13 +219,13 @@
                 <div class="flex flex-wrap items-start gap-2">
                   <div class="min-w-0 flex-1">
                     <div class="flex flex-wrap items-center gap-2">
-                      <span class="font-medium text-sm text-text-default">{{ credential.label }}</span>
+                      <span class="min-w-0 max-w-full font-medium text-sm text-text-default [overflow-wrap:anywhere]">{{ credential.label }}</span>
                       <BaseBadge :variant="credential.is_usable ? 'success' : 'danger'" size="sm">
                         {{ credential.is_usable ? 'Vigente' : 'No disponible' }}
                       </BaseBadge>
                       <code class="text-xs text-text-subtle">{{ credential.token_prefix }}…</code>
                     </div>
-                    <p class="mt-1 text-xs text-text-muted">
+                    <p class="mt-1 min-w-0 max-w-full text-xs text-text-muted [overflow-wrap:anywhere]">
                       {{ credentialScopeLabel(credential) }}
                       <template v-if="credential.actor"> · Actor: {{ credential.actor }}</template>
                     </p>
@@ -270,7 +270,7 @@
           <!-- Sub-accordion: recent activity (collapsed by default) -->
           <details v-if="connector.recent_events?.length" class="group">
             <summary
-              class="flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
+              class="touch-target flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
               :data-testid="`mcp-activity-toggle-${connector.slug}`"
             >
               <BaseActionIcon action="expand" class="transition-transform duration-200 group-open:rotate-180" />
@@ -303,7 +303,7 @@
                 >
                   Objetos: {{ formatObjectRefs(event.object_refs) }}
                 </span>
-                <span v-if="event.request_id" class="w-full pl-3.5 text-[10px] text-text-subtle">
+                <span v-if="event.request_id" class="w-full min-w-0 max-w-full pl-3.5 text-[10px] text-text-subtle [overflow-wrap:anywhere]">
                   Request {{ event.request_id }}
                 </span>
               </li>
@@ -313,7 +313,7 @@
           <!-- Sub-accordion: available tools (collapsed by default) -->
           <details v-if="connector.tools?.length" class="group">
             <summary
-              class="flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
+              class="touch-target flex items-center gap-2 text-xs font-semibold text-text-subtle uppercase tracking-wider cursor-pointer select-none list-none marker:hidden [&::-webkit-details-marker]:hidden"
               :data-testid="`mcp-tools-toggle-${connector.slug}`"
             >
               <BaseActionIcon action="expand" class="transition-transform duration-200 group-open:rotate-180" />

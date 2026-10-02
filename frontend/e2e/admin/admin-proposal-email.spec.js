@@ -6,6 +6,7 @@
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_SEND_BRANDED_EMAIL, ADMIN_SEND_PROPOSAL_EMAIL } from '../helpers/flow-tags.js';
 
@@ -100,9 +101,9 @@ test.describe('Admin Proposal Email — Branded', () => {
     const proposal = makeProposal({ status: 'negotiating' });
     await mockApi(page, emailApiRoutes(proposal));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
   });
 
@@ -113,11 +114,11 @@ test.describe('Admin Proposal Email — Branded', () => {
     const proposal = makeProposal({ status: 'negotiating' });
     await mockApi(page, emailApiRoutes(proposal));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
-    await correosTab.click();
+    await selectProposalDestination(page, 'communication', 'emails');
 
     await expect(page.locator('input[placeholder*="Asunto"]')).toBeVisible({ timeout: 10000 });
     await expect(page.getByText('Secciones del correo')).toContainText('Secciones del correo');
@@ -138,11 +139,11 @@ test.describe('Admin Proposal Email — Branded', () => {
       sendBody = route.request().postData() || '';
     }));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
-    await correosTab.click();
+    await selectProposalDestination(page, 'communication', 'emails');
 
     // Switch from the default "Seguimiento" (proposal) mode to "General" (branded).
     await page.getByRole('button', { name: 'General' }).click();
@@ -181,8 +182,8 @@ test.describe('Admin Proposal Email — Branded', () => {
       { status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'SMTP unavailable' }) },
     ));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: /Correos/i }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByRole('button', { name: 'General' }).click();
     await page.getByPlaceholder('Asunto del correo').fill('Aviso general');
     await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido listo para enviar.');
@@ -209,9 +210,9 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     const proposal = makeProposal({ status: 'sent' });
     await mockApi(page, emailApiRoutes(proposal));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
   });
 
@@ -223,11 +224,11 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     const proposal = makeProposal({ status: 'draft' });
     await mockApi(page, emailApiRoutes(proposal));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
-    await correosTab.click();
+    await selectProposalDestination(page, 'communication', 'emails');
     await expect(page.getByTestId('proposal-email-intro-card')).toBeVisible();
     await expect(page.getByTestId('proposal-email-intro')).toHaveValue(proposal.email_intro);
     await expect(page.getByText('El historial y los correos de seguimiento aparecerán después del primer envío.')).toBeVisible();
@@ -245,11 +246,11 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
       sendBody = route.request().postData() || '';
     }));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
-    const correosTab = page.getByRole('tab', { name: /Correos/i });
+    const correosTab = page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Comunicación', exact: true });
     await expect(correosTab).toBeVisible({ timeout: 15000 });
-    await correosTab.click();
+    await selectProposalDestination(page, 'communication', 'emails');
 
     // Default mode is "Seguimiento" (proposal-email) — no mode switch needed.
     const toInput = page.getByTestId('proposal-email-to');
@@ -286,8 +287,8 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
       { status: 502, contentType: 'application/json', body: JSON.stringify({ error: 'SMTP unavailable' }) },
     ));
 
-    await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`);
-    await page.getByRole('tab', { name: /Correos/i }).click();
+    await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+    await selectProposalDestination(page, 'communication', 'emails');
     await page.getByPlaceholder('Asunto del correo').fill('Seguimiento');
     await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Mensaje listo para enviar.');
 

@@ -247,9 +247,7 @@ class TestInvestmentLinearLayout:
 
 class TestInvestmentHostingRenewal:
     def test_hosting_with_renewal_text_renders(self, pdf_canvas, proposal):
-        """Catches a branch that no-ops on the hostingPlan renewal text and
-        returns the untouched default y instead of drawing the hosting tile.
-        """
+        """Catches a hosting renewal block that leaves the drawing position unchanged."""
         from content.services.proposal_pdf_service import _render_investment
 
         data = {
@@ -281,9 +279,7 @@ class TestInvestmentHostingRenewal:
 
 class TestFinalNoteCompleteBranches:
     def test_final_note_with_all_fields(self, pdf_canvas, proposal):
-        """Catches a branch that no-ops on the message/team/commitment-badge
-        content and returns the untouched default y instead of drawing it.
-        """
+        """Catches a final-note block that ignores the supplied content."""
         from content.services.proposal_pdf_service import _render_final_note
 
         data = {
@@ -306,9 +302,7 @@ class TestFinalNoteCompleteBranches:
         assert y < PAGE_H - MARGIN_T
 
     def test_final_note_with_no_optional_fields(self, pdf_canvas, proposal):
-        """Even with every optional field absent, the section header alone
-        must still advance y — catches a header-less no-op regression.
-        """
+        """Catches a missing section header when optional note fields are absent."""
         from content.services.proposal_pdf_service import _render_final_note
 
         data = {
@@ -326,9 +320,7 @@ class TestFinalNoteCompleteBranches:
 
 class TestNextStepsCompleteBranches:
     def test_next_steps_with_intro_and_descriptions(self, pdf_canvas, proposal):
-        """Catches a branch that no-ops on the intro/steps/contact-methods
-        content and returns the untouched default y instead of drawing it.
-        """
+        """Catches a next-steps block that ignores the supplied content."""
         from content.services.proposal_pdf_service import _render_next_steps
 
         data = {
@@ -350,9 +342,7 @@ class TestNextStepsCompleteBranches:
         assert y < PAGE_H - MARGIN_T
 
     def test_next_steps_without_intro(self, pdf_canvas, proposal):
-        """Catches a branch that no-ops on the steps content and returns the
-        untouched default y instead of drawing the step list.
-        """
+        """Catches a next-steps block that fails to draw the step list."""
         from content.services.proposal_pdf_service import _render_next_steps
 
         data = {
@@ -418,12 +408,13 @@ class TestPaymentPillTaxSuffix:
 
 
 class TestInvestmentTaxLabels:
-    """Every price in the investment section carries the tax label:
-    modules table, hosting tile and hosting billing tiers."""
+    """Verify tax labels on the investment total and hosting charges."""
 
     def _render_and_record(self, pdf_canvas, monkeypatch, proposal, data):
         from content.services.proposal_pdf_service import (
-            MARGIN_T, PAGE_H, _render_investment,
+            MARGIN_T,
+            PAGE_H,
+            _render_investment,
         )
         recorded = []
         for method in ('drawString', 'drawCentredString', 'drawRightString'):
@@ -443,7 +434,7 @@ class TestInvestmentTaxLabels:
             'index': '7', 'title': 'Inversión',
             'totalInvestment': '$5.000.000', 'currency': currency,
             'paymentOptions': [], 'whatsIncluded': [],
-            'modules': [{'id': 'm1', 'name': 'Módulo CMS', 'price': 2000000}],
+            'modules': [{'id': 'm1', 'name': 'Módulo CMS'}],
             'hostingPlan': {
                 'title': 'Hosting Premium', 'hostingPercent': 10,
                 'billingTiers': [
@@ -452,18 +443,21 @@ class TestInvestmentTaxLabels:
             },
         }
 
-    def test_cop_labels_modules_and_hosting_with_iva(
-            self, pdf_canvas, monkeypatch, proposal):
+    def test_cop_tax_labels_cover_total_hosting(
+        self, pdf_canvas, monkeypatch, proposal,
+    ):
         recorded = self._render_and_record(
             pdf_canvas, monkeypatch, proposal, self._data('COP'))
-        assert any('Precio (+ IVA)' in r for r in recorded)
+        assert not any('Precio (+ IVA)' in r for r in recorded)
+        assert any(r.strip() == 'Módulo' for r in recorded)
         assert any('Precio/mes (+ IVA)' in r for r in recorded)
         assert any('Equivalente (+ IVA)' in r for r in recorded)
-        # Both KPI tiles (total + hosting) carry the bare suffix as sub.
         assert sum(1 for r in recorded if r.strip() == '+ IVA') >= 2
 
     @freeze_time('2026-03-01 12:00:00')
-    def test_usd_labels_use_tax(self, pdf_canvas, monkeypatch, db):
+    def test_usd_tax_labels_cover_total_hosting(
+        self, pdf_canvas, monkeypatch, db,
+    ):
         usd_proposal = BusinessProposal.objects.create(
             title='USD Proposal', client_name='USD Client',
             client_email='usd@example.com', language='en',
@@ -473,6 +467,8 @@ class TestInvestmentTaxLabels:
         )
         recorded = self._render_and_record(
             pdf_canvas, monkeypatch, usd_proposal, self._data('USD'))
-        assert any('Precio (+ Tax)' in r for r in recorded)
+        assert not any('Precio (+ Tax)' in r for r in recorded)
         assert any('Precio/mes (+ Tax)' in r for r in recorded)
+        assert any('Equivalente (+ Tax)' in r for r in recorded)
+        assert sum(1 for r in recorded if r.strip() == '+ Tax') >= 2
         assert not any('+ IVA' in r for r in recorded)

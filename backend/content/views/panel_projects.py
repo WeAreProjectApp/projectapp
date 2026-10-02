@@ -32,7 +32,8 @@ from django.db.models import (
 from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
@@ -59,12 +60,40 @@ from content.serializers.panel_projects import (
     UpdatePanelProjectSerializer,
 )
 from content.services import accounting_service, project_service
+from content.services.project_deletion_service import (
+    ProjectDeleteBlocked, delete_empty_project, deletion_preview,
+)
 
 EntityType = AccountingChangeLog.EntityType
 
 logger = logging.getLogger(__name__)
 
 _SCOPES = ('active', 'archived', 'all')
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def preview_panel_project_delete(request, project_id):
+    project = get_object_or_404(Project, pk=project_id)
+    return Response(deletion_preview(project))
+
+
+@api_view(['DELETE'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def delete_panel_project(request, project_id):
+    try:
+        delete_empty_project(project_id, actor=request.user)
+    except Project.DoesNotExist:
+        return error_response('El proyecto no existe.', status=status.HTTP_404_NOT_FOUND)
+    except ProjectDeleteBlocked as exc:
+        return error_response(
+            str(exc), code='project_delete_blocked',
+            hint='Revisa las dependencias o usa Cambiar estado para conservar el historial.',
+            errors=exc.preview, status=status.HTTP_409_CONFLICT,
+        )
+    return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 def _count_for(model):

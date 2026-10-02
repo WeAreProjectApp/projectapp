@@ -164,6 +164,46 @@ def test_mcp_filters_manually_sent_links(api_client, mcp_token, make_link, staff
     assert data['count'] == 1
 
 
+def test_mcp_lists_only_consumed_links_for_the_selected_project(api_client, mcp_token, make_link, project, staff_user):
+    """Falla si el filtro MCP mezcla enlaces consumidos de proyectos distintos o revela secretos."""
+    from accounts.models import Project
+    from secure_links import services
+
+    selected, selected_url = make_link(project=project)
+    other_project = Project.objects.create(name='Proyecto de enlace ajeno', client=project.client)
+    other, other_url = make_link(project=other_project)
+    services.reveal(token_from(selected_url))
+    services.reveal(token_from(other_url))
+
+    response = call_tool(api_client, mcp_token, 'list_secure_links', {
+        'project_id': project.pk, 'status': 'consumed',
+    })
+
+    data = json.loads(text(response))
+    assert (data['count'], [row['id'] for row in data['results']]) == (1, [selected.pk])
+    assert token_from(selected_url) not in text(response)
+    assert token_from(other_url) not in text(response)
+
+
+def test_mcp_platform_reactivation_rejects_thirty_days(api_client, mcp_token, make_link, project, staff_user):
+    """Falla si MCP permite una vigencia de treinta días para un enlace Platform."""
+    from secure_links import services
+
+    link, url = make_link(project=project, origin=SecureLink.Origin.PLATFORM)
+    services.reveal(token_from(url), staff=True, actor=staff_user)
+    link.refresh_from_db()
+    before = (link.token_hash, link.expires_at, link.activation_count, link.events.count())
+
+    response = call_tool(api_client, mcp_token, 'reactivate_secure_link', {
+        'link_id': link.pk, 'validity_days': 30,
+    })
+
+    link.refresh_from_db()
+    assert error_code(response) == 'invalid_validity'
+    assert (link.token_hash, link.expires_at, link.activation_count, link.events.count()) == before
+    assert url not in text(response)
+
+
 def test_mcp_rejects_marking_received_links(api_client, mcp_token, make_link):
     """El MCP no permite marcar como enviado un enlace recibido del cliente."""
     link, _ = make_link(origin=SecureLink.Origin.PUBLIC)

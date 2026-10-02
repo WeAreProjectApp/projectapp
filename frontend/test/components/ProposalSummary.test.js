@@ -79,57 +79,39 @@ describe('ProposalSummary', () => {
       ],
     });
 
-    it('rewrites a stale taxed amount with the live customized total plus IVA', () => {
+    it('rewrites a stale taxed amount with the supplied agreed investment plus IVA', () => {
       const wrapper = mountSummary({
         content: investmentCardContent('Monto total del proyecto: $4.900.000 COP más IVA.'),
         proposal: { total_investment: 3200000, currency: 'COP' },
-        customizedTotal: 4320000,
-        isCustomized: false,
+        investmentTotal: 4320000,
       });
 
-      const card = wrapper.find('.summary-card');
+      const card = wrapper.get('[data-testid="proposal-summary-card"]');
       expect(card.text()).toContain('$4.320.000 COP + IVA');
       expect(card.text()).not.toContain('$4.900.000');
       expect(card.text()).not.toContain('más IVA');
     });
 
-    it('falls back to proposal.total_investment when customizedTotal is null', () => {
+    it('falls back to proposal.total_investment when no agreed investment is supplied', () => {
       const wrapper = mountSummary({
         content: investmentCardContent('Monto total del proyecto: $4.900.000 COP.'),
         proposal: { total_investment: 3200000, currency: 'COP' },
-        customizedTotal: null,
-        isCustomized: false,
+        investmentTotal: null,
       });
 
-      const card = wrapper.find('.summary-card');
+      const card = wrapper.get('[data-testid="proposal-summary-card"]');
       expect(card.text()).toContain('$3.200.000 COP + IVA');
       expect(card.text()).not.toContain('$4.900.000');
-    });
-
-    it('uses the customized copy and skips the regex when isCustomized is true', () => {
-      const wrapper = mountSummary({
-        content: investmentCardContent('Monto total del proyecto: $4.900.000 COP.'),
-        proposal: { total_investment: 3200000, currency: 'COP' },
-        customizedTotal: 4320000,
-        isCustomized: true,
-        language: 'es',
-      });
-
-      const card = wrapper.find('.summary-card');
-      expect(card.text()).toContain('$4.320.000 COP');
-      expect(card.text()).not.toContain('$4.900.000');
-      expect(card.text()).not.toContain('Monto total del proyecto');
     });
 
     it('preserves narrative text when there is no monetary amount in the description', () => {
       const wrapper = mountSummary({
         content: investmentCardContent('Inversión total acordada para el proyecto.'),
         proposal: { total_investment: 3200000, currency: 'COP' },
-        customizedTotal: 4320000,
-        isCustomized: false,
+        investmentTotal: 4320000,
       });
 
-      const card = wrapper.find('.summary-card');
+      const card = wrapper.get('[data-testid="proposal-summary-card"]');
       expect(card.text()).toContain('Inversión total acordada para el proyecto.');
       expect(card.text()).toContain('$4.320.000 COP');
     });

@@ -4,7 +4,10 @@ import { useDebounceFn } from '@vueuse/core';
 import BaseFloatingListbox from '~/components/base/BaseFloatingListbox.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
+import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
+import VatAmountInput from '~/components/accounting/VatAmountInput.vue';
 import IncomeFormModal from '~/components/accounting/IncomeFormModal.vue';
+import CollectionAccountProjectContext from '~/components/accounting/billing/CollectionAccountProjectContext.vue';
 import { INPUT_FIELD_BASE, INPUT_FIELD_SIZE } from '~/components/base/inputClasses';
 import { PANEL_BREAKPOINTS } from '~/config/responsive';
 import { useIsMobile } from '~/composables/useIsMobile';
@@ -65,6 +68,8 @@ const inlineClientErrors = ref({});
 
 // ── Income ──
 const selectedIncome = ref(null);
+const billingContext = ref({});
+const billingContextValid = ref(false);
 const incomeQuery = ref('');
 /** The FULL eligible set for the current search term, unscoped by client. */
 const incomeOptions = ref([]);
@@ -104,6 +109,8 @@ function defaultForm() {
     billing_concept: '',
     billing_description: '',
     unit_price: null,
+    vat_rate: 19,
+    vat_capture: null,
     period_start: '',
     period_end: '',
     term: 'days',
@@ -181,6 +188,8 @@ watch(
 
 function applyIncome(income) {
   selectedIncome.value = income;
+  form.value.vat_rate = income.vat_rate ?? null;
+  form.value.vat_capture = null;
   incomeQuery.value = income.concept || '';
   if (!form.value.billing_concept) {
     form.value.billing_concept = income.concept || '';
@@ -770,6 +779,7 @@ const incomeValidationError = computed(() => {
   if (!validationAttempted.value) return '';
   if (!selectedIncome.value?.id) return 'Selecciona un ingreso vinculado.';
   if (incomeClientConflict.value) return 'Resuelve el conflicto con el cliente del ingreso.';
+  if ((selectedIncome.value?.project || selectedIncome.value?.project_id) && !billingContextValid.value) return 'Fija la naturaleza y el vínculo del cobro del proyecto.';
   return '';
 });
 const amountValidationError = computed(() => (
@@ -811,14 +821,17 @@ function buildPayload() {
   const payload = {
     client_profile_id: clientId.value,
     income_record_id: selectedIncome.value.id,
+    ...billingContext.value,
     billing_concept: form.value.billing_concept,
+    vat_rate: form.value.vat_rate,
     items: [{
       // The Descripción column of the detalle. Sent raw — the backend falls
       // back to the concepto corto when it arrives empty, so a simple cuenta
       // still reads the way it does today.
       description: form.value.billing_description,
       quantity: '1',
-      unit_price: String(form.value.unit_price),
+      amount: String(form.value.vat_capture?.amount ?? form.value.unit_price),
+      amount_mode: form.value.vat_capture?.amount_mode ?? 'vat_included',
       period_start: form.value.period_start || null,
       period_end: form.value.period_end || null,
     }],
@@ -1277,6 +1290,12 @@ const modalFormId = useId();
               Crear ingreso esperado
             </button>
           </div>
+        <CollectionAccountProjectContext
+          v-model="billingContext"
+          :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
+          @valid="billingContextValid = $event"
+        />
+
         </div>
       </BaseFormField>
 
@@ -1289,14 +1308,14 @@ const modalFormId = useId();
             @input="onNumberInput"
           />
         </BaseFormField>
-        <BaseFormField label="Valor" required :error="amountValidationError">
-          <BaseCurrencyInput
-            v-model="form.unit_price"
-            data-testid="collection-form-amount"
-            :error="!!amountValidationError"
-          />
-        </BaseFormField>
+        <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
+          :error="amountValidationError"
+          input-test-id="collection-form-amount" :disabled="selectedIncome?.kind === 'liquid' || Number(selectedIncome?.paid_amount || 0) > 0"
+          disabled-reason="Este ingreso ya tiene pagos; se conservan su saldo y su IVA." @capture="form.vat_capture = $event" />
       </BaseFormRow>
+      <p class="text-xs text-text-muted" data-testid="collection-income-vat-hint">
+        Al emitir, el valor y el IVA se actualizarán también en el ingreso si todavía no tiene pagos ni deducciones.
+      </p>
 
       <BaseFormField
         label="Concepto del servicio"
@@ -1449,6 +1468,10 @@ const modalFormId = useId();
             {{ formatMoney(Number(preview?.total ?? 0), 'COP') }}
           </p>
         </div>
+        <VatBreakdown :total="preview?.total" :rate="preview?.vat_rate ?? null" :tax="preview?.vat_rate != null ? preview.tax_total : null" />
+        <p v-if="preview?.income_total" class="text-xs text-text-muted" data-testid="collection-preview-income-total">
+          Total del ingreso al confirmar: {{ formatMoney(preview.income_total, 'COP') }}.
+        </p>
         <BaseSegmented
           v-if="!isSplit"
           v-model="previewPane"

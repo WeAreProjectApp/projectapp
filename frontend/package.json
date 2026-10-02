@@ -16,6 +16,8 @@
     "test:coverage": "NODE_OPTIONS='--no-deprecation' jest --config jest.config.cjs --coverage && node scripts/coverage-summary.cjs",
     "e2e": "playwright test",
     "e2e:pwa": "playwright test --config playwright.pwa.config.js",
+    "e2e:delivery": "playwright test --config playwright.delivery.config.js",
+    "e2e:issues": "playwright test --config playwright.issues.config.js",
     "e2e:responsive": "node scripts/run-responsive-changed.mjs --all",
     "e2e:responsive:batch": "node scripts/run-responsive-changed.mjs",
     "e2e:responsive:changed": "node scripts/run-responsive-changed.mjs",

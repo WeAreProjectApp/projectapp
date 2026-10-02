@@ -1,6 +1,8 @@
 from decimal import Decimal
 
 from rest_framework import serializers
+from accounts.services.billing_context import context_data
+from accounts.serializers_billing_context import BillingContextFields
 
 from content.models import (
     Document,
@@ -24,6 +26,7 @@ class DocumentCollectionAccountSerializer(serializers.ModelSerializer):
     class Meta:
         model = DocumentCollectionAccount
         fields = (
+            'vat_rate',
             'billing_concept',
             'payment_term_type',
             'payment_term_days',
@@ -126,6 +129,12 @@ class DocumentPaymentMethodWriteSerializer(serializers.ModelSerializer):
 
 
 class CollectionAccountListSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source='project.name', default='')
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     document_type = DocumentTypeBriefSerializer(read_only=True)
     is_overdue = serializers.SerializerMethodField()
     project_id = serializers.IntegerField(read_only=True)
@@ -134,6 +143,7 @@ class CollectionAccountListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context', 'project_name',
             'id',
             'uuid',
             'document_type',
@@ -156,6 +166,13 @@ class CollectionAccountListSerializer(serializers.ModelSerializer):
 
 
 class CollectionAccountDetailSerializer(serializers.ModelSerializer):
+    context = serializers.SerializerMethodField()
+    project_name = serializers.CharField(source='project.name', default='')
+    vat_rate = serializers.DecimalField(source='collection_account.vat_rate', max_digits=5, decimal_places=2, read_only=True, allow_null=True)
+
+    def get_context(self, obj):
+        return context_data(getattr(obj, 'billing_context', None))
+
     document_type = DocumentTypeBriefSerializer(read_only=True)
     collection_account = serializers.SerializerMethodField()
     items = DocumentItemSerializer(many=True, read_only=True)
@@ -168,6 +185,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = (
+            'context', 'project_name',
             'id',
             'uuid',
             'document_type',
@@ -178,6 +196,7 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
             'due_date',
             'city',
             'currency',
+            'vat_rate',
             'subtotal',
             'discount_total',
             'tax_total',
@@ -217,7 +236,8 @@ class CollectionAccountDetailSerializer(serializers.ModelSerializer):
         return commercial_is_overdue(obj)
 
 
-class CollectionAccountCreateSerializer(serializers.Serializer):
+class CollectionAccountCreateSerializer(BillingContextFields):
+    vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     title = serializers.CharField(max_length=255)
     project_id = serializers.IntegerField(required=False, allow_null=True)
     deliverable_id = serializers.IntegerField(required=False, allow_null=True)
@@ -258,6 +278,7 @@ class CollectionAccountCreateSerializer(serializers.Serializer):
 
 
 class CollectionAccountUpdateSerializer(serializers.Serializer):
+    vat_rate = serializers.DecimalField(max_digits=5, decimal_places=2, min_value=Decimal('0'), max_value=Decimal('100'), required=False, allow_null=True)
     title = serializers.CharField(max_length=255, required=False)
     project_id = serializers.IntegerField(required=False, allow_null=True)
     client_user_id = serializers.IntegerField(required=False, allow_null=True)
