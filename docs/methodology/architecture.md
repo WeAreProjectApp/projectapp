@@ -1,5 +1,24 @@
 # Architecture — ProjectApp
 
+**2026-10-02 — aprobación y vinculación explícita de propuestas:** aceptar por
+el enlace público, Panel o MCP sólo registra el estado comercial. El modal
+compartido de listado/editor revisa cliente, proyecto y paquete contractual;
+permite seleccionar existentes, preparar nuevos registros o posponer.
+`proposal_approval_service.review_proposal` confirma en una transacción, con
+lock del proyecto antes de la propuesta, hash del origen e idempotencia.
+`platform_approval_manifest` congela la selección y el contenido técnico;
+`ProposalApprovalFile` conserva copias privadas independientes con tamaño y
+SHA-256, vínculos protegidos y descargas autorizadas. El paquete incluye los
+detalles comercial y técnico formales y contratos vigentes o múltiples
+personalizados, sin alterar originales ni evidencia firmada. La sincronización
+es conservadora y ocurre dentro de la confirmación; reintentar mantiene el
+mismo proyecto y paquete. Los endpoints Panel fijan sesión/CSRF; Platform
+usa `SessionJWTAuthentication` y permisos del proyecto. MCP requiere
+confirmación sensible de los assets exactos. `content/0278` depende de
+`0277_merge_vat_and_economic_conditions` y del esquema accounts existente.
+No crea contratos de entrega, firmas ni aprobaciones a partir de archivos.
+Contrato y recorrido: [Aprobación de propuestas](../PROPOSAL_APPROVAL.md).
+
 **2026-09-29 — intereses de módulos:** `BusinessProposal.module_interests` guarda instantáneas del catálogo independientemente de `selected_modules` (alcance contratado). El endpoint público idempotente sólo actualiza intereses; el total manual alimenta panel, web y PDF. La migración materializa recargos antiguos y conserva descuentos heredados. Véase `docs/PROPOSAL_MODULE_INTERESTS.md`.
 
 > **Autenticación y recuperación de fallos — 2026-10-01:** la autenticación

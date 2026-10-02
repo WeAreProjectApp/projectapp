@@ -58,18 +58,19 @@ test.describe('Admin Proposal Inline Status Change', () => {
     await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 8000, role: 'admin', is_staff: true } });
   });
 
-  test('forced status change asks for confirmation and PATCHes on confirm', {
+  test('forced finished status PATCHes after confirmation', {
     tag: [...ADMIN_PROPOSAL_INLINE_STATUS_CHANGE, '@role:admin'],
   }, async ({ page }) => {
     const updates = [];
     await setupMock(page, { onStatusUpdate: (id, body) => updates.push({ id, body }) });
     await gotoProposals(page);
 
-    // 'accepted' is not a natural transition from 'viewed' → forced confirm.
+    // 'finished' is not a natural transition from 'viewed' → forced confirm.
+    // Approval is covered by the explicit review-modal flow, not this generic confirmation.
     const row = page.getByRole('row').filter({ hasText: 'Proposal A' });
     const statusSelect = row.getByRole('combobox');
     await expect(statusSelect).toBeVisible();
-    await statusSelect.selectOption('accepted');
+    await statusSelect.selectOption('finished');
 
     const confirmButton = page.getByTestId('confirm-modal-confirm');
     await expect(confirmButton).toBeVisible();
@@ -77,7 +78,7 @@ test.describe('Admin Proposal Inline Status Change', () => {
     await confirmButton.click();
     await responsePromise;
 
-    expect(updates).toEqual([{ id: 1, body: { status: 'accepted' } }]);
+    expect(updates).toEqual([{ id: 1, body: { status: 'finished' } }]);
   });
 
   test('natural transition PATCHes without confirmation', {

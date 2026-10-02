@@ -1,5 +1,6 @@
 """Proposal Panel operations shared by Proposals and Commercial."""
 from content.mcp.operation_builder import _op as panel_op
+from content.mcp.proposal_approval_tools import PROPOSAL_APPROVAL_TOOLS
 from content.mcp.proposal_schemas import PAYLOAD_SCHEMAS, VARIANT, guarded_arguments
 
 
@@ -27,7 +28,6 @@ PROPOSAL_PARITY_TOOLS = [
     _op('get_proposal_analytics', 'Obtiene visitas e interacciones de una propuesta.', 'proposal-analytics', path=('proposal_id',)),
     _op('get_proposal_dashboard', 'Obtiene indicadores del módulo de propuestas.', 'proposal-dashboard'),
     _op('retry_proposal_first_view_notification', 'Reintenta la alerta fallida de primera vista.', 'retry-first-view-notification', 'POST', ('proposal_id',), 'sensitive', True),
-    _op('launch_proposal_to_platform', 'Crea o actualiza el espacio de proyecto en Plataforma.', 'launch-to-platform', 'POST', ('proposal_id',), 'sensitive', True),
     _op('create_proposal_section', 'Crea una sección en una propuesta.', 'create-proposal-section', 'POST', ('proposal_id',), 'write'),
     _op('update_proposal_section', 'Actualiza contenido y configuración de una sección.', 'update-proposal-section', 'PATCH', ('section_id',), 'write'),
     _op('delete_proposal_section', 'Elimina una sección de la propuesta.', 'delete-proposal-section', 'DELETE', ('section_id',), 'sensitive', True),
@@ -70,7 +70,7 @@ PROPOSAL_PARITY_TOOLS = [
     _op('complete_proposal_stage', 'Marca una etapa del cronograma como completada.', 'complete-project-stage', 'POST', ('proposal_id', 'stage_key'), 'write'),
 ]
 
-PROPOSAL_PARITY_TOOLS += [
+PROPOSAL_PARITY_TOOLS += PROPOSAL_APPROVAL_TOOLS + [
     _op('update_proposal_settings', 'Edita parcialmente los ajustes del panel sin reenviar secciones; para cambiar estado usa update_proposal_status.', 'update-proposal', 'PATCH', ('proposal_id',), 'write'),
     _op('get_proposal_company_settings', 'Consulta los datos de empresa y opciones vigentes del contrato de servicio.', 'get-company-settings'),
     _op('update_proposal_service_settings', 'Actualiza las opciones numéricas y valores predeterminados del contrato de servicio.', 'get-company-settings', 'PATCH', risk='write'),

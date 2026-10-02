@@ -323,9 +323,10 @@ PROPOSAL_TOOLS = [
         'name': 'update_proposal_status',
         'description': (
             'Cambia el estado a cualquier valor (modo admin). Los efectos '
-            '(email en draft→sent, onboarding en negotiating→accepted, correo '
-            'en accepted→finished) solo se disparan en sus transiciones '
-            'naturales; los saltos forzados solo guardan y loggean.'
+            'de correo en draft→sent y accepted→finished se disparan en sus '
+            'transiciones naturales; los saltos forzados solo guardan y loggean. '
+            'accepted no crea proyectos. Usa review_proposal_approval para '
+            'completar los casos pendientes de cliente, proyecto y documentos.'
         ),
         'input_schema': {
             'type': 'object',

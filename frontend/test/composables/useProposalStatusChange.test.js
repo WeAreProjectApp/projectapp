@@ -136,4 +136,25 @@ describe('useProposalStatusChange', () => {
       expect.objectContaining({ title: 'Ya está en ese estado', detail: 'Recarga' }),
     );
   });
+  it.each([
+    ['natural', { status: 'negotiating', available_transitions: ['accepted'] }],
+    ['forced', { status: 'draft', available_transitions: ['sent'] }],
+  ])('opens approval review before a %s acceptance', async (_kind, state) => {
+    const onAccept = jest.fn();
+    const proposal = buildProposal(state);
+    const { changeStatus } = useProposalStatusChange({ requestConfirm, onAccept });
+    await changeStatus(proposal, 'accepted');
+    expect(onAccept).toHaveBeenCalledWith(proposal);
+    expect(mockUpdateProposalStatus).not.toHaveBeenCalled();
+  });
+
+  it('keeps approval closed when forced acceptance is cancelled', async () => {
+    requestConfirm.mockResolvedValue(false);
+    const onAccept = jest.fn();
+    const { changeStatus } = useProposalStatusChange({ requestConfirm, onAccept });
+    await changeStatus(buildProposal({ status: 'draft' }), 'accepted');
+    expect(onAccept).not.toHaveBeenCalled();
+    expect(mockUpdateProposalStatus).not.toHaveBeenCalled();
+  });
+
 });

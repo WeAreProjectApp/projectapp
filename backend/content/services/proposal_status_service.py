@@ -2,11 +2,10 @@
 Admin status changes for business proposals.
 
 Any known status can be set from the panel (admin mode). Side effects —
-client email on draft→sent, finished-confirmation email, platform
-onboarding on accept — fire ONLY when the old→new pair is a *natural*
+client email on draft→sent and finished-confirmation email — fire ONLY when the old→new pair is a *natural*
 transition per ``BusinessProposal.ALLOWED_TRANSITIONS``; forced jumps are
 data corrections and just save + log. Every change lands in
-``ProposalChangeLog``.
+``ProposalChangeLog``. Acceptance waits for explicit internal project review.
 
 Shared by the panel endpoint (``update_proposal_status``) and the MCP tool
 of the same name so both surfaces behave identically.
@@ -94,48 +93,9 @@ def change_status(proposal, new_status, *, source='inline', acting_user_id=None)
                 proposal.id,
             )
 
-    if natural and new_status == BusinessProposal.Status.ACCEPTED:
-        # Only reachable naturally from 'negotiating'. Auto-provision the
-        # client's platform project (idempotent, async).
-        enqueue_onboarding_on_accept(proposal, acting_user_id=acting_user_id)
-
     return None, (not natural)
 
 
 def enqueue_onboarding_on_accept(proposal, *, acting_user_id):
-    """
-    Fire idempotent platform onboarding when a proposal becomes accepted.
-
-    The acceptance email is owned by the calling view (preserving existing
-    per-path email behavior), so the onboarding task is told to suppress its
-    own acceptance email (``send_email=False``). No-ops when the proposal was
-    already onboarded (e.g. launched early during negotiation).
-    """
-    if proposal.platform_onboarding_completed_at is not None:
-        return
-
-    proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING
-    proposal.save(update_fields=['platform_onboarding_status'])
-    ProposalChangeLog.objects.create(
-        proposal=proposal,
-        change_type=ProposalChangeLog.ChangeType.PLATFORM_LAUNCH,
-        field_name='platform_onboarding_status',
-        new_value='pending',
-        actor_type='system',
-        description='Auto-launch to platform on acceptance.',
-    )
-    try:
-        from content.tasks import run_platform_onboarding
-
-        run_platform_onboarding(
-            proposal.id,
-            acting_user_id=acting_user_id,
-            is_relaunch=False,
-            send_email=False,
-        )
-    except Exception:
-        logger.exception(
-            'Failed to auto-queue platform onboarding for proposal %s.', proposal.id,
-        )
-        proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_FAILED
-        proposal.save(update_fields=['platform_onboarding_status'])
+    """Compatibility no-op: acceptance is pending explicit internal review."""
+    return None

@@ -193,6 +193,9 @@ def _sync_technical_resources_core(
     bp,
     acting_user: User,
     delete_removed: bool = False,
+    preserve_existing: bool = False,
+    content_json_override=None,
+    content_is_filtered=False,
 ) -> dict[str, Any]:
     """Upsert selected epic resources and their data-model entities."""
     section = (
@@ -204,10 +207,12 @@ def _sync_technical_resources_core(
         .values('content_json')
         .first()
     )
+    if content_json_override is not None:
+        section = {'content_json': content_json_override}
     if not section:
         return {'ok': False, 'error': 'no_technical_section', 'detail': 'No hay sección técnica habilitada en la propuesta.'}
 
-    doc = filtered_technical_doc_for_sync(bp, section['content_json'] or {})
+    doc = (section['content_json'] or {}) if content_is_filtered else filtered_technical_doc_for_sync(bp, section['content_json'] or {})
     epics = doc.get('epics') or []
     if not isinstance(epics, list):
         epics = []
@@ -245,22 +250,27 @@ def _sync_technical_resources_core(
 
             seen_epic_keys.add(key)
 
-            d, created = Deliverable.objects.get_or_create(
-                project=project,
-                source_epic_key=key,
-                defaults={
-                    'category': Deliverable.CATEGORY_DOCUMENTS,
-                    'title': title[:300],
-                    'description': (description or '')[:2000],
-                    'file': None,
-                    'uploaded_by': acting_user,
-                    'source_epic_title': title[:300],
-                },
-            )
-            synced_deliverables.append(d)
+            preserved = Deliverable.objects.filter(project=project, source_epic_key=key).order_by('pk').first() if preserve_existing else None
+            if preserved is not None:
+                d, created = preserved, False
+            else:
+                d, created = Deliverable.objects.get_or_create(
+                    project=project,
+                    source_epic_key=key,
+                    defaults={
+                        'category': Deliverable.CATEGORY_DOCUMENTS,
+                        'title': title[:300],
+                        'description': (description or '')[:2000],
+                        'file': None,
+                        'uploaded_by': acting_user,
+                        'source_epic_title': title[:300],
+                    },
+                )
+            if created or not preserve_existing:
+                synced_deliverables.append(d)
             if created:
                 stats['deliverables_created'] += 1
-            else:
+            elif not preserve_existing:
                 updated = False
                 if d.title != title[:300]:
                     d.title = title[:300]
@@ -315,6 +325,8 @@ def _sync_technical_resources_core(
 
             for d in synced_deliverables:
                 existing = existing_entity_map.get((d.id, ent_name))
+                if existing and preserve_existing:
+                    continue
                 if existing:
                     updated = False
                     if existing.name != ent_name[:300]:

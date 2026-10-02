@@ -11,6 +11,13 @@
       @confirm="handleConfirmed"
       @cancel="handleCancelled"
     />
+    <ProposalApprovalModal
+      :visible="Boolean(approvalProposal)"
+      :proposal="approvalProposal || {}"
+      :accept-proposal="approvalAccept"
+      @close="approvalProposal = null"
+      @completed="approvalCompleted"
+    />
     <ContractParamsModal
       :visible="showContractModal"
       :saving="contractSaving"
@@ -364,6 +371,9 @@
             :updating="updatingStatusId === proposal.id"
             @change="(status) => onStatusSelect(proposal, status)"
           />
+          <BaseButton v-if="proposal.project_review_required" variant="link" size="sm" :data-testid="`approval-review-${proposal.id}`" @click.stop="openApproval(proposal, false)">
+            {{ approvalText.pending }}
+          </BaseButton>
         </template>
 
         <template #cell-total_investment="{ row: proposal }">
@@ -557,6 +567,8 @@
 import { computed, onMounted, reactive, ref, resolveComponent } from 'vue';
 import ProposalDashboard from '~/components/BusinessProposal/admin/ProposalDashboard.vue';
 import MetricsManual from '~/components/BusinessProposal/admin/MetricsManual.vue';
+import ProposalApprovalModal from '~/components/BusinessProposal/admin/ProposalApprovalModal.vue';
+import { useProposalApproval } from '~/composables/useProposalApproval';
 import ContractParamsModal from '~/components/BusinessProposal/admin/ContractParamsModal.vue';
 import ServiceContractSettings from '~/components/BusinessProposal/admin/ServiceContractSettings.vue';
 import ProposalResendModal from '~/components/BusinessProposal/admin/ProposalResendModal.vue';
@@ -939,6 +951,15 @@ const proposalActions = computed(() => {
     onClick: () => { actionsModalProposal.value = null; },
   });
 
+  if (['accepted', 'negotiating'].includes(p.status)) {
+    actions.push({
+      key: 'approval-review', action: 'edit',
+      label: p.linked_project ? approvalText.value.title : approvalText.value.complete,
+      info: 'Valida el cliente, proyecto y documentos del cierre antes de sincronizar.',
+      onClick: () => { actionsModalProposal.value = null; openApproval(p, p.status === 'accepted'); },
+    });
+  }
+
   // Un <a target="_blank"> de verdad, no un botón que llame a window.open: la
   // acción existe también en pantallas táctiles, donde ctrl+clic no está.
   actions.push({
@@ -1071,8 +1092,11 @@ const contractModalProposal = ref(null);
 
 // Shared confirm + PATCH + notify flow for the status selects (inline cell
 // and actions modal). Natural negotiating opens the contract modal instead.
+const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+
 const { updatingId: updatingStatusId, changeStatus } = useProposalStatusChange({
   requestConfirm,
+  onAccept: (record) => openApproval(record, true),
   onNegotiate: (p) => {
     contractModalProposal.value = p;
     showContractModal.value = true;

@@ -2457,6 +2457,15 @@ class TestNotifyProposalStageDeadlines:
 
 
 class TestRunPlatformOnboardingTask:
+    @pytest.fixture(autouse=True)
+    def confirmed_link(self, accepted_proposal, django_user_model):
+        from accounts.models import Deliverable, Project
+        actor = django_user_model.objects.create_user(username='confirmed-task-admin', is_staff=True)
+        project = Project.objects.create(client=actor, name='Confirmed')
+        accepted_proposal.deliverable = Deliverable.objects.create(project=project, uploaded_by=actor, title='Confirmed')
+        accepted_proposal.platform_approval_manifest = {'request_id': 'confirmed'}
+        accepted_proposal.save()
+
     def test_returns_none_when_proposal_does_not_exist(self):
         import content.tasks as tasks_module
 
@@ -2488,7 +2497,7 @@ class TestRunPlatformOnboardingTask:
         assert accepted_proposal.platform_onboarding_status == 'completed'
         _, kwargs = mock_onboard.call_args
         assert kwargs['acting_user'] == acting_user
-        assert kwargs['send_email'] is True
+        assert kwargs['send_email'] is False
 
     def test_sets_failed_when_onboarding_raises(self, accepted_proposal):
         accepted_proposal.platform_onboarding_status = 'pending'
@@ -2911,6 +2920,15 @@ class TestCheckEngagementFollowupsLastEventNone:
 
 
 class TestRunPlatformOnboardingIsRelaunch:
+    @pytest.fixture(autouse=True)
+    def confirmed_link(self, accepted_proposal, django_user_model):
+        from accounts.models import Deliverable, Project
+        actor = django_user_model.objects.create_user(username='confirmed-retry-admin', is_staff=True)
+        project = Project.objects.create(client=actor, name='Confirmed')
+        accepted_proposal.deliverable = Deliverable.objects.create(project=project, uploaded_by=actor, title='Confirmed')
+        accepted_proposal.platform_approval_manifest = {'request_id': 'confirmed'}
+        accepted_proposal.save()
+
     def test_passes_send_email_false_when_is_relaunch_is_true(self, accepted_proposal):
         accepted_proposal.platform_onboarding_status = 'pending'
         accepted_proposal.save(update_fields=['platform_onboarding_status'])
