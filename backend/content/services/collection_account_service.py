@@ -130,6 +130,11 @@ def recalculate_document_totals(document):
     )
     tax_total = sum((li.tax_amount for li in lines), Decimal('0'))
     line_sum = sum((li.line_total for li in lines), Decimal('0'))
+    extension = getattr(document, 'collection_account', None)
+    if extension is not None and extension.vat_rate is not None:
+        # Rounded line bases keep fractional quantities consistent with the
+        # exact gross charge and its VAT, including cent-sized differences.
+        subtotal = line_sum - tax_total
     document.subtotal = subtotal
     document.tax_total = tax_total
     document.total = line_sum - document.discount_total

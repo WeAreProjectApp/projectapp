@@ -39,6 +39,7 @@ from content.models import (
 from content.fake_data import add_seed_arguments, ensure_fake_data_allowed, seed_context
 from content.services import collection_account_service as ca_service
 from content.services import collection_account_create_service as ca_create_service
+from content.services.accounting_service import paid_amount_subquery
 from content.services.document_content import build_content_json
 from content.services.document_thread_service import create_document_thread
 from content.services.document_type_codes import COLLECTION_ACCOUNT, MARKDOWN
@@ -170,6 +171,20 @@ def _client_candidates():
     ]
 
 
+def _collection_income_candidates():
+    """Seed full-value accounts from incomes that have not received payments."""
+    return list(
+        IncomeRecord.objects.filter(
+            kind=IncomeRecord.Kind.EXPECTED,
+            client__isnull=False,
+            project__isnull=False,
+            collection_documents__isnull=True,
+        ).annotate(paid_amount=paid_amount_subquery())
+        .filter(paid_amount=0)
+        .select_related('client__user', 'project').order_by('pk')
+    )
+
+
 class Command(BaseCommand):
     help = 'Create a fake Document graph (issuer, folders, tags, markdown + collection accounts).'
 
@@ -213,30 +228,17 @@ class Command(BaseCommand):
         n_markdown = max(1, count // 3 - signable_count)
         n_collection = max(0, count - n_markdown - signable_count)
 
-        eligible_incomes = list(
-            IncomeRecord.objects.filter(
-                kind=IncomeRecord.Kind.EXPECTED,
-                client__isnull=False,
-                project__isnull=False,
-                collection_documents__isnull=True,
-            ).select_related('client__user', 'project').order_by('pk')
-        )
+        eligible_incomes = _collection_income_candidates()
         if len(eligible_incomes) < n_collection:
             call_command(
                 'create_fake_accounting',
-                '--count', str(max(count, 60)),
+                # Two unpaid rows in each 24-row cycle have a project.
+                '--count', str(max(count, 60, n_collection * 12 + 12)),
                 '--seed', str(self.seed_context.seed),
                 '--anchor-date', self.seed_context.anchor_date.isoformat(),
                 verbosity=0,
             )
-            eligible_incomes = list(
-                IncomeRecord.objects.filter(
-                    kind=IncomeRecord.Kind.EXPECTED,
-                    client__isnull=False,
-                    project__isnull=False,
-                    collection_documents__isnull=True,
-                ).select_related('client__user', 'project').order_by('pk')
-            )
+            eligible_incomes = _collection_income_candidates()
             clients = _client_candidates()
         if len(eligible_incomes) < n_collection:
             raise RuntimeError(
@@ -320,7 +322,6 @@ class Command(BaseCommand):
             client_user = income.client.user
             concept = BILLING_CONCEPTS[i % len(BILLING_CONCEPTS)]
             currency = 'COP'
-            base_amount = income.total_amount
             account_data = {
                 'uuid': self.seed_context.uuid(f'collection-account-{i}'),
                 'client_profile_id': income.client_id,
@@ -336,7 +337,8 @@ class Command(BaseCommand):
                 'items': [{
                     'description': concept,
                     'quantity': Decimal('1'),
-                    'unit_price': base_amount,
+                    'amount': income.total_amount,
+                    'amount_mode': 'vat_included',
                 }],
             }
             if lifecycle == 'draft':
