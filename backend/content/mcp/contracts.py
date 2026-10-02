@@ -447,12 +447,29 @@ MCP_MODEL_CONTRACTS = {
                     'Instantánea interna de precios históricos; sólo la migración y la edición financiera la gestionan.',
                     'legacy_pricing_snapshot',
                 )
+                | _excluded(
+                    'Manifiesto privado e inmutable del cierre; MCP usa la revisión autorizada y no escribe su JSON interno.',
+                    'platform_approval_manifest',
+                )
             ),
         ),
         _contract(
             'content.ProposalSection',
             read_only='id proposal section_type',
             read_write='title order is_enabled content_json is_wide_panel',
+        ),
+        _contract(
+            'content.ProposalApprovalFile',
+            read_only=(
+                'id proposal project title document_type filename sha256 size'
+            ),
+            excluded=(
+                _excluded(_AUDIT_INTERNAL, 'deliverable source_key created_by created_at')
+                | _excluded(
+                    'Copia privada duradera: sólo se descarga por la herramienta autorizada, nunca por una ruta de almacenamiento.',
+                    'file',
+                )
+            ),
         ),
         _contract(
             'content.ProposalShareLink',

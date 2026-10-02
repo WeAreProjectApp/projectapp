@@ -90,8 +90,8 @@ class TestUpdateProposalStatusAccepted:
             new_value='negotiating',
         ).exists()
 
-    def test_accepted_transition_triggers_platform_onboarding(self, admin_client, negotiating_proposal):
-        # negotiating → accepted now auto-enqueues platform onboarding.
+    def test_accepted_transition_waits_for_internal_review(self, admin_client, negotiating_proposal):
+        # Commercial acceptance waits for explicit internal binding.
         with patch('content.tasks.run_platform_onboarding') as mock_task:
             resp = admin_client.patch(
                 self._url(negotiating_proposal), {'status': 'accepted'}, format='json'
@@ -100,10 +100,9 @@ class TestUpdateProposalStatusAccepted:
         assert resp.status_code == 200
         negotiating_proposal.refresh_from_db()
         assert negotiating_proposal.status == 'accepted'
-        mock_task.assert_called_once()
-        # Admin inline accept sends no client email today, so the task suppresses
-        # its own acceptance email.
-        assert mock_task.call_args.kwargs.get('send_email') is False
+        mock_task.assert_not_called()
+        assert negotiating_proposal.deliverable_id is None
+        assert negotiating_proposal.project_review_required is True
 
     @freeze_time('2026-01-15 12:00:00')
     def test_accepted_transition_skips_onboarding_when_already_completed(
@@ -141,13 +140,13 @@ class TestUpdateProposalStatusAccepted:
         assert resp.status_code == 401
 
 
-class TestRespondToProposalTriggersOnboarding:
-    """Client acceptance (respond_to_proposal) auto-provisions the platform project."""
+class TestRespondToProposalPendingReview:
+    """Public acceptance records the deal without platform provisioning."""
 
     def _url(self, proposal):
         return reverse('respond-to-proposal', kwargs={'proposal_uuid': proposal.uuid})
 
-    def test_client_accept_enqueues_onboarding_and_sends_single_email(
+    def test_client_accept_leaves_project_review_pending(
         self, api_client, viewed_proposal,
     ):
         with patch('content.tasks.run_platform_onboarding') as mock_task, patch(
@@ -162,10 +161,9 @@ class TestRespondToProposalTriggersOnboarding:
         assert viewed_proposal.status == 'accepted'
         # The view owns the acceptance email (sent exactly once)...
         mock_email_svc.send_acceptance_confirmation.assert_called_once_with(viewed_proposal)
-        # ...and the onboarding task is enqueued with its own email suppressed.
-        mock_task.assert_called_once()
-        assert mock_task.call_args.kwargs.get('send_email') is False
-        assert mock_task.call_args.kwargs.get('acting_user_id') is None
+        mock_task.assert_not_called()
+        assert viewed_proposal.deliverable_id is None
+        assert viewed_proposal.project_review_required is True
 
     def test_client_reject_does_not_enqueue_onboarding(self, api_client, viewed_proposal):
         with patch('content.tasks.run_platform_onboarding') as mock_task, patch(
@@ -254,135 +252,47 @@ class TestUpdateProposalStatusFinished:
 
 
 class TestLaunchToPlatform:
-    """Tests for the launch_to_platform view.
+    """The old route cannot provision or destructively relaunch without review."""
 
-    The view queues a Huey task (run_platform_onboarding) for the heavy
-    lifting.  We mock the task itself so we only test view logic here:
-    validation, teardown, status flags, and changelog creation.
-    """
-
-    def _url(self, proposal):
-        return reverse('launch-to-platform', kwargs={'proposal_id': proposal.id})
-
-    def test_launch_to_platform_first_time(self, admin_client, accepted_proposal):
-        with patch('content.tasks.run_platform_onboarding') as mock_task:
-            resp = admin_client.post(self._url(accepted_proposal), format='json')
-
-        assert resp.status_code == 200
-        assert resp.json()['platform_onboarding_status'] == 'pending'
-        mock_task.assert_called_once_with(
-            accepted_proposal.id,
-            acting_user_id=resp.wsgi_request.user.id,
-            is_relaunch=False,
-        )
-
-    def test_launch_to_platform_not_accepted_returns_400(self, admin_client, sent_proposal):
-        resp = admin_client.post(self._url(sent_proposal), format='json')
-
-        assert resp.status_code == 400
-        assert 'aceptada' in resp.json()['error']
-
-    def test_launch_to_platform_from_negotiating_returns_200(
-        self, admin_client, negotiating_proposal
-    ):
-        with patch('content.tasks.run_platform_onboarding') as mock_task:
-            resp = admin_client.post(self._url(negotiating_proposal), format='json')
-
-        assert resp.status_code == 200
-        assert resp.json()['platform_onboarding_status'] == 'pending'
-        mock_task.assert_called_once_with(
-            negotiating_proposal.id,
-            acting_user_id=resp.wsgi_request.user.id,
-            is_relaunch=False,
-        )
-
-    def test_launch_to_platform_already_onboarded_no_force_returns_409(self, admin_client, accepted_proposal):
-        accepted_proposal.platform_onboarding_completed_at = '2026-04-01T10:00:00Z'
-        accepted_proposal.save(update_fields=['platform_onboarding_completed_at'])
-
-        resp = admin_client.post(self._url(accepted_proposal), format='json')
-
-        assert resp.status_code == 409
-        assert resp.json()['warning'] == 'already_onboarded'
-
-    def test_launch_to_platform_already_onboarded_with_force_calls_teardown(
-        self, admin_client, accepted_proposal
-    ):
-        accepted_proposal.platform_onboarding_completed_at = '2026-04-01T10:00:00Z'
-        accepted_proposal.save(update_fields=['platform_onboarding_completed_at'])
-
-        with patch(
-            'accounts.services.proposal_platform_onboarding.teardown_platform_for_proposal'
-        ) as mock_teardown, patch(
-            'content.tasks.run_platform_onboarding'
-        ) as mock_task:
-            resp = admin_client.post(
-                self._url(accepted_proposal), {'force': True}, format='json'
-            )
-
-        assert resp.status_code == 200
-        mock_teardown.assert_called_once()
-        mock_task.assert_called_once()
-        _, kwargs = mock_task.call_args
-        assert kwargs['is_relaunch'] is True
-
-    def test_force_relaunch_with_platform_information_preserves_existing_onboarding(
-        self, admin_client, admin_user, accepted_proposal,
-    ):
-        """Fails if a blocked force relaunch unlinks evidence or enqueues background work."""
-        project = Project.objects.create(name='Relaunch evidence', client=admin_user)
-        deliverable = Deliverable.objects.create(
-            project=project, category=Deliverable.CATEGORY_DOCUMENTS,
-            title='Proposal evidence', uploaded_by=admin_user,
-        )
-        completed_at = timezone.now()
-        accepted_proposal.deliverable = deliverable
-        accepted_proposal.platform_onboarding_completed_at = completed_at
-        accepted_proposal.save(update_fields=[
-            'deliverable_id', 'platform_onboarding_completed_at',
-        ])
-        idea = ProjectIdea.objects.create(
-            project=project, author=admin_user, author_label='Equipo', origin='team',
-            text='Esta información impide el reinicio.', archived_at=completed_at,
-            archived_by=admin_user,
-        )
-
-        with patch('content.tasks.run_platform_onboarding') as onboarding_task, patch(
-            'content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation',
-        ) as acceptance_email:
-            response = admin_client.post(
-                self._url(accepted_proposal), {'force': True}, format='json',
-            )
-
+    @pytest.mark.parametrize('body', [{}, {'force': True}])
+    def test_missing_review_is_rejected(self, admin_client, accepted_proposal, body):
+        response = admin_client.post(reverse('launch-to-platform', kwargs={'proposal_id': accepted_proposal.pk}), body, format='json')
+        assert response.status_code == 400
         accepted_proposal.refresh_from_db()
-        idea.refresh_from_db()
-        assert response.status_code == 409
-        assert (
-            accepted_proposal.deliverable_id,
-            accepted_proposal.platform_onboarding_completed_at,
-            Project.objects.filter(pk=project.pk).exists(),
-            idea.project_id,
-        ) == (deliverable.pk, completed_at, True, project.pk)
-        onboarding_task.assert_not_called()
-        acceptance_email.assert_not_called()
+        assert accepted_proposal.deliverable_id is None
+        assert not Project.objects.exists()
 
-    def test_launch_to_platform_creates_changelog(self, admin_client, accepted_proposal):
-        with patch('content.tasks.run_platform_onboarding'):
-            admin_client.post(self._url(accepted_proposal), format='json')
+    def test_force_preserves_operational_project(self, admin_client, admin_user, accepted_proposal):
+        project = Project.objects.create(client=admin_user, name='Operational')
+        deliverable = Deliverable.objects.create(project=project, uploaded_by=admin_user, title='Linked')
+        accepted_proposal.deliverable = deliverable
+        accepted_proposal.save(update_fields=['deliverable'])
+        response = admin_client.post(reverse('launch-to-platform', kwargs={'proposal_id': accepted_proposal.pk}), {'force': True}, format='json')
+        assert response.status_code == 400
+        accepted_proposal.refresh_from_db()
+        assert accepted_proposal.deliverable_id == deliverable.pk
+        assert Project.objects.filter(pk=project.pk).exists()
 
-        assert ProposalChangeLog.objects.filter(
-            proposal=accepted_proposal,
-            change_type='platform_launch',
-        ).exists()
-
-    def test_launch_to_platform_requires_admin(self, api_client, accepted_proposal):
-        resp = api_client.post(self._url(accepted_proposal), format='json')
-
-        assert resp.status_code == 401
+    def test_launch_requires_panel_session(self, api_client, accepted_proposal):
+        response = api_client.post(reverse('launch-to-platform', kwargs={'proposal_id': accepted_proposal.pk}), {}, format='json')
+        assert response.status_code == 403
 
 
 class TestRunPlatformOnboardingTask:
-    """Tests for the run_platform_onboarding Huey task logic."""
+    """Task retries require an explicitly confirmed association."""
+
+    @pytest.fixture(autouse=True)
+    def confirmed_link(self, accepted_proposal, negotiating_proposal, admin_user):
+        project = Project.objects.create(client=admin_user, name='Confirmed')
+        first = Deliverable.objects.create(project=project, uploaded_by=admin_user, title='Accepted')
+        second = Deliverable.objects.create(project=project, uploaded_by=admin_user, title='Negotiating')
+        accepted_proposal.deliverable = first
+        accepted_proposal.platform_approval_manifest = {'request_id': 'confirmed'}
+        accepted_proposal.save()
+        negotiating_proposal.deliverable = second
+        negotiating_proposal.platform_approval_manifest = {'request_id': 'confirmed'}
+        negotiating_proposal.save()
+
 
     def test_task_sets_completed_on_success(self, accepted_proposal):
         accepted_proposal.platform_onboarding_status = 'pending'
@@ -399,7 +309,7 @@ class TestRunPlatformOnboardingTask:
         assert accepted_proposal.platform_onboarding_status == 'completed'
         mock_onboard.assert_called_once()
         _, kwargs = mock_onboard.call_args
-        assert kwargs['send_email'] is True
+        assert kwargs['send_email'] is False
 
     def test_task_sets_failed_on_exception(self, accepted_proposal):
         accepted_proposal.platform_onboarding_status = 'pending'

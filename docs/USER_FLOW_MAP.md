@@ -6127,6 +6127,7 @@ Two transitions that were previously bundled into other flows now have their own
 | `admin-proposal-actions-modal` | admin | P1 | display,success | 1 |
 | `admin-proposal-advanced-filters` | admin | P2 | display | 1 |
 | `admin-proposal-analytics` | admin | P2 | display | 1 |
+| `admin-proposal-approval` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-attach-from-documents` | admin | P1 | success | 1 |
 | `admin-proposal-batch-actions` | admin | P2 | success,display | 1 |
 | `admin-proposal-change-history` | admin | P1 | display,success,failure | — |
@@ -7964,6 +7965,34 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 
 - **Coverage:** ✅ Las cuatro clases están cubiertas.
 - **E2E Specs:** `e2e/admin/admin-project-lifecycle-states.spec.js`
+
+# Revisar la aprobación y vincular una propuesta
+
+- Rol: administrador del Panel.
+- Prioridad: P1.
+- Origen: listado, cambio de estado, menú de acciones o editor de Propuestas.
+- Superficies: modal compartido de aprobación y revisión de cliente/proyecto.
+
+| Clase | Interacción | Resultado observable |
+|---|---|---|
+| success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
+| success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
+| success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
+| success | Aprobar y revisar después | Estado aceptado pendiente, sin cliente/proyecto/archivos nuevos |
+| error | Confirmar personalizados sin archivo o con datos inválidos | Error correspondiente; modal y valores conservados |
+| failure | Fallo del servidor durante confirmación | Mensaje visible; formulario conservado para reintentar |
+| display | Abrir aprobación desde el listado | Resumen real de cliente, proyecto, condiciones y documentos |
+| display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
+| success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
+
+La aceptación pública sigue su recorrido existente y se verifica además en
+backend: aceptar no aprovisiona recursos. Este flujo comienza con la revisión
+interna. Los permisos, atomicidad, duplicados y archivos privados se verifican
+también en pruebas API/servicios/MCP; no se sustituyen por mocks del navegador.
+
+Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js`.
+Estado de ejecución: se registra en el PR; el marcador
+`qa: draft-unvalidated` identifica una especificación aún no ejecutada.
 
 ### FLOW: `admin-proposal-change-history`
 

@@ -210,6 +210,7 @@ export const ADMIN_PROJECT_STATE_CATALOG = ['@flow:admin-project-state-catalog',
 export const ADMIN_PROPOSAL_ACTIONS_MODAL = ['@flow:admin-proposal-actions-modal', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_ADVANCED_FILTERS = ['@flow:admin-proposal-advanced-filters', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_ANALYTICS = ['@flow:admin-proposal-analytics', '@module:admin', '@priority:P2'];
+export const ADMIN_PROPOSAL_APPROVAL = ['@flow:admin-proposal-approval', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS = ['@flow:admin-proposal-attach-from-documents', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_BATCH_ACTIONS = ['@flow:admin-proposal-batch-actions', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_CHANGE_HISTORY = ['@flow:admin-proposal-change-history', '@module:admin', '@priority:P1'];

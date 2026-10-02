@@ -125,7 +125,6 @@ COMPOSED_EMAIL['anyOf'] = [
 ]
 PAYLOAD_SCHEMAS.update({
     'update_proposal_from_json': writable_schema(ProposalFromJSONSerializer),
-    'launch_proposal_to_platform': object_schema({'force': FLAG}),
     'create_proposal_section': object_schema({'section_type': TEXT, 'title': TEXT}, ('section_type',)),
     'reorder_proposal_sections': object_schema({'sections': {
         'type': 'array', 'items': object_schema({'id': NUMBER, 'order': {'type': 'integer'}}, ('id', 'order')),

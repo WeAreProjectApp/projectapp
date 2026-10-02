@@ -49,7 +49,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Paquetes de horas', href: lp('/panel/hour-packages'), icon: 'package' },
         { label: 'Clientes', href: lp('/panel/clients'), icon: 'users' },
         { label: 'Entregabilidad email', href: lp('/panel/proposals/email-deliverability'), icon: 'mail' },
-        { label: 'Propuestas', href: lp('/panel/proposals'), icon: 'money-bag' },
+        { label: 'Propuestas', href: lp('/panel/proposals'), icon: 'writing' },
         { label: 'Nueva propuesta', href: lp('/panel/proposals/create'), icon: 'plus' },
         { label: 'Módulos adicionales', href: lp('/panel/additional-modules'), icon: 'puzzle' },
         { label: 'Programa de Alianza', href: lp('/panel/partnership-program'), icon: 'credit-card' },

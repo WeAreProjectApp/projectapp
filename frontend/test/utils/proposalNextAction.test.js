@@ -65,7 +65,7 @@ describe('getProposalNextAction', () => {
       available_transitions: ['finished'],
       platform_onboarding_completed_at: null,
     });
-    expect(result.key).toBe('launch');
+    expect(result).toMatchObject({ key: 'launch', label: 'Completar revisión' });
   });
 
   it('suggests "finish" for accepted already onboarded', () => {

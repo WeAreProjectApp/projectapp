@@ -13,7 +13,8 @@ import {
  *
  * The owning page provides its ConfirmModal via `requestConfirm`
  * (useConfirmModal) and may intercept the natural `negotiating` transition
- * with `onNegotiate` (contract modal) and offer a resend action on email
+ * with `onNegotiate` (contract modal), intercept acceptance with `onAccept`
+ * (approval review), and offer a resend action on email
  * failures via `resend`.
  *
  * Usage:
@@ -26,7 +27,7 @@ import {
  * `changeStatus(proposal, newStatus)` returns the store result
  * ({ success, ... }) or `null` when the change was cancelled/intercepted.
  */
-export function useProposalStatusChange({ requestConfirm, onNegotiate = null, resend = null }) {
+export function useProposalStatusChange({ requestConfirm, onNegotiate = null, onAccept = null, resend = null }) {
   const proposalStore = useProposalStore();
   const notify = usePanelNotify();
   const updatingId = ref(null);
@@ -77,6 +78,11 @@ export function useProposalStatusChange({ requestConfirm, onNegotiate = null, re
 
     const confirmed = await confirmChange(proposal, newStatus, natural);
     if (!confirmed) return null;
+
+    if (newStatus === 'accepted' && onAccept) {
+      onAccept(proposal);
+      return null;
+    }
 
     updatingId.value = proposal.id;
     try {

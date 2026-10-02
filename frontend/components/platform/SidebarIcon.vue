@@ -8,6 +8,11 @@
       <rect x="3" y="14" width="7" height="7" rx="1" />
     </template>
 
+    <template v-else-if="name === 'writing'">
+      <path d="M14 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
+      <path d="M16 3a2.1 2.1 0 013 3l-9 9-4 1 1-4zM15 4l3 3M6 19h8" />
+    </template>
+
     <!-- Bell / Notifications -->
     <template v-else-if="name === 'bell'">
       <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9" />

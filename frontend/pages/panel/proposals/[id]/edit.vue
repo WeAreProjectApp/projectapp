@@ -17,6 +17,13 @@
       @secondary="handleSecondaryAction"
       @cancel="handleCancelled"
     />
+    <ProposalApprovalModal
+      :visible="Boolean(approvalProposal)"
+      :proposal="approvalProposal || {}"
+      :accept-proposal="approvalAccept"
+      @close="approvalProposal = null"
+      @completed="approvalCompleted"
+    />
     <ContractParamsModal
       :visible="showContractModal"
       :saving="contractSaving"
@@ -75,6 +82,7 @@
     <div v-if="proposal"
          class="sticky top-0 z-30 -mx-4 px-4 py-3 mb-6 bg-surface/80 backdrop-blur-md border-b border-border-muted transition-all sm:-mx-6 sm:px-6 panel-desktop:-mx-8 panel-desktop:px-8">
       <div class="flex flex-wrap items-center gap-2 sm:gap-3">
+        <BaseButton v-if="proposal.project_review_required" variant="secondary" size="sm" :data-testid="`approval-review-${proposal.id}`" @click="openApproval(proposal, false)">{{ approvalText.pending }}</BaseButton>
         <h1 class="text-lg sm:text-xl font-light text-text-default truncate">{{ proposal.title }}</h1>
         <span v-if="proposal.total_investment > 0" class="text-sm sm:text-base font-light text-text-subtle whitespace-nowrap">
           ({{ formatInvestment(proposal.total_investment, proposal.currency) }})
@@ -473,6 +481,8 @@ const ProposalAnalytics = lazyTab(() => import('~/components/BusinessProposal/ad
 // than v-if, so an async wrapper would still resolve on page load. Switching
 // them to v-if would also need their `watch(() => props.visible)` hooks to
 // become immediate, since visible is already true at mount time.
+import ProposalApprovalModal from '~/components/BusinessProposal/admin/ProposalApprovalModal.vue';
+import { useProposalApproval } from '~/composables/useProposalApproval';
 import ContractParamsModal from '~/components/BusinessProposal/admin/ContractParamsModal.vue';
 import ProposalActionsModal from '~/components/BusinessProposal/admin/ProposalActionsModal.vue';
 import ProposalMultiSendModal from '~/components/BusinessProposal/admin/ProposalMultiSendModal.vue';
@@ -642,6 +652,7 @@ async function handleContractConfirm(params) {
 }
 
 async function handleStatusChange(newStatus) {
+  if (newStatus === 'accepted') return changeStatus(proposal.value, newStatus);
   const result = await proposalStore.updateProposalStatus(proposal.value.id, newStatus);
   if (result.success) {
     proposal.value = result.data;
@@ -659,8 +670,11 @@ async function handleStatusChange(newStatus) {
 
 // Header status select (admin mode): shared confirm + PATCH + notify flow.
 // The store updates currentProposal on success, so no local assignment needed.
+const { approvalText, approvalProposal, approvalAccept, openApproval, approvalCompleted } = useProposalApproval();
+
 const { updatingId: statusUpdatingId, changeStatus } = useProposalStatusChange({
   requestConfirm,
+  onAccept: (record) => openApproval(record, true),
   onNegotiate: () => openContractModal(false),
 });
 
@@ -682,61 +696,9 @@ async function handleMarkAsFinished() {
 
 let cancelOnboardingPoll = null;
 
-async function handleLaunchToPlatform() {
-  const alreadyOnboarded = !!proposal.value.platform_onboarding_completed_at;
-
-  if (alreadyOnboarded) {
-    const confirmed = await requestConfirm({
-      title: 'Re-lanzar a Plataforma',
-      message: 'El proyecto, entregables, requerimientos y archivos existentes serán eliminados y recreados desde cero. ¿Deseas continuar?',
-      variant: 'danger',
-      confirmText: 'Re-lanzar',
-      cancelText: 'Cancelar',
-    });
-    if (!confirmed) return;
-  }
-
-  isLaunching.value = true;
-  const result = await proposalStore.launchToPlatform(proposal.value.id, alreadyOnboarded);
-  if (!result.success) {
-    isLaunching.value = false;
-    notify.error({
-      title: result.errors?.error || 'Error al lanzar a la plataforma.',
-    });
-    return;
-  }
-
-  proposal.value = result.data;
-
-  if (result.data.platform_onboarding_status === 'pending') {
-    notify.success({ title: 'Onboarding en progreso...' });
-    cancelOnboardingPoll = proposalStore.pollOnboardingStatus(
-      proposal.value.id,
-      (updated) => {
-        proposal.value = updated;
-        isLaunching.value = false;
-        cancelOnboardingPoll = null;
-        if (updated.platform_onboarding_status === 'completed') {
-          notify.success({
-            title: alreadyOnboarded ? 'Plataforma re-lanzada exitosamente.' : 'Propuesta lanzada a la plataforma.',
-          });
-        } else {
-          notify.error({
-            title: 'El onboarding falló. Revisa los logs del servidor.',
-          });
-        }
-      },
-    );
-  } else {
-    isLaunching.value = false;
-    const succeeded = result.data.platform_onboarding_status === 'completed';
-    notify.push({
-      type: succeeded ? 'success' : 'error',
-      title: succeeded
-        ? (alreadyOnboarded ? 'Plataforma re-lanzada exitosamente.' : 'Propuesta lanzada a la plataforma.')
-        : 'El onboarding falló. Revisa los logs del servidor.',
-    });
-  }
+function handleLaunchToPlatform() {
+  showActionsModal.value = false;
+  openApproval(proposal.value, false);
 }
 
 const technicalJsonRaw = ref('');

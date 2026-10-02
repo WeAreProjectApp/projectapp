@@ -1,3 +1,4 @@
+from content.views.proposal_approval import platform_approval_file_download
 from django.urls import include, path
 
 from accounts.collection_account_views import (
@@ -114,6 +115,7 @@ from accounts.views import (
 )
 
 urlpatterns = [
+    path("projects/<int:project_id>/approval-files/<int:file_id>/", platform_approval_file_download, name="platform-approval-file-download"),
     path('projects/<int:project_id>/', include('accounts.project_collaboration_urls')),
     path('', include('accounts.billing_urls')),
     path('', include('accounts.issue_report_urls')),

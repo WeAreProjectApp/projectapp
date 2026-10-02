@@ -482,6 +482,8 @@ export const useProposalStore = defineStore('proposals', {
           this.proposals[idx].status = response.data.status;
           this.proposals[idx].available_transitions = response.data.available_transitions || [];
           this.proposals[idx].sent_at = response.data.sent_at ?? this.proposals[idx].sent_at;
+          this.proposals[idx].project_review_required = response.data.project_review_required ?? this.proposals[idx].project_review_required;
+          this.proposals[idx].linked_project = response.data.linked_project ?? this.proposals[idx].linked_project;
         }
         return {
           success: true,
@@ -493,6 +495,42 @@ export const useProposalStore = defineStore('proposals', {
         console.error('Error updating proposal status:', error);
         return { success: false, errors: error.response?.data, ...normalizeApiError(error) };
       /* c8 ignore next 3 */
+      } finally {
+        this.isUpdating = false;
+      }
+    },
+
+    /** Read the exact approval packet before any client/project/file mutation. */
+    async fetchApproval(id) {
+      try {
+        const response = await get_request(`proposals/${id}/approval/`);
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, errors: error.response?.data, ...normalizeApiError(error) };
+      }
+    },
+
+    async submitApproval(id, payload, files = []) {
+      this.isUpdating = true;
+      try {
+        let body = payload;
+        if (files.length) {
+          body = new FormData();
+          body.append('payload', JSON.stringify(payload));
+          files.forEach((file) => body.append('custom_files[]', file));
+        }
+        const response = await create_request(`proposals/${id}/approval/`, body);
+        const proposal = response.data.proposal;
+        if (proposal) {
+          if (this.currentProposal?.id === id) {
+            this.currentProposal = { ...this.currentProposal, ...proposal };
+          }
+          const index = this.proposals.findIndex((record) => record.id === id);
+          if (index !== -1) this.proposals[index] = { ...this.proposals[index], ...proposal };
+        }
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, errors: error.response?.data, status: error.response?.status, ...normalizeApiError(error) };
       } finally {
         this.isUpdating = false;
       }

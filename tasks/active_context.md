@@ -1,3 +1,19 @@
+# Aprobación y vinculación de propuestas (2026-10-02)
+
+Implementación y pruebas focales completas en `feat/02102026-proposal-project-linking`, sobre la
+base integrada `0f56da25`. La aceptación comercial se separa de la vinculación:
+el Panel revisa cliente, proyecto y paquete documental, permite crearlos al
+confirmar o posponer. El switch contractual permite sustituir los contratos
+de la propuesta por varios adjuntos del cierre por correo, conservando siempre
+detalle comercial/técnico y originales. Las copias confirmadas son privadas y
+los reintentos conservan el proyecto operativo. Migración `content/0278`
+asignada por P0, hija de `0277_merge_vat_and_economic_conditions`; sin aplicación
+desde el worktree. Backend, MCP y componentes verificados con aislamiento de
+pruebas; los ocho casos nuevos, siete regresiones inline, cinco de editor/menú y una
+de entrada contractual pasaron en navegador.
+PR independiente y CI en cierre; integración y despliegue bajo coordinación de P0.
+Contrato y validación: [PROPOSAL_APPROVAL](../docs/PROPOSAL_APPROVAL.md).
+
 # Anexo comercial sin justificación de inversión (2026-09-29)
 
 El PDF comercial de Documentos omite la subsección «¿Por qué esta inversión?»

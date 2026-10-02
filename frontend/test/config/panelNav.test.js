@@ -9,6 +9,12 @@ import { getPanelNavSections } from '../../config/panelNav';
 const identityLocalePath = (path) => path;
 
 describe('getPanelNavSections', () => {
+  it('shows a writing icon for the proposals module', () => {
+    const sections = getPanelNavSections(identityLocalePath);
+    const proposals = sections.find(section => section.id === 'commercial').items.find(item => item.href === '/panel/proposals');
+    expect(proposals.icon).toBe('writing');
+  });
+
   it('names the site section Contenido ProjectApp', () => {
     const sections = getPanelNavSections(identityLocalePath);
     const site = sections.find((s) => s.id === 'site');

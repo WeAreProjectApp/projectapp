@@ -1,3 +1,12 @@
+> **2026-10-02 — aprobación y vinculación de propuestas:** implementado en
+> `feat/02102026-proposal-project-linking`. Aceptación comercial sin crear
+> proyectos automáticamente; revisión interna con creación al confirmar,
+> posposición y paquete contractual original o personalizado. Copias privadas,
+> reintentos conservadores y paridad MCP. Migración nueva `content/0278` de P0;
+> backend/MCP/componentes y navegador focal verificados; mapas actualizados.
+> Publicación del PR independiente y CI en cierre, integración a cargo de P0. Contrato:
+> [PROPOSAL_APPROVAL](../docs/PROPOSAL_APPROVAL.md).
+
 > **2026-09-29 — condiciones del servicio, PR #457:** traslado del bloque completo
 > de hosting al contrato de servicio en modalidad separada; anexo comercial del
 > producto, condiciones automáticas en texto personalizado y regeneración

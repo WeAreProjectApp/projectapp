@@ -26,6 +26,9 @@ SHA256_PATTERN = re.compile(r'^[0-9a-f]{64}$')
 ALLOWED_CONTENT_TYPES = {
     'video/mp4',
     'application/pdf',
+    'application/msword',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'image/gif',
     'image/jpeg',
@@ -37,6 +40,9 @@ ALLOWED_CONTENT_TYPES = {
 CONTENT_TYPE_EXTENSIONS = {
     'video/mp4': {'.mp4'},
     'application/pdf': {'.pdf'},
+    'application/msword': {'.doc'},
+    'application/vnd.ms-excel': {'.xls'},
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': {'.xlsx'},
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document': {
         '.docx',
     },
@@ -306,9 +312,20 @@ def _validate_declared_content(upload):
                     'INVALID_FILE_CONTENT',
                 )
             return
+        if content_type == 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':
+            try:
+                with zipfile.ZipFile(source) as archive:
+                    valid = {'[Content_Types].xml', 'xl/workbook.xml'} <= set(archive.namelist())
+            except (OSError, zipfile.BadZipFile) as exc:
+                raise _tool_error('El archivo no contiene un XLSX válido.', 'INVALID_FILE_CONTENT') from exc
+            if not valid:
+                raise _tool_error('El archivo no contiene un XLSX válido.', 'INVALID_FILE_CONTENT')
+            return
         header = source.read(1024)
     signature_matches = {
         'application/pdf': header.lstrip().startswith(b'%PDF-'),
+        'application/msword': header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'),
+        'application/vnd.ms-excel': header.startswith(b'\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1'),
         'image/gif': header.startswith((b'GIF87a', b'GIF89a')),
         'image/jpeg': header.startswith(b'\xff\xd8\xff'),
         'image/png': header.startswith(b'\x89PNG\r\n\x1a\n'),

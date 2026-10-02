@@ -21,13 +21,15 @@ Los contratos y correos no tienen una copia independiente de su lógica de negoc
 | Adjuntos Markdown de correo | `render_proposal_email_markdown_pdf` |
 | Formalización | `get_proposal_formalization_options`, `render_proposal_formalization_pdf`, `read_proposal_formalization_markdown`, `prepare_proposal_formalization`, `get_proposal_formalization`, `download_proposal_formalization_file`, `send_proposal_formalization` |
 | Seguimiento comercial | `get_proposal_scorecard`, `get_proposal_analytics`, `export_proposal_analytics_csv`, `get_proposal_dashboard`, alertas y `log_proposal_activity` |
-| Estado y ejecución | `update_proposal_status`, `toggle_proposal_active`, `bulk_action_proposals`, `launch_proposal_to_platform`, `update_proposal_stage`, `complete_proposal_stage` |
+| Estado y ejecución | `update_proposal_status`, `toggle_proposal_active`, `bulk_action_proposals`, `update_proposal_stage`, `complete_proposal_stage` |
+| Revisión y vinculación explícita | `get_proposal_approval`, `review_proposal_approval`, `launch_proposal_to_platform`, `download_proposal_approval_file` |
 | Videos | Consulta, sustitución, retiro y restauración del video genérico; consulta, sustitución y retiro del personalizado; visibilidad global y por propuesta |
 
 `tools/list` y `describe_capabilities` publican los campos y el riesgo de cada
 herramienta, filtrados por el alcance de la credencial. Los argumentos existentes
 siguen funcionando; los adaptadores aceptan campos planos o un objeto `data`.
-No repetir el mismo campo en ambas formas. Las lecturas aceptan parámetros planos
+No repetir el mismo campo en ambas formas. El lanzamiento requiere ahora una
+revisión explícita; no admite el antiguo reinicio con `force`. Las lecturas aceptan parámetros planos
 o `query`. `update_proposal` conserva su contrato de importación JSON completo;
 para un ajuste aislado usar `update_proposal_settings`.
 
@@ -36,6 +38,31 @@ automatización no admiten escritura directa. Los datos de empresa y la plantill
 contractual son de consulta; las opciones de duración y preavisos del servicio
 son editables, igual que en el panel. No se amplían los permisos de credenciales
 con una lista restringida de herramientas.
+
+## Revisar la aprobación y vincular el proyecto
+
+Aceptar sólo registra el estado comercial, sin crear clientes o proyectos.
+Consultar `get_proposal_approval` y revisar el cliente, proyecto, condiciones,
+documentos disponibles y `source_hash` antes de confirmar.
+
+`review_proposal_approval` admite `confirm`, `defer` y `retry`.
+Para confirmar, indicar el cliente/proyecto existente o sus datos de creación,
+`request_id`, `source_hash` y la selección de documentos. El switch
+`use_proposal_contracts` activo usa los contratos vigentes de la modalidad;
+desactivado requiere uno o más `custom_asset_ids` completados y sus
+`custom_documents` (título y tipo), en el mismo orden. Los detalles comercial
+y técnico se incluyen siempre; otros documentos se eligen explícitamente.
+
+La operación es sensible: revisar el impacto y confirmar mediante
+`confirm_action`. Assets, hashes, tamaño, origen, vencimiento y pertenencia
+a la credencial se revalidan al aplicar. Posponer no crea recursos; reintentar
+envía sólo `action: retry` y conserva el vínculo y paquete confirmado.
+`launch_proposal_to_platform` comparte esta revisión, con
+`accept_proposal: false` para vincular una propuesta en negociación o aceptada.
+No existe relanzamiento destructivo. Las copias privadas se descargan con
+`download_proposal_approval_file`, mediante assets de la credencial autorizada.
+
+Contrato completo: [Aprobación y vinculación](PROPOSAL_APPROVAL.md).
 
 ## Guardar un contrato personalizado
 
