@@ -35,6 +35,11 @@ from accounts.serializers_delivery_email import (
 from accounts.services.delivery_access import DeliveryConflict, fail, project_for_actor, require_admin
 from accounts.services.delivery_documents import DeliveryDocumentIndex, artifact_scope, store_private_pdf
 from accounts.services.delivery_workflow import _level_visible, _stage_approved
+from content.services.diagnostic_privacy import (
+    email_diagnostic_message,
+    email_exception_diagnostic,
+    safe_email_diagnostic,
+)
 
 
 TEMPLATE_KEY = 'delivery_stage_approved_client'
@@ -438,10 +443,21 @@ def _file_data(item, email_id):
     }
 
 
+def _attempt_error_message(attempt):
+    return safe_email_diagnostic(
+        attempt.error_message,
+        default_code=(
+            'email_audit_incomplete'
+            if attempt.status == DeliveryEvidenceEmailAttempt.Status.UNKNOWN
+            else 'email_transport_failed'
+        ),
+    )
+
+
 def _attempt_data(attempt):
     return {
         'id': attempt.pk, 'request_id': attempt.request_id, 'status': attempt.status,
-        'error_message': attempt.error_message, 'claimed_at': attempt.claimed_at.isoformat() if attempt.claimed_at else None,
+        'error_message': _attempt_error_message(attempt), 'claimed_at': attempt.claimed_at.isoformat() if attempt.claimed_at else None,
         'sent_at': attempt.sent_at.isoformat() if attempt.sent_at else None,
         'finished_at': attempt.finished_at.isoformat() if attempt.finished_at else None,
         'created_at': attempt.created_at.isoformat(),
@@ -478,7 +494,7 @@ def _dto(email, project=None, *, current_version=None):
         'closure_history': email.closure_history,
         'version': current_version,
         'attachments': [_file_data(item, email) for item in files],
-        'status': status, 'error_message': latest.error_message if latest else '',
+        'status': status, 'error_message': _attempt_error_message(latest) if latest else '',
         'attempts': [_attempt_data(item) for item in attempts],
         'created_at': email.created_at.isoformat(),
     }
@@ -651,7 +667,7 @@ def _record_gateway_send(email, *, status, error_message=''):
 
     logs = record_send(
         template_key=TEMPLATE_KEY, recipients=email.to_recipients, subject=email.subject,
-        status=status, error_message=error_message, html_body=email.html_body,
+        status=status, error_message=safe_email_diagnostic(error_message), html_body=email.html_body,
         text_body=email.text_body, client=getattr(email.client, 'profile', None),
         audience=EmailLog.Audience.CLIENT,
         metadata={'delivery_closure_email_id': str(email.pk), 'stage_id': email.stage_id},
@@ -671,7 +687,14 @@ def _finish_attempt(attempt, *, status, error_message='', log=None, snapshot=Non
     with transaction.atomic():
         current = DeliveryEvidenceEmailAttempt.objects.select_for_update().get(pk=attempt.pk)
         current.status = status
-        current.error_message = error_message[:1000]
+        current.error_message = safe_email_diagnostic(
+            error_message,
+            default_code=(
+                'email_audit_incomplete'
+                if status == DeliveryEvidenceEmailAttempt.Status.UNKNOWN
+                else 'email_transport_failed'
+            ),
+        )
         current.email_log = log
         current.gateway_snapshot = snapshot or getattr(log, 'snapshot', None)
         current.finished_at = timezone.now()
@@ -704,6 +727,7 @@ def send_stage_email(project_id, actor, preparation_id, data, *, mcp_credential=
     if not claimed:
         return _dto(email, project)
 
+    failure_code = 'email_transport_failed'
     try:
         from content.services.email_delivery_service import DeliveryClassification, EmailDeliveryGateway
 
@@ -714,15 +738,17 @@ def send_stage_email(project_id, actor, preparation_id, data, *, mcp_credential=
             resend_of=getattr(attempt.resend_of, 'gateway_snapshot', None),
         )
         if not sent:
-            raise RuntimeError('El backend de correo no aceptó el envío.')
+            failure_code = 'email_backend_rejected'
+            raise RuntimeError(email_diagnostic_message(failure_code))
     except Exception as exc:
+        failure_message = email_exception_diagnostic(exc, default_code=failure_code)
         try:
-            log = _record_gateway_send(email, status='failed', error_message=str(exc)[:1000])
+            log = _record_gateway_send(email, status='failed', error_message=failure_message)
         except Exception:
             log = None
         _finish_attempt(
             attempt, status=DeliveryEvidenceEmailAttempt.Status.FAILED,
-            error_message=str(exc), log=log, snapshot=_gateway_snapshot(email),
+            error_message=failure_message, log=log, snapshot=_gateway_snapshot(email),
         )
     else:
         snapshot = _gateway_snapshot(email)
@@ -732,13 +758,13 @@ def send_stage_email(project_id, actor, preparation_id, data, *, mcp_credential=
                 attempt, status=DeliveryEvidenceEmailAttempt.Status.SENT,
                 log=log, snapshot=snapshot,
             )
-        except Exception as exc:
+        except Exception:
             # SMTP already accepted the frozen message. A later audit-write
             # error cannot turn that observed delivery into a failed send or
             # license an automatic retry.
             _finish_attempt(
                 attempt, status=DeliveryEvidenceEmailAttempt.Status.UNKNOWN,
-                error_message=f'Correo aceptado; no se completó el registro posterior: {exc}',
+                error_message=email_diagnostic_message('email_audit_incomplete'),
                 snapshot=snapshot,
             )
     email.refresh_from_db()

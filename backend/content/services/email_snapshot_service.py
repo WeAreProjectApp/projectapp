@@ -14,6 +14,7 @@ from django.core.files.base import ContentFile
 from django.db import transaction
 
 from content.services.email_delivery_service import EmailMultiAlternatives
+from content.services.diagnostic_privacy import email_diagnostic_message
 from content.storage import get_private_storage
 
 logger = logging.getLogger(__name__)
@@ -96,7 +97,9 @@ def extract_body_links(text_body='', html_body=''):
         try:
             parser.feed(html_body)
         except Exception:
-            logger.warning('Could not fully parse email HTML links.', exc_info=True)
+            logger.warning(
+                'Could not fully parse email HTML links code=EMAIL_LINK_PARSE_FAILED.'
+            )
         candidates.extend(parser.links)
     for raw_url in _RAW_URL_RE.findall(text_body or ''):
         candidates.append((raw_url, ''))
@@ -327,7 +330,11 @@ def capture_delivery_snapshot(
             try:
                 storage.delete(name)
             except Exception:
-                logger.exception('Could not clean failed email snapshot file %s.', name)
+                logger.error(
+                    'Could not clean failed email snapshot file '
+                    'delivery_id=%s code=EMAIL_SNAPSHOT_CLEANUP_FAILED.',
+                    delivery_id,
+                )
         raise EmailSnapshotCaptureError(
             'No se pudo archivar el correo exacto antes de enviarlo.',
         ) from exc
@@ -412,7 +419,7 @@ def resend_email_log(log, recipients, cc_recipients=()):
         email_log_service.record_send(
             **common_log_fields,
             status=EmailLog.Status.FAILED,
-            error_message=str(exc)[:1000],
+            error_message=email_diagnostic_message('email_transport_failed'),
         )
         raise EmailSnapshotResendError(
             'El correo quedó archivado, pero el servidor no aceptó el reenvío.',

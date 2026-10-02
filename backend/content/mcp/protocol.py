@@ -15,6 +15,7 @@ from rest_framework.exceptions import ValidationError
 from content.mcp.errors import normalize_error
 from content.mcp.registry import public_tool
 from content.mcp.registry import server_info as build_server_info
+from content.services.diagnostic_privacy import safe_mcp_error_code
 
 logger = logging.getLogger(__name__)
 
@@ -181,7 +182,11 @@ def handle_message(message, tools, server_name=None, context=None):
             if isinstance(exc, ValidationError):
                 detail, code, fields = normalize_error(exc.detail)
                 exc = ToolError(detail, code=code, details=fields)
-            logger.info('[MCP] tool %s rejected: %s', name, exc)
+            logger.info(
+                '[MCP] tool %s rejected code=%s requestId=%s',
+                name, safe_mcp_error_code(exc.code),
+                context.request_id if context else '',
+            )
             return _text_result(
                 msg_id,
                 str(exc),
@@ -197,7 +202,10 @@ def handle_message(message, tools, server_name=None, context=None):
                 },
             )
         except Exception:
-            logger.exception('[MCP] tool %s crashed', name)
+            logger.error(
+                '[MCP] tool %s crashed code=INTERNAL_ERROR requestId=%s',
+                name, context.request_id if context else '',
+            )
             return _text_result(
                 msg_id,
                 'Error interno ejecutando la herramienta. Revisa los logs del servidor.',
