@@ -190,6 +190,23 @@ def test_invalid_review_publication_rolls_back_the_ticket(context, mutate):
     assert not IssueResponse.objects.filter(bug_report=report).exists()
 
 
+def test_omitted_verified_reply_citations_roll_back_ticket(context):
+    """Falla si una respuesta sin las citas verificadas cambia el ticket o deja evidencia nueva."""
+    report = ticket(context)
+    prepared = prepare(context, report, contract_id=context.contract.pk)
+    values = publish_payload(context, report, prepared, True, reply_payload(prepared))
+    values['contract_reply']['source_references'] = []
+    before = (report.version, report.admin_response, RequirementReview.objects.count())
+
+    response = evaluate(context, report, values)
+
+    report.refresh_from_db()
+    assert response.status_code == 400
+    assert response.json()['code'] == 'citation_message'
+    assert (report.version, report.admin_response, RequirementReview.objects.count()) == before
+    assert not IssueResponse.objects.filter(bug_report=report).exists()
+
+
 @pytest.mark.parametrize('mutate', [stale_ticket, stale_workspace])
 def test_stale_reply_version_rolls_back_the_ticket(context, mutate):
     """Falla si una versión vieja del ticket o del espacio publica una respuesta."""

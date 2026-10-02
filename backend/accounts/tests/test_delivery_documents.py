@@ -7,6 +7,7 @@ from unittest.mock import patch
 import pytest
 from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.files.base import ContentFile
 from django.core.files.uploadedfile import SimpleUploadedFile
 from reportlab.pdfgen.canvas import Canvas
 from rest_framework.exceptions import ValidationError
@@ -85,6 +86,83 @@ def test_published_pdf_survives_source_edit(context, api):
 
     assert response.content == original
     assert detail.data['title'] == 'Guía original'
+
+
+def test_admin_portal_reads_current_editorial_pdf(context, api):
+    """Fails if the administrator portal replaces its current source PDF with client evidence."""
+    doc = guide_document(context)
+    attach(context, doc)
+    publish(context)
+    snapshot = DeliveryDocumentSnapshot.objects.get(link__document=doc)
+    with snapshot.file.open('rb') as source:
+        public_bytes = source.read()
+    signature = ContractSignatureEvidence.objects.get()
+    signed_hash = signature.sha256
+    current_bytes = signed_pdf()
+    doc.generated_file.save('editorial-current.pdf', ContentFile(current_bytes), save=True)
+    admin = APIClient()
+    admin.force_authenticate(context.admin)
+
+    response = admin.get(f'/api/accounts/documents/{doc.uuid}/pdf/')
+    snapshot.refresh_from_db()
+    signature.refresh_from_db()
+    with snapshot.file.open('rb') as source:
+        frozen_bytes = source.read()
+
+    assert response.status_code == 200
+    assert response.content == current_bytes
+    assert response['Cache-Control'] == 'private, no-store'
+    assert frozen_bytes == public_bytes
+    assert (snapshot.title, signature.sha256) == ('Guía original', signed_hash)
+
+
+def test_archived_reply_source_keeps_admin_metadata(context):
+    """Fails if archiving a reply source erases admin evidence or exposes it to the client."""
+    doc = guide_document(context, title='Respuesta archivada')
+    delivery.add_message(context.project.pk, context.admin, {
+        'expected_version': version(context), 'request_id': 'archived-project-reply',
+        'level': 'project', 'target_id': context.project.pk,
+        'requirement_ids': [], 'message': 'La fuente sigue disponible para administración.', 'document_ids': [doc.pk],
+    })
+    doc.is_archived = True
+    doc.save(update_fields=['is_archived'])
+
+    admin_message = delivery.overview(context.project.pk, context.admin)['project']['messages'][0]
+    client_message = delivery.overview(context.project.pk, context.client)['project']['messages'][0]
+
+    assert admin_message['documents'] == [{'document_id': doc.pk, 'title': 'Respuesta archivada', 'uuid': str(doc.uuid)}]
+    assert client_message['documents'] == []
+    assert DeliveryDocumentSnapshot.objects.count() == 0
+    assert version(context) == 1
+
+
+@pytest.mark.parametrize('route', [
+    lambda context, api, link_id: api.get(
+        f'/api/accounts/projects/{context.project.pk}/delivery/documents/?level=phase&target_id={context.phase.pk}'
+    ),
+    lambda context, api, link_id: api.get(
+        f'/api/accounts/projects/{context.project.pk}/delivery/documents/{link_id}/pdf/'
+    ),
+    lambda context, api, link_id: api.get(
+        f'/api/accounts/projects/{context.project.pk}/delivery/contracts/{context.contract.pk}/pdf/'
+    ),
+], ids=['phase-list', 'linked-pdf', 'contract-pdf'])
+def test_hidden_contract_blocks_inherited_document_reads(context, api, route):
+    """Fails if a phase document survives the visibility guard after its contract is hidden."""
+    doc = guide_document(context, title='Fase publicada')
+    link_id = attach(context, doc, level='phase', target=context.phase.pk)
+    publish(context)
+    snapshot = DeliveryDocumentSnapshot.objects.get(link_id=link_id)
+    frozen = (snapshot.link_id, snapshot.title, snapshot.sha256)
+    context.contract.client_visible = False
+    context.contract.save(update_fields=['client_visible'])
+
+    response = route(context, api, link_id)
+
+    snapshot.refresh_from_db()
+    assert response.status_code == 404
+    assert str(doc.uuid) not in response.content.decode()
+    assert (snapshot.link_id, snapshot.title, snapshot.sha256) == frozen
 
 
 def test_approved_requirement_document_cannot_be_unlinked(context):

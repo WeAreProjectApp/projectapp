@@ -209,7 +209,7 @@ def test_anonymous_cannot_access_deletion(api_client, unused_project, method, su
 
     response = getattr(api_client, method)(url)
 
-    assert response.status_code == 401
+    assert response.status_code == 403
     assert Project.objects.filter(pk=unused_project.pk).exists()
 
 

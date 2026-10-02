@@ -19,7 +19,7 @@ from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.principal import service_actor_for_connector
 from content.mcp.protocol import handle_message
 from content.mcp.registry import normalize_tools
-from content.models import Document, McpConnector
+from content.models import Document, DocumentCollectionAccount, DocumentType, McpConnector
 
 
 pytestmark = pytest.mark.django_db
@@ -152,6 +152,52 @@ def test_mcp_confirmation_rejects_contract_from_another_project_without_associat
     assert CollectionAccountContext.objects.filter(document=account).count() == 0
 
 
+def test_mcp_account_context_rejects_an_account_from_another_project(
+    billing_runtime, project, contract,
+):
+    """Falla si una vista previa asocia la cuenta válida de otro proyecto."""
+    User = get_user_model()
+    other_user = User.objects.create_user(username='billing-account-owner@example.test')
+    UserProfile.objects.create(user=other_user, role=UserProfile.ROLE_CLIENT)
+    other = Project.objects.create(name='Proyecto de cuenta ajena', client=other_user)
+    document_type, _ = DocumentType.objects.get_or_create(code='collection_account', defaults={'name': 'Cuenta de cobro'})
+    other_account = Document.objects.create(title='Cuenta B', project=other, client_user=other_user, document_type=document_type, commercial_status='issued')
+    DocumentCollectionAccount.objects.create(document=other_account, customer_name='Titular B')
+    tools, context = billing_runtime
+
+    result = _call(tools, context, 'associate_collection_account_context', {
+        'project_id': project.pk, 'account_id': other_account.pk,
+        'payload': {'expected_version': 0, 'reason': 'Cruce rechazado', 'billing_nature': 'contract',
+                    'contract_id': contract.pk, 'amendment_id': None, 'project_hosting_id': None,
+                    'hosting_payment_id': None},
+    })
+
+    assert result['error']['code'] == 'VALIDATION_ERROR'
+    assert CollectionAccountContext.objects.count() == 0
+    assert BillingContextEvent.objects.count() == 0
+    assert other_account.is_archived is False
+
+
+def test_mcp_account_context_rejects_commercial_status_input(billing_runtime, project, contract):
+    """Falla si el MCP permite cambiar estado comercial al asociar una cuenta de cobro."""
+    tools, context = billing_runtime
+    document_type, _ = DocumentType.objects.get_or_create(code='collection_account', defaults={'name': 'Cuenta de cobro'})
+    account = Document.objects.create(title='Cuenta pactada', project=project, client_user=project.client, document_type=document_type, commercial_status='issued')
+    DocumentCollectionAccount.objects.create(document=account, customer_name='Titular')
+    before = (account.is_archived, CollectionAccountContext.objects.count())
+
+    result = _call(tools, context, 'associate_collection_account_context', {
+        'project_id': project.pk, 'account_id': account.pk,
+        'payload': {'expected_version': 0, 'reason': 'Campo no permitido', 'billing_nature': 'contract',
+                    'contract_id': contract.pk, 'amendment_id': None, 'project_hosting_id': None,
+                    'hosting_payment_id': None, 'commercial_status': 'paid'},
+    })
+
+    assert result['error']['code'] == 'VALIDATION_ERROR'
+    assert result['error']['details']['fields'] == ['commercial_status']
+    assert (account.is_archived, CollectionAccountContext.objects.count()) == before
+
+
 def test_mcp_hosting_preview_validates_identity_without_creating_context_or_financial_rows(
     billing_runtime, project, subscription, hosting_record,
 ):
@@ -179,6 +225,19 @@ def test_mcp_hosting_preview_validates_identity_without_creating_context_or_fina
     assert ProjectHosting.objects.filter(project=project).count() == 0
     assert ProjectHostingAccountingSource.objects.filter(hosting__project=project).count() == 0
     assert BillingContextEvent.objects.filter(project=project).count() == 0
+
+
+def test_mcp_hosting_reconciliation_rejects_an_unknown_project_without_writes(billing_runtime, subscription, hosting_record):
+    """Falla si reconciliar hosting para un proyecto inexistente crea intención o hechos financieros."""
+    tools, context = billing_runtime
+    result = _call(tools, context, 'reconcile_project_hosting', {
+        'project_id': 999999, 'payload': {'expected_version': 0, 'reason': 'Proyecto inexistente',
+        'subscription_id': subscription.pk, 'hosting_record_ids': [hosting_record.pk], 'operational_record_id': hosting_record.pk},
+    })
+
+    assert result['error']['code'] == 'NOT_FOUND'
+    assert ProjectHosting.objects.count() == 0
+    assert BillingContextEvent.objects.count() == 0
 
 
 def test_mcp_reconciliation_confirmation_creates_only_explicit_hosting_relationships(

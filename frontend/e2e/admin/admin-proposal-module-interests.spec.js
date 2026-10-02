@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 
 const PROPOSAL_ID = 144;
 const proposalSummary = {
@@ -97,7 +98,7 @@ test.describe('Admin proposal module interests', () => {
     await expect(interests).toContainText('Módulos de interés');
     await expect(interests).toContainText('Reportes semanales · Crecimiento');
 
-    await page.getByRole('tab', { name: 'Actividad' }).click();
+    await selectProposalDestination(page, 'tracking', 'activity');
     await expect(page.getByText('Interés en módulos')).toBeVisible();
     await expect(page.getByText('Módulos de interés: Reportes semanales')).toBeVisible();
   });

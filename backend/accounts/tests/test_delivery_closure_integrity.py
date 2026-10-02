@@ -127,7 +127,12 @@ def test_send_records_damaged_attachment_failure(context, approved_document, dam
 
     assert result['status'] == 'failed'
     assert result['attempts'][0]['status'] == 'failed'
-    assert error_code in result['error_message']
+    expected_message = {
+        'attachment_unavailable': 'No se pudo leer el adjunto conservado para enviarlo.',
+        'attachment_integrity': 'El adjunto conservado no coincide con su evidencia.',
+    }[error_code]
+    assert result['error_message'] == expected_message
+    assert result['attempts'][0]['error_message'] == expected_message
     assert email.attempts.count() == 1
     assert EmailDeliverySnapshot.objects.filter(template_key=closure_email.TEMPLATE_KEY).count() == 0
     assert mailoutbox == []

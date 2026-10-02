@@ -13,6 +13,7 @@ from accounts.models import (
 )
 from accounts.services import delivery_closure_email as closure_email
 from accounts.services import delivery_workflow as delivery
+from accounts.services.delivery_access import DeliveryConflict
 from accounts.tests.delivery_helpers import build_delivery_context, decisions, publish, version
 from content.models import Document, EmailDeliverySnapshot, EmailLog, McpConnector, McpCredential
 
@@ -287,6 +288,48 @@ def test_failed_send_needs_an_explicit_resend_preparation(context):
         'No se pudo completar el envío de correo.',
         'No se pudo completar el envío de correo.', True, 1,
     )
+
+
+def test_backend_rejected_closure_has_single_failed_attempt(context, mailoutbox):
+    """Fails if a rejected mail backend retries a reviewed closure or marks it as delivered."""
+    _approved(context)
+    prepared = _prepare(context)
+
+    with patch('django.core.mail.message.EmailMessage.send', return_value=0) as smtp_send:
+        failed = _send(context, prepared)
+        replay = _send(context, prepared, request_id='closure-backend-rejected-retry')
+
+    email = DeliveryEvidenceEmail.objects.get(pk=prepared['id'])
+    attempt = email.attempts.get()
+    log = EmailLog.objects.get(template_key='delivery_stage_approved_client')
+    assert (failed['status'], replay['status'], attempt.status, attempt.sent_at, log.status) == (
+        'failed', 'failed', 'failed', None, 'failed',
+    )
+    assert attempt.error_message == 'El backend de correo no aceptó el envío.'
+    assert smtp_send.call_count == 1
+    assert email.attempts.count() == 1
+    assert mailoutbox == []
+
+
+def test_changed_client_cannot_send_prepared_closure(context, mailoutbox):
+    """Fails if a prepared closure can be sent after the project changes client owner."""
+    _approved(context)
+    prepared = _prepare(context)
+    email = DeliveryEvidenceEmail.objects.get(pk=prepared['id'])
+    original = (email.client_id, email.manifest_sha256, email.request_id)
+    replacement = User.objects.create_user('replacement-owner', 'replacement@example.test', 'test-password')
+    UserProfile.objects.create(user=replacement, role='client', is_onboarded=True, email_verified=True)
+    context.project.client = replacement
+    context.project.save(update_fields=['client'])
+
+    with pytest.raises(DeliveryConflict) as rejected:
+        _send(context, prepared)
+
+    email.refresh_from_db()
+    assert rejected.value.status_code == 409
+    assert (email.client_id, email.manifest_sha256, email.request_id) == original
+    assert email.attempts.count() == 0
+    assert mailoutbox == []
 
 
 def test_post_smtp_audit_error_marks_delivery_unknown_without_resending(context):
