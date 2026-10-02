@@ -5,7 +5,7 @@ logger = logging.getLogger(__name__)
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model
 from django.db import connection, transaction
-from django.db.models import Prefetch, prefetch_related_objects
+from django.db.models import Exists, OuterRef, Prefetch, prefetch_related_objects
 from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
@@ -1800,7 +1800,10 @@ def deliverable_detail_view(request, project_id, deliverable_id):
 
     queryset = Deliverable.objects.select_related('business_proposal')
     if request.method == 'GET':
-        queryset = queryset.select_related('uploaded_by').only(
+        from content.models import ProposalApprovalFile
+        queryset = queryset.annotate(
+            _has_approval_files=Exists(ProposalApprovalFile.objects.filter(deliverable_id=OuterRef('pk'))),
+        ).select_related('uploaded_by').only(
             'id', 'project_id', 'category', 'title', 'description',
             'source_epic_key', 'source_epic_title', 'file', 'current_version',
             'uploaded_by_id', 'is_archived', 'archived_at', 'created_at', 'updated_at',

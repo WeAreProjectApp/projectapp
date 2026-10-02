@@ -9,13 +9,14 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.utils import timezone
+from freezegun import freeze_time
 
-from accounts.models import Project
+from accounts.models import Project, UserProfile
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.proposal_approval_tools import PREVIEW_TOOL
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import store_artifact
-from content.models import McpConnector, McpCredential, McpUpload, ProposalApprovalFile
+from content.models import McpActionIntent, McpConnector, McpCredential, McpUpload, ProposalApprovalFile
 
 pytestmark = pytest.mark.django_db
 
@@ -49,10 +50,7 @@ def assets(access):
 
 
 @pytest.fixture
-def approval_arguments(api_client, access, proposal, assets, monkeypatch):
-    # Replace PDF rendering only; validation, linking and packet persistence stay real.
-    monkeypatch.setattr('content.services.proposal_formalization_service.document_bytes',
-                        lambda proposal, kind, **kwargs: b'%PDF-1.4 ' + kind.encode())
+def approval_preview_arguments(api_client, access, proposal, assets):
     token, _ = access
     preview = rpc(api_client, token, 'get_proposal_approval', {'proposal_id': proposal.pk})
     return {
@@ -66,6 +64,14 @@ def approval_arguments(api_client, access, proposal, assets, monkeypatch):
             {'title': 'Signed amendment', 'document_type': 'amendment'},
         ],
     }
+
+
+@pytest.fixture
+def approval_arguments(approval_preview_arguments, monkeypatch):
+    # Replace PDF rendering only; validation, linking and packet persistence stay real.
+    monkeypatch.setattr('content.services.proposal_formalization_service.document_bytes',
+                        lambda proposal, kind, **kwargs: b'%PDF-1.4 ' + kind.encode())
+    return approval_preview_arguments
 
 
 def confirm(client, token, preview):
@@ -136,8 +142,35 @@ def test_tampered_asset_blocks_confirmation(api_client, access, proposal, approv
     assert ProposalApprovalFile.objects.count() == 0
 
 
+def test_missing_asset_blob_blocks_first_preview(api_client, access, proposal, approval_preview_arguments, assets):
+    """Fails if a missing completed-upload blob creates a confirmation or approval resources."""
+    token, _ = access
+    upload = McpUpload.objects.get(pk=assets[0])
+    metadata_before = McpUpload.objects.values().get(pk=upload.pk)
+    client_count_before = UserProfile.objects.clients().count()
+    upload.file.storage.delete(upload.file.name)
+
+    result = rpc(api_client, token, 'review_proposal_approval', approval_preview_arguments)
+
+    proposal.refresh_from_db()
+    metadata_after = McpUpload.objects.values().get(pk=upload.pk)
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'ATTACHMENT_CHANGED'
+    assert {
+        'intents': McpActionIntent.objects.count(),
+        'clients': UserProfile.objects.clients().count(),
+        'projects': Project.objects.count(),
+        'approval_files': ProposalApprovalFile.objects.count(),
+    } == {'intents': 0, 'clients': client_count_before, 'projects': 0, 'approval_files': 0}
+    assert metadata_after == metadata_before
+    assert metadata_after['status'] == McpUpload.STATUS_COMPLETE
+    assert (proposal.status, proposal.deliverable_id, proposal.platform_approval_manifest) == ('draft', None, {})
+
+
+@freeze_time('2026-10-02T12:00:00Z')
 def test_expired_asset_blocks_confirmation(api_client, access, approval_arguments, assets):
     token, _ = access
+    McpUpload.objects.filter(pk__in=assets).update(expires_at=timezone.now() + timedelta(minutes=15))
     preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
     McpUpload.objects.filter(pk=assets[0]).update(expires_at=timezone.now() - timedelta(seconds=1))
 
@@ -159,6 +192,27 @@ def test_changed_proposal_blocks_confirmation(api_client, access, proposal, appr
     assert result['isError'] is True
     assert result['structuredContent']['error']['code'] == 'STALE_VERSION'
     assert Project.objects.count() == 0
+
+
+def test_stale_source_hash_blocks_first_preview(api_client, access, proposal, approval_preview_arguments):
+    """Fails if the first sensitive preview accepts a source hash from before a proposal edit."""
+    token, _ = access
+    client_count_before = UserProfile.objects.clients().count()
+    proposal.title = 'Changed before the first approval preview'
+    proposal.save(update_fields=['title'])
+
+    result = rpc(api_client, token, 'review_proposal_approval', approval_preview_arguments)
+
+    proposal.refresh_from_db()
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'STALE_VERSION'
+    assert {
+        'intents': McpActionIntent.objects.count(),
+        'clients': UserProfile.objects.clients().count(),
+        'projects': Project.objects.count(),
+        'approval_files': ProposalApprovalFile.objects.count(),
+    } == {'intents': 0, 'clients': client_count_before, 'projects': 0, 'approval_files': 0}
+    assert (proposal.status, proposal.deliverable_id, proposal.platform_approval_manifest) == ('draft', None, {})
 
 
 def test_other_credential_cannot_confirm_packet(api_client, access, approval_arguments):

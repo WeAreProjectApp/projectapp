@@ -1296,6 +1296,8 @@ class DeliverableDetailSerializer(DeliverableListSerializer):
         return DeliverableFileSerializer(qs, many=True, context=self.context).data
 
     def get_approval_files(self, obj):
+        if getattr(obj, '_has_approval_files', None) is False:
+            return []
         from content.services.proposal_approval_service import file_summary
         return [file_summary(row, platform=True) for row in obj.proposal_approval_files.all()]
 
