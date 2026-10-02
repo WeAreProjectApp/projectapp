@@ -1,5 +1,15 @@
 # Architecture — ProjectApp
 
+**2026-10-02 — autorización de cuentas:** la lectura de fases limita por
+propietario salvo perfil administrador, también cuando el perfil no existe.
+El token verificado de recuperación incluye una huella HMAC de la contraseña
+vigente. La confirmación usa una actualización condicional por usuario y hash
+anterior para consumir la autorización sin sobrescribir un cambio intermedio;
+conserva validadores, notificación y sesión tras el guardado exitoso. Repetir el
+token o usar uno anterior sin huella retorna el error existente de token
+inválido. Los tokens antiguos requieren reiniciar recuperación durante su
+ventana máxima de cinco minutos. No cambia el esquema ni los JWT de sesión.
+
 **2026-10-02 — aprobación y vinculación explícita de propuestas:** aceptar por
 el enlace público, Panel o MCP sólo registra el estado comercial. El modal
 compartido de listado/editor revisa cliente, proyecto y paquete contractual;
