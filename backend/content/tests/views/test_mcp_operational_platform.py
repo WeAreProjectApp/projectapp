@@ -1694,7 +1694,7 @@ def test_array_tool_params_are_audited_as_invalid(api_client, tasks_connector):
 
     event = McpRequestLog.objects.get(connector=connector, event='tool_call')
     assert response.data['error']['code'] == -32602
-    assert event.tool_name == '?'
+    assert event.tool_name == 'unknown_tool'
     assert event.object_refs == []
 
 
