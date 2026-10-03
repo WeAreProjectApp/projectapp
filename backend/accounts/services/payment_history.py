@@ -1,6 +1,10 @@
 """Append-only payment status transition log."""
 
+import logging
+
 from accounts.models import Payment, PaymentHistory
+
+logger = logging.getLogger(__name__)
 
 
 def record_payment_status_change(payment, old_status, new_status, source='', metadata=None):
@@ -25,7 +29,11 @@ def record_payment_status_change(payment, old_status, new_status, source='', met
         try:
             from accounts.tasks import send_payment_status_team_email_task
             send_payment_status_team_email_task(payment.id, new_status, source or '')
-        except Exception:  # pragma: no cover - defensive guard
-            pass
+        except Exception:
+            logger.warning(
+                'PAYMENT_STATUS_EMAIL_ENQUEUE_FAILED payment_id=%s status=%s',
+                payment.id,
+                new_status,
+            )
 
     return history

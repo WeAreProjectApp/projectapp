@@ -1,12 +1,12 @@
 """Tests for content/services/panel_dashboard_service.py — global panel dashboard."""
-from datetime import date, timedelta
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
-from freezegun import freeze_time
-from django.utils import timezone
-
 from accounts.services import proposal_client_service
+from django.utils import timezone
+from freezegun import freeze_time
+
 from content.models import (
     AdditionalModule,
     AdditionalModuleShareLink,
@@ -19,10 +19,7 @@ from content.models import (
     Task,
     WebAppDiagnostic,
 )
-from content.services.panel_dashboard_service import (
-    _days_until_billing,
-    build_panel_dashboard,
-)
+from content.services.panel_dashboard_service import build_panel_dashboard
 from content.services.proposal_analytics_service import (
     build_dashboard,
     build_dashboard_core,
@@ -311,18 +308,64 @@ class TestRecurringDue:
         item = next(i for i in attention if i['type'] == 'recurring_due')
         assert item['count'] == 1
 
+    @freeze_time('2026-02-25 12:00:00')
+    def test_anchor_without_billing_day_appears_in_finance_radar(self):
+        """Falla si el radar omite cobros mensuales con un ancla válida."""
+        RecurringPayment.objects.create(
+            name='Cobro anclado', price=Decimal('50000.00'),
+            cop_equivalent=Decimal('50000.00'),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+            cycle_anchor_date=today_bogota(),
+        )
 
-# ── _days_until_billing ──
+        attention = build_panel_dashboard(include_finance=True)['attention']
 
-class TestDaysUntilBilling:
-    def test_same_month_upcoming_day(self):
-        assert _days_until_billing(15, date(2026, 7, 10)) == 5
+        item = next(i for i in attention if i['type'] == 'recurring_due')
+        assert item['count'] == 1
+        assert item['meta']['next_days'] == 0
 
-    def test_wraps_into_next_month(self):
-        assert _days_until_billing(5, date(2026, 7, 10)) == 26
+    @freeze_time('2026-02-25 12:00:00')
+    def test_anchor_wins_over_conflicting_billing_day_at_short_month_end(self):
+        """Falla si el radar usa billing_day y adelanta un ciclo anclado al 31."""
+        RecurringPayment.objects.create(
+            name='Cierre de mes', price=Decimal('50000.00'),
+            cop_equivalent=Decimal('50000.00'),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+            cycle_anchor_date='2026-01-31', billing_day=25,
+        )
 
-    def test_clamps_to_short_month_length(self):
-        assert _days_until_billing(31, date(2026, 2, 10)) == 18
+        attention = build_panel_dashboard(include_finance=True)['attention']
+
+        item = next(i for i in attention if i['type'] == 'recurring_due')
+        assert item['count'] == 1
+        assert item['meta']['next_days'] == 3
+
+    @freeze_time('2026-02-25 12:00:00')
+    def test_monthly_payment_without_schedule_does_not_alert(self):
+        """Falla si el radar inventa una fecha para un cobro sin calendario."""
+        RecurringPayment.objects.create(
+            name='Sin calendario', price=Decimal('50000.00'),
+            cop_equivalent=Decimal('50000.00'),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+        )
+
+        attention = build_panel_dashboard(include_finance=True)['attention']
+
+        assert all(item['type'] != 'recurring_due' for item in attention)
+
+    @freeze_time('2026-02-25 12:00:00')
+    def test_anchor_outside_due_window_does_not_alert(self):
+        """Falla si billing_day adelanta un aviso fuera de la ventana de siete días."""
+        RecurringPayment.objects.create(
+            name='Fuera de ventana', price=Decimal('50000.00'),
+            cop_equivalent=Decimal('50000.00'),
+            frequency=RecurringPayment.Frequency.MONTHLY,
+            cycle_anchor_date='2026-03-05', billing_day=25,
+        )
+
+        attention = build_panel_dashboard(include_finance=True)['attention']
+
+        assert all(item['type'] != 'recurring_due' for item in attention)
 
 
 # ── build_dashboard core parity (refactor lock) ──
