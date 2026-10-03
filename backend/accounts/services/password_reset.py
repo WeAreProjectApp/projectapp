@@ -8,11 +8,13 @@ import logging
 from datetime import timedelta
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, password_validation
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.crypto import constant_time_compare
 from rest_framework_simplejwt.exceptions import TokenError
 
 from accounts.models import VerificationCode
@@ -21,6 +23,7 @@ from accounts.services.tokens import (
     PASSWORD_RESET_VERIFIED_PURPOSE,
     decode_password_reset_token,
     get_decoy_password_reset_request_token,
+    get_password_reset_password_version,
     get_password_reset_request_token,
     get_password_reset_verified_token,
     get_tokens_for_user,
@@ -143,13 +146,28 @@ def confirm_password_reset(verified_token: str, new_password: str) -> dict:
     if not user:
         raise PasswordResetError('invalid_or_expired_token', http_status=401)
 
+    password_version = payload.get('password_version')
+    if not isinstance(password_version, str) or not constant_time_compare(
+        password_version, get_password_reset_password_version(user),
+    ):
+        raise PasswordResetError('invalid_or_expired_token', http_status=401)
+
+    original_password = user.password
     try:
         validate_password(new_password, user=user)
     except ValidationError as exc:
         raise PasswordResetError('weak_password', extra={'errors': list(exc.messages)})
 
     user.set_password(new_password)
-    user.save(update_fields=['password'])
+    # A password change after the token check must win over this stale reset.
+    with transaction.atomic():
+        updated = User.objects.filter(
+            pk=user.pk, password=original_password,
+        ).update(password=user.password)
+    if updated != 1:
+        raise PasswordResetError('invalid_or_expired_token', http_status=401)
+
+    password_validation.password_changed(new_password, user)
 
     try:
         send_password_changed_notification(user)
