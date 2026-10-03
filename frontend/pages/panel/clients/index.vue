@@ -1698,7 +1698,7 @@ const createFieldErrors = ref({});
 
 function clientFieldErrors(errors) {
   if (!errors || typeof errors !== 'object') return {};
-  const fields = ['name', 'email', 'phone', 'company', 'nit', 'billing_code'];
+  const fields = ['name', 'email', 'phone', 'company', 'nit', 'cedula', 'address', 'billing_code'];
   const normalized = Object.fromEntries(fields.flatMap((field) => {
     const value = errors[field];
     const message = Array.isArray(value) ? value[0] : value;
@@ -1777,6 +1777,9 @@ function openEditModal(client) {
   editForm.phone = client.phone || '';
   editForm.company = client.company || '';
   editForm.nit = client.nit || '';
+  editForm.cedula = client.cedula || '';
+  editForm.identification_type = client.nit ? 'NIT' : (client.cedula ? 'CC' : 'NIT');
+  editForm.address = client.address || '';
   editForm.billing_code = client.billing_code || '';
   editForm.is_archived = Boolean(client.is_archived);
   editError.value = '';

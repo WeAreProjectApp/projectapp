@@ -1,3 +1,30 @@
+# Formularios contables y datos del cliente (2026-10-02)
+
+Implementado en `fix/02102026-accounting-modals-client-data`, sobre
+`origin/main`: formularios contables compactos, consecutivo junto al concepto
+y valor/IVA en un bloque propio. Los formularios nuevos proponen 19% en
+cualquier contabilidad; editar conserva la tasa guardada. Las cuentas reciben
+nombre legal, NIT/cédula y tipo, contacto, correo y dirección de la ficha,
+editable desde la cuenta sin perder su borrador. `accounts.0076` añade dirección
+y la aplica el deploy. «Cobro del proyecto» aparece también al abrir desde el
+ingreso y explica qué vínculo falta; volver de preview conserva la selección.
+Se conserva la evidencia de documentos emitidos. Pruebas focales de backend,
+interfaz y navegador en verde; mapas de vistas/recorridos actualizados y
+auditoría independiente aprobada. Entrega de PR y CI en verificación.
+
+# Compatibilidad MySQL antes del deploy (2026-10-02)
+
+El ensayo del deploy encontró el error 3780 en `accounts/0067`: la tabla
+histórica de guías conserva `utf8mb4_0900_ai_ci`, pero la base y las tablas
+nuevas usan `utf8mb4_unicode_ci`. La producción no recibió migraciones.
+Se añade un reemplazo compatible de `0067`, conservando el archivo publicado
+y reconociendo su historial si ya fue aplicado. Sólo ajusta el DEFAULT de la
+tabla histórica antes de agregar la relación UUID; no convierte columnas ni
+reescribe los textos existentes. Pasaron cuatro pruebas focales SQLite
+(compatibilidad del historial y purga autorizada), la revisión de cambios
+pendientes en modelos y el gate focal de calidad (100/100). La prueba aislada
+MySQL 8.4 queda pendiente de CI; el deploy exige repetir el ensayo completo.
+
 # Vinculación de pagos y lectura de destinos (2026-10-02)
 
 La ronda `improvement-payments-documents` vincula cada respuesta Wompi con el

@@ -451,7 +451,7 @@ export const viewCatalogSections = [
         reference: 'vista de clientes del panel',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite posponer sin crear proyecto.',
+        notes: 'Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite posponer sin crear proyecto.',
       },
       {
         label: 'Blog del panel',
@@ -775,7 +775,7 @@ export const viewCatalogSections = [
         reference: 'vista de gastos del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Desglose opcional de IVA sin clasificación automática de IVA descontable. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Nuevos gastos proponen IVA del 19 %; editar conserva la tasa registrada. Desglose opcional de IVA sin clasificación automática de IVA descontable. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Hostings',
@@ -845,7 +845,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa.',
+        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',

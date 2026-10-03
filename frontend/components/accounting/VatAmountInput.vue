@@ -62,17 +62,20 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
 </script>
 <template>
   <div class="space-y-3" data-testid="vat-input">
-    <BaseFormField label="Cómo introduces el valor">
-      <BaseSegmented :model-value="mode" @update:model-value="changeMode($event)" :options="modeOptions" full-width :disabled="disabled" :disabled-reason="disabledReason" />
-    </BaseFormField>
-    <BaseFormRow :cols="2">
+    <BaseFormRow :cols="4">
+      <BaseFormField label="Cómo introduces el valor" class="panel-portrait:col-span-2">
+        <BaseSegmented :model-value="mode" @update:model-value="changeMode($event)" :options="modeOptions" full-width size="sm" :disabled="disabled" :disabled-reason="disabledReason" />
+      </BaseFormField>
       <BaseFormField :label="mode === 'before_vat' ? 'Valor antes de IVA' : 'Total con IVA incluido'" :required="required" :error="error" v-slot="{ errorId, invalid }">
         <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="errorId" @update:model-value="capture($event)" />
       </BaseFormField>
-      <BaseFormField label="IVA (%)" hint="Usa 0 para Sin IVA; vacío significa sin registrar.">
+      <BaseFormField label="IVA (%)">
         <BaseInput :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled" :disabled-reason="disabledReason" @update:model-value="changeRate($event)" />
-        <BaseButton type="button" variant="link" size="sm" :disabled="disabled" :disabled-reason="disabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
       </BaseFormField>
+      <template #help>
+        Usa 0 para Sin IVA; vacío significa sin registrar.
+        <BaseButton type="button" variant="link" size="sm" :disabled="disabled" :disabled-reason="disabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
+      </template>
     </BaseFormRow>
     <p v-if="invalid" class="text-sm text-danger-strong" role="alert">Revisa el importe y el porcentaje de IVA.</p>
     <VatBreakdown :total="modelValue" :rate="rate" />

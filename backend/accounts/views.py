@@ -3862,7 +3862,7 @@ def _get_project_or_404(project_id, user):
     from accounts.models import Project
     qs = Project.objects.filter(id=project_id)
     profile = getattr(user, 'profile', None)
-    if profile and profile.role != 'admin':
+    if not (profile and profile.is_admin):
         qs = qs.filter(client=user)
     return qs.first()
 

@@ -105,7 +105,7 @@ const modalFormId = useId();
 </script>
 
 <template>
-  <BaseModal :model-value="open" kind="form-wide" title-id="card-snapshot-form-title" @close="emit('close')">
+  <BaseModal :model-value="open" kind="form" title-id="card-snapshot-form-title" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
       <h3 id="card-snapshot-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>

@@ -183,7 +183,7 @@ MCP_MODEL_CONTRACTS = {
         _contract(
             'accounts.UserProfile',
             read_only=(
-                'id user is_onboarded cedula nit billing_code archived_at '
+                'id user is_onboarded cedula nit address billing_code archived_at '
                 'created_at updated_at'
             ),
             read_write='company_name phone',

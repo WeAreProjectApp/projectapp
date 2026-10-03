@@ -1,3 +1,16 @@
+## 2026-10-02 — MySQL rechaza el UUID de contexto durante el ensayo
+
+`accounts/0067` agregaba una FK UUID a una tabla histórica cuyo DEFAULT era
+`utf8mb4_0900_ai_ci`; el contexto nuevo heredaba `utf8mb4_unicode_ci` de la
+base. MySQL exige collations compatibles en las dos columnas y devolvió 3780.
+SQLite no detecta esta condición. El reemplazo `0067_delivery_context_mysql_compat`
+ajusta sólo el DEFAULT antes de ejecutar las operaciones publicadas, sin
+`CONVERT TO`, cambios de datos ni cambios de collation en columnas existentes.
+Las instalaciones que ya aplicaron la original no repiten sus operaciones.
+La regresión MySQL usa un servicio efímero de CI con datos inventados y sin
+settings ni credenciales de producción; pytest mantiene su aislamiento SQLite.
+Referencia: [reemplazos de migraciones en Django](https://docs.djangoproject.com/en/6.1/topics/migrations/#squashing-migrations).
+
 ## 2026-10-02 — Prefijo de idioma duplicado en enlaces de carpetas
 
 `folderToFor` volvía a localizar `route.path`, que ya incluía el idioma, y

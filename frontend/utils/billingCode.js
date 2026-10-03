@@ -24,13 +24,15 @@ export function normalizeBillingCode(value) {
  */
 export function emptyClientForm() {
   return {
-    name: '', email: '', phone: '', company: '', nit: '', billing_code: '',
+    name: '', email: '', phone: '', company: '', nit: '', cedula: '',
+    identification_type: 'NIT', address: '', billing_code: '',
     is_archived: false,
   };
 }
 
 /**
- * Trimmed payload for the create/update endpoints — the 6 identity fields.
+ * Trimmed identity/contact payload. The selected document type decides which
+ * identification is used; a personal cédula must never be saved as a NIT.
  *
  * Anything not listed here is dropped silently, so a new field that the API
  * must receive has to be added in BOTH functions. `is_archived` is the
@@ -42,7 +44,23 @@ export function clientFormPayload(form) {
     email: (form.email || '').trim(),
     phone: (form.phone || '').trim(),
     company: (form.company || '').trim(),
-    nit: (form.nit || '').trim(),
+    nit: form.identification_type === 'CC' ? '' : (form.nit || '').trim(),
+    cedula: (form.cedula || '').trim(),
+    address: (form.address || '').trim(),
     billing_code: normalizeBillingCode(form.billing_code),
+  };
+}
+
+/** Billing data comes from the same server projection used for the PDF. */
+export function clientCustomerSnapshot(client) {
+  if (client.billing_customer) return { ...client.billing_customer };
+  // Older cached picker rows can still arrive without the projection.
+  return {
+    name: client.nit ? (client.company || client.name || '') : (client.name || client.company || ''),
+    identification_type: client.nit ? 'NIT' : (client.cedula ? 'CC' : ''),
+    identification: client.nit || client.cedula || '',
+    email: client.is_email_placeholder ? '' : (client.email || ''),
+    contact_name: client.name || '',
+    address: client.address || '',
   };
 }

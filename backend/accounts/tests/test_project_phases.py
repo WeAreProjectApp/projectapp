@@ -15,6 +15,7 @@ MAX_PROJECT_PHASE_LIST_QUERIES = 6
 
 @pytest.fixture
 def client_user(db):
+    """Create the tenant account used by project-phase ownership checks."""
     user = User.objects.create_user(
         username='client@example.com', email='client@example.com', password='x',
     )
@@ -24,11 +25,13 @@ def client_user(db):
 
 @pytest.fixture
 def project(client_user):
+    """Create a project owned by the client tenant fixture."""
     return Project.objects.create(name='Test project', client=client_user)
 
 
 @pytest.fixture
 def business_proposal(db):
+    """Create a proposal that can be attached to a project phase."""
     from content.models import BusinessProposal
     return BusinessProposal.objects.create(title='Proposal A', client_name='Test Client')
 
@@ -39,6 +42,7 @@ def business_proposal(db):
 
 
 def test_phase_links_project_and_proposal_with_order(project, business_proposal):
+    """Fails if a phase loses its persisted project, proposal, or sequence."""
     p = ProjectPhase.objects.create(
         project=project, business_proposal=business_proposal, order=1,
     )
@@ -48,12 +52,14 @@ def test_phase_links_project_and_proposal_with_order(project, business_proposal)
 
 
 def test_unique_constraint_blocks_same_proposal_twice_on_one_project(project, business_proposal):
+    """Fails if one proposal can occupy duplicate phases in one project."""
     ProjectPhase.objects.create(project=project, business_proposal=business_proposal, order=1)
     with pytest.raises(IntegrityError):
         ProjectPhase.objects.create(project=project, business_proposal=business_proposal, order=2)
 
 
 def test_ordering_by_order_field(project, business_proposal):
+    """Fails if phase retrieval ignores the saved phase sequence."""
     from content.models import BusinessProposal
     p2 = BusinessProposal.objects.create(title='P2', client_name='X')
     ProjectPhase.objects.create(project=project, business_proposal=p2, order=2)
@@ -63,11 +69,13 @@ def test_ordering_by_order_field(project, business_proposal):
 
 
 def test_linked_business_proposal_returns_first_phase_proposal(project, business_proposal):
+    """Fails if a project cannot resolve its first linked proposal."""
     ProjectPhase.objects.create(project=project, business_proposal=business_proposal, order=1)
     assert project.linked_business_proposal() == business_proposal
 
 
 def test_linked_business_proposal_returns_none_when_no_phases(project):
+    """Fails if an unphased project reports a nonexistent linked proposal."""
     assert project.linked_business_proposal() is None
 
 
@@ -79,7 +87,6 @@ def test_linked_business_proposal_returns_none_when_no_phases(project):
 from accounts.services.project_phases import (  # noqa: E402
     PhaseError,
     add_phase,
-    list_phases,
     remove_phase,
     reorder_phases,
 )
@@ -119,6 +126,7 @@ def _list_phase_queries(client, url):
 
 
 def test_add_phase_appends_at_end_when_order_omitted(project, business_proposal):
+    """Fails if implicit phase insertion does not append after existing work."""
     phase = add_phase(project, business_proposal)
     assert phase.order == 1
     from content.models import BusinessProposal
@@ -128,6 +136,7 @@ def test_add_phase_appends_at_end_when_order_omitted(project, business_proposal)
 
 
 def test_add_phase_rejects_duplicate(project, business_proposal):
+    """Fails if the phase service permits a repeated proposal."""
     add_phase(project, business_proposal)
     with pytest.raises(PhaseError) as exc:
         add_phase(project, business_proposal)
@@ -135,6 +144,7 @@ def test_add_phase_rejects_duplicate(project, business_proposal):
 
 
 def test_remove_phase_renumbers_remaining(project, business_proposal):
+    """Fails if deletion leaves gaps in the remaining phase sequence."""
     from content.models import BusinessProposal
     p2 = BusinessProposal.objects.create(title='P2', client_name='X')
     p3 = BusinessProposal.objects.create(title='P3', client_name='X')
@@ -147,6 +157,7 @@ def test_remove_phase_renumbers_remaining(project, business_proposal):
 
 
 def test_reorder_phases_writes_new_order_atomically(project, business_proposal):
+    """Fails if a valid reorder does not persist the requested sequence."""
     from content.models import BusinessProposal
     p2 = BusinessProposal.objects.create(title='P2', client_name='X')
     p3 = BusinessProposal.objects.create(title='P3', client_name='X')
@@ -163,6 +174,7 @@ def test_reorder_phases_writes_new_order_atomically(project, business_proposal):
 
 
 def test_reorder_phases_rejects_phase_from_another_project(project, business_proposal, client_user):
+    """Fails if reorder input can inject a phase from another project."""
     other = Project.objects.create(name='Other', client=client_user)
     from content.models import BusinessProposal
     p_other = BusinessProposal.objects.create(title='PO', client_name='X')
@@ -188,6 +200,7 @@ from accounts.services.tokens import get_tokens_for_user  # noqa: E402
 
 @pytest.fixture
 def admin_user(db):
+    """Create an administrator authorized to manage every project's phases."""
     u = User.objects.create_user(
         username='admin@example.com', email='admin@example.com', password='x',
     )
@@ -197,6 +210,7 @@ def admin_user(db):
 
 @pytest.fixture
 def authed_client(admin_user):
+    """Provide a JWT client carrying the administrator's platform identity."""
     tokens = get_tokens_for_user(admin_user)
     c = APIClient()
     c.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
@@ -260,6 +274,13 @@ def test_list_phases_serializes_nested_proposal_fields(authed_client, project, c
     assert rows[0]['hosting_tiers'][0]['billing_amount'] == 1620
 
 
+def test_anonymous_user_cannot_list_project_phases(project):
+    """Fails if the phase endpoint stops requiring platform authentication."""
+    response = APIClient().get(f'/api/accounts/projects/{project.id}/phases/')
+
+    assert response.status_code == 401
+
+
 def test_client_lists_own_project_phases(client_user, project, business_proposal):
     """Fails if a client can no longer read phases belonging to their project."""
     tokens = get_tokens_for_user(client_user)
@@ -269,6 +290,26 @@ def test_client_lists_own_project_phases(client_user, project, business_proposal
 
     response = client.get(f'/api/accounts/projects/{project.id}/phases/')
 
+    assert response.status_code == 200
+    assert response.json()[0]['proposal']['id'] == business_proposal.pk
+
+
+def test_profileless_user_lists_own_project_phases(db, business_proposal):
+    """Fails if an owner without a profile loses access to their project phases."""
+    owner = User.objects.create_user(
+        username='profileless-owner@example.com',
+        email='profileless-owner@example.com',
+        password='x',
+    )
+    project = Project.objects.create(name='Profileless owner project', client=owner)
+    add_phase(project, business_proposal)
+    tokens = get_tokens_for_user(owner)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+
+    response = client.get(f'/api/accounts/projects/{project.id}/phases/')
+
+    assert not UserProfile.objects.filter(user=owner).exists()
     assert response.status_code == 200
     assert response.json()[0]['proposal']['id'] == business_proposal.pk
 
@@ -290,6 +331,25 @@ def test_client_cannot_list_foreign_project_phases(client_user, project, busines
     assert response.json()['detail'] == 'project_not_found'
 
 
+def test_profileless_user_cannot_list_foreign_project_phases(db, project, business_proposal):
+    """Fails if a missing profile bypasses tenant filtering for project phases."""
+    foreign_user = User.objects.create_user(
+        username='profileless-foreign@example.com',
+        email='profileless-foreign@example.com',
+        password='x',
+    )
+    add_phase(project, business_proposal)
+    tokens = get_tokens_for_user(foreign_user)
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
+
+    response = client.get(f'/api/accounts/projects/{project.id}/phases/')
+
+    assert not UserProfile.objects.filter(user=foreign_user).exists()
+    assert response.status_code == 404
+    assert response.json() == {'detail': 'project_not_found'}
+
+
 def test_project_phase_list_query_budget_is_constant(authed_client, project, client_user):
     """Fails if reading deliverables restores a query for each populated phase."""
     url = f'/api/accounts/projects/{project.id}/phases/'
@@ -306,6 +366,7 @@ def test_project_phase_list_query_budget_is_constant(authed_client, project, cli
 
 
 def test_add_phase_endpoint(authed_client, project, business_proposal):
+    """Fails if an administrator cannot add the first project phase."""
     resp = authed_client.post(
         f'/api/accounts/projects/{project.id}/phases/',
         {'proposal_id': business_proposal.id},
@@ -316,6 +377,7 @@ def test_add_phase_endpoint(authed_client, project, business_proposal):
 
 
 def test_add_phase_endpoint_rejects_duplicate(authed_client, project, business_proposal):
+    """Fails if the HTTP API accepts a duplicate proposal phase."""
     add_phase(project, business_proposal)
     resp = authed_client.post(
         f'/api/accounts/projects/{project.id}/phases/',
@@ -327,6 +389,7 @@ def test_add_phase_endpoint_rejects_duplicate(authed_client, project, business_p
 
 
 def test_remove_phase_endpoint(authed_client, project, business_proposal):
+    """Fails if an administrator's delete request leaves the phase intact."""
     phase = add_phase(project, business_proposal)
     resp = authed_client.delete(f'/api/accounts/projects/{project.id}/phases/{phase.id}/')
     assert resp.status_code == 204
@@ -334,6 +397,7 @@ def test_remove_phase_endpoint(authed_client, project, business_proposal):
 
 
 def test_reorder_phases_endpoint(authed_client, project, business_proposal):
+    """Fails if the reorder endpoint does not store the submitted order."""
     from content.models import BusinessProposal
     p2 = BusinessProposal.objects.create(title='P2', client_name='X')
     ph1 = add_phase(project, business_proposal)
@@ -349,6 +413,7 @@ def test_reorder_phases_endpoint(authed_client, project, business_proposal):
 
 
 def test_patch_phase_sets_hosting_start_date(authed_client, project, business_proposal):
+    """Fails if a hosting start date cannot be saved through the endpoint."""
     phase = add_phase(project, business_proposal)
     resp = authed_client.patch(
         f'/api/accounts/projects/{project.id}/phases/{phase.id}/',
@@ -363,6 +428,7 @@ def test_patch_phase_sets_hosting_start_date(authed_client, project, business_pr
 
 
 def test_patch_phase_clears_hosting_start_date(authed_client, project, business_proposal):
+    """Fails if a null hosting start date does not clear the stored value."""
     phase = add_phase(project, business_proposal)
     phase.hosting_start_date = '2026-06-01'
     phase.save()
@@ -377,7 +443,7 @@ def test_patch_phase_clears_hosting_start_date(authed_client, project, business_
 
 
 def test_patch_phase_returns_hosting_tiers(authed_client, project, business_proposal):
-    """hosting_tiers are returned in the phase response."""
+    """Fails if phase updates omit the configured hosting-tier response data."""
     phase = add_phase(project, business_proposal)
     resp = authed_client.patch(
         f'/api/accounts/projects/{project.id}/phases/{phase.id}/',
@@ -392,7 +458,7 @@ def test_patch_phase_returns_hosting_tiers(authed_client, project, business_prop
 
 
 def test_patch_phase_rejects_non_admin(project, business_proposal, client_user):
-    """Client user cannot PATCH a phase."""
+    """Fails if a client JWT can alter hosting data on a project phase."""
     from accounts.services.tokens import get_tokens_for_user
     phase = add_phase(project, business_proposal)
     tokens = get_tokens_for_user(client_user)
@@ -407,6 +473,7 @@ def test_patch_phase_rejects_non_admin(project, business_proposal, client_user):
 
 
 def test_list_phases_includes_hosting_tiers_and_start_date(authed_client, project, business_proposal):
+    """Fails if phase listing drops hosting dates or tier configuration."""
     phase = add_phase(project, business_proposal)
     phase.hosting_start_date = '2026-05-01'
     phase.save()

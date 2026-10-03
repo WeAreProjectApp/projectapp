@@ -1,5 +1,7 @@
+import json
 from datetime import timedelta
 
+from django.utils.crypto import salted_hmac
 from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
@@ -53,7 +55,17 @@ def get_password_reset_verified_token(user) -> str:
     token = AccessToken.for_user(user)
     token.set_exp(lifetime=VERIFIED_TOKEN_LIFETIME)
     token['purpose'] = PASSWORD_RESET_VERIFIED_PURPOSE
+    token['password_version'] = get_password_reset_password_version(user)
     return str(token)
+
+
+def get_password_reset_password_version(user) -> str:
+    """Bind verified tokens to the current password without exposing its hash."""
+    return salted_hmac(
+        'accounts.password-reset-verified-v1',
+        json.dumps([user.pk, user.password]),
+        algorithm='sha256',
+    ).hexdigest()
 
 
 def get_decoy_password_reset_request_token() -> str:

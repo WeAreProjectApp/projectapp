@@ -98,6 +98,7 @@ class UserProfile(HistoryTrackedModel):
     email_verified_at = models.DateTimeField(null=True, blank=True)
     company_name = models.CharField(max_length=200, blank=True, default='')
     phone = models.CharField(max_length=30, blank=True, default='')
+    address = models.CharField(max_length=512, blank=True, default='')
     cedula = models.CharField(max_length=20, blank=True, default='')
     nit = models.CharField(
         max_length=32, blank=True, default='',

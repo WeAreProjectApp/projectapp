@@ -53,6 +53,7 @@ from content.services import accounting_service
 from content.services.project_state_service import ProjectStateError
 from content.serializers.document import ClientDocumentRowSerializer
 from content.serializers.proposal_clients import (
+    ClientBillingFieldsSerializer,
     ProposalClientSearchSerializer,
     ProposalClientSerializer,
 )
@@ -669,7 +670,7 @@ def create_proposal_client(request):
     """
     Standalone client creation (no proposal yet, no invitation email).
 
-    Body: ``{name, email?, phone?, company?, nit?, billing_code?}``. ``email``
+    Body: ``{name, email?, phone?, company?, nit?, cedula?, address?, billing_code?}``. ``email``
     is optional — when omitted, a placeholder is generated. The billing pair
     matches the edit form field for field, so a client can be filed complete in
     one step instead of being created and immediately edited.
@@ -686,14 +687,21 @@ def create_proposal_client(request):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    nit, billing_code, error_response = _validated_billing_fields(request.data)
+    billing_serializer = ClientBillingFieldsSerializer(data=request.data)
+    billing_serializer.is_valid(raise_exception=True)
+    billing_data = billing_serializer.validated_data
+    nit, billing_code, error_response = _validated_billing_fields({
+        'nit': billing_data.get('nit', ''),
+        'billing_code': request.data.get('billing_code'),
+    })
     if error_response is not None:
         return error_response
 
     try:
         profile = proposal_client_service.get_or_create_client_for_proposal(
             name=name, email=email, phone=phone, company=company,
-            nit=nit, billing_code=billing_code,
+            nit=nit, cedula=billing_data.get('cedula', ''),
+            address=billing_data.get('address', ''), billing_code=billing_code,
         )
     except ValueError as exc:
         return Response(
@@ -719,10 +727,9 @@ def update_proposal_client(request, client_id):
         )
 
     # Billing identity fields live on the profile only (no proposal cascade).
-    billing_updates = []
-    if 'nit' in request.data:
-        profile.nit = (request.data.get('nit') or '').strip()
-        billing_updates.append('nit')
+    billing_serializer = ClientBillingFieldsSerializer(data=request.data)
+    billing_serializer.is_valid(raise_exception=True)
+    payload = dict(billing_serializer.validated_data)
     if 'billing_code' in request.data:
         code = normalize_billing_code(request.data.get('billing_code'))
         error = billing_code_error(code) if code else None
@@ -739,12 +746,7 @@ def update_proposal_client(request, client_id):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        profile.billing_code = code
-        billing_updates.append('billing_code')
-    if billing_updates:
-        profile.save(update_fields=billing_updates)
-
-    payload = {}
+        payload['billing_code'] = code or ''
     for key in ('name', 'email', 'phone', 'company'):
         if key in request.data:
             payload[key] = request.data[key]

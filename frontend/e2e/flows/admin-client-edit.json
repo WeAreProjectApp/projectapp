@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin edits an existing client profile from /panel/clients by clicking the edit (pencil) icon on a client row. The edit modal opens pre-filled with the client's name, email, phone, and company. Admin modifies fields and submits — PUT /api/proposals/client-profiles/:id/update/ — modal closes on success. A 400 response surfaces validation errors and keeps the modal open.",
+  "description": "Admin edits an existing client profile from /panel/clients by clicking the edit (pencil) icon on a client row. The edit modal opens pre-filled with the client's name, email, phone, company/legal name, NIT or C.C., address and billing code. Admin modifies fields and submits — PATCH /api/proposals/client-profiles/:id/update/ — modal closes on success. A 400 response surfaces validation errors and keeps the modal open. Successful updates also return the canonical billing_customer projection; new cuentas de cobro use the updated identification, address and legal name while issued documents retain their historical data.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

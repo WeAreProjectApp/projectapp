@@ -10,4 +10,4 @@
 
 #### IVA opcional
 
-IVA opcional con 0 por defecto: captura de total incluido o base antes del impuesto y desglose base/IVA/total en edición. No calcula IVA descontable ni cambia utilidad o reparto.
+Los gastos nuevos empiezan con IVA del 19%, tanto en contabilidad de empresa como personal. Se puede elegir «Sin IVA» (0%) o dejar la tasa sin registrar. Al editar se conserva la tasa del registro, incluido cero o null. La captura acepta total incluido o base antes del impuesto y muestra base/IVA/total. No calcula IVA descontable ni cambia utilidad o reparto.
