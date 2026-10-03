@@ -251,6 +251,8 @@ describe('panel/clients index page', () => {
       phone: '',
       company: 'LauraCo',
       nit: '',
+      cedula: '',
+      address: '',
       billing_code: '',
     });
     expect(mockStore.fetchClients).toHaveBeenCalledTimes(2);
@@ -294,6 +296,8 @@ describe('panel/clients index page', () => {
       phone: '',
       company: '',
       nit: '',
+      cedula: '',
+      address: '',
       billing_code: '',
     });
   });

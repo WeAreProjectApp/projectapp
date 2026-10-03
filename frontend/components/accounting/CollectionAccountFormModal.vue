@@ -15,7 +15,7 @@ import { usePanelNotify } from '~/composables/usePanelNotify';
 import { usePersistedRef } from '~/composables/usePersistedRef';
 import { useAccountingStore } from '~/stores/accounting';
 import { useProposalClientsStore } from '~/stores/proposal_clients';
-import { clientFormPayload, emptyClientForm } from '~/utils/billingCode';
+import { clientCustomerSnapshot, clientFormPayload, emptyClientForm } from '~/utils/billingCode';
 import { downloadUrl } from '~/utils/downloadFile';
 import { formatMoney } from '~/utils/formatMoney';
 
@@ -60,16 +60,22 @@ const selectedClient = ref(null);
 const clientEmailDraft = ref('');
 const clientEmailError = ref('');
 const savingClientEmail = ref(false);
+const editingClient = ref(false);
+const savingClient = ref(false);
+const clientEdit = ref(emptyClientForm());
+const clientEditErrors = ref({});
 // Client resolved from the selected income (PA-24): shown locked.
 const clientFromIncome = ref(null);
 const loadingClient = ref(false);
 const inlineClient = ref(emptyClientForm());
 const inlineClientErrors = ref({});
+let clientRequestId = 0;
 
 // ── Income ──
 const selectedIncome = ref(null);
 const billingContext = ref({});
 const billingContextValid = ref(false);
+const billingContextMessage = ref('');
 const incomeQuery = ref('');
 /** The FULL eligible set for the current search term, unscoped by client. */
 const incomeOptions = ref([]);
@@ -151,6 +157,7 @@ const selectedClientName = computed(() => (
 watch(
   () => props.open,
   (open) => {
+    clientRequestId += 1;
     if (!open) return;
     step.value = 'form';
     validationAttempted.value = false;
@@ -165,11 +172,17 @@ watch(
     clientEmailDraft.value = '';
     clientEmailError.value = '';
     savingClientEmail.value = false;
+    savingClient.value = false;
+    editingClient.value = false;
+    clientEditErrors.value = {};
     showIncomeForm.value = false;
     clientFromIncome.value = null;
     loadingClient.value = false;
     inlineClientErrors.value = {};
     selectedIncome.value = null;
+    billingContext.value = {};
+    billingContextValid.value = false;
+    billingContextMessage.value = '';
     incomeQuery.value = '';
     incomeOptions.value = [];
     incomeScope.value = 'all';
@@ -188,7 +201,8 @@ watch(
 
 function applyIncome(income) {
   selectedIncome.value = income;
-  form.value.vat_rate = income.vat_rate ?? null;
+  const hasPayments = income.kind === 'liquid' || Number(income.paid_amount || 0) > 0;
+  form.value.vat_rate = income.vat_rate ?? (hasPayments ? null : 19);
   form.value.vat_capture = null;
   incomeQuery.value = income.concept || '';
   if (!form.value.billing_concept) {
@@ -218,8 +232,10 @@ function applyIncome(income) {
 
 /** Fill the customer snapshot + suggested number from a client id alone. */
 async function applyClientById(profileId) {
+  const requestId = ++clientRequestId;
   loadingClient.value = true;
   const result = await clientsStore.fetchClient(profileId);
+  if (requestId !== clientRequestId || !props.open) return;
   loadingClient.value = false;
   if (result.success && result.data) {
     await onClientSelect(result.data);
@@ -517,11 +533,17 @@ const orphanIncomeSelected = computed(() => (
  * means closing the modal and beginning again.
  */
 function releaseClientFromIncome() {
+  clientRequestId += 1;
   clientFromIncome.value = null;
   clientId.value = null;
   selectedClient.value = null;
   clientEmailDraft.value = '';
   clientEmailError.value = '';
+  loadingClient.value = false;
+  editingClient.value = false;
+  form.value.customer = defaultForm().customer;
+  suggestedNumber.value = '';
+  form.value.public_number = '';
 }
 
 /** Resolve towards the income: adopt the client it already belongs to. */
@@ -543,6 +565,8 @@ function clearSelectedIncome() {
 // ── Client selection + snapshot prefill ──
 
 async function onClientSelect(client) {
+  const requestId = ++clientRequestId;
+  editingClient.value = false;
   selectedClient.value = client || null;
   clientEmailError.value = '';
   clientEmailDraft.value = client?.is_email_placeholder ? '' : (client?.email || '');
@@ -552,21 +576,57 @@ async function onClientSelect(client) {
     form.value.public_number = '';
     return;
   }
-  form.value.customer = {
-    name: client.company || client.name || '',
-    identification_type: client.nit ? 'NIT' : (client.cedula ? 'CC' : ''),
-    identification: client.nit || client.cedula || '',
-    email: client.is_email_placeholder ? '' : (client.email || ''),
-    contact_name: client.name || '',
-    address: '',
-  };
+  form.value.customer = clientCustomerSnapshot(client);
   numberDirty.value = false;
   const result = await store.fetchCollectionAccountNextNumber(client.id);
+  if (requestId !== clientRequestId || !props.open) return;
   if (result.success) {
     suggestedNumber.value = result.data.suggested_number || '';
     form.value.public_number = suggestedNumber.value;
     if (!form.value.city) form.value.city = result.data.issuer_city || '';
   }
+}
+
+function startClientEdit() {
+  clientEdit.value = {
+    ...emptyClientForm(), ...selectedClient.value,
+    email: selectedClientMissingEmail.value ? '' : selectedClient.value.email,
+    identification_type: selectedClient.value.nit ? 'NIT' : (selectedClient.value.cedula ? 'CC' : 'NIT'),
+  };
+  clientEditErrors.value = {};
+  editingClient.value = true;
+}
+
+function clearClientEditError(field) {
+  const next = { ...clientEditErrors.value };
+  delete next[field];
+  clientEditErrors.value = next;
+}
+
+async function saveClientDetails() {
+  if (savingClient.value) return;
+  if (!clientEdit.value.name.trim()) {
+    clientEditErrors.value = { name: 'Escribe el nombre del cliente.' };
+    return;
+  }
+  const id = clientId.value;
+  const requestId = clientRequestId;
+  savingClient.value = true;
+  const result = await clientsStore.updateClient(id, clientFormPayload(clientEdit.value));
+  if (requestId !== clientRequestId || !props.open || clientId.value !== id) return;
+  savingClient.value = false;
+  if (!result.success) {
+    clientEditErrors.value = result.errors || {};
+    notify.error({ title: 'No se pudieron guardar los datos del cliente', detail: result.errors?.message || '' });
+    return;
+  }
+  selectedClient.value = result.data;
+  form.value.customer = clientCustomerSnapshot(result.data);
+  clientEmailDraft.value = result.data.is_email_placeholder ? '' : (result.data.email || '');
+  clientEmailError.value = '';
+  if (clientFromIncome.value) clientFromIncome.value.name = result.data.name;
+  editingClient.value = false;
+  notify.success({ title: 'Datos del cliente guardados', detail: 'La cuenta usa los mismos datos de su ficha.' });
 }
 
 function isValidEmail(value) {
@@ -772,6 +832,7 @@ const clientValidationError = computed(() => {
   if (!validationAttempted.value) return '';
   if (!clientId.value) return 'Elige o crea un cliente.';
   if (loadingClient.value) return 'Espera a que carguen los datos del cliente.';
+  if (editingClient.value) return 'Guarda los datos del cliente o cancela su edición antes de revisar la cuenta.';
   if (selectedClientMissingEmail.value) return 'Agrega y guarda el correo del cliente.';
   return '';
 });
@@ -779,9 +840,15 @@ const incomeValidationError = computed(() => {
   if (!validationAttempted.value) return '';
   if (!selectedIncome.value?.id) return 'Selecciona un ingreso vinculado.';
   if (incomeClientConflict.value) return 'Resuelve el conflicto con el cliente del ingreso.';
-  if ((selectedIncome.value?.project || selectedIncome.value?.project_id) && !billingContextValid.value) return 'Fija la naturaleza y el vínculo del cobro del proyecto.';
   return '';
 });
+const billingContextValidationError = computed(() => (
+  validationAttempted.value
+  && (selectedIncome.value?.project || selectedIncome.value?.project_id)
+  && !billingContextValid.value
+    ? (billingContextMessage.value || 'Completa el tipo de cobro y selecciona el contrato o hosting en «Cobro del proyecto».')
+    : ''
+));
 const amountValidationError = computed(() => (
   validationAttempted.value && !(Number(form.value.unit_price) > 0)
     ? 'Ingresa un valor mayor a cero.'
@@ -809,6 +876,7 @@ const dueDateValidationError = computed(() => (
 const previewBlockers = computed(() => [
   clientValidationError.value,
   incomeValidationError.value,
+  billingContextValidationError.value,
   amountValidationError.value,
   conceptValidationError.value,
   customerEmailValidationError.value,
@@ -963,7 +1031,7 @@ const modalFormId = useId();
 <template>
   <BaseModal
     :model-value="open"
-    :kind="step === 'preview' ? 'workspace' : 'wizard'"
+    :kind="step === 'preview' ? 'workspace' : 'form'"
     :full-height="step === 'preview'"
     title-id="collection-form-title"
     @close="close"
@@ -1290,14 +1358,17 @@ const modalFormId = useId();
               Crear ingreso esperado
             </button>
           </div>
-        <CollectionAccountProjectContext
-          v-model="billingContext"
-          :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
-          @valid="billingContextValid = $event"
-        />
-
         </div>
       </BaseFormField>
+
+      <CollectionAccountProjectContext
+        v-if="open"
+        v-model="billingContext"
+        :project-id="selectedIncome?.project || selectedIncome?.project_id || null"
+        :validation-error="billingContextValidationError"
+        @valid="billingContextValid = $event"
+        @validation-message="billingContextMessage = $event"
+      />
 
       <BaseFormRow :cols="2" :gap="4" help="El consecutivo sugerido se puede editar.">
         <BaseFormField label="Consecutivo">
@@ -1308,27 +1379,22 @@ const modalFormId = useId();
             @input="onNumberInput"
           />
         </BaseFormField>
-        <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
+        <BaseFormField label="Concepto del servicio" required :error="conceptValidationError">
+          <BaseInput
+            v-model="form.billing_concept"
+            data-testid="collection-form-concept"
+            :error="!!conceptValidationError"
+          />
+        </BaseFormField>
+      </BaseFormRow>
+
+      <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
           :error="amountValidationError"
           input-test-id="collection-form-amount" :disabled="selectedIncome?.kind === 'liquid' || Number(selectedIncome?.paid_amount || 0) > 0"
           disabled-reason="Este ingreso ya tiene pagos; se conservan su saldo y su IVA." @capture="form.vat_capture = $event" />
-      </BaseFormRow>
       <p class="text-xs text-text-muted" data-testid="collection-income-vat-hint">
         Al emitir, el valor y el IVA se actualizarán también en el ingreso si todavía no tiene pagos ni deducciones.
       </p>
-
-      <BaseFormField
-        label="Concepto del servicio"
-        hint="Texto corto. Encabeza el documento y el asunto del correo."
-        required
-        :error="conceptValidationError"
-      >
-        <BaseInput
-          v-model="form.billing_concept"
-          data-testid="collection-form-concept"
-          :error="!!conceptValidationError"
-        />
-      </BaseFormField>
 
       <BaseFormField
         label="Descripción del concepto"
@@ -1336,27 +1402,27 @@ const modalFormId = useId();
       >
         <BaseTextarea
           v-model="form.billing_description"
-          :rows="5"
+          :rows="3"
           data-testid="collection-form-description"
           placeholder="Ej.&#10;- Ajuste del formulario de cotización&#10;- Reporte mensual de ventas por asesor"
         />
       </BaseFormField>
 
       <BaseFormRow :cols="2" :gap="4">
-        <BaseFormField label="Período facturado">
-          <div class="flex items-center gap-2">
-            <BaseInput v-model="form.period_start" type="date" data-testid="collection-form-period-start" />
-            <span class="text-text-subtle text-sm">a</span>
-            <BaseInput v-model="form.period_end" type="date" data-testid="collection-form-period-end" />
-          </div>
+        <BaseFormField label="Inicio del período facturado">
+          <BaseInput v-model="form.period_start" type="date" data-testid="collection-form-period-start" />
         </BaseFormField>
-        <BaseFormField label="Ciudad">
-          <BaseInput v-model="form.city" placeholder="Ciudad de emisión" />
+        <BaseFormField label="Fin del período facturado">
+          <BaseInput v-model="form.period_end" type="date" data-testid="collection-form-period-end" />
         </BaseFormField>
       </BaseFormRow>
 
       <!-- The hint only holds for the days mode; the fixed-date mode shares
            this field, where a 0 would mean nothing. -->
+      <BaseFormRow :cols="2" :gap="4">
+        <BaseFormField label="Ciudad">
+          <BaseInput v-model="form.city" placeholder="Ciudad de emisión" />
+        </BaseFormField>
       <BaseFormField
         label="Plazo de pago"
         :error="dueDateValidationError"
@@ -1383,10 +1449,24 @@ const modalFormId = useId();
           />
         </div>
       </BaseFormField>
+      </BaseFormRow>
 
       <!-- Editable customer snapshot -->
       <div class="rounded-xl border border-border-default p-4 space-y-3">
-        <p class="text-sm font-medium text-text-default">Datos del cliente en el documento</p>
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <p class="text-sm font-medium text-text-default">Datos del cliente en el documento</p>
+          <BaseButton v-if="selectedClient" type="button" variant="link" size="sm" data-testid="collection-form-edit-client" @click="startClientEdit">
+            Editar ficha del cliente
+          </BaseButton>
+        </div>
+        <p class="text-xs text-text-muted">Se completan desde la ficha del cliente: nombre, identificación, contacto, correo y dirección.</p>
+        <div v-if="editingClient" class="space-y-3" data-testid="collection-form-client-edit">
+          <ClientFormFields v-model="clientEdit" :errors="clientEditErrors" testid-prefix="collection-form-client-edit" dense @clear-error="clearClientEditError" />
+          <div class="flex flex-wrap justify-end gap-2">
+            <BaseButton type="button" variant="secondary" size="sm" :disabled="savingClient" @click="editingClient = false">Cancelar edición</BaseButton>
+            <BaseButton type="button" variant="primary" size="sm" :disabled="savingClient" data-testid="collection-form-client-edit-save" @click="saveClientDetails">{{ savingClient ? 'Guardando…' : 'Guardar datos del cliente' }}</BaseButton>
+          </div>
+        </div>
         <BaseFormRow
           :cols="2"
           :gap="3"
@@ -1427,7 +1507,7 @@ const modalFormId = useId();
             <BaseInput v-model="form.customer.contact_name" />
           </BaseFormField>
           <BaseFormField label="Dirección">
-            <BaseInput v-model="form.customer.address" />
+            <BaseInput v-model="form.customer.address" data-testid="collection-form-customer-address" />
           </BaseFormField>
         </BaseFormRow>
       </div>

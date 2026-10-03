@@ -69,7 +69,7 @@ test.describe('Panel project billing context', () => {
     // Catches the bug where the Panel can save a foreign amendment or omit the reconciliation reason.
     const calls = await arrangePanel(page);
     await openPanel(page, '/panel/accounting/collection-context/42', 'Asociación de cuenta de cobro');
-    await page.getByRole('combobox', { name: 'Naturaleza', exact: true }).selectOption('contract');
+    await page.getByRole('combobox', { name: '¿Qué estás cobrando?', exact: true }).selectOption('contract');
     await page.getByRole('combobox', { name: 'Contrato', exact: true }).selectOption('10');
     await expect(page.getByRole('combobox', { name: 'Otrosí (opcional)', exact: true }).getByRole('option')).toHaveCount(2);
     await expect(page.getByRole('combobox', { name: 'Otrosí (opcional)', exact: true })).not.toContainText('Otrosí ajeno');
@@ -103,7 +103,7 @@ test.describe('Panel project billing context', () => {
     await openPanel(page, '/panel/accounting/collection-context/42', 'Asociación de cuenta de cobro');
     await expect(page.getByRole('combobox', { name: 'Contrato', exact: true })).toHaveValue('10');
     await expect(page.getByRole('combobox', { name: 'Otrosí (opcional)', exact: true })).toHaveValue('11');
-    await page.getByRole('combobox', { name: 'Naturaleza', exact: true }).selectOption('');
+    await page.getByRole('combobox', { name: '¿Qué estás cobrando?', exact: true }).selectOption('');
     await expect(page.getByRole('button', { name: 'Guardar asociación' })).toBeDisabled();
     await page.getByLabel('Razón de la asociación o corrección').fill('Intento sin naturaleza');
     await expect(page.getByRole('button', { name: 'Guardar asociación' })).toBeDisabled();
@@ -116,7 +116,7 @@ test.describe('Panel project billing context', () => {
     // Catches the bug where a valid contract association is written without its mandatory audit reason.
     const calls = await arrangePanel(page);
     await openPanel(page, '/panel/accounting/collection-context/42', 'Asociación de cuenta de cobro');
-    await page.getByRole('combobox', { name: 'Naturaleza', exact: true }).selectOption('contract');
+    await page.getByRole('combobox', { name: '¿Qué estás cobrando?', exact: true }).selectOption('contract');
     await page.getByRole('combobox', { name: 'Contrato', exact: true }).selectOption('10');
     await page.getByRole('combobox', { name: 'Otrosí (opcional)', exact: true }).selectOption('11');
     await expect(page.getByRole('button', { name: 'Guardar asociación' })).toBeDisabled();

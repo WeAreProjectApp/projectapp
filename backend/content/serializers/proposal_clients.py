@@ -11,7 +11,26 @@ from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
 
 
-class ProposalClientSerializer(serializers.ModelSerializer):
+class ClientBillingSnapshotMixin:
+    def get_billing_customer(self, obj):
+        from content.services.collection_account_create_service import (
+            customer_snapshot_defaults,
+        )
+        customer = customer_snapshot_defaults(obj)
+        if obj.is_email_placeholder:
+            customer['email'] = ''
+        return customer
+
+
+class ClientBillingFieldsSerializer(serializers.Serializer):
+    """Validate the profile's billing fields before any client write."""
+
+    nit = serializers.CharField(max_length=32, required=False, allow_blank=True)
+    cedula = serializers.CharField(max_length=20, required=False, allow_blank=True)
+    address = serializers.CharField(max_length=512, required=False, allow_blank=True)
+
+
+class ProposalClientSerializer(ClientBillingSnapshotMixin, serializers.ModelSerializer):
     """
     Full serializer for the proposal-side client (UserProfile + nested User).
 
@@ -41,6 +60,7 @@ class ProposalClientSerializer(serializers.ModelSerializer):
         allow_blank=True,
         max_length=200,
     )
+    billing_customer = serializers.SerializerMethodField()
     user_id = serializers.IntegerField(source='user.id', read_only=True)
     is_email_placeholder = serializers.BooleanField(read_only=True)
     total_proposals = serializers.SerializerMethodField()
@@ -82,6 +102,8 @@ class ProposalClientSerializer(serializers.ModelSerializer):
             'company',
             'nit',
             'cedula',
+            'address',
+            'billing_customer',
             'billing_code',
             'is_onboarded',
             'is_email_placeholder',
@@ -441,19 +463,20 @@ class ProposalNestedClientSerializer(serializers.ModelSerializer):
         return rep
 
 
-class ProposalClientSearchSerializer(serializers.ModelSerializer):
+class ProposalClientSearchSerializer(ClientBillingSnapshotMixin, serializers.ModelSerializer):
     """Lightweight payload for a client-picker page (up to 20 results)."""
 
     name = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     company = serializers.CharField(source='company_name')
+    billing_customer = serializers.SerializerMethodField()
     is_email_placeholder = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = UserProfile
         fields = (
             'id', 'name', 'email', 'phone', 'company',
-            'nit', 'cedula', 'is_email_placeholder',
+            'nit', 'cedula', 'address', 'billing_code', 'billing_customer', 'is_email_placeholder',
         )
 
     def get_name(self, obj):

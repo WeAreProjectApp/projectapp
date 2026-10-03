@@ -1021,7 +1021,19 @@ describe('IncomeFormModal', () => {
 
     expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(false);
     expect(wrapper.text()).not.toContain('Destino');
-    expect(wrapper.text()).toContain('Valor');
+    expect(wrapper.text()).toContain('Cómo introduces el valor');
+  });
+
+  it('keeps the 19% VAT default after choosing a personal ledger', async () => {
+    // Fails if changing a new income to a personal ledger silently drops its default VAT.
+    const wrapper = mountModal();
+
+    await segmentedButton(wrapper, 'Personal Gustavo').trigger('click');
+    await wrapper.find('input[type="text"]').setValue('Ingreso personal');
+    await segmentedButton(wrapper, 'Otro').trigger('click');
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')[0][0].vat_rate).toBe(19);
   });
 
   it('personal ledger submits its VAT-aware capture without split amounts', async () => {
@@ -1039,7 +1051,7 @@ describe('IncomeFormModal', () => {
     expect(payload).toMatchObject({
       ledger: 'gustavo',
       destination: 'partners',
-      vat_rate: 0,
+      vat_rate: 19,
       amount: 54099,
       amount_mode: 'vat_included',
     });
@@ -1109,7 +1121,7 @@ describe('IncomeFormModal', () => {
   it('offers Perdido as a kind', () => {
     const wrapper = mountModal();
 
-    expect(segmentedButton(wrapper, 'Perdido')).toBeTruthy();
+    expect(segmentedButton(wrapper, 'Perdido').attributes('aria-selected')).toBe('false');
   });
 
   it('drops a pocket destination when switching to Perdido', async () => {

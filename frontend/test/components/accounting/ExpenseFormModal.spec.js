@@ -111,7 +111,7 @@ describe('ExpenseFormModal', () => {
       category: 'business',
       ledger: 'company',
       total_amount: '3000000',
-      vat_rate: 0,
+      vat_rate: 19,
       gustavo_amount: '1500000',
       carlos_amount: '1500000',
       register_in_pocket: true,
@@ -131,7 +131,7 @@ describe('ExpenseFormModal', () => {
     expect(wrapper.emitted('submit')[0][0].register_in_pocket).toBe(false);
   });
 
-  it('personal ledger replaces split controls with a value field', async () => {
+  it('personal ledger replaces split controls with the VAT amount capture', async () => {
     const wrapper = mountModal();
 
     expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(true);
@@ -139,7 +139,7 @@ describe('ExpenseFormModal', () => {
     await segmentedButton(wrapper, 'Personal Gustavo').trigger('click');
 
     expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(false);
-    expect(wrapper.text()).toContain('Valor');
+    expect(wrapper.text()).toContain('Cómo introduces el valor');
   });
 
   it('personal ledger submits a VAT-aware amount capture', async () => {
@@ -156,13 +156,30 @@ describe('ExpenseFormModal', () => {
     const payload = wrapper.emitted('submit')[0][0];
     expect(payload).toMatchObject({
       ledger: 'gustavo',
-      vat_rate: 0,
+      vat_rate: 19,
       amount: 3000000,
       amount_mode: 'vat_included',
     });
     expect(payload).not.toHaveProperty('total_amount');
     expect(payload).not.toHaveProperty('gustavo_amount');
     expect(payload).not.toHaveProperty('carlos_amount');
+  });
+
+  test.each([0, null])('keeps the stored VAT rate %s when editing an expense', async (vatRate) => {
+    // Fails if opening an existing expense overwrites its historical VAT rate with 19%.
+    const wrapper = mountModal({
+      record: {
+        concept: 'Servicio histórico',
+        period_date: '2026-05-08',
+        ledger: 'company',
+        total_amount: '250000',
+        vat_rate: vatRate,
+      },
+    });
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')[0][0].vat_rate).toBe(vatRate);
   });
 
   it('warns that a personal expense from the pocket becomes a company draw', async () => {

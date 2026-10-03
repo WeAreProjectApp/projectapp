@@ -39,9 +39,9 @@ const IncomeFormModalStub = {
 
 const CollectionAccountProjectContextStub = {
   name: 'CollectionAccountProjectContext',
-  props: ['projectId', 'modelValue'],
-  emits: ['update:modelValue', 'valid'],
-  template: '<div data-testid="collection-account-project-context-stub" />',
+  props: ['projectId', 'modelValue', 'validationError'],
+  emits: ['update:modelValue', 'valid', 'validation-message'],
+  template: '<div data-testid="collection-account-project-context-stub"><p v-if="validationError" role="alert">{{ validationError }}</p></div>',
 };
 
 const clientFixture = {
@@ -63,6 +63,7 @@ const incomeFixture = {
   kind_label: 'Esperado',
   total_amount: '1490000.00',
   pending_amount: '1490000.00',
+  paid_amount: 0,
   has_collection_account: false,
   collection_account_number: null,
 };
@@ -201,7 +202,7 @@ function mountModal(props = {}) {
           props: ['modelValue', 'decimals', 'size', 'error', 'placeholder', 'disabled', 'suggestion'],
           emits: ['update:modelValue'],
           template:
-            '<input type="text" inputmode="numeric" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value === \'\' ? null : Number($event.target.value))" />',
+            '<input type="text" inputmode="numeric" :value="modelValue" :disabled="disabled" @input="$emit(\'update:modelValue\', $event.target.value === \'\' ? null : Number($event.target.value))" />',
         },
         BaseTextarea: {
           props: ['modelValue', 'rows', 'placeholder'],
@@ -296,10 +297,10 @@ describe('CollectionAccountFormModal', () => {
     delete window.matchMedia;
   });
 
-  it('uses the wizard width for the form step', () => {
+  it('uses the compact form width before preview', () => {
     const wrapper = mountModal();
 
-    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('wizard');
+    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
   });
 
   it('uses the workspace width for the preview step', async () => {
@@ -710,22 +711,29 @@ describe('CollectionAccountFormModal', () => {
     ).toBe('901234567');
   });
 
-  it('puts every missing prerequisite beside its field after preview is attempted', async () => {
+  it('names the missing client and income before preview', async () => {
+    // Fails if the form no longer tells the operator which two links are missing.
     const wrapper = mountModal();
     await flushPromises();
-
-    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
-    expect(wrapper.get('[data-testid="collection-form-preview"]').element.disabled).toBe(false);
 
     await wrapper.get('[data-testid="collection-form-preview"]').element.click();
 
     expect(wrapper.text()).toContain('Elige o crea un cliente.');
     expect(wrapper.text()).toContain('Selecciona un ingreso vinculado.');
+    expect(create_request).not.toHaveBeenCalled();
+  });
+
+  it('names the missing amount and concept before preview', async () => {
+    // Fails if an empty draft hides the amount or service description that must be completed.
+    const wrapper = mountModal();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="collection-form-preview"]').element.click();
+
     expect(wrapper.text()).toContain('Ingresa un valor mayor a cero.');
     expect(wrapper.text()).toContain('Escribe el concepto del servicio.');
     expect(wrapper.find('[data-testid="collection-form-preview-gate-reasons"]').exists())
       .toBe(false);
-    expect(create_request).not.toHaveBeenCalled();
   });
 
   it('warns immediately when the selected client has no real email', async () => {
@@ -812,7 +820,8 @@ describe('CollectionAccountFormModal', () => {
       .toBe(false);
   });
 
-  it('omits the consecutivo from the payload while it matches the suggestion', async () => {
+  it('defaults an unpaid income without VAT to 19% in the preview payload', async () => {
+    // Fails if a new cuenta from an unpaid income silently starts without the default VAT.
     const wrapper = mountModal({ income: incomeFixture });
     await flushPromises();
     await selectClient(wrapper);
@@ -825,7 +834,7 @@ describe('CollectionAccountFormModal', () => {
     expect(payload.public_number).toBeUndefined();
     expect(payload.client_profile_id).toBe(5);
     expect(payload.income_record_id).toBe(8);
-    expect(payload.vat_rate).toBeNull();
+    expect(payload.vat_rate).toBe(19);
     expect(payload.items[0]).toEqual({
       description: '',
       quantity: '1',
@@ -834,6 +843,23 @@ describe('CollectionAccountFormModal', () => {
       period_start: null,
       period_end: null,
     });
+  });
+
+  it('keeps an unknown VAT rate on a paid income while locking its amount', async () => {
+    // Fails if opening a paid income retroactively assigns it the new 19% default.
+    const wrapper = mountModal({
+      income: { ...incomeFixture, kind: 'liquid', paid_amount: 120000, vat_rate: undefined },
+    });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    expect(wrapper.get('[data-testid="collection-form-amount"]').element.disabled).toBe(true);
+    await wrapper.find('[data-testid="collection-form-preview"]').element.click();
+    await flushPromises();
+
+    const payload = create_request.mock.calls.at(-1)[1];
+    expect(payload.vat_rate).toBeNull();
+    expect(payload.items[0].amount).toBe('1490000');
   });
 
   it('sends a zero plazo as a real 0 rather than the default term', async () => {
@@ -1038,6 +1064,66 @@ describe('CollectionAccountFormModal', () => {
     await flushPromises();
 
     expect(create_request.mock.calls.at(-1)[1].client_profile_id).toBe(5);
+  });
+
+  it('keeps the suggested consecutivo while a saved client projection refreshes the document snapshot', async () => {
+    // Fails if saving the client sheet leaves the document using stale address or identification data.
+    const wrapper = mountModal({ income: incomeFixture });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    patch_request.mockResolvedValueOnce({
+      data: {
+        ...clientFixture,
+        address: 'Carrera 7 # 72-41',
+        billing_customer: {
+          name: 'Acme Soluciones SAS',
+          identification_type: 'NIT',
+          identification: '901234567-8',
+          email: 'facturacion@acme.co',
+          contact_name: 'Ana Pérez',
+          address: 'Carrera 7 # 72-41',
+        },
+      },
+    });
+    await wrapper.get('[data-testid="collection-form-edit-client"]').trigger('click');
+    await wrapper.get('[data-testid="collection-form-client-edit-address"]')
+      .setValue('Carrera 7 # 72-41');
+    await wrapper.get('[data-testid="collection-form-client-edit-save"]').trigger('click');
+    await flushPromises();
+
+    expect(patch_request).toHaveBeenCalledWith('proposals/client-profiles/5/update/', {
+      name: 'Ana Pérez',
+      email: 'ana@acme.co',
+      phone: '',
+      company: 'Acme Soluciones',
+      nit: '901234567',
+      cedula: '',
+      address: 'Carrera 7 # 72-41',
+      billing_code: '',
+    });
+    expect(wrapper.get('[data-testid="collection-form-customer-identification"]').element.value)
+      .toBe('901234567-8');
+    expect(wrapper.get('[data-testid="collection-form-customer-address"]').element.value)
+      .toBe('Carrera 7 # 72-41');
+    expect(wrapper.get('[data-testid="collection-form-number"]').element.value).toBe('PA-ACME-003');
+  });
+
+  it('shows the project context message before a preview request', async () => {
+    // Fails if accounts opened from project income hide the actionable context error.
+    const wrapper = mountModal({ income: { ...incomeFixture, project: 14 } });
+    await flushPromises();
+    await selectClient(wrapper);
+
+    const context = wrapper.findComponent(CollectionAccountProjectContextStub);
+    expect(context.props('projectId')).toBe(14);
+    context.vm.$emit('valid', false);
+    context.vm.$emit('validation-message', 'En «Cobro del proyecto», elige si cobras un contrato o el hosting.');
+    await flushPromises();
+    await wrapper.get('[data-testid="collection-form-preview"]').trigger('click');
+
+    expect(wrapper.text()).toContain('En «Cobro del proyecto», elige si cobras un contrato o el hosting.');
+    expect(create_request).not.toHaveBeenCalled();
   });
 
   it('create-new client opens the inline form and links the created profile', async () => {

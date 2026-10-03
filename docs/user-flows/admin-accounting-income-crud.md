@@ -35,4 +35,4 @@
 
 #### IVA opcional
 
-IVA opcional: empresa nueva usa 19%; se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
+Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar de empresa a personal conserva el porcentaje elegido. Se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. Al editar se respeta la tasa guardada. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.

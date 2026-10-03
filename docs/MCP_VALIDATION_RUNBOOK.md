@@ -105,6 +105,12 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 - `UserProfile.document_navigation_mode` es una preferencia de presentación del
   panel y permanece clasificada como perfil/plataforma: no altera ni se expone
   en las herramientas MCP de clientes o Documentos.
+- `UserProfile.address` es una lectura de facturación del conector de clientes,
+  junto con NIT/cédula y código. `search_clients`, `list_clients` y `get_client`
+  usan los serializers del panel y devuelven la proyección `billing_customer`
+  que completa una nueva cuenta. Las tools actuales de escritura de clientes
+  conservan sus campos declarados de contacto; la identificación y dirección
+  se editan en la ficha del panel, también accesible desde la cuenta nueva.
 - Todo `Project` pertenece a los catálogos de Documentos y Comunicaciones; no
   existe un opt-out por módulo. `DocumentFolder.managed_project` identifica su
   única raíz documental canónica. El MCP puede seguir referenciando proyectos

@@ -193,7 +193,8 @@ CLIENT_TOOLS = [
             'Autocompletado rápido de clientes. Busca por email, nombre o '
             'empresa (parcial) y devuelve hasta 20 resultados resumidos. '
             'Úsalo para encontrar el client_id que necesitan otras tools '
-            '(p. ej. crear una propuesta o un diagnóstico).'
+            '(p. ej. crear una propuesta o un diagnóstico). Incluye los datos '
+            'canónicos de facturación: nombre legal, identificación y dirección.'
         ),
         'input_schema': {
             'type': 'object',
@@ -229,7 +230,8 @@ CLIENT_TOOLS = [
         'description': (
             'Devuelve un cliente con propuestas, proyectos y diagnósticos '
             'anidados, más las métricas actuales de documentos, contabilidad, '
-            'correos y comunicaciones. Consulta cada módulo en su propio MCP '
+            'correos y comunicaciones y los datos canónicos de facturación '
+            '(nombre legal, identificación, correo y dirección). Consulta cada módulo en su propio MCP '
             'para abrir esas colecciones completas.'
         ),
         'input_schema': {

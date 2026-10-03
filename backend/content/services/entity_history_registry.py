@@ -36,7 +36,7 @@ FIELDS = {
         selected_modules contract_params contract_modality'''.split(),
     'project': '''name description status current_state client production_url staging_url repository_url
         admin_url admin_username'''.split(),
-    'client': '''company_name phone cedula nit billing_code archived_at'''.split(),
+    'client': '''company_name phone address cedula nit billing_code archived_at'''.split(),
 }
 
 LABELS = {
@@ -46,7 +46,7 @@ LABELS = {
     'states': 'Estados', 'notes': 'Notas', 'document_notes': 'Notas del documento', 'sections': 'Secciones', 'access': 'Accesos',
     'access_notes': 'Notas del proyecto', 'total_investment': 'Inversión', 'currency': 'Moneda',
     'discount_percent': 'Descuento', 'first_name': 'Nombre', 'last_name': 'Apellido',
-    'email': 'Correo', 'phone': 'Teléfono', 'cedula': 'Documento de identidad', 'nit': 'NIT',
+    'email': 'Correo', 'phone': 'Teléfono', 'address': 'Dirección', 'cedula': 'Documento de identidad', 'nit': 'NIT',
     'company_name': 'Empresa', 'billing_code': 'Código de facturación',
     'production_url': 'URL de producción', 'staging_url': 'URL de staging',
     'repository_url': 'Repositorio', 'admin_url': 'URL de administración',

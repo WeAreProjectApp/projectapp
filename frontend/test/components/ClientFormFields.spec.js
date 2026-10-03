@@ -3,58 +3,41 @@ import { mount } from '@vue/test-utils';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
 import { emptyClientForm } from '~/utils/billingCode';
 
-function mountFields(overrides = {}) {
+function mountFields(overrides = {}, testidPrefix = 'clients-new') {
   return mount(ClientFormFields, {
     props: {
       modelValue: { ...emptyClientForm(), ...overrides },
-      testidPrefix: 'clients-new',
+      testidPrefix,
+    },
+    global: {
+      stubs: {
+        BaseSelect: {
+          props: ['modelValue', 'options'],
+          emits: ['update:modelValue'],
+          template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
+        },
+      },
     },
   });
 }
 
-const FIELDS = ['name', 'email', 'phone', 'company', 'nit', 'billing-code'];
-
 describe('ClientFormFields', () => {
-  it('renders the same six fields every client surface shares', () => {
+  it('marks the client name as required', () => {
+    // Fails if inline client creation allows a blank legal customer name.
     const wrapper = mountFields();
 
-    FIELDS.forEach((field) => {
-      expect(wrapper.find(`[data-testid="clients-new-${field}"]`).exists()).toBe(true);
-    });
+    expect(wrapper.get('[data-testid="clients-new-name"]').attributes('required')).toBe('');
   });
 
-  it('keeps the fields in one fixed order so the modals stay recognizable', () => {
+  it('limits the billing code to the server column width', () => {
+    // Fails if the shared form accepts a billing code that the API will reject.
     const wrapper = mountFields();
 
-    const rendered = wrapper
-      .findAll('[data-testid^="clients-new-"]')
-      .map((input) => input.attributes('data-testid'));
-
-    expect(rendered).toEqual(FIELDS.map((field) => `clients-new-${field}`));
+    expect(wrapper.get('[data-testid="clients-new-billing-code"]').attributes('maxlength')).toBe('12');
   });
 
-  it('uses the required marker only on the name', () => {
-    const wrapper = mountFields();
-
-    expect(
-      wrapper.find('[data-testid="clients-new-name"]').attributes('required'),
-    ).toBeDefined();
-    FIELDS.slice(1).forEach((field) => {
-      expect(
-        wrapper.find(`[data-testid="clients-new-${field}"]`).attributes('required'),
-      ).toBeUndefined();
-    });
-
-    const text = wrapper.text();
-    // "C.C. / NIT": the field takes cédulas as much as NITs, and the label
-    // has to say so — most clients are personas naturales.
-    ['Email', 'Teléfono', 'Empresa', 'C.C. / NIT', 'Código de facturación'].forEach((label) => {
-      expect(text).toContain(label);
-    });
-    expect(text).not.toContain('(opcional)');
-  });
-
-  it('emits the whole form back when a field changes', async () => {
+  it('emits the billing code with the client form payload', async () => {
+    // Fails if collection and income inline forms stop sending the billing code.
     const wrapper = mountFields();
 
     await wrapper.find('[data-testid="clients-new-billing-code"]').setValue('G&M');
@@ -65,40 +48,60 @@ describe('ClientFormFields', () => {
     });
   });
 
-  it('caps the billing code at the length the column allows', () => {
-    const wrapper = mountFields();
+  it('uses the supplied test id prefix for an inline client update', async () => {
+    // Fails if a surface loses its isolated hook and updates the wrong client input.
+    const wrapper = mountFields({}, 'collection-form-inline-client');
 
-    expect(
-      wrapper.find('[data-testid="clients-new-billing-code"]').attributes('maxlength'),
-    ).toBe('12');
-  });
+    await wrapper.find('[data-testid="collection-form-inline-client-billing-code"]').setValue('ACME');
 
-  it('keeps the billing labels atomic', () => {
-    const wrapper = mountFields();
-    const labels = wrapper.findAll('label');
-
-    const billingLabels = labels.filter((label) => [
-      'C.C. / NIT',
-      'Código de facturación',
-    ].includes(label.text().trim()));
-
-    expect(billingLabels).toHaveLength(2);
-    billingLabels.forEach((label) => {
-      expect(label.classes()).toContain('whitespace-nowrap');
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      ...emptyClientForm(),
+      billing_code: 'ACME',
     });
   });
 
-  it('drives each testid from the prefix so surfaces keep distinct hooks', () => {
-    const wrapper = mount(ClientFormFields, {
-      props: {
-        modelValue: emptyClientForm(),
-        testidPrefix: 'collection-form-inline-client',
-      },
-    });
+  it('emits C.C. as the selected identification type', async () => {
+    // Fails if a natural person's identity is saved as NIT after selecting C.C.
+    const wrapper = mountFields();
 
-    expect(
-      wrapper.find('[data-testid="collection-form-inline-client-nit"]').exists(),
-    ).toBe(true);
-    expect(wrapper.find('[data-testid="clients-new-nit"]').exists()).toBe(false);
+    await wrapper.find('[data-testid="clients-new-identification-type"]').setValue('CC');
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      ...emptyClientForm(),
+      identification_type: 'CC',
+    });
+  });
+
+  it('emits the cédula field after the selected type changes', async () => {
+    // Fails if the number remains bound to nit after the form receives C.C.
+    const wrapper = mountFields();
+    await wrapper.setProps({ modelValue: { ...emptyClientForm(), identification_type: 'CC' } });
+
+    await wrapper.find('[data-testid="clients-new-cedula"]').setValue('10203040');
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      ...emptyClientForm(),
+      identification_type: 'CC',
+      cedula: '10203040',
+    });
+  });
+
+  it('shows a legacy cédula value when the stored type is absent', () => {
+    // Fails if legacy client rows show the C.C. selector but bind the number to an empty NIT field.
+    const wrapper = mountFields({ identification_type: undefined, nit: '', cedula: '10203040' });
+
+    expect(wrapper.get('[data-testid="clients-new-cedula"]').element.value).toBe('10203040');
+  });
+
+  it('emits the typed address from the shared client form', async () => {
+    // Fails if the address field is absent or no longer updates the client payload.
+    const wrapper = mountFields();
+
+    await wrapper.find('[data-testid="clients-new-address"]').setValue('Carrera 7 # 72-41');
+
+    expect(wrapper.emitted('update:modelValue')[0][0]).toEqual({
+      ...emptyClientForm(),
+      address: 'Carrera 7 # 72-41',
+    });
   });
 });

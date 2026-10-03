@@ -35,7 +35,7 @@ function defaultForm() {
     category: 'business',
     ledger: 'company',
     total_amount: '',
-    vat_rate: 0,
+    vat_rate: 19,
     vat_capture: null,
     gustavo_amount: '',
     carlos_amount: '',
@@ -114,7 +114,7 @@ const modalFormId = useId();
 </script>
 
 <template>
-  <BaseModal :model-value="open" kind="form-wide" title-id="expense-form-title" @close="emit('close')">
+  <BaseModal :model-value="open" kind="form" title-id="expense-form-title" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
       <h3 id="expense-form-title" class="text-lg font-bold text-text-default">{{ title }}</h3>
     </div>
@@ -154,9 +154,7 @@ const modalFormId = useId();
         v-model:carlosAmount="form.carlos_amount"
       />
 
-      <BaseFormField v-else label="Valor" required>
-        <VatAmountInput v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
-      </BaseFormField>
+      <VatAmountInput v-else v-model="form.total_amount" v-model:rate="form.vat_rate" :reset-key="open" @capture="form.vat_capture = $event" />
 
       <div
         v-if="isDeduction"

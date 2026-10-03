@@ -14,8 +14,16 @@
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
 
 
-**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto, incluido el preview desde ingreso, fija contrato y otrosí opcional del mismo contrato o el hosting único. La elección conserva el flujo de emisión y contabilidad; el servidor rechaza relaciones de otro cliente/proyecto.
+**Contexto de cobros de proyecto (P2):** Toda cuenta nueva de proyecto fija contrato y otrosí opcional del mismo contrato o un hosting explícito. El bloque «Cobro del proyecto» aparece tanto desde el botón de nueva cuenta como desde la acción del ingreso, aunque el ingreso esté bloqueado. Los mensajes indican qué falta: tipo de cobro, contrato, hosting o período de hosting. Volver de previsualización conserva la selección revisada; cambiar de proyecto la limpia. El servidor rechaza relaciones de otro cliente/proyecto.
+
+**Datos del cliente y distribución (2026-10-02):** La proyección canónica
+`billing_customer` completa nombre legal, NIT/cédula y tipo, contacto, correo y
+dirección. «Editar ficha del cliente» guarda esos datos por PATCH y actualiza
+la cuenta manteniendo el consecutivo manual y el resto del borrador; un error
+de guardado conserva la edición. La ficha y las cuentas emitidas mantienen su
+historial. Consecutivo comparte fila con concepto; el bloque de valor/IVA ocupa
+su propia fila y las fechas se agrupan sin reservar una columna vacía.
 
 #### IVA opcional
 
-Hereda IVA del ingreso, acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
+Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propone 19%. Acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.

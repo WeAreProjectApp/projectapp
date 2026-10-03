@@ -214,9 +214,9 @@ test.describe('Admin accounting VAT', () => {
     expect(calls[0].body).toMatchObject({ amount: 1000000, amount_mode: 'before_vat', vat_rate: 19 });
   });
 
-  // Bug caught: a zero-rate expense could become an unknown tax state and stop
-  // accounting users from distinguishing an explicit Sin IVA expense.
-  test('expense keeps its zero VAT choice on save', {
+  // Bug caught: a new expense could show the standard rate while persisting
+  // the former zero-rate default in its accounting payload.
+  test('expense saves the default 19 percent VAT rate', {
     tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -226,14 +226,41 @@ test.describe('Admin accounting VAT', () => {
 
     await page.getByTestId('expenses-new-button').click();
     await expect(page.getByRole('heading', { name: 'Nuevo gasto' })).toBeVisible();
+    await expect(page.getByTestId('vat-rate')).toHaveValue('19');
+
+    // quality: allow-fragile-selector (the expense concept input has no test id or accessible label)
+    await page.locator('form input[type="text"]').first().fill('Servicio con IVA');
+    await page.getByTestId('expense-form-period').fill('2026-10-01');
+    await page.getByTestId('partner-split-total').fill('500000');
+
+    await expect(page.getByTestId('vat-base')).toHaveText('$420.168 COP');
+    await expect(page.getByTestId('vat-tax')).toHaveText('$79.832 COP');
+    await page.getByTestId('expense-form-submit').click();
+
+    await expect(page.getByText('Gasto creado')).toContainText('Gasto creado');
+    expect(calls).toHaveLength(1);
+    expect(calls[0].body).toMatchObject({ amount: 500000, amount_mode: 'vat_included', vat_rate: 19 });
+  });
+
+  // Bug caught: choosing Sin IVA could leave the default percentage in the
+  // payload, so an explicitly exempt expense was recorded as taxable.
+  test('expense saves zero VAT after choosing Sin IVA', {
+    tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, accountingHandler(calls));
+    await page.goto(`${PANEL_PATH}/expenses`, { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'Gastos', exact: true })).toBeVisible();
+
+    await page.getByTestId('expenses-new-button').click();
+    await expect(page.getByRole('heading', { name: 'Nuevo gasto' })).toBeVisible();
+    await page.getByRole('button', { name: 'Sin IVA' }).click();
     await expect(page.getByTestId('vat-rate')).toHaveValue('0');
 
     // quality: allow-fragile-selector (the expense concept input has no test id or accessible label)
     await page.locator('form input[type="text"]').first().fill('Servicio sin IVA');
     await page.getByTestId('expense-form-period').fill('2026-10-01');
     await page.getByTestId('partner-split-total').fill('500000');
-
-    await expect(page.getByTestId('vat-base')).toHaveText('$500.000 COP');
     await expect(page.getByTestId('vat-tax')).toHaveText('$0 COP');
     await page.getByTestId('expense-form-submit').click();
 
