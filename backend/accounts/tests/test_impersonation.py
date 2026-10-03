@@ -4,7 +4,7 @@ Covers the shared service (accounts/services/impersonation.py), the panel DRF
 endpoint, and the Django admin button/view.
 """
 from concurrent.futures import ThreadPoolExecutor
-from threading import Barrier
+from threading import Barrier, Event, Lock, local
 from unittest.mock import patch
 
 import pytest
@@ -30,6 +30,65 @@ from accounts.services.impersonation import (
 User = get_user_model()
 
 pytestmark = pytest.mark.django_db
+
+
+class _FirstExchangeReadBarrier:
+    """Synchronize only each worker's first read of one exchange key."""
+
+    def __init__(self, real_get, exchange_key):
+        self._real_get = real_get
+        self._exchange_key = exchange_key
+        self._barrier = Barrier(2)
+        self._local = local()
+
+    def __call__(self, key, default=None, version=None):
+        value = self._real_get(key, default=default, version=version)
+        if key == self._exchange_key and not getattr(self._local, 'read_exchange_key', False):
+            self._local.read_exchange_key = True
+            self._barrier.wait(timeout=5)
+        return value
+
+
+class _FirstReaderGate:
+    """Delay one worker's initial read while later reads stay live."""
+
+    def __init__(self, real_get, exchange_key):
+        self._real_get = real_get
+        self._exchange_key = exchange_key
+        self.initial_read = Event()
+        self.release = Event()
+        self._lock = Lock()
+        self._delay_next_reader = True
+        self._local = local()
+
+    def __call__(self, key, default=None, version=None):
+        value = self._real_get(key, default=default, version=version)
+        if key != self._exchange_key or getattr(self._local, 'read_exchange_key', False):
+            return value
+        self._local.read_exchange_key = True
+        with self._lock:
+            delay_reader = self._delay_next_reader
+            self._delay_next_reader = False
+        if delay_reader:
+            self.initial_read.set()
+            if not self.release.wait(timeout=5):
+                raise TimeoutError('Delayed exchange reader was not released.')
+        return value
+
+
+class _MutableCacheClock:
+    """Supply a deterministic mutable timestamp to the LocMem cache."""
+
+    def __init__(self, current_time):
+        self.current_time = current_time
+
+    def time(self):
+        """Return the current test-controlled timestamp."""
+        return self.current_time
+
+    def advance(self, seconds):
+        """Move the test-controlled timestamp forward by ``seconds``."""
+        self.current_time += seconds
 
 
 # ---------------------------------------------------------------------------
@@ -191,13 +250,10 @@ def test_exchange_code_allows_exactly_one_simultaneous_consumer(superuser, clien
     """Falla si dos consumidores solapados obtienen los tokens del mismo código."""
     tokens = impersonate(superuser, client_user)
     code = create_exchange_code(tokens)
-    real_get = cache.get
-    readers_ready = Barrier(2, timeout=5)
-
-    def synchronized_get(key, default=None, version=None):
-        value = real_get(key, default=default, version=version)
-        readers_ready.wait()
-        return value
+    synchronized_get = _FirstExchangeReadBarrier(
+        cache.get,
+        f'{EXCHANGE_CODE_PREFIX}{code}',
+    )
 
     with (
         patch(
@@ -209,6 +265,39 @@ def test_exchange_code_allows_exactly_one_simultaneous_consumer(superuser, clien
 
     assert results.count(tokens) == 1
     assert results.count(None) == 1
+
+
+def test_exchange_code_rechecks_live_value_after_claim_expiry(superuser, client_user):
+    """Falla si un lector demorado devuelve tokens tras expirar la reclamación."""
+    tokens = impersonate(superuser, client_user)
+    clock = _MutableCacheClock(1_000_000)
+
+    with (
+        patch('django.core.cache.backends.base.time.time', clock.time),
+        patch('django.core.cache.backends.locmem.time.time', clock.time),
+    ):
+        code = create_exchange_code(tokens)
+        delayed_reader = _FirstReaderGate(
+            cache.get,
+            f'{EXCHANGE_CODE_PREFIX}{code}',
+        )
+        with (
+            patch(
+                'accounts.services.impersonation.cache.get',
+                side_effect=delayed_reader,
+            ),
+            ThreadPoolExecutor(max_workers=2) as executor,
+        ):
+            delayed = executor.submit(consume_exchange_code, code)
+            assert delayed_reader.initial_read.wait(timeout=5)
+            winner = executor.submit(consume_exchange_code, code)
+            winner_result = winner.result(timeout=5)
+            clock.advance(EXCHANGE_CODE_TTL_SECONDS + 1)
+            delayed_reader.release.set()
+            delayed_result = delayed.result(timeout=5)
+
+    assert winner_result == tokens
+    assert delayed_result is None
 
 
 def test_exchange_code_with_existing_claim_stays_available():

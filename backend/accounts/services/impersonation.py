@@ -106,6 +106,11 @@ def consume_exchange_code(code):
     )
     if not claimed:
         return None
+    # A reader can resume after the earlier claim expired. Check the live code
+    # under this claim so it cannot return a payload read before consumption.
+    tokens = cache.get(key)
+    if tokens is None:
+        return None
     cache.delete(key)
     return tokens
 
