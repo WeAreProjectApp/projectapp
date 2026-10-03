@@ -11,7 +11,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.messages.middleware import MessageMiddleware
 from django.contrib.sessions.middleware import SessionMiddleware
-from django.core.cache import cache
+from django.core.cache import cache, caches
 from django.test import RequestFactory
 from rest_framework.test import APIClient
 
@@ -250,15 +250,15 @@ def test_exchange_code_allows_exactly_one_simultaneous_consumer(superuser, clien
     """Falla si dos consumidores solapados obtienen los tokens del mismo código."""
     tokens = impersonate(superuser, client_user)
     code = create_exchange_code(tokens)
+    cache_backend = caches['default']
     synchronized_get = _FirstExchangeReadBarrier(
-        cache.get,
+        cache_backend.get,
         f'{EXCHANGE_CODE_PREFIX}{code}',
     )
 
     with (
-        patch(
-            'accounts.services.impersonation.cache.get', side_effect=synchronized_get,
-        ),
+        patch('accounts.services.impersonation.cache', cache_backend),
+        patch.object(cache_backend, 'get', side_effect=synchronized_get),
         ThreadPoolExecutor(max_workers=2) as executor,
     ):
         results = tuple(executor.map(consume_exchange_code, (code, code)))
@@ -277,15 +277,14 @@ def test_exchange_code_rechecks_live_value_after_claim_expiry(superuser, client_
         patch('django.core.cache.backends.locmem.time.time', clock.time),
     ):
         code = create_exchange_code(tokens)
+        cache_backend = caches['default']
         delayed_reader = _FirstReaderGate(
-            cache.get,
+            cache_backend.get,
             f'{EXCHANGE_CODE_PREFIX}{code}',
         )
         with (
-            patch(
-                'accounts.services.impersonation.cache.get',
-                side_effect=delayed_reader,
-            ),
+            patch('accounts.services.impersonation.cache', cache_backend),
+            patch.object(cache_backend, 'get', side_effect=delayed_reader),
             ThreadPoolExecutor(max_workers=2) as executor,
         ):
             delayed = executor.submit(consume_exchange_code, code)
