@@ -27,6 +27,7 @@ from content.models import (
 )
 from content.services import accounting_service
 from content.services.proposal_analytics_service import build_dashboard_core
+from content.services.recurring_schedule import next_charge_date
 from content.utils import today_bogota
 
 EMAIL_FAILED_STATUSES = (EmailLog.Status.FAILED, EmailLog.Status.BOUNCED)
@@ -212,23 +213,6 @@ def _operations_block(today, now):
     }
 
 
-def _days_until_billing(billing_day, today):
-    """Days until the next monthly occurrence of ``billing_day``."""
-    import calendar
-
-    def _clamped(year, month):
-        return min(billing_day, calendar.monthrange(year, month)[1])
-
-    if today.day <= _clamped(today.year, today.month):
-        due_day = _clamped(today.year, today.month)
-        return due_day - today.day
-    next_month = today.month % 12 + 1
-    next_year = today.year + (1 if today.month == 12 else 0)
-    due_day = _clamped(next_year, next_month)
-    days_in_month = calendar.monthrange(today.year, today.month)[1]
-    return days_in_month - today.day + due_day
-
-
 def _recurring_due_soon(today):
     """Active monthly payments billed within RECURRING_DUE_DAYS."""
     due = []
@@ -236,13 +220,15 @@ def _recurring_due_soon(today):
         is_active=True,
         is_archived=False,
         frequency=RecurringPayment.Frequency.MONTHLY,
-        billing_day__isnull=False,
     ).filter(
         Q(reminders_muted=False)
         | Q(reminders_muted_until__isnull=False, reminders_muted_until__lte=today)
     )
     for payment in payments:
-        days = _days_until_billing(payment.billing_day, today)
+        target = next_charge_date(payment, today)
+        if target is None:
+            continue
+        days = (target - today).days
         if days <= RECURRING_DUE_DAYS:
             due.append(days)
     return due
