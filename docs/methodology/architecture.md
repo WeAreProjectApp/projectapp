@@ -953,6 +953,16 @@ flowchart TD
 
 ### Service Responsibilities
 
+La vinculación de pagos Wompi se comprueba en
+`accounts/services/wompi_payment_binding.py` antes de modificar un pago: ID de
+transacción, importe en centavos, moneda COP y referencia de pago/proyecto o
+`payment_link_id` local. Las respuestas de un cobro deben devolver su referencia
+exacta; el polling conserva también el ID consultado. Verificación manual,
+webhook, cobros con tarjeta y tareas comparten esta comprobación. El webhook
+mantiene la firma y consulta la transacción canónica del proveedor antes de
+resolver el pago. Una discrepancia conserva el pago y su historial; el alta de
+una tarjeta ya verificada conserva sus datos aunque falle el cobro posterior.
+
 | Service | Footprint | Responsibilities |
 |---------|-----------|-----------------|
 | **ProposalService** | Very large | Proposal CRUD, section management, default sections, analytics computation, engagement scoring, dashboard aggregation, CSV export, scorecard |

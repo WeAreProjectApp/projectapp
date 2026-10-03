@@ -1,4 +1,7 @@
-from datetime import date, datetime, timezone as datetime_timezone
+"""Tests payment and subscription behavior."""
+
+from datetime import date, datetime
+from datetime import timezone as datetime_timezone
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -20,6 +23,17 @@ from accounts.tests.wompi_event_helpers import signed_transaction_event
 
 User = get_user_model()
 MAX_SUBSCRIPTION_LIST_QUERIES = 6
+
+
+def _link_transaction(payment, transaction_id, transaction_status):
+    return {
+        'id': transaction_id,
+        'status': transaction_status,
+        'amount_in_cents': int(payment.amount * 100),
+        'currency': 'COP',
+        'reference': 'wompi-provider-reference',
+        'payment_link_id': payment.wompi_payment_link_id,
+    }
 
 
 def _create_subscription(project, *, start_date='2026-01-01'):
@@ -79,11 +93,13 @@ def _create_subscriptions_for_query_budget(client_user, count, *, add_pending_pa
 
 @pytest.fixture
 def api_client():
+    """Provide an API client for endpoint requests."""
     return APIClient()
 
 
 @pytest.fixture
 def admin_user():
+    """Provide an authenticated administrator user."""
     user = User.objects.create_user(
         username='admin@pay.com', email='admin@pay.com', password='adminpass1',
         first_name='Admin', last_name='User',
@@ -97,6 +113,7 @@ def admin_user():
 
 @pytest.fixture
 def admin_headers(api_client, admin_user):
+    """Provide bearer headers for the administrator."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'admin@pay.com', 'password': 'adminpass1',
     })
@@ -106,6 +123,7 @@ def admin_headers(api_client, admin_user):
 
 @pytest.fixture
 def client_user(admin_user):
+    """Provide an authenticated client user."""
     user = User.objects.create_user(
         username='client@pay.com', email='client@pay.com', password='clientpass1',
         first_name='Carlos', last_name='López',
@@ -120,6 +138,7 @@ def client_user(admin_user):
 
 @pytest.fixture
 def client_headers(api_client, client_user):
+    """Provide bearer headers for the client."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'client@pay.com', 'password': 'clientpass1',
     })
@@ -129,6 +148,7 @@ def client_headers(api_client, client_user):
 
 @pytest.fixture
 def project(client_user):
+    """Provide an active project owned by the client."""
     return Project.objects.create(
         name='Pay Project', client=client_user,
         status=Project.STATUS_ACTIVE, progress=0,
@@ -137,11 +157,13 @@ def project(client_user):
 
 @pytest.fixture
 def subscription(project):
+    """Provide an active hosting subscription for the project."""
     return _create_subscription(project)
 
 
 @pytest.fixture
 def sample_payments(subscription):
+    """Provide payments in representative billing states."""
     payments = []
     payments.append(Payment.objects.create(
         subscription=subscription,
@@ -180,7 +202,10 @@ def sample_payments(subscription):
 
 @pytest.mark.django_db
 class TestHostingSubscriptionModel:
+    """Covers hosting subscription model behavior."""
+
     def test_calculate_amounts_quarterly(self, project):
+        """Verifies calculate amounts quarterly."""
         sub = HostingSubscription(
             project=project, plan='quarterly',
             base_monthly_amount=Decimal('100000'), discount_percent=10,
@@ -192,6 +217,7 @@ class TestHostingSubscriptionModel:
         assert sub.billing_amount == Decimal('270000')
 
     def test_calculate_amounts_semiannual(self, project):
+        """Verifies calculate amounts semiannual."""
         sub = HostingSubscription(
             project=project, plan='semiannual',
             base_monthly_amount=Decimal('100000'), discount_percent=20,
@@ -203,6 +229,7 @@ class TestHostingSubscriptionModel:
         assert sub.billing_amount == Decimal('480000')
 
     def test_calculate_amounts_nine_month(self, project):
+        """Verifies calculate amounts nine month."""
         sub = HostingSubscription(
             project=project, plan='nine_month',
             base_monthly_amount=Decimal('100000'), discount_percent=40,
@@ -214,6 +241,7 @@ class TestHostingSubscriptionModel:
         assert sub.billing_amount == Decimal('540000')
 
     def test_calculate_amounts_monthly_no_discount(self, project):
+        """Verifies calculate amounts monthly no discount."""
         sub = HostingSubscription(
             project=project, plan='monthly',
             base_monthly_amount=Decimal('100000'), discount_percent=0,
@@ -225,6 +253,7 @@ class TestHostingSubscriptionModel:
         assert sub.billing_amount == Decimal('100000')
 
     def test_billing_months_property(self, subscription):
+        """Verifies billing months property."""
         assert subscription.billing_months == 3
 
 
@@ -235,9 +264,12 @@ class TestHostingSubscriptionModel:
 
 @pytest.mark.django_db
 class TestSubscriptionList:
+    """Covers subscription list behavior."""
+
     def test_admin_lists_all_subscriptions(
         self, api_client, admin_headers, subscription,
     ):
+        """Verifies admin lists all subscriptions."""
         resp = api_client.get('/api/accounts/subscriptions/', **admin_headers)
 
         assert resp.status_code == 200
@@ -248,12 +280,14 @@ class TestSubscriptionList:
     def test_client_lists_own_subscriptions(
         self, api_client, client_headers, subscription,
     ):
+        """Verifies client lists own subscriptions."""
         resp = api_client.get('/api/accounts/subscriptions/', **client_headers)
 
         assert resp.status_code == 200
         assert len(resp.json()) == 1
 
     def test_unauthenticated_rejected(self, api_client):
+        """Verifies unauthenticated rejected."""
         resp = api_client.get('/api/accounts/subscriptions/')
 
         assert resp.status_code == 401
@@ -366,9 +400,12 @@ class TestSubscriptionList:
 
 @pytest.mark.django_db
 class TestProjectSubscription:
+    """Covers project subscription behavior."""
+
     def test_get_subscription_with_payments(
         self, api_client, admin_headers, project, subscription, sample_payments,
     ):
+        """Verifies get subscription with payments."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/subscription/', **admin_headers,
         )
@@ -382,6 +419,7 @@ class TestProjectSubscription:
     def test_client_gets_own_subscription(
         self, api_client, client_headers, project, subscription,
     ):
+        """Verifies client gets own subscription."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/subscription/', **client_headers,
         )
@@ -391,6 +429,7 @@ class TestProjectSubscription:
     def test_no_subscription_returns_404(
         self, api_client, admin_headers, project,
     ):
+        """Verifies no subscription returns 404."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/subscription/', **admin_headers,
         )
@@ -400,6 +439,7 @@ class TestProjectSubscription:
     def test_admin_updates_plan(
         self, api_client, admin_headers, project, subscription,
     ):
+        """Verifies admin updates plan."""
         resp = api_client.patch(
             f'/api/accounts/projects/{project.id}/subscription/',
             {'plan': 'semiannual'},
@@ -415,6 +455,7 @@ class TestProjectSubscription:
     ):
         # The client may change the frequency only while the subscription is
         # still pending (the first payment has not settled yet).
+        """Verifies client can change plan."""
         subscription.status = HostingSubscription.STATUS_PENDING
         subscription.save(update_fields=['status'])
 
@@ -430,6 +471,7 @@ class TestProjectSubscription:
     def test_client_cannot_change_status(
         self, api_client, client_headers, project, subscription,
     ):
+        """Verifies client cannot change status."""
         resp = api_client.patch(
             f'/api/accounts/projects/{project.id}/subscription/',
             {'status': 'cancelled'},
@@ -446,9 +488,12 @@ class TestProjectSubscription:
 
 @pytest.mark.django_db
 class TestProjectPayments:
+    """Covers project payments behavior."""
+
     def test_list_payments_for_project(
         self, api_client, admin_headers, project, subscription, sample_payments,
     ):
+        """Verifies list payments for project."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/payments/', **admin_headers,
         )
@@ -459,6 +504,7 @@ class TestProjectPayments:
     def test_client_lists_payments(
         self, api_client, client_headers, project, subscription, sample_payments,
     ):
+        """Verifies client lists payments."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/payments/', **client_headers,
         )
@@ -469,6 +515,7 @@ class TestProjectPayments:
     def test_no_subscription_returns_empty(
         self, api_client, admin_headers, project,
     ):
+        """Verifies no subscription returns empty."""
         resp = api_client.get(
             f'/api/accounts/projects/{project.id}/payments/', **admin_headers,
         )
@@ -484,10 +531,13 @@ class TestProjectPayments:
 
 @pytest.mark.django_db
 class TestPaymentGenerateLink:
+    """Covers payment generate link behavior."""
+
     @patch('accounts.services.wompi.requests.post')
     def test_admin_generates_link_for_pending_payment(
         self, mock_post, api_client, admin_headers, project, subscription, sample_payments,
     ):
+        """Verifies admin generates link for pending payment."""
         pending = sample_payments[1]
         mock_post.return_value.status_code = 200
         mock_post.return_value.raise_for_status = lambda: None
@@ -508,6 +558,7 @@ class TestPaymentGenerateLink:
     def test_cannot_generate_link_for_paid_payment(
         self, api_client, admin_headers, project, subscription, sample_payments,
     ):
+        """Verifies cannot generate link for paid payment."""
         paid = sample_payments[0]
 
         resp = api_client.post(
@@ -520,6 +571,7 @@ class TestPaymentGenerateLink:
     def test_client_cannot_generate_link(
         self, api_client, client_headers, project, subscription, sample_payments,
     ):
+        """Verifies client cannot generate link."""
         pending = sample_payments[1]
 
         resp = api_client.post(
@@ -537,22 +589,25 @@ class TestPaymentGenerateLink:
 
 @pytest.mark.django_db
 class TestWompiWebhook:
+    """Covers wompi webhook behavior."""
+
     def test_approved_transaction_marks_payment_paid(
         self, api_client, subscription, sample_payments,
     ):
+        """Verifies approved transaction marks payment paid."""
         pending = sample_payments[1]
         pending.wompi_payment_link_id = 'link_test_ref'
         pending.save(update_fields=['wompi_payment_link_id'])
 
-        resp = api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_123',
-                'status': 'APPROVED',
-                'reference': 'link_test_ref',
-            }),
-            format='json',
-        )
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=_link_transaction(pending, 'txn_123', 'APPROVED'),
+        ):
+            resp = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_123', 'status': 'APPROVED'}),
+                format='json',
+            )
 
         assert resp.status_code == 200
         pending.refresh_from_db()
@@ -563,25 +618,27 @@ class TestWompiWebhook:
     def test_declined_transaction_marks_payment_failed(
         self, api_client, subscription, sample_payments,
     ):
+        """Verifies declined transaction marks payment failed."""
         pending = sample_payments[1]
         pending.wompi_payment_link_id = 'link_declined'
         pending.save(update_fields=['wompi_payment_link_id'])
 
-        resp = api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_456',
-                'status': 'DECLINED',
-                'reference': 'link_declined',
-            }),
-            format='json',
-        )
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=_link_transaction(pending, 'txn_456', 'DECLINED'),
+        ):
+            resp = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_456', 'status': 'DECLINED'}),
+                format='json',
+            )
 
         assert resp.status_code == 200
         pending.refresh_from_db()
         assert pending.status == Payment.STATUS_FAILED
 
     def test_non_transaction_event_ignored(self, api_client):
+        """Verifies non transaction event ignored."""
         resp = api_client.post(
             '/api/accounts/webhooks/wompi/',
             signed_transaction_event({}, event='nequi_token.updated'),
@@ -592,21 +649,29 @@ class TestWompiWebhook:
         assert resp.json()['status'] == 'ignored'
 
     def test_unknown_reference_returns_404(self, api_client):
-        resp = api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_ghost',
-                'status': 'APPROVED',
-                'reference': 'nonexistent_ref',
-            }),
-            format='json',
-        )
+        """Verifies unknown reference returns 404."""
+        canonical_transaction = {
+            'id': 'txn_ghost', 'status': 'APPROVED',
+            'amount_in_cents': 100,
+            'currency': 'COP',
+            'reference': 'PA99999P1T1700000000',
+        }
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=canonical_transaction,
+        ):
+            resp = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_ghost', 'status': 'APPROVED'}),
+                format='json',
+            )
 
         assert resp.status_code == 404
 
     def test_approved_transaction_activates_pending_subscription(
         self, api_client, project,
     ):
+        """Verifies approved transaction activates pending subscription."""
         sub = HostingSubscription.objects.create(
             project=project, plan='monthly',
             base_monthly_amount=Decimal('100000'), discount_percent=0,
@@ -621,15 +686,15 @@ class TestWompiWebhook:
             wompi_payment_link_id='link_activate',
         )
 
-        api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_activate',
-                'status': 'APPROVED',
-                'reference': 'link_activate',
-            }),
-            format='json',
-        )
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=_link_transaction(payment, 'txn_activate', 'APPROVED'),
+        ):
+            api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_activate', 'status': 'APPROVED'}),
+                format='json',
+            )
 
         sub.refresh_from_db()
         assert sub.status == HostingSubscription.STATUS_ACTIVE
@@ -642,9 +707,12 @@ class TestWompiWebhook:
 
 @pytest.mark.django_db
 class TestProjectCreationWithProposal:
+    """Covers project creation with proposal behavior."""
+
     def test_create_project_with_proposal_links_but_no_subscription(
         self, api_client, admin_headers, client_user,
     ):
+        """Verifies create project with proposal links but no subscription."""
         from content.models import BusinessProposal
 
         proposal = BusinessProposal.objects.create(
@@ -676,6 +744,7 @@ class TestProjectCreationWithProposal:
     def test_create_project_without_proposal(
         self, api_client, admin_headers, client_user,
     ):
+        """Verifies create project without proposal."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Manual Project',
             'client_id': client_user.id,
@@ -689,6 +758,7 @@ class TestProjectCreationWithProposal:
     def test_create_project_with_invalid_proposal_fails(
         self, api_client, admin_headers, client_user,
     ):
+        """Verifies create project with invalid proposal fails."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Bad', 'client_id': client_user.id, 'proposal_id': 99999,
         }, format='json', **admin_headers)
@@ -703,6 +773,7 @@ class TestProjectCreationWithProposal:
 
 @pytest.fixture
 def proposal_with_sections():
+    """Provide proposal with sections."""
     from content.models import BusinessProposal, ProposalSection
 
     proposal = BusinessProposal.objects.create(
@@ -779,9 +850,12 @@ def proposal_with_sections():
 
 @pytest.mark.django_db
 class TestAutoCreateRequirements:
+    """Covers auto create requirements behavior."""
+
     def test_no_requirements_auto_created_from_proposal(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies no requirements auto created from proposal."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Auto-Req Project',
             'client_id': client_user.id,
@@ -797,6 +871,7 @@ class TestAutoCreateRequirements:
     def test_project_from_proposal_has_no_hidden_requirements(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies project from proposal has no hidden requirements."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Hidden Test',
             'client_id': client_user.id,
@@ -809,6 +884,7 @@ class TestAutoCreateRequirements:
     def test_project_from_proposal_stores_milestones(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies project from proposal stores milestones."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Milestones Check',
             'client_id': client_user.id,
@@ -826,9 +902,12 @@ class TestAutoCreateRequirements:
 
 @pytest.mark.django_db
 class TestProposalFinancialExtraction:
+    """Covers proposal financial extraction behavior."""
+
     def test_payment_milestones_stored_on_project(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies payment milestones stored on project."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Milestones Test',
             'client_id': client_user.id,
@@ -844,6 +923,7 @@ class TestProposalFinancialExtraction:
     def test_hosting_tiers_stored_on_project(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies hosting tiers stored on project."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Tiers Test',
             'client_id': client_user.id,
@@ -861,6 +941,7 @@ class TestProposalFinancialExtraction:
     def test_milestones_visible_to_admin_in_detail(
         self, api_client, admin_headers, client_user, proposal_with_sections,
     ):
+        """Verifies milestones visible to admin in detail."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Admin Visibility',
             'client_id': client_user.id,
@@ -876,6 +957,7 @@ class TestProposalFinancialExtraction:
     def test_milestones_hidden_from_client_in_detail(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies milestones hidden from client in detail."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Client Hidden',
             'client_id': client_user.id,
@@ -891,6 +973,7 @@ class TestProposalFinancialExtraction:
     def test_hosting_tiers_visible_to_both_roles(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies hosting tiers visible to both roles."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Tiers Both Roles',
             'client_id': client_user.id,
@@ -908,6 +991,7 @@ class TestProposalFinancialExtraction:
     def test_project_without_proposal_has_empty_milestones(
         self, api_client, admin_headers, client_user,
     ):
+        """Verifies project without proposal has empty milestones."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'No Proposal',
             'client_id': client_user.id,
@@ -926,9 +1010,12 @@ class TestProposalFinancialExtraction:
 
 @pytest.mark.django_db
 class TestAutoRenewal:
+    """Covers auto renewal behavior."""
+
     def test_first_payment_created_when_client_chooses_plan(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies first payment created when client chooses plan."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'First Payment Test',
             'client_id': client_user.id,
@@ -955,6 +1042,7 @@ class TestAutoRenewal:
     def test_next_payment_generated_after_webhook_approval(
         self, api_client, project,
     ):
+        """Verifies next payment generated after webhook approval."""
         sub = HostingSubscription.objects.create(
             project=project, plan='monthly',
             base_monthly_amount=Decimal('250000'), discount_percent=0,
@@ -969,15 +1057,15 @@ class TestAutoRenewal:
             wompi_payment_link_id='link_renewal',
         )
 
-        api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_renewal',
-                'status': 'APPROVED',
-                'reference': 'link_renewal',
-            }),
-            format='json',
-        )
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=_link_transaction(payment, 'txn_renewal', 'APPROVED'),
+        ):
+            api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_renewal', 'status': 'APPROVED'}),
+                format='json',
+            )
 
         payment.refresh_from_db()
         assert payment.status == Payment.STATUS_PAID
@@ -997,6 +1085,7 @@ class TestAutoRenewal:
     def test_no_duplicate_pending_payment(
         self, api_client, project,
     ):
+        """Verifies no duplicate pending payment."""
         sub = HostingSubscription.objects.create(
             project=project, plan='monthly',
             base_monthly_amount=Decimal('100000'), discount_percent=0,
@@ -1024,9 +1113,12 @@ class TestAutoRenewal:
 
 @pytest.mark.django_db
 class TestClientCreateSubscription:
+    """Covers client create subscription behavior."""
+
     def test_client_creates_subscription_with_valid_plan(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies client creates subscription with valid plan."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Sub Create Test',
             'client_id': client_user.id,
@@ -1048,6 +1140,7 @@ class TestClientCreateSubscription:
     def test_duplicate_subscription_rejected(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies duplicate subscription rejected."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Dup Sub Test',
             'client_id': client_user.id,
@@ -1074,6 +1167,7 @@ class TestClientCreateSubscription:
     def test_no_proposal_project_rejected(
         self, api_client, admin_headers, client_headers, client_user,
     ):
+        """Verifies no proposal project rejected."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'No Proposal Sub',
             'client_id': client_user.id,
@@ -1092,6 +1186,7 @@ class TestClientCreateSubscription:
     def test_invalid_plan_rejected(
         self, api_client, admin_headers, client_headers, client_user, proposal_with_sections,
     ):
+        """Verifies invalid plan rejected."""
         resp = api_client.post('/api/accounts/projects/', {
             'name': 'Bad Plan',
             'client_id': client_user.id,

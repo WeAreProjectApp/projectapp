@@ -38,11 +38,13 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def api_client():
+    """Provide an API client for endpoint requests."""
     return APIClient()
 
 
 @pytest.fixture
 def admin_user():
+    """Provide an authenticated administrator user."""
     user = User.objects.create_user(
         username='admin@authgaps.com', email='admin@authgaps.com', password='adminpass1',
         first_name='Admin', last_name='User',
@@ -53,6 +55,7 @@ def admin_user():
 
 @pytest.fixture
 def admin_headers(api_client, admin_user):
+    """Provide bearer headers for the administrator."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'admin@authgaps.com', 'password': 'adminpass1',
     })
@@ -62,6 +65,7 @@ def admin_headers(api_client, admin_user):
 
 @pytest.fixture
 def client_user(admin_user):
+    """Provide an authenticated client user."""
     user = User.objects.create_user(
         username='client@authgaps.com', email='client@authgaps.com', password='clientpass1',
         first_name='Test', last_name='Client',
@@ -75,6 +79,7 @@ def client_user(admin_user):
 
 @pytest.fixture
 def client_headers(api_client, client_user):
+    """Provide bearer headers for the client."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'client@authgaps.com', 'password': 'clientpass1',
     })
@@ -84,6 +89,7 @@ def client_headers(api_client, client_user):
 
 @pytest.fixture
 def project(client_user):
+    """Provide an active project owned by the client."""
     return Project.objects.create(
         name='Auth Gaps Project', client=client_user,
         status=Project.STATUS_ACTIVE,
@@ -92,6 +98,7 @@ def project(client_user):
 
 @pytest.fixture
 def subscription(project):
+    """Provide an active hosting subscription for the project."""
     sub = HostingSubscription(
         project=project, plan=HostingSubscription.PLAN_MONTHLY,
         base_monthly_amount=Decimal('300000'), discount_percent=0,
@@ -105,6 +112,7 @@ def subscription(project):
 
 @pytest.fixture
 def pending_payment(subscription):
+    """Provide an open payment for the subscription."""
     return Payment.objects.create(
         subscription=subscription,
         amount=subscription.billing_amount,
@@ -121,6 +129,8 @@ def pending_payment(subscription):
 # ===========================================================================
 
 class TestLoginViewInactiveUser:
+    """Covers login view inactive user behavior."""
+
     @patch('accounts.views.authenticate')
     def test_inactive_user_returns_403(self, mock_auth, api_client):
         """When authenticate returns an inactive user, login returns 403."""
@@ -141,6 +151,8 @@ class TestLoginViewInactiveUser:
 # ===========================================================================
 
 class TestResendCodeViewInvalidToken:
+    """Covers resend code view invalid token behavior."""
+
     def test_invalid_bearer_token_returns_401(self, api_client):
         """Malformed or expired JWT token in resend-code/ triggers exception → 401."""
         resp = api_client.post(
@@ -156,9 +168,12 @@ class TestResendCodeViewInvalidToken:
 # ===========================================================================
 
 class TestMeViewCustomCoverImage:
+    """Covers me view custom cover image behavior."""
+
     def test_patch_custom_cover_image_updates_profile(self, api_client, client_headers):
         """PATCH /me/ with custom_cover_image file updates the profile field."""
         from io import BytesIO
+
         from PIL import Image
 
         buf = BytesIO()
@@ -180,6 +195,8 @@ class TestMeViewCustomCoverImage:
 # ===========================================================================
 
 class TestClientListViewDuplicateEmail:
+    """Covers client list view duplicate email behavior."""
+
     def test_duplicate_email_returns_400(self, api_client, admin_headers, client_user):
         """POST /clients/ with existing email raises ValueError → 400."""
         resp = api_client.post('/api/accounts/clients/', {
@@ -196,6 +213,8 @@ class TestClientListViewDuplicateEmail:
 # ===========================================================================
 
 class TestClientDetailViewIsActive:
+    """Covers client detail view is active behavior."""
+
     def test_admin_can_deactivate_client(self, api_client, admin_headers, client_user):
         """PATCH /clients/{id}/ with is_active=false deactivates the user."""
         resp = api_client.patch(
@@ -215,6 +234,8 @@ class TestClientDetailViewIsActive:
 # ===========================================================================
 
 class TestAdminDetailViewNonStaff:
+    """Covers admin detail view non staff behavior."""
+
     def test_non_staff_admin_returns_403(self, api_client, admin_headers, admin_user):
         """Non-staff admin accessing admin_detail_view gets 403 (requires is_staff)."""
         resp = api_client.get(
@@ -230,6 +251,8 @@ class TestAdminDetailViewNonStaff:
 # ===========================================================================
 
 class TestGenerateNextPaymentNilStart:
+    """Covers generate next payment nil start behavior."""
+
     def test_returns_none_when_next_billing_date_is_none(self, subscription):
         """_generate_next_payment returns None immediately when next_billing_date is None."""
         from accounts.views import _generate_next_payment
@@ -247,6 +270,8 @@ class TestGenerateNextPaymentNilStart:
 # ===========================================================================
 
 class TestHandlePaymentApprovedNotificationException:
+    """Covers handle payment approved notification exception behavior."""
+
     @patch('accounts.services.notifications.notify', side_effect=Exception('notify fail'))
     def test_notification_exception_is_silenced(self, mock_notify, project, subscription, pending_payment):
         """Exception in the notification block is caught and logged — payment is still updated."""
@@ -266,6 +291,8 @@ class TestHandlePaymentApprovedNotificationException:
 # ===========================================================================
 
 class TestPaymentCardPayInvalidProject:
+    """Covers payment card pay invalid project behavior."""
+
     def test_invalid_project_returns_404(self, api_client, client_headers):
         """payment_card_pay_view returns 404 when project_id does not exist."""
         url = '/api/accounts/projects/99999/payments/1/card-pay/'
@@ -279,6 +306,8 @@ class TestPaymentCardPayInvalidProject:
 # ===========================================================================
 
 class TestPaymentVerifyInvalidProject:
+    """Covers payment verify invalid project behavior."""
+
     def test_invalid_project_returns_404(self, api_client, client_headers):
         """payment_verify_transaction_view returns 404 when project_id does not exist."""
         url = '/api/accounts/projects/99999/payments/1/verify/'
@@ -292,18 +321,26 @@ class TestPaymentVerifyInvalidProject:
 # ===========================================================================
 
 class TestWompiWebhookPaPatternNotFound:
+    """Covers wompi webhook pa pattern not found behavior."""
+
     def test_pa_pattern_with_nonexistent_payment_id_not_found(self, api_client):
         """PA-pattern reference with non-existent payment ID falls through to 404."""
         reference = 'PA99999P1T1234567890'
-        resp = api_client.post(
-            '/api/accounts/webhooks/wompi/',
-            signed_transaction_event({
-                'id': 'txn_pa_miss',
-                'status': 'APPROVED',
-                'reference': reference,
-            }),
-            format='json',
-        )
+        canonical_transaction = {
+            'id': 'txn_pa_miss', 'status': 'APPROVED',
+            'amount_in_cents': 100,
+            'currency': 'COP',
+            'reference': reference,
+        }
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=canonical_transaction,
+        ):
+            resp = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_pa_miss', 'status': 'APPROVED'}),
+                format='json',
+            )
 
         assert resp.status_code == 404
 
@@ -313,6 +350,8 @@ class TestWompiWebhookPaPatternNotFound:
 # ===========================================================================
 
 class TestProjectSubscriptionInvalidProject:
+    """Covers project subscription invalid project behavior."""
+
     def test_invalid_project_returns_404(self, api_client, client_headers):
         """project_subscription_view returns 404 when project_id does not exist."""
         url = '/api/accounts/projects/99999/subscription/'
@@ -326,6 +365,8 @@ class TestProjectSubscriptionInvalidProject:
 # ===========================================================================
 
 class TestProjectPaymentsInvalidProject:
+    """Covers project payments invalid project behavior."""
+
     def test_invalid_project_returns_404(self, api_client, client_headers):
         """project_payments_view returns 404 when project_id does not exist."""
         url = '/api/accounts/projects/99999/payments/'

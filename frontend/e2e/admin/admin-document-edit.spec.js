@@ -65,6 +65,22 @@ const documentFolderTree = [
   { id: 30, name: '08 - Agosto', parent: 20, is_archived: false },
 ];
 
+const duplicateFolderName = 'Entregables de revisión contractual integral';
+const duplicateFolderOne = {
+  id: 81, name: duplicateFolderName, parent: 80, is_archived: false,
+  project_name: 'Renovación operativa Boreal', client_display_name: 'Cliente Boreal',
+};
+const duplicateFolderTwo = {
+  id: 91, name: duplicateFolderName, parent: 90, is_archived: false,
+  project_name: 'Conciliación documental Boreal', client_display_name: 'Cliente Boreal',
+};
+const duplicateFolderTree = [
+  { id: 80, name: 'Renovación anual Cliente Boreal', parent: null, is_archived: false },
+  duplicateFolderOne,
+  { id: 90, name: 'Conciliación trimestral Cliente Boreal', parent: null, is_archived: false },
+  duplicateFolderTwo,
+];
+
 const generatedProposalSnapshot = {
   ...mockDocument,
   title: '2026-08-14 · Propuesta comercial · Portal Nube · v02',
@@ -804,6 +820,55 @@ test.describe('Admin Document Edit', () => {
 
     expect((await requestPromise).postDataJSON().folder_id).toBe(20);
   });
+
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    test.describe(`folder picker long identities — ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
+      test.use(viewportUse(profile));
+
+      test(`saves the exact long duplicate folder identity at ${profile}`, {
+        // Bug this catches: clipped folder names or context make same-named
+        // destinations indistinguishable and save the wrong folder id.
+        tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success', '@responsive:documents'],
+      }, async ({ page }) => {
+        // quality: allow-duplicate (per-viewport contract: folder picker identity)
+        const filedDocument = { ...mockDocument, folder: null, folder_name: null };
+        let savedPayload = null;
+        await mockApi(page, async ({ apiPath, method, route }) => {
+          if (apiPath === 'auth/check/') return authCheck;
+          if (apiPath === 'documents/1/detail/') return { status: 200, contentType: 'application/json', body: JSON.stringify(filedDocument) };
+          if (apiPath === 'document-folders/') return { status: 200, contentType: 'application/json', body: JSON.stringify(duplicateFolderTree) };
+          if (apiPath === 'documents/1/update/' && method === 'PATCH') {
+            savedPayload = route.request().postDataJSON();
+            return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...filedDocument, ...savedPayload }) };
+          }
+          return null;
+        });
+
+        await page.goto('/panel/documents/1/edit', { waitUntil: 'domcontentloaded' });
+        const picker = page.getByTestId('doc-folder-select');
+        await picker.click();
+        const firstOption = page.getByTestId(`doc-folder-select-option-${duplicateFolderOne.id}`);
+        const secondOption = page.getByTestId(`doc-folder-select-option-${duplicateFolderTwo.id}`);
+        const firstDetail = page.getByTestId(`doc-folder-select-detail-${duplicateFolderOne.id}`);
+        const secondDetail = page.getByTestId(`doc-folder-select-detail-${duplicateFolderTwo.id}`);
+        await expect(firstOption.getByText(duplicateFolderName, { exact: true })).toHaveText(duplicateFolderName);
+        await expect(firstDetail).toHaveText('Renovación anual Cliente Boreal · Renovación operativa Boreal · Cliente Boreal');
+        await expect(secondOption.getByText(duplicateFolderName, { exact: true })).toHaveText(duplicateFolderName);
+        await expect(secondDetail).toHaveText('Conciliación trimestral Cliente Boreal · Conciliación documental Boreal · Cliente Boreal');
+        const geometry = await Promise.all([
+          firstOption.getByText(duplicateFolderName, { exact: true }), firstDetail,
+          secondOption.getByText(duplicateFolderName, { exact: true }), secondDetail,
+        ].map((option) => option.evaluate((element) => ({
+          scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+        }))));
+        expect(geometry.every((row) => row.scrollWidth <= row.clientWidth)).toBe(true);
+
+        await secondOption.click();
+        await page.getByTestId('doc-save').click();
+        await expect.poll(() => savedPayload?.folder_id).toBe(duplicateFolderTwo.id);
+      });
+    });
+  }
 
   test('edits a saved observation', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],

@@ -1,13 +1,14 @@
 <template>
   <nav
-    class="flex items-center gap-0.5 flex-wrap text-sm mb-4"
+    class="flex items-center gap-2 flex-wrap text-sm mb-4"
     aria-label="Ruta de carpetas"
   >
     <button
       type="button"
-      class="px-2 py-1 rounded-lg transition-colors"
+      class="touch-target px-2 py-1 rounded-lg transition-colors"
       :class="segmentClass(dragOverId === 'root')"
       data-testid="folder-breadcrumb-root"
+      data-responsive-touch-target
       @click="$emit('select', rootValue)"
       @dragover="onDragOver($event, 'root')"
       @dragleave="dragOverId = null"
@@ -26,8 +27,10 @@
       <button
         v-if="idx < ancestors.length - 1"
         type="button"
-        class="px-2 py-1 rounded-lg transition-colors max-w-[180px] truncate"
+        class="touch-target px-2 py-1 rounded-lg transition-colors max-w-[180px] truncate"
         :class="segmentClass(dragOverId === crumb.id)"
+        :data-testid="`folder-breadcrumb-${crumb.id}`"
+        data-responsive-touch-target
         @click="$emit('select', crumb.id)"
         @dragover="onDragOver($event, crumb.id)"
         @dragleave="dragOverId = null"
