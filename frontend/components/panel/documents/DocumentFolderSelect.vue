@@ -93,11 +93,11 @@
             @click="selectOption(option)"
             @mouseenter="highlightIndex = idx"
           >
-            <p class="truncate text-sm text-text-default">{{ option.name }}</p>
+            <p class="whitespace-normal [overflow-wrap:anywhere] text-sm text-text-default">{{ option.name }}</p>
             <!-- Los nombres se repiten a propósito (cada proyecto tiene su
                  «Entregables»): la ubicación y el dueño son los que distinguen. -->
             <p
-              class="truncate text-xs text-text-subtle"
+              class="whitespace-normal [overflow-wrap:anywhere] text-xs text-text-subtle"
               :data-testid="`${testid}-detail-${option.id}`"
             >
               {{ option.detail }}

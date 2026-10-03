@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_MOVE_FOLDER } from '../helpers/flow-tags.js';
+import { viewportUse } from '../helpers/viewports.js';
 
 const authCheck = {
   status: 200,
@@ -17,6 +18,11 @@ const authCheck = {
 
 const FOLDER_DISENO = { id: 10, name: 'Diseño', slug: 'diseno', parent: null, order: 0, document_count: 1, children_count: 0 };
 const FOLDER_DEV    = { id: 11, name: 'Dev', slug: 'dev', parent: null, order: 1, document_count: 0, children_count: 0 };
+const LONG_DESTINATION = {
+  id: 27,
+  name: 'Entregables de revisión contractual integral para la modernización 2026',
+  slug: 'entregables-revision-contractual', parent: null, order: 2, document_count: 0, children_count: 0,
+};
 
 const DOC = {
   id: 5, title: 'Brief de Proyecto', status: 'published',
@@ -249,3 +255,42 @@ test.describe('Admin Document Move Folder', () => {
   });
 
 });
+
+for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+  test.describe(`move destination identity — ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
+    test.use(viewportUse(profile));
+
+    test(`moves to the fully readable long destination at ${profile}`, {
+      // Bug this catches: the move dialog clips a long destination and lets an
+      // administrator choose the wrong same-prefix folder.
+      tag: [...ADMIN_DOCUMENT_MOVE_FOLDER, '@role:admin', '@outcome:success', '@responsive:documents'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-viewport contract: move destination identity)
+      let patchBody = null;
+      await mockApi(page, async ({ apiPath, method, route }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'documents/' && method === 'GET') return jsonOk([DOC]);
+        if (apiPath === 'document-folders/') return jsonOk([FOLDER_DISENO, FOLDER_DEV, LONG_DESTINATION]);
+        if (apiPath === 'document-tags/') return jsonOk([]);
+        if (apiPath === `documents/${DOC.id}/update/` && method === 'PATCH') {
+          patchBody = route.request().postDataJSON();
+          return jsonOk({ ...DOC, folder: LONG_DESTINATION.id, folder_name: LONG_DESTINATION.name });
+        }
+        return null;
+      });
+
+      await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('button', { name: `Acciones de ${DOC.title}`, exact: true }).click();
+      await page.getByRole('button', { name: 'Mover a carpeta' }).click();
+      const option = page.getByTestId(`move-folder-option-${LONG_DESTINATION.id}`);
+      await expect(option).toContainText(LONG_DESTINATION.name);
+      const geometry = await option.evaluate((element) => ({
+        scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+      }));
+      expect(geometry.scrollWidth).toBeLessThanOrEqual(geometry.clientWidth);
+
+      await option.click();
+      await expect.poll(() => patchBody?.folder_id).toBe(LONG_DESTINATION.id);
+    });
+  });
+}

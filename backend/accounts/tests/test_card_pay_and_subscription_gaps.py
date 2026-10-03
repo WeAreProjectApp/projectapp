@@ -9,7 +9,8 @@ Covers:
 - payment_generate_link_view: 404 (payment not found), 502 (service exception)
 """
 from decimal import Decimal
-from unittest.mock import patch, MagicMock
+from functools import partial
+from unittest.mock import patch
 
 import pytest
 from django.contrib.auth import get_user_model
@@ -19,6 +20,7 @@ from rest_framework.test import APIClient
 from accounts.models import (
     HostingSubscription,
     Payment,
+    PaymentHistory,
     Project,
     UserProfile,
 )
@@ -28,13 +30,28 @@ User = get_user_model()
 pytestmark = pytest.mark.django_db
 
 
+def _card_transaction(
+    payment, card_token, acceptance_token, reference, integrity_signature, *,
+    transaction_id, transaction_status,
+):
+    return {
+        'id': transaction_id,
+        'status': transaction_status,
+        'amount_in_cents': int(payment.amount * 100),
+        'currency': 'COP',
+        'reference': reference,
+    }
+
+
 @pytest.fixture
 def api_client():
+    """Provide an API client for endpoint requests."""
     return APIClient()
 
 
 @pytest.fixture
 def admin_user():
+    """Provide an authenticated administrator user."""
     user = User.objects.create_user(
         username='admin@cardpay.com', email='admin@cardpay.com', password='adminpass1',
         first_name='Admin', last_name='User',
@@ -45,6 +62,7 @@ def admin_user():
 
 @pytest.fixture
 def admin_headers(api_client, admin_user):
+    """Provide bearer headers for the administrator."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'admin@cardpay.com', 'password': 'adminpass1',
     })
@@ -54,6 +72,7 @@ def admin_headers(api_client, admin_user):
 
 @pytest.fixture
 def client_user(admin_user):
+    """Provide an authenticated client user."""
     user = User.objects.create_user(
         username='client@cardpay.com', email='client@cardpay.com', password='clientpass1',
         first_name='Carlos', last_name='Ruiz',
@@ -67,6 +86,7 @@ def client_user(admin_user):
 
 @pytest.fixture
 def client_headers(api_client, client_user):
+    """Provide bearer headers for the client."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'client@cardpay.com', 'password': 'clientpass1',
     })
@@ -76,6 +96,7 @@ def client_headers(api_client, client_user):
 
 @pytest.fixture
 def project(client_user):
+    """Provide an active project owned by the client."""
     return Project.objects.create(
         name='CardPay Project', client=client_user,
         status=Project.STATUS_ACTIVE,
@@ -84,6 +105,7 @@ def project(client_user):
 
 @pytest.fixture
 def subscription(project):
+    """Provide an active hosting subscription for the project."""
     sub = HostingSubscription(
         project=project, plan=HostingSubscription.PLAN_MONTHLY,
         base_monthly_amount=Decimal('300000'), discount_percent=0,
@@ -97,6 +119,7 @@ def subscription(project):
 
 @pytest.fixture
 def pending_payment(subscription):
+    """Provide an open payment for the subscription."""
     return Payment.objects.create(
         subscription=subscription,
         amount=subscription.billing_amount,
@@ -110,6 +133,7 @@ def pending_payment(subscription):
 
 @pytest.fixture
 def paid_payment(subscription):
+    """Provide a settled payment for the subscription."""
     return Payment.objects.create(
         subscription=subscription,
         amount=subscription.billing_amount,
@@ -135,6 +159,8 @@ VALID_CARD_PAYLOAD = {
 # ===========================================================================
 
 class TestPaymentCardPayView:
+    """Covers payment card pay view behavior."""
+
     def test_returns_404_when_payment_not_found(
         self, api_client, client_headers, project,
     ):
@@ -175,7 +201,10 @@ class TestPaymentCardPayView:
         with patch('accounts.services.wompi.tokenize_card', return_value={'id': 'tok_test', 'brand': 'VISA', 'last_four': '4242'}), \
              patch('accounts.services.wompi.get_acceptance_token', return_value='acc_tok'), \
              patch('accounts.services.wompi.create_card_transaction',
-                   return_value={'id': 'txn_card_ok', 'status': 'APPROVED'}):
+                   side_effect=partial(
+                       _card_transaction, transaction_id='txn_card_ok',
+                       transaction_status='APPROVED',
+                   )):
             url = f'/api/accounts/projects/{project.id}/payments/{pending_payment.id}/card-pay/'
             resp = api_client.post(url, VALID_CARD_PAYLOAD, format='json', **client_headers)
 
@@ -193,7 +222,10 @@ class TestPaymentCardPayView:
         with patch('accounts.services.wompi.tokenize_card', return_value={'id': 'tok_test', 'brand': 'VISA', 'last_four': '4242'}), \
              patch('accounts.services.wompi.get_acceptance_token', return_value='acc_tok'), \
              patch('accounts.services.wompi.create_card_transaction',
-                   return_value={'id': 'txn_card_wait', 'status': 'PENDING'}):
+                   side_effect=partial(
+                       _card_transaction, transaction_id='txn_card_wait',
+                       transaction_status='PENDING',
+                   )):
             url = f'/api/accounts/projects/{project.id}/payments/{pending_payment.id}/card-pay/'
             resp = api_client.post(url, VALID_CARD_PAYLOAD, format='json', **client_headers)
 
@@ -210,7 +242,10 @@ class TestPaymentCardPayView:
         with patch('accounts.services.wompi.tokenize_card', return_value={'id': 'tok_test', 'brand': 'VISA', 'last_four': '4242'}), \
              patch('accounts.services.wompi.get_acceptance_token', return_value='acc_tok'), \
              patch('accounts.services.wompi.create_card_transaction',
-                   return_value={'id': 'txn_card_no', 'status': 'DECLINED'}):
+                   side_effect=partial(
+                       _card_transaction, transaction_id='txn_card_no',
+                       transaction_status='DECLINED',
+                   )):
             url = f'/api/accounts/projects/{project.id}/payments/{pending_payment.id}/card-pay/'
             resp = api_client.post(url, VALID_CARD_PAYLOAD, format='json', **client_headers)
 
@@ -227,7 +262,10 @@ class TestPaymentCardPayView:
         with patch('accounts.services.wompi.tokenize_card', return_value={'id': 'tok_test', 'brand': 'VISA', 'last_four': '4242'}), \
              patch('accounts.services.wompi.get_acceptance_token', return_value='acc_tok'), \
              patch('accounts.services.wompi.create_card_transaction',
-                   return_value={'id': 'txn_err', 'status': 'ERROR'}):
+                   side_effect=partial(
+                       _card_transaction, transaction_id='txn_err',
+                       transaction_status='ERROR',
+                   )):
             url = f'/api/accounts/projects/{project.id}/payments/{pending_payment.id}/card-pay/'
             resp = api_client.post(url, VALID_CARD_PAYLOAD, format='json', **client_headers)
 
@@ -247,12 +285,42 @@ class TestPaymentCardPayView:
         assert resp.status_code == 502
         assert 'Error' in resp.json()['detail']
 
+    @override_settings(WOMPI_INTEGRITY_SECRET='test_secret')
+    def test_binding_failure_leaves_card_payment_pending(
+        self, api_client, client_headers, project, pending_payment,
+    ):
+        """Fails if a rejected card transaction writes status or history before returning 502."""
+        before_history = PaymentHistory.objects.filter(payment=pending_payment).count()
+        invalid_transaction = {
+            'id': 'txn-foreign-card',
+            'status': 'APPROVED',
+            'amount_in_cents': int(pending_payment.amount * 100),
+            'currency': 'COP',
+            'reference': f'PA{pending_payment.id + 1}P{project.id}T1700000000',
+        }
+        with patch('accounts.services.wompi.tokenize_card', return_value={'id': 'tok_test'}), \
+             patch('accounts.services.wompi.get_acceptance_token', return_value='acc_tok'), \
+             patch(
+                 'accounts.services.wompi.create_card_transaction',
+                 return_value=invalid_transaction,
+             ):
+            url = f'/api/accounts/projects/{project.id}/payments/{pending_payment.id}/card-pay/'
+            response = api_client.post(url, VALID_CARD_PAYLOAD, format='json', **client_headers)
+
+        assert response.status_code == 502
+        pending_payment.refresh_from_db()
+        assert pending_payment.status == Payment.STATUS_PENDING
+        assert pending_payment.wompi_transaction_id == ''
+        assert PaymentHistory.objects.filter(payment=pending_payment).count() == before_history
+
 
 # ===========================================================================
 # payment_generate_link_view — missing 404 and 502 branches
 # ===========================================================================
 
 class TestPaymentGenerateLinkViewEdgeCases:
+    """Covers payment generate link view edge cases behavior."""
+
     def test_returns_404_when_payment_not_found(
         self, api_client, admin_headers, project,
     ):
@@ -280,6 +348,8 @@ class TestPaymentGenerateLinkViewEdgeCases:
 # ===========================================================================
 
 class TestProjectSubscriptionPatchEdgeCases:
+    """Covers project subscription patch edge cases behavior."""
+
     def test_admin_archives_subscription(
         self, api_client, admin_headers, project, subscription,
     ):
@@ -340,6 +410,8 @@ class TestProjectSubscriptionPatchEdgeCases:
 # ===========================================================================
 
 class TestProjectSubscriptionGetArchivedClient:
+    """Covers project subscription get archived client behavior."""
+
     def test_archived_subscription_returns_404_to_client(
         self, api_client, client_headers, project, subscription,
     ):

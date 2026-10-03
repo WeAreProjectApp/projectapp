@@ -58,6 +58,7 @@
               <button
                 v-for="folder in orderedFolders"
                 :key="folder.id"
+                :data-testid="`move-folder-option-${folder.id}`"
                 type="button"
                 :disabled="isMoving"
                 class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left disabled:opacity-50"
@@ -70,7 +71,7 @@
                 <div class="w-7 h-7 rounded-lg bg-amber-50 dark:bg-amber-900/20 flex items-center justify-center flex-shrink-0">
                   <BaseActionIcon action="folders" class="text-amber-500 dark:text-amber-400" />
                 </div>
-                <span class="flex-1 min-w-0 text-sm font-medium text-text-default truncate">{{ folder.name }}</span>
+                <span class="flex-1 min-w-0 whitespace-normal [overflow-wrap:anywhere] text-sm font-medium text-text-default">{{ folder.name }}</span>
                 <!-- Directo: el selector lista muchos niveles a la vez e indentados
                    (igual que el gestor), y para elegir destino «cuánto hay acá»
                    significa esta carpeta, no su rama entera. -->

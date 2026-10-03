@@ -54,6 +54,23 @@ const RELATED = {
   thread_summary: null,
 };
 
+const LONG_CANDIDATE = {
+  id: 77,
+  title: 'Acta final de conciliación contractual y entrega de soportes técnicos 2026',
+  status: 'published',
+  issue_date: '2026-08-11',
+  created_at: '2026-08-11T13:00:00Z',
+  is_archived: false,
+  folder: { id: 71, name: 'Entregables de seguimiento Boreal' },
+  client: { id: 72, name: 'Cliente Boreal Servicios Integrados' },
+  project: { id: 73, name: 'Modernización contractual 2026' },
+  default_occurred_on: '2026-08-11',
+  available: true,
+  unavailable_reason: null,
+  thread_summary: null,
+};
+const LONG_CANDIDATE_METADATA = 'Entregables de seguimiento Boreal · Cliente Boreal Servicios Integrados · Modernización contractual 2026';
+
 // Un documento que ya pertenece a otro hilo: el backend lo devuelve igual, con
 // el motivo y el tamaño del hilo que lo ocupa, para poder explicar el bloqueo.
 const OCCUPIED = {
@@ -126,6 +143,7 @@ async function setupApi(page, options = {}) {
     threadStatus: options.threadStatus ?? 200,
     createStatus: options.createStatus ?? 201,
     createBody: null,
+    candidates: options.candidates ?? null,
   };
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
@@ -153,6 +171,7 @@ async function setupApi(page, options = {}) {
     }
     if (apiPath === 'documents/2/detail/') return json({ ...RELATED, content_markdown: '# Aprobación' });
     if (apiPath === 'document-threads/candidates/') {
+      if (state.candidates) return json({ count: state.candidates.length, next: null, previous: null, results: state.candidates });
       const includeArchived = new URL(route.request().url()).searchParams.get('scope') === 'all';
       const results = includeArchived ? [OCCUPIED, RELATED] : [OCCUPIED];
       return json({ count: results.length, next: null, previous: null, results });
@@ -235,6 +254,44 @@ test.describe('Admin document thread', () => {
     });
     await expect(page.getByTestId('document-thread-badge-1')).toContainText('Hilo · 2');
   });
+
+  for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
+    test.describe(`long candidate identity — ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
+      test.use(viewportUse(profile));
+
+      test(`keeps long candidate context readable before adding it at ${profile}`, {
+        // Bug this catches: truncated candidate and member labels make two
+        // similarly named documents indistinguishable before they are linked.
+        tag: [...ADMIN_DOCUMENT_THREAD, '@role:admin', '@outcome:success', '@responsive:documents'],
+      }, async ({ page }) => {
+        // quality: allow-duplicate (per-viewport contract: thread candidate identity)
+        const state = await setupApi(page, { candidates: [LONG_CANDIDATE] });
+        await openThreadModal(page);
+
+        const candidate = page.getByTestId(`thread-candidate-${LONG_CANDIDATE.id}`);
+        await expect(candidate.getByText(LONG_CANDIDATE.title, { exact: true })).toHaveText(LONG_CANDIDATE.title);
+        await expect(candidate.getByText(LONG_CANDIDATE_METADATA, { exact: true })).toHaveText(LONG_CANDIDATE_METADATA);
+        await candidate.click();
+
+        const member = page.getByTestId(`thread-member-${LONG_CANDIDATE.id}`);
+        await expect(member).toHaveCount(1);
+        await expect(member.getByText(LONG_CANDIDATE.title, { exact: true })).toHaveText(LONG_CANDIDATE.title);
+        await expect(member.getByText(LONG_CANDIDATE_METADATA, { exact: true })).toHaveText(LONG_CANDIDATE_METADATA);
+        const geometry = await Promise.all([
+          candidate.getByText(LONG_CANDIDATE.title, { exact: true }),
+          candidate.getByText(LONG_CANDIDATE_METADATA, { exact: true }),
+          member.getByText(LONG_CANDIDATE.title, { exact: true }),
+          member.getByText(LONG_CANDIDATE_METADATA, { exact: true }),
+        ].map((row) => row.evaluate((element) => ({
+          scrollWidth: element.scrollWidth, clientWidth: element.clientWidth,
+        }))));
+        expect(geometry.every((row) => row.scrollWidth <= row.clientWidth)).toBe(true);
+
+        await page.getByTestId('document-thread-save').click();
+        await expect.poll(() => state.createBody?.items.some((item) => item.document_id === LONG_CANDIDATE.id)).toBe(true);
+      });
+    });
+  }
 
   test('explains both reasons a candidate cannot be linked', {
     tag: [...ADMIN_DOCUMENT_THREAD, '@role:admin', '@outcome:display'],

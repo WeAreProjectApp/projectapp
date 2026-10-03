@@ -25,6 +25,20 @@ reescribe los textos existentes. Pasaron cuatro pruebas focales SQLite
 pendientes en modelos y el gate focal de calidad (100/100). La prueba aislada
 MySQL 8.4 queda pendiente de CI; el deploy exige repetir el ensayo completo.
 
+# Vinculación de pagos y lectura de destinos (2026-10-02)
+
+La ronda `improvement-payments-documents` vincula cada respuesta Wompi con el
+pago local antes de actualizar su estado. Comprueba ID, importe, moneda y
+referencia o link, también en webhook, tarjeta y tareas. El webhook consulta
+los datos canónicos; las pruebas simulan la frontera del proveedor sin cobros
+reales. En Documentos, la reproducción táctil de 835×1195 encontró botones
+de 28 px y un destino largo recortado. Se aplicaron el mínimo táctil de 44 px
+y la lectura multilínea en los tres selectores. Se añadieron recorridos de
+navegador para los cinco tamaños del estándar. La evidencia y el cierre de QA
+se registran en el [PR #472](https://github.com/WeAreProjectApp/projectapp/pull/472)
+y el reporte de ronda del toolkit. Sin
+migraciones ni despliegue.
+
 # Enlaces de carpetas antes del deploy (2026-10-02)
 
 Corregida la dirección publicada por las subcarpetas del Gestor Documental:

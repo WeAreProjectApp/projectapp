@@ -60,6 +60,10 @@ from accounts.services.project_phases import (
 from accounts.services.proposal_client_service import update_client_profile
 from accounts.services.tokens import get_tokens_for_user, get_verification_token_for_user
 from accounts.services.verification import create_and_send_otp, validate_otp
+from accounts.services.wompi_payment_binding import (
+    WompiPaymentBindingError,
+    validate_transaction_binding,
+)
 from accounts.services.archive import (
     archive_record,
     bug_visible_for_request,
@@ -2718,7 +2722,9 @@ def _handle_payment_approved(payment, payment_history_source=''):
         logger.warning('Failed to create payment notifications for payment %s', payment.id)
 
 
-def _poll_transaction_status(transaction_id, attempts=5, delay=2):
+def _poll_transaction_status(
+    transaction_id, payment, expected_reference, attempts=5, delay=2,
+):
     """
     Card transactions settle asynchronously — Wompi returns PENDING and
     resolves seconds later. Poll the transaction a few times so an approved
@@ -2737,6 +2743,11 @@ def _poll_transaction_status(transaction_id, attempts=5, delay=2):
         except Exception as e:
             logger.warning('Transaction poll error for %s: %s', transaction_id, e)
             continue
+        validate_transaction_binding(
+            payment, data,
+            expected_transaction_id=transaction_id,
+            expected_reference=expected_reference,
+        )
         if data.get('status') and data.get('status') != 'PENDING':
             return data
     return None
@@ -2770,14 +2781,20 @@ def _charge_payment_with_source(payment, history_source=''):
     txn_data = charge_with_payment_source(
         payment, sub.wompi_payment_source_id, reference, signature,
     )
+    validate_transaction_binding(payment, txn_data, expected_reference=reference)
     txn_id = txn_data.get('id', '')
     txn_status = txn_data.get('status', '')
 
     # The charge settles asynchronously — give Wompi a moment to resolve a
     # PENDING transaction before falling back to the webhook.
     if txn_status == 'PENDING' and txn_id:
-        settled = _poll_transaction_status(str(txn_id))
+        settled = _poll_transaction_status(txn_id, payment, reference)
         if settled:
+            validate_transaction_binding(
+                payment, settled,
+                expected_transaction_id=txn_id,
+                expected_reference=reference,
+            )
             txn_data = settled
             txn_status = settled.get('status', txn_status)
 
@@ -3269,6 +3286,7 @@ def payment_card_pay_view(request, project_id, payment_id):
         signature = hashlib.sha256(integrity_str.encode()).hexdigest()
 
         txn_data = create_card_transaction(payment, card_token, acceptance_token, reference, signature)
+        validate_transaction_binding(payment, txn_data, expected_reference=reference)
 
         txn_id = txn_data.get('id', '')
         txn_status = txn_data.get('status', '')
@@ -3302,6 +3320,12 @@ def payment_card_pay_view(request, project_id, payment_id):
             'transaction_status': txn_status,
         })
 
+    except WompiPaymentBindingError as exc:
+        logger.warning('Card charge binding rejected for payment %s: %s', payment.id, exc.reason)
+        return Response(
+            {'detail': 'No se pudo verificar la transacción del pago.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
     except Exception as e:
         logger.error('Card payment error for payment %s: %s', payment.id, e)
         return Response(
@@ -3336,21 +3360,43 @@ def payment_verify_transaction_view(request, project_id, payment_id):
 
     # Falls back to the transaction id already stored on the payment, so the
     # client can re-verify a PROCESSING payment without re-supplying it.
-    transaction_id = request.data.get('transaction_id') or payment.wompi_transaction_id
+    transaction_id = request.data.get('transaction_id')
+    if transaction_id is None or transaction_id == '':
+        transaction_id = payment.wompi_transaction_id
     if not transaction_id:
         return Response(
             {'detail': 'No hay una transacción asociada a este pago.'},
             status=status.HTTP_400_BAD_REQUEST,
         )
+    if (
+        not isinstance(transaction_id, str)
+        or not transaction_id.strip()
+        or len(transaction_id) > 100
+    ):
+        return Response(
+            {'detail': 'La transacción no corresponde a este pago.'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     try:
         from accounts.services.wompi import verify_transaction
-        txn_data = verify_transaction(str(transaction_id))
+        txn_data = verify_transaction(transaction_id)
     except Exception as e:
         logger.error('Wompi verify error: %s', e)
         return Response(
             {'detail': 'No se pudo verificar la transacción con Wompi.'},
             status=status.HTTP_502_BAD_GATEWAY,
+        )
+
+    try:
+        validate_transaction_binding(
+            payment, txn_data, expected_transaction_id=transaction_id,
+        )
+    except WompiPaymentBindingError as exc:
+        logger.warning('Transaction binding rejected for payment %s: %s', payment.id, exc.reason)
+        return Response(
+            {'detail': 'La transacción no corresponde a este pago.'},
+            status=status.HTTP_400_BAD_REQUEST,
         )
 
     from accounts.models import PaymentHistory
@@ -3634,6 +3680,12 @@ def payment_charge_stored_view(request, project_id, payment_id):
 
     try:
         txn_data = _charge_payment_with_source(payment)
+    except WompiPaymentBindingError as exc:
+        logger.warning('Stored charge binding rejected for payment %s: %s', payment.id, exc.reason)
+        return Response(
+            {'detail': 'No se pudo verificar la transacción del pago.'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
     except Exception as e:
         logger.error('Stored-card charge error for payment %s: %s', payment.id, e)
         return Response(
@@ -3655,14 +3707,13 @@ def payment_charge_stored_view(request, project_id, payment_id):
 def wompi_webhook_view(request):
     """
     Public webhook endpoint for Wompi transaction events.
-    Validates signature and updates payment status.
+    Validate the signature, then bind canonical provider data before any write.
     """
-    import json
-    from django.utils import timezone as tz
+    import re
 
     event = request.data
 
-    from accounts.services.wompi import validate_event_signature
+    from accounts.services.wompi import validate_event_signature, verify_transaction
     if not validate_event_signature(event):
         logger.warning('Wompi webhook rejected — invalid or missing event signature')
         return Response(
@@ -3670,48 +3721,69 @@ def wompi_webhook_view(request):
             status=status.HTTP_401_UNAUTHORIZED,
         )
 
-    event_type = event.get('event')
-    data = event.get('data', {})
-    transaction = data.get('transaction', {})
-
-    if event_type != 'transaction.updated':
+    if event.get('event') != 'transaction.updated':
         return Response({'status': 'ignored'})
 
-    transaction_id = transaction.get('id', '')
-    transaction_status = transaction.get('status', '')
-    reference = transaction.get('reference', '')
+    data = event.get('data')
+    event_transaction = data.get('transaction') if isinstance(data, dict) else None
+    transaction_id = (
+        event_transaction.get('id') if isinstance(event_transaction, dict) else None
+    )
+    if (
+        not isinstance(transaction_id, str)
+        or not transaction_id.strip()
+        or len(transaction_id) > 100
+    ):
+        return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not transaction_id or not reference:
-        return Response({'status': 'missing data'}, status=status.HTTP_400_BAD_REQUEST)
+    # A signature need not cover every event field. Resolve the payment and its
+    # outcome from the provider's response instead of trusting event metadata.
+    try:
+        transaction = verify_transaction(transaction_id)
+    except Exception:
+        logger.warning('Wompi webhook verification unavailable')
+        return Response(
+            {'status': 'verification unavailable'},
+            status=status.HTTP_502_BAD_GATEWAY,
+        )
 
-    import re
+    if not isinstance(transaction, dict) or transaction.get('id') != transaction_id:
+        return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
 
-    payment = None
+    payment_link_id = transaction.get('payment_link_id')
+    reference = transaction.get('reference')
+    if payment_link_id is not None and payment_link_id != '':
+        if not isinstance(payment_link_id, str) or len(payment_link_id) > 100:
+            return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
+        payment_lookup = {'wompi_payment_link_id': payment_link_id}
+    elif isinstance(reference, str):
+        match = re.fullmatch(r'PA([0-9]+)P([0-9]+)T[0-9]+', reference)
+        if match:
+            payment_lookup = {'id': match.group(1)}
+        elif re.fullmatch(r'[0-9]+', reference):
+            payment_lookup = {'id': reference}
+        else:
+            return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
+    else:
+        return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        payment = Payment.objects.select_related('subscription').get(
-            wompi_payment_link_id=reference,
-        )
+        payment = Payment.objects.select_related('subscription').get(**payment_lookup)
     except Payment.DoesNotExist:
-        pass
-
-    if payment is None:
-        match = re.match(r'^PA(\d+)P\d+T\d+$', reference)
-        if match:
-            try:
-                payment = Payment.objects.select_related('subscription').get(id=int(match.group(1)))
-            except Payment.DoesNotExist:
-                pass
-
-    if payment is None:
-        try:
-            payment = Payment.objects.select_related('subscription').get(id=int(reference))
-        except (ValueError, Payment.DoesNotExist):
-            pass
-
-    if payment is None:
-        logger.warning('Wompi webhook — payment not found for reference=%s', reference)
+        logger.warning('Wompi webhook payment not found')
         return Response({'status': 'payment not found'}, status=status.HTTP_404_NOT_FOUND)
+    except (Payment.MultipleObjectsReturned, ValueError, OverflowError):
+        return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        validate_transaction_binding(
+            payment, transaction, expected_transaction_id=transaction_id,
+        )
+    except WompiPaymentBindingError as exc:
+        logger.warning('Webhook binding rejected for payment %s: %s', payment.id, exc.reason)
+        return Response({'status': 'invalid transaction'}, status=status.HTTP_400_BAD_REQUEST)
+
+    transaction_status = transaction.get('status', '')
 
     from accounts.models import PaymentHistory
     from accounts.services.payment_history import record_payment_status_change
