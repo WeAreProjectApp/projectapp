@@ -40,6 +40,8 @@ def _contract(model_label, *, read_only='', read_write='', excluded=None):
 
 _AUDIT_INTERNAL = 'Identificador de auditoría o integración administrado por el servidor.'
 _PANEL_ONLY = 'Configuración avanzada reservada al panel; no forma parte del contrato MCP.'
+# Forced project deletion is a panel-only command, not a writable Project
+# model field. Existing MCP delete_project retains its empty-project boundary.
 _COMMERCIAL_DOCUMENT = 'Campo exclusivo de cuentas de cobro; el MCP sólo opera documentos markdown.'
 _PLATFORM_PROFILE = 'Dato del perfil de plataforma fuera del alcance del gestor comercial de clientes.'
 _AUTOMATION_STATE = 'Estado interno de automatización; se observa por resultados, no se manipula por MCP.'

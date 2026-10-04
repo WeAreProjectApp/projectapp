@@ -2011,3 +2011,20 @@ Detalle de modelos, superficies y reservas en `docs/PLATFORM_PROJECT_BILLING.md`
 ## Conservación al relanzar propuestas y autenticación de eliminación
 
 El relanzamiento forzado sólo puede retirar el stub inicial vacío de la propia propuesta. Bloquea Project antes de leer propuesta y Deliverable vigentes; el inventario de eliminación incluye relaciones archivadas y desconocidas, además de hijos del stub con _base_manager. Cualquier información conserva el grafo y devuelve 409, incluso si aparece durante la revalidación final: el conflicto sale de la transacción y revierte la desvinculación. El retiro vacío reutiliza delete_empty_project y su auditoría; no hay borrado directo ni purga. La vista de lanzamiento y las dos vistas de eliminación del Panel fijan SessionAuthentication y mantienen IsAdminUser y CSRF. El puente MCP mantiene su propio contexto y confirmación sensible.
+
+## Eliminación forzada de proyectos desde el Panel
+
+`project_force_deletion` es una operación separada de la eliminación normal y
+del relanzamiento de propuestas. Sólo una sesión de superusuario puede
+previsualizarla y confirmarla con `DELETE` exacto. La huella SHA-256 incluye
+actor, proyecto y valores de las dependencias; el servicio bloquea y vuelve a
+inventariar esas filas antes de confirmar el alcance. Borra hojas antes de
+padres sin cambiar las políticas FK. Abonos e hilos documentales compartidos,
+vínculos con otro cliente/proyecto y evidencia legal protegida bloquean toda
+la transacción. Se conservan cliente, propuestas, catálogos y auditoría
+independiente. Paquetes aprobados de propuestas, decisiones de facturación y
+contextos de fuentes capturados conservan sus vínculos protegidos y bloquean
+la purga. La limpieza de FileFields y assets JSON de Linktree ocurre
+sólo después del commit y conserva nombres todavía referenciados. El contexto
+MCP no puede activar esta operación mediante query ni payload; su eliminación
+sensible sigue limitada a proyectos vacíos. No requiere migraciones.

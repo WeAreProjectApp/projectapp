@@ -9,6 +9,14 @@ export default {
     "history": "Ver histórico de estados"
   },
   "deletion": {
+    "changeState": "Cambiar estado",
+    "forceTitle": "Forzar eliminación",
+    "forceHint": "Elimina el proyecto y sus datos propios en lugar de asignar un nuevo estado.",
+    "forceWarning": "Esta acción elimina definitivamente el proyecto y todas sus dependencias propias, incluidos los datos contables y contractuales. No se puede deshacer.",
+    "forcePreserved": "Se conservan el cliente, las propuestas comerciales y la auditoría. Los datos compartidos y la evidencia legal protegida impiden la eliminación.",
+    "confirmationLabel": "Confirmación de eliminación",
+    "confirmationHint": "Escribe exactamente DELETE en mayúsculas, sin espacios.",
+    "forceConfirm": "Eliminar proyecto y dependencias",
     "title": "Eliminar proyecto",
     "loading": "Comprobando dependencias…",
     "warning": "Esta acción elimina definitivamente el proyecto y su estructura automática vacía. No se puede deshacer.",

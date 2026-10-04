@@ -18,6 +18,22 @@ from content.services.project_state_service import (
     project_state_suggestion,
 )
 
+
+class DeletePanelProjectSerializer(serializers.Serializer):
+    force = serializers.BooleanField(default=False)
+    confirmation = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
+    impact_token = serializers.CharField(required=False, allow_blank=True)
+
+    def validate(self, attrs):
+        if attrs['force'] and attrs.get('confirmation') != 'DELETE':
+            raise serializers.ValidationError({
+                'confirmation': 'Escribe exactamente DELETE en mayúsculas.',
+            })
+        if attrs['force'] and not attrs.get('impact_token'):
+            raise serializers.ValidationError({'impact_token': 'Revisa las dependencias antes de confirmar.'})
+        return attrs
+
+
 class PanelProjectSerializer(serializers.ModelSerializer):
     """Listing row for ``/panel/projects``."""
 

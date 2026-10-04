@@ -244,6 +244,7 @@
       "title": "Section 27 — Panel Projects Module / Plataforma (Aug 13, 2026)",
       "flows": [
         "admin-panel-projects",
+        "admin-project-delete",
         "admin-project-fly-create",
         "admin-project-access-detail",
         "admin-project-access-field-edit",

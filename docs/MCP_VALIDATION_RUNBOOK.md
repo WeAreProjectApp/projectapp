@@ -326,6 +326,11 @@ segunda sólo muestra herramientas autorizadas más `describe_capabilities`,
 | Cobros | cuenta, hosting y ciclos | actualizar configuración o registro | emitir/reintentar/eliminar |
 | Tarjetas | extracto y transacciones | resolver alias o editar snapshot | finalizar/reabrir/eliminar |
 
+La eliminación forzada de Proyectos es exclusiva del Panel con sesión de
+superusuario: exige `DELETE` y una vista previa vigente. Los adaptadores MCP
+conservan la eliminación confirmada de proyectos vacíos; enviar `force` por
+`query` o `data` no habilita el borrado de dependencias.
+
 Los adaptadores resuelven la misma ruta DRF del Panel mediante
 `APIRequestFactory`, autentican el principal técnico y dejan que la vista,
 serializer y servicio existentes decidan permisos, validación y transacción.

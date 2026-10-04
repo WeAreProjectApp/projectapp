@@ -90,6 +90,17 @@ describe('put_request', () => {
 });
 
 describe('delete_request', () => {
+  it('sends the explicit deletion confirmation in the request body', async () => {
+    const payload = { force: true, confirmation: 'DELETE', impact_token: 'reviewed' };
+
+    await delete_request('projects/7/delete/', payload);
+
+    expect(mockAxios.delete).toHaveBeenCalledWith(
+      '/api/projects/7/delete/',
+      expect.objectContaining({ data: payload, headers: expect.any(Object) })
+    );
+  });
+
   it('sends DELETE request', async () => {
     const result = await delete_request('blog/1/');
 

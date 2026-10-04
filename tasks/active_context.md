@@ -1,3 +1,22 @@
+# Eliminación forzada de proyectos (2026-10-04)
+
+Implementado en `feat/04102026-project-force-deletion`, sobre `origin/main`.
+El modal de eliminación usa el ancho de formulario y muestra Cambiar estado
+sin elipsis. Desde ese paso un superusuario puede activar Forzar eliminación:
+revisa dependencias propias, escribe exactamente `DELETE` y confirma un
+alcance ligado a una huella vigente. Conserva cliente, propuestas, auditoría
+y evidencia legal protegida; bloquea abonos y vínculos de otros proyectos.
+Las dependencias protegidas se borran de hojas a raíces en una transacción,
+y los archivos exclusivos sólo se limpian después del commit. Paquetes
+aprobados, decisiones de facturación y fuentes capturadas bloquean la purga;
+los archivos JSON compartidos y las referencias ocultas externas se conservan.
+La ruta MCP
+continúa limitada a proyectos vacíos. Sin migraciones ni despliegue.
+Validación focal: 45 pruebas de backend, 50 de interfaz y catálogo, y 21 E2E
+en verde, incluidos los cinco tamaños del panel. Verificador y auditor QA
+aprobaron el cambio; mapa de vistas y recorridos sincronizados. Entrega de PR
+y CI en verificación.
+
 # Formularios contables y datos del cliente (2026-10-02)
 
 Implementado en `fix/02102026-accounting-modals-client-data`, sobre

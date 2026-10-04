@@ -9,6 +9,14 @@ export default {
     "history": "View state history"
   },
   "deletion": {
+    "changeState": "Change status",
+    "forceTitle": "Force deletion",
+    "forceHint": "Delete the project and its own data instead of assigning a new status.",
+    "forceWarning": "This permanently deletes the project and all its own dependencies, including accounting and contractual data. This cannot be undone.",
+    "forcePreserved": "The client, commercial proposals and audit trail are retained. Shared data and protected legal evidence prevent deletion.",
+    "confirmationLabel": "Deletion confirmation",
+    "confirmationHint": "Type exactly DELETE in uppercase, without spaces.",
+    "forceConfirm": "Delete project and dependencies",
     "title": "Delete project",
     "loading": "Checking dependencies…",
     "warning": "This permanently deletes the project and its empty automatic structure. It cannot be undone.",
