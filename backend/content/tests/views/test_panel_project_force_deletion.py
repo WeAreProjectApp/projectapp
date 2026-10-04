@@ -1,12 +1,11 @@
 """Forced project deletion keeps its superuser confirmation boundary intact."""
 
 import pytest
+from accounts.models import Project
 from django.test import Client
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import Project
-from content.models import Document, DocumentFolder, DocumentType
-
+from content.models import Document, DocumentFolder, DocumentType, IncomeRecord
 
 pytestmark = pytest.mark.django_db
 
@@ -36,6 +35,31 @@ def test_superuser_confirmed_force_delete_removes_project(super_client, force_pr
 
     assert response.status_code == 204
     assert not Project.objects.filter(pk=force_project.pk).exists()
+
+
+def test_force_delete_blocks_foreign_income_without_client_profile(
+    super_client, force_project, make_client_profile,
+):
+    """Legacy missing profiles never make another client's income disposable."""
+    force_project.communication_root_thread.delete()
+    force_project.client.profile.delete()
+    other_client = make_client_profile(company='Retained income client')
+    income = IncomeRecord.objects.create(
+        project=force_project, client=other_client, concept='Foreign legacy income',
+        period_date='2026-10-04', total_amount='100', gustavo_amount='50', carlos_amount='50',
+    )
+    preview = super_client.get(force_preview_url(force_project))
+
+    response = super_client.delete(force_delete_url(force_project), {
+        'force': True, 'confirmation': 'DELETE',
+        'impact_token': preview.data['impact_token'],
+    }, format='json')
+
+    assert response.status_code == 409
+    assert Project.objects.filter(pk=force_project.pk).exists()
+    income.refresh_from_db()
+    assert income.client_id == other_client.pk
+    assert income.project_id == force_project.pk
 
 
 def test_superuser_force_delete_without_csrf_is_rejected(superuser, force_project):

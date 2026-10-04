@@ -209,7 +209,7 @@ class ProjectDeletionPlan:
                     expected_id = (self.project.client_id if parent._meta.label_lower == 'auth.user'
                                    else getattr(self.project.client, 'profile', None))
                     expected_id = getattr(expected_id, 'pk', expected_id)
-                    if expected_id is not None and parent_id != expected_id:
+                    if parent_id != expected_id:
                         self._conflict(row, 'Hay información de otro cliente dentro de las dependencias. Resuelve ese vínculo antes de eliminar.')
                 is_owner = field.name in owner_names or (
                     field.remote_field.on_delete is models.CASCADE
