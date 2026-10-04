@@ -27,6 +27,9 @@ class ProjectBrandAsset(models.Model):
 
 @receiver(post_delete, sender=ProjectBrandAsset)
 def delete_brand_asset_file(sender, instance, **kwargs):
+    from content.services.project_file_cleanup import project_cleanup_active
+    if project_cleanup_active():
+        return
     if instance.file:
         storage, name = instance.file.storage, instance.file.name
         transaction.on_commit(lambda: storage.delete(name))

@@ -54,6 +54,7 @@ from content.serializers.accounting import (
 from content.serializers.document import DocumentListSerializer
 from content.serializers.panel_projects import (
     CreatePanelProjectSerializer,
+    DeletePanelProjectSerializer,
     PanelProjectSerializer,
     ProjectAssignUnlinkedSerializer,
     ProjectChangeClientSerializer,
@@ -62,6 +63,10 @@ from content.serializers.panel_projects import (
 from content.services import accounting_service, project_service
 from content.services.project_deletion_service import (
     ProjectDeleteBlocked, delete_empty_project, deletion_preview,
+)
+from content.services.project_force_deletion import (
+    ProjectForceDeleteError, force_delete_project, forced_deletion_preview,
+    require_superuser,
 )
 
 EntityType = AccountingChangeLog.EntityType
@@ -76,6 +81,8 @@ _SCOPES = ('active', 'archived', 'all')
 @permission_classes([IsAdminUser])
 def preview_panel_project_delete(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
+    if request.query_params.get('force') == 'true':
+        return Response(forced_deletion_preview(project, actor=request.user))
     return Response(deletion_preview(project))
 
 
@@ -83,8 +90,19 @@ def preview_panel_project_delete(request, project_id):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def delete_panel_project(request, project_id):
+    serializer = DeletePanelProjectSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    data = serializer.validated_data
+    if data['force']:
+        require_superuser(request.user)
     try:
-        delete_empty_project(project_id, actor=request.user)
+        if data['force']:
+            force_delete_project(
+                project_id, actor=request.user,
+                confirmation=data['confirmation'], impact_token=data['impact_token'],
+            )
+        else:
+            delete_empty_project(project_id, actor=request.user)
     except Project.DoesNotExist:
         return error_response('El proyecto no existe.', status=status.HTTP_404_NOT_FOUND)
     except ProjectDeleteBlocked as exc:
@@ -92,6 +110,11 @@ def delete_panel_project(request, project_id):
             str(exc), code='project_delete_blocked',
             hint='Revisa las dependencias o usa Cambiar estado para conservar el historial.',
             errors=exc.preview, status=status.HTTP_409_CONFLICT,
+        )
+    except ProjectForceDeleteError as exc:
+        return error_response(
+            str(exc), code=exc.code, errors=exc.preview,
+            status=status.HTTP_409_CONFLICT,
         )
     return Response(status=status.HTTP_204_NO_CONTENT)
 

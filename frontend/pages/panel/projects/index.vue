@@ -468,7 +468,7 @@
       :project="deleteProjectTarget"
       @close="deleteProjectTarget = null"
       @deleted="onProjectDeleted"
-      @change-state="deleteProjectTarget = null; openStateTransition($event)"
+      @change-state="deleteProjectTarget = null; openStateTransition($event, true)"
     />
 
     <!-- Create/edit modal -->
@@ -496,8 +496,11 @@
     <ProjectStateTransitionModal
       :open="stateTransitionOpen"
       :project="stateProject"
+      :allow-force-delete="stateFromDeletion"
+      :is-superuser="isSuperuser"
       @close="closeStateTransition"
       @changed="onStateChanged"
+      @deleted="onProjectDeleted"
     />
 
     <ProjectStateHistoryModal
@@ -899,18 +902,21 @@ function closeAccessDetail() {
 // ── Lifecycle transition + immutable history ──
 
 const stateTransitionOpen = ref(false);
+const stateFromDeletion = ref(false);
 const stateProject = ref(null);
 const stateHistoryOpen = ref(false);
 const historyProject = ref(null);
 
-function openStateTransition(project) {
+function openStateTransition(project, fromDeletion = false) {
   stateProject.value = project;
+  stateFromDeletion.value = fromDeletion === true;
   stateTransitionOpen.value = true;
 }
 
 function closeStateTransition() {
   stateTransitionOpen.value = false;
   stateProject.value = null;
+  stateFromDeletion.value = false;
 }
 
 async function onStateChanged(project) {

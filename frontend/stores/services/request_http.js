@@ -115,10 +115,11 @@ export async function put_request(url, params) {
 /**
  * Delete request.
  * @param {string} url - Endpoint.
+ * @param {object} [data] - Optional JSON body for a confirmed deletion.
  * @returns {object} - Data and status from endpoint.
  */
-export async function delete_request(url) {
-  return await makeRequest("DELETE", url);
+export async function delete_request(url, data) {
+  return await makeRequest("DELETE", url, {}, data === undefined ? {} : { data });
 }
 
 export const __test_makeRequest = makeRequest;

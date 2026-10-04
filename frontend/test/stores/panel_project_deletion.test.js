@@ -22,6 +22,16 @@ describe('panel project deletion', () => {
     expect(result.data.blockers).toEqual([{ key: 'incomes', count: 2 }]);
   });
 
+  // Fails if the forced-delete review silently falls back to the safe preview endpoint.
+  it('requests the forced dependency preview separately', async () => {
+    get_request.mockResolvedValue({ data: { can_delete: true, impact_token: 'force-token-7' } });
+
+    const result = await usePanelProjectsStore().previewDeletion(7, { force: true });
+
+    expect(get_request).toHaveBeenCalledWith('projects/7/delete-preview/?force=true');
+    expect(result.data.impact_token).toBe('force-token-7');
+  });
+
   it('returns a recoverable preview failure', async () => {
     get_request.mockRejectedValue({ response: { status: 503, data: { error: 'No disponible' } } });
 
@@ -41,6 +51,27 @@ describe('panel project deletion', () => {
     expect(result.success).toBe(true);
     expect(store.records).toEqual([{ id: 8 }]);
     expect(store.meta.total).toBe(1);
+  });
+
+  // Fails if an ordinary deletion starts sending the force-delete confirmation body.
+  it('keeps ordinary deletion bodyless', async () => {
+    delete_request.mockResolvedValue({ status: 204 });
+    get_request.mockResolvedValue({ data: { results: [], meta: { total: 0 } } });
+
+    await usePanelProjectsStore().deleteProject(7);
+
+    expect(delete_request).toHaveBeenCalledWith('projects/7/delete/');
+  });
+
+  // Fails if the destructive confirmation or the reviewed dependency token is dropped.
+  it('sends the forced deletion body unchanged', async () => {
+    const payload = { force: true, confirmation: 'DELETE', impact_token: 'force-token-7' };
+    delete_request.mockResolvedValue({ status: 204 });
+    get_request.mockResolvedValue({ data: { results: [], meta: { total: 0 } } });
+
+    await usePanelProjectsStore().deleteProject(7, payload);
+
+    expect(delete_request).toHaveBeenCalledWith('projects/7/delete/', payload);
   });
 
   it('invalidates stale project pickers after deletion', async () => {

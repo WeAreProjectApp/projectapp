@@ -52,7 +52,7 @@ async function confirmDeletion() {
 <template>
   <BaseModal
     :model-value="Boolean(project)"
-    kind="confirm"
+    kind="form"
     :close-on-backdrop="!deleting"
     :close-on-esc="!deleting"
     title-id="project-delete-title"
@@ -89,7 +89,7 @@ async function confirmDeletion() {
       <div class="mt-6 flex flex-wrap justify-end gap-3">
         <BaseButton variant="ghost" :disabled="deleting" @click="emit('close')">{{ $t('projectAccess.actions.cancel') }}</BaseButton>
         <BaseButton v-if="!preview && !loading" variant="secondary" data-testid="project-delete-retry" @click="loadPreview">{{ $t('projectAccess.deletion.retry') }}</BaseButton>
-        <BaseButton v-if="blockers.length" variant="secondary" data-testid="project-delete-change-state" @click="emit('change-state', project)">{{ $t('projectAccess.projectActions.state') }}</BaseButton>
+        <BaseButton v-if="blockers.length" variant="secondary" data-testid="project-delete-change-state" @click="emit('change-state', project)">{{ $t('projectAccess.deletion.changeState') }}</BaseButton>
         <BaseButton v-if="preview?.can_delete" variant="danger" :loading="deleting" :disabled="deleting" data-testid="project-delete-confirm" @click="confirmDeletion">{{ $t('projectAccess.deletion.confirm') }}</BaseButton>
       </div>
     </div>

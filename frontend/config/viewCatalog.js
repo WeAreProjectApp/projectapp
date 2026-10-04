@@ -707,10 +707,10 @@ export const viewCatalogSections = [
         url: '/panel/projects',
         group: 'Plataforma',
         file: 'frontend/pages/panel/projects/index.vue',
-        reference: 'modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca y eliminacion confirmada de proyectos vacios con tabla de dependencias',
+        reference: 'modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca, eliminacion de proyectos vacios y eliminacion forzada exclusiva de superusuarios con DELETE y revision de dependencias',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Desde Eliminar → Cambiar estado, un superusuario puede forzar la eliminación con DELETE; conserva cliente, propuestas y auditoría, y bloquea datos compartidos o evidencia legal protegida.',
       },
       {
         label: 'Ideas del proyecto',

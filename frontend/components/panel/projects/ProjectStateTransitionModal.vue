@@ -1,15 +1,80 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
 import { useProjectStateStore } from '~/stores/project_states';
+import { usePanelProjectsStore } from '~/stores/panel_projects';
 import { stateBadgeVariant } from '~/utils/documentState';
 import ProjectStateHelpBadge from './ProjectStateHelpBadge.vue';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
   project: { type: Object, default: null },
+  allowForceDelete: { type: Boolean, default: false },
+  isSuperuser: { type: Boolean, default: false },
 });
-const emit = defineEmits(['close', 'changed']);
+const emit = defineEmits(['close', 'changed', 'deleted']);
 const stateStore = useProjectStateStore();
+const projectStore = usePanelProjectsStore();
+const forceMode = ref(false);
+const deletionPreview = ref(null);
+const deletionLoading = ref(false);
+const deleting = ref(false);
+const deletionError = ref('');
+const confirmation = ref('');
+let deletionVersion = 0;
+const offersForceDelete = computed(() => props.allowForceDelete && props.isSuperuser);
+const deleteBlockReasons = computed(() => {
+  const reasons = [];
+  if (!deletionPreview.value || deletionLoading.value) reasons.push('Revisa las dependencias antes de confirmar.');
+  if (deletionPreview.value && !deletionPreview.value.can_delete) reasons.push('Resuelve los datos compartidos o protegidos antes de eliminar.');
+  if (confirmation.value !== 'DELETE') reasons.push('Escribe exactamente DELETE en mayúsculas.');
+  return reasons;
+});
+
+async function loadDeletionPreview() {
+  const id = props.project?.id;
+  if (!id || !offersForceDelete.value) return;
+  const version = ++deletionVersion;
+  confirmation.value = '';
+  deletionPreview.value = null;
+  deletionError.value = '';
+  deletionLoading.value = true;
+  const result = await projectStore.previewDeletion(id, { force: true });
+  if (version !== deletionVersion || !forceMode.value) return;
+  deletionLoading.value = false;
+  if (result.success) deletionPreview.value = result.data;
+  else deletionError.value = result.message;
+}
+
+watch(forceMode, (enabled) => {
+  deletionVersion += 1;
+  confirmation.value = '';
+  deletionPreview.value = null;
+  deletionLoading.value = false;
+  deletionError.value = '';
+  stateStore.clearPreview();
+  if (enabled) loadDeletionPreview();
+});
+
+async function confirmForceDeletion() {
+  if (deleting.value || deleteBlockReasons.value.length || !offersForceDelete.value) return;
+  deleting.value = true;
+  deletionError.value = '';
+  const result = await projectStore.deleteProject(props.project.id, {
+    force: true, confirmation: confirmation.value,
+    impact_token: deletionPreview.value.impact_token,
+  });
+  deleting.value = false;
+  if (result.success) {
+    emit('deleted', result);
+    emit('close');
+  } else {
+    confirmation.value = '';
+    // A returned conflict is a new review, never an authorization to retry
+    // using the confirmation of the old dependency graph.
+    deletionPreview.value = result.preview || null;
+    deletionError.value = result.message;
+  }
+}
 
 const selectedStateId = ref('');
 const useExactTime = ref(false);
@@ -89,7 +154,13 @@ const impactMessages = computed(() => {
   return messages;
 });
 
-watch(() => props.open, async (open) => {
+watch([() => props.open, () => props.project?.id], async ([open]) => {
+  deletionVersion += 1;
+  forceMode.value = false;
+  confirmation.value = '';
+  deletionPreview.value = null;
+  deletionLoading.value = false;
+  deletionError.value = '';
   if (!open) return;
   stateStore.clearPreview();
   selectedStateId.value = '';
@@ -161,7 +232,9 @@ async function applyState() {
     :model-value="open"
     kind="form"
     title-id="project-state-transition-title"
-    @close="emit('close')"
+    :close-on-backdrop="!deleting"
+    :close-on-esc="!deleting"
+    @close="!deleting && emit('close')"
   >
     <div class="border-b border-border-muted px-6 pb-4 pt-6">
       <h2 id="project-state-transition-title" class="text-lg font-bold text-text-default">Cambiar estado</h2>
@@ -171,6 +244,53 @@ async function applyState() {
     </div>
 
     <div class="space-y-5 px-6 py-5" data-testid="project-state-transition-modal">
+      <div v-if="offersForceDelete" class="flex items-center justify-between gap-4 rounded-lg border border-border-muted p-4">
+        <div>
+          <p class="font-semibold text-text-default">{{ $t('projectAccess.deletion.forceTitle') }}</p>
+          <p class="mt-1 text-sm text-text-muted">{{ $t('projectAccess.deletion.forceHint') }}</p>
+        </div>
+        <BaseToggle
+          v-model="forceMode"
+          :aria-label="$t('projectAccess.deletion.forceTitle')"
+          :disabled="deleting"
+          disabled-reason="La eliminación está en curso."
+          on-class="bg-danger-strong"
+          data-testid="project-force-delete-toggle"
+        />
+      </div>
+
+      <section v-if="forceMode" class="space-y-4" data-testid="project-force-delete-review">
+        <BaseAlert variant="danger">{{ $t('projectAccess.deletion.forceWarning') }}</BaseAlert>
+        <p v-if="deletionLoading" role="status" class="text-sm text-text-muted">{{ $t('projectAccess.deletion.loading') }}</p>
+        <template v-else-if="deletionPreview">
+          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.forcePreserved') }}</p>
+          <ul class="divide-y divide-border-muted rounded-lg border border-border-muted" data-testid="project-force-delete-dependencies">
+            <li v-for="item in deletionPreview.dependencies" :key="item.key" class="flex justify-between gap-3 px-3 py-2 text-sm">
+              <span class="break-words text-text-default">{{ $te(`projectAccess.deletion.labels.${item.key}`) ? $t(`projectAccess.deletion.labels.${item.key}`) : item.label }}</span>
+              <span class="shrink-0 tabular-nums text-text-default">{{ item.count }}</span>
+            </li>
+          </ul>
+          <BaseAlert v-if="deletionPreview.blockers?.length" variant="warning" data-testid="project-force-delete-blockers">
+            <ul class="space-y-2"><li v-for="(blocker, index) in deletionPreview.blockers" :key="index">{{ blocker.message }}</li></ul>
+          </BaseAlert>
+          <BaseFormField v-slot="{ errorId }" :label="$t('projectAccess.deletion.confirmationLabel')" required :hint="$t('projectAccess.deletion.confirmationHint')">
+            <BaseInput
+              v-model="confirmation"
+              autocomplete="off"
+              autocapitalize="off"
+              :spellcheck="false"
+              :aria-label="$t('projectAccess.deletion.confirmationLabel')"
+              :aria-describedby="errorId"
+              :disabled="deleting"
+              disabled-reason="La eliminación está en curso."
+              data-testid="project-force-delete-confirmation"
+            />
+          </BaseFormField>
+        </template>
+        <BaseAlert v-if="deletionError" variant="danger" role="alert" data-testid="project-force-delete-error">{{ deletionError }}</BaseAlert>
+        <BaseButton v-if="!deletionPreview && !deletionLoading" variant="secondary" data-testid="project-force-delete-retry" @click="loadDeletionPreview">{{ $t('projectAccess.deletion.retry') }}</BaseButton>
+      </section>
+      <template v-else>
       <BaseAlert v-if="project?.state_review_required" variant="warning">
         Este proyecto viene del catálogo anterior. Revisa y confirma su estado real.
       </BaseAlert>
@@ -258,6 +378,7 @@ async function applyState() {
           {{ stateStore.isUpdating && !preview ? 'Calculando…' : 'Revisar consecuencias' }}
         </BaseButton>
       </section>
+      </template>
 
       <section v-if="preview" class="space-y-4 rounded-xl border border-border-default bg-surface-raised p-4" data-testid="project-state-impact">
         <h3 class="font-semibold text-text-default">Consecuencias antes de confirmar</h3>
@@ -328,8 +449,18 @@ async function applyState() {
     </div>
     <template #footer>
       <BaseModalActions>
-        <BaseButton variant="secondary" @click="emit('close')">Cancelar</BaseButton>
+        <BaseButton variant="secondary" :disabled="deleting" disabled-reason="La eliminación está en curso." @click="emit('close')">Cancelar</BaseButton>
         <BaseButton
+          v-if="forceMode"
+          variant="danger"
+          data-testid="project-force-delete-confirm"
+          :loading="deleting"
+          :disabled="Boolean(deleteBlockReasons.length) || deleting"
+          :disabled-reason="deleting ? 'La eliminación está en curso.' : deleteBlockReasons.join(' ')"
+          @click="confirmForceDeletion"
+        >{{ $t('projectAccess.deletion.forceConfirm') }}</BaseButton>
+        <BaseButton
+          v-else
           variant="primary"
           data-testid="project-state-apply"
           :loading="stateStore.isUpdating"
