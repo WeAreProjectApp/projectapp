@@ -20,6 +20,17 @@ def test_service_term_cannot_be_omitted(coherent_template, variant, field):
     assert exc_info.value.details['missing_placeholders'] == [field]
 
 
+@pytest.mark.django_db
+@pytest.mark.parametrize('variant', ['combined', 'product'])
+def test_standalone_service_conditions_cannot_be_used_in_another_variant(coherent_template, variant):
+    markdown = read_template(variant)['markdown'] + '\n{service_conditions}'
+
+    with pytest.raises(ContractTemplateError) as exc_info:
+        validate_markdown(markdown, variant)
+
+    assert exc_info.value.details['unknown_placeholders'] == ['service_conditions']
+
+
 @pytest.mark.parametrize('markdown', ['Contrato {client.email}', 'Contrato {client_email'])
 def test_invalid_placeholder_syntax_is_rejected(markdown):
     with pytest.raises(ContractTemplateError):

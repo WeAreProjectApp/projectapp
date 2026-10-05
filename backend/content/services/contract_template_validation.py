@@ -50,7 +50,8 @@ def validate_markdown(markdown, variant):
     required = CORE_FIELDS | (SERVICE_FIELDS if variant in {'combined', 'service'} else set())
     if variant == 'service':
         required |= {'service_conditions'}
-    unknown, missing = fields - KNOWN_FIELDS, required - fields
+    known = KNOWN_FIELDS if variant == 'service' else KNOWN_FIELDS - {'service_conditions'}
+    unknown, missing = fields - known, required - fields
     if unknown or missing:
         raise ContractTemplateError('Revisa los campos de la plantilla.', details={
             'variant': variant, 'unknown_placeholders': sorted(unknown), 'missing_placeholders': sorted(missing),

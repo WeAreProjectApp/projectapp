@@ -19,6 +19,9 @@ entre `markdown` o `patches`. Devuelve el texto candidato, diff unificado,
 validaciones, coherencia y `documents_to_sync` con variante, ID y disponibilidad
 del espejo. No escribe contratos ni versiones.
 
+El campo `{service_conditions}` está reservado al contrato de servicio separado;
+las otras variantes lo rechazan porque sus generadores no lo resuelven.
+
 Los parches admiten `replace`, `insert_before` e `insert_after`. Seleccionan un
 bloque completo por `heading`, un parágrafo con `heading` + `clause_heading`,
 o un fragmento por `text` exacto. El resultado se indica en `markdown`. Cada
