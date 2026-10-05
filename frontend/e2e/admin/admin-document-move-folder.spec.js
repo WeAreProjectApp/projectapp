@@ -204,34 +204,6 @@ test.describe('Admin Document Move Folder', () => {
     expect(patchBody.adopt_folder_client).toBe(true);
     expect(patchBody.folder_id).toBe(11);
   });
-  test('moves the live contract using a compact write response', {
-    tag: [...ADMIN_DOCUMENT_MOVE_FOLDER, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    let location = FOLDER_DISENO;
-    let receivedPayload;
-    await mockApi(page, async ({ apiPath, method, route }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath === 'documents/') return jsonOk([{ ...DOC, folder: location.id, folder_name: location.name, is_contract_mirror: true, movable: true }]);
-      if (apiPath === 'document-folders/') return jsonOk([FOLDER_DISENO, FOLDER_DEV]);
-      if (apiPath === 'document-tags/') return jsonOk([]);
-      if (apiPath === 'documents/5/update/' && method === 'PATCH') {
-        receivedPayload = route.request().postDataJSON();
-        location = FOLDER_DEV;
-        return jsonOk({ id: DOC.id, title: DOC.title, folder_id: location.id, folder_name: location.name, status: 'published', editable: false, movable: true, etag: 'moved' });
-      }
-      return null;
-    });
-    await page.goto('/en-us/panel/documents', { waitUntil: 'domcontentloaded' });
-    const row = page.getByRole('row', { name: /Brief de Proyecto/i });
-    await row.getByRole('button', { name: /^Acciones de / }).click();
-    await page.getByRole('button', { name: 'Mover a carpeta' }).click();
-    const modal = page.getByRole('dialog', { name: /Mover documento/i });
-    await modal.getByRole('button', { name: 'Dev' }).click();
-    await expect(modal).toBeHidden();
-    expect(receivedPayload).toEqual({ folder_id: FOLDER_DEV.id });
-    await expect(row).toContainText('Dev');
-  });
-
   test('a protected destination keeps the document in its current folder', {
     tag: [...ADMIN_DOCUMENT_MOVE_FOLDER, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {

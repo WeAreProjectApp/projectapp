@@ -53,7 +53,7 @@ const emit = defineEmits([
 ])
 
 function isDocumentDraggable(document) {
-  if (document.is_archived || document.is_generated_snapshot) return false
+  if (document.is_archived || document.is_generated_snapshot || document.is_contract_mirror || document.movable === false) return false
   return !(
     document.document_type_code === 'collection_account'
     && document.commercial_status !== 'draft'

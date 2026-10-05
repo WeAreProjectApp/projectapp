@@ -74,7 +74,6 @@ PROPOSAL_PARITY_TOOLS += PROPOSAL_APPROVAL_TOOLS + [
     _op('update_proposal_settings', 'Edita parcialmente los ajustes del panel sin reenviar secciones; para cambiar estado usa update_proposal_status.', 'update-proposal', 'PATCH', ('proposal_id',), 'write'),
     _op('get_proposal_company_settings', 'Consulta los datos de empresa y opciones vigentes del contrato de servicio.', 'get-company-settings'),
     _op('update_proposal_service_settings', 'Actualiza las opciones numéricas y valores predeterminados del contrato de servicio.', 'get-company-settings', 'PATCH', risk='write'),
-    _op('get_proposal_contract_template', 'Consulta el Markdown de la plantilla contractual predeterminada, de sólo lectura.', 'get-default-contract-template'),
     _op('read_proposal_contract_markdown', 'Lee el Markdown guardado del contrato; en modalidad split indica variant=product o service.', 'contract-markdown', path=('proposal_id',)),
     _op('read_proposal_document_markdown', 'Extrae el Markdown de un documento adjunto perteneciente a la propuesta.', 'proposal-attachment-markdown', path=('proposal_id', 'doc_id')),
     _op('download_proposal_document', 'Descarga un adjunto de la propuesta como archivo temporal de esta credencial.', 'proposal-attachment-download', path=('proposal_id', 'doc_id')),
@@ -90,3 +89,6 @@ for _tool in PROPOSAL_PARITY_TOOLS:
 
     if _tool['name'] == 'get_proposal_defaults':
         _tool['input_schema']['properties']['lang'] = {'type': 'string', 'enum': ['es', 'en']}
+
+from content.mcp.contract_template_tools import CONTRACT_TEMPLATE_TOOLS
+PROPOSAL_PARITY_TOOLS += CONTRACT_TEMPLATE_TOOLS

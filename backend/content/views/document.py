@@ -441,7 +441,7 @@ def retrieve_document(request, document_id):
             ),
         ).select_related(
             'document_type', 'folder', 'project', 'client_user__profile',
-            'thread_item__thread', 'collection_account', 'contract_template',
+            'thread_item__thread', 'collection_account', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
         ).prefetch_related(
             Prefetch(
                 'document_notes',
@@ -516,8 +516,7 @@ def update_document(request, document_id):
     """Update a document."""
     document = get_object_or_404(Document, pk=document_id)
     mirror = _contract_mirror_read_only_error(document)
-    folder_only = 'folder_id' in request.data and not (set(request.data) - {'folder_id', 'include_content'})
-    if mirror and not folder_only:
+    if mirror:
         return mirror
     generated = _generated_snapshot_read_only_error(document)
     if generated:
@@ -703,6 +702,9 @@ def unarchive_document(request, document_id):
     envelope: el store devuelve `response.data` tal cual a la página.
     """
     document = get_object_or_404(Document, pk=document_id)
+    mirror = _contract_mirror_read_only_error(document)
+    if mirror:
+        return mirror
     result = document_archive_service.unarchive_document(document)
     return Response({
         **write_response_data(document, request, is_archived=document.is_archived, archived_at=document.archived_at),
@@ -803,7 +805,7 @@ def download_document_pdf(request, document_id):
     if is_contract_mirror(document):
         # Rendered live from the one contract: the same draft the client
         # downloads from the proposal's legal view.
-        pdf_bytes = mirror_pdf()
+        pdf_bytes = mirror_pdf(document)
         if not pdf_bytes:
             return Response(
                 {'detail': 'El contrato vigente no está disponible en este momento.'},

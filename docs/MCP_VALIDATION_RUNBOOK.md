@@ -1,5 +1,14 @@
 # Guion de validación y mantenimiento de MCP
 
+Las plantillas contractuales independientes se administran desde Propuestas
+(2.1.0) y se consultan en Documentos (3.1.0) como espejos de solo lectura.
+Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar
+lectura de las tres variantes, preview sin escritura, campos obligatorios,
+rechazo por etag, confirmación, coherencia, historial/restauración y reversión
+del lote si falla un PDF o una nota. Comprobar `list_contract_mirrors` y que el
+panel rechace también movimiento, archivado y cambios de las carpetas que
+contienen los espejos. Los contratos ya guardados o firmados conservan sus bytes.
+
 ## Tickets de proyecto: bugs y solicitudes contextualizadas
 
 `projects` incorpora once acciones mediante los mismos servicios REST. Inventario,

@@ -861,7 +861,7 @@ branch before removing its now-empty parallel wrappers.
 | **CommunicationAttachment** | Bidirectional reference to an existing document | message (CASCADE), document (PROTECT), unique message/document pair |
 | **CommunicationMessageRevision** | Append-only draft-edit audit | message, supplied field diffs, edited_by/at |
 | **CommunicationMessageDateCorrection** | Append-only business-date correction | message, previous/corrected occurred_at, reason, corrected_by/at |
-| **ContractTemplate** | The one contract (default row), versioned by data migrations | name, content_markdown (single contract; the product contract is derived from it), service_content_markdown (standalone hosting, maintenance and support contract), is_default, mirror_document, timestamps |
+| **ContractTemplate** | Three default texts updated through one transactional service | combined/product/service Markdown, immutable ContractTemplateVersion history, ContractTemplateMirror documents/PDFs/sync dates; existing proposal files remain snapshots |
 | **ProposalDocument** | Generated contracts and uploaded annexes of a proposal | proposal, document_type (`contract`, `contract_product`, `contract_service`, amendment, legal_annex, client_document, other), title, file, custom_type_label, is_generated, content_markdown (snapshot), timestamps |
 | **CompanySettings** | Company-level branding and info used in PDFs | name, logo, address, tax_id, email, phone, website |
 | **UserProfile** | Platform user (extends Django User) | user_fk, role (admin/client), company_name, phone, avatar, is_onboarded, profile_completed, **email_verified, email_verified_at**, document_navigation_mode (project/client panel preference), is_active |

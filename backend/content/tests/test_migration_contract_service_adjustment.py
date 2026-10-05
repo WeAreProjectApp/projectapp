@@ -116,11 +116,11 @@ def test_forward_is_idempotent(legacy_template, schema_editor):
 
 
 def test_forward_does_not_create_a_missing_default(schema_editor):
-    ContractTemplate.objects.all().delete()
+    ContractTemplate.objects.update(is_default=False)
 
     migration.update_default_template(apps, schema_editor)
 
-    assert not ContractTemplate.objects.exists()
+    assert ContractTemplate.get_default() is None
 
 
 def test_reverse_restores_the_previous_wording(legacy_template, schema_editor):

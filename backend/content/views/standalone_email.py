@@ -144,7 +144,7 @@ def _parse_standalone_email(request):
                 # The contract window stores no text: attach the contract itself,
                 # the same draft the panel downloads.
                 from content.services.contract_mirror_service import mirror_pdf
-                pdf_bytes = mirror_pdf()
+                pdf_bytes = mirror_pdf(doc)
             else:
                 # `resolve_blocks` y no `content_json['blocks']`: un documento
                 # cuyo writer se saltó el parseo se descarga bien desde el panel

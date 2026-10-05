@@ -8,7 +8,7 @@ downstream, so producing correct Markdown is enough here.
 
 Write contracts:
 - Native content tools handle active Markdown documents; generated snapshots remain protected.
-- The live contract permits only folder moves. Content comes from its linked template.
+- Live contract templates are read-only and stay in Contratos.
 - Writes return compact metadata unless include_content=true requests Markdown.
 - Folder names/slugs are distinct: renames preserve the stable slug.
 
@@ -18,6 +18,8 @@ ToolError for business errors. They reuse the exact same parser and
 document_type helpers as the panel so the PDF pipeline stays identical.
 """
 import json
+
+from content.services.contract_template_service import mirror_metadata
 
 from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
@@ -96,7 +98,7 @@ def _markdown_qs():
     return (
         Document.objects
         .filter(document_type__code=MARKDOWN, is_archived=False)
-        .select_related('folder', 'project', 'client_user__profile', 'contract_template')
+        .select_related('folder', 'project', 'client_user__profile', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision')
         .prefetch_related('tags')
     )
 
@@ -329,9 +331,10 @@ def _doc_detail(doc):
         .order_by('order', 'id')
     )
     # The contract window stores a pointer; callers read the contract itself.
-    markdown = (mirror_markdown() or '') if is_contract_mirror(doc) else doc.content_markdown
+    markdown = (mirror_markdown(doc) or '') if is_contract_mirror(doc) else doc.content_markdown
     return {
         **_doc_summary(doc),
+        **mirror_metadata(doc),
         'markdown': markdown,
         'client_email_subject': doc.client_email_subject,
         'client_email_body': doc.client_email_body,
@@ -596,7 +599,7 @@ def update_document(arguments):
         )
     _check_document_etag(doc, arguments)
     changes = set(arguments) - {'document_id', 'include_content', 'if_match'}
-    if is_contract_mirror(doc) and changes != {'folder_id'}:
+    if is_contract_mirror(doc):
         _refuse_contract_mirror(doc)
     if changes == {'folder_id'}:
         serializer = _valid_serializer(DocumentCreateUpdateSerializer(
@@ -1097,7 +1100,7 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) sólo admite folder_id; '
+            'contrato vigente (is_contract_mirror) es de solo lectura; '
             'su contenido no se edita.'
         ),
         'input_schema': {
@@ -1372,3 +1375,6 @@ for _tool in DOCUMENT_TOOLS:
     if _tool['name'] in ('create_folder', 'rename_folder', 'list_folders', 'create_document', 'update_document', 'append_document'):
         _schema['additionalProperties'] = False
         _tool['handler'] = _validated_document_tool(_tool['handler'], _schema['properties'])
+
+from content.mcp.contract_template_tools import CONTRACT_MIRROR_TOOLS
+DOCUMENT_TOOLS += CONTRACT_MIRROR_TOOLS

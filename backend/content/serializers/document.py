@@ -434,7 +434,9 @@ class DocumentDetailSerializer(
         if data.get('is_contract_mirror'):
             # The row stores a pointer; readers get the contract itself.
             from content.services.contract_mirror_service import mirror_markdown
-            data['content_markdown'] = mirror_markdown() or ''
+            data['content_markdown'] = mirror_markdown(instance) or ''
+            from content.services.contract_template_service import mirror_metadata
+            data.update(mirror_metadata(instance))
         return data
 
 
@@ -480,11 +482,8 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         if self.instance is not None and self.instance.is_contract_mirror:
-            if set(data) - {'folder_id', 'include_content'} or 'folder_id' not in data:
-                from content.services.contract_mirror_service import (
-                    CONTRACT_MIRROR_MESSAGE,
-                )
-                raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
+            from content.services.contract_mirror_service import CONTRACT_MIRROR_MESSAGE
+            raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
         return super().to_internal_value(data)
 
     def validate(self, attrs):

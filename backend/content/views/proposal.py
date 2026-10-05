@@ -3484,18 +3484,13 @@ def get_company_settings(request):
 @permission_classes([IsAdminUser])
 def get_default_contract_template(request):
     """Return the default contract template markdown for preview/editing."""
-    from content.models import ContractTemplate
-    template = ContractTemplate.get_default()
-    if not template:
-        return Response(
-            {'error': 'No default contract template configured.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-    return Response({
-        'id': template.id,
-        'name': template.name,
-        'content_markdown': template.content_markdown,
-    }, status=status.HTTP_200_OK)
+    from content.services.contract_template_service import read_template
+    from content.services.contract_template_validation import ContractTemplateError
+    try:
+        return Response(read_template(request.query_params.get('variant', 'combined')))
+    except ContractTemplateError as exc:
+        return Response({'detail': str(exc), 'code': exc.code, **exc.details}, status=404 if exc.code == 'NOT_FOUND' else 400)
+
 
 
 @api_view(['GET'])

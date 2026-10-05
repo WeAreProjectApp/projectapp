@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin moves documents, including the read-only live contract, to a folder or root. Compact write responses preserve the editor; the live contract never adopts destination ownership.",
+  "description": "Admin moves editable documents to a folder or root. Compact write responses preserve the editor. The three contract mirrors stay in Contratos and reject all moves.",
   "expectedSpecs": 3,
   "outcomes": [
     "display",

@@ -1,22 +1,13 @@
+from django.conf import settings
+from django.core.exceptions import ValidationError
 from django.db import models
 
 
 class ContractTemplate(models.Model):
-    """
-    Stores a contract template as markdown with optional {placeholders}.
+    """Default combined, product and service texts, changed through one service.
 
-    The default template (is_default=True) is used when generating contracts
-    from the ContractParamsModal. Placeholders like {client_full_name} are
-    substituted with values from proposal.contract_params at PDF generation time.
-
-    It is the one contract: the public legal view, the draft download,
-    generated contracts and the Document-manager window (``mirror_document``)
-    all read it. Its text changes only through versioned data migrations;
-    Django admin shows it read-only.
-
-    A deal can also close with two documents. The product contract is derived
-    from ``content_markdown`` (``contract_variants.derive_product_markdown``);
-    the standalone service contract lives in ``service_content_markdown``.
+    MCP confirms edits; the console uses the same transactional writer.
+    Generated/signed proposal documents retain their stored snapshots.
     """
 
     name = models.CharField(max_length=255)
@@ -39,6 +30,7 @@ class ContractTemplate(models.Model):
             '{service_termination_notice_days}.'
         ),
     )
+    product_content_markdown = models.TextField(blank=True, default='')
     is_default = models.BooleanField(default=False)
     mirror_document = models.OneToOneField(
         'content.Document',
@@ -72,3 +64,45 @@ class ContractTemplate(models.Model):
     def get_default(cls):
         """Return the default template, or None if not configured."""
         return cls.objects.filter(is_default=True).first()
+
+
+class ContractTemplateVersion(models.Model):
+    """Append-only text revision; restoring creates a new revision."""
+
+    template = models.ForeignKey(ContractTemplate, on_delete=models.PROTECT, related_name='versions')
+    variant = models.CharField(max_length=8, choices=[(key, key) for key in ('combined', 'product', 'service')])
+    version = models.PositiveIntegerField()
+    markdown = models.TextField()
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name='+')
+    credential = models.ForeignKey('content.McpCredential', null=True, on_delete=models.SET_NULL, related_name='+')
+    author_label = models.CharField(max_length=255, default='Sistema')
+    change_note = models.TextField()
+    restored_from = models.ForeignKey('self', null=True, on_delete=models.PROTECT, related_name='+')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-version']
+        constraints = [models.UniqueConstraint(fields=['template', 'variant', 'version'], name='unique_contract_template_revision')]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValidationError('Las versiones contractuales son inmutables.')
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValidationError('Las versiones contractuales no se eliminan.')
+
+
+class ContractTemplateMirror(models.Model):
+    """Current draft PDF lives in the DB, so synchronization can roll back."""
+
+    template = models.ForeignKey(ContractTemplate, on_delete=models.PROTECT, related_name='mirrors')
+    variant = models.CharField(max_length=8, choices=[(key, key) for key in ('combined', 'product', 'service')])
+    document = models.OneToOneField('content.Document', on_delete=models.PROTECT, related_name='contract_mirror')
+    revision = models.ForeignKey(ContractTemplateVersion, on_delete=models.PROTECT, related_name='+')
+    pdf_content = models.BinaryField()
+    synced_at = models.DateTimeField()
+    imported_markdown = models.TextField(blank=True, default='')
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['template', 'variant'], name='unique_contract_template_mirror')]

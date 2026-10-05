@@ -1,19 +1,7 @@
-"""One contract, three presentations.
+"""Three independently versioned default texts for single or split closing.
 
-A deal closes with the single contract (``combined``) or with two separate
-documents: the product contract (software development and implementation) and
-the service contract (hosting, maintenance and support). The clauses do not
-change; only the separation does.
-
-- ``combined`` renders ``ContractTemplate.content_markdown``.
-- ``product`` is derived from that same text at runtime: clauses 21-24 are
-  cut and three anchored adjustments replace the references that pointed at
-  them. Any later patch to clauses 1-20 therefore reaches it on its own, and a
-  patch that rewrites an anchored paragraph makes the derivation fail loudly.
-- ``service`` renders ``ContractTemplate.service_content_markdown``, a
-  standalone text built from clauses 21-24 plus the general clauses it needs.
-
-Every consumer of "the contract" resolves its documents through this registry.
+Product derivation remains solely for importing the pre-versioning text.
+All runtime consumers read the stored variant instead of deriving it again.
 """
 
 from dataclasses import dataclass
@@ -167,7 +155,7 @@ def template_markdown(template, variant):
     if template is None:
         return ''
     if variant == PRODUCT:
-        return derive_product_markdown(template.content_markdown) or ''
+        return template.product_content_markdown or ''
     if variant == SERVICE:
         return template.service_content_markdown or ''
     return template.content_markdown or ''

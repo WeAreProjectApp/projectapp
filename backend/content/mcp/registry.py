@@ -62,7 +62,7 @@ def normalize_tools(tools, connector_slug):
     return normalized
 
 
-CONNECTOR_VERSIONS = {'documents': '3.0.1'}
+CONNECTOR_VERSIONS = {'documents': '3.1.0', 'proposals': '2.1.0'}
 
 
 def connector_version(slug, default='2.0.0'):

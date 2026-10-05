@@ -14,6 +14,8 @@ def document_etag(document):
 
 
 def movement_blockers(document):
+    if is_contract_mirror(document):
+        return ["contract_mirror"]
     if document.is_archived:
         return ["archived"]
     if document.is_generated_snapshot:
@@ -50,7 +52,7 @@ def document_write_payload(document, *, include_content=False):
     }
     if include_content:
         data["markdown"] = (
-            (mirror_markdown() or "")
+            (mirror_markdown(document) or "")
             if is_contract_mirror(document)
             else document.content_markdown
         )

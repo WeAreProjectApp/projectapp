@@ -27,9 +27,9 @@ function mountSheet(props = {}) {
   });
 }
 
-// Los botones de acción son los que viven en la lista `.p-2` (excluye la X y "Cancelar").
+// Los botones de acción viven dentro de la lista identificada (excluye la X y "Cancelar").
 function actionButtons(wrapper) {
-  return wrapper.findAll('.p-2 button');
+  return wrapper.get('[data-testid="document-actions-list"]').findAll('button');
 }
 
 function actionByLabel(wrapper, label) {
@@ -268,7 +268,7 @@ describe('DocumentActionsSheet — abrir en pestaña nueva', () => {
 describe('DocumentActionsSheet — contract window', () => {
   it('offers only consulting, sharing and export for the live contract', () => {
     const wrapper = mountSheet({
-      document: { ...baseDocument, is_contract_mirror: true },
+      document: { ...baseDocument, is_contract_mirror: true, movable: true },
       editTo: '/es-co/panel/documents/7/edit',
     });
     const labels = wrapper.findAll('[data-testid="document-actions-list"] > *')
@@ -286,12 +286,21 @@ describe('DocumentActionsSheet — contract window', () => {
   });
 });
 
-describe('DocumentActionsSheet — movable contract', () => {
-  it('emits a move action for a movable contract', async () => {
-    const wrapper = mountSheet({ document: { ...baseDocument, is_contract_mirror: true, movable: true } });
-    await actionByLabel(wrapper, 'Mover a carpeta').trigger('click');
-    expect(wrapper.emitted('move')).toHaveLength(1);
-    expect(actionByLabel(wrapper, 'Duplicar')).toBeUndefined();
+describe('DocumentActionsSheet — contract exports', () => {
+  it('emits the current contract PDF download', async () => {
+    const wrapper = mountSheet({ document: { ...baseDocument, is_contract_mirror: true } });
+
+    await actionByLabel(wrapper, 'Descargar PDF').trigger('click');
+
+    expect(wrapper.emitted('download-pdf')).toEqual([[undefined]]);
+  });
+
+  it('emits a copy of the current contract Markdown', async () => {
+    const wrapper = mountSheet({ document: { ...baseDocument, is_contract_mirror: true } });
+
+    await actionByLabel(wrapper, 'Copiar markdown').trigger('click');
+
+    expect(wrapper.emitted('copy-markdown')).toEqual([[undefined]]);
   });
 });
 

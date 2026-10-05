@@ -22,6 +22,7 @@ from content.services.entity_history import historical_write
 import logging
 
 from django.db import transaction
+from rest_framework.exceptions import ValidationError
 
 from content.models import AccountingChangeLog, Document, DocumentFolder
 from content.services import accounting_service
@@ -118,6 +119,9 @@ def change_client_preview(folder, new_profile):
     Es la lista contra la que el operador confirma; el apply recibe de vuelta
     los ids como token, así que el plan que corre es el que se mostró.
     """
+    from content.services.contract_mirror_service import folder_contains_mirror, CONTRACT_MIRROR_MESSAGE
+    if folder_contains_mirror(folder):
+        raise ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
     sets = linked_sets(folder)
     current_profile = getattr(folder.client_user, 'profile', None)
 
@@ -196,6 +200,9 @@ def change_client_apply(folder, new_profile, mode, user):
     por cliente. Las filas de auditoría van adentro — un movimiento revertido
     no puede dejar un log diciendo que ocurrió — y ninguna notifica por correo.
     """
+    from content.services.contract_mirror_service import folder_contains_mirror, CONTRACT_MIRROR_MESSAGE
+    if folder_contains_mirror(folder):
+        raise ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
     sets = linked_sets(folder)
     # Lock the financial descendants before saving a folder. A draft account
     # must not be moved using an owner read before a competing project move.

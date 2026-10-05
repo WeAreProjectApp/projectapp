@@ -587,7 +587,7 @@ export const viewCatalogSections = [
         reference: 'vista principal del gestor documental',
         audience: 'admin',
         viewType: 'list',
-        notes: 'ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Permite mover el contrato vigente de carpeta sin editar su contenido y rechaza carpetas duplicadas en el mismo nivel.',
+        notes: 'ID interno visible antes del título, búsqueda exacta con #ID y referencia en el editor; conserva numeración comercial. Mantiene las tres plantillas contractuales en Contratos con contenido y ubicación de solo lectura y rechaza carpetas duplicadas en el mismo nivel.',
       },
       {
         label: 'Crear documento',
@@ -606,7 +606,7 @@ export const viewCatalogSections = [
         reference: 'vista de edición de documento',
         audience: 'admin',
         viewType: 'edit',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; el contrato vigente se abre en solo lectura con PDF y Markdown en vivo; acceso interno.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; los tres espejos contractuales se abren en solo lectura con versión, sincronización, PDF y Markdown en vivo; acceso interno.',
       },
       {
         label: 'Estados de documentos',

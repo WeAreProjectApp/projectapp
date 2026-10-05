@@ -246,7 +246,7 @@ const isIssuedAccount = computed(() => (
 const actions = computed(() => {
   if (props.document?.is_contract_mirror) {
     const available = [...CONTRACT_MIRROR_ACTIONS];
-    if (props.document.movable) available.push(BASE_ACTIONS.find((action) => action.event === 'move'));
+
     return available.filter((action) => action && (!action.newTab || props.editTo));
   }
   if (isIssuedAccount.value || props.document?.is_generated_snapshot) {
