@@ -165,8 +165,9 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
         'describe_capabilities',
         'confirm_action',
         'begin_upload',
+        'list_contract_mirrors',
     } <= tool_names
-    assert len(TOOLS_BY_SLUG['documents']) == 65
+    assert len(TOOLS_BY_SLUG['documents']) == 66
 
 
 def test_communications_contract_exposes_archive_state():
