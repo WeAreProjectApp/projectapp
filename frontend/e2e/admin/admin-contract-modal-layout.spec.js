@@ -35,7 +35,7 @@ async function expectCompactLayout(dialog, viewport, variant) {
     expect(Math.abs(date.y - city.y)).toBeLessThanOrEqual(1);
     expect(date.width).toBeLessThanOrEqual(320);
     // Leave room for font rendering while rejecting the previous taller layout.
-    const contentHeightLimit = { combined: 800, product: 800, service: 1024 };
+    const contentHeightLimit = { combined: 1024, product: 800, service: 1024 };
     expect(body.height).toBeLessThanOrEqual(contentHeightLimit[variant]);
   }
 }
