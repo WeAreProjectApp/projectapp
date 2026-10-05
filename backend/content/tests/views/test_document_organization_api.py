@@ -132,23 +132,22 @@ def test_invalid_content_control_does_not_write(admin_client, doc):
     assert doc.title == 'Large'
 
 
-def test_mirror_folder_move_preserves_content(admin_client, mirror):
+def test_mirror_folder_move_is_rejected(admin_client, mirror):
     folder = DocumentFolder.objects.create(name='Destination')
     response = admin_client.patch(reverse('update-document', args=[mirror.pk]), {'folder_id': folder.pk}, format='json')
-    assert response.status_code == 200
+    assert response.status_code == 409
     mirror.refresh_from_db()
-    assert mirror.folder_id == folder.pk
+    assert mirror.folder_id is None
     assert mirror.content_markdown.endswith('x' * 72000)
-    assert response.data['editable'] is False
-    assert response.data['movable'] is True
+    assert response.data['code'] == 'contract_mirror_read_only'
 
 
-def test_mcp_mirror_folder_move_succeeds(rpc, mirror):
+def test_mcp_mirror_folder_move_is_rejected(rpc, mirror):
     folder = DocumentFolder.objects.create(name='Destination')
     result = rpc('update_document', {'document_id': mirror.pk, 'folder_id': folder.pk})
-    assert result['isError'] is False
+    assert result['isError'] is True
     mirror.refresh_from_db()
-    assert mirror.folder_id == folder.pk
+    assert mirror.folder_id is None
 
 
 def test_mcp_move_rejects_generated_markdown(rpc, doc):
@@ -176,7 +175,7 @@ def test_mirror_mixed_update_is_atomic(admin_client, mirror):
 def test_capabilities_can_filter_and_summarize(rpc):
     result = rpc('describe_capabilities', {'tools': ['update_folder', 'move_documents'], 'summary': True})
     data = result['structuredContent']
-    assert data['version'] == '3.0.1'
+    assert data['version'] == '3.1.0'
     assert {tool['name'] for tool in data['tools']} == {'update_folder', 'move_documents'}
     assert set(data['tools'][0]) == {'name', 'title', 'risk', 'requires_confirmation'}
 

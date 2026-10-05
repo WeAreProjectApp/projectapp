@@ -397,6 +397,9 @@ def resolve_contract_content(proposal, draft=False, *, force_default=False, vari
     spec = VARIANTS[variant]
     raw_params = getattr(proposal, 'contract_params', None) or {}
     source = 'default' if force_default else raw_params.get(spec.source_key, 'default')
+    if variant in {COMBINED, SERVICE} and source == 'default':
+        from content.serializers.service_contract_settings import fill_service_term_defaults
+        raw_params = fill_service_term_defaults(raw_params)
     params = _build_params(raw_params, draft=draft)
     if variant == SERVICE:
         params['service_conditions'] = service_conditions_markdown(proposal)

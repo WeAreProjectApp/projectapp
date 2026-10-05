@@ -239,6 +239,10 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         return data
 
     def validate(self, attrs):
+        if self.instance is not None:
+            from content.services.contract_mirror_service import folder_contains_mirror, CONTRACT_MIRROR_MESSAGE
+            if set(attrs) - {'order'} and folder_contains_mirror(self.instance):
+                raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
         """Misma regla de asociación que los documentos, sin `client_name`."""
         if self.instance is not None and self.instance.is_system_managed:
             raise serializers.ValidationError({'detail': 'Esta carpeta se administra automáticamente.', 'code': 'system_managed_folder'})

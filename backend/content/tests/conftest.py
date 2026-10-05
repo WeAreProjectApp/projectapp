@@ -658,3 +658,8 @@ def non_deferring_constraints():
         yield connection
     finally:
         features.can_defer_constraint_checks = original
+
+# Shared contract-template fixtures keep transport and generation tests in their layers.
+from content.tests.contract_template_fixtures import (
+    source_237_markdown, coherent_template, initialized_contract_mirrors, proposals_mcp,
+)

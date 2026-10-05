@@ -296,7 +296,7 @@ def build_document_list_queryset(
         ),
     ).select_related(
         'document_type', 'folder', 'project', 'client_user__profile',
-        'thread_item__thread', 'contract_template',
+        'thread_item__thread', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
     )
 
     prefix = '' if order == 'oldest' else '-'

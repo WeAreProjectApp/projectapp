@@ -1,3 +1,12 @@
+> **2026-10-05 — plantillas contractuales versionadas, en validación:** tres
+> variantes independientes; MCP con preview, confirmación, etags e historial.
+> Los documentos del gestor son de solo lectura y permanecen en Contratos.
+> PDF y nota se guardan en la misma transacción; un fallo revierte el lote.
+> Primer uso: documento 237, confidencialidad/no circunvención de tres años
+> y garantía de producto de tres años. Migraciones 0279–0280 y comandos
+> operativos posteriores al despliegue. Contrato de herramientas:
+> [CONTRACT_TEMPLATE_MCP](../docs/CONTRACT_TEMPLATE_MCP.md).
+
 > **2026-10-02 — aprobación y vinculación de propuestas:** implementado en
 > `feat/02102026-proposal-project-linking`. Aceptación comercial sin crear
 > proyectos automáticamente; revisión interna con creación al confirmar,

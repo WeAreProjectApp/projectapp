@@ -88,3 +88,19 @@ class ServiceContractSettingsSerializer(StrictSettingsSerializer):
 
 class CompanyServiceSettingsSerializer(StrictSettingsSerializer):
     service_contract_settings = ServiceContractSettingsSerializer()
+
+
+def fill_service_term_defaults(raw_params):
+    """Explicit proposal values win; defaults only fill missing commercial terms."""
+    from content.models.company_settings import CompanySettings, default_service_contract_settings
+    company = CompanySettings.objects.filter(pk=1).values_list('service_contract_settings', flat=True).first()
+    settings = company if company is not None else default_service_contract_settings()
+    params = dict(raw_params or {})
+    for key, default, duration in [
+        ('service_initial_term', 'default_duration', True),
+        ('service_renewal_notice_days', 'default_renewal_notice', False),
+        ('service_termination_notice_days', 'default_termination_notice', False),
+    ]:
+        if params.get(key) in (None, ''):
+            params[key] = format_service_term(settings[default], duration=duration)
+    return params

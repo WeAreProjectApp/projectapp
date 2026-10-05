@@ -284,6 +284,11 @@ class DocumentAdmin(admin.ModelAdmin):
             return (*fields, 'title', 'content_markdown', 'content_json')
         return fields
 
+    def has_change_permission(self, request, obj=None):
+        if obj is not None and obj.is_contract_mirror:
+            return False
+        return super().has_change_permission(request, obj)
+
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.is_contract_mirror:
             return False
@@ -291,7 +296,7 @@ class DocumentAdmin(admin.ModelAdmin):
 
 
 class ContractTemplateAdmin(admin.ModelAdmin):
-    """The one contract. Its text changes only through versioned migrations.
+    """Default contract texts are edited through the versioned service.
 
     An edit here used to be the way the default template drifted away from the
     migration chain, after which every later contract migration skipped it.
@@ -299,11 +304,17 @@ class ContractTemplateAdmin(admin.ModelAdmin):
 
     list_display = ('name', 'is_default', 'mirror_document', 'updated_at')
     raw_id_fields = ('mirror_document',)
-    readonly_fields = ('content_markdown', 'service_content_markdown', 'created_at', 'updated_at')
+    readonly_fields = ('name', 'is_default', 'mirror_document', 'content_markdown', 'product_content_markdown', 'service_content_markdown', 'created_at', 'updated_at')
     fields = (
         'name', 'is_default', 'mirror_document', 'content_markdown',
-        'service_content_markdown', 'created_at', 'updated_at',
+        'product_content_markdown', 'service_content_markdown', 'created_at', 'updated_at',
     )
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_add_permission(self, request):
+        return False
 
     def has_delete_permission(self, request, obj=None):
         if obj is not None and obj.is_default:

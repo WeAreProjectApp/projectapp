@@ -161,7 +161,7 @@ def test_link_command_dry_run_then_apply(markdown_type):
     call_command('link_contract_document', '--document-id', str(document.pk), '--apply')
     document.refresh_from_db()
     assert ContractTemplate.get_default().mirror_document_id == document.pk
-    assert document.title == 'Contrato de prestación de servicios — borrador vigente'
+    assert document.title == 'Contrato unificado de producto y servicio'
     assert 'Texto v6' not in document.content_markdown
 
 
@@ -192,6 +192,6 @@ def test_admin_cannot_rewrite_the_contract_text(client, superuser):
         {'name': template.name, 'is_default': 'on', 'content_markdown': '# Editado a mano'},
     )
 
-    assert response.status_code == 302
+    assert response.status_code == 403
     template.refresh_from_db()
     assert template.content_markdown == before

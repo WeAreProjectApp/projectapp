@@ -99,7 +99,8 @@ def _refuse_contract_mirror(documents):
     """The window onto the one contract never leaves the panel's main view."""
     from content.services.contract_mirror_service import CONTRACT_MIRROR_MESSAGE
 
-    if documents.filter(contract_template__isnull=False).exists():
+    from content.services.contract_mirror_service import mirror_documents
+    if mirror_documents(documents).exists():
         raise DocumentArchiveError(CONTRACT_MIRROR_MESSAGE)
 
 
@@ -128,6 +129,7 @@ def unarchive_document(document):
     cadena está rota por un ciclo se lo manda ahí a propósito: una ubicación
     pobre es mejor que ninguna.
     """
+    _refuse_contract_mirror(Document.objects.filter(pk=document.pk))
     # Lock de fila (no-op en SQLite/tests, lock real en MySQL/prod): serializa
     # este unarchive con un archive_folder concurrente de un ancestro — la
     # carrera que deja un documento activo sepultado bajo carpeta archivada.

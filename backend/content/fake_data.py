@@ -174,6 +174,7 @@ DERIVED_MODELS = {
     'content.DocumentCollectionAccount', 'content.DocumentItem',
     'content.DocumentThreadItem',
     'content.DocumentNote', 'content.DocumentNoteEvent',
+    'content.ContractTemplateVersion', 'content.ContractTemplateMirror',
     'content.DocumentNumberSequence',
     'content.DocumentPaymentMethod', 'content.DocumentStateEpisode',
     'content.DocumentStateEpisodeEvent', 'content.EmailAttachmentSnapshot',

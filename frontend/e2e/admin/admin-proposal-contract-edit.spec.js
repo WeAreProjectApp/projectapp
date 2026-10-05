@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_CONTRACT_EDIT } from '../helpers/flow-tags.js';
+import { SERVICE_SETTINGS } from '../helpers/contract-modals.js';
 
 const PROPOSAL_ID = 1;
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
@@ -64,6 +65,7 @@ const companySettings = {
   bank_account_type: 'Ahorros',
   bank_account_number: '123456789',
   contract_city: 'Medellín',
+  service_contract_settings: SERVICE_SETTINGS,
 };
 
 test.describe('Admin Proposal Contract Edit', () => {

@@ -192,8 +192,8 @@
                 </div>
               </fieldset>
 
-              <!-- Service terms: only the standalone service contract uses them -->
-              <fieldset v-if="variant === 'service'" data-testid="contract-service-terms">
+              <!-- Both default contracts containing service clauses use these terms. -->
+              <fieldset v-if="['combined', 'service'].includes(variant)" data-testid="contract-service-terms">
                 <legend class="text-sm font-semibold text-text-brand mb-1">Datos del servicio</legend>
                 <p class="text-xs text-text-muted mb-3">{{ t('serviceContract.formHint') }}</p>
                 <p v-if="loadingDefaults" role="status" class="text-sm text-text-muted">{{ t('serviceContract.loading') }}</p>
@@ -361,7 +361,7 @@ watch(() => props.saveError, error => {
 const loadingDefaults = ref(false);
 const formRevision = ref(0);
 const serviceSettingsReady = computed(() => validServiceContractSettings(companyDefaults.value.service_contract_settings));
-const serviceSettingsBlocked = computed(() => props.variant === 'service' && contractSource.value === 'default'
+const serviceSettingsBlocked = computed(() => ['combined', 'service'].includes(props.variant) && contractSource.value === 'default'
   && (loadingDefaults.value || !serviceSettingsReady.value));
 
 const debouncedMarkdown = ref('');
@@ -451,7 +451,7 @@ function resetForm() {
 
 watch(() => props.visible, async (val) => {
   if (val) {
-    if (props.variant === 'service' || !companyDefaults.value.contractor_full_name) {
+    if (['combined', 'service'].includes(props.variant) || !companyDefaults.value.contractor_full_name) {
       await loadDefaults();
     }
     resetForm();
@@ -495,7 +495,7 @@ function validate() {
     if (!nit && !cedula) {
       errors.contractor_identity = 'Indica el NIT o la cédula del contratista';
     }
-    if (props.variant === 'service') {
+    if (['combined', 'service'].includes(props.variant)) {
       for (const { key, duration } of SERVICE_CONTRACT_FIELDS) {
         const value = form.value[key];
         const max = duration ? 100 : 60;
@@ -536,7 +536,7 @@ function handleSubmit() {
   }
   const serviceKeys = SERVICE_CONTRACT_FIELDS.map(({ key }) => key);
   const params = Object.fromEntries(
-    Object.entries(form.value).filter(([key]) => props.variant === 'service' || !serviceKeys.includes(key)),
+    Object.entries(form.value).filter(([key]) => ['combined', 'service'].includes(props.variant) || !serviceKeys.includes(key)),
   );
   emit('confirm', { [sourceKey]: 'default', ...params });
 }

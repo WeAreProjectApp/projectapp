@@ -104,7 +104,7 @@
         <div
           class="grid grid-cols-2 gap-2 border-t border-border-muted pt-2 panel-portrait:flex panel-portrait:items-center panel-portrait:border-l panel-portrait:border-t-0 panel-portrait:pl-3 panel-portrait:pt-0"
           role="group"
-          aria-label="Acciones de edición"
+          :aria-label="contractMirror ? 'Consulta del documento' : 'Acciones de edición'"
           data-testid="doc-edit-actions"
         >
           <BaseButton
@@ -115,9 +115,10 @@
             class="w-full whitespace-nowrap panel-portrait:w-auto"
             data-testid="doc-cancel"
           >
-            Cancelar
+            {{ contractMirror ? 'Volver' : 'Cancelar' }}
           </BaseButton>
           <BaseButton
+            v-if="!contractMirror"
             variant="primary"
             size="md"
             type="submit"
@@ -277,9 +278,8 @@
         data-testid="doc-contract-mirror-alert"
       >
         Contrato vigente, en solo lectura. Este documento muestra en vivo el
-        mismo contrato que ven los clientes en la sección legal de su propuesta.
-        Se consulta y se descarga en PDF o en Markdown; se modifica únicamente
-        por migración de la plantilla del contrato.
+        contenido de la plantilla predeterminada de esta variante.
+        Se consulta y se descarga en PDF o Markdown; conserva su ubicación en Contratos.
       </BaseAlert>
 
       <BaseAlert
@@ -580,7 +580,7 @@
             </p>
             <p class="mt-1 text-sm text-text-muted">
               {{ contractMirror
-                ? 'Se genera en vivo desde el contrato único: es el mismo borrador que el cliente descarga desde la sección legal de su propuesta.'
+                ? 'Muestra la plantilla vigente de esta variante, sin datos de un cliente.'
                 : isCollectionAccount
                   ? generatedSnapshot
                     ? 'Es el archivo definitivo creado al emitir la cuenta; no se vuelve a generar ni se puede reemplazar.'
@@ -620,6 +620,10 @@
             </template>
           </div>
         </div>
+        <dl v-if="contractMirror" class="mb-4 flex flex-wrap gap-4 text-sm" data-testid="doc-contract-version">
+          <div><dt class="text-text-muted">Versión</dt><dd>{{ documentStore.currentDocument.contract_version }}</dd></div>
+          <div><dt class="text-text-muted">Última sincronización</dt><dd>{{ formatDate(documentStore.currentDocument.contract_synced_at) }}</dd></div>
+        </dl>
         <dl
           v-if="isCollectionAccount"
           class="mb-4 grid gap-3 rounded-xl border border-border-muted bg-surface-raised p-4 text-sm sm:grid-cols-2"
@@ -865,7 +869,7 @@ const pdfPreviewDocument = computed(
 );
 const readOnlyReason = computed(() => {
   if (contractMirror.value) {
-    return 'Este es el contrato vigente: se consulta y se descarga aquí; se modifica únicamente por migración de la plantilla.';
+    return 'Este es el contrato vigente: se consulta y se descarga aquí; su contenido se mantiene sincronizado con la plantilla de esta variante.';
   }
   if (generatedSnapshot.value) {
     if (lockedCuenta.value) {

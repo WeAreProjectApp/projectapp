@@ -4,6 +4,10 @@ import ServiceContractTermField from '../../components/BusinessProposal/admin/Se
 enableAutoUnmount(afterEach);
 
 const proposalStore = { fetchCompanySettings: jest.fn() };
+const SERVICE_SETTINGS = {
+  duration_options: [3, 6, 9, 12], notice_options: [30, 60, 90],
+  default_duration: 9, default_renewal_notice: 60, default_termination_notice: 60,
+};
 
 global.useProposalStore = jest.fn(() => proposalStore);
 
@@ -130,6 +134,11 @@ describe('ContractParamsModal', () => {
 });
 
 describe('ContractParamsModal — identificación del contratista', () => {
+  beforeEach(() => {
+    proposalStore.fetchCompanySettings.mockReset().mockResolvedValue({
+      success: true, data: { service_contract_settings: SERVICE_SETTINGS },
+    });
+  });
   // The contract prints whichever document is on file, preferring the NIT, so
   // either one on its own is a complete answer — but neither is not.
   const FILLED = {
@@ -149,8 +158,7 @@ describe('ContractParamsModal — identificación del contratista', () => {
   async function openWith(params) {
     const wrapper = mountContractParamsModal({ visible: false, initialParams: params });
     await wrapper.setProps({ visible: true });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await wrapper.vm.$nextTick();
+    await flushPromises();
     return wrapper;
   }
 
@@ -201,13 +209,6 @@ describe('ContractParamsModal — contratos separados', () => {
     client_email: 'client@acme.com',
     contract_date: '2026-09-26',
   };
-  const SERVICE_SETTINGS = {
-    duration_options: [3, 6, 9, 12],
-    notice_options: [30, 60, 90],
-    default_duration: 9,
-    default_renewal_notice: 60,
-    default_termination_notice: 60,
-  };
 
   beforeEach(() => {
     proposalStore.fetchCompanySettings.mockReset().mockResolvedValue({ success: true, data: {} });
@@ -219,8 +220,7 @@ describe('ContractParamsModal — contratos separados', () => {
       components,
     );
     await wrapper.setProps({ visible: true });
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    await wrapper.vm.$nextTick();
+    await flushPromises();
     return wrapper;
   }
 
@@ -457,16 +457,34 @@ describe('ContractParamsModal — contratos separados', () => {
     expect(wrapper.findAllComponents(ServiceContractTermField)[0].get('[role="combobox"]').text()).toBe('seis (6) meses');
   });
 
-  it('keeps the service terms out of the single contract payload', async () => {
-    // Falla si editar el contrato único borra los datos guardados del servicio.
+  it('submits configured service terms with the combined contract', async () => {
+    // Falla si el contrato unificado deja de sustituir duración o avisos en sus cláusulas de servicio.
+    proposalStore.fetchCompanySettings.mockResolvedValue({
+      success: true,
+      data: { service_contract_settings: SERVICE_SETTINGS },
+    });
     const wrapper = await openFor('combined', PARTIES);
 
-    await wrapper.find('form').trigger('submit');
+    await wrapper.get('form').trigger('submit');
 
-    const payload = wrapper.emitted('confirm')[0][0];
-    expect(payload.contract_source).toBe('default');
-    expect(payload).not.toHaveProperty('service_initial_term');
-    expect(wrapper.find('[data-testid="contract-service-terms"]').exists()).toBe(false);
+    expect(wrapper.get('[data-testid="contract-service-terms"]').text()).toContain('Datos del servicio');
+    expect(wrapper.emitted('confirm')[0][0]).toMatchObject({
+      contract_source: 'default',
+      service_initial_term: 9,
+      service_renewal_notice_days: 60,
+      service_termination_notice_days: 60,
+    });
+  });
+
+  it('submits the product contract without service terms', async () => {
+    // Falla si el producto separado queda bloqueado por condiciones que sólo pertenecen al servicio.
+    const wrapper = await openFor('product', PARTIES);
+
+    await wrapper.get('form').trigger('submit');
+
+    expect(wrapper.findAll('[data-testid="contract-service-terms"]')).toHaveLength(0);
+    expect(wrapper.emitted('confirm')[0][0]).toMatchObject({ product_contract_source: 'default' });
+    expect(wrapper.emitted('confirm')[0][0]).not.toHaveProperty('service_initial_term');
   });
 
   it('edits the custom text of the product contract only', async () => {

@@ -142,3 +142,7 @@ el código nuevo; no se aplica desde un worktree.
 Las operaciones sensibles del conector Propuestas pasan por confirmación,
 incluidos envíos, borrados, cambios de estado con efectos y creación de enlaces
 que notifican por correo. Los clientes deben manejar `confirmation_required`.
+
+## Plantillas contractuales predeterminadas
+
+El conector ofrece lectura por variante, preview, actualización confirmada, historial, restauración y coherencia bloqueante. `describe_capabilities` publica sus argumentos y riesgos. El MCP documental lista los tres espejos de lectura. Contratos nuevos o regenerados usan la plantilla vigente; los guardados permanecen intactos. Contrato completo y primer uso: [CONTRACT_TEMPLATE_MCP.md](CONTRACT_TEMPLATE_MCP.md).

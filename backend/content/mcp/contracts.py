@@ -49,6 +49,14 @@ _DOCUMENT_THREAD_DERIVED_POSITION = (
     'La posición se deriva de la cronología del hilo; el conector envía fechas, '
     'nunca posiciones.'
 )
+_CONTRACT_MIRROR_MODEL = _contract(
+    'content.ContractTemplateMirror',
+    read_only='id variant document revision synced_at',
+    excluded=_excluded(
+        'Estado transaccional interno: PDF vigente y respaldo de la copia importada; no son campos editables por MCP.',
+        'template pdf_content imported_markdown',
+    ),
+)
 
 
 MCP_MODEL_CONTRACTS = {
@@ -68,6 +76,7 @@ MCP_MODEL_CONTRACTS = {
         ),
     ),
     'documents': (
+        _CONTRACT_MIRROR_MODEL,
         _contract(
             'accounts.Project',
             read_only='id name client current_state',
@@ -397,12 +406,22 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.ContractTemplate',
-            read_only='id name content_markdown',
+            read_only='id name created_at updated_at',
+            read_write='content_markdown product_content_markdown service_content_markdown',
             excluded=_excluded(
-                'Plantilla canónica administrada fuera del módulo Propuestas; aquí sólo se consulta el texto predeterminado.',
-                'service_content_markdown is_default mirror_document created_at updated_at',
+                'Selección y vínculo legado administrados por el servidor; las ediciones MCP son versionadas y confirmadas.',
+                'is_default mirror_document',
             ),
         ),
+        _contract(
+            'content.ContractTemplateVersion',
+            read_only='id variant version markdown author_label change_note restored_from created_at',
+            excluded=_excluded(
+                'Relaciones de auditoría internas; el historial expone la etiqueta del autor y nunca la credencial.',
+                'template author credential',
+            ),
+        ),
+        _CONTRACT_MIRROR_MODEL,
         _contract(
             'content.EmailTemplateConfig',
             read_only='id template_key created_at updated_at',

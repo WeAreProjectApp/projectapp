@@ -444,8 +444,12 @@ class ContractParamsSerializer(serializers.Serializer):
             raise serializers.ValidationError(
                 {'contractor_nit': 'Indica el NIT o la cédula del contratista (al menos uno).'}
             )
-        # The standalone service contract fills three terms of its own.
-        if self.context.get('variant') == SERVICE and data.get('service_contract_source', 'default') == 'default':
+        if uses_template and any(key in active for key in (COMBINED, SERVICE)):
+            from content.serializers.service_contract_settings import fill_service_term_defaults
+            data = fill_service_term_defaults(data)
+        # Both contracts containing service clauses use the same commercial terms.
+        variant = self.context.get('variant')
+        if variant in {COMBINED, SERVICE} and data.get(VARIANTS[variant].source_key, 'default') == 'default':
             missing = {
                 key: 'Indica este dato del contrato de servicio.'
                 for key in SERVICE_PARAM_KEYS if not (data.get(key) or '').strip()

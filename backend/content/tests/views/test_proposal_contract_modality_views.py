@@ -138,19 +138,73 @@ def test_modality_requires_an_admin(api_client, negotiated):
     assert response.status_code == 401
 
 
-def test_generating_the_service_contract_needs_its_three_terms(admin_client, negotiated):
+def test_generating_the_service_contract_needs_its_three_terms(
+    admin_client, negotiated, company_settings,
+):
     """Fails if the service contract is generated with blank duration or notices."""
+    company_settings.service_contract_settings = {
+        **company_settings.service_contract_settings,
+        'default_duration': '',
+        'default_renewal_notice': '',
+        'default_termination_notice': '',
+    }
+    company_settings.save(update_fields=['service_contract_settings'])
     negotiated.contract_modality = 'split'
     negotiated.save(update_fields=['contract_modality'])
 
     response = admin_client.patch(
-        _update_url(negotiated), {'contract_params': {}, 'variant': 'service'}, format='json',
+        _update_url(negotiated),
+        {
+            'contract_params': {
+                'service_initial_term': ' ',
+                'service_renewal_notice_days': ' ',
+                'service_termination_notice_days': ' ',
+            },
+            'variant': 'service',
+        },
+        format='json',
     )
 
     assert response.status_code == 400
     assert set(response.data) == {
         'service_initial_term', 'service_renewal_notice_days', 'service_termination_notice_days',
     }
+
+
+def test_generating_the_service_contract_uses_company_term_defaults(
+    admin_client, negotiated, company_settings,
+):
+    """Fails if configured defaults do not reach the saved service contract."""
+    company_settings.service_contract_settings = {
+        'duration_options': [6, 12],
+        'notice_options': [30, 60],
+        'default_duration': 12,
+        'default_renewal_notice': 30,
+        'default_termination_notice': 60,
+    }
+    company_settings.save(update_fields=['service_contract_settings'])
+    negotiated.contract_modality = 'split'
+    negotiated.save(update_fields=['contract_modality'])
+
+    response = admin_client.patch(
+        _update_url(negotiated), {'contract_params': {}, 'variant': 'service'}, format='json',
+    )
+    negotiated.refresh_from_db()
+    service = ProposalDocument.objects.get(
+        proposal=negotiated, document_type=ProposalDocument.DOC_TYPE_CONTRACT_SERVICE,
+    )
+
+    assert response.status_code == 200
+    assert {
+        key: negotiated.contract_params[key] for key in SERVICE_TERMS
+    } == {
+        'service_initial_term': 'doce (12) meses',
+        'service_renewal_notice_days': 'treinta (30)',
+        'service_termination_notice_days': 'sesenta (60)',
+    }
+    assert 'duración inicial de doce (12) meses' in service.content_markdown
+    assert 'al menos treinta (30) días calendario' in service.content_markdown
+    assert 'al menos sesenta (60) días calendario' in service.content_markdown
 
 
 def test_editing_one_document_keeps_the_other_documents_data(admin_client, negotiated):

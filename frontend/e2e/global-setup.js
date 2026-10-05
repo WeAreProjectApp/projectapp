@@ -130,6 +130,14 @@ function warmupApiFixture({ apiPath, method }) {
   if (apiPath === 'accounts/projects/' && method === 'GET') {
     return json([]);
   }
+  if (apiPath === 'projects/' && method === 'GET') {
+    // The panel endpoint returns an envelope; an array leaves records undefined
+    // and can prevent the required warmup page from mounting.
+    return json({ results: [], meta: {
+      total: 0, by_state: [], review_required: 0,
+      clients_without_projects: 0, records_without_project: 0,
+    } });
+  }
   if (apiPath === 'accounts/projects/1/' && method === 'GET') {
     return json({ id: 1, name: 'Warmup project', status_label: 'Activo', current_state: { color: 'emerald', operational_effect: 'operating' } });
   }

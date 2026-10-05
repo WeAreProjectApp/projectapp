@@ -1,3 +1,12 @@
+# En curso — plantillas contractuales versionadas (05-10-2026)
+
+Implementación en `feat/05102026-contract-template-versions`: tres variantes
+editables mediante MCP confirmado, coherencia bloqueante y espejos de lectura
+en ProjectApp/Contratos. El primer uso incorpora el documento 237, confidencialidad
+y no circunvención de tres años y garantía del producto de tres años. Conserva
+los contratos ya guardados o firmados. Validación aislada y despliegue canónico
+antes de cualquier actualización de datos reales.
+
 # Eliminación forzada de proyectos (2026-10-04)
 
 Implementado en `feat/04102026-project-force-deletion`, sobre `origin/main`.

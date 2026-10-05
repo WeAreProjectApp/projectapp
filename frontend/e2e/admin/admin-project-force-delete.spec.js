@@ -300,7 +300,7 @@ test('cancels forced deletion without issuing a destructive request', {
   await enterProjects(page, 'desktop');
   await openForcedDeletion(page);
 
-  await page.getByRole('dialog')
+  await page.getByRole('dialog', { name: 'Cambiar estado', exact: true })
     .getByRole('button', { name: 'Cancelar', exact: true })
     .click();
 

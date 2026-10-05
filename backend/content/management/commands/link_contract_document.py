@@ -31,6 +31,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         template = ContractTemplate.get_default()
+        if template is not None and template.mirrors.exists():
+            raise CommandError('Los tres espejos ya están inicializados; usa initialize_contract_template_mirrors para revisar su vinculación.')
         if template is None:
             raise CommandError('There is no default contract template.')
         try:

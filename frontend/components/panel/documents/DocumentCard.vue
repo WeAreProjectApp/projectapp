@@ -23,6 +23,8 @@ const excerpt = computed(() => makeSafeExcerpt(props.document.content_excerpt ||
 
 const isReadOnlyDocument = computed(() => (
   props.document.is_generated_snapshot
+  || props.document.is_contract_mirror
+  || props.document.movable === false
   || (
     props.document.document_type_code === 'collection_account'
     && props.document.commercial_status !== 'draft'

@@ -476,56 +476,112 @@ test.describe('Admin Document Edit', () => {
       .toContainText('contrato.pdf');
   });
 
-  test('the live contract window previews it and exports Markdown without editing', {
-    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
-  }, async ({ page }) => {
-    // quality: allow-deep-link (/panel/documents is the module entry; from
-    // there this test follows the real list → contract window interaction)
-    const contractWindow = {
-      ...mockDocument,
-      title: 'Contrato de prestación de servicios — borrador vigente',
-      slug: 'contrato-vigente',
+  const contractMirrors = [
+      {
+        ...mockDocument,
+        id: 104,
+        title: 'Contrato unificado de producto y servicio',
+        slug: 'contrato-unificado-producto-servicio',
+        contract_variant: 'combined',
+        contract_version: 8,
+        contract_synced_at: '2026-10-05T15:00:00Z',
+        synced_label: 'Lun, 5 oct 2026',
+      },
+      {
+        ...mockDocument,
+        id: 206,
+        title: 'Contrato de producto — desarrollo e implementación de software',
+        slug: 'contrato-producto',
+        contract_variant: 'product',
+        contract_version: 3,
+        contract_synced_at: '2026-10-04T15:00:00Z',
+        synced_label: 'Dom, 4 oct 2026',
+      },
+      {
+        ...mockDocument,
+        id: 205,
+        title: 'Contrato de servicio — hosting, mantenimiento y soporte',
+        slug: 'contrato-servicio',
+        contract_variant: 'service',
+        contract_version: 5,
+        contract_synced_at: '2026-10-03T15:00:00Z',
+        synced_label: 'Sáb, 3 oct 2026',
+      },
+    ].map((mirror) => ({
+      ...mirror,
+      folder: 121,
+      folder_id: 121,
+      folder_name: 'Contratos',
       is_contract_mirror: true,
-      content_markdown: '# CONTRATO DE PRESTACIÓN DE SERVICIOS\n\n## CLÁUSULA PRIMERA — OBJETO DEL CONTRATO\n',
+      content_markdown: `# ${mirror.title}\n\n## CLÁUSULA PRIMERA — OBJETO DEL CONTRATO\n`,
       active_states: [],
       notes: [],
-    };
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath === 'documents/') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify([contractWindow]) };
-      }
-      if (
-        apiPath === 'document-folders/'
-        || apiPath === 'document-tags/'
-        || apiPath === 'document-states/'
-        || apiPath === 'document-state-groups/'
-      ) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
-      }
-      if (apiPath === 'documents/1/detail/') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(contractWindow) };
-      }
-      if (apiPath === 'documents/1/pdf/') {
-        return { status: 200, contentType: 'application/pdf', body: '%PDF-1.4 live contract' };
-      }
-      return null;
+    }));
+  for (const mirror of contractMirrors) {
+    test(`the ${mirror.contract_variant} contract mirror opens from Contratos in read-only mode`, {
+      tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],
+    }, async ({ page }) => {
+      // Falla si un espejo admite edición o deja de mostrar su versión vigente.
+      await mockApi(page, async ({ apiPath }) => {
+        if (apiPath === 'auth/check/') return authCheck;
+        if (apiPath === 'documents/') {
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(contractMirrors) };
+        }
+        if (
+          apiPath === 'document-folders/'
+          || apiPath === 'document-tags/'
+          || apiPath === 'document-states/'
+          || apiPath === 'document-state-groups/'
+        ) {
+          return { status: 200, contentType: 'application/json', body: JSON.stringify([
+            { id: 121, name: 'Contratos', slug: 'contratos', parent: null, is_archived: false },
+          ]) };
+        }
+        const detailId = /^documents\/(\d+)\/detail\/$/.exec(apiPath)?.[1];
+        const mirror = contractMirrors.find((item) => item.id === Number(detailId));
+        if (mirror) {
+          return { status: 200, contentType: 'application/json', body: JSON.stringify(mirror) };
+        }
+        if (/^documents\/\d+\/pdf\/$/.test(apiPath)) {
+          return { status: 200, contentType: 'application/pdf', body: '%PDF-1.4 live contract' };
+        }
+        return null;
+      });
+      // quality: allow-deep-link (the panel is the entry; Documents and each mirror are reached through UI links)
+      await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+      await page.getByRole('link', { name: 'Gestor Documental', exact: true }).click();
+      await page.waitForURL('**/en-us/panel/documents');
+
+      const row = page.getByTestId(`document-row-${mirror.id}`);
+      await expect(row).toContainText(mirror.title);
+      await expect(row).toContainText('Contratos');
+      await expect(row).toHaveAttribute('draggable', 'false');
+
+      await row.getByRole('button', { name: `Acciones de ${mirror.title}`, exact: true }).click();
+      const actions = page.getByTestId('document-actions-list');
+      await expect(actions).toContainText('Ver contrato vigente');
+      await expect(actions).not.toContainText(/Editar contenido|Renombrar|Mover a carpeta|Duplicar|Archivar|Eliminar/);
+      await actions.getByRole('button', { name: /^Ver contrato vigente/ }).click();
+      await expect(page).toHaveURL(new RegExp(`/panel/documents/${mirror.id}/edit(?:\\?|$)`));
+
+      await expect(page.getByTestId('doc-contract-mirror-alert'))
+        .toContainText('Contrato vigente, en solo lectura');
+      await expect(page.getByTestId('doc-generated-pdf-frame')).toHaveAttribute(
+        'src', new RegExp(`/api/documents/${mirror.id}/pdf/`),
+      );
+      await expect(page.getByTestId('doc-contract-version')).toContainText(new RegExp(`Versión\\s*${mirror.contract_version}\\b`));
+      await expect(page.getByTestId('doc-contract-version')).toContainText(mirror.synced_label);
+      await expect(page.getByTestId('doc-markdown-editor-panel')).toHaveCount(0);
+      await expect(page.getByTestId('doc-save')).toHaveCount(0);
+
+      const download = page.waitForEvent('download');
+      await page.getByTestId('doc-contract-markdown-download').click();
+      expect((await download).suggestedFilename()).toBe(`${mirror.slug}.md`);
+
+      await page.getByTestId('doc-cancel').click();
+      await page.waitForURL(/\/en-us\/panel\/documents(?:\?|$)/);
     });
-    await page.goto('/panel/documents', { waitUntil: 'domcontentloaded' });
-    await expect(page.getByText(contractWindow.title, { exact: true }).first())
-      .toBeVisible({ timeout: 30000 });
-    await page.getByTestId('document-open-1').click();
-
-    await expect(page.getByTestId('doc-contract-mirror-alert'))
-      .toContainText('Contrato vigente, en solo lectura');
-    await expect(page.getByTestId('doc-generated-pdf-frame')).toBeVisible();
-    await expect(page.getByTestId('doc-markdown-editor-panel')).toHaveCount(0);
-    await expect(page.getByTestId('doc-save')).toBeDisabled();
-
-    const download = page.waitForEvent('download');
-    await page.getByTestId('doc-contract-markdown-download').click();
-    expect((await download).suggestedFilename()).toBe('contrato-vigente.md');
-  });
+  }
 
   test('a stored collection account previews its PDF with editable observations', {
     tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:display'],

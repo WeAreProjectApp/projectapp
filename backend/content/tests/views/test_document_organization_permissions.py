@@ -85,10 +85,10 @@ def test_scoped_credential_cannot_move_documents(scoped_rpc, markdown_type):
     assert document.folder_id is None
 
 
-def test_move_request_moves_mirror_without_rewriting_its_associations(
+def test_move_request_rejects_a_selection_containing_a_mirror(
     admin_client, superuser, markdown_type,
 ):
-    """Falla si mover el espejo modifica su markdown, cliente o proyecto en vez de sólo su carpeta."""
+    """Falla si un lote que contiene un espejo permite mover algún documento."""
     project = Project.objects.create(name='Original project', client=superuser)
     mirror = Document.objects.create(
         title='Contract window', document_type=markdown_type,
@@ -109,9 +109,9 @@ def test_move_request_moves_mirror_without_rewriting_its_associations(
     mirror.refresh_from_db()
     normal.refresh_from_db()
 
-    assert response.status_code == 200
-    assert mirror.folder_id == destination.pk
-    assert normal.folder_id == destination.pk
+    assert response.status_code == 409
+    assert mirror.folder_id is None
+    assert normal.folder_id is None
     assert mirror.content_markdown == '# Stored pointer'
     assert mirror.client_user_id == superuser.pk
     assert mirror.client_name == 'Original client'
