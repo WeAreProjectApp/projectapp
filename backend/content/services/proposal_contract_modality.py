@@ -163,7 +163,7 @@ def prepare(proposal, arguments, *, restore=False):
             try:
                 service_conditions_markdown(candidate)
             except ServiceConditionsError as exc:
-                raise ContractModalityError(str(exc), 'SERVICE_CONDITIONS_MISSING') from exc
+                raise ContractModalityError(str(exc), 'service_conditions_missing') from exc
     links = _linked_documents(proposal)
     linked_variants = {str(pk): variants.DOC_TYPE_VARIANTS[doc_type]
                        for pk, doc_type in proposal.proposal_documents.filter(document_type__in=variants.CONTRACT_DOC_TYPES).values_list('pk', 'document_type')}

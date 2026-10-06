@@ -107,7 +107,7 @@
           {{ new Date(proposal.platform_onboarding_completed_at).toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) }}
         </p>
       </div>
-      <div v-if="!hasDocumentsTab">
+      <div v-if="showOriginalPdfDownloads">
         <span class="text-text-subtle text-xs">PDFs</span>
         <div class="flex items-center gap-3 mt-0.5 flex-wrap">
           <PanelDownloadLink :url="'/api/proposals/' + proposal.id + '/pdf/'"
@@ -766,7 +766,7 @@ import {
 import ProposalExplainerToggle from '~/components/panel/proposal/ProposalExplainerToggle.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import TabSplitLayout from '~/components/panel/TabSplitLayout.vue';
-import { DEFAULT_METHOD_PHASES } from '~/stores/proposals_constants';
+import { DEFAULT_METHOD_PHASES, PROPOSAL_STATUS } from '~/stores/proposals_constants';
 import { useProposalStore } from '~/stores/proposals';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { usePanelNotify } from '~/composables/usePanelNotify';
@@ -784,6 +784,15 @@ const props = defineProps({
   investmentPaymentPercentages: { type: Array, default: () => [] },
   paymentAmounts: { type: Array, default: () => [] },
 });
+
+// Original proposal PDFs remain separate from the formalization documents.
+const showOriginalPdfDownloads = computed(() =>
+  !props.hasDocumentsTab || [
+    PROPOSAL_STATUS.DRAFT,
+    PROPOSAL_STATUS.EXPIRED,
+    PROPOSAL_STATUS.FINISHED,
+  ].includes(props.proposal.status),
+);
 
 const emit = defineEmits([
   'update',

@@ -1897,3 +1897,12 @@ heredar la tasa al liquidar y congelar el desglose documental evita divergencias
 entre ingreso, cuenta, PDF y correo. La previsualización comparte la transacción
 de emisión y revierte todos sus cambios; los pagos y la emisión comparten el
 lock del ingreso para impedir cambios financieros simultáneos.
+
+### Reportes E2E fuera del servidor Nuxt compartido (2026-10-06)
+
+Dos ejecuciones Playwright que comparten el servidor Nuxt pueden provocar una
+recarga de página al escribir `playwright-report/index.html` dentro del frontend.
+La recarga interrumpe una prueba que estaba navegando aunque sus APIs estén
+aisladas. Para validar lotes sobre ese servidor, ejecutarlos secuencialmente con
+`--reporter=line --output=/tmp/<directorio-propio> --retries=0`. Con los artefactos
+fuera del worktree, la regresión de documentos pasó sin recargas ni reintentos.

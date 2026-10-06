@@ -83,14 +83,17 @@ test.describe('Admin Proposal — Documentos tab', () => {
     });
   });
 
-  test('Documentos tab is hidden for draft proposals', {
+  test('Documentos tab is visible for draft proposals', {
     tag: ['@outcome:display', ...ADMIN_PROPOSAL_DIAGNOSTIC_TEMPLATES, '@role:admin'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (the authenticated proposal editor is the fixture entry; the test clicks Documentos and verifies its draft content)
     await mockApi(page, baseHandler(makeProposal({ status: 'draft' })));
     await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
 
     await expect(page.getByRole('tab', { name: 'General' })).toBeVisible({ timeout: 15000 });
-    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Documentos', exact: true })).not.toBeVisible();
+    await selectProposalDestination(page, 'documents', 'documents');
+    await expect(page.getByTestId('proposal-primary-navigation').getByRole('tab', { name: 'Documentos', exact: true })).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByRole('heading', { name: 'Documentos para formalización' })).toBeVisible();
   });
 
   test('Documentos tab is visible for sent proposals', {

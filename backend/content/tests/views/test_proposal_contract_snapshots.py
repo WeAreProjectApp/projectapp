@@ -3,6 +3,7 @@
 import hashlib
 
 import pytest
+from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from django.urls import reverse
 from django.utils import timezone
@@ -11,7 +12,9 @@ from freezegun import freeze_time
 from content.models import (
     Document,
     ProposalChangeLog,
+    ProposalContractChangeIntent,
     ProposalContractSnapshot,
+    ProposalContractSnapshotFile,
     ProposalDocument,
     ProposalSection,
 )
@@ -28,6 +31,8 @@ TERMS = {
     'service_initial_term': 'doce meses', 'service_renewal_notice_days': 'treinta',
     'service_termination_notice_days': 'quince',
 }
+EXACT_MARKDOWN = '# Signed contract\n\nExact negotiated clauses.\n'
+EXACT_PDF = b'%PDF-1.4 signed contract bytes\x00%%EOF'
 
 
 def _url(proposal, name, **kwargs):
@@ -45,6 +50,78 @@ def _contract(proposal, markdown, pdf):
     )
     document.file.save('snapshot-source.pdf', ContentFile(pdf), save=True)
     return document
+
+
+def _snapshot_row(proposal, *, note='Retained legal evidence', payload=None):
+    return ProposalContractSnapshot(
+        proposal=proposal,
+        payload=payload if payload is not None else {},
+        actor_label='Admin',
+        source='panel',
+        change_note=note,
+        from_modality='single',
+        to_modality='split',
+    )
+
+
+def _save_snapshot(proposal, *, note='Retained legal evidence', payload=None):
+    snapshot = _snapshot_row(proposal, note=note, payload=payload)
+    snapshot.save()
+    return snapshot
+
+
+def _snapshot_with_file(proposal, source_document):
+    payload = {
+        'contract_modality': 'single',
+        'contract_params': {
+            'contract_source': 'custom',
+            'custom_contract_markdown': EXACT_MARKDOWN,
+        },
+        'documents': [{
+            'variant': 'combined',
+            'document_id': source_document.pk,
+            'document_type': 'contract',
+            'title': source_document.title,
+            'file_name': source_document.file.name,
+            'markdown': EXACT_MARKDOWN,
+            'source': 'custom',
+            'is_archived': False,
+        }],
+        'linked_documents': [],
+    }
+    snapshot = _save_snapshot(proposal, payload=payload)
+    snapshot_file = ProposalContractSnapshotFile.objects.create(
+        snapshot=snapshot,
+        source_document_id=source_document.pk,
+        pdf_content=EXACT_PDF,
+        sha256=hashlib.sha256(EXACT_PDF).hexdigest(),
+    )
+    return snapshot, snapshot_file
+
+
+def _history_evidence_url(proposal, _snapshot, _source_document):
+    return _url(proposal, 'list-contract-snapshots')
+
+
+def _detail_evidence_url(proposal, snapshot, _source_document):
+    return _url(proposal, 'read-contract-snapshot', snapshot_id=snapshot.pk)
+
+
+def _file_evidence_url(proposal, snapshot, source_document):
+    return _url(
+        proposal,
+        'download-contract-snapshot',
+        snapshot_id=snapshot.pk,
+        document_id=source_document.pk,
+    )
+
+
+def _missing_snapshot_id(_proposal):
+    return 2_147_483_647
+
+
+def _foreign_snapshot_id(proposal):
+    return _save_snapshot(proposal, note='Foreign proposal evidence').pk
 
 
 @pytest.fixture
@@ -106,6 +183,172 @@ def test_snapshot_read_is_scoped_to_its_proposal(admin_client, accepted_contract
     response = admin_client.get(_url(proposal, 'read-contract-snapshot', snapshot_id=snapshot.pk))
 
     assert response.status_code == 404
+
+
+@freeze_time('2026-10-06 12:00:00')
+def test_snapshot_history_paginates_only_requested_proposal(admin_client, accepted_contract, proposal):
+    """Fails if retained history leaks another proposal or skips the fixed 20-row page boundary."""
+    history = ProposalContractSnapshot.objects.bulk_create([
+        _snapshot_row(accepted_contract, note=f'Retained evidence {index}')
+        for index in range(22)
+    ])
+    foreign = _save_snapshot(proposal, note='Other proposal evidence')
+
+    first_page = admin_client.get(_url(accepted_contract, 'list-contract-snapshots'))
+    last_page = admin_client.get(_url(accepted_contract, 'list-contract-snapshots'), {'offset': 20})
+
+    assert (first_page.status_code, last_page.status_code) == (200, 200)
+    assert (first_page.data['total'], last_page.data['total']) == (22, 22)
+    assert (len(first_page.data['snapshots']), len(last_page.data['snapshots'])) == (20, 2)
+    assert [row['snapshot_id'] for row in first_page.data['snapshots']] == [
+        row.pk for row in reversed(history[2:])
+    ]
+    assert [row['snapshot_id'] for row in last_page.data['snapshots']] == [history[1].pk, history[0].pk]
+    assert foreign.pk not in {
+        row['snapshot_id']
+        for row in first_page.data['snapshots'] + last_page.data['snapshots']
+    }
+
+
+@pytest.mark.parametrize('offset', ['-1', 'not-an-integer'])
+def test_snapshot_history_rejects_invalid_offset(admin_client, accepted_contract, offset):
+    """Fails if malformed pagination reaches the immutable history query."""
+    snapshot = _save_snapshot(accepted_contract)
+
+    response = admin_client.get(
+        _url(accepted_contract, 'list-contract-snapshots'),
+        {'offset': offset},
+    )
+
+    assert response.status_code == 400
+    assert response.data == {'error': 'offset debe ser un entero positivo o cero.'}
+    assert ProposalContractSnapshot.objects.filter(pk=snapshot.pk).exists()
+
+
+def test_snapshot_detail_returns_exact_contract_evidence(admin_client, accepted_contract):
+    """Fails if detail retrieval changes the stored custom Markdown or its source-file metadata."""
+    source = _contract(accepted_contract, EXACT_MARKDOWN, EXACT_PDF)
+    snapshot, snapshot_file = _snapshot_with_file(accepted_contract, source)
+
+    response = admin_client.get(
+        _url(accepted_contract, 'read-contract-snapshot', snapshot_id=snapshot.pk),
+    )
+
+    document = response.data['payload']['documents'][0]
+    assert response.status_code == 200
+    assert response.data['snapshot_id'] == snapshot.pk
+    assert response.data['payload'] == snapshot.payload
+    assert document['markdown'] == EXACT_MARKDOWN
+    assert document['file_name'] == source.file.name
+    assert snapshot_file.sha256 == hashlib.sha256(EXACT_PDF).hexdigest()
+
+
+def test_snapshot_file_download_returns_original_pdf(admin_client, accepted_contract):
+    """Fails if recovery download changes signed bytes or permits intermediary caching."""
+    source = _contract(accepted_contract, EXACT_MARKDOWN, EXACT_PDF)
+    snapshot, _snapshot_file = _snapshot_with_file(accepted_contract, source)
+
+    response = admin_client.get(_file_evidence_url(accepted_contract, snapshot, source))
+
+    assert response.status_code == 200
+    assert response.content == EXACT_PDF
+    assert response['Content-Type'] == 'application/pdf'
+    assert response['Content-Disposition'] == (
+        f'attachment; filename="contract-snapshot-{snapshot.pk}-{source.pk}.pdf"'
+    )
+    assert response['Cache-Control'] == 'private, no-store'
+
+
+@pytest.mark.parametrize(
+    'url_builder',
+    [_history_evidence_url, _detail_evidence_url, _file_evidence_url],
+    ids=['history', 'detail', 'file'],
+)
+def test_snapshot_evidence_requires_admin(api_client, accepted_contract, url_builder):
+    """Fails if a non-admin can read recovery history, Markdown, or stored PDF bytes."""
+    source = _contract(accepted_contract, EXACT_MARKDOWN, EXACT_PDF)
+    snapshot, snapshot_file = _snapshot_with_file(accepted_contract, source)
+    viewer = get_user_model().objects.create_user(
+        username='snapshot_viewer',
+        email='snapshot-viewer@example.com',
+    )
+    api_client.force_authenticate(user=viewer)
+
+    response = api_client.get(url_builder(accepted_contract, snapshot, source))
+
+    snapshot_file.refresh_from_db()
+    assert response.status_code == 403
+    assert EXACT_MARKDOWN.encode() not in response.content
+    assert EXACT_PDF not in response.content
+    assert bytes(snapshot_file.pdf_content) == EXACT_PDF
+
+
+def test_snapshot_detail_hides_missing_identifier(admin_client, accepted_contract):
+    """Fails if a missing recovery identifier returns content or creates history."""
+    response = admin_client.get(
+        _url(accepted_contract, 'read-contract-snapshot', snapshot_id=_missing_snapshot_id(accepted_contract)),
+    )
+
+    assert response.status_code == 404
+    assert EXACT_MARKDOWN.encode() not in response.content
+    assert not ProposalContractSnapshot.objects.filter(proposal=accepted_contract).exists()
+
+
+def test_snapshot_file_download_rejects_unknown_document(admin_client, accepted_contract):
+    """Fails if a valid snapshot can serve bytes under an unrelated document identifier."""
+    source = _contract(accepted_contract, EXACT_MARKDOWN, EXACT_PDF)
+    snapshot, snapshot_file = _snapshot_with_file(accepted_contract, source)
+
+    response = admin_client.get(_url(
+        accepted_contract,
+        'download-contract-snapshot',
+        snapshot_id=snapshot.pk,
+        document_id=source.pk + 10_000,
+    ))
+
+    snapshot_file.refresh_from_db()
+    assert response.status_code == 404
+    assert EXACT_PDF not in response.content
+    assert bytes(snapshot_file.pdf_content) == EXACT_PDF
+
+
+def test_snapshot_file_download_rejects_foreign_proposal(
+    admin_client, accepted_contract, proposal,
+):
+    """Fails if a proposal URL can download another proposal's retained contract."""
+    source = _contract(accepted_contract, EXACT_MARKDOWN, EXACT_PDF)
+    snapshot, snapshot_file = _snapshot_with_file(accepted_contract, source)
+
+    response = admin_client.get(_file_evidence_url(proposal, snapshot, source))
+
+    snapshot_file.refresh_from_db()
+    assert response.status_code == 404
+    assert EXACT_PDF not in response.content
+    assert bytes(snapshot_file.pdf_content) == EXACT_PDF
+
+
+@pytest.mark.parametrize(
+    'snapshot_id_builder',
+    [_missing_snapshot_id, _foreign_snapshot_id],
+    ids=['missing', 'other-proposal'],
+)
+def test_restore_preview_rejects_unknown_snapshot(
+    admin_client, accepted_contract, proposal, snapshot_id_builder,
+):
+    """Fails if restore accepts missing or foreign evidence and mutates the target proposal."""
+    snapshot_id = snapshot_id_builder(proposal)
+
+    response = admin_client.post(_url(accepted_contract, 'preview-contract-change'), {
+        'snapshot_id': snapshot_id,
+        'change_note': 'Attempt invalid restore',
+    }, format='json')
+
+    accepted_contract.refresh_from_db()
+    assert response.status_code == 404
+    assert response.data['code'] == 'NOT_FOUND'
+    assert accepted_contract.contract_modality == 'single'
+    assert not accepted_contract.contract_snapshots.exists()
+    assert not ProposalContractChangeIntent.objects.filter(proposal=accepted_contract).exists()
 
 
 def test_saved_contract_snapshot_cannot_be_edited(accepted_contract):

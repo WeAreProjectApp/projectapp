@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin views the 'Documentos' tab on the proposal edit page. Tab is visible for proposals in sent|viewed|negotiating|accepted|rejected status. Shows a unified document list (Contrato de desarrollo, Propuesta comercial PDF, Detalle técnico PDF) plus a 'Documentos adjuntos' section with upload form. Does NOT show 'Enviar documentos al cliente' (that section was removed Apr 22 2026 — sending is done from the Correos tab).",
+  "description": "El administrador abre Documentos en cualquier estado de la propuesta, incluido borrador, vencida y finalizada. La pestaña muestra los contratos activos según su modalidad, los PDFs formales comercial y técnico y Documentos adjuntos con su formulario de carga. No muestra la antigua sección Enviar documentos al cliente.",
   "expectedSpecs": 1,
   "outcomes": [
     "display"

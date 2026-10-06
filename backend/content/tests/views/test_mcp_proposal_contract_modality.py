@@ -4,6 +4,7 @@ import pytest
 from django.core.files.base import ContentFile
 
 from content.models import (
+    McpActionIntent,
     McpConnector,
     ProposalContractSnapshot,
     ProposalDocument,
@@ -34,6 +35,24 @@ def _call(client, token, name, arguments):
 
 def _pdf(_proposal, *, resolved_content, **_kwargs):
     return b'%PDF-1.4 mcp\n' + resolved_content['snapshot'].encode()
+
+
+def _custom_combined(proposal, markdown, pdf):
+    proposal.contract_params = {**PARTY, 'contract_source': 'custom', 'custom_contract_markdown': markdown}
+    proposal.save(update_fields=['contract_params'])
+    document = ProposalDocument.objects.create(
+        proposal=proposal, document_type='contract', title='Signed', is_generated=True,
+        content_markdown=markdown,
+    )
+    document.file.save('mcp-signed.pdf', ContentFile(pdf), save=True)
+    return document
+
+
+def _split_preview(client, token, proposal):
+    return _call(client, token, 'update_proposal_contract_modality', {
+        'proposal_id': proposal.pk, 'contract_modality': 'split',
+        'change_note': 'Separate accepted agreement', 'contract_params': TERMS,
+    })
 
 
 @pytest.fixture
@@ -122,3 +141,93 @@ def test_reduced_mcp_scope_rejects_contract_modality_change(api_client, mcp_acce
 
     assert result['isError'] is True
     assert result['structuredContent']['error']['code'] == 'FORBIDDEN'
+
+
+def test_mcp_lists_and_reads_immutable_snapshot_with_literal_markdown(
+    api_client, mcp_access, accepted_mcp_proposal, monkeypatch,
+):
+    """Fails if MCP snapshot reads omit the exact custom contract evidence created by a confirmed change."""
+    monkeypatch.setattr('content.services.contract_pdf_service.generate_contract_pdf', _pdf)
+    token, _ = mcp_access
+    markdown = '# Signed literal\n\nWhitespace stays  \n'
+    _custom_combined(accepted_mcp_proposal, markdown, b'%PDF-1.4 signed')
+    preview = _split_preview(api_client, token, accepted_mcp_proposal)
+    _call(api_client, token, 'confirm_action', {'confirmation_id': preview['structuredContent']['confirmation_id']})
+    snapshot = ProposalContractSnapshot.objects.get(proposal=accepted_mcp_proposal)
+
+    listed = _call(api_client, token, 'list_proposal_contract_snapshots', {'proposal_id': accepted_mcp_proposal.pk})
+    read = _call(api_client, token, 'read_proposal_contract_snapshot', {
+        'proposal_id': accepted_mcp_proposal.pk, 'snapshot_id': str(snapshot.pk),
+    })
+
+    assert listed['isError'] is False
+    assert listed['structuredContent']['total'] == 1
+    assert listed['structuredContent']['snapshots'][0]['change_note'] == 'Separate accepted agreement'
+    assert read['structuredContent']['payload']['documents'][0]['markdown'] == markdown
+    assert read['structuredContent']['from_modality'] == 'single'
+
+
+def test_mcp_restore_confirmation_recovers_signed_custom_contract(api_client, mcp_access, accepted_mcp_proposal, monkeypatch):
+    """Fails if confirmed MCP restore cannot recover the custom signed contract preserved before splitting."""
+    monkeypatch.setattr('content.services.contract_pdf_service.generate_contract_pdf', _pdf)
+    token, _ = mcp_access
+    markdown = '# Recover literally\n'
+    pdf = b'%PDF-1.4 recover signed\x00'
+    _custom_combined(accepted_mcp_proposal, markdown, pdf)
+    split = _split_preview(api_client, token, accepted_mcp_proposal)
+    _call(api_client, token, 'confirm_action', {'confirmation_id': split['structuredContent']['confirmation_id']})
+    snapshot = ProposalContractSnapshot.objects.get(proposal=accepted_mcp_proposal, from_modality='single')
+
+    preview = _call(api_client, token, 'restore_proposal_contract_snapshot', {
+        'proposal_id': accepted_mcp_proposal.pk, 'snapshot_id': snapshot.pk, 'change_note': 'Restore signed text',
+    })
+    confirmed = _call(api_client, token, 'confirm_action', {
+        'confirmation_id': preview['structuredContent']['confirmation_id'],
+    })
+
+    recovered = accepted_mcp_proposal.proposal_documents.get(document_type='contract', is_archived=False)
+    assert preview['structuredContent']['confirmation_required'] is True
+    assert confirmed['structuredContent']['result']['contract_change']['contract_modality'] == 'single'
+    assert recovered.content_markdown == markdown
+    assert recovered.file.read() == pdf
+    assert ProposalContractSnapshot.objects.filter(proposal=accepted_mcp_proposal).count() == 2
+
+
+def test_mcp_rejects_cross_proposal_snapshot_before_creating_an_intent(
+    api_client, mcp_access, accepted_mcp_proposal, proposal,
+):
+    """Fails if MCP can preview a restore using another proposal's recovery evidence."""
+    token, _ = mcp_access
+    snapshot = ProposalContractSnapshot.objects.create(
+        proposal=accepted_mcp_proposal, payload={}, actor_label='Admin', source='panel', change_note='original',
+        from_modality='single', to_modality='split',
+    )
+
+    result = _call(api_client, token, 'restore_proposal_contract_snapshot', {
+        'proposal_id': proposal.pk, 'snapshot_id': snapshot.pk, 'change_note': 'Wrong proposal',
+    })
+
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'NOT_FOUND'
+    assert McpActionIntent.objects.count() == 0
+
+
+@pytest.mark.parametrize('proposal_id', [True, -1])
+def test_mcp_snapshot_list_rejects_invalid_proposal_identifier(api_client, mcp_access, proposal_id):
+    """Fails if snapshot listing accepts a non-positive or boolean proposal identifier."""
+    token, _ = mcp_access
+
+    result = _call(api_client, token, 'list_proposal_contract_snapshots', {'proposal_id': proposal_id})
+
+    assert result['isError'] is True
+
+
+def test_mcp_snapshot_list_accepts_legacy_digit_string_identifier(api_client, mcp_access, accepted_mcp_proposal):
+    """Fails if MCP rejects the digit-string proposal IDs supported by older connector clients."""
+    token, _ = mcp_access
+
+    result = _call(api_client, token, 'list_proposal_contract_snapshots', {
+        'proposal_id': str(accepted_mcp_proposal.pk),
+    })
+
+    assert result['isError'] is False
