@@ -582,7 +582,8 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 | `ENABLE_SILK` | `false` | Enable query profiler |
 | `DJANGO_CORS_ALLOWED_ORIGINS` | `http://127.0.0.1:5173,...` | CORS origins |
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `http://127.0.0.1:5173,...` | CSRF trusted |
-| `PROJECT_ACCESS_CIPHER_KEY` | *(required in prod)* | Fernet key for project admin passwords and encrypted project-note content. Generate: `python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"` |
+| `PROJECT_ACCESS_CIPHER_KEY` | *(optional when a private key file exists)* | Fernet key for project passwords, notes and secure links. Takes precedence over file configuration; never generate/rotate automatically. |
+| `PROJECT_ACCESS_CIPHER_KEY_FILE` | `PRIVATE_MEDIA_ROOT/runtime-secrets/project-access.key` | Private regular file, owner-only permissions; keep outside Git/public media and back up separately. |
 
 ---
 
@@ -1147,7 +1148,7 @@ description and preserves its credentials, active state and last-use timestamp.
 - **Custom admin site** — `content/admin.py` with custom `AdminSite` class; `accounts/admin.py` registers `ProjectAdmin` for project metadata and product URLs. Environment credentials are intentionally writable only through the dedicated secure detail.
 - **Management commands** — fake data generation for development/testing
 - **Email template registry** — centralized email content management with admin-editable overrides
-- **Fernet encryption** — `accounts/services/credential_cipher.py`; generic `encrypt_secret`/`decrypt_secret` plus backward-compatible password wrappers use `PROJECT_ACCESS_CIPHER_KEY`; the cipher instance is cached with `@lru_cache`
+- **Fernet encryption** — `accounts/services/credential_cipher.py`; generic `encrypt_secret`/`decrypt_secret` plus backward-compatible password wrappers use `PROJECT_ACCESS_CIPHER_KEY` or a private key file; the cipher instance is cached with `@lru_cache`
 - **Project access boundary** — `accounts/services/project_access.py` owns environment fields, note encryption and conflict-safe legacy classification. `accounts/project_access_api.py` owns shared response contracts and `no-store`; thin FBVs select session/CSRF or JWT permissions. General serializers never deserialize a project-access password, and MCP excludes the complete operational detail.
 - **Bogotá time helpers** (`content/utils.py`) — `now_bogota()`, `today_bogota()`, `to_bogota_date(dt)`, `format_bogota_date(d)` (accepts both `date` and `datetime`), `format_bogota_datetime(dt)`. Use these for any day-level arithmetic instead of `date.today()` (UTC). Bogotá is fixed UTC-5 with no DST.
 - **Internal-only fields gated by `is_admin`** — when a model is internal-only (e.g., `ProposalProjectStage`), expose it via `SerializerMethodField` returning `[]` for non-admin context, never `read_only=True` model nesting. Precedent: `ProposalDetailSerializer.get_project_stages`.
@@ -1494,7 +1495,7 @@ projectapp/
 6. **Large service files** — `proposal_service.py`, `proposal_pdf_service.py`, `proposal_email_service.py`, and `pdf_utils.py` remain large and would benefit from further splitting
 7. **Bogotá timezone for day-level arithmetic** — Django's `TIME_ZONE='UTC'` means `date.today()` returns UTC date. For day-level logic (e.g., the daily Huey task computing "is the stage overdue today?") always use `today_bogota()` from `content/utils.py`. Bogotá is fixed UTC-5 with no DST so the offset is stable year-round.
 8. **Huey cron schedule is in UTC** — `crontab(hour='13', minute='30')` means 13:30 UTC = 08:30 Bogotá. Document the offset in a comment above any periodic task that's meant to land in the team inbox at a specific local time.
-9. **`PROJECT_ACCESS_CIPHER_KEY` required** — must be set in production `.env`; it encrypts environment passwords and all project-note bodies. Never rotate it without a data re-encryption procedure.
+9. **Project access cipher key required** — use `PROJECT_ACCESS_CIPHER_KEY` or the private file described in `docs/secure-links.md`; it encrypts environment passwords, project notes and secure links. Restore the original key when encrypted data exists. Never rotate it without a data re-encryption procedure.
 10. **Modal search results use the shared floating layer** — searchable listboxes
     inside `BaseModal` render through `BaseFloatingListbox`; consumers must pass
     their anchor and owner elements instead of positioning a results panel inside
