@@ -13,6 +13,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction } from '../helpers/bulk-actions.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import {
   ADMIN_ACCOUNTING_INCOME_BULK_SETTLE,
 } from '../helpers/flow-tags.js';
