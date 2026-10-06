@@ -2308,21 +2308,138 @@ describe('useProposalStore', () => {
       expect(store.isUpdating).toBe(false);
     });
 
-    it('returns the backend reason when the modality is locked', async () => {
-      // Falla si el panel no puede explicar por qué no cambió la modalidad.
+    it('passes the change note and service terms with a direct negotiation update', async () => {
+      // Falla si el cambio directo durante negociación omite los datos contractuales que eligió el administrador.
       store.currentProposal = { id: 1, contract_modality: 'single' };
-      patch_request.mockRejectedValueOnce({
-        response: {
-          status: 409,
-          data: { error: 'La modalidad de cierre sólo se cambia durante la negociación.', code: 'modality_locked' },
-        },
+      const data = { id: 1, contract_modality: 'split', proposal_documents: [] };
+      patch_request.mockResolvedValueOnce({ data });
+
+      await store.updateContractModality(1, 'split', {
+        change_note: 'El cliente pidió contratos separados.',
+        contract_params: { service_initial_term: '12 meses' },
       });
 
-      const result = await store.updateContractModality(1, 'split');
+      expect(patch_request).toHaveBeenCalledWith('proposals/1/contract/modality/', {
+        contract_modality: 'split',
+        change_note: 'El cliente pidió contratos separados.',
+        contract_params: { service_initial_term: '12 meses' },
+      });
+      expect(store.currentProposal.contract_modality).toBe('split');
+    });
 
-      expect(result).toMatchObject({ success: false, code: 'modality_locked' });
-      expect(result.message).toBe('La modalidad de cierre sólo se cambia durante la negociación.');
+    it('returns the complete preview impact without dropping contract sources', async () => {
+      // Falla si la interfaz recibe una vista previa pero pierde qué variante usa plantilla o contenido personalizado.
+      const preview = {
+        confirmation_id: 'confirm-118',
+        impact: {
+          contract_modality: 'split',
+          contracts: [
+            { variant: 'product', source: 'custom', action: 'move' },
+            { variant: 'service', source: 'default', action: 'create' },
+          ],
+        },
+      };
+      create_request.mockResolvedValueOnce({ data: preview });
+
+      const result = await store.previewContractChange(118, {
+        contract_modality: 'split',
+        change_note: 'Separar producto y servicio.',
+      });
+
+      expect(create_request).toHaveBeenCalledWith('proposals/118/contract/modality/preview/', {
+        contract_modality: 'split',
+        change_note: 'Separar producto y servicio.',
+      });
+      expect(result).toEqual(preview);
+    });
+
+    it('replaces the open proposal only after the confirmation response', async () => {
+      // Falla si confirmar una revisión no refresca las fuentes finales que ve el administrador.
+      store.currentProposal = { id: 118, contract_modality: 'single' };
+      const confirmed = {
+        id: 118,
+        contract_modality: 'split',
+        contract_variants: [
+          { variant: 'product', source: 'custom' },
+          { variant: 'service', source: 'default' },
+        ],
+      };
+      create_request.mockResolvedValueOnce({ data: confirmed });
+
+      const result = await store.confirmContractChange(118, 'confirm-118');
+
+      expect(create_request).toHaveBeenCalledWith('proposals/118/contract/modality/confirm/', { confirmation_id: 'confirm-118' });
+      expect(result.contract_variants).toEqual([
+        { variant: 'product', source: 'custom' },
+        { variant: 'service', source: 'default' },
+      ]);
+      expect(store.currentProposal).toEqual(confirmed);
+    });
+
+    it('keeps the open proposal unchanged when a preview returns service validation details', async () => {
+      // Falla si un rechazo de la revisión cambia la modalidad antes de que existan los tres términos de servicio.
+      store.currentProposal = { id: 118, contract_modality: 'single' };
+      const validationError = {
+        response: {
+          status: 400,
+          data: {
+            error: 'Completa los datos del servicio.',
+            details: {
+              service_initial_term: 'Indica el plazo inicial.',
+              service_renewal_notice_days: 'Indica el preaviso de renovación.',
+              service_termination_notice_days: 'Indica el preaviso de terminación.',
+            },
+          },
+        },
+      };
+      create_request.mockRejectedValueOnce(validationError);
+
+      await expect(store.previewContractChange(118, {
+        contract_modality: 'split',
+        change_note: 'Falta completar los datos.',
+      })).rejects.toEqual(validationError);
+
       expect(store.currentProposal.contract_modality).toBe('single');
+    });
+
+    it('cancels a reviewed change without replacing the open proposal', async () => {
+      // Falla si cancelar una confirmación pendiente altera la propuesta antes de que el usuario acepte el cambio.
+      store.currentProposal = { id: 118, contract_modality: 'single' };
+      create_request.mockResolvedValueOnce({ data: { cancelled: true, confirmation_id: 'confirm-118' } });
+
+      const result = await store.cancelContractChange(118, 'confirm-118');
+
+      expect(create_request).toHaveBeenCalledWith('proposals/118/contract/modality/cancel/', { confirmation_id: 'confirm-118' });
+      expect(result).toEqual({ cancelled: true, confirmation_id: 'confirm-118' });
+      expect(store.currentProposal.contract_modality).toBe('single');
+    });
+
+    it('returns the requested snapshot page with its contract sources', async () => {
+      // Falla si el historial carga otra página o descarta la fuente del contrato guardado.
+      const snapshots = {
+        total: 2,
+        snapshots: [{ snapshot_id: 41, from_modality: 'single', to_modality: 'split', sources: { product: 'custom' } }],
+      };
+      get_request.mockResolvedValueOnce({ data: snapshots });
+
+      const result = await store.fetchContractSnapshots(118, 1);
+
+      expect(get_request).toHaveBeenCalledWith('proposals/118/contract/snapshots/?offset=1');
+      expect(result).toEqual(snapshots);
+    });
+
+    it('returns the exact document payload for a selected snapshot', async () => {
+      // Falla si abrir una instantánea devuelve un contrato distinto del que eligió el administrador.
+      const snapshot = {
+        snapshot_id: 41,
+        payload: { documents: [{ document_id: 81, source: 'custom', markdown: '# Contrato firmado' }] },
+      };
+      get_request.mockResolvedValueOnce({ data: snapshot });
+
+      const result = await store.fetchContractSnapshot(118, 41);
+
+      expect(get_request).toHaveBeenCalledWith('proposals/118/contract/snapshots/41/');
+      expect(result).toEqual(snapshot);
     });
   });
 

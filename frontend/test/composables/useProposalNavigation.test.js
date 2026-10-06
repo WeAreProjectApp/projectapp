@@ -73,15 +73,15 @@ describe('useProposalNavigation', () => {
     expect([...navigation.visitedTabs.value]).toEqual(['general']);
   });
 
-  // Fails if finishing a proposal leaves its unavailable Documents panel active.
-  it('repairs Documents to General when the proposal finishes', async () => {
+  // Fails if finishing a proposal redirects away from its available Documents panel.
+  it('keeps Documents selected when the proposal finishes', async () => {
     navigation = createNavigation({ tab: 'documents' }, 'accepted');
 
     navigation.status.value = 'finished';
     await nextTick();
 
-    expect(navigation.activeTab.value).toBe('general');
-    expect([...navigation.visitedTabs.value]).toEqual(['documents', 'general']);
+    expect(navigation.activeTab.value).toBe('documents');
+    expect([...navigation.visitedTabs.value]).toEqual(['documents']);
   });
 
   // Fails if grouped email navigation drops unrelated shared-link details.

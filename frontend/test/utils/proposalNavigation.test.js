@@ -11,9 +11,9 @@ const sectionIds = (status, groupId) => availableProposalGroups(status)
   .map((section) => section.id);
 
 describe('proposal navigation catalog', () => {
-  // Fails if a draft exposes tools that are not available before the proposal is sent.
-  it('keeps draft navigation limited to its four available groups', () => {
-    expect(groupIds('draft')).toEqual(['general', 'proposal', 'communication', 'tracking']);
+  // Fails if a draft loses its Documents entry before a modality needs review.
+  it('keeps Documents in draft navigation', () => {
+    expect(groupIds('draft')).toEqual(['general', 'proposal', 'communication', 'documents', 'tracking']);
   });
 
   // Fails if sent proposals lose the Documents group that users need to review shared files.
@@ -33,16 +33,21 @@ describe('proposal navigation catalog', () => {
     expect(sectionIds('accepted', 'project')).toEqual(['schedule', 'development']);
   });
 
-  // Fails if finished work loses its schedule or still offers the closed Development tool.
+  // Fails if finished work loses Documents, its schedule, or still offers the closed Development tool.
   it('keeps only the schedule in Project after a proposal is finished', () => {
     expect(groupIds('finished')).toEqual([
-      'general', 'proposal', 'communication', 'project', 'tracking',
+      'general', 'proposal', 'communication', 'documents', 'project', 'tracking',
     ]);
     expect(sectionIds('finished', 'project')).toEqual(['schedule']);
   });
 });
 
 describe('proposal navigation links', () => {
+  test.each(['draft', 'expired', 'finished'])('resolves the Documents link for a %s proposal', (status) => {
+    // Falla si un estado fuera de negociación abre General en vez de los documentos contractuales.
+    expect(resolveProposalSection({ tab: 'documents' }, status)).toBe('documents');
+  });
+
   // Fails if a shared legacy link is rejected before its proposal status has loaded.
   it('keeps a legacy email destination while proposal status is loading', () => {
     expect(resolveProposalSection({ tab: 'emails' }, null)).toBe('emails');

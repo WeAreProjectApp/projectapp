@@ -479,6 +479,7 @@ def serialize_proposal_document(d, *, proposal=None, service_snapshot=None):
         'title': d.title,
         'file': d.file.url if d.file else None,
         'is_generated': d.is_generated,
+        'is_archived': d.is_archived,
         'created_at': d.created_at.isoformat(),
         'updated_at': d.updated_at.isoformat(),
         'needs_regeneration': needs_regeneration,

@@ -6,7 +6,7 @@ jest.mock('#imports', () => ({
   } }),
 }));
 
-import { mount } from '@vue/test-utils';
+import { mount, flushPromises } from '@vue/test-utils';
 
 jest.mock('~/stores/services/request_http', () => ({
   get_request: jest.fn(),
@@ -21,10 +21,16 @@ const mockNotify = { success: jest.fn(), error: jest.fn() };
 jest.mock('~/composables/usePanelNotify', () => ({ usePanelNotify: () => mockNotify }));
 
 const mockUpdateContractModality = jest.fn();
+const mockPreviewContractChange = jest.fn();
+const mockConfirmContractChange = jest.fn();
+const mockCancelContractChange = jest.fn();
 global.useProposalStore = jest.fn(() => ({
   uploadProposalDocument: jest.fn().mockResolvedValue({ success: true }),
   deleteProposalDocument: jest.fn().mockResolvedValue({ success: true }),
   updateContractModality: mockUpdateContractModality,
+  previewContractChange: mockPreviewContractChange,
+  confirmContractChange: mockConfirmContractChange,
+  cancelContractChange: mockCancelContractChange,
 }));
 
 import ProposalDocumentsTab from '../../components/BusinessProposal/admin/ProposalDocumentsTab.vue';
@@ -46,7 +52,14 @@ function mountProposalDocumentsTab(props = {}) {
       documents: [],
       ...props,
     },
-    global: { components: { BaseSegmented } },
+    global: {
+      components: { BaseSegmented },
+      stubs: {
+        ProposalContractChangeModal: {
+          template: '<div data-testid="proposal-contract-change-modal">Cambiar modalidad de contrato</div>',
+        },
+      },
+    },
   });
 }
 
@@ -203,30 +216,28 @@ describe('ProposalDocumentsTab closing modality', () => {
 
   beforeEach(() => {
     mockUpdateContractModality.mockReset();
+    mockPreviewContractChange.mockReset();
+    mockConfirmContractChange.mockReset();
+    mockCancelContractChange.mockReset();
     mockNotify.success.mockReset();
     mockNotify.error.mockReset();
   });
 
   test.each([
-    ['sent', false],
-    ['viewed', false],
-    ['negotiating', true],
-    ['accepted', true],
-    ['rejected', true],
-  ])('shows the modality switch for a %s proposal: %s', (status, visible) => {
-    // Falla si el interruptor aparece antes de negociar o desaparece después.
+    ['draft'],
+    ['sent'],
+    ['viewed'],
+    ['negotiating'],
+    ['accepted'],
+    ['rejected'],
+    ['expired'],
+    ['finished'],
+  ])('shows an enabled modality choice for a %s proposal', (status) => {
+    // Falla si una propuesta deja de mostrar una modalidad que ahora se puede revisar o cambiar.
     const wrapper = mountProposalDocumentsTab({ proposal: { ...negotiating, status } });
 
-    expect(wrapper.find('[data-testid="proposal-contract-modality"]').exists()).toBe(visible);
-  });
-
-  it('locks the switch once the proposal is accepted', () => {
-    // Falla si la modalidad se puede cambiar después de la negociación.
-    const wrapper = mountProposalDocumentsTab({ proposal: { ...split, status: 'accepted' } });
-    const option = wrapper.get('[data-testid="proposal-contract-modality-single"]');
-
-    expect(option.element.disabled).toBe(true);
-    expect(option.attributes('title')).toBe('La modalidad de cierre se elige durante la negociación.');
+    expect(wrapper.get('[data-testid="proposal-contract-modality"]').text()).toContain('Modalidad de cierre');
+    expect(wrapper.get('[data-testid="proposal-contract-modality-split"]').element.disabled).toBe(false);
   });
 
   it('shows the product and service contracts for a split closing', () => {
@@ -270,13 +281,33 @@ describe('ProposalDocumentsTab closing modality', () => {
   it('persists a new modality and confirms it', async () => {
     // Falla si el cambio de modalidad no llega al backend o no avisa el resultado.
     mockUpdateContractModality.mockResolvedValue({ success: true, data: split });
-    const wrapper = mountProposalDocumentsTab({ proposal: negotiating });
+    const wrapper = mountProposalDocumentsTab({
+      proposal: {
+        ...negotiating,
+        contract_params: {
+          service_initial_term: '12 meses',
+          service_renewal_notice_days: 30,
+          service_termination_notice_days: 30,
+        },
+      },
+    });
 
     await wrapper.get('[data-testid="proposal-contract-modality-split"]').trigger('click');
     await Promise.resolve();
 
     expect(mockUpdateContractModality).toHaveBeenCalledWith(1, 'split');
     expect(mockNotify.success).toHaveBeenCalledWith('El negocio se cierra con contrato de producto y contrato de servicio.');
+  });
+
+  test.each(['accepted', 'rejected'])('opens the review flow instead of changing a %s proposal directly', async (status) => {
+    // Falla si una propuesta cerrada cambia la modalidad sin la revisión y confirmación obligatorias.
+    const wrapper = mountProposalDocumentsTab({ proposal: { ...negotiating, status } });
+
+    await wrapper.get('[data-testid="proposal-contract-modality-split"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="proposal-contract-change-modal"]').text()).toContain('Cambiar modalidad de contrato');
+    expect(mockUpdateContractModality).not.toHaveBeenCalled();
   });
 
   it('ignores a click on the modality already selected', async () => {
@@ -294,14 +325,23 @@ describe('ProposalDocumentsTab closing modality', () => {
   it('reports why the modality could not change', async () => {
     // Falla si un rechazo del backend se pierde sin avisar al administrador.
     mockUpdateContractModality.mockResolvedValue({
-      success: false, message: 'La modalidad de cierre sólo se cambia durante la negociación.',
+      success: false, message: 'No tienes permiso para cambiar la modalidad.',
     });
-    const wrapper = mountProposalDocumentsTab({ proposal: negotiating });
+    const wrapper = mountProposalDocumentsTab({
+      proposal: {
+        ...negotiating,
+        contract_params: {
+          service_initial_term: '12 meses',
+          service_renewal_notice_days: 30,
+          service_termination_notice_days: 30,
+        },
+      },
+    });
 
     await wrapper.get('[data-testid="proposal-contract-modality-split"]').trigger('click');
     await Promise.resolve();
 
-    expect(mockNotify.error).toHaveBeenCalledWith('La modalidad de cierre sólo se cambia durante la negociación.');
+    expect(mockNotify.error).toHaveBeenCalledWith('No tienes permiso para cambiar la modalidad.');
   });
 
   test.each([

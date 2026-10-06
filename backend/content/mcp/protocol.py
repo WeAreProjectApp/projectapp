@@ -172,6 +172,7 @@ def handle_message(message, tools, server_name=None, context=None):
                 raise ToolError('Los argumentos deben ser un objeto JSON.')
             if (
                 tool.get('requires_confirmation')
+                and (not tool.get('confirmation_predicate') or tool['confirmation_predicate'](arguments))
                 and not (context and context.confirmation_bypass)
             ):
                 from content.mcp.confirmation import preview_sensitive_action

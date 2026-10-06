@@ -116,10 +116,10 @@ test.describe('Admin proposal grouped navigation', () => {
 
   // Catches status-gated areas remaining available after the proposal lifecycle changes.
   for (const scenario of [
-    { status: 'draft', visible: ['General', 'Propuesta', 'Comunicación', 'Seguimiento'], absent: ['Documentos', 'Proyecto'] },
+    { status: 'draft', visible: ['General', 'Propuesta', 'Comunicación', 'Documentos', 'Seguimiento'], absent: ['Proyecto'] },
     { status: 'sent', visible: ['General', 'Propuesta', 'Comunicación', 'Documentos', 'Seguimiento'], absent: ['Proyecto'] },
     { status: 'accepted', visible: ['General', 'Propuesta', 'Comunicación', 'Documentos', 'Proyecto', 'Seguimiento'], absent: [], destination: 'development' },
-    { status: 'finished', visible: ['General', 'Propuesta', 'Comunicación', 'Proyecto', 'Seguimiento'], absent: ['Documentos'], destination: 'schedule' },
+    { status: 'finished', visible: ['General', 'Propuesta', 'Comunicación', 'Documentos', 'Proyecto', 'Seguimiento'], absent: [], destination: 'schedule' },
   ]) {
     test(`${scenario.status} exposes only its available grouped destinations`, {
       tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin', '@outcome:display'],

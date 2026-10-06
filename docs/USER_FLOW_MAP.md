@@ -3885,6 +3885,7 @@ Two transitions that were previously bundled into other flows now have their own
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
   - [Grouped navigation] Select a primary area and one of its visible secondary tools. Compact and portrait profiles use named selectors. Returning to an area restores its last tool and preserves unsaved content or a selected video file.
   - [Shared links] Old `?tab=<tool>` links and new `?tab=<group>&section=<tool>` links open the corresponding tool after proposal data loads, preserving unrelated parameters and fragments. Unknown or unavailable destinations return to General.
   - [Lifecycle changes] When an active tool becomes unavailable, select the first available tool in its area or return to General. Finished projects retain Cronograma but not Desarrollo.
@@ -5816,26 +5817,21 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 
 ### FLOW: `admin-proposal-diagnostic-templates`
 
-- **Module:** admin
-- **Role:** admin
-- **Priority:** P2
-- **Routes:** `/panel/proposals/:id/edit` → "Documentos & Plantillas" tab
-- **Description:** Admin accesses 3 static markdown diagnostic templates (Diagnóstico de Aplicación, Diagnóstico Técnico, Anexo — Dimensionamiento) from the proposal edit page. Tab is visible when `proposal.status ∈ {sent, viewed, negotiating, accepted, rejected}` — the same condition as the Correos tab. Each template card shows the title, filename, and last-modified date. Three actions are available per card: **Copiar contenido** (fetches `GET /api/diagnostic-templates/:slug/` and writes to clipboard via `navigator.clipboard.writeText`; shows "¡Copiado!" feedback for 2 s; per-slug response cached in component `ref` to avoid duplicate requests), **Descargar .md** (Blob + temporary `<a download>` link click), and **Vista previa** (toggles an inline `<pre>` block with raw markdown).
-- **Steps:**
-  1. Admin opens a proposal in `sent` or later status via `/panel/proposals/:id/edit`.
-  2. Admin clicks the "Documentos & Plantillas" tab.
-  3. Template list fetches `GET /api/diagnostic-templates/` → 3 cards render.
-  4. Admin clicks "Copiar contenido" on a card → detail fetch → clipboard write → "¡Copiado!" appears.
-  5. Admin clicks "Descargar .md" → Blob download triggers.
-  6. Admin clicks "Vista previa" → inline `<pre>` block expands; "Ocultar" collapses it.
-- **Branches:**
-  - [Tab hidden] When `proposal.status === 'draft'`, the tab is not rendered.
-  - [Proposal documents sub-section] `ProposalDocumentsTab` (contract, generated PDFs) is only shown within this tab for `negotiating|accepted|rejected` — not for `sent|viewed`.
-- **API:** `GET /api/diagnostic-templates/` (list), `GET /api/diagnostic-templates/:slug/` (detail + content_markdown)
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/admin/admin-proposal-diagnostic-templates.spec.js`
-- **Unit Tests:** `frontend/test/components/ProposalDiagnosticTemplatesSection.test.js`
-- **Backend Tests:** `backend/content/tests/views/test_diagnostic_template_views.py`
+- **Módulo:** panel de propuestas
+- **Rol:** administrador
+- **Prioridad:** P2
+- **Ruta:** `/panel/proposals/:id/edit` → Documentos
+- **Descripción:** La pestaña Documentos está disponible en cualquier estado de la propuesta. Muestra una lista unificada de contratos activos según la modalidad, Propuesta comercial formal y Detalle técnico formal, además de Documentos adjuntos y su formulario de carga.
+- **Pasos:**
+  1. Abrir una propuesta, incluida una propuesta en borrador.
+  2. Seleccionar Documentos en la navegación visible.
+  3. Consultar los contratos y los PDFs formales de la lista.
+  4. Consultar o cargar los documentos adjuntos.
+- **Presentación:** Sin contrato generado aparece Generar contrato. Los documentos adjuntos existentes aparecen en su lista. La antigua sección Enviar documentos al cliente permanece ausente.
+- **Disponibilidad:** Documentos también se mantiene disponible para propuestas vencidas y finalizadas. Los PDFs originales de estos estados y del borrador continúan accesibles desde General.
+- **API:** `GET /api/proposals/:id/detail/`, rutas administrativas de documentos y de formalización de la propuesta.
+- **Cobertura:** ✅ Cubierto
+- **E2E:** `frontend/e2e/admin/admin-proposal-diagnostic-templates.spec.js`.
 
 ### FLOW: `admin-diagnostic-markdown-attachment`
 
@@ -8056,16 +8052,20 @@ Los resultados finales de integración se registran en el PR.
 - **Módulo:** admin
 - **Rol:** admin
 - **Prioridad:** P1
-- **Ruta:** `/panel/proposals/:id/edit` → Documentos
-- **Recorrido:** abrir una propuesta en negociación; en Documentos, elegir la modalidad de cierre (`Contrato único` o `Producto y servicio`); con la separación aparecen el contrato de producto y el de servicio; generar el de servicio con su duración inicial y sus dos preavisos; volver al contrato único cuando haga falta.
-- **Display:** interruptor editable sólo en negociación y bloqueado con su motivo en aceptada o rechazada; oculto en enviada o vista. Cada contrato de la modalidad muestra copia, vista previa, descarga, borrador y parámetros propios.
-- **Success:** el cambio se guarda al instante, confirma la modalidad y muestra sus documentos; generar el contrato de servicio envía sus tres datos y el documento queda disponible.
-- **Error:** un rechazo del backend (fuera de negociación, plantilla sin texto de servicio) deja la modalidad anterior y explica el motivo; sin los tres datos del servicio el formulario no se envía.
-- **Límites:** cambiar de modalidad no borra documentos; los de la otra modalidad no se sirven ni se sincronizan a la plataforma. La vista pública "Contrato y condiciones" sigue mostrando el contrato único.
+- **Ruta:** `/panel/proposals/:id/edit` → Documentos; Seguimiento → Historial.
+- **Recorrido:** elegir contrato único o producto y servicio en cualquier estado. Fuera de negociación, escribir nota, completar los tres plazos del servicio si corresponde, revisar qué contratos se crearán, trasladarán o archivarán y confirmar o cancelar.
+- **Display:** selector disponible en todos los estados; cada contrato indica plantilla o personalizado. La vista previa advierte sobre documentos anteriores enviados o firmados. Historial ofrece instantáneas permanentes con Markdown, descarga PDF y restauración.
+- **Success:** confirmar activa los contratos elegidos, conserva exactamente texto y PDF del personalizado trasladado y guarda primero una instantánea. Restaurar recupera contratos y parámetros anteriores, conserva el estado comercial y genera otra instantánea.
+- **Error:** nota obligatoria fuera de negociación; split exige plazo inicial y ambos preavisos guardados o enviados expresamente, sin completar valores globales. Un conflicto entre personalizados exige resolución explícita. Los errores mantienen el borrador.
+- **Failure:** un fallo no aplica cambios parciales. Una vista previa vencida, cancelada o cuyos documentos cambiaron no puede confirmarse; una confirmación repetida no duplica el cambio.
+- **Límites:** conservar documentos, paquetes aprobados, firmas y envíos históricos. No enviar ni solicitar firma automáticamente, modificar plantillas o regenerar contratos de otras propuestas.
 
 #### Datos del servicio configurables
 
-Duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
+Los formularios de creación y edición de contratos conservan sus opciones
+globales. El cambio de modalidad exige los valores guardados o ingresados
+expresamente, sin usar esas preselecciones. En creación y edición,
+duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
 muestra debajo un campo de texto libre. Las preselecciones iniciales son
 9 meses / 60 / 60 días. Sólo las opciones frecuentes se envían como números;
 el servidor guarda el texto personalizado literalmente. La duración incluye
