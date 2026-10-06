@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 import uuid
 
 from django.conf import settings
@@ -8,7 +9,7 @@ from content.models.history_tracked import HistoryTrackedModel
 from content.utils import safe_slug
 
 
-class Document(HistoryTrackedModel):
+class Document(RetainedProjectModel, HistoryTrackedModel):
     """Generic branded document: markdown content and/or commercial collection account."""
 
     class Status(models.TextChoices):
@@ -59,13 +60,7 @@ class Document(HistoryTrackedModel):
         related_name='documents',
         blank=True,
     )
-    project = models.ForeignKey(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='documents',
-    )
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, null=True, blank=True, related_name='documents')
     deliverable = models.ForeignKey(
         'accounts.Deliverable',
         on_delete=models.SET_NULL,

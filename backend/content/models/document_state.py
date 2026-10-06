@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 import unicodedata
 
 from django.conf import settings
@@ -232,7 +233,7 @@ class DocumentState(models.Model):
         super().save(*args, **kwargs)
 
 
-class DocumentStateEpisode(HistoryTrackedModel):
+class DocumentStateEpisode(RetainedProjectModel, HistoryTrackedModel):
     """One state occurrence for exactly one document or project."""
 
     class Outcome(models.TextChoices):
@@ -255,13 +256,7 @@ class DocumentStateEpisode(HistoryTrackedModel):
         null=True,
         blank=True,
     )
-    project = models.ForeignKey(
-        'accounts.Project',
-        on_delete=models.CASCADE,
-        related_name='state_episodes',
-        null=True,
-        blank=True,
-    )
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='state_episodes', null=True, blank=True)
     state = models.ForeignKey(
         DocumentState,
         on_delete=models.PROTECT,
@@ -323,7 +318,7 @@ class DocumentStateEpisode(HistoryTrackedModel):
 
     def clean(self):
         errors = {}
-        if self.document_id is None and self.project_id is None:
+        if self.document_id is None and self.project_id is None and self.retention_context_id is None:
             errors['document'] = (
                 'El episodio debe pertenecer a un documento o a un proyecto.'
             )

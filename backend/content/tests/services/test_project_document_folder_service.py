@@ -1,8 +1,13 @@
 """Behavioral coverage for automatic project roots in Documents."""
 import pytest
+from rest_framework.exceptions import PermissionDenied
 
 from accounts.models import Project, UserProfile
-from content.models import DocumentFolder
+from content.models import DocumentFolder, ProjectRetentionContext
+from content.services.project_force_deletion import (
+    force_delete_project,
+    forced_deletion_preview,
+)
 from content.services.project_document_folder_service import (
     ensure_project_folder,
 )
@@ -127,13 +132,28 @@ def test_project_client_change_synchronizes_its_folder_tree(
     assert not root.children.exclude(client_user=user).exists()
 
 
-def test_project_delete_preserves_root_as_manual(project):
-    root_id = project.document_root_folder.id
+def test_empty_force_selection_retains_project_root_as_read_only(project, superuser):
+    """Fails if an unselected project folder becomes an editable manual folder after deletion."""
+    root = project.document_root_folder
+    project_id = project.pk
+    client_id = project.client_id
+    preview = forced_deletion_preview(project, actor=superuser, delete_keys=[])
 
-    project.delete()
+    force_delete_project(
+        project_id,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=[],
+    )
 
-    root = DocumentFolder.objects.get(pk=root_id)
-    assert root.managed_project_id is None
+    root.refresh_from_db()
+    context = ProjectRetentionContext.objects.get(pk=root.retention_context_id)
+    assert not Project.objects.filter(pk=project_id).exists()
     assert root.project_id is None
-    assert root.parent_id is None
-    assert root.folder_kind == 'manual'
+    assert root.managed_project_id is None
+    assert root.client_user_id == client_id
+    assert context.client_id == client_id
+    assert str(root.pk) in context.retained_records['content.documentfolder']
+    with pytest.raises(PermissionDenied, match='sólo permiten consulta'):
+        root.save()

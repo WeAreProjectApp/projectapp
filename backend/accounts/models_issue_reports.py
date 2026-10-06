@@ -1,4 +1,6 @@
 """Ticket-owned history; delivery publications and approvals remain untouched."""
+
+from accounts.retention import RetainedProjectModel
 from django.conf import settings
 from django.db import models
 
@@ -13,9 +15,9 @@ def _ticket_constraint(name):
     )
 
 
-class IssueContext(models.Model):
+class IssueContext(RetainedProjectModel, models.Model):
     """Original published guide and its ancestry, captured once on submission."""
-    project = models.ForeignKey('accounts.Project', on_delete=models.CASCADE)
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, null=True, blank=True)
     bug_report = models.OneToOneField(
         'accounts.BugReport', null=True, blank=True, on_delete=models.CASCADE,
         related_name='issue_context',
@@ -98,9 +100,9 @@ class IssueAttachment(models.Model):
         )]
 
 
-class IssueEvent(models.Model):
+class IssueEvent(RetainedProjectModel, models.Model):
     """Append-only state transitions and owned retry receipts."""
-    project = models.ForeignKey('accounts.Project', on_delete=models.CASCADE)
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, null=True, blank=True)
     bug_report = models.ForeignKey(
         'accounts.BugReport', null=True, blank=True, on_delete=models.CASCADE,
         related_name='issue_events',

@@ -21,6 +21,7 @@ from accounts.models import (
     UserProfile,
 )
 from accounts.services.payment_history import record_payment_status_change
+from content.models import ProjectRetentionContext
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
@@ -348,6 +349,28 @@ class TestTeamPaymentEmailBranches:
         ok = send_payment_status_team_email(999999, Payment.STATUS_PAID, 'webhook')
         assert ok is False
         assert len(mail.outbox) == 0
+
+    def test_skips_retained_subscription_payment(self, payment, team_email):
+        """Fails if retained payment history still sends a new team status notification."""
+        subscription = payment.subscription
+        context = ProjectRetentionContext.objects.create(
+            client=subscription.project.client,
+            original_project_id=subscription.project_id,
+            project_name=subscription.project.name,
+            retained_records={},
+            created_by=subscription.project.client,
+        )
+        HostingSubscription.objects.filter(pk=subscription.pk).update(
+            project=None,
+            retention_context=context,
+        )
+        from accounts.services.payment_notifications import send_payment_status_team_email
+
+        mail.outbox = []
+        ok = send_payment_status_team_email(payment.pk, Payment.STATUS_PAID, 'retained-webhook')
+
+        assert ok is False
+        assert mail.outbox == []
 
     def test_send_failure_is_swallowed(self, payment, team_email):
         """Returns false when the email backend raises during delivery."""

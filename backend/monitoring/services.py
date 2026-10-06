@@ -26,7 +26,7 @@ def ingest(credential, data):
     source = get_object_or_404(Source.objects.select_for_update().select_related('resource__server'), resource__key=data['resource'], key=data['source'])
     resource = source.resource
     server_key = resource.server.key if resource.server_id else resource.key
-    if server_key != data['server'] or not resource.enabled or not credential.resources.filter(pk=resource.pk).exists():
+    if resource.retention_context_id or server_key != data['server'] or not resource.enabled or not credential.resources.filter(pk=resource.pk).exists():
         raise PermissionDenied('Recurso fuera del alcance de la credencial.')
     digest = hashlib.sha256(json.dumps(data, cls=DjangoJSONEncoder, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
     previous = Delivery.objects.filter(source=source, external_id=data['external_id']).first()

@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 import uuid
 from decimal import Decimal
 
@@ -160,7 +161,7 @@ class FinancingPolicyRevision(models.Model):
         return cls.objects.order_by('-version').first()
 
 
-class FinancingAgreement(models.Model):
+class FinancingAgreement(RetainedProjectModel, models.Model):
     """Administrative financing addendum and its immutable legal snapshots."""
 
     class Modality(models.TextChoices):
@@ -201,13 +202,7 @@ class FinancingAgreement(models.Model):
         null=True,
         blank=True,
     )
-    source_project = models.ForeignKey(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        related_name='financing_agreements',
-        null=True,
-        blank=True,
-    )
+    source_project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='financing_agreements', null=True, blank=True)
 
     client_full_name = models.CharField(max_length=311)
     client_company = models.CharField(max_length=200, blank=True, default='')

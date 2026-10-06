@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 import secrets
 import string
 import uuid
@@ -508,7 +509,7 @@ class Project(HistoryTrackedModel):
         )
 
 
-class ProjectAdminAccess(HistoryTrackedModel):
+class ProjectAdminAccess(RetainedProjectModel, HistoryTrackedModel):
     """Django-admin access for one fixed project environment.
 
     The password is always a Fernet token. Plaintext only exists for the
@@ -520,11 +521,7 @@ class ProjectAdminAccess(HistoryTrackedModel):
         PRODUCTION = 'production', 'Producción'
         STAGING = 'staging', 'Staging'
 
-    project = models.ForeignKey(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='admin_accesses',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='admin_accesses', null=True, blank=True)
     environment = models.CharField(max_length=20, choices=Environment.choices)
     admin_url = models.URLField(max_length=500, blank=True, default='')
     admin_username = models.CharField(max_length=150, blank=True, default='')
@@ -549,17 +546,13 @@ class ProjectAdminAccess(HistoryTrackedModel):
         ]
 
     def __str__(self):
-        return f'{self.project.name} — {self.get_environment_display()}'
+        return f'{self.project_label} — {self.get_environment_display()}'
 
 
-class ProjectAccessNote(HistoryTrackedModel):
+class ProjectAccessNote(RetainedProjectModel, HistoryTrackedModel):
     """Encrypted operational note attached to a project's access detail."""
 
-    project = models.ForeignKey(
-        Project,
-        on_delete=models.CASCADE,
-        related_name='access_notes',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='access_notes', null=True, blank=True)
     title = models.CharField(max_length=255)
     content_encrypted = models.TextField()
     is_sensitive = models.BooleanField(default=False)
@@ -584,10 +577,10 @@ class ProjectAccessNote(HistoryTrackedModel):
         ordering = ['-created_at', '-id']
 
     def __str__(self):
-        return f'{self.project.name} — {self.title}'
+        return f'{self.project_label} — {self.title}'
 
 
-class ProjectPhase(models.Model):
+class ProjectPhase(RetainedProjectModel, models.Model):
     """One phase of a Project, backed by a BusinessProposal from the panel.
 
     A project can have multiple phases (e.g. discovery, design, build),
@@ -595,9 +588,7 @@ class ProjectPhase(models.Model):
     ``order=1`` is the first phase, ``order=2`` is the second, etc.
     """
 
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='phases',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='phases', null=True, blank=True)
     business_proposal = models.ForeignKey(
         'content.BusinessProposal',
         on_delete=models.PROTECT,
@@ -626,13 +617,13 @@ class ProjectPhase(models.Model):
         ]
 
     def __str__(self):
-        return f'{self.project.name} — Fase {self.order}: {self.business_proposal.title}'
+        return f'{self.project_label} — Fase {self.order}: {self.business_proposal.title}'
 
 
-class DeliveryWorkspace(models.Model):
+class DeliveryWorkspace(RetainedProjectModel, models.Model):
     """Project-wide optimistic version; all delivery writes lock the project."""
 
-    project = models.OneToOneField(Project, on_delete=models.CASCADE, related_name='delivery_workspace')
+    project = models.OneToOneField(Project, on_delete=models.PROTECT, related_name='delivery_workspace', null=True, blank=True)
     version = models.PositiveIntegerField(default=0)
 
 
@@ -651,8 +642,8 @@ class DeliveryNode(models.Model):
         return self.title
 
 
-class ProjectContract(DeliveryNode):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_contracts')
+class ProjectContract(RetainedProjectModel, DeliveryNode):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_contracts', null=True, blank=True)
     document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
     proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
     client_visible = models.BooleanField(default=False)
@@ -774,10 +765,10 @@ class DeliveryPublication(models.Model):
         constraints = [models.UniqueConstraint(fields=['stage', 'round'], name='delivery_publication_round')]
 
 
-class DeliveryDocumentLink(models.Model):
+class DeliveryDocumentLink(RetainedProjectModel, models.Model):
     """Exactly one delivery level owns this attachment; authorization is inherited."""
 
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_documents')
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_documents', null=True, blank=True)
     document = models.ForeignKey('content.Document', on_delete=models.PROTECT, related_name='delivery_links')
     level = models.CharField(max_length=20)
     contract = models.ForeignKey(ProjectContract, on_delete=models.CASCADE, null=True, blank=True, related_name='document_links')
@@ -864,8 +855,8 @@ class DeliveryReviewDocumentEvidence(models.Model):
         constraints = [models.UniqueConstraint(fields=['review', 'document'], name='delivery_review_document_unique')]
 
 
-class DeliveryMessage(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_messages')
+class DeliveryMessage(RetainedProjectModel, models.Model):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_messages', null=True, blank=True)
     level = models.CharField(max_length=20)
     target_id = models.PositiveBigIntegerField()
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_messages')
@@ -882,8 +873,8 @@ class DeliveryMessage(models.Model):
         ordering = ['created_at', 'id']
 
 
-class DeliveryOperation(models.Model):
-    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='delivery_operations')
+class DeliveryOperation(RetainedProjectModel, models.Model):
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_operations', null=True, blank=True)
     request_id = models.CharField(max_length=100)
     actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='delivery_operations')
     fingerprint = models.CharField(max_length=64)
@@ -977,7 +968,7 @@ class DeliveryPromptSource(ImmutablePromptRecord):
         constraints = [models.UniqueConstraint(fields=['context', 'source_key'], name='delivery_prompt_source_unique')]
 
 
-class ChangeRequest(models.Model):
+class ChangeRequest(RetainedProjectModel, models.Model):
     """
     A client-initiated change request for a project.
     The admin evaluates and responds with estimated cost/time.
@@ -1009,9 +1000,7 @@ class ChangeRequest(models.Model):
         (PRIORITY_LOW, 'Baja'),
     ]
 
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='change_requests',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='change_requests', null=True, blank=True)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='change_requests',
     )
@@ -1098,7 +1087,7 @@ class ChangeRequestComment(models.Model):
         return f'Comment by {self.user.email} on CR #{self.change_request_id}'
 
 
-class BugReport(models.Model):
+class BugReport(RetainedProjectModel, models.Model):
     """
     A bug report filed for a specific project deliverable (epic/scope).
     Admin manages the lifecycle: confirm, fix, QA, resolve.
@@ -1143,10 +1132,7 @@ class BugReport(models.Model):
         (ENV_DEV, 'Desarrollo'),
     ]
 
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='bug_reports',
-        null=True, blank=True,
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='bug_reports', null=True, blank=True)
     reported_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='bug_reports',
     )
@@ -1234,7 +1220,7 @@ class BugComment(models.Model):
         return f'Comment by {self.user.email} on Bug #{self.bug_report_id}'
 
 
-class Deliverable(models.Model):
+class Deliverable(RetainedProjectModel, models.Model):
     """
     A file deliverable for a project, organized by category.
     Admin uploads, client downloads. Supports version history.
@@ -1260,9 +1246,7 @@ class Deliverable(models.Model):
         CATEGORY_DESIGNS, CATEGORY_CONTRACT, CATEGORY_AMENDMENT, CATEGORY_LEGAL_ANNEX,
     )
 
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, related_name='deliverables',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='deliverables', null=True, blank=True)
     category = models.CharField(
         max_length=20, choices=CATEGORY_CHOICES, default=CATEGORY_OTHER,
     )
@@ -1354,17 +1338,14 @@ class DataModelEntity(models.Model):
         return f'{self.name} (deliverable={self.deliverable_id})'
 
 
-class ProjectDataModelEntity(models.Model):
+class ProjectDataModelEntity(RetainedProjectModel, models.Model):
     """
     A data-model entity defined at the project level via admin JSON upload.
     Reflects the actual/real state of the project's data model.
     Separate from DataModelEntity (deliverable-scoped, proposal-synced).
     """
 
-    project = models.ForeignKey(
-        'Project', on_delete=models.CASCADE,
-        related_name='project_data_model_entities',
-    )
+    project = models.ForeignKey('Project', on_delete=models.PROTECT, related_name='project_data_model_entities', null=True, blank=True)
     name = models.CharField(max_length=300)
     description = models.TextField(blank=True, default='')
     key_fields = models.TextField(
@@ -1501,7 +1482,7 @@ class DeliverableClientUpload(models.Model):
         return ''
 
 
-class Notification(models.Model):
+class Notification(RetainedProjectModel, models.Model):
     """
     In-app notification for platform users.
     Created by the notification service when relevant events occur.
@@ -1544,11 +1525,7 @@ class Notification(models.Model):
         help_text='Model name: project, change_request, bug_report, deliverable, requirement',
     )
     related_object_id = models.PositiveIntegerField(null=True, blank=True)
-    project = models.ForeignKey(
-        Project, on_delete=models.CASCADE, null=True, blank=True,
-        related_name='notifications',
-        help_text='Project context for deep-linking.',
-    )
+    project = models.ForeignKey(Project, on_delete=models.PROTECT, null=True, blank=True, related_name='notifications', help_text='Project context for deep-linking.')
     deliverable = models.ForeignKey(
         'Deliverable', on_delete=models.SET_NULL, null=True, blank=True,
         related_name='notifications',
@@ -1564,7 +1541,7 @@ class Notification(models.Model):
         return f'[{self.get_type_display()}] {self.title} → {self.user.email}'
 
 
-class HostingSubscription(models.Model):
+class HostingSubscription(RetainedProjectModel, models.Model):
     """
     Recurring hosting subscription for a project.
     Derived from the linked BusinessProposal pricing or set manually.
@@ -1608,9 +1585,7 @@ class HostingSubscription(models.Model):
         PLAN_ANNUAL: 'Anual (histórico)',
     }
 
-    project = models.OneToOneField(
-        Project, on_delete=models.CASCADE, related_name='hosting_subscription',
-    )
+    project = models.OneToOneField(Project, on_delete=models.PROTECT, related_name='hosting_subscription', null=True, blank=True)
     plan = models.CharField(max_length=20, choices=PLAN_CHOICES, default=PLAN_QUARTERLY)
     base_monthly_amount = models.DecimalField(
         max_digits=12, decimal_places=2,
@@ -1658,7 +1633,7 @@ class HostingSubscription(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f'{self.project.name} — {self.plan_label} (${self.billing_amount:,.0f} COP)'
+        return f'{self.project_label} — {self.plan_label} (${self.billing_amount:,.0f} COP)'
 
     @property
     def billing_months(self):

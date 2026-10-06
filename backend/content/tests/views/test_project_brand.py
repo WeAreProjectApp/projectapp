@@ -2,8 +2,13 @@
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.urls import reverse
+from rest_framework.exceptions import PermissionDenied
 from accounts.models import Project
-from content.models import Linktree, ProjectBrandAsset
+from content.models import Linktree, ProjectBrandAsset, ProjectRetentionContext
+from content.services.project_force_deletion import (
+    force_delete_project,
+    forced_deletion_preview,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -43,11 +48,29 @@ def test_nonexistent_project_rejected(admin_client):
     assert response.status_code == 400
     assert not Linktree.objects.filter(handle='missing-project').exists()
 
-def test_project_delete_preserves_linktree(project):
+def test_empty_force_selection_retains_public_linktree(project, superuser, api_client):
+    """Fails if an unselected public Linktree loses its handle or becomes editable after project deletion."""
     tree = Linktree.objects.create(name='Brand', handle='keep-public', project=project)
-    project.delete()
+    preview = forced_deletion_preview(project, actor=superuser, delete_keys=[])
+
+    force_delete_project(
+        project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=[],
+    )
+
     tree.refresh_from_db()
+    context = ProjectRetentionContext.objects.get(pk=tree.retention_context_id)
     assert tree.project_id is None
+    assert tree.handle == 'keep-public'
+    assert context.client_id == project.client_id
+    public = api_client.get(reverse('public-linktree', args=[tree.handle]))
+    assert public.status_code == 200
+    assert 'project' not in public.data
+    with pytest.raises(PermissionDenied, match='sólo permiten consulta'):
+        tree.save()
 
 def test_upload_is_downloadable_and_not_exposed_as_public_media(admin_client, project):
     response = admin_client.post(reverse('project-brand', args=[project.pk]), {

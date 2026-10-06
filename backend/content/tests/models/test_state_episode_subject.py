@@ -11,12 +11,15 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.core.exceptions import ValidationError
 from django.db import IntegrityError, transaction
+from django.db.models.deletion import ProtectedError
 
 from accounts.models import Project, UserProfile
 from content.models import (
     Document,
+    DocumentState,
     DocumentStateEpisode,
     DocumentStateEpisodeEvent,
+    DocumentStateGroup,
     DocumentType,
 )
 
@@ -58,7 +61,19 @@ def client_user():
 
 @pytest.fixture
 def project(client_user):
-    return Project.objects.create(name='Proyecto con estados', client=client_user)
+    group = DocumentStateGroup.objects.create(
+        catalog=DocumentStateGroup.Catalog.PROJECTS,
+        name='Estados para probar el historial',
+    )
+    state = DocumentState.objects.create(
+        catalog=DocumentStateGroup.Catalog.PROJECTS,
+        group=group, name='En revisión',
+    )
+    project = Project.objects.create(
+        name='Proyecto con estados', client=client_user, current_state=state,
+    )
+    DocumentStateEpisode.objects.create(project=project, state=state)
+    return project
 
 
 # ── The subject invariants themselves ──
@@ -110,13 +125,15 @@ def test_deleting_a_document_takes_its_episode_with_it(document):
     assert DocumentStateEpisode.objects.count() == 0
 
 
-def test_deleting_a_project_takes_its_episode_with_it(project):
-    assert project.state_episodes.exists()
+def test_direct_project_delete_preserves_its_episode(project):
+    episode = project.state_episodes.get()
 
-    project.delete()
+    with pytest.raises(ProtectedError) as error:
+        project.delete()
 
-    assert not Project.objects.filter(pk=project.pk).exists()
-    assert DocumentStateEpisode.objects.count() == 0
+    assert episode in error.value.protected_objects
+    episode.refresh_from_db()
+    assert episode.project_id == project.pk
 
 
 def test_bulk_document_delete_leaves_no_orphan_episode(document):
@@ -127,9 +144,12 @@ def test_bulk_document_delete_leaves_no_orphan_episode(document):
     assert DocumentStateEpisode.objects.count() == 0
 
 
-def test_bulk_project_delete_leaves_no_orphan_episode(project):
-    assert project.state_episodes.exists()
+def test_bulk_project_delete_preserves_its_episode(project):
+    episode = project.state_episodes.get()
 
-    Project.objects.all().delete()
+    with pytest.raises(ProtectedError) as error:
+        Project.objects.all().delete()
 
-    assert DocumentStateEpisode.objects.count() == 0
+    assert episode in error.value.protected_objects
+    episode.refresh_from_db()
+    assert episode.project_id == project.pk

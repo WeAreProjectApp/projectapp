@@ -1,10 +1,11 @@
+from accounts.retention import RetainedProjectModel
 from django.conf import settings
 from django.db import models
 
 from content.utils import safe_slug
 
 
-class DocumentFolder(models.Model):
+class DocumentFolder(RetainedProjectModel, models.Model):
     """Carpeta jerárquica para organizar documentos en el panel admin.
 
     Soporta anidación ilimitada vía la self-FK `parent`: las carpetas sin
@@ -54,24 +55,12 @@ class DocumentFolder(models.Model):
 
     # Asociación. SET_NULL como en Document: borrar un cliente o un proyecto
     # no puede llevarse por delante la organización del gestor.
-    project = models.ForeignKey(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='document_folders',
-    )
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, null=True, blank=True, related_name='document_folders')
     # Sólo las raíces creadas y mantenidas por el ciclo de vida de Project
     # llevan este vínculo. `project` sigue siendo la asociación heredable de
     # PA-64 para CUALQUIER carpeta; separar ambos conceptos evita confundir una
     # carpeta manual asociada a un proyecto con la raíz automática del mismo.
-    managed_project = models.OneToOneField(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='document_root_folder',
-    )
+    managed_project = models.OneToOneField('accounts.Project', on_delete=models.PROTECT, null=True, blank=True, related_name='document_root_folder')
     client_user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

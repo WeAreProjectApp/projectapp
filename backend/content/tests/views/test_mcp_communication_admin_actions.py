@@ -8,7 +8,7 @@ from django.apps import apps as django_apps
 from django.contrib.auth import get_user_model
 
 from accounts.models import Project, UserProfile
-from content.models import CommunicationMessage, CommunicationThread, McpConnector
+from content.models import CommunicationMessage, CommunicationThread, McpConnector, ProjectRetentionContext
 from content.services import communication_service
 
 
@@ -336,6 +336,70 @@ def test_delete_draft_rejects_sent_message(
     assert response.data['result']['isError'] is True
     assert 'borradores activos' in tool_text(response)
     assert CommunicationMessage.objects.filter(pk=message.pk).exists()
+
+
+def test_mcp_rejects_deleting_retained_draft(
+    api_client, communications_connector, communication_context, mcp_superuser,
+):
+    """Fails if MCP can delete a retained draft after its project has been removed."""
+    message = make_message(
+        communication_context,
+        mcp_superuser,
+        status=CommunicationMessage.Status.DRAFT,
+    )
+    context = ProjectRetentionContext.objects.create(
+        client=communication_context['client'].user,
+        original_project_id=communication_context['project'].pk,
+        project_name=communication_context['project'].name,
+        retained_records={},
+        created_by=mcp_superuser,
+    )
+    CommunicationThread.objects.filter(pk=communication_context['thread'].pk).update(
+        project=None,
+        retention_context=context,
+    )
+    _, token = communications_connector
+
+    response = call_confirmed_tool(api_client, token, 'delete_draft', {
+        'message_id': message.pk,
+    })
+
+    assert response.data['result']['isError'] is True
+    assert 'sólo permiten consulta' in tool_text(response)
+    assert CommunicationMessage.objects.filter(pk=message.pk).exists()
+
+
+def test_mcp_rejects_updating_retained_draft(
+    api_client, communications_connector, communication_context, mcp_superuser,
+):
+    """Fails if MCP can edit a retained draft after project deletion."""
+    message = make_message(
+        communication_context,
+        mcp_superuser,
+        status=CommunicationMessage.Status.DRAFT,
+    )
+    context = ProjectRetentionContext.objects.create(
+        client=communication_context['client'].user,
+        original_project_id=communication_context['project'].pk,
+        project_name=communication_context['project'].name,
+        retained_records={},
+        created_by=mcp_superuser,
+    )
+    CommunicationThread.objects.filter(pk=communication_context['thread'].pk).update(
+        project=None,
+        retention_context=context,
+    )
+    _, token = communications_connector
+
+    response = call_tool(api_client, token, 'update_message', {
+        'message_id': message.pk,
+        'content': 'Cambio prohibido',
+    })
+
+    message.refresh_from_db()
+    assert response.data['result']['isError'] is True
+    assert 'sólo permiten consulta' in tool_text(response)
+    assert message.content == 'Contenido histórico'
 
 
 def test_void_message_records_reason(

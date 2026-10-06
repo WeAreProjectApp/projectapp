@@ -24,6 +24,29 @@ Integrity stat de producción: state=ok, drift=0.
 La recuperación del sitio sigue pendiente de integración, despliegue y una
 validación real con contenido ficticio; no confundir el PR con ese cierre.
 
+
+## Eliminación selectiva de proyectos (2026-10-06)
+
+La eliminación forzada empieza con todas las categorías apagadas. La selección
+explícita y el contenido vigente forman el token de impacto; la API no acepta
+volver al borrado total por ausencia de selección. Las dependencias requieren
+una elección manual. La ficha del proyecto se elimina, mientras sus datos no
+seleccionados conservan cliente y origen mediante ProjectRetentionContext, sin
+un proyecto operativo sustituto. Clientes incorpora consulta y descarga; no
+habilita edición ni reasignación. Las evidencias inmutables conservan sus
+bloqueos, y los cobros/avisos del proyecto retirado dejan de ejecutarse.
+
+Migraciones nuevas: accounts.0077, content.0281, monitoring.0003 y
+secure_links.0005. Se aplican mediante deploy, nunca a datos reales desde el
+worktree. Las relaciones mutables permiten desvinculación explícita y usan
+PROTECT para impedir cascadas de Project fuera del servicio autorizado.
+
+La eliminación también contempla credenciales con permisos activos: sus señales
+no crean eventos nuevos fuera del alcance ya confirmado. La revocación normal
+de una credencial sigue vigente. Los reinicios autorizados de datos de prueba
+limpian las raíces protegidas antes del proyecto, incluyen los contextos ya
+conservados y mantienen los importes manuales que sobrevivían al reinicio.
+
 # En curso — plantillas contractuales versionadas (05-10-2026)
 
 Implementación en `feat/05102026-contract-template-versions`: tres variantes

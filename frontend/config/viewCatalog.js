@@ -451,7 +451,7 @@ export const viewCatalogSections = [
         reference: 'vista de clientes del panel',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite posponer sin crear proyecto.',
+        notes: 'Ficha compartida con facturación: nombre, empresa, correo, contacto, dirección y tipo de identificación NIT o C.C. Los datos se completan en nuevas cuentas de cobro y se pueden actualizar desde su preparación. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; aprobar una propuesta del cliente abre la revisión compartida y permite posponer sin crear proyecto. Datos sin proyecto permite consultar y descargar información conservada de proyectos eliminados; no habilita edición ni reasignación.',
       },
       {
         label: 'Blog del panel',
@@ -707,10 +707,10 @@ export const viewCatalogSections = [
         url: '/panel/projects',
         group: 'Plataforma',
         file: 'frontend/pages/panel/projects/index.vue',
-        reference: 'modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca, eliminacion de proyectos vacios y eliminacion forzada exclusiva de superusuarios con DELETE y revision de dependencias',
+        reference: 'modulo de proyectos: acciones por tres puntos al inicio, ciclo real, filtros, creacion, edicion, historico, accesos, marca, eliminacion de proyectos vacios y eliminacion selectiva exclusiva de superusuarios con DELETE, interruptores apagados y dependencias explícitas',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Desde Eliminar → Cambiar estado, un superusuario puede forzar la eliminación con DELETE; conserva cliente, propuestas y auditoría, y bloquea datos compartidos o evidencia legal protegida.',
+        notes: 'Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno. Desde Eliminar → Cambiar estado, un superusuario elige las categorías a eliminar, apagadas por defecto, y confirma DELETE. Lo conservado queda sin proyecto bajo el cliente; las dependencias se eligen manualmente y las evidencias protegidas bloquean.',
       },
       {
         label: 'Ideas del proyecto',

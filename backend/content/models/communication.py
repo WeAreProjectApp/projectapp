@@ -1,10 +1,11 @@
+from accounts.retention import RetainedProjectModel
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.utils import timezone
 
 
-class CommunicationThread(models.Model):
+class CommunicationThread(RetainedProjectModel, models.Model):
     """A client conversation that can span several ordered messages."""
 
     class Status(models.TextChoices):
@@ -17,13 +18,7 @@ class CommunicationThread(models.Model):
         related_name='communication_threads',
         limit_choices_to={'role': 'client'},
     )
-    project = models.ForeignKey(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        related_name='communication_threads',
-        null=True,
-        blank=True,
-    )
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='communication_threads', null=True, blank=True)
     folder = models.ForeignKey(
         'content.CommunicationFolder', null=True, blank=True,
         on_delete=models.PROTECT, related_name='threads',
@@ -62,13 +57,7 @@ class CommunicationThread(models.Model):
     # carpetas— por la misma razón que allá apunta a auth.User: coincidir con la
     # columna hermana (`client`), que es lo que hace posible la CheckConstraint
     # `client = F('managed_client')`.
-    managed_project = models.OneToOneField(
-        'accounts.Project',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name='communication_root_thread',
-    )
+    managed_project = models.OneToOneField('accounts.Project', on_delete=models.PROTECT, null=True, blank=True, related_name='communication_root_thread')
     managed_client = models.OneToOneField(
         'accounts.UserProfile',
         on_delete=models.SET_NULL,

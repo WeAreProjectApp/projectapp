@@ -1,12 +1,14 @@
 """Project billing identity and evidence; financial sources remain unchanged."""
+
+from accounts.retention import RetainedProjectModel
 from django.conf import settings
 from django.db import models
 
 from content.models.history_tracked import HistoryTrackedModel
 
 
-class ProjectHosting(models.Model):
-    project = models.OneToOneField('accounts.Project', on_delete=models.PROTECT, related_name='billing_hosting')
+class ProjectHosting(RetainedProjectModel, models.Model):
+    project = models.OneToOneField('accounts.Project', on_delete=models.PROTECT, related_name='billing_hosting', null=True, blank=True)
     subscription = models.OneToOneField('accounts.HostingSubscription', on_delete=models.PROTECT, null=True, blank=True, related_name='billing_context')
     operational_accounting_source = models.OneToOneField('accounts.ProjectHostingAccountingSource', on_delete=models.PROTECT, null=True, blank=True, related_name='+')
     version = models.PositiveIntegerField(default=0)

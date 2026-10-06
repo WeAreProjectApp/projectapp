@@ -1,0 +1,16 @@
+{
+  "id": "admin-client-retained-data",
+  "name": "Consulta de datos sin proyecto del cliente",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Desde la ficha expandida de un cliente, Datos sin proyecto abre la consulta de registros conservados de proyectos eliminados. Muestra el nombre de origen y cantidades por categoría; carga detalles al elegir una categoría. Permite volver, paginar y descargar archivos sin editar ni reasignar. Las credenciales se revelan sólo mediante una acción explícita. Un resultado vacío se explica; errores de permisos o del servidor conservan la consulta sin realizar escrituras.",
+  "expectedSpecs": 5,
+  "outcomes": [
+    "display",
+    "error",
+    "failure"
+  ]
+}

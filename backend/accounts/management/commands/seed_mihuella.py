@@ -23,6 +23,8 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+from django.db import transaction
+from django.db.models import Q
 from django.utils import timezone
 
 from accounts.management.commands._seed_helpers import seed_validation_guides, clear_fake_delivery
@@ -131,6 +133,7 @@ class Command(BaseCommand):
         )
         add_seed_arguments(parser)
 
+    @transaction.atomic
     def handle(self, *args, **options):
         ensure_fake_data_allowed('seed_mihuella')
         self.seed_context = seed_context(options, 'mihuella')
@@ -173,23 +176,85 @@ class Command(BaseCommand):
         return admin_profile.user if admin_profile else None
 
     def _flush(self):
-        from content.models import Document
+        from content.models import (
+            CommunicationThread,
+            Document,
+            DocumentFolder,
+            DocumentStateEpisode,
+            ProjectRetentionContext,
+        )
 
         user = User.objects.filter(email=CLIENT_EMAIL).first()
         if user:
-            projects = Project.objects.filter(client=user, name=PROJECT_NAME)
+            projects = list(Project.objects.select_for_update().filter(
+                client=user, name=PROJECT_NAME,
+            ))
+            project_ids = [project.pk for project in projects]
+            project_scope = Project.objects.filter(pk__in=project_ids)
             from accounts.management.commands._billing_seed_helpers import clear_fake_billing
-            clear_fake_billing(projects)
-            clear_fake_delivery(projects)
+            clear_fake_billing(project_scope)
+            clear_fake_delivery(project_scope)
             Document.objects.filter(
-                client_user=user, project__in=projects, title__startswith='[Seed]',
+                client_user=user, project_id__in=project_ids, title__startswith='[Seed]',
             ).delete()
-            # Delete payments → subscriptions → projects (ProtectedFKs)
+
             for project in projects:
                 for sub in HostingSubscription.objects.filter(project=project):
+                    for payment in Payment.objects.filter(subscription=sub):
+                        payment.history.all().delete()
                     Payment.objects.filter(subscription=sub).delete()
                 HostingSubscription.objects.filter(project=project).delete()
-            projects.delete()
+
+                Deliverable.objects.filter(project=project).delete()
+                ChangeRequest.objects.filter(project=project).delete()
+                BugReport.objects.filter(project=project).delete()
+                ProjectPhase.objects.filter(project=project).delete()
+                DocumentStateEpisode.objects.filter(project=project).delete()
+
+                # The project folder tree is provisioned by the Project signal,
+                # not by user input. Delete only the unchanged generated nodes;
+                # a custom descendant remains a PROTECT blocker and rolls the
+                # whole flush back.
+                DocumentFolder.objects.filter(
+                    project=project,
+                    creation_source='system',
+                    creation_operation='ensure_project_folder.template',
+                ).delete()
+                DocumentFolder.objects.filter(
+                    managed_project=project,
+                    creation_source='system',
+                    creation_operation='ensure_project_folder',
+                ).delete()
+
+                # Conversations are client history. Preserve every thread that
+                # referenced the demo project under a read-only retention owner
+                # before removing the operational Project row.
+                thread_ids = list(CommunicationThread.objects.filter(
+                    Q(project=project) | Q(managed_project=project),
+                ).values_list('pk', flat=True))
+                if thread_ids:
+                    retained_records = {
+                        'content.communicationthread': [
+                            str(thread_id) for thread_id in thread_ids
+                        ],
+                    }
+                    context = ProjectRetentionContext.objects.create(
+                        client=project.client,
+                        original_project_id=project.pk,
+                        project_name=project.name,
+                        retained_records=retained_records,
+                        category_counts={
+                            'content.communicationthread': len(thread_ids),
+                        },
+                        created_by=project.client,
+                    )
+                    CommunicationThread.objects.filter(pk__in=thread_ids).update(
+                        project_id=None,
+                        managed_project_id=None,
+                        retention_context_id=context.pk,
+                    )
+
+                project.delete()
             BusinessProposal.objects.filter(
                 client_email=CLIENT_EMAIL, slug=PROPOSAL_SLUG,
             ).delete()

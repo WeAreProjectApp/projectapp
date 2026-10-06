@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 import uuid
 
 from django.core.validators import RegexValidator
@@ -36,7 +37,7 @@ LINKTREE_ACTIONS = {
 }
 
 
-class Linktree(models.Model):
+class Linktree(RetainedProjectModel, models.Model):
     """
     A public, customizable link-in-bio page served at /lk/@<handle>.
     It is the second destination type a QRCard can point to: the printed
@@ -48,10 +49,7 @@ class Linktree(models.Model):
         PERSONAL = 'personal', 'Personal'
         COMPANY = 'company', 'Empresa'
 
-    project = models.ForeignKey(
-        'accounts.Project', null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='linktrees',
-    )
+    project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='linktrees')
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     handle = models.CharField(
