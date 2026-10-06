@@ -343,7 +343,8 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     await mockApi(page, buildHandler({
       rows: [incomeRow({
         id: 11, total_amount: '500000.00', pending_amount: '500000.00',
-        client: 5, client_name: 'Kore SAS',
+        client: 5, client_name: 'Kore SAS', has_collection_account: true,
+        collection_account_status: 'issued',
       })],
       calls,
     }));
