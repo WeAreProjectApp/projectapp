@@ -86,7 +86,7 @@ def _cipher_operation(operation, value):
         return operation(value)
     except ImproperlyConfigured as exc:
         # Do not log arguments, tokens, key material or exception locals.
-        logger.error('Secure links cipher unavailable: check PROJECT_ACCESS_CIPHER_KEY.')
+        logger.error('Secure links cipher unavailable: check PROJECT_ACCESS_CIPHER_KEY or its private key file.')
         raise SecureLinkError(
             'El servicio de enlaces seguros no está disponible. Contacta al administrador.',
             code='secure_links_unavailable', status=503,

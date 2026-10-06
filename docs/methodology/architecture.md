@@ -23,6 +23,14 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 
 # Architecture — ProjectApp
 
+**2026-10-06 — clave de cifrado fuera de Git:** `credential_cipher` conserva
+prioridad de `PROJECT_ACCESS_CIPHER_KEY` y, si falta, lee un archivo privado
+bajo `PRIVATE_MEDIA_ROOT/runtime-secrets` o la ruta explícita
+`PROJECT_ACCESS_CIPHER_KEY_FILE`. Verifica tipo, propietario y permisos antes
+de leer. Las comprobaciones de despliegue releen esa fuente sin cache.
+Enlaces, accesos, notas y MCP comparten el mismo cifrador; se conservan sus
+contratos y la apertura única. La aplicación nunca genera ni reemplaza claves.
+
 **2026-10-02 — autorización de cuentas:** la lectura de fases limita por
 propietario salvo perfil administrador, también cuando el perfil no existe.
 El token verificado de recuperación incluye una huella HMAC de la contraseña
