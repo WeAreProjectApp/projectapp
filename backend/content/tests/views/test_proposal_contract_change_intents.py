@@ -49,6 +49,15 @@ def _prepare(proposal, template):
     return proposal
 
 
+def _pending_intent(admin_client, proposal):
+    preview = admin_client.post(_url(proposal, 'preview-contract-change'), {
+        'contract_modality': 'split',
+        'change_note': 'Keep this review pending',
+        'contract_params': TERMS,
+    }, format='json')
+    return ProposalContractChangeIntent.objects.get(pk=preview.data['confirmation_id'])
+
+
 @pytest.mark.parametrize('fixture_name', ['sent_proposal', 'viewed_proposal', 'accepted_proposal', 'rejected_proposal'])
 def test_non_negotiating_direct_patch_requires_confirmation(admin_client, request, contract_template, fixture_name):
     """Fails if a post-negotiation proposal can change modality without a review confirmation."""
@@ -99,6 +108,66 @@ def test_cancelled_contract_change_intent_cannot_apply(admin_client, accepted_pr
     assert response.status_code == 409
     assert response.data['code'] == 'CONFIRMATION_EXPIRED'
     assert proposal.contract_modality == 'single'
+
+
+def test_confirm_rejects_malformed_confirmation_id_without_mutation(
+    admin_client, accepted_proposal, contract_template,
+):
+    """Fails if invalid client input can consume a review or alter recovery state."""
+    proposal = _prepare(accepted_proposal, contract_template)
+    intent = _pending_intent(admin_client, proposal)
+
+    response = admin_client.post(_url(proposal, 'confirm-contract-change'), {
+        'confirmation_id': 'not-a-uuid',
+    }, format='json')
+
+    intent.refresh_from_db()
+    proposal.refresh_from_db()
+    assert response.status_code == 400
+    assert response.data == {'error': 'Selecciona una confirmación válida.'}
+    assert intent.status == 'pending'
+    assert (proposal.contract_modality, proposal.contract_params) == ('single', PARTY)
+    assert not ProposalContractSnapshot.objects.filter(proposal=proposal).exists()
+
+
+def test_cancel_rejects_malformed_confirmation_id_without_mutation(
+    admin_client, accepted_proposal, contract_template,
+):
+    """Fails if malformed cancellation input can discard a valid pending review."""
+    proposal = _prepare(accepted_proposal, contract_template)
+    intent = _pending_intent(admin_client, proposal)
+
+    response = admin_client.post(_url(proposal, 'cancel-contract-change'), {
+        'confirmation_id': 'not-a-uuid',
+    }, format='json')
+
+    intent.refresh_from_db()
+    proposal.refresh_from_db()
+    assert response.status_code == 400
+    assert response.data == {'error': 'Selecciona una confirmación válida.'}
+    assert intent.status == 'pending'
+    assert (proposal.contract_modality, proposal.contract_params) == ('single', PARTY)
+    assert not ProposalContractSnapshot.objects.filter(proposal=proposal).exists()
+
+
+def test_cancel_rejects_unknown_confirmation_without_touching_pending_intent(
+    admin_client, accepted_proposal, contract_template,
+):
+    """Fails if cancelling an unknown UUID affects another proposal review."""
+    proposal = _prepare(accepted_proposal, contract_template)
+    intent = _pending_intent(admin_client, proposal)
+
+    response = admin_client.post(_url(proposal, 'cancel-contract-change'), {
+        'confirmation_id': '00000000-0000-0000-0000-000000000000',
+    }, format='json')
+
+    intent.refresh_from_db()
+    proposal.refresh_from_db()
+    assert response.status_code == 404
+    assert response.data == {'error': 'No existe esa confirmación pendiente.'}
+    assert intent.status == 'pending'
+    assert (proposal.contract_modality, proposal.contract_params) == ('single', PARTY)
+    assert not ProposalContractSnapshot.objects.filter(proposal=proposal).exists()
 
 
 def test_non_negotiating_preview_requires_a_change_note(admin_client, accepted_proposal, contract_template):
