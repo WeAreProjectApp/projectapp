@@ -246,4 +246,5 @@ def delete_empty_project(project_id, *, actor):
     DocumentFolder.objects.filter(pk__in=folder_ids, parent__isnull=False).delete()
     DocumentFolder.objects.filter(pk__in=folder_ids).delete()
     CommunicationThread.objects.filter(pk__in=thread_ids).delete()
+    DocumentStateEpisode.objects.filter(project=project).delete()
     project.delete()

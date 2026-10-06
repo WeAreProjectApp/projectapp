@@ -95,7 +95,7 @@ const panelCapabilities = [
         ['/panel/partnership-program', '/panel/partnership-program/new', '/panel/partnership-program/:id', '/panel/financing', '/panel/financing/new', '/panel/financing/:id'],
         { icon: 'credit-card', stage: 'Venta' }),
       feature('panel-clients-offers', 'Administrar clientes y paquetes',
-        'Centraliza identidades comerciales y ofertas de horas reutilizables. La ficha conserva dirección y distingue NIT de C.C.; las cuentas de cobro reutilizan sus datos y permiten editar la ficha durante la preparación. Incluye historial por registro con fecha, autor y consulta de versiones; aprobar desde la ficha de un cliente abre la misma revisión de cliente, proyecto y documentos.',
+        'Centraliza identidades comerciales y ofertas de horas reutilizables. La ficha conserva dirección y distingue NIT de C.C.; las cuentas de cobro reutilizan sus datos y permiten editar la ficha durante la preparación. Incluye historial por registro con fecha, autor y consulta de versiones; aprobar desde la ficha de un cliente abre la misma revisión de cliente, proyecto y documentos. Incluye consulta y descarga de datos conservados sin proyecto, sin edición ni reasignación.',
         'Evita duplicar contexto al preparar nuevas oportunidades.',
         ['/panel/clients', '/panel/hour-packages', '/panel/hour-packages/create', '/panel/hour-packages/:id/edit'],
         { icon: 'users', stage: 'Relación' }),
@@ -164,7 +164,7 @@ const panelCapabilities = [
     'Convierte una venta cerrada en una iniciativa gobernada y visible.',
     [
       feature('panel-project-portfolio', 'Administrar proyectos',
-        'Relaciona cada proyecto con su cliente, accesos y Linktrees; organiza documentos y assets privados de branding y diseño. Reúne las acciones en tres puntos y permite eliminar proyectos vacíos con confirmación. Desde Eliminar → Cambiar estado, un superusuario puede forzar el borrado de dependencias propias al escribir DELETE; conserva cliente, propuestas y auditoría, y bloquea datos compartidos o evidencia legal protegida. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Relaciona cada proyecto con su cliente, accesos y Linktrees; organiza documentos y assets privados de branding y diseño. Reúne las acciones en tres puntos y permite eliminar proyectos vacíos con confirmación. Desde Eliminar → Cambiar estado, un superusuario elige categorías con interruptores apagados por defecto y confirma DELETE; las dependencias requieren elección manual. Lo conservado queda bajo el cliente sin proyecto; las evidencias protegidas siguen bloqueando. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Crea una referencia común entre el panel y la plataforma del cliente.', ['/panel/projects'],
         { icon: 'folder', stage: 'Ejecución' }),
       feature('panel-project-ideas', 'Recopilar ideas para el futuro',

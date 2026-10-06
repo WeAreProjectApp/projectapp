@@ -1,9 +1,11 @@
 """Independent filing hierarchy for complete client conversations."""
+
+from accounts.retention import RetainedProjectModel
 from django.core.exceptions import ValidationError
 from django.db import models
 
 
-class CommunicationFolder(models.Model):
+class CommunicationFolder(RetainedProjectModel, models.Model):
     name = models.CharField(max_length=120)
     parent = models.ForeignKey(
         'self', null=True, blank=True, on_delete=models.PROTECT,
@@ -13,10 +15,7 @@ class CommunicationFolder(models.Model):
         'accounts.UserProfile', on_delete=models.PROTECT,
         related_name='communication_folders',
     )
-    project = models.ForeignKey(
-        'accounts.Project', null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='communication_folders',
-    )
+    project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='communication_folders')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

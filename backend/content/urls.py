@@ -359,7 +359,15 @@ from content.views.entity_history import (
     entity_history_list, entity_history_version, entity_history_compare, entity_history_reveal, entity_history_file,
 )
 
+from content.views.project_retention import (
+    client_retained_project_data, retained_project_file, reveal_retained_project_secret,
+)
+
 urlpatterns = [
+    path('proposals/client-profiles/<int:client_id>/retained-project-data/', client_retained_project_data),
+    path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/files/<str:field_name>/', retained_project_file),
+    path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/reveal/', reveal_retained_project_secret),
+
     path('projects/<int:project_id>/', include('content.project_collaboration_urls')),
     path('admin/billing-context/', include('content.billing_urls')),
     path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),

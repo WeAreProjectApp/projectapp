@@ -1,3 +1,20 @@
+
+## Eliminación selectiva de proyectos (2026-10-06)
+
+La eliminación forzada empieza con todas las categorías apagadas. La selección
+explícita y el contenido vigente forman el token de impacto; la API no acepta
+volver al borrado total por ausencia de selección. Las dependencias requieren
+una elección manual. La ficha del proyecto se elimina, mientras sus datos no
+seleccionados conservan cliente y origen mediante ProjectRetentionContext, sin
+un proyecto operativo sustituto. Clientes incorpora consulta y descarga; no
+habilita edición ni reasignación. Las evidencias inmutables conservan sus
+bloqueos, y los cobros/avisos del proyecto retirado dejan de ejecutarse.
+
+Migraciones nuevas: accounts.0077, content.0281, monitoring.0003 y
+secure_links.0005. Se aplican mediante deploy, nunca a datos reales desde el
+worktree. Las relaciones mutables permiten desvinculación explícita y usan
+PROTECT para impedir cascadas de Project fuera del servicio autorizado.
+
 # Product Requirements Document — ProjectApp
 
 **2026-09-29 — propuesta consultiva:** los módulos adicionales se exploran sin precios y se guardan como interés pendiente. El equipo acuerda e incorpora alcance e inversión manualmente. La portada incorpora guía y accesos a catálogo y alianza en otra pestaña.

@@ -74,9 +74,11 @@ export const usePanelProjectsStore = defineStore('panel_projects', {
   }),
 
   actions: {
-    async previewDeletion(id, { force = false } = {}) {
+    async previewDeletion(id, { force = false, deleteKeys } = {}) {
       try {
-        const response = await get_request(`projects/${id}/delete-preview/${force ? '?force=true' : ''}`);
+        const response = force && deleteKeys !== undefined
+          ? await create_request(`projects/${id}/delete-preview/`, { delete_keys: deleteKeys })
+          : await get_request(`projects/${id}/delete-preview/${force ? '?force=true' : ''}`);
         return { success: true, data: response.data };
       } catch (error) {
         return { success: false, ...normalizeApiError(error, 'No se pudieron comprobar las dependencias del proyecto.') };

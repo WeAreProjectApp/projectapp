@@ -5,6 +5,8 @@ capability to reveal it once. Status is derived from timestamps so expiry
 needs no scheduled job, and reactivation simply clears the consumption.
 """
 
+from accounts.retention import RetainedProjectModel
+
 import hashlib
 
 from django.conf import settings
@@ -43,7 +45,7 @@ class SecureLinkQuerySet(models.QuerySet):
         return self.filter(self.status_conditions(now)[status])
 
 
-class SecureLink(models.Model):
+class SecureLink(RetainedProjectModel, models.Model):
     class Origin(models.TextChoices):
         PANEL = 'panel', 'Equipo (panel)'
         MCP = 'mcp', 'Asistente (MCP)'
@@ -79,10 +81,7 @@ class SecureLink(models.Model):
         'accounts.UserProfile', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='secure_links',
     )
-    project = models.ForeignKey(
-        'accounts.Project', null=True, blank=True, on_delete=models.SET_NULL,
-        related_name='secure_links',
-    )
+    project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='secure_links')
     owner = models.ForeignKey(
         'accounts.UserProfile', null=True, blank=True, on_delete=models.SET_NULL,
         related_name='owned_secure_links',

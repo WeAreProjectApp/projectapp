@@ -214,7 +214,7 @@ def _link_for_token(token, *, lock=False):
     queryset = SecureLink.objects.select_related('client__user', 'project')
     if lock:
         queryset = queryset.select_for_update()
-    return queryset.filter(token_hash=SecureLink.hash_token(token)).first()
+    return queryset.filter(token_hash=SecureLink.hash_token(token), retention_context__isnull=True).first()
 
 
 def _not_found():

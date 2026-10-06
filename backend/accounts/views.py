@@ -2639,6 +2639,9 @@ def _generate_next_payment(subscription):
     """
     from dateutil.relativedelta import relativedelta
 
+    if subscription.retention_context_id or not subscription.project_id:
+        return None
+
     # Check if there's already a pending/processing payment
     existing = Payment.objects.filter(
         subscription=subscription,
@@ -2689,6 +2692,8 @@ def _handle_payment_approved(payment, payment_history_source=''):
     )
 
     sub = payment.subscription
+    if sub.retention_context_id or not sub.project_id:
+        return
     sub.next_billing_date = payment.billing_period_end + relativedelta(days=1)
     if sub.status == HostingSubscription.STATUS_PENDING:
         sub.status = HostingSubscription.STATUS_ACTIVE
@@ -2769,6 +2774,8 @@ def _charge_payment_with_source(payment, history_source=''):
     from accounts.services.wompi import charge_with_payment_source
 
     sub = payment.subscription
+    if sub.retention_context_id or not sub.project_id:
+        raise ValueError('La suscripción se conserva sin proyecto y no permite nuevos cobros.')
     if not sub.wompi_payment_source_id:
         raise ValueError('La suscripción no tiene una tarjeta guardada.')
 

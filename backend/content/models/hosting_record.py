@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 from decimal import Decimal
 
 from django.db import models
@@ -5,7 +6,7 @@ from django.db import models
 from .accounting_base import AccountingRecordBase, VatBreakdownMixin
 
 
-class HostingRecord(VatBreakdownMixin, AccountingRecordBase):
+class HostingRecord(RetainedProjectModel, VatBreakdownMixin, AccountingRecordBase):
     """
     Client hosting subscription registry (accounting view).
 
@@ -54,13 +55,7 @@ class HostingRecord(VatBreakdownMixin, AccountingRecordBase):
     # that was never a client. SET_NULL for the same reason as on incomes:
     # the project is a label, and `delete_fake_data` deletes projects before
     # the accounting sweep.
-    project = models.ForeignKey(
-        'accounts.Project',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='hosting_records',
-    )
+    project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='hosting_records')
     # Billing snapshot: what the cuenta de cobro prints and mails. Filled
     # from the linked client and editable afterwards, because the billing
     # contact may legitimately differ from the account holder. The FK above

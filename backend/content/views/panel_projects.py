@@ -76,13 +76,19 @@ logger = logging.getLogger(__name__)
 _SCOPES = ('active', 'archived', 'all')
 
 
-@api_view(['GET'])
+@api_view(['GET', 'POST'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def preview_panel_project_delete(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
-    if request.query_params.get('force') == 'true':
-        return Response(forced_deletion_preview(project, actor=request.user))
+    if request.method == 'POST' or request.query_params.get('force') == 'true':
+        from content.serializers.panel_projects import ProjectDeletionSelectionSerializer
+        keys = []
+        if request.method == 'POST':
+            serializer = ProjectDeletionSelectionSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            keys = serializer.validated_data['delete_keys']
+        return Response(forced_deletion_preview(project, actor=request.user, delete_keys=keys))
     return Response(deletion_preview(project))
 
 
@@ -100,6 +106,7 @@ def delete_panel_project(request, project_id):
             force_delete_project(
                 project_id, actor=request.user,
                 confirmation=data['confirmation'], impact_token=data['impact_token'],
+                delete_keys=data['delete_keys'],
             )
         else:
             delete_empty_project(project_id, actor=request.user)

@@ -563,6 +563,10 @@
               </div>
             </template>
 
+            <div class="border-t border-border-muted px-5 py-4">
+              <BaseButton variant="secondary" size="sm" :data-testid="`client-retained-data-${client.id}`" @click="retainedDataClient = client">{{ $t('projectAccess.retention.title') }}</BaseButton>
+            </div>
+
             <!-- Web diagnostics (drop target for diagnostic reassignment) -->
             <div
               v-if="(detailCache[client.id]?.diagnostics || []).length > 0"
@@ -946,6 +950,7 @@
       </div>
     </BaseDrawer>
 
+    <ClientRetainedProjectDataModal :open="Boolean(retainedDataClient)" :client="retainedDataClient" @close="retainedDataClient = null" />
     <ClientReassignModal
       v-model="showTouchReassign"
       :item="touchReassignItem"
@@ -1088,6 +1093,7 @@ import ClientFilterPanel from '~/components/clients/ClientFilterPanel.vue';
 import ClientArchiveModal from '~/components/clients/ClientArchiveModal.vue';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
 import ClientModuleTabs from '~/components/clients/ClientModuleTabs.vue';
+import ClientRetainedProjectDataModal from '~/components/clients/ClientRetainedProjectDataModal.vue';
 import ClientReassignModal from '~/components/clients/ClientReassignModal.vue';
 import ClientEmailsModal from '~/components/clients/ClientEmailsModal.vue';
 import EmailBodyModal from '~/components/accounting/EmailBodyModal.vue';
@@ -1127,6 +1133,7 @@ const { goToPlatform, isBridging } = usePanelToPlatformBridge();
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
 const clientsStore = useProposalClientsStore();
+const retainedDataClient = ref(null);
 const { isMobile: isCompact } = useIsMobile(PANEL_BREAKPOINTS.landscape - 1);
 const showMobileFilters = ref(false);
 

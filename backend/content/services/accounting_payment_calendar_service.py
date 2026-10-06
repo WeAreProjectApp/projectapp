@@ -106,6 +106,7 @@ def collect_income_notices(today, config):
     candidates = (
         IncomeRecord.objects
         .filter(
+            retention_context__isnull=True,
             kind=IncomeRecord.Kind.EXPECTED,
             reminders_muted=False,
             period_date__lte=today + _days(FIRST_NOTICE_DAYS),
@@ -156,6 +157,7 @@ def _resume_expired_mutes(today):
     from content.models import IncomeRecord
 
     IncomeRecord.objects.filter(
+        retention_context__isnull=True,
         reminders_muted=True,
         reminders_muted_until__isnull=False,
         reminders_muted_until__lte=today,
@@ -167,7 +169,7 @@ def _rearm_moved_incomes():
     from content.models import IncomeRecord
 
     IncomeRecord.objects.filter(
-        Q(reminder_target_date__isnull=False)
+        Q(retention_context__isnull=True) & Q(reminder_target_date__isnull=False)
         & ~Q(reminder_target_date=F('period_date')),
     ).update(
         reminder_target_date=F('period_date'),

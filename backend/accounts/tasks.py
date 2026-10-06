@@ -88,6 +88,8 @@ def auto_charge_due_subscriptions():
         charge_attempts__lt=MAX_CHARGE_ATTEMPTS,
         # ACTIVE for recurring cycles; PENDING covers the first charge after a
         # free-month gift (subscription activates when that charge settles).
+        subscription__retention_context__isnull=True,
+        subscription__project__isnull=False,
         subscription__status__in=[
             HostingSubscription.STATUS_ACTIVE,
             HostingSubscription.STATUS_PENDING,
@@ -222,7 +224,7 @@ def _onboard_due_phases():
     from accounts.services.hosting_billing import prorated_amount, project_billing_amount
 
     today = date.today()
-    due_phases = ProjectPhase.objects.select_related(
+    due_phases = ProjectPhase.objects.filter(project__isnull=False, retention_context__isnull=True).select_related(
         'project', 'business_proposal', 'project__hosting_subscription',
     ).filter(
         hosting_start_date__lte=today,

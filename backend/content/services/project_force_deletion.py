@@ -1,7 +1,8 @@
 """Preview and atomically purge a project's exclusive dependency graph.
 
-Foreign-key policies stay unchanged. Every row is inventoried, shared owners
-block the whole operation, and protected leaves are removed before parents.
+Every row is inventoried, only explicit categories may be removed, and
+protected leaves are removed before parents. Mutable roots may be retained
+under the client's non-operational retention context.
 Commercial proposals and independent mail/history evidence are retained.
 """
 
@@ -17,7 +18,7 @@ from content.api_errors import ProposalActionError
 from content.models import AccountingChangeLog, DocumentThread, DocumentThreadItem, IncomeRecord, PocketMovement
 from content.services import accounting_service
 from content.services.entity_history import capture_instance, historical_write
-from content.services.project_deletion_service import DEPENDENCY_LABELS
+from content.services.project_deletion_catalog import CATEGORIES
 from content.services.project_file_cleanup import (
     deferred_project_cleanup, project_row_files, schedule_project_files,
 )
@@ -75,36 +76,9 @@ OWNERS = {
 }
 
 FORCE_DEPENDENCY_LABELS = {
-    **DEPENDENCY_LABELS,
-    'accounts.projectcontract': ('contracts', 'Contratos del proyecto'),
-    'accounts.contractamendment': ('contract_amendments', 'Otrosíes de contratos'),
-    'accounts.contractsignatureevidence': ('contract_signatures', 'Firmas de contratos'),
-    'accounts.deliveryscope': ('delivery_scopes', 'Alcances de entrega'),
-    'accounts.deliveryphase': ('delivery_phases', 'Fases de entrega'),
-    'accounts.deliverystage': ('delivery_stages', 'Etapas de entrega'),
-    'accounts.requirement': ('requirements', 'Requerimientos'),
-    'accounts.deliverypublication': ('delivery_publications', 'Publicaciones de entrega'),
-    'accounts.requirementreview': ('requirement_reviews', 'Revisiones de requerimientos'),
-    'accounts.deliverydocumentsnapshot': ('delivery_documents', 'Copias de documentos de entrega'),
-    'accounts.deliveryreviewdocumentevidence': ('delivery_evidence', 'Evidencias de revisión'),
-    'accounts.payment': ('payments', 'Pagos de hosting'),
-    'accounts.paymenthistory': ('payment_history', 'Historial de pagos'),
-    'accounts.projecthosting': ('project_hostings', 'Hostings del proyecto'),
-    'accounts.projecthostingaccountingsource': ('hosting_sources', 'Vínculos de facturación del hosting'),
-    'content.expenserecord': ('expenses', 'Gastos y deducciones'),
-    'content.pocketmovement': ('pocket_movements', 'Movimientos del bolsillo'),
-    'content.documentfolder': ('document_folders', 'Carpetas de documentos'),
-    'content.documentthread': ('document_threads', 'Hilos documentales'),
-    'content.documentthreaditem': ('document_thread_items', 'Documentos enlazados en hilos'),
-    'content.documentstateepisode': ('state_episodes', 'Episodios de estado'),
-    'content.documentstateepisodeevent': ('state_events', 'Eventos de estado'),
-    'content.communicationthread': ('communication_threads', 'Conversaciones'),
-    'content.communicationmessage': ('messages', 'Mensajes'),
-    'content.communicationattachment': ('communication_attachments', 'Adjuntos de comunicaciones'),
-    'content.linktreeasset': ('linktree_assets', 'Imágenes de páginas de enlaces'),
-    'content.linktreetemplateversion': ('linktree_versions', 'Versiones de páginas de enlaces'),
-    'content.linktreetemplateclick': ('linktree_clicks', 'Estadísticas de páginas de enlaces'),
+    model: (category['key'], category['label']) for model, category in CATEGORIES.items()
 }
+
 
 
 class ProjectForceDeleteError(ProposalActionError):
@@ -126,15 +100,29 @@ def _key(row):
 
 
 class ProjectDeletionPlan:
-    def __init__(self, project, *, lock=False):
+    def __init__(self, project, *, lock=False, delete_keys=()):
         self.project = project
         self.lock = lock
         self.rows = {_key(project): project}
         self.conflicts = []
+        self.shared_money = set()
+        self.requires = defaultdict(set)
+        self.delete_keys = sorted(set(delete_keys))
         self._expand()
         self._include_money_movements()
         self._include_document_threads()
         self._check_owners()
+        self.inventory = self.rows.copy()
+        known_keys = {CATEGORIES[model._meta.label_lower]['key']
+                      for model, _ in self.inventory if model._meta.label_lower in CATEGORIES}
+        if set(self.delete_keys) - known_keys:
+            self._conflict(project, 'La selección contiene datos que no aparecen en esta revisión.')
+        for (model, _), row in self.inventory.items():
+            if model is not Project and model._meta.label_lower not in CATEGORIES:
+                self._conflict(row, 'Hay información relacionada aún no clasificada. No se puede eliminar de forma segura.')
+        self.rows = {key: row for key, row in self.inventory.items()
+                     if key[0] is Project or CATEGORIES.get(key[0]._meta.label_lower, {}).get('key') in self.delete_keys}
+        self._check_selection()
         self.layers, self.cycle_links = self._deletion_order()
 
     def _read(self, queryset):
@@ -174,7 +162,8 @@ class ProjectDeletionPlan:
             incomes = self._read(movement.income_records.all())
             expenses = self._read(accounting_service.ExpenseRecord.objects.filter(pocket_movement=movement))
             if any(_key(row) not in self.rows for row in incomes + expenses):
-                self._conflict(movement, 'Un movimiento del bolsillo incluye registros ajenos al proyecto. Resuelve el abono compartido antes de eliminar.')
+                self.shared_money.add(_key(movement))
+                self.rows[_key(movement)] = movement
             else:
                 self.rows[_key(movement)] = movement
 
@@ -241,6 +230,38 @@ class ProjectDeletionPlan:
                             'Hay una plantilla compartida o evidencia independiente protegida que debe conservarse.',
                         ))
 
+    def _require(self, parent, child):
+        parent_category = CATEGORIES.get(parent._meta.label_lower)
+        child_category = CATEGORIES.get(child._meta.label_lower)
+        if parent_category and child_category:
+            self.requires[parent_category['key']].add(child_category['key'])
+            self._conflict(child, f"Para eliminar «{parent_category['label']}» también debes elegir «{child_category['label']}», porque no se puede conservar sin ese dato.")
+        else:
+            self._conflict(child, 'Una dependencia protegida impide eliminar los datos seleccionados.')
+
+    def _check_selection(self):
+        for key, row in self.inventory.items():
+            for field in row._meta.concrete_fields:
+                if not isinstance(field, models.ForeignKey):
+                    continue
+                parent_key = (field.remote_field.model, getattr(row, field.attname))
+                if parent_key not in self.rows or key in self.rows:
+                    continue
+                if parent_key[0] is Project and hasattr(row, 'retention_context_id'):
+                    continue
+                if field.remote_field.on_delete in (models.CASCADE, models.PROTECT, models.RESTRICT):
+                    self._require(self.rows[parent_key], row)
+        for key, row in self.inventory.items():
+            if not isinstance(row, (IncomeRecord, accounting_service.ExpenseRecord)) or not row.pocket_movement_id:
+                continue
+            movement_key = (PocketMovement, row.pocket_movement_id)
+            if key in self.rows and movement_key not in self.rows:
+                self._require(row, self.inventory[movement_key])
+            if movement_key in self.rows and key not in self.rows:
+                self._require(self.inventory[movement_key], row)
+            if (key in self.rows or movement_key in self.rows) and movement_key in self.shared_money:
+                self._conflict(row, 'Un movimiento del bolsillo incluye registros ajenos al proyecto. Resuelve el abono compartido antes de eliminar.')
+
     def _deletion_order(self):
         children = {key: set() for key in self.rows}
         links = {}
@@ -275,51 +296,55 @@ class ProjectDeletionPlan:
 
     def payload(self, actor):
         counts = defaultdict(int)
-        labels = {}
         fingerprint = []
-        for (model, _), row in sorted(self.rows.items(), key=lambda item: (item[0][0]._meta.label_lower, str(item[0][1]))):
+        for (model, _), row in sorted(self.inventory.items(), key=lambda item: (item[0][0]._meta.label_lower, str(item[0][1]))):
             fingerprint.append((model._meta.label_lower, [
-                (field.attname, getattr(row, field.attname))
-                for field in model._meta.concrete_fields
+                (field.attname, getattr(row, field.attname)) for field in model._meta.concrete_fields
             ]))
-            if model is Project:
-                continue
-            key, label = FORCE_DEPENDENCY_LABELS.get(model._meta.label_lower, (
-                model._meta.label_lower, str(model._meta.verbose_name_plural),
-            ))
-            counts[key] += 1
-            labels[key] = label
+            if model is not Project and model._meta.label_lower in CATEGORIES:
+                counts[model._meta.label_lower] += 1
+        dependencies = []
+        for model, count in sorted(counts.items()):
+            category = CATEGORIES[model]
+            dependencies.append({**category, 'count': count,
+                                 'selected': category['key'] in self.delete_keys,
+                                 'requires': sorted(self.requires[category['key']])})
         digest = salted_hmac('project-force-delete', json.dumps(
-            [actor.pk, fingerprint, self.conflicts], sort_keys=True, default=str,
+            [actor.pk, fingerprint, self.delete_keys, self.conflicts], sort_keys=True, default=str,
         ), algorithm='sha256').hexdigest()
         return {
             'project': {'id': self.project.pk, 'name': self.project.name},
-            'force': True, 'can_delete': not self.conflicts,
-            'dependencies': [{'key': key, 'label': labels[key], 'count': counts[key]}
-                             for key in sorted(counts)],
-            'blockers': self.conflicts, 'impact_token': digest,
+            'force': True, 'can_delete': not self.conflicts, 'delete_keys': self.delete_keys,
+            'dependencies': dependencies, 'blockers': self.conflicts, 'impact_token': digest,
+            'consequences': [
+                'La ficha operativa del proyecto se elimina: nombre, descripción, URLs, fechas, avance y configuración.',
+                'Lo no seleccionado queda bajo el mismo cliente, sin proyecto, para consulta y descarga.',
+                'Se detienen nuevos cobros y avisos automáticos asociados al proyecto eliminado. Los importes y el historial conservados no cambian.',
+            ],
         }
 
 
-def forced_deletion_preview(project, *, actor):
+def forced_deletion_preview(project, *, actor, delete_keys=()):
     require_superuser(actor)
-    return ProjectDeletionPlan(project).payload(actor)
+    return ProjectDeletionPlan(project, delete_keys=delete_keys).payload(actor)
 
 
 @historical_write
 @transaction.atomic
-def force_delete_project(project_id, *, actor, confirmation, impact_token):
+def force_delete_project(project_id, *, actor, confirmation, impact_token, delete_keys):
     require_superuser(actor)
     if confirmation != 'DELETE':
         raise ProjectForceDeleteError('Escribe exactamente DELETE en mayúsculas.', code='project_delete_confirmation_required')
     project = Project.objects.select_for_update().get(pk=project_id)
-    plan = ProjectDeletionPlan(project, lock=True)
+    plan = ProjectDeletionPlan(project, lock=True, delete_keys=delete_keys)
     preview = plan.payload(actor)
     if not impact_token or not constant_time_compare(impact_token, preview['impact_token']):
         raise ProjectForceDeleteError('Las dependencias cambiaron. Revisa el alcance y escribe DELETE de nuevo.', code='stale_project_delete_preview', preview=preview)
     if preview['blockers']:
         raise ProjectForceDeleteError('El proyecto tiene datos compartidos que deben resolverse antes de eliminar.', code='project_force_delete_blocked', preview=preview)
 
+    from content.services.project_retention_service import retain_project_records
+    retained = retain_project_records(plan, actor)
     files = []
     for row in plan.rows.values():
         capture_instance(row)
@@ -333,7 +358,8 @@ def force_delete_project(project_id, *, actor, confirmation, impact_token):
                 accounting_service.log_entity_removal(entity_type, row, actor)
     audit = log_project_event(project, AccountingChangeLog.Action.DELETED, project_snapshot(project), actor)
     audit.changes += [{'field': 'forced_deletion', 'label': 'Eliminación forzada',
-                      'old': {'dependencies': preview['dependencies']}, 'new': ''}]
+                      'old': {'dependencies': preview['dependencies'], 'delete_keys': plan.delete_keys},
+                      'new': {'retention_context': retained.pk if retained else None, 'automations_stopped': True}}]
     audit.save(update_fields=['changes'])
 
     with deferred_project_cleanup():

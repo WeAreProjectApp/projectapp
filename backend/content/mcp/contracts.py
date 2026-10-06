@@ -29,7 +29,13 @@ class McpModelContract:
         return self.read_only | self.read_write | frozenset(self.excluded)
 
 
+_RETENTION_MODELS = frozenset({'secure_links.securelink', 'content.incomerecord', 'accounts.changerequest', 'accounts.projectphase', 'content.hostingrecord', 'content.communicationthread', 'accounts.deliverydocumentlink', 'content.communicationfolder', 'accounts.deliverymessage', 'accounts.bugreport', 'accounts.projectidea', 'content.documentfolder', 'accounts.projectclientaccessevent', 'accounts.projectideacollection', 'accounts.projectadminaccess', 'content.document', 'accounts.issuecontext', 'content.documentstateepisode', 'accounts.projectcontract', 'accounts.deliverable', 'accounts.deliveryworkspace', 'accounts.projecthosting', 'accounts.projectclientaccesspolicy', 'accounts.projectaccessnote', 'accounts.hostingsubscription', 'content.financingagreement', 'content.linktree', 'accounts.notification', 'accounts.projectdatamodelentity', 'monitoring.resource', 'accounts.issueevent', 'accounts.deliveryoperation', 'content.projectbrandasset'})
+
+
 def _contract(model_label, *, read_only='', read_write='', excluded=None):
+    if model_label.lower() in _RETENTION_MODELS:
+        excluded = {**(excluded or {}), 'retention_context': 'Propiedad histórica de datos sin proyecto, administrada únicamente por la eliminación del panel.'}
+
     return McpModelContract(
         model_label=model_label,
         read_only=_names(read_only),
