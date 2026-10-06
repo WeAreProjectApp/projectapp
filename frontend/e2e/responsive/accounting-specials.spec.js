@@ -8,6 +8,12 @@ import { RESPONSIVE_PROFILES } from './catalog-scenarios.js';
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 const longConcept = 'IngresoSinEspaciosDemasiadoLargoParaLaColumnaPrioritaria20260901';
 const income = { id: 1, concept: longConcept, kind: 'expected', kind_label: 'Esperado', origin: 'hosting', client: 1, client_name: 'Cliente con nombre muy largo para confirmar prioridad responsive', project: 1, project_name: 'Proyecto fixture', total_amount: '123456789.00', paid_amount: '0.00', pending_amount: '123456789.00', payment_status: 'pending', payment_status_label: 'Pendiente', has_collection_account: true, collection_account_status: 'issued', collection_account_number: 'CC-RESP-001', can_settle: true, destination: 'partners', destination_label: 'Socios', ledger: 'company', ledger_label: 'Empresa', period_date: '2026-09-01', gustavo_amount: '61728394.50', carlos_amount: '61728394.50', notes: '' };
+// Collection creation chooses a different, unbilled income; the issued row
+// remains available for liquidation and bulk payments.
+const unbilledIncome = {
+  ...income, id: 3, has_collection_account: false, collection_account_id: null,
+  collection_account_status: null, collection_account_number: null, can_settle: false,
+};
 const collection = { id: 1, public_number: 'CC-RESP-001', customer_name: income.client_name, billing_concept: longConcept, total: '123456789.00', commercial_status: 'issued', commercial_status_label: 'Emitida', client: 1, client_display_name: income.client_name, project_id: 1, project_name: 'Proyecto fixture', due_date: '2026-10-01', is_overdue: false };
 const pocket = { id: 1, concept: longConcept, amount: '123456789.00', movement_date: '2026-09-01', created_at: '2026-09-01T10:00:00Z', direction: 'in', direction_label: 'Ingreso', is_linked: true };
 const collectionPreviewPdf = '/api/accounting/collection-accounts/preview/accounting-special/CC-RESP-001.pdf';
@@ -78,7 +84,7 @@ async function setup(page) {
       return json(accountingSettings);
     }
     if (apiPath === 'accounting/pocket/' && method === 'GET') return json({ results: [pocket], meta: { balance: '123456789.00' } });
-    if (apiPath === 'accounting/incomes/' && method === 'GET') return json({ results: [income], meta: { expected_total: '123456789.00', liquid_total: '0.00' } });
+    if (apiPath === 'accounting/incomes/' && method === 'GET') return json({ results: [income, unbilledIncome], meta: { expected_total: '123456789.00', liquid_total: '0.00' } });
     if (apiPath.startsWith('accounting/dashboard/') && method === 'GET') return json(responsiveDashboardSummary);
     if (apiPath === 'accounting/receivables/' && method === 'GET') return json({ results: receivableRows, summary: receivablesSummary });
     if (apiPath.startsWith('accounting/card-snapshots/') && method === 'GET') return json({ results: [], meta: {} });
@@ -224,7 +230,7 @@ const longModalFlows = Object.freeze([
       await page.getByTestId('collection-form-client').fill('Cliente con nombre muy largo');
       await page.getByTestId('client-autocomplete-option-1').click();
       await page.getByTestId('collection-form-income').click();
-      await page.getByTestId('collection-form-income-option-1').click();
+      await page.getByTestId('collection-form-income-option-3').click();
       await page.getByTestId('billing-nature').selectOption('contract');
       await page.getByTestId('billing-contract').selectOption('10');
       await page.getByTestId('collection-form-amount').fill('123456789');
