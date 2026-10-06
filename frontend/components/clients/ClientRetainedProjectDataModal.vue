@@ -7,6 +7,8 @@ const props = defineProps({ open: Boolean, client: { type: Object, default: null
 const emit = defineEmits(['close']);
 const { t, locale } = useI18n();
 const contexts = ref([]);
+const contextCount = ref(0);
+const contextPage = ref(1);
 const activeContext = ref(null);
 const activeCategory = ref(null);
 const records = ref([]);
@@ -20,13 +22,17 @@ const root = computed(() => `proposals/client-profiles/${props.client?.id}/retai
 const label = (category) => locale.value.startsWith('en') ? category.label_en || category.label : category.label;
 const description = (category) => locale.value.startsWith('en') ? category.description_en || category.description : category.description;
 
-async function loadContexts() {
+async function loadContexts(nextPage = 1) {
   const current = ++version;
   loading.value = true;
   error.value = '';
   try {
-    const response = await get_request(root.value);
-    if (current === version) contexts.value = response.data.contexts;
+    const response = await get_request(nextPage === 1 ? root.value : `${root.value}?page=${nextPage}`);
+    if (current === version) {
+      contexts.value = response.data.contexts;
+      contextCount.value = response.data.count ?? response.data.contexts.length;
+      contextPage.value = nextPage;
+    }
   } catch {
     if (current === version) error.value = t('projectAccess.retention.loadError');
   } finally {
@@ -39,6 +45,7 @@ async function selectCategory(context, category, nextPage = 1) {
   activeContext.value = context;
   activeCategory.value = category;
   revealed.value = {};
+  records.value = [];
   loading.value = true;
   error.value = '';
   try {
@@ -87,6 +94,8 @@ const displayValue = (value) => typeof value === 'boolean' ? t(value ? 'projectA
 watch([() => props.open, () => props.client?.id], ([open]) => {
   showContexts();
   contexts.value = [];
+  contextCount.value = 0;
+  contextPage.value = 1;
   if (open && props.client?.id) loadContexts();
 }, { immediate: true });
 </script>
@@ -100,7 +109,7 @@ watch([() => props.open, () => props.client?.id], ([open]) => {
       <BaseAlert v-if="error" variant="danger" role="alert">{{ error }}</BaseAlert>
       <p v-if="loading" role="status" class="text-sm text-text-muted">{{ $t('projectAccess.retention.loading') }}</p>
       <template v-else-if="!activeCategory">
-        <p v-if="!contexts.length" class="text-sm text-text-muted" data-testid="retained-data-empty">{{ $t('projectAccess.retention.empty') }}</p>
+        <p v-if="!contexts.length && !error" class="text-sm text-text-muted" data-testid="retained-data-empty">{{ $t('projectAccess.retention.empty') }}</p>
         <section v-for="context in contexts" :key="context.id" class="space-y-3 rounded-lg border border-border-muted p-4">
           <h3 class="break-words font-semibold text-text-default">{{ context.project_name }}</h3>
           <p class="text-xs text-text-subtle">{{ $t('projectAccess.retention.originalProject') }}</p>
@@ -108,6 +117,11 @@ watch([() => props.open, () => props.client?.id], ([open]) => {
             <BaseButton v-for="category in context.categories" :key="category.key" variant="secondary" size="sm" :data-testid="`retained-category-${category.key}`" @click="selectCategory(context, category)">{{ label(category) }} ({{ category.count }})</BaseButton>
           </div>
         </section>
+        <div v-if="contextCount > 50" class="flex flex-wrap items-center justify-between gap-3">
+          <BaseButton v-if="contextPage > 1" variant="secondary" size="sm" @click="loadContexts(contextPage - 1)">{{ $t('projectAccess.retention.previous') }}</BaseButton>
+          <p class="text-sm text-text-muted">{{ contextPage }} / {{ Math.ceil(contextCount / 50) }}</p>
+          <BaseButton v-if="contextPage * 50 < contextCount" variant="secondary" size="sm" @click="loadContexts(contextPage + 1)">{{ $t('projectAccess.retention.next') }}</BaseButton>
+        </div>
       </template>
       <template v-else>
         <h3 class="font-semibold text-text-default">{{ activeContext.project_name }} · {{ label(activeCategory) }}</h3>

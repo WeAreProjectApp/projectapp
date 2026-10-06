@@ -19,6 +19,7 @@ def retain_project_records(plan, actor):
     context = ProjectRetentionContext.objects.create(
         client_id=plan.project.client_id, original_project_id=plan.project.pk,
         project_name=plan.project.name, retained_records=dict(index), created_by=actor,
+        category_counts={label: len(ids) for label, ids in index.items()},
     )
     for row in retained.values():
         updates = {}

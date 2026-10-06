@@ -1293,7 +1293,7 @@ def change_request_all_view(request):
     is_admin = profile and profile.is_admin
 
     if is_admin:
-        qs = ChangeRequest.objects.all()
+        qs = ChangeRequest.objects.filter(retention_context__isnull=True)
     else:
         qs = ChangeRequest.objects.filter(project__client=request.user)
 
@@ -1693,7 +1693,7 @@ def deliverable_all_view(request):
     is_admin = profile and profile.is_admin
 
     if is_admin:
-        qs = Deliverable.objects.select_related('uploaded_by', 'project').all()
+        qs = Deliverable.objects.select_related('uploaded_by', 'project').filter(retention_context__isnull=True)
     else:
         qs = Deliverable.objects.select_related('uploaded_by', 'project').filter(
             project__client=request.user,
@@ -2639,7 +2639,9 @@ def _generate_next_payment(subscription):
     """
     from dateutil.relativedelta import relativedelta
 
-    if subscription.retention_context_id or not subscription.project_id:
+    if not HostingSubscription.objects.filter(
+        pk=subscription.pk, retention_context__isnull=True, project__isnull=False,
+    ).exists():
         return None
 
     # Check if there's already a pending/processing payment
@@ -2691,7 +2693,8 @@ def _handle_payment_approved(payment, payment_history_source=''):
         source=payment_history_source or PaymentHistory.SOURCE_SYSTEM,
     )
 
-    sub = payment.subscription
+    # A queued callback may carry a subscription loaded before deletion.
+    sub = HostingSubscription.objects.get(pk=payment.subscription_id)
     if sub.retention_context_id or not sub.project_id:
         return
     sub.next_billing_date = payment.billing_period_end + relativedelta(days=1)
@@ -2773,7 +2776,9 @@ def _charge_payment_with_source(payment, history_source=''):
     from accounts.services.payment_history import record_payment_status_change
     from accounts.services.wompi import charge_with_payment_source
 
-    sub = payment.subscription
+    # Re-read ownership rather than trusting a queued task's cached relation.
+    sub = HostingSubscription.objects.get(pk=payment.subscription_id)
+    payment.subscription = sub
     if sub.retention_context_id or not sub.project_id:
         raise ValueError('La suscripción se conserva sin proyecto y no permite nuevos cobros.')
     if not sub.wompi_payment_source_id:
@@ -2860,7 +2865,7 @@ def subscription_list_view(request):
     is_admin = profile and profile.is_admin
 
     if is_admin:
-        qs = HostingSubscription.objects.select_related('project').all()
+        qs = HostingSubscription.objects.select_related('project').filter(retention_context__isnull=True)
     else:
         qs = HostingSubscription.objects.select_related('project').filter(
             project__client=request.user,

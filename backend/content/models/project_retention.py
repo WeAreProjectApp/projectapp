@@ -8,6 +8,7 @@ class ProjectRetentionContext(models.Model):
     original_project_id = models.PositiveBigIntegerField(unique=True)
     project_name = models.CharField(max_length=200)
     retained_records = models.JSONField(default=dict)
+    category_counts = models.JSONField(default=dict)
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='+',
     )

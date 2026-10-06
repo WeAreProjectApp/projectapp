@@ -58,9 +58,16 @@ jest.mock('../../composables/useConfirmModal', () => ({
   }),
 }));
 
+const translate = (key) => ({
+  'projectAccess.retention.title': 'Datos sin proyecto',
+}[key] || key);
+
 function mountPage() {
   return mount(PanelClientsIndex, {
     global: {
+      mocks: {
+        $t: translate,
+      },
       stubs: {
         // These existing cases cover the client forms; approval is exercised
         // with its real modal and stores in PanelClientsProposalApproval.spec.js.
@@ -106,7 +113,7 @@ const LONG_CLIENT = {
 
 describe('panel/clients index page', () => {
   beforeEach(() => {
-    global.useI18n = () => ({ locale: ref('es-co') });
+    global.useI18n = () => ({ locale: ref('es-co'), t: translate });
     mockStore.clients = [];
     mockStore.statusCounts = {};
     mockStore.isLoading = false;

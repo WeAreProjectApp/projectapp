@@ -6002,6 +6002,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-client-email-copy-settings` | admin | P1 | display,success,error,failure | 7 |
 | `admin-client-email-validated-notification` | admin | P2 | — | 0 |
 | `admin-client-first-login-notification` | admin | P2 | — | 0 |
+| `admin-client-retained-data` | admin | P1 | display,error,failure | 5 |
 | `admin-clients-config-tab` | admin | P3 | — | 0 |
 | `admin-clients-documents-section` | admin | P2 | display,success | 2 |
 | `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
@@ -6123,7 +6124,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-project-change-client` | admin | P2 | display,success | 2 |
 | `admin-project-change-history` | admin | P1 | display,success,failure | — |
 | `admin-project-client-access-policy` | admin | P1 | success,error,failure,display | — |
-| `admin-project-delete` | admin | P1 | success,error,failure | 21 |
+| `admin-project-delete` | admin | P1 | success,error,failure | 22 |
 | `admin-project-fly-create` | admin | P2 | success,error | 4 |
 | `admin-project-idea-collection` | admin | P1 | success,error,failure,display | — |
 | `admin-project-inline-assign-offer` | admin | P2 | success | 1 |
@@ -7055,10 +7056,10 @@ The Plataforma sidebar space (placed after Contabilidad on purpose: it doubles t
 - **Rol:** administrador; eliminación forzada exclusiva de superusuarios
 - **Prioridad:** P1
 - **Ruta:** `/panel/projects`
-- **API:** `GET /api/projects/<id>/delete-preview/`, `GET /api/projects/<id>/delete-preview/?force=true`, `DELETE /api/projects/<id>/delete/`
-- **Descripción:** El menú de acciones abre Eliminar proyecto en un modal amplio. Cambiar estado muestra su texto completo en los cinco tamaños del panel. Un proyecto vacío admite la confirmación normal; uno con información muestra sus dependencias. Desde Cambiar estado, un superusuario puede activar Forzar eliminación, revisar los registros propios afectados y escribir exactamente `DELETE`. Esta acción elimina el proyecto y sus dependencias propias, incluidos datos contables y contratos, sin asignar otro estado. Conserva cliente, propuestas comerciales, catálogos y auditoría independiente. Los archivos exclusivos se limpian después de confirmar la transacción; los archivos aún referenciados se conservan.
+- **API:** `GET /api/projects/<id>/delete-preview/`, `POST /api/projects/<id>/delete-preview/` con `delete_keys`, `DELETE /api/projects/<id>/delete/`
+- **Descripción:** El menú de acciones abre Eliminar proyecto. Un proyecto vacío admite la confirmación normal; uno con información muestra sus dependencias. Desde Cambiar estado, un superusuario activa Forzar eliminación y elige los datos con interruptores apagados por defecto. Apagado conserva ese dato; sólo se eliminan las categorías elegidas junto con la ficha operativa. La restricción de una dependencia exige selección manual; no activa ningún interruptor. Escribir exactamente `DELETE` confirma la selección con su huella vigente. Lo conservado queda bajo el mismo cliente, sin proyecto, para consulta y descarga. Propuestas comerciales, catálogos y auditoría independiente se conservan. Los archivos exclusivos elegidos se limpian tras confirmar la transacción; los no elegidos y los aún referenciados se conservan. No se crean nuevos cobros ni avisos asociados al proyecto retirado.
 - **Éxito:** La confirmación válida retira el proyecto de la lista y muestra Proyecto eliminado. Cancelar conserva el proyecto y no envía una petición de borrado. Desactivar Forzar eliminación vuelve al formulario de estado y descarta la confirmación previa.
-- **Error:** `delete`, espacios u otro texto no habilitan la confirmación. La opción no aparece para un administrador ordinario ni al abrir Cambiar estado directamente. Un abono, hilo o dependencia compartida, o evidencia legal protegida, impide todo el borrado. Si cambian las dependencias después de revisarlas, el modal muestra el alcance actualizado, limpia `DELETE` y exige confirmar de nuevo.
+- **Error:** `delete`, espacios u otro texto no habilitan la confirmación. La opción no aparece para un administrador ordinario ni al abrir Cambiar estado directamente. Un abono, hilo o dependencia compartida, o evidencia legal protegida, impide el borrado. Elegir un padre sin su dependencia obligatoria muestra la restricción y mantiene la confirmación desactivada. Cambiar una opción o recibir una revisión obsoleta limpia `DELETE` y exige confirmar de nuevo.
 - **Fallo:** Una vista previa fallida muestra el error y permite reintentar. Un fallo al eliminar conserva el proyecto y el modal abierto. La transacción evita borrados parciales.
 - **Visualización:** La revisión muestra proyecto, advertencia, tipos de registros y cantidades. Se verifica como parte del recorrido de eliminación; no declara una prueba de visualización independiente.
 - **Cobertura:** `frontend/e2e/admin/admin-project-delete.spec.js` conserva el recorrido normal; `frontend/e2e/admin/admin-project-force-delete.spec.js` cubre el recorrido forzado, permisos, confirmación exacta, vista previa obsoleta, reintento y cancelación. Borrado transaccional, datos compartidos, CSRF/JWT, auditoría y archivos se verifican en backend.
@@ -7607,6 +7608,20 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Error outcome:** n/a — los controles emiten sólo identificadores y opciones válidas. Permisos, pertenencia y validación del contrato se prueban en backend.
 - **Failure outcome:** Fallos de API muestran una recuperación explícita y no revelan valores protegidos ni comparaciones obsoletas.
 - **Coverage:** Display, success y failure validados en `admin/admin-entity-history.spec.js`.
+
+### FLOW: `admin-client-retained-data`
+
+- **Módulo:** admin
+- **Rol:** administrador del panel con sesión
+- **Prioridad:** P1
+- **Ruta:** `/panel/clients`
+- **API:** `GET /api/proposals/client-profiles/<id>/retained-project-data/`; consulta por contexto, categoría y página; descarga de archivo; `POST .../reveal/` sólo para revelar un secreto admitido, con CSRF.
+- **Descripción:** La ficha expandida ofrece Datos sin proyecto. La consulta muestra el proyecto de origen y las cantidades de datos conservados, carga registros al elegir una categoría y permite volver, paginar y cerrar. Los archivos se descargan con autorización. Las credenciales no se precargan; se revelan mediante una acción explícita y se ocultan al cambiar de contexto o cerrar.
+- **Éxito:** No hay formulario de edición, reasignación ni mutación de los registros. La consulta completada se valida como visualización con navegación real y datos concretos.
+- **Error:** Un rechazo de acceso al consultar una categoría muestra el error y no expone registros ni realiza escrituras. El backend rechaza un contexto de otro cliente, una fila fuera del inventario y una revelación no admitida.
+- **Fallo:** Si el servicio no responde correctamente, el modal muestra el error; cerrar y abrir permite reintentar. Una respuesta tardía de otro cliente se descarta.
+- **Visualización:** Llegar desde el menú Clientes, expandir la ficha y abrir Datos sin proyecto muestra el nombre anterior del proyecto y cantidades reales. Elegir una categoría muestra los registros conservados; un resultado vacío se explica.
+- **Cobertura:** `frontend/e2e/admin/admin-client-retained-data.spec.js`; autorización, paginación, lectura segura, archivos y CSRF en `backend/content/tests/views/test_project_retention.py`; aislamiento de respuestas y revelado explícito en `frontend/test/components/clients/ClientRetainedProjectDataModal.spec.js`.
 
 ### FLOW: `admin-communication-folders`
 

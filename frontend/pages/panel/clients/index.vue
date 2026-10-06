@@ -950,7 +950,7 @@
       </div>
     </BaseDrawer>
 
-    <ClientRetainedProjectDataModal :open="Boolean(retainedDataClient)" :client="retainedDataClient" @close="retainedDataClient = null" />
+    <ClientRetainedProjectDataModal v-if="retainedDataClient" :open="true" :client="retainedDataClient" @close="retainedDataClient = null" />
     <ClientReassignModal
       v-model="showTouchReassign"
       :item="touchReassignItem"

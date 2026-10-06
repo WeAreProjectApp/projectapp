@@ -41,13 +41,20 @@ def target_project(make_client_profile):
     return Project.objects.create(name='Boundary target project', client=profile.user)
 
 
+def full_preview(project, actor):
+    initial = forced_deletion_preview(project, actor=actor)
+    delete_keys = [dependency['key'] for dependency in initial['dependencies']]
+    return forced_deletion_preview(project, actor=actor, delete_keys=delete_keys)
+
+
 def force_delete(project, actor):
-    preview = forced_deletion_preview(project, actor=actor)
+    preview = full_preview(project, actor)
     force_delete_project(
         project.pk,
         actor=actor,
         confirmation='DELETE',
         impact_token=preview['impact_token'],
+        delete_keys=preview['delete_keys'],
     )
 
 
@@ -61,11 +68,12 @@ def test_force_delete_blocks_version_used_by_another_card(superuser, target_proj
     other_tree = Linktree.objects.create(
         handle='external-version', name='Other card', active_template_version=version,
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(target_project.pk, actor=superuser,
-                             confirmation='DELETE', impact_token=preview['impact_token'])
+                             confirmation='DELETE', impact_token=preview['impact_token'],
+                             delete_keys=preview['delete_keys'])
 
     other_tree.refresh_from_db()
     assert error.value.code == 'project_force_delete_blocked'
@@ -118,7 +126,7 @@ def test_force_delete_blocks_thread_with_foreign_document(
         document=foreign_document,
         occurred_on=date(2026, 10, 5),
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(
@@ -126,6 +134,7 @@ def test_force_delete_blocks_thread_with_foreign_document(
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     assert preview['can_delete'] is False
@@ -154,7 +163,7 @@ def test_force_delete_blocks_folder_with_foreign_project_document(
         project=other_project,
         folder=folder,
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(
@@ -162,6 +171,7 @@ def test_force_delete_blocks_folder_with_foreign_project_document(
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     assert preview['can_delete'] is False
@@ -278,7 +288,7 @@ def test_force_delete_preserves_proposal_approval_file_boundary(superuser, targe
         size=22,
         created_by=superuser,
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(
@@ -286,6 +296,7 @@ def test_force_delete_preserves_proposal_approval_file_boundary(superuser, targe
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     approval.file.open('rb')
@@ -308,7 +319,7 @@ def test_force_delete_preserves_billing_context_event(superuser, target_project)
         before={'project': target_project.pk, 'scope': 'previous'},
         after={'project': target_project.pk, 'scope': 'current'},
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(
@@ -316,6 +327,7 @@ def test_force_delete_preserves_billing_context_event(superuser, target_project)
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     event.refresh_from_db()
@@ -349,7 +361,7 @@ def test_force_delete_preserves_private_prompt_source(superuser, target_project)
         filename='private-source.pdf',
         sha256='d' * 64,
     )
-    preview = forced_deletion_preview(target_project, actor=superuser)
+    preview = full_preview(target_project, superuser)
 
     with pytest.raises(ProjectForceDeleteError) as error:
         force_delete_project(
@@ -357,6 +369,7 @@ def test_force_delete_preserves_private_prompt_source(superuser, target_project)
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     source.file.open('rb')

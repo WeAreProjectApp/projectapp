@@ -82,6 +82,7 @@ _SCOPES = ('active', 'archived', 'all')
 def preview_panel_project_delete(request, project_id):
     project = get_object_or_404(Project, pk=project_id)
     if request.method == 'POST' or request.query_params.get('force') == 'true':
+        require_superuser(request.user)
         from content.serializers.panel_projects import ProjectDeletionSelectionSerializer
         keys = []
         if request.method == 'POST':
@@ -96,7 +97,7 @@ def preview_panel_project_delete(request, project_id):
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def delete_panel_project(request, project_id):
-    serializer = DeletePanelProjectSerializer(data=request.data)
+    serializer = DeletePanelProjectSerializer(data=request.data, context={'request': request})
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
     if data['force']:

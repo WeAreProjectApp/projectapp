@@ -33,6 +33,13 @@ class DeletePanelProjectSerializer(serializers.Serializer):
         child=serializers.CharField(max_length=120), required=False, allow_empty=True,
     )
 
+    def validate_force(self, value):
+        request = self.context.get('request')
+        if value and request is not None:
+            from content.services.project_force_deletion import require_superuser
+            require_superuser(request.user)
+        return value
+
     def validate(self, attrs):
         if attrs['force'] and 'delete_keys' not in attrs:
             raise serializers.ValidationError({'delete_keys': 'Elige explícitamente qué datos se eliminan; una lista vacía conserva todos.'})

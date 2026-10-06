@@ -19,13 +19,13 @@ const PROJECT_EIGHT = {
 const PREVIEW_SEVEN = {
   can_delete: true,
   impact_token: 'force-token-7',
-  dependencies: [{ key: 'documents', label: 'Documentos', count: 2 }],
+  dependencies: [{ key: 'documents', label: 'Documentos', description: 'Archivos del proyecto.', count: 2 }],
   blockers: [],
 };
 const PREVIEW_EIGHT = {
   can_delete: true,
   impact_token: 'force-token-8',
-  dependencies: [{ key: 'contracts', label: 'Contratos', count: 4 }],
+  dependencies: [{ key: 'contracts', label: 'Contratos', description: 'Acuerdos del proyecto.', count: 4 }],
   blockers: [],
 };
 const t = (key) => key.split('.').slice(1).reduce((value, part) => value?.[part], translations) || key;
@@ -102,14 +102,16 @@ describe('ProjectStateTransitionModal force deletion', () => {
     expect(wrapper.text()).not.toContain('Forzar eliminación');
   });
 
-  // Fails if the authorized recovery path does not request the forced dependency review.
+  // Fails if the authorized recovery path sends a preselected deletion category.
   it('loads the force review for an authorized deletion path', async () => {
     const { wrapper, projectStore } = mountModal();
 
     await enterForceMode(wrapper);
 
-    expect(projectStore.previewDeletion).toHaveBeenCalledWith(7, { force: true });
-    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toBe('Documentos2');
+    expect(projectStore.previewDeletion).toHaveBeenCalledWith(7, { force: true, deleteKeys: [] });
+    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toContain('Documentos (2)');
+    expect(wrapper.get('[data-testid="project-delete-category-documents"]').attributes('aria-checked')).toBe('false');
+    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toContain('Se conserva sin proyecto');
   });
 
   // Fails if a previous DELETE confirmation survives leaving the destructive review.
@@ -140,8 +142,8 @@ describe('ProjectStateTransitionModal force deletion', () => {
     await flushPromises();
     await enterForceMode(wrapper);
 
-    expect(projectStore.previewDeletion).toHaveBeenLastCalledWith(8, { force: true });
-    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toBe('Contratos4');
+    expect(projectStore.previewDeletion).toHaveBeenLastCalledWith(8, { force: true, deleteKeys: [] });
+    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toContain('Contratos (4)');
   });
 
   // Fails if lowercase or padded confirmations authorize permanent deletion.
@@ -154,18 +156,43 @@ describe('ProjectStateTransitionModal force deletion', () => {
     expect(projectStore.deleteProject).not.toHaveBeenCalled();
   });
 
-  // Fails if the confirmed request loses the token from the currently reviewed dependencies.
-  it('sends uppercase DELETE with the current impact token', async () => {
+  // Fails if changing a category retains a DELETE confirmation or reuses the old selection token.
+  it('reviews the selected category before allowing confirmation', async () => {
     const { wrapper, projectStore } = mountModal();
     await enterForceMode(wrapper);
+    await wrapper.get('[data-testid="project-force-delete-confirmation"]').setValue('DELETE');
+
+    projectStore.previewDeletion.mockResolvedValueOnce({
+      success: true,
+      data: { ...PREVIEW_SEVEN, impact_token: 'force-token-documents' },
+    });
+    await wrapper.get('[data-testid="project-delete-category-documents"]').trigger('click');
+    await flushPromises();
+
+    expect(projectStore.previewDeletion).toHaveBeenLastCalledWith(7, { force: true, deleteKeys: ['documents'] });
+    expect(wrapper.get('[data-testid="project-force-delete-confirmation"]').element.value).toBe('');
+    expect(wrapper.get('[data-testid="project-force-delete-dependencies"]').text()).toContain('Se elimina');
+  });
+
+  // Fails if the confirmed request drops the reviewed selection or its token.
+  it('sends uppercase DELETE with the current selected categories', async () => {
+    const { wrapper, projectStore } = mountModal();
+    await enterForceMode(wrapper);
+    projectStore.previewDeletion.mockResolvedValueOnce({
+      success: true,
+      data: { ...PREVIEW_SEVEN, impact_token: 'force-token-documents' },
+    });
+    await wrapper.get('[data-testid="project-delete-category-documents"]').trigger('click');
+    await flushPromises();
     await wrapper.get('[data-testid="project-force-delete-confirmation"]').setValue('DELETE');
     await wrapper.get('[data-testid="project-force-delete-confirm"]').trigger('click');
     await flushPromises();
 
     expect(projectStore.deleteProject).toHaveBeenCalledWith(7, {
       force: true,
+      delete_keys: ['documents'],
       confirmation: 'DELETE',
-      impact_token: 'force-token-7',
+      impact_token: 'force-token-documents',
     });
     expect(wrapper.emitted('deleted')[0]).toEqual([{ success: true }]);
   });

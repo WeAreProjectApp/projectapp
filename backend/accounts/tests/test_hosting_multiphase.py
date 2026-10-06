@@ -23,6 +23,7 @@ from accounts.models import (
 )
 from accounts.services import hosting_billing
 from accounts.tasks import _onboard_due_phases
+from content.models import ProjectRetentionContext
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
@@ -252,6 +253,31 @@ class TestPhaseOnboarding:
         assert count == 0
         phase.refresh_from_db()
         assert phase.hosting_activated_at is None
+
+    def test_skips_retained_phase_while_onboarding_operational_phase(self, project):
+        """Fails if retained project history is picked up by phase-onboarding automation."""
+        active_phase = _phase(project, 12_000_000, order=1, start_date=date(2026, 3, 1))
+        retained_phase = _phase(project, 6_000_000, order=2, start_date=date(2026, 3, 1))
+        self._active_subscription(project)
+        context = ProjectRetentionContext.objects.create(
+            client=project.client,
+            original_project_id=project.pk,
+            project_name=project.name,
+            retained_records={},
+            created_by=project.client,
+        )
+        ProjectPhase.objects.filter(pk=retained_phase.pk).update(
+            project=None,
+            retention_context=context,
+        )
+
+        count = _onboard_due_phases()
+
+        active_phase.refresh_from_db()
+        retained_phase.refresh_from_db()
+        assert count == 1
+        assert active_phase.hosting_activated_at == date(2026, 4, 4)
+        assert retained_phase.hosting_activated_at is None
 
     @pytest.mark.parametrize('failure_target', [
         'accounts.models.Payment.objects.create',

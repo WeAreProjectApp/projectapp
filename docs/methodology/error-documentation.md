@@ -1480,3 +1480,17 @@ contracts, not conventions repeated in individual commands.
   los outcomes E2E de éxito/error/fallo.
 - **Lesson**: Un fallback no debe convertir la ausencia de contenido comercial
   obligatorio en una entrega aparentemente válida.
+
+## 2026-10-06 — Permiso de eliminación forzada antes de validar el alcance
+
+Al exigir la nueva selección explícita, una petición de eliminación forzada
+sin `delete_keys` podía fallar por validación antes de comprobar el permiso.
+Esto cambiaba la respuesta del conector MCP de FORBIDDEN a VALIDATION_ERROR,
+aunque conservara los datos. El permiso se comprueba al validar `force` con el
+request real; la selección se valida después. La vista previa forzada también
+comprueba el permiso antes del cuerpo. La prohibición de forzar por MCP se
+mantiene incluso cuando faltan datos de confirmación.
+
+Regresión focal verificada: `content/tests/views/test_mcp_project_deletion.py`
+y contrato del conector `projects`. No sustituir la comprobación de permisos
+por una validación incompleta del cuerpo.

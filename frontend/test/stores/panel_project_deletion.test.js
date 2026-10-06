@@ -1,7 +1,7 @@
 import { setActivePinia, createPinia } from 'pinia';
 import { usePanelProjectsStore } from '../../stores/panel_projects';
 import { useAccountingStore } from '../../stores/accounting';
-import { get_request, delete_request } from '../../stores/services/request_http';
+import { create_request, get_request, delete_request } from '../../stores/services/request_http';
 
 jest.mock('../../stores/services/request_http', () => ({
   get_request: jest.fn(), create_request: jest.fn(), patch_request: jest.fn(), delete_request: jest.fn(),
@@ -22,13 +22,13 @@ describe('panel project deletion', () => {
     expect(result.data.blockers).toEqual([{ key: 'incomes', count: 2 }]);
   });
 
-  // Fails if the forced-delete review silently falls back to the safe preview endpoint.
-  it('requests the forced dependency preview separately', async () => {
-    get_request.mockResolvedValue({ data: { can_delete: true, impact_token: 'force-token-7' } });
+  // Fails if the forced-delete review silently falls back to the GET-only preview endpoint.
+  it('posts the explicit empty selection for a forced dependency preview', async () => {
+    create_request.mockResolvedValue({ data: { can_delete: true, impact_token: 'force-token-7' } });
 
-    const result = await usePanelProjectsStore().previewDeletion(7, { force: true });
+    const result = await usePanelProjectsStore().previewDeletion(7, { force: true, deleteKeys: [] });
 
-    expect(get_request).toHaveBeenCalledWith('projects/7/delete-preview/?force=true');
+    expect(create_request).toHaveBeenCalledWith('projects/7/delete-preview/', { delete_keys: [] });
     expect(result.data.impact_token).toBe('force-token-7');
   });
 
@@ -63,9 +63,9 @@ describe('panel project deletion', () => {
     expect(delete_request).toHaveBeenCalledWith('projects/7/delete/');
   });
 
-  // Fails if the destructive confirmation or the reviewed dependency token is dropped.
-  it('sends the forced deletion body unchanged', async () => {
-    const payload = { force: true, confirmation: 'DELETE', impact_token: 'force-token-7' };
+  // Fails if the destructive confirmation drops the categories reviewed by the user.
+  it('sends the forced deletion selection unchanged', async () => {
+    const payload = { force: true, delete_keys: ['documents', 'deliverables'], confirmation: 'DELETE', impact_token: 'force-token-7' };
     delete_request.mockResolvedValue({ status: 204 });
     get_request.mockResolvedValue({ data: { results: [], meta: { total: 0 } } });
 

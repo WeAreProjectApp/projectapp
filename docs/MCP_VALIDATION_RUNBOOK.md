@@ -336,9 +336,19 @@ segunda sólo muestra herramientas autorizadas más `describe_capabilities`,
 | Tarjetas | extracto y transacciones | resolver alias o editar snapshot | finalizar/reabrir/eliminar |
 
 La eliminación forzada de Proyectos es exclusiva del Panel con sesión de
-superusuario: exige `DELETE` y una vista previa vigente. Los adaptadores MCP
+superusuario: exige `DELETE`, una selección explícita `delete_keys` (vacía
+significa conservar todos los registros relacionados) y una vista previa vigente
+obtenida con esa misma selección. Los adaptadores MCP
 conservan la eliminación confirmada de proyectos vacíos; enviar `force` por
 `query` o `data` no habilita el borrado de dependencias.
+
+La propiedad `retention_context` de los registros y el modelo
+`ProjectRetentionContext` son internos del panel y están excluidos expresamente
+del contrato de escritura MCP. El cliente conserva los datos no elegidos sin
+un proyecto operativo y puede consultarlos desde su ficha. No se permite
+editar una conversación conservada mediante las acciones habituales del panel
+ni mediante MCP. Un callback de un pago ya iniciado conserva el resultado
+real y su historial, pero no renueva hosting ni crea nuevos avisos o cargos.
 
 Los adaptadores resuelven la misma ruta DRF del Panel mediante
 `APIRequestFactory`, autentican el principal técnico y dejan que la vista,

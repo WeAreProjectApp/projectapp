@@ -6,8 +6,9 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
 
 from accounts.models import Project, ProjectContract, UserProfile
-from content.models import Document
+from content.models import Document, DocumentType, ProjectRetentionContext
 from content.models.document_collection_account import DocumentCollectionAccount
+from content.models.document_item import DocumentItem
 
 User = get_user_model()
 
@@ -77,6 +78,19 @@ def _create_payload(title='Test Invoice', client_user_id=None):
     if client_user_id is not None:
         data['client_user_id'] = client_user_id
     return data
+
+
+def _replacement_item_payload():
+    return {
+        'items': [{
+            'description': 'Replacement line',
+            'quantity': '2',
+            'unit_price': '50.00',
+            'discount_amount': '0.00',
+            'tax_amount': '0.00',
+            'line_total': '100.00',
+        }],
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -236,6 +250,55 @@ class TestUpdateCollectionAccount:
         )
 
         assert response.status_code in (403, 404)
+
+    def test_retained_account_update_keeps_existing_document_items(
+        self, admin_client, admin_user, client_user_obj,
+    ):
+        """Fails if a retained collection-account update replaces line items before its parent is rejected."""
+        collection_type = DocumentType.objects.create(
+            code='collection_account',
+            name='Collection account',
+        )
+        document = Document.objects.create(
+            title='Retained collection account',
+            client_user=client_user_obj,
+            document_type=collection_type,
+            commercial_status=Document.CommercialStatus.DRAFT,
+        )
+        DocumentCollectionAccount.objects.create(document=document)
+        original_item = DocumentItem.objects.create(
+            document=document,
+            description='Original retained line',
+            quantity=1,
+            unit_price=100,
+            line_total=100,
+        )
+        context = ProjectRetentionContext.objects.create(
+            client=client_user_obj,
+            original_project_id=document.pk,
+            project_name='Archived collection account',
+            retained_records={},
+            category_counts={},
+            created_by=admin_user,
+        )
+        Document.objects.filter(pk=document.pk).update(
+            project=None,
+            retention_context=context,
+        )
+
+        response = admin_client.patch(
+            f'{BASE_URL}{document.pk}/',
+            data=_replacement_item_payload(),
+            format='json',
+        )
+
+        assert response.status_code == 403
+        original_item.refresh_from_db()
+        assert original_item.description == 'Original retained line'
+        assert not DocumentItem.objects.filter(
+            document_id=document.pk,
+            description='Replacement line',
+        ).exists()
 
 
 # ---------------------------------------------------------------------------

@@ -24,11 +24,12 @@ const createProposal = (overrides = {}) => ({id:91,title:'Propuesta del cliente'
 let proposal;
 let wrapper;
 const pickerStub = { props: ['modelValue','initialLabel','testId'], template:'<input :data-testid="testId" :value="initialLabel" />' };
+const translate = (key) => ({'projectAccess.retention.title':'Datos sin proyecto'}[key] || key);
 
 async function openPage() {
   const pinia = createPinia();
   setActivePinia(pinia);
-  wrapper = mount(PanelClientsIndex, {attachTo:document.body,global:{plugins:[pinia],components:{BaseModal,BaseFormField,BaseInput,BaseSelect,BaseTextarea},stubs:{
+  wrapper = mount(PanelClientsIndex, {attachTo:document.body,global:{plugins:[pinia],mocks:{$t:translate},components:{BaseModal,BaseFormField,BaseInput,BaseSelect,BaseTextarea},stubs:{
     Teleport:{template:'<div><slot/></div>'},Transition:false,NuxtLink:{template:'<a><slot/></a>'},
     BaseBadge:{template:'<span><slot/></span>'},UiFilterToggleButton:true,BaseDrawer:true,BaseAlert:true,
     ClientAutocomplete:pickerStub,EntityHistorySection:true,ClientFilterPanel:true,ClientArchiveModal:true,ClientReassignModal:true,ClientEmailsModal:true,EmailBodyModal:true,ViewSettingsPanel:true,
@@ -48,7 +49,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   global.useLocalePath = () => (path) => path;
   global.definePageMeta = jest.fn();
-  global.useI18n = () => ({locale:ref('es-co')});
+  global.useI18n = () => ({locale:ref('es-co'),t:translate});
   Object.defineProperty(global.crypto,'randomUUID',{value:()=> '5c1e0ad6-f99e-4fe9-a23d-b7c6ce01c795',configurable:true});
   proposal = createProposal();
   get_request.mockImplementation(async(url) => {

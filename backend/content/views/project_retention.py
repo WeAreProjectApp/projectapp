@@ -16,6 +16,29 @@ from content.models import ProjectRetentionContext
 from content.services.project_deletion_catalog import CATEGORIES
 from content.services.project_retention_service import retained_record_payload
 
+PAGE_SIZE = 50
+
+
+def _page(request):
+    try:
+        page = int(request.query_params.get('page', 1))
+    except (ValueError, TypeError):
+        raise ValidationError({'page': 'Indica un número de página.'})
+    if page < 1:
+        raise ValidationError({'page': 'La página debe ser mayor que cero.'})
+    return page
+
+
+def _private_response(data):
+    response = Response(data)
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
+def _categories(context):
+    return [{**CATEGORIES[label], 'count': count}
+            for label, count in context.category_counts.items() if label in CATEGORIES]
+
 
 def _context(client_id, context_id):
     profile = get_object_or_404(UserProfile.objects.clients(), pk=client_id)
@@ -40,24 +63,25 @@ def client_retained_project_data(request, client_id):
     profile = get_object_or_404(UserProfile.objects.clients(), pk=client_id)
     contexts = ProjectRetentionContext.objects.filter(client_id=profile.user_id)
     context_id = request.query_params.get('context')
+    page = _page(request)
     if not context_id:
-        return Response({'contexts': [{
+        total = contexts.count()
+        contexts = contexts.defer('retained_records')[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
+        return _private_response({'contexts': [{
             'id': ctx.pk, 'project_name': ctx.project_name, 'created_at': ctx.created_at,
-            'categories': [{**CATEGORIES[label], 'count': len(ids)}
-                           for label, ids in ctx.retained_records.items() if label in CATEGORIES],
-        } for ctx in contexts]})
-    context = get_object_or_404(contexts, pk=context_id)
+            'categories': _categories(ctx),
+        } for ctx in contexts], 'count': total, 'page': page})
+    try:
+        context = get_object_or_404(contexts, pk=int(context_id))
+    except (ValueError, TypeError):
+        raise NotFound('Esa consulta no existe.')
     key = request.query_params.get('category', '')
     label = next((label for label, category in CATEGORIES.items() if category['key'] == key), None)
     if label is None:
         raise ValidationError({'category': 'Elige una categoría válida.'})
-    try:
-        page = max(1, int(request.query_params.get('page', 1)))
-    except ValueError:
-        raise ValidationError({'page': 'Indica un número de página.'})
     rows = apps.get_model(label)._base_manager.filter(pk__in=context.retained_records.get(label, [])).order_by('pk')
-    return Response({'count': rows.count(), 'page': page,
-                     'results': [retained_record_payload(row) for row in rows[(page - 1) * 50:page * 50]]})
+    return _private_response({'count': rows.count(), 'page': page,
+                             'results': [retained_record_payload(row) for row in rows[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]]})
 
 
 @api_view(['GET'])

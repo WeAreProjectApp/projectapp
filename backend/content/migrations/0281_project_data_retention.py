@@ -81,6 +81,7 @@ class Migration(migrations.Migration):
                 ('original_project_id', models.PositiveBigIntegerField(unique=True)),
                 ('project_name', models.CharField(max_length=200)),
                 ('retained_records', models.JSONField(default=dict)),
+                ('category_counts', models.JSONField(default=dict)),
                 ('created_at', models.DateTimeField(auto_now_add=True)),
                 ('client', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL)),
                 ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to=settings.AUTH_USER_MODEL)),
