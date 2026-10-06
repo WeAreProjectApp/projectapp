@@ -1,3 +1,9 @@
+> **Cobro antes de liquidación — 2026-10-06:** el servidor comparte la política de
+> liquidación entre las proyecciones de ingresos y sus escritores individuales y
+> masivos. Los contratos se vinculan explícitamente desde Contabilidad reutilizando
+> el escritor versionado del seguimiento; las consultas no crean registros. El
+> historial conserva sus hechos y corrige la presentación del IVA antiguo al leer.
+
 
 ## Eliminación selectiva de proyectos (2026-10-06)
 
@@ -1960,10 +1966,12 @@ preparados ni contratos de propuestas cerradas.
 ### Modalidad de cierre
 
 `BusinessProposal.contract_modality` decide si el negocio cierra con el contrato único o con dos documentos:
-- el contrato de producto, derivado del texto por defecto;
+- el contrato de producto, `product_content_markdown`;
 - el contrato de servicio, `service_content_markdown`.
 
-`content/services/contract_variants.py` registra las tres variantes, sus claves de `contract_params`, portadas y tipos de documento. `PATCH proposals/{id}/contract/modality/` cambia la modalidad sólo en negociación, sin borrar documentos, y regenera los de la modalidad elegida.
+`content/services/contract_variants.py` registra las tres variantes, sus claves de `contract_params`, portadas y tipos de documento. `proposal_contract_modality` planifica y aplica la transición en cualquier estado. El PATCH conserva el cambio directo durante negociación; los demás estados requieren nota e intención de diez minutos mediante preview/confirm/cancel. Los personalizados se trasladan literalmente con su PDF. Las instantáneas permanentes conservan parámetros y Markdown en JSON y copias PDF inmutables en la base de datos; restaurar es otra operación confirmada. Las filas anteriores de ProposalDocument quedan archivadas sin borrar archivos ni vínculos históricos. MCP utiliza el mismo servicio y McpActionIntent.
+
+Los cambios de modalidad no modifican plantillas ni sus espejos globales. Los tres plazos del servicio se exigen explícitamente para split; el resultado y el historial identifican fuentes y documentos históricos sin sustituir documentos firmados.
 
 Descargas, copia Markdown, adjuntos del compositor, envío legado, formalización, regeneración y sincronización con la plataforma usan sólo los documentos de la modalidad activa.
 

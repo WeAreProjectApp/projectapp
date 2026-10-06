@@ -1,3 +1,10 @@
+## IVA mostrado como dinero en notificaciones (2026-10-06)
+
+El formateador del historial trataba todos los campos Decimal como importes COP,
+incluida la tasa de IVA. La tasa ahora se formatea por su campo antes de la rama
+monetaria. Las lecturas normalizan únicamente el patrón antiguo conocido del IVA,
+sin modificar registros históricos ni correos ya enviados.
+
 ## 2026-10-02 — MySQL rechaza el UUID de contexto durante el ensayo
 
 `accounts/0067` agregaba una FK UUID a una tabla histórica cuyo DEFAULT era

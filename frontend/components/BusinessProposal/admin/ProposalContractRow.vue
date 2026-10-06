@@ -7,6 +7,7 @@
         <template v-if="doc">PDF · Generado el {{ formatDate(doc.updated_at || doc.created_at) }}</template>
         <template v-else>PDF · No generado</template>
       </div>
+      <p v-if="doc" class="mt-1 text-xs text-text-muted" :data-testid="`proposal-contract-source-${variant.key}`">{{ proposal.contract_params?.[variant.sourceKey] === 'custom' ? 'Personalizado' : 'Plantilla' }}</p>
       <p v-if="doc?.needs_regeneration" class="mt-1 text-xs text-warning-strong" role="status" data-testid="proposal-service-contract-stale">
         Las condiciones del servicio cambiaron. Regenera y revisa el contrato antes de enviarlo.
       </p>

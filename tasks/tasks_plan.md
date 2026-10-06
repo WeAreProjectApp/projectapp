@@ -1,3 +1,9 @@
+> **Cobro antes de liquidación — 2026-10-06:** entrega de sesión para vínculo de
+> contratos existentes, cuenta emitida como requisito en cobros a clientes,
+> compactación de formularios y presentación de notificaciones. La validación
+> usa bases y correos de pruebas aislados; integración y despliegue se verifican
+> por separado.
+
 
 ## Eliminación selectiva de proyectos (2026-10-06)
 

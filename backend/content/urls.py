@@ -359,6 +359,11 @@ from content.views.entity_history import (
     entity_history_list, entity_history_version, entity_history_compare, entity_history_reveal, entity_history_file,
 )
 
+from content.views.proposal_contract_modality import (
+    preview_contract_change, confirm_contract_change, cancel_contract_change,
+    list_contract_snapshots, read_contract_snapshot, download_contract_snapshot,
+)
+
 from content.views.project_retention import (
     client_retained_project_data, retained_project_file, reveal_retained_project_secret,
 )
@@ -722,6 +727,12 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/contract/save-and-negotiate/', save_contract_and_negotiate, name='save-contract-and-negotiate'),
     path('proposals/<int:proposal_id>/contract/update/', update_contract_params, name='update-contract-params'),
     path('proposals/<int:proposal_id>/contract/modality/', update_contract_modality, name='update-contract-modality'),
+    path('proposals/<int:proposal_id>/contract/modality/preview/', preview_contract_change, name='preview-contract-change'),
+    path('proposals/<int:proposal_id>/contract/modality/confirm/', confirm_contract_change, name='confirm-contract-change'),
+    path('proposals/<int:proposal_id>/contract/modality/cancel/', cancel_contract_change, name='cancel-contract-change'),
+    path('proposals/<int:proposal_id>/contract/snapshots/', list_contract_snapshots, name='list-contract-snapshots'),
+    path('proposals/<int:proposal_id>/contract/snapshots/<int:snapshot_id>/', read_contract_snapshot, name='read-contract-snapshot'),
+    path('proposals/<int:proposal_id>/contract/snapshots/<int:snapshot_id>/files/<int:document_id>/', download_contract_snapshot, name='download-contract-snapshot'),
     path('proposals/<int:proposal_id>/contract/markdown/', contract_markdown, name='contract-markdown'),
     path('proposals/<int:proposal_id>/formalization/markdown/<str:kind>/', formalization_markdown, name='formalization-markdown'),
     path('proposals/<int:proposal_id>/documents/<int:doc_id>/markdown/', attachment_markdown, name='proposal-attachment-markdown'),

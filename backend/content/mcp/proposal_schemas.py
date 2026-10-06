@@ -85,6 +85,10 @@ PAYLOAD_SCHEMAS = {
     'save_proposal_contract_negotiation': object_schema({'contract_params': CONTRACT_PARAMS}, ('contract_params',)),
     'update_proposal_contract_modality': object_schema({
         'contract_modality': {'type': 'string', 'enum': ['single', 'split']},
+        'change_note': {'type': 'string', 'maxLength': 4000},
+        'contract_params': object_schema({key: CONTRACT_PARAMS['properties'][key] for key in (
+            'service_initial_term', 'service_renewal_notice_days', 'service_termination_notice_days')}),
+        'conflict_resolution': {'type': 'string', 'enum': ['use_origin']},
     }, ('contract_modality',)),
     'update_proposal_service_settings': writable_schema(CompanyServiceSettingsSerializer),
     'update_proposal_section': writable_schema(ProposalSectionUpdateSerializer, partial=True),

@@ -542,8 +542,22 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.ProposalDocument',
-            read_only='id proposal is_generated content_markdown created_at updated_at',
+            read_only='id proposal is_generated is_archived content_markdown created_at updated_at',
             read_write='document_type title file custom_type_label',
+        ),
+        _contract(
+            'content.ProposalContractSnapshot',
+            read_only='id proposal payload actor_label source change_note from_modality to_modality restored_from_id created_at',
+            excluded=_excluded(_AUDIT_INTERNAL, 'actor_id_snapshot'),
+        ),
+        _contract(
+            'content.ProposalContractSnapshotFile',
+            read_only='id snapshot source_document_id sha256',
+            excluded=_excluded('Copia PDF inmutable descargable sólo desde el historial administrativo.', 'pdf_content'),
+        ),
+        _contract(
+            'content.ProposalContractChangeIntent',
+            excluded=_excluded(_AUDIT_INTERNAL, 'id proposal owner arguments source_hash status expires_at result'),
         ),
         _contract(
             'content.ProposalFormalization',

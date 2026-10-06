@@ -695,6 +695,7 @@ import { usePanelProjectsStore } from '~/stores/panel_projects';
 import { buildExportParams } from '~/utils/accountingExportParams';
 import { describeAssignmentResult } from '~/utils/clientAssignment';
 import { describeBulkSettleResult } from '~/utils/settleAllocation';
+import { settlementBlockedReason } from '~/utils/incomeSettlement';
 import { describeProjectAssignmentResult } from '~/utils/projectAssignment';
 import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
@@ -1313,6 +1314,11 @@ const isLiquidateModalOpen = ref(false);
 const liquidatingRecord = ref(null);
 
 function openLiquidateModal(record) {
+  const reason = settlementBlockedReason(record);
+  if (reason) {
+    notify.error({ title: 'No se puede liquidar el ingreso', detail: reason });
+    return;
+  }
   liquidatingRecord.value = record;
   isLiquidateModalOpen.value = true;
 }
@@ -1640,6 +1646,10 @@ function onCollectionCreated() {
 }
 
 function goToCollectionAccount(row) {
+  if (row.collection_account_status === 'draft') {
+    navigateTo(`/panel/documents/${row.collection_account_id}/edit`);
+    return;
+  }
   navigateTo({
     path: '/panel/accounting/collections',
     query: { focus: row.collection_account_id },

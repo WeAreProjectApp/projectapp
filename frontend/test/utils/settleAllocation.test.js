@@ -30,6 +30,27 @@ describe('isSettleEligible', () => {
     expect(isSettleEligible(expectedRow({ pending_amount: '0.00' }))).toBe(false);
     expect(isSettleEligible(expectedRow({ ledger: 'gustavo' }))).toBe(false);
   });
+
+  // Falla si el abono masivo vuelve a incluir una fila de cliente sin cuenta emitida.
+  test.each(['', 'draft', 'cancelled'])(
+    'excludes a client row whose collection account is %s',
+    (collectionAccountStatus) => {
+      expect(isSettleEligible(expectedRow({
+        client: 5,
+        collection_account_status: collectionAccountStatus,
+      }))).toBe(false);
+    },
+  );
+
+  test.each(['issued', 'paid'])(
+    'includes a client row whose collection account is %s',
+    (collectionAccountStatus) => {
+      expect(isSettleEligible(expectedRow({
+        client: 5,
+        collection_account_status: collectionAccountStatus,
+      }))).toBe(true);
+    },
+  );
 });
 
 describe('sortForSettle', () => {

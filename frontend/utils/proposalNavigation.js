@@ -1,4 +1,4 @@
-const documentStatuses = ['sent', 'viewed', 'negotiating', 'accepted', 'rejected'];
+const documentStatuses = ['draft', 'sent', 'viewed', 'negotiating', 'accepted', 'rejected', 'expired', 'finished'];
 
 export const proposalNavigationGroups = [
   { id: 'general', label: 'General', sections: [{ id: 'general', label: 'General' }] },

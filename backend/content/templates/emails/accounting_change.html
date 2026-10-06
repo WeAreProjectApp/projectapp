@@ -12,10 +12,11 @@
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden; max-width:600px; width:100%;">
           <tr>
-            <td style="padding:20px 32px; background-color:{{ accent_color }}; color:#ffffff;">
+            <td style="padding:20px 32px; background-color:#f9fafb; color:#1f2933; border-bottom:1px solid #e5e7eb;">
               <h1 style="margin:0; font-size:18px; font-weight:bold;">
-                Contabilidad · {{ entity_label }} {{ action_label|lower }}
+                Contabilidad · {{ entity_label }}
               </h1>
+              <span style="display:inline-block; margin-top:8px; padding:4px 8px; border-radius:4px; background-color:{{ accent_color }}; color:#ffffff; font-size:12px;">{{ action_label }}</span>
             </td>
           </tr>
           <tr>
@@ -23,24 +24,7 @@
               <p style="margin:0 0 16px 0; font-size:15px;">
                 <strong>{{ object_repr }}</strong>
               </p>
-              <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:13px; margin-bottom:20px;">
-                <tr>
-                  <td style="padding:2px 12px 2px 0; color:#6b7280;">Entidad</td>
-                  <td style="padding:2px 0;">{{ entity_label }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:2px 12px 2px 0; color:#6b7280;">Acción</td>
-                  <td style="padding:2px 0;">{{ action_label }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:2px 12px 2px 0; color:#6b7280;">Usuario</td>
-                  <td style="padding:2px 0;">{{ actor_name }}</td>
-                </tr>
-                <tr>
-                  <td style="padding:2px 12px 2px 0; color:#6b7280;">Fecha</td>
-                  <td style="padding:2px 0;">{{ occurred_at|bogota_datetime }}</td>
-                </tr>
-              </table>
+              <p style="margin:0 0 20px; font-size:12px; color:#6b7280;">{{ actor_name }} · {{ occurred_at|bogota_datetime }}</p>
               {% if changes %}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:13px; border-collapse:collapse;">
                 <tr>
@@ -56,10 +40,10 @@
                 <tr>
                   <td style="padding:8px; border-bottom:1px solid #f3f4f6;">{{ change.label }}</td>
                   {% if is_updated or is_deleted %}
-                  <td style="padding:8px; border-bottom:1px solid #f3f4f6; color:#b91c1c;">{{ change.old|default:'(vacío)' }}</td>
+                  <td style="padding:8px; border-bottom:1px solid #f3f4f6; color:#374151;">{{ change.old|default:'(vacío)' }}</td>
                   {% endif %}
                   {% if not is_deleted %}
-                  <td style="padding:8px; border-bottom:1px solid #f3f4f6; color:{{ accent_color }};">{{ change.new|default:'(vacío)' }}</td>
+                  <td style="padding:8px; border-bottom:1px solid #f3f4f6; color:#374151;">{{ change.new|default:'(vacío)' }}</td>
                   {% endif %}
                 </tr>
                 {% endfor %}

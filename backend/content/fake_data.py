@@ -219,12 +219,16 @@ EXEMPT_MODELS = {
     # Immutable private packet copies require explicit real proposal review;
     # seeds must never fabricate approval, signatures or these retained files.
     'content.ProposalApprovalFile',
+    # Contract snapshots preserve reviewed originals; demo seeds must not
+    # fabricate contract changes, signed content or restoration evidence.
+    'content.ProposalContractSnapshot', 'content.ProposalContractSnapshotFile',
     # Ephemeral verification/confirmation/upload material and real OAuth/MCP
     # credentials must never be fabricated as reusable demo secrets.
     # Runtime replay receipts are produced by real administrative actions.
     'accounts.DeliveryOperation',
     'accounts.VerificationCode', 'content.LinkedInToken',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
+    'content.ProposalContractChangeIntent',
     'content.McpActionIntent', 'content.McpCredential', 'content.McpUpload',
 }
 

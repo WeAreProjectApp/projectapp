@@ -311,6 +311,7 @@ describe('BulkAssignBar — Registrar abono behind settleEnabled', () => {
     {
       id: 11, kind: 'expected', ledger: 'company',
       pending_amount: '500000.00', client: 5, concept: 'Kore - Fase 2',
+      collection_account_status: 'issued',
     },
     {
       id: 12, kind: 'expected', ledger: 'company',
@@ -358,6 +359,19 @@ describe('BulkAssignBar — Registrar abono behind settleEnabled', () => {
     expect(item.find('button').element.disabled).toBe(true);
     // The reason rides on the item itself: a disabled Headless UI MenuItem
     // takes no focus and swallows the pointer, so a tooltip is unreachable.
-    expect(item.text()).toContain('Para abonar se necesitan esperados con saldo pendiente.');
+    expect(item.text()).toContain('los cobros a clientes requieren una cuenta de cobro emitida.');
+  });
+
+  it('blocks a draft account before emitting a settlement request', async () => {
+    const wrapper = mountIncomes({
+      rows: [{ ...INCOME_ROWS[0], collection_account_status: 'draft' }],
+      selected: [11],
+    });
+    const item = action(wrapper, 'Registrar abono');
+
+    await runAction(wrapper, 'Registrar abono');
+
+    expect(item.find('button').element.disabled).toBe(true);
+    expect(wrapper.emitted('submit-settle')).toBeUndefined();
   });
 });

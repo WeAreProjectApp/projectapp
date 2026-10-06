@@ -1,3 +1,10 @@
+> **Cuenta de cobro antes del pago — 2026-10-06:** los ingresos esperados con
+> cliente requieren una cuenta emitida para liquidar o abonar; el envío por correo
+> no es requisito. El contrato puede registrarse explícitamente desde el cobro.
+> Fechas e importes se agrupan en los modales contables. Correos de cambios:
+> tabla anterior/nuevo neutra, etiquetas verde/azul/rojo según crear/editar/eliminar,
+> e IVA expresado en porcentajes, distinguiendo cero de tasa sin registrar.
+
 
 ## Eliminación selectiva de proyectos (2026-10-06)
 
@@ -1176,3 +1183,8 @@ El equipo puede organizar conversaciones completas en carpetas/subcarpetas por c
 Cada proyecto conserva sugerencias simples con autor, fecha, correcciones y archivo reversible. El equipo recopila versiones seleccionadas en copias internas inmutables para estudiar un futuro contrato; recopilar nunca amplía alcances ni crea aprobaciones. Audio, IA y contratación automática quedan fuera.
 
 Oculto por defecto aplica exclusivamente a URLs y accesos: producción/QA y cada URL, usuario o contraseña Django se habilitan de forma independiente por proyecto. Bugs, hosting, cobros y entregas publicadas conservan su visibilidad. La API aplica la política aunque se acceda por URL directa. Contrato completo: `docs/platform/project-ideas-access.md`.
+
+
+### Modalidad contractual posterior a negociación
+
+El equipo administrativo puede corregir single/split en cualquier estado. Fuera de negociación debe revisar el impacto, escribir una nota y confirmar. El contenido personalizado y las evidencias enviadas o firmadas se conservan. Los cambios y restauraciones guardan instantáneas permanentes consultables desde historial y MCP. No se envían documentos automáticamente ni se modifican plantillas u otras propuestas.

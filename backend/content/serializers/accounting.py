@@ -219,6 +219,9 @@ class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSer
     has_collection_account = serializers.SerializerMethodField()
     collection_account_id = serializers.SerializerMethodField()
     collection_account_number = serializers.SerializerMethodField()
+    collection_account_status = serializers.SerializerMethodField()
+    can_settle = serializers.SerializerMethodField()
+    settlement_blocked_reason = serializers.SerializerMethodField()
     client_name = serializers.SerializerMethodField()
     # None, not '': "sin proyecto" has to stay distinguishable from a blank
     # name, same convention get_client_name follows.
@@ -259,6 +262,7 @@ class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSer
             'payment_status', 'payment_status_label',
             'has_collection_account', 'collection_account_id',
             'collection_account_number',
+            'collection_account_status', 'can_settle', 'settlement_blocked_reason',
             'reminders_muted', 'reminders_muted_until',
             'reminder_last_sent_at', 'reminder_count',
             'notes', 'created_at', 'updated_at',
@@ -329,16 +333,18 @@ class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSer
                 obj._collection_account_ref = (
                     obj.__dict__['collection_account_id'],
                     obj.__dict__.get('collection_account_number') or '',
+                    obj.__dict__.get('collection_account_status'),
                 )
             else:
                 row = (
                     obj.collection_documents
+                    .filter(document_type__code='collection_account')
                     .exclude(commercial_status=Document.CommercialStatus.CANCELLED)
                     .order_by('-created_at')
-                    .values_list('id', 'public_number')
+                    .values_list('id', 'public_number', 'commercial_status')
                     .first()
                 )
-                obj._collection_account_ref = row or (None, '')
+                obj._collection_account_ref = row or (None, '', None)
         return obj._collection_account_ref
 
     def get_has_collection_account(self, obj):
@@ -349,6 +355,32 @@ class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSer
 
     def get_collection_account_number(self, obj):
         return self._collection_account(obj)[1] or None
+
+    def get_collection_account_status(self, obj):
+        return self._collection_account(obj)[2]
+
+    def get_settlement_blocked_reason(self, obj):
+        from content.services.income_settlement_policy import settlement_blocked_reason
+        account_status = self.get_collection_account_status(obj)
+        if obj.client_id:
+            eligible_account = obj.__dict__.get('has_issued_collection_account')
+            if eligible_account is None:
+                eligible_account = obj.collection_documents.filter(
+                    document_type__code='collection_account',
+                    commercial_status__in=('issued', 'paid'),
+                    client_user_id=obj.client.user_id, project_id=obj.project_id,
+                ).exists()
+            if not eligible_account:
+                account_status = None
+        return settlement_blocked_reason(
+            kind=obj.kind,
+            pending=max(obj.total_amount - (self._paid(obj) or 0), Decimal('0')),
+            client_id=obj.client_id,
+            account_status=account_status,
+        )
+
+    def get_can_settle(self, obj):
+        return not self.get_settlement_blocked_reason(obj)
 
 
 def validate_project_client_match(project, client):
@@ -1870,6 +1902,12 @@ class EmailLogSerializer(serializers.ModelSerializer):
 # ── Change log & settings ──
 
 class AccountingChangeLogSerializer(serializers.ModelSerializer):
+    changes = serializers.SerializerMethodField()
+
+    def get_changes(self, obj):
+        from content.services.accounting_display import display_accounting_changes
+        return display_accounting_changes(obj.changes)
+
     entity_type_label = serializers.CharField(
         source='get_entity_type_display', read_only=True,
     )

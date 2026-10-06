@@ -1,3 +1,9 @@
+> **Contabilidad — 2026-10-06:** opciones de cobro administrativas incluyen
+> `contract_sources` y `delivery_version`; `POST admin/billing-context/projects/:id/contracts/link/`
+> recibe fuente, versión y request_id con sesión/CSRF. Los ingresos exponen
+> `collection_account_status`, `can_settle` y `settlement_blocked_reason`. Los
+> escritores revalidan cuentas emitidas tras los locks y antes de mutar pagos.
+
 
 ## Eliminación selectiva de proyectos (2026-10-06)
 

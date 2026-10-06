@@ -15,6 +15,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import {
   ADMIN_ACCOUNTING_COLLECTION_CREATE,
@@ -167,6 +168,11 @@ function buildHandler({
     },
   },
 }) {
+  // Linking a source changes the project context. Keep that state inside this
+  // mock handler so the E2E path exercises the same refresh the UI performs
+  // after the POST instead of preloading a contract the operator has not yet
+  // linked.
+  let linkedContract = Boolean(collectionProjectContext?.linkedContract);
   return async ({ route, apiPath, method }) => {
     if (collectionProjectContext && apiPath === `admin/billing-context/projects/${collectionProjectContext.project.id}/options/` && method === 'GET') {
       return {
@@ -176,8 +182,29 @@ function buildHandler({
           project_id: collectionProjectContext.project.id,
           project_name: collectionProjectContext.project.name,
           hosting_id: null,
-          contracts: [collectionProjectContext.contract],
+          delivery_version: collectionProjectContext.deliveryVersion ?? 1,
+          contracts: linkedContract
+            ? [collectionProjectContext.contract]
+            : (collectionProjectContext.contracts ?? [collectionProjectContext.contract]),
+          contract_sources: collectionProjectContext.contractSources ?? [],
         }),
+      };
+    }
+    if (collectionProjectContext && apiPath === `admin/billing-context/projects/${collectionProjectContext.project.id}/contracts/link/` && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ method, apiPath, body });
+      if ((collectionProjectContext.linkStatus ?? 200) >= 400) {
+        return {
+          status: collectionProjectContext.linkStatus,
+          contentType: 'application/json',
+          body: JSON.stringify({ detail: 'El documento ya no se puede vincular a este proyecto.' }),
+        };
+      }
+      linkedContract = true;
+      return {
+        status: collectionProjectContext.linkStatus ?? 200,
+        contentType: 'application/json',
+        body: JSON.stringify(collectionProjectContext.contract),
       };
     }
     if (collectionProjectContext && apiPath === `admin/billing-context/projects/${collectionProjectContext.project.id}/hosting/` && method === 'GET') {
@@ -491,7 +518,8 @@ const CLIENT_SEARCH_RESULT = [
 // The view lands on the "Solo esperados" builtin tab, so the CRUD tests ask
 // for the unfiltered baseline explicitly; the landing tab has its own test.
 async function gotoIncomes(page, query = '?accounting_incomeTab=all') {
-  await page.goto(`/panel/accounting/incomes${query}`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`/en-us/panel/accounting/incomes${query}`, { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
   await expect(
     page.getByRole('heading', { name: 'Ingresos', exact: true }),
   ).toBeVisible({ timeout: 40_000 });
@@ -1602,6 +1630,55 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await expect(page.getByTestId('accounting-row-11')).toBeVisible();
   });
 
+  // Bug caught: a client income could submit a settlement before its cuenta
+  // de cobro was issued, and stayed blocked after that account was emitted.
+  test('an issued collection account unlocks settlement after the blocked state reloads', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    const rows = [incomeRow({
+      id: 21,
+      concept: 'Litigio - primera cuenta de cobro',
+      client: 5,
+      client_name: 'Marco David Camacho García',
+      total_amount: '600000.00',
+      pending_amount: '600000.00',
+      collection_account_status: null,
+      has_collection_account: false,
+      can_settle: false,
+    })];
+    await mockApi(page, buildHandler({ rows, calls }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-21').click();
+    const blockedLiquidate = page.getByTestId('income-action-liquidate-21');
+    await expect(blockedLiquidate).toBeDisabled();
+    await expect(blockedLiquidate).toContainText(
+      'Primero genera y emite una cuenta de cobro para este ingreso.',
+    );
+    await expect(page.getByTestId('income-action-generate-collection-21'))
+      .toHaveText('Generar cuenta de cobro');
+    await page.keyboard.press('Escape');
+
+    rows[0] = {
+      ...rows[0], has_collection_account: true, collection_account_status: 'issued',
+      collection_account_number: 'CC-LIT-001', can_settle: true,
+    };
+    await page.reload({ waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
+    await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toBeVisible();
+
+    await page.getByTestId('income-actions-21').click();
+    await expect(page.getByTestId('income-action-liquidate-21')).toBeEnabled();
+    await page.getByTestId('income-action-liquidate-21').click();
+    await page.getByTestId('income-liquidate-period').fill('2026-11-17');
+    await page.getByTestId('income-liquidate-submit').click();
+
+    await expect.poll(() => calls.filter((call) => (
+      call.apiPath === 'accounting/incomes/21/settle/'
+    )).length).toBe(1);
+  });
+
   test('books the shortfall of a settlement as a deduction expense', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
@@ -1937,6 +2014,105 @@ test.describe('Admin Accounting Incomes — cuenta de cobro entry point', () => 
       billing_nature: 'contract',
       contract_id: contract.id,
     });
+  });
+
+  // Bug caught: a contract document already attached to the project could not
+  // become the billing contract, trapping the operator before preview.
+  test('linking an existing project contract unlocks its collection preview', {
+    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    const project = { id: 10, name: 'Litigio' };
+    const contract = { id: 91, title: 'Contrato Marco David Camacho García', amendments: [] };
+    const client = {
+      id: 5, name: 'Marco David Camacho García', company: '', email: 'marco@litigio.test',
+      phone: '', nit: '', cedula: '123456789', is_email_placeholder: false,
+    };
+    const contractSource = {
+      id: 701, source_type: 'document', title: contract.title,
+      origin_label: 'Documento del proyecto',
+    };
+    await mockApi(page, buildHandler({
+      rows: [incomeRow({
+        has_collection_account: false, client: client.id, client_name: client.name,
+        project: project.id, project_name: project.name,
+      })],
+      calls,
+      collectionProjectContext: {
+        project, contract, client, contracts: [], contractSources: [contractSource],
+      },
+    }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-1').click();
+    await page.getByTestId('income-action-generate-collection-1').click();
+    await page.getByTestId('billing-nature').selectOption('contract');
+    await page.getByTestId('billing-link-contract-open').click();
+    await page.getByTestId('billing-link-contract-source')
+      .selectOption(`${contractSource.source_type}:${contractSource.id}`);
+    await page.getByTestId('billing-link-contract-submit').click();
+
+    await expect.poll(() => calls.filter((call) => (
+      call.apiPath === 'admin/billing-context/projects/10/contracts/link/'
+    )).length).toBe(1);
+    await expect(page.getByTestId('billing-contract')).toHaveValue(String(contract.id));
+    await page.getByTestId('collection-form-preview').click();
+    await expect(page.getByTestId('collection-preview-subject')).toContainText('PA-KORE-001');
+
+    const linkCall = calls.find((call) => call.apiPath.endsWith('/contracts/link/'));
+    expect(linkCall.body).toMatchObject({
+      source_type: contractSource.source_type,
+      source_id: contractSource.id,
+    });
+    const previewCall = calls.find((call) => call.apiPath === 'accounting/collection-accounts/preview/');
+    expect(previewCall.body).toMatchObject({
+      billing_nature: 'contract', contract_id: contract.id,
+    });
+  });
+
+  // Bug caught: a rejected contract link used to erase the billing context or
+  // let the preview run with an unregistered document.
+  test('a rejected existing-contract link keeps the context blocked before preview', {
+    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    const calls = [];
+    const project = { id: 10, name: 'Litigio' };
+    const contract = { id: 91, title: 'Contrato Marco David Camacho García', amendments: [] };
+    const client = {
+      id: 5, name: 'Marco David Camacho García', company: '', email: 'marco@litigio.test',
+      phone: '', nit: '', cedula: '123456789', is_email_placeholder: false,
+    };
+    const contractSource = {
+      id: 701, source_type: 'document', title: contract.title,
+      origin_label: 'Documento del proyecto',
+    };
+    await mockApi(page, buildHandler({
+      rows: [incomeRow({
+        has_collection_account: false, client: client.id, client_name: client.name,
+        project: project.id, project_name: project.name,
+      })],
+      calls,
+      collectionProjectContext: {
+        project, contract, client, contracts: [], contractSources: [contractSource], linkStatus: 400,
+      },
+    }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-1').click();
+    await page.getByTestId('income-action-generate-collection-1').click();
+    await page.getByTestId('billing-nature').selectOption('contract');
+    await page.getByTestId('billing-link-contract-open').click();
+    await page.getByTestId('billing-link-contract-source')
+      .selectOption(`${contractSource.source_type}:${contractSource.id}`);
+    await page.getByTestId('billing-link-contract-submit').click();
+
+    await expect(page.getByTestId('billing-link-contract-error'))
+      .toHaveText('El documento ya no se puede vincular a este proyecto.');
+    await page.getByTestId('collection-form-preview').click();
+    await expect(page.getByTestId('collection-form-project-context-error'))
+      .toContainText('Este proyecto no tiene contratos registrados.');
+    expect(calls.filter((call) => call.apiPath === 'accounting/collection-accounts/preview/'))
+      .toHaveLength(0);
   });
 
   test('a linked income swaps to Ver cuenta de cobro and navigates focused', {

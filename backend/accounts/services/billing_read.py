@@ -68,10 +68,16 @@ def project_billing_options(project_id, actor):
         amendments = amendments.filter(collection_contexts__document__in=accounts).distinct()
     contracts = contracts.prefetch_related(Prefetch('amendments', queryset=amendments))
     hosting = ProjectHosting.objects.filter(project=project).first()
-    return {'project_id': project.pk, 'project_name': project.name,
+    result = {'project_id': project.pk, 'project_name': project.name,
             'contracts': [{'id': contract.pk, 'title': contract.title,
                            'amendments': [{'id': row.pk, 'title': row.title} for row in contract.amendments.all()]} for contract in contracts],
             'hosting_id': hosting.pk if hosting else None}
+    if is_billing_admin(actor):
+        from accounts.models import DeliveryWorkspace
+        from accounts.services.billing_contracts import contract_source_options
+        result['contract_sources'] = contract_source_options(project)
+        result['delivery_version'] = DeliveryWorkspace.objects.filter(project=project).values_list('version', flat=True).first() or 0
+    return result
 
 
 def payment_data(payment):

@@ -231,6 +231,7 @@ def contract_document(proposal, variant):
     return (
         ProposalDocument.objects.filter(
             proposal=proposal, document_type=VARIANTS[variant].doc_type, is_generated=True,
+            is_archived=False,
         )
         .order_by('-updated_at', '-pk')
         .first()

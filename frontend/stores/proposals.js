@@ -1390,12 +1390,12 @@ export const useProposalStore = defineStore('proposals', {
      * @param {number} proposalId
      * @param {string} modality
      */
-    async updateContractModality(proposalId, modality) {
+    async updateContractModality(proposalId, modality, options = {}) {
       this.isUpdating = true;
       try {
         const response = await patch_request(
           `proposals/${proposalId}/contract/modality/`,
-          { contract_modality: modality },
+          { contract_modality: modality, ...options },
         );
         if (this.currentProposal?.id === proposalId) {
           this.currentProposal = response.data;
@@ -1408,6 +1408,32 @@ export const useProposalStore = defineStore('proposals', {
       } finally {
         this.isUpdating = false;
       }
+    },
+
+    async previewContractChange(proposalId, payload) {
+      const response = await create_request(`proposals/${proposalId}/contract/modality/preview/`, payload);
+      return response.data;
+    },
+
+    async confirmContractChange(proposalId, confirmationId) {
+      const response = await create_request(`proposals/${proposalId}/contract/modality/confirm/`, { confirmation_id: confirmationId });
+      if (this.currentProposal?.id === proposalId) this.currentProposal = response.data;
+      return response.data;
+    },
+
+    async cancelContractChange(proposalId, confirmationId) {
+      const response = await create_request(`proposals/${proposalId}/contract/modality/cancel/`, { confirmation_id: confirmationId });
+      return response.data;
+    },
+
+    async fetchContractSnapshots(proposalId, offset = 0) {
+      const response = await get_request(`proposals/${proposalId}/contract/snapshots/?offset=${offset}`);
+      return response.data;
+    },
+
+    async fetchContractSnapshot(proposalId, snapshotId) {
+      const response = await get_request(`proposals/${proposalId}/contract/snapshots/${snapshotId}/`);
+      return response.data;
     },
 
     /**
