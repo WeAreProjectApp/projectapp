@@ -2560,3 +2560,8 @@ ni guardas de evidencia. P6 conserva IVA y sus otros bloques de contabilidad;
 P2 reserva sólo este callsite y su frontera de validación hasta publicar el fix.
 QA focal: 36 casos aprobados en lotes de 20/16 y gate estricto del archivo nuevo
 100/100, sin errores ni advertencias; settings_test/SQLite y MAILERS locmem.
+
+
+## 2026-10-06 — Modalidad contractual en cualquier estado
+
+La implementación permite cambiar single/split en todos los estados con revisión y nota fuera de negociación. Conserva personalizados literalmente con su PDF, exige plazos explícitos del servicio y guarda instantáneas permanentes restaurables. Panel y MCP comparten el servicio transaccional. Se preservan paquetes, documentos y firmas históricos sin envío automático. La aceptación real de la propuesta 118 queda después del despliegue y requiere indicar los tres plazos del servicio.

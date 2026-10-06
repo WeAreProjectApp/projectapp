@@ -38,7 +38,7 @@
           />
         </div>
         <p v-if="customSplitNotice" class="mt-3 text-xs text-text-muted" role="note" data-testid="proposal-contract-modality-custom-notice">
-          El contrato único de esta propuesta es personalizado. Los contratos de producto y servicio parten del texto estándar; personalízalos desde «Editar parámetros» si hace falta.
+          El contrato de producto conserva el texto personalizado del contrato único. Los documentos anteriores permanecen en el historial.
         </p>
       </div>
 
@@ -196,6 +196,7 @@
         class="max-w-full mx-auto" :alt="previewTitle" />
     </MarkdownPreviewModal>
   </div>
+  <ProposalContractChangeModal v-if="pendingModality" :proposal="proposal" :modality="pendingModality" @close="pendingModality = null" @changed="modalityChanged" />
 </template>
 
 <script setup>
@@ -207,6 +208,7 @@ import DocumentMarkdownBody from '~/components/panel/documents/DocumentMarkdownB
 import { get_request } from '~/stores/services/request_http';
 import { usePanelDownload } from '~/composables/usePanelDownload';
 import ProposalFormalizationModal from './ProposalFormalizationModal.vue';
+import ProposalContractChangeModal from './ProposalContractChangeModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import {
   CONTRACT_DOC_TYPES,
@@ -251,7 +253,7 @@ const contractVariants = computed(() =>
 );
 
 function contractDocFor(variant) {
-  return props.documents.find(d => d.document_type === variant.docType) || null;
+  return props.documents.find(d => !d.is_archived && d.document_type === variant.docType) || null;
 }
 
 const contractActionsDisabled = computed(() =>
@@ -262,13 +264,18 @@ const contractActionsDisabled = computed(() =>
 const modality = computed(() => props.proposal?.contract_modality || CONTRACT_MODALITY.SINGLE);
 const showModality = computed(() => CONTRACT_MODALITY_VISIBLE_STATUSES.includes(props.proposal?.status));
 const savingModality = ref(false);
+const pendingModality = ref(null);
+function modalityChanged() {
+  pendingModality.value = null;
+  emit('refresh');
+}
 const modalityDisabled = computed(() =>
   savingModality.value || !CONTRACT_MODALITY_EDITABLE_STATUSES.includes(props.proposal?.status),
 );
 const modalityDisabledReason = computed(() => (
   savingModality.value
     ? 'Guardando la modalidad de cierre…'
-    : 'La modalidad de cierre se elige durante la negociación.'
+    : 'Espera a que termine la operación.'
 ));
 const modalityOptions = [
   { value: CONTRACT_MODALITY.SINGLE, label: 'Contrato único', testId: 'proposal-contract-modality-single' },
@@ -282,6 +289,12 @@ const customSplitNotice = computed(() => {
 async function changeModality(value) {
   // BaseSegmented also emits when the selected option is clicked again.
   if (value === modality.value || savingModality.value) return;
+  const params = props.proposal.contract_params || {};
+  const missingTerms = value === CONTRACT_MODALITY.SPLIT && ['service_initial_term', 'service_renewal_notice_days', 'service_termination_notice_days'].some(key => !String(params[key] || '').trim());
+  if (props.proposal.status !== 'negotiating' || missingTerms) {
+    pendingModality.value = value;
+    return;
+  }
   savingModality.value = true;
   const result = await proposalStore.updateContractModality(props.proposal.id, value);
   savingModality.value = false;
@@ -289,6 +302,8 @@ async function changeModality(value) {
     notify.success(value === CONTRACT_MODALITY.SPLIT
       ? 'El negocio se cierra con contrato de producto y contrato de servicio.'
       : 'El negocio se cierra con un contrato único.');
+  } else if (result.code === 'CUSTOM_CONTRACT_CONFLICT') {
+    pendingModality.value = value;
   } else {
     notify.error(result.message || 'No se pudo cambiar la modalidad de cierre.');
   }

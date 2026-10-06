@@ -92,3 +92,9 @@ for _tool in PROPOSAL_PARITY_TOOLS:
 
 from content.mcp.contract_template_tools import CONTRACT_TEMPLATE_TOOLS
 PROPOSAL_PARITY_TOOLS += CONTRACT_TEMPLATE_TOOLS
+
+from content.mcp.proposal_contract_modality_tools import configure_modality_tool, CONTRACT_SNAPSHOT_TOOLS
+for _tool in PROPOSAL_PARITY_TOOLS:
+    if _tool['name'] == 'update_proposal_contract_modality':
+        configure_modality_tool(_tool)
+PROPOSAL_PARITY_TOOLS += CONTRACT_SNAPSHOT_TOOLS

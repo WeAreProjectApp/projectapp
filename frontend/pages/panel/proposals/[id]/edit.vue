@@ -130,6 +130,7 @@
 
       <div v-if="visitedTabs.has('history')" v-show="activeTab === 'history'">
         <EntityHistoryPanel entity-type="proposal" :object-id="proposal.id" />
+        <ProposalContractSnapshots :proposal="proposal" @refresh="refreshData" />
       </div>
 
       <div v-if="visitedTabs.has('resources')" v-show="activeTab === 'resources'">
@@ -488,6 +489,7 @@ import ProposalActionsModal from '~/components/BusinessProposal/admin/ProposalAc
 import ProposalMultiSendModal from '~/components/BusinessProposal/admin/ProposalMultiSendModal.vue';
 import ProposalResendModal from '~/components/BusinessProposal/admin/ProposalResendModal.vue';
 const ProposalDocumentsTab = lazyTab(() => import('~/components/BusinessProposal/admin/ProposalDocumentsTab.vue'));
+const ProposalContractSnapshots = lazyTab(() => import('~/components/BusinessProposal/admin/ProposalContractSnapshots.vue'));
 const ProposalEmailsTab = lazyTab(() => import('~/components/BusinessProposal/admin/ProposalEmailsTab.vue'));
 const ProjectScheduleEditor = lazyTab(() => import('~/components/BusinessProposal/admin/ProjectScheduleEditor.vue'));
 import JsonStatsPanel from '~/components/BusinessProposal/admin/JsonStatsPanel.vue';

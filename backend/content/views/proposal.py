@@ -1095,6 +1095,12 @@ def delete_proposal(request, proposal_id):
     try:
         proposal.delete()
     except ProtectedError:
+        if proposal.contract_snapshots.exists():
+            return Response(
+                {'error': 'No se puede eliminar esta propuesta porque conserva instantáneas permanentes de sus contratos.',
+                 'code': 'contract_history_protected'},
+                status=status.HTTP_409_CONFLICT,
+            )
         phases = proposal.project_phases.select_related('project').all()
         phase_labels = [
             f'{ph.project.name} (fase {ph.order})'
@@ -3336,60 +3342,16 @@ def update_contract_params(request, proposal_id):
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
 def update_contract_modality(request, proposal_id):
-    """Choose whether the deal closes with one contract or with two documents.
+    """During negotiation apply directly; every other state needs a preview."""
+    from content.services import proposal_contract_modality as service
+    from content.views.proposal_contract_modality import error_response, proposal_response
 
-    Only while negotiating. Nothing is deleted: each modality keeps its
-    documents, and the chosen modality's contracts are regenerated from the
-    current parameters so the tab never shows a stale document.
-    """
-    new_value = request.data.get('contract_modality')
-    if new_value not in BusinessProposal.ContractModality.values:
-        return Response(
-            {'error': 'Modalidad de cierre inválida.', 'code': 'invalid_modality'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    with transaction.atomic():
-        proposal = get_object_or_404(BusinessProposal.objects.select_for_update(), pk=proposal_id)
-        if proposal.status != BusinessProposal.Status.NEGOTIATING:
-            return Response(
-                {
-                    'error': 'La modalidad de cierre sólo se cambia durante la negociación.',
-                    'code': 'modality_locked',
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-        old_value = proposal.contract_modality
-        if new_value != old_value:
-            if new_value == BusinessProposal.ContractModality.SPLIT and not contract_variants.split_available():
-                return Response(
-                    {
-                        'error': (
-                            'El contrato por defecto no se puede separar en producto y servicio. '
-                            'Revisa el texto de la plantilla del contrato.'
-                        ),
-                        'code': 'split_unavailable',
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
-            error = _service_conditions_error(proposal, proposal.contract_params, contract_variants.MODALITY_VARIANTS[new_value])
-            if error is not None:
-                return error
-            proposal.contract_modality = new_value
-            proposal.save(update_fields=['contract_modality', 'updated_at'])
-            log_proposal_change(
-                proposal,
-                'updated',
-                field_name='contract_modality',
-                old_value=old_value,
-                new_value=new_value,
-                actor_type='seller',
-                description=f'contract_modality: {old_value} → {new_value}',
-            )
-            _sync_active_contracts(proposal)
-
-    detail = ProposalDetailSerializer(proposal, context={'request': request, 'is_admin': True})
-    return Response(detail.data, status=status.HTTP_200_OK)
+    get_object_or_404(BusinessProposal, pk=proposal_id)
+    try:
+        proposal, result = service.apply(proposal_id, request.data, actor=request.user)
+    except service.ContractModalityError as exc:
+        return error_response(exc)
+    return Response(proposal_response(proposal, result, request))
 
 
 def _get_contract_doc(proposal, variant=contract_variants.COMBINED):

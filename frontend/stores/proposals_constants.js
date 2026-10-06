@@ -39,15 +39,9 @@ export const CONTRACT_MODALITY = Object.freeze({
   SPLIT: 'split',
 });
 
-// The modality is chosen during negotiation and stays visible afterwards.
-export const CONTRACT_MODALITY_EDITABLE_STATUSES = Object.freeze([
-  PROPOSAL_STATUS.NEGOTIATING,
-]);
-export const CONTRACT_MODALITY_VISIBLE_STATUSES = Object.freeze([
-  PROPOSAL_STATUS.NEGOTIATING,
-  PROPOSAL_STATUS.ACCEPTED,
-  PROPOSAL_STATUS.REJECTED,
-]);
+// Every proposal state can change modality; the server confirms outside negotiation.
+export const CONTRACT_MODALITY_EDITABLE_STATUSES = Object.freeze(Object.values(PROPOSAL_STATUS));
+export const CONTRACT_MODALITY_VISIBLE_STATUSES = CONTRACT_MODALITY_EDITABLE_STATUSES;
 
 export const CONTRACT_VARIANTS = Object.freeze({
   combined: Object.freeze({

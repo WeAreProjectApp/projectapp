@@ -68,14 +68,111 @@ export function json(status, body) {
 export function buildHandler(state, {
   modalityStatus = 200,
   onModality = () => {},
+  onPreview = () => {},
+  onConfirm = () => {},
+  onCancel = () => {},
   onUpdate = () => {},
   companySettings = SERVICE_SETTINGS,
   companySettingsStatuses = [],
   updateResponses = [],
+  previewResponses = [],
+  contractSnapshots = [],
+  contractSnapshotDetails = {},
   beforeUpdate = async () => {},
 } = {}) {
   let companySettingsRequests = 0;
   let updateRequests = 0;
+  let previewRequests = 0;
+  const confirmations = new Map();
+
+  function restorationSnapshot(payload) {
+    return contractSnapshotDetails[String(payload.snapshot_id)] || null;
+  }
+
+  function snapshotDocuments(snapshot) {
+    const documents = snapshot?.payload?.documents || [];
+    const docsByVariant = { combined: COMBINED, product: PRODUCT, service: SERVICE };
+    return documents.map(({ variant }) => docsByVariant[variant]).filter(Boolean);
+  }
+
+  function previewFor(payload, confirmationId) {
+    const restoring = payload.snapshot_id != null;
+    const snapshot = restoring ? restorationSnapshot(payload) : null;
+    const previous = state.proposal.contract_modality;
+    const target = restoring ? snapshot?.from_modality : payload.contract_modality;
+    const params = restoring
+      ? snapshot?.payload?.contract_params || {}
+      : { ...state.proposal.contract_params, ...(payload.contract_params || {}) };
+    const productSource = params.contract_source === 'custom' ? 'custom' : 'default';
+    return {
+      confirmation_id: confirmationId,
+      expires_at: '2026-10-06T12:10:00Z',
+      impact: {
+        previous_modality: previous,
+        contract_modality: target,
+        contracts: restoring
+          ? (snapshot?.payload?.documents || []).map((document) => ({
+            variant: document.variant,
+            action: 'restore',
+            source: document.source,
+          }))
+          : target === 'split'
+          ? [
+            { variant: 'product', action: productSource === 'custom' ? 'move' : 'create', source: productSource },
+            { variant: 'service', action: 'create', source: 'default' },
+          ]
+          : [{ variant: 'combined', action: productSource === 'custom' ? 'move' : 'create', source: productSource }],
+        archive: restoring
+          ? (state.proposal.proposal_documents || []).map((document) => ({
+            variant: document.document_type === 'contract_product' ? 'product' : document.document_type === 'contract_service' ? 'service' : 'combined',
+            document_id: document.id,
+          }))
+          : target === 'split' ? [{ variant: 'combined', document_id: COMBINED.id }] : [
+          { variant: 'product', document_id: PRODUCT.id },
+          { variant: 'service', document_id: SERVICE.id },
+        ],
+        contract_params: params,
+        warnings: ['Los documentos enviados, aprobados o firmados se conservan. Este cambio no envía documentos ni solicita nuevas firmas.'],
+        linked_documents: [],
+      },
+    };
+  }
+
+  function confirmedProposal(payload) {
+    const restoring = payload.snapshot_id != null;
+    const snapshot = restoring ? restorationSnapshot(payload) : null;
+    const target = restoring ? snapshot?.from_modality : payload.contract_modality;
+    const previousParams = state.proposal.contract_params || {};
+    const nextParams = restoring
+      ? snapshot?.payload?.contract_params || {}
+      : {
+        ...previousParams,
+        ...(payload.contract_params || {}),
+        product_contract_source: previousParams.contract_source === 'custom' ? 'custom' : 'default',
+        service_contract_source: 'default',
+      };
+    const proposal = {
+      ...state.proposal,
+      contract_modality: target,
+      contract_params: nextParams,
+      proposal_documents: restoring ? snapshotDocuments(snapshot) : target === 'split' ? [PRODUCT, SERVICE] : [COMBINED],
+    };
+    if (restoring) {
+      const snapshotId = Math.max(0, ...contractSnapshots.map(({ snapshot_id: id }) => id)) + 1;
+      contractSnapshots.unshift({
+        snapshot_id: snapshotId,
+        created_at: '2026-10-06T12:05:00Z',
+        actor: 'Admin E2E',
+        source: 'panel',
+        change_note: payload.change_note,
+        from_modality: state.proposal.contract_modality,
+        to_modality: target,
+        restored_from_id: payload.snapshot_id,
+      });
+    }
+    return proposal;
+  }
+
   return async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') return json(200, { user: { username: 'admin', is_staff: true } });
     if (apiPath === 'proposals/dashboard/') return json(200, { total: 1, conversion_rate: 100 });
@@ -104,6 +201,36 @@ export function buildHandler(state, {
         proposal_documents: payload.contract_modality === 'split' ? [COMBINED, PRODUCT] : [COMBINED],
       };
       return json(200, state.proposal);
+    }
+    if (apiPath === `proposals/${PROPOSAL_ID}/contract/modality/preview/` && method === 'POST') {
+      const payload = route.request().postDataJSON();
+      onPreview(payload);
+      const response = previewResponses[previewRequests++];
+      if (response) return response;
+      const confirmationId = `contract-change-${previewRequests}`;
+      confirmations.set(confirmationId, payload);
+      return json(200, previewFor(payload, confirmationId));
+    }
+    if (apiPath === `proposals/${PROPOSAL_ID}/contract/modality/confirm/` && method === 'POST') {
+      const { confirmation_id: confirmationId } = route.request().postDataJSON();
+      onConfirm(confirmationId);
+      const payload = confirmations.get(confirmationId);
+      if (!payload) return json(409, { error: 'La confirmación venció o fue cancelada.' });
+      state.proposal = confirmedProposal(payload);
+      return json(200, state.proposal);
+    }
+    if (apiPath === `proposals/${PROPOSAL_ID}/contract/modality/cancel/` && method === 'POST') {
+      const { confirmation_id: confirmationId } = route.request().postDataJSON();
+      onCancel(confirmationId);
+      confirmations.delete(confirmationId);
+      return json(200, { cancelled: true });
+    }
+    if (apiPath === `proposals/${PROPOSAL_ID}/contract/snapshots/` && method === 'GET') {
+      return json(200, { total: contractSnapshots.length, snapshots: contractSnapshots });
+    }
+    const snapshotMatch = apiPath.match(new RegExp(`^proposals/${PROPOSAL_ID}/contract/snapshots/(\\d+)/$`));
+    if (snapshotMatch && method === 'GET') {
+      return json(200, contractSnapshotDetails[snapshotMatch[1]] || {});
     }
     if (apiPath === `proposals/${PROPOSAL_ID}/contract/update/` && method === 'PATCH') {
       const payload = route.request().postDataJSON();

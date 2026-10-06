@@ -8044,16 +8044,20 @@ Los resultados finales de integración se registran en el PR.
 - **Módulo:** admin
 - **Rol:** admin
 - **Prioridad:** P1
-- **Ruta:** `/panel/proposals/:id/edit` → Documentos
-- **Recorrido:** abrir una propuesta en negociación; en Documentos, elegir la modalidad de cierre (`Contrato único` o `Producto y servicio`); con la separación aparecen el contrato de producto y el de servicio; generar el de servicio con su duración inicial y sus dos preavisos; volver al contrato único cuando haga falta.
-- **Display:** interruptor editable sólo en negociación y bloqueado con su motivo en aceptada o rechazada; oculto en enviada o vista. Cada contrato de la modalidad muestra copia, vista previa, descarga, borrador y parámetros propios.
-- **Success:** el cambio se guarda al instante, confirma la modalidad y muestra sus documentos; generar el contrato de servicio envía sus tres datos y el documento queda disponible.
-- **Error:** un rechazo del backend (fuera de negociación, plantilla sin texto de servicio) deja la modalidad anterior y explica el motivo; sin los tres datos del servicio el formulario no se envía.
-- **Límites:** cambiar de modalidad no borra documentos; los de la otra modalidad no se sirven ni se sincronizan a la plataforma. La vista pública "Contrato y condiciones" sigue mostrando el contrato único.
+- **Ruta:** `/panel/proposals/:id/edit` → Documentos; Seguimiento → Historial.
+- **Recorrido:** elegir contrato único o producto y servicio en cualquier estado. Fuera de negociación, escribir nota, completar los tres plazos del servicio si corresponde, revisar qué contratos se crearán, trasladarán o archivarán y confirmar o cancelar.
+- **Display:** selector disponible en todos los estados; cada contrato indica plantilla o personalizado. La vista previa advierte sobre documentos anteriores enviados o firmados. Historial ofrece instantáneas permanentes con Markdown, descarga PDF y restauración.
+- **Success:** confirmar activa los contratos elegidos, conserva exactamente texto y PDF del personalizado trasladado y guarda primero una instantánea. Restaurar recupera contratos y parámetros anteriores, conserva el estado comercial y genera otra instantánea.
+- **Error:** nota obligatoria fuera de negociación; split exige plazo inicial y ambos preavisos guardados o enviados expresamente, sin completar valores globales. Un conflicto entre personalizados exige resolución explícita. Los errores mantienen el borrador.
+- **Failure:** un fallo no aplica cambios parciales. Una vista previa vencida, cancelada o cuyos documentos cambiaron no puede confirmarse; una confirmación repetida no duplica el cambio.
+- **Límites:** conservar documentos, paquetes aprobados, firmas y envíos históricos. No enviar ni solicitar firma automáticamente, modificar plantillas o regenerar contratos de otras propuestas.
 
 #### Datos del servicio configurables
 
-Duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
+Los formularios de creación y edición de contratos conservan sus opciones
+globales. El cambio de modalidad exige los valores guardados o ingresados
+expresamente, sin usar esas preselecciones. En creación y edición,
+duración y ambos preavisos ofrecen opciones globales y **Personalizar**, que
 muestra debajo un campo de texto libre. Las preselecciones iniciales son
 9 meses / 60 / 60 días. Sólo las opciones frecuentes se envían como números;
 el servidor guarda el texto personalizado literalmente. La duración incluye
