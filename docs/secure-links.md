@@ -79,8 +79,10 @@ con credenciales ficticias guardadas en el navegador afectado.
 
 ## Seguridad
 
-- **Cifrado:** carga útil JSON cifrada con Fernet (`PROJECT_ACCESS_CIPHER_KEY`,
-  la misma llave de accesos de proyectos; no hay variable nueva). Un fallo de
+- **Cifrado:** carga útil JSON cifrada con Fernet, con la misma clave de accesos
+  y notas de proyectos. `PROJECT_ACCESS_CIPHER_KEY` conserva prioridad; si falta,
+  se lee `PRIVATE_MEDIA_ROOT/runtime-secrets/project-access.key`.
+  `PROJECT_ACCESS_CIPHER_KEY_FILE` permite indicar otra ruta privada. Un fallo de
   descifrado responde error explícito, nunca contenido vacío.
 - **Token:** `secrets.token_urlsafe(32)` en el fragmento de la URL
   (`/{locale}/secure-link/view#<token>`). No llega a nginx, Silk, Referer ni a
@@ -128,10 +130,24 @@ para fecha/actor de envío y el evento `marked_sent`. Las herramientas MCP apare
 conector Comunicaciones sin reemitir credenciales, salvo credenciales con
 `allowed_tools` restringido.
 
-`manage.py check --deploy` valida `PROJECT_ACCESS_CIPHER_KEY` mediante
+`manage.py check --deploy` valida la clave del entorno o archivo privado mediante
 `projectapp.E002`, sin imprimirla. La clave también protege los accesos y notas
 de proyectos: recuperar la existente si hay datos cifrados. Crear una nueva sólo
 tras comprobar que no hay datos dependientes. No se genera ni se rota desde la app.
+
+El archivo privado debe ser regular, sin symlinks ni hardlinks, propiedad del
+usuario del servicio o root y sin permisos de grupo/otros (recomendado: 0600;
+directorio: 0700). Mantenerlo fuera de Git y de media pública. Respaldar la
+misma clave en almacenamiento privado fuera del checkout antes de usarla; una
+nueva generación del código debe conservar ese archivo. Reiniciar los procesos
+tras instalar/restaurar una clave: el cifrador está cacheado, mientras el check
+de deploy siempre relee la configuración. Una clave de entorno inválida no se
+sustituye silenciosamente por la del archivo.
+
+Antes de generar una clave inicial comprobar, con lecturas de producción, que
+no hay claves/cargas de `SecureLink`, contraseñas antiguas de `Project`,
+contraseñas de `ProjectAdminAccess`, notas de `ProjectAccessNote` ni secretos
+en `EntityRevision.secrets`. Si existen, restaurar su clave original.
 
 ## Fuera de alcance (posibles mejoras)
 
@@ -140,7 +156,18 @@ personalizadas por cliente, varias aperturas por enlace, aviso por WhatsApp y
 purga automática.
 
 
-## Diagnóstico de creación en producción (2026-09-27)
+## Diagnóstico verificado en producción (2026-10-06)
+
+En `vps-projectapp-prod`, con ProjectApp `57bb3677`, la configuración activa y
+su fuente canónica carecían de `PROJECT_ACCESS_CIPHER_KEY`. La consulta de
+las cinco columnas cifradas y `EntityRevision.secrets` devolvió cero datos
+dependientes. La fuente canónica está versionada en el toolkit y su huella está
+sellada por Integrity; añadir ahí la clave obligaría a versionar un secreto y a
+renovar la autoridad root. El archivo privado permite conservar esa fuente.
+La corrección requiere integrarse y desplegarse; el diagnóstico y las pruebas
+aisladas no acreditan por sí solos la recuperación del sitio.
+
+## Diagnóstico previo de creación en producción (2026-09-27)
 
 Se reprodujo en tests la excepción no controlada ante una clave de cifrado
 faltante o inválida y se agregó su manejo. Esto no confirma la causa del

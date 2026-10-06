@@ -7,6 +7,23 @@ y los correos de cambios usan etiquetas por acción con datos neutros. La valida
 se realiza en SQLite aislado y navegador con fronteras HTTP simuladas; sin escrituras
 en la base desplegada ni emisión de documentos reales.
 
+# Recuperación de enlaces seguros — 06-10-2026
+
+La inspección de producción confirmó ausencia de `PROJECT_ACCESS_CIPHER_KEY`
+con código `57bb3677` y cero datos cifrados dependientes, incluido el historial.
+La fuente canónica del toolkit está versionada y sellada; la clave inicial
+debe permanecer fuera de Git. Implementación en
+`fix/06102026-secure-link-private-key`: fuente privada opcional, prioridad del
+entorno, permisos/propietario estrictos y check de deploy sin cache.
+Validación focal: 37 pruebas en tres lotes (20/15/2), incluidas creación,
+apertura única, permisos, errores de configuración, accesos de proyectos y MCP.
+Gate de los dos archivos nuevos: cero errores y cero advertencias.
+La clave inicial quedó instalada con 0600 y respaldo privado fuera del checkout;
+el código del worktree la aceptó con la configuración real, sin escribir la DB.
+Integrity stat de producción: state=ok, drift=0.
+La recuperación del sitio sigue pendiente de integración, despliegue y una
+validación real con contenido ficticio; no confundir el PR con ese cierre.
+
 # En curso — plantillas contractuales versionadas (05-10-2026)
 
 Implementación en `feat/05102026-contract-template-versions`: tres variantes
