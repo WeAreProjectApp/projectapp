@@ -7,6 +7,7 @@ from accounts.services.credential_cipher import encrypt_secret
 from content.models import BusinessProposal, ProjectRetentionContext
 from django.core.files.base import ContentFile
 from django.db import connection
+from django.test import Client
 from django.test.utils import CaptureQueriesContext
 
 
@@ -66,6 +67,30 @@ def retained_attachment(admin_user, make_client_profile):
     context.category_counts = {'accounts.deliverablefile': 1}
     context.save(update_fields=['retained_records', 'category_counts'])
     return {'profile': profile, 'context': context, 'attachment': attachment}
+
+
+@pytest.fixture
+def retained_access(admin_user, make_client_profile):
+    profile = make_client_profile(company='Credential retention client')
+    context = ProjectRetentionContext.objects.create(
+        client=profile.user,
+        original_project_id=202,
+        project_name='Archived credential project',
+        retained_records={},
+        category_counts={},
+        created_by=admin_user,
+    )
+    access = ProjectAdminAccess.objects.create(
+        project=None,
+        environment=ProjectAdminAccess.Environment.PRODUCTION,
+        admin_username='archived-admin',
+        admin_password_encrypted=encrypt_secret('retained-secret'),
+        retention_context=context,
+    )
+    context.retained_records = {'accounts.projectadminaccess': [str(access.pk)]}
+    context.category_counts = {'accounts.projectadminaccess': 1}
+    context.save(update_fields=['retained_records', 'category_counts'])
+    return {'profile': profile, 'context': context, 'access': access}
 
 
 def retained_data_url(profile):
@@ -277,25 +302,11 @@ def test_staff_cannot_reveal_retained_record_through_another_client(
     assert response.data['detail'] == 'No ProjectRetentionContext matches the given query.'
 
 
-def test_staff_reveals_encrypted_retained_access_only_on_request(admin_client, admin_user, make_client_profile):
+def test_staff_reveals_encrypted_retained_access_only_on_request(admin_client, retained_access):
     """Fails if retained administrative credentials cannot be revealed through their explicit endpoint."""
-    profile = make_client_profile(company='Credential retention client')
-    context = ProjectRetentionContext.objects.create(
-        client=profile.user,
-        original_project_id=202,
-        project_name='Archived credential project',
-        retained_records={},
-        created_by=admin_user,
-    )
-    access = ProjectAdminAccess.objects.create(
-        project=None,
-        environment=ProjectAdminAccess.Environment.PRODUCTION,
-        admin_username='archived-admin',
-        admin_password_encrypted=encrypt_secret('retained-secret'),
-        retention_context=context,
-    )
-    context.retained_records = {'accounts.projectadminaccess': [str(access.pk)]}
-    context.save(update_fields=['retained_records'])
+    profile = retained_access['profile']
+    context = retained_access['context']
+    access = retained_access['access']
 
     response = admin_client.post(
         f'{retained_data_url(profile)}{context.pk}/accesses/{access.pk}/reveal/',
@@ -306,6 +317,23 @@ def test_staff_reveals_encrypted_retained_access_only_on_request(admin_client, a
     assert response.status_code == 200
     assert response.data == {'value': 'retained-secret'}
     assert response['Cache-Control'] == 'no-store'
+
+
+def test_session_post_without_csrf_cannot_reveal_retained_secret(admin_user, retained_access):
+    """Fails if a logged-in browser can reveal a retained credential without a CSRF token."""
+    client = Client(enforce_csrf_checks=True)
+    client.force_login(admin_user)
+    profile = retained_access['profile']
+    context = retained_access['context']
+    access = retained_access['access']
+
+    response = client.post(
+        f'{retained_data_url(profile)}{context.pk}/accesses/{access.pk}/reveal/',
+    )
+
+    assert response.status_code == 403
+    assert 'CSRF' in response.json()['detail']
+    assert b'retained-secret' not in response.content
 
 
 def test_staff_downloads_file_listed_by_retention_context(admin_client, retained_attachment):
