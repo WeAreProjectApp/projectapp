@@ -1,6 +1,15 @@
 """Explicit billing context input reused across authenticated entry points."""
 from rest_framework import serializers
 
+from accounts.serializers_delivery import StrictSerializer
+
+
+class BillingContractLinkSerializer(StrictSerializer):
+    source_type = serializers.ChoiceField(choices=('document', 'proposal_document'))
+    source_id = serializers.IntegerField(min_value=1)
+    expected_version = serializers.IntegerField(min_value=0)
+    request_id = serializers.CharField(max_length=100)
+
 
 class BillingContextFields(serializers.Serializer):
     billing_nature = serializers.ChoiceField(choices=('contract', 'hosting'), required=False)

@@ -1,3 +1,5 @@
+> **Contabilidad — 2026-10-06:** la unidad se define por el campo: IVA es porcentaje, los importes son moneda. Los snapshots nuevos usan esa unidad y las lecturas del legado se proyectan sin reescribir el historial. La elegibilidad de liquidación debe coincidir en interfaz y escritor transaccional, incluyendo cliente y proyecto de la cuenta emitida.
+
 ---
 trigger: model_decision
 description: Project intelligence and lessons learned. Reference for project-specific patterns, preferences, and key insights discovered during development.

@@ -11,6 +11,7 @@ from django.conf import settings
 from django.template.loader import render_to_string
 
 from content.services import email_log_service
+from content.services.accounting_display import display_accounting_changes
 from content.services.email_delivery_service import (
     DeliveryClassification,
     EmailDeliveryGateway,
@@ -32,6 +33,12 @@ NOTIFICATION_TONE_COLORS = {
     NOTIFICATION_TONE_INCOME: '#15803d',
     NOTIFICATION_TONE_OUTFLOW: '#b45309',
     NOTIFICATION_TONE_NEUTRAL: '#1d4ed8',
+}
+
+ACTION_COLORS = {
+    'created': '#15803d',
+    'updated': '#1d4ed8',
+    'deleted': '#b91c1c',
 }
 
 _INCOME_ENTITY_TYPES = frozenset({'income'})
@@ -82,7 +89,7 @@ def build_accounting_change_context(change_log):
         'entity_label': change_log.get_entity_type_display(),
         'object_repr': change_log.object_repr,
         'actor_name': change_log.actor_username or 'Sistema',
-        'changes': change_log.changes,
+        'changes': display_accounting_changes(change_log.changes),
         'is_created': change_log.action == 'created',
         'is_updated': change_log.action == 'updated',
         'is_deleted': change_log.action == 'deleted',
@@ -90,7 +97,7 @@ def build_accounting_change_context(change_log):
         'panel_url': f'{base_url}{path}',
         'history_url': f'{base_url}/panel/accounting/history',
         'notification_tone': notification_tone,
-        'accent_color': NOTIFICATION_TONE_COLORS[notification_tone],
+        'accent_color': ACTION_COLORS.get(change_log.action, '#374151'),
     }
 
 

@@ -148,12 +148,13 @@ function buildHandler({ rows, calls, settleStatus = 201 }) {
 }
 
 async function gotoIncomes(page) {
-  await page.goto('/panel/accounting/incomes?accounting_incomeTab=all', {
+  await page.goto('/en-us/panel/accounting/incomes?accounting_incomeTab=all', {
     waitUntil: 'domcontentloaded',
   });
+  await waitForNuxtApp(page);
   await expect(
     page.getByRole('heading', { name: 'Ingresos', exact: true }),
-  ).toBeVisible({ timeout: 25_000 });
+  ).toBeVisible({ timeout: 15_000 });
 }
 
 async function openSettleModal(page, ids) {
@@ -190,6 +191,71 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     expect(settle.body.total_amount).toBe(400000);
     expect(settle.body.allocations).toEqual([{ income_id: 11, amount: 400000 }]);
     await expect(page.getByTestId('incomes-bulk-bar')).toHaveCount(0);
+  });
+
+  // Bug caught: a draft cuenta from a client row could still enter the bulk
+  // payment request even though the backend must reject that settlement.
+  test('a client row with a draft collection account keeps Registrar abono blocked', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [incomeRow({
+        id: 11, client: 5, client_name: 'Kore SAS', has_collection_account: true,
+        collection_account_status: 'draft', collection_account_number: 'CC-DRAFT-001',
+      })],
+      calls,
+    }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('accounting-select-11').check();
+    await page.getByTestId('incomes-bulk-actions').click();
+    const blockedAction = page.getByRole('menuitem', { name: 'Registrar abono' });
+    await expect(blockedAction).toBeDisabled();
+    await expect(blockedAction).toContainText(
+      'los cobros a clientes requieren una cuenta de cobro emitida.',
+    );
+    expect(calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/'))
+      .toHaveLength(0);
+  });
+
+  // Bug caught: excluding a draft client row used to remove every selected
+  // row, including client accounts that were already issued and payable.
+  test('an issued client row stays payable while a draft row is excluded', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [
+        incomeRow({
+          id: 11, client: 5, client_name: 'Kore SAS', has_collection_account: true,
+          collection_account_status: 'draft', collection_account_number: 'CC-DRAFT-001',
+        }),
+        incomeRow({
+          id: 12, concept: 'Kore - cuenta emitida', period: '2026-06',
+          period_label: 'Junio 2026', period_date: '2026-06-01',
+          client: 5, client_name: 'Kore SAS', has_collection_account: true,
+          collection_account_status: 'issued', collection_account_number: 'CC-ISSUED-001',
+        }),
+      ],
+      calls,
+    }));
+    await gotoIncomes(page);
+
+    await openSettleModal(page, [11, 12]);
+    await expect(page.getByTestId('income-bulk-settle-excluded'))
+      .toContainText('Se excluyó 1 seleccionado');
+    await expect(page.getByTestId('income-bulk-settle-modal'))
+      .toContainText('Kore - cuenta emitida');
+    await expect(page.getByTestId('income-bulk-settle-modal'))
+      .not.toContainText('Kore - Fase 2 Entrega');
+    await page.getByTestId('income-bulk-settle-submit').click();
+
+    await expect.poll(() => calls.filter((call) => (
+      call.apiPath === 'accounting/incomes/bulk-settle/'
+    )).length).toBe(1);
+    const settle = calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/');
+    expect(settle.body.allocations).toEqual([{ income_id: 12, amount: 1000000 }]);
   });
 
   test('the prefilled valor covers several incomes exactly and all turn Pagado', {
@@ -304,13 +370,15 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
       rows: [
         incomeRow({
           id: 11, total_amount: '500000.00', pending_amount: '500000.00',
-          client: 5, client_name: 'Kore SAS',
+          client: 5, client_name: 'Kore SAS', has_collection_account: true,
+          collection_account_status: 'issued',
         }),
         incomeRow({
           id: 12, concept: 'Globex - Fase 1', period: '2026-06',
           period_label: 'Junio 2026', period_date: '2026-06-01',
           total_amount: '300000.00', pending_amount: '300000.00',
-          client: 9, client_name: 'Globex',
+          client: 9, client_name: 'Globex', has_collection_account: true,
+          collection_account_status: 'issued',
         }),
       ],
       calls,

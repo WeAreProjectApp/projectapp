@@ -7,7 +7,7 @@ import { RESPONSIVE_PROFILES } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 const longConcept = 'IngresoSinEspaciosDemasiadoLargoParaLaColumnaPrioritaria20260901';
-const income = { id: 1, concept: longConcept, kind: 'expected', kind_label: 'Esperado', origin: 'hosting', client: 1, client_name: 'Cliente con nombre muy largo para confirmar prioridad responsive', project: 1, project_name: 'Proyecto fixture', total_amount: '123456789.00', paid_amount: '0.00', pending_amount: '123456789.00', payment_status: 'pending', payment_status_label: 'Pendiente', has_collection_account: false, destination: 'partners', destination_label: 'Socios', ledger: 'company', ledger_label: 'Empresa', period_date: '2026-09-01', gustavo_amount: '61728394.50', carlos_amount: '61728394.50', notes: '' };
+const income = { id: 1, concept: longConcept, kind: 'expected', kind_label: 'Esperado', origin: 'hosting', client: 1, client_name: 'Cliente con nombre muy largo para confirmar prioridad responsive', project: 1, project_name: 'Proyecto fixture', total_amount: '123456789.00', paid_amount: '0.00', pending_amount: '123456789.00', payment_status: 'pending', payment_status_label: 'Pendiente', has_collection_account: true, collection_account_status: 'issued', collection_account_number: 'CC-RESP-001', can_settle: true, destination: 'partners', destination_label: 'Socios', ledger: 'company', ledger_label: 'Empresa', period_date: '2026-09-01', gustavo_amount: '61728394.50', carlos_amount: '61728394.50', notes: '' };
 const collection = { id: 1, public_number: 'CC-RESP-001', customer_name: income.client_name, billing_concept: longConcept, total: '123456789.00', commercial_status: 'issued', commercial_status_label: 'Emitida', client: 1, client_display_name: income.client_name, project_id: 1, project_name: 'Proyecto fixture', due_date: '2026-10-01', is_overdue: false };
 const pocket = { id: 1, concept: longConcept, amount: '123456789.00', movement_date: '2026-09-01', created_at: '2026-09-01T10:00:00Z', direction: 'in', direction_label: 'Ingreso', is_linked: true };
 const collectionPreviewPdf = '/api/accounting/collection-accounts/preview/accounting-special/CC-RESP-001.pdf';
@@ -110,6 +110,15 @@ async function setup(page) {
     if (apiPath.startsWith('proposals/client-profiles/search/')) return json([{ id: 1, name: income.client_name, email: 'client@fixture.test' }]);
     return null;
   });
+}
+
+async function openIncomesFromPanel(page) {
+  await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
+  if (page.viewportSize().width < 1024) {
+    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  }
+  await page.getByRole('link', { name: 'Ingresos', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toHaveText('Ingresos');
 }
 
 test.describe('accounting compact decision special', () => {
@@ -227,9 +236,10 @@ const longModalFlows = Object.freeze([
   {
     name: 'liquidate exposes its final CTA',
     flow: 'admin-accounting-income-crud',
+    outcome: 'display',
     dialog: (page) => page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true }),
     open: async (page) => {
-      await page.goto('/en-us/panel/accounting/incomes?accounting_incomeTab=all', { waitUntil: 'domcontentloaded' });
+      await openIncomesFromPanel(page);
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-liquidate-1').click();
     },
@@ -264,7 +274,7 @@ for (const profile of RESPONSIVE_PROFILES) {
   test.describe(`accounting long modals · ${profile}`, { tag: [`@viewport:${profile}`] }, () => {
     test.use(viewportUse(profile));
     for (const modalFlow of longModalFlows) {
-      test(modalFlow.name, { tag: [`@flow:${modalFlow.flow}`, '@outcome:success', '@responsive-special:accounting', `@viewport:${profile}`, '@responsive-batch:accounting-special-2'] }, async ({ page }) => {
+      test(modalFlow.name, { tag: [`@flow:${modalFlow.flow}`, `@outcome:${modalFlow.outcome ?? 'success'}`, '@responsive-special:accounting', `@viewport:${profile}`, '@responsive-batch:accounting-special-2'] }, async ({ page }) => {
         await setup(page);
         // quality: allow-deep-link (each modal is opened from its own catalog list after mounting the responsive surface)
         const dialog = modalFlow.dialog(page);

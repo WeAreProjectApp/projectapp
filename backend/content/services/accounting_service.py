@@ -19,7 +19,7 @@ from decimal import Decimal
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import (
-    Avg, Count, DecimalField, F, Max, Min, OuterRef, Q, Subquery, Sum, Value,
+    Avg, BigIntegerField, Count, DecimalField, Exists, F, Max, Min, OuterRef, Q, Subquery, Sum, Value,
 )
 from django.db.models.functions import Coalesce, Greatest
 
@@ -259,6 +259,9 @@ def display_value(instance, field_name):
     value = getattr(instance, field_name)
     if value is None:
         return ''
+    if field_name == 'vat_rate':
+        from content.services.accounting_display import format_percentage
+        return format_percentage(value)
     if isinstance(value, bool):
         return 'Sí' if value else 'No'
     if isinstance(value, get_user_model()):
@@ -535,7 +538,8 @@ def create_record(entity_type, serializer, user, notify=True, *,
             proposed_project = serializer.validated_data.get('project')
             expected = serializer.validated_data.get('expected_income') if entity_type == EntityType.INCOME else None
             locked = lock_billing_rows(project_ids=[proposed_project.pk if proposed_project else None],
-                                       income_ids=[expected.pk] if expected else [])
+                                       income_ids=[expected.pk] if expected else [],
+                                       include_origin_documents=bool(expected))
             if proposed_project:
                 serializer.validated_data['project'] = locked.projects[proposed_project.pk]
                 validate_project_client_match(locked.projects[proposed_project.pk], serializer.validated_data.get('client'))
@@ -544,6 +548,13 @@ def create_record(entity_type, serializer, user, notify=True, *,
                     from accounts.services.billing_access import BillingConflict
                     raise BillingConflict()
                 serializer.validated_data['expected_income'] = locked.incomes[expected.pk]
+                if serializer.validated_data.get('kind') == IncomeRecord.Kind.LIQUID and not serializer.context.get('settlement'):
+                    from rest_framework.exceptions import ValidationError
+                    from content.services.income_settlement_policy import require_issued_accounts
+                    try:
+                        require_issued_accounts([locked.incomes[expected.pk]], locked.documents.values())
+                    except ValueError as exc:
+                        raise ValidationError(str(exc)) from exc
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
         if shared_pocket_movement is not None:
             instance = serializer.save(
@@ -589,18 +600,40 @@ def update_record(entity_type, instance, serializer, user, notify=True):
             from accounts.services.billing_locks import lock_billing_rows
             from accounts.services.billing_reassignment import validate_financial_reassignment
             target = serializer.validated_data.get('project')
+            expected = None
+            if entity_type == EntityType.INCOME:
+                expected = (serializer.validated_data['expected_income']
+                            if 'expected_income' in serializer.validated_data else instance.expected_income)
             locked = lock_billing_rows(
-                income_ids=[instance.pk] if entity_type == EntityType.INCOME else [],
+                income_ids=([instance.pk] + ([expected.pk] if expected else [])
+                            if entity_type == EntityType.INCOME else []),
                 hosting_ids=[instance.pk] if entity_type == EntityType.HOSTING else [],
                 project_ids=[target.pk if target else None],
                 include_income_children=True, include_origin_documents=True,
             )
             instance = (locked.incomes if entity_type == EntityType.INCOME else locked.hostings)[instance.pk]
             serializer.instance = instance
+            if (entity_type == EntityType.INCOME and 'expected_income' not in serializer.validated_data
+                    and instance.expected_income_id != (expected.pk if expected else None)):
+                from accounts.services.billing_access import BillingConflict
+                raise BillingConflict()
+            if expected and 'expected_income' in serializer.validated_data:
+                serializer.validated_data['expected_income'] = locked.incomes[expected.pk]
             if target:
                 serializer.validated_data['project'] = locked.projects[target.pk]
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
             validate_financial_reassignment(instance, serializer.validated_data)
+            if (entity_type == EntityType.INCOME and expected
+                    and serializer.validated_data.get('kind', instance.kind) == IncomeRecord.Kind.LIQUID
+                    and (instance.kind != IncomeRecord.Kind.LIQUID
+                         or expected.pk != instance.expected_income_id
+                         or serializer.validated_data.get('total_amount', instance.total_amount) > instance.total_amount)):
+                from rest_framework.exceptions import ValidationError
+                from content.services.income_settlement_policy import require_issued_accounts
+                try:
+                    require_issued_accounts([locked.incomes[expected.pk]], locked.documents.values())
+                except ValueError as exc:
+                    raise ValidationError(str(exc)) from exc
         if (
             entity_type == EntityType.INCOME
             and {'total_amount', 'vat_rate'} & serializer.validated_data.keys()
@@ -1422,6 +1455,14 @@ def collection_account_subqueries():
     return {
         'collection_account_id': Subquery(base.values('id')[:1]),
         'collection_account_number': Subquery(base.values('public_number')[:1]),
+        'collection_account_status': Subquery(base.values('commercial_status')[:1]),
+        'has_issued_collection_account': Exists(base.annotate(
+            settlement_project_id=Coalesce('project_id', Value(0), output_field=BigIntegerField()),
+        ).filter(
+            commercial_status__in=('issued', 'paid'),
+            client_user_id=OuterRef('client__user_id'),
+            settlement_project_id=Coalesce(OuterRef('project_id'), Value(0), output_field=BigIntegerField()),
+        )),
     }
 
 

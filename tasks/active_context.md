@@ -1,3 +1,12 @@
+# Cobro y liquidación de ingresos (2026-10-06)
+
+Se incorpora el vínculo explícito de contratos existentes desde la preparación de
+cuentas. Liquidación y abonos de ingresos con cliente requieren una cuenta emitida;
+los ingresos sin cliente mantienen su flujo. El historial muestra IVA en porcentajes
+y los correos de cambios usan etiquetas por acción con datos neutros. La validación
+se realiza en SQLite aislado y navegador con fronteras HTTP simuladas; sin escrituras
+en la base desplegada ni emisión de documentos reales.
+
 # En curso — plantillas contractuales versionadas (05-10-2026)
 
 Implementación en `feat/05102026-contract-template-versions`: tres variantes

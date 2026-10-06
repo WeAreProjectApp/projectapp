@@ -33,6 +33,7 @@
       </div>
 
       <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
+        <BaseFormRow :cols="2" :gap="3">
         <BaseFormField label="Valor recibido" required>
           <BaseCurrencyInput
             v-model="form.total"
@@ -51,6 +52,8 @@
           input-testid="income-bulk-settle-period"
           toggle-testid="income-bulk-settle-exact-date"
         />
+
+        </BaseFormRow>
 
         <BaseFormField
           label="Destino"
@@ -217,6 +220,7 @@ import BaseBadge from '~/components/base/BaseBadge.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
+import { settlementBlockedReason } from '~/utils/incomeSettlement';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseTextarea from '~/components/base/BaseTextarea.vue';
 import PeriodDateField from '~/components/accounting/PeriodDateField.vue';
@@ -281,8 +285,8 @@ const clientListLabel = computed(() => joinEs(clientLabels.value));
 
 const excludedNote = computed(() => (
   props.excludedCount === 1
-    ? 'Se excluyó 1 seleccionado que no aplica: solo entran esperados con saldo pendiente.'
-    : `Se excluyeron ${props.excludedCount} seleccionados que no aplican: solo entran esperados con saldo pendiente.`
+    ? 'Se excluyó 1 seleccionado: requiere saldo pendiente, contabilidad de empresa y, si tiene cliente, una cuenta de cobro emitida.'
+    : `Se excluyeron ${props.excludedCount} seleccionados: requieren saldo pendiente, contabilidad de empresa y, si tienen cliente, una cuenta de cobro emitida.`
 ));
 
 function money(value) {
@@ -384,6 +388,8 @@ const summaryState = computed(() => {
 });
 
 const submitBlockReason = computed(() => {
+  const blocked = props.records.find(row => settlementBlockedReason(row));
+  if (blocked) return `${blocked.concept}: ${settlementBlockedReason(blocked)}`;
   if (totalValue.value <= 0) {
     return 'Ingresa un valor recibido mayor a cero.';
   }

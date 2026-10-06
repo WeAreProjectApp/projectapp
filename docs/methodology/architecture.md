@@ -1,3 +1,9 @@
+> **Cobro antes de liquidación — 2026-10-06:** el servidor comparte la política de
+> liquidación entre las proyecciones de ingresos y sus escritores individuales y
+> masivos. Los contratos se vinculan explícitamente desde Contabilidad reutilizando
+> el escritor versionado del seguimiento; las consultas no crean registros. El
+> historial conserva sus hechos y corrige la presentación del IVA antiguo al leer.
+
 # Architecture — ProjectApp
 
 **2026-10-02 — autorización de cuentas:** la lectura de fases limita por

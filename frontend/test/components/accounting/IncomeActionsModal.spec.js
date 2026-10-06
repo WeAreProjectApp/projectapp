@@ -156,6 +156,42 @@ describe('IncomeActionsModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
+  // Falla si el menú deja liquidar una fila cuya cuenta de cobro aún no fue emitida.
+  it('blocks settlement until the draft collection account is emitted', async () => {
+    const record = {
+      ...EXPECTED,
+      client: 12,
+      has_collection_account: true,
+      collection_account_status: 'draft',
+      collection_account_number: 'CC-042',
+    };
+    const wrapper = mountModal(record);
+    const settle = wrapper.get('[data-testid="income-action-liquidate-42"]');
+
+    expect(settle.element.disabled).toBe(true);
+    expect(settle.text()).toContain('Primero genera y emite una cuenta de cobro para este ingreso.');
+    expect(wrapper.get('[data-testid="income-action-view-collection-42"]').text())
+      .toBe('Completar y emitir cuenta de cobro');
+
+    await settle.trigger('click');
+
+    expect(wrapper.emitted('liquidate')).toBeUndefined();
+  });
+
+  it('emits settlement for an issued collection account', async () => {
+    const record = {
+      ...EXPECTED,
+      client: 12,
+      has_collection_account: true,
+      collection_account_status: 'issued',
+    };
+    const wrapper = mountModal(record);
+
+    await wrapper.get('[data-testid="income-action-liquidate-42"]').trigger('click');
+
+    expect(wrapper.emitted('liquidate')[0]).toEqual([record]);
+  });
+
   // The detail modal carries the income's history, like every accounting menu's
   // first entry, so it reads the same as on the other tabs.
   it('names the detail entry as the income history', () => {

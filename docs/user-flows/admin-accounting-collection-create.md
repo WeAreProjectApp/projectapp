@@ -27,3 +27,7 @@ su propia fila y las fechas se agrupan sin reservar una columna vacía.
 #### IVA opcional
 
 Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propone 19%. Acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
+
+## Cobro y liquidación (2026-10-06)
+
+Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explícitamente un documento del proyecto o contrato de una propuesta vinculada y se selecciona sin duplicar el original. Un rechazo conserva el formulario; cambiar de proyecto descarta respuestas de la consulta anterior.

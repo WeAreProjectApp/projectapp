@@ -1,9 +1,12 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import CollectionAccountProjectContext from '../../../../components/accounting/billing/CollectionAccountProjectContext.vue';
 
-jest.mock('../../../../stores/services/request_http', () => ({ get_request: jest.fn() }));
+jest.mock('../../../../stores/services/request_http', () => ({
+  get_request: jest.fn(),
+  create_request: jest.fn(),
+}));
 
-const { get_request } = require('../../../../stores/services/request_http');
+const { get_request, create_request } = require('../../../../stores/services/request_http');
 
 beforeAll(() => {
   global.useLocalePath = () => (path) => path;
@@ -28,6 +31,24 @@ function mountContext(props = {}) {
       stubs: {
         BillingContextFields: { props: ['modelValue', 'options', 'payments'], template: '<div />' },
         NuxtLink: { template: '<a><slot /></a>' },
+        BaseFormField: { template: '<div><slot /></div>' },
+        BaseSelect: {
+          props: ['modelValue', 'options', 'placeholder'],
+          emits: ['update:modelValue'],
+          template: `<select v-bind="$attrs" :value="modelValue" @change="$emit('update:modelValue', $event.target.value)">
+            <option v-if="placeholder" value="">{{ placeholder }}</option>
+            <option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option>
+          </select>`,
+        },
+        BaseControlGate: {
+          props: ['reasons'],
+          template: '<div><slot :blocked="reasons.length > 0" described-by="billing-link-gate-reason" /></div>',
+        },
+        BaseButton: {
+          props: ['disabled', 'loading'],
+          emits: ['click'],
+          template: '<button type="button" :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
+        },
       },
     },
   });
@@ -86,5 +107,78 @@ describe('CollectionAccountProjectContext', () => {
     await flushPromises();
 
     expect(wrapper.emitted('update:modelValue').at(-1)[0]).toEqual({});
+  });
+
+  // Falla si un contrato fuente sigue sin poder vincularse desde la cuenta en curso.
+  it('selects the contract returned by a linked source', async () => {
+    get_request.mockImplementation((url) => {
+      if (url.includes('/hosting/')) {
+        return Promise.resolve({ data: { overview: { subscription: { associated: false, payments: [] } } } });
+      }
+      return Promise.resolve({ data: {
+        contracts: [],
+        delivery_version: 4,
+        contract_sources: [{
+          source_type: 'document', id: 31, title: 'Contrato Litigio', origin_label: 'Documento del proyecto',
+        }],
+      } });
+    });
+    create_request.mockResolvedValue({ data: { id: 88 } });
+    const wrapper = mountContext({
+      modelValue: { billing_nature: 'contract', contract_id: null },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('document:31');
+    await wrapper.get('[data-testid="billing-link-contract-submit"]').trigger('click');
+    await flushPromises();
+
+    expect(create_request).toHaveBeenCalledWith(
+      'admin/billing-context/projects/7/contracts/link/',
+      {
+        source_type: 'document',
+        source_id: 31,
+        expected_version: 4,
+        request_id: expect.stringMatching(/^billing-link-\d+-document:31$/),
+      },
+    );
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toEqual({
+      billing_nature: 'contract', contract_id: 88, amendment_id: null,
+      project_hosting_id: null, hosting_payment_id: null,
+    });
+    expect(get_request).toHaveBeenCalledTimes(3);
+  });
+
+  // Falla si un rechazo de vínculo borra la selección que el operador estaba revisando.
+  it('keeps the source form after a link rejection', async () => {
+    get_request.mockImplementation((url) => {
+      if (url.includes('/hosting/')) {
+        return Promise.resolve({ data: { overview: { subscription: { associated: false, payments: [] } } } });
+      }
+      return Promise.resolve({ data: {
+        contracts: [],
+        delivery_version: 4,
+        contract_sources: [{
+          source_type: 'document', id: 31, title: 'Contrato Litigio', origin_label: 'Documento del proyecto',
+        }],
+      } });
+    });
+    create_request.mockRejectedValue({ response: { data: { detail: 'El documento ya cambió.' } } });
+    const wrapper = mountContext({
+      modelValue: { billing_nature: 'contract', contract_id: null },
+    });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="billing-link-contract-open"]').trigger('click');
+    await wrapper.get('[data-testid="billing-link-contract-source"]').setValue('document:31');
+    await wrapper.get('[data-testid="billing-link-contract-submit"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="billing-link-contract-error"]').text())
+      .toBe('El documento ya cambió.');
+    expect(wrapper.get('[data-testid="billing-link-contract-source"]').element.value)
+      .toBe('document:31');
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
 });

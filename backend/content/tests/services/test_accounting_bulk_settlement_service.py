@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import pytest
 
-from content.models import AccountingChangeLog, IncomeRecord, PocketMovement
+from content.models import AccountingChangeLog, Document, DocumentType, IncomeRecord, PocketMovement
 from content.services import accounting_service
 from content.services.accounting_settlement_service import (
     _paid_total,
@@ -54,6 +54,19 @@ def abono(allocations, total, **overrides):
     }
     data.update(overrides)
     return data
+
+
+def issue_collection_account(income):
+    return Document.objects.create(
+        title=f'Cuenta de {income.concept}',
+        document_type=DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0],
+        commercial_status=Document.CommercialStatus.ISSUED,
+        income_record=income,
+        client_user=income.client.user,
+        project=income.project,
+    )
 
 
 class TestAbonoHappyPath:
@@ -127,6 +140,7 @@ class TestAbonoHappyPath:
         profile = make_client_profile(company='Kore SAS')
         parent = make_expected(client=profile,
                                origin=IncomeRecord.Origin.DEVELOPMENT)
+        issue_collection_account(parent)
 
         result = bulk_settle_expected_incomes(
             abono([(parent, '1000000.00')], '1000000.00'), superuser,
@@ -150,6 +164,7 @@ class TestSaldoAFavor:
                                total_amount=Decimal('500000.00'),
                                gustavo_amount=Decimal('250000.00'),
                                carlos_amount=Decimal('250000.00'))
+        issue_collection_account(parent)
 
         result = bulk_settle_expected_incomes(
             abono([(parent, '500000.00')], '700000.00'), superuser,
@@ -184,6 +199,8 @@ class TestSaldoAFavor:
         first = make_expected(client=make_client_profile(company='Kore SAS'))
         second = make_expected(client=make_client_profile(company='Globex'),
                                concept='Globex - Fase 1')
+        issue_collection_account(first)
+        issue_collection_account(second)
 
         with pytest.raises(ValueError, match='clientes mezclados'):
             bulk_settle_expected_incomes(
