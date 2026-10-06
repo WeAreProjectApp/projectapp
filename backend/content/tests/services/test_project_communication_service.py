@@ -2,9 +2,14 @@
 import pytest
 from accounts.models import Project, UserProfile
 from django.contrib.auth import get_user_model
+from rest_framework.exceptions import PermissionDenied
 
-from content.models import CommunicationThread
+from content.models import CommunicationThread, ProjectRetentionContext
 from content.services.client_communication_service import adopt_client_thread
+from content.services.project_force_deletion import (
+    force_delete_project,
+    forced_deletion_preview,
+)
 from content.services.project_communication_service import (
     ProjectCommunicationThreadUnavailable,
     ensure_project_thread,
@@ -102,17 +107,31 @@ def test_require_reports_instead_of_provisioning_silently():
         require_project_thread(project)
 
 
-def test_deleting_the_project_leaves_the_thread_as_manual():
+def test_empty_force_selection_retains_project_thread_as_read_only(superuser):
+    """Fails if an unselected project conversation becomes editable after its project is deleted."""
     client = make_client('deleted@example.com')
     project = Project.objects.create(name='Se borra', client=client.user)
     thread = CommunicationThread.objects.get(managed_project=project)
+    preview = forced_deletion_preview(project, actor=superuser, delete_keys=[])
 
-    project.delete()
+    force_delete_project(
+        project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=[],
+    )
+
     thread.refresh_from_db()
+    context = ProjectRetentionContext.objects.get(pk=thread.retention_context_id)
 
-    # SET_NULL en las dos puntas: la conversación sobrevive, degradada a suelta.
+    assert thread.project_id is None
     assert thread.managed_project_id is None
-    assert thread.thread_kind == 'manual'
+    assert thread.client_id == client.pk
+    assert context.client_id == client.user_id
+    assert context.retained_records['content.communicationthread'] == [str(thread.pk)]
+    with pytest.raises(PermissionDenied, match='sólo permiten consulta'):
+        thread.save()
 
 
 def test_client_thread_adoption_requires_a_projectless_thread():

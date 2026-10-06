@@ -1,8 +1,13 @@
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.db.models import Q
 
-from accounts.models import HostingSubscription, Payment, PaymentHistory, Project
+from accounts.models import (
+    BugReport, ChangeRequest, Deliverable, HostingSubscription, Notification,
+    Payment, PaymentHistory, Project, ProjectAccessNote, ProjectAdminAccess,
+    ProjectDataModelEntity, ProjectPhase,
+)
 from content.models import (
     AdditionalModuleShareLink,
     BlogPost,
@@ -13,11 +18,14 @@ from content.models import (
     Contact,
     Document,
     DocumentFolder,
+    DocumentStateEpisode,
     DocumentThread,
     DocumentTag,
     EmailLog,
     FinancingAgreement,
     FinancingAgreementNumberSequence,
+    HostingRecord,
+    IncomeRecord,
     LinkedInPost,
     Linktree,
     LinktreeTemplate,
@@ -25,6 +33,7 @@ from content.models import (
     McpRequestLog,
     PortfolioWork,
     ProjectBrandAsset,
+    ProjectRetentionContext,
     QRCard,
     Task,
     WebAppDiagnostic,
@@ -66,20 +75,35 @@ class Command(BaseCommand):
 
         # Signed and review PDF evidence protects documents and source messages.
         # A fake reset explicitly clears that graph before those source records.
+        project_ids = list(Project.objects.values_list('pk', flat=True))
+        retention_context_ids = list(ProjectRetentionContext.objects.values_list('pk', flat=True))
+        projects = Project.objects.filter(pk__in=project_ids)
         from accounts.management.commands._billing_seed_helpers import clear_fake_billing
-        clear_fake_billing(Project.objects.all())
+        clear_fake_billing(projects, retention_context_ids=retention_context_ids)
         from accounts.management.commands._seed_helpers import clear_fake_delivery
-        clear_fake_delivery(Project.objects.all())
+        clear_fake_delivery(projects, retention_context_ids=retention_context_ids)
         from accounts.management.commands._project_collaboration_seed import clear_fake_project_collaboration
-        clear_fake_project_collaboration(Project.objects.all())
+        clear_fake_project_collaboration(projects, retention_context_ids=retention_context_ids)
+
+        # These rows previously cascaded from Project. Their new protection is
+        # intentional; this confirmed development reset removes roots first.
+        owners = Q(project_id__in=project_ids) | Q(retention_context_id__in=retention_context_ids)
+        for model in (
+            ProjectAdminAccess, ProjectAccessNote, ProjectDataModelEntity,
+            ChangeRequest, BugReport, Notification, Deliverable, ProjectPhase,
+        ):
+            model.objects.filter(owners).delete()
+
+        from secure_links.models import SecureLink
+        SecureLink.objects.filter(owners).delete()
 
         # Order matters because of PROTECT chains:
         #   CommunicationAttachment ─PROTECT→ Document
         #   CommunicationMessage.reply_to ─PROTECT→ CommunicationMessage
         #   Payment ─PROTECT→ HostingSubscription ─PROTECT→ Project
         #   ProjectPhase ─PROTECT→ BusinessProposal
-        # So: payments → subscriptions → projects (cascades the platform graph:
-        # phases, requirements, deliverables, change requests, bugs) → proposals.
+        # Project roots are protected: clear their records before projects,
+        # then proposals. Catalog/configuration rows remain in place.
         # Break only the self-reply pointers inside the dataset being removed;
         # message deletion then cascades attachments and date corrections.
         signed_documents = FinancingAgreement.objects.exclude(
@@ -117,8 +141,6 @@ class Command(BaseCommand):
             (PaymentHistory, 'payment history'),
             (Payment, 'payments'),
             (HostingSubscription, 'hosting subscriptions'),
-            (Project, 'projects (+ platform graph)'),
-            (BusinessProposal, 'business proposals'),
             (BlogPost, 'blog posts'),
             (PortfolioWork, 'portfolio works'),
             (Task, 'tasks'),
@@ -185,6 +207,22 @@ class Command(BaseCommand):
             (ProjectBrandAsset, 'project brand resources'),
             (QRCard, 'QR cards'),
             (McpRequestLog, 'MCP request history'),
+        ):
+            deleted, _ = model.objects.all().delete()
+            self.stdout.write(self.style.SUCCESS(f'Deleted {label} ({deleted} rows)'))
+
+        # Imported/manual accounting previously survived the project's SET_NULL
+        # link. Keep that behavior; retained history remains read-only.
+        for model in (IncomeRecord, HostingRecord):
+            model.objects.exclude(source_ref='fake:accounting').filter(
+                project__isnull=False, retention_context__isnull=True,
+            ).update(project=None)
+
+        for model, label in (
+            (DocumentStateEpisode, 'project state history'),
+            (Project, 'projects'),
+            (BusinessProposal, 'business proposals'),
+            (ProjectRetentionContext, 'project retention contexts'),
         ):
             deleted, _ = model.objects.all().delete()
             self.stdout.write(self.style.SUCCESS(f'Deleted {label} ({deleted} rows)'))

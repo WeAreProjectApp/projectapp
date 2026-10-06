@@ -9,8 +9,13 @@ from decimal import Decimal
 import pytest
 from accounts.models import Project, UserProfile
 from django.contrib.auth import get_user_model
+from rest_framework.exceptions import PermissionDenied
 
-from content.models import ExpenseRecord, HostingRecord, IncomeRecord
+from content.models import ExpenseRecord, HostingRecord, IncomeRecord, ProjectRetentionContext
+from content.services.project_force_deletion import (
+    force_delete_project,
+    forced_deletion_preview,
+)
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
@@ -291,11 +296,8 @@ class TestExpectedIncomeFilter:
 
 
 class TestProjectDeletionDoesNotBlockTheLedger:
-    def test_deleting_a_project_blanks_the_label_instead_of_raising(self):
-        """SET_NULL rather than PROTECT, and that is forced rather than
-        aesthetic: `delete_fake_data` deletes every Project BEFORE the
-        accounting sweep, so PROTECT here would break the
-        create_fake_data -> delete_fake_data cycle outright."""
+    def test_empty_force_selection_retains_ledger_records(self, superuser):
+        """Fails if retaining ledger rows drops amounts or makes their former project editable."""
         from content.models import HostingRecord
 
         owner = make_client('daniel@example.com')
@@ -305,13 +307,25 @@ class TestProjectDeletionDoesNotBlockTheLedger:
             client=owner, project=project, client_name='Daniel - Mimittos',
             monthly_value=Decimal('77760.00'),
         )
+        preview = forced_deletion_preview(project, actor=superuser, delete_keys=[])
 
-        # No ProtectedError: the money is permanent, the label is not.
-        project.delete()
+        force_delete_project(
+            project.pk,
+            actor=superuser,
+            confirmation='DELETE',
+            impact_token=preview['impact_token'],
+            delete_keys=[],
+        )
 
         income.refresh_from_db()
         hosting.refresh_from_db()
-        assert income.project_id is None
-        assert hosting.project_id is None
-        # The client link, which IS PROTECT, is untouched.
-        assert income.client_id == owner.pk
+        context = ProjectRetentionContext.objects.get(pk=income.retention_context_id)
+        assert (
+            income.project_id, hosting.project_id,
+            income.client_id, hosting.client_id,
+            income.total_amount, hosting.monthly_value,
+        ) == (None, None, owner.pk, owner.pk, Decimal('1000000.00'), Decimal('77760.00'))
+        assert income.retention_context_id == hosting.retention_context_id == context.pk
+        assert context.client_id == owner.user_id
+        with pytest.raises(PermissionDenied, match='sólo permiten consulta'):
+            income.save()

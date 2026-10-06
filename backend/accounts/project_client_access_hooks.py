@@ -54,6 +54,12 @@ def revoke_admin_source(sender, instance, created, **kwargs):
 
 @receiver(post_delete, sender=ProjectAdminAccess, dispatch_uid='client_access_revoke_deleted_admin')
 def revoke_deleted_admin_source(sender, instance, **kwargs):
+    from content.services.project_file_cleanup import project_cleanup_active
+
+    # A project purge already plans the access policy and its history. Adding
+    # a revocation event here would create an unplanned protected project row.
+    if instance.project_id is None or project_cleanup_active():
+        return
     from accounts.services.project_client_access import revoke_grants
     revoke_grants(instance.project, fields=[f'{instance.environment}.{field}' for field in ('admin_url', 'admin_username', 'admin_password')])
 

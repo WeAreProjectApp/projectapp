@@ -113,10 +113,8 @@ def test_readiness_reports_suspended_projects_as_eligible(
 
 
 def test_readiness_distinguishes_a_real_empty_project_catalog(
-    admin_client, project,
+    admin_client,
 ):
-    project.delete()
-
     response = admin_client.get(reverse('project-folder-readiness'))
 
     assert response.status_code == 200

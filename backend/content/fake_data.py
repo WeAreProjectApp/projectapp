@@ -203,6 +203,9 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Provenance is created only by an explicitly confirmed forced deletion;
+    # demo generation must never fabricate a deleted project or its ownership.
+    'content.ProjectRetentionContext',
     # Retained authoring proof is created only by explicit administrative
     # source selection, never fabricated by automatic demo-data generation.
     # Authorized fake resets dissolve its protected graph in dependency order.

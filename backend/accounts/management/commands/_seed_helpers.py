@@ -258,9 +258,9 @@ def _seed_stage_document(stage, *, context, actor=None):
     )
 
 
-def clear_fake_delivery(projects):
+def clear_fake_delivery(projects, *, retention_context_ids=()):
     """Dissolve protected review evidence only during an authorized fake reset."""
-    from accounts.models import DeliveryPromptContext, DeliveryPromptSource
+    from accounts.models import DeliveryPromptContext, DeliveryPromptSource, ProjectContract
     from content.fake_data import ensure_fake_data_allowed
     from django.core.management.base import CommandError
     from django.db import transaction
@@ -268,20 +268,30 @@ def clear_fake_delivery(projects):
 
     ensure_fake_data_allowed('delivery_seed_helpers')
     project_ids = list(projects.values_list('pk', flat=True))
+    retention_context_ids = tuple(retention_context_ids)
+    owners = (
+        models.Q(project_id__in=project_ids)
+        | models.Q(retention_context_id__in=retention_context_ids)
+    )
+    contract_ids = list(
+        ProjectContract.objects.filter(owners).values_list('pk', flat=True)
+    )
     foreign_sources = DeliveryPromptSource.objects.exclude(context__project_id__in=project_ids).filter(
-        models.Q(signature_evidence__contract__project_id__in=project_ids)
-        | models.Q(signature_evidence__amendment__contract__project_id__in=project_ids),
+        models.Q(signature_evidence__contract_id__in=contract_ids)
+        | models.Q(signature_evidence__amendment__contract_id__in=contract_ids),
     )
     foreign_contexts = DeliveryPromptContext.objects.exclude(project_id__in=project_ids).filter(
-        models.Q(contract__project_id__in=project_ids)
-        | models.Q(scope__contract__project_id__in=project_ids)
-        | models.Q(stage__phase__scope__contract__project_id__in=project_ids),
+        models.Q(contract_id__in=contract_ids)
+        | models.Q(scope__contract_id__in=contract_ids)
+        | models.Q(stage__phase__scope__contract_id__in=contract_ids),
     )
     if foreign_sources.exists() or foreign_contexts.exists():
         raise CommandError('Otro proyecto conserva referencias a esta evidencia. No se borraron datos ni archivos; incluye todos los proyectos afectados o conserva esta evidencia.')
     try:
         with transaction.atomic():
-            files = _clear_fake_delivery_rows(project_ids)
+            files = _clear_fake_delivery_rows(
+                project_ids, retention_context_ids, contract_ids,
+            )
             transaction.on_commit(lambda: _delete_delivery_files(files))
     except ProtectedError as error:
         raise CommandError('La evidencia sigue referenciada fuera del reinicio autorizado. No se borraron datos ni archivos.') from error
@@ -292,7 +302,7 @@ def _delete_delivery_files(files):
         storage.delete(name)
 
 
-def _clear_fake_delivery_rows(project_ids):
+def _clear_fake_delivery_rows(project_ids, retention_context_ids, contract_ids):
     from accounts.models import (
         ContractAmendment, ContractSignatureEvidence, DeliveryDocumentLink,
         DeliveryDocumentSnapshot, DeliveryMessage, DeliveryOperation, DeliveryPhase,
@@ -300,39 +310,52 @@ def _clear_fake_delivery_rows(project_ids):
         DeliveryStage, DeliveryWorkspace, DeliveryPromptContext, DeliveryPromptSource,
         ProjectContract, Requirement, RequirementReview,
     )
+    owners = (
+        models.Q(project_id__in=project_ids)
+        | models.Q(retention_context_id__in=retention_context_ids)
+    )
     files = []
     for source in DeliveryPromptSource.objects.filter(context__project_id__in=project_ids):
         if source.file:
             files.append((source.file.storage, source.file.name))
         source.delete()
     for evidence in DeliveryReviewDocumentEvidence.objects.filter(
-        review__publication__stage__phase__scope__contract__project_id__in=project_ids,
+        review__publication__stage__phase__scope__contract_id__in=contract_ids,
     ):
         if evidence.file:
             files.append((evidence.file.storage, evidence.file.name))
         evidence.delete()
-    RequirementReview.objects.filter(requirement__stage__phase__scope__contract__project_id__in=project_ids).delete()
-    for snapshot in DeliveryDocumentSnapshot.objects.filter(publication__stage__phase__scope__contract__project_id__in=project_ids):
+    RequirementReview.objects.filter(
+        requirement__stage__phase__scope__contract_id__in=contract_ids,
+    ).delete()
+    for snapshot in DeliveryDocumentSnapshot.objects.filter(
+        publication__stage__phase__scope__contract_id__in=contract_ids,
+    ):
         if snapshot.file:
             files.append((snapshot.file.storage, snapshot.file.name))
         snapshot.delete()
     evidence = ContractSignatureEvidence.objects.filter(
-        models.Q(contract__project_id__in=project_ids) | models.Q(amendment__contract__project_id__in=project_ids),
+        models.Q(contract_id__in=contract_ids)
+        | models.Q(amendment__contract_id__in=contract_ids),
     )
     for row in evidence:
         if row.file:
             files.append((row.file.storage, row.file.name))
         row.delete()
-    DeliveryPublication.objects.filter(stage__phase__scope__contract__project_id__in=project_ids).delete()
-    DeliveryMessage.objects.filter(project_id__in=project_ids).delete()
-    DeliveryDocumentLink.objects.filter(project_id__in=project_ids).delete()
-    Requirement.objects.filter(stage__phase__scope__contract__project_id__in=project_ids).delete()
+    DeliveryPublication.objects.filter(
+        stage__phase__scope__contract_id__in=contract_ids,
+    ).delete()
+    DeliveryMessage.objects.filter(owners).delete()
+    DeliveryDocumentLink.objects.filter(owners).delete()
+    Requirement.objects.filter(
+        stage__phase__scope__contract_id__in=contract_ids,
+    ).delete()
     DeliveryPromptContext.objects.filter(project_id__in=project_ids).delete()
-    DeliveryStage.objects.filter(phase__scope__contract__project_id__in=project_ids).delete()
-    DeliveryPhase.objects.filter(scope__contract__project_id__in=project_ids).delete()
-    DeliveryScope.objects.filter(contract__project_id__in=project_ids).delete()
-    ContractAmendment.objects.filter(contract__project_id__in=project_ids).delete()
-    ProjectContract.objects.filter(project_id__in=project_ids).delete()
-    DeliveryWorkspace.objects.filter(project_id__in=project_ids).delete()
-    DeliveryOperation.objects.filter(project_id__in=project_ids).delete()
+    DeliveryStage.objects.filter(phase__scope__contract_id__in=contract_ids).delete()
+    DeliveryPhase.objects.filter(scope__contract_id__in=contract_ids).delete()
+    DeliveryScope.objects.filter(contract_id__in=contract_ids).delete()
+    ContractAmendment.objects.filter(contract_id__in=contract_ids).delete()
+    ProjectContract.objects.filter(pk__in=contract_ids).delete()
+    DeliveryWorkspace.objects.filter(owners).delete()
+    DeliveryOperation.objects.filter(owners).delete()
     return files

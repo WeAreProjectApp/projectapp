@@ -255,9 +255,9 @@ class TestUpdateCollectionAccount:
         self, admin_client, admin_user, client_user_obj,
     ):
         """Fails if a retained collection-account update replaces line items before its parent is rejected."""
-        collection_type = DocumentType.objects.create(
+        collection_type, _ = DocumentType.objects.get_or_create(
             code='collection_account',
-            name='Collection account',
+            defaults={'name': 'Collection account'},
         )
         document = Document.objects.create(
             title='Retained collection account',

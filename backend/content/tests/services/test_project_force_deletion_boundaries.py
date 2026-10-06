@@ -11,7 +11,11 @@ from accounts.models import (
     DeliveryPromptSource,
     Deliverable,
     Project,
+    ProjectAdminAccess,
+    ProjectClientAccessEvent,
+    ProjectClientAccessPolicy,
 )
+from accounts.tests.project_collaboration_helpers import context, enable, sources
 from content.models import (
     BusinessProposal,
     Document,
@@ -196,6 +200,38 @@ def test_force_delete_preserves_managed_client_root(superuser, target_project):
     client_root.refresh_from_db()
     assert client_root.managed_client_id == target_project.client_id
     assert client_root.client_user_id == target_project.client_id
+
+
+def test_force_delete_removes_client_access_graph_after_admin_access_revoke():
+    """Fails if deleting an admin access creates an unplanned client-access event that blocks project deletion."""
+    collaboration = context()
+    collaboration.admin.is_superuser = True
+    collaboration.admin.save(update_fields=['is_superuser'])
+    admin_access = sources(collaboration)
+    enable(collaboration, 'production.admin_username')
+    policy = ProjectClientAccessPolicy.objects.get(project=collaboration.project)
+    event_ids = list(ProjectClientAccessEvent.objects.filter(
+        project=collaboration.project,
+    ).values_list('pk', flat=True))
+    preview = full_preview(collaboration.project, collaboration.admin)
+
+    force_delete_project(
+        collaboration.project.pk,
+        actor=collaboration.admin,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=preview['delete_keys'],
+    )
+
+    assert not Project.objects.filter(pk=collaboration.project.pk).exists()
+    assert not ProjectAdminAccess.objects.filter(pk=admin_access.pk).exists()
+    assert not ProjectClientAccessPolicy.objects.filter(pk=policy.pk).exists()
+    assert not ProjectClientAccessEvent.objects.filter(
+        pk__in=event_ids,
+    ).exists()
+    assert not ProjectClientAccessEvent.objects.filter(
+        project_id=collaboration.project.pk,
+    ).exists()
 
 
 def test_force_delete_removes_linktree_asset_json_paths(

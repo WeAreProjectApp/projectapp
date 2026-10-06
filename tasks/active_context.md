@@ -15,6 +15,12 @@ secure_links.0005. Se aplican mediante deploy, nunca a datos reales desde el
 worktree. Las relaciones mutables permiten desvinculación explícita y usan
 PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 
+La eliminación también contempla credenciales con permisos activos: sus señales
+no crean eventos nuevos fuera del alcance ya confirmado. La revocación normal
+de una credencial sigue vigente. Los reinicios autorizados de datos de prueba
+limpian las raíces protegidas antes del proyecto, incluyen los contextos ya
+conservados y mantienen los importes manuales que sobrevivían al reinicio.
+
 # En curso — plantillas contractuales versionadas (05-10-2026)
 
 Implementación en `feat/05102026-contract-template-versions`: tres variantes
