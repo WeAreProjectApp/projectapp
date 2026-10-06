@@ -145,3 +145,7 @@ from .communication_folder import CommunicationFolder
 from .video_resource import VideoResource
 
 from .proposal_approval_file import ProposalApprovalFile
+
+from .proposal_contract_snapshot import (
+    ProposalContractSnapshot, ProposalContractSnapshotFile, ProposalContractChangeIntent,
+)

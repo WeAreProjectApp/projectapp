@@ -8,6 +8,7 @@ from django.utils import timezone
 from content.models import AccountingChangeLog, PocketMovement
 from content.serializers.accounting import (
     AccountingChangeLogSerializer,
+    IncomeRecordCreateUpdateSerializer,
     PocketMovementCreateUpdateSerializer,
 )
 from content.services import accounting_service
@@ -141,7 +142,8 @@ def test_pocket_update_persists_unchanged_direction(superuser):
     assert log.movement_direction == AccountingChangeLog.MovementDirection.OUT
 
 
-def test_created_expense_uses_outflow_accent():
+def test_created_change_uses_the_green_action_accent():
+    """Falla si una creación deja de identificarse con el acento verde de acción."""
     log = make_change_log(
         EntityType.EXPENSE,
         changes=[{
@@ -157,11 +159,13 @@ def test_created_expense_uses_outflow_accent():
         build_accounting_change_context(log),
     )
 
-    assert 'background-color:#b45309;' in html
-    assert 'color:#b45309;">$200.000' in html
+    assert 'background-color:#15803d;' in html
+    assert 'background-color:#f9fafb;' in html
+    assert 'color:#374151;">$200.000' in html
 
 
-def test_updated_income_preserves_old_value_accent():
+def test_updated_change_uses_blue_accent_with_neutral_values():
+    """Falla si actualizar un registro vuelve a colorear los valores como una alerta."""
     log = make_change_log(
         EntityType.INCOME,
         action=Action.UPDATED,
@@ -178,12 +182,13 @@ def test_updated_income_preserves_old_value_accent():
         build_accounting_change_context(log),
     )
 
-    assert 'background-color:#15803d;' in html
-    assert 'color:#b91c1c;">$100.000' in html
-    assert 'color:#15803d;">$200.000' in html
+    assert 'background-color:#1d4ed8;' in html
+    assert 'color:#374151;">$100.000' in html
+    assert 'color:#374151;">$200.000' in html
 
 
-def test_deleted_outflow_uses_outflow_header_accent():
+def test_deleted_change_uses_red_accent_and_omits_new_value_column():
+    """Falla si eliminar un registro pierde su señal roja o muestra un valor nuevo ficticio."""
     log = make_change_log(
         EntityType.POCKET,
         action=Action.DELETED,
@@ -201,6 +206,61 @@ def test_deleted_outflow_uses_outflow_header_accent():
         build_accounting_change_context(log),
     )
 
-    assert 'background-color:#b45309;' in html
-    assert 'color:#b91c1c;">$200.000' in html
+    assert 'background-color:#b91c1c;' in html
+    assert 'color:#374151;">$200.000' in html
     assert 'Valor nuevo' not in html
+
+
+def test_change_email_text_body_preserves_the_old_to_new_transition():
+    """Falla si el correo en texto pierde el contraste legible entre valor anterior y nuevo."""
+    log = make_change_log(
+        EntityType.INCOME,
+        action=Action.UPDATED,
+        changes=[{
+            'field': 'total_amount',
+            'label': 'Monto total',
+            'old': '$100.000',
+            'new': '$200.000',
+        }],
+    )
+
+    text = render_to_string(
+        'emails/accounting_change.txt',
+        build_accounting_change_context(log),
+    )
+
+    assert 'Monto total: $100.000 → $200.000' in text
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize('rate,display', [('19', '19 %'), ('5.25', '5.25 %')])
+def test_vat_update_audits_the_rate_as_a_percentage(superuser, make_income, rate, display):
+    """Falla si cambiar el IVA vuelve a guardar el valor nuevo con signo de pesos."""
+    income = make_income(vat_rate=Decimal('0'))
+    serializer = IncomeRecordCreateUpdateSerializer(
+        income, data={'vat_rate': rate}, partial=True,
+    )
+    assert serializer.is_valid(), serializer.errors
+
+    accounting_service.update_record(EntityType.INCOME, income, serializer, superuser, notify=False)
+
+    log = AccountingChangeLog.objects.get(object_id=income.pk, entity_type=EntityType.INCOME)
+    change = next(row for row in log.changes if row['field'] == 'vat_rate')
+    assert change == {'field': 'vat_rate', 'label': 'IVA (%)', 'old': '0 %', 'new': display}
+
+
+@pytest.mark.django_db
+def test_legacy_vat_email_projects_percentages_without_rewriting_the_audit():
+    """Falla si los correos muestran pesos para IVA o alteran el historial ya registrado."""
+    raw_changes = [{'field': 'vat_rate', 'label': 'IVA (%)', 'old': '$0', 'new': '$19'}]
+    log = make_change_log(EntityType.INCOME, action=Action.UPDATED, changes=raw_changes)
+    log.save()
+
+    context = build_accounting_change_context(log)
+    html = render_to_string('emails/accounting_change.html', context)
+    plain = render_to_string('emails/accounting_change.txt', context)
+
+    assert '19 %' in html
+    assert 'IVA (%): 0 % → 19 %' in plain
+    log.refresh_from_db()
+    assert log.changes == raw_changes

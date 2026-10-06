@@ -1,3 +1,9 @@
+> **Cobro antes de liquidación — 2026-10-06:** entrega de sesión para vínculo de
+> contratos existentes, cuenta emitida como requisito en cobros a clientes,
+> compactación de formularios y presentación de notificaciones. La validación
+> usa bases y correos de pruebas aislados; integración y despliegue se verifican
+> por separado.
+
 > **2026-10-05 — plantillas contractuales versionadas, en validación:** tres
 > variantes independientes; MCP con preview, confirmación, etags e historial.
 > Los documentos del gestor son de solo lectura y permanecen en Contratos.

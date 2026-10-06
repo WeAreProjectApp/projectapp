@@ -354,11 +354,12 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
+
+
+      <BaseFormRow :cols="3" :gap="3">
       <BaseFormField label="Identificación del cliente (NIT/CC)">
         <BaseInput v-model="form.client_identification" data-testid="hosting-form-identification" />
       </BaseFormField>
-
-      <BaseFormRow :cols="2" :gap="4">
         <BaseFormField label="Valor por mes" required>
           <BaseCurrencyInput v-model="form.monthly_value" data-testid="hosting-form-monthly" required />
         </BaseFormField>

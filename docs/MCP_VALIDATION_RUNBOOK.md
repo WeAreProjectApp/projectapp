@@ -205,7 +205,8 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | Slug | Herramientas | Alcance |
 |---|---:|---|
 | `operations` | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
-| `commercial` | 135 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos y correos comerciales |
+| `commercial` | 194 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
+| `proposals` | 101 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
 | `projects` | 21 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
 | `documents` | 64 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 44 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
@@ -218,10 +219,12 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `clients` | 6 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
 | `accounting` | 70 | Conector de compatibilidad: catálogo contable monolítico anterior |
 | `diagnostics` | 13 | Conector de compatibilidad: diagnósticos y secciones |
-| `proposals` | 11 | Conector de compatibilidad: propuestas y enlaces |
 | `linkedin-personal` | 7 | Conector de compatibilidad: LinkedIn personal |
 
-Los conectores canónicos nuevos nacen inactivos. Los seis slugs marcados como
+Los conteos de `commercial` y `proposals` incluyen los controles comunes y se
+verificaron contra `TOOLS_BY_SLUG` el 2026-10-06.
+
+Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
 hacia los conectores agrupados por área.
 
@@ -1045,32 +1048,53 @@ worker debe tener Chromium instalado (ver guía de plantillas).
 
 ### Documentos de propuestas — copia Markdown
 
-`ProposalDocument` y su snapshot `content_markdown` quedan explícitamente
-excluidos del contrato MCP: son archivos administrados por sesión del panel.
-La exportación no agrega herramientas MCP ni permite editar la evidencia del
-contrato a través de `contract_params`. Revisar el contrato de campos al añadir
-cualquier campo nuevo a este modelo.
+`ProposalDocument`, su `content_markdown` y su indicador `is_archived` quedan
+excluidos del CRUD genérico MCP. Los contratos activos y las instantáneas se
+consultan por sus operaciones de propuestas; el archivo y la restauración son
+responsabilidad del servicio compartido, sin escrituras directas sobre la
+evidencia retenida. Revisar el contrato de campos al añadir campos a este modelo.
 
-### Modalidad de cierre — 2026-09-26
+### Modalidad de cierre e instantáneas — 2026-10-06
 
 `BusinessProposal.contract_modality` se clasifica como lectura/escritura en el
 conector de propuestas. Se escribe sólo mediante la operación
-`update_proposal_contract_modality`, que invoca `PATCH contract/modality/`:
-- sólo en negociación; en otro estado responde `409 modality_locked`;
-- `409 split_unavailable` si la plantilla no tiene texto de servicio;
-- sin borrar documentos.
+`update_proposal_contract_modality`, que comparte el servicio transaccional del
+panel:
+- permite cambiar `single`/`split` en cualquier estado;
+- fuera de negociación exige nota y vista previa, seguida de `confirm_action`
+  o `cancel_action`; el intento pertenece al actor y rechaza datos obsoletos;
+- acepta `proposal_id`, `contract_modality`, `change_note` y los tres parámetros
+  opcionales de servicio: plazo inicial, preaviso de renovación y de terminación;
+  exige valores enviados o ya guardados, sin tomar preselecciones globales;
+- conserva literalmente el Markdown y PDF personalizado al moverlo entre
+  contrato único y producto; genera las variantes de plantilla vigentes;
+- guarda una instantánea permanente antes de cambiar y registra autor, fecha,
+  modalidades y nota; los documentos anteriores se archivan sin eliminarse;
+- la respuesta informa variantes activas, fuente `default`/`custom` y la
+  correspondencia con documentos históricos o firmados, sin envío automático.
+
+`list_proposal_contract_snapshots` pagina el historial de esta propuesta;
+`read_proposal_contract_snapshot` devuelve la evidencia anterior y su Markdown.
+`restore_proposal_contract_snapshot` exige nota y confirmación, recupera la
+instantánea revisada y conserva primero una instantánea del estado actual.
+Los tres modelos internos de instantáneas/archivos/intentos quedan excluidos
+del CRUD genérico para preservar su inmutabilidad y confirmaciones propias.
 
 `update_proposal_contract` acepta `variant` (`combined`, `product`, `service`).
 Las operaciones de render reenvían `variant` como parámetro de consulta: en
 cierre separado exigen `product` o `service` (`variant_required`) y rechazan la
 variante de la otra modalidad (`inactive_variant`).
 
-Los nuevos tipos de `ProposalDocument` (`contract_product` y `contract_service`)
-no agregan campos, así que el modelo sigue excluido del MCP.
-
 Slice focal:
 - `test_mcp_contracts.py -k "proposals or commercial or operations"`;
-- `test_proposal_contract_modality_views.py`.
+- `test_mcp_proposal_contract_modality.py`;
+- `test_proposal_contract_modality_views.py`;
+- `test_proposal_contract_change_intents.py`;
+- `test_proposal_contract_snapshots.py`.
+
+La aceptación real de la propuesta 118 requiere desplegar la migración 0281 e
+indicar los tres plazos del servicio. Procedimiento completo:
+[Modalidad contractual en cualquier estado](proposal-contract-modality.md).
 
 ### Carpetas de Comunicaciones
 

@@ -157,7 +157,7 @@ const settleEligibleIds = computed(() => {
 /** Empty string = the abono action is live. */
 const settleBlockedReason = computed(() => {
   if (!props.settleEnabled || settleEligibleIds.value.length > 0) return '';
-  return 'Para abonar se necesitan esperados con saldo pendiente.';
+  return 'Para abonar se necesitan esperados de la empresa con saldo pendiente; los cobros a clientes requieren una cuenta de cobro emitida.';
 });
 
 /**

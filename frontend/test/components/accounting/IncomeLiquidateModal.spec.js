@@ -10,10 +10,15 @@ beforeEach(() => {
 
 const PartnerSplitInputStub = {
   name: 'PartnerSplitInput',
-  props: ['total', 'gustavoAmount', 'carlosAmount'],
+  props: {
+    total: [String, Number],
+    gustavoAmount: [String, Number],
+    carlosAmount: [String, Number],
+    compact: Boolean,
+  },
   emits: ['update:total', 'update:gustavoAmount', 'update:carlosAmount'],
   template: `
-    <div data-testid="partner-split-stub">
+    <div data-testid="partner-split-stub" :data-compact="compact ? 'yes' : 'no'">
       <input data-testid="split-total" :value="total" @input="$emit('update:total', $event.target.value)" />
       <input data-testid="split-gustavo" :value="gustavoAmount" @input="$emit('update:gustavoAmount', $event.target.value)" />
       <input data-testid="split-carlos" :value="carlosAmount" @input="$emit('update:carlosAmount', $event.target.value)" />
@@ -256,13 +261,53 @@ describe('IncomeLiquidateModal', () => {
     expect(payload.carlos_amount).toBeUndefined();
   });
 
+  // Falla si la compactación visual desconecta el total o uno de los socios.
+  it('keeps every company split control in compact mode', () => {
+    const wrapper = mountModal();
+    const split = wrapper.get('[data-testid="partner-split-stub"]');
+
+    expect(split.attributes('data-compact')).toBe('yes');
+    expect(wrapper.get('[data-testid="split-total"]').element.value).toBe('600000.00');
+    expect(wrapper.get('[data-testid="split-gustavo"]').element.value).toBe('');
+    expect(wrapper.get('[data-testid="split-carlos"]').element.value).toBe('');
+  });
+
+  // Falla si la redistribución elimina la fecha al no mostrar el reparto personal.
+  it('keeps the payment date for a personal settlement', async () => {
+    const wrapper = mountModal({ record: { ...expectedRecord, ledger: 'gustavo' } });
+
+    await wrapper.find('input[type="date"]').setValue('2026-11-17');
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
+  });
+
+  // Falla si una llamada directa liquida una fila local que aún necesita cuenta emitida.
+  it('does not emit settlement when a client account is still a draft', async () => {
+    const wrapper = mountModal({
+      record: {
+        ...expectedRecord,
+        client: 12,
+        collection_account_status: 'draft',
+      },
+    });
+
+    expect(wrapper.get('[data-testid="income-liquidate-submit"]').element.disabled).toBe(true);
+    expect(wrapper.get('[data-testid="income-liquidate-submit-reason"]').text())
+      .toBe('Primero genera y emite una cuenta de cobro para este ingreso.');
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')).toBeUndefined();
+  });
+
   it('emits close when Cancelar is clicked', async () => {
     const wrapper = mountModal();
 
     const cancel = wrapper.findAll('button').find((b) => b.text() === 'Cancelar');
     await cancel.trigger('click');
 
-    expect(wrapper.emitted('close')).toBeTruthy();
+    expect(wrapper.emitted('close')).toEqual([[]]);
   });
 
   // ── Shortfall (the money that did not arrive) ──

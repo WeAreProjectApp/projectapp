@@ -139,7 +139,7 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
-      <BaseFormField label="Contabilidad">
+      <BaseFormField label="Contabilidad" class="panel-portrait:max-w-md">
         <BaseSegmented v-model="form.ledger" :options="ledgerOptions" full-width />
       </BaseFormField>
 

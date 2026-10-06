@@ -9,7 +9,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_CONTRACT_MODALITY } from '../helpers/flow-tags.js';
 
-import { PROPOSAL_ID, CONTRACT_PARAMS, COMBINED, PRODUCT, SERVICE, buildProposal, json, buildHandler, openDocuments, openDocumentsFromPanel } from '../helpers/contract-modals.js';
+import { CONTRACT_PARAMS, COMBINED, PRODUCT, SERVICE, buildProposal, json, buildHandler, openDocuments, openDocumentsFromPanel } from '../helpers/contract-modals.js';
 
 test.describe('Admin proposal contract modality', () => {
   test.beforeEach(async ({ page }) => {
@@ -20,24 +20,59 @@ test.describe('Admin proposal contract modality', () => {
     });
   });
 
-  test('switching to product and service shows both separate contracts', {
+  test('an accepted custom contract changes to split only after reviewing and confirming the impact', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
-    const state = { proposal: buildProposal() };
-    let modalityPayload = null;
-    await mockApi(page, buildHandler(state, { onModality: payload => { modalityPayload = payload; } }));
+    // Falla si una propuesta cerrada omite la confirmación o muestra fuentes contractuales equivocadas después del cambio.
+    const state = {
+      proposal: buildProposal({
+        status: 'accepted',
+        contract_params: {
+          ...CONTRACT_PARAMS,
+          contract_source: 'custom',
+          custom_contract_markdown: '# Contrato personalizado de Littigio',
+        },
+      }),
+    };
+    let previewPayload = null;
+    let confirmationId = null;
+    await mockApi(page, buildHandler(state, {
+      onPreview: payload => { previewPayload = payload; },
+      onConfirm: value => { confirmationId = value; },
+    }));
     await openDocuments(page);
     await expect(page.getByTestId('proposal-contract-row-combined')).toBeVisible();
 
     await page.getByTestId('proposal-contract-modality-split').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Cambiar modalidad de contrato' })).toHaveText('Cambiar modalidad de contrato');
+    await dialog.getByTestId('contract-change-note').fill('El cierre requiere contratos separados.');
+    await dialog.getByTestId('contract-change-service_initial_term').fill('12');
+    await dialog.getByTestId('contract-change-service_renewal_notice_days').fill('60');
+    await dialog.getByTestId('contract-change-service_termination_notice_days').fill('30');
+    await dialog.getByTestId('contract-change-preview').click();
 
-    await expect(page.getByText('El negocio se cierra con contrato de producto y contrato de servicio.')).toBeVisible({ timeout: 10_000 });
-    expect(modalityPayload).toEqual({ contract_modality: 'split' });
+    await expect(dialog.getByTestId('contract-change-impact')).toContainText('Contrato único → Producto y servicio');
+    await expect(dialog.getByTestId('contract-change-impact')).toContainText('Contrato de producto: Trasladar sin cambiar el contenido · Personalizado');
+    await expect(dialog.getByTestId('contract-change-impact')).toContainText('Contrato de servicio: Crear desde plantilla · Plantilla');
+    await dialog.getByTestId('contract-change-confirm').click();
+
+    expect(previewPayload).toEqual({
+      contract_modality: 'split',
+      change_note: 'El cierre requiere contratos separados.',
+      contract_params: {
+        service_initial_term: 12,
+        service_renewal_notice_days: 60,
+        service_termination_notice_days: 30,
+      },
+    });
+    expect(confirmationId).toBe('contract-change-1');
     await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('proposal-contract-row-combined')).toHaveCount(0);
     const product = page.getByTestId('proposal-contract-row-product');
-    await expect(product.getByRole('link', { name: /Descargar PDF|Download PDF/ })).toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=product`);
-    await expect(page.getByTestId('proposal-contract-row-service')).toContainText('PDF · No generado');
+    await expect(product.getByTestId('proposal-contract-source-product')).toHaveText('Personalizado');
+    await expect(page.getByTestId('proposal-contract-row-service').getByTestId('proposal-contract-source-service')).toHaveText('Plantilla');
+    await expect(page.getByTestId('proposal-contract-row-service')).toContainText('PDF · Generado el');
   });
 
   test('configured defaults generate numeric service terms', {
@@ -295,46 +330,222 @@ test.describe('Admin proposal contract modality', () => {
     await expect(dialog.getByRole('button', { name: 'Generar contrato', exact: true })).toBeEnabled();
   });
 
-  test('a refused separation keeps the single contract and explains why', {
+  test('cancelling the reviewed change keeps the accepted proposal on its combined contract', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
-    const state = { proposal: buildProposal() };
-    await mockApi(page, buildHandler(state, { modalityStatus: 409 }));
+    // Falla si cancelar una vista previa ya modifica la modalidad comercial o archiva el contrato único.
+    const state = { proposal: buildProposal({ status: 'accepted' }) };
+    let cancelledConfirmation = null;
+    let confirmRequests = 0;
+    await mockApi(page, buildHandler(state, {
+      onCancel: value => { cancelledConfirmation = value; },
+      onConfirm: () => { confirmRequests += 1; },
+    }));
     await openDocuments(page);
 
     await page.getByTestId('proposal-contract-modality-split').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByTestId('contract-change-note').fill('Se evaluó la separación y se canceló.');
+    await dialog.getByTestId('contract-change-service_initial_term').fill('12');
+    await dialog.getByTestId('contract-change-service_renewal_notice_days').fill('60');
+    await dialog.getByTestId('contract-change-service_termination_notice_days').fill('30');
+    await dialog.getByTestId('contract-change-preview').click();
+    await dialog.getByTestId('contract-change-cancel').click();
 
-    await expect(page.getByText('El contrato por defecto no se puede separar en producto y servicio.', { exact: false })).toBeVisible({ timeout: 10_000 });
+    expect(cancelledConfirmation).toBe('contract-change-1');
+    expect(confirmRequests).toBe(0);
+    await expect(page.getByTestId('proposal-contract-modality-single')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('proposal-contract-row-combined')).toBeVisible();
+    await expect(page.getByTestId('proposal-contract-row-product')).toHaveCount(0);
+  });
+
+  test('missing service terms keep the reviewed change open and never confirm it', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    // Falla si la validación de plazo cierra la revisión o envía una confirmación con un contrato de servicio incompleto.
+    const state = { proposal: buildProposal({ status: 'accepted' }) };
+    let confirmRequests = 0;
+    await mockApi(page, buildHandler(state, {
+      onConfirm: () => { confirmRequests += 1; },
+      previewResponses: [json(422, {
+        error: 'Faltan los plazos del contrato de servicio.',
+        details: { service_initial_term: 'Indica este dato del contrato de servicio.' },
+      })],
+    }));
+    await openDocuments(page);
+
+    await page.getByTestId('proposal-contract-modality-split').click();
+    const dialog = page.getByRole('dialog');
+    await dialog.getByTestId('contract-change-note').fill('Separar al completar las condiciones de servicio.');
+    await dialog.getByTestId('contract-change-service_renewal_notice_days').fill('60');
+    await dialog.getByTestId('contract-change-service_termination_notice_days').fill('30');
+    await dialog.getByTestId('contract-change-preview').click();
+
+    await expect(dialog.getByRole('alert')).toHaveText('Faltan los plazos del contrato de servicio.');
+    await expect(dialog.getByText('Indica este dato del contrato de servicio.')).toHaveText('Indica este dato del contrato de servicio.');
+    await expect(dialog.getByTestId('contract-change-service_renewal_notice_days')).toHaveValue('60');
+    expect(confirmRequests).toBe(0);
     await expect(page.getByTestId('proposal-contract-modality-single')).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('proposal-contract-row-combined')).toBeVisible();
   });
 
-  test('an accepted proposal shows its modality without letting it change', {
+  test('an accepted proposal displays its split documents and active contract sources', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
-    // quality: allow-deep-link (localized panel entry is followed by visible Propuestas, proposal, and Documentos navigation)
-    const state = { proposal: buildProposal({ status: 'accepted', contract_modality: 'split', proposal_documents: [COMBINED, PRODUCT, SERVICE] }) };
+    // Falla si navegar por el panel deja de mostrar los contratos separados que pertenecen a una propuesta aceptada.
+    // quality: allow-deep-link (admin dashboard is authenticated setup; the test clicks Propuestas, the proposal, then Documentos)
+    const state = { proposal: buildProposal({
+      status: 'accepted',
+      contract_modality: 'split',
+      contract_params: { ...CONTRACT_PARAMS, product_contract_source: 'custom', service_contract_source: 'default' },
+      proposal_documents: [PRODUCT, SERVICE],
+    }) };
     await mockApi(page, buildHandler(state));
     await openDocumentsFromPanel(page);
 
     await expect(page.getByTestId('proposal-contract-modality-split')).toHaveAttribute('aria-selected', 'true', { timeout: 20_000 });
-    await expect(page.getByTestId('proposal-contract-modality-single')).toBeDisabled();
+    await expect(page.getByTestId('proposal-contract-modality-single')).toBeEnabled();
     await expect(page.getByTestId('proposal-contract-row-product')).toContainText('Desarrollo e implementación del software');
-    await expect(page.getByTestId('proposal-contract-row-service').getByRole('link', { name: /Descargar PDF|Download PDF/ }))
-      .toHaveAttribute('href', `/api/proposals/${PROPOSAL_ID}/contract/pdf/?variant=service`);
+    await expect(page.getByTestId('proposal-contract-source-product')).toHaveText('Personalizado');
+    await expect(page.getByTestId('proposal-contract-source-service')).toHaveText('Plantilla');
     await expect(page.getByTestId('proposal-contract-row-combined')).toHaveCount(0);
   });
 
-  test('the switch stays hidden before the negotiation', {
+  test('proposal history lets an administrator read the preserved custom contract snapshot', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
-    // quality: allow-deep-link (localized panel entry is followed by visible Propuestas, proposal, and Documentos navigation)
+    // Falla si el historial deja de mostrar el texto personalizado que protegió antes de cambiar la modalidad.
+    // quality: allow-deep-link (admin dashboard is authenticated setup; the test clicks Propuestas, the proposal, Seguimiento and Historial)
+    const snapshot = {
+      snapshot_id: 701,
+      created_at: '2026-10-06T12:00:00Z',
+      actor: 'Admin E2E',
+      source: 'panel',
+      change_note: 'Separación aprobada con resguardo del contrato firmado.',
+      from_modality: 'single',
+      to_modality: 'split',
+      restored_from_id: null,
+    };
+    const state = { proposal: buildProposal({ status: 'accepted' }) };
+    await mockApi(page, buildHandler(state, {
+      contractSnapshots: [snapshot],
+      contractSnapshotDetails: {
+        701: {
+          ...snapshot,
+          payload: {
+            documents: [{
+              document_id: COMBINED.id,
+              title: 'Contrato único firmado',
+              source: 'custom',
+              markdown: '# Contrato firmado el 30 de septiembre de 2026',
+            }],
+          },
+        },
+      },
+    }));
+    await openDocumentsFromPanel(page);
+    await page.getByRole('tab', { name: 'Seguimiento', exact: true }).click();
+    await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+
+    const snapshots = page.getByTestId('contract-snapshots');
+    await snapshots.getByTestId('contract-snapshots-load').click();
+    await expect(snapshots).toContainText('Contrato único → Producto y servicio');
+    await expect(snapshots).toContainText('Admin E2E');
+    await expect(snapshots).toContainText('Separación aprobada con resguardo del contrato firmado.');
+    await snapshots.getByTestId('contract-snapshot-read-701').click();
+
+    const snapshotDialog = page.getByRole('dialog');
+    await expect(snapshotDialog.getByRole('heading', { name: 'Instantánea de contratos 701' })).toHaveText('Instantánea de contratos 701');
+    await expect(snapshotDialog).toContainText('Contrato único firmado · Personalizado');
+    await expect(snapshotDialog).toContainText('Contrato firmado el 30 de septiembre de 2026');
+  });
+
+  test('restoring a contract snapshot preserves the custom single contract after reviewed confirmation', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Falla si restaurar omite la revisión, no recupera el contrato personalizado o no guarda la instantánea inversa.
+    // quality: allow-deep-link (admin dashboard is authenticated setup; the test clicks Propuestas, the proposal, Seguimiento, Historial and Restaurar)
+    const singleParams = {
+      ...CONTRACT_PARAMS,
+      contract_source: 'custom',
+      custom_contract_markdown: '# Contrato firmado el 30 de septiembre de 2026',
+    };
+    const snapshot = {
+      snapshot_id: 701,
+      created_at: '2026-10-06T12:00:00Z',
+      actor: 'Admin E2E',
+      source: 'panel',
+      change_note: 'Separación aprobada con resguardo del contrato firmado.',
+      from_modality: 'single',
+      to_modality: 'split',
+      restored_from_id: null,
+    };
+    const state = { proposal: buildProposal({
+      status: 'accepted',
+      contract_modality: 'split',
+      contract_params: {
+        ...CONTRACT_PARAMS,
+        product_contract_source: 'custom',
+        product_custom_contract_markdown: singleParams.custom_contract_markdown,
+        service_contract_source: 'default',
+      },
+      proposal_documents: [PRODUCT, SERVICE],
+    }) };
+    await mockApi(page, buildHandler(state, {
+      contractSnapshots: [snapshot],
+      contractSnapshotDetails: {
+        701: {
+          ...snapshot,
+          payload: {
+            contract_params: singleParams,
+            documents: [{
+              variant: 'combined',
+              document_id: COMBINED.id,
+              title: 'Contrato único firmado',
+              source: 'custom',
+              markdown: singleParams.custom_contract_markdown,
+            }],
+          },
+        },
+      },
+    }));
+    await openDocumentsFromPanel(page);
+    await page.getByRole('tab', { name: 'Seguimiento', exact: true }).click();
+    await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+
+    const snapshots = page.getByTestId('contract-snapshots');
+    await snapshots.getByTestId('contract-snapshots-load').click();
+    await snapshots.getByTestId('contract-snapshot-restore-701').click();
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByRole('heading', { name: 'Restaurar contratos anteriores' })).toHaveText('Restaurar contratos anteriores');
+    await dialog.getByTestId('contract-change-note').fill('Se restaura el contrato firmado antes de separar documentos.');
+    await dialog.getByTestId('contract-change-preview').click();
+    await expect(dialog.getByTestId('contract-change-impact')).toContainText('Producto y servicio → Contrato único');
+    await expect(dialog.getByTestId('contract-change-impact')).toContainText('Contrato único: Restaurar copia guardada · Personalizado');
+    await dialog.getByTestId('contract-change-confirm').click();
+
+    await page.getByRole('tab', { name: 'Documentos', exact: true }).click();
+    await expect(page.getByTestId('proposal-contract-modality-single')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('proposal-contract-source-combined')).toHaveText('Personalizado');
+    await expect(page.getByTestId('proposal-contract-row-product')).toHaveCount(0);
+    await page.getByRole('tab', { name: 'Seguimiento', exact: true }).click();
+    await page.getByRole('tab', { name: 'Historial', exact: true }).click();
+    await expect(snapshots).toContainText('Producto y servicio → Contrato único');
+    await expect(snapshots).toContainText('Se restaura el contrato firmado antes de separar documentos.');
+  });
+
+  test('a sent proposal still displays the single-contract control through panel navigation', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // Falla si los estados previos a negociación vuelven a ocultar la modalidad que ahora puede cambiarse con confirmación.
+    // quality: allow-deep-link (admin dashboard is authenticated setup; the test clicks Propuestas, the proposal, then Documentos)
     const state = { proposal: buildProposal({ status: 'sent', proposal_documents: [] }) };
     await mockApi(page, buildHandler(state));
     await openDocumentsFromPanel(page);
 
     await expect(page.getByTestId('proposal-contract-row-combined')).toContainText('PDF · No generado', { timeout: 20_000 });
-    await expect(page.getByTestId('proposal-contract-modality')).toHaveCount(0);
-    await expect(page.getByTestId('proposal-generate-contract-combined')).toHaveCount(0);
+    await expect(page.getByTestId('proposal-contract-modality')).toHaveCount(1);
+    await expect(page.getByTestId('proposal-contract-modality-single')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.getByTestId('proposal-contract-modality-split')).toBeEnabled();
   });
 });

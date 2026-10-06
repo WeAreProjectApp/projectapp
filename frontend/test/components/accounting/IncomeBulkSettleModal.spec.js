@@ -12,6 +12,7 @@ function expectedRow(overrides = {}) {
     pending_amount: '500000.00',
     client: 5,
     client_name: 'Kore SAS',
+    collection_account_status: 'issued',
     ...overrides,
   };
 }
@@ -259,6 +260,24 @@ describe('IncomeBulkSettleModal', () => {
     const wrapper = mountModal({ excludedCount: 2 });
 
     expect(wrapper.find('[data-testid="income-bulk-settle-excluded"]').text())
-      .toContain('Se excluyeron 2 seleccionados que no aplican');
+      .toBe('Se excluyeron 2 seleccionados: requieren saldo pendiente, contabilidad de empresa y, si tienen cliente, una cuenta de cobro emitida.');
+  });
+
+  // Falla si un reparto ya abierto acepta una fila que el servidor rechazará.
+  it('blocks submit for a selected draft account', () => {
+    const blocked = expectedRow({
+      id: 31,
+      concept: 'Litigio - Primera cuenta',
+      client: 9,
+      client_name: 'Marco David Camacho García',
+      collection_account_status: 'draft',
+    });
+    const wrapper = mountModal({ records: [THREE_RECORDS[0], blocked], excludedCount: 1 });
+
+    expect(wrapper.get('[data-testid="income-bulk-settle-submit"]').element.disabled).toBe(true);
+    expect(wrapper.get('[data-testid="income-bulk-settle-submit-reason"]').text())
+      .toBe('Litigio - Primera cuenta: Primero genera y emite una cuenta de cobro para este ingreso.');
+    expect(wrapper.get('[data-testid="income-bulk-settle-excluded"]').text())
+      .toBe('Se excluyó 1 seleccionado: requiere saldo pendiente, contabilidad de empresa y, si tiene cliente, una cuenta de cobro emitida.');
   });
 });

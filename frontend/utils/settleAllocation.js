@@ -2,6 +2,7 @@
 // distribution the modal pre-fills, and the success-toast copy. No Vue on
 // purpose — the modal, the bar and the page must agree on these rules, and
 // a composable would drag reactivity into what is plain arithmetic.
+import { settlementBlockedReason } from './incomeSettlement';
 
 // An abono lands in the company pocket, so only company expected incomes
 // with something left to collect qualify (the liquidate modal enforces the
@@ -11,6 +12,7 @@ export function isSettleEligible(row) {
     row?.kind === 'expected'
     && Number(row.pending_amount) > 0
     && row.ledger === 'company'
+    && !settlementBlockedReason(row)
   );
 }
 

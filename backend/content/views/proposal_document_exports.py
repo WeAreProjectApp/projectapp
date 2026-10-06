@@ -43,7 +43,8 @@ def contract_markdown(request, proposal_id):
     if not document.file or not document.file.storage.exists(document.file.name):
         return private_response({'error': 'El archivo ya no está disponible.', 'code': 'file_missing'}, 404)
     if document.content_markdown:
-        return markdown_response(lambda: export_payload(document.title, document.content_markdown))
+        # Saved contract text is evidence: preserve whitespace and line endings.
+        return private_response({'title': document.title, 'markdown': document.content_markdown, 'warnings': []})
     return markdown_response(lambda: extract_attachment_markdown(document))
 
 
