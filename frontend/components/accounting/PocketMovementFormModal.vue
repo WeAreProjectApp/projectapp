@@ -118,9 +118,8 @@ const modalFormId = useId();
       </BaseFormField>
 
       <BaseFormRow
-        :cols="2"
-        :gap="4"
-        at="sm"
+        :cols="3"
+        :gap="3"
         :help="directionLocked ? 'La dirección se fija al crear el movimiento vinculado.' : ''"
       >
         <BaseFormField label="Fecha" required>
@@ -135,6 +134,9 @@ const modalFormId = useId();
             full-width
           />
         </BaseFormField>
+      <BaseFormField label="Valor" required>
+        <BaseCurrencyInput v-model="form.amount" required />
+      </BaseFormField>
       </BaseFormRow>
 
       <BaseFormField v-if="showLedger" :label="ledgerLabel" required>
@@ -155,9 +157,7 @@ const modalFormId = useId();
         </p>
       </BaseFormField>
 
-      <BaseFormField label="Valor" required>
-        <BaseCurrencyInput v-model="form.amount" required />
-      </BaseFormField>
+
 
       <BaseFormField label="Notas">
         <BaseTextarea v-model="form.notes" :rows="3" />

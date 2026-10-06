@@ -51,6 +51,7 @@ from content.serializers.accounting import (
     split_half,
 )
 from content.services import accounting_service
+from content.services.income_settlement_policy import require_issued_accounts
 
 EntityType = AccountingChangeLog.EntityType
 
@@ -186,6 +187,8 @@ def settle_expected_income(income, data, user):
             'esperados no puede superar el saldo pendiente '
             f'(${pending:,.2f}).'
         )
+
+    require_issued_accounts([income], locked.documents.values())
 
     # After every refusal and before anything is created: a settlement that
     # will not happen must not leave the parent altered.
@@ -538,6 +541,7 @@ def bulk_settle_expected_incomes(data, user):
                 f'pendiente (${pending:,.2f}).'
             )
 
+    require_issued_accounts(parents, locked.documents.values())
     allocated = sum(amounts.values(), Decimal('0'))
     excess = data['total_amount'] - allocated
     credit_client = None

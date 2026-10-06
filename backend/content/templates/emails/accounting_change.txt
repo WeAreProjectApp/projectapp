@@ -1,10 +1,8 @@
 {% load date_filters %}[Contabilidad] {{ entity_label }} {{ action_label|lower }}: {{ object_repr }}
 
 Registro:  {{ object_repr }}
-Entidad:   {{ entity_label }}
-Acción:    {{ action_label }}
-Usuario:   {{ actor_name }}
-Fecha:     {{ occurred_at|bogota_datetime }}
+{{ action_label }} · {{ entity_label }}
+{{ actor_name }} · {{ occurred_at|bogota_datetime }}
 {% if changes %}
 Cambios:
 {% for change in changes %}- {{ change.label }}: {% if is_updated %}{{ change.old|default:"(vacío)" }} → {{ change.new|default:"(vacío)" }}{% elif is_deleted %}{{ change.old }}{% else %}{{ change.new }}{% endif %}

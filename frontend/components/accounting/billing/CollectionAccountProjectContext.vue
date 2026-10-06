@@ -1,7 +1,8 @@
 <script setup>
 import { computed, ref, watch } from 'vue'
+import BaseButton from '~/components/base/BaseButton.vue'
 import BillingContextFields from './BillingContextFields.vue'
-import { get_request } from '~/stores/services/request_http'
+import { get_request, create_request } from '~/stores/services/request_http'
 const props = defineProps({
   projectId: { type: [String, Number], default: null },
   modelValue: { type: Object, required: true },
@@ -13,6 +14,14 @@ const options = ref(null)
 const payments = ref([])
 const error = ref('')
 const loading = ref(false)
+const sourceValue = ref('')
+const linking = ref(false)
+const showLinkForm = ref(false)
+const linkError = ref('')
+const sourceOptions = computed(() => (options.value?.contract_sources || []).map(source => ({
+  value: `${source.source_type}:${source.id}`,
+  label: `${source.title} · ${source.origin_label}`,
+})))
 let sequence = 0
 const validationMessage = computed(() => {
   if (!props.projectId) return ''
@@ -21,7 +30,7 @@ const validationMessage = computed(() => {
   const context = props.modelValue
   if (!context.billing_nature) return 'En «Cobro del proyecto», elige si cobras un contrato o el hosting.'
   if (context.billing_nature === 'contract') {
-    if (!options.value?.contracts?.length) return 'Este proyecto no tiene contratos disponibles para vincular el cobro. Agrega un contrato en los documentos del proyecto.'
+    if (!options.value?.contracts?.length) return 'Este proyecto no tiene contratos registrados. Usa «Vincular contrato existente» para elegir su documento.'
     if (!options.value.contracts.some(row => Number(row.id) === Number(context.contract_id))) return 'Selecciona el contrato que corresponde a esta cuenta de cobro.'
     return ''
   }
@@ -39,6 +48,7 @@ watch(validationMessage, value => emit('validation-message', value), { immediate
 async function load(id, previousId) {
   const request = ++sequence
   options.value = null; payments.value = []; error.value = ''; loading.value = true
+  sourceValue.value = ''; showLinkForm.value = false; linkError.value = ''; linking.value = false
   // Clear links when changing project, but preserve the reviewed choice when
   // this component remounts on returning from the preview.
   if (!id || (previousId !== undefined && Number(previousId) !== Number(id))) emit('update:modelValue', {})
@@ -58,6 +68,29 @@ async function load(id, previousId) {
     if (sequence === request) loading.value = false
   }
 }
+async function linkContract() {
+  if (!sourceValue.value || linking.value || !options.value) return
+  const [sourceType, sourceId] = sourceValue.value.split(':')
+  const request = sequence
+  const projectId = props.projectId
+  linking.value = true; linkError.value = ''
+  try {
+    const result = await create_request(`admin/billing-context/projects/${projectId}/contracts/link/`, {
+      source_type: sourceType, source_id: Number(sourceId),
+      expected_version: options.value.delivery_version,
+      request_id: `billing-link-${Date.now()}-${sourceValue.value}`,
+    })
+    if (request !== sequence) return
+    const refreshed = await get_request(`admin/billing-context/projects/${projectId}/options/`)
+    if (request !== sequence) return
+    options.value = refreshed.data
+    emit('update:modelValue', { billing_nature: 'contract', contract_id: result.data.id,
+      amendment_id: null, project_hosting_id: null, hosting_payment_id: null })
+    showLinkForm.value = false; sourceValue.value = ''
+  } catch (err) {
+    if (request === sequence) linkError.value = err.response?.data?.detail || 'No se pudo vincular el contrato. Actualiza las opciones e inténtalo de nuevo.'
+  } finally { if (request === sequence) linking.value = false }
+}
 watch(() => props.projectId, load, { immediate: true })
 </script>
 <template>
@@ -67,6 +100,21 @@ watch(() => props.projectId, load, { immediate: true })
     <p v-if="loading" role="status" class="text-sm text-text-muted">Consultando vínculos del proyecto…</p>
     <div v-else-if="error" role="alert" class="text-sm text-danger-strong"><p>{{ error }}</p><button type="button" @click="load(projectId)">Reintentar</button></div>
     <BillingContextFields v-else :model-value="modelValue" :options="options" :payments="payments" @update:model-value="emit('update:modelValue', $event)" />
+    <div v-if="!loading && !error && modelValue.billing_nature === 'contract'" class="space-y-3">
+      <BaseButton variant="link" size="sm" data-testid="billing-link-contract-open" @click="showLinkForm = !showLinkForm">Vincular contrato existente</BaseButton>
+      <section v-if="showLinkForm" class="rounded-xl border border-border-muted p-3 space-y-3" data-testid="billing-link-contract-form">
+        <p class="text-xs text-text-muted">Elige el documento que corresponde al contrato. Se registrará en el seguimiento del proyecto sin copiarlo ni cambiar su contenido.</p>
+        <BaseFormField v-if="sourceOptions.length" label="Contrato existente del proyecto">
+          <BaseSelect v-model="sourceValue" :options="sourceOptions" placeholder="Seleccionar documento…" data-testid="billing-link-contract-source" />
+        </BaseFormField>
+        <p v-else class="text-sm text-text-muted" data-testid="billing-link-contract-empty">No hay documentos vinculables. Agrega el contrato a este proyecto o vincula la propuesta que lo contiene.</p>
+        <BaseControlGate :reasons="sourceValue ? [] : ['Selecciona el documento que corresponde al contrato.']" align="start" label="Vincular contrato" v-slot="{ blocked, describedBy }">
+          <BaseButton :loading="linking" :disabled="blocked" :disabled-reason="blocked ? 'Selecciona un documento del proyecto.' : ''" :aria-describedby="describedBy" data-testid="billing-link-contract-submit" @click="linkContract">Vincular y seleccionar</BaseButton>
+        </BaseControlGate>
+        <p v-if="linkError" role="alert" class="text-sm text-danger-strong" data-testid="billing-link-contract-error">{{ linkError }}</p>
+        <BaseButton variant="secondary" size="sm" @click="load(projectId)">Actualizar opciones</BaseButton>
+      </section>
+    </div>
     <p v-if="validationError && !error" role="alert" class="text-sm text-danger-strong" data-testid="collection-form-project-context-error">{{ validationError }}</p>
     <NuxtLink :to="localePath(`/panel/accounting/project-hosting/${projectId}`)" class="text-sm text-text-brand">Conciliar hosting del proyecto</NuxtLink>
   </section>

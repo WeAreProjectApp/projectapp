@@ -6,7 +6,9 @@ from decimal import Decimal
 import pytest
 
 from accounts.models import Project, UserProfile
-from content.models import AccountingChangeLog, ExpenseRecord, IncomeRecord, PocketMovement
+from content.models import AccountingChangeLog, Document, DocumentType, ExpenseRecord, IncomeRecord, PocketMovement
+from content.serializers.accounting import IncomeRecordCreateUpdateSerializer
+from content.services import accounting_service
 from content.services.accounting_settlement_service import (
     bulk_settle_expected_incomes,
     income_payment_status,
@@ -52,6 +54,19 @@ def _financial_counts():
     )
 
 
+def _collection_account(income, status, *, client_user=None, project=None):
+    return Document.objects.create(
+        title=f'Cuenta para {income.concept}',
+        document_type=DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0],
+        commercial_status=status,
+        income_record=income,
+        client_user=client_user or income.client.user,
+        project=income.project if project is None else project,
+    )
+
+
 @pytest.fixture
 def settlement_admin(admin_user):
     """A real Panel administrator for settlement writes in this isolated test area."""
@@ -72,6 +87,8 @@ def test_settlement_reloads_the_current_client_for_the_current_project_before_cr
     project.client = replacement_user
     project.save(update_fields=['client'])
     IncomeRecord.objects.filter(pk=stale_income.pk).update(client=replacement_profile)
+    _collection_account(stale_income, Document.CommercialStatus.ISSUED,
+                        client_user=replacement_user)
 
     result = settle_expected_income(stale_income, _settlement(), settlement_admin)
 
@@ -130,6 +147,8 @@ def test_settlement_rejects_an_amount_above_the_current_reduced_balance_without_
 def _bulk_case(settlement_admin, client_profile):
     first = _expected(concept='Primera', amount='100.00', client=client_profile)
     second = _expected(concept='Segunda', amount='80.00', client=client_profile)
+    _collection_account(first, Document.CommercialStatus.ISSUED)
+    _collection_account(second, Document.CommercialStatus.ISSUED)
     result = bulk_settle_expected_incomes({
         'allocations': [
             {'income_id': second.pk, 'amount': Decimal('80.00')},
@@ -196,4 +215,121 @@ def test_settlement_endpoint_rejects_an_income_whose_project_owner_differs_witho
     )
 
     assert response.status_code == 400
+    assert _financial_counts() == before
+
+
+@pytest.mark.parametrize('status', [
+    Document.CommercialStatus.DRAFT,
+    Document.CommercialStatus.CANCELLED,
+])
+def test_settlement_rejects_client_income_without_an_issued_collection_account_without_writes(
+    settlement_admin, client_user, status,
+):
+    """Falla si una cuenta borrador o anulada permite liquidar dinero de un cliente."""
+    income = _expected(client=client_user.profile)
+    _collection_account(income, status)
+    before = _financial_counts()
+
+    with pytest.raises(ValueError, match='genera y emite una cuenta de cobro'):
+        settle_expected_income(income, _settlement(), settlement_admin)
+
+    assert _financial_counts() == before
+
+
+def test_settlement_accepts_client_income_with_an_issued_matching_collection_account(
+    settlement_admin, client_user,
+):
+    """Falla si una cuenta emitida para el mismo ingreso no desbloquea su liquidación."""
+    income = _expected(client=client_user.profile)
+    _collection_account(income, Document.CommercialStatus.ISSUED)
+
+    result = settle_expected_income(income, _settlement(), settlement_admin)
+
+    assert result['liquid'].expected_income_id == income.pk
+    assert result['liquid'].total_amount == Decimal('100.00')
+
+
+def test_settlement_rejects_issued_collection_account_of_another_client_without_writes(
+    settlement_admin, client_user, django_user_model,
+):
+    """Falla si una cuenta emitida para otro cliente habilita el cobro del ingreso equivocado."""
+    other_user = django_user_model.objects.create_user(username='foreign-account@example.test')
+    other_profile = UserProfile.objects.create(user=other_user, role=UserProfile.ROLE_CLIENT)
+    income = _expected(client=client_user.profile)
+    _collection_account(income, Document.CommercialStatus.ISSUED, client_user=other_profile.user)
+    before = _financial_counts()
+
+    with pytest.raises(ValueError, match='genera y emite una cuenta de cobro'):
+        settle_expected_income(income, _settlement(), settlement_admin)
+
+    assert _financial_counts() == before
+
+
+def test_bulk_settlement_rejects_client_income_without_issued_collection_account_without_writes(
+    settlement_admin, client_user,
+):
+    """Falla si el abono masivo crea movimientos antes de verificar las cuentas emitidas."""
+    income = _expected(client=client_user.profile)
+    before = _financial_counts()
+
+    with pytest.raises(ValueError, match='genera y emite una cuenta de cobro'):
+        bulk_settle_expected_incomes({
+            'allocations': [{'income_id': income.pk, 'amount': Decimal('100.00')}],
+            'total_amount': Decimal('100.00'),
+            'period_date': date(2026, 10, 15),
+            'notes': '',
+        }, settlement_admin)
+
+    assert _financial_counts() == before
+
+
+def test_generic_liquid_writer_rejects_client_expected_income_without_issued_account(
+    settlement_admin, client_user,
+):
+    """Falla si el alta genérica crea un pago vinculado y evita la precondición de liquidación."""
+    expected = _expected(client=client_user.profile)
+    serializer = IncomeRecordCreateUpdateSerializer(data={
+        'concept': 'Pago directo indebido',
+        'kind': IncomeRecord.Kind.LIQUID,
+        'period_date': '2026-10-15',
+        'destination': IncomeRecord.Destination.PARTNERS,
+        'total_amount': '100.00',
+        'client': client_user.profile.pk,
+        'expected_income': expected.pk,
+        'origin': IncomeRecord.Origin.DEVELOPMENT,
+    })
+    assert serializer.is_valid(), serializer.errors
+    before = _financial_counts()
+
+    from rest_framework.exceptions import ValidationError
+    with pytest.raises(ValidationError, match='genera y emite una cuenta de cobro'):
+        accounting_service.create_record(
+            accounting_service.EntityType.INCOME, serializer, settlement_admin,
+            notify=False,
+        )
+
+    assert _financial_counts() == before
+
+
+def test_generic_liquid_update_cannot_attach_an_unissued_client_expected_income(
+    settlement_admin, client_user,
+):
+    """Falla si editar un pago permite liquidar un ingreso que aún no tiene cuenta emitida."""
+    from rest_framework.exceptions import ValidationError
+    expected = _expected(client=client_user.profile)
+    liquid = _expected(kind=IncomeRecord.Kind.LIQUID)
+    serializer = IncomeRecordCreateUpdateSerializer(
+        liquid, data={'expected_income': expected.pk}, partial=True,
+    )
+    assert serializer.is_valid(), serializer.errors
+    before = _financial_counts()
+
+    with pytest.raises(ValidationError, match='genera y emite una cuenta de cobro'):
+        accounting_service.update_record(
+            accounting_service.EntityType.INCOME, liquid, serializer,
+            settlement_admin, notify=False,
+        )
+
+    liquid.refresh_from_db()
+    assert liquid.expected_income_id is None
     assert _financial_counts() == before

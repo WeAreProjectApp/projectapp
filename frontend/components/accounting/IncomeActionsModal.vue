@@ -32,11 +32,16 @@
             :class="action.danger
               ? 'text-danger-strong hover:bg-danger-soft'
               : 'text-text-default hover:bg-surface-raised'"
+            :disabled="Boolean(action.disabledReason)"
+            :title="action.disabledReason || undefined"
             :data-testid="`income-action-${action.id}-${record?.id}`"
             @click="run(action)"
           >
             <BaseActionIcon :action="action.action" class="h-5 w-5" />
-            <span>{{ action.label }}</span>
+            <span>
+              {{ action.label }}
+              <span v-if="action.disabledReason" class="block text-xs text-text-muted mt-1">{{ action.disabledReason }}</span>
+            </span>
           </button>
         </li>
       </ul>
@@ -55,6 +60,7 @@ import { computed } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import { HISTORY_ROW_ACTION, NOTE_ROW_ACTION, hasNote } from '~/utils/accountingRowActions';
 import { formatMoney } from '~/utils/formatMoney';
+import { settlementBlockedReason } from '~/utils/incomeSettlement';
 
 /**
  * Every action available on one income, in one list.
@@ -99,6 +105,7 @@ const actions = computed(() => {
   if (row.kind === 'expected') {
     list.push({
       id: 'liquidate', action: 'settle', label: 'Liquidar', event: 'liquidate',
+      disabledReason: settlementBlockedReason(row),
     });
   }
   if (row.kind !== 'lost') {
@@ -106,7 +113,9 @@ const actions = computed(() => {
       ? {
         id: 'view-collection',
         action: 'open-external',
-        label: `Ver cuenta de cobro ${row.collection_account_number || ''}`.trim(),
+        label: row.collection_account_status === 'draft'
+          ? 'Completar y emitir cuenta de cobro'
+          : `Ver cuenta de cobro ${row.collection_account_number || ''}`.trim(),
         event: 'view-collection',
       }
       : {
@@ -142,6 +151,7 @@ const actions = computed(() => {
 });
 
 function run(action) {
+  if (action.disabledReason) return;
   emit(action.event, props.record);
   emit('close');
 }

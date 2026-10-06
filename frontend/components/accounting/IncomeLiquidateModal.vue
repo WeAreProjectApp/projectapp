@@ -7,6 +7,7 @@ import { DEDUCTION_TYPE_OPTIONS as deductionOptions } from '~/utils/accountingDe
 import { formatMoney } from '~/utils/formatMoney'
 import { todayISO } from '~/utils/periodDates'
 import { FREQUENCY_OPTIONS as cadenceOptions } from '~/utils/recurring'
+import { settlementBlockedReason } from '~/utils/incomeSettlement'
 
 const props = defineProps({
   open: { type: Boolean, default: false },
@@ -201,11 +202,13 @@ const hasIncompleteRow = computed(
 )
 
 const canSubmit = computed(
-  () => !overAllocated.value && !hasIncompleteRow.value && !periodIncomplete.value,
+  () => !settlementBlockedReason(props.record) && !overAllocated.value && !hasIncompleteRow.value && !periodIncomplete.value,
 )
 
 /** Why the submit is blocked — shown next to the disabled button. */
 const submitBlockReason = computed(() => {
+  const billingReason = settlementBlockedReason(props.record)
+  if (billingReason) return billingReason
   if (canSubmit.value) return ''
   if (overAllocated.value) {
     return `La distribución supera el saldo por resolver por ${money(-unassigned.value)}.`
@@ -400,27 +403,30 @@ const modalFormId = useId();
         <BaseInput v-model="form.concept" required />
       </BaseFormField>
 
-      <PeriodDateField
-        v-model="form.period_date"
-        v-model:exact="exactDate"
-        label-exact="Fecha en que se pagó"
-        label-month="Mes en que se pagó"
-        toggle-label="Registrar el día exacto de pago"
-        required
-        input-testid="income-liquidate-period"
-        toggle-testid="income-liquidate-exact-date"
-      />
-
-      <BaseFormField v-if="!isPersonal" label="Destino">
-        <BaseSegmented
-          v-model="form.destination"
-          :options="destinationOptions"
-          full-width
+      <BaseFormRow :cols="isPersonal ? 1 : 2" :gap="3">
+        <PeriodDateField
+          v-model="form.period_date"
+          v-model:exact="exactDate"
+          label-exact="Fecha en que se pagó"
+          label-month="Mes en que se pagó"
+          toggle-label="Registrar el día exacto de pago"
+          required
+          input-testid="income-liquidate-period"
+          toggle-testid="income-liquidate-exact-date"
         />
-      </BaseFormField>
+
+        <BaseFormField v-if="!isPersonal" label="Destino">
+          <BaseSegmented
+            v-model="form.destination"
+            :options="destinationOptions"
+            full-width
+          />
+        </BaseFormField>
+      </BaseFormRow>
 
       <PartnerSplitInput
         v-if="!isPersonal"
+        compact
         v-model:total="form.total_amount"
         v-model:gustavoAmount="form.gustavo_amount"
         v-model:carlosAmount="form.carlos_amount"
@@ -447,7 +453,8 @@ const modalFormId = useId();
           </p>
         </div>
 
-        <BaseFormField
+        <BaseFormRow :cols="3" :gap="3">
+          <BaseFormField
           label="Periodicidad"
           hint="Al elegirla se calcula la fecha de fin del período."
         >
@@ -459,7 +466,6 @@ const modalFormId = useId();
           />
         </BaseFormField>
 
-        <BaseFormRow :cols="2" :gap="3" at="sm">
           <BaseFormField label="Inicio del período">
             <BaseInput
               v-model="form.period_start"

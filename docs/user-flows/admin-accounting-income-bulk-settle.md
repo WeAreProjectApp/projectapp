@@ -9,3 +9,7 @@
 - **Branches:** el reparto se consulta también desde el ingreso; valor menor deja el último parcial; valor exacto cubre todo sin tipear; excedente anuncia el saldo a favor; excedente con mezcla de clientes bloquea; 400 del backend deja el modal abierto; el reparto se consulta desde el movimiento del bolsillo.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
+
+## Cobro y liquidación (2026-10-06)
+
+Requisito de cobro (2026-10-06): las filas con cliente sólo participan cuando tienen cuenta emitida; las excluidas se explican antes del reparto. Una anulación concurrente causa rechazo atómico del servidor.

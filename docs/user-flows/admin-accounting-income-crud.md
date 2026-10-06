@@ -36,3 +36,7 @@
 #### IVA opcional
 
 Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar de empresa a personal conserva el porcentaje elegido. Se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. Al editar se respeta la tasa guardada. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
+
+## Cobro y liquidación (2026-10-06)
+
+Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.

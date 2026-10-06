@@ -11,7 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
-from content.models import AccountingChangeLog, ExpenseRecord, IncomeRecord
+from content.models import AccountingChangeLog, Document, DocumentType, ExpenseRecord, IncomeRecord
 from content.services import accounting_service, accounting_settlement_service
 
 pytestmark = pytest.mark.django_db
@@ -58,6 +58,19 @@ def gateway_fee(amount='8000.00'):
     }
 
 
+def issue_collection_account(income):
+    return Document.objects.create(
+        title=f'Cuenta de {income.concept}',
+        document_type=DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0],
+        commercial_status=Document.CommercialStatus.ISSUED,
+        income_record=income,
+        client_user=income.client.user,
+        project=income.project,
+    )
+
+
 class TestClientInheritance:
     """The settled money must stay attributed to the same client."""
 
@@ -68,6 +81,7 @@ class TestClientInheritance:
         income = make_expected(
             client=profile, origin=IncomeRecord.Origin.DEVELOPMENT,
         )
+        issue_collection_account(income)
 
         result = accounting_settlement_service.settle_expected_income(
             income,
@@ -96,6 +110,7 @@ class TestClientInheritance:
         profile = make_client_profile()
         project = Project.objects.create(name='Kore', client=profile.user)
         income = make_expected(client=profile, project=project)
+        issue_collection_account(income)
 
         result = accounting_settlement_service.settle_expected_income(
             income, settlement(), superuser,

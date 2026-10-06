@@ -4,7 +4,7 @@ from rest_framework.decorators import api_view, authentication_classes, permissi
 from rest_framework.response import Response
 from content.permissions import IsSuperUser
 from accounts.serializers_billing_context import (
-    BillingContextAssignmentSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
+    BillingContextAssignmentSerializer, BillingContractLinkSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
 )
 from accounts.services.billing_context import associate_account, context_data
 from accounts.services.billing_read import account_for_actor, project_billing_options, project_hosting_read
@@ -16,6 +16,16 @@ from accounts.services.hosting_context import hosting_inventory, reconcile_evide
 @permission_classes([IsSuperUser])
 def options(request, project_id):
     return Response(project_billing_options(project_id, request.user))
+
+
+@api_view(['POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsSuperUser])
+def link_contract(request, project_id):
+    from accounts.services.billing_contracts import link_billing_contract
+    serializer = BillingContractLinkSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    return Response(link_billing_contract(project_id, request.user, serializer.validated_data))
 
 
 @api_view(['GET', 'PATCH'])

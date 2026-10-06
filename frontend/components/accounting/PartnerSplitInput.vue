@@ -1,17 +1,5 @@
 <template>
   <div class="space-y-4">
-    <VatAmountInput v-if="showVat" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
-      @update:model-value="onTotalInput" @update:rate="emit('update:vatRate', $event)" @capture="emit('vatCapture', $event)" />
-    <div v-else>
-      <label class="block text-xs font-medium text-text-muted mb-1">Valor total</label>
-      <BaseCurrencyInput
-        :model-value="total"
-        placeholder="0"
-        data-testid="partner-split-total"
-        @update:model-value="onTotalInput"
-      />
-    </div>
-
     <div class="flex items-center gap-2">
       <BaseToggle
         :model-value="autoSplit"
@@ -22,28 +10,42 @@
       <span class="text-sm text-text-default">Reparto automático 50/50</span>
     </div>
 
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-      <div>
-        <label class="block text-xs font-medium text-text-muted mb-1">Gustavo</label>
+    <div :class="compact && !showVat ? 'grid grid-cols-1 panel-portrait:grid-cols-3 gap-3' : 'space-y-4'">
+      <VatAmountInput v-if="showVat" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
+        @update:model-value="onTotalInput" @update:rate="emit('update:vatRate', $event)" @capture="emit('vatCapture', $event)" />
+      <div v-else>
+        <label class="block text-xs font-medium text-text-muted mb-1">Valor total</label>
         <BaseCurrencyInput
-          :model-value="gustavoAmount"
+          :model-value="total"
           placeholder="0"
-          :disabled="autoSplit"
-          disabled-reason="Desactiva el reparto automático para editar este valor."
-          data-testid="partner-split-gustavo"
-          @update:model-value="emit('update:gustavoAmount', $event)"
+          data-testid="partner-split-total"
+          @update:model-value="onTotalInput"
         />
       </div>
-      <div>
-        <label class="block text-xs font-medium text-text-muted mb-1">Carlos</label>
-        <BaseCurrencyInput
-          :model-value="carlosAmount"
-          placeholder="0"
-          :disabled="autoSplit"
-          disabled-reason="Desactiva el reparto automático para editar este valor."
-          data-testid="partner-split-carlos"
-          @update:model-value="emit('update:carlosAmount', $event)"
-        />
+
+      <div :class="compact && !showVat ? 'contents' : 'grid grid-cols-1 panel-portrait:grid-cols-2 gap-3'">
+        <div>
+          <label class="block text-xs font-medium text-text-muted mb-1">Gustavo</label>
+          <BaseCurrencyInput
+            :model-value="gustavoAmount"
+            placeholder="0"
+            :disabled="autoSplit"
+            disabled-reason="Desactiva el reparto automático para editar este valor."
+            data-testid="partner-split-gustavo"
+            @update:model-value="emit('update:gustavoAmount', $event)"
+          />
+        </div>
+        <div>
+          <label class="block text-xs font-medium text-text-muted mb-1">Carlos</label>
+          <BaseCurrencyInput
+            :model-value="carlosAmount"
+            placeholder="0"
+            :disabled="autoSplit"
+            disabled-reason="Desactiva el reparto automático para editar este valor."
+            data-testid="partner-split-carlos"
+            @update:model-value="emit('update:carlosAmount', $event)"
+          />
+        </div>
       </div>
     </div>
 
@@ -77,6 +79,7 @@ import BaseToggle from '~/components/base/BaseToggle.vue';
 import { formatMoney } from '~/utils/formatMoney';
 
 const props = defineProps({
+  compact: { type: Boolean, default: false },
   showVat: { type: Boolean, default: false },
   vatRate: { type: [Number, String], default: null },
   vatResetKey: { type: [Boolean, Number, String], default: null },

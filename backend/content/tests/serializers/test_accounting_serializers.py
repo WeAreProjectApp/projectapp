@@ -5,14 +5,19 @@ from decimal import Decimal
 import pytest
 
 from content.models import (
+    AccountingChangeLog,
+    Document,
+    DocumentType,
     HostingRecord,
     IncomeRecord,
     NotificationRecipient,
     PocketMovement,
     RecurringPayment,
 )
+from accounts.models import Project
 from content.serializers.accounting import (
     AccountingSettingsSerializer,
+    AccountingChangeLogSerializer,
     CardBalanceSnapshotCreateUpdateSerializer,
     ExpenseRecordCreateUpdateSerializer,
     ExpenseRecordSerializer,
@@ -31,6 +36,151 @@ from content.serializers.accounting import (
 class TestMonthLabel:
     def test_empty_date_returns_a_blank_label(self):
         assert month_label(None) == ''
+
+
+def _collection_account_for(income, status):
+    return Document.objects.create(
+        title='Cuenta de cobro de prueba',
+        document_type=DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0],
+        commercial_status=status,
+        income_record=income,
+        client_user=income.client.user,
+        project=income.project,
+    )
+
+
+@pytest.mark.django_db
+class TestIncomeSettlementEligibilityProjection:
+    def test_client_expected_without_collection_account_is_blocked(self, make_income, make_client_profile):
+        """Falla si el panel ofrece liquidar un ingreso de cliente sin cuenta emitida."""
+        profile = make_client_profile()
+        income = make_income(client=profile)
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['collection_account_status'] is None
+        assert data['can_settle'] is False
+        assert data['settlement_blocked_reason'] == (
+            'Primero genera y emite una cuenta de cobro para este ingreso.'
+        )
+
+    def test_client_expected_with_draft_collection_account_is_blocked(self, make_income, make_client_profile):
+        """Falla si un borrador desbloquea el pago antes de que la cuenta sea emitida."""
+        profile = make_client_profile()
+        income = make_income(client=profile)
+        _collection_account_for(income, Document.CommercialStatus.DRAFT)
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['collection_account_status'] == 'draft'
+        assert data['can_settle'] is False
+        assert data['settlement_blocked_reason'] == (
+            'Primero genera y emite una cuenta de cobro para este ingreso.'
+        )
+
+    def test_client_expected_with_cancelled_collection_account_is_blocked(self, make_income, make_client_profile):
+        """Falla si una cuenta anulada aparece vigente y habilita la liquidación."""
+        profile = make_client_profile()
+        income = make_income(client=profile)
+        _collection_account_for(income, Document.CommercialStatus.CANCELLED)
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['collection_account_status'] is None
+        assert data['can_settle'] is False
+        assert data['settlement_blocked_reason'] == (
+            'Primero genera y emite una cuenta de cobro para este ingreso.'
+        )
+
+    def test_client_expected_with_issued_collection_account_is_settleable(self, make_income, make_client_profile):
+        """Falla si una cuenta emitida sigue mostrando un ingreso como bloqueado."""
+        profile = make_client_profile()
+        project = Project.objects.create(name='Litigio', client=profile.user)
+        income = make_income(client=profile, project=project)
+        _collection_account_for(income, Document.CommercialStatus.ISSUED)
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['collection_account_status'] == 'issued'
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
+
+    def test_expected_without_client_remains_settleable(self, make_income):
+        """Falla si la regla nueva bloquea ingresos internos que no requieren cuenta."""
+        income = make_income(client=None)
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['collection_account_status'] is None
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
+
+    @pytest.mark.parametrize('mismatch', ['client', 'project'])
+    def test_issued_account_outside_the_income_context_stays_blocked(
+        self, make_income, make_client_profile, mismatch,
+    ):
+        """Falla si una cuenta emitida ajena habilita Liquidar en la interfaz."""
+        profile = make_client_profile()
+        income = make_income(client=profile)
+        account = _collection_account_for(income, Document.CommercialStatus.ISSUED)
+        foreign = make_client_profile()
+        changes = {
+            'client': {'client_user': foreign.user},
+            'project': {'project': Project.objects.create(name='Otro proyecto', client=profile.user)},
+        }
+        Document.objects.filter(pk=account.pk).update(**changes[mismatch])
+
+        data = IncomeRecordSerializer(income).data
+
+        assert data['can_settle'] is False
+        assert data['settlement_blocked_reason'] == (
+            'Primero genera y emite una cuenta de cobro para este ingreso.'
+        )
+
+    def test_list_eligibility_uses_one_query_for_several_client_incomes(
+        self, make_income, make_client_profile, django_assert_num_queries,
+    ):
+        """Falla si agregar estado y bloqueo introduce consultas por cada ingreso listado."""
+        from content.services.accounting_service import collection_account_subqueries, paid_amount_subquery
+        profile = make_client_profile()
+        issued = make_income(client=profile)
+        draft = make_income(client=profile)
+        _collection_account_for(issued, Document.CommercialStatus.ISSUED)
+        _collection_account_for(draft, Document.CommercialStatus.DRAFT)
+        queryset = IncomeRecord.objects.filter(pk__in=[issued.pk, draft.pk]).annotate(
+            paid_amount=paid_amount_subquery(), **collection_account_subqueries(),
+        ).select_related('client__user', 'project').order_by('pk')
+
+        with django_assert_num_queries(1):
+            data = IncomeRecordSerializer(queryset, many=True).data
+
+        assert [row['can_settle'] for row in data] == [True, False]
+
+
+class TestAccountingChangeDisplay:
+    def test_vat_changes_are_projected_as_percentages_without_rewriting_money(self):
+        """Falla si IVA vuelve a mostrarse como COP o si un importe deja de conservar su moneda."""
+        log = AccountingChangeLog(
+            entity_type=AccountingChangeLog.EntityType.INCOME,
+            object_id=1,
+            object_repr='Ingreso Litigio',
+            action=AccountingChangeLog.Action.UPDATED,
+            changes=[
+                {'field': 'vat_rate', 'label': 'IVA', 'old': '$19', 'new': '19 %'},
+                {'field': 'total_amount', 'label': 'Valor', 'old': '$100.000', 'new': '$119.000'},
+            ],
+        )
+
+        changes = AccountingChangeLogSerializer(log).data['changes']
+
+        assert changes[0] == {
+            'field': 'vat_rate', 'label': 'IVA', 'old': '19 %', 'new': '19 %',
+        }
+        assert changes[1] == {
+            'field': 'total_amount', 'label': 'Valor', 'old': '$100.000', 'new': '$119.000',
+        }
 
 
 def income_payload(**overrides):

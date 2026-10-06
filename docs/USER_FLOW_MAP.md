@@ -6487,6 +6487,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 
 Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar de empresa a personal conserva el porcentaje elegido. Se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. Al editar se respeta la tasa guardada. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
 
+## Cobro y liquidación (2026-10-06)
+
+Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
@@ -6498,6 +6502,10 @@ Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar 
 - **Branches:** el reparto se consulta también desde el ingreso; valor menor deja el último parcial; valor exacto cubre todo sin tipear; excedente anuncia el saldo a favor; excedente con mezcla de clientes bloquea; 400 del backend deja el modal abierto; el reparto se consulta desde el movimiento del bolsillo.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
+
+## Cobro y liquidación (2026-10-06)
+
+Requisito de cobro (2026-10-06): las filas con cliente sólo participan cuando tienen cuenta emitida; las excluidas se explican antes del reparto. Una anulación concurrente causa rechazo atómico del servidor.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -6787,6 +6795,10 @@ su propia fila y las fechas se agrupan sin reservar una columna vacía.
 #### IVA opcional
 
 Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propone 19%. Acepta total incluido o base y muestra base, IVA y total en previsualización, PDF y correo. Antes de pagos, confirmar actualiza ingreso y cuenta juntos; previsualizar no persiste cambios. Con pagos o deducciones conserva tasa y saldo; documentos emitidos se corrigen anulando y reemitiendo.
+
+## Cobro y liquidación (2026-10-06)
+
+Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explícitamente un documento del proyecto o contrato de una propuesta vinculada y se selecciona sin duplicar el original. Un rechazo conserva el formulario; cambiar de proyecto descarta respuestas de la consulta anterior.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 

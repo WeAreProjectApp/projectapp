@@ -1,3 +1,10 @@
+> **Cuenta de cobro antes del pago — 2026-10-06:** los ingresos esperados con
+> cliente requieren una cuenta emitida para liquidar o abonar; el envío por correo
+> no es requisito. El contrato puede registrarse explícitamente desde el cobro.
+> Fechas e importes se agrupan en los modales contables. Correos de cambios:
+> tabla anterior/nuevo neutra, etiquetas verde/azul/rojo según crear/editar/eliminar,
+> e IVA expresado en porcentajes, distinguiendo cero de tasa sin registrar.
+
 # Product Requirements Document — ProjectApp
 
 **2026-09-29 — propuesta consultiva:** los módulos adicionales se exploran sin precios y se guardan como interés pendiente. El equipo acuerda e incorpora alcance e inversión manualmente. La portada incorpora guía y accesos a catálogo y alianza en otra pestaña.
