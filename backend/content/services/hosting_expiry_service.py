@@ -39,7 +39,7 @@ def collect_hosting_notices(today):
     from content.models import HostingRecord
 
     HostingRecord.objects.filter(
-        Q(expiry_notice_target__isnull=False) & ~Q(expiry_notice_target=F('valid_to')),
+        Q(retention_context__isnull=True) & Q(expiry_notice_target__isnull=False) & ~Q(expiry_notice_target=F('valid_to')),
     ).update(
         expiry_notice_target=F('valid_to'),
         expiry_notice_last_sent_at=None,
@@ -48,6 +48,7 @@ def collect_hosting_notices(today):
     )
 
     candidates = HostingRecord.objects.filter(
+        retention_context__isnull=True,
         is_active=True,
         valid_to__isnull=False,
         billing_requested_at__isnull=True,

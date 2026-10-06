@@ -1,5 +1,7 @@
 """Operational observations are separate from administrator follow-up."""
 
+from accounts.retention import RetainedProjectModel
+
 import hashlib
 import secrets
 
@@ -8,12 +10,12 @@ from django.db import models
 from django.utils import timezone
 
 
-class Resource(models.Model):
+class Resource(RetainedProjectModel, models.Model):
     key = models.SlugField(max_length=100, unique=True)
     name = models.CharField(max_length=160)
     kind = models.CharField(max_length=10, choices=[('server', 'Servidor'), ('project', 'Proyecto')])
     server = models.ForeignKey('self', null=True, blank=True, on_delete=models.PROTECT)
-    project = models.OneToOneField('accounts.Project', null=True, blank=True, on_delete=models.SET_NULL)
+    project = models.OneToOneField('accounts.Project', null=True, blank=True, on_delete=models.PROTECT)
     environment = models.CharField(max_length=20, default='production')
     enabled = models.BooleanField(default=True)
 

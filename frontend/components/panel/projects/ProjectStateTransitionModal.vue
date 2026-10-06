@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from 'vue';
+import { useI18n } from '#imports';
 import { useProjectStateStore } from '~/stores/project_states';
 import { usePanelProjectsStore } from '~/stores/panel_projects';
 import { stateBadgeVariant } from '~/utils/documentState';
@@ -20,6 +21,10 @@ const deletionLoading = ref(false);
 const deleting = ref(false);
 const deletionError = ref('');
 const confirmation = ref('');
+const selectedDeletionKeys = ref([]);
+const { locale } = useI18n();
+const deletionLabel = (item) => locale.value.startsWith('en') ? item.label_en || item.label : item.label;
+const deletionDescription = (item) => locale.value.startsWith('en') ? item.description_en || item.description : item.description;
 let deletionVersion = 0;
 const offersForceDelete = computed(() => props.allowForceDelete && props.isSuperuser);
 const deleteBlockReasons = computed(() => {
@@ -30,15 +35,15 @@ const deleteBlockReasons = computed(() => {
   return reasons;
 });
 
-async function loadDeletionPreview() {
+async function loadDeletionPreview({ resetSelection = false } = {}) {
   const id = props.project?.id;
   if (!id || !offersForceDelete.value) return;
   const version = ++deletionVersion;
   confirmation.value = '';
-  deletionPreview.value = null;
+  if (resetSelection) selectedDeletionKeys.value = [];
   deletionError.value = '';
   deletionLoading.value = true;
-  const result = await projectStore.previewDeletion(id, { force: true });
+  const result = await projectStore.previewDeletion(id, { force: true, deleteKeys: [...selectedDeletionKeys.value] });
   if (version !== deletionVersion || !forceMode.value) return;
   deletionLoading.value = false;
   if (result.success) deletionPreview.value = result.data;
@@ -52,15 +57,23 @@ watch(forceMode, (enabled) => {
   deletionLoading.value = false;
   deletionError.value = '';
   stateStore.clearPreview();
+  selectedDeletionKeys.value = [];
   if (enabled) loadDeletionPreview();
 });
+
+function toggleDeletionCategory(key, enabled) {
+  selectedDeletionKeys.value = enabled
+    ? [...new Set([...selectedDeletionKeys.value, key])]
+    : selectedDeletionKeys.value.filter((item) => item !== key);
+  loadDeletionPreview();
+}
 
 async function confirmForceDeletion() {
   if (deleting.value || deleteBlockReasons.value.length || !offersForceDelete.value) return;
   deleting.value = true;
   deletionError.value = '';
   const result = await projectStore.deleteProject(props.project.id, {
-    force: true, confirmation: confirmation.value,
+    force: true, delete_keys: [...selectedDeletionKeys.value], confirmation: confirmation.value,
     impact_token: deletionPreview.value.impact_token,
   });
   deleting.value = false;
@@ -72,6 +85,7 @@ async function confirmForceDeletion() {
     // A returned conflict is a new review, never an authorization to retry
     // using the confirmation of the old dependency graph.
     deletionPreview.value = result.preview || null;
+    selectedDeletionKeys.value = result.preview?.delete_keys || [];
     deletionError.value = result.message;
   }
 }
@@ -157,6 +171,7 @@ const impactMessages = computed(() => {
 watch([() => props.open, () => props.project?.id], async ([open]) => {
   deletionVersion += 1;
   forceMode.value = false;
+  selectedDeletionKeys.value = [];
   confirmation.value = '';
   deletionPreview.value = null;
   deletionLoading.value = false;
@@ -262,14 +277,28 @@ async function applyState() {
       <section v-if="forceMode" class="space-y-4" data-testid="project-force-delete-review">
         <BaseAlert variant="danger">{{ $t('projectAccess.deletion.forceWarning') }}</BaseAlert>
         <p v-if="deletionLoading" role="status" class="text-sm text-text-muted">{{ $t('projectAccess.deletion.loading') }}</p>
-        <template v-else-if="deletionPreview">
+        <template v-if="deletionPreview">
           <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.forcePreserved') }}</p>
           <ul class="divide-y divide-border-muted rounded-lg border border-border-muted" data-testid="project-force-delete-dependencies">
-            <li v-for="item in deletionPreview.dependencies" :key="item.key" class="flex justify-between gap-3 px-3 py-2 text-sm">
-              <span class="break-words text-text-default">{{ $te(`projectAccess.deletion.labels.${item.key}`) ? $t(`projectAccess.deletion.labels.${item.key}`) : item.label }}</span>
-              <span class="shrink-0 tabular-nums text-text-default">{{ item.count }}</span>
+            <li v-for="item in deletionPreview.dependencies" :key="item.key" class="flex items-start gap-3 px-3 py-3 text-sm">
+              <div class="min-w-0 flex-1">
+                <p class="break-words font-semibold text-text-default">{{ deletionLabel(item) }} <span class="tabular-nums">({{ item.count }})</span></p>
+                <p class="mt-1 break-words text-text-muted">{{ deletionDescription(item) }}</p>
+                <p class="mt-1 text-xs" :class="selectedDeletionKeys.includes(item.key) ? 'text-danger-strong' : 'text-text-subtle'">{{ $t(selectedDeletionKeys.includes(item.key) ? 'projectAccess.deletion.selected' : 'projectAccess.deletion.retained') }}</p>
+              </div>
+              <BaseToggle
+                :model-value="selectedDeletionKeys.includes(item.key)"
+                :aria-label="`${$t('projectAccess.deletion.selectCategory')} ${deletionLabel(item)}`"
+                :disabled="deleting"
+                disabled-reason="La eliminación está en curso."
+                on-class="bg-danger-strong"
+                :data-testid="`project-delete-category-${item.key}`"
+                @update:model-value="toggleDeletionCategory(item.key, $event)"
+              />
             </li>
           </ul>
+          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.operationalRemoved') }}</p>
+          <p class="text-sm text-text-muted">{{ $t('projectAccess.deletion.automationsStopped') }}</p>
           <BaseAlert v-if="deletionPreview.blockers?.length" variant="warning" data-testid="project-force-delete-blockers">
             <ul class="space-y-2"><li v-for="(blocker, index) in deletionPreview.blockers" :key="index">{{ blocker.message }}</li></ul>
           </BaseAlert>

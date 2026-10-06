@@ -8,6 +8,10 @@ from accounts.models import Project, ProjectAdminAccess
 from accounts.services.credential_cipher import encrypt_secret
 from content.models import Document, EntityHistory, EntityRevision, ExpenseRecord
 from content.services.entity_history import history_operation
+from content.services.project_force_deletion import (
+    force_delete_project,
+    forced_deletion_preview,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -290,14 +294,18 @@ def test_bulk_create_keeps_history_when_database_does_not_return_ids(monkeypatch
     ).values_list('revision', flat=True).order_by('object_id')) == [1, 1]
 
 
-def test_deleting_project_records_document_project_removal_in_same_operation():
-    """Fails if a SET_NULL project deletion leaves the document snapshot pointing at it."""
+def test_deleting_project_records_document_project_removal_in_same_operation(superuser):
+    """Fails if retaining a document loses its project-removal audit trail."""
     client = get_user_model().objects.create_user(username='project-client')
     project = Project.objects.create(name='Proyecto retirado', client=client)
     document = Document.objects.create(title='Contrato ligado', project=project)
     project_id = project.pk
+    preview = forced_deletion_preview(project, actor=superuser, delete_keys=[])
 
-    project.delete()
+    force_delete_project(
+        project_id, actor=superuser, confirmation='DELETE',
+        impact_token=preview['impact_token'], delete_keys=[],
+    )
 
     document_change = document_history(document).entries.first()
     project_deletion = EntityHistory.objects.get(

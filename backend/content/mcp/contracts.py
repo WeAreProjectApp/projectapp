@@ -29,7 +29,47 @@ class McpModelContract:
         return self.read_only | self.read_write | frozenset(self.excluded)
 
 
+_RETENTION_MODELS = frozenset({
+    'accounts.bugreport',
+    'accounts.changerequest',
+    'accounts.deliverable',
+    'accounts.deliverydocumentlink',
+    'accounts.deliverymessage',
+    'accounts.deliveryoperation',
+    'accounts.deliveryworkspace',
+    'accounts.hostingsubscription',
+    'accounts.issuecontext',
+    'accounts.issueevent',
+    'accounts.notification',
+    'accounts.projectaccessnote',
+    'accounts.projectadminaccess',
+    'accounts.projectclientaccessevent',
+    'accounts.projectclientaccesspolicy',
+    'accounts.projectcontract',
+    'accounts.projectdatamodelentity',
+    'accounts.projecthosting',
+    'accounts.projectidea',
+    'accounts.projectideacollection',
+    'accounts.projectphase',
+    'content.communicationfolder',
+    'content.communicationthread',
+    'content.document',
+    'content.documentfolder',
+    'content.documentstateepisode',
+    'content.financingagreement',
+    'content.hostingrecord',
+    'content.incomerecord',
+    'content.linktree',
+    'content.projectbrandasset',
+    'monitoring.resource',
+    'secure_links.securelink',
+})
+
+
 def _contract(model_label, *, read_only='', read_write='', excluded=None):
+    if model_label.lower() in _RETENTION_MODELS:
+        excluded = {**(excluded or {}), 'retention_context': 'Propiedad histórica de datos sin proyecto, administrada únicamente por la eliminación del panel.'}
+
     return McpModelContract(
         model_label=model_label,
         read_only=_names(read_only),
@@ -1195,7 +1235,17 @@ MCP_MODEL_CONTRACTS.update({
         + MCP_MODEL_CONTRACTS['diagnostics']
         + COMMERCIAL_CATALOG_CONTRACTS
     ),
-    'projects': PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS + build_issue_contracts(_contract),
+    'projects': (
+        PROJECT_CONTRACTS + DELIVERY_CONTRACTS + PROJECT_COLLABORATION_CONTRACTS
+        + build_issue_contracts(_contract)
+        + (_contract(
+            'content.ProjectRetentionContext',
+            excluded=_excluded(
+                'Consulta histórica interna del panel; no admite creación, edición ni eliminación por MCP.',
+                'id client original_project_id project_name retained_records category_counts created_by created_at',
+            ),
+        ),)
+    ),
     'content': (
         MCP_MODEL_CONTRACTS['blog']
         + MCP_MODEL_CONTRACTS['linkedin-personal']

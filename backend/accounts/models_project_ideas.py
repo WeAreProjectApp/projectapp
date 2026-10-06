@@ -1,12 +1,14 @@
 """Project suggestions remain separate from contractual delivery."""
+
+from accounts.retention import RetainedProjectModel
 import uuid
 
 from django.conf import settings
 from django.db import models
 
 
-class ProjectIdea(models.Model):
-    project = models.ForeignKey('accounts.Project', on_delete=models.CASCADE, related_name='ideas')
+class ProjectIdea(RetainedProjectModel, models.Model):
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='ideas', null=True, blank=True)
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     author_label = models.CharField(max_length=255)
@@ -39,8 +41,8 @@ class ProjectIdeaRevision(models.Model):
         constraints = [models.UniqueConstraint(fields=['idea', 'number'], name='idea_revision_unique')]
 
 
-class ProjectIdeaCollection(models.Model):
-    project = models.ForeignKey('accounts.Project', on_delete=models.CASCADE, related_name='idea_collections')
+class ProjectIdeaCollection(RetainedProjectModel, models.Model):
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='idea_collections', null=True, blank=True)
     recipient = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')
     title = models.CharField(max_length=255)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name='+')

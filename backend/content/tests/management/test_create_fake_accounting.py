@@ -251,10 +251,8 @@ class TestCreateFakeAccounting:
             client=profile, project__isnull=True,
         ).exists()
 
-    def test_the_full_cycle_survives_projects_being_deleted_first(self):
-        """delete_fake_data deletes Projects BEFORE the accounting sweep.
-        With PROTECT on the project FKs this would raise ProtectedError and
-        the whole cycle would stop working."""
+    def test_fake_accounting_is_cleared_before_protected_project_deletion(self):
+        """The reset removes fictitious money before its protected project."""
         from accounts.models import Project, UserProfile
         from django.contrib.auth import get_user_model
 
@@ -263,14 +261,49 @@ class TestCreateFakeAccounting:
             password='pass12345', first_name='Ana', last_name='Pérez',
         )
         UserProfile.objects.create(user=user, role='client')
-        Project.objects.create(name='MIMITTOS', client=user)
+        project = Project.objects.create(name='MIMITTOS', client=user)
 
         call_command('create_fake_accounting', '--count', '8')
         call_command('delete_fake_data', '--confirm')
 
+        assert not Project.objects.filter(pk=project.pk).exists()
         assert not IncomeRecord.objects.filter(
             source_ref='fake:accounting',
         ).exists()
         assert not HostingRecord.objects.filter(
             source_ref='fake:accounting',
         ).exists()
+
+    def test_project_reset_preserves_manual_accounting(self, admin_user, make_income):
+        from accounts.models import Project
+
+        project = Project.objects.create(name='Manual accounting', client=admin_user)
+        income = make_income(
+            project=project, concept='Imported receivable',
+            total_amount=Decimal('125.00'), gustavo_amount=Decimal('75.00'),
+            carlos_amount=Decimal('50.00'),
+        )
+        hosting = HostingRecord.objects.create(
+            project=project, client_name='Manual operator', monthly_value=Decimal('77.00'),
+        )
+
+        call_command('delete_fake_data', '--confirm')
+
+        income.refresh_from_db()
+        hosting.refresh_from_db()
+        assert income.project_id is None
+        assert income.total_amount == Decimal('125.00')
+        assert hosting.project_id is None
+        assert hosting.monthly_value == Decimal('77.00')
+
+    def test_fake_reset_requires_explicit_capability(self, settings, admin_user):
+        from accounts.models import Project
+        from django.core.management.base import CommandError
+
+        project = Project.objects.create(name='Protected reset', client=admin_user)
+        settings.FAKE_DATA_ALLOWED = False
+
+        with pytest.raises(CommandError, match='FAKE_DATA_ALLOWED=True'):
+            call_command('delete_fake_data', '--confirm')
+
+        assert Project.objects.filter(pk=project.pk).exists()

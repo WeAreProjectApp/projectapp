@@ -4,6 +4,7 @@ Tests for DataModelEntity and ProjectDataModelEntity models and their serializer
 import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError
+from django.db.models.deletion import ProtectedError
 from django.utils import timezone
 
 from accounts.models import (
@@ -224,15 +225,19 @@ class TestProjectDataModelEntityModel:
         )
         assert names == ['Alpha', 'Zulu']
 
-    def test_cascade_delete_removes_entities_when_project_deleted(self, project):
+    def test_direct_project_delete_is_protected_by_project_entity(self, project):
+        """Fails if a direct deletion cascades through project data definitions instead of requiring review."""
         entity = ProjectDataModelEntity.objects.create(
             project=project, name='WillBeGone',
         )
-        entity_id = entity.id
 
-        project.delete()
+        with pytest.raises(ProtectedError) as error:
+            project.delete()
 
-        assert not ProjectDataModelEntity.objects.filter(id=entity_id).exists()
+        assert entity in error.value.protected_objects
+        entity.refresh_from_db()
+        assert entity.project_id == project.pk
+        assert Project.objects.filter(pk=project.pk).exists()
 
     def test_relationship_field_stores_long_text(self, project):
         rel = '1:N with Order, M:N with Product'

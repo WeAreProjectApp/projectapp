@@ -1,11 +1,13 @@
 """Private project brand library, independent of public Linktree media."""
+
+from accounts.retention import RetainedProjectModel
 from django.db import models, transaction
 from django.db.models.signals import post_delete
 from django.dispatch import receiver
 from content.storage import get_private_storage
 
 
-class ProjectBrandAsset(models.Model):
+class ProjectBrandAsset(RetainedProjectModel, models.Model):
     class Category(models.TextChoices):
         BRANDING = 'branding', 'Branding'
         MANUAL = 'manual', 'Manual de marca'
@@ -13,7 +15,7 @@ class ProjectBrandAsset(models.Model):
         LOGO = 'logo', 'Logo'
         OTHER = 'other', 'Otro recurso'
 
-    project = models.ForeignKey('accounts.Project', on_delete=models.CASCADE, related_name='brand_assets')
+    project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, related_name='brand_assets', null=True, blank=True)
     title = models.CharField(max_length=200)
     category = models.CharField(max_length=20, choices=Category.choices)
     file = models.FileField(storage=get_private_storage, upload_to='project-brand/%Y/%m/', max_length=500)

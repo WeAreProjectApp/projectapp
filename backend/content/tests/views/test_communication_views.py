@@ -10,9 +10,11 @@ from accounts.services import proposal_client_service
 from content.models import (
     CommunicationMessage,
     CommunicationMessageDateCorrection,
+    CommunicationMessageRevision,
     CommunicationThread,
     Document,
     DocumentType,
+    ProjectRetentionContext,
 )
 from content.services import communication_service, project_service
 
@@ -240,6 +242,59 @@ def test_sent_message_rejects_direct_edit(admin_client, communication_context):
 
     assert response.status_code == 400
     assert 'borradores' in response.data['detail']
+
+
+def test_retained_thread_rejects_draft_edit(admin_client, admin_user, communication_context):
+    """Fails if an archived project's retained draft can be changed through the panel."""
+    created = create_message(admin_client, communication_context['thread'])
+    context = ProjectRetentionContext.objects.create(
+        client=communication_context['client'].user,
+        original_project_id=communication_context['project'].pk,
+        project_name=communication_context['project'].name,
+        retained_records={},
+        created_by=admin_user,
+    )
+    CommunicationThread.objects.filter(pk=communication_context['thread'].pk).update(
+        project=None,
+        retention_context=context,
+    )
+
+    response = admin_client.patch(
+        reverse('communication-message-detail', args=[created.data['id']]),
+        {'content': 'Texto que no debe persistir'},
+        format='json',
+    )
+
+    message = CommunicationMessage.objects.get(pk=created.data['id'])
+    assert response.status_code == 400
+    assert response.data['detail'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
+    assert message.content == 'Texto de seguimiento'
+    assert not CommunicationMessageRevision.objects.filter(message=message).exists()
+
+
+def test_retained_thread_rejects_draft_deletion(admin_client, admin_user, communication_context):
+    """Fails if deleting a retained draft removes its history through the panel."""
+    created = create_message(admin_client, communication_context['thread'])
+    context = ProjectRetentionContext.objects.create(
+        client=communication_context['client'].user,
+        original_project_id=communication_context['project'].pk,
+        project_name=communication_context['project'].name,
+        retained_records={},
+        created_by=admin_user,
+    )
+    CommunicationThread.objects.filter(pk=communication_context['thread'].pk).update(
+        project=None,
+        retention_context=context,
+    )
+
+    response = admin_client.delete(
+        reverse('communication-message-detail', args=[created.data['id']]),
+    )
+
+    assert response.status_code == 400
+    assert response.data['detail'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
+    assert CommunicationMessage.objects.filter(pk=created.data['id']).exists()
+    assert not CommunicationMessageRevision.objects.filter(message_id=created.data['id']).exists()
 
 
 def test_date_correction_creates_audit_record(admin_client, communication_context):

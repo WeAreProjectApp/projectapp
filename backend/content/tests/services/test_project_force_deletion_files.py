@@ -9,6 +9,7 @@ from django.db import transaction
 
 from accounts.models import (
     Deliverable,
+    DeliverableFile,
     DeliveryEvidenceEmail,
     DeliveryEvidenceEmailFile,
     Project,
@@ -28,6 +29,7 @@ from content.models import (
     PocketMovement,
     ProjectBrandAsset,
     ProposalDocument,
+    ProjectRetentionContext,
 )
 from content.services.project_force_deletion import (
     ProjectForceDeleteError,
@@ -46,7 +48,9 @@ def owned_project(make_client_profile):
 
 
 def confirmed_preview(project, actor):
-    return forced_deletion_preview(project, actor=actor)
+    initial = forced_deletion_preview(project, actor=actor)
+    delete_keys = [dependency['key'] for dependency in initial['dependencies']]
+    return forced_deletion_preview(project, actor=actor, delete_keys=delete_keys)
 
 
 def force_delete(project, actor):
@@ -56,6 +60,7 @@ def force_delete(project, actor):
         actor=actor,
         confirmation='DELETE',
         impact_token=preview['impact_token'],
+        delete_keys=preview['delete_keys'],
     )
 
 
@@ -213,6 +218,7 @@ def test_force_preview_blocks_shared_pocket_event(superuser, make_client_profile
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     assert preview['can_delete'] is False
@@ -257,6 +263,7 @@ def test_force_delete_preserves_immutable_evidence_file(superuser):
             actor=superuser,
             confirmation='DELETE',
             impact_token=preview['impact_token'],
+            delete_keys=preview['delete_keys'],
         )
 
     attachment.file.open('rb')
@@ -335,3 +342,69 @@ def test_force_delete_keeps_file_reused_by_proposal(
         force_delete(owned_project, superuser)
 
     assert storage.exists(name)
+
+
+def test_empty_selection_retains_phase_under_client_context(superuser, owned_project):
+    """Fails if an empty selection deletes a phase instead of retaining its client-owned history."""
+    proposal = BusinessProposal.objects.create(
+        title='Retained phase proposal', client_name='Owned project client',
+    )
+    phase = ProjectPhase.objects.create(
+        project=owned_project, business_proposal=proposal, order=1,
+    )
+    preview = forced_deletion_preview(owned_project, actor=superuser, delete_keys=[])
+
+    force_delete_project(
+        owned_project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=preview['impact_token'],
+        delete_keys=[],
+    )
+
+    phase.refresh_from_db()
+    context = ProjectRetentionContext.objects.get(pk=phase.retention_context_id)
+    assert not Project.objects.filter(pk=owned_project.pk).exists()
+    assert phase.project_id is None
+    assert context.client_id == owned_project.client_id
+    assert context.original_project_id == owned_project.pk
+    assert context.retained_records['accounts.projectphase'] == [str(phase.pk)]
+
+
+def test_deliverable_selection_requires_attached_file_selection(superuser, owned_project):
+    """Fails if deleting a deliverable silently deletes its unselected attachment."""
+    deliverable = Deliverable.objects.create(
+        project=owned_project,
+        title='Deliverable with attachment',
+        uploaded_by=superuser,
+    )
+    attachment = DeliverableFile.objects.create(
+        deliverable=deliverable,
+        file=ContentFile(b'attachment bytes', name='selection-attachment.pdf'),
+        title='Contract attachment',
+        uploaded_by=superuser,
+    )
+    blocked_preview = forced_deletion_preview(
+        owned_project, actor=superuser, delete_keys=['deliverables'],
+    )
+
+    assert blocked_preview['can_delete'] is False
+    assert blocked_preview['dependencies'][0]['key'] == 'deliverables'
+    assert blocked_preview['dependencies'][0]['requires'] == ['accounts.deliverablefile']
+    assert 'Archivos adjuntos de entregables' in blocked_preview['blockers'][0]['message']
+
+    selected_keys = ['deliverables', 'accounts.deliverablefile']
+    reviewed_preview = forced_deletion_preview(
+        owned_project, actor=superuser, delete_keys=selected_keys,
+    )
+    force_delete_project(
+        owned_project.pk,
+        actor=superuser,
+        confirmation='DELETE',
+        impact_token=reviewed_preview['impact_token'],
+        delete_keys=selected_keys,
+    )
+
+    assert reviewed_preview['can_delete'] is True
+    assert not Deliverable.objects.filter(pk=deliverable.pk).exists()
+    assert not DeliverableFile.objects.filter(pk=attachment.pk).exists()

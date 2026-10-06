@@ -46,6 +46,7 @@ from content.models import (
     McpRequestLog,
     ProposalShareLink,
     QRCard,
+    ProjectRetentionContext,
     Task,
     WebAppDiagnostic,
 )
@@ -191,6 +192,75 @@ def test_model_contract_classifies_every_concrete_business_model():
     }
 
     assert covered_model_labels() == actual
+
+
+def test_fake_reset_clears_retained_document_ownership(admin_user):
+    client = get_user_model().objects.create_user(username='retained-demo-client')
+    context = ProjectRetentionContext.objects.create(
+        client=client, created_by=admin_user,
+        original_project_id=999001, project_name='Removed demo project',
+    )
+    document = Document.objects.create(
+        title='Retained demo document', retention_context=context,
+    )
+
+    run_command('delete_fake_data', '--confirm')
+
+    assert not Document.objects.filter(pk=document.pk).exists()
+    assert not ProjectRetentionContext.objects.filter(pk=context.pk).exists()
+    assert not get_user_model().objects.filter(pk=client.pk).exists()
+    assert get_user_model().objects.filter(pk=admin_user.pk).exists()
+
+
+def test_fake_reset_removes_retained_access_owner_graph(admin_user):
+    client = get_user_model().objects.create_user(username='retained-access-client')
+    context = ProjectRetentionContext.objects.create(
+        client=client, created_by=admin_user,
+        original_project_id=999002, project_name='Removed access project',
+    )
+    access = ProjectAdminAccess.objects.create(
+        retention_context=context,
+        environment=ProjectAdminAccess.Environment.PRODUCTION,
+        admin_url='https://retained-access.example.test/admin/',
+        updated_by=admin_user,
+    )
+
+    assert access.retention_context_id == context.pk
+
+    run_command('delete_fake_data', '--confirm')
+
+    assert not ProjectAdminAccess.objects.filter(pk=access.pk).exists()
+    assert not ProjectRetentionContext.objects.filter(pk=context.pk).exists()
+    assert not get_user_model().objects.filter(pk=client.pk).exists()
+    assert get_user_model().objects.filter(pk=admin_user.pk).exists()
+
+
+def test_fake_reset_scopes_secure_link_cleanup_to_project_owners():
+    from secure_links.models import SecureLink, SecureLinkEvent
+
+    run_command('create_fake_secure_links')
+    platform_project_ids = set(Project.objects.filter(
+        name__startswith='Secure links demo ',
+    ).values_list('pk', flat=True))
+    platform_link_ids = set(SecureLink.objects.filter(
+        project_id__in=platform_project_ids,
+    ).values_list('pk', flat=True))
+    platform_event_ids = set(SecureLinkEvent.objects.filter(
+        link_id__in=platform_link_ids,
+    ).values_list('pk', flat=True))
+    standalone_link = SecureLink.objects.filter(
+        project__isnull=True, retention_context__isnull=True,
+    ).order_by('pk').first()
+
+    assert len(platform_event_ids) >= len(platform_link_ids) > len(platform_project_ids) > 0
+    assert standalone_link is not None
+
+    run_command('delete_fake_data', '--confirm')
+
+    assert not Project.objects.filter(pk__in=platform_project_ids).exists()
+    assert not SecureLink.objects.filter(pk__in=platform_link_ids).exists()
+    assert not SecureLinkEvent.objects.filter(pk__in=platform_event_ids).exists()
+    assert SecureLink.objects.filter(pk=standalone_link.pk).exists()
 
 
 def test_seed_context_replays_the_same_random_stream():
@@ -425,6 +495,7 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
     client = get_user_model().objects.get(email=CLIENT_EMAIL)
     role = client.profile.role
     client_thread = CommunicationThread.objects.get(client=client.profile, project__name=PROJECT_NAME)
+    original_project_id = client_thread.project_id
     document = Document.objects.create(
         title='Contrato externo del cliente', client_user=client,
     )
@@ -447,7 +518,14 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
     assert Project.objects.get(pk=other_project.pk).client_id == client.pk
     assert BusinessProposal.objects.filter(pk=other_proposal.pk).exists()
     assert get_user_model().objects.get(pk=client.pk).profile.role == role
-    assert CommunicationThread.objects.get(pk=client_thread.pk).client_id == client.profile.pk
+    client_thread.refresh_from_db()
+    assert client_thread.client_id == client.profile.pk
+    assert client_thread.project_id is None
+    assert client_thread.managed_project_id is None
+    assert client_thread.retention_context.original_project_id == original_project_id
+    assert client_thread.retention_context.retained_records == {
+        'content.communicationthread': [str(client_thread.pk)],
+    }
 
 
 def test_platform_seed_configures_communication_preferences():
@@ -665,6 +743,7 @@ def test_orchestrator_rolls_back_a_failed_stage(monkeypatch):
 def test_orchestrator_replace_rebuilds_the_existing_graph():
     run_command('create_fake_clients_projects', '--count', '3')
     run_command('create_contacts', '1')
+    replaced_project_ids = set(Project.objects.values_list('pk', flat=True))
 
     run_command(
         'create_fake_data', '--replace', '--count', '2', '--skip-platform',
@@ -673,6 +752,10 @@ def test_orchestrator_replace_rebuilds_the_existing_graph():
         '--skip-communications', '--skip-auxiliary',
     )
 
+    replacement_project_ids = set(Project.objects.values_list('pk', flat=True))
+    assert len(replaced_project_ids) > 0
+    assert len(replacement_project_ids) > 0
+    assert replaced_project_ids.isdisjoint(replacement_project_ids)
     assert UserProfile.objects.clients().count() == 2
     assert Contact.objects.count() == 2
 

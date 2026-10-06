@@ -86,6 +86,7 @@ export const ADMIN_CLIENT_EMAIL_COPY_HISTORY = ['@flow:admin-client-email-copy-h
 export const ADMIN_CLIENT_EMAIL_COPY_SETTINGS = ['@flow:admin-client-email-copy-settings', '@module:admin', '@priority:P1'];
 export const ADMIN_CLIENT_EMAIL_VALIDATED_NOTIFICATION = ['@flow:admin-client-email-validated-notification', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENT_FIRST_LOGIN_NOTIFICATION = ['@flow:admin-client-first-login-notification', '@module:admin', '@priority:P2'];
+export const ADMIN_CLIENT_RETAINED_DATA = ['@flow:admin-client-retained-data', '@module:admin', '@priority:P1'];
 export const ADMIN_CLIENTS_CONFIG_TAB = ['@flow:admin-clients-config-tab', '@module:admin', '@priority:P3'];
 export const ADMIN_CLIENTS_DOCUMENTS_SECTION = ['@flow:admin-clients-documents-section', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENTS_FILTER_PRESETS = ['@flow:admin-clients-filter-presets', '@module:admin', '@priority:P2'];

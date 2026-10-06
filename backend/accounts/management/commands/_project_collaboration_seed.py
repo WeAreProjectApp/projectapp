@@ -1,7 +1,13 @@
 """Own seed/reset helpers; never grant client access automatically."""
 from content.fake_data import ensure_fake_data_allowed
-from accounts.models_project_client_access import ProjectClientAccessPolicy
-from accounts.models_project_ideas import ProjectIdeaCollection, ProjectIdeaCollectionItem
+from django.db.models import Q
+
+from accounts.models_project_client_access import (
+    ProjectClientAccessEvent, ProjectClientAccessPolicy,
+)
+from accounts.models_project_ideas import (
+    ProjectIdea, ProjectIdeaCollection, ProjectIdeaCollectionItem,
+)
 from accounts.services import project_idea_collections as collections, project_ideas as ideas
 
 
@@ -33,8 +39,13 @@ def seed_project_collaboration(project, context, actor):
         'items': [{'idea_id': suggestion['id'], 'expected_version': suggestion['version']}]}, channel='panel')
 
 
-def clear_fake_project_collaboration(projects):
+def clear_fake_project_collaboration(projects, *, retention_context_ids=()):
     ensure_fake_data_allowed('clear_fake_project_collaboration')
+    owners = Q(project__in=projects) | Q(retention_context_id__in=retention_context_ids)
+    collection_ids = list(ProjectIdeaCollection.objects.filter(owners).values_list('pk', flat=True))
     # Frozen items protect their original suggestions; clear these first.
-    ProjectIdeaCollectionItem.objects.filter(collection__project__in=projects).delete()
-    ProjectIdeaCollection.objects.filter(project__in=projects).delete()
+    ProjectIdeaCollectionItem.objects.filter(collection_id__in=collection_ids).delete()
+    ProjectIdeaCollection.objects.filter(pk__in=collection_ids).delete()
+    ProjectIdea.objects.filter(owners).delete()
+    ProjectClientAccessEvent.objects.filter(owners).delete()
+    ProjectClientAccessPolicy.objects.filter(owners).delete()

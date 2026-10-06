@@ -17,7 +17,13 @@ class CommunicationError(ValueError):
     """A business-rule violation safe to expose through the panel API."""
 
 
+def _require_operational_thread(thread):
+    if thread.retention_context_id:
+        raise CommunicationError('Los datos conservados sin proyecto sólo permiten consulta.')
+
+
 def _validate_thread(thread):
+    _require_operational_thread(thread)
     try:
         thread.full_clean()
     except DjangoValidationError as exc:
@@ -25,6 +31,7 @@ def _validate_thread(thread):
 
 
 def _validate_message_shape(*, thread, channel, direction, status, subject, reply_to):
+    _require_operational_thread(thread)
     if thread.status == CommunicationThread.Status.CLOSED:
         raise CommunicationError('El hilo está cerrado. Reábrelo antes de registrar mensajes.')
     if direction == CommunicationMessage.Direction.INCOMING:
@@ -285,6 +292,7 @@ def update_draft(message, *, actor, document_ids=None, **validated_data):
 
 @transaction.atomic
 def delete_draft(message, *, actor):
+    _require_operational_thread(message.thread)
     if message.status != CommunicationMessage.Status.DRAFT or message.voided_at:
         raise CommunicationError('Sólo los borradores activos se pueden eliminar.')
     thread = message.thread
@@ -294,6 +302,7 @@ def delete_draft(message, *, actor):
 
 @transaction.atomic
 def mark_sent(message, *, actor, occurred_at=None):
+    _require_operational_thread(message.thread)
     if message.thread.status == CommunicationThread.Status.CLOSED:
         raise CommunicationError('Reabre el hilo antes de marcar el envío.')
     if message.direction != CommunicationMessage.Direction.OUTGOING:
@@ -311,6 +320,7 @@ def mark_sent(message, *, actor, occurred_at=None):
 
 @transaction.atomic
 def void_message(message, *, actor, reason):
+    _require_operational_thread(message.thread)
     if message.status == CommunicationMessage.Status.DRAFT:
         raise CommunicationError('Elimina el borrador en lugar de anularlo.')
     if message.voided_at:
@@ -331,6 +341,7 @@ def void_message(message, *, actor, reason):
 
 @transaction.atomic
 def correct_message_date(message, *, actor, occurred_at, reason):
+    _require_operational_thread(message.thread)
     if message.status == CommunicationMessage.Status.DRAFT:
         raise CommunicationError('Edita el borrador para cambiar su fecha.')
     if message.voided_at:

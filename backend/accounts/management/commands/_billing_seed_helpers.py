@@ -3,6 +3,7 @@ import hashlib
 from django.contrib.auth import get_user_model
 from django.core.management.base import CommandError
 from django.db import transaction
+from django.db.models import Q
 
 from accounts.models import (
     BillingContextEvent, CollectionAccountContext, ContractAmendment,
@@ -140,15 +141,25 @@ def seed_fake_hosting_billing(*, context, actor=None):
 
 
 @transaction.atomic
-def clear_fake_billing(projects):
+def clear_fake_billing(projects, *, retention_context_ids=()):
     """Called before clearing protected contract/source roots in a fake reset."""
     ensure_fake_data_allowed('billing_seed_helpers')
     ids = list(projects.values_list('pk', flat=True))
-    hostings = ProjectHosting.objects.filter(project_id__in=ids)
-    HostingEvidence.objects.filter(group__hosting__in=hostings).delete()
-    HostingEvidenceGroup.objects.filter(hosting__in=hostings).delete()
-    CollectionAccountContext.objects.filter(document__project_id__in=ids).delete()
+    retention_context_ids = tuple(retention_context_ids)
+    hosting_ids = list(ProjectHosting.objects.filter(
+        Q(project_id__in=ids)
+        | Q(retention_context_id__in=retention_context_ids)
+    ).values_list('pk', flat=True))
+    HostingEvidence.objects.filter(group__hosting_id__in=hosting_ids).delete()
+    HostingEvidenceGroup.objects.filter(hosting_id__in=hosting_ids).delete()
+    CollectionAccountContext.objects.filter(
+        Q(document__project_id__in=ids)
+        | Q(document__retention_context_id__in=retention_context_ids)
+        | Q(hosting_id__in=hosting_ids)
+    ).delete()
     BillingContextEvent.objects.filter(project_id__in=ids).delete()
-    hostings.update(operational_accounting_source=None)
-    ProjectHostingAccountingSource.objects.filter(hosting__in=hostings).delete()
-    hostings.delete()
+    ProjectHosting.objects.filter(pk__in=hosting_ids).update(
+        operational_accounting_source=None,
+    )
+    ProjectHostingAccountingSource.objects.filter(hosting_id__in=hosting_ids).delete()
+    ProjectHosting.objects.filter(pk__in=hosting_ids).delete()

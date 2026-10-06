@@ -19,12 +19,30 @@ from content.services.project_state_service import (
 )
 
 
+class ProjectDeletionSelectionSerializer(serializers.Serializer):
+    delete_keys = serializers.ListField(
+        child=serializers.CharField(max_length=120), allow_empty=True,
+    )
+
+
 class DeletePanelProjectSerializer(serializers.Serializer):
     force = serializers.BooleanField(default=False)
     confirmation = serializers.CharField(required=False, allow_blank=True, trim_whitespace=False)
     impact_token = serializers.CharField(required=False, allow_blank=True)
+    delete_keys = serializers.ListField(
+        child=serializers.CharField(max_length=120), required=False, allow_empty=True,
+    )
+
+    def validate_force(self, value):
+        request = self.context.get('request')
+        if value and request is not None:
+            from content.services.project_force_deletion import require_superuser
+            require_superuser(request.user)
+        return value
 
     def validate(self, attrs):
+        if attrs['force'] and 'delete_keys' not in attrs:
+            raise serializers.ValidationError({'delete_keys': 'Elige explícitamente qué datos se eliminan; una lista vacía conserva todos.'})
         if attrs['force'] and attrs.get('confirmation') != 'DELETE':
             raise serializers.ValidationError({
                 'confirmation': 'Escribe exactamente DELETE en mayúsculas.',

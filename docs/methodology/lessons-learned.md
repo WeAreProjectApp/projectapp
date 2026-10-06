@@ -1908,3 +1908,22 @@ La recarga interrumpe una prueba que estaba navegando aunque sus APIs estén
 aisladas. Para validar lotes sobre ese servidor, ejecutarlos secuencialmente con
 `--reporter=line --output=/tmp/<directorio-propio> --retries=0`. Con los artefactos
 fuera del worktree, la regresión de documentos pasó sin recargas ni reintentos.
+
+### Eliminación selectiva: revisión y propiedad de lo conservado (2026-10-06)
+
+Una confirmación destructiva debe identificar la selección, no sólo la lista
+actual de dependencias. La huella del proyecto incluye cliente, registros,
+valores y categorías elegidas; cambiar un interruptor descarta la confirmación.
+Las relaciones obligatorias se explican y requieren elección manual.
+
+Conservar datos sin proyecto requiere una propiedad explícita bajo el cliente y
+un origen histórico separado de un proyecto operativo. Las raíces conservadas
+usan `retention_context`; sus hijos mantienen las relaciones originales y se
+consultan mediante el inventario autorizado. Los listados operativos deben
+excluir esas raíces cuando presuponen un proyecto vivo.
+
+Detener nuevas automatizaciones no equivale a descartar un resultado real de
+un cobro ya iniciado: se registra su estado y se evita renovar, cobrar de nuevo
+o enviar avisos relacionados con el proyecto eliminado. Las tareas deben
+comprobar la propiedad actual en la base, aunque hayan cargado la suscripción
+antes de la eliminación.

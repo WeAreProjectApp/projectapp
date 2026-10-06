@@ -13,6 +13,7 @@ from rest_framework.test import APIClient
 
 from accounts.models import (
     HostingSubscription,
+    Notification,
     Payment,
     PaymentHistory,
     Project,
@@ -20,9 +21,17 @@ from accounts.models import (
     UserProfile,
 )
 from accounts.tests.wompi_event_helpers import signed_transaction_event
+from content.models import ProjectRetentionContext
 
 User = get_user_model()
 MAX_SUBSCRIPTION_LIST_QUERIES = 6
+
+
+def _payment_notifications(payment):
+    return Notification.objects.filter(
+        related_object_type='payment',
+        related_object_id=payment.pk,
+    )
 
 
 def _link_transaction(payment, transaction_id, transaction_status):
@@ -614,6 +623,79 @@ class TestWompiWebhook:
         assert pending.status == Payment.STATUS_PAID
         assert pending.paid_at is not None
         assert pending.wompi_transaction_id == 'txn_123'
+
+    def test_late_approved_webhook_keeps_retained_subscription_historical(
+        self, api_client, admin_user, project, subscription, sample_payments,
+    ):
+        """Fails if an approved late webhook renews or notifies a subscription retained after deletion."""
+        pending = sample_payments[1]
+        pending.wompi_payment_link_id = 'retained-payment-link'
+        pending.save(update_fields=['wompi_payment_link_id'])
+        subscription.refresh_from_db()
+        status_before_retention = subscription.status
+        billing_date_before_retention = subscription.next_billing_date
+        notifications_before_webhook = _payment_notifications(pending).count()
+        context = ProjectRetentionContext.objects.create(
+            client=project.client,
+            original_project_id=project.pk,
+            project_name=project.name,
+            retained_records={},
+            created_by=admin_user,
+        )
+        HostingSubscription.objects.filter(pk=subscription.pk).update(
+            project=None,
+            retention_context=context,
+        )
+
+        with patch(
+            'accounts.services.wompi.verify_transaction',
+            return_value=_link_transaction(pending, 'txn_retained', 'APPROVED'),
+        ):
+            response = api_client.post(
+                '/api/accounts/webhooks/wompi/',
+                signed_transaction_event({'id': 'txn_retained', 'status': 'APPROVED'}),
+                format='json',
+            )
+
+        pending.refresh_from_db()
+        subscription.refresh_from_db()
+        assert response.status_code == 200
+        assert pending.status == Payment.STATUS_PAID
+        assert PaymentHistory.objects.filter(
+            payment=pending,
+            from_status=Payment.STATUS_PENDING,
+            to_status=Payment.STATUS_PAID,
+        ).exists()
+        assert Payment.objects.filter(subscription_id=subscription.pk).count() == 3
+        assert subscription.status == status_before_retention
+        assert subscription.next_billing_date == billing_date_before_retention
+        assert _payment_notifications(pending).count() == notifications_before_webhook == 0
+
+    def test_stale_subscription_cache_cannot_charge_retained_payment(
+        self, admin_user, project, subscription, sample_payments,
+    ):
+        """Fails if a queued charge trusts a pre-deletion subscription loaded in memory."""
+        pending = sample_payments[1]
+        pending.subscription
+        context = ProjectRetentionContext.objects.create(
+            client=project.client,
+            original_project_id=project.pk,
+            project_name=project.name,
+            retained_records={},
+            created_by=admin_user,
+        )
+        HostingSubscription.objects.filter(pk=subscription.pk).update(
+            project=None,
+            retention_context=context,
+        )
+        from accounts.views import _charge_payment_with_source
+
+        with pytest.raises(ValueError, match='se conserva sin proyecto'):
+            _charge_payment_with_source(pending)
+
+        pending.refresh_from_db()
+        assert pending.status == Payment.STATUS_PENDING
+        assert pending.wompi_transaction_id == ''
 
     def test_declined_transaction_marks_payment_failed(
         self, api_client, subscription, sample_payments,

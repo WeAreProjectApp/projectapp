@@ -109,6 +109,9 @@ def send_payment_status_team_email(
         logger.warning('Payment %s not found for team status email', payment_id)
         return False
 
+    if payment.subscription.retention_context_id or not payment.subscription.project_id:
+        return False
+
     from content.utils import format_cop_email
 
     context = build_payment_status_context(payment, to_status, source)

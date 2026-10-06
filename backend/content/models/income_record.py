@@ -1,3 +1,4 @@
+from accounts.retention import RetainedProjectModel
 from django.db import models
 from django.db.models import Q
 
@@ -5,7 +6,7 @@ from .accounting_base import AccountingRecordBase, PartnerSplitMixin, VatBreakdo
 from .recurring_payment import RecurringPayment
 
 
-class IncomeRecord(VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
+class IncomeRecord(RetainedProjectModel, VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
     """
     Income entry of the accounting module.
 
@@ -62,13 +63,7 @@ class IncomeRecord(VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
     # project is a label on it: losing the label must never block deleting a
     # project, and `delete_fake_data` deletes projects BEFORE the accounting
     # sweep, so PROTECT here would break the fake-data cycle outright.
-    project = models.ForeignKey(
-        'accounts.Project',
-        null=True,
-        blank=True,
-        on_delete=models.SET_NULL,
-        related_name='income_records',
-    )
+    project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='income_records')
     # Business line. Blank means "sin clasificar" (records predating the
     # field); hosting incomes rely on it because hosting clients are stored
     # as plain text and often have no platform profile to link to.

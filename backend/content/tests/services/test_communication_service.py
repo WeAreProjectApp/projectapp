@@ -9,6 +9,7 @@ from content.models import (
     CommunicationMessage,
     CommunicationMessageRevision,
     Document,
+    ProjectRetentionContext,
 )
 from content.services import communication_service
 
@@ -75,6 +76,66 @@ def test_update_draft_preserves_message_identity(communication_context):
 
     assert updated.pk == message.pk
     assert updated.thread_id == communication_context['thread'].pk
+
+
+def retain_thread(context):
+    retention = ProjectRetentionContext.objects.create(
+        client=context['client'].user,
+        original_project_id=context['thread'].pk + 1000,
+        project_name='Archived communication project',
+        retained_records={},
+        created_by=context['actor'],
+    )
+    type(context['thread']).objects.filter(pk=context['thread'].pk).update(
+        retention_context=retention,
+    )
+    context['thread'].refresh_from_db()
+    context['message'].refresh_from_db()
+
+
+def test_retained_thread_rejects_mark_sent(communication_context):
+    """Fails if a retained outgoing draft can be marked sent."""
+    retain_thread(communication_context)
+
+    with pytest.raises(communication_service.CommunicationError, match='sólo permiten consulta'):
+        communication_service.mark_sent(
+            communication_context['message'], actor=communication_context['actor'],
+        )
+
+    communication_context['message'].refresh_from_db()
+    assert communication_context['message'].status == CommunicationMessage.Status.DRAFT
+
+
+def test_retained_thread_rejects_voiding_sent_message(communication_context):
+    """Fails if a retained sent message can be voided."""
+    message = communication_service.mark_sent(
+        communication_context['message'], actor=communication_context['actor'],
+    )
+    retain_thread(communication_context)
+
+    with pytest.raises(communication_service.CommunicationError, match='sólo permiten consulta'):
+        communication_service.void_message(message, actor=communication_context['actor'], reason='No aplicar')
+
+    message.refresh_from_db()
+    assert message.voided_at is None
+
+
+def test_retained_thread_rejects_sent_message_date_correction(communication_context):
+    """Fails if a retained sent message can acquire a date-correction history row."""
+    message = communication_service.mark_sent(
+        communication_context['message'], actor=communication_context['actor'],
+    )
+    retain_thread(communication_context)
+
+    with pytest.raises(communication_service.CommunicationError, match='sólo permiten consulta'):
+        communication_service.correct_message_date(
+            message,
+            actor=communication_context['actor'],
+            occurred_at=OCCURRED_AT + timedelta(days=1),
+            reason='No aplicar',
+        )
+
+    assert message.date_corrections.count() == 0
 
 
 def test_update_draft_preserves_immutable_message_metadata(communication_context):

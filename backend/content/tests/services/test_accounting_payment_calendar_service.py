@@ -15,6 +15,7 @@ from content.models import (
     HostingRecord,
     IncomeRecord,
     NotificationRecipient,
+    ProjectRetentionContext,
     RecurringPayment,
 )
 from content.services.accounting_payment_calendar_service import (
@@ -127,6 +128,30 @@ class TestIncomeCadence:
         assert run_payment_calendar(TODAY) == 0
         record.refresh_from_db()
         assert record.reminder_count == 0
+
+    def test_retained_expected_income_is_absent_while_operational_income_is_announced(self):
+        """Fails if a retained income continues to create payment-calendar reminders."""
+        client = User.objects.create_user(
+            username='retained-income@example.com',
+            email='retained-income@example.com',
+        )
+        context = ProjectRetentionContext.objects.create(
+            client=client,
+            original_project_id=101,
+            project_name='Deleted income project',
+            retained_records={},
+            created_by=client,
+        )
+        retained = make_expected(days_left=15, retention_context=context)
+        operational = make_expected(days_left=15, concept='Operational income')
+
+        sent = run_payment_calendar(TODAY)
+
+        retained.refresh_from_db()
+        operational.refresh_from_db()
+        assert sent == 1
+        assert retained.reminder_count == 0
+        assert operational.reminder_count == 1
 
     def test_announces_again_when_crossing_7_days(self):
         make_expected(days_left=15)
