@@ -738,6 +738,10 @@ PROJECT_CONTRACTS = (
     _contract('accounts.ProjectDataModelEntity', read_only='id project created_at updated_at',
         read_write='name description key_fields relationship',
         excluded=_excluded('Contexto interno conservado; no editable por MCP.', 'retention_context')),
+    _contract('content.ProposalApprovalFile',
+        read_only='id proposal project deliverable title document_type filename size sha256 created_at',
+        excluded=(_excluded('Fuente inmutable privada; la herramienta descarga un artefacto autorizado.', 'file')
+                  | _excluded('Identidad interna y autor del paquete; no admite escritura por MCP.', 'source_key created_by'))),
     _contract(
         'content.ProjectBrandAsset',
         read_only='id project filename size created_at',
