@@ -75,7 +75,7 @@ def project_commercial_phases(request, project_id):
         proposal = get_object_or_404(BusinessProposal.objects.select_for_update().select_related('client', 'deliverable'), pk=serializer.validated_data['proposal_id'])
         retained_name = _retained_source_name(proposal)
         if retained_name is not None:
-            raise ValidationError({'proposal_id': f'La propuesta conserva recursos del proyecto eliminado «{retained_name}». Esos datos quedan en consulta y no se incorporan como fase de otro proyecto.'})
+            raise ValidationError({'proposal_id': f'La propuesta conserva recursos del proyecto eliminado «{retained_name}». Trasládala primero con la reasignación de proyecto: mueve su fase, entregables y documentos.'})
         if (not proposal.client_id or proposal.client.user_id != project.client_id
                 or proposal.status not in ('accepted', 'finished')
                 or not proposal.deliverable_id or proposal.deliverable.project_id != project.pk

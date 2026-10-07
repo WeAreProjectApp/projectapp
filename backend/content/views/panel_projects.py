@@ -42,6 +42,7 @@ from accounts.models import Project, UserProfile
 from content.api_errors import error_response
 from content.models import (
     AccountingChangeLog,
+    CommunicationThread,
     Document,
     DocumentState,
     HostingRecord,
@@ -452,11 +453,25 @@ def _unlinked_payload(project):
 
     Hostings lean on ``display_label`` (client — project — domain fallback);
     incomes carry concept plus kind and period so two same-concept rows stay
-    distinguishable in the confirmation list.
+    distinguishable in the confirmation list. Rows retained from a deleted
+    project name it (``retained``) and carry non-blocking duplicate hints;
+    the client's retained communication threads join the plan.
     """
+    from content.services import retained_adoption
+
+    hosting_rows = list(_unlinked_qs(HostingRecord, project).select_related('retention_context'))
+    income_rows = list(_unlinked_qs(IncomeRecord, project).select_related('retention_context'))
+    document_rows = list(
+        _unlinked_documents_qs(project).select_related('document_type', 'retention_context'),
+    )
+    thread_rows = list(retained_adoption.retained_threads(project))
+    hints = retained_adoption.unlinked_hints(
+        project, incomes=income_rows, documents=document_rows, threads=thread_rows,
+    )
+    tag = retained_adoption.retained_tag
     hostings = [
-        {'id': record.pk, 'label': record.display_label}
-        for record in _unlinked_qs(HostingRecord, project)
+        {'id': record.pk, 'label': record.display_label, 'retained': tag(record)}
+        for record in hosting_rows
     ]
     incomes = [
         {
@@ -464,8 +479,10 @@ def _unlinked_payload(project):
             'label': record.concept,
             'kind_label': record.get_kind_display(),
             'period_label': month_label(record.period_date),
+            'retained': tag(record),
+            'duplicates': hints.get(('content.incomerecord', record.pk), []),
         }
-        for record in _unlinked_qs(IncomeRecord, project)
+        for record in income_rows
     ]
     documents = [
         {
@@ -475,15 +492,30 @@ def _unlinked_payload(project):
             # Issued cuentas show their number: it is how the operator knows
             # them, and the visible hint that this one is a fill, not an edit.
             'number': record.public_number,
+            'retained': tag(record),
+            'duplicates': hints.get(('content.document', record.pk), []),
         }
-        for record in _unlinked_documents_qs(project).select_related('document_type')
+        for record in document_rows
     ]
+    threads = [
+        {
+            'id': record.pk,
+            'label': record.title,
+            'status_label': record.get_status_display(),
+            'retained': tag(record),
+            'duplicates': hints.get(('content.communicationthread', record.pk), []),
+        }
+        for record in thread_rows
+    ]
+    rows = hostings + incomes + documents + threads
     return {
         'client': PanelProjectSerializer().get_client(project),
         'hostings': hostings,
         'incomes': incomes,
         'documents': documents,
-        'total': len(hostings) + len(incomes) + len(documents),
+        'threads': threads,
+        'retained_total': sum(1 for row in rows if row['retained']),
+        'total': len(rows),
     }
 
 
@@ -523,6 +555,8 @@ def assign_project_unlinked_records(request, project_id):
     hosting_ids = serializer.validated_data['hosting_ids']
     income_ids = serializer.validated_data['income_ids']
     document_ids = serializer.validated_data['document_ids']
+    thread_ids = serializer.validated_data['thread_ids']
+    from content.services import retained_adoption
 
     # Document is deliberately not in ENTITY_MODELS (it never enters the
     # generic accounting pipeline), so its existence check lives here.
@@ -533,10 +567,18 @@ def assign_project_unlinked_records(request, project_id):
             .filter(pk__in=document_ids).values_list('pk', flat=True),
         ),
     )
+    missing_threads = sorted(
+        set(thread_ids)
+        - set(
+            CommunicationThread._base_manager
+            .filter(pk__in=thread_ids).values_list('pk', flat=True),
+        ),
+    )
     missing = (
         accounting_service.missing_record_ids(EntityType.HOSTING, hosting_ids)
         + accounting_service.missing_record_ids(EntityType.INCOME, income_ids)
         + missing_documents
+        + missing_threads
     )
     if missing:
         count = len(missing)
@@ -565,6 +607,11 @@ def assign_project_unlinked_records(request, project_id):
             - set(_unlinked_documents_qs(project)
                   .filter(pk__in=document_ids).values_list('pk', flat=True))
         )
+        | (
+            set(thread_ids)
+            - set(retained_adoption.retained_threads(project)
+                  .filter(pk__in=thread_ids).values_list('pk', flat=True))
+        )
     )
     if changed:
         count = len(changed)
@@ -581,15 +628,24 @@ def assign_project_unlinked_records(request, project_id):
     # One unit: a rejected step must undo the earlier ones. The request-level
     # history block commits on a handled 4xx, so the rollback has to live here.
     with transaction.atomic():
+        # Retained rows (and the billing rows that must travel with them) leave
+        # retention first, audited per deleted project; then the usual writers
+        # assign them with their own ledger audit.
+        adoption = retained_adoption.adopt_for_assignment(
+            project, actor=request.user, hosting_ids=hosting_ids, income_ids=income_ids,
+            document_ids=document_ids, thread_ids=thread_ids,
+            reason=serializer.validated_data['reason'],
+        )
         assigned_hostings = accounting_service.bulk_assign_project(
-            EntityType.HOSTING, hosting_ids, project, request.user,
-        ) if hosting_ids else []
+            EntityType.HOSTING, adoption.hosting_ids, project, request.user,
+        ) if adoption.hosting_ids else []
         assigned_incomes = accounting_service.bulk_assign_project(
-            EntityType.INCOME, income_ids, project, request.user,
-        ) if income_ids else []
+            EntityType.INCOME, adoption.income_ids, project, request.user,
+        ) if adoption.income_ids else []
         assigned_documents = accounting_service.assign_project_to_documents(
-            document_ids, project, request.user,
-        ) if document_ids else []
+            adoption.document_ids, project, request.user,
+        ) if adoption.document_ids else []
+        adoptions = adoption.finish()
     logger.info(
         'Panel project %s assigned to %s hostings, %s incomes and %s documents',
         project.pk, len(assigned_hostings), len(assigned_incomes),
@@ -617,6 +673,10 @@ def assign_project_unlinked_records(request, project_id):
         'hostings': HostingRecordSerializer(assigned_hostings, many=True).data,
         'incomes': IncomeRecordSerializer(income_rows, many=True).data,
         'documents': DocumentListSerializer(assigned_documents, many=True).data,
+        'assigned_threads': len(adoption.threads),
+        'threads': [{'id': thread.pk, 'title': thread.title} for thread in adoption.threads],
+        # One audited operation per deleted project; each can be undone.
+        'adoptions': adoptions,
         'project': _annotated_row(project.pk),
     })
 

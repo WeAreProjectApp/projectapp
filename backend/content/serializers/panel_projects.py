@@ -181,12 +181,21 @@ class ProjectAssignUnlinkedSerializer(serializers.Serializer):
     document_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, default=list,
     )
+    # Communication threads join the plan only when retained from a deleted
+    # project of this client; their adoption is audited with the rest.
+    thread_ids = serializers.ListField(
+        child=serializers.IntegerField(), required=False, default=list,
+    )
+    reason = serializers.CharField(
+        max_length=2000, required=False, allow_blank=True, default='', trim_whitespace=True,
+    )
 
     def validate(self, attrs):
         if (
             not attrs.get('hosting_ids')
             and not attrs.get('income_ids')
             and not attrs.get('document_ids')
+            and not attrs.get('thread_ids')
         ):
             raise serializers.ValidationError(
                 'Selecciona al menos un registro para asignar.'

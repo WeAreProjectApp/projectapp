@@ -11,6 +11,7 @@ from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
+from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.entity_history_tools import history_tools
 from content.mcp.proposal_schemas import writable_schema
@@ -59,9 +60,9 @@ PROJECT_TOOLS = [
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,
-    _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto.', 'panel-projects-unlinked-records', path=('project_id',)),
+    _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',)),
     _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. query.client_profile_id filtra por perfil de cliente, query.page pagina de a 20 y query.integrity=1 agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit'),
-    _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
+    _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
     _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),
     _op('change_project_client', 'Cambia el cliente y aplica la cascada previamente revisada.', 'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True),
     _op('list_project_state_groups', 'Lista grupos del catálogo de estados de proyecto.', 'project-state-groups'),
@@ -84,7 +85,7 @@ PROJECT_TOOLS = [
     _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, payload_schema=writable_schema(ProjectBrandAssetUploadSerializer, exclude=('file',))),
     _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id')),
     _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True),
-] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PROJECT_RETENTION_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
