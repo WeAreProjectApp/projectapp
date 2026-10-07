@@ -180,7 +180,7 @@ def change_folder(project_id, actor, resource_id, folder_id, data, *, delete=Fal
     values = {} if delete else _validate(CreateDeliverableClientFolderSerializer, data, partial=True)
 
     def change(project):
-        resource = _resource(project, actor, resource_id, editable=True)
+        resource = _resource(project, actor, resource_id)
         row = resource.client_folders.filter(pk=folder_id).first()
         if row is None:
             raise NotFound('Carpeta no encontrada.')

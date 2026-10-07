@@ -8,6 +8,7 @@ from datetime import timedelta
 import pytest
 from accounts.models import (
     Deliverable,
+    DeliverableClientFolder,
     DeliverableVersion,
     Project,
     ProjectDataModelEntity,
@@ -98,6 +99,19 @@ def test_resource_archive_preserves_the_file(call_projects, project, superuser):
     assert resource.is_archived is True
     with resource.file.open('rb') as source:
         assert source.read() == SIGNED_PDF
+
+
+def test_admin_can_rename_an_archived_resource_folder(call_projects, project, superuser):
+    resource = Deliverable.objects.create(project=project, uploaded_by=superuser,
+        title='Archived resource', is_archived=True)
+    folder = DeliverableClientFolder.objects.create(deliverable=resource, created_by=superuser, name='Original')
+    confirm(call_projects, 'update_project_resource_folder', {'project_id': project.pk,
+        'resource_id': resource.pk, 'folder_id': folder.pk, 'expected_version': 0,
+        'request_id': 'archived-folder', 'data': {'name': 'Renamed'}})
+    folder.refresh_from_db()
+    assert folder.name == 'Renamed'
+    resource.refresh_from_db()
+    assert resource.is_archived is True
 
 
 def test_resource_download_rejects_a_foreign_project(call_projects, project, superuser, django_user_model):

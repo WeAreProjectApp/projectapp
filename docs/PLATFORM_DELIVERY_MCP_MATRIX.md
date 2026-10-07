@@ -249,3 +249,9 @@ REST con migraciones reales de test; cuatro comprobaciones del contrato MCP;
 creado por ORM (`--nomigrations`). El gate focal de los tres archivos nuevos
 terminó en 100/100, sin errores ni advertencias. La revisión combinada, MySQL y
 el CI remoto pertenecen al cierre del PR y no se presumen por esos resultados.
+
+La compatibilidad de carpetas conserva también la edición/eliminación
+administrativa dentro de un recurso archivado; el cliente sigue sin poder
+consultarlo. Crear carpetas o subir archivos a un recurso archivado mantiene el
+rechazo existente. Una prueba MCP y cinco regresiones REST verificaron este
+límite en el schema de test aislado.
