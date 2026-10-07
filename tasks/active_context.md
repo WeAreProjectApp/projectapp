@@ -1,3 +1,5 @@
+> **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id` y los avisos se integran con los contratos de sus sesiones propietarias. La privacidad de URLs históricas requiere una ronda y deploy separado; no está acreditada por esta entrega.
+
 # Datos conservados sin proyecto — PR-0 (2026-10-07)
 
 Caso Littigio: la eliminación forzada de dos proyectos dejó ingresos, documentos,
