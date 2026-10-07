@@ -714,12 +714,30 @@ PROJECT_CONTRACTS = (
     ),
     _contract(
         'accounts.Deliverable',
-        read_only='id project category title description source_proposal source_epic_key source_epic_title current_version is_archived archived_at created_at updated_at',
+        read_only='id project source_proposal source_epic_key source_epic_title current_version archived_at created_at updated_at',
+        read_write='category title description is_archived',
         excluded=(
             _excluded('Archivo privado: sólo se opera mediante recursos y descargas autorizadas.', 'file')
             | _excluded(_AUDIT_INTERNAL, 'uploaded_by retention_context')
         ),
     ),
+    _contract('accounts.DeliverableVersion',
+        read_only='id deliverable version_number created_at',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.DeliverableFile', read_only='id deliverable created_at',
+        read_write='title category',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.DeliverableClientFolder', read_only='id deliverable created_at',
+        read_write='name order', excluded=_excluded(_AUDIT_INTERNAL, 'created_by')),
+    _contract('accounts.DeliverableClientUpload', read_only='id deliverable created_at',
+        read_write='title folder',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.ProjectDataModelEntity', read_only='id project created_at updated_at',
+        read_write='name description key_fields relationship',
+        excluded=_excluded('Contexto interno conservado; no editable por MCP.', 'retention_context')),
     _contract(
         'content.ProjectBrandAsset',
         read_only='id project filename size created_at',

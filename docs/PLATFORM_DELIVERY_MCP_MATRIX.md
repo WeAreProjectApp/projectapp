@@ -2,7 +2,7 @@
 
 La interfaz se abre en `/platform/projects/{id}/delivery`, con controles
 administrativos de contratos, alcances, importación, firma y publicación.
-El conector **Proyectos** incluye la autoría y administración de la jerarquía
+El conector **Gestor de la plataforma** (`projects`) incluye la autoría y administración de la jerarquía
 proyecto → contrato/otrosí → alcance → fase de ejecución → etapa → requerimiento.
 Las operaciones invocan `accounts.services.delivery_workflow` y
 `accounts.services.delivery_authoring`, igual que las vistas JWT de Platform.
@@ -164,3 +164,62 @@ correos históricos ni introducir un transportador adicional. Captura fallida
 impide SMTP y limpia los archivos nuevos. El estado desconocido o enviando no
 provoca un reintento automático. La operación explícita de reenvío conserva el
 vínculo con la copia y el snapshot anteriores.
+
+## Recursos y modelo de datos
+
+El mismo conector conserva proyectos, estados, fases comerciales, historial,
+entregas, ideas, permisos de consulta, cobros y tickets. Clientes y Propuestas
+conservan sus conectores propios. La etiqueta no cambia el slug, las credenciales,
+la activación ni los permisos existentes. La versión compatible es 2.1.0.
+
+| Acción | Herramientas |
+| --- | --- |
+| Consultar recursos | `list_project_resources`, `get_project_resource` |
+| Crear o editar | `create_project_resource`, `update_project_resource` |
+| Archivar o restaurar | `archive_project_resource`, `restore_project_resource` |
+| Incorporar una versión | `upload_project_resource_version` |
+| Consultar o adjuntar archivos | `list_project_resource_attachments`, `upload_project_resource_attachment` |
+| Administrar carpetas | `list_project_resource_folders`, `create_project_resource_folder`, `update_project_resource_folder`, `delete_project_resource_folder` |
+| Archivos del cliente | `list_project_resource_client_files`, `upload_project_resource_client_file` |
+| Descargar bytes exactos | `download_project_resource_file` |
+| Consultar el modelo y su plantilla | `get_project_data_model`, `get_project_data_model_template` |
+| Revisar e importar entidades | `preview_project_data_model`, `import_project_data_model` |
+
+Los recursos conservan el modelo existente `Deliverable`; archivar no elimina
+sus archivos ni versiones. Eliminar una carpeta conserva la operación vigente de
+Platform: elimina esa carpeta y sus registros dependientes. Los adaptadores no
+atribuyen una carga administrativa al cliente. REST y MCP usan
+`accounts.services.platform_resources` y `platform_data_model`.
+
+Las escrituras MCP requieren `expected_version` y `request_id`, y pasan por
+confirmación antes de cambiar contenido compartido. La vista previa conserva la
+selección, el propietario y la metadata del archivo. Al ejecutar se revalida el
+propietario dentro del bloqueo del proyecto. Los recibos reutilizan
+`DeliveryWorkspace` y `DeliveryOperation`, con dominio de operación y huella que
+incluye actor, credencial y propietario; no existe otro contador o tabla de
+reintentos. Las consultas devuelven `version`, `project_id` y `result`.
+
+Los archivos se cargan mediante assets propios. PDF conserva las reglas de
+categoría y los archivos del cliente tienen máximo 15 MB. Diseños admite ZIP
+solamente en `projects`, sin extracción: se comprueba estructura, cantidad,
+rutas, ausencia de cifrado y tamaño descomprimido. Los demás conectores no
+adquieren ese formato. La respuesta conversacional omite `file_url`; descargar
+requiere el recurso y, para versiones/adjuntos/archivos del cliente, el tipo y su
+`file_id`. El resultado es un artefacto temporal ligado a la credencial.
+
+Esta adaptación no certifica que el servidor haya retirado las URLs históricas
+públicas. Su cierre pertenece a la ronda de privacidad y al deploy verificado.
+
+## Avisos operativos de entrega
+
+`list_delivery_notification_events` y `get_delivery_notification_event` consultan
+el estado y sus intentos. `preview_delivery_notification_retry` retorna la copia
+y `preview_sha256` sin SMTP. `retry_delivery_notification_event` requiere esa
+huella, versión y `request_id`; la confirmación es sensible y duradera.
+
+Los cuatro adaptadores llaman a `accounts.services.delivery_notifications`.
+El servicio administra el bloqueo, destinatario vigente, claim anterior al envío
+y reintentos; el adaptador no implementa otro gateway. Solo un fallo confirmado
+permite reintento. `sending` y `unknown` no se reintentan automáticamente.
+Las respuestas omiten HTML, secretos y rutas privadas. La integración de ese
+servicio y sus migraciones precede a la validación combinada de los avisos.

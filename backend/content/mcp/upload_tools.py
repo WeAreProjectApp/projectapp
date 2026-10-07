@@ -24,6 +24,7 @@ MAX_CHUNK_BYTES = 1024 * 1024
 DEFAULT_MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 SHA256_PATTERN = re.compile(r'^[0-9a-f]{64}$')
 ALLOWED_CONTENT_TYPES = {
+    'application/zip',
     'video/mp4',
     'application/pdf',
     'application/msword',
@@ -38,6 +39,7 @@ ALLOWED_CONTENT_TYPES = {
     'text/plain',
 }
 CONTENT_TYPE_EXTENSIONS = {
+    'application/zip': {'.zip'},
     'video/mp4': {'.mp4'},
     'application/pdf': {'.pdf'},
     'application/msword': {'.doc'},
@@ -123,6 +125,8 @@ def begin_upload(arguments):
     max_bytes = max_upload_bytes(content_type)
     if content_type == 'video/mp4' and context.connector.slug not in VIDEO_CONNECTORS:
         raise _tool_error('Este conector no admite videos.', 'FORBIDDEN')
+    if content_type == 'application/zip' and context.connector.slug != 'projects':
+        raise _tool_error('Solo el Gestor de la plataforma admite archivos ZIP.', 'FORBIDDEN')
     if not filename or filename in {'.', '..'}:
         raise _tool_error('filename es obligatorio y debe ser un nombre seguro.')
     if len(filename) > McpUpload._meta.get_field('filename').max_length:
@@ -285,6 +289,22 @@ def _validate_declared_content(upload):
             raise _tool_error(str(exc.detail), 'INVALID_FILE_CONTENT') from exc
         return
     with upload.file.open('rb') as source:
+        if content_type == 'application/zip':
+            try:
+                with zipfile.ZipFile(source) as archive:
+                    members = archive.infolist()
+                    if not members or len(members) > 1000:
+                        raise ValueError('El ZIP necesita de uno a mil archivos.')
+                    for member in members:
+                        name = member.filename.replace('\\', '/')
+                        parts = name.split('/')
+                        if name.startswith('/') or '..' in parts or ':' in name or member.flag_bits & 1:
+                            raise ValueError('El ZIP contiene rutas inseguras o archivos cifrados.')
+                    if sum(member.file_size for member in members) > 100 * 1024 * 1024:
+                        raise ValueError('El ZIP supera el tamaño descomprimido permitido.')
+            except (OSError, zipfile.BadZipFile, ValueError) as exc:
+                raise _tool_error('El archivo no contiene un ZIP permitido.', 'INVALID_FILE_CONTENT') from exc
+            return
         if content_type in {'text/markdown', 'text/plain'}:
             decoder = codecs.getincrementaldecoder('utf-8')()
             try:
