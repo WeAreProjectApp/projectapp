@@ -107,6 +107,8 @@ def _perform(project_id, actor, operation, data, change, *, idempotent=False):
             if isinstance(expected, bool) or not isinstance(expected, int) or expected != workspace.version:
                 raise DeliveryConflict()
             result = change(project)
+            from accounts.services.delivery_notifications import record_operation_notice
+            record_operation_notice(project, actor, operation, result, data)
             workspace.version += 1
             workspace.save(update_fields=['version'])
             response = overview(project.pk, actor)
@@ -393,7 +395,6 @@ def publish_stage(project_id, actor, stage_id, data):
         )
         from accounts.services.delivery_documents import capture_publication_documents
         capture_publication_documents(project, stage, publication)
-        _notify(project, actor, f'Etapa disponible: {stage.title}', client=True, stage_id=stage.pk)
         return {'kind': 'publications', 'id': publication.pk}
 
     return _perform(project_id, actor, f'publish:{stage_id}', values, change, idempotent=True)
@@ -488,9 +489,6 @@ def _message(project, actor, values):
     if docs and not internal:
         from accounts.services.delivery_documents import share_message_documents
         share_message_documents(project, actor, level, target, docs)
-    if not internal:
-        _notify(project, actor, 'Nueva respuesta de seguimiento', values['message'][:500],
-                client=is_admin(actor), stage_id=target_id if level == 'stage' else None)
     return msg
 
 
@@ -560,7 +558,6 @@ def review_stage(project_id, actor, stage_id, data, historical=False):
             _message(project, actor, {'level': 'stage', 'target_id': stage.pk,
                                      'requirement_ids': decision_ids, 'message': message_text,
                                      'document_ids': values.get('document_ids', [])})
-        _notify(project, actor, f'Revisión recibida: {stage.title}', stage_id=stage.pk)
         return {'kind': 'reviews', 'stage_id': stage.pk}
 
     return _perform(project_id, actor, f'review:{stage_id}:{historical}', values, change, idempotent=True)

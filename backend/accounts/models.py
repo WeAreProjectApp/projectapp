@@ -1888,3 +1888,7 @@ from accounts.models_issue_reports import (  # noqa: E402,F401
 from accounts.models_delivery_email import (  # noqa: E402,F401
     DeliveryEvidenceEmail, DeliveryEvidenceEmailAttempt, DeliveryEvidenceEmailFile,
 )
+
+from accounts.models_delivery_notifications import (  # noqa: E402,F401
+    DeliveryNotificationAttempt, DeliveryNotificationEvent,
+)
