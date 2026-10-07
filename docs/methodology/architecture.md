@@ -1609,7 +1609,7 @@ The explicit `$proposal-create` / `/proposal-create` workflow can precede the pa
 1. Admin creates proposal via `/panel/proposals/create` (or JSON import)
 2. Admin selects an existing client from `<ClientAutocomplete>` (or types a new one). Backend resolves the client via `proposal_client_service.get_or_create_client_for_proposal()` — case-insensitive dedup by `User.email`, never hijacks admin accounts. Empty emails get a placeholder `cliente_<id>@temp.example.com` (RFC 2606 reserved TLD) generated via two-step save, which automatically pauses every email automation for that proposal until a real address is entered.
 3. 18 section types auto-generated with default content per language (some web-only, skipping the PDF). Functional requirements begin with the four core cards `views` → `components` → `features` → `cross_cutting_features`; the fourth container is stable while its quality items are contextual. The frontend seller prompt and backend `_seller_prompt.bold_formatting` share the same 14-field lead-copy emphasis contract; both must remain aligned. `show_contract_terms` remains separate top-level metadata, so enabling the fourth reading mode does not mutate this section snapshot or its prompt/JSON shape.
-4. Admin edits sections via `/panel/proposals/{id}/edit` (client picker also available there; can be swapped or its profile updated via the propagate-changes checkbox which cascades the snapshot to every other linked proposal)
+4. Admin edits sections via `/panel/proposals/{id}/edit`. Proyecto > Datos owns client selection, editable contact snapshots and the current project in all statuses. A linked proposal cannot swap its client through a generic PATCH. Contact and email settings save independently of the General draft; Recursos lives under Propuesta. Changing a linked project uses an audited preview/confirm operation within the same client.
 5. Admin clicks "Send" → email sent to client + admin notification + reminders scheduled (skipped silently if client email is a placeholder)
 6. Client opens unique link `/proposal/{uuid}`; this document `GET` does not count as a commercial view, and staff sessions or drafts never enter tracking.
 7. The gateway offers executive, detailed and technical views; eligible Spanish proposals also offer **Contrato y condiciones**. That legal mode lazily loads the current masked global template into a full-content-width intro/index panel followed by one continuous vertical contract panel contained in one semantic, accessible paper surface. PDF download remains a persistent floating proposal action and is not duplicated inside the introduction.
@@ -2061,3 +2061,28 @@ la purga. La limpieza de FileFields y assets JSON de Linktree ocurre
 sólo después del commit y conserva nombres todavía referenciados. El contexto
 MCP no puede activar esta operación mediante query ni payload; su eliminación
 sensible sigue limitada a proyectos vacíos. No requiere migraciones.
+
+
+## Reasignación auditada de propuestas y recursos por origen
+
+`proposal_project_reassignment` bloquea proyectos antes de propuesta y relaciones,
+calcula una huella del impacto y registra la operación mediante
+`ProposalProjectReassignment`. No repite aprobación, no modifica el manifest
+congelado ni emite documentos. Los IDs escalares de origen/destino conservan el
+evento después de retirar un proyecto vacío. Un request_id estable devuelve el
+resultado anterior; un payload distinto o un impacto obsoleto produce conflicto.
+Los archivos conservan su nombre almacenado, ID, tamaño y huella.
+
+`Deliverable.source_proposal` separa los recursos técnicos de las distintas fases
+comerciales de un proyecto. La unicidad considera proyecto, propuesta y clave;
+los recursos legacy no atribuidos mantienen su propia unicidad. El sync dirigido
+sólo modifica la propuesta elegida. El sync global recorre todas las propuestas
+de sus fases, en lugar de elegir la primera. `accounts.0078` atribuye únicamente
+claves comprobadas de proyectos con un solo origen; la ambigüedad no se resuelve
+por título. `content.0283` crea la auditoría; sus campos obligatorios no tienen
+DEFAULT persistente de base de datos. La relación nueva en Deliverable es nullable.
+
+La lectura de actividad usa páginas acotadas con cursor firmado por propuesta y
+orden `(created_at, pk)` para no saltar empates. La UI conserva páginas y notas
+locales ante respuestas tardías. Cliente/contactos y ajustes del correo guardan
+sólo su conjunto de campos; General no reenvía esos campos ni fechas sin cambios.

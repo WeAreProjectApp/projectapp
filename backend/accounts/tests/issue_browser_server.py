@@ -4,9 +4,15 @@ import json
 import os
 import sys
 from pathlib import Path
+from socketserver import ThreadingMixIn
+from threading import Lock
 from wsgiref.simple_server import WSGIRequestHandler, WSGIServer, make_server
 
 MEMORY_MAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
+
+
+class ThreadedWSGIServer(ThreadingMixIn, WSGIServer):
+    daemon_threads = True
 
 
 def memory_mailers(settings):
@@ -73,39 +79,41 @@ def main():
             from accounts.tests.delivery_browser_fixtures import create_browser_fixture
             from django.contrib.auth import get_user_model
             application = get_wsgi_application()
+            application_lock = Lock()
             fixtures = {}
 
             def test_application(environ, start_response):
-                path = environ.get('PATH_INFO')
-                if path == '/__issues_ready__':
-                    response = HttpResponse('ready')
-                elif path == '/__issues_mailbox__':
-                    from django.core import mail
-                    assert_memory_mailers()
-                    response = JsonResponse({'backend': 'locmem', 'aliases': sorted(settings.MAILERS),
-                                             'count': len(getattr(mail, 'outbox', []))})
-                elif path == '/__issues_fixture__' and environ.get('REQUEST_METHOD') == 'POST':
-                    assert_memory_mailers()
-                    size = min(int(environ.get('CONTENT_LENGTH') or 0), 4096)
-                    key = json.loads(environ['wsgi.input'].read(size) or '{}').get('key', 'issues')
-                    if key not in fixtures:
-                        data = create_browser_fixture(key)
-                        client = get_user_model().objects.get(email=data['client']['email'])
-                        general = Project.objects.create(name=f'General {key}', client=client)
-                        data['general_project'] = {'id': general.pk, 'name': general.name}
-                        data['publication_id'] = DeliveryPublication.objects.get(stage_id=data['stage_id']).pk
-                        fixtures[key] = data
-                    response = JsonResponse(fixtures[key])
-                else:
-                    return application(environ, start_response)
-                start_response(f'{response.status_code} OK', list(response.items()))
-                return [response.content]
+                with application_lock:
+                    path = environ.get('PATH_INFO')
+                    if path == '/__issues_ready__':
+                        response = HttpResponse('ready')
+                    elif path == '/__issues_mailbox__':
+                        from django.core import mail
+                        assert_memory_mailers()
+                        response = JsonResponse({'backend': 'locmem', 'aliases': sorted(settings.MAILERS),
+                                                 'count': len(getattr(mail, 'outbox', []))})
+                    elif path == '/__issues_fixture__' and environ.get('REQUEST_METHOD') == 'POST':
+                        assert_memory_mailers()
+                        size = min(int(environ.get('CONTENT_LENGTH') or 0), 4096)
+                        key = json.loads(environ['wsgi.input'].read(size) or '{}').get('key', 'issues')
+                        if key not in fixtures:
+                            data = create_browser_fixture(key)
+                            client = get_user_model().objects.get(email=data['client']['email'])
+                            general = Project.objects.create(name=f'General {key}', client=client)
+                            data['general_project'] = {'id': general.pk, 'name': general.name}
+                            data['publication_id'] = DeliveryPublication.objects.get(stage_id=data['stage_id']).pk
+                            fixtures[key] = data
+                        response = JsonResponse(fixtures[key])
+                    else:
+                        return application(environ, start_response)
+                    start_response(f'{response.status_code} OK', list(response.items()))
+                    return [response.content]
 
             # Shared in-memory SQLite cannot wait on concurrent table locks.
             # Serialize this disposable harness; production locks remain in
             # the domain services, not in this fixture-only server.
             with make_server('127.0.0.1', args.port, test_application,
-                             server_class=WSGIServer, handler_class=QuietHandler) as server:
+                             server_class=ThreadedWSGIServer, handler_class=QuietHandler) as server:
                 server.serve_forever()
         finally:
             teardown_databases(databases, verbosity=0)

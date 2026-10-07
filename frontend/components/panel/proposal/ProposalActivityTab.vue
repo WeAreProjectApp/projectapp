@@ -59,8 +59,9 @@
         {{ tt.activityHistory }}
       </BaseTooltip>
     </div>
-    <div v-if="!changeLogs.length" class="text-center py-8 text-sm text-text-subtle">Sin actividad registrada.</div>
-    <div v-else class="relative pl-6 space-y-0">
+    <p v-if="loading && !changeLogs.length" role="status" class="text-sm text-text-muted">Cargando actividad…</p>
+    <div v-else-if="!changeLogs.length && !loadError" class="text-center py-8 text-sm text-text-subtle">Sin actividad registrada.</div>
+    <div v-if="changeLogs.length" class="relative pl-6 space-y-0">
       <div class="absolute left-[9px] top-2 bottom-2 w-px bg-surface-raised" />
       <div v-for="log in changeLogs" :key="log.id" class="relative pb-5 last:pb-0">
         <div class="absolute -left-6 top-1 w-[18px] h-[18px] rounded-full border-2 border-border-default shadow-sm flex items-center justify-center text-[10px]" :class="activityDotClass(log.change_type)">
@@ -76,11 +77,17 @@
         </div>
       </div>
     </div>
+    <div v-if="loadError" role="alert" class="mt-4 text-sm text-danger-strong">
+      {{ loadError }} <BaseButton variant="secondary" size="sm" @click="loadActivity(!changeLogs.length)">Reintentar</BaseButton>
+    </div>
+    <BaseButton v-if="nextCursor" variant="secondary" size="sm" class="mt-5" :loading="loading"
+      :disabled="loading" disabled-reason="Espera a que termine de cargar la actividad."
+      data-testid="proposal-activity-load-more" @click="loadActivity()">Cargar más</BaseButton>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue';
+import { reactive, ref, watch, onBeforeUnmount } from 'vue';
 import { QuestionMarkCircleIcon } from '@heroicons/vue/24/outline';
 import { useProposalStore } from '~/stores/proposals';
 import { usePanelNotify } from '~/composables/usePanelNotify';
@@ -99,23 +106,51 @@ const { proposalEdit: tt } = useTooltipTexts();
 
 const activityForm = reactive({ change_type: 'note', description: '' });
 const isSubmittingActivity = ref(false);
-const changeLogs = computed(() => props.proposal?.change_logs || []);
+const changeLogs = ref([]);
+const nextCursor = ref(null);
+const loading = ref(false);
+const loadError = ref('');
+let generation = 0;
+async function loadActivity(reset = false) {
+  if (!props.proposal?.id || (loading.value && !reset)) return;
+  const current = reset ? ++generation : generation;
+  loading.value = true;
+  loadError.value = '';
+  try {
+    const data = await proposalStore.fetchActivity(props.proposal.id, reset ? null : nextCursor.value);
+    if (current !== generation) return;
+    // The proposal watcher clears previous entries. Keep a note added while
+    // the first page is loading instead of replacing it with that response.
+    const existing = changeLogs.value;
+    changeLogs.value = [...new Map([...existing, ...data.results].map(item => [item.id, item])).values()];
+    nextCursor.value = data.next_cursor;
+  } catch {
+    if (current === generation) loadError.value = 'No se pudo cargar la actividad. Vuelve a intentarlo.';
+  } finally { if (current === generation) loading.value = false; }
+}
+watch(() => props.proposal?.id, () => { changeLogs.value = []; nextCursor.value = null; loadActivity(true); }, { immediate: true });
+onBeforeUnmount(() => { generation++; });
 
 async function submitActivity() {
   if (!activityForm.description.trim() || isSubmittingActivity.value) return;
+  const current = generation;
+  const submittedDescription = activityForm.description;
   isSubmittingActivity.value = true;
   try {
     const result = await proposalStore.logActivity(props.proposal.id, {
       change_type: activityForm.change_type,
       description: activityForm.description.trim(),
     });
+    if (current !== generation) return;
     if (result.success) {
-      activityForm.description = '';
-      await proposalStore.fetchProposal(props.proposal.id);
+      if (activityForm.description === submittedDescription) activityForm.description = '';
+      changeLogs.value = [result.data, ...changeLogs.value.filter(item => item.id !== result.data.id)];
       notify.success({ title: 'Actividad registrada.' });
     } else {
       notify.error({ title: 'No se pudo registrar la actividad.' });
     }
+  } catch {
+    if (current === generation) notify.error({ title: 'No se pudo registrar la actividad.' });
   } finally {
     isSubmittingActivity.value = false;
   }

@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, ref, shallowRef, watch } from 'vue';
 import { useEntityHistoryStore } from '~/stores/entity_history';
 import HistoryValue from './HistoryValue.vue';
+import BasePagination from '~/components/base/BasePagination.vue';
 
 const props = defineProps({ entityType: { type: String, required: true }, objectId: { type: [Number, String], required: true } });
 const store = useEntityHistoryStore();
@@ -27,6 +28,20 @@ const protectedLabel = (field) => {
   }
   return `contraseña · ${field.includes('production') ? 'Producción' : field.includes('staging') ? 'Staging' : 'Anterior'}`;
 };
+
+function goToPage(value) {
+  const target = Math.max(1, Math.min(Number(value), result.value?.num_pages || 1));
+  if (loading.value || target === page.value) return;
+  page.value = target;
+  load();
+}
+const pagination = computed(() => ({
+  currentPage: page.value, totalPages: result.value?.num_pages || 1,
+  totalItems: result.value?.count || 0,
+  rangeFrom: result.value?.count ? (page.value - 1) * 20 + 1 : 0,
+  rangeTo: Math.min(page.value * 20, result.value?.count || 0),
+  alwaysShow: true,
+}));
 
 async function load() {
   const current = ++listGeneration;
@@ -145,6 +160,8 @@ onBeforeUnmount(() => { listGeneration++; detailGeneration++; revealed.value = {
       <BaseButton v-if="selected.length === 2" variant="secondary" data-testid="history-compare" @click="compareSelected">Comparar versiones</BaseButton>
       <BaseButton variant="ghost" @click="selected = []">Limpiar selección</BaseButton>
     </div>
+    <BasePagination v-if="result && !loading" v-bind="pagination" aria-label="Paginación del historial"
+      @prev="goToPage(page - 1)" @next="goToPage(page + 1)" @go="goToPage" />
     <ol class="divide-y divide-border-muted">
       <li v-for="entry in result?.results || []" :key="entry.id" class="flex flex-wrap items-start gap-3 py-3" :data-testid="`history-entry-${entry.id}`">
         <label v-if="entry.complete" class="flex items-center gap-2 py-2 text-sm">
@@ -160,11 +177,8 @@ onBeforeUnmount(() => { listGeneration++; detailGeneration++; revealed.value = {
         <BaseButton variant="secondary" size="sm" @click="openVersion(entry.id)">Consultar</BaseButton>
       </li>
     </ol>
-    <div v-if="result?.num_pages > 1" class="flex flex-wrap items-center justify-between gap-3 text-sm">
-      <BaseButton v-if="page > 1" variant="secondary" @click="page--; load()">Anterior</BaseButton>
-      <span>Página {{ page }} de {{ result.num_pages }}</span>
-      <BaseButton v-if="page < result.num_pages" variant="secondary" @click="page++; load()">Siguiente</BaseButton>
-    </div>
+    <BasePagination v-if="result && !loading" v-bind="pagination" aria-label="Paginación del historial al final"
+      @prev="goToPage(page - 1)" @next="goToPage(page + 1)" @go="goToPage" />
     <p v-if="busy" role="status" class="text-sm text-text-muted">Consultando versión…</p>
     <div v-if="detail || comparison" class="space-y-4 rounded-xl border border-border-muted bg-surface-raised p-4" data-testid="history-version-detail">
       <div class="flex flex-wrap items-center justify-between gap-2">

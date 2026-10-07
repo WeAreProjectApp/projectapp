@@ -2,10 +2,13 @@
 from datetime import timedelta
 
 import pytest
+from accounts.models import Deliverable, Project, ProjectPhase, UserProfile
+from django.contrib.auth import get_user_model
 
 from content.models import (
     BusinessProposal,
     EntityHistory,
+    EntityRevision,
     McpConnector,
     ProposalDefaultConfig,
 )
@@ -47,6 +50,72 @@ def proposals_token(db):
 
 @pytest.mark.django_db
 class TestProposalMcpSettings:
+    def test_reassignment_requires_mcp_confirmation_before_moving_the_phase(
+        self, api_client, proposals_token,
+    ):
+        """Fails if MCP applies a proposal project correction before the caller confirms its reviewed impact."""
+        User = get_user_model()
+        client_user = User.objects.create_user(username='mcp-reassignment-client', password='test')
+        client = UserProfile.objects.create(user=client_user, role=UserProfile.ROLE_CLIENT)
+        source = Project.objects.create(name='MCP source', client=client_user)
+        target = Project.objects.create(name='MCP target', client=client_user)
+        proposal = BusinessProposal.objects.create(
+            title='MCP proposal correction', client=client, client_name='MCP client',
+            client_email='mcp-client@example.test', total_investment=1,
+            status=BusinessProposal.Status.ACCEPTED,
+        )
+        package = Deliverable.objects.create(project=source, title='MCP package', uploaded_by=client_user)
+        proposal.deliverable = package
+        proposal.save(update_fields=['deliverable'])
+        phase = ProjectPhase.objects.create(project=source, business_proposal=proposal, order=1)
+        preview = _payload(_call(api_client, proposals_token, 'preview_proposal_project_reassignment', {
+            'proposal_id': proposal.pk, 'target_project_id': target.pk,
+        }))
+
+        pending = _call(api_client, proposals_token, 'reassign_proposal_project', {
+            'proposal_id': proposal.pk, 'target_project_id': target.pk,
+            'reason': 'Correct MCP project association',
+            'expected_impact_hash': preview['impact_hash'], 'request_id': 'mcp-confirmation-request',
+        })
+        phase.refresh_from_db()
+        assert _payload(pending)['confirmation_required'] is True
+        assert phase.project_id == source.pk
+        confirmed = _call(api_client, proposals_token, 'confirm_action', {
+            'confirmation_id': _payload(pending)['confirmation_id'],
+        })
+
+        phase.refresh_from_db()
+        assert phase.project_id == target.pk
+        assert confirmed['isError'] is False
+
+    def test_history_tool_redacts_private_file_paths_from_a_real_mcp_response(
+        self, api_client, proposals_token, proposal,
+    ):
+        """Fails if MCP history reads reveal a stored file path in snapshots or change values."""
+        history, _ = EntityHistory.objects.get_or_create(
+            entity_type='proposal', object_id=proposal.pk,
+            defaults={'object_label': proposal.title},
+        )
+        revision = EntityRevision.objects.create(
+            history=history, number=999, action='updated',
+            snapshot={'generated_file': 'private/proposals/contract.pdf', 'title': proposal.title},
+            changes=[
+                {'field': 'generated_file', 'old': 'private/proposals/old.pdf',
+                 'new': 'private/proposals/contract.pdf', 'lines': ['private/proposals/contract.pdf']},
+                {'field': 'title', 'old': 'Before', 'new': 'After'},
+            ],
+        )
+
+        result = _call(api_client, proposals_token, 'get_proposal_history_version', {
+            'object_id': proposal.pk, 'revision_id': revision.pk,
+        })
+        payload = _payload(result)
+
+        assert result['isError'] is False
+        assert payload['snapshot'] == {'title': proposal.title}
+        assert payload['changes'] == [{'field': 'generated_file'}, {'field': 'title', 'old': 'Before', 'new': 'After'}]
+        assert 'private/proposals' not in str(payload)
+
     def test_restricted_credential_does_not_gain_proposal_write_tools(self, api_client, proposals_token):
         """Fails if a restricted credential discovers proposal mutations outside its explicit allowlist."""
         connector = McpConnector.objects.get(slug='proposals')

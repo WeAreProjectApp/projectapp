@@ -696,7 +696,35 @@ def _contracts_from(profile, *model_labels):
     return tuple(by_label[label] for label in model_labels)
 
 
+MCP_MODEL_CONTRACTS['proposals'] += (
+    _contract(
+        'content.ProposalProjectReassignment',
+        read_only='id proposal source_project_id target_project_id reason impact result created_at',
+        excluded=_excluded('Registro inmutable de correcciones; el actor, la idempotencia y la huella se escriben sólo por el servicio autorizado.', 'request_id payload_hash actor'),
+    ),
+)
+
+
 PROJECT_CONTRACTS = (
+    _contract(
+        'accounts.ProjectPhase',
+        read_only='id project business_proposal hosting_activated_at created_at',
+        read_write='order hosting_start_date',
+        excluded=_excluded('Contexto interno de datos conservados; no editable por MCP.', 'retention_context'),
+    ),
+    _contract(
+        'accounts.Deliverable',
+        read_only='id project category title description source_proposal source_epic_key source_epic_title current_version is_archived archived_at created_at updated_at',
+        excluded=(
+            _excluded('Archivo privado: sólo se opera mediante recursos y descargas autorizadas.', 'file')
+            | _excluded(_AUDIT_INTERNAL, 'uploaded_by retention_context')
+        ),
+    ),
+    _contract(
+        'content.ProjectBrandAsset',
+        read_only='id project filename size created_at',
+        read_write='title category file',
+    ),
     _contract(
         'accounts.Project',
         read_only='id created_at updated_at',

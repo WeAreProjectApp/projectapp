@@ -16,10 +16,11 @@ from django.db.models import Max
 from accounts.models import (
     DataModelEntity,
     Deliverable,
+    Project,
     ProjectPhase,
 )
 from accounts.services.archive import archive_record
-from content.models import ProposalSection
+from content.models import BusinessProposal, ProposalSection
 
 
 User = get_user_model()
@@ -86,15 +87,30 @@ def filtered_technical_doc_for_sync(bp, doc: dict) -> dict:
     )
 
 
-def compute_sync_diff(project, new_content_json: dict) -> dict[str, Any]:
+def _proposal_resources(project, proposal=None):
+    resources = Deliverable.objects.filter(project=project)
+    if proposal is None:
+        return resources
+    # Historical resources may be adopted only in a single-proposal project.
+    # Never reuse an unowned key when several proposals share the project.
+    owned = resources.filter(source_proposal=proposal)
+    owners = set(project.phases.values_list('business_proposal_id', flat=True)) | set(
+        BusinessProposal.objects.filter(deliverable__project=project).values_list('pk', flat=True)
+    )
+    if owners <= {proposal.pk}:
+        from django.db.models import Q
+        return resources.filter(Q(source_proposal=proposal) | Q(source_proposal__isnull=True))
+    return owned
+
+
+def compute_sync_diff(project, new_content_json: dict, proposal=None) -> dict[str, Any]:
     """Preview resource and data-model changes without writing delivery guides."""
     epics_list = _parse_epics_from_json(new_content_json)
 
     # Build lookup of current non-archived Deliverables by source_epic_key
     current_deliverables = {
         d.source_epic_key: d
-        for d in Deliverable.objects.filter(
-            project=project,
+        for d in _proposal_resources(project, proposal).filter(
             source_epic_key__isnull=False,
             is_archived=False,
         )
@@ -148,7 +164,7 @@ def compute_sync_diff(project, new_content_json: dict) -> dict[str, Any]:
     entities_list = _parse_data_model_entities(new_content_json)
     current_entities: dict[str, DataModelEntity] = {}
     for e in DataModelEntity.objects.filter(
-        deliverable__project=project,
+        deliverable__in=_proposal_resources(project, proposal),
         is_archived=False,
     ):
         if e.source_entity_name:
@@ -229,7 +245,12 @@ def _sync_technical_resources_core(
     }
 
     with transaction.atomic():
+        Project.objects.select_for_update().get(pk=project.pk)
         _ensure_phase(project, bp)
+        legacy_by_key = {
+            resource.source_epic_key: resource
+            for resource in _proposal_resources(project, bp).filter(source_proposal__isnull=True).exclude(source_epic_key='')
+        }
         seen_epic_keys: set[str] = set()
         synced_deliverables: list[Deliverable] = []
 
@@ -250,12 +271,17 @@ def _sync_technical_resources_core(
 
             seen_epic_keys.add(key)
 
-            preserved = Deliverable.objects.filter(project=project, source_epic_key=key).order_by('pk').first() if preserve_existing else None
+            legacy = legacy_by_key.get(key)
+            if legacy is not None:
+                legacy.source_proposal = bp
+                legacy.save(update_fields=['source_proposal'])
+            preserved = Deliverable.objects.filter(project=project, source_proposal=bp, source_epic_key=key).order_by('pk').first() if preserve_existing else None
             if preserved is not None:
                 d, created = preserved, False
             else:
                 d, created = Deliverable.objects.get_or_create(
                     project=project,
+                    source_proposal=bp,
                     source_epic_key=key,
                     defaults={
                         'category': Deliverable.CATEGORY_DOCUMENTS,
@@ -290,6 +316,7 @@ def _sync_technical_resources_core(
         if delete_removed and seen_epic_keys:
             to_del_d = Deliverable.objects.filter(
                 project=project,
+                source_proposal=bp,
                 source_epic_key__isnull=False,
                 is_archived=False,
             ).exclude(source_epic_key__in=seen_epic_keys)
@@ -363,6 +390,7 @@ def _sync_technical_resources_core(
         if delete_removed and seen_entity_names:
             to_del_e = DataModelEntity.objects.filter(
                 deliverable__project=project,
+                deliverable__source_proposal=bp,
                 source_entity_name__isnull=False,
                 is_archived=False,
             ).exclude(source_entity_name='').exclude(
@@ -382,11 +410,18 @@ def sync_technical_resources_for_project(
     Upsert resources (per epic) from the linked proposal's
     technical_document section (first BusinessProposal on a project deliverable).
     """
-    bp = project.linked_business_proposal()
-    if not bp:
+    proposals = [phase.business_proposal for phase in project.phases.select_related('business_proposal').order_by('order', 'pk')]
+    if not proposals:
+        legacy = project.linked_business_proposal()
+        proposals = [legacy] if legacy else []
+    if not proposals:
         return {'ok': False, 'error': 'no_linked_proposal', 'detail': 'El proyecto no tiene propuesta en un entregable.'}
-
-    return _sync_technical_resources_core(project, bp, acting_user, delete_removed=delete_removed)
+    with transaction.atomic():
+        results = [_sync_technical_resources_core(project, bp, acting_user, delete_removed=delete_removed) for bp in proposals]
+    if len(results) == 1:
+        return results[0]
+    return {'ok': all(item['ok'] for item in results), 'proposals': [bp.pk for bp in proposals],
+            **{key: sum(item.get(key, 0) for item in results) for key in results[0] if key not in ('ok', 'error', 'detail')}}
 
 
 def sync_technical_resources_for_deliverable(

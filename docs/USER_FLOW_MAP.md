@@ -3885,6 +3885,8 @@ Two transitions that were previously bundled into other flows now have their own
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
+  - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
   - [Grouped navigation] Select a primary area and one of its visible secondary tools. Compact and portrait profiles use named selectors. Returning to an area restores its last tool and preserves unsaved content or a selected video file.
   - [Shared links] Old `?tab=<tool>` links and new `?tab=<group>&section=<tool>` links open the corresponding tool after proposal data loads, preserving unrelated parameters and fragments. Unknown or unavailable destinations return to General.
@@ -5126,7 +5128,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
   2. Admin selects an activity type and enters a description.
   3. Admin submits → API call to `POST /api/proposals/:id/log-activity/`.
   4. Backend creates a ProposalChangeLog entry and updates `last_activity_at`.
-  5. Activity timeline refreshes with the new entry.
+  5. Activity timeline inserts the new entry without clearing loaded pages.
+- **Carga incremental:** Seguimiento → Actividad consulta `GET /api/proposals/:id/activity/` con veinte entradas iniciales. Cargar más usa el cursor de la respuesta, conserva lo cargado y alcanza entradas anteriores a la número cincuenta. Un fallo ofrece reintento sin perder entradas. Una nota añadida durante la carga inicial permanece cuando llega la respuesta.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-log-activity.spec.js`
 
@@ -6160,7 +6163,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-proposal-documents-send` | admin | P1 | — | 0 |
 | `admin-proposal-download-pdf` | admin | P2 | success | — |
 | `admin-proposal-duplicate` | admin | P2 | success | 1 |
-| `admin-proposal-edit` | admin | P1 | success,error,display | 1 |
+| `admin-proposal-edit` | admin | P1 | success,error,failure,display | 1 |
 | `admin-proposal-engagement-decay-alert` | admin | P2 | — | 0 |
 | `admin-proposal-engagement-score` | admin | P2 | display | 1 |
 | `admin-proposal-explainer-preference` | admin | P2 | display,success,failure | 3 |
@@ -6181,6 +6184,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-proposal-multi-send` | admin | P1 | success,error,failure | 1 |
 | `admin-proposal-platform-handoff` | admin | P1 | success,failure | 1 |
 | `admin-proposal-post-rejection-revisit` | admin | P2 | — | 0 |
+| `admin-proposal-project-reassignment` | admin | P1 | success,error,failure | — |
 | `admin-proposal-project-schedule` | admin | P1 | success,error | 1 |
 | `admin-proposal-prompt` | admin | P3 | success | 1 |
 | `admin-proposal-quick-log` | admin | P2 | success | 1 |
@@ -6549,6 +6553,7 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/pocket`
+- **Copiar saldo:** El botón junto a Saldo del bolsillo copia el importe total con el formato mostrado, símbolo y separadores colombianos. Los filtros de movimientos no cambian el valor copiado. La confirmación o el error aparece junto al botón; durante la carga o si no se obtuvo el total, la acción permanece deshabilitada.
 - **Description:** ProjectApp pocket ledger with balance card and running-balance column (default view newest-first; the balance is computed chronologically). The pocket is the money entry point (Jul 2026): creating a movement also creates its linked income (IN → liquid/pocket) or expense (OUT). A new movement opens on Egreso, the common case, with every direction-dependent field already in its egreso variant; editing keeps the direction the record has. For IN the "Contabilidad" segmented is company-only; for OUT it is relabeled "Atribuir a" (Empresa/Gustavo/Carlos) because pocket money is company money: every OUT mirrors a company-ledger expense that counts against liquid utility — Empresa splits 50/50, a partner option registers a draw fully assigned to that partner (category personal). Linked movements open the edit modal with the direction locked and the attribution prefilled (derived from the split); edits mirror into the linked record and deleting either side cascades to the other (the delete confirm warns about the cascade). Unlinked historical movements keep plain CRUD and never gain a mirror. The row menu also offers **Ver nota** when the movement has a note.
   Desde ago-2026 el panel de filtros expone todos los campos que el formulario captura (el criterio de *insumo*): además de Fecha, Tipo y Valor trae **Atribuir a** (multi Empresa/Gustavo/Carlos sobre el `linked_ledger` derivado del espejo) y **Vínculo** (Todos/Vinculados/Sin vincular sobre `is_auto_managed`, que es la forma de encontrar los movimientos que quedaron sin su registro espejo); los campos de texto libre entran por el buscador, que ahora cubre `notes` además de `concept`. Los dos filtros nuevos existen también en el servidor (un knob `q_filters` en la capa compartida), así que el export CSV y la MCP `list_pocket` cortan las mismas filas que la tabla, y el export ganó las columnas *Atribución* y *Vinculado*. Como el saldo es una acumulación cronológica, se calcula **después** de filtrar: con filtros activos la columna se relabela **Acumulado** y suma sólo las filas visibles, el subtítulo lo aclara, y la tarjeta de saldo —que el servidor calcula siempre sobre todos los movimientos— se rotula "(total, no refleja los filtros)" y suma una línea "N movimientos filtrados · neto X". La tira de pestañas (`ProposalFilterTabs`, el estándar PA-44) trae seis sembradas: Entradas, Salidas, Gustavo, Carlos, Empresa y Sin vincular (la migración `accounts/0050` las backfillea para los usuarios existentes), cada una con su conteo entre paréntesis —el (0) honesto incluido— calculado en el browser con `countTabs`, ya que el dataset completo está en el store; lo que no cabe en la tira colapsa en el menú "+N".
   El contrato responsivo conserva el significado del libro: por debajo de 1024 px el saldo corrido se mueve debajo del valor de cada movimiento en vez de desaparecer; los tabs del módulo y los filtros guardados pasan a selectores. Desde 1024 px regresan las tiras y la columna independiente de saldo. La aceptación automática fija los cinco viewports de referencia (412, 835, 1195, 1440 y 2560 px), comprueba que no haya desborde horizontal y limita el shell general a 1400 px en monitor grande; la certificación física se registra por separado.
@@ -8193,6 +8198,26 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 - **Error:** datos requeridos o adjuntos no disponibles impiden preparar; revisión obsoleta, del formato anterior de anexos, vencida o consumida muestra un error accionable.
 - **Failure:** falla de carga o preparación conserva el formulario; resultado incierto de envío consulta el estado y evita un segundo envío automático.
 - **Límites:** preparación privada de 24 horas, hasta 20 secciones y 10 destinatarios; sin transición automática del estado comercial.
+
+### FLOW: `admin-proposal-project-reassignment`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Routes:** `/panel/proposals/:id/edit?tab=project&section=project-data`
+- **Description:** Corregir el proyecto de una propuesta vinculada conservando su identidad, fases y evidencia aprobada.
+- **Steps:**
+  1. Abrir Proyecto → Datos desde la navegación de la propuesta.
+  2. Seleccionar otro proyecto activo del mismo cliente y explicar el motivo.
+  3. Revisar el origen, destino y las relaciones incluidas en el traslado.
+  4. Confirmar sólo cuando la revisión no tiene dependencias pendientes.
+  5. Ver el proyecto actualizado en Datos.
+- **Outcomes:**
+  - `success`: La confirmación cambia el vínculo sin recrear la propuesta ni el paquete aprobado.
+  - `error`: Una revisión obsoleta o una dependencia pendiente exige revisar nuevamente antes de confirmar.
+  - `failure`: Un error de transporte conserva la revisión y permite reintentar la misma operación; la idempotencia evita duplicar el traslado.
+  - `display`: La consulta de cliente, contactos y proyecto en todos los estados forma parte de `admin-proposal-edit`.
+- **E2E Spec:** `e2e/admin/admin-proposal-navigation.spec.js`
 
 # admin-pwa-install — Instalación del panel interno
 

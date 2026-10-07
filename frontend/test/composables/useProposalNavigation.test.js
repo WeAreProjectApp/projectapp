@@ -39,14 +39,14 @@ describe('useProposalNavigation', () => {
   });
 
   // Fails if a finished proposal remains on its unavailable Development panel.
-  it('repairs Development to Schedule when an accepted proposal finishes', async () => {
+  it('repairs Development to project data when an accepted proposal finishes', async () => {
     navigation = createNavigation({ tab: 'project', section: 'development' }, 'accepted');
 
     navigation.status.value = 'finished';
     await nextTick();
 
-    expect(navigation.activeTab.value).toBe('schedule');
-    expect([...navigation.visitedTabs.value]).toEqual(['development', 'schedule']);
+    expect(navigation.activeTab.value).toBe('project-data');
+    expect([...navigation.visitedTabs.value]).toEqual(['development', 'project-data']);
   });
 
   // Fails if an unloaded legacy Development link mounts its panel before Draft permissions are known.
@@ -92,7 +92,7 @@ describe('useProposalNavigation', () => {
     navigation.activeGroup.value = 'communication';
     await nextTick();
 
-    expect(window.location.search).toBe('?filter=unread&tab=communication&section=emails');
+    expect(window.location.search).toBe('?filter=unread&tab=communication');
     expect(window.location.hash).toBe('#activity');
   });
 

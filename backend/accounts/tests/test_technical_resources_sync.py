@@ -1,5 +1,6 @@
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from decimal import Decimal
 
 from accounts.models import (
@@ -493,6 +494,48 @@ def _make_full_sync_setup(prefix, epics=None, entities=None):
         title='Técnico', order=1, content_json=content_json,
     )
     return project, admin, bp, prop_d
+
+
+@pytest.mark.django_db
+def test_syncing_one_proposal_preserves_a_neighbor_resource_with_the_same_epic_key():
+    """Fails if syncing a phase overwrites or archives the other proposal's equally named technical resource."""
+    project, admin, first, first_package = _make_full_sync_setup('owned-scope-first', epics=[
+        {'epicKey': 'shared-epic', 'title': 'First scope', 'requirements': []},
+    ])
+    second = BusinessProposal.objects.create(
+        title='Second phase', client_name='C', total_investment=Decimal('1'),
+        hosting_percent=30, status='accepted',
+    )
+    second_package = Deliverable.objects.create(
+        project=project, title='Second package', category=Deliverable.CATEGORY_DOCUMENTS,
+        file=None, uploaded_by=admin,
+    )
+    second.deliverable = second_package
+    second.save(update_fields=['deliverable'])
+    ProjectPhase.objects.create(project=project, business_proposal=first, order=1)
+    ProjectPhase.objects.create(project=project, business_proposal=second, order=2)
+    ProposalSection.objects.create(
+        proposal=second, section_type=ProposalSection.SectionType.TECHNICAL_DOCUMENT,
+        title='Second technical scope', order=1,
+        content_json={'epics': [{'epicKey': 'shared-epic', 'title': 'Second scope', 'requirements': []}]},
+    )
+    sync_technical_resources_for_project(project, admin)
+    second_resource = Deliverable.objects.get(project=project, source_proposal=second, source_epic_key='shared-epic')
+    second_resource.file.save('second-scope.txt', ContentFile(b'keep this file'), save=True)
+    second_resource.is_archived = False
+    second_resource.save(update_fields=['is_archived'])
+    first_section = ProposalSection.objects.get(proposal=first, section_type=ProposalSection.SectionType.TECHNICAL_DOCUMENT)
+    first_section.content_json['epics'][0]['title'] = 'First scope revised'
+    first_section.save(update_fields=['content_json'])
+
+    sync_technical_resources_for_deliverable(first_package, admin, delete_removed=True)
+
+    first_resource = Deliverable.objects.get(project=project, source_proposal=first, source_epic_key='shared-epic')
+    second_resource.refresh_from_db()
+    assert first_resource.title == 'First scope revised'
+    assert second_resource.title == 'Second scope'
+    assert second_resource.file.name.endswith('second-scope.txt')
+    assert second_resource.is_archived is False
 
 
 @pytest.mark.django_db

@@ -98,3 +98,10 @@ for _tool in PROPOSAL_PARITY_TOOLS:
     if _tool['name'] == 'update_proposal_contract_modality':
         configure_modality_tool(_tool)
 PROPOSAL_PARITY_TOOLS += CONTRACT_SNAPSHOT_TOOLS
+
+from content.mcp.proposal_project_tools import PROPOSAL_PROJECT_TOOLS
+from content.mcp.entity_history_tools import history_tools
+PROPOSAL_PARITY_TOOLS += PROPOSAL_PROJECT_TOOLS + history_tools('proposal') + [
+    _op('list_proposal_activity', 'Carga actividad atribuida en páginas de 20 entradas; next_cursor permite continuar sin límite de 50.',
+        'list-proposal-activity', path=('proposal_id',)),
+]

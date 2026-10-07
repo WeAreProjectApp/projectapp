@@ -2,7 +2,7 @@
 from unittest.mock import patch
 
 import pytest
-from accounts.models import UserProfile
+from accounts.models import Deliverable, Project, UserProfile
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
 from freezegun import freeze_time
@@ -396,6 +396,70 @@ class TestProposalCreateUpdateSerializerHostingPercent:
 
 
 class TestProposalCreateUpdateSerializerClientResolution:
+    def _linked_client_proposal(self, proposal):
+        user = User.objects.create_user(
+            username='linked-owner@example.test', email='linked-owner@example.test',
+            password='pass12345',
+        )
+        profile = UserProfile.objects.create(user=user, role=UserProfile.ROLE_CLIENT)
+        project = Project.objects.create(name='Linked client project', client=user)
+        deliverable = Deliverable.objects.create(project=project, title='Linked package', uploaded_by=user)
+        proposal.client = profile
+        proposal.deliverable = deliverable
+        proposal.save(update_fields=['client', 'deliverable'])
+        return profile, project
+
+    def test_linked_proposal_updates_its_current_client_contact_details(self, proposal):
+        """Fails if project linkage blocks legitimate corrections to the current client's contact details."""
+        profile, _ = self._linked_client_proposal(proposal)
+        serializer = ProposalCreateUpdateSerializer(
+            proposal,
+            data={
+                'client_name': 'Updated Owner', 'client_email': 'updated-owner@example.test',
+                'client_phone': '+57 300 123 4567', 'client_company': 'Updated Company',
+                'propagate_client_updates': True,
+            },
+            partial=True,
+        )
+
+        assert serializer.is_valid(), serializer.errors
+        serializer.save()
+
+        proposal.refresh_from_db()
+        profile.refresh_from_db()
+        profile.user.refresh_from_db()
+        assert proposal.client_id == profile.pk
+        assert proposal.client_name == 'Updated Owner'
+        assert proposal.client_email == 'updated-owner@example.test'
+        assert proposal.client_phone == '+57 300 123 4567'
+        assert profile.company_name == 'Updated Company'
+
+    def test_linked_proposal_rejects_a_different_client_owner(self, proposal):
+        """Fails if the editor can silently transfer a project-linked proposal to another client."""
+        profile, _ = self._linked_client_proposal(proposal)
+        other_user = User.objects.create_user(username='other-owner@example.test', password='pass12345')
+        other_profile = UserProfile.objects.create(user=other_user, role=UserProfile.ROLE_CLIENT)
+        serializer = ProposalCreateUpdateSerializer(proposal, data={'client_id': other_profile.pk}, partial=True)
+
+        assert serializer.is_valid() is False
+        assert 'client_id' in serializer.errors
+        proposal.refresh_from_db()
+        assert proposal.client_id == profile.pk
+
+    def test_linked_proposal_rejects_creating_a_new_client(self, proposal):
+        """Fails if create_new_client bypasses the owner guard for a project-linked proposal."""
+        profile, _ = self._linked_client_proposal(proposal)
+        serializer = ProposalCreateUpdateSerializer(
+            proposal,
+            data={'create_new_client': True, 'client_name': 'Wrong replacement'},
+            partial=True,
+        )
+
+        assert serializer.is_valid() is False
+        assert 'client_id' in serializer.errors
+        proposal.refresh_from_db()
+        assert proposal.client_id == profile.pk
+
     def test_create_uses_service_resolution_when_client_id_is_omitted(self):
         serializer = ProposalCreateUpdateSerializer(
             data={

@@ -573,6 +573,12 @@ class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
 
     def validate(self, attrs):
         """Ensure client_email is set when status is SENT."""
+        if self.instance is not None and self.instance.deliverable_id:
+            target_client = attrs.get('client', self.instance.client)
+            if attrs.get('create_new_client') or (target_client and target_client.pk != self.instance.client_id):
+                raise serializers.ValidationError({
+                    'client_id': 'La propuesta ya tiene proyecto. Cambia su propietario mediante Cambiar cliente en Proyectos.',
+                })
         status = attrs.get('status', getattr(self.instance, 'status', None))
         client_email = attrs.get(
             'client_email',

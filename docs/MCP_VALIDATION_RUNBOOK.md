@@ -205,15 +205,17 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | Slug | Herramientas | Alcance |
 |---|---:|---|
 | `operations` | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
-| `commercial` | 194 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
-| `proposals` | 101 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 21 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
-| `documents` | 64 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
-| `communications` | 44 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
-| `content` | 43 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
+| `partnership-program` | 26 | Condiciones, formalización y recursos del Programa de Alianza |
+| `additional-modules` | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
+| `commercial` | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
+| `proposals` | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
+| `projects` | 132 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
+| `documents` | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `communications` | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
+| `content` | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
 | `accounting-ledger` | 56 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
-| `accounting-billing` | 35 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
+| `accounting-billing` | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 38 | Tarjetas, snapshots, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 7 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
 | `clients` | 6 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
@@ -222,7 +224,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `linkedin-personal` | 7 | Conector de compatibilidad: LinkedIn personal |
 
 Los conteos de `commercial` y `proposals` incluyen los controles comunes y se
-verificaron contra `TOOLS_BY_SLUG` el 2026-10-06.
+verificaron contra `TOOLS_BY_SLUG` el 2026-10-07 en settings de test, sin consultar datos reales.
 
 Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
@@ -1341,3 +1343,47 @@ aceptan `vat_rate` y captura `amount` + `amount_mode` (`before_vat` o
 histórico sin registrar y cero indica Sin IVA. Panel y MCP comparten
 serializers, restricciones de documentos emitidos y auditoría. Liquidaciones
 heredan tasa; las retenciones mantienen el flujo de deducciones actual.
+
+
+## Administración de propuestas y proyectos — 2026-10-07
+
+Las operaciones nuevas usan los mismos serializers, permisos y servicios que
+Panel. La credencial sigue limitada a su conector; no habilitan revelación de
+secretos ni aceptan una entidad arbitraria al consultar historial.
+
+| Conector | Operaciones incorporadas | Validación principal |
+| --- | --- | --- |
+| `proposals` y `commercial` | `list_proposal_activity` | Página 1–50, veinte por defecto; cursor firmado ligado a la propuesta |
+| `proposals` y `commercial` | `preview_proposal_project_reassignment`, `reassign_proposal_project` | Mismo cliente, impacto vigente, motivo, petición idempotente y confirmación MCP |
+| `proposals` y `commercial` | `list_proposal_history`, `get_proposal_history_version`, `compare_proposal_history`, `download_proposal_history_file` | Entidad fijada; archivos mediante asset temporal de la credencial, sin rutas privadas |
+| `projects` | `get_project` | Cliente, estado y metadatos; sin credenciales |
+| `projects` | `list_project_commercial_phases`, `add_project_commercial_phase`, `update_project_commercial_phase`, `remove_project_commercial_phase`, `reorder_project_commercial_phases` | Aprobación/vínculo previos; relaciones contractuales y hosting protegen la fase |
+| `projects` | `get_project_brand`, `upload_project_brand_asset`, `download_project_brand_asset`, `delete_project_brand_asset` | Assets autorizados; eliminación confirmada |
+| `projects` | `list_project_history`, `get_project_history_version`, `compare_project_history` | Historial del proyecto, con credenciales protegidas |
+| `projects` y `accounting-billing` | `link_project_billing_contract` | Fuente del mismo proyecto/cliente, versión vigente, permiso contable y confirmación; no emite ni altera dinero |
+
+`list_projects` admite `query.client_profile_id` para solicitar únicamente los
+proyectos del cliente elegido. La ficha y la raíz documental existentes son la
+fuente de la relación; el título de un contrato nunca asigna su proyecto.
+Las operaciones documentales `update_document` y `move_documents` ya permiten
+corregir cliente/proyecto y carpeta respectivamente. El movimiento es atómico;
+no hace falta crear otra carpeta de Littigio.
+
+Comprobar antes del rollout:
+
+1. `tools/list` coincide con el registro local y no repite nombres; los esquemas
+   rechazan campos desconocidos y mantienen los argumentos de las operaciones
+   existentes. Comprobar también el agregado `commercial`.
+2. La reasignación sensible sólo crea una intención al pedirla. Antes de
+   `confirm_action`, las relaciones no cambian. El impacto muestra origen,
+   destino, IDs y bloqueos; una huella obsoleta no se ejecuta.
+3. Recursos con la misma clave en propuestas distintas conviven y sincronizar
+   una propuesta no archiva los de la otra. Una procedencia ambigua queda sin
+   atribuir y bloquea el traslado; no se adivina en la migración.
+4. El historial no devuelve rutas de archivos ni valores sensibles, tampoco
+   dentro de cambios/comparaciones. La descarga requiere el asset autorizado.
+5. El registro del contrato muestra la fuente concreta y no crea cuenta de
+   cobro, pago ni liquidación. Probar la reutilización del mismo vínculo.
+6. Tras el deploy, aplicar el inventario y las verificaciones de
+   `docs/runbooks/littigio-project-reassignment.md`; guardar recibos privados
+   fuera de Git. Hasta entonces no declarar los datos reparados.

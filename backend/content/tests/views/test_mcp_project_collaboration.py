@@ -3,13 +3,14 @@
 from uuid import uuid4
 
 import pytest
+from accounts.models import Deliverable, ProjectPhase
 from accounts.models_project_ideas import ProjectIdea, ProjectIdeaCollection
 from accounts.services import project_client_access as access
 from accounts.services import project_ideas as ideas
 from accounts.tests.project_collaboration_helpers import context, idea, sources
 from rest_framework.test import APIClient
 
-from content.models import McpConnector
+from content.models import BusinessProposal, Document, McpConnector
 
 pytestmark = pytest.mark.django_db
 
@@ -123,3 +124,118 @@ def test_mcp_exposes_no_client_credential_revelation_tool():
     assert 'get_project_client_access_policy' in names
     assert not names.intersection({'reveal_project_client_credential', 'reveal_project_client_access_password'})
     assert not any('client' in name and 'reveal' in name for name in names)
+
+
+def test_project_mcp_registers_administrative_project_and_history_tools():
+    """Fails if project administration exists in the Panel but is absent from the MCP discovery contract."""
+    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
+    connector.is_active = True
+    connector.save()
+    response = APIClient().post(f'/api/mcp/projects/{connector.generate_token()}/', {
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list'}, format='json')
+
+    names = {tool['name'] for tool in response.data['result']['tools']}
+    assert {
+        'get_project', 'list_project_commercial_phases', 'add_project_commercial_phase',
+        'update_project_commercial_phase', 'remove_project_commercial_phase',
+        'reorder_project_commercial_phases', 'get_project_brand',
+        'upload_project_brand_asset', 'download_project_brand_asset',
+        'delete_project_brand_asset',
+        'link_project_billing_contract', 'list_project_history',
+        'get_project_history_version', 'compare_project_history',
+    } <= names
+
+
+def test_project_mcp_filters_project_rows_by_the_requested_client_profile(call):
+    """Fails if an MCP proposal selector receives projects from a different client."""
+    c = context()
+
+    result = call('list_projects', {'query': {'client_profile_id': c.client.profile.pk}})
+
+    assert [row['id'] for row in result['results']] == [c.project.pk]
+
+
+def test_project_mcp_rejects_an_invalid_client_profile_filter(call):
+    """Fails if a malformed client selector silently returns unrelated projects."""
+
+    result = call('list_projects', {'query': {'client_profile_id': 0}}, error=True)
+
+    assert result['code'] == 'INVALID_CLIENT_PROFILE'
+
+
+def test_project_mcp_rejects_a_commercial_phase_owned_by_another_client(call):
+    """Fails if the MCP phase endpoint can attach another client's proposal to this project."""
+    c = context()
+    foreign_package = Deliverable.objects.create(
+        project=c.other_project, title='Foreign package', uploaded_by=c.admin,
+    )
+    foreign = BusinessProposal.objects.create(
+        title='Foreign proposal', client=c.other.profile, client_name='Other client',
+        total_investment=1, status=BusinessProposal.Status.ACCEPTED,
+        deliverable=foreign_package,
+    )
+
+    error = call('add_project_commercial_phase', {
+        'project_id': c.project.pk, 'proposal_id': foreign.pk,
+    }, error=True)
+
+    assert error['code'] == 'VALIDATION_ERROR'
+    assert ProjectPhase.objects.filter(project=c.project).count() == 0
+
+
+def test_project_mcp_rejects_an_unlinked_commercial_phase(call):
+    """Fails if MCP can create the initial proposal-project binding without the approval review."""
+    c = context()
+    unlinked_package = Deliverable.objects.create(
+        project=c.other_project, title='Wrong project package', uploaded_by=c.admin,
+    )
+    unlinked = BusinessProposal.objects.create(
+        title='Unlinked proposal', client=c.client.profile, client_name='Client',
+        total_investment=1, status=BusinessProposal.Status.ACCEPTED,
+        deliverable=unlinked_package,
+    )
+
+    error = call('add_project_commercial_phase', {
+        'project_id': c.project.pk, 'proposal_id': unlinked.pk,
+    }, error=True)
+
+    assert error['code'] == 'VALIDATION_ERROR'
+    assert ProjectPhase.objects.filter(project=c.project).count() == 0
+
+
+def test_project_mcp_reuses_a_confirmed_billing_contract_source(call):
+    """Fails if confirming the same MCP billing source twice creates duplicate project contracts."""
+    c = context()
+    source = Document.objects.create(
+        title='MCP billing contract', project=c.project, client_user=c.client,
+    )
+    options = call('get_project_billing_options', {'project_id': c.project.pk})
+    arguments = {
+        'project_id': c.project.pk,
+        'payload': {
+            'source_type': 'document', 'source_id': source.pk,
+            'expected_version': options['delivery_version'], 'request_id': 'mcp-contract-link-one',
+        },
+    }
+    preview = call('link_project_billing_contract', arguments)
+    first = call('confirm_action', {'confirmation_id': preview['confirmation_id']})
+    retry_options = call('get_project_billing_options', {'project_id': c.project.pk})
+    retry = call('link_project_billing_contract', {
+        **arguments,
+        'payload': {
+            **arguments['payload'], 'expected_version': retry_options['delivery_version'],
+            'request_id': 'mcp-contract-link-retry',
+        },
+    })
+    second = call('confirm_action', {'confirmation_id': retry['confirmation_id']})
+
+    assert preview['confirmation_required'] is True
+    assert preview['impact']['project_name'] == c.project.name
+    assert preview['impact']['source'] == {
+        'source_type': 'document', 'id': source.pk, 'title': 'MCP billing contract',
+        'origin_label': 'Documento del proyecto',
+    }
+    assert first['result']['reused'] is False
+    assert second['result'] == {
+        'id': first['result']['id'], 'title': 'MCP billing contract', 'reused': True,
+    }

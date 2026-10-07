@@ -5,6 +5,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_UPDATE_CLIENT } from '../helpers/flow-tags.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 
 const PROPOSAL_ID = 44;
 
@@ -57,7 +58,7 @@ test.describe('Admin Proposal Update Client', () => {
   });
 
   test('reassigns the proposal to a different client and syncs snapshot fields', {
-    tag: [...ADMIN_PROPOSAL_UPDATE_CLIENT, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_UPDATE_CLIENT, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     let capturedPayload = null;
 
@@ -97,6 +98,7 @@ test.describe('Admin Proposal Update Client', () => {
     });
 
     await page.goto(`/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
+    await selectProposalDestination(page, 'project', 'project-data');
     await expect(page.getByTestId('proposal-edit-client-autocomplete')).toBeVisible({ timeout: 20_000 });
 
     const autocomplete = page.getByTestId('proposal-edit-client-autocomplete');
@@ -111,7 +113,7 @@ test.describe('Admin Proposal Update Client', () => {
 
     const [response] = await Promise.all([
       page.waitForResponse((res) => res.url().includes(`/api/proposals/${PROPOSAL_ID}/update/`) && res.request().method() === 'PATCH'),
-      page.getByTestId('proposal-edit-submit').click(),
+      page.getByRole('button', { name: 'Guardar cliente' }).click(),
     ]);
     await response.finished();
 
@@ -120,6 +122,6 @@ test.describe('Admin Proposal Update Client', () => {
     expect(capturedPayload.client_name).toBe('Cliente Nuevo');
     expect(capturedPayload.client_email).toBe('nuevo@example.com');
 
-    await expect(page.getByText('Propuesta actualizada.')).toBeVisible();
+    await expect(page.getByRole('alert')).toContainText('Cambios guardados.');
   });
 });

@@ -500,6 +500,26 @@ export const useProposalStore = defineStore('proposals', {
       }
     },
 
+    async previewProjectReassignment(id, targetProjectId) {
+      try {
+        const response = await get_request(`proposals/${id}/project-reassignment/`, { params: { target_project_id: targetProjectId } });
+        return { success: true, data: response.data };
+      } catch (error) { return { success: false, ...normalizeApiError(error) }; }
+    },
+    async reassignProject(id, payload) {
+      try {
+        const response = await create_request(`proposals/${id}/project-reassignment/`, payload);
+        if (this.currentProposal?.id === id) this.currentProposal = { ...this.currentProposal, ...response.data.proposal };
+        const index = this.proposals.findIndex(item => item.id === id);
+        if (index !== -1) this.proposals[index] = { ...this.proposals[index], ...response.data.proposal };
+        return { success: true, data: response.data };
+      } catch (error) { return { success: false, ...normalizeApiError(error) }; }
+    },
+    async fetchActivity(id, cursor = null) {
+      const response = await get_request(`proposals/${id}/activity/`, { params: { ...(cursor ? { cursor } : {}), page_size: 20 } });
+      return response.data;
+    },
+
     /** Read the exact approval packet before any client/project/file mutation. */
     async fetchApproval(id) {
       try {

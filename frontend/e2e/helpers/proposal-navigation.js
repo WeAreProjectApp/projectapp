@@ -13,7 +13,7 @@ const SECTION_LABELS = {
   general: 'General', sections: 'Secciones', technical: 'Detalle técnico',
   'hour-rate': 'Tarifa por hora', prompt: 'Prompt', json: 'JSON',
   emails: 'Correos', resources: 'Recursos', documents: 'Documentos',
-  schedule: 'Cronograma', development: 'Desarrollo', activity: 'Actividad',
+  'project-data': 'Datos', schedule: 'Cronograma', development: 'Desarrollo', activity: 'Actividad',
   history: 'Historial', analytics: 'Analítica',
 };
 
@@ -32,7 +32,7 @@ export async function selectProposalDestination(page, group, section) {
     await primary.getByRole('tab', { name: GROUP_LABELS[group], exact: true }).click();
   }
 
-  if (!section || section === 'general' || (group === 'documents' && section === 'documents')) return;
+  if (!section || section === 'general' || (group === 'documents' && section === 'documents') || (group === 'communication' && section === 'emails') || (group === 'project' && section === 'project-data')) return;
 
   const secondary = page.getByTestId('proposal-secondary-navigation');
   if (viewport && viewport.width < 1024) {

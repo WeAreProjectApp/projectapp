@@ -29,18 +29,21 @@
           <button
             type="button"
             class="flex w-full items-center gap-3 px-6 py-3 text-sm text-left transition-colors"
-            :class="action.danger
+            :class="action.disabledReason
+              ? 'cursor-not-allowed text-text-muted'
+              : action.danger
               ? 'text-danger-strong hover:bg-danger-soft'
               : 'text-text-default hover:bg-surface-raised'"
             :disabled="Boolean(action.disabledReason)"
             :title="action.disabledReason || undefined"
+            :aria-describedby="action.disabledReason ? `income-action-reason-${action.id}-${record?.id}` : undefined"
             :data-testid="`income-action-${action.id}-${record?.id}`"
             @click="run(action)"
           >
-            <BaseActionIcon :action="action.action" class="h-5 w-5" />
+            <BaseActionIcon :action="action.action" class="h-5 w-5" :class="action.disabledReason ? 'opacity-40' : ''" />
             <span>
               {{ action.label }}
-              <span v-if="action.disabledReason" class="block text-xs text-text-muted mt-1">{{ action.disabledReason }}</span>
+              <span v-if="action.disabledReason" :id="`income-action-reason-${action.id}-${record?.id}`" class="block text-xs text-text-muted mt-1">{{ action.disabledReason }}</span>
             </span>
           </button>
         </li>

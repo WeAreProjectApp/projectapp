@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin logs seller activity from the proposal Activity tab and reads automatic client module-interest changes.",
+  "description": "Admin logs seller activity from the proposal Activity tab and reads automatic client module-interest changes. Activity loads twenty entries initially via GET /api/proposals/:id/activity/, then follows its signed cursor through Cargar más beyond fifty entries. Failed requests preserve loaded rows and allow retry; new notes remain visible when the initial page arrives.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

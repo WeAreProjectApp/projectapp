@@ -150,3 +150,5 @@ from .proposal_contract_snapshot import (
     ProposalContractSnapshot, ProposalContractSnapshotFile, ProposalContractChangeIntent,
 )
 from .project_retention import ProjectRetentionContext
+
+from .proposal_project_reassignment import ProposalProjectReassignment
