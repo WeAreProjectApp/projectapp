@@ -9,12 +9,12 @@ export const proposalNavigationGroups = [
       { id: 'hour-rate', label: 'Tarifa por hora' },
       { id: 'prompt', label: 'Prompt' },
       { id: 'json', label: 'JSON' },
+      { id: 'resources', label: 'Recursos' },
     ],
   },
   {
     id: 'communication', label: 'Comunicación', sections: [
       { id: 'emails', label: 'Correos' },
-      { id: 'resources', label: 'Recursos' },
     ],
   },
   {
@@ -23,6 +23,7 @@ export const proposalNavigationGroups = [
   },
   {
     id: 'project', label: 'Proyecto', sections: [
+      { id: 'project-data', label: 'Datos' },
       { id: 'schedule', label: 'Cronograma', statuses: ['accepted', 'finished'] },
       { id: 'development', label: 'Desarrollo', statuses: ['accepted'] },
     ],
@@ -52,6 +53,7 @@ export function proposalGroupForSection(section) {
 export function resolveProposalSection(query, status) {
   const groups = availableProposalGroups(status);
   const tab = query.tab || 'general';
+  if (tab === 'communication' && query.section === 'resources') return 'resources';
   const group = groups.find((entry) => entry.id === tab);
   if (group) {
     if (!query.section) return group.sections[0].id;

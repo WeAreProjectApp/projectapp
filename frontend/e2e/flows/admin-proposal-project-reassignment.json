@@ -1,0 +1,15 @@
+{
+  "id": "admin-proposal-project-reassignment",
+  "name": "Admin Proposal Project Reassignment",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Admin opens Proyecto > Datos on a linked proposal, selects another active project of the same client, enters a reason, reviews the impact and confirms. Confirmation updates the project link while preserving proposal identity and approved evidence. A stale impact requires a fresh preview; a server failure keeps the reviewed impact and stable request identifier for retry.",
+  "outcomes": [
+    "success",
+    "error",
+    "failure"
+  ]
+}

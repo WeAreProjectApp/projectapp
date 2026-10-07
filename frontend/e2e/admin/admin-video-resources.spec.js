@@ -140,7 +140,7 @@ async function openProposalGlobalResources(page) {
 async function openProposalPersonalizedResources(page) {
   await openProposals(page)
   await page.getByTestId(`proposal-open-${PROPOSAL_ID}`).click()
-  await selectProposalDestination(page, 'communication', 'resources')
+  await selectProposalDestination(page, 'proposal', 'resources')
   await expect(page.getByTestId('video-resource-manager')).toBeVisible()
 }
 

@@ -156,26 +156,38 @@ describe('IncomeActionsModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
+  const draftCollectionRecord = () => ({
+    ...EXPECTED,
+    client: 12,
+    has_collection_account: true,
+    collection_account_status: 'draft',
+    collection_account_number: 'CC-042',
+  });
+
   // Falla si el menú deja liquidar una fila cuya cuenta de cobro aún no fue emitida.
-  it('blocks settlement until the draft collection account is emitted', async () => {
-    const record = {
-      ...EXPECTED,
-      client: 12,
-      has_collection_account: true,
-      collection_account_status: 'draft',
-      collection_account_number: 'CC-042',
-    };
-    const wrapper = mountModal(record);
+  it('blocks settlement and describes the issued-account requirement', async () => {
+    const wrapper = mountModal(draftCollectionRecord());
     const settle = wrapper.get('[data-testid="income-action-liquidate-42"]');
 
     expect(settle.element.disabled).toBe(true);
-    expect(settle.text()).toContain('Primero genera y emite una cuenta de cobro para este ingreso.');
+    expect(settle.attributes('aria-describedby')).toBe('income-action-reason-liquidate-42');
+    expect(wrapper.get('#income-action-reason-liquidate-42').text())
+      .toBe('Primero genera y emite una cuenta de cobro para este ingreso.');
     expect(wrapper.get('[data-testid="income-action-view-collection-42"]').text())
       .toBe('Completar y emitir cuenta de cobro');
 
     await settle.trigger('click');
 
     expect(wrapper.emitted('liquidate')).toBeUndefined();
+  });
+
+  // Falla si la acción bloqueada deja de comunicar visualmente que no se puede usar.
+  it('mutes the blocked settlement action and its icon', () => {
+    const wrapper = mountModal(draftCollectionRecord());
+    const settle = wrapper.get('[data-testid="income-action-liquidate-42"]');
+
+    expect(settle.classes()).toContain('cursor-not-allowed');
+    expect(settle.find('[class*="opacity-40"]').classes()).toContain('opacity-40');
   });
 
   it('emits settlement for an issued collection account', async () => {

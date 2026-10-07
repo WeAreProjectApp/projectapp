@@ -3,10 +3,11 @@ from copy import deepcopy
 from rest_framework.exceptions import APIException
 
 from accounts.serializers_billing_context import (
-    BillingContextAssignmentSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
+    BillingContextAssignmentSerializer, BillingContractLinkSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
 )
 from accounts.services.billing_access import require_billing_admin
 from accounts.services.billing_context import associate_account, context_data
+from accounts.services.billing_contracts import link_billing_contract
 from accounts.services.billing_read import account_for_actor, project_billing_options, project_hosting_read
 from accounts.services.hosting_context import hosting_inventory, reconcile_evidence, reconcile_hosting
 from content.mcp.actor import mcp_actor
@@ -63,13 +64,14 @@ def _associate(arguments, actor, payload):
     return context_data(associate_account(arguments['account_id'], actor, payload))
 
 
-def _tool(name, description, operation, *, serializer=None, fields=None, required=(), sensitive=False):
+def _tool(name, description, operation, *, serializer=None, fields=None, required=(), sensitive=False,
+          payload_required=None, prepare_operation=None, version_getter=None, impact_builder=None):
     properties = {'project_id': ID}
     if required:
         properties['account_id'] = ID
     if serializer:
         properties['payload'] = {'type': 'object', 'additionalProperties': False, 'properties': fields,
-                                 'required': ['expected_version', 'reason'] + (['billing_nature'] if serializer == BillingContextAssignmentSerializer else ['label'] if serializer == HostingEvidenceSerializer else [])}
+                                 'required': list(payload_required) if payload_required is not None else ['expected_version', 'reason'] + (['billing_nature'] if serializer == BillingContextAssignmentSerializer else ['label'] if serializer == HostingEvidenceSerializer else [])}
     schema = {'type': 'object', 'additionalProperties': False, 'properties': properties,
               'required': ['project_id', *required] + (['payload'] if serializer else [])}
 
@@ -88,10 +90,13 @@ def _tool(name, description, operation, *, serializer=None, fields=None, require
     if sensitive:
         def prepare(arguments):
             try:
-                _validate(arguments, schema, serializer)
+                payload = _validate(arguments, schema, serializer)
                 actor = mcp_actor()
                 require_billing_admin(actor)
-                hosting_inventory(arguments['project_id'], actor)
+                if prepare_operation:
+                    prepare_operation(arguments, actor, payload)
+                else:
+                    hosting_inventory(arguments['project_id'], actor)
                 if required:
                     _account(arguments, actor)
                 return deepcopy(arguments)
@@ -101,6 +106,8 @@ def _tool(name, description, operation, *, serializer=None, fields=None, require
 
         def etag(arguments):
             actor = mcp_actor()
+            if version_getter:
+                return {f'project:{arguments["project_id"]}:delivery': str(version_getter(arguments, actor))}
             if required:
                 version = _read_account(arguments, actor, None)['version']
                 return {f'account:{arguments["account_id"]}:context': str(version)}
@@ -108,14 +115,45 @@ def _tool(name, description, operation, *, serializer=None, fields=None, require
             return {f'project:{arguments["project_id"]}:hosting': str(inventory['version'])}
 
         tool.update(requires_confirmation=True, prepare_arguments=prepare, etag_resolver=etag,
-                    impact_builder=lambda arguments: {'summary': description, 'operation': name,
-                                                       'project_id': arguments['project_id'], 'financial_effect': 'none'})
+                    impact_builder=impact_builder or (lambda arguments: {'summary': description, 'operation': name,
+                                                       'project_id': arguments['project_id'], 'financial_effect': 'none'}))
     return tool
+
+
+def _prepare_contract(arguments, actor, payload):
+    options = project_billing_options(arguments['project_id'], actor)
+    if not any(row['source_type'] == payload['source_type'] and row['id'] == payload['source_id']
+               for row in options['contract_sources']):
+        raise ToolError('El contrato seleccionado no pertenece a este proyecto y cliente.', code='NOT_FOUND')
+    if options['delivery_version'] != payload['expected_version']:
+        raise ToolError('El proyecto cambió. Consulta nuevamente sus opciones.', code='STALE_VERSION')
+
+
+def _contract_impact(arguments):
+    options = project_billing_options(arguments['project_id'], mcp_actor())
+    payload = arguments['payload']
+    source = next((row for row in options['contract_sources']
+                   if row['source_type'] == payload['source_type'] and row['id'] == payload['source_id']), None)
+    if source is None or options['delivery_version'] != payload['expected_version']:
+        raise ToolError('El contrato o el proyecto cambió. Consulta nuevamente sus opciones.', code='STALE_VERSION')
+    return {'summary': 'Registrar el contrato existente para la facturación del proyecto.',
+            'project_id': arguments['project_id'], 'project_name': options['project_name'],
+            'source': source, 'financial_effect': 'none'}
 
 
 PLATFORM_BILLING_TOOLS = [
     _tool('get_project_billing_options', 'Lista contratos/otrosí y el hosting único del proyecto sin conceder acceso documental.',
           lambda args, actor, data: project_billing_options(args['project_id'], actor)),
+    _tool('link_project_billing_contract', 'Registra un contrato existente del proyecto para habilitar sus cuentas de cobro; no emite documentos ni modifica importes.',
+          lambda args, actor, data: link_billing_contract(args['project_id'], actor, data),
+          serializer=BillingContractLinkSerializer,
+          fields={'source_type': {'type': 'string', 'enum': ['document', 'proposal_document']},
+                  'source_id': ID, 'expected_version': {'type': 'integer', 'minimum': 0},
+                  'request_id': {'type': 'string', 'minLength': 1, 'maxLength': 100}},
+          payload_required=('source_type', 'source_id', 'expected_version', 'request_id'),
+          sensitive=True, prepare_operation=_prepare_contract,
+          impact_builder=_contract_impact,
+          version_getter=lambda args, actor: project_billing_options(args['project_id'], actor)['delivery_version']),
     _tool('get_project_hosting', 'Consulta un hosting por proyecto y sus pagos, cuentas y evidencias sin sumar orígenes no conciliados.',
           lambda args, actor, data: project_hosting_read(args['project_id'], actor)),
     _tool('get_project_hosting_inventory', 'Inventaría orígenes históricos, contradicciones, cuentas pendientes y decisiones auditadas.',

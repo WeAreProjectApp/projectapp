@@ -2614,3 +2614,38 @@ QA focal: 36 casos aprobados en lotes de 20/16 y gate estricto del archivo nuevo
 ## 2026-10-06 — Modalidad contractual en cualquier estado
 
 La implementación permite cambiar single/split en todos los estados con revisión y nota fuera de negociación. Conserva personalizados literalmente con su PDF, exige plazos explícitos del servicio y guarda instantáneas permanentes restaurables. Panel y MCP comparten el servicio transaccional. Se preservan paquetes, documentos y firmas históricos sin envío automático. La aceptación real de la propuesta 118 queda después del despliegue y requiere indicar los tres plazos del servicio.
+
+## 2026-10-07 — Propuestas, MCP y relaciones de Littigio
+
+Implementación en worktree propio `proposals-littigio-admin` desde `8dc56e24`.
+Parche aislado Django 6.1.2 y source-map-js 1.2.2; redistribución Proyecto > Datos,
+Recursos en Propuesta, correo en Comunicación y seguimiento incremental.
+Reasignación administrativa explícita preservará #117/#118 en proyecto #14,
+con origen de recursos por propuesta y MCP compartido con Panel. La reparación
+de producción se hará después de publicar las herramientas; #15/#16 sólo se
+retiran si su inventario queda vacío. Acceso SSH de producción requiere
+autenticación adicional de Tailscale, solicitada al operador.
+
+### Verificación documental parcial — 2026-10-07
+
+Por el MCP documental vigente se corrigieron y releyeron los siete documentos
+201/202/203/208/209/227/236: cliente 61, proyecto 14 y carpeta 129. Markdown,
+estados, visibilidad, notas y copias de comunicación se conservaron literalmente.
+El inventario previo y los recibos posteriores están fuera de Git. La corrección
+de propuestas, el registro contable de 208 y el retiro vacío de 15/16 siguen
+pendientes de las herramientas nuevas; no se tocaron importes ni se emitieron cuentas.
+
+### Validación de código — 2026-10-07
+
+Las pruebas focales cubren traslado, conservación literal de archivos, auditoría,
+bloqueos financieros/contractuales, actividad con cursor y atribución de recursos
+desde el paquete aprobado. La migración 0078 pasó con MigrationExecutor real;
+`makemigrations --check --dry-run` no detecta cambios adicionales. Navegador local:
+recursos/enlaces antiguos, seguimiento, borradores, reasignación y copia de saldo
+verificados. Gate del lote sin errores nuevos; CI del conjunto pendiente.
+
+El CI del parche de dependencias evidenció un bloqueo del harness de tickets:
+un socket ocioso detenía su servidor WSGI de un hilo. La aceptación de conexiones
+ahora usa hilos y la ejecución de la aplicación se serializa para preservar
+SQLite. La reproducción del bloqueo y cinco regresiones focales pasan; su
+regresión de navegador se comprueba antes de cerrar el PR.

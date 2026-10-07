@@ -9,7 +9,7 @@ from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from content.models.history_tracked import HistoryTrackedModel, HistoryQuerySet
-from django.db.models.functions import NullIf
+from django.db.models.functions import Coalesce, NullIf
 from django.utils import timezone
 
 from accounts.services.image_utils import optimize_avatar, optimize_image
@@ -1252,6 +1252,7 @@ class Deliverable(RetainedProjectModel, models.Model):
     )
     title = models.CharField(max_length=300)
     description = models.TextField(blank=True, default='')
+    source_proposal = models.ForeignKey('content.BusinessProposal', on_delete=models.SET_NULL, null=True, blank=True, related_name='technical_resources')
     source_epic_key = models.CharField(max_length=200, blank=True, default='', db_index=True)
     source_epic_title = models.CharField(max_length=300, blank=True, default='')
     file = models.FileField(upload_to='deliverables/', blank=True, null=True)
@@ -1274,8 +1275,9 @@ class Deliverable(RetainedProjectModel, models.Model):
         constraints = [
             models.UniqueConstraint(
                 models.F('project'),
+                Coalesce(models.F('source_proposal'), models.Value(0)),
                 NullIf(models.F('source_epic_key'), models.Value('')),
-                name='uniq_deliverable_project_epic_key',
+                name='uniq_deliverable_proposal_epic_key',
             ),
         ]
 

@@ -10,6 +10,7 @@
   2. Admin selects an activity type and enters a description.
   3. Admin submits → API call to `POST /api/proposals/:id/log-activity/`.
   4. Backend creates a ProposalChangeLog entry and updates `last_activity_at`.
-  5. Activity timeline refreshes with the new entry.
+  5. Activity timeline inserts the new entry without clearing loaded pages.
+- **Carga incremental:** Seguimiento → Actividad consulta `GET /api/proposals/:id/activity/` con veinte entradas iniciales. Cargar más usa el cursor de la respuesta, conserva lo cargado y alcanza entradas anteriores a la número cincuenta. Un fallo ofrece reintento sin perder entradas. Una nota añadida durante la carga inicial permanece cuando llega la respuesta.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-proposal-log-activity.spec.js`

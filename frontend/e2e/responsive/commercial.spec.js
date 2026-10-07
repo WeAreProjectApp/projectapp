@@ -2,6 +2,7 @@
 import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import {
   financingAgreementFixture,
@@ -80,7 +81,7 @@ async function exerciseCommercialView(page, scenario) {
     'frontend/pages/panel/partnership-program/[id].vue': { action: () => page.getByTestId('financing-mark-ready').click(), value: null },
     'frontend/pages/panel/proposals/index.vue': { action: () => page.getByTestId('proposal-actions-1').click(), value: null },
     'frontend/pages/panel/proposals/create.vue': { action: async () => { await page.getByRole('button', { name: 'Manual' }).click(); await page.getByLabel('Título', { exact: true }).fill('Propuesta manual responsive'); }, value: null },
-    'frontend/pages/panel/proposals/[id]/edit.vue': { action: async () => { await page.getByTestId('edit-email-preview-btn').click(); await expect(page.getByRole('heading', { name: 'Vista previa del correo', exact: true })).toBeVisible(); }, value: null },
+    'frontend/pages/panel/proposals/[id]/edit.vue': { action: async () => { await selectProposalDestination(page, 'communication', 'emails'); await page.getByTestId('edit-email-preview-btn').click(); await expect(page.getByRole('heading', { name: 'Vista previa del correo', exact: true })).toBeVisible(); }, value: null },
     'frontend/pages/panel/defaults.vue': { action: async () => { await page.getByRole('button', { name: 'Diagnóstico', exact: true }).click(); await expect(page).toHaveURL(/mode=diagnostic/); }, value: 'Valores por Defecto' },
     'frontend/pages/panel/hour-packages/index.vue': { action: () => page.getByTestId('hour-packages-view-cards').click(), value: 'Paquete 20 horas' },
     'frontend/pages/panel/hour-packages/create.vue': { action: () => page.getByLabel('Nombre (ES)').fill('Paquete responsive'), value: 'Paquete responsive' },

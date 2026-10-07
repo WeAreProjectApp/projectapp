@@ -49,6 +49,7 @@ async function setupProposalAdminApi(page) {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true } });
     if (apiPath === 'proposals/') return json([proposalSummary]);
     if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) return json(proposalDetail);
+    if (apiPath === `proposals/${PROPOSAL_ID}/activity/`) return json({ results: proposalDetail.change_logs, next_cursor: null, has_more: false });
     if (apiPath === `proposals/${PROPOSAL_ID}/analytics/`) return json({
       total_views: 2, unique_sessions: 1, comparison: {}, section_views: [], daily_views: [], funnel: [], share_links: [], skipped_sections: [], device_breakdown: {}, activity_log: [], sections: [], sessions: [], timeline: [],
     });

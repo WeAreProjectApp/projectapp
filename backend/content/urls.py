@@ -1,3 +1,9 @@
+from content.views.proposal_project_reassignment import proposal_project_reassignment
+from content.views.project_administration import (
+    project_detail, project_commercial_phases, project_commercial_phase_detail,
+    project_commercial_phases_reorder,
+)
+from content.views.proposal_activity import list_proposal_activity
 from content.views.proposal_approval import approval_review, approval_file_download
 from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
@@ -374,14 +380,18 @@ urlpatterns = [
     path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/reveal/', reveal_retained_project_secret),
 
     path('projects/<int:project_id>/', include('content.project_collaboration_urls')),
+    path('projects/<int:project_id>/', project_detail, name='panel-project-detail'),
+    path('projects/<int:project_id>/commercial-phases/', project_commercial_phases, name='project-commercial-phases'),
+    path('projects/<int:project_id>/commercial-phases/reorder/', project_commercial_phases_reorder, name='project-commercial-phases-reorder'),
+    path('projects/<int:project_id>/commercial-phases/<int:phase_id>/', project_commercial_phase_detail, name='project-commercial-phase-detail'),
     path('admin/billing-context/', include('content.billing_urls')),
     path('video-resources/admin/modules/<slug:module>/<str:language>/', admin_module_video, name='admin-module-video'),
     path('video-resources/admin/proposals/<int:proposal_id>/', admin_proposal_video, name='admin-proposal-video'),
     path('video-resources/<uuid:resource_id>/<int:revision>/<str:kind>/', public_video_file, name='public-video-file'),
-    path('entity-history/<str:entity_type>/<int:object_id>/', entity_history_list),
-    path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/file/', entity_history_file),
-    path('entity-history/<str:entity_type>/<int:object_id>/compare/', entity_history_compare),
-    path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/', entity_history_version),
+    path('entity-history/<str:entity_type>/<int:object_id>/', entity_history_list, name='entity-history-list'),
+    path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/file/', entity_history_file, name='entity-history-file'),
+    path('entity-history/<str:entity_type>/<int:object_id>/compare/', entity_history_compare, name='entity-history-compare'),
+    path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/', entity_history_version, name='entity-history-version'),
     path('entity-history/<str:entity_type>/<int:object_id>/versions/<int:revision_id>/reveal/', entity_history_reveal),
     path('proposals/<int:proposal_id>/formalization/', formalization_options, name='formalization-options'),
     path('proposals/<int:proposal_id>/formalization/pdf/<str:kind>/', formalization_pdf, name='formalization-pdf'),
@@ -679,6 +689,7 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/resend/', resend_proposal, name='resend-proposal'),
     path('proposals/<int:proposal_id>/toggle-active/', toggle_proposal_active, name='toggle-proposal-active'),
     path('proposals/<int:proposal_id>/update-status/', update_proposal_status, name='update-proposal-status'),
+    path('proposals/<int:proposal_id>/project-reassignment/', proposal_project_reassignment, name='proposal-project-reassignment'),
     path('proposals/<int:proposal_id>/approval/', approval_review, name='proposal-approval'),
     path('proposals/<int:proposal_id>/approval/files/<int:file_id>/', approval_file_download, name='proposal-approval-file-download'),
     path('proposals/<int:proposal_id>/launch-to-platform/', launch_to_platform, name='launch-to-platform'),
@@ -713,6 +724,7 @@ urlpatterns = [
     path('proposals/alerts/', proposal_alerts, name='proposal-alerts'),
     path('proposals/alerts/create/', create_proposal_alert, name='create-proposal-alert'),
     path('proposals/alerts/<int:alert_id>/dismiss/', dismiss_proposal_alert, name='dismiss-proposal-alert'),
+    path('proposals/<int:proposal_id>/activity/', list_proposal_activity, name='list-proposal-activity'),
     path('proposals/<int:proposal_id>/log-activity/', log_activity, name='log-activity'),
     path('proposals/bulk-action/', bulk_action, name='bulk-action'),
 

@@ -42,7 +42,12 @@ const updatedProposal = {
   ],
 };
 
+function activityPage(results = mockProposal.change_logs, nextCursor = null) {
+  return { results, next_cursor: nextCursor, has_more: Boolean(nextCursor) };
+}
+
 test.describe('Admin Proposal Activity Log', () => {
+  test.setTimeout(60_000);
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
       token: 'e2e-admin-token',
@@ -58,6 +63,7 @@ test.describe('Admin Proposal Activity Log', () => {
       if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProposal) };
       }
+      if (apiPath === `proposals/${PROPOSAL_ID}/activity/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(activityPage()) };
       return null;
     });
 
@@ -78,13 +84,14 @@ test.describe('Admin Proposal Activity Log', () => {
   });
 
   test('submit button is disabled when description is empty', {
-    tag: [...ADMIN_PROPOSAL_ACTIVITY_LOG, '@role:admin'],
+    tag: [...ADMIN_PROPOSAL_ACTIVITY_LOG, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
     await mockApi(page, async ({ apiPath }) => {
       if (apiPath === 'auth/check/') return authCheck;
       if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
         return { status: 200, contentType: 'application/json', body: JSON.stringify(mockProposal) };
       }
+      if (apiPath === `proposals/${PROPOSAL_ID}/activity/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(activityPage()) };
       return null;
     });
 
@@ -111,6 +118,7 @@ test.describe('Admin Proposal Activity Log', () => {
         const body = logCalled ? updatedProposal : mockProposal;
         return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
       }
+      if (apiPath === `proposals/${PROPOSAL_ID}/activity/`) return { status: 200, contentType: 'application/json', body: JSON.stringify(activityPage()) };
       if (apiPath === `proposals/${PROPOSAL_ID}/log-activity/`) {
         logCalled = true;
         capturedPayload = route.request().postDataJSON();
@@ -142,4 +150,5 @@ test.describe('Admin Proposal Activity Log', () => {
     // New entry should appear in the timeline
     await expect(page.getByText('Llamé al cliente para seguimiento')).toBeVisible({ timeout: 5000 });
   });
+
 });

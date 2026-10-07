@@ -87,8 +87,39 @@ class TestProposalsMcp:
             'read_proposal_formalization_markdown', 'prepare_proposal_formalization',
             'get_proposal_formalization', 'download_proposal_formalization_file',
             'send_proposal_formalization', 'confirm_action',
+            'list_proposal_activity', 'preview_proposal_project_reassignment',
+            'reassign_proposal_project', 'list_proposal_history',
+            'get_proposal_history_version', 'compare_proposal_history',
         }
         assert expected <= names
+
+    def test_project_reassignment_schema_requires_a_complete_correction_payload(
+        self, api_client, proposals_connector,
+    ):
+        """Fails if MCP can invoke a project correction without its target, reason, impact version, or request identity."""
+        _, token = proposals_connector
+        response = api_client.post(_url(token), _rpc('tools/list'), format='json')
+        tools = {tool['name']: tool for tool in response.data['result']['tools']}
+        schema = tools['reassign_proposal_project']['inputSchema']
+
+        payload_schema = schema['properties'].get('data', schema)
+        assert {'target_project_id', 'reason', 'expected_impact_hash', 'request_id'} <= set(payload_schema['required'])
+        assert payload_schema['additionalProperties'] is False
+
+    def test_project_reassignment_rejects_an_unknown_argument(self, api_client, proposals_connector):
+        """Fails if a misspelled reassignment argument reaches a partially defined correction."""
+        _, token = proposals_connector
+        response = _call(api_client, token, 'reassign_proposal_project', {
+            'proposal_id': 1,
+            'target_project_id': 2,
+            'reason': 'Correction',
+            'expected_impact_hash': 'a' * 64,
+            'request_id': 'strict-mcp-request',
+            'target_projecct_id': 2,
+        })
+
+        assert response.data['result']['isError'] is True
+        assert response.data['result']['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
 
     def test_template_has_required_fields(self, api_client, proposals_connector):
         _, token = proposals_connector

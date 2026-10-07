@@ -217,7 +217,9 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
             project = Project.objects.select_for_update().filter(pk=project_id).first() if project_id else None
             proposal = BusinessProposal.objects.select_for_update().get(pk=proposal_id)
             if proposal.deliverable_id:
-                Deliverable.objects.select_for_update().get(pk=proposal.deliverable_id)
+                current_deliverable = Deliverable.objects.select_for_update().get(pk=proposal.deliverable_id)
+                if current_deliverable.project_id != project_id:
+                    raise ApprovalConflict({'detail': 'El proyecto cambió. Actualiza y vuelve a revisar.', 'code': 'link_changed'})
             if original.deliverable_id != proposal.deliverable_id:
                 raise ApprovalConflict({'detail': 'La vinculación cambió. Actualiza y vuelve a revisar.', 'code': 'link_changed'})
             action = data['action']

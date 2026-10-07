@@ -14,6 +14,8 @@
   6. API call to `PATCH /api/proposals/:id/update/`.
   7. Success feedback displays.
 - **Branches:**
+  - [Datos del proyecto] Proyecto → Datos está disponible en todos los estados. Reúne el cliente y los contactos con guardado propio; una propuesta ya vinculada conserva su cliente. El proyecto actual se muestra allí y su cambio exige destino del mismo cliente, motivo, revisión y confirmación.
+  - [Recursos y correos] Recursos pertenece a Propuesta. Los enlaces anteriores a Comunicación → Recursos abren la nueva ubicación. Firma, funcionalidades y fases del correo se guardan desde Comunicación → Correos sin sobrescribir cambios pendientes en General.
   - [Disponibilidad de Documentos] La pestaña está disponible en todos los estados y permanece seleccionada cuando la propuesta pasa a finalizada. General conserva los PDFs originales de propuestas en borrador, vencidas y finalizadas, distintos de los documentos formales.
   - [Grouped navigation] Select a primary area and one of its visible secondary tools. Compact and portrait profiles use named selectors. Returning to an area restores its last tool and preserves unsaved content or a selected video file.
   - [Shared links] Old `?tab=<tool>` links and new `?tab=<group>&section=<tool>` links open the corresponding tool after proposal data loads, preserving unrelated parameters and fragments. Unknown or unavailable destinations return to General.

@@ -229,6 +229,7 @@ EXEMPT_MODELS = {
     'accounts.VerificationCode', 'content.LinkedInToken',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.ProposalContractChangeIntent',
+    'content.ProposalProjectReassignment',
     'content.McpActionIntent', 'content.McpCredential', 'content.McpUpload',
 }
 

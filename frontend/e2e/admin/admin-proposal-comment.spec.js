@@ -52,6 +52,9 @@ function setupMock(page, capturedActivities = []) {
     if (apiPath === `proposals/${PROPOSAL_ID}/detail/`) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(currentProposal) };
     }
+    if (apiPath === `proposals/${PROPOSAL_ID}/activity/` && route.request().method() === 'GET') {
+      return { status: 200, contentType: 'application/json', body: JSON.stringify({ results: currentProposal.change_logs, next_cursor: null, has_more: false }) };
+    }
     if (apiPath === `proposals/${PROPOSAL_ID}/analytics/`) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify(mockAnalytics) };
     }

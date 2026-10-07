@@ -501,6 +501,48 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
     await expect(page.getByTestId('pocket-filtered-net')).toContainText('1 movimiento');
   });
 
+  // Bug caught: copying after a filter used the visible net instead of the server-owned pocket balance.
+  test('copy balance keeps the formatted server total after filtering the ledger', {
+    tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async (text) => { window.__pocketClipboardText = text; } },
+      });
+    });
+    await mockApi(page, buildHandler({ calls: [] }));
+    await page.goto('/panel/accounting/pocket', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('accounting-row-1')).toBeVisible({ timeout: 25_000 });
+
+    await page.getByRole('button', { name: /Filtros/ }).click();
+    await page.getByRole('group', { name: 'Vínculo' })
+      .getByRole('button', { name: 'Sin vincular', exact: true }).click();
+    await expect(page.getByTestId('pocket-filtered-net')).toContainText('neto $-2.272.000');
+
+    await page.getByTestId('pocket-copy-balance').click();
+    await expect.poll(() => page.evaluate(() => window.__pocketClipboardText)).toBe('$-149.000');
+    await expect(page.getByRole('status').filter({ hasText: 'Saldo copiado' })).toHaveText('Saldo copiado');
+  });
+
+  // Bug caught: a rejected Clipboard API call looked like a successful copy.
+  test('copy balance exposes an accessible error when the clipboard rejects', {
+    tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(navigator, 'clipboard', {
+        configurable: true,
+        value: { writeText: async () => Promise.reject(new Error('denied')) },
+      });
+    });
+    await mockApi(page, buildHandler({ calls: [] }));
+    await page.goto('/panel/accounting/pocket', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByTestId('pocket-balance')).toHaveText('$-149.000');
+
+    await page.getByTestId('pocket-copy-balance').click();
+    await expect(page.getByRole('status').filter({ hasText: 'No se pudo copiar' })).toHaveText('No se pudo copiar');
+  });
+
   test('attribution filter cuts the ledger by partner', {
     tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {

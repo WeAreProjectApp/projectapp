@@ -713,3 +713,18 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 - Verificar navegador real y responsive, aislamiento, revocación permanente y ausencia de secretos; entregar PR separado hacia main con CI verde.
 - P0 fijó `0070_platform_ideas_access`, padre P3 `0067_explicit_delivery_authoring_context`, y el orden P3 → P1 → P2 → P4 → P5. La nueva no-op `0075_p4_platform_domains_merge`, padres `0074_p2_platform_billing_merge` y `0070_platform_ideas_access`, está creada después de absorber P2 `fae1e361` y P3 `cecb5b93`; no aplicada. No modificar migraciones anteriores ni referenciar padres inexistentes.
 - Preservar en change_client_apply y ProjectAdmin.save_model el orden proyecto bloqueado → validación/guards financiero y core/tickets P2 sin escrituras si rechazan → revoke_grants P4 → reasignación/cascada o guardado. P2 conserva formulario, validación y helper; P4 conserva únicamente su puente y regresiones. Las referencias P2/P3 publicadas están absorbidas; las regresiones de rechazo y edición inocua pasan. P0 conserva el orden de integración. No ejecutar deploy/migrate ni mergear desde esta sesión; P3 conserva núcleo y guías.
+
+
+## 2026-10-07 — Propuestas, MCP, Littigio y parche de seguridad
+
+| Fase | Alcance | Criterio de cierre |
+| --- | --- | --- |
+| 1 | Seguridad: sólo Django 6.1.2; source-map-js 1.2.2 con lockfile | Audit de producción sin severidad alta; pruebas y CI del parche verdes; sin migraciones del parche |
+| 2 | Redistribución del editor, carga de actividad e historial, iconos de ingreso y copia de saldo | Controles conservados, borradores independientes, recorridos y mapas sincronizados |
+| 3 | Administración MCP y reasignación con procedencia técnica/auditoría | Permisos/esquemas/confirmación y migración conservadora probados |
+| 4 | Integración y publicación del código | PR revisable con CI verde; deploy canónico antes de invocar herramientas nuevas |
+| 5 | Reparación de datos separada | Propuestas 117/118 en 14, documentos en 129, contrato208 vinculado y cobro245 con opciones; 15/16 sólo si vacíos |
+
+Estado al planificar: implementación y QA en el worktree propio; la reparación
+de producción aún no aplicada. El acceso SSH requiere autenticación Tailscale
+adicional. No generar ni emitir cuentas, alterar importes ni borrar propuestas.

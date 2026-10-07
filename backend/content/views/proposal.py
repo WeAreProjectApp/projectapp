@@ -1784,7 +1784,7 @@ def preview_sync_section(request, section_id):
     project = Project.objects.select_related('client').get(pk=deliverable.project_id)
 
     diff = compute_sync_diff(
-        project, filtered_technical_doc_for_sync(proposal, content_json),
+        project, filtered_technical_doc_for_sync(proposal, content_json), proposal=proposal,
     )
 
     return Response({

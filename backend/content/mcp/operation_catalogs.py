@@ -12,6 +12,11 @@ from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.operation_builder import _op
+from content.mcp.entity_history_tools import history_tools
+from content.mcp.proposal_schemas import writable_schema
+from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
+from accounts.serializers import UpdateProjectPhaseSerializer
+from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
 
@@ -48,7 +53,8 @@ _PROJECT_DELETE['impact_builder'] = lambda arguments: _PROJECT_DELETE_PREVIEW['h
 )
 
 PROJECT_TOOLS = [
-    _op('list_projects', 'Lista proyectos y sus indicadores por estado.', 'panel-projects-list'),
+    _op('list_projects', 'Lista proyectos y sus indicadores por estado; query.client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list'),
+    _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',)),
     _op('create_project', 'Crea un proyecto con las validaciones del Panel.', 'panel-projects-create', 'POST', risk='write'),
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
     _PROJECT_DELETE_PREVIEW,
@@ -68,7 +74,16 @@ PROJECT_TOOLS = [
     _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',)),
     _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True),
     _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',)),
-] + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS
+    _op('list_project_commercial_phases', 'Consulta las fases comerciales asociadas a propuestas y sus fechas de hosting.', 'project-commercial-phases', path=('project_id',)),
+    _op('add_project_commercial_phase', 'Incorpora como fase una propuesta aceptada ya vinculada a este proyecto; la vinculación inicial requiere revisión de aprobación.', 'project-commercial-phases', 'POST', ('project_id',), 'write', payload_schema=writable_schema(AddCommercialPhaseSerializer)),
+    _op('update_project_commercial_phase', 'Actualiza la fecha de inicio del hosting de una fase, conservando su vínculo con la propuesta.', 'project-commercial-phase-detail', 'PATCH', ('project_id', 'phase_id'), 'write', payload_schema=writable_schema(UpdateProjectPhaseSerializer)),
+    _op('remove_project_commercial_phase', 'Desvincula una fase sin entrega ni hosting asociado; conserva la propuesta y sus archivos.', 'project-commercial-phase-detail', 'DELETE', ('project_id', 'phase_id'), 'sensitive', True),
+    _op('reorder_project_commercial_phases', 'Reordena todas las fases comerciales con identificadores únicos y posiciones consecutivas.', 'project-commercial-phases-reorder', 'PATCH', ('project_id',), 'write', payload_schema=writable_schema(ReorderCommercialPhasesSerializer)),
+    _op('get_project_brand', 'Consulta Linktrees y los archivos de marca del proyecto sin exponer rutas de almacenamiento privadas.', 'project-brand', path=('project_id',)),
+    _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, payload_schema=writable_schema(ProjectBrandAssetUploadSerializer, exclude=('file',))),
+    _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id')),
+    _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True),
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}

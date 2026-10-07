@@ -44,6 +44,7 @@ from content.models import (
     Linktree,
     McpConnector,
     McpRequestLog,
+    ProposalProjectReassignment,
     ProposalShareLink,
     QRCard,
     ProjectRetentionContext,
@@ -232,6 +233,30 @@ def test_fake_reset_removes_retained_access_owner_graph(admin_user):
     assert not ProjectAdminAccess.objects.filter(pk=access.pk).exists()
     assert not ProjectRetentionContext.objects.filter(pk=context.pk).exists()
     assert not get_user_model().objects.filter(pk=client.pk).exists()
+    assert get_user_model().objects.filter(pk=admin_user.pk).exists()
+
+
+def test_fake_reset_removes_reassignment_receipt_before_proposal(admin_user):
+    proposal = BusinessProposal.objects.create(
+        title='Proposal with reassignment audit',
+        client_email='audit-client@example.test',
+    )
+    receipt = ProposalProjectReassignment.objects.create(
+        proposal=proposal,
+        request_id='fake-reset-reassignment',
+        payload_hash='a' * 64,
+        source_project_id=101,
+        target_project_id=202,
+        reason='Development reset regression',
+        impact={},
+        result={},
+        actor=admin_user,
+    )
+
+    run_command('delete_fake_data', '--confirm')
+
+    assert not ProposalProjectReassignment.objects.filter(pk=receipt.pk).exists()
+    assert not BusinessProposal.objects.filter(pk=proposal.pk).exists()
     assert get_user_model().objects.filter(pk=admin_user.pk).exists()
 
 

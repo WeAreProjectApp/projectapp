@@ -160,8 +160,15 @@
         />
       </div>
 
+      <div v-if="visitedTabs.has('project-data')" v-show="activeTab === 'project-data'">
+        <ProposalProjectDataTab :proposal="proposal" :form="form" :saving="proposalStore.isUpdating"
+          @save-client="saveClientData" @client-selected="onClientSelected"
+          @create-inline-client="onCreateInlineClient" @review="openApproval(proposal, false)" />
+      </div>
+
       <!-- Tab: Correos -->
-      <div v-if="visitedTabs.has('emails')" v-show="activeTab === 'emails'">
+      <div v-if="visitedTabs.has('emails')" v-show="activeTab === 'emails'" class="space-y-5">
+        <ProposalEmailSettings :form="form" :saving="proposalStore.isUpdating" @save="saveEmailSettings" @open-email-preview="openEmailPreview" />
         <ProposalEmailsTab
           :proposal="proposal"
           @email-intro-saved="handleEmailIntroSaved"
@@ -471,6 +478,8 @@ const lazyTab = (loader) => defineAsyncComponent({
 const EntityHistoryPanel = lazyTab(() => import('~/components/history/EntityHistoryPanel.vue'));
 const VideoResourceManager = lazyTab(() => import('~/components/resources/VideoResourceManager.vue'));
 const ProposalSectionsTab = lazyTab(() => import('~/components/panel/proposal/ProposalSectionsTab.vue'));
+const ProposalProjectDataTab = lazyTab(() => import('~/components/panel/proposal/ProposalProjectDataTab.vue'));
+const ProposalEmailSettings = lazyTab(() => import('~/components/panel/proposal/ProposalEmailSettings.vue'));
 const ProposalHourRateTab = lazyTab(() => import('~/components/panel/proposal/ProposalHourRateTab.vue'));
 import { DEFAULT_HOSTING_PERCENT, DEFAULT_METHOD_PHASES } from '~/stores/proposals_constants';
 // Hoisted so the idle warm-up in onMounted and the async wrapper share ONE
@@ -564,10 +573,7 @@ watch(activeTab, async (tab) => {
   if (tab === 'analytics') {
     analyticsRefreshKey.value += 1;
   }
-  if (tab === 'activity' && !hasUnsavedEdits.value) {
-    await proposalStore.fetchProposal(route.params.id);
-    hydrateFormFromProposal();
-  }
+
 });
 const hasDocumentsTab = computed(() => tabs.value.some(tab => tab.id === 'documents'));
 const hasProposalDocuments = hasDocumentsTab;
@@ -765,6 +771,7 @@ const syncApplying = ref(false);
 const pendingSyncPayload = ref(null);
 const investmentPaymentPercentages = ref([]);
 
+const savedForm = ref(null);
 const form = reactive({
   title: '',
   client_id: null,
@@ -865,6 +872,7 @@ async function openInitialEmailPreview(emailIntro) {
 
 function handleEmailIntroSaved(emailIntro) {
   form.email_intro = emailIntro;
+  if (savedForm.value) savedForm.value.email_intro = emailIntro;
   scorecardData.value = null;
 }
 
@@ -1089,6 +1097,7 @@ function hydrateFormFromProposal() {
     email_signed_by: proposal.value.email_signed_by || 'gustavo',
   });
   creatingNewClient.value = false;
+  savedForm.value = JSON.parse(JSON.stringify(form));
 }
 
 onMounted(async () => {
@@ -1126,11 +1135,13 @@ const {
   guardedReload,
 } = useUnsavedGuard({
   flags: {
+    general: () => savedForm.value && Object.keys(form).some(key => JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key])),
     sections: () => sectionsDirty.value,
     hourRate: () => hourRateDirty.value,
     emailIntro: () => emailIntroDirty.value,
   },
   labels: {
+    general: 'datos de la propuesta',
     sections: 'secciones',
     hourRate: 'tarifa por hora',
     emailIntro: 'mensaje del correo',
@@ -1164,11 +1175,13 @@ onBeforeUnmount(() => {
 });
 
 async function toggleAutomationsPaused() {
+  if (proposalStore.isUpdating) return;
   form.automations_paused = !form.automations_paused;
   const result = await proposalStore.updateProposal(proposal.value.id, {
     automations_paused: form.automations_paused,
   });
   if (result.success) {
+    savedForm.value.automations_paused = form.automations_paused;
     notify.success({ title: form.automations_paused ? 'Automatizaciones pausadas.' : 'Automatizaciones reactivadas.' });
   } else {
     form.automations_paused = !form.automations_paused;
@@ -1182,6 +1195,7 @@ async function toggleExplainerVideo(value) {
   form.show_explainer_video = value;
   const result = await proposalStore.updateProposal(proposal.value.id, { show_explainer_video: value });
   if (result.success) {
+    savedForm.value.show_explainer_video = value;
     notify.success({ title: 'Preferencia del video guardada.' });
   } else {
     form.show_explainer_video = previous;
@@ -1190,12 +1204,14 @@ async function toggleExplainerVideo(value) {
 }
 
 async function toggleContractTerms() {
+  if (proposalStore.isUpdating) return;
   const previousValue = form.show_contract_terms;
   form.show_contract_terms = !previousValue;
   const result = await proposalStore.updateProposal(proposal.value.id, {
     show_contract_terms: form.show_contract_terms,
   });
   if (result.success) {
+    savedForm.value.show_contract_terms = form.show_contract_terms;
     notify.success({
       title: form.show_contract_terms
         ? 'Contrato y condiciones visible.'
@@ -1220,23 +1236,46 @@ function sanitizeEmailMetadata(payload) {
   return payload;
 }
 
-async function handleUpdate() {
-  const payload = sanitizeEmailMetadata({ ...form });
-  if (creatingNewClient.value) {
-    payload.create_new_client = true;
-    payload.propagate_client_updates = false;
-    payload.client_id = null;
+const CLIENT_FIELDS = ['client_id', 'client_name', 'client_email', 'client_phone', 'client_company'];
+const EMAIL_FIELDS = ['email_features', 'email_method_phases', 'email_signed_by'];
+async function saveFormFields(fields, extra = {}) {
+  if (proposalStore.isUpdating) return false;
+  const submitted = JSON.parse(JSON.stringify(Object.fromEntries(fields.map(key => [key, form[key]]))));
+  const payload = JSON.parse(JSON.stringify(submitted));
+  if (fields === EMAIL_FIELDS) sanitizeEmailMetadata(payload);
+  const result = await proposalStore.updateProposal(proposal.value.id, { ...payload, ...extra });
+  if (result.success) {
+    fields.forEach(key => {
+      savedForm.value[key] = JSON.parse(JSON.stringify(payload[key]));
+      if (JSON.stringify(form[key]) === JSON.stringify(submitted[key])) form[key] = JSON.parse(JSON.stringify(payload[key]));
+    });
+    notify.success({ title: 'Cambios guardados.' });
   } else {
-    payload.propagate_client_updates = true;
+    notify.error({ title: 'No se pudieron guardar los cambios.', detail: result.message || 'Revisa los datos e intenta de nuevo.' });
   }
-  if (payload.expires_at) {
+  return result.success;
+}
+async function saveClientData() {
+  const success = await saveFormFields(CLIENT_FIELDS, { create_new_client: creatingNewClient.value, propagate_client_updates: !creatingNewClient.value });
+  if (success && proposal.value.client) { form.client_id = proposal.value.client.id; savedForm.value.client_id = form.client_id; creatingNewClient.value = false; }
+}
+async function saveEmailSettings() { await saveFormFields(EMAIL_FIELDS); }
+
+async function handleUpdate() {
+  if (proposalStore.isUpdating) return;
+  const submitted = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(form).filter(([key]) =>
+    !CLIENT_FIELDS.includes(key) && !EMAIL_FIELDS.includes(key) && JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key])
+  ))));
+  const payload = { ...submitted };
+  if (Object.hasOwn(payload, 'expires_at') && payload.expires_at) {
     const d = new Date(payload.expires_at);
     payload.expires_at = isNaN(d.getTime()) ? null : d.toISOString();
-  } else {
+  } else if (Object.hasOwn(payload, 'expires_at')) {
     payload.expires_at = null;
   }
   const result = await proposalStore.updateProposal(proposal.value.id, payload);
   if (result.success) {
+    Object.keys(submitted).forEach(key => { savedForm.value[key] = submitted[key]; });
     const syncResult = await syncInvestmentPercentagesFromGeneral();
     if (syncResult.success) {
       notify.success({ title: 'Propuesta actualizada.' });

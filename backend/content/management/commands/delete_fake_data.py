@@ -33,6 +33,7 @@ from content.models import (
     McpRequestLog,
     PortfolioWork,
     ProjectBrandAsset,
+    ProposalProjectReassignment,
     ProjectRetentionContext,
     QRCard,
     Task,
@@ -217,6 +218,11 @@ class Command(BaseCommand):
             model.objects.exclude(source_ref='fake:accounting').filter(
                 project__isnull=False, retention_context__isnull=True,
             ).update(project=None)
+
+        deleted, _ = ProposalProjectReassignment.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS(
+            f'Deleted proposal project reassignment receipts ({deleted} rows)'
+        ))
 
         for model, label in (
             (DocumentStateEpisode, 'project state history'),

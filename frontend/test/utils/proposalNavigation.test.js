@@ -11,14 +11,16 @@ const sectionIds = (status, groupId) => availableProposalGroups(status)
   .map((section) => section.id);
 
 describe('proposal navigation catalog', () => {
-  // Fails if a draft loses its Documents entry before a modality needs review.
-  it('keeps Documents in draft navigation', () => {
-    expect(groupIds('draft')).toEqual(['general', 'proposal', 'communication', 'documents', 'tracking']);
+  // Fails if drafts cannot reach their client and project relationship data.
+  it('keeps Project data in draft navigation', () => {
+    expect(groupIds('draft')).toEqual(['general', 'proposal', 'communication', 'documents', 'project', 'tracking']);
+    expect(sectionIds('draft', 'project')).toEqual(['project-data']);
   });
 
-  // Fails if sent proposals lose the Documents group that users need to review shared files.
-  it('adds Documents after a proposal is sent', () => {
-    expect(groupIds('sent')).toEqual(['general', 'proposal', 'communication', 'documents', 'tracking']);
+  // Fails if sent proposals lose the relationship data needed before acceptance.
+  it('keeps Project data in sent navigation', () => {
+    expect(groupIds('sent')).toEqual(['general', 'proposal', 'communication', 'documents', 'project', 'tracking']);
+    expect(sectionIds('sent', 'project')).toEqual(['project-data']);
   });
 
   // Fails if accepted proposals hide a top-level group needed after approval.
@@ -28,17 +30,17 @@ describe('proposal navigation catalog', () => {
     ]);
   });
 
-  // Fails if accepted proposals hide either Project tool after work has been approved.
-  it('exposes both Project tools for accepted proposals', () => {
-    expect(sectionIds('accepted', 'project')).toEqual(['schedule', 'development']);
+  // Fails if accepted proposals hide their relationship data or either delivery tool.
+  it('exposes project data and delivery tools for accepted proposals', () => {
+    expect(sectionIds('accepted', 'project')).toEqual(['project-data', 'schedule', 'development']);
   });
 
-  // Fails if finished work loses Documents, its schedule, or still offers the closed Development tool.
-  it('keeps only the schedule in Project after a proposal is finished', () => {
+  // Fails if finished work loses its relationship data or still offers the closed Development tool.
+  it('keeps project data and schedule after a proposal is finished', () => {
     expect(groupIds('finished')).toEqual([
       'general', 'proposal', 'communication', 'documents', 'project', 'tracking',
     ]);
-    expect(sectionIds('finished', 'project')).toEqual(['schedule']);
+    expect(sectionIds('finished', 'project')).toEqual(['project-data', 'schedule']);
   });
 });
 
@@ -61,6 +63,18 @@ describe('proposal navigation links', () => {
   // Fails if old schedule links stop working after the proposal is finished.
   it('resolves a legacy schedule destination for finished proposals', () => {
     expect(resolveProposalSection({ tab: 'schedule' }, 'finished')).toBe('schedule');
+  });
+
+  // Fails if saved Resources links still point at the former Communication tab.
+  it('resolves the old Communication Resources URL and serializes the new Proposal URL', () => {
+    expect(resolveProposalSection({ tab: 'communication', section: 'resources' }, 'accepted')).toBe('resources');
+    expect(proposalSectionQuery('resources')).toEqual({ tab: 'proposal', section: 'resources' });
+  });
+
+  // Fails if email configuration falls back into General after the tab move.
+  it('resolves Correos within Communication', () => {
+    expect(resolveProposalSection({ tab: 'communication', section: 'emails' }, 'draft')).toBe('emails');
+    expect(proposalSectionQuery('emails')).toEqual({ tab: 'communication' });
   });
 
   // Fails if a status-gated or malformed section can select a panel with no available content.

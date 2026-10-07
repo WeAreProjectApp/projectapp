@@ -34,13 +34,17 @@
           (total, no refleja los filtros)
         </span>
       </p>
-      <p
-        class="text-3xl font-semibold tabular-nums"
-        :class="pocketBalance >= 0 ? 'text-success-strong' : 'text-danger-strong'"
-        data-testid="pocket-balance"
-      >
-        {{ formatMoney(pocketBalance) }}
-      </p>
+      <div class="flex items-center gap-3">
+        <p class="text-3xl font-semibold tabular-nums"
+          :class="pocketBalance >= 0 ? 'text-success-strong' : 'text-danger-strong'"
+          data-testid="pocket-balance">{{ formatMoney(pocketBalance) }}</p>
+        <BaseActionButton action="copy" label="Copiar saldo del bolsillo" tooltip="Copiar saldo"
+          :disabled="store.isLoading || store.error === 'fetch_failed'"
+          disabled-reason="Espera a que se cargue el saldo del bolsillo."
+          :status-label="balanceClipboard.feedbackFor().label"
+          :status-tone="balanceClipboard.feedbackFor().tone"
+          data-testid="pocket-copy-balance" @click="copyPocketBalance" />
+      </div>
       <p
         v-if="hasActiveFilters"
         class="text-sm text-text-muted mt-2 tabular-nums"
@@ -348,11 +352,17 @@ import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue
 import { buildExportParams } from '~/utils/accountingExportParams';
 import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
+import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { withRunningBalance } from '~/utils/pocketRunningBalance';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useAccountingStore();
+const balanceClipboard = useClipboardFeedback();
+async function copyPocketBalance() {
+  if (store.isLoading || store.error === 'fetch_failed') return;
+  await balanceClipboard.copyText({ text: formatMoney(pocketBalance.value), successLabel: 'Saldo copiado' });
+}
 const { isMobile: isCompactCards } = useIsMobile(PANEL_BREAKPOINTS.portrait - 1);
 const { isMobile: isNarrowTable } = useIsMobile(PANEL_BREAKPOINTS.landscape - 1);
 

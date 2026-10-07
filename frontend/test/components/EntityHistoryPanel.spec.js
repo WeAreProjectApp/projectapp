@@ -172,6 +172,102 @@ describe('EntityHistoryPanel', () => {
     wrapper.unmount();
   });
 
+  function mockThreePageHistory() {
+    get_request.mockImplementation((url) => {
+      if (url.includes('versions/31/')) {
+        return Promise.resolve({ data: makeVersion(31, 31, {
+          snapshot: { generated_file: '/media/proposal-v31.pdf' },
+        }) });
+      }
+      if (url.includes('page=2')) {
+        return Promise.resolve({ data: {
+          ...makeList([makeEntry(31, 31)]), count: 43, num_pages: 3,
+        } });
+      }
+      if (url.includes('page=3')) {
+        return Promise.resolve({ data: {
+          ...makeList([makeEntry(41, 41)]), count: 43, num_pages: 3,
+        } });
+      }
+      return Promise.resolve({ data: { ...makeList([makeEntry(1, 1)]), count: 43, num_pages: 3 } });
+    });
+  }
+
+  async function goToSecondPage(wrapper) {
+    await buttonByText(wrapper, '2').trigger('click');
+    await flushPromises();
+  }
+
+  // Falla si la paginación no aclara qué tramo de las 43 versiones se está viendo.
+  it('shows the exact range for the second history page', async () => {
+    mockThreePageHistory();
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    await goToSecondPage(wrapper);
+
+    expect(wrapper.get('[aria-label="Paginación del historial"]').text()).toContain('Mostrando 21–40 de 43');
+    wrapper.unmount();
+  });
+
+  // Falla si avanzar una página pierde el orden reciente que eligió el usuario.
+  it('requests the next history page with recent ordering', async () => {
+    mockThreePageHistory();
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    await goToSecondPage(wrapper);
+    await wrapper.get('[aria-label="Paginación del historial"] [aria-label="Página siguiente"]').trigger('click');
+    await flushPromises();
+
+    expect(get_request).toHaveBeenLastCalledWith('entity-history/document/8/?page=3&order=recent');
+    wrapper.unmount();
+  });
+
+  // Falla si cambiar el orden conserva la página 2 y muestra una cronología incompleta bajo el nuevo orden.
+  it('returns to the first page when the history order changes from page two', async () => {
+    get_request.mockImplementation((url) => {
+      if (url.includes('page=2&order=recent')) {
+        return Promise.resolve({ data: { ...makeList([makeEntry(31, 31)]), count: 43, num_pages: 3 } });
+      }
+      if (url.includes('page=1&order=oldest')) {
+        return Promise.resolve({ data: { ...makeList([makeEntry(1, 1)]), count: 43, num_pages: 3 } });
+      }
+      return Promise.resolve({ data: { ...makeList([makeEntry(51, 51)]), count: 43, num_pages: 3 } });
+    });
+    const wrapper = mountPanel();
+    await flushPromises();
+    await goToSecondPage(wrapper);
+
+    await wrapper.get('[data-testid="history-order"]').setValue('oldest');
+    await flushPromises();
+
+    expect(get_request).toHaveBeenLastCalledWith('entity-history/document/8/?page=1&order=oldest');
+    expect(wrapper.get('[data-testid="history-entry-1"]').text()).toContain('v1');
+    expect(wrapper.find('[data-testid="history-entry-31"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Falla si cambiar de página cierra una versión seleccionada o pierde su archivo histórico.
+  it('keeps the selected version and its PDF download after pagination', async () => {
+    mockThreePageHistory();
+    const wrapper = mountPanel();
+    await flushPromises();
+
+    await goToSecondPage(wrapper);
+    await buttonByText(wrapper.get('[data-testid="history-entry-31"]'), 'Consultar').trigger('click');
+    await flushPromises();
+
+    expect(get_request).toHaveBeenLastCalledWith('entity-history/document/8/versions/31/');
+    expect(wrapper.get('[href="/api/entity-history/document/8/versions/31/file/"]').text()).toBe('Ver PDF de esta versión');
+
+    await wrapper.get('[aria-label="Paginación del historial"] [aria-label="Página siguiente"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="history-version-detail"]').text()).toContain('Versión 31');
+    wrapper.unmount();
+  });
+
   // Falla si la respuesta tardía de una revelación vuelve a mostrar una clave de la versión anterior.
   it('does not display a late V1 reveal after switching to V2', async () => {
     const pendingReveal = deferred();

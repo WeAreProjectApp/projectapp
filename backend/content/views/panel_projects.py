@@ -280,6 +280,8 @@ def list_panel_projects(request):
     """Full project listing for the module: rows plus header meta.
 
     Query params:
+        - ``client_profile_id``: optional positive profile ID; filters before
+          serialization so a proposal's selector loads only its client's projects.
         - ``scope``: compatibility selector for legacy consumers. The panel
           requests ``all`` and filters by ``current_state`` from the shared
           project catalog.
@@ -292,6 +294,14 @@ def list_panel_projects(request):
         )
 
     qs = _annotated_queryset()
+    if 'client_profile_id' in request.query_params:
+        try:
+            client_profile_id = int(request.query_params['client_profile_id'])
+            if client_profile_id < 1:
+                raise ValueError
+        except (TypeError, ValueError):
+            return error_response('Selecciona un cliente válido.', code='invalid_client_profile')
+        qs = qs.filter(client__profile__pk=client_profile_id)
     if scope == 'active':
         qs = qs.exclude(status=Project.STATUS_ARCHIVED)
     elif scope == 'archived':

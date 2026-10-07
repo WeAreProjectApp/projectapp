@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Change the linked client on an existing proposal from the proposal edit page (/panel/proposals/:id/edit). Admin selects a different client via the autocomplete and saves; snapshot fields update to reflect the new client.",
+  "description": "Desde Proyecto > Datos de la edición, cambiar el cliente de una propuesta que todavía no está vinculada a un proyecto. El administrador selecciona otro cliente y usa Guardar cliente; los contactos se actualizan sin guardar el borrador de General. Si ya existe un proyecto vinculado, el propietario queda bloqueado y su cambio requiere la acción de cliente del proyecto.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

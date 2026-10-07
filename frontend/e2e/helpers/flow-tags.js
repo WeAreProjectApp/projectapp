@@ -263,6 +263,7 @@ export const ADMIN_PROPOSAL_MODULE_INTERESTS = ['@flow:admin-proposal-module-int
 export const ADMIN_PROPOSAL_MULTI_SEND = ['@flow:admin-proposal-multi-send', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_PLATFORM_HANDOFF = ['@flow:admin-proposal-platform-handoff', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_POST_REJECTION_REVISIT = ['@flow:admin-proposal-post-rejection-revisit', '@module:admin', '@priority:P2'];
+export const ADMIN_PROPOSAL_PROJECT_REASSIGNMENT = ['@flow:admin-proposal-project-reassignment', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_PROJECT_SCHEDULE = ['@flow:admin-proposal-project-schedule', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_PROMPT = ['@flow:admin-proposal-prompt', '@module:admin', '@priority:P3'];
 export const ADMIN_PROPOSAL_QUICK_LOG = ['@flow:admin-proposal-quick-log', '@module:admin', '@priority:P2'];
