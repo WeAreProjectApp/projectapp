@@ -164,7 +164,9 @@ class TestProposalMcpSettings:
     ):
         """Fails if MCP records a pending reassignment despite a financial document blocker."""
         ctx = _reassignment_context()
-        document_type = DocumentType.objects.create(code='collection_account', name='Cuenta de cobro')
+        document_type, _ = DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )
         Document.objects.create(
             title='Collection account', project=ctx.source, client_user=ctx.source.client,
             source_proposal=ctx.proposal, document_type=document_type,
