@@ -6,19 +6,24 @@ from accounts.serializers import (
 )
 from accounts.services.delivery_access import (
     DeliveryConflict,
-    project_for_actor,
-    require_admin,
 )
-from accounts.services.platform_resource_operations import perform, workspace_version
+from accounts.services.platform_resource_operations import (
+    perform,
+    require_resource_admin,
+    workspace_version,
+)
+from accounts.services.platform_resource_operations import (
+    project_for_resource_actor as project_for_actor,
+)
 
 
-def list_entities(project_id, actor):
-    project = project_for_actor(project_id, actor)
+def list_entities(project_id, actor, *, request=None):
+    project = project_for_actor(project_id, actor, request=request)
     return list(ProjectDataModelEntitySerializer(ProjectDataModelEntity.objects.filter(project=project), many=True).data)
 
 
-def template(project_id, actor):
-    project_for_actor(project_id, actor)
+def template(project_id, actor, *, request=None):
+    project_for_actor(project_id, actor, request=request)
     return {'entities': [{'name': 'ExampleEntity', 'description': 'Brief description of the entity',
                          'keyFields': 'id, name, created_at', 'relationship': '1:N with OtherEntity'}]}
 
@@ -29,19 +34,19 @@ def _validated(data):
     return serializer.validated_data
 
 
-def preview(project_id, actor, data, expected_version):
-    require_admin(actor)
-    project = project_for_actor(project_id, actor)
+def preview(project_id, actor, data, expected_version, *, request=None):
+    require_resource_admin(actor, request)
+    project = project_for_actor(project_id, actor, request=request)
     values = _validated(data)
     version = workspace_version(project)
     if type(expected_version) is not int or expected_version != version:
         raise DeliveryConflict()
     return {'project_id': project.pk, 'version': version, 'client_id': project.client_id,
-            'before': list_entities(project.pk, actor), 'after': values['entities']}
+            'before': list_entities(project.pk, actor, request=request), 'after': values['entities']}
 
 
-def import_entities(project_id, actor, data, **operation):
-    require_admin(actor)
+def import_entities(project_id, actor, data, *, request=None, **operation):
+    require_resource_admin(actor, request)
     values = _validated(data)
 
     def change(project):
@@ -51,6 +56,6 @@ def import_entities(project_id, actor, data, **operation):
                                    key_fields=item['keyFields'], relationship=item['relationship'])
             for item in values['entities']
         ])
-        return list_entities(project.pk, actor)
+        return list_entities(project.pk, actor, request=request)
 
-    return perform(project_id, actor, 'data-model:import', values, change, **operation)
+    return perform(project_id, actor, 'data-model:import', values, change, request=request, **operation)

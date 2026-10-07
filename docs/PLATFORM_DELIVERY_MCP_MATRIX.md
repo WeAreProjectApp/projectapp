@@ -255,3 +255,18 @@ administrativa dentro de un recurso archivado; el cliente sigue sin poder
 consultarlo. Crear carpetas o subir archivos a un recurso archivado mantiene el
 rechazo existente. Una prueba MCP y cinco regresiones REST verificaron este
 límite en el schema de test aislado.
+
+## Límite de rol entre REST y MCP
+
+El acceso REST de recursos y modelo de datos conserva el rol administrativo de
+Platform y la propiedad del proyecto. Marcar una cuenta de cliente como staff
+no habilita lecturas de otro proyecto, archivos archivados ni escrituras
+administrativas. El servicio compartido recibe el Request real desde las vistas;
+ese contexto no es un campo del payload. MCP conserva su principal técnico sin
+perfil simulado y exige contexto del conector `projects`, actor y credencial
+coincidentes y una credencial utilizable. No se modifican los permisos globales
+de entrega ni los roles del proyecto.
+
+Doce escenarios negativos de REST/servicio y comprobaciones positivas del
+principal MCP verifican este límite. El archivo de pruebas es
+`accounts/tests/test_platform_resource_role_boundary.py`.

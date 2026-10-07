@@ -1429,3 +1429,8 @@ propiedad y ausencia de rutas de almacenamiento en la respuesta. Los avisos
 comprueban versión del evento, manifest, credencial, replay y rechazo de estado
 incierto. La migración de medios históricos privados y el retiro de sus URLs
 públicas se verifican aparte mediante deploy, nunca desde un worktree.
+
+El slice de permisos se encuentra en
+`accounts/tests/test_platform_resource_role_boundary.py` (12 casos): cliente
+staff sigue siendo cliente para lecturas ajenas, archivados, categoría restringida
+y escrituras. El principal técnico MCP sin UserProfile conserva su caso permitido.

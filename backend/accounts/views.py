@@ -1909,8 +1909,8 @@ def deliverable_client_folders_view(request, project_id, deliverable_id):
     if err:
         return err
     if request.method == 'GET':
-        return Response(resources.list_folders(project_id, request.user, deliverable_id))
-    return Response(resources.create_folder(project_id, request.user, deliverable_id, request.data), status=201)
+        return Response(resources.list_folders(project_id, request.user, deliverable_id, request=request))
+    return Response(resources.create_folder(project_id, request.user, deliverable_id, request.data, request=request), status=201)
 
 
 @api_view(['PATCH', 'DELETE'])
@@ -1921,9 +1921,9 @@ def deliverable_client_folder_detail_view(request, project_id, deliverable_id, f
     if err:
         return err
     if request.method == 'DELETE':
-        resources.change_folder(project_id, request.user, deliverable_id, folder_id, {}, delete=True)
+        resources.change_folder(project_id, request.user, deliverable_id, folder_id, {}, delete=True, request=request)
         return Response(status=204)
-    return Response(resources.change_folder(project_id, request.user, deliverable_id, folder_id, request.data))
+    return Response(resources.change_folder(project_id, request.user, deliverable_id, folder_id, request.data, request=request))
 
 
 @api_view(['GET', 'POST'])
@@ -1984,8 +1984,8 @@ def project_data_model_entities_view(request, project_id):
     if err:
         return err
     if request.method == 'GET':
-        return Response(data_model.list_entities(project_id, request.user))
-    return Response(data_model.import_entities(project_id, request.user, request.data), status=201)
+        return Response(data_model.list_entities(project_id, request.user, request=request))
+    return Response(data_model.import_entities(project_id, request.user, request.data, request=request), status=201)
 
 
 @api_view(['GET'])
@@ -1995,7 +1995,7 @@ def project_data_model_template_view(request, project_id):
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    return Response(data_model.template(project_id, request.user))
+    return Response(data_model.template(project_id, request.user, request=request))
 
 
 # ==========================================================================

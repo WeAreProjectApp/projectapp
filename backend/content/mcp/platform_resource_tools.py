@@ -37,7 +37,8 @@ WRITE = {'expected_version': VERSION, 'request_id': REQUEST_ID}
 
 def _credential():
     context = current_mcp_context()
-    if context is None or context.credential is None or not context.credential.is_usable:
+    if (context is None or context.credential is None or not context.credential.is_usable
+            or context.actor is None or context.credential.actor_id != context.actor.pk):
         raise ToolError('Se requiere una credencial MCP activa.', code='FORBIDDEN')
     return context.credential
 
