@@ -68,7 +68,7 @@ def test_publication_sends_one_client_snapshot(context, django_capture_on_commit
     assert (event.status, event.audience) == ('sent', 'client')
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [context.client.email]
-    assert snapshot.body == event.text_body
+    assert snapshot.body.text == event.text_body
     assert snapshot.subject == event.subject
 
 
