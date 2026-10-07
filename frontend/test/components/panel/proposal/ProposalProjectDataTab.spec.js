@@ -296,4 +296,15 @@ describe('ProposalProjectDataTab', () => {
     expect(mockCreateRequest).toHaveBeenCalledTimes(0);
     wrapper.unmount();
   });
+
+  // Falla si una propuesta cuyo proyecto fue eliminado se muestra como «Sin proyecto vinculado» o reabre su cliente.
+  it('names the deleted project of a retained deliverable and keeps the owner locked', async () => {
+    const wrapper = mountTab({ proposal: { ...linkedProposal, linked_project: { id: null, name: 'Plataforma educativa fase 1', retained: true } } });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="proposal-linked-project"]').text()).toBe('Plataforma educativa fase 1 — proyecto eliminado');
+    expect(wrapper.get('[data-testid="proposal-retained-project-note"]').text()).toContain('proyecto eliminado');
+    expect(wrapper.get('[data-testid="proposal-edit-client-autocomplete"]').element.disabled).toBe(true);
+    wrapper.unmount();
+  });
 });

@@ -93,3 +93,20 @@ def test_is_idempotent():
 
     assert '0 carpeta(s) adoptada(s)' in output
     assert DocumentFolder.objects.filter(managed_client=user).count() == 1
+
+
+def test_retained_project_root_is_reported_not_adopted(admin_user):
+    """Fails if the root retained from a deleted project is adopted as the client root."""
+    from content.models import ProjectRetentionContext
+
+    user = _client_user('retained@example.com')
+    context = ProjectRetentionContext.objects.create(
+        client=user, original_project_id=9014, project_name='Littigio', created_by=admin_user,
+    )
+    root = DocumentFolder.objects.create(name='Littigio', client_user=user, retention_context=context)
+
+    output = _run('--apply')
+
+    assert f'saltar   carpeta {root.pk} «Littigio» — conservada de un proyecto eliminado' in output
+    root.refresh_from_db()
+    assert root.managed_client_id is None

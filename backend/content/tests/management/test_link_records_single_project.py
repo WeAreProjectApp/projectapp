@@ -251,3 +251,25 @@ class TestRunContract:
         assert 'ingresos 0/0 por enlazar' in output
         assert 'documentos 0/0 por enlazar' in output
         assert 'Aplicado: 0 ingresos; 0 hostings; 0 documentos.' in output
+
+
+def test_retained_rows_are_reported_and_never_linked(make_client_profile, admin_user):
+    """Fails if --apply tries to fill a row retained from a deleted project and aborts the run."""
+    from content.models import ProjectRetentionContext
+
+    profile = make_client_profile()
+    project = make_project(profile)
+    context = ProjectRetentionContext.objects.create(
+        client=profile.user, original_project_id=9014, project_name='Littigio anterior',
+        created_by=admin_user,
+    )
+    retained = make_income(profile, concept='Inicio Fase 1', retention_context=context)
+    loose = make_income(profile, concept='Entrega Fase 1')
+
+    output = run_command('--apply')
+
+    assert '[skip] datos conservados de un proyecto eliminado: 1 ingresos' in output
+    retained.refresh_from_db()
+    loose.refresh_from_db()
+    assert retained.project_id is None
+    assert loose.project_id == project.pk

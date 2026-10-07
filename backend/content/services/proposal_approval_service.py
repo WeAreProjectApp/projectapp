@@ -30,7 +30,18 @@ class ApprovalConflict(ValidationError):
 
 
 def load_proposal(pk):
-    return BusinessProposal.objects.select_related('client__user', 'deliverable__project__client__profile').prefetch_related('sections', 'proposal_documents', 'approval_files').get(pk=pk)
+    return BusinessProposal.objects.select_related('client__user', 'deliverable__project__client__profile', 'deliverable__retention_context__client__profile').prefetch_related('sections', 'proposal_documents', 'approval_files').get(pk=pk)
+
+
+def retained_link_conflict(proposal):
+    """Its deliverable outlived a forced project deletion: review cannot bind it."""
+    name = (proposal.linked_project or {}).get('name') or 'sin nombre'
+    return ApprovalConflict({
+        'detail': f'El entregable de esta propuesta quedó conservado del proyecto eliminado «{name}». '
+                  'La revisión no puede vincularlo; esos datos quedan en consulta hasta trasladarlos '
+                  'a un proyecto vigente del cliente.',
+        'code': 'retained_project',
+    })
 
 
 def source_hash(proposal):
@@ -94,8 +105,9 @@ def preview(proposal):
         error = str(exc.detail['use_proposal_contracts'])
         if isinstance(exc.detail['use_proposal_contracts'], list):
             error = ' '.join(str(message) for message in exc.detail['use_proposal_contracts'])
-    summary = {'id': proposal.pk, 'status': proposal.status, 'platform_onboarding_status': proposal.platform_onboarding_status, 'platform_onboarding_completed_at': proposal.platform_onboarding_completed_at.isoformat() if proposal.platform_onboarding_completed_at else None, 'available_transitions': proposal.available_transitions, 'project_review_required': proposal.project_review_required, 'linked_project': proposal.linked_project}
-    return {'source_hash': source_hash(proposal), 'client': client, 'linked_project': proposal.linked_project, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in proposal.approval_files.all()], 'proposal': summary}
+    linked = proposal.linked_project
+    summary = {'id': proposal.pk, 'status': proposal.status, 'platform_onboarding_status': proposal.platform_onboarding_status, 'platform_onboarding_completed_at': proposal.platform_onboarding_completed_at.isoformat() if proposal.platform_onboarding_completed_at else None, 'available_transitions': proposal.available_transitions, 'project_review_required': proposal.project_review_required, 'linked_project': linked}
+    return {'source_hash': source_hash(proposal), 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in proposal.approval_files.all()], 'proposal': summary}
 
 
 def _original_contracts(proposal):
@@ -195,6 +207,8 @@ def _packet(proposal, data, files, *, profile):
 def _sync(proposal, actor):
     from accounts.services.technical_resources_sync import _sync_technical_resources_core
     project = proposal.deliverable.project
+    if project is None:
+        raise retained_link_conflict(proposal)
     manifest = proposal.platform_approval_manifest
     if manifest:
         result = _sync_technical_resources_core(project, proposal, actor, preserve_existing=True, content_json_override=manifest.get('technical_content', {}), content_is_filtered=True)
@@ -213,6 +227,8 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
     try:
         with transaction.atomic():
             original = load_proposal(proposal_id)
+            if original.deliverable_id and original.deliverable.project_id is None and data['action'] != 'defer':
+                raise retained_link_conflict(original)
             project_id = original.deliverable.project_id if original.deliverable_id else data.get('project_id')
             project = Project.objects.select_for_update().filter(pk=project_id).first() if project_id else None
             proposal = BusinessProposal.objects.select_for_update().get(pk=proposal_id)
@@ -253,7 +269,7 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
                 raise ValidationError({'status': 'La propuesta debe estar aceptada o en negociación.'})
             if project_id and project is None:
                 raise ValidationError({'project_id': 'Ese proyecto no existe.'})
-            if proposal.deliverable_id and data.get('project_id') != project.pk:
+            if proposal.deliverable_id and (project is None or data.get('project_id') != project.pk):
                 raise ApprovalConflict({'detail': 'La propuesta ya tiene proyecto. No se puede reemplazar el vínculo.', 'code': 'immutable_link'})
             if data.get('client_profile_id'):
                 profile = UserProfile.objects.clients().select_related('user').filter(pk=data['client_profile_id'], archived_at__isnull=True).first()

@@ -15,6 +15,7 @@ from accounts.services.credential_cipher import decrypt_secret
 from content.models import ProjectRetentionContext
 from content.services.project_deletion_catalog import CATEGORIES
 from content.services.project_retention_service import retained_record_payload
+from content.services.retention_audit import audit_payload
 
 PAGE_SIZE = 50
 
@@ -114,3 +115,22 @@ def reveal_retained_project_secret(request, client_id, context_id, category, rec
     response = Response({'value': decrypt_secret(getattr(row, field))})
     response['Cache-Control'] = 'no-store'
     return response
+
+
+@api_view(['GET'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def retained_project_data_audit(request):
+    """Every retention context with live counts per category, for all clients."""
+    client_profile_id = request.query_params.get('client_profile_id')
+    if client_profile_id not in (None, ''):
+        try:
+            client_profile_id = int(client_profile_id)
+        except (TypeError, ValueError):
+            raise ValidationError({'client_profile_id': 'Indica el número del perfil de cliente.'})
+    else:
+        client_profile_id = None
+    integrity = request.query_params.get('integrity', '').lower() in ('1', 'true')
+    return _private_response(audit_payload(
+        page=_page(request), client_profile_id=client_profile_id, integrity=integrity,
+    ))

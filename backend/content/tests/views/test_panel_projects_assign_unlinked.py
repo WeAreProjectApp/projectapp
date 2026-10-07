@@ -493,3 +493,30 @@ class TestDocumentsInTheAssignFlow:
         assert response.status_code == 200, response.data
         assert response.data['assigned_hostings'] == 0
         assert response.data['assigned_documents'] == 1
+
+
+def test_apply_undoes_earlier_steps_when_a_later_one_is_refused(
+    admin_client, make_client_profile, monkeypatch,
+):
+    """Fails if a refused document step leaves the incomes of the same plan assigned."""
+    from rest_framework.exceptions import PermissionDenied
+
+    profile = make_client_profile()
+    project = make_project(profile)
+    income = make_income(profile)
+    document = make_document(profile)
+
+    def refuse(*args, **kwargs):
+        raise PermissionDenied('Los datos conservados sin proyecto sólo permiten consulta.')
+
+    monkeypatch.setattr(accounting_service, 'assign_project_to_documents', refuse)
+    response = admin_client.post(
+        apply_url(project.pk),
+        {'income_ids': [income.pk], 'document_ids': [document.pk]},
+        format='json',
+    )
+
+    assert response.status_code == 403
+    income.refresh_from_db()
+    assert income.project_id is None
+    assert not audit_rows(EntityType.INCOME, income.pk).exists()

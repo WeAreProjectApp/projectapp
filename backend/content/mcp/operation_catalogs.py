@@ -60,6 +60,7 @@ PROJECT_TOOLS = [
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto.', 'panel-projects-unlinked-records', path=('project_id',)),
+    _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. query.client_profile_id filtra por perfil de cliente, query.page pagina de a 20 y query.integrity=1 agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit'),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
     _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),
     _op('change_project_client', 'Cambia el cliente y aplica la cascada previamente revisada.', 'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True),

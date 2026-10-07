@@ -355,6 +355,29 @@ editar una conversación conservada mediante las acciones habituales del panel
 ni mediante MCP. Un callback de un pago ya iniciado conserva el resultado
 real y su historial, pero no renueva hosting ni crea nuevos avisos o cargos.
 
+### Proyectos: auditoría de datos conservados (2026-10-07)
+
+1. Invocar `list_project_retention_contexts` sin argumentos. Cada resultado es un
+   proyecto eliminado con su cliente (`profile_id` y `user_id`), quién lo eliminó
+   y, por categoría, `at_deletion` (índice capturado al eliminar), `remaining`
+   (filas que siguen conservadas, con sus `ids`) y `unlisted` (conservadas pero
+   fuera del índice). `tracked: false` indica categorías sin vínculo directo al
+   proyecto: siguen a su registro padre y no tienen conteo propio.
+2. Repetir con `query.client_profile_id` de un cliente con datos conservados y
+   comprobar que sólo aparecen sus contextos; `proposals` lista las propuestas
+   cuyo entregable o fase comercial quedó conservado.
+3. Con `query.integrity=1`, `integrity` debe venir vacío; una fila conservada que
+   volvió a tener proyecto aparece como `retained_with_project`.
+4. `get_proposal_approval` de una propuesta con entregable conservado responde
+   sin error, con `linked_project.retained = true` y
+   `project_reassignment_required = true`; `review_proposal_approval` (salvo
+   `action=defer`) responde `RETAINED_PROJECT` antes de crear una confirmación, y
+   `preview_proposal_project_reassignment` informa el bloqueo `retained_source`.
+5. Un `PermissionDenied` de un servicio llamado por una herramienta nativa
+   responde `FORBIDDEN`; un fallo inesperado responde `INTERNAL_ERROR` y el log
+   técnico guarda sólo el tipo de excepción y los frames `archivo:línea:función`,
+   nunca su mensaje.
+
 Los adaptadores resuelven la misma ruta DRF del Panel mediante
 `APIRequestFactory`, autentican el principal técnico y dejan que la vista,
 serializer y servicio existentes decidan permisos, validación y transacción.

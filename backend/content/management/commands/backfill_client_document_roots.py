@@ -31,7 +31,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         apply_changes = options['apply']
 
-        candidates = (
+        roots = (
             DocumentFolder.objects
             .filter(
                 parent__isnull=True,
@@ -45,8 +45,15 @@ class Command(BaseCommand):
             .select_related('client_user')
             .order_by('pk')
         )
+        # La raíz conservada de un proyecto eliminado luce idéntica a una raíz
+        # de cliente, pero es de sólo consulta: adoptarla abortaría el --apply.
+        candidates = roots.filter(retention_context__isnull=True)
 
-        planned, skipped = [], []
+        planned = []
+        skipped = [
+            (folder, 'conservada de un proyecto eliminado (sólo consulta)')
+            for folder in roots.filter(retention_context__isnull=False)
+        ]
         # Un cliente con dos raíces no se resuelve solo: elegir una por orden de
         # id sería inventar la decisión. Se reportan las dos y se saltan ambas.
         by_client = {}

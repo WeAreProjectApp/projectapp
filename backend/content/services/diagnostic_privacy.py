@@ -28,7 +28,7 @@ _MCP_DOMAIN_CODES = frozenset('''
     project_client_mismatch project_collaboration_conflict projects_changed
     published_frozen reply_destination_archived reply_destination_snapshot
     reply_provider_unavailable reply_transaction_required request_id_conflict
-    request_id_required review_round_closed scope_indeterminate
+    request_id_required retained_project retained_source review_round_closed scope_indeterminate
     secure_links_unavailable signed_source_frozen source_contract source_duplicate
     staff_only stage_not_approved stage_not_client_visible suspended_state_missing
     target_unpublished unknown_field version_conflict

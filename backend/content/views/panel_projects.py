@@ -26,6 +26,7 @@ Endpoints
 
 import logging
 
+from django.db import transaction
 from django.db.models import (
     Count, Exists, IntegerField, OuterRef, Q, Subquery, Value,
 )
@@ -577,15 +578,18 @@ def assign_project_unlinked_records(request, project_id):
             errors={'changed_ids': changed},
         )
 
-    assigned_hostings = accounting_service.bulk_assign_project(
-        EntityType.HOSTING, hosting_ids, project, request.user,
-    ) if hosting_ids else []
-    assigned_incomes = accounting_service.bulk_assign_project(
-        EntityType.INCOME, income_ids, project, request.user,
-    ) if income_ids else []
-    assigned_documents = accounting_service.assign_project_to_documents(
-        document_ids, project, request.user,
-    ) if document_ids else []
+    # One unit: a rejected step must undo the earlier ones. The request-level
+    # history block commits on a handled 4xx, so the rollback has to live here.
+    with transaction.atomic():
+        assigned_hostings = accounting_service.bulk_assign_project(
+            EntityType.HOSTING, hosting_ids, project, request.user,
+        ) if hosting_ids else []
+        assigned_incomes = accounting_service.bulk_assign_project(
+            EntityType.INCOME, income_ids, project, request.user,
+        ) if income_ids else []
+        assigned_documents = accounting_service.assign_project_to_documents(
+            document_ids, project, request.user,
+        ) if document_ids else []
     logger.info(
         'Panel project %s assigned to %s hostings, %s incomes and %s documents',
         project.pk, len(assigned_hostings), len(assigned_incomes),

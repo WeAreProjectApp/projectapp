@@ -89,18 +89,30 @@ class Command(BaseCommand):
                 )
             plans[module] = plan
 
+        unlinked = {
+            'ingresos': IncomeRecord.objects.filter(client__isnull=False, project__isnull=True),
+            'hostings': HostingRecord.objects.filter(client__isnull=False, project__isnull=True),
+            'documentos': Document.objects.filter(
+                client_user__isnull=False, project__isnull=True, is_archived=False,
+            ),
+        }
+        # Lo conservado de un proyecto eliminado es de sólo consulta: guardarlo
+        # abortaría toda la transacción de --apply. Se reporta y no se enlaza.
+        for module, rows in unlinked.items():
+            retained = rows.filter(retention_context__isnull=False).count()
+            if retained:
+                skipped['datos conservados de un proyecto eliminado'][module] += retained
+
         scan(
             'ingresos', 'ingreso',
-            IncomeRecord.objects
-            .filter(client__isnull=False, project__isnull=True)
+            unlinked['ingresos'].filter(retention_context__isnull=True)
             .select_related('client__user'),
             lambda row: row.client.user_id,
             lambda row: f'"{row.concept}"',
         )
         scan(
             'hostings', 'hosting',
-            HostingRecord.objects
-            .filter(client__isnull=False, project__isnull=True)
+            unlinked['hostings'].filter(retention_context__isnull=True)
             .select_related('client__user'),
             lambda row: row.client.user_id,
             lambda row: f'"{row.display_label}"',
@@ -108,9 +120,7 @@ class Command(BaseCommand):
         # Cuentas y documentos comparten el modelo; la etiqueta distingue.
         scan(
             'documentos', 'documento',
-            Document.objects
-            .filter(client_user__isnull=False, project__isnull=True,
-                    is_archived=False)
+            unlinked['documentos'].filter(retention_context__isnull=True)
             .select_related('document_type'),
             lambda row: row.client_user_id,
             lambda row: (

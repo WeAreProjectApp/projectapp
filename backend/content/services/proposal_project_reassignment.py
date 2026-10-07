@@ -24,7 +24,7 @@ def _summary(proposal):
 
 
 def preview_reassignment(proposal_id, target_project_id):
-    proposal = get_object_or_404(BusinessProposal.objects.select_related('client', 'deliverable__project'), pk=proposal_id)
+    proposal = get_object_or_404(BusinessProposal.objects.select_related('client', 'deliverable__project', 'deliverable__retention_context'), pk=proposal_id)
     target = get_object_or_404(Project, pk=target_project_id)
     source = proposal.deliverable.project if proposal.deliverable_id else None
     blockers = []
@@ -32,7 +32,12 @@ def preview_reassignment(proposal_id, target_project_id):
     def block(code, message):
         blockers.append({'code': code, 'message': message})
 
-    if source is None:
+    if source is None and proposal.deliverable_id and proposal.deliverable.retention_context_id:
+        # The approval review cannot bind it either: pointing there again would
+        # close the loop the operator cannot leave.
+        block('retained_source', f'La propuesta conserva su entregable del proyecto eliminado «{proposal.deliverable.retention_context.project_name}». '
+                                 'Esos datos quedan en consulta: esta reasignación sólo traslada entre proyectos vigentes.')
+    elif source is None:
         block('no_source_project', 'Vincula primero la propuesta mediante su revisión de aprobación.')
     if source and source.pk == target.pk:
         block('same_project', 'La propuesta ya pertenece al proyecto de destino.')
@@ -105,6 +110,11 @@ def reassign_proposal(proposal_id, payload, *, actor):
     fingerprint = _digest({'proposal_id': proposal_id, **data})
     original = load_proposal(proposal_id)
     source_id = original.deliverable.project_id if original.deliverable_id else None
+    if source_id is None:
+        # Without a live source the "project IS NULL" locks below would reach
+        # retained rows of every client; the preview already names the blocker.
+        impact = preview_reassignment(proposal_id, data['target_project_id'])
+        raise ApprovalConflict({'detail': 'La reasignación tiene dependencias pendientes.', 'blockers': impact['blockers'], 'code': 'reassignment_blocked'})
     # Same order as financial/approval writers: projects, then proposal and children.
     projects = list(Project.objects.select_for_update().filter(pk__in=[pk for pk in (source_id, data['target_project_id']) if pk]).order_by('pk'))
     proposal = BusinessProposal.objects.select_for_update().get(pk=proposal_id)

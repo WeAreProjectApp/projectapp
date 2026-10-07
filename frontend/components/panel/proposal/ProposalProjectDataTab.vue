@@ -6,12 +6,13 @@
         <ProposalClientFields :proposal="proposal" :form="form"
           @client-selected="emit('client-selected', $event)" @create-inline-client="emit('create-inline-client', $event)" />
       </fieldset>
-      <p v-if="proposal.linked_project" class="mt-3 text-sm text-text-muted">El cliente pertenece al proyecto vinculado. Para cambiar su propietario, usa la acción Cambiar cliente desde Proyectos.</p>
+      <p v-if="retainedProject" class="mt-3 text-sm text-text-muted" data-testid="proposal-retained-project-note">El cliente pertenece a los datos conservados del proyecto eliminado. Sus fases y entregables quedaron en consulta hasta trasladarlos a un proyecto vigente del mismo cliente.</p>
+      <p v-else-if="proposal.linked_project" class="mt-3 text-sm text-text-muted">El cliente pertenece al proyecto vinculado. Para cambiar su propietario, usa la acción Cambiar cliente desde Proyectos.</p>
       <BaseButton variant="primary" size="sm" class="mt-4" :loading="saving" @click="emit('save-client')">Guardar cliente</BaseButton>
     </section>
     <section class="rounded-xl border border-border-muted bg-surface p-5">
       <h2 class="text-base font-semibold text-text-default">Proyecto</h2>
-      <p class="mt-2 text-sm text-text-default" data-testid="proposal-linked-project">{{ proposal.linked_project?.name || 'Sin proyecto vinculado' }}</p>
+      <p class="mt-2 text-sm text-text-default" data-testid="proposal-linked-project">{{ linkedProjectLabel }}</p>
       <BaseButton v-if="!proposal.linked_project" variant="primary" size="sm" class="mt-4"
         :disabled="!canReview" disabled-reason="La revisión del proyecto está disponible cuando la propuesta está en negociación o aceptada."
         @click="emit('review')">Revisar cliente, proyecto y documentos</BaseButton>
@@ -62,6 +63,14 @@ const reason = ref('');
 const impact = ref(null);
 let requestId = '';
 const canReview = computed(() => ['negotiating', 'accepted'].includes(props.proposal.status));
+// A forced deletion can retain the proposal's deliverable without a project:
+// still linked to that history (id null), never shown as "sin proyecto".
+const retainedProject = computed(() => Boolean(props.proposal.linked_project) && props.proposal.linked_project.id == null);
+const linkedProjectLabel = computed(() => {
+  if (!props.proposal.linked_project) return 'Sin proyecto vinculado';
+  if (retainedProject.value) return `${props.proposal.linked_project.name || 'Proyecto sin nombre'} — proyecto eliminado`;
+  return props.proposal.linked_project.name;
+});
 const eligibleProjects = computed(() => projects.value.filter(row => Number(row.client?.profile_id) === Number(props.proposal.client?.id) && row.id !== props.proposal.linked_project?.id && row.status !== 'archived'));
 watch([targetProjectId, reason], () => { impact.value = null; requestId = ''; error.value = ''; });
 onMounted(async () => {
