@@ -3492,6 +3492,11 @@ def project_phases_view(request, project_id):
     proposal_id = request.data.get('proposal_id')
     if not proposal_id:
         return Response({'detail': 'proposal_id required'}, status=400)
+    from rest_framework import serializers as input_serializers
+    try:
+        proposal_id = input_serializers.IntegerField(min_value=1).run_validation(proposal_id)
+    except input_serializers.ValidationError as exc:
+        return Response({'proposal_id': exc.detail}, status=400)
     from content.models import BusinessProposal
     proposal = BusinessProposal.objects.filter(id=proposal_id).first()
     if proposal is None:
