@@ -96,28 +96,31 @@ def test_review_defer_still_answers_with_the_retained_link(retained_proposal, ad
     assert Project.objects.count() == 1
 
 
-def test_reassignment_preview_names_the_retained_source(retained_proposal):
+def test_reassignment_preview_starts_from_the_deleted_project(retained_proposal):
     """Fails if the preview sends the operator back to the approval review (the circle)."""
     impact = preview_reassignment(retained_proposal['proposal'].pk, retained_proposal['target'].pk)
 
-    assert [blocker['code'] for blocker in impact['blockers']] == ['retained_source']
-    assert 'Plataforma educativa fase 1' in impact['blockers'][0]['message']
+    assert impact['blockers'] == []
+    assert impact['source_project'] == {'id': None, 'name': 'Plataforma educativa fase 1', 'retained': True}
 
 
-def test_reassignment_without_live_source_stops_before_moving_anything(retained_proposal, admin_user):
-    """Fails if a retained source reaches the move (or locks retained rows of other clients)."""
-    impact = preview_reassignment(retained_proposal['proposal'].pk, retained_proposal['target'].pk)
+def test_reassignment_without_any_source_stops_before_moving_anything(retained_proposal, admin_user):
+    """Fails if a proposal with no deliverable at all reaches the move (or locks rows of other clients)."""
+    orphan = BusinessProposal.objects.create(
+        title='Sin vínculo', client=retained_proposal['profile'], client_name='Littigio',
+        client_email='littigio@example.test', status=BusinessProposal.Status.ACCEPTED,
+    )
+    impact = preview_reassignment(orphan.pk, retained_proposal['target'].pk)
 
     with pytest.raises(ApprovalConflict) as raised:
-        reassign_proposal(retained_proposal['proposal'].pk, {
+        reassign_proposal(orphan.pk, {
             'target_project_id': retained_proposal['target'].pk, 'reason': 'Unificar Littigio',
-            'expected_impact_hash': impact['impact_hash'], 'request_id': 'retained-move-117',
+            'expected_impact_hash': impact['impact_hash'], 'request_id': 'orphan-move',
         }, actor=admin_user)
 
+    assert [blocker['code'] for blocker in impact['blockers']] == ['no_source_project']
     assert str(raised.value.detail['code']) == 'reassignment_blocked'
     assert not ProposalProjectReassignment.objects.exists()
-    retained_proposal['phase'].refresh_from_db()
-    assert retained_proposal['phase'].project_id is None
 
 
 def test_commercial_phase_names_the_deleted_project(admin_client, retained_proposal):

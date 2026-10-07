@@ -500,9 +500,14 @@ export const useProposalStore = defineStore('proposals', {
       }
     },
 
-    async previewProjectReassignment(id, targetProjectId) {
+    async previewProjectReassignment(id, targetProjectId, hosting = {}) {
       try {
-        const response = await get_request(`proposals/${id}/project-reassignment/`, { params: { target_project_id: targetProjectId } });
+        // hosting: { hosting_start_date, accept_hosting_start } — explicit decision when a due phase
+        // would join the target's active hosting subscription.
+        const params = { target_project_id: targetProjectId };
+        if (hosting.hosting_start_date) params.hosting_start_date = hosting.hosting_start_date;
+        if (hosting.accept_hosting_start) params.accept_hosting_start = 'true';
+        const response = await get_request(`proposals/${id}/project-reassignment/`, { params });
         return { success: true, data: response.data };
       } catch (error) { return { success: false, ...normalizeApiError(error) }; }
     },

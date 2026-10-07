@@ -371,12 +371,39 @@ real y su historial, pero no renueva hosting ni crea nuevos avisos o cargos.
 4. `get_proposal_approval` de una propuesta con entregable conservado responde
    sin error, con `linked_project.retained = true` y
    `project_reassignment_required = true`; `review_proposal_approval` (salvo
-   `action=defer`) responde `RETAINED_PROJECT` antes de crear una confirmación, y
-   `preview_proposal_project_reassignment` informa el bloqueo `retained_source`.
+   `action=defer`) responde `RETAINED_PROJECT` antes de crear una confirmación.
 5. Un `PermissionDenied` de un servicio llamado por una herramienta nativa
    responde `FORBIDDEN`; un fallo inesperado responde `INTERNAL_ERROR` y el log
    técnico guarda sólo el tipo de excepción y los frames `archivo:línea:función`,
    nunca su mensaje.
+
+### Proyectos: traslado auditado de datos conservados
+
+1. `list_project_unlinked_records` de un proyecto vigente del mismo cliente marca
+   cada registro conservado con `retained` (contexto y proyecto eliminado) y
+   `duplicates`, y suma los hilos de comunicación conservados en `threads`.
+2. `assign_project_unlinked_records` con esos ids (y `thread_ids`, `reason`)
+   exige la confirmación habitual. Al confirmar, la respuesta trae `adoptions`
+   (una operación por proyecto eliminado); los registros quedan en el proyecto,
+   editables, y desaparecen de «Datos sin proyecto» del cliente. Los ingresos
+   viajan con sus hijos líquidos y sus cuentas.
+3. `preview_retained_operation_undo` de esa operación no muestra bloqueos;
+   `undo_retained_operation` (con `expected_impact_hash`, `reason` y `request_id`)
+   pide confirmación y devuelve los registros a solo consulta. Si alguno se editó
+   después del traslado, la vista previa informa `changed_since` y no se deshace.
+4. `preview_retained_container_cleanup` lista hilos y carpetas conservados con sus
+   `holders`; `delete_empty_retained_containers` (misma selección) sólo elimina
+   contenedores vacíos, hijos antes que padres, y nunca un contenedor con datos.
+5. `preview_proposal_project_reassignment` de una propuesta con entregable
+   conservado no informa `no_source_project`: `source_project.retained = true` y
+   la vista previa lista fases y entregables con sus ids. Si el destino tiene
+   hosting activo y la fase ya alcanzó su fecha, aparece `pending_hosting_start`
+   hasta enviar `hosting_start_date` futura o `accept_hosting_start`.
+   `reassign_proposal_project` mueve esos ids y deja una operación
+   `proposal_reassignment` en la auditoría.
+6. Escribir directamente un dato conservado (`move_documents`, `update_thread`,
+   `update_income`) sigue respondiendo que sólo admite consulta, y el mensaje
+   indica usar «Asignar registros sin proyecto».
 
 Los adaptadores resuelven la misma ruta DRF del Panel mediante
 `APIRequestFactory`, autentican el principal técnico y dejan que la vista,

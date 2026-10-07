@@ -128,8 +128,8 @@ def _impact(arguments):
         # Fail before a confirmation exists: the review can never bind a
         # deliverable retained from a deleted project.
         raise ToolError(
-            'El entregable de esta propuesta quedó conservado de un proyecto eliminado; '
-            'la revisión de aprobación no puede vincularlo.',
+            'El entregable de esta propuesta quedó conservado de un proyecto eliminado; la revisión de '
+            'aprobación no puede vincularlo. Usa preview_proposal_project_reassignment y reassign_proposal_project.',
             code='RETAINED_PROJECT',
             details={'linked_project': preview.get('linked_project')},
         )

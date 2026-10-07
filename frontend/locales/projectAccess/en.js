@@ -2,6 +2,7 @@ export default {
   retention: {
   "title": "Data without a project",
   "hint": "Read and download retained data. Editing is unavailable here.",
+  "reassignHint": "To move them into an active project of the same client, open that project and use \"Assign records without a project\": the move is recorded and can be undone.",
   "back": "Back to source projects",
   "loading": "Loading retained data…",
   "empty": "This client has no retained data from deleted projects.",
