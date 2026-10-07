@@ -1,6 +1,7 @@
+// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
 import { backendUrl, authenticate, openWorkspace, submitDecision } from './helpers.js'
-import { PANEL_VIEWPORTS } from '../../config/responsive.js'
+import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
 
@@ -62,27 +63,29 @@ async function prepareReviewedEmail(page, data, message) {
   await page.getByTestId('delivery-closure-reviewed').getByRole('checkbox').check()
 }
 
-for (const [viewport, dimensions] of Object.entries(PANEL_VIEWPORTS)) {
-  test(`admin opens the closure preview at ${viewport} width through the approved stage`, {
-    tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display', '@responsive:clients', `@responsive-scenario:${responsiveScenario}`, `@responsive-batch:${batchForScenario(responsiveScenario)}`, `@viewport:${viewport}`],
-  }, async ({ page, request }, testInfo) => {
-    // Catches a regression where the approved-stage email modal clips its preview, recipient, or action at this viewport.
-    const data = await closureFixture(request, testInfo, 'closure-approved')
-    await page.setViewportSize(dimensions)
-    await enterPortalAndOpenWorkspace(page, request, data)
-    await openClosureEmail(page, data)
-    await page.getByTestId('delivery-closure-message').fill('Vista previa legible en el portal.')
-    await page.getByTestId('delivery-closure-prepare').click()
+for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) {
+  test.describe(`delivery closure preview ${viewport}`, () => {
+    test.use(viewportUse(viewport))
+    test(`admin opens the closure preview at ${viewport} width through the approved stage`, {
+      tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display', '@responsive:clients', `@responsive-scenario:${responsiveScenario}`, `@responsive-batch:${batchForScenario(responsiveScenario)}`, `@viewport:${viewport}`],
+    }, async ({ page, request }, testInfo) => {
+      // Catches a regression where the approved-stage email modal clips its preview, recipient, or action at this viewport.
+      const data = await closureFixture(request, testInfo, 'closure-approved')
+      await enterPortalAndOpenWorkspace(page, request, data)
+      await openClosureEmail(page, data)
+      await page.getByTestId('delivery-closure-message').fill('Vista previa legible en el portal.')
+      await page.getByTestId('delivery-closure-prepare').click()
 
-    await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toContainText('Aprobado')
-    await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
-    await expect(page.getByTestId('delivery-closure-send')).toHaveText('Enviar correo')
-    await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-    expect(overflow).toBeLessThanOrEqual(1)
-    const probe = await closureProbe(request, testInfo)
-    expect(probe.outbox_count).toBe(0)
-    expect(probe.emails).toHaveLength(1)
+      await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toContainText('Aprobado')
+      await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
+      await expect(page.getByTestId('delivery-closure-send')).toHaveText('Enviar correo')
+      await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(1)
+      const probe = await closureProbe(request, testInfo)
+      expect(probe.outbox_count).toBe(0)
+      expect(probe.emails).toHaveLength(1)
+    })
   })
 }
 

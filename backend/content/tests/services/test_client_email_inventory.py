@@ -43,6 +43,8 @@ EXPECTED_CHANNELS = (
     ('delivery_stage_approved_client', DOCUMENTS_MANUAL),
     ('collection_account_sent', COLLECTIONS),
     ('document_signed_client', PLATFORM),
+    ('delivery_published_client', PLATFORM),
+    ('delivery_message_client', PLATFORM),
 )
 
 SEND_CALL = re.compile(r'\.send\s*\(')
