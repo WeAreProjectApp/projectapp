@@ -310,11 +310,16 @@ def _clear_fake_delivery_rows(project_ids, retention_context_ids, contract_ids):
         DeliveryStage, DeliveryWorkspace, DeliveryPromptContext, DeliveryPromptSource,
         ProjectContract, Requirement, RequirementReview,
     )
+    from accounts.models_delivery_notifications import DeliveryNotificationEvent
     owners = (
         models.Q(project_id__in=project_ids)
         | models.Q(retention_context_id__in=retention_context_ids)
     )
     files = []
+    # The explicit development reset removes pending/retained notice roots
+    # before their protected project, client and requesting actor references.
+    # Attempts cascade from the event; captured gateway history stays separate.
+    DeliveryNotificationEvent.objects.filter(owners).delete()
     for source in DeliveryPromptSource.objects.filter(context__project_id__in=project_ids):
         if source.file:
             files.append((source.file.storage, source.file.name))

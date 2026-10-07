@@ -217,6 +217,9 @@ EXEMPT_MODELS = {
     # preparation and reviewed transport action, never automatic demo sending.
     'accounts.DeliveryEvidenceEmail', 'accounts.DeliveryEvidenceEmailFile',
     'accounts.DeliveryEvidenceEmailAttempt',
+    # Activity events and SMTP attempts arise from actual committed operations;
+    # seeds must never fabricate delivery/acknowledgement or dispatch notices.
+    'accounts.DeliveryNotificationEvent', 'accounts.DeliveryNotificationAttempt',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Immutable private packet copies require explicit real proposal review;
