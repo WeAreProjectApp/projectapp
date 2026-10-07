@@ -26,7 +26,7 @@ def nginx_endpoint(tmp_path, live_server, settings):
     binary = (os.environ.get('PLATFORM_MEDIA_NGINX_BINARY') or shutil.which('nginx')
         or str(ROOT / 'frontend/test-results/nginx-runtime/extracted/usr/sbin/nginx'))
     if not Path(binary).is_file():
-        pytest.skip('No isolated nginx binary is available for this HTTP proof.')
+        pytest.fail('This HTTP proof requires nginx: provision PLATFORM_MEDIA_NGINX_BINARY before running it.')
     settings.ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'testserver']
     with socket.socket() as listener:
         listener.bind(('127.0.0.1', 0))

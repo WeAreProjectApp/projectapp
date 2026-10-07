@@ -121,8 +121,9 @@ def test_media_conversion_rolls_back_after_a_copy_failure(media_context, invento
     assert Path(storages['default'].path(inventory['before']['current'])).read_bytes() == media_context['bodies']['current']
 
 
-def test_media_conversion_refuses_worktree_apply_outside_pytest(media_context, inventory, monkeypatch):
+def test_media_conversion_refuses_worktree_apply_outside_pytest(media_context, inventory, monkeypatch, settings, tmp_path):
     """Fails if a session worktree can write the symlinked production database."""
+    monkeypatch.setattr(settings, 'BASE_DIR', tmp_path / '.wt' / 'project' / 'backend')
     monkeypatch.delenv('PYTEST_CURRENT_TEST')
     with pytest.raises(ValueError, match='worktree'):
         migration.privatize(inventory['path'], inventory['sha'], apply=True)

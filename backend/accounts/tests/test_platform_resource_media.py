@@ -1,4 +1,5 @@
 """JWT resource downloads preserve exact bytes and real project authority."""
+import hashlib
 from pathlib import Path
 
 import pytest
@@ -80,10 +81,32 @@ def test_missing_private_file_never_reads_a_public_shadow(media_context):
     assert response.status_code == 404
 
 
+def _sparse_fingerprint(prefix, size):
+    """Hash the independently arranged source without reading its actual file."""
+    digest = hashlib.sha256(prefix)
+    remaining = size - len(prefix)
+    zeros = bytes(64 * 1024)
+    while remaining:
+        count = min(remaining, len(zeros))
+        digest.update(zeros[:count])
+        remaining -= count
+    return digest.hexdigest()
+
+
+def _response_fingerprint(response):
+    """Consume every streamed chunk using bounded memory, including its tail."""
+    digest, size = hashlib.sha256(), 0
+    for chunk in response.streaming_content:
+        size += len(chunk)
+        digest.update(chunk)
+    return size, digest.hexdigest()
+
+
 def test_jwt_download_streams_a_large_existing_resource(large_resource):
     """Fails if the MCP materialization limit is imposed on an authorized stream."""
     response = api_for(large_resource['owner']).get(download_url(large_resource, 'current'))
     assert response.status_code == 200
     assert int(response['Content-Length']) == 26 * 1024 * 1024 + 1
-    assert next(response.streaming_content).startswith(large_resource['bodies']['current'])
+    assert _response_fingerprint(response) == (26 * 1024 * 1024 + 1,
+        _sparse_fingerprint(large_resource['bodies']['current'], 26 * 1024 * 1024 + 1))
     response.close()
