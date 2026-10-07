@@ -280,13 +280,10 @@ def contract_pdf(project_id, actor, kind, node_id):
         if source['content_type'] != 'application/pdf':
             fail('Esta fuente conserva su formato original. Descarga su copia o registra el PDF firmado.', 'contract_source_not_pdf')
         return validated_pdf_bytes(io.BytesIO(source['raw'])), node.title
-    evidence = node.signature_evidence.first()
-    if evidence:
-        try:
-            with evidence.file.open('rb') as source:
-                return source.read(), node.title
-        except (OSError, ValueError):
-            fail('El PDF firmado no está disponible.', 'pdf_unavailable')
+    from accounts.services.delivery_contract_sources import signed_contract_source
+    signed = signed_contract_source(node)
+    if signed:
+        return signed['raw'], node.title
     if node.document_id:
         return _raw_pdf(node.document), node.title
     try:
@@ -300,6 +297,8 @@ def contract_pdf(project_id, actor, kind, node_id):
 
 
 def capture_publication_documents(project, stage, publication):
+    from accounts.services.delivery_contract_sources import signed_source_for_link
+
     scope = stage.phase.scope
     filters = (Q(level='project') | Q(contract_id=scope.contract_id) | Q(scope_id=scope.pk)
                | Q(phase_id=stage.phase_id) | Q(stage_id=stage.pk) | Q(requirement__stage=stage))
@@ -316,8 +315,9 @@ def capture_publication_documents(project, stage, publication):
                 pdf = source.read()
             title = previous.title
         else:
-            pdf = _raw_pdf(link.document)
-            title = link.document.title
+            signed = signed_source_for_link(link)
+            pdf = signed['raw'] if signed else _raw_pdf(link.document)
+            title = signed['title'] if signed else link.document.title
         snapshot = DeliveryDocumentSnapshot(publication=publication, link=link, title=title,
                                             sha256=hashlib.sha256(pdf).hexdigest())
         store_private_pdf(snapshot, pdf, 'document.pdf')
