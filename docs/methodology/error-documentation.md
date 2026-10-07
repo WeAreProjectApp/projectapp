@@ -1,3 +1,19 @@
+## Propuesta con entregable conservado de un proyecto eliminado (2026-10-07)
+
+La eliminación forzada (#482) conserva el entregable de una propuesta con
+`project=NULL` y `retention_context`. `BusinessProposal.linked_project` leía
+`deliverable.project.pk` sin comprobar `None`: la vista previa de aprobación
+(`get_proposal_approval`) respondía INTERNAL_ERROR, mientras los serializers
+omitían la clave en silencio y el panel mostraba la propuesta «sin vincular»,
+con el cliente editable y una revisión que tampoco podía vincularla; la
+reasignación devolvía `no_source_project` y mandaba de vuelta a esa revisión.
+Ahora el vínculo nombra el proyecto eliminado (`retained: true`, `id: null`),
+la revisión responde 409 `retained_project` (salvo posponer), la reasignación
+informa `retained_source` y se detiene antes de bloquear filas sin proyecto de
+otros clientes. El dispatcher MCP traducía cualquier `APIException` de una
+herramienta nativa a INTERNAL_ERROR y no dejaba traza: ahora conserva su código
+(FORBIDDEN/NOT_FOUND/CONFLICT) y el log guarda tipo y frames sin el mensaje.
+
 ## IVA mostrado como dinero en notificaciones (2026-10-06)
 
 El formateador del historial trataba todos los campos Decimal como importes COP,

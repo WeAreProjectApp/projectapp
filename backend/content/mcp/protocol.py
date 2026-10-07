@@ -9,8 +9,9 @@ run under gunicorn WSGI).
 """
 import json
 import logging
+import traceback
 
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import APIException, ValidationError
 
 from content.mcp.errors import normalize_error
 from content.mcp.registry import public_tool
@@ -18,6 +19,18 @@ from content.mcp.registry import server_info as build_server_info
 from content.services.diagnostic_privacy import safe_mcp_error_code
 
 logger = logging.getLogger(__name__)
+TRACE_FRAMES = 12
+
+
+def _safe_trace(exc):
+    """Exception type and code frames only: messages may carry client data."""
+    frames = traceback.StackSummary.extract(traceback.walk_tb(exc.__traceback__), lookup_lines=False)
+    trace = ' > '.join(
+        f'{frame.filename.rsplit("/backend/", 1)[-1]}:{frame.lineno}:{frame.name}'
+        for frame in list(frames)[-TRACE_FRAMES:]
+    )
+    cause = exc.__cause__ or exc.__context__
+    return f'{type(exc).__name__} at {trace}' + (f' (from {type(cause).__name__})' if cause else '')
 
 MODERN_PROTOCOL_VERSION = '2026-07-28'
 LEGACY_PROTOCOL_VERSIONS = (
@@ -179,9 +192,14 @@ def handle_message(message, tools, server_name=None, context=None):
                 payload = preview_sensitive_action(tool, arguments)
             else:
                 payload = tool['handler'](arguments)
-        except (ToolError, ValidationError) as exc:
+        except (ToolError, APIException) as exc:
             if isinstance(exc, ValidationError):
                 detail, code, fields = normalize_error(exc.detail)
+                exc = ToolError(detail, code=code, details=fields)
+            elif isinstance(exc, APIException):
+                # Domain tools call services directly: a model guard or service
+                # PermissionDenied/NotFound keeps its meaning instead of INTERNAL_ERROR.
+                detail, code, fields = normalize_error(exc.detail, exc.status_code)
                 exc = ToolError(detail, code=code, details=fields)
             logger.info(
                 '[MCP] tool %s rejected code=%s requestId=%s',
@@ -202,10 +220,10 @@ def handle_message(message, tools, server_name=None, context=None):
                     'risk': tool.get('risk'),
                 },
             )
-        except Exception:
+        except Exception as exc:
             logger.error(
-                '[MCP] tool %s crashed code=INTERNAL_ERROR requestId=%s',
-                name, context.request_id if context else '',
+                '[MCP] tool %s crashed code=INTERNAL_ERROR requestId=%s trace=%s',
+                name, context.request_id if context else '', _safe_trace(exc),
             )
             return _text_result(
                 msg_id,

@@ -1268,9 +1268,11 @@ MCP_MODEL_CONTRACTS.update({
         + build_issue_contracts(_contract)
         + (_contract(
             'content.ProjectRetentionContext',
+            # list_project_retention_contexts audits it; nothing creates, edits or deletes it by MCP.
+            read_only='id client original_project_id project_name category_counts created_by created_at',
             excluded=_excluded(
-                'Consulta histórica interna del panel; no admite creación, edición ni eliminación por MCP.',
-                'id client original_project_id project_name retained_records category_counts created_by created_at',
+                'Índice de ids capturado al eliminar; la auditoría devuelve los ids que siguen conservados.',
+                'retained_records',
             ),
         ),)
     ),

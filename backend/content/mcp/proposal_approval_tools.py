@@ -124,6 +124,15 @@ def _resource_versions(arguments):
 
 def _impact(arguments):
     preview = _preview(arguments)
+    if arguments['action'] != 'defer' and preview.get('project_reassignment_required'):
+        # Fail before a confirmation exists: the review can never bind a
+        # deliverable retained from a deleted project.
+        raise ToolError(
+            'El entregable de esta propuesta quedó conservado de un proyecto eliminado; '
+            'la revisión de aprobación no puede vincularlo.',
+            code='RETAINED_PROJECT',
+            details={'linked_project': preview.get('linked_project')},
+        )
     versions = _resource_versions(arguments)
     if arguments['action'] == 'confirm' and arguments.get('source_hash') != versions['source_hash']:
         raise ToolError('La propuesta cambió. Consulta la revisión actual antes de confirmar.',

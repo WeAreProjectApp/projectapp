@@ -393,8 +393,19 @@ class BusinessProposal(HistoryTrackedModel):
     def linked_project(self):
         if not self.deliverable_id:
             return None
-        project = self.deliverable.project
-        return {"id": project.pk, "name": project.name, "client_profile_id": getattr(getattr(project.client, "profile", None), "pk", None)}
+        deliverable = self.deliverable
+        project = deliverable.project
+        if project is not None:
+            return {"id": project.pk, "name": project.name, "client_profile_id": getattr(getattr(project.client, "profile", None), "pk", None)}
+        # A forced project deletion can retain the deliverable without a project.
+        # The proposal stays bound to that history instead of reading as unlinked
+        # (which would reopen its client and offer to link it again).
+        context = deliverable.retention_context if deliverable.retention_context_id else None
+        profile = getattr(getattr(context, "client", None), "profile", None)
+        return {"id": None, "name": context.project_name if context else "", "retained": context is not None,
+                "retention_context_id": getattr(context, "pk", None),
+                "original_project_id": getattr(context, "original_project_id", None),
+                "client_profile_id": getattr(profile, "pk", None)}
 
     # Timestamps
     created_at = models.DateTimeField(auto_now_add=True)

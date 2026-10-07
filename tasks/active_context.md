@@ -1,3 +1,17 @@
+# Datos conservados sin proyecto — PR-0 (2026-10-07)
+
+Caso Littigio: la eliminación forzada de dos proyectos dejó ingresos, documentos,
+carpetas, un hilo y el entregable/fase de la propuesta #117 conservados sin
+proyecto y de sólo consulta. PR-0 (sin migraciones) corrige la lectura del vínculo
+de la propuesta (nombra el proyecto eliminado), cierra el círculo revisión ↔
+reasignación con mensajes explícitos, conserva el código de error real en MCP con
+traza saneada, vuelve atómica la asignación de registros sin proyecto, hace que dos
+comandos de backfill omitan lo conservado y agrega la auditoría global
+`list_project_retention_contexts` / `GET /api/projects/retained-data/audit/`.
+La re-adopción auditada (trasladar lo conservado a un proyecto vigente del mismo
+cliente) y la corrección de los datos de Littigio llegan en PR-1; la opción de
+trasladar al eliminar, en PR-2. Ninguna escritura sobre la base desplegada.
+
 # Cobro y liquidación de ingresos (2026-10-06)
 
 Se incorpora el vínculo explícito de contratos existentes desde la preparación de

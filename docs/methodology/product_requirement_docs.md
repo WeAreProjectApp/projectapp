@@ -22,6 +22,13 @@ secure_links.0005. Se aplican mediante deploy, nunca a datos reales desde el
 worktree. Las relaciones mutables permiten desvinculación explícita y usan
 PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 
+**2026-10-07 — auditoría de lo conservado:** una propuesta cuyo entregable quedó
+conservado se muestra vinculada al proyecto eliminado (nunca «sin proyecto») y
+su revisión de aprobación explica que no puede vincularla. Proyectos ofrece una
+auditoría global de solo lectura (panel y MCP `list_project_retention_contexts`)
+con lo conservado por proyecto eliminado, cliente y categoría, comparado con lo
+que se conservó al eliminar.
+
 # Product Requirements Document — ProjectApp
 
 **2026-09-29 — propuesta consultiva:** los módulos adicionales se exploran sin precios y se guardan como interés pendiente. El equipo acuerda e incorpora alcance e inversión manualmente. La portada incorpora guía y accesos a catálogo y alianza en otra pestaña.

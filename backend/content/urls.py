@@ -371,10 +371,12 @@ from content.views.proposal_contract_modality import (
 )
 
 from content.views.project_retention import (
-    client_retained_project_data, retained_project_file, reveal_retained_project_secret,
+    client_retained_project_data, retained_project_data_audit, retained_project_file,
+    reveal_retained_project_secret,
 )
 
 urlpatterns = [
+    path('projects/retained-data/audit/', retained_project_data_audit, name='panel-projects-retained-data-audit'),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/', client_retained_project_data),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/files/<str:field_name>/', retained_project_file),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/reveal/', reveal_retained_project_secret),

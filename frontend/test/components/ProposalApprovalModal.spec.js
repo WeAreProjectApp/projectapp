@@ -126,4 +126,17 @@ describe('ProposalApprovalModal',()=>{
     expect(wrapper.find('input[value="Catálogo contratado"]').exists()).toBe(false);
   });
 
+  // Falla si la revisión ofrece confirmar el vínculo de un entregable conservado de un proyecto eliminado.
+  it('explains a deleted project and keeps the review closed',async()=>{
+    preview=createPreview({linked_project:{id:null,name:'Plataforma educativa fase 1',retained:true,client_profile_id:7},project_reassignment_required:true});
+    await open();
+    expect(wrapper.get('[data-testid="approval-retained-project"]').text()).toContain('fue eliminado');
+    expect(wrapper.text()).toContain('Plataforma educativa fase 1 — proyecto eliminado');
+    const confirm=wrapper.get('[data-testid="approval-confirm"]');
+    expect(confirm.attributes('disabled')).toBeDefined();
+    expect(confirm.attributes('title')).toContain('fue eliminado');
+    await confirm.trigger('click');await flushPromises();
+    expect(create_request).not.toHaveBeenCalled();
+  });
+
 });

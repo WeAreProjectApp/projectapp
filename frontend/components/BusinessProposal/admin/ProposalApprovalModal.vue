@@ -39,6 +39,8 @@ const requestId = ref('');
 const errorElement = ref(null);
 let generation = 0;
 const linked = computed(() => !!preview.value?.linked_project);
+// The deliverable outlived a forced project deletion: the review cannot bind it.
+const retained = computed(() => preview.value?.project_reassignment_required === true);
 const confirmed = computed(() => !!preview.value?.confirmed);
 const projectOptions = computed(() => !clientId.value ? [] : projects.value.filter((row) => Number(row.client?.profile_id) === Number(clientId.value)).map((row) => ({ value: row.id, label: row.name })));
 const stateOptions = computed(() => states.activeStates.map((row) => ({ value: row.id, label: row.name })));
@@ -151,7 +153,8 @@ function close() { if (!saving.value) emit('close'); }
       </div>
       <template v-if="preview && !loading">
         <div v-if="linked" class="space-y-2 rounded-lg bg-surface-raised p-4 text-sm text-text-default">
-          <p>{{ confirmed ? text.linked : text.limitedRetry }}</p><p class="break-words">{{ text.client }}: {{ preview.client?.name }}</p><p class="break-words">{{ text.project }}: {{ preview.linked_project.name }}</p>
+          <p v-if="retained" role="status" class="text-warning-strong" data-testid="approval-retained-project">{{ text.retainedProject }}</p>
+          <p v-else>{{ confirmed ? text.linked : text.limitedRetry }}</p><p class="break-words">{{ text.client }}: {{ preview.client?.name }}</p><p class="break-words">{{ text.project }}: {{ retained ? `${preview.linked_project.name} — ${text.deletedProject}` : preview.linked_project.name }}</p>
         </div>
         <template v-else>
           <BaseFormField :label="text.client" required :error="fieldError('client_profile_id')">
@@ -210,8 +213,8 @@ function close() { if (!saving.value) emit('close'); }
     <template #footer><BaseModalActions>
       <BaseButton type="button" variant="secondary" :disabled="saving" :disabled-reason="text.processing" @click="close">{{ text.cancel }}</BaseButton>
       <BaseButton v-if="!linked" type="button" variant="secondary" :disabled="saving || loading || !preview" :disabled-reason="saving ? text.processing : loading ? text.loading : text.loadError" data-testid="approval-defer" @click="submit('defer')">{{ acceptProposal ? text.defer : text.later }}</BaseButton>
-      <BaseButton v-if="confirmed" type="button" variant="primary" :loading="saving" :disabled="loading || !preview" :disabled-reason="loading ? text.loading : text.loadError" data-testid="approval-retry" @click="submit('retry')">{{ text.retry }}</BaseButton>
-      <BaseButton v-else type="button" variant="primary" :loading="saving" :disabled="loading || !preview" :disabled-reason="loading ? text.loading : text.loadError" data-testid="approval-confirm" @click="submit('confirm')">{{ acceptProposal ? text.confirm : text.link }}</BaseButton>
+      <BaseButton v-if="confirmed" type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-retry" @click="submit('retry')">{{ text.retry }}</BaseButton>
+      <BaseButton v-else type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-confirm" @click="submit('confirm')">{{ acceptProposal ? text.confirm : text.link }}</BaseButton>
     </BaseModalActions></template>
   </BaseModal>
 </template>

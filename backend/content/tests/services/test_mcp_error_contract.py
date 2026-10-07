@@ -4,7 +4,7 @@ import logging
 
 import pytest
 from rest_framework import serializers
-from rest_framework.exceptions import Throttled
+from rest_framework.exceptions import PermissionDenied, Throttled
 
 from content.mcp.errors import transport_exception_handler
 from content.mcp.context import McpExecutionContext
@@ -106,3 +106,33 @@ def test_transport_internal_error_hides_exception_contents(caplog):
         {'code': 'INTERNAL_ERROR', 'message': 'Error interno del servidor.'},
         True,
     )
+
+
+def test_internal_error_logs_exception_type_and_code_frames(caplog):
+    """Fails if a crash leaves no way to locate it in the technical log (or leaks its message)."""
+    with caplog.at_level(logging.ERROR, logger='content.mcp.protocol'):
+        handle_message(
+            {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'fail'}},
+            [{'name': 'fail', 'handler': _internal_failure}],
+        )
+
+    assert 'RuntimeError at ' in caplog.text
+    assert 'test_mcp_error_contract.py:' in caplog.text
+    assert ':_internal_failure' in caplog.text
+    assert PRIVATE_MARKER not in caplog.text
+
+
+def _guarded_write(_arguments):
+    raise PermissionDenied('Los datos conservados sin proyecto sólo permiten consulta.')
+
+
+def test_domain_permission_denied_keeps_forbidden_code():
+    """Fails if a model guard reached from a native tool turns into INTERNAL_ERROR."""
+    _, response = handle_message(
+        {'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'guarded'}},
+        [{'name': 'guarded', 'handler': _guarded_write}],
+    )
+
+    error = json.loads(response['result']['content'][0]['text'])['error']
+    assert error['code'] == 'FORBIDDEN'
+    assert error['message'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
