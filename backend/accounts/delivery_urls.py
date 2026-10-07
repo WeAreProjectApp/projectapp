@@ -46,4 +46,5 @@ for kind in ('contracts', 'amendments'):
     urlpatterns += [
         path(f'{kind}/<int:node_id>/signature-external/', views.delivery_signature, {'kind': kind}, name=f'delivery-{kind}-signature'),
         path(f'{kind}/<int:node_id>/pdf/', views.delivery_contract_pdf, {'kind': kind}, name=f'delivery-{kind}-pdf'),
+        path(f'{kind}/<int:node_id>/source/', views.contract_source_download, {'kind': kind}, name=f'delivery-{kind}-source'),
     ]

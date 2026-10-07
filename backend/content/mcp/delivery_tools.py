@@ -81,11 +81,11 @@ COMMON_FIELDS = {'key': TEXT, 'title': TEXT}
 NODE_FIELDS = {
     'contracts': {
         **COMMON_FIELDS, 'document_id': NULLABLE_ID,
-        'proposal_document_id': NULLABLE_ID, 'client_visible': {'type': 'boolean'},
+        'proposal_document_id': NULLABLE_ID, 'approval_file_id': NULLABLE_ID, 'client_visible': {'type': 'boolean'},
     },
     'amendments': {
         **COMMON_FIELDS, 'contract_id': ID, 'document_id': NULLABLE_ID,
-        'proposal_document_id': NULLABLE_ID, 'client_visible': {'type': 'boolean'},
+        'proposal_document_id': NULLABLE_ID, 'approval_file_id': NULLABLE_ID, 'client_visible': {'type': 'boolean'},
     },
     'scopes': {
         **COMMON_FIELDS, 'description': TEXT, 'contract_id': ID,
