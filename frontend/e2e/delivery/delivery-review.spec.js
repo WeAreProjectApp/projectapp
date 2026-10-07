@@ -38,7 +38,7 @@ test('a client with retained Django flags records its own review', {
 }, async ({ page, request }, testInfo) => {
   const data = await fixture(request, testInfo, 'client-retained-django-flags')
   const session = await authenticate(page, request, data)
-  expect(session.user.role).toBe('client')
+  expect(session.user).toMatchObject({ role: 'client', user_id: expect.any(Number) })
   await openWorkspace(page, data)
   const message = 'Conformidad registrada con mi rol actual de cliente.'
   await submitDecision(page, data, 0, 'approved', message)
@@ -55,7 +55,7 @@ test('a client with retained Django flags records its own review', {
     .flatMap((phase) => phase.stages).flatMap((stage) => stage.requirements)
     .find((item) => item.id === data.requirement_ids[0])
   expect(persisted.reviews).toEqual([expect.objectContaining({
-    id: expect.any(Number), actor_id: session.user.id, decision: 'approved',
+    id: expect.any(Number), actor_id: session.user.user_id, decision: 'approved',
     is_external: false, message,
   })])
 })

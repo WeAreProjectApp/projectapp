@@ -82,6 +82,8 @@ def main():
         CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3203'],
         EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
         MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}},
+        # Use fast hashes only for disposable loopback fixture accounts.
+        PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
         RECAPTCHA_ENABLED=False,
         # Browser tests exercise the runtime model schema. Dedicated migration
         # tests separately verify the historical purge and preservation rules.
