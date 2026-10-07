@@ -12,6 +12,7 @@ from accounts.models import (
     DeliverableVersion,
     Project,
     ProjectDataModelEntity,
+    UserProfile,
 )
 from accounts.services import platform_resources
 from accounts.services.delivery_access import DeliveryConflict
@@ -61,6 +62,7 @@ def test_resource_confirmation_records_the_service_actor(call_projects, project,
     resource = Deliverable.objects.get(pk=result['id'])
     credential = McpConnector.objects.get(slug='projects').credentials.get(label='Default')
     assert resource.uploaded_by_id == credential.actor_id
+    assert not UserProfile.objects.filter(user_id=credential.actor_id).exists()
     assert resource.current_version == 1
     assert resource.versions.count() == 1
     assert 'file_url' not in result
@@ -191,6 +193,7 @@ def test_resource_confirmation_rejects_a_changed_owner(call_projects, project, a
 
 
 def test_resource_write_revalidates_owner_inside_the_lock(project, superuser):
+    UserProfile.objects.create(user=superuser, role=UserProfile.ROLE_ADMIN)
     resource = Deliverable.objects.create(project=project, title='Original', uploaded_by=superuser)
     with pytest.raises(DeliveryConflict):
         platform_resources.update_resource(project.pk, superuser, resource.pk, {'title': 'Changed'},

@@ -28,9 +28,15 @@ from accounts.serializers import (
     UploadNewVersionSerializer,
 )
 from accounts.services.archive import archive_record, unarchive_record
-from accounts.services.delivery_access import is_admin, project_for_actor, require_admin
 from accounts.services.notifications import notify_project_client
-from accounts.services.platform_resource_operations import perform
+from accounts.services.platform_resource_operations import (
+    is_resource_admin,
+    perform,
+    require_resource_admin,
+)
+from accounts.services.platform_resource_operations import (
+    project_for_resource_actor as project_for_actor,
+)
 
 
 def _validate(serializer_type, data, **kwargs):
@@ -39,7 +45,7 @@ def _validate(serializer_type, data, **kwargs):
     return serializer.validated_data
 
 
-def _resource(project, actor, resource_id, *, editable=False):
+def _resource(project, actor, resource_id, *, editable=False, request=None):
     resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').filter(
         project=project, pk=resource_id,
     ).first()
@@ -47,7 +53,7 @@ def _resource(project, actor, resource_id, *, editable=False):
         raise NotFound('Recurso no encontrado.')
     if editable and resource.is_archived:
         raise ValidationError('El recurso está archivado.')
-    if resource.is_archived and not is_admin(actor):
+    if resource.is_archived and not is_resource_admin(actor, request):
         raise NotFound('Recurso no encontrado.')
     return resource
 
@@ -60,11 +66,11 @@ def _data(resource, request=None, *, detail=False):
 
 
 def list_resources(project_id, actor, *, include_archived=False, category=None, request=None):
-    project = project_for_actor(project_id, actor)
+    project = project_for_actor(project_id, actor, request=request)
     rows = Deliverable.objects.filter(project=project).select_related('uploaded_by').annotate(
         _versions_count=Count('versions'),
     ).order_by('category', '-updated_at')
-    if not (is_admin(actor) and include_archived):
+    if not (is_resource_admin(actor, request) and include_archived):
         rows = rows.filter(is_archived=False)
     if category:
         rows = rows.filter(category=category)
@@ -72,14 +78,14 @@ def list_resources(project_id, actor, *, include_archived=False, category=None, 
 
 
 def get_resource(project_id, actor, resource_id, *, request=None):
-    project = project_for_actor(project_id, actor)
-    return _data(_resource(project, actor, resource_id), request, detail=True)
+    project = project_for_actor(project_id, actor, request=request)
+    return _data(_resource(project, actor, resource_id, request=request), request, detail=True)
 
 
 def create_resource(project_id, actor, data, *, request=None, **operation):
     values = _validate(CreateDeliverableSerializer, data)
     category = values['category']
-    if not is_admin(actor) and category in Deliverable.ADMIN_ONLY_CATEGORIES:
+    if not is_resource_admin(actor, request) and category in Deliverable.ADMIN_ONLY_CATEGORIES:
         raise PermissionDenied('Esta categoría solo puede ser subida por el administrador.')
 
     def change(project):
@@ -95,15 +101,15 @@ def create_resource(project_id, actor, data, *, request=None, **operation):
             exclude_user=actor, deliverable=resource)
         return _data(resource, request)
 
-    return perform(project_id, actor, 'resource:create', values, change, **operation)
+    return perform(project_id, actor, 'resource:create', values, change, request=request, **operation)
 
 
 def update_resource(project_id, actor, resource_id, data, *, request=None, **operation):
-    require_admin(actor)
+    require_resource_admin(actor, request)
     values = _validate(UpdateDeliverableSerializer, data)
 
     def change(project):
-        resource = _resource(project, actor, resource_id)
+        resource = _resource(project, actor, resource_id, request=request)
         if 'is_archived' in values:
             resource.updated_at = timezone.now()
             (archive_record if values['is_archived'] else unarchive_record)(
@@ -116,14 +122,14 @@ def update_resource(project_id, actor, resource_id, data, *, request=None, **ope
             resource.save(update_fields=[*changed, 'updated_at'])
         return _data(resource, request, detail=True)
 
-    return perform(project_id, actor, f'resource:{resource_id}:update', values, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:update', values, change, request=request, **operation)
 
 
 def upload_version(project_id, actor, resource_id, data, *, request=None, **operation):
-    require_admin(actor)
+    require_resource_admin(actor, request)
 
     def change(project):
-        resource = _resource(project, actor, resource_id, editable=True)
+        resource = _resource(project, actor, resource_id, editable=True, request=request)
         values = _validate(UploadNewVersionSerializer, data, context={'deliverable': resource})
         number = resource.current_version + 1
         DeliverableVersion.objects.create(deliverable=resource, file=values['file'],
@@ -138,49 +144,49 @@ def upload_version(project_id, actor, resource_id, data, *, request=None, **oper
             exclude_user=actor, deliverable=resource)
         return _data(resource, request, detail=True)
 
-    return perform(project_id, actor, f'resource:{resource_id}:version', data, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:version', data, change, request=request, **operation)
 
 
 def list_attachments(project_id, actor, resource_id, *, request=None):
-    project = project_for_actor(project_id, actor)
-    resource = _resource(project, actor, resource_id)
+    project = project_for_actor(project_id, actor, request=request)
+    resource = _resource(project, actor, resource_id, request=request)
     return list(DeliverableFileSerializer(resource.attachment_files.select_related('uploaded_by'),
                                          many=True, context={'request': request}).data)
 
 
 def upload_attachment(project_id, actor, resource_id, data, *, request=None, **operation):
-    require_admin(actor)
+    require_resource_admin(actor, request)
     values = _validate(CreateDeliverableFileSerializer, data)
 
     def change(project):
-        resource = _resource(project, actor, resource_id, editable=True)
+        resource = _resource(project, actor, resource_id, editable=True, request=request)
         row = DeliverableFile.objects.create(deliverable=resource, uploaded_by=actor, **values)
         return dict(DeliverableFileSerializer(row, context={'request': request}).data)
 
-    return perform(project_id, actor, f'resource:{resource_id}:attachment', values, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:attachment', values, change, request=request, **operation)
 
 
-def list_folders(project_id, actor, resource_id):
-    project = project_for_actor(project_id, actor)
-    return list(DeliverableClientFolderSerializer(_resource(project, actor, resource_id).client_folders.all(), many=True).data)
+def list_folders(project_id, actor, resource_id, *, request=None):
+    project = project_for_actor(project_id, actor, request=request)
+    return list(DeliverableClientFolderSerializer(_resource(project, actor, resource_id, request=request).client_folders.all(), many=True).data)
 
 
-def create_folder(project_id, actor, resource_id, data, **operation):
+def create_folder(project_id, actor, resource_id, data, *, request=None, **operation):
     values = _validate(CreateDeliverableClientFolderSerializer, data)
 
     def change(project):
         row = DeliverableClientFolder.objects.create(
-            deliverable=_resource(project, actor, resource_id, editable=True), created_by=actor, **values)
+            deliverable=_resource(project, actor, resource_id, editable=True, request=request), created_by=actor, **values)
         return dict(DeliverableClientFolderSerializer(row).data)
 
-    return perform(project_id, actor, f'resource:{resource_id}:folder-create', values, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:folder-create', values, change, request=request, **operation)
 
 
-def change_folder(project_id, actor, resource_id, folder_id, data, *, delete=False, **operation):
+def change_folder(project_id, actor, resource_id, folder_id, data, *, delete=False, request=None, **operation):
     values = {} if delete else _validate(CreateDeliverableClientFolderSerializer, data, partial=True)
 
     def change(project):
-        resource = _resource(project, actor, resource_id)
+        resource = _resource(project, actor, resource_id, request=request)
         row = resource.client_folders.filter(pk=folder_id).first()
         if row is None:
             raise NotFound('Carpeta no encontrada.')
@@ -193,29 +199,29 @@ def change_folder(project_id, actor, resource_id, folder_id, data, *, delete=Fal
             row.save(update_fields=list(values))
         return dict(DeliverableClientFolderSerializer(row).data)
 
-    return perform(project_id, actor, f'resource:{resource_id}:folder:{folder_id}:{delete}', values, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:folder:{folder_id}:{delete}', values, change, request=request, **operation)
 
 
 def list_client_files(project_id, actor, resource_id, *, request=None):
-    project = project_for_actor(project_id, actor)
-    resource = _resource(project, actor, resource_id)
+    project = project_for_actor(project_id, actor, request=request)
+    resource = _resource(project, actor, resource_id, request=request)
     return list(DeliverableClientUploadSerializer(resource.client_uploads.select_related('uploaded_by', 'folder'),
                                                  many=True, context={'request': request}).data)
 
 
 def upload_client_file(project_id, actor, resource_id, data, *, request=None, **operation):
     def change(project):
-        resource = _resource(project, actor, resource_id, editable=True)
+        resource = _resource(project, actor, resource_id, editable=True, request=request)
         values = _validate(CreateDeliverableClientUploadSerializer, data, context={'deliverable': resource})
         row = DeliverableClientUpload.objects.create(deliverable=resource, uploaded_by=actor, **values)
         return dict(DeliverableClientUploadSerializer(row, context={'request': request}).data)
 
-    return perform(project_id, actor, f'resource:{resource_id}:client-file', data, change, **operation)
+    return perform(project_id, actor, f'resource:{resource_id}:client-file', data, change, request=request, **operation)
 
 
-def read_file(project_id, actor, resource_id, *, kind='current', file_id=None):
-    project = project_for_actor(project_id, actor)
-    resource = _resource(project, actor, resource_id)
+def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+    project = project_for_actor(project_id, actor, request=request)
+    resource = _resource(project, actor, resource_id, request=request)
     if kind == 'current':
         if file_id is not None:
             raise ValidationError('El archivo actual no recibe file_id.')

@@ -3,9 +3,51 @@ import hashlib
 import json
 
 from django.db import transaction
+from rest_framework.exceptions import NotFound, PermissionDenied
 
-from accounts.models import DeliveryOperation, DeliveryWorkspace
-from accounts.services.delivery_access import DeliveryConflict, fail, project_for_actor
+from accounts.models import DeliveryOperation, DeliveryWorkspace, Project
+from accounts.permissions import IsAdminRole
+from accounts.services.delivery_access import (
+    DeliveryConflict,
+    fail,
+    is_admin,
+)
+
+
+def is_resource_admin(actor, request=None):
+    """REST keeps its Platform role; trusted MCP calls use their service principal."""
+    if not actor.is_authenticated or not actor.is_active:
+        return False
+    if request is not None:
+        return actor.pk == request.user.pk and IsAdminRole().has_permission(request, None)
+    profile = getattr(actor, 'profile', None)
+    if profile and profile.is_admin:
+        return True
+    from content.mcp.context import current_mcp_context
+    context = current_mcp_context()
+    return bool(is_admin(actor) and context and context.connector.slug == 'projects'
+        and context.actor and context.actor.pk == actor.pk and context.credential
+        and context.credential.is_usable and context.credential.actor_id == actor.pk
+        and context.credential.connector_id == context.connector.pk)
+
+
+def require_resource_admin(actor, request=None):
+    if not is_resource_admin(actor, request):
+        raise PermissionDenied('Solo los administradores pueden modificar este recurso.')
+
+
+def project_for_resource_actor(project_id, actor, *, request=None, lock=False):
+    if not actor.is_authenticated or not actor.is_active:
+        raise PermissionDenied('Se requiere una cuenta activa.')
+    query = Project.objects.select_related('client')
+    if lock:
+        query = query.select_for_update()
+    if not is_resource_admin(actor, request):
+        query = query.filter(client_id=actor.pk)
+    project = query.filter(pk=project_id).first()
+    if project is None:
+        raise NotFound('Proyecto no encontrado.')
+    return project
 
 
 def _fingerprint(value):
@@ -30,8 +72,8 @@ def workspace_version(project):
 
 @transaction.atomic
 def perform(project_id, actor, operation, payload, change, *, expected_version=None,
-            request_id=None, credential=None, expected_client_id=None):
-    project = project_for_actor(project_id, actor, lock=True)
+            request_id=None, credential=None, expected_client_id=None, request=None):
+    project = project_for_resource_actor(project_id, actor, lock=True, request=request)
     if expected_client_id is not None and expected_client_id != project.client_id:
         raise DeliveryConflict('El destinatario del proyecto cambió. Revisa de nuevo la operación.')
     workspace, _ = DeliveryWorkspace.objects.get_or_create(project=project)
