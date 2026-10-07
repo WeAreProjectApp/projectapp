@@ -67,6 +67,13 @@ fuente contractual de descarga y del prompt. Ver el contrato del puente en
 5. El equipo consulta los resultados y las respuestas, corrige lo pendiente y
    publica otra ronda cuando el cliente pueda volver a probarlo.
 
+Publicación, observaciones y respuestas públicas registran avisos internos y
+correos duraderos. El administrador puede consultar su historial y revisar la
+copia exacta antes de reintentar un fallo confirmado. Una aceptación del
+transporte no equivale a lectura, y un resultado desconocido no se reenvía
+automáticamente. Contrato operativo:
+[Avisos de entregas](DELIVERY_ACTIVITY_NOTICES.md).
+
 La revisión editorial y la conformidad tienen estados distintos:
 
 | Aspecto | Estados y efecto |

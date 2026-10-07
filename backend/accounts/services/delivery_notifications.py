@@ -13,8 +13,6 @@ from content.services.email_delivery_service import (
     matching_delivery_trace,
 )
 from django.conf import settings
-from django.core.mail import mailers
-from django.core.mail.backends.smtp import EmailBackend as SmtpBackend
 from django.db import transaction
 from django.template.loader import render_to_string
 from django.utils import timezone
@@ -206,9 +204,7 @@ def send_attempt(attempt_id):
     if not ProposalEmailService._is_template_active(event.event_type):
         _finish(attempt_id, STATUS.CANCELLED, 'template_disabled')
         return False
-    connection = mailers.create_connection('default')
-    if isinstance(connection, SmtpBackend) and (connection.timeout is None or connection.timeout > 20):
-        connection.timeout = 20
+    connection = EmailDeliveryGateway.bounded_connection(timeout_seconds=20)
     message = EmailMultiAlternatives(subject=event.subject, body=event.text_body,
                                      from_email=event.from_email, to=event.recipients, connection=connection)
     message.attach_alternative(event.html_body, 'text/html')

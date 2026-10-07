@@ -1,3 +1,12 @@
+> **Avisos de entregas — 2026-10-07:** `accounts.0080_delivery_activity_notices`
+> agrega eventos e intentos duraderos, con recibo de operación, copia exacta y
+> vínculo al historial de `EmailDeliveryGateway`. El envío se reclama después
+> del commit; el despachador recupera pendientes y trata los intentos sin
+> resultado como `unknown`, sin reenvío automático. La API JWT y el MCP `projects`
+> comparten consulta y reintento con versión y huella del aviso. Las pruebas
+> usan `settings_test` y el mailer `locmem`, sin leer el `.env` enlazado ni
+> enviar correos reales. [Contrato](../DELIVERY_ACTIVITY_NOTICES.md).
+
 > **Contabilidad — 2026-10-06:** opciones de cobro administrativas incluyen
 > `contract_sources` y `delivery_version`; `POST admin/billing-context/projects/:id/contracts/link/`
 > recibe fuente, versión y request_id con sesión/CSRF. Los ingresos exponen
