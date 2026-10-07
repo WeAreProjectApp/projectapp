@@ -39,14 +39,6 @@ def _phase_error(exc):
     return Response({'detail': exc.code, **exc.extra}, status=exc.http_status)
 
 
-def _retained_source_name(proposal):
-    """Name of the deleted project whose deliverable or phase this proposal kept."""
-    if proposal.deliverable_id and proposal.deliverable.retention_context_id:
-        return proposal.deliverable.retention_context.project_name
-    phase = proposal.project_phases.filter(retention_context__isnull=False).select_related('retention_context').first()
-    return phase.retention_context.project_name if phase else None
-
-
 @api_view(['GET'])
 @authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
@@ -73,14 +65,6 @@ def project_commercial_phases(request, project_id):
     with transaction.atomic():
         project = Project.objects.select_for_update().get(pk=project_id)
         proposal = get_object_or_404(BusinessProposal.objects.select_for_update().select_related('client', 'deliverable'), pk=serializer.validated_data['proposal_id'])
-        retained_name = _retained_source_name(proposal)
-        if retained_name is not None:
-            raise ValidationError({'proposal_id': f'La propuesta conserva recursos del proyecto eliminado «{retained_name}». Esos datos quedan en consulta y no se incorporan como fase de otro proyecto.'})
-        if (not proposal.client_id or proposal.client.user_id != project.client_id
-                or proposal.status not in ('accepted', 'finished')
-                or not proposal.deliverable_id or proposal.deliverable.project_id != project.pk
-                or proposal.project_phases.exclude(project=project).exists()):
-            raise ValidationError({'proposal_id': 'Usa primero la revisión de aprobación o reasignación para vincular esta propuesta al proyecto y cliente correctos.'})
         try:
             phase = add_phase(project, proposal, order=serializer.validated_data.get('order'))
         except PhaseError as exc:
@@ -96,8 +80,6 @@ def project_commercial_phase_detail(request, project_id, phase_id):
         project = get_object_or_404(Project.objects.select_for_update(), pk=project_id)
         phase = get_object_or_404(ProjectPhase.objects.select_for_update(), pk=phase_id, project=project)
         if request.method == 'DELETE':
-            if phase.delivery_phases.exists() or phase.hosting_activated_at or phase.hosting_start_date:
-                raise ValidationError({'phase_id': 'Esta fase tiene entrega o hosting asociado. Conserva esas relaciones antes de desvincularla.'})
             try:
                 remove_phase(project, phase_id)
             except PhaseError as exc:

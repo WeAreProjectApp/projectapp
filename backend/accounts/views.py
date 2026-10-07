@@ -3890,6 +3890,8 @@ def project_phases_view(request, project_id):
     profile = getattr(request.user, 'profile', None)
     if not (profile and profile.is_admin):
         return Response({'detail': 'forbidden'}, status=403)
+    if not isinstance(request.data, dict) or set(request.data) - {'proposal_id', 'order'}:
+        return Response({'detail': 'La fase sólo admite propuesta y posición.'}, status=400)
     proposal_id = request.data.get('proposal_id')
     if not proposal_id:
         return Response({'detail': 'proposal_id required'}, status=400)
