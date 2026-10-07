@@ -3,14 +3,14 @@
 from uuid import uuid4
 
 import pytest
-from accounts.models import Deliverable, ProjectPhase
+from accounts.models import Deliverable, ProjectContract, ProjectPhase
 from accounts.models_project_ideas import ProjectIdea, ProjectIdeaCollection
 from accounts.services import project_client_access as access
 from accounts.services import project_ideas as ideas
 from accounts.tests.project_collaboration_helpers import context, idea, sources
 from rest_framework.test import APIClient
 
-from content.models import BusinessProposal, Document, McpConnector
+from content.models import BusinessProposal, Document, McpActionIntent, McpConnector
 
 pytestmark = pytest.mark.django_db
 
@@ -201,6 +201,104 @@ def test_project_mcp_rejects_an_unlinked_commercial_phase(call):
 
     assert error['code'] == 'VALIDATION_ERROR'
     assert ProjectPhase.objects.filter(project=c.project).count() == 0
+
+
+def _linked_accepted_proposal(c, project, title):
+    package = Deliverable.objects.create(project=project, title=f'{title} package', uploaded_by=c.admin)
+    return BusinessProposal.objects.create(
+        title=title, client=project.client.profile, client_name='Client', total_investment=1,
+        status=BusinessProposal.Status.ACCEPTED, deliverable=package,
+    )
+
+
+def _invalid_commercial_phase_reorder(first, second, foreign, variant):
+    if variant == 'omit-own-phase':
+        return [{'id': first.pk, 'order': 1}]
+    return [{'id': first.pk, 'order': 1}, {'id': foreign.pk, 'order': 2}]
+
+
+def test_project_mcp_rejects_a_duplicate_commercial_phase(call):
+    """Fails if the MCP adapter reports success after the Panel rejects a duplicate commercial phase."""
+    c = context()
+    proposal = _linked_accepted_proposal(c, c.project, 'Existing phase')
+    ProjectPhase.objects.create(project=c.project, business_proposal=proposal, order=1)
+
+    error = call('add_project_commercial_phase', {
+        'project_id': c.project.pk, 'proposal_id': proposal.pk,
+    }, error=True)
+
+    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['details']['detail'] == 'duplicate_proposal'
+    assert ProjectPhase.objects.filter(project=c.project).count() == 1
+
+
+@pytest.mark.parametrize('variant', ('omit-own-phase', 'foreign-phase'))
+def test_project_mcp_reorder_rejects_a_phase_set_that_does_not_exactly_match_the_project(call, variant):
+    """Fails if MCP reordering permits a phase set that does not exactly match the project."""
+    c = context()
+    first = ProjectPhase.objects.create(
+        project=c.project, business_proposal=_linked_accepted_proposal(c, c.project, 'First local'), order=1,
+    )
+    second = ProjectPhase.objects.create(
+        project=c.project, business_proposal=_linked_accepted_proposal(c, c.project, 'Second local'), order=2,
+    )
+    foreign = ProjectPhase.objects.create(
+        project=c.other_project,
+        business_proposal=_linked_accepted_proposal(c, c.other_project, 'Foreign phase'), order=1,
+    )
+
+    error = call('reorder_project_commercial_phases', {
+        'project_id': c.project.pk,
+        'items': _invalid_commercial_phase_reorder(first, second, foreign, variant),
+    }, error=True)
+
+    foreign.refresh_from_db()
+    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['details']['detail'] == 'invalid_phase_id'
+    assert list(ProjectPhase.objects.filter(project=c.project).order_by('order').values_list('pk', 'order')) == [
+        (first.pk, 1), (second.pk, 2),
+    ]
+    assert (foreign.project_id, foreign.order) == (c.other_project.pk, 1)
+
+
+def test_project_mcp_billing_link_rejects_a_document_from_another_project(call):
+    """Fails if MCP starts a billing-link confirmation for a document owned by another project."""
+    c = context()
+    foreign = Document.objects.create(
+        title='Foreign billing contract', project=c.other_project, client_user=c.other,
+    )
+    options = call('get_project_billing_options', {'project_id': c.project.pk})
+
+    error = call('link_project_billing_contract', {
+        'project_id': c.project.pk,
+        'payload': {
+            'source_type': 'document', 'source_id': foreign.pk,
+            'expected_version': options['delivery_version'], 'request_id': 'foreign-billing-source',
+        },
+    }, error=True)
+
+    assert error['code'] == 'NOT_FOUND'
+    assert McpActionIntent.objects.filter(tool_name='link_project_billing_contract').count() == 0
+    assert ProjectContract.objects.filter(project=c.project).count() == 0
+
+
+def test_project_mcp_billing_link_rejects_a_stale_delivery_version(call):
+    """Fails if MCP starts a billing-link confirmation with an outdated delivery version."""
+    c = context()
+    source = Document.objects.create(title='Current billing contract', project=c.project, client_user=c.client)
+    options = call('get_project_billing_options', {'project_id': c.project.pk})
+
+    error = call('link_project_billing_contract', {
+        'project_id': c.project.pk,
+        'payload': {
+            'source_type': 'document', 'source_id': source.pk,
+            'expected_version': options['delivery_version'] + 1, 'request_id': 'stale-billing-version',
+        },
+    }, error=True)
+
+    assert error['code'] == 'STALE_VERSION'
+    assert McpActionIntent.objects.filter(tool_name='link_project_billing_contract').count() == 0
+    assert ProjectContract.objects.filter(project=c.project).count() == 0
 
 
 def test_project_mcp_reuses_a_confirmed_billing_contract_source(call):

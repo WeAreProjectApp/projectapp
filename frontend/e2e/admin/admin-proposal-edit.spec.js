@@ -1,7 +1,7 @@
 /**
  * E2E tests for admin proposal edit flow.
  *
- * Covers: page heading, tab rendering, General tab form fields.
+ * Covers: page heading, tab rendering, and grouped proposal editor fields.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -174,13 +174,14 @@ test.describe('Admin Proposal Edit', () => {
     await expect(page.getByTestId('proposal-secondary-navigation').getByRole('tab', { name: 'Secciones' })).toBeVisible();
   });
 
-  test('shows client name field pre-filled in General tab', {
+  test('shows client name field pre-filled in Project Datos', {
     tag: [...ADMIN_PROPOSAL_EDIT, '@role:admin'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
     await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByText('Propuesta E2E')).toBeVisible({ timeout: 20_000 });
+    await selectProposalDestination(page, 'project', 'project-data');
     await expect(page.getByTestId('edit-client-name')).toHaveValue('Cliente Edit E2E');
   });
 

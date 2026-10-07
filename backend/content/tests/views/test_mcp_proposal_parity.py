@@ -1,5 +1,6 @@
 """Proposal MCP parity behavior over the public JSON-RPC endpoint."""
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from accounts.models import Deliverable, Project, ProjectPhase, UserProfile
@@ -10,7 +11,10 @@ from content.models import (
     EntityHistory,
     EntityRevision,
     McpConnector,
+    McpActionIntent,
     ProposalDefaultConfig,
+    Document,
+    DocumentType,
 )
 
 
@@ -36,6 +40,32 @@ def _list_tools(api_client, token):
 
 def _payload(result):
     return result['structuredContent']
+
+
+def _reassignment_context():
+    User = get_user_model()
+    client_user = User.objects.create_user(username='mcp-reassignment-client', password='test')
+    client = UserProfile.objects.create(user=client_user, role=UserProfile.ROLE_CLIENT)
+    source = Project.objects.create(name='MCP source', client=client_user)
+    target = Project.objects.create(name='MCP target', client=client_user)
+    proposal = BusinessProposal.objects.create(
+        title='MCP proposal correction', client=client, client_name='MCP client',
+        client_email='mcp-client@example.test', total_investment=1,
+        status=BusinessProposal.Status.ACCEPTED,
+    )
+    package = Deliverable.objects.create(project=source, title='MCP package', uploaded_by=client_user)
+    proposal.deliverable = package
+    proposal.save(update_fields=['deliverable'])
+    phase = ProjectPhase.objects.create(project=source, business_proposal=proposal, order=1)
+    return SimpleNamespace(client=client, client_user=client_user, source=source, target=target, proposal=proposal, phase=phase)
+
+
+def _reassignment_arguments(ctx, impact_hash):
+    return {
+        'proposal_id': ctx.proposal.pk, 'target_project_id': ctx.target.pk,
+        'reason': 'Correct MCP project association', 'expected_impact_hash': impact_hash,
+        'request_id': 'mcp-reassignment-request',
+    }
 
 
 @pytest.fixture
@@ -87,6 +117,73 @@ class TestProposalMcpSettings:
         phase.refresh_from_db()
         assert phase.project_id == target.pk
         assert confirmed['isError'] is False
+
+    def test_reassignment_rejects_an_invalid_impact_hash_before_creating_an_intent(
+        self, api_client, proposals_token,
+    ):
+        """Fails if MCP records a pending correction when the reassignment hash is malformed."""
+        ctx = _reassignment_context()
+
+        result = _call(
+            api_client, proposals_token, 'reassign_proposal_project',
+            _reassignment_arguments(ctx, 'a' * 63),
+        )
+
+        ctx.phase.refresh_from_db()
+        assert result['isError'] is True
+        assert _payload(result)['error']['code'] == 'VALIDATION_ERROR'
+        assert ctx.phase.project_id == ctx.source.pk
+        assert McpActionIntent.objects.filter(tool_name='reassign_proposal_project').count() == 0
+
+    def test_reassignment_rejects_an_outdated_preview_before_creating_an_intent(
+        self, api_client, proposals_token,
+    ):
+        """Fails if MCP creates a pending correction from an impact changed by a new proposal document."""
+        ctx = _reassignment_context()
+        preview = _payload(_call(api_client, proposals_token, 'preview_proposal_project_reassignment', {
+            'proposal_id': ctx.proposal.pk, 'target_project_id': ctx.target.pk,
+        }))
+        Document.objects.create(
+            title='Changed after preview', project=ctx.source, client_user=ctx.source.client,
+            source_proposal=ctx.proposal,
+        )
+
+        result = _call(
+            api_client, proposals_token, 'reassign_proposal_project',
+            _reassignment_arguments(ctx, preview['impact_hash']),
+        )
+
+        ctx.phase.refresh_from_db()
+        assert result['isError'] is True
+        assert _payload(result)['error']['code'] == 'STALE_VERSION'
+        assert ctx.phase.project_id == ctx.source.pk
+        assert McpActionIntent.objects.filter(tool_name='reassign_proposal_project').count() == 0
+
+    def test_reassignment_rejects_a_financial_document_before_creating_an_intent(
+        self, api_client, proposals_token,
+    ):
+        """Fails if MCP records a pending reassignment despite a financial document blocker."""
+        ctx = _reassignment_context()
+        document_type = DocumentType.objects.create(code='collection_account', name='Cuenta de cobro')
+        Document.objects.create(
+            title='Collection account', project=ctx.source, client_user=ctx.source.client,
+            source_proposal=ctx.proposal, document_type=document_type,
+        )
+        preview = _payload(_call(api_client, proposals_token, 'preview_proposal_project_reassignment', {
+            'proposal_id': ctx.proposal.pk, 'target_project_id': ctx.target.pk,
+        }))
+
+        result = _call(
+            api_client, proposals_token, 'reassign_proposal_project',
+            _reassignment_arguments(ctx, preview['impact_hash']),
+        )
+
+        ctx.phase.refresh_from_db()
+        assert result['isError'] is True
+        assert _payload(result)['error']['code'] == 'CONFLICT'
+        assert _payload(result)['error']['details']['blockers'][0]['code'] == 'financial_document'
+        assert ctx.phase.project_id == ctx.source.pk
+        assert McpActionIntent.objects.filter(tool_name='reassign_proposal_project').count() == 0
 
     def test_history_tool_redacts_private_file_paths_from_a_real_mcp_response(
         self, api_client, proposals_token, proposal,

@@ -224,6 +224,30 @@ describe('EntityHistoryPanel', () => {
     wrapper.unmount();
   });
 
+  // Falla si cambiar el orden conserva la página 2 y muestra una cronología incompleta bajo el nuevo orden.
+  it('returns to the first page when the history order changes from page two', async () => {
+    get_request.mockImplementation((url) => {
+      if (url.includes('page=2&order=recent')) {
+        return Promise.resolve({ data: { ...makeList([makeEntry(31, 31)]), count: 43, num_pages: 3 } });
+      }
+      if (url.includes('page=1&order=oldest')) {
+        return Promise.resolve({ data: { ...makeList([makeEntry(1, 1)]), count: 43, num_pages: 3 } });
+      }
+      return Promise.resolve({ data: { ...makeList([makeEntry(51, 51)]), count: 43, num_pages: 3 } });
+    });
+    const wrapper = mountPanel();
+    await flushPromises();
+    await goToSecondPage(wrapper);
+
+    await wrapper.get('[data-testid="history-order"]').setValue('oldest');
+    await flushPromises();
+
+    expect(get_request).toHaveBeenLastCalledWith('entity-history/document/8/?page=1&order=oldest');
+    expect(wrapper.get('[data-testid="history-entry-1"]').text()).toContain('v1');
+    expect(wrapper.find('[data-testid="history-entry-31"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
   // Falla si cambiar de página cierra una versión seleccionada o pierde su archivo histórico.
   it('keeps the selected version and its PDF download after pagination', async () => {
     mockThreePageHistory();

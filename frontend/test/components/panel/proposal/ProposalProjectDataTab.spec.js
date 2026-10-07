@@ -32,6 +32,10 @@ const contactForm = {
   client_company: 'Littigio',
 };
 
+function unlinkedProposal(status) {
+  return { ...linkedProposal, status, linked_project: null };
+}
+
 function mountTab(props = {}) {
   const pinia = createPinia();
   setActivePinia(pinia);
@@ -181,6 +185,115 @@ describe('ProposalProjectDataTab', () => {
       ['proposals/117/project-reassignment/', payload],
     ]);
     expect(wrapper.find('[data-testid="proposal-reassignment-impact"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Falla si un error al revisar el impacto deja disponible una reasignación sin revisión válida.
+  it('keeps reassignment confirmation unavailable when the impact preview fails', async () => {
+    mockGetRequest
+      .mockResolvedValueOnce({ data: { results: [{ id: 15, name: 'Littigio destino', status: 'active', client: { profile_id: 61 } }] } })
+      .mockRejectedValueOnce({ response: { status: 503, data: { detail: 'No se pudo revisar el impacto.' } } });
+    const wrapper = mountTab();
+    await flushPromises();
+    await wrapper.get('[data-testid="proposal-reassignment-project"]').setValue('15');
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Corregir proyecto creado por error');
+    await wrapper.get('[data-testid="proposal-reassignment-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('No se pudo revisar el impacto.');
+    expect(wrapper.find('[data-testid="proposal-reassignment-impact"]').exists()).toBe(false);
+    expect(mockCreateRequest).toHaveBeenCalledTimes(0);
+    wrapper.unmount();
+  });
+
+  // Falla si un conflicto de relaciones conserva un impacto que ya no puede confirmarse.
+  it('invalidates a reviewed impact after a reassignment conflict', async () => {
+    const impact = {
+      source_project: { id: 14, name: 'Littigio actual' }, target_project: { id: 15, name: 'Littigio destino' },
+      deliverable_ids: [71], phase_ids: [31], approval_file_ids: [], impact_hash: 'c'.repeat(64), blockers: [],
+    };
+    mockGetRequest
+      .mockResolvedValueOnce({ data: { results: [{ id: 15, name: 'Littigio destino', status: 'active', client: { profile_id: 61 } }] } })
+      .mockResolvedValueOnce({ data: impact });
+    mockCreateRequest.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'El impacto cambió; revísalo otra vez.' } } });
+    const wrapper = mountTab();
+    await flushPromises();
+    await wrapper.get('[data-testid="proposal-reassignment-project"]').setValue('15');
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Corregir proyecto creado por error');
+    await wrapper.get('[data-testid="proposal-reassignment-preview"]').trigger('click');
+    await flushPromises();
+    await wrapper.get('[data-testid="proposal-reassignment-confirm"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('El impacto cambió; revísalo otra vez.');
+    expect(wrapper.find('[data-testid="proposal-reassignment-impact"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Falla si editar el motivo conserva un impacto calculado con razones distintas.
+  it('invalidates a reviewed impact when the reassignment reason changes', async () => {
+    const impact = {
+      source_project: { id: 14, name: 'Littigio actual' }, target_project: { id: 15, name: 'Littigio destino' },
+      deliverable_ids: [71], phase_ids: [31], approval_file_ids: [], impact_hash: 'c'.repeat(64), blockers: [],
+    };
+    mockGetRequest
+      .mockResolvedValueOnce({ data: { results: [{ id: 15, name: 'Littigio destino', status: 'active', client: { profile_id: 61 } }] } })
+      .mockResolvedValueOnce({ data: impact });
+    const wrapper = mountTab();
+    await flushPromises();
+    await wrapper.get('[data-testid="proposal-reassignment-project"]').setValue('15');
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Corregir proyecto creado por error');
+    await wrapper.get('[data-testid="proposal-reassignment-preview"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="proposal-reassignment-impact"]').text()).toContain('Littigio actual → Littigio destino');
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Corregir la asignación tras revisar el conflicto');
+    await flushPromises();
+    expect(wrapper.find('[data-testid="proposal-reassignment-impact"]').exists()).toBe(false);
+    wrapper.unmount();
+  });
+
+  // Falla si un catálogo de proyectos inaccesible parece vacío pero habilita una reasignación.
+  it('shows the project catalog failure without enabling reassignment', async () => {
+    mockGetRequest.mockRejectedValueOnce({ response: { status: 503 } });
+    const wrapper = mountTab();
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('No se pudieron cargar los proyectos. Vuelve a abrir esta página para reintentar.');
+    const options = Array.from(wrapper.get('[data-testid="proposal-reassignment-project"]').element.options);
+    expect(options.map((option) => option.value)).toEqual(['']);
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Corregir proyecto creado por error');
+    expect(wrapper.get('[data-testid="proposal-reassignment-preview"]').element.disabled).toBe(true);
+    expect(mockCreateRequest).toHaveBeenCalledTimes(0);
+    wrapper.unmount();
+  });
+
+  // Falla si Datos bloquea el cliente de un draft o permite iniciar una revisión antes de negociar.
+  it('keeps draft client data editable while review remains unavailable', async () => {
+    const wrapper = mountTab({ proposal: unlinkedProposal('draft') });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="proposal-edit-client-autocomplete"]').element.disabled).toBe(false);
+    expect(['edit-client-name', 'edit-client-email', 'edit-client-phone', 'edit-client-company']
+      .map((testId) => wrapper.get(`[data-testid="${testId}"]`).element.disabled)).toEqual([false, false, false, false]);
+    const review = buttonByName(wrapper, 'Revisar cliente, proyecto y documentos');
+    expect(review.element.disabled).toBe(true);
+    expect(review.attributes('disabled-reason')).toBe('La revisión del proyecto está disponible cuando la propuesta está en negociación o aceptada.');
+    expect(mockGetRequest).toHaveBeenCalledTimes(0);
+    expect(mockCreateRequest).toHaveBeenCalledTimes(0);
+    wrapper.unmount();
+  });
+
+  // Falla si un estado elegible sin proyecto no abre el flujo de revisión inicial.
+  it.each(['negotiating', 'accepted'])('emits initial project review for an unlinked %s proposal', async (status) => {
+    const wrapper = mountTab({ proposal: unlinkedProposal(status) });
+    await flushPromises();
+    const review = buttonByName(wrapper, 'Revisar cliente, proyecto y documentos');
+
+    expect(review.element.disabled).toBe(false);
+    await review.trigger('click');
+    expect(wrapper.emitted('review')).toEqual([[]]);
+    expect(mockGetRequest).toHaveBeenCalledTimes(0);
+    expect(mockCreateRequest).toHaveBeenCalledTimes(0);
     wrapper.unmount();
   });
 });
