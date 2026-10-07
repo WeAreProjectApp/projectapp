@@ -15,7 +15,7 @@ export const usePlatformDeliverablesStore = defineStore('platformDeliverables', 
   getters: {
     groupedByCategory: (state) => {
       const groups = {}
-      const order = ['designs', 'documents', 'credentials', 'apks', 'other']
+      const order = ['designs', 'documents', 'contract', 'amendment', 'legal_annex', 'credentials', 'apks', 'other']
       for (const d of state.deliverables) {
         if (!groups[d.category]) groups[d.category] = []
         groups[d.category].push(d)
