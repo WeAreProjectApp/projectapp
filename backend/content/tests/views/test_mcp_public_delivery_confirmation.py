@@ -163,6 +163,8 @@ def test_public_issue_status_requires_confirmation_for_an_internal_note(call_pro
         'admin_response': 'Private team note', 'is_internal': True, 'status': 'resolved'}})
     assert preview['confirmation_required'] is True
     assert IssueResponse.objects.count() == 0
+    ticket = BugReport.objects.get(pk=issue['id'])
+    assert (ticket.status, ticket.version) == ('reported', issue['version'])
 
 
 def test_public_issue_comment_requires_confirmation(call_projects, public_project, issue):

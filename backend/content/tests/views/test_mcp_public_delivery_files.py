@@ -4,7 +4,6 @@ import hashlib
 import pytest
 from accounts.models import DeliveryDocumentLink, DeliveryMessage, ProjectContract
 
-from content.mcp.confirmation import canonical_arguments_hash
 from content.tests.views.test_mcp_delivery import (
     SIGNED_PDF,
     current_version,
@@ -88,8 +87,15 @@ def test_unsigned_source_without_pdf_shows_render_provenance_without_writing(cal
     assert source['file'] is None
     assert source['content_markdown'] == '# Reviewed unsigned content'
     assert source['renderer_provenance']['renderer'] == 'DocumentPdfService'
-    expected = {key: value for key, value in source.items() if key not in ('content_sha256', 'file', 'preparation')}
-    assert source['content_sha256'] == canonical_arguments_hash(expected)
+    attachment.content_markdown = '# Revised unsigned content'
+    attachment.save(update_fields=['content_markdown'])
+    revised = call_projects('link_delivery_document',
+        document_arguments(call_projects, public_project, attachment))['impact']['files'][0]
+    assert revised['content_markdown'] == '# Revised unsigned content'
+    assert revised['renderer_provenance'] == source['renderer_provenance']
+    assert revised['content_sha256'] != source['content_sha256']
+    assert revised['file'] is None
+    assert DeliveryDocumentLink.objects.count() == 0
     attachment.refresh_from_db()
     assert not attachment.generated_file
 
