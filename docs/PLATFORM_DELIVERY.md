@@ -38,6 +38,20 @@ propuestas y el hosting. Una fase de entrega puede referenciarlas mediante
 `commercial_phase_id`; esa referencia no altera cobros, suscripciones ni
 activaciones. Las guías se redactan por separado del detalle técnico y comercial.
 
+Al registrar un contrato u otrosí, el equipo también puede elegir un **archivo
+del paquete confirmado de aprobación**, incluidos los archivos personalizados.
+Se usa la copia privada exacta conservada al confirmar el proyecto, con su hash;
+no se transforma en un documento editable ni se crea un contrato automáticamente.
+Esta selección se guarda sin firma y con consulta del cliente deshabilitada.
+El equipo puede habilitarla explícitamente después de revisar la fuente.
+
+Los originales no PDF se descargan en su formato real. PDF y DOCX pueden aportar
+texto al prompt; imágenes y otros formatos conservan una advertencia cuando no
+se puede extraer texto verificable. Para publicar una entrega deben acreditarse
+las firmas: cuando se registra el PDF firmado externo, esa copia pasa a ser la
+fuente contractual de descarga y del prompt. Ver el contrato del puente en
+[DELIVERY_APPROVAL_SOURCES](DELIVERY_APPROVAL_SOURCES.md).
+
 ## Preparar, publicar y revisar
 
 1. El administrador registra el contrato y los otrosí aplicables, selecciona

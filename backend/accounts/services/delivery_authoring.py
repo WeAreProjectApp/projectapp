@@ -93,14 +93,15 @@ def prompt_options(project_id, actor):
     from accounts.services.delivery_workflow import document_options, import_schema, signature_state
     evidence = ContractSignatureEvidence.objects.only('id', 'contract_id', 'amendment_id', 'method', 'signed_at', 'signer_name')
     deferred = ('document__content_markdown', 'document__content_json', 'proposal_document__content_markdown')
-    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
-    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
+    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document', 'approval_file').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
+    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document', 'approval_file').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
 
     def entry(node):
-        source = node.document if node.document_id else node.proposal_document
+        source = node.document if node.document_id else node.approval_file if node.approval_file_id else node.proposal_document
         return {'id': node.pk, 'title': node.title, 'version': node.version,
                 'contract_id': node.contract_id if isinstance(node, ContractAmendment) else node.pk,
                 'document_id': node.document_id, 'proposal_document_id': node.proposal_document_id,
+                'approval_file_id': node.approval_file_id,
                 'source_title': source.title, **signature_state(node)}
 
     return {
@@ -208,7 +209,32 @@ def _capture_source(context, *, key, origin, source_id, title, role, raw=b'', fi
     return source
 
 
+def _approval_node_source(context, node, role):
+    from accounts.services.delivery_contract_sources import approval_contract_source
+
+    warnings = []
+    try:
+        captured = approval_contract_source(node)
+    except APIException:
+        return _capture_source(
+            context, key=f'{role}-{node.pk}', origin='approval_file', source_id=node.approval_file_id,
+            title=node.title, role=role, warnings=['No se pudo verificar la copia contractual conservada.'],
+            snapshot={'approval_file_id': node.approval_file_id},
+        )
+    evidence = captured['evidence']
+    if evidence is None:
+        warnings.append('Seleccionar el archivo confirmado no acredita una firma. Registra su evidencia por separado.')
+    return _capture_source(
+        context, key=f'{role}-{node.pk}', origin='approval_file', source_id=node.approval_file_id,
+        title=captured['title'], role=role, raw=captured['raw'], filename=captured['filename'],
+        warnings=warnings, version_kind='approval_packet', date=captured['date'],
+        snapshot=captured['snapshot'], evidence=evidence,
+    )
+
+
 def _node_source(context, node, role, actor):
+    if node.approval_file_id:
+        return _approval_node_source(context, node, role)
     evidence = node.signature_evidence.first()
     doc = node.document if node.document_id else None
     source = doc or node.proposal_document

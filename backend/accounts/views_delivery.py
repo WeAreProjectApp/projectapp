@@ -165,6 +165,18 @@ def delivery_contract_pdf(request, project_id, kind, node_id):
     return _pdf_response(delivery.contract_pdf(project_id, request.user, kind, node_id))
 
 
+@delivery_endpoint(['GET'])
+def contract_source_download(request, project_id, kind, node_id):
+    from accounts.services.delivery_contract_sources import contract_source_file
+
+    raw, filename, content_type = contract_source_file(project_id, request.user, kind, node_id)
+    response = HttpResponse(raw, content_type=content_type)
+    response['Content-Disposition'] = content_disposition_header(True, filename)
+    response['Cache-Control'] = 'private, no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
+    return response
+
+
 @delivery_endpoint(['POST'])
 def delivery_signature(request, project_id, kind, node_id):
     data = {key: request.data.get(key) for key in request.data if key != 'file'}

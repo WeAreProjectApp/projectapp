@@ -63,6 +63,16 @@ de una credencial sigue vigente. Los reinicios autorizados de datos de prueba
 limpian las raíces protegidas antes del proyecto, incluyen los contextos ya
 conservados y mantienen los importes manuales que sobrevivían al reinicio.
 
+# Puente de fuentes contractuales confirmadas (07-10-2026)
+
+Implementación en `feat/07102026-delivery-approval-source-bridge`, desde
+`2c36cb60`: contratos y otrosíes pueden seleccionar explícitamente los archivos
+privados del paquete aprobado, incluidos personalizados, sin inferir firma ni
+habilitar consulta del cliente al crear. El original conserva su formato y las
+capturas verifican hash; la evidencia externa PDF es la fuente contractual canónica.
+Migración reservada `accounts.0079`, sólo mediante deploy. Ver
+`docs/DELIVERY_APPROVAL_SOURCES.md`; QA conjunta y CI verifican la entrega.
+
 # En curso — plantillas contractuales versionadas (05-10-2026)
 
 Implementación en `feat/05102026-contract-template-versions`: tres variantes
