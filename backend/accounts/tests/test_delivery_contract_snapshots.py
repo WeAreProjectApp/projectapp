@@ -190,3 +190,30 @@ def test_missing_signed_copy_does_not_use_live_document_text(context):
         publish(context)
 
     assert not context.stage.publications.exists()
+
+
+def test_corrupt_approved_attachment_cannot_be_recaptured(context):
+    raw = pdf_bytes('The guide document actually approved by the client.')
+    document = Document.objects.create(project=context.project, client_user=context.client,
+                                       title='Approved attachment', generated_file=ContentFile(raw, name='guide.pdf'))
+    delivery.link_document(context.project.pk, context.admin, {
+        'expected_version': version(context), 'level': 'requirement', 'target_id': context.first.pk,
+        'document_id': document.pk,
+    })
+    publish(context)
+    delivery.review_stage(context.project.pk, context.client, context.stage.pk,
+                          decisions(context, (context.first, 'approved'), (context.second, 'objected')))
+    snapshot = DeliveryDocumentSnapshot.objects.get(link__document=document)
+    with snapshot.file.open('wb') as stream:
+        stream.write(pdf_bytes('A tampered approved copy.'))
+    expected_version = version(context)
+    snapshot_root = Path(settings.PRIVATE_MEDIA_ROOT) / 'delivery' / 'snapshots'
+    before = set(snapshot_root.rglob('*.pdf'))
+
+    with pytest.raises(ValidationError, match='huella conservada'):
+        publish(context, request_id='second-round-invalid-evidence')
+
+    assert context.stage.publications.count() == 1
+    assert DeliveryDocumentSnapshot.objects.filter(link__document=document).count() == 1
+    assert version(context) == expected_version
+    assert set(snapshot_root.rglob('*.pdf')) == before

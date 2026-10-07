@@ -37,6 +37,7 @@ def memory_mail(settings):
     settings.MAILERS = {'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}}
     settings.NOTIFICATION_EMAIL = 'team@example.test'
     settings.NOTIFICATION_EMAILS = []
+    settings.FRONTEND_URL = 'https://delivery.example.test'
     mail.outbox = []
 
 
@@ -68,8 +69,10 @@ def test_publication_sends_one_client_snapshot(context, django_capture_on_commit
     assert (event.status, event.audience) == ('sent', 'client')
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [context.client.email]
-    assert snapshot.body == event.text_body
+    assert snapshot.body.text == event.text_body
+    assert snapshot.body.html == event.html_body
     assert snapshot.subject == event.subject
+    assert f'https://delivery.example.test/es-co/platform/projects/{context.project.pk}/delivery?stage={context.stage.pk}' in mail.outbox[0].body
 
 
 def test_publication_replay_preserves_one_notice(context, django_capture_on_commit_callbacks):

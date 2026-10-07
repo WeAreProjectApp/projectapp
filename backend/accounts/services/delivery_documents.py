@@ -297,7 +297,7 @@ def contract_pdf(project_id, actor, kind, node_id):
 
 
 def capture_publication_documents(project, stage, publication):
-    from accounts.services.delivery_contract_sources import signed_source_for_link
+    from accounts.services.delivery_contract_sources import frozen_document_source, signed_source_for_link
 
     scope = stage.phase.scope
     filters = (Q(level='project') | Q(contract_id=scope.contract_id) | Q(scope_id=scope.pk)
@@ -311,9 +311,8 @@ def capture_publication_documents(project, stage, publication):
         # Previously approved guides keep the PDF from the approving round.
         previous = _snapshot_for_link(link) if link.level == 'requirement' and link.requirement.review_status == 'approved' else None
         if previous:
-            with previous.file.open('rb') as source:
-                pdf = source.read()
-            title = previous.title
+            frozen = frozen_document_source(previous)
+            pdf, title = frozen['raw'], frozen['title']
         else:
             signed = signed_source_for_link(link)
             pdf = signed['raw'] if signed else _raw_pdf(link.document)

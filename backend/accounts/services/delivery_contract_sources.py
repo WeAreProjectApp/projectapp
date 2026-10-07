@@ -106,6 +106,12 @@ def signed_source_for_link(link):
     return signed_contract_source(node)
 
 
+def frozen_document_source(snapshot):
+    """Verify the original approved copy rather than recapturing its live source."""
+    raw = _read_exact(snapshot.file, expected_hash=snapshot.sha256, max_bytes=MAX_SIGNED_BYTES)
+    return {'raw': raw, 'title': snapshot.title}
+
+
 def approval_contract_source(node):
     """Prefer the exact signed PDF over the unsigned confirmed package file."""
     source = approval_file_for_project(node.project, node.approval_file_id)
