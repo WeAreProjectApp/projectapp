@@ -822,6 +822,14 @@ PROJECT_COLLABORATION_CONTRACTS = (
 )
 
 DELIVERY_CONTRACTS = (
+    _contract('accounts.DeliveryNotificationEvent',
+        read_only='id project event_type audience recipients subject text_body status version error_code created_at updated_at',
+        excluded=_excluded('Captura privada y propiedad del servidor; no admite CRUD por MCP.',
+                           'actor client operation_key from_email html_body public_context retention_context')),
+    _contract('accounts.DeliveryNotificationAttempt',
+        read_only='id event status error_code claimed_at finished_at created_at',
+        excluded=_excluded('Recibo duradero y ownership internos; sólo se reintenta por el servicio autorizado.',
+                           'request_id preview_sha256 requested_by credential gateway_snapshot')),
     _contract(
         'accounts.DeliveryWorkspace',
         read_only='project version',

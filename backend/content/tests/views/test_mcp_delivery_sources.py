@@ -7,6 +7,8 @@ from accounts.tests.test_delivery_approval_sources import confirmed_file, create
 
 from content.tests.views.test_mcp_delivery import (
     call_projects as call_projects,  # noqa: PLC0414
+)
+from content.tests.views.test_mcp_delivery import (
     draft as draft,  # noqa: PLC0414
 )
 
@@ -30,7 +32,7 @@ def test_mcp_creates_an_unsigned_contract_from_an_approval_file(call_projects, s
 
 
 def test_mcp_downloads_the_exact_original_docx(call_projects, source_context, api_client):
-    body = docx_bytes('The confirmed agreement includes record creation.')
+    body = docx_bytes()
     node = create_source(source_context, confirmed_file(source_context, raw=body, filename='agreement.docx'))
     artifact = call_projects('download_delivery_contract_source', {
         'project_id': source_context.project.pk, 'kind': 'contracts', 'node_id': node.pk})

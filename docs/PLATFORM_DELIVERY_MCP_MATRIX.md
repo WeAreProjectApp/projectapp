@@ -58,7 +58,7 @@ explícita y mantiene su procedencia externa.
 
 ## Autoría con fuentes elegidas y respuesta revisada
 
-El catálogo implementado contiene **52 herramientas de entrega**. Los contextos
+El catálogo implementado contiene **52 herramientas de entrega y la descarga de fuente contractual**. Los contextos
 se crean y se consultan; no tienen CRUD editorial ni permiten sustituir las
 copias retenidas. Crear un contexto exige `expected_version` y `request_id`,
 pero no incrementa la versión del espacio ni publica etapas. Repetir la misma
@@ -223,3 +223,29 @@ y reintentos; el adaptador no implementa otro gateway. Solo un fallo confirmado
 permite reintento. `sending` y `unknown` no se reintentan automáticamente.
 Las respuestas omiten HTML, secretos y rutas privadas. La integración de ese
 servicio y sus migraciones precede a la validación combinada de los avisos.
+
+## Fuente del paquete aprobado y verificación focal
+
+`create_delivery_contract` y `create_delivery_amendment` aceptan
+`data.approval_file_id`, exclusivamente frente a `document_id` o
+`proposal_document_id`. El servicio compartido exige pertenencia al proyecto y
+cliente y coincidencia con el manifest confirmado. El registro empieza privado
+y sin firma. El conector no transforma ese cierre administrativo en aceptación,
+firma o revisión del cliente.
+
+`download_delivery_contract_source` recibe `project_id`, `kind` y `node_id`.
+Conserva el formato original del archivo confirmado; cuando consta evidencia
+firmada, devuelve ese PDF exacto. Usa la autorización y comprobación de hash del
+servicio compartido y produce un artefacto temporal de la credencial.
+
+El reintento de un aviso usa **la versión del evento**, obtenida en su detalle,
+no la versión general del espacio de entrega. La confirmación conserva la huella
+del DTO del aviso y el servicio vuelve a comprobar el manifest bajo bloqueo.
+Un UUID malformado se rechaza antes de consultar o crear una intención.
+
+Verificación local de esta entrega: 18 casos de recursos MCP y 10 regresiones
+REST con migraciones reales de test; cuatro comprobaciones del contrato MCP;
+13 casos de integración de fuente, avisos, archivo y campos con schema de test
+creado por ORM (`--nomigrations`). El gate focal de los tres archivos nuevos
+terminó en 100/100, sin errores ni advertencias. La revisión combinada, MySQL y
+el CI remoto pertenecen al cierre del PR y no se presumen por esos resultados.

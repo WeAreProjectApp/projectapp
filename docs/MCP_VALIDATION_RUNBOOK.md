@@ -1410,3 +1410,22 @@ Comprobar antes del rollout:
 6. Tras el deploy, aplicar el inventario y las verificaciones de
    `docs/runbooks/littigio-project-reassignment.md`; guardar recibos privados
    fuera de Git. Hasta entonces no declarar los datos reparados.
+
+
+## Gestor de la plataforma — incremento 2026-10-07
+
+`projects` conserva su identidad y se presenta como Gestor de la plataforma,
+versión 2.1.0. Consultar la matriz de entrega para recursos, modelo de datos,
+fuentes confirmadas y avisos. Los contratos de campos incluyen recursos y sus
+relaciones, `ProposalApprovalFile` y eventos/intentos de aviso, con archivos,
+HTML, snapshots e idempotencia interna excluidos de escritura conversacional.
+
+Slices de transporte: `test_mcp_platform_resources.py` (18 casos),
+`test_mcp_delivery_sources.py` (4) y `test_mcp_delivery_notifications.py` (7).
+Ejecutarlos separados en un worktree con settings de test; máximo veinte casos
+por lote. El incremento reutiliza los servicios de REST y el gateway de avisos,
+sin datos ni credenciales reales. Las descargas deben comprobar bytes exactos,
+propiedad y ausencia de rutas de almacenamiento en la respuesta. Los avisos
+comprueban versión del evento, manifest, credencial, replay y rechazo de estado
+incierto. La migración de medios históricos privados y el retiro de sus URLs
+públicas se verifican aparte mediante deploy, nunca desde un worktree.
