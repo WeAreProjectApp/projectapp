@@ -21,7 +21,7 @@ describe('Delivery draft authoring', () => {
   beforeEach(() => { global.useI18n = () => ({ t: translate }) })
   afterEach(() => { wrappers.forEach((wrapper) => wrapper.unmount()); wrappers.length = 0; delete global.useI18n })
   const renderForm = (props = {}) => {
-    const wrapper = mount(DeliveryAuthoringForm, { props: { entity: 'contracts', initial: createDraft(), ...props }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
+    const wrapper = mount(DeliveryAuthoringForm, { props: { entity: 'contracts', initial: createDraft({ document_id: 7 }), documents: [{ id: 7, title: 'Existing agreement' }], ...props }, global: { stubs: { NuxtLink: { template: '<a><slot /></a>' } } } })
     wrappers.push(wrapper)
     return wrapper
   }
@@ -29,7 +29,7 @@ describe('Delivery draft authoring', () => {
   it('submits a contract using the contract API fields', async () => {
     const wrapper = renderForm()
     await wrapper.get('form').trigger('submit')
-    expect(wrapper.emitted('submit')[0][0]).toEqual({ key: 'client-guide', title: 'Invoice validation', document_id: null, proposal_document_id: null, client_visible: true })
+    expect(wrapper.emitted('submit')[0][0]).toEqual({ key: 'client-guide', title: 'Invoice validation', document_id: 7, proposal_document_id: null, approval_file_id: null, client_visible: true })
   })
 
   it('links a scope to its original contract', async () => {
