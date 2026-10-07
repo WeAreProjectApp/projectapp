@@ -149,6 +149,6 @@ from .proposal_approval_file import ProposalApprovalFile
 from .proposal_contract_snapshot import (
     ProposalContractSnapshot, ProposalContractSnapshotFile, ProposalContractChangeIntent,
 )
-from .project_retention import ProjectRetentionContext
+from .project_retention import ProjectRetentionContext, ProjectRetentionOperation
 
 from .proposal_project_reassignment import ProposalProjectReassignment

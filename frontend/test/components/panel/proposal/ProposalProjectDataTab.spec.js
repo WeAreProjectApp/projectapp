@@ -44,7 +44,8 @@ function mountTab(props = {}) {
     global: {
       plugins: [pinia],
       stubs: {
-        BaseInput: { props: ['modelValue', 'size', 'type'], template: '<input v-bind="$attrs" :type="type" :value="modelValue" />' },
+        BaseInput: { props: ['modelValue', 'size', 'type'], emits: ['update:modelValue'], template: '<input v-bind="$attrs" :type="type" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
+        BaseCheckbox: { props: ['modelValue'], emits: ['update:modelValue'], template: '<label v-bind="$attrs"><input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" /><slot /></label>' },
         BaseButton: { props: ['disabled'], emits: ['click'], template: '<button role="button" v-bind="$attrs" :disabled="disabled" type="button" @click="$emit(\'click\')"><slot /></button>' },
         BaseSelect: { props: ['modelValue', 'disabled'], emits: ['update:modelValue'], template: '<select v-bind="$attrs" :disabled="disabled" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><slot /></select>' },
         BaseTextarea: { props: ['modelValue', 'disabled'], emits: ['update:modelValue'], template: '<textarea v-bind="$attrs" :disabled="disabled" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />' },
@@ -305,6 +306,34 @@ describe('ProposalProjectDataTab', () => {
     expect(wrapper.get('[data-testid="proposal-linked-project"]').text()).toBe('Plataforma educativa fase 1 — proyecto eliminado');
     expect(wrapper.get('[data-testid="proposal-retained-project-note"]').text()).toContain('proyecto eliminado');
     expect(wrapper.get('[data-testid="proposal-edit-client-autocomplete"]').element.disabled).toBe(true);
+    wrapper.unmount();
+  });
+
+  // Falla si trasladar una fase vencida a un hosting activo no pide una decisión explícita antes de cobrarla.
+  it('asks for a hosting decision and previews again with the chosen start date', async () => {
+    const impact = {
+      source_project: { id: null, name: 'Plataforma educativa fase 1', retained: true }, target_project: { id: 16, name: 'Littigio' },
+      deliverable_ids: [29], phase_ids: [4], approval_file_ids: [], impact_hash: 'c'.repeat(64),
+      blockers: [{ code: 'pending_hosting_start', message: 'El destino tiene hosting activo.' }],
+    };
+    mockGetRequest.mockImplementation(async (url) => (url.includes('project-reassignment')
+      ? { data: impact }
+      : { data: { results: [{ id: 16, name: 'Littigio', status: 'active', client: { profile_id: 61 } }] } }));
+    const wrapper = mountTab({ proposal: { ...linkedProposal, linked_project: { id: null, name: 'Plataforma educativa fase 1', retained: true } } });
+    await flushPromises();
+    await wrapper.get('[data-testid="proposal-reassignment-project"]').setValue('16');
+    await wrapper.get('[data-testid="proposal-reassignment-reason"]').setValue('Unificar Littigio');
+    await wrapper.get('[data-testid="proposal-reassignment-preview"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="proposal-reassignment-impact"]').text()).toContain('Plataforma educativa fase 1 (proyecto eliminado) → Littigio');
+    expect(wrapper.get('[data-testid="proposal-reassignment-hosting"]').text()).toContain('decide cuándo empieza a cobrarse');
+    await wrapper.get('[data-testid="proposal-reassignment-hosting-date"]').setValue('2026-12-01');
+    await wrapper.get('[data-testid="proposal-reassignment-preview"]').trigger('click');
+    await flushPromises();
+    expect(mockGetRequest).toHaveBeenLastCalledWith('proposals/117/project-reassignment/', {
+      params: { target_project_id: 16, hosting_start_date: '2026-12-01' },
+    });
     wrapper.unmount();
   });
 });

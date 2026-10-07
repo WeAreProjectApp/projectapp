@@ -3,6 +3,7 @@ from django.db import transaction
 from django.db.models import Max
 from django.utils import timezone
 
+from accounts.retention import READ_ONLY_MESSAGE
 from content.models import (
     CommunicationAttachment,
     CommunicationMessage,
@@ -19,7 +20,7 @@ class CommunicationError(ValueError):
 
 def _require_operational_thread(thread):
     if thread.retention_context_id:
-        raise CommunicationError('Los datos conservados sin proyecto sólo permiten consulta.')
+        raise CommunicationError(READ_ONLY_MESSAGE)
 
 
 def _validate_thread(thread):

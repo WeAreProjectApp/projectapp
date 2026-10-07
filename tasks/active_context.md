@@ -1,3 +1,15 @@
+# Datos conservados sin proyecto — PR-1, traslado auditado (2026-10-07)
+
+«Asignar registros sin proyecto» acepta los registros conservados del mismo
+cliente (ingresos con sus hijos y cuentas, hostings, documentos e hilos), con una
+`ProjectRetentionOperation` por contexto que guarda antes/después y permite
+deshacer. Nuevas herramientas para deshacer y para eliminar contenedores
+conservados vacíos; la reasignación de propuestas acepta como origen el proyecto
+eliminado y exige decisión de hosting si una fase vencida entraría a un hosting
+activo. Migración `content.0284` (sólo esquema). Corrección de Littigio en
+`docs/runbooks/littigio-retained-data-recovery.md`, a ejecutar con la cadena del
+orquestador tras el deploy. Pendiente: opción de trasladar al eliminar (PR-2).
+
 # Datos conservados sin proyecto — PR-0 (2026-10-07)
 
 Caso Littigio: la eliminación forzada de dos proyectos dejó ingresos, documentos,

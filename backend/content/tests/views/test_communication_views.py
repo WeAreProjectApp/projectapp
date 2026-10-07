@@ -6,6 +6,7 @@ from django.core.management import call_command
 from django.urls import reverse
 
 from accounts.models import Project, UserProfile
+from accounts.retention import READ_ONLY_MESSAGE
 from accounts.services import proposal_client_service
 from content.models import (
     CommunicationMessage,
@@ -267,7 +268,7 @@ def test_retained_thread_rejects_draft_edit(admin_client, admin_user, communicat
 
     message = CommunicationMessage.objects.get(pk=created.data['id'])
     assert response.status_code == 400
-    assert response.data['detail'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
+    assert response.data['detail'] == READ_ONLY_MESSAGE
     assert message.content == 'Texto de seguimiento'
     assert not CommunicationMessageRevision.objects.filter(message=message).exists()
 
@@ -292,7 +293,7 @@ def test_retained_thread_rejects_draft_deletion(admin_client, admin_user, commun
     )
 
     assert response.status_code == 400
-    assert response.data['detail'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
+    assert response.data['detail'] == READ_ONLY_MESSAGE
     assert CommunicationMessage.objects.filter(pk=created.data['id']).exists()
     assert not CommunicationMessageRevision.objects.filter(message_id=created.data['id']).exists()
 
