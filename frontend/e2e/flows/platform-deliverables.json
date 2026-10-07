@@ -7,11 +7,12 @@
     "platform-client"
   ],
   "priority": "P2",
-  "description": "Admin uploads deliverables (designs, documents, APKs, credentials) with version history. Client downloads files. Per-project view at /platform/projects/:id/deliverables and unified cross-project view at /platform/deliverables.",
+  "description": "Admin uploads project resources with version history. The library preserves designs, documents, credentials, APKs and other resources and displays contracts, amendments and legal annexes in their own groups. Client downloads the exact current or previous file through the authenticated Platform API. A denied or interrupted download shows its explanation without closing the detail or creating a browser artifact; pending downloads disable duplicate requests. Per-project view at /platform/projects/:id/deliverables and unified cross-project view at /platform/deliverables.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",
     "error",
-    "display"
+    "display",
+    "failure"
   ]
 }

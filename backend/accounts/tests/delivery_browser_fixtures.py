@@ -13,6 +13,7 @@ from content.models import (
 )
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from django.core.files.uploadedfile import SimpleUploadedFile
 from django.utils import timezone
 from rest_framework.test import APIClient
 
@@ -27,6 +28,7 @@ from accounts.models import (
     UserProfile,
 )
 from accounts.models_delivery_notifications import DeliveryNotificationEvent
+from accounts.services.tokens import get_tokens_for_user
 from accounts.tests.delivery_authoring_helpers import docx_bytes, pdf_bytes
 
 
@@ -83,6 +85,58 @@ def confirmed_browser_source(project, admin, client, mode):
         'size': len(raw), 'sha256': source.sha256, 'content_type': content_type,
         'original_base64': base64.b64encode(raw).decode('ascii'),
     }
+
+
+def private_browser_resources(project, admin, *, suffix):
+    """Upload real categorized resources and an older version through JWT APIs."""
+    api = APIClient()
+    api.credentials(HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(admin)["access"]}')
+    base = f'/api/accounts/projects/{project.pk}/deliverables/'
+    resources = []
+    for category, title in (
+        ('contract', 'Contrato privado de prueba'),
+        ('amendment', 'Otrosí privado de prueba'),
+        ('legal_annex', 'Anexo legal privado de prueba'),
+    ):
+        original = pdf_bytes(f'Original private {category} version 1.')
+        original_name = f'{category}-{suffix}-v1.pdf'
+        created = api.post(base, {
+            'title': title, 'category': category,
+            'description': f'Recurso privado de la categoría {category}.',
+            'file': SimpleUploadedFile(original_name, original, content_type='application/pdf'),
+        }, format='multipart')
+        if created.status_code != 201:
+            raise RuntimeError(f'Private resource fixture failed: {created.data}')
+        resource_id = created.data['id']
+        current = original
+        if category == 'contract':
+            current = pdf_bytes('Original private contract version 2 with revised terms.')
+            revised = api.post(base + f'{resource_id}/upload-version/', {
+                'file': SimpleUploadedFile(
+                    f'{category}-{suffix}-v2.pdf', current, content_type='application/pdf',
+                ),
+            }, format='multipart')
+            if revised.status_code != 201:
+                raise RuntimeError(f'Private version fixture failed: {revised.data}')
+        detail = api.get(base + f'{resource_id}/')
+        if detail.status_code != 200:
+            raise RuntimeError(f'Private resource detail failed: {detail.data}')
+        first = next(row for row in detail.data['versions'] if row['version_number'] == 1)
+        resources.append({
+            **dict(detail.data),
+            'expected_current': {
+                'file_name': detail.data['file_name'], 'file_url': detail.data['file_url'],
+                'sha256': hashlib.sha256(current).hexdigest(),
+                'original_base64': base64.b64encode(current).decode('ascii'),
+            },
+            'expected_previous': {
+                'id': first['id'], 'version_number': 1,
+                'file_name': first['file_name'], 'file_url': first['file_url'],
+                'sha256': hashlib.sha256(original).hexdigest(),
+                'original_base64': base64.b64encode(original).decode('ascii'),
+            },
+        })
+    return resources
 
 
 def create_browser_fixture(key, *, mode=None):
@@ -216,6 +270,17 @@ def create_browser_fixture(key, *, mode=None):
     }
     if approval_source is not None:
         result['approval_source'] = approval_source
+    if mode == 'private-resources':
+        result['resources'] = private_browser_resources(project, admin, suffix=suffix)
+        foreign = User.objects.create_user(
+            username=f'foreign-{suffix}@example.com', email=f'foreign-{suffix}@example.com',
+            password=password, first_name='Otro cliente', last_name='Recursos',
+        )
+        UserProfile.objects.update_or_create(user=foreign, defaults={
+            'role': UserProfile.ROLE_CLIENT, 'created_by': admin, 'is_onboarded': True,
+            'profile_completed': True, 'email_verified': True,
+        })
+        result['foreign_client'] = {'email': foreign.email, 'password': password}
     if mode in {'notice-failed', 'notice-smtp-failure'}:
         event = DeliveryNotificationEvent.objects.get(project=project)
         if event.status != 'failed' or event.attempts.count() != 1:

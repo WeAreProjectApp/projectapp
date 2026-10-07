@@ -1,6 +1,15 @@
 > **Límite REST/MCP de recursos — 2026-10-07:** preservado el rol administrativo de Platform frente a los flags Django staff/superuser. Las lecturas, escrituras y descargas del servicio compartido filtran por propietario cuando no existe ese rol; MCP admite su principal técnico únicamente con contexto, actor y credencial coincidentes. Verificados doce rechazos de cliente staff, positivos de admin/cliente y principal MCP sin perfil simulado; gate focal 100 y schema sin drift.
 
-> **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id` y los avisos se integran con los contratos de sus sesiones propietarias. La privacidad de URLs históricas requiere una ronda y deploy separado; no está acreditada por esta entrega.
+> **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id`, los avisos duraderos y el almacenamiento privado se integraron en el worktree del conductor. El bloqueo HTTP del legado se probó con Nginx aislado y archivos ficticios; la conversión y el deploy real siguen el runbook, sin escrituras en la base desplegada.
+
+> **Cierre conjunto p0x/p1xx/p2xx/p3xx — en curso:** integridad contractual,
+> fases comerciales, ascendencia y recursos privados aplicados. La tercera
+> ronda cierra autoridad JWT por perfil y confirmación de efectos públicos del
+> MCP. La QA final se ejecutará sobre un SHA limpio; sus pruebas de trabajo no
+> certifican aún la combinación. Historial masivo: la medición de 10.000 rondas
+> requiere cambiar su lectura completa; no se declara resuelto ni se alteran
+> presupuestos. IMAP no autenticó y el Gestor Documental no estuvo disponible;
+> el formato Vástago se contrastó únicamente con referencias locales.
 
 # Datos conservados sin proyecto — PR-1, traslado auditado (2026-10-07)
 

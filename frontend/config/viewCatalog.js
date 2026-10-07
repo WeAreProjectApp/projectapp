@@ -1150,7 +1150,7 @@ export const viewCatalogSections = [
         group: 'Proyectos',
         file: 'frontend/pages/platform/projects/[id]/deliverables/index.vue',
         reference: 'vista de entregables de proyecto',
-        notes: 'La biblioteca permite consultar y descargar las copias privadas del paquete de aprobación confirmado, separadas de los adjuntos editables y sin inferir firmas o aprobaciones de entrega.',
+        notes: 'La biblioteca permite consultar y descargar las copias privadas del paquete de aprobación confirmado, separadas de los adjuntos editables y sin inferir firmas o aprobaciones de entrega. También muestra contratos, otrosíes y anexos legales; las descargas del archivo actual y sus versiones se autentican, impiden solicitudes duplicadas y conservan el detalle abierto al mostrar un error de permiso o conexión.',
         audience: 'client',
         viewType: 'list',
       },

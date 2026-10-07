@@ -1,3 +1,13 @@
+> **Operación de entregas — 2026-10-07:** los archivos confirmados al revisar
+> una propuesta pueden sustentar contratos y otrosí sin inferir firma ni
+> aceptación. El Gestor de la plataforma mantiene `projects` y administra la
+> jerarquía, recursos, modelo de datos e historia de avisos. Publicar, observar
+> y responder públicamente genera avisos internos y correo duradero; las
+> conformidades sin observaciones conservan el recibo del portal. La skill
+> `platform-delivery-authoring` crea borradores basados en fuentes seleccionadas
+> y código, sin publicar ni aprobar como cliente. Los archivos del proyecto
+> se consultan mediante rutas autorizadas, incluyendo datos conservados.
+
 > **Cuenta de cobro antes del pago — 2026-10-06:** los ingresos esperados con
 > cliente requieren una cuenta emitida para liquidar o abonar; el envío por correo
 > no es requisito. El contrato puede registrarse explícitamente desde el cobro.

@@ -4,6 +4,7 @@ This module is never imported by runtime settings or URLs. Storage and database
 isolation are checked before fixtures are written. No deployed .env is loaded.
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -56,9 +57,10 @@ def main():
         storage_refusals,
     )
 
-    from accounts.models import ProjectContract
+    from accounts.models import Deliverable, ProjectContract
     from accounts.models_delivery_email import DeliveryEvidenceEmail
     from accounts.models_delivery_notifications import DeliveryNotificationEvent
+    from accounts.platform_media_storage import resource_storage_kind
     from accounts.services.delivery_workflow import signature_state
     from accounts.tests.delivery_browser_fixtures import create_browser_fixture
 
@@ -96,6 +98,16 @@ def main():
             def request_data(environ):
                 size = int(environ.get('CONTENT_LENGTH') or 0)
                 return json.loads(environ['wsgi.input'].read(min(size, 4096)) or '{}')
+
+            def resource_file_probe(row):
+                with row.file.open('rb') as stream:
+                    raw = stream.read()
+                return {
+                    'file_name': row.file_name, 'size': len(raw),
+                    'sha256': hashlib.sha256(raw).hexdigest(),
+                    'storage_kind': resource_storage_kind(row.file.name),
+                    'public_copy_exists': (Path(settings.MEDIA_ROOT) / row.file.name).exists(),
+                }
 
             def evidence_probe(key):
                 fixture = fixtures.get(key)
@@ -148,11 +160,24 @@ def main():
                 } for contract in ProjectContract.objects.filter(
                     project_id=fixture['project']['id'],
                 )]
+                resource_ids = [row['id'] for row in fixture.get('resources', [])]
+                resource_files = [{
+                    'id': resource.pk, 'title': resource.title, 'category': resource.category,
+                    'current_version': resource.current_version,
+                    'current': resource_file_probe(resource),
+                    'versions': [{
+                        'id': version.pk, 'version_number': version.version_number,
+                        **resource_file_probe(version),
+                    } for version in resource.versions.all()],
+                } for resource in Deliverable.objects.filter(
+                    project_id=fixture['project']['id'], pk__in=resource_ids,
+                ).prefetch_related('versions')]
                 return JsonResponse({
                     # Preserve closure-only semantics for all existing specs.
                     'outbox_count': len(outbox), 'emails': emails,
                     'notice_outbox_count': len(notice_outbox), 'notices': notices,
                     'contracts': contracts,
+                    'resource_files': resource_files,
                 })
 
             def test_application(environ, start_response):
@@ -163,6 +188,7 @@ def main():
                     payload = request_data(environ)
                     key = payload.get('key', 'fixture')
                     if key not in fixtures:
+                        assert_memory_mailers()
                         fixtures[key] = create_browser_fixture(key, mode=payload.get('mode'))
                         if payload.get('mode') == 'closure-smtp-failure':
                             smtp_failures.add(fixtures[key]['project']['id'])

@@ -338,7 +338,7 @@ const platformCapabilities = [
         { icon: 'file', actors: ['client'], stage: 'Entrega' }),
       feature('platform-deliverable-library', 'Consultar entregables',
         'Permite revisar la biblioteca del proyecto y abrir el detalle de cada entrega. Muestra el paquete documental confirmado al aprobar la propuesta, con descargas autenticadas de copias privadas, separado de los adjuntos editables.',
-        'Ofrece un punto estable para encontrar y validar los recursos recibidos.',
+        'Ofrece un punto estable para encontrar y validar los recursos recibidos, incluidos contratos, otrosíes y anexos legales. Las descargas autenticadas conservan el archivo actual o la versión elegida y explican los fallos sin cerrar su detalle.',
         ['/platform/projects/:id/deliverables', '/platform/projects/:id/deliverables/:deliverableId', '/platform/deliverables'],
         { icon: 'file', actors: ['client', 'team'], stage: 'Entrega' }),
     ],
