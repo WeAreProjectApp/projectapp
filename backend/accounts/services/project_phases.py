@@ -40,7 +40,8 @@ def _validate_proposal_link(project, proposal, *, approval_request_id=None):
     if retained_name is not None:
         raise _proposal_error(
             f'La propuesta conserva recursos del proyecto eliminado «{retained_name}». '
-            'Esos datos quedan en consulta y no se incorporan como fase de otro proyecto.',
+            'Trasládala primero mediante la reasignación revisada de proyecto, '
+            'que conserva su fase, entregables y documentos.',
             'retained_proposal',
         )
     coherent = (proposal.client_id and proposal.client.user_id == project.client_id
