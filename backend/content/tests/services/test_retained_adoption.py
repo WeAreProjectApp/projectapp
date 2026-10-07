@@ -13,7 +13,7 @@ from content.models import (
 )
 from content.services.project_document_folder_service import require_project_folder
 from content.services.proposal_project_reassignment import preview_reassignment, reassign_proposal
-from content.services.retained_adoption import RetentionConflict, preview_undo, undo_adoption
+from content.services.retained_adoption import RetentionConflict, adopt_for_assignment, preview_undo, undo_adoption
 from content.services.retained_containers import discard_empty_containers, preview_discard
 from content.tests.views.test_panel_projects_assign_unlinked import apply_url, make_income, preview_url
 
@@ -242,6 +242,154 @@ def test_cleanup_endpoint_rejects_a_stale_preview(admin_client, littigio):
     assert CommunicationThread.objects.filter(pk=littigio['thread'].pk).exists()
 
 
+def cleanup_url(context_id):
+    return f'/api/projects/retained-contexts/{context_id}/cleanup/'
+
+
+def _empty_retained_folder(admin_client, littigio):
+    """Adopt the only retained document so its retained folder is left empty."""
+    admin_client.post(apply_url(littigio['target'].pk), {'document_ids': [littigio['document'].pk]}, format='json')
+    return littigio['folder']
+
+
+def test_cleanup_endpoint_previews_the_folders_named_in_the_url_and_deletes_them(admin_client, littigio):
+    """Fails if the panel preview ignores the containers chosen in the URL or the apply deletes another set."""
+    folder = _empty_retained_folder(admin_client, littigio)
+    url = cleanup_url(littigio['context'].pk)
+    preview = admin_client.get(url, {'document_folders': str(folder.pk)})
+
+    response = admin_client.post(url, {
+        'reason': 'Limpieza Littigio', 'request_id': 'panel-cleanup',
+        'expected_impact_hash': preview.data['impact_hash'], 'selection': {'document_folders': [folder.pk]},
+    }, format='json')
+
+    assert preview['Cache-Control'] == 'no-store'
+    assert [(row['kind'], row['id']) for row in preview.data['containers']] == [('document_folders', folder.pk)]
+    assert (response.status_code, response.data['deleted']) == (200, 1)
+    assert not DocumentFolder.objects.filter(pk=folder.pk).exists()
+    assert CommunicationThread.objects.filter(pk=littigio['thread'].pk).exists()
+
+
+def test_cleanup_endpoint_rejects_malformed_ids_and_unknown_container_types(admin_client, littigio):
+    """Fails if a cleanup with non-numeric ids or a container type it does not handle reaches the service."""
+    url = cleanup_url(littigio['context'].pk)
+
+    malformed = admin_client.get(url, {'document_folders': 'carpeta'})
+    unknown = admin_client.post(url, {
+        'reason': 'Limpieza', 'request_id': 'panel-cleanup-unknown', 'expected_impact_hash': '0' * 64,
+        'selection': {'projects': [littigio['target'].pk]},
+    }, format='json')
+
+    assert (malformed.status_code, unknown.status_code) == (400, 400)
+    assert 'document_folders' in malformed.data
+    assert 'Tipos no válidos: projects.' in str(unknown.data['selection'])
+    assert DocumentFolder.objects.filter(pk=littigio['folder'].pk).exists()
+
+
+def test_cleanup_without_a_selection_weighs_every_retained_container(admin_client, littigio):
+    """Fails if an apply without a selection skips a retained folder that still holds a document."""
+    impact = preview_discard(littigio['context'].pk)
+
+    response = admin_client.post(cleanup_url(littigio['context'].pk), {
+        'reason': 'Limpieza', 'request_id': 'panel-cleanup-all', 'expected_impact_hash': impact['impact_hash'],
+    }, format='json')
+
+    assert response.status_code == 409
+    assert str(response.data['code']) == 'discard_blocked'
+    assert DocumentFolder.objects.filter(pk=littigio['folder'].pk).exists()
+
+
+def test_cleanup_replay_is_idempotent_and_a_reused_request_id_is_refused(admin_client, admin_user, littigio):
+    """Fails if a retried cleanup deletes twice, or another cleanup can reuse its request_id."""
+    folder = _empty_retained_folder(admin_client, littigio)
+    selection = {'document_folders': [folder.pk]}
+    impact = preview_discard(littigio['context'].pk, selection)
+    arguments = {'actor': admin_user, 'request_id': 'cleanup-once', 'expected_impact_hash': impact['impact_hash'],
+                 'selection': selection}
+    first = discard_empty_containers(littigio['context'].pk, reason='Limpieza', **arguments)
+
+    again = discard_empty_containers(littigio['context'].pk, reason='Limpieza', **arguments)
+
+    assert again == {'operation_id': first['operation_id'], 'deleted': 1, 'idempotent': True}
+    with pytest.raises(RetentionConflict):
+        discard_empty_containers(littigio['context'].pk, reason='Otra limpieza', **arguments)
+    assert ProjectRetentionOperation.objects.filter(operation='discard').count() == 1
+
+
+def test_cleanup_preview_flags_containers_of_another_context(admin_user, littigio):
+    """Fails if a selection naming another deleted project's container is not reported as foreign."""
+    other_context = ProjectRetentionContext.objects.create(
+        client=littigio['profile'].user, original_project_id=9016, project_name='Otro eliminado', created_by=admin_user,
+    )
+    foreign = DocumentFolder.objects.create(name='Otro eliminado', client_user=littigio['profile'].user,
+                                            retention_context=other_context)
+
+    impact = preview_discard(littigio['context'].pk, {'document_folders': [foreign.pk]})
+
+    assert impact['containers'] == []
+    assert [blocker['code'] for blocker in impact['blockers']] == ['nothing_to_discard', 'not_in_context']
+    assert impact['blockers'][1]['records'] == [{'kind': 'document_folders', 'id': foreign.pk}]
+
+
+def test_undo_preview_refuses_a_container_discard(admin_client, admin_user, littigio):
+    """Fails if a discard of empty containers can be undone as if it were a move."""
+    folder = _empty_retained_folder(admin_client, littigio)
+    selection = {'document_folders': [folder.pk]}
+    discard = discard_empty_containers(
+        littigio['context'].pk, actor=admin_user, reason='Limpieza', request_id='cleanup-final',
+        expected_impact_hash=preview_discard(littigio['context'].pk, selection)['impact_hash'], selection=selection,
+    )
+
+    impact = preview_undo(discard['operation_id'])
+
+    assert 'not_undoable' in [blocker['code'] for blocker in impact['blockers']]
+
+
+def test_undo_refuses_a_stale_impact_a_second_undo_and_a_borrowed_request_id(admin_client, admin_user, littigio):
+    """Fails if a move can be undone against an old preview, twice, or under another undo's request_id."""
+    admin_client.post(apply_url(littigio['target'].pk), {'income_ids': [littigio['expected'].pk]}, format='json')
+    adoption = ProjectRetentionOperation.objects.get()
+    with pytest.raises(RetentionConflict):
+        undo_adoption(adoption.pk, actor=admin_user, reason='Prueba', request_id='undo-stale',
+                      expected_impact_hash='0' * 64)
+    undo_adoption(adoption.pk, actor=admin_user, reason='Prueba', request_id='undo-first',
+                  expected_impact_hash=preview_undo(adoption.pk)['impact_hash'])
+
+    impact = preview_undo(adoption.pk)
+
+    assert 'already_reverted' in [blocker['code'] for blocker in impact['blockers']]
+    with pytest.raises(RetentionConflict):
+        undo_adoption(adoption.pk + 1000, actor=admin_user, reason='Prueba', request_id='undo-first',
+                      expected_impact_hash=impact['impact_hash'])
+
+
+def test_adoption_refuses_retained_rows_of_another_client(admin_user, make_client_profile, littigio):
+    """Fails if one client's retained income can be released into another client's project."""
+    other = make_client_profile(company='Otro cliente')
+    other_context = ProjectRetentionContext.objects.create(
+        client=other.user, original_project_id=9099, project_name='Ajeno', created_by=admin_user,
+    )
+    foreign = make_income(other, concept='Cuota ajena', retention_context=other_context)
+
+    with pytest.raises(RetentionConflict):
+        adopt_for_assignment(littigio['target'], actor=admin_user, income_ids=[foreign.pk])
+
+    foreign.refresh_from_db()
+    assert (foreign.project_id, foreign.retention_context_id) == (None, other_context.pk)
+
+
+def test_audit_lists_the_moves_that_already_touched_a_context(admin_client, littigio):
+    """Fails if the retention audit hides that part of a deleted project already moved to a live one."""
+    admin_client.post(apply_url(littigio['target'].pk), {'income_ids': [littigio['expected'].pk]}, format='json')
+    adoption = ProjectRetentionOperation.objects.get()
+
+    response = admin_client.get('/api/projects/retained-data/audit/', {'client_profile_id': littigio['profile'].pk})
+
+    [row] = response.data['results'][0]['operations']
+    assert (row['id'], row['operation'], row['records'], row['reverted_by']) == (adoption.pk, 'adopt', 2, None)
+    assert str(adoption) == 'Traslado a un proyecto vigente · Littigio anterior'
+
+
 @pytest.fixture
 def retained_phase_one(admin_user, make_client_profile, proposal):
     profile = make_client_profile(company='Littigio')
@@ -341,16 +489,25 @@ def test_a_postponed_hosting_start_is_written_on_the_moved_phase(admin_user, ret
     assert (case['phase'].project_id, case['phase'].hosting_start_date) == (case['target'].pk, start)
 
 
-@pytest.fixture
-def projects_token():
-    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects'})
+def _token(slug):
+    connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug.title()})
     connector.is_active = True
     connector.save(update_fields=['is_active'])
     return connector.generate_token()
 
 
-def _call(api_client, token, name, arguments):
-    response = api_client.post(f'/api/mcp/projects/{token}/', {
+@pytest.fixture
+def projects_token():
+    return _token('projects')
+
+
+@pytest.fixture
+def proposals_token():
+    return _token('proposals')
+
+
+def _call(api_client, token, name, arguments, connector='projects'):
+    response = api_client.post(f'/api/mcp/{connector}/{token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': name, 'arguments': arguments},
     }, format='json')
     return json.loads(response.data['result']['content'][0]['text'])
@@ -374,3 +531,51 @@ def test_mcp_undo_needs_the_preview_backed_confirmation(api_client, admin_client
 
     littigio['expected'].refresh_from_db()
     assert (littigio['expected'].project_id, littigio['expected'].retention_context_id) == (None, littigio['context'].pk)
+
+
+def test_mcp_cleanup_deletes_only_after_a_preview_backed_confirmation(api_client, admin_client, projects_token, littigio):
+    """Fails if MCP deletes retained containers against a stale impact, without confirmation, or not at all."""
+    folder = _empty_retained_folder(admin_client, littigio)
+    request = {'context_id': littigio['context'].pk, 'reason': 'Limpieza MCP',
+               'selection': {'document_folders': [folder.pk]}}
+    preview = _call(api_client, projects_token, 'preview_retained_container_cleanup', {
+        'context_id': littigio['context'].pk, 'query': {'document_folders': str(folder.pk)},
+    })
+
+    stale = _call(api_client, projects_token, 'delete_empty_retained_containers', {
+        **request, 'request_id': 'mcp-cleanup-stale', 'expected_impact_hash': '0' * 64,
+    })
+    pending = _call(api_client, projects_token, 'delete_empty_retained_containers', {
+        **request, 'request_id': 'mcp-cleanup', 'expected_impact_hash': preview['impact_hash'],
+    })
+    assert stale['error']['code'] == 'STALE_VERSION'
+    assert pending['confirmation_required'] is True
+    assert DocumentFolder.objects.filter(pk=folder.pk).exists()
+
+    _call(api_client, projects_token, 'confirm_action', {'confirmation_id': pending['confirmation_id']})
+
+    assert not DocumentFolder.objects.filter(pk=folder.pk).exists()
+
+
+def test_mcp_reassignment_carries_the_hosting_decision_into_its_impact(api_client, proposals_token, retained_phase_one):
+    """Fails if MCP drops the hosting decision and asks to confirm a move its preview would still block."""
+    case = retained_phase_one
+    _active_subscription(case['target'])
+    ProjectPhase.objects.filter(pk=case['phase'].pk).update(hosting_start_date=date.today() - timedelta(days=3))
+    start = date.today() + timedelta(days=30)
+    move = {'proposal_id': case['proposal'].pk, 'target_project_id': case['target'].pk, 'reason': 'Unificar Littigio'}
+
+    later = _call(api_client, proposals_token, 'reassign_proposal_project', {
+        **move, 'request_id': 'mcp-move-later', 'hosting_start_date': start.isoformat(),
+        'expected_impact_hash': preview_reassignment(
+            case['proposal'].pk, case['target'].pk, hosting_start_date=start)['impact_hash'],
+    }, connector='proposals')
+    now = _call(api_client, proposals_token, 'reassign_proposal_project', {
+        **move, 'request_id': 'mcp-move-now', 'accept_hosting_start': True,
+        'expected_impact_hash': preview_reassignment(
+            case['proposal'].pk, case['target'].pk, accept_hosting_start=True)['impact_hash'],
+    }, connector='proposals')
+
+    assert (later['confirmation_required'], now['confirmation_required']) == (True, True)
+    case['phase'].refresh_from_db()
+    assert case['phase'].project_id is None
