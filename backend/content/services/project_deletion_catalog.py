@@ -39,6 +39,8 @@ accounts.deliverablefile|Archivos adjuntos de entregables|Deliverable attachment
 accounts.deliverableclientfolder|Carpetas de archivos del cliente|Client upload folders
 accounts.deliverableclientupload|Archivos aportados por el cliente|Client uploads
 accounts.notification|Notificaciones|Notifications
+accounts.deliverynotificationevent|Avisos de seguimiento de entregas|Delivery activity notices
+accounts.deliverynotificationattempt|Intentos de avisos de entregas|Delivery notice attempts
 accounts.hostingsubscription|Suscripciones de hosting|Hosting subscriptions
 accounts.payment|Pagos de hosting|Hosting payments
 accounts.paymenthistory|Historial de pagos|Payment history

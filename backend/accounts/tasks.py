@@ -20,6 +20,18 @@ RETRY_INTERVAL_DAYS = 2
 
 
 @task()
+def send_delivery_notification_task(attempt_id):
+    from accounts.services.delivery_notifications import send_attempt
+    return send_attempt(attempt_id)
+
+
+@periodic_task(crontab(minute='*/5'))
+def dispatch_delivery_notifications_task():
+    from accounts.services.delivery_notifications import dispatch_pending
+    dispatch_pending()
+
+
+@task()
 def send_payment_status_team_email_task(payment_id, to_status, source=''):
     """Async wrapper: email the team a payment outcome (approved/failed)."""
     from accounts.services.payment_notifications import send_payment_status_team_email

@@ -1,4 +1,11 @@
 export default {
+  notices: {
+    title: 'Delivery notices', hint: 'Check notice delivery. Review the exact copy before retrying.',
+    empty: 'No notices recorded.', error: 'The notice could not be loaded or retried.',
+    preview: 'Review retry', confirm: 'Confirm retry', previous: 'Previous', next: 'Next',
+    uncertain: 'The team must review the delivery outcome. It is not resent automatically.',
+    status: { pending: 'Pending', sending: 'Sending', sent: 'Sent', failed: 'Failed', unknown: 'Unknown outcome', cancelled: 'Cancelled' },
+  },
   reopenRound: 'Open another review round', awaitingRound: 'The team will open another review round when this requirement is ready to test again.',
   navigation: 'Deliveries', title: 'Scope and deliveries', subtitle: 'See what was agreed, test each requirement and record your results.',
   project: 'Project', contract: 'Original contract', amendment: 'Amendment', scope: 'Scope', phase: 'Delivery phase', stage: 'Stage', requirement: 'Requirement',

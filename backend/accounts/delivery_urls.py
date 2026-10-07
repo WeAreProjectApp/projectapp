@@ -1,8 +1,13 @@
 from django.urls import path
 
 from accounts import views_delivery as views
+from accounts import views_delivery_notifications as notices
 
 urlpatterns = [
+    path('notices/', notices.delivery_notice_list, name='delivery-notice-list'),
+    path('notices/<uuid:event_id>/', notices.delivery_notice_detail, name='delivery-notice-detail'),
+    path('notices/<uuid:event_id>/retry-preview/', notices.delivery_notice_retry_preview, name='delivery-notice-retry-preview'),
+    path('notices/<uuid:event_id>/retry/', notices.delivery_notice_retry, name='delivery-notice-retry'),
     path('', views.delivery_overview, name='delivery-overview'),
     path('prompt/', views.delivery_prompt, name='delivery-prompt'),
     path('prompt/options/', views.delivery_prompt_options, name='delivery-prompt-options'),

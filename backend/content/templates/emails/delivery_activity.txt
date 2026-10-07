@@ -1,0 +1,12 @@
+{{ title }}
+Proyecto: {{ project_name }}
+{% if stage_title %}Etapa: {{ stage_title }}{% endif %}
+
+{{ message }}
+{% for item in decisions %}
+{{ item.title }} — {{ item.result }}
+{{ item.message }}
+{% endfor %}
+Consultar seguimiento: {{ url }}
+
+Este aviso comunica actividad. La conformidad corresponde a los resultados registrados por el cliente en la plataforma.

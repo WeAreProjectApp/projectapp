@@ -1,0 +1,8 @@
+<!doctype html><html lang="es"><body>
+<h1>{{ title }}</h1><p>Proyecto: {{ project_name }}</p>
+{% if stage_title %}<p>Etapa: {{ stage_title }}</p>{% endif %}
+<p>{{ message|linebreaksbr }}</p>
+{% for item in decisions %}<h2>{{ item.title }} — {{ item.result }}</h2><p>{{ item.message|linebreaksbr }}</p>{% endfor %}
+<p><a href="{{ url }}">Consultar seguimiento</a></p>
+<p>Este aviso comunica actividad. La conformidad corresponde a los resultados registrados por el cliente en la plataforma.</p>
+</body></html>
