@@ -19,6 +19,7 @@ from projectapp.recaptcha import CaptchaError, verify_captcha
 
 from accounts.models import UserProfile
 from accounts.permissions import IsAdminRole
+from accounts.services._platform_authority import platform_role_boundary
 from accounts.serializers import (
     AdminListSerializer,
     ClientListSerializer,
@@ -1200,6 +1201,7 @@ def _get_project_or_403(request, project_id, *, related_fields=()):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def requirement_list_view(request, project_id):
     """Read requirements visible in the contractual delivery hierarchy."""
     from accounts.services.delivery_workflow import visible_requirements
@@ -1284,6 +1286,7 @@ def _change_request_list_queryset(qs, actor=None):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_all_view(request):
     """
     GET — All change requests across all projects the user has access to.
@@ -1316,6 +1319,7 @@ def change_request_all_view(request):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_list_view(request, project_id):
     """
     GET  — All change requests for a project (both roles, filtered by status optionally).
@@ -1346,6 +1350,7 @@ def change_request_list_view(request, project_id):
 
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_detail_view(request, project_id, cr_id):
     """
     GET    — Detail with comments (both roles).
@@ -1402,6 +1407,7 @@ def change_request_detail_view(request, project_id, cr_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_evaluate_view(request, project_id, cr_id):
     from accounts.views_issue_reports import evaluate_handler
 
@@ -1438,6 +1444,7 @@ def _bulk_evaluation_ids(items, model):
 @transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_bulk_evaluate_view(request, project_id):
     from accounts.views_issue_reports import bulk_handler
 
@@ -1449,6 +1456,7 @@ def change_request_bulk_evaluate_view(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_comment_view(request, project_id, cr_id):
     from accounts.views_issue_reports import comment_handler
 
@@ -1460,6 +1468,7 @@ def change_request_comment_view(request, project_id, cr_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
+@platform_role_boundary
 def change_request_convert_view(request, project_id, cr_id):
     from accounts.views_issue_reports import convert_handler
 
@@ -1509,6 +1518,7 @@ def _bug_report_list_queryset(qs, actor=None):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_all_view(request):
     """
     GET — All bug reports across all projects the user has access to.
@@ -1544,6 +1554,7 @@ def bug_report_all_view(request):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_list_view(request, project_id):
     """
     GET  — All bug reports for a project (both roles, filtered optionally).
@@ -1577,6 +1588,7 @@ def bug_report_list_view(request, project_id):
 
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_detail_view(request, project_id, bug_id):
     """
     GET    — Detail with comments (both roles).
@@ -1634,6 +1646,7 @@ def bug_report_detail_view(request, project_id, bug_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_evaluate_view(request, project_id, bug_id):
     from accounts.views_issue_reports import evaluate_handler
 
@@ -1646,6 +1659,7 @@ def bug_report_evaluate_view(request, project_id, bug_id):
 @transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_bulk_evaluate_view(request, project_id):
     from accounts.views_issue_reports import bulk_handler
 
@@ -1657,6 +1671,7 @@ def bug_report_bulk_evaluate_view(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_comment_view(request, project_id, bug_id):
     from accounts.views_issue_reports import comment_handler
 
