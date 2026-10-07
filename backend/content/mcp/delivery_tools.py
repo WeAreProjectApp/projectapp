@@ -24,6 +24,7 @@ from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
+from content.mcp.public_delivery_confirmation import DELIVERY_PUBLIC_TOOLS, configure_public_tool
 
 
 ID = {'type': 'integer', 'minimum': 1}
@@ -679,3 +680,7 @@ DELIVERY_TOOLS = [
           }, ('kind', 'node_id', 'expected_version', 'request_id', 'asset_id',
               'signer_name', 'signed_at', 'attestation'), risk='sensitive'),
 ]
+
+for _public_tool in DELIVERY_TOOLS:
+    if _public_tool['name'] in DELIVERY_PUBLIC_TOOLS:
+        configure_public_tool(_public_tool, _actor)

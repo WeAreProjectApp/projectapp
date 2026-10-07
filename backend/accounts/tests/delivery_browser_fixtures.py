@@ -143,6 +143,7 @@ def create_browser_fixture(key, *, mode=None):
     """Create independent projects; publication passes through the real API."""
     suffix = secrets.token_hex(6)
     password = secrets.token_urlsafe(24)
+    retained_client_flags = mode == 'client-retained-django-flags'
     User = get_user_model()
     admin = User.objects.create_user(
         username=f'admin-{suffix}@example.com', email=f'admin-{suffix}@example.com',
@@ -156,6 +157,7 @@ def create_browser_fixture(key, *, mode=None):
     client = User.objects.create_user(
         username=f'client-{suffix}@example.com', email=f'client-{suffix}@example.com',
         password=password, first_name='Cliente', last_name='Delivery',
+        is_staff=retained_client_flags, is_superuser=retained_client_flags,
     )
     UserProfile.objects.update_or_create(
         user=client, defaults={'role': UserProfile.ROLE_CLIENT, 'created_by': admin,

@@ -3,9 +3,10 @@
 > **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id`, los avisos duraderos y el almacenamiento privado se integraron en el worktree del conductor. El bloqueo HTTP del legado se probó con Nginx aislado y archivos ficticios; la conversión y el deploy real siguen el runbook, sin escrituras en la base desplegada.
 
 > **Cierre conjunto p0x/p1xx/p2xx/p3xx — en curso:** integridad contractual,
-> fases comerciales, ascendencia y recursos privados aplicados. La tercera
-> ronda cierra autoridad JWT por perfil y confirmación de efectos públicos del
-> MCP. La QA final se ejecutará sobre un SHA limpio; sus pruebas de trabajo no
+> fases comerciales, ascendencia, recursos privados, autoridad JWT por perfil y
+> confirmación de efectos públicos del MCP aplicados. Las respuestas, fuentes y
+> destinatarios se revalidan dentro del bloqueo antes de compartir contenido.
+> La QA final se ejecutará sobre un SHA limpio; sus pruebas de trabajo no
 > certifican aún la combinación. Historial masivo: la medición de 10.000 rondas
 > requiere cambiar su lectura completa; no se declara resuelto ni se alteran
 > presupuestos. IMAP no autenticó y el Gestor Documental no estuvo disponible;

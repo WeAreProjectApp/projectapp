@@ -301,7 +301,7 @@ def test_mcp_historical_approval_requires_a_client_statement(call_projects, publ
 
 
 def test_mcp_reply_keeps_optional_document_evidence(call_projects, published):
-    call_projects('add_delivery_message', {
+    confirm(call_projects, 'add_delivery_message', {
         'project_id': published.project.pk, 'expected_version': current_version(call_projects, published.project),
         'request_id': 'reply-with-evidence', 'level': 'stage', 'target_id': published.stage.pk,
         'message': 'El ajuste está listo para otra revisión.',

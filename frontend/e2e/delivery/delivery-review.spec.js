@@ -1,6 +1,6 @@
 // qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
-import { authenticate, fixture, openReview, openWorkspace, publish, submitDecision } from './helpers.js'
+import { authenticate, backendUrl, fixture, openReview, openWorkspace, publish, submitDecision } from './helpers.js'
 import { PLATFORM_DELIVERY_REVIEW } from '../helpers/flow-tags.js'
 
 test.setTimeout(60_000)
@@ -29,6 +29,35 @@ test('client records a partial conformity', {
   await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[0]}`)).toContainText('Aprobado')
   await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[1]}`)).toContainText('En revisión')
   await expect(page.getByTestId(`delivery-review-open-${data.stage_id}`)).toBeVisible()
+})
+
+// Fails if retained Django administration flags override the client's current
+// Platform role and turn its own JWT review into an administrative operation.
+test('a client with retained Django flags records its own review', {
+  tag: ['@flow:platform-delivery-review', '@role:platform-client', '@outcome:success'],
+}, async ({ page, request }, testInfo) => {
+  const data = await fixture(request, testInfo, 'client-retained-django-flags')
+  const session = await authenticate(page, request, data)
+  expect(session.user.role).toBe('client')
+  await openWorkspace(page, data)
+  const message = 'Conformidad registrada con mi rol actual de cliente.'
+  await submitDecision(page, data, 0, 'approved', message)
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  const requirement = page.getByTestId(`delivery-requirement-${data.requirement_ids[0]}`)
+  await expect(requirement).toContainText('Aprobado')
+  await expect(requirement).toContainText(message)
+  const response = await request.get(`${backendUrl}/api/accounts/projects/${data.project.id}/delivery/`, {
+    headers: { Authorization: `Bearer ${session.tokens.access}` },
+  })
+  expect(response.status()).toBe(200)
+  const workspace = await response.json()
+  const persisted = workspace.scopes.flatMap((scope) => scope.phases)
+    .flatMap((phase) => phase.stages).flatMap((stage) => stage.requirements)
+    .find((item) => item.id === data.requirement_ids[0])
+  expect(persisted.reviews).toEqual([expect.objectContaining({
+    id: expect.any(Number), actor_id: session.user.id, decision: 'approved',
+    is_external: false, message,
+  })])
 })
 
 for (const [decision, label] of [['objected', 'objection'], ['rejected', 'rejection']]) {
