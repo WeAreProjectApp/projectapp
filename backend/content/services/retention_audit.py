@@ -13,7 +13,7 @@ from django.db.models import Q
 from accounts.models import Deliverable, Project, ProjectPhase
 from accounts.retention import RetainedProjectModel
 from accounts.services.proposal_client_service import build_client_display_name
-from content.models import ProjectRetentionContext
+from content.models import ProjectRetentionContext, ProjectRetentionOperation
 from content.services.project_deletion_catalog import CATEGORIES
 
 PAGE_SIZE = 20
@@ -70,6 +70,22 @@ def _proposals(context_ids):
             for context_id, rows in found.items()}
 
 
+def _operations(context_ids):
+    """Adoptions, undos, discards and reassignments that already touched each context."""
+    found = defaultdict(list)
+    rows = (ProjectRetentionOperation.objects.filter(context_id__in=context_ids)
+            .select_related('actor', 'reverted_by').order_by('created_at', 'id'))
+    for row in rows:
+        found[row.context_id].append({
+            'id': row.pk, 'operation': row.operation, 'origin': row.origin,
+            'target_project_id': row.target_project_id, 'target_project_name': row.target_project_name,
+            'records': len(row.items), 'created_at': row.created_at,
+            'actor': row.actor.get_full_name() or row.actor.email,
+            'reverted_by': getattr(getattr(row, 'reverted_by', None), 'pk', None),
+        })
+    return found
+
+
 def _category(label, context, live_ids):
     try:
         model = apps.get_model(label)
@@ -81,6 +97,7 @@ def _category(label, context, live_ids):
     return {
         'key': meta['key'], 'label': meta['label'], 'label_en': meta['label_en'], 'model': label,
         'at_deletion': context.category_counts.get(label, len(listed)),
+        'listed': len(listed),
         'tracked': tracked,
         'remaining': len(live_ids) if tracked else None,
         'ids': live_ids[:IDS_PER_CATEGORY],
@@ -118,6 +135,7 @@ def audit_payload(*, page=1, client_profile_id=None, integrity=False):
     ids = [context.pk for context in rows]
     live = _live_ids(ids) if ids else {}
     proposals = _proposals(ids) if ids else {}
+    operations = _operations(ids) if ids else {}
     results = []
     for context in rows:
         context_live = live.get(context.pk, {})
@@ -136,6 +154,7 @@ def audit_payload(*, page=1, client_profile_id=None, integrity=False):
             'pending_total': sum(row['remaining'] or 0 for row in categories),
             'categories': categories,
             'proposals': proposals.get(context.pk, []),
+            'operations': operations.get(context.pk, []),
         })
     payload = {'count': total, 'page': page, 'page_size': PAGE_SIZE, 'results': results}
     if integrity:

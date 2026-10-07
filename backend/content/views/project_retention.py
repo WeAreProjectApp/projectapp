@@ -37,8 +37,9 @@ def _private_response(data):
 
 
 def _categories(context):
-    return [{**CATEGORIES[label], 'count': count}
-            for label, count in context.category_counts.items() if label in CATEGORIES]
+    # The live index: rows adopted or discarded later leave it, so do their counts.
+    return [{**CATEGORIES[label], 'count': len(ids)}
+            for label, ids in context.retained_records.items() if label in CATEGORIES and ids]
 
 
 def _context(client_id, context_id):
@@ -67,7 +68,7 @@ def client_retained_project_data(request, client_id):
     page = _page(request)
     if not context_id:
         total = contexts.count()
-        contexts = contexts.defer('retained_records')[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
+        contexts = contexts[(page - 1) * PAGE_SIZE:page * PAGE_SIZE]
         return _private_response({'contexts': [{
             'id': ctx.pk, 'project_name': ctx.project_name, 'created_at': ctx.created_at,
             'categories': _categories(ctx),
@@ -134,3 +135,36 @@ def retained_project_data_audit(request):
     return _private_response(audit_payload(
         page=_page(request), client_profile_id=client_profile_id, integrity=integrity,
     ))
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def retained_operation_undo(request, operation_id):
+    """Preview (GET) or apply (POST) the exact undo of an adoption."""
+    from content.models import ProjectRetentionOperation
+    from content.serializers.project_retention import RetainedUndoSerializer
+    from content.services.retained_adoption import preview_undo, undo_adoption
+
+    get_object_or_404(ProjectRetentionOperation, pk=operation_id)
+    if request.method == 'GET':
+        return _private_response(preview_undo(operation_id))
+    serializer = RetainedUndoSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    return Response(undo_adoption(operation_id, actor=request.user, **serializer.validated_data))
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def retained_context_cleanup(request, context_id):
+    """Preview (GET) or apply (POST) the deletion of empty retained containers."""
+    from content.serializers.project_retention import RetainedCleanupSerializer, selection_from_query
+    from content.services.retained_containers import discard_empty_containers, preview_discard
+
+    get_object_or_404(ProjectRetentionContext, pk=context_id)
+    if request.method == 'GET':
+        return _private_response(preview_discard(context_id, selection_from_query(request.query_params)))
+    serializer = RetainedCleanupSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    return Response(discard_empty_containers(context_id, actor=request.user, **serializer.validated_data))

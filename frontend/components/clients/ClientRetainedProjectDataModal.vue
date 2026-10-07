@@ -105,6 +105,7 @@ watch([() => props.open, () => props.client?.id], ([open]) => {
     <div class="space-y-4 p-6" data-testid="client-retained-project-data">
       <h2 class="text-lg font-semibold text-text-default">{{ $t('projectAccess.retention.title') }}</h2>
       <p class="text-sm text-text-muted">{{ client?.company || client?.full_name || client?.name }} · {{ $t('projectAccess.retention.hint') }}</p>
+      <p class="text-xs text-text-subtle" data-testid="retained-data-reassign-hint">{{ $t('projectAccess.retention.reassignHint') }}</p>
       <BaseButton v-if="activeCategory" variant="secondary" size="sm" @click="showContexts">{{ $t('projectAccess.retention.back') }}</BaseButton>
       <BaseAlert v-if="error" variant="danger" role="alert">{{ error }}</BaseAlert>
       <p v-if="loading" role="status" class="text-sm text-text-muted">{{ $t('projectAccess.retention.loading') }}</p>

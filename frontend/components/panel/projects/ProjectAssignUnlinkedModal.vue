@@ -50,6 +50,7 @@
                 :data-testid="`project-assign-unlinked-hosting-${record.id}`"
               >
                 {{ record.label }}
+                <span v-if="record.retained" class="block text-xs text-warning-strong">{{ retainedLabel(record) }}</span>
               </BaseCheckbox>
             </li>
           </ul>
@@ -70,6 +71,12 @@
                 <span class="text-xs text-text-subtle">
                   · {{ record.kind_label }} · {{ record.period_label }}
                 </span>
+                <span
+                  v-if="record.retained"
+                  class="block text-xs text-warning-strong"
+                  :data-testid="`project-assign-unlinked-retained-income-${record.id}`"
+                >{{ retainedLabel(record) }}</span>
+                <span v-if="record.duplicates?.length" class="block text-xs text-text-subtle">{{ duplicatesLabel(record) }}</span>
               </BaseCheckbox>
             </li>
           </ul>
@@ -90,10 +97,51 @@
                 <span v-if="record.type_label" class="text-xs text-text-subtle">
                   · {{ record.type_label }}
                 </span>
+                <span
+                  v-if="record.retained"
+                  class="block text-xs text-warning-strong"
+                  :data-testid="`project-assign-unlinked-retained-document-${record.id}`"
+                >{{ retainedLabel(record) }}</span>
+                <span v-if="record.duplicates?.length" class="block text-xs text-text-subtle">{{ duplicatesLabel(record) }}</span>
               </BaseCheckbox>
             </li>
           </ul>
         </section>
+
+        <section v-if="threads.length" class="mt-4">
+          <h4 class="text-xs font-semibold uppercase tracking-wide text-text-subtle mb-2">
+            Hilos de comunicación conservados ({{ threads.length }})
+          </h4>
+          <ul class="space-y-1.5">
+            <li v-for="record in threads" :key="`thread-${record.id}`">
+              <BaseCheckbox
+                v-model="selectedThreadIds"
+                :value="record.id"
+                :data-testid="`project-assign-unlinked-thread-${record.id}`"
+              >
+                {{ record.label }}
+                <span class="text-xs text-text-subtle">· {{ record.status_label }}</span>
+                <span class="block text-xs text-warning-strong">{{ retainedLabel(record) }}</span>
+                <span v-if="record.duplicates?.length" class="block text-xs text-text-subtle">{{ duplicatesLabel(record) }}</span>
+              </BaseCheckbox>
+            </li>
+          </ul>
+        </section>
+
+        <div v-if="selectedRetainedCount > 0" class="mt-4" data-testid="project-assign-unlinked-retained-note">
+          <label for="project-assign-unlinked-reason" class="block text-sm text-text-default">
+            Motivo del traslado (opcional)
+          </label>
+          <BaseInput
+            id="project-assign-unlinked-reason"
+            v-model="reason"
+            data-testid="project-assign-unlinked-reason"
+          />
+          <p class="text-xs text-text-subtle mt-1">
+            Los datos conservados de un proyecto eliminado dejan de ser de solo consulta y
+            quedan en este proyecto. El traslado queda registrado y se puede deshacer.
+          </p>
+        </div>
       </template>
     </div>
 
@@ -138,6 +186,7 @@ import { computed, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue';
+import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { usePanelProjectsStore } from '~/stores/panel_projects';
@@ -164,21 +213,37 @@ const errorMessage = ref('');
 const hostings = ref([]);
 const incomes = ref([]);
 const documents = ref([]);
+const threads = ref([]);
 const clientName = ref('');
 const selectedHostingIds = ref([]);
 const selectedIncomeIds = ref([]);
 const selectedDocumentIds = ref([]);
+const selectedThreadIds = ref([]);
+const reason = ref('');
 
 const selectedCount = computed(
   () => selectedHostingIds.value.length
     + selectedIncomeIds.value.length
-    + selectedDocumentIds.value.length,
+    + selectedDocumentIds.value.length
+    + selectedThreadIds.value.length,
 );
 const isEmpty = computed(
   () => hostings.value.length === 0
     && incomes.value.length === 0
-    && documents.value.length === 0,
+    && documents.value.length === 0
+    && threads.value.length === 0,
 );
+const retainedIds = (rows) => new Set(rows.filter((record) => record.retained).map((record) => record.id));
+// Rows kept from a deleted project leave read-only mode when assigned: the
+// operator selects them deliberately and may say why.
+const selectedRetainedCount = computed(
+  () => selectedHostingIds.value.filter((id) => retainedIds(hostings.value).has(id)).length
+    + selectedIncomeIds.value.filter((id) => retainedIds(incomes.value).has(id)).length
+    + selectedDocumentIds.value.filter((id) => retainedIds(documents.value).has(id)).length
+    + selectedThreadIds.value.length,
+);
+const retainedLabel = (record) => `Conservado de «${record.retained.project_name}» (proyecto eliminado)`;
+const duplicatesLabel = (record) => `Posible duplicado: ${record.duplicates.map((item) => item.label).join(', ')}`;
 
 async function loadPreview() {
   isLoadingPreview.value = true;
@@ -188,18 +253,24 @@ async function loadPreview() {
     hostings.value = [];
     incomes.value = [];
     documents.value = [];
+    threads.value = [];
     errorMessage.value = result.message;
     return;
   }
   hostings.value = result.data.hostings;
   incomes.value = result.data.incomes;
   documents.value = result.data.documents ?? [];
+  threads.value = result.data.threads ?? [];
   clientName.value = result.data.client?.name || '';
   // Everything checked by default: the common case is "yes, all of it",
-  // and unchecking is the deliberate exception.
-  selectedHostingIds.value = result.data.hostings.map((record) => record.id);
-  selectedIncomeIds.value = result.data.incomes.map((record) => record.id);
-  selectedDocumentIds.value = documents.value.map((record) => record.id);
+  // and unchecking is the deliberate exception. Rows retained from a deleted
+  // project are the opposite: they start unchecked and are chosen on purpose.
+  const loose = (rows) => rows.filter((record) => !record.retained).map((record) => record.id);
+  selectedHostingIds.value = loose(result.data.hostings);
+  selectedIncomeIds.value = loose(result.data.incomes);
+  selectedDocumentIds.value = loose(documents.value);
+  selectedThreadIds.value = [];
+  reason.value = '';
 }
 
 watch(() => props.open, (open) => {
@@ -211,17 +282,23 @@ watch(() => props.open, (open) => {
 
 async function confirmAssign() {
   errorMessage.value = '';
-  const result = await store.assignUnlinkedRecords(props.project.id, {
+  const payload = {
     hosting_ids: selectedHostingIds.value,
     income_ids: selectedIncomeIds.value,
     document_ids: selectedDocumentIds.value,
-  });
+  };
+  if (selectedThreadIds.value.length) payload.thread_ids = selectedThreadIds.value;
+  if (selectedRetainedCount.value > 0 && reason.value.trim()) payload.reason = reason.value.trim();
+  const result = await store.assignUnlinkedRecords(props.project.id, payload);
   if (result.success) {
+    const moved = (result.data.adoptions ?? []).reduce((total, item) => total + item.records, 0);
     notify.success({
       title: `Registros asignados a "${props.project.name}"`,
       detail: `${result.data.assigned_hostings} hostings, `
         + `${result.data.assigned_incomes} ingresos y `
-        + `${result.data.assigned_documents ?? 0} documentos.`,
+        + `${result.data.assigned_documents ?? 0} documentos`
+        + (result.data.assigned_threads ? `, ${result.data.assigned_threads} hilos` : '')
+        + (moved ? `; ${moved} datos conservados trasladados con registro de auditoría.` : '.'),
     });
     emit('assigned', result.data);
     return;

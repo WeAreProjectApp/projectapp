@@ -38,8 +38,8 @@ def retained_link_conflict(proposal):
     name = (proposal.linked_project or {}).get('name') or 'sin nombre'
     return ApprovalConflict({
         'detail': f'El entregable de esta propuesta quedó conservado del proyecto eliminado «{name}». '
-                  'La revisión no puede vincularlo; esos datos quedan en consulta hasta trasladarlos '
-                  'a un proyecto vigente del cliente.',
+                  'La revisión no puede vincularlo: trasládala con la reasignación de proyecto a un '
+                  'proyecto vigente del mismo cliente.',
         'code': 'retained_project',
     })
 
