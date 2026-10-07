@@ -43,10 +43,12 @@ def _resource(project, actor, resource_id, *, editable=False):
     resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').filter(
         project=project, pk=resource_id,
     ).first()
-    if resource is None or (resource.is_archived and not is_admin(actor)):
+    if resource is None:
         raise NotFound('Recurso no encontrado.')
     if editable and resource.is_archived:
         raise ValidationError('El recurso está archivado.')
+    if resource.is_archived and not is_admin(actor):
+        raise NotFound('Recurso no encontrado.')
     return resource
 
 
