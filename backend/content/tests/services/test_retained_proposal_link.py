@@ -61,7 +61,8 @@ def test_linked_project_names_the_deleted_project(retained_proposal):
 
 def test_detail_serializer_keeps_the_retained_link(retained_proposal):
     """Fails if the panel receives no linked_project and reopens the proposal client."""
-    data = ProposalDetailSerializer(BusinessProposal.objects.get(pk=retained_proposal['proposal'].pk)).data
+    proposal = BusinessProposal.objects.get(pk=retained_proposal['proposal'].pk)
+    data = ProposalDetailSerializer(proposal, context={'is_admin': True}).data
 
     assert data['linked_project']['retained'] is True
     assert data['linked_project']['name'] == 'Plataforma educativa fase 1'
