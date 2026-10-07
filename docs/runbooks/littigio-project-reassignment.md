@@ -1,5 +1,9 @@
 # Corrección de relaciones de Littigio — 2026-10-07
 
+> **Superado el 07-10-2026.** Después de este procedimiento se eliminaron con
+> eliminación forzada los proyectos 14 y 15 y se conservó el 16. La recuperación
+> vigente está en `littigio-retained-data-recovery.md`.
+
 Este procedimiento separa la entrega de código de la reparación de producción.
 No elimina las propuestas ni emite documentos contables.
 

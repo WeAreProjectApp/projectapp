@@ -68,7 +68,7 @@ _RETENTION_MODELS = frozenset({
 
 def _contract(model_label, *, read_only='', read_write='', excluded=None):
     if model_label.lower() in _RETENTION_MODELS:
-        excluded = {**(excluded or {}), 'retention_context': 'Propiedad histórica de datos sin proyecto, administrada únicamente por la eliminación del panel.'}
+        excluded = {**(excluded or {}), 'retention_context': 'Propiedad histórica de datos sin proyecto: la fija la eliminación forzada del panel y sólo la libera el traslado auditado; nunca se edita directamente por MCP.'}
 
     return McpModelContract(
         model_label=model_label,
@@ -1304,7 +1304,15 @@ MCP_MODEL_CONTRACTS.update({
                 'Índice de ids capturado al eliminar; la auditoría devuelve los ids que siguen conservados.',
                 'retained_records',
             ),
-        ),)
+        ), _contract(
+            'content.ProjectRetentionOperation',
+            # Written only by the audited adoption, undo, discard and reassignment services.
+            read_only='id context operation origin target_project_id target_project_name request_id reason items removed_records reverts actor created_at',
+            excluded=_excluded(
+                'Huella interna de idempotencia; la auditoría expone la operación, no su hash.',
+                'payload_hash',
+            ),
+        ))
     ),
     'content': (
         MCP_MODEL_CONTRACTS['blog']

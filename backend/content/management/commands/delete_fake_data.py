@@ -35,6 +35,7 @@ from content.models import (
     ProjectBrandAsset,
     ProposalProjectReassignment,
     ProjectRetentionContext,
+    ProjectRetentionOperation,
     QRCard,
     Task,
     WebAppDiagnostic,
@@ -222,6 +223,13 @@ class Command(BaseCommand):
         deleted, _ = ProposalProjectReassignment.objects.all().delete()
         self.stdout.write(self.style.SUCCESS(
             f'Deleted proposal project reassignment receipts ({deleted} rows)'
+        ))
+
+        # Undo receipts protect the operation they revert; both precede contexts.
+        ProjectRetentionOperation.objects.filter(reverts__isnull=False).delete()
+        deleted, _ = ProjectRetentionOperation.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS(
+            f'Deleted project retention operations ({deleted} rows)'
         ))
 
         for model, label in (

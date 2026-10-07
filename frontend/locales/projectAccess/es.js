@@ -2,6 +2,7 @@ export default {
   retention: {
   "title": "Datos sin proyecto",
   "hint": "Consulta y descarga de datos conservados. No se pueden editar desde aquí.",
+  "reassignHint": "Para trasladarlos a un proyecto vigente del mismo cliente, abre ese proyecto y usa «Asignar registros sin proyecto»: el traslado queda registrado y se puede deshacer.",
   "back": "Volver a los proyectos de origen",
   "loading": "Cargando datos conservados…",
   "empty": "Este cliente no tiene datos conservados de proyectos eliminados.",

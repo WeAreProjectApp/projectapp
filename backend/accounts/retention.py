@@ -2,6 +2,12 @@
 from django.db import models
 from rest_framework.exceptions import PermissionDenied
 
+# Every write except the audited adoption is refused; the message names the way out.
+READ_ONLY_MESSAGE = (
+    'Los datos conservados sin proyecto sólo permiten consulta. Para trasladarlos a un '
+    'proyecto vigente del mismo cliente, usa «Asignar registros sin proyecto» en ese proyecto.'
+)
+
 
 class RetainedProjectModel(models.Model):
     retention_context = models.ForeignKey(
@@ -21,10 +27,10 @@ class RetainedProjectModel(models.Model):
 
     def save(self, *args, **kwargs):
         if self.retention_context_id and not self._state.adding:
-            raise PermissionDenied('Los datos conservados sin proyecto sólo permiten consulta.')
+            raise PermissionDenied(READ_ONLY_MESSAGE)
         return super().save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
         if self.retention_context_id:
-            raise PermissionDenied('Los datos conservados sin proyecto sólo permiten consulta.')
+            raise PermissionDenied(READ_ONLY_MESSAGE)
         return super().delete(*args, **kwargs)

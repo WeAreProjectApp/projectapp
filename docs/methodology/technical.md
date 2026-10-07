@@ -14,6 +14,28 @@
 > escritores revalidan cuentas emitidas tras los locks y antes de mutar pagos.
 
 
+## Traslado auditado de datos conservados (2026-10-07)
+
+Lo conservado por una eliminación forzada deja de ser un callejón sin salida.
+«Asignar registros sin proyecto» de un proyecto vigente del MISMO cliente lista
+ingresos, hostings, documentos e hilos de comunicación conservados, con el
+proyecto eliminado de origen y posibles duplicados, sin marcarlos por defecto.
+Al confirmar, cada contexto de retención genera una `ProjectRetentionOperation`
+con los valores de pertenencia antes y después: los ingresos viajan con sus
+hijos líquidos y sus cuentas, los documentos que estaban en carpetas
+conservadas pasan a la raíz del destino y los hilos toman el proyecto. El
+traslado se deshace exactamente mientras nada haya cambiado después. Los
+contenedores conservados vacíos (hilos sin mensajes, carpetas sin contenido) se
+eliminan con vista previa e impacto vigente. La reasignación de propuestas
+acepta como origen el proyecto eliminado y mueve fase, entregables y documentos
+conservando sus ids; si una fase vencida entraría a un hosting activo del
+destino, exige una fecha de inicio futura o aceptar el cobro. El candado del
+modelo sigue rechazando cualquier otra escritura y su mensaje indica el camino.
+Servicios: `retained_adoption`, `retained_containers`, `retention_audit` y
+`proposal_project_reassignment`; MCP: `list_project_retention_contexts`,
+`preview_/undo_retained_operation(_undo)`, `preview_retained_container_cleanup`
+y `delete_empty_retained_containers`. Migración nueva: `content.0284`.
+
 ## Eliminación selectiva de proyectos (2026-10-06)
 
 La eliminación forzada empieza con todas las categorías apagadas. La selección
