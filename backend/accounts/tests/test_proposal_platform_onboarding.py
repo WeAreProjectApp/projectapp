@@ -61,6 +61,7 @@ def proposal_with_deliverable(db, client_user, admin_user):
         title='Prop',
         client_name='Test Client',
         client_email='client-onb@test.com',
+        client=client_user.profile,
         status=BusinessProposal.Status.ACCEPTED,
         deliverable=d,
     )

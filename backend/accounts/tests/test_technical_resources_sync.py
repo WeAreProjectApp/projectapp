@@ -59,7 +59,7 @@ def _make_sync_setup(admin_email, client_email, project_name, entities=None):
     project = Project.objects.create(name=project_name, client=client)
     bp = BusinessProposal.objects.create(
         title='BP', client_name='C', total_investment=Decimal('1'),
-        hosting_percent=30, status='accepted',
+        hosting_percent=30, status='accepted', client=project.client.profile,
     )
     d = Deliverable.objects.create(
         project=project, title='Prop',
@@ -478,7 +478,7 @@ def _make_full_sync_setup(prefix, epics=None, entities=None):
     project = Project.objects.create(name=f'{prefix}P', client=client)
     bp = BusinessProposal.objects.create(
         title='BP', client_name='C', total_investment=Decimal('1'),
-        hosting_percent=30, status='accepted',
+        hosting_percent=30, status='accepted', client=project.client.profile,
     )
     prop_d = Deliverable.objects.create(
         project=project, title='Prop', category=Deliverable.CATEGORY_DOCUMENTS,
@@ -504,7 +504,7 @@ def test_syncing_one_proposal_preserves_a_neighbor_resource_with_the_same_epic_k
     ])
     second = BusinessProposal.objects.create(
         title='Second phase', client_name='C', total_investment=Decimal('1'),
-        hosting_percent=30, status='accepted',
+        hosting_percent=30, status='accepted', client=project.client.profile,
     )
     second_package = Deliverable.objects.create(
         project=project, title='Second package', category=Deliverable.CATEGORY_DOCUMENTS,
@@ -705,7 +705,7 @@ def test_sync_returns_error_when_no_technical_section():
     project = Project.objects.create(name='ns1P', client=client)
     bp = BusinessProposal.objects.create(
         title='BP', client_name='C', total_investment=Decimal('1'),
-        hosting_percent=30, status='accepted',
+        hosting_percent=30, status='accepted', client=project.client.profile,
     )
     prop_d = Deliverable.objects.create(
         project=project, title='Prop', category=Deliverable.CATEGORY_DOCUMENTS,
@@ -843,7 +843,7 @@ def _make_selection_setup(suffix, module_selected):
     project = Project.objects.create(name=f'P-{suffix}', client=client)
     bp = BusinessProposal.objects.create(
         title='BP', client_name='C', total_investment=Decimal('1'),
-        hosting_percent=30, status='accepted',
+        hosting_percent=30, status='accepted', client=project.client.profile,
     )
     d = Deliverable.objects.create(
         project=project, title='Prop', category=Deliverable.CATEGORY_DOCUMENTS,

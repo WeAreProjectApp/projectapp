@@ -1,9 +1,9 @@
 """Business logic for managing ProjectPhase rows."""
+from content.models import BusinessProposal
 from django.db import transaction
 from rest_framework import serializers
 
 from accounts.models import Project, ProjectPhase
-from content.models import BusinessProposal
 
 
 class PhaseError(Exception):
@@ -108,15 +108,16 @@ def remove_phase(project, phase_id: int) -> None:
             ph.save(update_fields=['order'])
 
 
+@transaction.atomic
 def reorder_phases(project, items: list[dict]) -> None:
     """Bulk-rewrite phase ordering. ``items`` is a list of ``{id, order}`` pairs
     covering every existing phase of the project. Atomic."""
+    project = Project.objects.select_for_update().get(pk=project.pk)
     given_ids = {item['id'] for item in items}
-    existing_ids = set(project.phases.values_list('id', flat=True))
+    existing_ids = set(project.phases.select_for_update().values_list('id', flat=True))
     if given_ids != existing_ids:
         raise PhaseError('invalid_phase_id', extra={
             'expected': sorted(existing_ids), 'received': sorted(given_ids),
         })
-    with transaction.atomic():
-        for item in items:
-            ProjectPhase.objects.filter(id=item['id']).update(order=item['order'])
+    for item in items:
+        ProjectPhase.objects.filter(project=project, id=item['id']).update(order=item['order'])
