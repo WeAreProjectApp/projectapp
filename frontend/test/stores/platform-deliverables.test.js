@@ -59,6 +59,15 @@ describe('usePlatformDeliverablesStore', () => {
     expect(groups.map((g) => g.category)).toEqual(['designs', 'documents'])
   })
 
+  it.each(['contract', 'amendment', 'legal_annex'])('exposes a %s resource in its category group', (category) => {
+    const resource = { id: 7, category, title: 'Recurso contractual conservado' }
+    store.deliverables = [resource]
+
+    const groups = store.groupedByCategory
+
+    expect(groups).toEqual([{ category, items: [resource] }])
+  })
+
   it('groupedByCategory omits empty categories', () => {
     store.deliverables = [{ id: 1, category: 'other' }]
     expect(store.groupedByCategory).toHaveLength(1)
@@ -89,9 +98,11 @@ describe('usePlatformDeliverablesStore', () => {
   })
 
   it('fetchAllDeliverables clears projectId', async () => {
+    store.projectId = 1
     mockGet.mockResolvedValueOnce({ data: [] })
     await store.fetchAllDeliverables()
     expect(store.projectId).toBeNull()
+    expect(mockGet).toHaveBeenCalledWith('deliverables/')
   })
 
   it('fetchAllDeliverables adds include_archived when requested', async () => {
