@@ -1,6 +1,8 @@
 """Public effects require an exact owned preview; private preparation stays direct."""
 import pytest
 from accounts.models import (
+    BugComment,
+    BugReport,
     DeliveryDocumentLink,
     DeliveryMessage,
     IssueResponse,
@@ -142,6 +144,8 @@ def test_public_issue_response_preview_creates_no_response(call_projects, public
         'admin_response': 'Exact public issue response'}})
     assert preview['confirmation_required'] is True
     assert IssueResponse.objects.count() == 0
+    ticket = BugReport.objects.get(pk=issue['id'])
+    assert (ticket.status, ticket.version) == ('reported', issue['version'])
 
 
 def test_internal_issue_response_remains_direct(call_projects, public_project, issue):
@@ -167,6 +171,9 @@ def test_public_issue_comment_requires_confirmation(call_projects, public_projec
         'kind': 'bug', 'ticket_id': issue['id'], 'payload': {'expected_version': issue['version'],
         'content': 'Exact visible comment'}})
     assert preview['confirmation_required'] is True
+    assert BugComment.objects.count() == 0
+    ticket = BugReport.objects.get(pk=issue['id'])
+    assert (ticket.status, ticket.version) == ('reported', issue['version'])
 
 
 def test_public_issue_bulk_preview_keeps_every_response_unwritten(call_projects, public_project, issue):

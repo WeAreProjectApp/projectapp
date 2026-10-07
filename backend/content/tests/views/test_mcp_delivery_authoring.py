@@ -326,7 +326,7 @@ def test_mcp_reply_sharing_requires_human_review(call_projects, published_projec
     """Falla si un borrador citado puede compartirse sin revisión humana explícita."""
     context = prepare_reply(call_projects, published_project)
 
-    error = call_projects('add_delivery_message', message_arguments(
+    error = confirm(call_projects, 'add_delivery_message', message_arguments(
         call_projects, published_project, context, human_reviewed=False,
     ), expect_error=True)
 
@@ -338,7 +338,7 @@ def test_mcp_reviewed_reply_preserves_its_provenance(call_projects, published_pr
     """Falla si compartir manualmente descarta el contexto y fundamento de la respuesta."""
     context = prepare_reply(call_projects, published_project)
 
-    call_projects('add_delivery_message', message_arguments(call_projects, published_project, context))
+    confirm(call_projects, 'add_delivery_message', message_arguments(call_projects, published_project, context))
 
     message = DeliveryMessage.objects.get(project=published_project.project)
     assert str(message.context_id) == context['id']
@@ -351,14 +351,14 @@ def test_mcp_reviewed_reply_preserves_its_provenance(call_projects, published_pr
 def test_mcp_reply_sharing_rejects_changed_observations(call_projects, published_project):
     """Falla si una respuesta usa una conversación capturada antes de otra observación."""
     context = prepare_reply(call_projects, published_project)
-    call_projects('add_delivery_message', {
+    confirm(call_projects, 'add_delivery_message', {
         'project_id': published_project.project.pk, 'level': 'stage',
         'target_id': published_project.stage.pk,
         'expected_version': current_version(call_projects, published_project.project),
         'request_id': 'new-observation', 'message': 'Nueva observación: el listado aparece vacío.',
     })
 
-    error = call_projects('add_delivery_message', message_arguments(
+    error = confirm(call_projects, 'add_delivery_message', message_arguments(
         call_projects, published_project, context,
     ), expect_error=True)
 

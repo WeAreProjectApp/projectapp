@@ -89,7 +89,7 @@ for (const variant of variants) {
         title, document_id: data.contract_document_id,
         proposal_document_id: null, approval_file_id: null,
       })
-      await expect(page.getByTestId(`delivery-contract-${contract.id}`).getByRole('heading')).toHaveText(title)
+      await expect(page.getByTestId(`delivery-contract-${contract.id}`).getByRole('heading', { level: 3 })).toHaveText(title)
     })
 
     test(`admin downloads the selected ${variant.format} original without conversion`, {

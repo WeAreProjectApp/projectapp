@@ -286,7 +286,7 @@ del proyecto, destinatario y documentos antes de llamar al servicio existente;
 un cambio de dueño, correo, cuerpo, fuente o versión exige una vista previa nueva.
 No se crean permisos, firmas, decisiones del cliente ni un contador alternativo.
 
-Para contratos firmados, manda la copia privada C1 y no el borrador editable.
+Para contratos firmados, manda la copia privada de la evidencia firmada y no el borrador editable.
 En documentos se respeta la precedencia del portal: copia publicada, archivo
 generado y finalmente contenido que se renderiza al descargar. Sin PDF guardado,
 la vista previa muestra contenido y procedencia del renderer con sus hashes,
