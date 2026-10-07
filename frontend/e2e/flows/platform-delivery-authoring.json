@@ -4,7 +4,7 @@
   "module": "platform",
   "roles": ["platform-admin"],
   "priority": "P1",
-  "description": "Prepare contracts, scopes, independent execution phases, stages and validation requirements; publish a stage only with complete guides and signed applicable agreements. A source-backed guide that names a product role must state access/data, allowed and blocked actions, permitted and blocked verification steps and expected results; a rejected publication preserves the draft until it is completed.",
+  "description": "Prepare contracts, amendments, scopes, independent execution phases, stages and validation requirements. A contract or amendment selects exactly one source: a project document, proposal PDF, or file from the confirmed approval package, including customized files. A newly selected confirmed file remains private until reviewed and does not establish a signature; a non-PDF source remains downloadable in its original format, while a recorded external signature makes the retained signed PDF the canonical copy. Publish a stage only with complete guides and signed applicable agreements. A source-backed guide that names a product role must state access/data, allowed and blocked actions, permitted and blocked verification steps and expected results; a rejected publication preserves the draft until it is completed.",
   "expectedSpecs": 1,
-  "outcomes": ["success", "error", "failure"]
+  "outcomes": ["success", "error", "failure", "display"]
 }

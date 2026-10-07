@@ -1,15 +1,33 @@
 """Representative fixtures for real delivery browser tests, never production."""
+import base64
+import hashlib
 import secrets
+from contextlib import nullcontext
+from unittest.mock import patch
 
+from content.models import (
+    BusinessProposal,
+    Document,
+    DocumentType,
+    ProposalApprovalFile,
+)
 from django.contrib.auth import get_user_model
+from django.core.files.base import ContentFile
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from accounts.models import (
-    DeliveryPhase, DeliveryScope, DeliveryStage, Project, ProjectContract,
-    Requirement, UserProfile,
+    Deliverable,
+    DeliveryPhase,
+    DeliveryScope,
+    DeliveryStage,
+    Project,
+    ProjectContract,
+    Requirement,
+    UserProfile,
 )
-from content.models import Document, DocumentType
+from accounts.models_delivery_notifications import DeliveryNotificationEvent
+from accounts.tests.delivery_authoring_helpers import docx_bytes, pdf_bytes
 
 
 def guide(title):
@@ -20,6 +38,50 @@ def guide(title):
         'steps': ['Abrir el registro preparado.', 'Confirmar la operación.'],
         'expected_result': title,
         'failure_signals': 'El registro no cambia o aparece un mensaje de error.',
+    }
+
+
+def confirmed_browser_source(project, admin, client, mode):
+    """Keep synthetic originals under the same confirmation manifest as runtime."""
+    formats = {
+        'approval-source-docx': (
+            'agreement.docx', docx_bytes,
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        ),
+        'approval-source-pdf': ('agreement.pdf', pdf_bytes, 'application/pdf'),
+        'approval-source-png': (
+            'agreement.png',
+            lambda: base64.b64decode(
+                'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jR1EAAAAASUVORK5CYII='
+            ),
+            'image/png',
+        ),
+    }
+    filename, make_bytes, content_type = formats[mode]
+    raw = make_bytes()
+    deliverable = Deliverable.objects.create(
+        project=project, title='Paquete confirmado de prueba', uploaded_by=admin,
+    )
+    proposal = BusinessProposal.objects.create(
+        title='Propuesta confirmada de prueba', client_name='Cliente Delivery',
+        client=client.profile, status='accepted', deliverable=deliverable,
+    )
+    source = ProposalApprovalFile.objects.create(
+        proposal=proposal, project=project, deliverable=deliverable,
+        source_key='custom:0', title='Acuerdo original confirmado', document_type='contract',
+        filename=filename, file=ContentFile(raw, name=filename), size=len(raw),
+        sha256=hashlib.sha256(raw).hexdigest(), created_by=admin,
+    )
+    proposal.platform_approval_manifest = {
+        'client_profile_id': client.profile.pk, 'project_id': project.pk,
+        'files': [{'id': source.pk, 'source_key': source.source_key,
+                   'sha256': source.sha256, 'size': source.size}],
+    }
+    proposal.save(update_fields=['platform_approval_manifest'])
+    return {
+        'id': source.pk, 'title': source.title, 'filename': filename,
+        'size': len(raw), 'sha256': source.sha256, 'content_type': content_type,
+        'original_base64': base64.b64encode(raw).decode('ascii'),
     }
 
 
@@ -47,6 +109,11 @@ def create_browser_fixture(key, *, mode=None):
                               'email_verified': True, 'company_name': f'Cliente {key}'},
     )
     project = Project.objects.create(name=f'Delivery {key}', client=client)
+    approval_source = (
+        confirmed_browser_source(project, admin, client, mode)
+        if mode in {'approval-source-docx', 'approval-source-pdf', 'approval-source-png'}
+        else None
+    )
     document_type, _ = DocumentType.objects.get_or_create(
         code='markdown', defaults={'name': 'Markdown'},
     )
@@ -111,11 +178,18 @@ def create_browser_fixture(key, *, mode=None):
         if linked.status_code not in (200, 201):
             raise RuntimeError(f'Fixture document failed: {linked.data}')
         workspace = api.get(base)
-    publication = api.post(
-        base + f'stages/{stage.id}/publish/',
-        {'expected_version': workspace.data['version'], 'request_id': f'publish-{suffix}'},
-        format='json',
+    # Reject only the SMTP boundary; the publication, snapshot and persisted
+    # failed attempt still pass through the production API and gateway.
+    rejection = (
+        patch('accounts.services.delivery_notifications.EmailMultiAlternatives.send', return_value=0)
+        if mode in {'notice-failed', 'notice-smtp-failure'} else nullcontext()
     )
+    with rejection:
+        publication = api.post(
+            base + f'stages/{stage.id}/publish/',
+            {'expected_version': workspace.data['version'], 'request_id': f'publish-{suffix}'},
+            format='json',
+        )
     if publication.status_code not in (200, 201):
         raise RuntimeError(f'Fixture publication failed: {publication.data}')
     if mode in {'closure-approved', 'closure-smtp-failure'}:
@@ -130,7 +204,8 @@ def create_browser_fixture(key, *, mode=None):
         }, format='json')
         if reviewed.status_code != 200:
             raise RuntimeError(f'Fixture approval failed: {reviewed.data}')
-    return {
+    result = {
+        'fixture_key': key,
         'project': {'id': project.id, 'name': project.name},
         'contract_id': contract.id, 'scope_id': scope.id, 'phase_id': phase.id,
         'stage_id': stage.id, 'hidden_stage_id': hidden.id,
@@ -139,3 +214,15 @@ def create_browser_fixture(key, *, mode=None):
         'admin': {'email': admin.email, 'password': password},
         'client': {'email': client.email, 'password': password},
     }
+    if approval_source is not None:
+        result['approval_source'] = approval_source
+    if mode in {'notice-failed', 'notice-smtp-failure'}:
+        event = DeliveryNotificationEvent.objects.get(project=project)
+        if event.status != 'failed' or event.attempts.count() != 1:
+            raise RuntimeError('Fixture notice did not retain its rejected transport')
+        result['notice'] = {
+            'id': str(event.pk), 'subject': event.subject,
+            'recipients': event.recipients, 'text_body': event.text_body,
+            'status': event.status, 'version': event.version,
+        }
+    return result

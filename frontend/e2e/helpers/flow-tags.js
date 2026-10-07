@@ -354,6 +354,7 @@ export const PLATFORM_DELIVERY_AUTHORING = ['@flow:platform-delivery-authoring',
 export const PLATFORM_DELIVERY_CLOSURE_EMAIL = ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_GUIDE_PROMPT = ['@flow:platform-delivery-guide-prompt', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_IMPORT = ['@flow:platform-delivery-import', '@module:platform', '@priority:P1'];
+export const PLATFORM_DELIVERY_NOTICES = ['@flow:platform-delivery-notices', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_REPLY_PROMPT = ['@flow:platform-delivery-reply-prompt', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_RESPONSES = ['@flow:platform-delivery-responses', '@module:platform', '@priority:P1'];
 export const PLATFORM_DELIVERY_REVIEW = ['@flow:platform-delivery-review', '@module:platform', '@priority:P1'];

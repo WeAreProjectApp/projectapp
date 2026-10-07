@@ -1,6 +1,6 @@
 // qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
-import { backendUrl, authenticate, openWorkspace, submitDecision } from './helpers.js'
+import { backendUrl, assertTouchAction, authenticate, openWorkspace, submitDecision } from './helpers.js'
 import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
@@ -75,6 +75,7 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
       await openClosureEmail(page, data)
       await page.getByTestId('delivery-closure-message').fill('Vista previa legible en el portal.')
       await page.getByTestId('delivery-closure-prepare').click()
+      await assertTouchAction(page, page.getByTestId('delivery-closure-prepare'), viewport, testInfo)
 
       await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toContainText('Aprobado')
       await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
@@ -92,7 +93,7 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
 test('admin sends exactly one reviewed closure email', {
   tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:success'],
 }, async ({ page, request }, testInfo) => {
-  // Catches a regression where a preview sends early, a double click duplicates delivery, or a resend skips a new reviewed preview.
+  // Catches a regression where a preview sends early or a double click duplicates delivery.
   const data = await closureFixture(request, testInfo, 'closure-approved')
   await authenticate(page, request, data, 'admin')
   await openWorkspace(page, data)
@@ -100,8 +101,7 @@ test('admin sends exactly one reviewed closure email', {
 
   let probe = await closureProbe(request, testInfo)
   expect(probe.outbox_count).toBe(0)
-  expect(probe.emails).toHaveLength(1)
-  expect(probe.emails[0].status).toBe('prepared')
+  expect(probe.emails.map((email) => email.status)).toEqual(['prepared'])
 
   await page.getByTestId('delivery-closure-send').dblclick()
   await expect(page.getByTestId('delivery-closure-status')).toHaveText('Enviado')
@@ -111,12 +111,24 @@ test('admin sends exactly one reviewed closure email', {
   expect(probe.outbox_count).toBe(1)
   expect(probe.emails).toHaveLength(1)
   expect(probe.emails[0]).toMatchObject({ status: 'sent', attempt_count: 1, to: [data.client.email] })
+})
+
+test('admin prepares a linked closure resend without sending it', {
+  tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:success'],
+}, async ({ page, request }, testInfo) => {
+  // Catches a resend that loses its predecessor or transports the new copy before another review.
+  const data = await closureFixture(request, testInfo, 'closure-approved')
+  await authenticate(page, request, data, 'admin')
+  await openWorkspace(page, data)
+  await prepareReviewedEmail(page, data, 'Gracias por comprobar los casos publicados.')
+  await page.getByTestId('delivery-closure-send').click()
+  await expect(page.getByTestId('delivery-closure-status')).toHaveText('Enviado')
 
   await page.getByTestId('delivery-closure-resend-current').click()
   await expect(page.getByTestId('delivery-closure-status')).toHaveText('Preparado, sin enviar')
   await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
 
-  probe = await closureProbe(request, testInfo)
+  const probe = await closureProbe(request, testInfo)
   expect(probe.outbox_count).toBe(1)
   expect(probe.emails).toHaveLength(2)
   expect(probe.emails[0]).toMatchObject({ status: 'prepared' })

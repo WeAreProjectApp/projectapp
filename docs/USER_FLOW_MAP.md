@@ -6252,10 +6252,11 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-dashboard` | platform | P2 | — | 0 |
 | `platform-deliverable-detail` | platform | P2 | success | 1 |
 | `platform-deliverables` | platform | P2 | success,error,display | 1 |
-| `platform-delivery-authoring` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-authoring` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-closure-email` | platform | P1 | success,error,failure,display | — |
 | `platform-delivery-guide-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-import` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-notices` | platform | P1 | display,success,error,failure | 1 |
 | `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-responses` | platform | P1 | success,error,failure | 1 |
 | `platform-delivery-review` | platform | P1 | display,success,error,failure | 1 |
@@ -7473,11 +7474,27 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 
 ### Platform: preparar y publicar etapas
 
-Fuente: `DeliveryAuthoringForm.vue`, `DeliveryWorkspace.vue` y `accounts.services.delivery_workflow`.
+Fuente: `DeliveryAuthoringForm.vue`, `DeliveryWorkspace.vue`,
+`accounts.services.delivery_workflow` y `accounts.services.delivery_contract_sources`.
+
+Cada contrato u otrosí elige exactamente una fuente: documento del proyecto,
+PDF de propuesta o archivo del paquete de aprobación confirmado para el mismo
+proyecto y cliente, incluidos archivos personalizados. Una selección nueva del
+paquete se registra privada y sin firma; la selección no acredita aprobación
+contractual ni habilita publicación.
+
+| Interacción | Resultado | Clase |
+|---|---|---|
+| Elegir una fuente confirmada y guardar el borrador | Conserva el archivo seleccionado y la fuente nueva queda privada. | `success` |
+| Guardar sin fuente única o con una fuente ajena/no confirmada | El formulario o la API rechaza la operación sin crear la referencia. | `error` |
+| Descargar la fuente conservada | Entrega el formato original exacto si no hay PDF; la copia firmada prevalece tras acreditar firma. | `display` |
+| Usar una fuente ausente, corrupta o congelada | La operación falla sin sustituir el contenido contractual ni su firma. | `failure` |
 
 El administrador vincula el contrato original, sus otrosíes y el alcance; crea fases de ejecución independientes de los cobros y organiza sus etapas y requerimientos. Guarda borradores antes de publicar. Una etapa sin requerimientos, con guía incompleta o con contrato aplicable sin firmar no se puede publicar. Si una guía basada en fuentes nombra un rol del producto, debe explicar acceso y datos, acciones permitidas y bloqueadas, y los pasos y resultados para verificar ambos casos. El rechazo conserva el borrador; se completa la guía y sólo entonces se publica para el cliente. Las ampliaciones de una etapa aprobada requieren otra etapa.
 
-`delivery-authoring.spec.js` cubre la preparación y publicación desde el formulario. La API comprueba también permisos, versiones y protección de aprobaciones.
+Los specs de autoría y fuente verifican estas interacciones; la ejecución viva
+y sus límites se consultan en los artefactos de QA ligados al SHA combinado.
+La API comprueba también permisos, versiones y protección de aprobaciones.
 
 ### Platform: prompt e importación de JSON
 
@@ -7495,12 +7512,16 @@ Fuente: `DeliveryWorkspace.vue`, `DeliveryStage.vue`, `DeliveryReviewForm.vue` y
 |---|---|---|
 | Abrir Entregas desde el proyecto | Mostrar guía publicada con datos y pasos; ocultar borradores | `delivery-review.spec.js` |
 | Aprobar solamente lo probado | Conservar conformidad parcial y dejar abiertos los demás casos | `delivery-review.spec.js` |
-| Objetar sin motivo | Pedir el motivo sin guardar una decisión | `delivery-review.spec.js` |
+| Objetar o rechazar sin motivo | Pedir el motivo sin guardar una decisión | `delivery-review.spec.js` |
+| Rechazar con un motivo | Conservar la decisión y el motivo al volver a abrir la entrega | `delivery-review.spec.js` |
+| Responder públicamente a una objeción | Conservar la respuesta sin conceder conformidad | `delivery-review.spec.js` |
 | Corregir y republicar un caso pendiente | Mantener el caso aprobado y entregar otra versión del pendiente | `delivery-review.spec.js` |
+| Enviar una revisión sobre una versión que cambió en otra sesión | Mostrar el conflicto sin perder el motivo pendiente | `delivery-review.spec.js` |
+| Enviar una respuesta después de otra respuesta del equipo | Mostrar el conflicto sin guardar ni perder el texto pendiente | `delivery-review.spec.js` |
 | Aprobar todos los requerimientos | Cerrar la etapa; una etapa en borrador impide cerrar la fase | `delivery-review.spec.js` |
 | Abrir el formulario en cinco anchos | Controles alcanzables sin desbordamiento horizontal | `delivery-authoring.spec.js` |
 
-Los conflictos de versión, permisos por proyecto y evidencia inmutable se comprueban además en las pruebas de API. El navegador usa JWT reales y una base temporal; no simula aprobaciones.
+El flujo registra resultados `success`, `error`, `failure` y `display`. Los conflictos de versión se ejercitan en el navegador con dos sesiones; los permisos por proyecto y la evidencia inmutable también se comprueban en las pruebas de API. El harness usa JWT reales y una base temporal. La ejecución de cada spec se acredita con el artefacto de su revisión de código; un spec marcado `draft-unvalidated` todavía no acredita cobertura en vivo.
 
 ### Platform: responder sobre una etapa
 
@@ -8416,6 +8437,31 @@ contrato obligatorio, rechazo de una cita inventada y consulta de un anexo falta
 después de navegar desde el proyecto.
 También cubre la corrección trazada, descarga comprobada por huella, consulta
 del historial y operación en los cinco tamaños de pantalla.
+
+### Platform: consultar y reintentar avisos de entrega
+
+Fuente: `DeliveryWorkspace.vue`, `DeliveryNoticeHistory.vue` y
+`accounts.services.delivery_notifications`.
+
+Sólo el administrador ve el historial al entrar por Proyecto → Entregas. Cada
+registro conserva asunto, destinatarios y estado del aviso derivado de una
+publicación, una respuesta pública o una revisión con observaciones. No crea
+conformidades ni sustituye la revisión del cliente.
+
+| Interacción | Resultado | Clase |
+|---|---|---|
+| Llegar a Entregas desde la navegación del proyecto y consultar el historial | Muestra datos reales del aviso y permite paginar más de veinte registros. El cliente no recibe esta superficie. | `display` |
+| Abrir «Revisar reintento» en un aviso fallido | Muestra destinatarios, asunto y cuerpo exactos retenidos; la previsualización no envía. | `display` |
+| Confirmar el reintento después de revisar la copia | Envía versión, huella de la copia e identificador idempotente; refresca el estado conservado. | `success` |
+| Reintentar tras cambio de versión, destinatario, proyecto o estado | La API rechaza la acción y la interfaz conserva y muestra el error. | `error` |
+| Consultar un envío fallido, en curso o de resultado desconocido | Un fallo confirmado puede revisarse; los estados en curso o desconocidos requieren revisión humana y no ofrecen reintento automático. | `failure` |
+
+Los fallos de carga, previsualización y confirmación se muestran en el aviso de
+error. La generación de avisos, el worker de correo y las operaciones MCP son
+contratos backend; no constituyen flujos E2E de navegador.
+
+La ejecución viva y sus límites se consultan en los artefactos de QA ligados al
+SHA combinado; los borradores de specs no acreditan cobertura por sí solos.
 
 ### Platform: preparar y revisar una respuesta fundamentada
 
