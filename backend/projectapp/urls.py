@@ -37,7 +37,16 @@ def oauth_discovery_not_found(request, *args, **kwargs):
     return HttpResponseNotFound()
 
 
+def legacy_resource_media_not_found(request):
+    """Deny historical resource paths before DEBUG static serving or the SPA."""
+    response = HttpResponseNotFound()
+    response['Cache-Control'] = 'no-store'
+    return response
+
+
 urlpatterns = [
+    # Public resource names remain denied even with Django's DEBUG media server.
+    re_path(r'^media/deliverables(?:/.*)?$', legacy_resource_media_not_found, name='legacy-resource-media-denied'),
     re_path(r'^(?P<locale>en-us|es-co)/lk/(?P<handle>@?[a-zA-Z0-9_.-]+)/?$', localized_linktree, name='localized-linktree'),
     path('manifest.webmanifest', serve_pwa_file, {'filename': 'manifest.webmanifest'}, name='pwa-manifest'),
     path('sw.js', serve_pwa_file, {'filename': 'sw.js'}, name='pwa-worker'),

@@ -219,7 +219,8 @@ def upload_client_file(project_id, actor, resource_id, data, *, request=None, **
     return perform(project_id, actor, f'resource:{resource_id}:client-file', data, change, request=request, **operation)
 
 
-def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+def open_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+    """Authorize the parent and selected child before opening either namespace."""
     project = project_for_actor(project_id, actor, request=request)
     resource = _resource(project, actor, resource_id, request=request)
     if kind == 'current':
@@ -235,11 +236,18 @@ def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, r
     if row is None or not row.file:
         raise NotFound('Archivo no encontrado.')
     try:
-        with row.file.open('rb') as source:
-            body = source.read(25 * 1024 * 1024 + 1)
+        source = row.file.open('rb')
     except (OSError, ValueError) as exc:
         raise NotFound('Archivo no disponible.') from exc
+    filename = PurePosixPath(row.file.name).name
+    return source, filename, mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+
+def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+    source, filename, content_type = open_file(project_id, actor, resource_id,
+        kind=kind, file_id=file_id, request=request)
+    with source:
+        body = source.read(25 * 1024 * 1024 + 1)
     if len(body) > 25 * 1024 * 1024:
         raise ValidationError('El archivo supera 25 MB.')
-    filename = PurePosixPath(row.file.name).name
-    return body, filename, mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    return body, filename, content_type

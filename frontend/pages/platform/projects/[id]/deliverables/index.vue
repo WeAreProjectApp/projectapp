@@ -237,19 +237,22 @@
               </div>
 
               <!-- Download current -->
-              <a
+              <BaseButton unstyled type="button"
                 v-if="detailItem.file_url"
-                :href="detailItem.file_url"
-                target="_blank"
-                class="mb-5 flex items-center gap-3 rounded-xl border border-border-default bg-surface-muted/20 p-4 transition hover:border-border-default dark:hover:border-white/15"
+                :disabled="Boolean(downloadingFile)"
+                :aria-busy="downloadingFile === detailItem.file_url"
+                class="mb-5 flex w-full items-center gap-3 rounded-xl border border-border-default bg-surface-muted/20 p-4 text-left transition hover:border-border-default disabled:opacity-60 dark:hover:border-white/15"
+                @click="downloadResource(detailItem)"
               >
                 <svg class="h-5 w-5 shrink-0 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                 <div class="flex-1 min-w-0">
                   <p class="truncate text-sm font-medium text-text-default">{{ detailItem.file_name }}</p>
                   <p class="text-[10px] text-green-light/60">Versión {{ detailItem.current_version }} · {{ detailItem.uploaded_by_name }} · {{ formatDate(detailItem.updated_at) }}</p>
                 </div>
-                <span class="text-xs font-medium text-text-brand">Descargar</span>
-              </a>
+                <span class="text-xs font-medium text-text-brand">{{ downloadingFile === detailItem.file_url ? 'Descargando…' : 'Descargar' }}</span>
+              </BaseButton>
+
+              <p v-if="downloadError" role="alert" class="mb-5 text-sm text-red-500">{{ downloadError }}</p>
 
               <ProposalApprovalFiles
                 :project-id="projectId"
@@ -276,12 +279,13 @@
               <div v-if="detailItem.versions && detailItem.versions.length" class="mb-5">
                 <p class="mb-3 text-xs font-semibold uppercase tracking-wider text-green-light/60">Historial de versiones</p>
                 <div class="space-y-2">
-                  <a
+                  <BaseButton unstyled type="button"
                     v-for="v in detailItem.versions"
                     :key="v.id"
-                    :href="v.file_url"
-                    target="_blank"
-                    class="flex items-center gap-3 rounded-xl border border-border-muted p-3 transition hover:border-border-default dark:hover:border-white/12"
+                    :disabled="!v.file_url || Boolean(downloadingFile)"
+                    :aria-busy="downloadingFile === v.file_url"
+                    class="flex w-full items-center gap-3 rounded-xl border border-border-muted p-3 text-left transition hover:border-border-default disabled:opacity-60 dark:hover:border-white/12"
+                    @click="downloadResource(v)"
                   >
                     <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-green-light dark:bg-white/10">v{{ v.version_number }}</span>
                     <div class="flex-1 min-w-0">
@@ -289,7 +293,7 @@
                       <p class="text-[10px] text-green-light/60">{{ v.uploaded_by_name }} · {{ formatDate(v.created_at) }}</p>
                     </div>
                     <svg class="h-4 w-4 shrink-0 text-green-light/30" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 10v6m0 0l-3-3m3 3l3-3" /></svg>
-                  </a>
+                  </BaseButton>
                 </div>
               </div>
 
@@ -424,6 +428,8 @@ const selectedFile = ref(null)
 const createError = ref('')
 
 const detailItem = ref(null)
+const downloadingFile = ref('')
+const downloadError = ref('')
 const isVersionUploadOpen = ref(false)
 const versionFile = ref(null)
 
@@ -501,9 +507,29 @@ async function handleCreate() {
 }
 
 async function openDetailModal(d) {
+  const requestedProjectId = projectId.value
+  downloadError.value = ''
   detailItem.value = d
-  const result = await store.fetchDeliverable(projectId.value, d.id)
-  if (result.success) detailItem.value = result.data
+  const result = await store.fetchDeliverable(requestedProjectId, d.id)
+  if (result.success && requestedProjectId === projectId.value && detailItem.value?.id === d.id) {
+    detailItem.value = result.data
+  }
+}
+
+async function downloadResource(file) {
+  if (downloadingFile.value) return
+  const requestedProjectId = projectId.value
+  const requestedDetailId = detailItem.value?.id
+  downloadError.value = ''
+  downloadingFile.value = file.file_url
+  try {
+    const result = await store.downloadFile(file)
+    if (!result.success && requestedProjectId === projectId.value && detailItem.value?.id === requestedDetailId) {
+      downloadError.value = result.message
+    }
+  } finally {
+    downloadingFile.value = ''
+  }
 }
 
 function openUploadVersion() { versionFile.value = null; isVersionUploadOpen.value = true }
@@ -530,6 +556,8 @@ onMounted(async () => {
 })
 
 watch(projectId, () => {
+  detailItem.value = null
+  downloadError.value = ''
   loadDeliverables()
 })
 </script>
