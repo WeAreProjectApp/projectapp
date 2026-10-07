@@ -1,3 +1,5 @@
+"""Gateway behavior for hidden copies and retained delivery evidence."""
+
 import logging
 from smtplib import SMTPException
 from unittest.mock import patch
@@ -15,6 +17,7 @@ from content.models import (
     EmailDeliverySnapshot,
     EmailLog,
 )
+from content.serializers.accounting import EmailLogSerializer
 from content.services import email_log_service
 from content.services.client_email_inventory import CLIENT_EMAIL_CHANNELS
 from content.services.email_delivery_service import (
@@ -27,8 +30,6 @@ from content.services.email_snapshot_service import (
     _inferred_business_kind,
 )
 from content.services.outbound_email_inventory import OUTBOUND_EMAIL_CHANNELS
-from content.serializers.accounting import EmailLogSerializer
-
 
 pytestmark = pytest.mark.django_db
 
@@ -177,10 +178,21 @@ def test_every_registered_outbound_channel_uses_its_family_bcc_copy():
     delivery_matrix = _exercise_outbound_inventory_bcc_matrix()
 
     assert set(delivery_matrix) == set(OUTBOUND_EMAIL_CHANNELS)
-    assert len(delivery_matrix) == 59
     assert delivery_matrix['delivery_stage_approved_client']['copy_bcc'] == [
         'audit-documents_communications@example.com',
     ]
+    assert {
+        key: delivery_matrix[key]['copy_bcc']
+        for key in (
+            'delivery_published_client', 'delivery_reviewed_team',
+            'delivery_message_client', 'delivery_message_team',
+        )
+    } == {
+        'delivery_published_client': ['audit-platform@example.com'],
+        'delivery_reviewed_team': ['audit-platform@example.com'],
+        'delivery_message_client': ['audit-platform@example.com'],
+        'delivery_message_team': ['audit-platform@example.com'],
+    }
     assert all(
         delivery == {
             'result': 1,
@@ -215,15 +227,17 @@ def test_primary_failure_records_primary_without_copy(caplog):
     message = build_message()
     marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'):
-        with patch(
+    with (
+        caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'),
+        patch(
             'content.services.email_delivery_service.EmailMessage.send',
             side_effect=SMTPException(marker),
-        ) as smtp_send:
-            with pytest.raises(SMTPException):
-                EmailDeliveryGateway.send(
-                    message, template_key='proposal_sent_client',
-                )
+        ) as smtp_send,
+        pytest.raises(SMTPException),
+    ):
+        EmailDeliveryGateway.send(
+            message, template_key='proposal_sent_client',
+        )
 
     primary = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.PRIMARY)
     assert (
@@ -241,16 +255,18 @@ def test_primary_smtp_failure_is_suppressed_when_requested(caplog):
     message = build_message()
     marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'):
-        with patch(
+    with (
+        caplog.at_level(logging.ERROR, logger='content.services.email_delivery_service'),
+        patch(
             'content.services.email_delivery_service.EmailMessage.send',
             side_effect=SMTPException(marker),
-        ) as smtp_send:
-            result = EmailDeliveryGateway.send(
-                message,
-                template_key='proposal_sent_client',
-                fail_silently=True,
-            )
+        ) as smtp_send,
+    ):
+        result = EmailDeliveryGateway.send(
+            message,
+            template_key='proposal_sent_client',
+            fail_silently=True,
+        )
 
     smtp_send.assert_called_once_with()
     primary = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.PRIMARY)
@@ -267,14 +283,16 @@ def test_copy_failure_preserves_primary_status(caplog):
     message = build_message()
     marker = 'SYNTHETIC_PRIVATE_P5_20261001'
 
-    with caplog.at_level(logging.WARNING, logger='content.services.email_delivery_service'):
-        with patch(
+    with (
+        caplog.at_level(logging.WARNING, logger='content.services.email_delivery_service'),
+        patch(
             'content.services.email_delivery_service.EmailMessage.send',
             side_effect=[1, SMTPException(marker)],
-        ) as smtp_send:
-            result = EmailDeliveryGateway.send(
-                message, template_key='proposal_sent_client',
-            )
+        ) as smtp_send,
+    ):
+        result = EmailDeliveryGateway.send(
+            message, template_key='proposal_sent_client',
+        )
     primary = record_primary()
 
     copy_log = EmailLog.objects.get(delivery_role=EmailLog.DeliveryRole.COPY)
@@ -608,12 +626,11 @@ def test_snapshot_failure_blocks_smtp():
         side_effect=RuntimeError('storage unavailable'),
     ), patch(
         'content.services.email_delivery_service.EmailMessage.send',
-    ) as smtp_send:
-        with pytest.raises(RuntimeError, match='storage unavailable'):
-            EmailDeliveryGateway.send(
-                message,
-                template_key='proposal_sent_client',
-            )
+    ) as smtp_send, pytest.raises(RuntimeError, match='storage unavailable'):
+        EmailDeliveryGateway.send(
+            message,
+            template_key='proposal_sent_client',
+        )
 
     smtp_send.assert_not_called()
 
