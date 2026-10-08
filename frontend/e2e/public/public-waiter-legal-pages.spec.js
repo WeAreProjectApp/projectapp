@@ -52,9 +52,11 @@ test.describe('Waiter product and legal pages', () => {
   test('English privacy policy lists AWS hosting and the translation notice', {
     tag: ['@outcome:display', ...PUBLIC_WAITER_LEGAL_PAGES, '@role:guest'],
   }, async ({ page }) => {
-    await page.goto('/en-us/waiter', { waitUntil: 'domcontentloaded' });
+    await page.goto('/en-us', { waitUntil: 'domcontentloaded' });
+    const footer = page.getByTestId('legal-footer');
+    await expect(footer.getByTestId('legal-footer-link-privacy')).toBeVisible({ timeout: 20_000 });
 
-    await page.getByTestId('legal-footer').getByTestId('legal-footer-link-privacy').click();
+    await footer.getByTestId('legal-footer-link-privacy').click();
 
     await expect(page).toHaveURL(/\/en-us\/waiter\/privacy$/);
     await expect(page.getByRole('heading', { level: 1, name: 'ProjectApp Personal Data Processing Policy' })).toBeVisible({ timeout: 15_000 });
