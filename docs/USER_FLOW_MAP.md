@@ -6257,8 +6257,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-delivery-guide-prompt` | platform | P1 | success,error,failure,display | 1 |
 | `platform-delivery-import` | platform | P1 | success,error,failure | 1 |
 | `platform-delivery-reply-prompt` | platform | P1 | success,error,failure,display | 1 |
-| `platform-delivery-responses` | platform | P1 | success,error | 1 |
-| `platform-delivery-review` | platform | P1 | display,success,error | 1 |
+| `platform-delivery-responses` | platform | P1 | success,error,failure | 1 |
+| `platform-delivery-review` | platform | P1 | display,success,error,failure | 1 |
 | `platform-hosting-card-delete` | platform | P2 | success,failure | 1 |
 | `platform-hosting-card-setup` | platform | P1 | success,error | 1 |
 | `platform-hosting-project-list` | platform | P2 | display,success,error | — |

@@ -180,12 +180,12 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that treated a general bug as contractual or exposed private review provenance to the client.
   test('revisión humana de bug general publica sólo alcance indeterminado', { tag: ['@flow:platform-bug-reports', '@outcome:success'] }, async ({ page, request }, testInfo) => {
-    const initialMailboxCount = await mailboxCount(request)
     const data = await fixture(request, testInfo)
     const admin = await login(request, data.admin)
     const ticket = await apiPost(request, admin, `projects/${data.general_project.id}/bug-reports/`, {
       title: 'Bug general revisado con fuentes',
     })
+    const initialMailboxCount = await mailboxCount(request)
 
     await open(page, request, data, data.general_project.id, 'bugs', '', 'admin')
     await page.getByRole('button', { name: ticket.title, exact: true }).press('Enter')
@@ -206,12 +206,12 @@ test.describe('Tickets reales de proyecto', () => {
 
   // Catches the regression that accepted a reviewed reply after another admin had changed the ticket.
   test('publicación contractual rechaza la revisión cuando cambió el ticket', { tag: ['@flow:platform-bug-reports', '@outcome:error'] }, async ({ page, request }, testInfo) => {
-    const initialMailboxCount = await mailboxCount(request)
     const data = await fixture(request, testInfo)
     const admin = await login(request, data.admin)
     const ticket = await apiPost(request, admin, `projects/${data.general_project.id}/bug-reports/`, {
       title: 'Bug general con versión vencida',
     })
+    const initialMailboxCount = await mailboxCount(request)
 
     await open(page, request, data, data.general_project.id, 'bugs', '', 'admin')
     await page.getByRole('button', { name: ticket.title, exact: true }).press('Enter')

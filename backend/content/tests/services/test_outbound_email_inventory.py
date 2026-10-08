@@ -95,6 +95,10 @@ def test_accounting_inventory_lists_every_channel():
 
 def test_platform_inventory_lists_every_channel():
     assert _channels_for(PLATFORM) == {
+        'delivery_published_client',
+        'delivery_reviewed_team',
+        'delivery_message_client',
+        'delivery_message_team',
         'document_signed_client',
         'client_flow_first_login_team',
         'client_flow_email_validated_team',
@@ -124,5 +128,5 @@ def test_security_inventory_lists_every_channel():
     }
 
 
-def test_inventory_contains_59_unique_channels():
-    assert len(OUTBOUND_EMAIL_CHANNELS) == 59
+def test_inventory_contains_63_unique_channels():
+    assert len(OUTBOUND_EMAIL_CHANNELS) == 63

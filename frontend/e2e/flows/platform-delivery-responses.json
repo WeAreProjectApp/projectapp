@@ -6,5 +6,5 @@
   "priority": "P1",
   "description": "Send contextual responses on a published stage with a message and optional existing document links, then read the recorded response history.",
   "expectedSpecs": 1,
-  "outcomes": ["success", "error"]
+  "outcomes": ["success", "error", "failure"]
 }

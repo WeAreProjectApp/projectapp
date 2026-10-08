@@ -5,23 +5,35 @@ from datetime import date
 from io import StringIO
 
 import pytest
-from django.apps import apps
-from django.contrib.auth import get_user_model
-from django.core.management import call_command
-from django.core.management.base import CommandError
-from django.db.models import Count, F, Q
-
+from accounts.management.commands._seed_helpers import clear_fake_delivery
 from accounts.models import (
     BugReport,
     ChangeRequest,
     CommunicationPanelPreference,
     Deliverable,
+    DeliveryPhase,
+    DeliveryScope,
+    DeliveryStage,
     Project,
     ProjectAdminAccess,
+    ProjectContract,
     Requirement,
     UserProfile,
 )
+from accounts.models_delivery_notifications import (
+    DeliveryNotificationAttempt,
+    DeliveryNotificationEvent,
+)
+from accounts.services import delivery_workflow as delivery
 from accounts.services.credential_cipher import decrypt_secret
+from accounts.tests.delivery_helpers import GUIDE, build_delivery_context, publish
+from django.apps import apps
+from django.contrib.auth import get_user_model
+from django.core.management import call_command
+from django.core.management.base import CommandError
+from django.db import transaction
+from django.db.models import Count, F, Q
+
 from content.fake_data import SeedContext, covered_model_labels
 from content.models import (
     AdditionalModule,
@@ -44,14 +56,13 @@ from content.models import (
     Linktree,
     McpConnector,
     McpRequestLog,
+    ProjectRetentionContext,
     ProposalProjectReassignment,
     ProposalShareLink,
     QRCard,
-    ProjectRetentionContext,
     Task,
     WebAppDiagnostic,
 )
-
 
 pytestmark = pytest.mark.django_db
 
@@ -65,7 +76,6 @@ def run_command(name, *args, **options):
 @pytest.fixture
 def seeded_accounting():
     """Create the full accounting distribution for one focused assertion."""
-
     run_command(
         'create_fake_accounting', '--count', '60',
         '--seed', '19', '--anchor-date', '2026-08-26',
@@ -75,7 +85,6 @@ def seeded_accounting():
 @pytest.fixture
 def seeded_documents():
     """Create related clients, accounting rows and documents."""
-
     run_command(
         'create_fake_clients_projects', '--count', '30',
         '--seed', '19', '--anchor-date', '2026-08-26',
@@ -93,7 +102,6 @@ def seeded_documents():
 @pytest.fixture
 def seeded_communications():
     """Create the representative communication-history distribution."""
-
     get_user_model().objects.create_user(
         username='fake-admin', email='fake-admin@example.test', is_staff=True,
     )
@@ -109,7 +117,6 @@ def seeded_communications():
 
 def complete_dataset_snapshot():
     """Return stable business values, excluding PKs and auto-managed clocks."""
-
     return {
         'contacts': list(Contact.objects.order_by('email').values_list(
             'email', 'subject', 'message',
@@ -193,6 +200,49 @@ def test_model_contract_classifies_every_concrete_business_model():
     }
 
     assert covered_model_labels() == actual
+
+
+def test_fake_delivery_reset_removes_only_owned_notice_roots(django_capture_on_commit_callbacks):
+    """Fails if reset leaves protected notices or deletes another project's notice."""
+    with transaction.atomic():
+        context = build_delivery_context()
+    other_project = Project.objects.create(name='Otra entrega conservada', client=context.client)
+    other_document = Document.objects.create(
+        title='Contrato de la otra entrega', project=other_project, client_user=context.client,
+        requires_signature=True, signed_by=context.client,
+        signed_at=context.document.signed_at, signature_name='Cliente', is_client_visible=True,
+        content_markdown='# Contrato\nAlcance de la otra entrega.',
+        include_portada=False, include_subportada=False, include_contraportada=False,
+    )
+    other_contract = ProjectContract.objects.create(
+        project=other_project, key='otro-contrato', title='Otro contrato',
+        document=other_document, client_visible=True,
+    )
+    other_scope = DeliveryScope.objects.create(contract=other_contract, key='otro-alcance', title='Otro alcance')
+    other_phase = DeliveryPhase.objects.create(scope=other_scope, key='otra-fase', title='Otra fase')
+    other_stage = DeliveryStage.objects.create(phase=other_phase, key='otra-etapa', title='Otra etapa')
+    Requirement.objects.create(stage=other_stage, key='otro-caso', title='Otro caso', guide=GUIDE)
+    with django_capture_on_commit_callbacks(execute=False):
+        publish(context)
+        delivery.publish_stage(other_project.pk, context.admin, other_stage.pk, {
+            'expected_version': 0, 'request_id': 'publish-unrelated-project',
+        })
+    owned = DeliveryNotificationEvent.objects.get(project=context.project)
+    owned_attempt_id = owned.attempts.get().pk
+    other = DeliveryNotificationEvent.objects.get(project=other_project)
+    other_attempt_id = other.attempts.get().pk
+
+    clear_fake_delivery(Project.objects.filter(pk=context.project.pk))
+
+    assert not DeliveryNotificationEvent.objects.filter(pk=owned.pk).exists()
+    assert not DeliveryNotificationAttempt.objects.filter(pk=owned_attempt_id).exists()
+    other.refresh_from_db()
+    assert other.status == 'pending'
+    assert list(other.attempts.values_list('pk', 'status', 'gateway_snapshot_id')) == [
+        (other_attempt_id, 'pending', None),
+    ]
+    assert ProjectContract.objects.filter(project=context.project).count() == 0
+    assert ProjectContract.objects.get(pk=other_contract.pk).project_id == other_project.pk
 
 
 def test_fake_reset_clears_retained_document_ownership(admin_user):
@@ -466,12 +516,14 @@ def test_platform_seed_hides_internal_draft_stage_from_client(seeded_review_work
 def test_platform_fake_reset_clears_protected_review_graph(
     seeded_review_workflow, django_capture_on_commit_callbacks,
 ):
-    from django.core.files.base import ContentFile
     from accounts.management.commands._seed_helpers import _demo_pdf
     from accounts.models import (
-        DeliveryPublication, DeliveryReviewDocumentEvidence, ProjectContract,
+        DeliveryPublication,
+        DeliveryReviewDocumentEvidence,
+        ProjectContract,
         RequirementReview,
     )
+    from django.core.files.base import ContentFile
     review = RequirementReview.objects.filter(
         publication__stage__phase__scope__contract__project=seeded_review_workflow,
     ).first()
@@ -513,6 +565,7 @@ def test_mihuella_flush_preserves_records_outside_its_seed(seeded_review_workflo
     """Resetting this demo must preserve other agreements and client history."""
     from accounts.management.commands.seed_mihuella import CLIENT_EMAIL, PROJECT_NAME
     from accounts.models import ProjectContract
+
     from content.models import CommunicationThread
 
     seed_args = ('--seed', '19', '--anchor-date', '2026-08-26')
