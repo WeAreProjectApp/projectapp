@@ -1166,7 +1166,10 @@ def deliverable_sync_technical_resources_view(request, project_id, deliverable_i
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    result = sync_technical_resources_for_deliverable(d, request.user)
+    try:
+        result = sync_technical_resources_for_deliverable(d, request.user)
+    except PhaseError as exc:
+        return Response({'detail': exc.code, **exc.extra}, status=exc.http_status)
     if not result.get('ok'):
         return Response(
             {'detail': result.get('detail', 'No se pudo sincronizar.')},

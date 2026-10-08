@@ -6,6 +6,7 @@ import pytest
 from content.models import BusinessProposal, ProposalSection
 from django.contrib.auth import get_user_model
 from django.core.files.base import ContentFile
+from rest_framework.test import APIClient
 
 from accounts.models import (
     DataModelEntity,
@@ -20,6 +21,7 @@ from accounts.services.technical_resources_sync import (
     sync_technical_resources_for_deliverable,
     sync_technical_resources_for_project,
 )
+from accounts.services.tokens import get_tokens_for_user
 
 User = get_user_model()
 
@@ -61,7 +63,7 @@ def _make_sync_setup(admin_email, client_email, project_name, entities=None):
 
     project = Project.objects.create(name=project_name, client=client)
     bp = BusinessProposal.objects.create(
-        title='BP', client_name='C', total_investment=Decimal('1'),
+        title='BP', client_name='C', total_investment=Decimal(1),
         hosting_percent=30, status='accepted', client=project.client.profile,
     )
     d = Deliverable.objects.create(
@@ -394,7 +396,7 @@ def test_compute_sync_diff_reports_epic_to_create_when_no_deliverable_exists():
 @pytest.mark.django_db
 def test_compute_sync_diff_reports_epic_to_update_when_title_changed():
     """Existing deliverable with changed title appears in to_update."""
-    project, admin, client = _make_project_with_deliverable('e2')
+    project, admin, _client = _make_project_with_deliverable('e2')
     Deliverable.objects.create(
         project=project, title='Old Title', source_epic_key='epic-x',
         category=Deliverable.CATEGORY_DOCUMENTS, file=None, uploaded_by=admin,
@@ -410,7 +412,7 @@ def test_compute_sync_diff_reports_epic_to_update_when_title_changed():
 @pytest.mark.django_db
 def test_compute_sync_diff_reports_epics_to_delete_when_removed():
     """Deliverables in DB but absent from JSON appear in to_delete."""
-    project, admin, client = _make_project_with_deliverable('e3')
+    project, admin, _client = _make_project_with_deliverable('e3')
     Deliverable.objects.create(
         project=project, title='Stale', source_epic_key='epic-stale',
         category=Deliverable.CATEGORY_DOCUMENTS, file=None, uploaded_by=admin,
@@ -491,7 +493,7 @@ def _make_full_sync_setup(prefix, epics=None, entities=None):
     UserProfile.objects.create(user=client, role=UserProfile.ROLE_CLIENT, is_onboarded=True)
     project = Project.objects.create(name=f'{prefix}P', client=client)
     bp = BusinessProposal.objects.create(
-        title='BP', client_name='C', total_investment=Decimal('1'),
+        title='BP', client_name='C', total_investment=Decimal(1),
         hosting_percent=30, status='accepted', client=project.client.profile,
     )
     prop_d = Deliverable.objects.create(
@@ -517,7 +519,7 @@ def test_syncing_one_proposal_preserves_a_neighbor_resource_with_the_same_epic_k
         {'epicKey': 'shared-epic', 'title': 'First scope', 'requirements': []},
     ])
     second = BusinessProposal.objects.create(
-        title='Second phase', client_name='C', total_investment=Decimal('1'),
+        title='Second phase', client_name='C', total_investment=Decimal(1),
         hosting_percent=30, status='accepted', client=project.client.profile,
     )
     second_package = Deliverable.objects.create(
@@ -615,7 +617,7 @@ def test_sync_archives_removed_deliverables_when_delete_removed_true():
 @pytest.mark.django_db
 def test_sync_for_deliverable_returns_ok_when_bp_exists():
     """sync_technical_resources_for_deliverable succeeds when deliverable has a BP."""
-    project, admin, bp, prop_d = _make_full_sync_setup('del1', epics=[
+    _project, admin, _bp, prop_d = _make_full_sync_setup('del1', epics=[
         {'epicKey': 'del-epic', 'title': 'E', 'requirements': []},
     ])
 
@@ -687,7 +689,7 @@ def test_compute_sync_diff_skips_non_dict_entity():
     """A non-dict item in dataModel.entities is silently skipped."""
     from accounts.services.technical_resources_sync import compute_sync_diff
 
-    project, admin, _, _ = _make_full_sync_setup('diff7', epics=[])
+    project, _admin, _, _ = _make_full_sync_setup('diff7', epics=[])
     new_json = {'epics': [], 'dataModel': {'entities': ['not-a-dict']}}
     diff = compute_sync_diff(project, new_json)
     assert diff['data_model_entities']['to_create'] == []
@@ -698,7 +700,7 @@ def test_compute_sync_diff_skips_entity_with_empty_name():
     """An entity with no name is silently skipped by compute_sync_diff."""
     from accounts.services.technical_resources_sync import compute_sync_diff
 
-    project, admin, _, _ = _make_full_sync_setup('diff8', epics=[])
+    project, _admin, _, _ = _make_full_sync_setup('diff8', epics=[])
     new_json = {'epics': [], 'dataModel': {'entities': [{'name': '', 'description': 'no name'}]}}
     diff = compute_sync_diff(project, new_json)
     assert diff['data_model_entities']['to_create'] == []
@@ -718,7 +720,7 @@ def test_sync_returns_error_when_no_technical_section():
     UserProfile.objects.create(user=client, role=UserProfile.ROLE_CLIENT, is_onboarded=True)
     project = Project.objects.create(name='ns1P', client=client)
     bp = BusinessProposal.objects.create(
-        title='BP', client_name='C', total_investment=Decimal('1'),
+        title='BP', client_name='C', total_investment=Decimal(1),
         hosting_percent=30, status='accepted', client=project.client.profile,
     )
     prop_d = Deliverable.objects.create(
@@ -856,7 +858,7 @@ def _make_selection_setup(suffix, module_selected):
 
     project = Project.objects.create(name=f'P-{suffix}', client=client)
     bp = BusinessProposal.objects.create(
-        title='BP', client_name='C', total_investment=Decimal('1'),
+        title='BP', client_name='C', total_investment=Decimal(1),
         hosting_percent=30, status='accepted', client=project.client.profile,
     )
     d = Deliverable.objects.create(
@@ -966,10 +968,52 @@ def test_resources_follow_optional_module_selection(selected, expected):
 @pytest.mark.django_db
 def test_preview_reports_resource_changes_without_review_cards():
     """Preview planned resource changes without creating resources or review cards."""
-    admin, project = _make_selection_setup('preview-resources', module_selected=True)
+    _admin, project = _make_selection_setup('preview-resources', module_selected=True)
 
     diff = compute_sync_diff(project, {'epics': [{'epicKey': 'resource-a', 'title': 'Resource A'}]})
 
     assert diff['epics']['to_create'] == [{'epicKey': 'resource-a', 'title': 'Resource A'}]
     assert set(diff) == {'epics', 'data_model_entities'}
     assert not Deliverable.objects.filter(project=project, source_epic_key='resource-a').exists()
+
+
+@pytest.mark.django_db
+def test_http_sync_rejects_an_incoherent_proposal_without_mutation():
+    """Reject an incoherent proposal through HTTP without mutating project resources."""
+    project, admin, package = _make_sync_setup(
+        'http-incoherent-admin@sync.test', 'http-incoherent-client@sync.test',
+        'Incoherent HTTP sync', entities=[{'name': 'Untouched entity', 'keyFields': 'id'}],
+    )
+    proposal = BusinessProposal.objects.get(deliverable=package)
+    proposal.client = None
+    proposal.save(update_fields=['client'])
+    before_phases = list(project.phases.values_list('pk', 'business_proposal_id', 'order'))
+    before_resources = list(Deliverable.objects.filter(project=project).order_by('pk').values_list(
+        'pk', 'title', 'source_proposal_id', 'source_epic_key', 'is_archived',
+    ))
+    before_entities = list(DataModelEntity.objects.filter(deliverable__project=project).values_list('pk', 'name'))
+    before_proposal = (
+        proposal.client_id, proposal.deliverable_id, proposal.status,
+        proposal.platform_approval_manifest,
+    )
+    before_progress = project.progress
+    client = APIClient()
+    client.credentials(HTTP_AUTHORIZATION=f'Bearer {get_tokens_for_user(admin)["access"]}')
+    url = f'/api/accounts/projects/{project.pk}/deliverables/{package.pk}/sync-technical-resources/'
+
+    response = client.post(url)
+
+    assert response.status_code == 400
+    assert response.json()['code'] == 'proposal_context'
+    assert list(project.phases.values_list('pk', 'business_proposal_id', 'order')) == before_phases
+    assert list(Deliverable.objects.filter(project=project).order_by('pk').values_list(
+        'pk', 'title', 'source_proposal_id', 'source_epic_key', 'is_archived',
+    )) == before_resources
+    assert list(DataModelEntity.objects.filter(deliverable__project=project).values_list('pk', 'name')) == before_entities
+    proposal.refresh_from_db()
+    assert (
+        proposal.client_id, proposal.deliverable_id, proposal.status,
+        proposal.platform_approval_manifest,
+    ) == before_proposal
+    project.refresh_from_db()
+    assert project.progress == before_progress

@@ -178,7 +178,7 @@ def test_project_mcp_rejects_a_commercial_phase_owned_by_another_client(call):
         'project_id': c.project.pk, 'proposal_id': foreign.pk,
     }, error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'PROPOSAL_CONTEXT'
     assert ProjectPhase.objects.filter(project=c.project).count() == 0
 
 
@@ -198,7 +198,7 @@ def test_project_mcp_rejects_an_unlinked_commercial_phase(call):
         'project_id': c.project.pk, 'proposal_id': unlinked.pk,
     }, error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'PROPOSAL_CONTEXT'
     assert ProjectPhase.objects.filter(project=c.project).count() == 0
 
 

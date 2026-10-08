@@ -36,13 +36,9 @@ async function openClosureEmail(page, data) {
 }
 
 async function enterPortalAndOpenWorkspace(page, request, data) {
+  // Enter the closure flow at Platform; public Home is a separate journey.
   await authenticate(page, request, data, 'admin')
-  await page.goto('/es-co', { waitUntil: 'domcontentloaded' })
-  await waitForNuxtApp(page)
-  const landingNav = page.getByLabel(page.viewportSize()?.width < 1024 ? 'Mobile navigation' : 'Main navigation')
-  const entryLink = landingNav.getByRole('link', { name: 'Iniciar Sesión' })
-  await expect(entryLink).toHaveAttribute('href', '/es-co/platform')
-  await entryLink.click()
+  await page.goto('/es-co/platform', { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
   if (page.viewportSize()?.width < 768) await page.getByRole('button', { name: 'Abrir navegación' }).click()
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click()
@@ -69,6 +65,7 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
     test(`admin opens the closure preview at ${viewport} width through the approved stage`, {
       tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display', '@responsive:clients', `@responsive-scenario:${responsiveScenario}`, `@responsive-batch:${batchForScenario(responsiveScenario)}`, `@viewport:${viewport}`],
     }, async ({ page, request }, testInfo) => {
+      // quality: allow-deep-link (the authenticated Platform portal is the flow entry; Proyectos, the project row, Entregas and the closure action are reached by UI clicks)
       // Catches a regression where the approved-stage email modal clips its preview, recipient, or action at this viewport.
       const data = await closureFixture(request, testInfo, 'closure-approved')
       await enterPortalAndOpenWorkspace(page, request, data)
