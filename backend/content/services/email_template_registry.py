@@ -1360,6 +1360,30 @@ EMAIL_TEMPLATE_REGISTRY = {
         'description': 'Constancia manual revisada por el administrador cuando el cliente aprueba todos los requerimientos de una etapa.',
         **_composed_email_base(),
     },
+    'delivery_published_client': {
+        'name': 'Etapa disponible para revisión',
+        'description': 'Aviso automático de publicación o nueva ronda; no acredita conformidad.',
+        'category': 'client', 'html_template': 'emails/delivery_activity.html', 'txt_template': 'emails/delivery_activity.txt',
+        'editable_fields': [], 'available_variables': [], 'sample_context': {},
+    },
+    'delivery_reviewed_team': {
+        'name': 'Observaciones de revisión de entregas',
+        'description': 'Aviso al equipo por objeción, rechazo o comentario del cliente.',
+        'category': 'internal', 'html_template': 'emails/delivery_activity.html', 'txt_template': 'emails/delivery_activity.txt',
+        'editable_fields': [], 'available_variables': [], 'sample_context': {},
+    },
+    'delivery_message_client': {
+        'name': 'Respuesta pública de seguimiento',
+        'description': 'Aviso al cliente sobre una respuesta pública del equipo.',
+        'category': 'client', 'html_template': 'emails/delivery_activity.html', 'txt_template': 'emails/delivery_activity.txt',
+        'editable_fields': [], 'available_variables': [], 'sample_context': {},
+    },
+    'delivery_message_team': {
+        'name': 'Comentario del cliente en seguimiento',
+        'description': 'Aviso al equipo sobre un comentario público del cliente.',
+        'category': 'internal', 'html_template': 'emails/delivery_activity.html', 'txt_template': 'emails/delivery_activity.txt',
+        'editable_fields': [], 'available_variables': [], 'sample_context': {},
+    },
 }
 
 

@@ -1719,226 +1719,39 @@ def deliverable_all_view(request):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def deliverable_list_view(request, project_id):
-    """
-    GET  — All deliverables for a project (both roles, filtered by category optionally).
-    POST — Admin uploads a new deliverable.
-    """
-    from django.db.models import Count
-
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
-    profile = getattr(request.user, 'profile', None)
-    is_admin = profile and profile.is_admin
-
     if request.method == 'GET':
-        qs = (
-            Deliverable.objects.filter(project=proj)
-            .select_related('uploaded_by')
-            .annotate(_versions_count=Count('versions'))
-            .order_by('category', '-updated_at')
-        )
-        qs = filter_deliverables_for_list(qs, request, is_admin=is_admin)
-        category_filter = request.query_params.get('category')
-        if category_filter:
-            qs = qs.filter(category=category_filter)
-        serializer = DeliverableListSerializer(qs, many=True, context={'request': request})
-        return Response(serializer.data)
-
-    serializer = CreateDeliverableSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-
-    category = data.get('category', Deliverable.CATEGORY_OTHER)
-    if not is_admin and category in Deliverable.ADMIN_ONLY_CATEGORIES:
-        return Response(
-            {'detail': 'Esta categoría solo puede ser subida por el administrador.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    upload_file = data.get('file')
-    deliverable = Deliverable.objects.create(
-        project=proj,
-        uploaded_by=request.user,
-        title=data['title'],
-        description=data.get('description', ''),
-        category=category,
-        file=upload_file,
-        current_version=1 if upload_file else 0,
-    )
-
-    if upload_file:
-        DeliverableVersion.objects.create(
-            deliverable=deliverable,
-            file=upload_file,
-            version_number=1,
-            uploaded_by=request.user,
-        )
-        notify_project_client(
-            proj, Notification.TYPE_DELIVERABLE_UPLOADED,
-            f'Nuevo entregable: {deliverable.title}',
-            message=f'Se subió un archivo en {proj.name}.',
-            related_object_type='deliverable', related_object_id=deliverable.id,
-            exclude_user=request.user,
-            deliverable=deliverable,
-        )
-
-    return Response(
-        DeliverableListSerializer(deliverable, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+        return Response(resources.list_resources(project_id, request.user,
+            include_archived=wants_include_archived(request), category=request.query_params.get('category'), request=request))
+    return Response(resources.create_resource(project_id, request.user, request.data, request=request), status=201)
 
 
 @api_view(['GET', 'PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def deliverable_detail_view(request, project_id, deliverable_id):
-    """
-    GET    — Detail with version history (both roles).
-    PATCH  — Admin updates metadata (title, description, category).
-    DELETE — Admin only.
-    """
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
-    queryset = Deliverable.objects.select_related('business_proposal')
     if request.method == 'GET':
-        from content.models import ProposalApprovalFile
-        queryset = queryset.annotate(
-            _has_approval_files=Exists(ProposalApprovalFile.objects.filter(deliverable_id=OuterRef('pk'))),
-        ).select_related('uploaded_by').only(
-            'id', 'project_id', 'category', 'title', 'description',
-            'source_epic_key', 'source_epic_title', 'file', 'current_version',
-            'uploaded_by_id', 'is_archived', 'archived_at', 'created_at', 'updated_at',
-            'uploaded_by__id', 'uploaded_by__first_name', 'uploaded_by__last_name',
-            'uploaded_by__email', 'business_proposal__id', 'business_proposal__title',
-        )
-    try:
-        deliverable = queryset.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if request.method == 'GET':
-        if not deliverable_visible_for_request(deliverable, request):
-            return Response(
-                {'detail': 'Entregable no encontrado.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        deliverable._detail_versions = list(
-            deliverable.versions.select_related('uploaded_by').all(),
-        )
-        return Response(
-            DeliverableDetailSerializer(deliverable, context={'request': request}).data,
-        )
-
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden modificar entregables.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
+        return Response(resources.get_resource(project_id, request.user, deliverable_id, request=request))
     if request.method == 'DELETE':
-        deliverable.updated_at = timezone.now()
-        archive_record(deliverable, extra_update_fields=('updated_at',))
+        resources.update_resource(project_id, request.user, deliverable_id, {'is_archived': True}, request=request)
         return Response({'detail': 'Entregable archivado.'})
-
-    serializer = UpdateDeliverableSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = dict(serializer.validated_data)
-
-    if 'is_archived' in data:
-        flag = data.pop('is_archived')
-        deliverable.updated_at = timezone.now()
-        if flag:
-            archive_record(deliverable, extra_update_fields=('updated_at',))
-        else:
-            unarchive_record(deliverable, extra_update_fields=('updated_at',))
-
-    upd_fields = ['updated_at']
-    for field in ('title', 'description', 'category'):
-        if field in data:
-            setattr(deliverable, field, data[field])
-            upd_fields.append(field)
-    if len(upd_fields) > 1:
-        deliverable.save(update_fields=upd_fields)
-
-    deliverable._detail_versions = list(
-        deliverable.versions.select_related('uploaded_by').all(),
-    )
-    return Response(
-        DeliverableDetailSerializer(deliverable, context={'request': request}).data,
-    )
+    return Response(resources.update_resource(project_id, request.user, deliverable_id, request.data, request=request))
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def deliverable_upload_version_view(request, project_id, deliverable_id):
-    """
-    Admin uploads a new version of an existing deliverable.
-    The old file is kept in DeliverableVersion history.
-    """
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden subir nuevas versiones.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    try:
-        deliverable = Deliverable.objects.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    if deliverable.is_archived:
-        return Response(
-            {'detail': 'El entregable está archivado.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    serializer = UploadNewVersionSerializer(data=request.data, context={'deliverable': deliverable})
-    serializer.is_valid(raise_exception=True)
-
-    new_version = deliverable.current_version + 1
-
-    DeliverableVersion.objects.create(
-        deliverable=deliverable,
-        file=serializer.validated_data['file'],
-        version_number=new_version,
-        uploaded_by=request.user,
-    )
-
-    deliverable.file = serializer.validated_data['file']
-    deliverable.current_version = new_version
-    deliverable.save(update_fields=['file', 'current_version', 'updated_at'])
-
-    notify_project_client(
-        proj, Notification.TYPE_DELIVERABLE_NEW_VERSION,
-        f'Nueva versión: {deliverable.title} v{new_version}',
-        message=f'Se actualizó un entregable en {proj.name}.',
-        related_object_type='deliverable', related_object_id=deliverable.id,
-        exclude_user=request.user,
-        deliverable=deliverable,
-    )
-
-    deliverable._detail_versions = list(
-        deliverable.versions.select_related('uploaded_by').all(),
-    )
-    return Response(
-        DeliverableDetailSerializer(deliverable, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+    return Response(resources.upload_version(project_id, request.user, deliverable_id, request.data, request=request), status=201)
 
 
 def _build_proposal_pdf_http_response(proposal, doc_variant: str):
@@ -2072,58 +1885,13 @@ def deliverable_technical_document_pdf_view(request, project_id, deliverable_id)
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def deliverable_attachment_files_view(request, project_id, deliverable_id):
-    """List extra files on a deliverable (GET) or upload (POST, admin)."""
-    from accounts.models import Deliverable, DeliverableFile
-    from accounts.serializers import DeliverableFileSerializer, CreateDeliverableFileSerializer
-
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
-    try:
-        deliverable = Deliverable.objects.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
     if request.method == 'GET':
-        if not deliverable_visible_for_request(deliverable, request):
-            return Response(
-                {'detail': 'Entregable no encontrado.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        qs = deliverable.attachment_files.select_related('uploaded_by').all()
-        return Response(DeliverableFileSerializer(qs, many=True, context={'request': request}).data)
-
-    profile = getattr(request.user, 'profile', None)
-    if not profile or not profile.is_admin:
-        return Response(
-            {'detail': 'Solo los administradores pueden subir archivos adicionales.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    if deliverable.is_archived:
-        return Response(
-            {'detail': 'El entregable está archivado.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    serializer = CreateDeliverableFileSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-    row = DeliverableFile.objects.create(
-        deliverable=deliverable,
-        file=data['file'],
-        title=data.get('title', ''),
-        category=data.get('category', Deliverable.CATEGORY_OTHER),
-        uploaded_by=request.user,
-    )
-    return Response(
-        DeliverableFileSerializer(row, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+        return Response(resources.list_attachments(project_id, request.user, deliverable_id, request=request))
+    return Response(resources.upload_attachment(project_id, request.user, deliverable_id, request.data, request=request), status=201)
 
 
 def _client_or_admin_for_project_docs(request, proj):
@@ -2136,161 +1904,38 @@ def _client_or_admin_for_project_docs(request, proj):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def deliverable_client_folders_view(request, project_id, deliverable_id):
-    from accounts.models import Deliverable, DeliverableClientFolder
-    from accounts.serializers import (
-        CreateDeliverableClientFolderSerializer,
-        DeliverableClientFolderSerializer,
-    )
-
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    try:
-        deliverable = Deliverable.objects.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-    if not _client_or_admin_for_project_docs(request, proj):
-        return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
-
     if request.method == 'GET':
-        if not deliverable_visible_for_request(deliverable, request):
-            return Response(
-                {'detail': 'Entregable no encontrado.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        qs = deliverable.client_folders.all()
-        return Response(DeliverableClientFolderSerializer(qs, many=True).data)
-
-    if deliverable.is_archived:
-        return Response(
-            {'detail': 'El entregable está archivado.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    serializer = CreateDeliverableClientFolderSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-    row = DeliverableClientFolder.objects.create(
-        deliverable=deliverable,
-        name=data['name'],
-        order=data.get('order', 0),
-        created_by=request.user,
-    )
-    return Response(
-        DeliverableClientFolderSerializer(row).data,
-        status=status.HTTP_201_CREATED,
-    )
+        return Response(resources.list_folders(project_id, request.user, deliverable_id, request=request))
+    return Response(resources.create_folder(project_id, request.user, deliverable_id, request.data, request=request), status=201)
 
 
 @api_view(['PATCH', 'DELETE'])
 @permission_classes([IsAuthenticated])
 def deliverable_client_folder_detail_view(request, project_id, deliverable_id, folder_id):
-    from accounts.models import Deliverable, DeliverableClientFolder
-    from accounts.serializers import DeliverableClientFolderSerializer
-
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    try:
-        deliverable = Deliverable.objects.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-    if not _client_or_admin_for_project_docs(request, proj):
-        return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
-
-    if not deliverable_visible_for_request(deliverable, request):
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    try:
-        folder = DeliverableClientFolder.objects.get(
-            id=folder_id, deliverable=deliverable,
-        )
-    except DeliverableClientFolder.DoesNotExist:
-        return Response({'detail': 'Carpeta no encontrada.'}, status=status.HTTP_404_NOT_FOUND)
-
     if request.method == 'DELETE':
-        folder.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    name = request.data.get('name')
-    order = request.data.get('order')
-    upd = []
-    if name is not None:
-        folder.name = str(name)[:200]
-        upd.append('name')
-    if order is not None:
-        folder.order = int(order)
-        upd.append('order')
-    if upd:
-        folder.save(update_fields=upd)
-    return Response(DeliverableClientFolderSerializer(folder).data)
+        resources.change_folder(project_id, request.user, deliverable_id, folder_id, {}, delete=True, request=request)
+        return Response(status=204)
+    return Response(resources.change_folder(project_id, request.user, deliverable_id, folder_id, request.data, request=request))
 
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def deliverable_client_uploads_view(request, project_id, deliverable_id):
-    from accounts.models import Deliverable, DeliverableClientUpload
-    from accounts.serializers import (
-        CreateDeliverableClientUploadSerializer,
-        DeliverableClientUploadSerializer,
-    )
-
+    from accounts.services import platform_resources as resources
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    try:
-        deliverable = Deliverable.objects.get(id=deliverable_id, project=proj)
-    except Deliverable.DoesNotExist:
-        return Response(
-            {'detail': 'Entregable no encontrado.'},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-    if not _client_or_admin_for_project_docs(request, proj):
-        return Response({'detail': 'No autorizado.'}, status=status.HTTP_403_FORBIDDEN)
-
     if request.method == 'GET':
-        if not deliverable_visible_for_request(deliverable, request):
-            return Response(
-                {'detail': 'Entregable no encontrado.'},
-                status=status.HTTP_404_NOT_FOUND,
-            )
-        qs = deliverable.client_uploads.select_related('uploaded_by', 'folder').all()
-        return Response(
-            DeliverableClientUploadSerializer(qs, many=True, context={'request': request}).data,
-        )
-
-    if deliverable.is_archived:
-        return Response(
-            {'detail': 'El entregable está archivado.'},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    serializer = CreateDeliverableClientUploadSerializer(
-        data=request.data,
-        context={'deliverable': deliverable},
-    )
-    serializer.is_valid(raise_exception=True)
-    data = serializer.validated_data
-    row = DeliverableClientUpload.objects.create(
-        deliverable=deliverable,
-        folder_id=data.get('folder_id'),
-        file=data['file'],
-        title=data.get('title', ''),
-        uploaded_by=request.user,
-    )
-    return Response(
-        DeliverableClientUploadSerializer(row, context={'request': request}).data,
-        status=status.HTTP_201_CREATED,
-    )
+        return Response(resources.list_client_files(project_id, request.user, deliverable_id, request=request))
+    return Response(resources.upload_client_file(project_id, request.user, deliverable_id, request.data, request=request), status=201)
 
 
 # ==========================================================================
@@ -2334,71 +1979,23 @@ def deliverable_data_model_entities_view(request, project_id, deliverable_id):
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
 def project_data_model_entities_view(request, project_id):
-    """
-    GET  — List project-level data model entities (admin or owning client).
-    POST — Admin uploads JSON to create/replace entities for the project.
-    """
+    from accounts.services import platform_data_model as data_model
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
     if request.method == 'GET':
-        qs = ProjectDataModelEntity.objects.filter(project=proj)
-        return Response(ProjectDataModelEntitySerializer(qs, many=True).data)
-
-    profile = getattr(request.user, 'profile', None)
-    if not (profile and profile.is_admin):
-        return Response(
-            {'detail': 'Solo administradores pueden subir el modelo de datos.'},
-            status=status.HTTP_403_FORBIDDEN,
-        )
-
-    serializer = ProjectDataModelUploadSerializer(data=request.data)
-    if not serializer.is_valid():
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-    entities_data = serializer.validated_data['entities']
-
-    with transaction.atomic():
-        ProjectDataModelEntity.objects.filter(project=proj).delete()
-        objs = [
-            ProjectDataModelEntity(
-                project=proj,
-                name=item['name'][:300],
-                description=item.get('description', ''),
-                key_fields=item.get('keyFields', ''),
-                relationship=item.get('relationship', ''),
-            )
-            for item in entities_data
-        ]
-        ProjectDataModelEntity.objects.bulk_create(objs)
-
-    qs = ProjectDataModelEntity.objects.filter(project=proj)
-    return Response(
-        ProjectDataModelEntitySerializer(qs, many=True).data,
-        status=status.HTTP_201_CREATED,
-    )
+        return Response(data_model.list_entities(project_id, request.user, request=request))
+    return Response(data_model.import_entities(project_id, request.user, request.data, request=request), status=201)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def project_data_model_template_view(request, project_id):
-    """GET — Return the JSON template for project data model upload."""
+    from accounts.services import platform_data_model as data_model
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-
-    template = {
-        'entities': [
-            {
-                'name': 'ExampleEntity',
-                'description': 'Brief description of the entity',
-                'keyFields': 'id, name, created_at',
-                'relationship': '1:N with OtherEntity',
-            },
-        ],
-    }
-    return Response(template)
+    return Response(data_model.template(project_id, request.user, request=request))
 
 
 # ==========================================================================

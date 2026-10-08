@@ -1,5 +1,5 @@
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, toRef } from 'vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
 import BaseFormField from '~/components/base/BaseFormField.vue'
@@ -13,15 +13,22 @@ const props = defineProps({
   stage: { type: Object, required: true }, documents: { type: Array, default: () => [] },
   historical: { type: Boolean, default: false }, loading: { type: Boolean, default: false }, error: { type: String, default: '' },
   evidenceMessages: { type: Array, default: () => [] },
+  draft: { type: Object, default: null },
 })
-const emit = defineEmits(['submit', 'cancel'])
+const emit = defineEmits(['submit', 'cancel', 'draft'])
 const { t } = useI18n()
-const decisions = reactive(Object.fromEntries(props.stage.requirements.map((requirement) => [requirement.id, { decision: '', message: '', environment: requirement.guide?.environment || '' }])))
-const message = ref('')
-const documentIds = ref([])
+const draftState = reactive(props.draft || {
+  decisions: Object.fromEntries(props.stage.requirements.map((requirement) => [requirement.id, { decision: '', message: '', environment: requirement.guide?.environment || '' }])),
+  message: '', documentIds: [],
+  evidence: { source_message_id: '', client_statement: false, original_reviewer: '', occurred_at: '', evidence_channel: 'email', external_reference: '' },
+})
+emit('draft', draftState)
+const decisions = draftState.decisions
+const message = toRef(draftState, 'message')
+const documentIds = toRef(draftState, 'documentIds')
 const validationError = ref('')
 const fieldErrors = reactive({})
-const evidence = reactive({ source_message_id: '', client_statement: false, original_reviewer: '', occurred_at: '', evidence_channel: 'email', external_reference: '' })
+const evidence = draftState.evidence
 const selectedEvidence = computed(() => props.evidenceMessages.find((item) => String(item.id) === String(evidence.source_message_id)))
 const evidenceOptions = computed(() => [{ value: '', label: t('platformDelivery.otherEvidence') }, ...props.evidenceMessages.map((item) => ({ value: item.id, label: `${item.original_reviewer} · ${item.subject}` }))])
 const decisionOptions = () => [

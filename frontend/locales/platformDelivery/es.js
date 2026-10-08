@@ -1,4 +1,11 @@
 export default {
+  notices: {
+    title: 'Avisos de seguimiento', hint: 'Consulta el envío de los avisos. Reintentar requiere revisar la copia exacta.',
+    empty: 'No hay avisos registrados.', error: 'No se pudo consultar o reintentar el aviso.',
+    preview: 'Revisar reintento', confirm: 'Confirmar reintento', previous: 'Anterior', next: 'Siguiente',
+    uncertain: 'El resultado del envío requiere revisión del equipo. No se reenvía automáticamente.',
+    status: { pending: 'Pendiente', sending: 'Enviando', sent: 'Enviado', failed: 'Fallido', unknown: 'Resultado desconocido', cancelled: 'Cancelado' },
+  },
   reopenRound: 'Abrir nueva ronda', awaitingRound: 'El equipo abrirá una nueva ronda cuando puedas volver a probar este requerimiento.',
   navigation: 'Entregas', title: 'Alcance y entregas', subtitle: 'Consulta lo acordado, prueba cada requerimiento y registra tus resultados.',
   project: 'Proyecto', contract: 'Contrato original', amendment: 'Otrosí', scope: 'Alcance', phase: 'Fase de ejecución', stage: 'Etapa', requirement: 'Requerimiento',

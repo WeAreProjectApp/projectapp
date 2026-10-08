@@ -66,6 +66,7 @@ OWNERS = {
     'accounts.paymenthistory': ('payment',),
     'accounts.deliveryevidenceemailfile': ('email',),
     'accounts.deliveryevidenceemailattempt': ('email',),
+    'accounts.deliverynotificationattempt': ('event',),
     'content.incomerecord': ('expected_income',),
     'content.documentthreaditem': ('thread',),
     'monitoring.source': ('resource',),

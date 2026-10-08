@@ -1,3 +1,7 @@
+> **Límite REST/MCP de recursos — 2026-10-07:** preservado el rol administrativo de Platform frente a los flags Django staff/superuser. Las lecturas, escrituras y descargas del servicio compartido filtran por propietario cuando no existe ese rol; MCP admite su principal técnico únicamente con contexto, actor y credencial coincidentes. Verificados doce rechazos de cliente staff, positivos de admin/cliente y principal MCP sin perfil simulado; gate focal 100 y schema sin drift.
+
+> **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id` y los avisos se integran con los contratos de sus sesiones propietarias. La privacidad de URLs históricas requiere una ronda y deploy separado; no está acreditada por esta entrega.
+
 # Datos conservados sin proyecto — PR-1, traslado auditado (2026-10-07)
 
 «Asignar registros sin proyecto» acepta los registros conservados del mismo
