@@ -1,5 +1,6 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.authentication import SessionAuthentication
+from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 
@@ -9,6 +10,7 @@ from accounts.services.tokens import get_tokens_for_user
 
 
 @api_view(['POST'])
+@authentication_classes([SessionAuthentication])
 @permission_classes([IsAdminUser])
 def session_token_bridge(request):
     """

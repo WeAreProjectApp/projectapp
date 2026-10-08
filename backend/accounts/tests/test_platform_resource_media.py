@@ -8,6 +8,11 @@ from django.core.files.base import ContentFile
 from django.core.files.storage import storages
 from rest_framework.test import APIClient
 
+from accounts.services.tokens import (
+    get_password_reset_request_token,
+    get_password_reset_verified_token,
+    get_verification_token_for_user,
+)
 from accounts.tests.platform_media_helpers import (
     KINDS,
     api_for,
@@ -34,6 +39,24 @@ def test_resource_file_rejects_anonymous_download(media_context, kind):
     """Fails if any file family streams bytes before JWT authentication."""
     response = APIClient().get(download_url(media_context, kind))
     assert response.status_code == 401
+
+
+@pytest.mark.parametrize('token_factory', [
+    get_verification_token_for_user,
+    get_password_reset_request_token,
+    get_password_reset_verified_token,
+], ids=['verification', 'password_reset_request', 'password_reset_verified'])
+@pytest.mark.parametrize('kind', KINDS)
+def test_resource_file_rejects_a_challenge_token(media_context, kind, token_factory):
+    """Fails if a pre-session challenge can stream the claimed owner's file."""
+    api = APIClient()
+    api.credentials(HTTP_AUTHORIZATION=f'Bearer {token_factory(media_context["owner"])}')
+
+    response = api.get(download_url(media_context, kind))
+
+    assert response.status_code == 401
+    assert response.streaming is False
+    assert media_context['bodies'][kind] not in response.content
 
 
 @pytest.mark.parametrize('kind', KINDS)
