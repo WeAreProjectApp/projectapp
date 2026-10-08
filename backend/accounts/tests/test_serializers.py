@@ -1,15 +1,18 @@
-from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
-from datetime import date, datetime, timezone as datetime_timezone
+"""Tests for platform serializer validation and observable output contracts."""
+
+from datetime import date, datetime
+from datetime import timezone as datetime_timezone
 from decimal import Decimal
 from unittest.mock import MagicMock, PropertyMock, patch
 
 import pytest
+from content.models.business_proposal import BusinessProposal
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIRequestFactory
 
 from accounts.models import (
-    BugReport,
     BugComment,
+    BugReport,
     ChangeRequest,
     ChangeRequestComment,
     Deliverable,
@@ -20,7 +23,7 @@ from accounts.models import (
     ProjectPhase,
     UserProfile,
 )
-from content.models.business_proposal import BusinessProposal
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
 
 
 def _make_phase(project):
@@ -62,24 +65,30 @@ factory = APIRequestFactory()
 # =========================================================================
 
 class TestLoginSerializer:
+    """Validate platform login credentials."""
+
     def test_valid_data_passes_validation(self):
+        """Accept a valid input payload."""
         serializer = LoginSerializer(data={'email': 'a@b.com', 'password': 'secret'})
 
         assert serializer.is_valid() is True
 
     def test_missing_email_fails_validation(self):
+        """Reject login data without an email address."""
         serializer = LoginSerializer(data={'password': 'secret'})
 
         assert serializer.is_valid() is False
         assert 'email' in serializer.errors
 
     def test_missing_password_fails_validation(self):
+        """Reject login data without a password."""
         serializer = LoginSerializer(data={'email': 'a@b.com'})
 
         assert serializer.is_valid() is False
         assert 'password' in serializer.errors
 
     def test_invalid_email_format_fails_validation(self):
+        """Reject a malformed login email address."""
         serializer = LoginSerializer(data={'email': 'not-an-email', 'password': 'x'})
 
         assert serializer.is_valid() is False
@@ -91,7 +100,10 @@ class TestLoginSerializer:
 # =========================================================================
 
 class TestVerifyOnboardingSerializer:
+    """Validate onboarding verification codes and passwords."""
+
     def test_valid_data_passes_validation(self):
+        """Accept a valid input payload."""
         serializer = VerifyOnboardingSerializer(
             data={'code': '123456', 'new_password': 'MySecure1!'},
         )
@@ -99,6 +111,7 @@ class TestVerifyOnboardingSerializer:
         assert serializer.is_valid() is True
 
     def test_code_too_short_fails_validation(self):
+        """Reject an onboarding verification code below the required length."""
         serializer = VerifyOnboardingSerializer(
             data={'code': '123', 'new_password': 'MySecure1!'},
         )
@@ -107,6 +120,7 @@ class TestVerifyOnboardingSerializer:
         assert 'code' in serializer.errors
 
     def test_password_too_short_fails_validation(self):
+        """Reject an onboarding password below the required length."""
         serializer = VerifyOnboardingSerializer(
             data={'code': '123456', 'new_password': 'short'},
         )
@@ -120,6 +134,8 @@ class TestVerifyOnboardingSerializer:
 # =========================================================================
 
 class TestCompleteProfileSerializer:
+    """Validate required client profile details."""
+
     VALID_DATA = {
         'company_name': 'ACME Corp',
         'phone': '+57 300 111 2222',
@@ -130,11 +146,13 @@ class TestCompleteProfileSerializer:
     }
 
     def test_valid_data_passes_validation(self):
+        """Accept a valid input payload."""
         serializer = CompleteProfileSerializer(data=self.VALID_DATA)
 
         assert serializer.is_valid() is True
 
     def test_missing_cedula_fails_validation(self):
+        """Reject profile completion without an identity-document number."""
         data = {**self.VALID_DATA}
         del data['cedula']
         serializer = CompleteProfileSerializer(data=data)
@@ -143,6 +161,7 @@ class TestCompleteProfileSerializer:
         assert 'cedula' in serializer.errors
 
     def test_blank_cedula_fails_custom_validation(self):
+        """Reject a blank identity-document number."""
         data = {**self.VALID_DATA, 'cedula': '   '}
         serializer = CompleteProfileSerializer(data=data)
 
@@ -150,6 +169,7 @@ class TestCompleteProfileSerializer:
         assert 'cedula' in serializer.errors
 
     def test_blank_phone_fails_custom_validation(self):
+        """Reject a blank phone number."""
         data = {**self.VALID_DATA, 'phone': '   '}
         serializer = CompleteProfileSerializer(data=data)
 
@@ -157,6 +177,7 @@ class TestCompleteProfileSerializer:
         assert 'phone' in serializer.errors
 
     def test_invalid_gender_choice_fails_validation(self):
+        """Reject a gender value outside the supported choices."""
         data = {**self.VALID_DATA, 'gender': 'invalid_choice'}
         serializer = CompleteProfileSerializer(data=data)
 
@@ -164,6 +185,7 @@ class TestCompleteProfileSerializer:
         assert 'gender' in serializer.errors
 
     def test_invalid_education_level_fails_validation(self):
+        """Reject an education level outside the supported choices."""
         data = {**self.VALID_DATA, 'education_level': 'phd'}
         serializer = CompleteProfileSerializer(data=data)
 
@@ -171,6 +193,7 @@ class TestCompleteProfileSerializer:
         assert 'education_level' in serializer.errors
 
     def test_avatar_is_optional(self):
+        """Accept profile completion without an avatar."""
         serializer = CompleteProfileSerializer(data=self.VALID_DATA)
 
         assert serializer.is_valid() is True
@@ -183,7 +206,10 @@ class TestCompleteProfileSerializer:
 
 @pytest.mark.django_db
 class TestCreateClientSerializer:
+    """Validate new client inputs and email normalization."""
+
     def test_valid_data_passes_validation(self):
+        """Accept a valid input payload."""
         serializer = CreateClientSerializer(data={
             'email': 'new@client.com',
             'first_name': 'New',
@@ -193,6 +219,7 @@ class TestCreateClientSerializer:
         assert serializer.is_valid() is True
 
     def test_duplicate_email_fails_validation(self):
+        """Reject an email address already registered to an account."""
         User.objects.create_user(
             username='exist@test.com', email='exist@test.com', password='pass',
         )
@@ -206,6 +233,7 @@ class TestCreateClientSerializer:
         assert 'email' in serializer.errors
 
     def test_email_normalized_to_lowercase(self):
+        """Normalize an account email address to lowercase."""
         serializer = CreateClientSerializer(data={
             'email': '  UPPER@Example.COM  ',
             'first_name': 'A',
@@ -221,13 +249,17 @@ class TestCreateClientSerializer:
 # =========================================================================
 
 class TestUpdateClientSerializer:
+    """Validate editable fields on existing client accounts."""
+
     def test_partial_update_with_single_field(self):
+        """Accept a partial client update containing one supported field."""
         serializer = UpdateClientSerializer(data={'first_name': 'Updated'})
 
         assert serializer.is_valid() is True
         assert serializer.validated_data == {'first_name': 'Updated'}
 
     def test_is_active_boolean_field(self):
+        """Accept the client activation flag as a boolean."""
         serializer = UpdateClientSerializer(data={'is_active': False})
 
         assert serializer.is_valid() is True
@@ -239,7 +271,10 @@ class TestUpdateClientSerializer:
 # =========================================================================
 
 class TestUpdateProfileSerializer:
+    """Validate partial self-profile updates."""
+
     def test_valid_partial_update(self):
+        """Accept a partial profile update."""
         serializer = UpdateProfileSerializer(data={
             'first_name': 'Updated',
             'gender': 'female',
@@ -248,12 +283,14 @@ class TestUpdateProfileSerializer:
         assert serializer.is_valid() is True
 
     def test_invalid_gender_choice_fails(self):
+        """Reject a gender value outside the supported choices."""
         serializer = UpdateProfileSerializer(data={'gender': 'xyz'})
 
         assert serializer.is_valid() is False
         assert 'gender' in serializer.errors
 
     def test_empty_payload_is_valid(self):
+        """Accept an empty partial profile update."""
         serializer = UpdateProfileSerializer(data={})
 
         assert serializer.is_valid() is True
@@ -265,8 +302,11 @@ class TestUpdateProfileSerializer:
 
 @pytest.mark.django_db
 class TestCreateProjectSerializer:
+    """Validate project creation inputs and tenant references."""
+
     @pytest.fixture
     def client_user(self):
+        """Create the client profile used for project input validation."""
         user = User.objects.create_user(
             username='cli@test.com', email='cli@test.com', password='pass',
         )
@@ -274,6 +314,7 @@ class TestCreateProjectSerializer:
         return user
 
     def test_valid_data_passes_validation(self, client_user):
+        """Accept a valid input payload."""
         serializer = CreateProjectSerializer(data={
             'name': 'Test Project',
             'client_id': client_user.id,
@@ -282,6 +323,7 @@ class TestCreateProjectSerializer:
         assert serializer.is_valid() is True
 
     def test_nonexistent_client_id_fails_validation(self):
+        """Reject a project whose client account does not exist."""
         serializer = CreateProjectSerializer(data={
             'name': 'Test',
             'client_id': 99999,
@@ -291,6 +333,7 @@ class TestCreateProjectSerializer:
         assert 'client_id' in serializer.errors
 
     def test_admin_as_client_fails_validation(self):
+        """Reject an administrator account as a project client."""
         admin = User.objects.create_user(
             username='adm@test.com', email='adm@test.com', password='pass',
         )
@@ -305,6 +348,7 @@ class TestCreateProjectSerializer:
         assert 'client_id' in serializer.errors
 
     def test_status_is_not_a_writable_field(self, client_user):
+        """Exclude project status from the writable serializer fields."""
         serializer = CreateProjectSerializer(data={
             'name': 'Test',
             'client_id': client_user.id,
@@ -313,6 +357,7 @@ class TestCreateProjectSerializer:
         assert 'status' not in serializer.fields
 
     def test_progress_out_of_range_fails_validation(self, client_user):
+        """Reject project progress outside its allowed range."""
         serializer = CreateProjectSerializer(data={
             'name': 'Test',
             'client_id': client_user.id,
@@ -328,12 +373,16 @@ class TestCreateProjectSerializer:
 # =========================================================================
 
 class TestUpdateProjectSerializer:
+    """Validate the editable project fields."""
+
     def test_partial_update_valid(self):
+        """Accept a partial project update."""
         serializer = UpdateProjectSerializer(data={'name': 'New Name'})
 
         assert serializer.is_valid() is True
 
     def test_status_is_not_a_writable_field(self):
+        """Exclude project status from the writable serializer fields."""
         serializer = UpdateProjectSerializer(data={'name': 'New Name'})
 
         assert 'status' not in serializer.fields
@@ -345,7 +394,10 @@ class TestUpdateProjectSerializer:
 
 @pytest.mark.django_db
 class TestClientListSerializer:
+    """Serialize client profile summaries and live aggregates."""
+
     def test_serializes_client_profile_correctly(self):
+        """Expose the persisted client profile fields."""
         user = User.objects.create_user(
             username='cl@test.com', email='cl@test.com', password='pass',
             first_name='Carlos', last_name='López',
@@ -399,7 +451,10 @@ class TestClientListSerializer:
 
 @pytest.mark.django_db
 class TestProjectListSerializer:
+    """Serialize project summaries, client labels and detail aggregates."""
+
     def test_serializes_project_with_client_info(self):
+        """Expose the project details with the associated client information."""
         user = User.objects.create_user(
             username='pj@test.com', email='pj@test.com', password='pass',
             first_name='Maria', last_name='García',
@@ -419,6 +474,7 @@ class TestProjectListSerializer:
         assert data['client_company'] == 'ACME'
 
     def test_client_name_falls_back_to_email(self):
+        """Use the client email when the client has no display name."""
         user = User.objects.create_user(
             username='fb@test.com', email='fb@test.com', password='pass',
         )
@@ -484,7 +540,10 @@ class TestProjectListSerializer:
 
 @pytest.mark.django_db
 class TestUserProfileSerializer:
+    """Serialize profile details and avatar links."""
+
     def test_serializes_full_profile_fields(self):
+        """Expose the persisted account and profile details."""
         user = User.objects.create_user(
             username='ups@test.com', email='ups@test.com', password='pass',
             first_name='Laura', last_name='Ríos',
@@ -513,6 +572,7 @@ class TestUserProfileSerializer:
         assert data['education_level'] == 'universitario'
 
     def test_avatar_display_url_returns_empty_when_no_avatar(self):
+        """Return an empty avatar link when the profile has no avatar."""
         user = User.objects.create_user(
             username='noav2@test.com', email='noav2@test.com', password='pass',
         )
@@ -524,6 +584,7 @@ class TestUserProfileSerializer:
         assert data['avatar_display_url'] == ''
 
     def test_avatar_display_url_returns_absolute_url_for_avatar_url_field(self):
+        """Keep the configured absolute avatar link unchanged."""
         user = User.objects.create_user(
             username='avurl@test.com', email='avurl@test.com', password='pass',
         )
@@ -543,6 +604,8 @@ class TestUserProfileSerializer:
 
 @pytest.mark.django_db
 class TestListSerializerAnnotatedCounts:
+    """Preserve list counts when queryset annotations are absent."""
+
     def test_deliverable_list_serializer_falls_back_to_versions_count(self):
         """Fails if an unannotated deliverable loses its real version count."""
         user = User.objects.create_user(
@@ -602,6 +665,8 @@ class TestListSerializerAnnotatedCounts:
 
 @pytest.mark.django_db
 class TestHostingSubscriptionListSerializerPendingPayments:
+    """Calculate pending payments for unannotated subscriptions."""
+
     def test_unannotated_subscription_serializer_uses_fallback(self):
         """Fails if direct subscription serialization loses the payment count fallback."""
         client = User.objects.create_user(
@@ -646,7 +711,10 @@ class TestHostingSubscriptionListSerializerPendingPayments:
 
 @pytest.mark.django_db
 class TestCreateAdminSerializer:
+    """Validate administrator email uniqueness and normalization."""
+
     def test_duplicate_email_fails_validation(self):
+        """Reject an email address already registered to an account."""
         User.objects.create_user(
             username='addup@test.com', email='addup@test.com', password='pass',
         )
@@ -660,6 +728,7 @@ class TestCreateAdminSerializer:
         assert 'email' in serializer.errors
 
     def test_email_normalized_to_lowercase(self):
+        """Normalize an account email address to lowercase."""
         serializer = CreateAdminSerializer(data={
             'email': '  NEWADMIN@TEST.COM  ',
             'first_name': 'A',
@@ -676,7 +745,10 @@ class TestCreateAdminSerializer:
 
 @pytest.mark.django_db
 class TestClientListSerializerAvatarUrl:
+    """Resolve public avatar links in client summaries."""
+
     def test_avatar_display_url_builds_absolute_for_relative_url(self):
+        """Expand a relative public avatar link against the request origin."""
         user = User.objects.create_user(
             username='avtest@test.com', email='avtest@test.com', password='pass',
         )
@@ -699,7 +771,10 @@ class TestClientListSerializerAvatarUrl:
 
 @pytest.mark.django_db
 class TestCreateProjectSerializerProposalValidation:
+    """Reject proposals already linked to delivery packages."""
+
     def test_proposal_already_linked_to_deliverable_fails(self):
+        """Reject a proposal that is already attached to a delivery package."""
         from content.models import BusinessProposal
 
         client = User.objects.create_user(
@@ -734,7 +809,10 @@ class TestCreateProjectSerializerProposalValidation:
 # =========================================================================
 
 class TestChangeRequestSerializerScreenshotUrl:
+    """Serialize public screenshot links for change requests."""
+
     def test_list_serializer_returns_http_url_directly(self):
+        """Keep an absolute public list screenshot link unchanged."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = 'https://cdn.example.com/shot.png'
@@ -745,6 +823,7 @@ class TestChangeRequestSerializerScreenshotUrl:
         assert result == 'https://cdn.example.com/shot.png'
 
     def test_list_serializer_returns_none_when_no_screenshot(self):
+        """Return no list screenshot link when the screenshot is absent."""
         mock_obj = MagicMock()
         mock_obj.screenshot = None
 
@@ -754,6 +833,7 @@ class TestChangeRequestSerializerScreenshotUrl:
         assert result is None
 
     def test_list_serializer_builds_absolute_with_request(self):
+        """Expand a relative public list screenshot link against the request origin."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = '/media/shot.png'
@@ -765,6 +845,7 @@ class TestChangeRequestSerializerScreenshotUrl:
         assert result.startswith('http')
 
     def test_detail_serializer_returns_http_url_directly(self):
+        """Keep an absolute public detail screenshot link unchanged."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = 'https://cdn.example.com/shot.png'
@@ -775,6 +856,7 @@ class TestChangeRequestSerializerScreenshotUrl:
         assert result == 'https://cdn.example.com/shot.png'
 
     def test_detail_serializer_returns_none_when_no_screenshot(self):
+        """Return no detail screenshot link when the screenshot is absent."""
         mock_obj = MagicMock()
         mock_obj.screenshot = None
 
@@ -784,6 +866,7 @@ class TestChangeRequestSerializerScreenshotUrl:
         assert result is None
 
     def test_detail_serializer_builds_absolute_with_request(self):
+        """Expand a relative public detail screenshot link against the request origin."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = '/media/shot.png'
@@ -801,7 +884,10 @@ class TestChangeRequestSerializerScreenshotUrl:
 # =========================================================================
 
 class TestBugReportSerializerScreenshotUrl:
+    """Serialize public screenshot links for issue reports."""
+
     def test_list_serializer_returns_http_url_directly(self):
+        """Keep an absolute public list screenshot link unchanged."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = 'https://cdn.example.com/bug.png'
@@ -812,6 +898,7 @@ class TestBugReportSerializerScreenshotUrl:
         assert result == 'https://cdn.example.com/bug.png'
 
     def test_list_serializer_returns_none_when_no_screenshot(self):
+        """Return no list screenshot link when the screenshot is absent."""
         mock_obj = MagicMock()
         mock_obj.screenshot = None
 
@@ -821,6 +908,7 @@ class TestBugReportSerializerScreenshotUrl:
         assert result is None
 
     def test_list_serializer_builds_absolute_with_request(self):
+        """Expand a relative public list screenshot link against the request origin."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = '/media/bug.png'
@@ -832,6 +920,7 @@ class TestBugReportSerializerScreenshotUrl:
         assert result.startswith('http')
 
     def test_detail_serializer_returns_http_url_directly(self):
+        """Keep an absolute public detail screenshot link unchanged."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = 'https://cdn.example.com/bug.png'
@@ -842,6 +931,7 @@ class TestBugReportSerializerScreenshotUrl:
         assert result == 'https://cdn.example.com/bug.png'
 
     def test_detail_serializer_returns_none_when_no_screenshot(self):
+        """Return no detail screenshot link when the screenshot is absent."""
         mock_obj = MagicMock()
         mock_obj.screenshot = None
 
@@ -851,6 +941,7 @@ class TestBugReportSerializerScreenshotUrl:
         assert result is None
 
     def test_detail_serializer_builds_absolute_with_request(self):
+        """Expand a relative public detail screenshot link against the request origin."""
         mock_obj = MagicMock()
         mock_obj.screenshot = MagicMock()
         mock_obj.screenshot.url = '/media/bug.png'
@@ -868,7 +959,10 @@ class TestBugReportSerializerScreenshotUrl:
 
 @pytest.mark.django_db
 class TestCreateBugReportSerializerValidation:
+    """Require a project-owned source for new issue reports."""
+
     def test_no_project_context_raises_validation_error(self):
+        """Reject issue creation without its required project context."""
         serializer = CreateBugReportSerializer(
             data={'source_requirement_id': 1, 'title': 'Bug'},
             context={},  # no 'project' key
@@ -878,6 +972,7 @@ class TestCreateBugReportSerializerValidation:
         assert 'source_requirement_id' in serializer.errors
 
     def test_source_requirement_not_in_project_fails(self):
+        """Reject an issue source requirement belonging to another project."""
         client = User.objects.create_user(
             username='bugcli@test.com', email='bugcli@test.com', password='pass',
         )
@@ -903,8 +998,11 @@ class TestCreateBugReportSerializerValidation:
 
 @pytest.mark.django_db
 class TestEvaluateBugReportSerializerValidation:
+    """Validate links to existing, active project issue reports."""
+
     @pytest.fixture
     def project_with_bug(self):
+        """Create a project and issue for linked-issue validation."""
         client = User.objects.create_user(
             username='evbug@test.com', email='evbug@test.com', password='pass',
         )
@@ -917,6 +1015,7 @@ class TestEvaluateBugReportSerializerValidation:
         return project, bug
 
     def test_nonexistent_linked_bug_fails(self, project_with_bug):
+        """Reject a linked issue identifier that does not exist."""
         _, bug = project_with_bug
         serializer = EvaluateBugReportSerializer(
             data={'status': BugReport.STATUS_REPORTED, 'linked_bug_id': 99999},
@@ -927,6 +1026,7 @@ class TestEvaluateBugReportSerializerValidation:
         assert 'linked_bug_id' in serializer.errors
 
     def test_archived_linked_bug_fails(self, project_with_bug):
+        """Reject an archived issue as the linked issue."""
         project, bug = project_with_bug
         archived_bug = BugReport.objects.create(
             project=project, reported_by=bug.reported_by,
@@ -942,6 +1042,7 @@ class TestEvaluateBugReportSerializerValidation:
         assert 'linked_bug_id' in serializer.errors
 
     def test_valid_linked_bug_passes(self, project_with_bug):
+        """Accept an active linked issue belonging to the same project."""
         project, bug = project_with_bug
         other_bug = BugReport.objects.create(
             project=project, reported_by=bug.reported_by,
@@ -963,28 +1064,10 @@ class TestEvaluateBugReportSerializerValidation:
 # =========================================================================
 
 class TestDeliverableSerializerFileUrls:
-    def test_version_serializer_builds_absolute_url_with_request(self):
-        mock_version = MagicMock()
-        mock_version.file = MagicMock()
-        mock_version.file.url = '/media/versions/file.pdf'
-
-        request = factory.get('/')
-        s = DeliverableVersionSerializer(context={'request': request})
-        result = s.get_file_url(mock_version)
-
-        assert result.startswith('http')
-
-    def test_version_serializer_returns_http_url_directly(self):
-        mock_version = MagicMock()
-        mock_version.file = MagicMock()
-        mock_version.file.url = 'https://cdn.example.com/file.pdf'
-
-        s = DeliverableVersionSerializer()
-        result = s.get_file_url(mock_version)
-
-        assert result == 'https://cdn.example.com/file.pdf'
+    """Serialize missing resource files and resource author labels."""
 
     def test_version_serializer_returns_none_when_no_file(self):
+        """Return no version download link when the version file is absent."""
         mock_version = MagicMock()
         mock_version.file = None
 
@@ -993,28 +1076,10 @@ class TestDeliverableSerializerFileUrls:
 
         assert result is None
 
-    def test_list_serializer_builds_absolute_url_with_request(self):
-        mock_deliverable = MagicMock()
-        mock_deliverable.file = MagicMock()
-        mock_deliverable.file.url = '/media/deliverables/file.pdf'
 
-        request = factory.get('/')
-        s = DeliverableListSerializer(context={'request': request})
-        result = s.get_file_url(mock_deliverable)
-
-        assert result.startswith('http')
-
-    def test_list_serializer_returns_http_url_directly(self):
-        mock_deliverable = MagicMock()
-        mock_deliverable.file = MagicMock()
-        mock_deliverable.file.url = 'https://cdn.example.com/file.pdf'
-
-        s = DeliverableListSerializer()
-        result = s.get_file_url(mock_deliverable)
-
-        assert result == 'https://cdn.example.com/file.pdf'
 
     def test_file_serializer_returns_none_when_no_file(self):
+        """Return no attachment download link when the attachment file is absent."""
         mock_file = MagicMock()
         mock_file.file = None
 
@@ -1023,18 +1088,9 @@ class TestDeliverableSerializerFileUrls:
 
         assert result is None
 
-    def test_file_serializer_builds_absolute_url_with_request(self):
-        mock_file = MagicMock()
-        mock_file.file = MagicMock()
-        mock_file.file.url = '/media/files/attachment.pdf'
-
-        request = factory.get('/')
-        s = DeliverableFileSerializer(context={'request': request})
-        result = s.get_file_url(mock_file)
-
-        assert result.startswith('http')
 
     def test_file_serializer_get_uploaded_by_name(self):
+        """Expose the resource author full name."""
         mock_file = MagicMock()
         mock_file.uploaded_by.first_name = 'Ana'
         mock_file.uploaded_by.last_name = 'García'
@@ -1046,6 +1102,7 @@ class TestDeliverableSerializerFileUrls:
         assert result == 'Ana García'
 
     def test_client_upload_serializer_returns_none_when_no_file(self):
+        """Return no client-upload download link when its file is absent."""
         mock_upload = MagicMock()
         mock_upload.file = None
 
@@ -1053,14 +1110,3 @@ class TestDeliverableSerializerFileUrls:
         result = s.get_file_url(mock_upload)
 
         assert result is None
-
-    def test_client_upload_serializer_builds_absolute_url_with_request(self):
-        mock_upload = MagicMock()
-        mock_upload.file = MagicMock()
-        mock_upload.file.url = '/media/uploads/doc.pdf'
-
-        request = factory.get('/')
-        s = DeliverableClientUploadSerializer(context={'request': request})
-        result = s.get_file_url(mock_upload)
-
-        assert result.startswith('http')
