@@ -219,7 +219,6 @@ def authed_client(admin_user):
 
 def test_list_phases_endpoint_returns_ordered_phases(authed_client, project, business_proposal):
     """Fails if the phase endpoint stops respecting the persisted phase order."""
-
     later_proposal = _reviewed_proposal(project, 'Later proposal')
     add_phase(project, later_proposal, order=2)
     add_phase(project, business_proposal, order=1)
@@ -294,15 +293,27 @@ def test_client_lists_own_project_phases(client_user, project, business_proposal
     assert response.json()[0]['proposal']['id'] == business_proposal.pk
 
 
-def test_profileless_user_lists_own_project_phases(db, business_proposal):
+def test_profileless_user_lists_own_project_phases(db):
     """Fails if an owner without a profile loses access to their project phases."""
+    from content.models import BusinessProposal
+
     owner = User.objects.create_user(
         username='profileless-owner@example.com',
         email='profileless-owner@example.com',
         password='x',
     )
     project = Project.objects.create(name='Profileless owner project', client=owner)
-    add_phase(project, business_proposal)
+    historical_package = Deliverable.objects.create(
+        project=project, title='Historical owner package', uploaded_by=owner,
+    )
+    business_proposal = BusinessProposal.objects.create(
+        title='Historical owner proposal', client_name='Profileless owner',
+        client_email=owner.email, status=BusinessProposal.Status.ACCEPTED,
+        deliverable=historical_package,
+    )
+    ProjectPhase.objects.create(
+        project=project, business_proposal=business_proposal, order=1,
+    )
     tokens = get_tokens_for_user(owner)
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
