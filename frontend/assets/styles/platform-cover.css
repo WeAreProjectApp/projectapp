@@ -11,8 +11,8 @@
    ============================ */
 .platform-cover main > div > div {
   background: rgba(255, 255, 255, 0.52);
-  backdrop-filter: blur(20px) saturate(1.5);
   -webkit-backdrop-filter: blur(20px) saturate(1.5);
+  backdrop-filter: blur(20px) saturate(1.5);
   border-radius: 1.5rem;
   padding: 1.5rem;
   border: 1px solid rgba(255, 255, 255, 0.22);
@@ -40,8 +40,8 @@
 .platform-cover main .rounded-3xl,
 .platform-cover main .rounded-2xl {
   background: rgba(255, 255, 255, 0.55) !important;
-  backdrop-filter: blur(8px) !important;
   -webkit-backdrop-filter: blur(8px) !important;
+  backdrop-filter: blur(8px) !important;
   border-color: rgba(255, 255, 255, 0.28) !important;
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.04) !important;
 }
@@ -69,8 +69,8 @@
 .platform-cover main .rounded-3xl table,
 .platform-cover main .rounded-2xl table {
   background-color: transparent !important;
-  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
   box-shadow: none !important;
   border-color: rgba(255, 255, 255, 0.12) !important;
 }
@@ -84,8 +84,8 @@
    ============================ */
 .platform-cover aside {
   background: rgba(255, 255, 255, 0.62) !important;
-  backdrop-filter: blur(24px) saturate(1.6) !important;
   -webkit-backdrop-filter: blur(24px) saturate(1.6) !important;
+  backdrop-filter: blur(24px) saturate(1.6) !important;
 }
 :root[style*="--theme-color"] .platform-cover aside {
   background: rgba(var(--theme-surface-rgb), 0.65) !important;
@@ -102,8 +102,8 @@
    ============================ */
 .platform-cover .mobile-topbar {
   background: rgba(255, 255, 255, 0.62) !important;
-  backdrop-filter: blur(24px) !important;
   -webkit-backdrop-filter: blur(24px) !important;
+  backdrop-filter: blur(24px) !important;
 }
 :root[style*="--theme-color"] .platform-cover .mobile-topbar {
   background: rgba(var(--theme-surface-rgb), 0.65) !important;

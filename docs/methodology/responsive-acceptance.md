@@ -22,10 +22,10 @@ comparativas usan `BaseResponsiveTable` y declaran la prioridad de cada columna.
 
 Las fichas PA-45, PA-61, PA-66, PA-69, PA-70 y PA-73 dejan de ser variantes
 independientes: su criterio de cierre es este contrato y sus primitives
-compartidas. La línea base vigente se verifica con 121 escenarios explícitos,
-13 módulos, cinco perfiles y 605 celdas catálogo×perfil: 102 vistas visuales
-(510 celdas) y 19 redirects de compatibilidad (95 celdas), además del mapa de
-flujos funcional. Las nuevas entregas contractuales tienen escenarios con API
+compartidas. La línea base vigente se verifica con los escenarios explícitos
+de los 13 módulos en cinco perfiles: cada vista visual y cada redirect de
+compatibilidad del catálogo por perfil (el conteo vigente lo imprime
+`npm run check:responsive-contract`), además del mapa de flujos funcional. Las nuevas entregas contractuales tienen escenarios con API
 y JWT reales en los cinco perfiles; el antiguo tablero de proyecto redirige allí.
 
 Esa línea base es automatizada: Playwright emula viewport y capacidades de

@@ -96,7 +96,11 @@
               </div>
             </div>
           </div>
-        <div class="flex w-full justify-between items-end absolute bottom-0">
+        <div class="absolute bottom-0 w-full">
+          <div class="hidden px-4 pb-1 lg:block">
+            <LegalFooter variant="overlay" />
+          </div>
+          <div class="flex w-full justify-between items-end">
             <h3 
               class="hidden ms-4 mb-4 text-lg font-regular text-white opacity-40 lg:block"
               >
@@ -119,6 +123,7 @@
             <h3 class="hidden me-4 mb-4 text-lg font-regular text-white opacity-40 lg:block">
               {{ globalMessages.copyright || '©2026 Project App.' }}
             </h3>
+          </div>
         </div>
       </div>
     </div>
@@ -187,6 +192,7 @@
 
 <script setup>
 import Email from '~/components/layouts/Email.vue';
+import LegalFooter from '~/components/legal/LegalFooter.vue';
 import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { gsap } from 'gsap';
 import { XMarkIcon } from '@heroicons/vue/24/outline';

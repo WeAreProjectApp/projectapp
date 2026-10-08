@@ -83,6 +83,26 @@ export default {
       title: "Privacy Policy - Project App.",
       description: "Learn how Project App. collects, uses, and protects your personal information. Our commitment to your privacy and data security.",
       keywords: "Project App., privacy policy, data protection, personal information, cookies, GDPR, data security"
+    },
+    waiter: {
+      title: "Waiter, the restaurant system - Project App.",
+      description: "Waiter is ProjectApp's point of sale for restaurants in Colombia: cash register, floor, kitchen, inventory, reservations, QR digital menu and an assistant that serves customers on WhatsApp.",
+      keywords: "Waiter, ProjectApp, restaurant point of sale, restaurant POS, QR digital menu, WhatsApp orders, restaurant software Colombia"
+    },
+    waiterPrivacy: {
+      title: "Waiter Privacy Policy - Project App.",
+      description: "How ProjectApp processes personal data in Waiter: digital menu, point of sale, AI assistant and WhatsApp messages, under Colombian Law 1581 of 2012.",
+      keywords: "Waiter, privacy policy, personal data processing, Law 1581 of 2012, WhatsApp Business, ProjectApp"
+    },
+    waiterTerms: {
+      title: "Waiter Terms of Service - Project App.",
+      description: "Terms of service for Waiter, ProjectApp's restaurant software: accounts, acceptable use, WhatsApp, assistant, data, payments and support.",
+      keywords: "Waiter, terms of service, terms of use, restaurant software, ProjectApp"
+    },
+    waiterDataDeletion: {
+      title: "Waiter Data Deletion - Project App.",
+      description: "Step-by-step guide to request deletion of your Waiter data: menu account, assistant conversations and WhatsApp messages.",
+      keywords: "Waiter, data deletion, delete my data, personal data erasure, ProjectApp"
     }
   };
   

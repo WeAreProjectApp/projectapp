@@ -92,6 +92,9 @@
                   {{ globalMessages.privacy_policy || 'Privacy Policy' }}
                 </NuxtLink>
               </div>
+              <div class="mb-2 pe-4">
+                <LegalFooter variant="overlay" />
+              </div>
               <h3 class="text-xs font-regular text-white opacity-40">
                 {{ globalMessages.based_in || 'Based in Colombia' }}
               </h3>
@@ -104,6 +107,7 @@
 
 <script setup>
 import Email from '~/components/layouts/Email.vue';
+import LegalFooter from '~/components/legal/LegalFooter.vue';
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import ArrowUpRightIcon from '@heroicons/vue/20/solid/ArrowUpRightIcon';
 import { useGlobalMessages } from '~/composables/useMessages';

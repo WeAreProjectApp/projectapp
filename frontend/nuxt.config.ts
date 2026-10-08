@@ -63,6 +63,11 @@ export default defineNuxtConfig({
     '/es-co/additional-modules': { ssr: true },
     '/en-us/partnership-program': { ssr: true },
     '/es-co/partnership-program': { ssr: true },
+    // Waiter legal pages are fetched by Meta's app review: serve real HTML.
+    '/en-us/waiter': { ssr: true },
+    '/en-us/waiter/**': { ssr: true },
+    '/es-co/waiter': { ssr: true },
+    '/es-co/waiter/**': { ssr: true },
     '/en-us/additional-modules/share/**': { ssr: false },
     '/es-co/additional-modules/share/**': { ssr: false },
     '/en-us/secure-link/**': { ssr: false },
@@ -129,6 +134,13 @@ export default defineNuxtConfig({
         '/es-co/additional-modules',
         '/en-us/partnership-program',
         '/es-co/partnership-program',
+        // Waiter product + legal pages: public, linked from every footer and
+        // registered in the Meta app review, so they must exist as static HTML.
+        ...['en-us', 'es-co'].flatMap((locale) =>
+          ['waiter', 'waiter/privacy', 'waiter/terms', 'waiter/data-deletion'].map(
+            (page) => `/${locale}/${page}`,
+          ),
+        ),
         ...(await blogPrerenderRoutes()),
       ],
     },

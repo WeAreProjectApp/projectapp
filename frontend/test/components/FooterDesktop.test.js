@@ -89,6 +89,7 @@ function mountFooterDesktop() {
       stubs: {
         Email: true,
         Teleport: true,
+        LegalFooter: { props: ['variant'], template: '<div data-testid="legal-footer-stub" :data-variant="variant" />' },
         NuxtLink: { props: ['to'], template: '<a :href="to" v-bind="$attrs"><slot /></a>' },
       },
     },
@@ -262,5 +263,12 @@ describe('FooterDesktop', () => {
 
     const emailLink = wrapper.find('a[aria-label="Email our web design team"]');
     await expect(emailLink.trigger('click')).resolves.not.toThrow();
+  });
+
+  it('renders the Waiter legal strip in its overlay variant', () => {
+    const wrapper = mountFooterDesktop();
+
+    const strip = wrapper.get('[data-testid="legal-footer-stub"]');
+    expect(strip.attributes('data-variant')).toBe('overlay');
   });
 });

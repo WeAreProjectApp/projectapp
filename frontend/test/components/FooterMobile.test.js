@@ -57,6 +57,7 @@ function mountFooterMobile() {
     global: {
       stubs: {
         Email: true,
+        LegalFooter: { props: ['variant'], template: '<div data-testid="legal-footer-stub" :data-variant="variant" />' },
         NuxtLink: { props: ['to'], template: '<a :href="to" v-bind="$attrs"><slot /></a>' },
       },
     },
@@ -116,5 +117,12 @@ describe('FooterMobile', () => {
 
     expect(wrapper.get('a[href="/partnership-program"]').attributes('aria-label'))
       .toBe('Partnership Program');
+  });
+
+  it('renders the Waiter legal strip in its overlay variant', () => {
+    const wrapper = mountFooterMobile();
+
+    const strip = wrapper.get('[data-testid="legal-footer-stub"]');
+    expect(strip.attributes('data-variant')).toBe('overlay');
   });
 });
