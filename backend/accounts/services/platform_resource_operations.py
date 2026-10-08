@@ -36,20 +36,21 @@ def require_resource_admin(actor, request=None):
         raise PermissionDenied('Solo los administradores pueden modificar este recurso.')
 
 
-def project_for_resource_actor(project_id, actor, *, request=None, lock=False):
+def project_for_resource_actor(project_id, actor, *, request=None, lock=False,
+                               foreign_project_error=NotFound):
     if not actor.is_authenticated or not actor.is_active:
         raise PermissionDenied('Se requiere una cuenta activa.')
     query = Project.objects.select_related('client')
     if lock:
         query = query.select_for_update()
     admin = is_resource_admin(actor, request)
-    if request is None and not admin:
+    if foreign_project_error is NotFound and not admin:
         query = query.filter(client_id=actor.pk)
     project = query.filter(pk=project_id).first()
     if project is None:
         raise NotFound('Proyecto no encontrado.')
-    if request is not None and not admin and project.client_id != actor.pk:
-        raise PermissionDenied('No tienes acceso a este proyecto.')
+    if not admin and project.client_id != actor.pk:
+        raise foreign_project_error('No tienes acceso a este proyecto.')
     return project
 
 
