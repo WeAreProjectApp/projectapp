@@ -79,7 +79,8 @@ def list_resources(project_id, actor, *, include_archived=False, category=None, 
 
 
 def get_resource(project_id, actor, resource_id, *, request=None):
-    project = project_for_actor(project_id, actor, request=request)
+    project = project_for_actor(project_id, actor, request=request,
+        foreign_project_error=PermissionDenied if request is not None else NotFound)
     return _data(_resource(project, actor, resource_id, request=request), request, detail=True)
 
 
