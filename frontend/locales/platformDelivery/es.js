@@ -1,4 +1,11 @@
 export default {
+  notices: {
+    title: 'Avisos de seguimiento', hint: 'Consulta el envío de los avisos. Reintentar requiere revisar la copia exacta.',
+    empty: 'No hay avisos registrados.', error: 'No se pudo consultar o reintentar el aviso.',
+    preview: 'Revisar reintento', confirm: 'Confirmar reintento', previous: 'Anterior', next: 'Siguiente',
+    uncertain: 'El resultado del envío requiere revisión del equipo. No se reenvía automáticamente.',
+    status: { pending: 'Pendiente', sending: 'Enviando', sent: 'Enviado', failed: 'Fallido', unknown: 'Resultado desconocido', cancelled: 'Cancelado' },
+  },
   reopenRound: 'Abrir nueva ronda', awaitingRound: 'El equipo abrirá una nueva ronda cuando puedas volver a probar este requerimiento.',
   navigation: 'Entregas', title: 'Alcance y entregas', subtitle: 'Consulta lo acordado, prueba cada requerimiento y registra tus resultados.',
   project: 'Proyecto', contract: 'Contrato original', amendment: 'Otrosí', scope: 'Alcance', phase: 'Fase de ejecución', stage: 'Etapa', requirement: 'Requerimiento',
@@ -13,6 +20,7 @@ export default {
   edit: 'Editar', remove: 'Eliminar', cancel: 'Cancelar', save: 'Guardar', saved: 'Cambios guardados.', close: 'Cerrar', confirmRemove: '¿Eliminar «{title}»?', removeHint: 'Sólo pueden eliminarse borradores editables. El servidor comprobará sus vínculos.',
   createTitle: 'Crear {entity}', editTitle: 'Editar {entity}', key: 'Identificador estable', keyHint: 'Utiliza un nombre corto que también puedas conservar al importar JSON.', name: 'Título', description: 'Descripción en lenguaje sencillo', order: 'Orden',
   select: 'Selecciona una opción', none: 'Sin referencia', contractDocument: 'Documento del contrato', proposalDocument: 'Contrato asociado a una propuesta', sourceHint: 'Elige una sola fuente. La firma se acredita por separado.', clientVisible: 'El cliente puede consultar este contrato', isCurrent: 'Este alcance está vigente',
+  approvalFile: 'Archivo del paquete confirmado', approvalFileHint: 'Incluye los archivos personalizados que se conservaron al revisar la aprobación de la propuesta.', approvalFilePrivate: 'Se guardará en privado y sin firma registrada. Después podrás habilitar su consulta y acreditar la firma por separado.', sourceRequired: 'Selecciona una sola fuente del contrato.', downloadSource: 'Descargar archivo original',
   role: 'Rol en el producto del cliente', roleHint: 'Indica sólo un rol del producto que conste en las fuentes, no un rol de acceso a Platform. Si no hay roles definidos, deja este campo vacío.',
   environment: 'Ambiente de prueba', preparation: 'Qué necesitas antes de empezar', access: 'Accesos antes de empezar', data: 'Datos para probar',
   allowedActions: 'Qué puedes ver y hacer', steps: 'Pasos para probar lo permitido', stepsHint: 'Escribe un paso por línea.', expected: 'Qué debe pasar', failures: 'Cómo reconocer que falló',

@@ -157,7 +157,6 @@ def test_project_mcp_filters_project_rows_by_the_requested_client_profile(call):
 
 def test_project_mcp_rejects_an_invalid_client_profile_filter(call):
     """Fails if a malformed client selector silently returns unrelated projects."""
-
     result = call('list_projects', {'query': {'client_profile_id': 0}}, error=True)
 
     assert result['code'] == 'INVALID_CLIENT_PROFILE'
@@ -179,7 +178,7 @@ def test_project_mcp_rejects_a_commercial_phase_owned_by_another_client(call):
         'project_id': c.project.pk, 'proposal_id': foreign.pk,
     }, error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'PROPOSAL_CONTEXT'
     assert ProjectPhase.objects.filter(project=c.project).count() == 0
 
 
@@ -199,8 +198,35 @@ def test_project_mcp_rejects_an_unlinked_commercial_phase(call):
         'project_id': c.project.pk, 'proposal_id': unlinked.pk,
     }, error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'PROPOSAL_CONTEXT'
     assert ProjectPhase.objects.filter(project=c.project).count() == 0
+
+
+def test_project_mcp_cannot_claim_the_internal_approval_transition(call):
+    """A public MCP payload cannot use a matching private approval claim."""
+    c = context()
+    package = Deliverable.objects.create(project=c.project, title='Reviewed package', uploaded_by=c.admin)
+    proposal = BusinessProposal.objects.create(
+        title='Negotiating reviewed proposal', client=c.client.profile, client_name='Client',
+        total_investment=1, status=BusinessProposal.Status.NEGOTIATING, deliverable=package,
+        platform_approval_manifest={
+            'request_id': 'confirmed-review', 'project_id': c.project.pk,
+            'client_profile_id': c.client.profile.pk,
+        },
+    )
+
+    error = call('add_project_commercial_phase', {
+        'project_id': c.project.pk, 'proposal_id': proposal.pk,
+        'approval_request_id': 'confirmed-review',
+    }, error=True)
+
+    assert error['code'] == 'unknown_field'
+    assert [(row['field'], row['code']) for row in error['details']['errors']] == [
+        ('approval_request_id', 'unknown_field'),
+    ]
+    assert not ProjectPhase.objects.filter(business_proposal=proposal).exists()
+    proposal.refresh_from_db()
+    assert proposal.status == BusinessProposal.Status.NEGOTIATING
 
 
 def _linked_accepted_proposal(c, project, title):
@@ -232,7 +258,7 @@ def test_project_mcp_rejects_a_duplicate_commercial_phase(call):
     assert ProjectPhase.objects.filter(project=c.project).count() == 1
 
 
-@pytest.mark.parametrize('variant', ('omit-own-phase', 'foreign-phase'))
+@pytest.mark.parametrize('variant', ['omit-own-phase', 'foreign-phase'])
 def test_project_mcp_reorder_rejects_a_phase_set_that_does_not_exactly_match_the_project(call, variant):
     """Fails if MCP reordering permits a phase set that does not exactly match the project."""
     c = context()

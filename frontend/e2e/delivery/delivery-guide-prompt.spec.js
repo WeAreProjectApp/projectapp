@@ -1,7 +1,8 @@
 import { test, expect } from '../helpers/test.js'
-import { authenticate, fixture, openWorkspace } from './helpers.js'
+import { assertTouchAction, authenticate, fixture, openWorkspace } from './helpers.js'
 import { guidePayload, preparePrompt } from './prompt-helpers.js'
-import { PANEL_VIEWPORTS } from '../../config/responsive.js'
+import { viewportUse } from '../helpers/viewports.js'
+import { batchForScenario } from '../responsive/catalog-scenarios.js'
 import { readFile } from 'node:fs/promises'
 import { createHash } from 'node:crypto'
 
@@ -141,21 +142,24 @@ test('admin retrieves a previous prompt from the source history', {
   await expect(page.getByTestId('delivery-prompt-sources')).toContainText(context.sources[0].sha256)
 })
 
-for (const [name, { width, height }] of Object.entries(PANEL_VIEWPORTS)) {
-  test('guide source controls remain usable at ' + name + ' width', {
-    tag: ['@flow:platform-delivery-guide-prompt', ...tags, '@outcome:success', '@viewport:' + name],
-  }, async ({ page, request }, testInfo) => {
-    const data = await fixture(request, testInfo)
-    await page.setViewportSize({ width, height })
-    await authenticate(page, request, data, 'admin')
-    await openWorkspace(page, data)
-    await page.getByTestId('delivery-create-guides').click()
-    await page.getByTestId('delivery-prompt-contract').selectOption(String(data.contract_id))
-    await preparePrompt(page)
-    await page.getByTestId('delivery-prompt-json').scrollIntoViewIfNeeded()
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-    expect(overflow).toBeLessThanOrEqual(1)
-    await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click()
-    await expect(page.getByTestId('delivery-prompt-workbench')).toHaveCount(0)
+for (const name of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) {
+  test.describe(`delivery guide sources ${name}`, () => {
+    test.use(viewportUse(name))
+    test('guide source controls remain usable at ' + name + ' width', {
+      tag: ['@flow:platform-delivery-guide-prompt', ...tags, '@outcome:success', '@responsive:clients', '@responsive-scenario:frontend/pages/platform/projects/[id]/delivery.vue', `@responsive-batch:${batchForScenario('frontend/pages/platform/projects/[id]/delivery.vue')}`, '@viewport:' + name],
+    }, async ({ page, request }, testInfo) => {
+      const data = await fixture(request, testInfo)
+      await authenticate(page, request, data, 'admin')
+      await openWorkspace(page, data)
+      await page.getByTestId('delivery-create-guides').click()
+      await page.getByTestId('delivery-prompt-contract').selectOption(String(data.contract_id))
+      await preparePrompt(page)
+      await page.getByTestId('delivery-prompt-json').scrollIntoViewIfNeeded()
+      await assertTouchAction(page, page.getByTestId('delivery-prompt-copy'), name, testInfo)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(1)
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click()
+      await expect(page.getByTestId('delivery-prompt-workbench')).toHaveCount(0)
+    })
   })
 }

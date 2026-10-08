@@ -100,5 +100,7 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
         uploads = deepcopy(UPLOAD_TOOLS)
         if connector_slug not in VIDEO_CONNECTORS:
             uploads[0]['input_schema']['properties']['content_type']['enum'].remove('video/mp4')
+        if connector_slug != 'projects':
+            uploads[0]['input_schema']['properties']['content_type']['enum'].remove('application/zip')
         tools.extend(uploads)
     return tools

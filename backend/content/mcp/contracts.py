@@ -714,12 +714,34 @@ PROJECT_CONTRACTS = (
     ),
     _contract(
         'accounts.Deliverable',
-        read_only='id project category title description source_proposal source_epic_key source_epic_title current_version is_archived archived_at created_at updated_at',
+        read_only='id project source_proposal source_epic_key source_epic_title current_version archived_at created_at updated_at',
+        read_write='category title description is_archived',
         excluded=(
             _excluded('Archivo privado: sólo se opera mediante recursos y descargas autorizadas.', 'file')
             | _excluded(_AUDIT_INTERNAL, 'uploaded_by retention_context')
         ),
     ),
+    _contract('accounts.DeliverableVersion',
+        read_only='id deliverable version_number created_at',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.DeliverableFile', read_only='id deliverable created_at',
+        read_write='title category',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.DeliverableClientFolder', read_only='id deliverable created_at',
+        read_write='name order', excluded=_excluded(_AUDIT_INTERNAL, 'created_by')),
+    _contract('accounts.DeliverableClientUpload', read_only='id deliverable created_at',
+        read_write='title folder',
+        excluded=(_excluded('Archivo privado operado mediante assets y descarga autorizada.', 'file')
+                  | _excluded(_AUDIT_INTERNAL, 'uploaded_by'))),
+    _contract('accounts.ProjectDataModelEntity', read_only='id project created_at updated_at',
+        read_write='name description key_fields relationship',
+        excluded=_excluded('Contexto interno conservado; no editable por MCP.', 'retention_context')),
+    _contract('content.ProposalApprovalFile',
+        read_only='id proposal project deliverable title document_type filename size sha256 created_at',
+        excluded=(_excluded('Fuente inmutable privada; la herramienta descarga un artefacto autorizado.', 'file')
+                  | _excluded('Identidad interna y autor del paquete; no admite escritura por MCP.', 'source_key created_by'))),
     _contract(
         'content.ProjectBrandAsset',
         read_only='id project filename size created_at',
@@ -800,6 +822,14 @@ PROJECT_COLLABORATION_CONTRACTS = (
 )
 
 DELIVERY_CONTRACTS = (
+    _contract('accounts.DeliveryNotificationEvent',
+        read_only='id project event_type audience recipients subject text_body status version error_code created_at updated_at',
+        excluded=_excluded('Captura privada y propiedad del servidor; no admite CRUD por MCP.',
+                           'actor client operation_key from_email html_body public_context retention_context')),
+    _contract('accounts.DeliveryNotificationAttempt',
+        read_only='id event status error_code claimed_at finished_at created_at',
+        excluded=_excluded('Recibo duradero y ownership internos; sólo se reintenta por el servicio autorizado.',
+                           'request_id preview_sha256 requested_by credential gateway_snapshot')),
     _contract(
         'accounts.DeliveryWorkspace',
         read_only='project version',
@@ -812,12 +842,12 @@ DELIVERY_CONTRACTS = (
     _contract(
         'accounts.ProjectContract',
         read_only='id project version created_at updated_at',
-        read_write='key title document proposal_document client_visible',
+        read_write='key title document proposal_document approval_file client_visible',
     ),
     _contract(
         'accounts.ContractAmendment',
         read_only='id version created_at updated_at',
-        read_write='key title contract document proposal_document client_visible',
+        read_write='key title contract document proposal_document approval_file client_visible',
     ),
     _contract(
         'accounts.DeliveryScope',

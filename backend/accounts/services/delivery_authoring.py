@@ -93,14 +93,15 @@ def prompt_options(project_id, actor):
     from accounts.services.delivery_workflow import document_options, import_schema, signature_state
     evidence = ContractSignatureEvidence.objects.only('id', 'contract_id', 'amendment_id', 'method', 'signed_at', 'signer_name')
     deferred = ('document__content_markdown', 'document__content_json', 'proposal_document__content_markdown')
-    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
-    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
+    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document', 'approval_file').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
+    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document', 'approval_file').defer(*deferred).prefetch_related(Prefetch('signature_evidence', queryset=evidence)))
 
     def entry(node):
-        source = node.document if node.document_id else node.proposal_document
+        source = node.document if node.document_id else node.approval_file if node.approval_file_id else node.proposal_document
         return {'id': node.pk, 'title': node.title, 'version': node.version,
                 'contract_id': node.contract_id if isinstance(node, ContractAmendment) else node.pk,
                 'document_id': node.document_id, 'proposal_document_id': node.proposal_document_id,
+                'approval_file_id': node.approval_file_id,
                 'source_title': source.title, **signature_state(node)}
 
     return {
@@ -208,7 +209,32 @@ def _capture_source(context, *, key, origin, source_id, title, role, raw=b'', fi
     return source
 
 
+def _approval_node_source(context, node, role):
+    from accounts.services.delivery_contract_sources import approval_contract_source
+
+    warnings = []
+    try:
+        captured = approval_contract_source(node)
+    except APIException:
+        return _capture_source(
+            context, key=f'{role}-{node.pk}', origin='approval_file', source_id=node.approval_file_id,
+            title=node.title, role=role, warnings=['No se pudo verificar la copia contractual conservada.'],
+            snapshot={'approval_file_id': node.approval_file_id},
+        )
+    evidence = captured['evidence']
+    if evidence is None:
+        warnings.append('Seleccionar el archivo confirmado no acredita una firma. Registra su evidencia por separado.')
+    return _capture_source(
+        context, key=f'{role}-{node.pk}', origin='approval_file', source_id=node.approval_file_id,
+        title=captured['title'], role=role, raw=captured['raw'], filename=captured['filename'],
+        warnings=warnings, version_kind='approval_packet', date=captured['date'],
+        snapshot=captured['snapshot'], evidence=evidence,
+    )
+
+
 def _node_source(context, node, role, actor):
+    if node.approval_file_id:
+        return _approval_node_source(context, node, role)
     evidence = node.signature_evidence.first()
     doc = node.document if node.document_id else None
     source = doc or node.proposal_document
@@ -722,7 +748,7 @@ def validate_guides_payload(project, actor, payload):
     return result
 
 
-def requirement_provenance(project, stage, values, existing=None):
+def requirement_provenance(project, stage, values, existing=None, *, _context=None):
     if existing and existing.context_id:
         if 'context_id' in values and not values['context_id']:
             fail('La guía conserva su contexto y citas verificadas.', 'context_required')
@@ -735,15 +761,18 @@ def requirement_provenance(project, stage, values, existing=None):
         if references:
             fail('Las citas del requerimiento necesitan su contexto.', 'context_required')
         return
-    context = DeliveryPromptContext.objects.filter(pk=context_id, project=project).prefetch_related('sources').first()
+    context = _context or DeliveryPromptContext.objects.filter(pk=context_id, project=project).prefetch_related('sources').first()
     if context is None:
+        raise NotFound('Contexto de autoría no encontrado.')
+    if str(context.pk) != str(context_id) or context.project_id != project.pk:
         raise NotFound('Contexto de autoría no encontrado.')
     scope = stage.phase.scope
     if context.mode != 'guides' or scope.contract_id != context.contract_id or (context.scope_id and context.scope_id != scope.pk):
         fail('El requerimiento debe conservar el contrato y alcance del contexto.', 'context_scope')
     scope_source = next((source for source in context.sources.all() if source.role == 'scope_description'), None)
     if context.scope_id:
-        if scope.key != scope_source.snapshot['key'] or scope.amendment_id != scope_source.snapshot['amendment_id']:
+        if (scope_source is None or scope.key != scope_source.snapshot.get('key')
+                or scope.amendment_id != scope_source.snapshot.get('amendment_id')):
             fail('El alcance cambió de otrosí o identidad. Prepara un contexto actualizado.', 'context_scope')
     elif scope.amendment_id and scope.amendment_id not in context.amendment_ids:
         fail('El requerimiento pertenece a un otrosí que no se capturó en el contexto.', 'context_scope')

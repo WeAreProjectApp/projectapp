@@ -1,5 +1,6 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
+import DeliveryNoticeHistory from '~/components/platform/delivery/DeliveryNoticeHistory.vue'
 import { usePlatformAuthStore } from '~/stores/platform-auth'
 import { usePlatformDeliveryStore } from '~/stores/platform-delivery'
 import { usePlatformDocumentsStore } from '~/stores/platform-documents'
@@ -40,6 +41,7 @@ const optionsError = ref(false)
 const commercialPhases = ref([])
 const dialog = ref('')
 const selected = ref(null)
+const reviewDraft = ref(null)
 const author = ref(null)
 const confirm = ref(null)
 const importJson = ref('')
@@ -126,7 +128,7 @@ async function confirmAction() {
   if (!result.success) { failure(result); return }
   close(); announce(t(action.kind === 'publish' ? 'platformDelivery.published' : 'platformDelivery.saved'))
 }
-function openReview(stage, historical = false) { open(historical ? 'historical' : 'review', stage) }
+function openReview(stage, historical = false) { reviewDraft.value = null; open(historical ? 'historical' : 'review', stage) }
 async function submitReview(payload) {
   const result = dialog.value === 'historical'
     ? await store.recordHistoricalApprovals(selected.value.id, payload)
@@ -199,6 +201,10 @@ async function attachDocument() {
 }
 async function downloadDocument(document) {
   const result = await store.downloadDocument(document)
+  if (!result.success) announce(result.message || t('platformDelivery.downloadError'), 'danger')
+}
+async function downloadContractSource(source) {
+  const result = await store.downloadContractSource(source)
   if (!result.success) announce(result.message || t('platformDelivery.downloadError'), 'danger')
 }
 async function copyStage(stage) {
@@ -288,6 +294,7 @@ watch(reportMessage, () => { reportHumanReviewed.value = false })
         <BaseButton variant="secondary" size="sm" class="mt-2" @click="loadOptions">{{ t('platformDelivery.retry') }}</BaseButton>
       </BaseAlert>
       <DeliveryDocuments :documents="store.workspace.project?.documents" :can-edit="isAdmin" @attach="openAttach({ level: 'project', node: store.workspace.project })" @download="downloadDocument" @unlink="requestUnlink" />
+      <DeliveryNoticeHistory v-if="isAdmin" :project-id="projectId" :workspace-version="store.version" />
       <div v-if="!store.contracts.length" class="rounded-xl bg-surface-raised p-6 text-center">
         <h3 class="text-base font-semibold text-text-default">{{ t('platformDelivery.empty') }}</h3>
         <p class="mt-2 text-sm text-text-muted">{{ t(isAdmin ? 'platformDelivery.emptyAdmin' : 'platformDelivery.emptyClient') }}</p>
@@ -302,6 +309,7 @@ watch(reportMessage, () => { reportHumanReviewed.value = false })
           <p v-if="contract.signer_name" class="text-sm text-text-muted">{{ t('platformDelivery.signer') }}: {{ contract.signer_name }}</p>
           <div class="flex flex-wrap gap-2">
             <BaseButton v-if="contract.pdf_url" variant="secondary" size="sm" @click="downloadDocument(contract)">{{ t('platformDelivery.download') }}</BaseButton>
+            <BaseButton v-if="contract.source_download_url && !contract.pdf_url" variant="secondary" size="sm" :data-testid="`delivery-contract-source-${contract.id}`" @click="downloadContractSource(contract)">{{ t('platformDelivery.downloadSource') }}</BaseButton>
             <template v-if="isAdmin">
               <BaseButton v-if="!signed(contract)" variant="secondary" size="sm" @click="openAuthor({ entity: 'contracts', node: contract })">{{ t('platformDelivery.edit') }}</BaseButton>
               <BaseButton v-if="!signed(contract)" variant="secondary" size="sm" :data-testid="`delivery-signature-contract-${contract.id}`" @click="openSignature({ entity: 'contracts', node: contract }, 'externalSignature')">{{ t('platformDelivery.signature') }}</BaseButton>
@@ -320,6 +328,7 @@ watch(reportMessage, () => { reportHumanReviewed.value = false })
             <p v-if="amendment.description" class="whitespace-pre-line break-words text-sm text-text-muted">{{ amendment.description }}</p>
             <div class="flex flex-wrap gap-2">
               <BaseButton v-if="amendment.pdf_url" variant="secondary" size="sm" @click="downloadDocument(amendment)">{{ t('platformDelivery.download') }}</BaseButton>
+              <BaseButton v-if="amendment.source_download_url && !amendment.pdf_url" variant="secondary" size="sm" :data-testid="`delivery-amendment-source-${amendment.id}`" @click="downloadContractSource(amendment)">{{ t('platformDelivery.downloadSource') }}</BaseButton>
               <template v-if="isAdmin && !signed(amendment)">
                 <BaseButton variant="secondary" size="sm" @click="openAuthor({ entity: 'amendments', node: amendment })">{{ t('platformDelivery.edit') }}</BaseButton>
                 <BaseButton variant="secondary" size="sm" @click="openSignature({ entity: 'amendments', node: amendment }, 'externalSignature')">{{ t('platformDelivery.signature') }}</BaseButton>
@@ -395,8 +404,8 @@ watch(reportMessage, () => { reportHumanReviewed.value = false })
             </article>
             <BaseModalActions><BaseButton variant="ghost" @click="close">{{ t('platformDelivery.close') }}</BaseButton></BaseModalActions>
           </section>
-          <DeliveryAuthoringForm v-else-if="dialog === 'author'" :key="`${author.entity}-${author.node?.id || 'new'}`" :entity="author.entity" :initial="author.node || author.initial || {}" :contracts="store.contracts" :documents="store.documentOptions" :proposal-documents="store.proposalDocumentOptions" :commercial-phases="commercialPhases" :loading="store.isUpdating" :error="formError" @submit="saveAuthor" @cancel="close" />
-          <DeliveryReviewForm v-else-if="dialog === 'review' || dialog === 'historical'" :key="`${dialog}-${selected.id}`" :stage="selected" :historical="dialog === 'historical'" :documents="chosenDocuments" :evidence-messages="store.evidenceMessages" :loading="store.isUpdating" :error="formError" @submit="submitReview" @cancel="close" />
+          <DeliveryAuthoringForm v-else-if="dialog === 'author'" :key="`${author.entity}-${author.node?.id || 'new'}`" :entity="author.entity" :initial="author.node || author.initial || {}" :contracts="store.contracts" :documents="store.documentOptions" :proposal-documents="store.proposalDocumentOptions" :approval-files="store.approvalFileOptions" :commercial-phases="commercialPhases" :loading="store.isUpdating" :error="formError" @submit="saveAuthor" @cancel="close" />
+          <DeliveryReviewForm v-else-if="dialog === 'review' || dialog === 'historical'" :key="`${dialog}-${selected.id}`" :stage="selected" :draft="reviewDraft" :historical="dialog === 'historical'" :documents="chosenDocuments" :evidence-messages="store.evidenceMessages" :loading="store.isUpdating" :error="formError" @draft="reviewDraft = $event" @submit="submitReview" @cancel="close" />
           <template v-else>
             <BaseAlert v-if="formError" variant="danger" role="alert">{{ formError }}</BaseAlert>
             <form v-if="dialog === 'report'" class="space-y-5" @submit.prevent="sendReport">

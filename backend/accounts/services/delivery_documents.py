@@ -244,8 +244,10 @@ def document_options(project_id, actor):
     proposal_documents = ProposalDocument.objects.filter(
         Q(proposal__project_phases__project=project) | Q(proposal__deliverable__project=project),
     ).distinct()
+    from accounts.services.delivery_contract_sources import approval_file_options
     return {'documents': [{'id': doc.pk, 'uuid': str(doc.uuid), 'title': doc.title, 'requires_signature': doc.requires_signature} for doc in documents],
-            'proposal_documents': list(proposal_documents.values('id', 'title', 'document_type'))}
+            'proposal_documents': list(proposal_documents.values('id', 'title', 'document_type')),
+            'approval_files': approval_file_options(project)}
 
 
 def document_pdf(project_id, actor, link_id):
@@ -272,13 +274,16 @@ def contract_pdf(project_id, actor, kind, node_id):
     node = _node(project, kind, node_id)
     if not _level_visible(project, actor, 'contract' if kind == 'contracts' else 'amendment', node):
         raise NotFound('Contrato no habilitado para el cliente.')
-    evidence = node.signature_evidence.first()
-    if evidence:
-        try:
-            with evidence.file.open('rb') as source:
-                return source.read(), node.title
-        except (OSError, ValueError):
-            fail('El PDF firmado no está disponible.', 'pdf_unavailable')
+    if node.approval_file_id:
+        from accounts.services.delivery_contract_sources import approval_contract_source
+        source = approval_contract_source(node)
+        if source['content_type'] != 'application/pdf':
+            fail('Esta fuente conserva su formato original. Descarga su copia o registra el PDF firmado.', 'contract_source_not_pdf')
+        return validated_pdf_bytes(io.BytesIO(source['raw'])), node.title
+    from accounts.services.delivery_contract_sources import signed_contract_source
+    signed = signed_contract_source(node)
+    if signed:
+        return signed['raw'], node.title
     if node.document_id:
         return _raw_pdf(node.document), node.title
     try:
@@ -292,6 +297,8 @@ def contract_pdf(project_id, actor, kind, node_id):
 
 
 def capture_publication_documents(project, stage, publication):
+    from accounts.services.delivery_contract_sources import frozen_document_source, signed_source_for_link
+
     scope = stage.phase.scope
     filters = (Q(level='project') | Q(contract_id=scope.contract_id) | Q(scope_id=scope.pk)
                | Q(phase_id=stage.phase_id) | Q(stage_id=stage.pk) | Q(requirement__stage=stage))
@@ -304,12 +311,12 @@ def capture_publication_documents(project, stage, publication):
         # Previously approved guides keep the PDF from the approving round.
         previous = _snapshot_for_link(link) if link.level == 'requirement' and link.requirement.review_status == 'approved' else None
         if previous:
-            with previous.file.open('rb') as source:
-                pdf = source.read()
-            title = previous.title
+            frozen = frozen_document_source(previous)
+            pdf, title = frozen['raw'], frozen['title']
         else:
-            pdf = _raw_pdf(link.document)
-            title = link.document.title
+            signed = signed_source_for_link(link)
+            pdf = signed['raw'] if signed else _raw_pdf(link.document)
+            title = signed['title'] if signed else link.document.title
         snapshot = DeliveryDocumentSnapshot(publication=publication, link=link, title=title,
                                             sha256=hashlib.sha256(pdf).hexdigest())
         store_private_pdf(snapshot, pdf, 'document.pdf')

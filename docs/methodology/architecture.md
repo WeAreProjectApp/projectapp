@@ -1,3 +1,21 @@
+> **Integridad y avisos de entregas — 2026-10-07:** los cambios de ascendencia
+> validan el destino y las guías descendientes conservadas; la publicación
+> comprueba también otrosí y citas. Panel, Platform y sincronización técnica
+> comparten las reglas de fases comerciales. La copia firmada es la fuente
+> contractual de publicación y descarga. Los eventos de avisos se registran
+> con el cambio y se despachan después del commit mediante el gateway existente.
+
+> **Archivos de recursos — 2026-10-07:** cuatro familias usan
+> `PlatformResourceStorage`, con namespaces privado e histórico separados.
+> La descarga aplica primero rol y pertenencia; el frontend usa JWT y Blob.
+> El inventario identificado por su digest conserva propietario y bytes, incluida
+> la consulta de registros retenidos. El bloqueo de rutas históricas HTTP es
+> independiente de convertir referencias. [Contrato](../PLATFORM_RESOURCE_MEDIA.md).
+
+> **Permisos de recursos — 2026-10-07:** `project_for_resource_actor` distingue el Request real de Platform del contexto MCP validado. REST exige el rol de Platform para autoridad administrativa y filtra por propietario; los flags Django staff/superuser por sí solos no amplían esa interfaz. MCP conserva su principal técnico cuando conector, actor y credencial coinciden. La regla se comparte entre lecturas, escrituras y descargas.
+
+> **Recursos por MCP — 2026-10-07:** `platform_resources` y `platform_data_model` concentran las reglas de las vistas REST existentes y sus adaptadores conversacionales. `platform_resource_operations` reutiliza la versión y los recibos de entrega con bloqueo de proyecto; el fingerprint incluye el dominio, contenido, propietario y credencial. No cambia el principal técnico ni la autenticación. Las descargas conversacionales pasan por el recurso autorizado y producen artefactos temporales propios. El servicio de avisos es el único dueño del envío.
+
 > **Cobro antes de liquidación — 2026-10-06:** el servidor comparte la política de
 > liquidación entre las proyecciones de ingresos y sus escritores individuales y
 > masivos. Los contratos se vinculan explícitamente desde Contabilidad reutilizando

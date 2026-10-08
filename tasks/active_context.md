@@ -1,3 +1,17 @@
+> **Límite REST/MCP de recursos — 2026-10-07:** preservado el rol administrativo de Platform frente a los flags Django staff/superuser. Las lecturas, escrituras y descargas del servicio compartido filtran por propietario cuando no existe ese rol; MCP admite su principal técnico únicamente con contexto, actor y credencial coincidentes. Verificados doce rechazos de cliente staff, positivos de admin/cliente y principal MCP sin perfil simulado; gate focal 100 y schema sin drift.
+
+> **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id`, los avisos duraderos y el almacenamiento privado se integraron en el worktree del conductor. El bloqueo HTTP del legado se probó con Nginx aislado y archivos ficticios; la conversión y el deploy real siguen el runbook, sin escrituras en la base desplegada.
+
+> **Cierre conjunto p0x/p1xx/p2xx/p3xx — en curso:** integridad contractual,
+> fases comerciales, ascendencia, recursos privados, autoridad JWT por perfil y
+> confirmación de efectos públicos del MCP aplicados. Las respuestas, fuentes y
+> destinatarios se revalidan dentro del bloqueo antes de compartir contenido.
+> La QA final se ejecutará sobre un SHA limpio; sus pruebas de trabajo no
+> certifican aún la combinación. Historial masivo: la medición de 10.000 rondas
+> requiere cambiar su lectura completa; no se declara resuelto ni se alteran
+> presupuestos. IMAP no autenticó y el Gestor Documental no estuvo disponible;
+> el formato Vástago se contrastó únicamente con referencias locales.
+
 # Datos conservados sin proyecto — PR-1, traslado auditado (2026-10-07)
 
 «Asignar registros sin proyecto» acepta los registros conservados del mismo
@@ -72,6 +86,16 @@ no crean eventos nuevos fuera del alcance ya confirmado. La revocación normal
 de una credencial sigue vigente. Los reinicios autorizados de datos de prueba
 limpian las raíces protegidas antes del proyecto, incluyen los contextos ya
 conservados y mantienen los importes manuales que sobrevivían al reinicio.
+
+# Puente de fuentes contractuales confirmadas (07-10-2026)
+
+Implementación en `feat/07102026-delivery-approval-source-bridge`, desde
+`2c36cb60`: contratos y otrosíes pueden seleccionar explícitamente los archivos
+privados del paquete aprobado, incluidos personalizados, sin inferir firma ni
+habilitar consulta del cliente al crear. El original conserva su formato y las
+capturas verifican hash; la evidencia externa PDF es la fuente contractual canónica.
+Migración reservada `accounts.0079`, sólo mediante deploy. Ver
+`docs/DELIVERY_APPROVAL_SOURCES.md`; QA conjunta y CI verifican la entrega.
 
 # En curso — plantillas contractuales versionadas (05-10-2026)
 

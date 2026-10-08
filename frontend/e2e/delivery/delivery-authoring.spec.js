@@ -1,7 +1,7 @@
 import { test, expect } from '../helpers/test.js'
-import { addRequirement, authenticate, fixture, openWorkspace, publish } from './helpers.js'
+import { addRequirement, assertTouchAction, authenticate, fixture, openWorkspace, publish } from './helpers.js'
 import { preparePrompt, roleGuidePayload } from './prompt-helpers.js'
-import { PANEL_VIEWPORTS } from '../../config/responsive.js'
+import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
 
 const tags = ['@module:platform', '@priority:P1', '@role:platform-admin']
@@ -146,21 +146,24 @@ test('admin previews the JSON before applying drafts', {
   await expect(page.getByTestId('delivery-workspace')).toContainText('Alcance preparado para después')
 })
 
-for (const [name, { width, height }] of Object.entries(PANEL_VIEWPORTS)) {
-  test(`review controls remain usable at ${name} width`, {
-    tag: ['@flow:platform-delivery-review', '@module:platform', '@priority:P1', '@role:platform-client', '@outcome:success', '@responsive:clients', '@responsive-scenario:frontend/pages/platform/projects/[id]/delivery.vue', `@responsive-batch:${batchForScenario('frontend/pages/platform/projects/[id]/delivery.vue')}`, `@viewport:${name}`],
-  }, async ({ page, request }, testInfo) => {
-    const data = await fixture(request, testInfo)
-    await page.setViewportSize({ width, height })
-    await authenticate(page, request, data)
-    await openWorkspace(page, data)
-    await page.getByTestId(`delivery-review-open-${data.stage_id}`).click()
-    await page.getByTestId(`delivery-review-decision-${data.requirement_ids[0]}`).selectOption('approved')
-    await page.getByTestId('delivery-review-submit').scrollIntoViewIfNeeded()
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
-    expect(overflow).toBeLessThanOrEqual(1)
-    await page.getByTestId('delivery-review-submit').click()
-    await expect(page.getByTestId('delivery-review-form')).toHaveCount(0)
-    await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[0]}`)).toContainText('Aprobado')
+for (const name of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) {
+  test.describe(`delivery review ${name}`, () => {
+    test.use(viewportUse(name))
+    test(`review controls remain usable at ${name} width`, {
+      tag: ['@flow:platform-delivery-review', '@module:platform', '@priority:P1', '@role:platform-client', '@outcome:success', '@responsive:clients', '@responsive-scenario:frontend/pages/platform/projects/[id]/delivery.vue', `@responsive-batch:${batchForScenario('frontend/pages/platform/projects/[id]/delivery.vue')}`, `@viewport:${name}`],
+    }, async ({ page, request }, testInfo) => {
+      const data = await fixture(request, testInfo)
+      await authenticate(page, request, data)
+      await openWorkspace(page, data)
+      await page.getByTestId(`delivery-review-open-${data.stage_id}`).click()
+      await page.getByTestId(`delivery-review-decision-${data.requirement_ids[0]}`).selectOption('approved')
+      await page.getByTestId('delivery-review-submit').scrollIntoViewIfNeeded()
+      await assertTouchAction(page, page.getByTestId('delivery-review-submit'), name, testInfo)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(1)
+      await page.getByTestId('delivery-review-submit').click()
+      await expect(page.getByTestId('delivery-review-form')).toHaveCount(0)
+      await expect(page.getByTestId(`delivery-requirement-${data.requirement_ids[0]}`)).toContainText('Aprobado')
+    })
   })
 }

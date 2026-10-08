@@ -107,6 +107,8 @@ def _perform(project_id, actor, operation, data, change, *, idempotent=False):
             if isinstance(expected, bool) or not isinstance(expected, int) or expected != workspace.version:
                 raise DeliveryConflict()
             result = change(project)
+            from accounts.services.delivery_notifications import record_operation_notice
+            record_operation_notice(project, actor, operation, result, data)
             workspace.version += 1
             workspace.save(update_fields=['version'])
             response = overview(project.pk, actor)
@@ -166,10 +168,14 @@ def _mark_draft(stage):
 def _document_source(project, data, existing=None):
     document_id = data.get('document_id', getattr(existing, 'document_id', None))
     proposal_document_id = data.get('proposal_document_id', getattr(existing, 'proposal_document_id', None))
-    if bool(document_id) == bool(proposal_document_id):
-        fail('Selecciona un documento o un PDF de propuesta, exactamente uno.')
+    approval_file_id = data.get('approval_file_id', getattr(existing, 'approval_file_id', None))
+    if sum(bool(source_id) for source_id in (document_id, proposal_document_id, approval_file_id)) != 1:
+        fail('Selecciona una sola fuente: documento, PDF de propuesta o archivo confirmado.')
     if document_id:
         _owned_document(project, document_id)
+    elif approval_file_id:
+        from accounts.services.delivery_contract_sources import approval_file_for_project, read_approval_file
+        read_approval_file(approval_file_for_project(project, approval_file_id))
     else:
         allowed = ProposalDocument.objects.filter(pk=proposal_document_id).filter(
             Q(proposal__project_phases__project=project) | Q(proposal__deliverable__project=project),
@@ -198,8 +204,14 @@ def _validate_relations(project, kind, values, node):
         contract_id = values.get('contract_id', getattr(node, 'contract_id', None))
         contract = _node(project, 'contracts', contract_id)
         if kind == 'amendments' and node is not None:
-            from accounts.services.billing_reassignment import validate_amendment_billing_reassignment
+            from accounts.services.billing_reassignment import (
+                validate_amendment_billing_reassignment,
+            )
+            from accounts.services.delivery_integrity import (
+                validate_amendment_destination,
+            )
             validate_amendment_billing_reassignment(node, contract)
+            validate_amendment_destination(node, contract)
         if kind == 'scopes':
             amendment_id = values.get('amendment_id', getattr(node, 'amendment_id', None))
             if amendment_id:
@@ -213,9 +225,9 @@ def _validate_relations(project, kind, values, node):
         if commercial_id and not ProjectPhase.objects.filter(pk=commercial_id, project=project).exists():
             fail('La referencia comercial no pertenece al proyecto.')
     if kind == 'stages':
+        from accounts.services.delivery_integrity import validate_stage_destination
         parent = _node(project, 'phases', values.get('phase_id', getattr(node, 'phase_id', None)))
-        if node is None and _phase_approved(parent):
-            fail('La fase aprobada está congelada. Registra otra fase.', 'approved_frozen')
+        validate_stage_destination(node, parent)
     if kind == 'requirements':
         parent = _node(project, 'stages', values.get('stage_id', getattr(node, 'stage_id', None)))
         if _stage_approved(parent):
@@ -223,16 +235,19 @@ def _validate_relations(project, kind, values, node):
         from accounts.services.delivery_authoring import requirement_provenance
         requirement_provenance(project, parent, values, node)
     if node and kind in ('contracts', 'amendments') and signature_state(node)['signature_status'] != 'unsigned':
-        if any(field in values and values[field] != getattr(node, field, None) for field in ('document_id', 'proposal_document_id', 'contract_id', 'key', 'title')):
+        if any(field in values and values[field] != getattr(node, field, None) for field in ('document_id', 'proposal_document_id', 'approval_file_id', 'contract_id', 'key', 'title')):
             fail('La fuente del contrato firmado y su identidad están congeladas.', 'signed_source_frozen')
     if node and _has_publication(kind, node):
-        protected = [PARENT_FIELDS[kind], 'document_id', 'proposal_document_id', 'amendment_id', 'commercial_phase_id', 'key']
+        protected = [PARENT_FIELDS[kind], 'document_id', 'proposal_document_id', 'approval_file_id', 'amendment_id', 'commercial_phase_id', 'key']
         if any(field in values and values[field] != getattr(node, field, None) for field in protected):
             fail('Las referencias publicadas se conservan. Registra una ampliación.', 'published_frozen')
         if kind in ('contracts', 'amendments', 'scopes', 'phases'):
             changed = [field for field in values if getattr(node, field, None) != values[field]]
             if changed:
                 fail('El contexto contractual publicado se conserva. Registra una ampliación.', 'published_frozen')
+    if kind in ('scopes', 'phases', 'stages'):
+        from accounts.services.delivery_integrity import validate_ancestor_change
+        validate_ancestor_change(project, kind, node, values)
 
 
 def mutate_node(project_id, actor, kind, data, node_id=None, delete=False):
@@ -261,6 +276,11 @@ def mutate_node(project_id, actor, kind, data, node_id=None, delete=False):
             return result
         fields = {key: value for key, value in values.items() if key not in ('expected_version', 'request_id')}
         _validate_relations(project, kind, fields, node)
+        if kind in ('contracts', 'amendments') and fields.get('approval_file_id') and (
+                node is None or node.approval_file_id != fields['approval_file_id']):
+            if fields.get('client_visible'):
+                fail('El archivo confirmado se registra primero en privado. Habilita su consulta después de revisarlo.', 'source_visibility')
+            fields['client_visible'] = False
         if kind == 'contracts':
             fields['project_id'] = project.pk
         parent_field = PARENT_FIELDS[kind]
@@ -312,6 +332,8 @@ def signature_state(node):
 
 def _contract_ready(scope):
     from accounts.services.delivery_documents import ensure_portal_signature_capture
+    from accounts.services.delivery_integrity import validate_applicable_amendment
+    validate_applicable_amendment(scope)
     ensure_portal_signature_capture(scope.contract, scope.contract.project.client)
     if scope.amendment_id:
         ensure_portal_signature_capture(scope.amendment, scope.contract.project.client)
@@ -364,6 +386,8 @@ def publish_stage(project_id, actor, stage_id, data):
         requirements = list(stage.requirements.all())
         if not requirements:
             fail('Agrega al menos un requerimiento antes de publicar.', 'empty_stage')
+        from accounts.services.delivery_integrity import validate_requirement_contexts
+        validate_requirement_contexts(project, requirements)
         for req in requirements:
             _validate_guide(req)
         stage.editorial_status = 'published'
@@ -384,7 +408,6 @@ def publish_stage(project_id, actor, stage_id, data):
         )
         from accounts.services.delivery_documents import capture_publication_documents
         capture_publication_documents(project, stage, publication)
-        _notify(project, actor, f'Etapa disponible: {stage.title}', client=True, stage_id=stage.pk)
         return {'kind': 'publications', 'id': publication.pk}
 
     return _perform(project_id, actor, f'publish:{stage_id}', values, change, idempotent=True)
@@ -479,9 +502,6 @@ def _message(project, actor, values):
     if docs and not internal:
         from accounts.services.delivery_documents import share_message_documents
         share_message_documents(project, actor, level, target, docs)
-    if not internal:
-        _notify(project, actor, 'Nueva respuesta de seguimiento', values['message'][:500],
-                client=is_admin(actor), stage_id=target_id if level == 'stage' else None)
     return msg
 
 
@@ -551,7 +571,6 @@ def review_stage(project_id, actor, stage_id, data, historical=False):
             _message(project, actor, {'level': 'stage', 'target_id': stage.pk,
                                      'requirement_ids': decision_ids, 'message': message_text,
                                      'document_ids': values.get('document_ids', [])})
-        _notify(project, actor, f'Revisión recibida: {stage.title}', stage_id=stage.pk)
         return {'kind': 'reviews', 'stage_id': stage.pk}
 
     return _perform(project_id, actor, f'review:{stage_id}:{historical}', values, change, idempotent=True)
@@ -579,7 +598,9 @@ def attest_signature(project_id, actor, kind, node_id, data, file):
             signer_name=values['signer_name'], signed_at=values['signed_at'],
             attestation=values['attestation'], attested_by=actor, sha256=values['sha256'],
             method='external', source_sha256=values['sha256'],
-            source_snapshot={'title': node.title, 'document_id': node.document_id, 'proposal_document_id': node.proposal_document_id},
+            source_snapshot={'title': node.title, 'document_id': node.document_id,
+                             'proposal_document_id': node.proposal_document_id,
+                             'approval_file_id': node.approval_file_id},
         )
         store_private_pdf(evidence, pdf, 'signed.pdf')
         evidence.save()
@@ -675,8 +696,8 @@ def _base(node):
 def overview(project_id, actor):
     project = project_for_actor(project_id, actor)
     admin = is_admin(actor)
-    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document').prefetch_related('signature_evidence'))
-    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document').prefetch_related('signature_evidence'))
+    contracts = list(ProjectContract.objects.filter(project=project).select_related('project__client', 'document', 'proposal_document', 'approval_file').prefetch_related('signature_evidence'))
+    amendments = list(ContractAmendment.objects.filter(contract__project=project).select_related('contract__project__client', 'document', 'proposal_document', 'approval_file').prefetch_related('signature_evidence'))
     scopes = list(DeliveryScope.objects.filter(contract__project=project))
     phases = list(DeliveryPhase.objects.filter(scope__contract__project=project))
     stages = list(DeliveryStage.objects.filter(phase__scope__contract__project=project))
@@ -738,6 +759,19 @@ def overview(project_id, actor):
                        'proposal_document_id': node.proposal_document_id, 'client_visible': node.client_visible,
                        'pdf_url': f'/api/accounts/projects/{project.pk}/delivery/{kind}/{node.pk}/pdf/'})
         result.update(signature_state(node))
+        if node.approval_file_id:
+            from accounts.services.delivery_contract_sources import file_metadata
+            metadata = file_metadata(node.approval_file)
+            evidence = node.signature_evidence.first()
+            result.update({'approval_file_id': node.approval_file_id,
+                           'source_download_url': f'/api/accounts/projects/{project.pk}/delivery/{kind}/{node.pk}/source/',
+                           'source_filename': 'signed-contract.pdf' if evidence else metadata['filename'],
+                           'source_content_type': 'application/pdf' if evidence else metadata['content_type'],
+                           'source_sha256': evidence.sha256 if evidence else metadata['sha256']})
+            if not evidence and metadata['content_type'] != 'application/pdf':
+                result['pdf_url'] = None
+        else:
+            result['approval_file_id'] = None
         if admin:
             result['signature_evidence'] = [
                 {'id': evidence.pk, 'sha256': evidence.sha256, 'signer_name': evidence.signer_name,
@@ -865,6 +899,11 @@ def _validate_import(project, payload, *, allow_provenance=False):
             elif parent:
                 query = NODE_MODELS[kind].objects.filter(**{parent_field: parent.pk, 'key': validated['key']})
             node = query.first() if query is not None else None
+            if node:
+                from accounts.services.delivery_integrity import (
+                    validate_ancestor_change,
+                )
+                validate_ancestor_change(project, kind, node, validated)
             if node and kind == 'requirements' and node.context_id and not allow_provenance:
                 fail('La guía conserva sus fuentes. Usa JSON v2 con contexto y citas para actualizarla.', 'context_required')
             if node and _has_publication(kind, node):

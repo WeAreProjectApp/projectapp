@@ -81,6 +81,10 @@ OUTBOUND_EMAIL_CHANNELS = {
     'client_flow_first_login_team': PLATFORM,
     'client_flow_email_validated_team': PLATFORM,
     'client_flow_document_signed_team': PLATFORM,
+    'delivery_published_client': PLATFORM,
+    'delivery_reviewed_team': PLATFORM,
+    'delivery_message_client': PLATFORM,
+    'delivery_message_team': PLATFORM,
 
     # Operational alerts and diagnostic tooling.
     'task_deadline_notification': TASKS_OPERATIONS,

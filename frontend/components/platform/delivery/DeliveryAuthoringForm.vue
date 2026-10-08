@@ -10,14 +10,14 @@ import BaseTextarea from '~/components/base/BaseTextarea.vue'
 const props = defineProps({
   entity: { type: String, required: true }, initial: { type: Object, default: () => ({}) },
   contracts: { type: Array, default: () => [] }, documents: { type: Array, default: () => [] },
-  proposalDocuments: { type: Array, default: () => [] }, commercialPhases: { type: Array, default: () => [] },
+  proposalDocuments: { type: Array, default: () => [] }, approvalFiles: { type: Array, default: () => [] }, commercialPhases: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false }, error: { type: String, default: '' },
 })
 const emit = defineEmits(['submit', 'cancel'])
 const { t } = useI18n()
 const form = reactive({
   key: '', title: '', description: '', order: 0, contract_id: '', amendment_id: '', commercial_phase_id: '',
-  document_id: '', proposal_document_id: '', client_visible: true, is_current: true,
+  document_id: '', proposal_document_id: '', approval_file_id: '', client_visible: true, is_current: true,
   ...props.initial,
   guide: {
     role: '', environment: '', preparation: '', access: '', data: '', allowed_actions: '',
@@ -32,9 +32,16 @@ const contractOptions = computed(() => props.contracts.map((item) => ({ value: i
 const amendmentOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...(props.contracts.find((contract) => String(contract.id) === String(form.contract_id))?.amendments || []).map((item) => ({ value: item.id, label: item.title }))])
 const documentOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...props.documents.map((item) => ({ value: item.id, label: item.title }))])
 const proposalOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...props.proposalDocuments.map((item) => ({ value: item.id, label: item.title }))])
+const approvalOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...props.approvalFiles.map((item) => ({ value: item.id, label: `${item.title} · ${item.filename}` }))])
 const commercialOptions = computed(() => [{ value: '', label: t('platformDelivery.none') }, ...props.commercialPhases.map((item) => ({ value: item.id, label: item.proposal?.title || item.title }))])
 const idOrNull = (value) => value ? Number(value) : null
 const isContract = computed(() => ['contracts', 'amendments'].includes(props.entity))
+const sourceFields = ['document_id', 'proposal_document_id', 'approval_file_id']
+const newApprovalSource = computed(() => !!form.approval_file_id && (!props.initial.id || String(form.approval_file_id) !== String(props.initial.approval_file_id)))
+function chooseSource(field) {
+  sourceFields.filter((key) => key !== field).forEach((key) => { form[key] = '' })
+  if (field === 'approval_file_id' && form.approval_file_id) form.client_visible = false
+}
 const hasProvenance = computed(() => props.entity === 'requirements' && !!props.initial.context_id)
 const provenanceReviewed = ref(false)
 watch(() => [form.title, form.description, form.guide, form.stepsText, form.blockedStepsText], () => {
@@ -44,6 +51,7 @@ function submit() {
   Object.keys(fieldErrors).forEach((key) => delete fieldErrors[key])
   for (const key of ['key', 'title']) if (!form[key]?.trim()) fieldErrors[key] = t('platformDelivery.fieldRequired')
   if (['amendments', 'scopes'].includes(props.entity) && !form.contract_id) fieldErrors.contract_id = t('platformDelivery.fieldRequired')
+  if (isContract.value && sourceFields.filter((key) => !!form[key]).length !== 1) fieldErrors.source = t('platformDelivery.sourceRequired')
   if (!Number.isFinite(Number(form.order)) || Number(form.order) < 0) fieldErrors.order = t('platformDelivery.numericOrder')
   if (hasProvenance.value && !provenanceReviewed.value) fieldErrors.provenance = t('platformDelivery.promptSources.guideReviewRequired')
   if (Object.keys(fieldErrors).length) return
@@ -53,7 +61,8 @@ function submit() {
   if (isContract.value) {
     payload.document_id = idOrNull(form.document_id)
     payload.proposal_document_id = idOrNull(form.proposal_document_id)
-    payload.client_visible = !!form.client_visible
+    payload.approval_file_id = idOrNull(form.approval_file_id)
+    payload.client_visible = newApprovalSource.value ? false : !!form.client_visible
   }
   if (props.entity === 'amendments') payload.contract_id = Number(form.contract_id)
   if (props.entity === 'scopes') Object.assign(payload, { contract_id: Number(form.contract_id), amendment_id: idOrNull(form.amendment_id), is_current: form.is_current })
@@ -99,15 +108,20 @@ function submit() {
       <BaseCheckbox v-model="form.is_current">{{ t('platformDelivery.isCurrent') }}</BaseCheckbox>
     </template>
     <template v-if="isContract">
+      <BaseAlert v-if="fieldErrors.source" variant="danger" data-testid="delivery-source-error">{{ fieldErrors.source }}</BaseAlert>
       <BaseFormRow :cols="2" :help="t('platformDelivery.sourceHint')">
         <BaseFormField :label="t('platformDelivery.contractDocument')" for="delivery-author-document">
-          <BaseSelect id="delivery-author-document" v-model="form.document_id" :options="documentOptions" @update:model-value="form.proposal_document_id = ''" />
+          <BaseSelect id="delivery-author-document" v-model="form.document_id" :options="documentOptions" @update:model-value="chooseSource('document_id')" />
         </BaseFormField>
         <BaseFormField :label="t('platformDelivery.proposalDocument')" for="delivery-author-proposal">
-          <BaseSelect id="delivery-author-proposal" v-model="form.proposal_document_id" :options="proposalOptions" @update:model-value="form.document_id = ''" />
+          <BaseSelect id="delivery-author-proposal" v-model="form.proposal_document_id" :options="proposalOptions" @update:model-value="chooseSource('proposal_document_id')" />
         </BaseFormField>
       </BaseFormRow>
-      <BaseCheckbox v-model="form.client_visible">{{ t('platformDelivery.clientVisible') }}</BaseCheckbox>
+      <BaseFormField :label="t('platformDelivery.approvalFile')" :hint="t('platformDelivery.approvalFileHint')" for="delivery-author-approval-file" label-policy="wrap">
+        <BaseSelect id="delivery-author-approval-file" v-model="form.approval_file_id" :options="approvalOptions" data-testid="delivery-author-approval-file" @update:model-value="chooseSource('approval_file_id')" />
+      </BaseFormField>
+      <BaseAlert v-if="newApprovalSource" variant="info" data-testid="delivery-approval-private">{{ t('platformDelivery.approvalFilePrivate') }}</BaseAlert>
+      <BaseCheckbox v-else v-model="form.client_visible">{{ t('platformDelivery.clientVisible') }}</BaseCheckbox>
     </template>
     <BaseFormField v-if="entity === 'phases'" :label="t('platformDelivery.commercialPhase')" :hint="t('platformDelivery.commercialHint')" for="delivery-author-commercial">
       <BaseSelect id="delivery-author-commercial" v-model="form.commercial_phase_id" :options="commercialOptions" />

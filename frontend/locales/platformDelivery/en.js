@@ -1,4 +1,11 @@
 export default {
+  notices: {
+    title: 'Delivery notices', hint: 'Check notice delivery. Review the exact copy before retrying.',
+    empty: 'No notices recorded.', error: 'The notice could not be loaded or retried.',
+    preview: 'Review retry', confirm: 'Confirm retry', previous: 'Previous', next: 'Next',
+    uncertain: 'The team must review the delivery outcome. It is not resent automatically.',
+    status: { pending: 'Pending', sending: 'Sending', sent: 'Sent', failed: 'Failed', unknown: 'Unknown outcome', cancelled: 'Cancelled' },
+  },
   reopenRound: 'Open another review round', awaitingRound: 'The team will open another review round when this requirement is ready to test again.',
   navigation: 'Deliveries', title: 'Scope and deliveries', subtitle: 'See what was agreed, test each requirement and record your results.',
   project: 'Project', contract: 'Original contract', amendment: 'Amendment', scope: 'Scope', phase: 'Delivery phase', stage: 'Stage', requirement: 'Requirement',
@@ -13,6 +20,7 @@ export default {
   edit: 'Edit', remove: 'Delete', cancel: 'Cancel', save: 'Save', saved: 'Changes saved.', close: 'Close', confirmRemove: 'Delete “{title}”?', removeHint: 'Only editable drafts can be deleted. The server will check their links.',
   createTitle: 'Create {entity}', editTitle: 'Edit {entity}', key: 'Stable identifier', keyHint: 'Use a short name that you can keep when importing JSON.', name: 'Title', description: 'Description in plain language', order: 'Order',
   select: 'Select an option', none: 'No reference', contractDocument: 'Contract document', proposalDocument: 'Contract linked to a proposal', sourceHint: 'Choose one source. A signature is recorded separately.', clientVisible: 'The client can view this contract', isCurrent: 'This scope is current',
+  approvalFile: 'File from the confirmed package', approvalFileHint: 'Includes custom files retained when the proposal approval was reviewed.', approvalFilePrivate: 'This will be saved privately with no recorded signature. You can enable client access and record signature evidence separately afterwards.', sourceRequired: 'Select exactly one contractual source.', downloadSource: 'Download original file',
   role: 'Role in the client’s product', roleHint: 'Use only a product role supported by the sources, not a Platform access role. If no roles are defined, leave this field empty.',
   environment: 'Test environment', preparation: 'What you need before starting', access: 'Access needed before starting', data: 'Test data',
   allowedActions: 'What you can see and do', steps: 'Steps to test permitted actions', stepsHint: 'Write one step per line.', expected: 'What should happen', failures: 'How to recognize a failure',

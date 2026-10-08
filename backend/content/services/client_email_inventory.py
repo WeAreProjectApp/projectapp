@@ -51,6 +51,8 @@ CLIENT_EMAIL_CHANNELS = {
 
     # Platform operational confirmations (security credentials are excluded).
     'document_signed_client': PLATFORM,
+    'delivery_published_client': PLATFORM,
+    'delivery_message_client': PLATFORM,
 }
 
 

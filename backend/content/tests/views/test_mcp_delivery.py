@@ -5,18 +5,26 @@ import io
 from types import SimpleNamespace
 
 import pytest
-from django.core.files.base import ContentFile
-from pypdf import PdfWriter
-
 from accounts.models import (
-    ContractAmendment, ContractSignatureEvidence, DeliveryDocumentLink,
-    DeliveryMessage, DeliveryPhase, DeliveryPublication, DeliveryScope,
-    DeliveryStage, Project, ProjectContract, Requirement, RequirementReview,
+    ContractAmendment,
+    ContractSignatureEvidence,
+    DeliveryDocumentLink,
+    DeliveryMessage,
+    DeliveryPhase,
+    DeliveryPublication,
+    DeliveryScope,
+    DeliveryStage,
+    Project,
+    ProjectContract,
+    Requirement,
+    RequirementReview,
 )
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_helpers import RECORDED_AT
-from content.models import Document, DocumentType, McpConnector, McpUpload
+from django.core.files.base import ContentFile
+from pypdf import PdfWriter
 
+from content.models import Document, DocumentType, McpConnector, McpUpload
 
 pytestmark = pytest.mark.django_db
 
@@ -301,7 +309,7 @@ def test_mcp_historical_approval_requires_a_client_statement(call_projects, publ
 
 
 def test_mcp_reply_keeps_optional_document_evidence(call_projects, published):
-    call_projects('add_delivery_message', {
+    confirm(call_projects, 'add_delivery_message', {
         'project_id': published.project.pk, 'expected_version': current_version(call_projects, published.project),
         'request_id': 'reply-with-evidence', 'level': 'stage', 'target_id': published.stage.pk,
         'message': 'El ajuste está listo para otra revisión.',

@@ -1437,3 +1437,42 @@ Comprobar antes del rollout:
 6. Tras el deploy, aplicar el inventario y las verificaciones de
    `docs/runbooks/littigio-project-reassignment.md`; guardar recibos privados
    fuera de Git. Hasta entonces no declarar los datos reparados.
+
+
+## Gestor de la plataforma — incremento 2026-10-07
+
+`projects` conserva su identidad y se presenta como Gestor de la plataforma,
+versión 2.1.0. Consultar la matriz de entrega para recursos, modelo de datos,
+fuentes confirmadas y avisos. Los contratos de campos incluyen recursos y sus
+relaciones, `ProposalApprovalFile` y eventos/intentos de aviso, con archivos,
+HTML, snapshots e idempotencia interna excluidos de escritura conversacional.
+
+Slices de transporte: `test_mcp_platform_resources.py` (19 casos),
+`test_mcp_delivery_sources.py` (4) y `test_mcp_delivery_notifications.py` (7).
+Ejecutarlos separados en un worktree con settings de test; máximo veinte casos
+por lote. El incremento reutiliza los servicios de REST y el gateway de avisos,
+sin datos ni credenciales reales. Las descargas deben comprobar bytes exactos,
+propiedad y ausencia de rutas de almacenamiento en la respuesta. Los avisos
+comprueban versión del evento, manifest, credencial, replay y rechazo de estado
+incierto. La migración de medios históricos privados y el retiro de sus URLs
+públicas se verifican aparte mediante deploy, nunca desde un worktree.
+
+El slice de permisos se encuentra en
+`accounts/tests/test_platform_resource_role_boundary.py` (12 casos): cliente
+staff sigue siendo cliente para lecturas ajenas, archivados, categoría restringida
+y escrituras. El principal técnico MCP sin UserProfile conserva su caso permitido.
+# Recursos privados de Platform (S1, 2026-10-07)
+
+Los cuatro FileFields de recursos usan storage privado para cargas futuras.
+MCP conserva su descarga como asset temporal ligado a la credencial y su límite
+de materialización de 25 MB; REST transmite el original con JWT, propietario/rol
+de Platform y selección del hijo dentro del recurso. `file_url` es una ruta
+relativa de API, nunca una URL de storage. La clasificación MCP de los campos
+permanece igual: la referencia física no se expone.
+
+La lectura histórica no reinterpreta `deliverables/...` como storage privado ni
+recurre a media pública para un nombre privado ausente. Nginx y Django DEBUG
+deniegan las URLs antiguas. QA debe incluir las cuatro familias y los datos
+retenidos, junto con bytes originales, cliente ajeno, archivados y replay del
+manifest. El guion y la condición de cierre tras deploy están en
+`docs/PLATFORM_RESOURCE_MEDIA.md`.

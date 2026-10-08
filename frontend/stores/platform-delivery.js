@@ -18,6 +18,7 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
     workspace: null,
     documentOptions: [],
     proposalDocumentOptions: [],
+    approvalFileOptions: [],
     evidenceMessages: [],
     isLoading: false,
     isUpdating: false,
@@ -41,6 +42,7 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
         this.workspace = null
         this.documentOptions = []
         this.proposalDocumentOptions = []
+        this.approvalFileOptions = []
         this.evidenceMessages = []
         this.pendingRequests = {}
       }
@@ -61,6 +63,7 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
         const response = await usePlatformApi().get(this.base('documents/options/'))
         this.documentOptions = response.data.documents || []
         this.proposalDocumentOptions = response.data.proposal_documents || []
+        this.approvalFileOptions = response.data.approval_files || []
         return { success: true }
       } catch (error) { return apiFailure(error) }
     },
@@ -174,6 +177,12 @@ export const usePlatformDeliveryStore = defineStore('platformDelivery', {
         const failure = await normalizeBlobApiError(error, '')
         return { success: false, message: failure.message }
       }
+    },
+    downloadContractSource(source) {
+      return this.downloadPromptSource({
+        download_url: source.source_download_url, filename: source.source_filename,
+        content_type: source.source_content_type, title: source.title,
+      })
     },
     async downloadDocument(document) {
       try {

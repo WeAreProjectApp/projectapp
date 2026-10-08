@@ -19,6 +19,7 @@ from accounts.document_views import (
     email_verify_request_view,
 )
 from accounts.views_bridge import session_token_bridge
+from accounts.views_platform_files import platform_resource_file
 from accounts.views_saved_filter_tabs import (
     saved_filter_tab_detail,
     saved_filter_tabs_collection,
@@ -115,6 +116,8 @@ from accounts.views import (
 )
 
 urlpatterns = [
+    path('projects/<int:project_id>/deliverables/<int:resource_id>/files/<str:kind>/',
+         platform_resource_file, name='platform-resource-file'),
     path("projects/<int:project_id>/approval-files/<int:file_id>/", platform_approval_file_download, name="platform-approval-file-download"),
     path('projects/<int:project_id>/', include('accounts.project_collaboration_urls')),
     path('', include('accounts.billing_urls')),

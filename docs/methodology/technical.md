@@ -1,3 +1,20 @@
+> **Archivos privados — 2026-10-07:** `accounts.0081_private_platform_resource_files`
+> cambia el storage de las cuatro familias y amplía sus nombres a 500 caracteres.
+> `content.0285_merge_platform_manager_retention` une las dos hojas 0284;
+> ninguna migración publicada se reescribe. Las descargas JWT son streaming,
+> sin el límite de materialización del MCP. Inventario y conversión verifican
+> digest, propietario y bytes; sólo el deploy aplica esquema y traslado.
+> [Procedimiento](../PLATFORM_RESOURCE_MEDIA.md).
+
+> **Avisos de entregas — 2026-10-07:** `accounts.0080_delivery_activity_notices`
+> agrega eventos e intentos duraderos, con recibo de operación, copia exacta y
+> vínculo al historial de `EmailDeliveryGateway`. El envío se reclama después
+> del commit; el despachador recupera pendientes y trata los intentos sin
+> resultado como `unknown`, sin reenvío automático. La API JWT y el MCP `projects`
+> comparten consulta y reintento con versión y huella del aviso. Las pruebas
+> usan `settings_test` y el mailer `locmem`, sin leer el `.env` enlazado ni
+> enviar correos reales. [Contrato](../DELIVERY_ACTIVITY_NOTICES.md).
+
 > **Contabilidad — 2026-10-06:** opciones de cobro administrativas incluyen
 > `contract_sources` y `delivery_version`; `POST admin/billing-context/projects/:id/contracts/link/`
 > recibe fuente, versión y request_id con sesión/CSRF. Los ingresos exponen
