@@ -57,6 +57,22 @@ export async function publish(page, stageId) {
   await expect(page.getByTestId('delivery-confirm-action')).toHaveCount(0)
 }
 
+export async function assertTouchAction(page, action, profile, testInfo) {
+  const coarse = await page.evaluate(() => matchMedia('(pointer: coarse)').matches)
+  expect(coarse).toBe(['compact', 'portrait', 'landscape'].includes(profile))
+  const geometry = await action.evaluate((element) => {
+    const { width, height } = element.getBoundingClientRect()
+    return { width, height }
+  })
+  await testInfo.attach('delivery-action-geometry', {
+    body: JSON.stringify({ profile, coarse, ...geometry }), contentType: 'application/json',
+  })
+  if (coarse) {
+    expect(geometry.width).toBeGreaterThanOrEqual(44)
+    expect(geometry.height).toBeGreaterThanOrEqual(44)
+  }
+}
+
 export async function addRequirement(page, data, title) {
   await page.getByTestId(`delivery-add-requirement-${data.hidden_stage_id}`).click()
   await page.getByTestId('delivery-author-key').fill('prepared-case')

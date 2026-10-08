@@ -9,6 +9,7 @@ from accounts.models import ProjectContract
 from accounts.serializers_issue_reports import IssueContextOptionsFields
 from accounts.services import issue_reports as issues
 from accounts.services import issue_contract_reply as replies
+from accounts.services._platform_authority import platform_role_boundary
 from accounts.services.delivery_access import fail, is_admin, project_for_actor
 from accounts.services.delivery_workflow import overview
 from accounts.services.issue_context import capture_context
@@ -118,6 +119,7 @@ def context_options(project_id, actor, *, kind=None, ticket_id=None, contract_id
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_context_options(request, project_id):
     serializer = IssueContextOptionsFields(data=request.query_params)
     serializer.is_valid(raise_exception=True)
@@ -126,12 +128,14 @@ def issue_context_options(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_reopen_view(request, project_id, bug_id):
     return comment_handler(request, project_id, 'bug', bug_id, reopen=True)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_attachment_view(request, attachment_id):
     attachment = attachment_for_actor(attachment_id, request.user)
     response = FileResponse(attachment.file.open('rb'), content_type='application/pdf',
@@ -143,30 +147,35 @@ def issue_attachment_view(request, attachment_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_reply_options(request, project_id, kind, ticket_id):
     return Response(replies.reply_options(project_id, request.user, kind, ticket_id))
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_reply_prepare(request, project_id, kind, ticket_id):
     return Response(replies.prepare_reply(project_id, request.user, kind, ticket_id, request.data), status=201)
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_reply_context(request, project_id, kind, ticket_id, context_id):
     return Response(replies.get_reply_context(project_id, request.user, kind, ticket_id, context_id))
 
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_reply_preview(request, project_id, kind, ticket_id):
     return Response(replies.preview_reply(project_id, request.user, kind, ticket_id, request.data))
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def issue_reply_source(request, project_id, kind, ticket_id, context_id, source_key):
     body, filename, content_type = replies.reply_source_file(
         project_id, request.user, kind, ticket_id, context_id, source_key,

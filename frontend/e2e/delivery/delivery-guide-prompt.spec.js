@@ -1,6 +1,5 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
-import { authenticate, fixture, openWorkspace } from './helpers.js'
+import { assertTouchAction, authenticate, fixture, openWorkspace } from './helpers.js'
 import { guidePayload, preparePrompt } from './prompt-helpers.js'
 import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
@@ -156,6 +155,7 @@ for (const name of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) {
       await page.getByTestId('delivery-prompt-contract').selectOption(String(data.contract_id))
       await preparePrompt(page)
       await page.getByTestId('delivery-prompt-json').scrollIntoViewIfNeeded()
+      await assertTouchAction(page, page.getByTestId('delivery-prompt-copy'), name, testInfo)
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBeLessThanOrEqual(1)
       await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click()

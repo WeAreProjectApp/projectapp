@@ -92,6 +92,26 @@ def signed_contract_source(node):
             'snapshot': evidence.source_snapshot, 'date': evidence.signed_at}
 
 
+def signed_source_for_link(link):
+    """Only the contractual source itself inherits its verified signature PDF.
+
+    Other attachments at the same contract/amendment level remain independent
+    documents; associating an annex must never replace it with the contract.
+    """
+    if link.level not in ('contract', 'amendment'):
+        return None
+    node = getattr(link, link.level)
+    if node is None or node.document_id != link.document_id:
+        return None
+    return signed_contract_source(node)
+
+
+def frozen_document_source(snapshot):
+    """Verify the original approved copy rather than recapturing its live source."""
+    raw = _read_exact(snapshot.file, expected_hash=snapshot.sha256, max_bytes=MAX_SIGNED_BYTES)
+    return {'raw': raw, 'title': snapshot.title}
+
+
 def approval_contract_source(node):
     """Prefer the exact signed PDF over the unsigned confirmed package file."""
     source = approval_file_for_project(node.project, node.approval_file_id)

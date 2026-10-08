@@ -1,9 +1,10 @@
 """Compatibility guards for internal review and preservation of platform evidence."""
 
 from decimal import Decimal
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
+from content.models import BusinessProposal, IncomeRecord, ProposalSection
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from django.utils import timezone
@@ -20,13 +21,13 @@ from accounts.services.proposal_platform_onboarding import (
 from accounts.services.technical_resources_sync import (
     sync_technical_resources_for_deliverable,
 )
-from content.models import BusinessProposal, IncomeRecord, ProposalSection
 
 User = get_user_model()
 
 
 @pytest.fixture
 def admin_user(db):
+    """Create the staff administrator used for proposal synchronization."""
     u = User.objects.create_user(
         username='admin-onb@test.com',
         email='admin-onb@test.com',
@@ -39,6 +40,7 @@ def admin_user(db):
 
 @pytest.fixture
 def client_user(db):
+    """Create the client account associated with the accepted proposal."""
     u = User.objects.create_user(
         username='client-onb@test.com',
         email='client-onb@test.com',
@@ -50,6 +52,7 @@ def client_user(db):
 
 @pytest.fixture
 def proposal_with_deliverable(db, client_user, admin_user):
+    """Create an accepted proposal with its project, deliverable and technical section."""
     proj = Project.objects.create(name='P1', client=client_user)
     d = Deliverable.objects.create(
         project=proj,
@@ -61,6 +64,7 @@ def proposal_with_deliverable(db, client_user, admin_user):
         title='Prop',
         client_name='Test Client',
         client_email='client-onb@test.com',
+        client=client_user.profile,
         status=BusinessProposal.Status.ACCEPTED,
         deliverable=d,
     )
@@ -93,6 +97,7 @@ def proposal_with_deliverable(db, client_user, admin_user):
 
 @pytest.mark.django_db
 def test_handle_proposal_accepted_skips_when_already_completed(proposal_with_deliverable, admin_user):
+    """Skip platform onboarding when the completion timestamp is already set."""
     proposal_with_deliverable.platform_onboarding_completed_at = timezone.now()
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -104,6 +109,7 @@ def test_handle_proposal_accepted_skips_when_already_completed(proposal_with_del
 
 @pytest.mark.django_db
 def test_proposal_sync_creates_resources_without_delivery_reviews(proposal_with_deliverable, admin_user):
+    """Create technical resources without creating client-review requirements."""
     from accounts.models import Requirement
     d = proposal_with_deliverable.deliverable
 
@@ -115,8 +121,10 @@ def test_proposal_sync_creates_resources_without_delivery_reviews(proposal_with_
 
 @pytest.mark.django_db
 def test_relaunch_keeps_a_project_with_contractual_delivery(proposal_with_deliverable):
-    from accounts.tests._delivery_fixtures import make_delivery_stage
+    """Preserve the project when contractual delivery blocks a proposal relaunch."""
     from rest_framework.exceptions import ValidationError
+
+    from accounts.tests._delivery_fixtures import make_delivery_stage
     project = proposal_with_deliverable.deliverable.project
     stage = make_delivery_stage(project)
 
@@ -135,8 +143,9 @@ def test_relaunch_keeps_a_project_with_contractual_delivery(proposal_with_delive
     return_value=True,
 )
 def test_legacy_link_requires_review_before_sync(
-    _mock_send, proposal_with_deliverable, admin_user,
+    mock_send, proposal_with_deliverable, admin_user,
 ):
+    """Keep a legacy proposal pending until its platform review is completed."""
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -151,6 +160,7 @@ def test_legacy_link_requires_review_before_sync(
 def test_acceptance_preserves_original_document_locations_without_review(
     proposal_with_deliverable, admin_user,
 ):
+    """Keep proposal document snapshots in place before platform review."""
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -259,7 +269,7 @@ def test_ensure_deliverable_returns_none_when_user_is_not_client(admin_user):
 @pytest.mark.django_db
 @patch('accounts.views._extract_proposal_financial_data', return_value=([], []))
 def test_acceptance_does_not_create_project_for_existing_client(
-    _mock_extract, client_user, admin_user,
+    mock_extract, client_user, admin_user,
 ):
     """An existing client email never implicitly authorizes project creation."""
     proposal = BusinessProposal.objects.create(
@@ -285,9 +295,9 @@ def test_acceptance_does_not_create_project_for_existing_client(
 @pytest.mark.django_db
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
-def test_unreviewed_acceptance_skips_resource_sync(_mock_sync, _mock_email, proposal_with_deliverable, admin_user):
+def test_unreviewed_acceptance_skips_resource_sync(mock_sync, mock_email, proposal_with_deliverable, admin_user):
     """An unreviewed proposal never invokes the resource synchronization path."""
-    _mock_sync.return_value = {'ok': False, 'error': 'no_technical_section', 'detail': 'No section'}
+    mock_sync.return_value = {'ok': False, 'error': 'no_technical_section', 'detail': 'No section'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -296,7 +306,7 @@ def test_unreviewed_acceptance_skips_resource_sync(_mock_sync, _mock_email, prop
     )
 
     assert result == {'skipped': True, 'reason': 'review_required'}
-    _mock_sync.assert_not_called()
+    mock_sync.assert_not_called()
 
 
 # -- _ensure_project_stages -------------------------------------------------
@@ -306,12 +316,12 @@ def test_unreviewed_acceptance_skips_resource_sync(_mock_sync, _mock_email, prop
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_unreviewed_acceptance_does_not_create_internal_stages(
-    _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
+    mock_sync, mock_email, proposal_with_deliverable, admin_user,
 ):
     """Unreviewed acceptance leaves internal stage tracking untouched."""
     from content.models import ProposalProjectStage
 
-    _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
+    mock_sync.return_value = {'ok': True, 'detail': 'synced'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -327,12 +337,12 @@ def test_unreviewed_acceptance_does_not_create_internal_stages(
 @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation', return_value=True)
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_repeated_unreviewed_acceptance_leaves_internal_stages_empty(
-    _mock_sync, _mock_email, proposal_with_deliverable, admin_user,
+    mock_sync, mock_email, proposal_with_deliverable, admin_user,
 ):
     """Repeated unreviewed acceptance cannot initialize internal execution stages."""
     from content.models import ProposalProjectStage
 
-    _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
+    mock_sync.return_value = {'ok': True, 'detail': 'synced'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -356,6 +366,7 @@ def test_repeated_unreviewed_acceptance_leaves_internal_stages_empty(
 
 @pytest.mark.django_db
 def test_teardown_returns_early_when_no_deliverable_id():
+    """Leave an unlinked proposal unchanged during platform teardown."""
     proposal = BusinessProposal.objects.create(
         title='TeardownNoDel',
         client_name='Client',
@@ -368,6 +379,7 @@ def test_teardown_returns_early_when_no_deliverable_id():
 
 @pytest.mark.django_db
 def test_teardown_deletes_project_and_clears_deliverable_id(proposal_with_deliverable):
+    """Remove the empty project when its proposal platform state is torn down."""
     project_pk = proposal_with_deliverable.deliverable.project_id
     teardown_platform_for_proposal(proposal_with_deliverable)
     proposal_with_deliverable.refresh_from_db()
@@ -377,6 +389,7 @@ def test_teardown_deletes_project_and_clears_deliverable_id(proposal_with_delive
 
 @pytest.mark.django_db
 def test_teardown_clears_platform_onboarding_completed_at(proposal_with_deliverable):
+    """Clear the proposal onboarding timestamp during platform teardown."""
     proposal_with_deliverable.platform_onboarding_completed_at = timezone.now()
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -392,6 +405,7 @@ def test_teardown_blocks_archived_project_idea_without_unlinking_proposal(
 ):
     """Fails if archived client ideas allow a relaunch to delete Platform evidence."""
     from rest_framework.exceptions import ValidationError
+
     from accounts.services.proposal_platform_onboarding import PlatformRelaunchConflict
 
     proposal = proposal_with_deliverable
@@ -457,8 +471,9 @@ def test_teardown_blocks_project_income_without_nulling_its_foreign_key(
 @patch('content.services.proposal_pdf_service.ProposalPdfService.generate', return_value=b'')
 @patch('content.services.technical_document_pdf.generate_technical_document_pdf', return_value=b'')
 def test_sync_documents_skips_deliverable_file_when_pdf_returns_empty_bytes(
-    _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
+    mock_tech, mock_gen, proposal_with_deliverable, admin_user,
 ):
+    """Keep the deliverable file count unchanged when PDF generation returns no bytes."""
     from accounts.models import DeliverableFile
 
     d = proposal_with_deliverable.deliverable
@@ -475,11 +490,12 @@ def test_sync_documents_skips_deliverable_file_when_pdf_returns_empty_bytes(
 )
 @patch('content.services.technical_document_pdf.generate_technical_document_pdf', return_value=None)
 def test_sync_documents_does_not_raise_when_proposal_pdf_generation_fails(
-    _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
+    mock_tech, mock_gen, proposal_with_deliverable, admin_user,
 ):
-    """Catches: a half-written deliverable. Asserting only that the call does not
-    raise would also pass if it swallowed the failure AFTER attaching a file, so
-    the count is what proves the failed PDF left nothing behind."""
+    """Preserve the file count when PDF generation fails.
+
+    Returning normally must not hide a file attached before the failure.
+    """
     from accounts.models import DeliverableFile
 
     d = proposal_with_deliverable.deliverable
@@ -497,11 +513,12 @@ def test_sync_documents_does_not_raise_when_proposal_pdf_generation_fails(
     side_effect=Exception('tech fail'),
 )
 def test_sync_documents_does_not_raise_when_technical_pdf_generation_fails(
-    _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
+    mock_tech, mock_gen, proposal_with_deliverable, admin_user,
 ):
-    """Catches: a half-written deliverable. Asserting only that the call does not
-    raise would also pass if it swallowed the failure AFTER attaching a file, so
-    the count is what proves the failed PDF left nothing behind."""
+    """Preserve the file count when PDF generation fails.
+
+    Returning normally must not hide a file attached before the failure.
+    """
     from accounts.models import DeliverableFile
 
     d = proposal_with_deliverable.deliverable
@@ -516,7 +533,7 @@ def test_sync_documents_does_not_raise_when_technical_pdf_generation_fails(
 @patch('content.services.proposal_pdf_service.ProposalPdfService.generate', return_value=None)
 @patch('content.services.technical_document_pdf.generate_technical_document_pdf', return_value=None)
 def test_sync_documents_copies_only_the_contracts_of_the_chosen_modality(
-    _mock_tech, _mock_gen, proposal_with_deliverable, admin_user,
+    mock_tech, mock_gen, proposal_with_deliverable, admin_user,
 ):
     """Fails if a split closing hands the client the stale single contract as well."""
     from content.models import ProposalDocument
@@ -572,8 +589,9 @@ def test_sync_documents_copies_the_single_contract_by_default(
 @override_settings(AUTO_PROVISION_CLIENT_FROM_PROPOSAL=True)
 @patch('accounts.services.onboarding.create_client', side_effect=ValueError('Duplicate email'))
 def test_ensure_deliverable_logs_and_continues_when_create_client_raises_value_error(
-    _mock_create, admin_user,
+    mock_create, admin_user,
 ):
+    """Return no deliverable when automatic client provisioning rejects the account."""
     proposal = BusinessProposal.objects.create(
         title='AutoProv',
         client_name='Auto Client',
@@ -586,7 +604,8 @@ def test_ensure_deliverable_logs_and_continues_when_create_client_raises_value_e
 
 @pytest.mark.django_db
 def test_ensure_deliverable_returns_none_when_user_has_no_profile():
-    u = User.objects.create_user(
+    """Return no deliverable for an existing account without a platform profile."""
+    User.objects.create_user(
         username='noprofile-onb@test.com',
         email='noprofile-onb@test.com',
         password='pass',
@@ -607,9 +626,10 @@ def test_ensure_deliverable_returns_none_when_user_has_no_profile():
 @pytest.mark.django_db
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_unreviewed_acceptance_does_not_mark_completed(
-    _mock_sync, proposal_with_deliverable, admin_user,
+    mock_sync, proposal_with_deliverable, admin_user,
 ):
-    _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
+    """Keep the onboarding timestamp unset for an unreviewed acceptance."""
+    mock_sync.return_value = {'ok': True, 'detail': 'synced'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 
@@ -624,9 +644,10 @@ def test_unreviewed_acceptance_does_not_mark_completed(
 @pytest.mark.django_db
 @patch('accounts.services.proposal_platform_onboarding.sync_technical_resources_for_deliverable')
 def test_unreviewed_acceptance_stays_pending_for_review(
-    _mock_sync, proposal_with_deliverable, admin_user,
+    mock_sync, proposal_with_deliverable, admin_user,
 ):
-    _mock_sync.return_value = {'ok': True, 'detail': 'synced'}
+    """Report that an unreviewed acceptance still requires platform review."""
+    mock_sync.return_value = {'ok': True, 'detail': 'synced'}
     proposal_with_deliverable.platform_onboarding_completed_at = None
     proposal_with_deliverable.save(update_fields=['platform_onboarding_completed_at'])
 

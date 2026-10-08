@@ -3,8 +3,10 @@ from unittest.mock import patch
 
 import pytest
 from content.models import EmailDeliverySnapshot
+from content.services.email_delivery_service import EmailDeliveryGateway
 from django.core import mail
 from django.db import transaction
+from django.test import override_settings
 from rest_framework.exceptions import ValidationError
 
 from accounts.models import (
@@ -37,6 +39,7 @@ def memory_mail(settings):
     settings.MAILERS = {'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}}
     settings.NOTIFICATION_EMAIL = 'team@example.test'
     settings.NOTIFICATION_EMAILS = []
+    settings.FRONTEND_URL = 'https://delivery.example.test'
     mail.outbox = []
 
 
@@ -69,7 +72,9 @@ def test_publication_sends_one_client_snapshot(context, django_capture_on_commit
     assert len(mail.outbox) == 1
     assert mail.outbox[0].to == [context.client.email]
     assert snapshot.body.text == event.text_body
+    assert snapshot.body.html == event.html_body
     assert snapshot.subject == event.subject
+    assert f'https://delivery.example.test/es-co/platform/projects/{context.project.pk}/delivery?stage={context.stage.pk}' in mail.outbox[0].body
 
 
 def test_publication_replay_preserves_one_notice(context, django_capture_on_commit_callbacks):
@@ -259,3 +264,22 @@ def test_dispatch_recovers_a_notice_without_its_commit_callback(context):
     assert event.status == 'sent'
     assert event.attempts.count() == 1
     assert len(mail.outbox) == 1
+
+
+@pytest.mark.parametrize(('configured_timeout', 'expected_timeout'), [(None, 20), (5, 5)])
+def test_activity_smtp_connection_uses_the_bounded_timeout(configured_timeout, expected_timeout):
+    """The SMTP boundary receives a finite timeout without raising a stricter limit."""
+    smtp_mailers = {'default': {
+        'BACKEND': 'django.core.mail.backends.smtp.EmailBackend',
+        'OPTIONS': {'host': 'example.invalid', 'port': 25, 'timeout': configured_timeout},
+    }}
+    with override_settings(MAILERS=smtp_mailers), patch('django.core.mail.backends.smtp.smtplib.SMTP') as transport:
+        connection = EmailDeliveryGateway.bounded_connection(timeout_seconds=20)
+
+        opened = connection.open()
+        connection.close()
+
+    assert opened is True
+    assert transport.call_count == 1
+    assert transport.call_args.args == ('example.invalid', 25)
+    assert transport.call_args.kwargs['timeout'] == expected_timeout

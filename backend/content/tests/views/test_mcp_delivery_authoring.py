@@ -1,24 +1,34 @@
 """Explicit delivery authoring uses real MCP transport and retained source files."""
-from copy import deepcopy
 import hashlib
 import io
 import json
+from copy import deepcopy
 
 import pytest
-from django.core.files.base import ContentFile
-from reportlab.pdfgen.canvas import Canvas
-
 from accounts.models import (
-    ContractSignatureEvidence, DeliveryMessage, DeliveryPromptContext,
-    Project, ProjectContract, Requirement,
+    ContractSignatureEvidence,
+    DeliveryMessage,
+    DeliveryPromptContext,
+    Project,
+    ProjectContract,
+    Requirement,
 )
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_helpers import RECORDED_AT
+from django.core.files.base import ContentFile
+from reportlab.pdfgen.canvas import Canvas
+
 from content.models import Document, McpUpload
 from content.tests.views.test_mcp_delivery import (
-    call_projects as call_projects, confirm, current_version, draft as draft,
+    call_projects as call_projects,
 )
-
+from content.tests.views.test_mcp_delivery import (
+    confirm,
+    current_version,
+)
+from content.tests.views.test_mcp_delivery import (
+    draft as draft,
+)
 
 pytestmark = pytest.mark.django_db
 AGREEMENT_TEXT = 'The agreement includes creating and editing a customer record.'
@@ -326,7 +336,7 @@ def test_mcp_reply_sharing_requires_human_review(call_projects, published_projec
     """Falla si un borrador citado puede compartirse sin revisión humana explícita."""
     context = prepare_reply(call_projects, published_project)
 
-    error = call_projects('add_delivery_message', message_arguments(
+    error = confirm(call_projects, 'add_delivery_message', message_arguments(
         call_projects, published_project, context, human_reviewed=False,
     ), expect_error=True)
 
@@ -338,7 +348,7 @@ def test_mcp_reviewed_reply_preserves_its_provenance(call_projects, published_pr
     """Falla si compartir manualmente descarta el contexto y fundamento de la respuesta."""
     context = prepare_reply(call_projects, published_project)
 
-    call_projects('add_delivery_message', message_arguments(call_projects, published_project, context))
+    confirm(call_projects, 'add_delivery_message', message_arguments(call_projects, published_project, context))
 
     message = DeliveryMessage.objects.get(project=published_project.project)
     assert str(message.context_id) == context['id']
@@ -351,14 +361,14 @@ def test_mcp_reviewed_reply_preserves_its_provenance(call_projects, published_pr
 def test_mcp_reply_sharing_rejects_changed_observations(call_projects, published_project):
     """Falla si una respuesta usa una conversación capturada antes de otra observación."""
     context = prepare_reply(call_projects, published_project)
-    call_projects('add_delivery_message', {
+    confirm(call_projects, 'add_delivery_message', {
         'project_id': published_project.project.pk, 'level': 'stage',
         'target_id': published_project.stage.pk,
         'expected_version': current_version(call_projects, published_project.project),
         'request_id': 'new-observation', 'message': 'Nueva observación: el listado aparece vacío.',
     })
 
-    error = call_projects('add_delivery_message', message_arguments(
+    error = confirm(call_projects, 'add_delivery_message', message_arguments(
         call_projects, published_project, context,
     ), expect_error=True)
 

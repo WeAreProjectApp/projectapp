@@ -270,3 +270,27 @@ de entrega ni los roles del proyecto.
 Doce escenarios negativos de REST/servicio y comprobaciones positivas del
 principal MCP verifican este límite. El archivo de pruebas es
 `accounts/tests/test_platform_resource_role_boundary.py`.
+
+## Confirmación de efectos públicos (S2)
+
+`add_delivery_message`, crear/editar contrato u otrosí, asociar/retirar un
+documento y evaluar/comentar/evaluar en lote tickets requieren una confirmación
+cuando cambian lo que ve el cliente. Notas internas y borradores privados se
+ejecutan directamente. Un estado público de ticket sigue requiriendo revisión
+aunque su nota sea interna; ocultar contenido ya visible también es público.
+
+La vista previa identifica al cliente por id y correo, muestra la selección
+exacta y conserva las versiones del espacio y los tickets. Incluye las fuentes
+canónicas y sus hashes. La ejecución vuelve a verificar la huella bajo bloqueo
+del proyecto, destinatario y documentos antes de llamar al servicio existente;
+un cambio de dueño, correo, cuerpo, fuente o versión exige una vista previa nueva.
+No se crean permisos, firmas, decisiones del cliente ni un contador alternativo.
+
+Para contratos firmados, manda la copia privada de la evidencia firmada y no el borrador editable.
+En documentos se respeta la precedencia del portal: copia publicada, archivo
+generado y finalmente contenido que se renderiza al descargar. Sin PDF guardado,
+la vista previa muestra contenido y procedencia del renderer con sus hashes,
+`file=null` y `source_mode=render_on_read`; no promete un hash binario ni genera
+archivos. Esa revisión permite completar la asociación. Preparar posteriormente
+una copia binaria cambia la fuente y requiere revisar una vista previa nueva.
+Los flags staff del destinatario no cambian esta proyección de cliente.

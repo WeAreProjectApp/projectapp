@@ -1,0 +1,10 @@
+{
+  "id": "platform-delivery-notices",
+  "name": "Platform Delivery Notice History",
+  "module": "platform",
+  "roles": ["platform-admin"],
+  "priority": "P1",
+  "description": "An administrator navigates from a project to Delivery, reads the persisted delivery-notice history, previews the exact retained copy of a confirmed failed notice, and explicitly retries that reviewed manifest. Sending or unknown outcomes require manual review and are never automatically retried.",
+  "expectedSpecs": 1,
+  "outcomes": ["display", "success", "error", "failure"]
+}

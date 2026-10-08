@@ -3,6 +3,7 @@ from decimal import Decimal
 
 from django.contrib.auth import get_user_model
 from django.db.models import Max, Q
+from django.urls import reverse
 from rest_framework import serializers
 
 from accounts.models import SavedFilterTab, UserProfile
@@ -1058,6 +1059,21 @@ from accounts.models import (  # noqa: E402
 )
 
 
+def _resource_file_url(obj, kind, request=None):
+    """Expose the authenticated route, never a storage URL or credential."""
+    if not obj.file:
+        return None
+    resource = obj if kind == 'current' else obj.deliverable
+    if resource.project_id is None:
+        return None
+    url = reverse('platform-resource-file', kwargs={
+        'project_id': resource.project_id, 'resource_id': resource.pk, 'kind': kind,
+    })
+    if kind != 'current':
+        url += f'?file_id={obj.pk}'
+    return url
+
+
 class DeliverableVersionSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.SerializerMethodField()
     file_url = serializers.SerializerMethodField()
@@ -1076,13 +1092,7 @@ class DeliverableVersionSerializer(serializers.ModelSerializer):
         return f'{u.first_name} {u.last_name}'.strip() or u.email
 
     def get_file_url(self, obj):
-        if not obj.file:
-            return None
-        request = self.context.get('request')
-        url = obj.file.url
-        if request and not url.startswith('http'):
-            return request.build_absolute_uri(url)
-        return url
+        return _resource_file_url(obj, 'version', self.context.get('request'))
 
 
 class DeliverableListSerializer(serializers.ModelSerializer):
@@ -1108,13 +1118,7 @@ class DeliverableListSerializer(serializers.ModelSerializer):
         return f'{u.first_name} {u.last_name}'.strip() or u.email
 
     def get_file_url(self, obj):
-        if not obj.file:
-            return None
-        request = self.context.get('request')
-        url = obj.file.url
-        if request and not url.startswith('http'):
-            return request.build_absolute_uri(url)
-        return url
+        return _resource_file_url(obj, 'current', self.context.get('request'))
 
     def get_versions_count(self, obj):
         if hasattr(obj, '_versions_count'):
@@ -1131,13 +1135,7 @@ class DeliverableFileSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'category', 'file_url', 'uploaded_by_name', 'created_at']
 
     def get_file_url(self, obj):
-        if not obj.file:
-            return None
-        request = self.context.get('request')
-        url = obj.file.url
-        if request and not url.startswith('http'):
-            return request.build_absolute_uri(url)
-        return url
+        return _resource_file_url(obj, 'attachment', self.context.get('request'))
 
     def get_uploaded_by_name(self, obj):
         u = obj.uploaded_by
@@ -1162,13 +1160,7 @@ class DeliverableClientUploadSerializer(serializers.ModelSerializer):
         ]
 
     def get_file_url(self, obj):
-        if not obj.file:
-            return None
-        request = self.context.get('request')
-        url = obj.file.url
-        if request and not url.startswith('http'):
-            return request.build_absolute_uri(url)
-        return url
+        return _resource_file_url(obj, 'client_upload', self.context.get('request'))
 
     def get_uploaded_by_name(self, obj):
         u = obj.uploaded_by

@@ -2,6 +2,7 @@
 from rest_framework.exceptions import APIException, NotFound, PermissionDenied, ValidationError
 
 from accounts.models import Project
+from accounts.services._platform_authority import platform_role_authority
 
 
 class DeliveryConflict(APIException):
@@ -16,9 +17,11 @@ def fail(message, code='delivery_invalid'):
 
 def is_admin(actor):
     profile = getattr(actor, 'profile', None)
-    return bool(actor.is_authenticated and actor.is_active and (
+    authority = platform_role_authority(actor)
+    administrative = authority if authority is not None else (
         actor.is_staff or actor.is_superuser or (profile and profile.is_admin)
-    ))
+    )
+    return bool(actor.is_authenticated and actor.is_active and administrative)
 
 
 def require_admin(actor):

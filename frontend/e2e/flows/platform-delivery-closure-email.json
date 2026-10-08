@@ -4,6 +4,6 @@
   "module": "platform",
   "roles": ["platform-admin"],
   "priority": "P1",
-  "description": "Prepare an exact private closure-email preview for a fully approved stage, confirm a manual send, inspect delivery history and explicitly prepare a resend with the same frozen evidence.",
+  "description": "Reach a fully approved stage through the Platform portal in Spanish or English, preserve that locale during navigation, prepare an exact private closure-email preview, confirm a manual send, inspect delivery history and explicitly prepare a resend with the same frozen evidence.",
   "outcomes": ["success", "error", "failure", "display"]
 }

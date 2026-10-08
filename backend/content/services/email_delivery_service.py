@@ -235,6 +235,17 @@ def _persist_gateway_history(
 class EmailDeliveryGateway:
     """Execute one outbound email under an explicit delivery policy."""
 
+    @staticmethod
+    def bounded_connection(*, timeout_seconds=20):
+        """Use the configured mailer, with a finite SMTP deadline for activity notices."""
+        from django.core.mail import mailers
+        from django.core.mail.backends.smtp import EmailBackend as SmtpBackend
+
+        connection = mailers.create_connection('default')
+        if isinstance(connection, SmtpBackend) and (connection.timeout is None or connection.timeout > timeout_seconds):
+            connection.timeout = timeout_seconds
+        return connection
+
     @classmethod
     def send(
         cls,

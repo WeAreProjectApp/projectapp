@@ -11,7 +11,6 @@ from typing import Any
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Max
 
 from accounts.models import (
     DataModelEntity,
@@ -40,10 +39,10 @@ def _ensure_phase(project, bp) -> ProjectPhase:
     phase = ProjectPhase.objects.filter(project=project, business_proposal=bp).first()
     if phase:
         return phase
-    next_order = (project.phases.aggregate(m=Max('order'))['m'] or 0) + 1
-    return ProjectPhase.objects.create(
-        project=project, business_proposal=bp, order=next_order,
-    )
+    from accounts.services.project_phases import add_phase
+    manifest = bp.platform_approval_manifest
+    approval_request_id = manifest.get('request_id') if isinstance(manifest, dict) else None
+    return add_phase(project, bp, approval_request_id=approval_request_id)
 
 
 def _parse_epics_from_json(content_json: dict) -> list:

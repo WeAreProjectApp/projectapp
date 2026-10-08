@@ -21,6 +21,7 @@ from rest_framework.response import Response
 from accounts.models import VerificationCode
 from accounts.serializers import DocumentSignSerializer, EmailVerifyConfirmSerializer
 from accounts.serializers_documents import ClientDocumentSerializer
+from accounts.services._platform_authority import platform_role_boundary
 from accounts.services.verification import create_and_send_otp, validate_otp
 from content.models import Document
 from content.services.document_pdf_service import DocumentPdfService
@@ -76,6 +77,7 @@ def _ordered_docs(qs):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def client_document_list_view(request):
     """List the client's portal documents plus their email-verification state."""
     docs = _ordered_docs(_visible_docs_qs(request))
@@ -89,6 +91,7 @@ def client_document_list_view(request):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def client_document_detail_view(request, doc_uuid):
     doc = _visible_docs_qs(request).filter(uuid=doc_uuid).first()
     if not doc:
@@ -98,6 +101,7 @@ def client_document_detail_view(request, doc_uuid):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def client_document_pdf_view(request, doc_uuid):
     doc = _visible_docs_qs(request).filter(uuid=doc_uuid).first()
     if not doc:
@@ -135,6 +139,7 @@ def client_document_pdf_view(request, doc_uuid):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def client_document_sign_view(request, doc_uuid):
     """Client accepts/signs a document (click-to-accept). Requires a verified email."""
     if request.auth and request.auth.get('impersonated_by'):

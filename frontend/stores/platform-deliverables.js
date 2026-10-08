@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { buildPlatformListUrl } from '~/composables/useIncludeArchivedQuery'
 import { usePlatformApi } from '~/composables/usePlatformApi'
+import { normalizeBlobApiError } from '~/stores/services/normalize_api_error'
+import { downloadBlob, filenameFromDisposition } from '~/utils/downloadFile'
 
 export const usePlatformDeliverablesStore = defineStore('platformDeliverables', {
   state: () => ({
@@ -15,7 +17,7 @@ export const usePlatformDeliverablesStore = defineStore('platformDeliverables', 
   getters: {
     groupedByCategory: (state) => {
       const groups = {}
-      const order = ['designs', 'documents', 'credentials', 'apks', 'other']
+      const order = ['designs', 'documents', 'contract', 'amendment', 'legal_annex', 'credentials', 'apks', 'other']
       for (const d of state.deliverables) {
         if (!groups[d.category]) groups[d.category] = []
         groups[d.category].push(d)
@@ -29,6 +31,22 @@ export const usePlatformDeliverablesStore = defineStore('platformDeliverables', 
   },
 
   actions: {
+    async downloadFile(file) {
+      const fallback = 'No pudimos descargar el archivo. Inténtalo de nuevo.'
+      if (typeof file?.file_url !== 'string' || !file.file_url.startsWith('/api/accounts/')) {
+        return { success: false, message: 'El archivo no tiene una descarga disponible.' }
+      }
+      try {
+        const response = await usePlatformApi().get(file.file_url, { responseType: 'blob', baseURL: '' })
+        const filename = filenameFromDisposition(response.headers?.['content-disposition']) || file.file_name || 'resource'
+        downloadBlob(response.data, filename.replace(/[\\/]/g, '-'))
+        return { success: true }
+      } catch (error) {
+        const failure = await normalizeBlobApiError(error, fallback)
+        return { success: false, message: failure.message }
+      }
+    },
+
     async fetchDeliverables(projectId, category = null, includeArchived = false) {
       this.isLoading = true
       this.error = ''

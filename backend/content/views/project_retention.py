@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
 from accounts.models import UserProfile
+from accounts.platform_media_storage import open_retained_file
 from accounts.services.credential_cipher import decrypt_secret
 from content.models import ProjectRetentionContext
 from content.services.project_deletion_catalog import CATEGORIES
@@ -97,10 +98,11 @@ def retained_project_file(request, client_id, context_id, category, record_id, f
         raise NotFound('Ese archivo no existe.')
     value = getattr(row, field.name)
     try:
-        response = FileResponse(value.open('rb'), as_attachment=True, filename=value.name.rsplit('/', 1)[-1])
-    except FileNotFoundError:
+        response = FileResponse(open_retained_file(value), as_attachment=True, filename=value.name.rsplit('/', 1)[-1])
+    except (OSError, ValueError):
         raise NotFound('El archivo ya no está disponible.')
     response['Cache-Control'] = 'no-store'
+    response['X-Content-Type-Options'] = 'nosniff'
     return response
 
 

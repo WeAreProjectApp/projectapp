@@ -89,7 +89,7 @@ describe('Administrative delivery notice history', () => {
   })
 
   // Detecta que se ofrezca reintento para un transporte cuyo resultado no se conoce.
-  it.each(['unknown', 'sending'])('withholds retry for a $0 notice', async (status) => {
+  it.each(['unknown', 'sending'])('withholds retry for a %s notice', async (status) => {
     api.get.mockResolvedValueOnce({ data: history([createEvent({ status })]) })
 
     await renderHistory()
@@ -143,5 +143,79 @@ describe('Administrative delivery notice history', () => {
     expect(wrapper.text()).not.toContain('client@example.test')
     expect(api.post).not.toHaveBeenCalled()
     expect(wrapper.text()).toContain(spanish.notices.empty)
+  })
+
+  it('refresh restores the history after loading fails', async () => {
+    api.get.mockRejectedValueOnce({ response: { status: 503, data: { detail: 'El historial no está disponible.' } } })
+    await renderHistory()
+    expect(wrapper.get('[role="alert"]').text()).toContain('El historial no está disponible.')
+    api.get.mockResolvedValueOnce({ data: history([createEvent({ subject: 'Aviso recuperado' })]) })
+
+    await button(spanish.refresh).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.findAll('[role="alert"]')).toHaveLength(0)
+    expect(wrapper.text()).toContain('Aviso recuperado')
+  })
+
+  it('navigates the retained history pages', async () => {
+    const first = createEvent({ subject: 'Aviso de la primera página' })
+    const last = createEvent({ id: '2cf423a3-737b-4d76-ae2a-90a1a867aaad', subject: 'Aviso de la última página' })
+    api.get.mockResolvedValueOnce({ data: { count: 21, page: 1, results: [first] } })
+      .mockResolvedValueOnce({ data: { count: 21, page: 2, results: [last] } })
+      .mockResolvedValueOnce({ data: { count: 21, page: 1, results: [first] } })
+    await renderHistory()
+    expect(button(spanish.notices.previous).element.disabled).toBe(true)
+
+    await button(spanish.notices.next).trigger('click')
+    await flushPromises()
+    expect(wrapper.text()).toContain('Aviso de la última página')
+    expect(button(spanish.notices.next).element.disabled).toBe(true)
+    await button(spanish.notices.previous).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('Aviso de la primera página')
+    expect(button(spanish.notices.next).element.disabled).toBe(false)
+    expect(api.get).toHaveBeenLastCalledWith('projects/7/delivery/notices/', { params: { page: 1 } })
+  })
+
+  it('reports a stale retry preview without offering confirmation', async () => {
+    await renderHistory()
+    api.get.mockRejectedValueOnce({ response: { status: 409, data: { detail: 'El seguimiento cambió.' } } })
+
+    await button(spanish.notices.preview).trigger('click')
+    await flushPromises()
+
+    expect(wrapper.get('[role="alert"]').text()).toContain('El seguimiento cambió.')
+    expect(wrapper.findAll('[data-testid="delivery-notice-retry-preview"]')).toHaveLength(0)
+    expect(api.post).not.toHaveBeenCalled()
+    expect(wrapper.text()).toContain('Etapa disponible: Inventario')
+  })
+
+  it('keeps the current project preview when an older retry completes', async () => {
+    await renderHistory()
+    await prepareRetry()
+    const oldRetry = deferred()
+    api.post.mockReturnValueOnce(oldRetry.promise)
+    await button(spanish.notices.confirm).trigger('click')
+    const currentEvent = createEvent({
+      id: '2cf423a3-737b-4d76-ae2a-90a1a867aaad',
+      subject: 'Aviso del proyecto actual', recipients: ['project-eight@example.test'],
+    })
+    api.get.mockResolvedValueOnce({ data: history([currentEvent]) })
+    await wrapper.setProps({ projectId: 8 })
+    await flushPromises()
+    api.get.mockResolvedValueOnce({ data: currentEvent })
+    await button(spanish.notices.preview).trigger('click')
+    await flushPromises()
+
+    oldRetry.resolve({ data: createEvent({ status: 'sent' }) })
+    await flushPromises()
+
+    const currentPreview = wrapper.get('[data-testid="delivery-notice-retry-preview"]')
+    expect(currentPreview.text()).toContain('Aviso del proyecto actual')
+    expect(currentPreview.text()).toContain('project-eight@example.test')
+    expect(currentPreview.text()).not.toContain('client@example.test')
+    expect(api.get).toHaveBeenLastCalledWith(`projects/8/delivery/notices/${currentEvent.id}/retry-preview/`, { params: { expected_version: 3 } })
   })
 })

@@ -86,7 +86,7 @@ def _operation_context(project, actor, operation, result, data):
             stage = requirement.stage if requirement else None
     else:
         return None
-    path = f'/es/platform/projects/{project.pk}/delivery'
+    path = f'/es-co/platform/projects/{project.pk}/delivery'
     if stage:
         path += f'?stage={stage.pk}'
     return {'event_type': event_type, 'audience': audience, 'title': title,
@@ -204,8 +204,9 @@ def send_attempt(attempt_id):
     if not ProposalEmailService._is_template_active(event.event_type):
         _finish(attempt_id, STATUS.CANCELLED, 'template_disabled')
         return False
+    connection = EmailDeliveryGateway.bounded_connection(timeout_seconds=20)
     message = EmailMultiAlternatives(subject=event.subject, body=event.text_body,
-                                     from_email=event.from_email, to=event.recipients)
+                                     from_email=event.from_email, to=event.recipients, connection=connection)
     message.attach_alternative(event.html_body, 'text/html')
     status, code = STATUS.UNKNOWN, 'transport_result_unknown'
     try:
@@ -281,6 +282,7 @@ def _retry_manifest(project, event, expected_version):
     if event.status != STATUS.FAILED:
         fail('Sólo se reintenta un fallo confirmado; un resultado desconocido requiere revisión.', 'notice_not_retryable')
     payload = {'event_id': str(event.pk), 'version': event.version, 'client_id': project.client_id,
+               'from_email': event.from_email,
                'recipients': event.recipients, 'subject': event.subject,
                'text_body': event.text_body, 'html_body': event.html_body}
     return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()

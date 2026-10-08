@@ -9,6 +9,7 @@ Covers:
 from unittest.mock import MagicMock, patch
 
 import pytest
+from content.models.business_proposal import BusinessProposal
 from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework.test import APIClient
@@ -18,7 +19,6 @@ from accounts.models import (
     Project,
     UserProfile,
 )
-from content.models.business_proposal import BusinessProposal
 
 User = get_user_model()
 
@@ -27,11 +27,13 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def api_client():
+    """Provide an API client for exercising account endpoints."""
     return APIClient()
 
 
 @pytest.fixture
 def admin_user():
+    """Create an onboarded administrator for account endpoint tests."""
     user = User.objects.create_user(
         username='admin@gaps2.com', email='admin@gaps2.com', password='adminpass1',
         first_name='Admin', last_name='User',
@@ -42,6 +44,7 @@ def admin_user():
 
 @pytest.fixture
 def admin_headers(api_client, admin_user):
+    """Authenticate the administrator to return real JWT request headers."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'admin@gaps2.com', 'password': 'adminpass1',
     })
@@ -51,6 +54,7 @@ def admin_headers(api_client, admin_user):
 
 @pytest.fixture
 def client_user(admin_user):
+    """Create an onboarded client linked to the administrator."""
     user = User.objects.create_user(
         username='client@gaps2.com', email='client@gaps2.com', password='clientpass1',
         first_name='Carlos', last_name='Ruiz',
@@ -64,6 +68,7 @@ def client_user(admin_user):
 
 @pytest.fixture
 def client_headers(api_client, client_user):
+    """Authenticate the client to return real JWT request headers."""
     resp = api_client.post('/api/accounts/login/', {
         'email': 'client@gaps2.com', 'password': 'clientpass1',
     })
@@ -73,6 +78,7 @@ def client_headers(api_client, client_user):
 
 @pytest.fixture
 def project(client_user):
+    """Create an active project owned by the client."""
     return Project.objects.create(
         name='Gaps2 Project', client=client_user,
         status=Project.STATUS_ACTIVE,
@@ -81,6 +87,7 @@ def project(client_user):
 
 @pytest.fixture
 def deliverable(project, admin_user):
+    """Create a document deliverable in the client's project."""
     return Deliverable.objects.create(
         project=project,
         title='Main Deliverable',
@@ -93,6 +100,7 @@ def deliverable(project, admin_user):
 
 @pytest.fixture
 def archived_deliverable(project, admin_user):
+    """Create an archived document deliverable in the client's project."""
     d = Deliverable.objects.create(
         project=project,
         title='Archived Deliverable',
@@ -108,6 +116,8 @@ def archived_deliverable(project, admin_user):
 # ===========================================================================
 
 class TestDeliverableSyncTechnicalResourcesView:
+    """Verify HTTP access and outcomes for technical resource synchronization."""
+
     def test_returns_404_when_deliverable_not_found(
         self, api_client, admin_headers, project,
     ):
@@ -152,10 +162,12 @@ class TestDeliverableSyncTechnicalResourcesView:
         self, api_client, admin_headers, project, deliverable,
     ):
         """An admin can mirror proposal resources without authoring client guides."""
-        from accounts.models import Requirement
         from content.models import ProposalSection
+
+        from accounts.models import Requirement
         proposal = BusinessProposal.objects.create(
             title='Resource proposal', client_name='Cliente', deliverable=deliverable,
+            client=project.client.profile, status=BusinessProposal.Status.ACCEPTED,
         )
         ProposalSection.objects.create(
             proposal=proposal, section_type='technical_document', title='Technical resources',
@@ -173,6 +185,7 @@ class TestDeliverableSyncTechnicalResourcesView:
         assert not Requirement.objects.filter(stage__phase__scope__contract__project=project).exists()
 
     def test_client_cannot_sync_technical_resources(self, api_client, client_user, project, deliverable):
+        """Reject a client's attempt to synchronize technical resources."""
         api_client.force_authenticate(client_user)
         url = f'/api/accounts/projects/{project.id}/deliverables/{deliverable.id}/sync-technical-resources/'
 
@@ -186,6 +199,8 @@ class TestDeliverableSyncTechnicalResourcesView:
 # ===========================================================================
 
 class TestLoginRecaptchaBranches:
+    """Verify reCAPTCHA rejection paths at the login endpoint."""
+
     @override_settings(RECAPTCHA_ENABLED=True, RECAPTCHA_SITE_KEY='test-site',
                        RECAPTCHA_SECRET_KEY='test_recaptcha_secret', RECAPTCHA_ALLOWED_HOSTNAMES=['testserver'])
     def test_missing_recaptcha_token_returns_400(self, api_client):
@@ -238,6 +253,8 @@ class TestLoginRecaptchaBranches:
 # ===========================================================================
 
 class TestProjectDetailNonOwningClient:
+    """Verify that project detail access respects client ownership."""
+
     def test_client_cannot_access_other_clients_project(
         self, api_client, client_headers, admin_user,
     ):

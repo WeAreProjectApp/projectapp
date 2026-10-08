@@ -8,7 +8,13 @@ from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 
-from accounts.models import Deliverable, DeliverableVersion, Project, UserProfile
+from accounts.models import (
+    Deliverable,
+    DeliverableVersion,
+    DeliveryWorkspace,
+    Project,
+    UserProfile,
+)
 
 User = get_user_model()
 MAX_DELIVERABLE_VERSION_QUERIES = 1
@@ -181,11 +187,13 @@ def actors():
 
 @pytest.fixture
 def project(actors):
-    """Create the project whose deliverable history is returned."""
+    """Create the project workspace before mutation query capture."""
     _, client = actors
-    return Project.objects.create(
+    project = Project.objects.create(
         name="Deliverable detail budget project", client=client
     )
+    DeliveryWorkspace.objects.get_or_create(project=project)
+    return project
 
 
 @pytest.fixture

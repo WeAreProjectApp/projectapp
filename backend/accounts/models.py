@@ -13,6 +13,7 @@ from django.db.models.functions import Coalesce, NullIf
 from django.utils import timezone
 
 from accounts.services.image_utils import optimize_avatar, optimize_image
+from accounts.platform_media_storage import get_platform_resource_storage
 from content.storage import get_private_storage
 
 
@@ -1265,7 +1266,8 @@ class Deliverable(RetainedProjectModel, models.Model):
     source_proposal = models.ForeignKey('content.BusinessProposal', on_delete=models.SET_NULL, null=True, blank=True, related_name='technical_resources')
     source_epic_key = models.CharField(max_length=200, blank=True, default='', db_index=True)
     source_epic_title = models.CharField(max_length=300, blank=True, default='')
-    file = models.FileField(upload_to='deliverables/', blank=True, null=True)
+    file = models.FileField(storage=get_platform_resource_storage,
+                            upload_to='platform-resources/current/', max_length=500, blank=True, null=True)
     current_version = models.PositiveIntegerField(default=1)
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -1384,7 +1386,8 @@ class DeliverableVersion(models.Model):
     deliverable = models.ForeignKey(
         Deliverable, on_delete=models.CASCADE, related_name='versions',
     )
-    file = models.FileField(upload_to='deliverables/versions/')
+    file = models.FileField(storage=get_platform_resource_storage,
+                            upload_to='platform-resources/versions/', max_length=500)
     version_number = models.PositiveIntegerField()
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,
@@ -1418,7 +1421,8 @@ class DeliverableFile(models.Model):
     deliverable = models.ForeignKey(
         Deliverable, on_delete=models.CASCADE, related_name='attachment_files',
     )
-    file = models.FileField(upload_to='deliverables/attachments/')
+    file = models.FileField(storage=get_platform_resource_storage,
+                            upload_to='platform-resources/attachments/', max_length=500)
     title = models.CharField(max_length=300, blank=True, default='')
     category = models.CharField(
         max_length=20, choices=Deliverable.CATEGORY_CHOICES, default=Deliverable.CATEGORY_OTHER,
@@ -1473,7 +1477,8 @@ class DeliverableClientUpload(models.Model):
         DeliverableClientFolder, on_delete=models.CASCADE,
         null=True, blank=True, related_name='uploads',
     )
-    file = models.FileField(upload_to='deliverables/client_uploads/')
+    file = models.FileField(storage=get_platform_resource_storage,
+                            upload_to='platform-resources/client_uploads/', max_length=500)
     title = models.CharField(max_length=300, blank=True, default='')
     uploaded_by = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE,

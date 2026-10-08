@@ -5,8 +5,16 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.db import IntegrityError, connection
 from django.test.utils import CaptureQueriesContext
+from rest_framework.test import APIClient
 
 from accounts.models import Deliverable, Project, ProjectPhase, UserProfile
+from accounts.services.project_phases import (
+    PhaseError,
+    add_phase,
+    remove_phase,
+    reorder_phases,
+)
+from accounts.services.tokens import get_tokens_for_user
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db
@@ -29,11 +37,18 @@ def project(client_user):
     return Project.objects.create(name='Test project', client=client_user)
 
 
-@pytest.fixture
-def business_proposal(db):
-    """Create a proposal that can be attached to a project phase."""
+def _reviewed_proposal(project, title):
+    """Arrange an accepted proposal whose reviewed package belongs to the project."""
     from content.models import BusinessProposal
-    return BusinessProposal.objects.create(title='Proposal A', client_name='Test Client')
+    package = Deliverable.objects.create(project=project, title=f'{title} package', uploaded_by=project.client)
+    return BusinessProposal.objects.create(title=title, client_name='Test Client', client=project.client.profile,
+                                           status='accepted', deliverable=package)
+
+
+@pytest.fixture
+def business_proposal(project):
+    """Create a proposal that can be attached to a project phase."""
+    return _reviewed_proposal(project, 'Proposal A')
 
 
 # =========================================================================
@@ -84,14 +99,6 @@ def test_linked_business_proposal_returns_none_when_no_phases(project):
 # =========================================================================
 
 
-from accounts.services.project_phases import (  # noqa: E402
-    PhaseError,
-    add_phase,
-    remove_phase,
-    reorder_phases,
-)
-
-
 def _add_distinct_phases(project, user, count):
     """Create phases whose populated deliverables expose descriptor query drift."""
     from content.models import BusinessProposal
@@ -113,7 +120,9 @@ def _add_distinct_phases(project, user, count):
             )
             proposal.deliverable = deliverable
             proposal.save(update_fields=['deliverable'])
-        phases.append(add_phase(project, proposal, order=starting_order + number))
+        # Read budgets include historical unreviewed/unlinked rows. They are not
+        # newly writable through the stricter commercial phase service.
+        phases.append(ProjectPhase.objects.create(project=project, business_proposal=proposal, order=starting_order + number))
     return phases
 
 
@@ -129,8 +138,7 @@ def test_add_phase_appends_at_end_when_order_omitted(project, business_proposal)
     """Fails if implicit phase insertion does not append after existing work."""
     phase = add_phase(project, business_proposal)
     assert phase.order == 1
-    from content.models import BusinessProposal
-    p2 = BusinessProposal.objects.create(title='P2', client_name='X')
+    p2 = _reviewed_proposal(project, 'P2')
     phase2 = add_phase(project, p2)
     assert phase2.order == 2
 
@@ -145,9 +153,8 @@ def test_add_phase_rejects_duplicate(project, business_proposal):
 
 def test_remove_phase_renumbers_remaining(project, business_proposal):
     """Fails if deletion leaves gaps in the remaining phase sequence."""
-    from content.models import BusinessProposal
-    p2 = BusinessProposal.objects.create(title='P2', client_name='X')
-    p3 = BusinessProposal.objects.create(title='P3', client_name='X')
+    p2 = _reviewed_proposal(project, 'P2')
+    p3 = _reviewed_proposal(project, 'P3')
     add_phase(project, business_proposal)
     ph2 = add_phase(project, p2)
     add_phase(project, p3)
@@ -158,9 +165,8 @@ def test_remove_phase_renumbers_remaining(project, business_proposal):
 
 def test_reorder_phases_writes_new_order_atomically(project, business_proposal):
     """Fails if a valid reorder does not persist the requested sequence."""
-    from content.models import BusinessProposal
-    p2 = BusinessProposal.objects.create(title='P2', client_name='X')
-    p3 = BusinessProposal.objects.create(title='P3', client_name='X')
+    p2 = _reviewed_proposal(project, 'P2')
+    p3 = _reviewed_proposal(project, 'P3')
     ph1 = add_phase(project, business_proposal)
     ph2 = add_phase(project, p2)
     ph3 = add_phase(project, p3)
@@ -176,8 +182,7 @@ def test_reorder_phases_writes_new_order_atomically(project, business_proposal):
 def test_reorder_phases_rejects_phase_from_another_project(project, business_proposal, client_user):
     """Fails if reorder input can inject a phase from another project."""
     other = Project.objects.create(name='Other', client=client_user)
-    from content.models import BusinessProposal
-    p_other = BusinessProposal.objects.create(title='PO', client_name='X')
+    p_other = _reviewed_proposal(other, 'PO')
     phase_other = add_phase(other, p_other)
     ph1 = add_phase(project, business_proposal)
     with pytest.raises(PhaseError) as exc:
@@ -191,11 +196,6 @@ def test_reorder_phases_rejects_phase_from_another_project(project, business_pro
 # =========================================================================
 # HTTP-level endpoint tests
 # =========================================================================
-
-
-from rest_framework.test import APIClient  # noqa: E402
-
-from accounts.services.tokens import get_tokens_for_user  # noqa: E402
 
 
 @pytest.fixture
@@ -219,9 +219,7 @@ def authed_client(admin_user):
 
 def test_list_phases_endpoint_returns_ordered_phases(authed_client, project, business_proposal):
     """Fails if the phase endpoint stops respecting the persisted phase order."""
-    from content.models import BusinessProposal
-
-    later_proposal = BusinessProposal.objects.create(title='Later proposal', client_name='Test Client')
+    later_proposal = _reviewed_proposal(project, 'Later proposal')
     add_phase(project, later_proposal, order=2)
     add_phase(project, business_proposal, order=1)
 
@@ -255,8 +253,9 @@ def test_list_phases_serializes_nested_proposal_fields(authed_client, project, c
         total_investment=Decimal('9000.00'),
         status=BusinessProposal.Status.FINISHED,
     )
-    add_phase(project, linked_proposal, order=1)
-    add_phase(project, detached_proposal, order=2)
+    # Existing historical phases remain readable, including a missing package.
+    ProjectPhase.objects.create(project=project, business_proposal=linked_proposal, order=1)
+    ProjectPhase.objects.create(project=project, business_proposal=detached_proposal, order=2)
 
     response = authed_client.get(f'/api/accounts/projects/{project.id}/phases/')
 
@@ -294,15 +293,27 @@ def test_client_lists_own_project_phases(client_user, project, business_proposal
     assert response.json()[0]['proposal']['id'] == business_proposal.pk
 
 
-def test_profileless_user_lists_own_project_phases(db, business_proposal):
+def test_profileless_user_lists_own_project_phases(db):
     """Fails if an owner without a profile loses access to their project phases."""
+    from content.models import BusinessProposal
+
     owner = User.objects.create_user(
         username='profileless-owner@example.com',
         email='profileless-owner@example.com',
         password='x',
     )
     project = Project.objects.create(name='Profileless owner project', client=owner)
-    add_phase(project, business_proposal)
+    historical_package = Deliverable.objects.create(
+        project=project, title='Historical owner package', uploaded_by=owner,
+    )
+    business_proposal = BusinessProposal.objects.create(
+        title='Historical owner proposal', client_name='Profileless owner',
+        client_email=owner.email, status=BusinessProposal.Status.ACCEPTED,
+        deliverable=historical_package,
+    )
+    ProjectPhase.objects.create(
+        project=project, business_proposal=business_proposal, order=1,
+    )
     tokens = get_tokens_for_user(owner)
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {tokens["access"]}')
@@ -398,8 +409,7 @@ def test_remove_phase_endpoint(authed_client, project, business_proposal):
 
 def test_reorder_phases_endpoint(authed_client, project, business_proposal):
     """Fails if the reorder endpoint does not store the submitted order."""
-    from content.models import BusinessProposal
-    p2 = BusinessProposal.objects.create(title='P2', client_name='X')
+    p2 = _reviewed_proposal(project, 'P2')
     ph1 = add_phase(project, business_proposal)
     ph2 = add_phase(project, p2)
     resp = authed_client.patch(

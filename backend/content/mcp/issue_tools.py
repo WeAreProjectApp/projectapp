@@ -16,6 +16,7 @@ from content.mcp.context import current_mcp_context
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
+from content.mcp.public_delivery_confirmation import ISSUE_PUBLIC_TOOLS, configure_public_tool
 
 ID = {'type': 'integer', 'minimum': 1}
 VERSION = {'type': 'integer', 'minimum': 0}
@@ -298,3 +299,7 @@ ISSUE_TOOLS = [
           _reply_source, {'kind': KIND, 'ticket_id': ID, 'context_id': RETRY, 'source_key': TEXT},
           ('kind', 'ticket_id', 'context_id', 'source_key')),
 ]
+
+for _public_tool in ISSUE_TOOLS:
+    if _public_tool['name'] in ISSUE_PUBLIC_TOOLS:
+        configure_public_tool(_public_tool, _actor)

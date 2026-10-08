@@ -16,6 +16,7 @@ from rest_framework.exceptions import APIException
 from accounts.services import delivery_authoring as authoring
 from accounts.services import delivery_closure_email as closure_email
 from accounts.services import delivery_workflow as delivery
+from accounts.services._platform_authority import mcp_delivery_actor_is_bound
 from accounts.services.delivery_access import is_admin
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
@@ -23,6 +24,7 @@ from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
+from content.mcp.public_delivery_confirmation import DELIVERY_PUBLIC_TOOLS, configure_public_tool
 
 
 ID = {'type': 'integer', 'minimum': 1}
@@ -108,8 +110,13 @@ NODE_FIELDS = {
 }
 
 
-def _actor():
-    actor = mcp_actor()
+def _actor(*, tool_name=''):
+    context = current_mcp_context()
+    actor = context.actor if context is not None else mcp_actor()
+    if not mcp_delivery_actor_is_bound(actor, context):
+        message = ('La descarga requiere una credencial MCP.' if tool_name.startswith('download_')
+                   else 'La operación requiere una credencial MCP válida.')
+        raise ToolError(message, code='FORBIDDEN')
     if not is_admin(actor):
         raise ToolError('Solo los administradores pueden gestionar entregas.', code='FORBIDDEN')
     return actor
@@ -407,7 +414,7 @@ def _tool(name, description, handler, properties=None, required=(), *, risk='rea
 
     def execute(arguments):
         _validate(arguments, schema)
-        actor = _actor()
+        actor = _actor(tool_name=name)
         if durable_execution:
             # External transport must retain its claim if later history fails.
             return handler(arguments, actor)
@@ -421,7 +428,7 @@ def _tool(name, description, handler, properties=None, required=(), *, risk='rea
     if risk == 'sensitive':
         def prepare(arguments):
             _validate(arguments, schema)
-            _overview(arguments, _actor())
+            _overview(arguments, _actor(tool_name=name))
             return deepcopy(arguments)
 
         tool.update({
@@ -673,3 +680,7 @@ DELIVERY_TOOLS = [
           }, ('kind', 'node_id', 'expected_version', 'request_id', 'asset_id',
               'signer_name', 'signed_at', 'attestation'), risk='sensitive'),
 ]
+
+for _public_tool in DELIVERY_TOOLS:
+    if _public_tool['name'] in DELIVERY_PUBLIC_TOOLS:
+        configure_public_tool(_public_tool, _actor)
