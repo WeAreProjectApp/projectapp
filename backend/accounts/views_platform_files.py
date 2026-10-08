@@ -7,13 +7,13 @@ from rest_framework.decorators import (
 )
 from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
-from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from accounts.authentication import SessionJWTAuthentication
 from accounts.services import platform_resources
 
 
 @api_view(['GET'])
-@authentication_classes([JWTAuthentication])
+@authentication_classes([SessionJWTAuthentication])
 @permission_classes([IsAuthenticated])
 def platform_resource_file(request, project_id, resource_id, kind):
     """Keep role and project ownership in the shared REST/MCP resource service."""
