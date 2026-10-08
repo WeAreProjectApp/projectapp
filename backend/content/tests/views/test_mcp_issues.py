@@ -1,22 +1,29 @@
 """MCP ticket parity uses real connector transport and shared domain writes."""
-import io
 import hashlib
+import io
 from datetime import timedelta
 
 import pytest
+from accounts.models import (
+    BugReport,
+    DeliveryPromptSource,
+    DeliveryStage,
+    IssueResponse,
+    Project,
+    Requirement,
+    RequirementReview,
+)
+from accounts.services import issue_reports as issues
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
+from accounts.tests.delivery_authoring_helpers import build_authoring_context
+from accounts.tests.delivery_helpers import RECORDED_AT, publish, version
+from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 from django.core.files.base import ContentFile
 from django.test import override_settings
 from freezegun import freeze_time
 from PIL import Image
 from pypdf import PdfWriter
 
-from accounts.models import BugReport, DeliveryPromptSource, DeliveryStage, IssueResponse, Project, Requirement, RequirementReview
-from accounts.services import issue_reports as issues
-from accounts.tests.delivery_authoring_helpers import build_authoring_context
-from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
-from accounts.tests.delivery_helpers import RECORDED_AT
-from accounts.tests.delivery_helpers import publish, version
-from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 from content.models import Document, McpActionIntent, McpConnector, McpUpload
 
 pytestmark = pytest.mark.django_db
@@ -58,6 +65,14 @@ def create(call, project):
     return call('create_bug_report', {'project_id': project.pk, 'payload': {'title': 'General failure'}})['structuredContent']
 
 
+def confirmed_issue_call(call, tool, arguments):
+    """Drive the owned preview before executing an explicitly public mutation."""
+    preview = call(tool, arguments)
+    if preview['isError']:
+        return preview
+    return call('confirm_action', {'confirmation_id': preview['structuredContent']['confirmation_id']})
+
+
 def pdf_bytes():
     output = io.BytesIO()
     writer = PdfWriter()
@@ -77,7 +92,7 @@ def test_mcp_evaluation_preserves_guide_approvals(call, project):
     source = make_requirement(make_delivery_stage(project))
     ticket = call('create_bug_report', {'project_id': project.pk, 'payload': {'title': 'Failure', 'source_requirement_id': source.pk}})['structuredContent']
 
-    result = call('evaluate_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+    result = confirmed_issue_call(call, 'evaluate_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
                                           'payload': {'status': 'resolved', 'admin_response': 'Fixed.', 'expected_version': ticket['version']}})
 
     assert result['isError'] is False
@@ -87,10 +102,11 @@ def test_mcp_evaluation_preserves_guide_approvals(call, project):
 
 def test_mcp_reopen_preserves_response_history(call, project):
     ticket = create(call, project)
-    fixed = call('evaluate_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+    confirmed = confirmed_issue_call(call, 'evaluate_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
                                          'payload': {'status': 'resolved', 'admin_response': 'Fixed.', 'expected_version': ticket['version']}})['structuredContent']
+    fixed = confirmed['result']
 
-    result = call('comment_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
+    result = confirmed_issue_call(call, 'comment_issue_report', {'project_id': project.pk, 'kind': 'bug', 'ticket_id': ticket['id'],
                                          'payload': {'content': 'Still fails.', 'reopen': True, 'expected_version': fixed['version']}})
 
     assert result['isError'] is False
@@ -167,7 +183,7 @@ def test_mcp_archive_confirmation_lists_the_archived_ticket(call, project):
     """Falla si confirmar un archivo borra historia o la lista archivada mezcla tickets distractores."""
     ticket = create(call, project)
     distractor = create(call, project)
-    call('evaluate_issue_report', {
+    confirmed_issue_call(call, 'evaluate_issue_report', {
         'project_id': project.pk, 'kind': 'bug', 'ticket_id': distractor['id'],
         'payload': {'status': 'resolved', 'admin_response': 'Otro caso resuelto.',
                     'expected_version': distractor['version']},
@@ -184,7 +200,7 @@ def test_mcp_archive_confirmation_lists_the_archived_ticket(call, project):
     assert confirmed['structuredContent']['result']['archived'] is True
     assert (archived.is_archived, archived.version, archived.title) == (True, ticket['version'] + 1, 'General failure')
     assert [row['id'] for row in listed['tickets']] == [ticket['id']]
-    assert McpActionIntent.objects.count() == 1
+    assert McpActionIntent.objects.count() == 2
 
 
 def _completed_png():

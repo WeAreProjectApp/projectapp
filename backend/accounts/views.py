@@ -19,6 +19,7 @@ from projectapp.recaptcha import CaptchaError, verify_captcha
 
 from accounts.models import UserProfile
 from accounts.permissions import IsAdminRole
+from accounts.services._platform_authority import platform_role_boundary
 from accounts.serializers import (
     AdminListSerializer,
     ClientListSerializer,
@@ -1165,7 +1166,10 @@ def deliverable_sync_technical_resources_view(request, project_id, deliverable_i
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    result = sync_technical_resources_for_deliverable(d, request.user)
+    try:
+        result = sync_technical_resources_for_deliverable(d, request.user)
+    except PhaseError as exc:
+        return Response({'detail': exc.code, **exc.extra}, status=exc.http_status)
     if not result.get('ok'):
         return Response(
             {'detail': result.get('detail', 'No se pudo sincronizar.')},
@@ -1200,6 +1204,7 @@ def _get_project_or_403(request, project_id, *, related_fields=()):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def requirement_list_view(request, project_id):
     """Read requirements visible in the contractual delivery hierarchy."""
     from accounts.services.delivery_workflow import visible_requirements
@@ -1284,6 +1289,7 @@ def _change_request_list_queryset(qs, actor=None):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_all_view(request):
     """
     GET — All change requests across all projects the user has access to.
@@ -1316,6 +1322,7 @@ def change_request_all_view(request):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_list_view(request, project_id):
     """
     GET  — All change requests for a project (both roles, filtered by status optionally).
@@ -1346,6 +1353,7 @@ def change_request_list_view(request, project_id):
 
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_detail_view(request, project_id, cr_id):
     """
     GET    — Detail with comments (both roles).
@@ -1402,6 +1410,7 @@ def change_request_detail_view(request, project_id, cr_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_evaluate_view(request, project_id, cr_id):
     from accounts.views_issue_reports import evaluate_handler
 
@@ -1438,6 +1447,7 @@ def _bulk_evaluation_ids(items, model):
 @transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_bulk_evaluate_view(request, project_id):
     from accounts.views_issue_reports import bulk_handler
 
@@ -1449,6 +1459,7 @@ def change_request_bulk_evaluate_view(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def change_request_comment_view(request, project_id, cr_id):
     from accounts.views_issue_reports import comment_handler
 
@@ -1460,6 +1471,7 @@ def change_request_comment_view(request, project_id, cr_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
+@platform_role_boundary
 def change_request_convert_view(request, project_id, cr_id):
     from accounts.views_issue_reports import convert_handler
 
@@ -1509,6 +1521,7 @@ def _bug_report_list_queryset(qs, actor=None):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_all_view(request):
     """
     GET — All bug reports across all projects the user has access to.
@@ -1544,6 +1557,7 @@ def bug_report_all_view(request):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_list_view(request, project_id):
     """
     GET  — All bug reports for a project (both roles, filtered optionally).
@@ -1577,6 +1591,7 @@ def bug_report_list_view(request, project_id):
 
 @api_view(['GET', 'DELETE'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_detail_view(request, project_id, bug_id):
     """
     GET    — Detail with comments (both roles).
@@ -1634,6 +1649,7 @@ def bug_report_detail_view(request, project_id, bug_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_evaluate_view(request, project_id, bug_id):
     from accounts.views_issue_reports import evaluate_handler
 
@@ -1646,6 +1662,7 @@ def bug_report_evaluate_view(request, project_id, bug_id):
 @transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_bulk_evaluate_view(request, project_id):
     from accounts.views_issue_reports import bulk_handler
 
@@ -1657,6 +1674,7 @@ def bug_report_bulk_evaluate_view(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+@platform_role_boundary
 def bug_report_comment_view(request, project_id, bug_id):
     from accounts.views_issue_reports import comment_handler
 
@@ -1733,11 +1751,11 @@ def deliverable_list_view(request, project_id):
 @permission_classes([IsAuthenticated])
 def deliverable_detail_view(request, project_id, deliverable_id):
     from accounts.services import platform_resources as resources
+    if request.method == 'GET':
+        return Response(resources.get_resource(project_id, request.user, deliverable_id, request=request))
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    if request.method == 'GET':
-        return Response(resources.get_resource(project_id, request.user, deliverable_id, request=request))
     if request.method == 'DELETE':
         resources.update_resource(project_id, request.user, deliverable_id, {'is_archived': True}, request=request)
         return Response({'detail': 'Entregable archivado.'})
@@ -3487,9 +3505,16 @@ def project_phases_view(request, project_id):
     profile = getattr(request.user, 'profile', None)
     if not (profile and profile.is_admin):
         return Response({'detail': 'forbidden'}, status=403)
+    if not isinstance(request.data, dict) or set(request.data) - {'proposal_id', 'order'}:
+        return Response({'detail': 'La fase sólo admite propuesta y posición.'}, status=400)
     proposal_id = request.data.get('proposal_id')
     if not proposal_id:
         return Response({'detail': 'proposal_id required'}, status=400)
+    from rest_framework import serializers as input_serializers
+    try:
+        proposal_id = input_serializers.IntegerField(min_value=1).run_validation(proposal_id)
+    except input_serializers.ValidationError as exc:
+        return Response({'proposal_id': exc.detail}, status=400)
     from content.models import BusinessProposal
     proposal = BusinessProposal.objects.filter(id=proposal_id).first()
     if proposal is None:

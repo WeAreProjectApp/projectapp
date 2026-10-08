@@ -2,7 +2,7 @@
 import mimetypes
 from pathlib import PurePosixPath
 
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -46,9 +46,10 @@ def _validate(serializer_type, data, **kwargs):
 
 
 def _resource(project, actor, resource_id, *, editable=False, request=None):
-    resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').filter(
-        project=project, pk=resource_id,
-    ).first()
+    from content.models import ProposalApprovalFile
+    resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').annotate(
+        _has_approval_files=Exists(ProposalApprovalFile.objects.filter(deliverable_id=OuterRef('pk'))),
+    ).filter(project=project, pk=resource_id).first()
     if resource is None:
         raise NotFound('Recurso no encontrado.')
     if editable and resource.is_archived:
@@ -78,7 +79,8 @@ def list_resources(project_id, actor, *, include_archived=False, category=None, 
 
 
 def get_resource(project_id, actor, resource_id, *, request=None):
-    project = project_for_actor(project_id, actor, request=request)
+    project = project_for_actor(project_id, actor, request=request,
+        foreign_project_error=PermissionDenied if request is not None else NotFound)
     return _data(_resource(project, actor, resource_id, request=request), request, detail=True)
 
 
@@ -219,7 +221,8 @@ def upload_client_file(project_id, actor, resource_id, data, *, request=None, **
     return perform(project_id, actor, f'resource:{resource_id}:client-file', data, change, request=request, **operation)
 
 
-def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+def open_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+    """Authorize the parent and selected child before opening either namespace."""
     project = project_for_actor(project_id, actor, request=request)
     resource = _resource(project, actor, resource_id, request=request)
     if kind == 'current':
@@ -235,11 +238,18 @@ def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, r
     if row is None or not row.file:
         raise NotFound('Archivo no encontrado.')
     try:
-        with row.file.open('rb') as source:
-            body = source.read(25 * 1024 * 1024 + 1)
+        source = row.file.open('rb')
     except (OSError, ValueError) as exc:
         raise NotFound('Archivo no disponible.') from exc
+    filename = PurePosixPath(row.file.name).name
+    return source, filename, mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+
+
+def read_file(project_id, actor, resource_id, *, kind='current', file_id=None, request=None):
+    source, filename, content_type = open_file(project_id, actor, resource_id,
+        kind=kind, file_id=file_id, request=request)
+    with source:
+        body = source.read(25 * 1024 * 1024 + 1)
     if len(body) > 25 * 1024 * 1024:
         raise ValidationError('El archivo supera 25 MB.')
-    filename = PurePosixPath(row.file.name).name
-    return body, filename, mimetypes.guess_type(filename)[0] or 'application/octet-stream'
+    return body, filename, content_type

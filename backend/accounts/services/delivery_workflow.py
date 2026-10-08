@@ -204,8 +204,14 @@ def _validate_relations(project, kind, values, node):
         contract_id = values.get('contract_id', getattr(node, 'contract_id', None))
         contract = _node(project, 'contracts', contract_id)
         if kind == 'amendments' and node is not None:
-            from accounts.services.billing_reassignment import validate_amendment_billing_reassignment
+            from accounts.services.billing_reassignment import (
+                validate_amendment_billing_reassignment,
+            )
+            from accounts.services.delivery_integrity import (
+                validate_amendment_destination,
+            )
             validate_amendment_billing_reassignment(node, contract)
+            validate_amendment_destination(node, contract)
         if kind == 'scopes':
             amendment_id = values.get('amendment_id', getattr(node, 'amendment_id', None))
             if amendment_id:
@@ -219,9 +225,9 @@ def _validate_relations(project, kind, values, node):
         if commercial_id and not ProjectPhase.objects.filter(pk=commercial_id, project=project).exists():
             fail('La referencia comercial no pertenece al proyecto.')
     if kind == 'stages':
+        from accounts.services.delivery_integrity import validate_stage_destination
         parent = _node(project, 'phases', values.get('phase_id', getattr(node, 'phase_id', None)))
-        if node is None and _phase_approved(parent):
-            fail('La fase aprobada está congelada. Registra otra fase.', 'approved_frozen')
+        validate_stage_destination(node, parent)
     if kind == 'requirements':
         parent = _node(project, 'stages', values.get('stage_id', getattr(node, 'stage_id', None)))
         if _stage_approved(parent):
@@ -239,6 +245,9 @@ def _validate_relations(project, kind, values, node):
             changed = [field for field in values if getattr(node, field, None) != values[field]]
             if changed:
                 fail('El contexto contractual publicado se conserva. Registra una ampliación.', 'published_frozen')
+    if kind in ('scopes', 'phases', 'stages'):
+        from accounts.services.delivery_integrity import validate_ancestor_change
+        validate_ancestor_change(project, kind, node, values)
 
 
 def mutate_node(project_id, actor, kind, data, node_id=None, delete=False):
@@ -323,6 +332,8 @@ def signature_state(node):
 
 def _contract_ready(scope):
     from accounts.services.delivery_documents import ensure_portal_signature_capture
+    from accounts.services.delivery_integrity import validate_applicable_amendment
+    validate_applicable_amendment(scope)
     ensure_portal_signature_capture(scope.contract, scope.contract.project.client)
     if scope.amendment_id:
         ensure_portal_signature_capture(scope.amendment, scope.contract.project.client)
@@ -375,6 +386,8 @@ def publish_stage(project_id, actor, stage_id, data):
         requirements = list(stage.requirements.all())
         if not requirements:
             fail('Agrega al menos un requerimiento antes de publicar.', 'empty_stage')
+        from accounts.services.delivery_integrity import validate_requirement_contexts
+        validate_requirement_contexts(project, requirements)
         for req in requirements:
             _validate_guide(req)
         stage.editorial_status = 'published'
@@ -886,6 +899,11 @@ def _validate_import(project, payload, *, allow_provenance=False):
             elif parent:
                 query = NODE_MODELS[kind].objects.filter(**{parent_field: parent.pk, 'key': validated['key']})
             node = query.first() if query is not None else None
+            if node:
+                from accounts.services.delivery_integrity import (
+                    validate_ancestor_change,
+                )
+                validate_ancestor_change(project, kind, node, validated)
             if node and kind == 'requirements' and node.context_id and not allow_provenance:
                 fail('La guía conserva sus fuentes. Usa JSON v2 con contexto y citas para actualizarla.', 'context_required')
             if node and _has_publication(kind, node):

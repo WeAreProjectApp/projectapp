@@ -1,3 +1,12 @@
+> **Seguimiento de entregas — 2026-10-07, p0x:** preparación y validación
+> coordinada en worktrees propios. Aplicados el puente contractual, MCP de
+> recursos/modelo de datos, avisos, integridad de jerarquía y archivos privados.
+> Pendientes de cierre: autoridad JWT por perfil, efectos públicos MCP con
+> confirmación exacta, QA conjunta y drenaje de los tres PRs mediante merge-queue.
+> La lectura de historia extensa requiere decisión de contrato; no se presenta
+> como un frente suficiente. Despliegue y conversión de archivos reales son
+> operaciones separadas del cambio de código.
+
 > **Cobro antes de liquidación — 2026-10-06:** entrega de sesión para vínculo de
 > contratos existentes, cuenta emitida como requisito en cobros a clientes,
 > compactación de formularios y presentación de notificaciones. La validación

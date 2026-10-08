@@ -1461,3 +1461,18 @@ El slice de permisos se encuentra en
 `accounts/tests/test_platform_resource_role_boundary.py` (12 casos): cliente
 staff sigue siendo cliente para lecturas ajenas, archivados, categoría restringida
 y escrituras. El principal técnico MCP sin UserProfile conserva su caso permitido.
+# Recursos privados de Platform (S1, 2026-10-07)
+
+Los cuatro FileFields de recursos usan storage privado para cargas futuras.
+MCP conserva su descarga como asset temporal ligado a la credencial y su límite
+de materialización de 25 MB; REST transmite el original con JWT, propietario/rol
+de Platform y selección del hijo dentro del recurso. `file_url` es una ruta
+relativa de API, nunca una URL de storage. La clasificación MCP de los campos
+permanece igual: la referencia física no se expone.
+
+La lectura histórica no reinterpreta `deliverables/...` como storage privado ni
+recurre a media pública para un nombre privado ausente. Nginx y Django DEBUG
+deniegan las URLs antiguas. QA debe incluir las cuatro familias y los datos
+retenidos, junto con bytes originales, cliente ajeno, archivados y replay del
+manifest. El guion y la condición de cierre tras deploy están en
+`docs/PLATFORM_RESOURCE_MEDIA.md`.

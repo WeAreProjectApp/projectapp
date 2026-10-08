@@ -2,16 +2,27 @@
 import hashlib
 
 import pytest
-from django.core.files.base import ContentFile
-
 from accounts.models import ContractSignatureEvidence, Project, RequirementReview
 from accounts.tests.delivery_helpers import RECORDED_AT
+from django.core.files.base import ContentFile
+
 from content.models import McpActionIntent, McpUpload
 from content.tests.views.test_mcp_delivery import (
-    SIGNED_PDF, call_projects as call_projects, confirm, current_version,
-    draft as draft, historical_arguments, published as published, sign_contract,
+    SIGNED_PDF,
+    confirm,
+    current_version,
+    historical_arguments,
+    sign_contract,
 )
-
+from content.tests.views.test_mcp_delivery import (
+    call_projects as call_projects,
+)
+from content.tests.views.test_mcp_delivery import (
+    draft as draft,
+)
+from content.tests.views.test_mcp_delivery import (
+    published as published,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -36,17 +47,32 @@ def test_mcp_signature_read_omits_internal_network_evidence(call_projects, draft
 
 
 def test_mcp_cannot_rewrite_a_signed_contract_before_publication(call_projects, draft, superuser):
-    sign_contract(draft, superuser)
+    """Reject a confirmed rewrite while preserving the signed contract evidence."""
+    evidence = sign_contract(draft, superuser)
+    signed_file_name = evidence.file.name
+    contract_version = draft.contract.version
+    workspace_version = current_version(call_projects, draft.project)
 
-    error = call_projects('update_delivery_contract', {
+    error = confirm(call_projects, 'update_delivery_contract', {
         'project_id': draft.project.pk, 'node_id': draft.contract.pk,
-        'expected_version': current_version(call_projects, draft.project),
+        'expected_version': workspace_version,
         'data': {'title': 'Contrato reemplazado'},
     }, expect_error=True)
 
     draft.contract.refresh_from_db()
-    assert error['code'] != 'INTERNAL_ERROR'
+    evidence.refresh_from_db()
+    assert error['code'] == 'SIGNED_SOURCE_FROZEN'
     assert draft.contract.title == 'Contrato original'
+    assert (
+        draft.contract.key, draft.contract.version, draft.contract.document_id,
+        draft.contract.proposal_document_id, draft.contract.approval_file_id,
+    ) == ('contract', contract_version, draft.document.pk, None, None)
+    assert current_version(call_projects, draft.project) == workspace_version
+    assert (evidence.contract_id, evidence.sha256, evidence.file.name) == (
+        draft.contract.pk, hashlib.sha256(SIGNED_PDF).hexdigest(), signed_file_name,
+    )
+    with evidence.file.open('rb') as signed_file:
+        assert signed_file.read() == SIGNED_PDF
 
 
 def test_mcp_external_attestation_cannot_claim_a_portal_signature(call_projects, draft):

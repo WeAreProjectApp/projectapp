@@ -748,7 +748,7 @@ def validate_guides_payload(project, actor, payload):
     return result
 
 
-def requirement_provenance(project, stage, values, existing=None):
+def requirement_provenance(project, stage, values, existing=None, *, _context=None):
     if existing and existing.context_id:
         if 'context_id' in values and not values['context_id']:
             fail('La guía conserva su contexto y citas verificadas.', 'context_required')
@@ -761,15 +761,18 @@ def requirement_provenance(project, stage, values, existing=None):
         if references:
             fail('Las citas del requerimiento necesitan su contexto.', 'context_required')
         return
-    context = DeliveryPromptContext.objects.filter(pk=context_id, project=project).prefetch_related('sources').first()
+    context = _context or DeliveryPromptContext.objects.filter(pk=context_id, project=project).prefetch_related('sources').first()
     if context is None:
+        raise NotFound('Contexto de autoría no encontrado.')
+    if str(context.pk) != str(context_id) or context.project_id != project.pk:
         raise NotFound('Contexto de autoría no encontrado.')
     scope = stage.phase.scope
     if context.mode != 'guides' or scope.contract_id != context.contract_id or (context.scope_id and context.scope_id != scope.pk):
         fail('El requerimiento debe conservar el contrato y alcance del contexto.', 'context_scope')
     scope_source = next((source for source in context.sources.all() if source.role == 'scope_description'), None)
     if context.scope_id:
-        if scope.key != scope_source.snapshot['key'] or scope.amendment_id != scope_source.snapshot['amendment_id']:
+        if (scope_source is None or scope.key != scope_source.snapshot.get('key')
+                or scope.amendment_id != scope_source.snapshot.get('amendment_id')):
             fail('El alcance cambió de otrosí o identidad. Prepara un contexto actualizado.', 'context_scope')
     elif scope.amendment_id and scope.amendment_id not in context.amendment_ids:
         fail('El requerimiento pertenece a un otrosí que no se capturó en el contexto.', 'context_scope')

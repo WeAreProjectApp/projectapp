@@ -4,6 +4,7 @@ This module is never imported by runtime settings or URLs. Storage and database
 isolation are checked before fixtures are written. No deployed .env is loaded.
 """
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -43,16 +44,25 @@ def main():
 
     import django
     django.setup()
-    from django.conf import settings
     from django.apps import apps
+    from django.conf import settings
+    from django.core import mail
     from django.core.wsgi import get_wsgi_application
     from django.http import HttpResponse, JsonResponse
     from django.test import override_settings
     from django.test.utils import setup_databases, teardown_databases
-    from projectapp.tests.isolation import collect_storage_locations, settings_refusals, storage_refusals
-    from accounts.tests.delivery_browser_fixtures import create_browser_fixture
+    from projectapp.tests.isolation import (
+        collect_storage_locations,
+        settings_refusals,
+        storage_refusals,
+    )
+
+    from accounts.models import Deliverable, ProjectContract
     from accounts.models_delivery_email import DeliveryEvidenceEmail
-    from django.core import mail
+    from accounts.models_delivery_notifications import DeliveryNotificationEvent
+    from accounts.platform_media_storage import resource_storage_kind
+    from accounts.services.delivery_workflow import signature_state
+    from accounts.tests.delivery_browser_fixtures import create_browser_fixture
 
     reasons = settings_refusals(settings, os.environ) + storage_refusals(
         settings.TEST_FILE_ROOT, settings.BASE_DIR, collect_storage_locations(),
@@ -72,6 +82,8 @@ def main():
         CSRF_TRUSTED_ORIGINS=['http://127.0.0.1:3203'],
         EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend',
         MAILERS={'default': {'BACKEND': 'django.core.mail.backends.locmem.EmailBackend'}},
+        # Use fast hashes only for disposable loopback fixture accounts.
+        PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'],
         RECAPTCHA_ENABLED=False,
         # Browser tests exercise the runtime model schema. Dedicated migration
         # tests separately verify the historical purge and preservation rules.
@@ -83,10 +95,21 @@ def main():
             application = get_wsgi_application()
             fixtures = {}
             smtp_failures = set()
+            notice_smtp_failures = set()
 
             def request_data(environ):
                 size = int(environ.get('CONTENT_LENGTH') or 0)
                 return json.loads(environ['wsgi.input'].read(min(size, 4096)) or '{}')
+
+            def resource_file_probe(row):
+                with row.file.open('rb') as stream:
+                    raw = stream.read()
+                return {
+                    'file_name': row.file_name, 'size': len(raw),
+                    'sha256': hashlib.sha256(raw).hexdigest(),
+                    'storage_kind': resource_storage_kind(row.file.name),
+                    'public_copy_exists': (Path(settings.MEDIA_ROOT) / row.file.name).exists(),
+                }
 
             def evidence_probe(key):
                 fixture = fixtures.get(key)
@@ -108,7 +131,56 @@ def main():
                     if message.subject.startswith(fixture['project']['name'] + ':')
                     and message.to == [fixture['client']['email']]
                 ]
-                return JsonResponse({'outbox_count': len(outbox), 'emails': emails})
+                events = list(DeliveryNotificationEvent.objects.filter(
+                    project_id=fixture['project']['id'],
+                ).prefetch_related('attempts'))
+                notices = [{
+                    'id': str(event.pk), 'status': event.status,
+                    'version': event.version, 'subject': event.subject,
+                    'recipients': event.recipients, 'error_code': event.error_code,
+                    'attempt_count': event.attempts.count(),
+                    'attempts': [{
+                        'status': attempt.status, 'request_id': attempt.request_id,
+                        'preview_sha256': attempt.preview_sha256,
+                        'error_code': attempt.error_code,
+                    } for attempt in event.attempts.all()],
+                } for event in events]
+                notice_outbox = [
+                    message for message in getattr(mail, 'outbox', [])
+                    if any(message.subject == event.subject
+                           and message.to == event.recipients
+                           and message.body == event.text_body for event in events)
+                ]
+                contracts = [{
+                    'id': contract.pk, 'key': contract.key, 'title': contract.title,
+                    'document_id': contract.document_id,
+                    'proposal_document_id': contract.proposal_document_id,
+                    'approval_file_id': contract.approval_file_id,
+                    'client_visible': contract.client_visible,
+                    'signature_evidence_count': contract.signature_evidence.count(),
+                    **signature_state(contract),
+                } for contract in ProjectContract.objects.filter(
+                    project_id=fixture['project']['id'],
+                )]
+                resource_ids = [row['id'] for row in fixture.get('resources', [])]
+                resource_files = [{
+                    'id': resource.pk, 'title': resource.title, 'category': resource.category,
+                    'current_version': resource.current_version,
+                    'current': resource_file_probe(resource),
+                    'versions': [{
+                        'id': version.pk, 'version_number': version.version_number,
+                        **resource_file_probe(version),
+                    } for version in resource.versions.all()],
+                } for resource in Deliverable.objects.filter(
+                    project_id=fixture['project']['id'], pk__in=resource_ids,
+                ).prefetch_related('versions')]
+                return JsonResponse({
+                    # Preserve closure-only semantics for all existing specs.
+                    'outbox_count': len(outbox), 'emails': emails,
+                    'notice_outbox_count': len(notice_outbox), 'notices': notices,
+                    'contracts': contracts,
+                    'resource_files': resource_files,
+                })
 
             def test_application(environ, start_response):
                 path = environ.get('PATH_INFO')
@@ -118,9 +190,12 @@ def main():
                     payload = request_data(environ)
                     key = payload.get('key', 'fixture')
                     if key not in fixtures:
+                        assert_memory_mailers()
                         fixtures[key] = create_browser_fixture(key, mode=payload.get('mode'))
                         if payload.get('mode') == 'closure-smtp-failure':
                             smtp_failures.add(fixtures[key]['project']['id'])
+                        if payload.get('mode') == 'notice-smtp-failure':
+                            notice_smtp_failures.add(fixtures[key]['project']['id'])
                     response = JsonResponse(fixtures[key])
                 elif path == '/__delivery_fixture_probe__':
                     payload = request_data(environ) if environ.get('REQUEST_METHOD') == 'POST' else {
@@ -129,6 +204,14 @@ def main():
                     response = evidence_probe(payload.get('key'))
                 else:
                     project_prefix = '/api/accounts/projects/'
+                    if (path.startswith(project_prefix) and '/delivery/notices/' in path
+                            and path.endswith('/retry/') and environ.get('REQUEST_METHOD') == 'POST'):
+                        project_id = path[len(project_prefix):].split('/', 1)[0]
+                        if project_id.isdigit() and int(project_id) in notice_smtp_failures:
+                            notice_smtp_failures.remove(int(project_id))
+                            assert_memory_mailers()
+                            with patch('accounts.services.delivery_notifications.EmailMultiAlternatives.send', return_value=0):
+                                return application(environ, start_response)
                     if path.startswith(project_prefix) and path.endswith('/send/') and environ.get('REQUEST_METHOD') == 'POST':
                         project_id = path[len(project_prefix):].split('/', 1)[0]
                         if project_id.isdigit() and int(project_id) in smtp_failures:

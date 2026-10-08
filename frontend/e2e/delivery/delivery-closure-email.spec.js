@@ -1,11 +1,20 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
-import { backendUrl, authenticate, openWorkspace, submitDecision } from './helpers.js'
+import { backendUrl, assertTouchAction, authenticate, openWorkspace, submitDecision } from './helpers.js'
 import { viewportUse } from '../helpers/viewports.js'
 import { batchForScenario } from '../responsive/catalog-scenarios.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
 
 const responsiveScenario = 'frontend/pages/platform/projects/[id]/delivery.vue'
+const closureLocaleLabels = {
+  'es-co': {
+    deliveryNavigation: 'Entregas',
+    hint: 'Prepara el correo y revisa su contenido exacto.',
+  },
+  'en-us': {
+    deliveryNavigation: 'Deliveries',
+    hint: 'Prepare the email and review its exact contents.',
+  },
+}
 
 test.setTimeout(60_000)
 
@@ -30,27 +39,23 @@ async function closureProbe(request, testInfo) {
   return response.json()
 }
 
-async function openClosureEmail(page, data) {
+async function openClosureEmail(page, data, locale = 'es-co') {
   await page.getByTestId(`delivery-closure-email-open-${data.stage_id}`).click()
-  await expect(page.getByTestId('delivery-closure-email')).toContainText('Prepara el correo y revisa su contenido exacto.')
+  await expect(page.getByTestId('delivery-closure-email')).toContainText(closureLocaleLabels[locale].hint)
 }
 
-async function enterPortalAndOpenWorkspace(page, request, data) {
+async function enterPortalAndOpenWorkspace(page, request, data, locale = 'es-co') {
+  // Enter the closure flow at Platform; public Home is a separate journey.
   await authenticate(page, request, data, 'admin')
-  await page.goto('/es-co', { waitUntil: 'domcontentloaded' })
-  await waitForNuxtApp(page)
-  const landingNav = page.getByLabel(page.viewportSize()?.width < 1024 ? 'Mobile navigation' : 'Main navigation')
-  const entryLink = landingNav.getByRole('link', { name: 'Iniciar Sesión' })
-  await expect(entryLink).toHaveAttribute('href', '/es-co/platform')
-  await entryLink.click()
+  await page.goto(`/${locale}/platform`, { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
   if (page.viewportSize()?.width < 768) await page.getByRole('button', { name: 'Abrir navegación' }).click()
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click()
-  await expect(page).toHaveURL(/\/platform\/projects\/?$/)
+  await expect(page).toHaveURL(new RegExp(`/${locale}/platform/projects/?$`))
   const project = page.getByTestId(`project-row-${data.project.id}`).or(page.getByTestId(`project-card-${data.project.id}`))
   await expect(project).toContainText(data.project.name)
   await project.click()
-  await page.getByRole('link', { name: 'Entregas', exact: true }).click()
+  await page.getByRole('link', { name: closureLocaleLabels[locale].deliveryNavigation, exact: true }).click()
   await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toBeVisible()
 }
 
@@ -69,12 +74,14 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
     test(`admin opens the closure preview at ${viewport} width through the approved stage`, {
       tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display', '@responsive:clients', `@responsive-scenario:${responsiveScenario}`, `@responsive-batch:${batchForScenario(responsiveScenario)}`, `@viewport:${viewport}`],
     }, async ({ page, request }, testInfo) => {
+      // quality: allow-deep-link (the authenticated Platform portal is the flow entry; Proyectos, the project row, Entregas and the closure action are reached by UI clicks)
       // Catches a regression where the approved-stage email modal clips its preview, recipient, or action at this viewport.
       const data = await closureFixture(request, testInfo, 'closure-approved')
       await enterPortalAndOpenWorkspace(page, request, data)
       await openClosureEmail(page, data)
       await page.getByTestId('delivery-closure-message').fill('Vista previa legible en el portal.')
       await page.getByTestId('delivery-closure-prepare').click()
+      await assertTouchAction(page, page.getByTestId('delivery-closure-prepare'), viewport, testInfo)
 
       await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toContainText('Aprobado')
       await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
@@ -89,10 +96,32 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
   })
 }
 
+test.describe('delivery closure English portal', () => {
+  test.use(viewportUse('desktop'))
+  test('admin reaches the closure preview through the English Platform portal', {
+    tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display'],
+  }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated Platform portal is the flow entry; Proyectos, the project row, Entregas and the closure action are reached by UI clicks)
+    const data = await closureFixture(request, testInfo, 'closure-approved')
+    await enterPortalAndOpenWorkspace(page, request, data, 'en-us')
+    await expect(page).toHaveURL(new RegExp(`/en-us/platform/projects/${data.project.id}/delivery/?$`))
+    await openClosureEmail(page, data, 'en-us')
+    const message = 'Closure preview keeps the English portal route.'
+    await page.getByTestId('delivery-closure-message').fill(message)
+    await page.getByTestId('delivery-closure-prepare').click()
+    await expect(page.getByTestId('delivery-closure-preview')).toContainText(message)
+    await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
+    await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('The email is prepared. It has not been sent yet.')
+    const probe = await closureProbe(request, testInfo)
+    expect(probe.outbox_count).toBe(0)
+    expect(probe.emails).toHaveLength(1)
+  })
+})
+
 test('admin sends exactly one reviewed closure email', {
   tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:success'],
 }, async ({ page, request }, testInfo) => {
-  // Catches a regression where a preview sends early, a double click duplicates delivery, or a resend skips a new reviewed preview.
+  // Catches a regression where a preview sends early or a double click duplicates delivery.
   const data = await closureFixture(request, testInfo, 'closure-approved')
   await authenticate(page, request, data, 'admin')
   await openWorkspace(page, data)
@@ -100,8 +129,7 @@ test('admin sends exactly one reviewed closure email', {
 
   let probe = await closureProbe(request, testInfo)
   expect(probe.outbox_count).toBe(0)
-  expect(probe.emails).toHaveLength(1)
-  expect(probe.emails[0].status).toBe('prepared')
+  expect(probe.emails.map((email) => email.status)).toEqual(['prepared'])
 
   await page.getByTestId('delivery-closure-send').dblclick()
   await expect(page.getByTestId('delivery-closure-status')).toHaveText('Enviado')
@@ -111,12 +139,24 @@ test('admin sends exactly one reviewed closure email', {
   expect(probe.outbox_count).toBe(1)
   expect(probe.emails).toHaveLength(1)
   expect(probe.emails[0]).toMatchObject({ status: 'sent', attempt_count: 1, to: [data.client.email] })
+})
+
+test('admin prepares a linked closure resend without sending it', {
+  tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:success'],
+}, async ({ page, request }, testInfo) => {
+  // Catches a resend that loses its predecessor or transports the new copy before another review.
+  const data = await closureFixture(request, testInfo, 'closure-approved')
+  await authenticate(page, request, data, 'admin')
+  await openWorkspace(page, data)
+  await prepareReviewedEmail(page, data, 'Gracias por comprobar los casos publicados.')
+  await page.getByTestId('delivery-closure-send').click()
+  await expect(page.getByTestId('delivery-closure-status')).toHaveText('Enviado')
 
   await page.getByTestId('delivery-closure-resend-current').click()
   await expect(page.getByTestId('delivery-closure-status')).toHaveText('Preparado, sin enviar')
   await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
 
-  probe = await closureProbe(request, testInfo)
+  const probe = await closureProbe(request, testInfo)
   expect(probe.outbox_count).toBe(1)
   expect(probe.emails).toHaveLength(2)
   expect(probe.emails[0]).toMatchObject({ status: 'prepared' })

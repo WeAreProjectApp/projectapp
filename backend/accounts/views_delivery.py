@@ -15,11 +15,14 @@ from accounts.services.delivery_review_evidence import list_review_evidence, rev
 from accounts.services import delivery_authoring as authoring
 from accounts.services import delivery_closure_email as closure_email
 from accounts.serializers_delivery import VersionedSerializer
+from accounts.services._platform_authority import platform_role_boundary
 
 
 def delivery_endpoint(methods):
     def decorate(view):
-        return api_view(methods)(authentication_classes([SessionJWTAuthentication])(permission_classes([IsAuthenticated])(view)))
+        return api_view(methods)(authentication_classes([SessionJWTAuthentication])(
+            permission_classes([IsAuthenticated])(platform_role_boundary(view)),
+        ))
     return decorate
 
 

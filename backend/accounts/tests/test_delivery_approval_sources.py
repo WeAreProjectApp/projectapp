@@ -25,10 +25,12 @@ pytestmark = pytest.mark.django_db
 
 @pytest.fixture
 def context():
+    """Build the isolated project with real delivery users and documents."""
     return build_delivery_context()
 
 
 def confirmed_file(context, raw=None, filename='confirmed.pdf', *, project=None):
+    """Create original bytes bound to a confirmed proposal manifest."""
     raw = pdf_bytes('The confirmed contract includes creating records.') if raw is None else raw
     project = project or context.project
     deliverable = Deliverable.objects.create(project=project, title='Confirmed package', uploaded_by=context.admin)
@@ -51,6 +53,7 @@ def confirmed_file(context, raw=None, filename='confirmed.pdf', *, project=None)
 
 
 def create_source(context, source, *, kind='contracts', **overrides):
+    """Register a confirmed source through the real delivery mutation."""
     data = {'expected_version': version(context), 'request_id': f'create-{kind}-{source.pk}',
             'key': 'confirmed-package', 'title': 'Confirmed agreement', 'approval_file_id': source.pk}
     if kind == 'amendments':
@@ -63,6 +66,7 @@ def create_source(context, source, *, kind='contracts', **overrides):
 
 @pytest.mark.parametrize('kind', ['contracts', 'amendments'])
 def test_package_file_is_registered_without_a_signature(context, kind):
+    """A signed-looking filename cannot supply signature evidence."""
     source = confirmed_file(context, filename='signed-contract.pdf')
 
     node = create_source(context, source, kind=kind)
@@ -73,6 +77,7 @@ def test_package_file_is_registered_without_a_signature(context, kind):
 
 
 def test_new_package_contract_stays_private(context):
+    """A newly registered package remains absent from the client workspace."""
     node = create_source(context, confirmed_file(context))
 
     workspace = delivery.overview(context.project.pk, context.client)
@@ -82,6 +87,7 @@ def test_new_package_contract_stays_private(context):
 
 
 def test_creation_cannot_publish_a_package_contract(context):
+    """Creation rejects client visibility without changing project state."""
     source = confirmed_file(context)
 
     with pytest.raises(ValidationError, match='primero en privado'):
@@ -92,6 +98,7 @@ def test_creation_cannot_publish_a_package_contract(context):
 
 
 def test_package_file_cannot_be_combined_with_a_document(context):
+    """A contractual node rejects simultaneous document and package sources."""
     source = confirmed_file(context)
 
     with pytest.raises(ValidationError, match='sola fuente'):
@@ -101,6 +108,7 @@ def test_package_file_cannot_be_combined_with_a_document(context):
 
 
 def test_another_project_package_cannot_be_selected(context):
+    """A confirmed source remains limited to its owning project."""
     other = Project.objects.create(name='Another project', client=context.client)
     source = confirmed_file(context, project=other)
 
@@ -111,6 +119,7 @@ def test_another_project_package_cannot_be_selected(context):
 
 
 def test_unconfirmed_file_is_omitted_from_options(context):
+    """Removing manifest confirmation removes the source from valid options."""
     source = confirmed_file(context)
     source.proposal.platform_approval_manifest['files'] = []
     source.proposal.save(update_fields=['platform_approval_manifest'])
@@ -121,6 +130,7 @@ def test_unconfirmed_file_is_omitted_from_options(context):
 
 
 def test_options_do_not_publish_storage_paths(context):
+    """Selectable source metadata does not expose private storage locations."""
     source = confirmed_file(context)
 
     options = delivery.document_options(context.project.pk, context.admin)
@@ -132,6 +142,7 @@ def test_options_do_not_publish_storage_paths(context):
 
 
 def test_modified_package_bytes_are_rejected_before_creation(context):
+    """Changed package bytes cannot create a contract from its old manifest."""
     source = confirmed_file(context)
     with source.file.open('wb') as stream:
         stream.write(pdf_bytes('Different unconfirmed terms.'))
@@ -144,6 +155,7 @@ def test_modified_package_bytes_are_rejected_before_creation(context):
 
 
 def test_repeated_creation_preserves_the_same_contract(context):
+    """Replaying one request keeps exactly one contractual node."""
     source = confirmed_file(context)
     data = {'expected_version': 0, 'request_id': 'repeat-contract', 'key': 'repeat',
             'title': 'Confirmed agreement', 'approval_file_id': source.pk}
@@ -155,10 +167,12 @@ def test_repeated_creation_preserves_the_same_contract(context):
     assert ProjectContract.objects.filter(approval_file=source).count() == 1
 
 
-@pytest.mark.parametrize('filename, raw', [
-    ('agreement.docx', docx_bytes()), ('agreement.png', b'\x89PNG\r\n\x1a\noriginal image'),
+@pytest.mark.parametrize(('filename', 'raw', 'content_type'), [
+    ('agreement.docx', docx_bytes(), 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'),
+    ('agreement.png', b'\x89PNG\r\n\x1a\noriginal image', 'image/png'),
 ])
-def test_source_download_keeps_the_confirmed_format(context, filename, raw):
+def test_source_download_keeps_the_confirmed_format(context, filename, raw, content_type):
+    """Original downloads preserve the confirmed bytes and exact MIME type."""
     source = confirmed_file(context, raw, filename)
     node = create_source(context, source)
     api = APIClient()
@@ -169,11 +183,12 @@ def test_source_download_keeps_the_confirmed_format(context, filename, raw):
     assert response.status_code == 200
     assert response.content == raw
     assert filename in response['Content-Disposition']
-    assert response['Content-Type'] != 'application/pdf'
+    assert response['Content-Type'] == content_type
     assert response['Cache-Control'] == 'private, no-store'
 
 
 def test_private_contract_source_is_hidden_from_client(context):
+    """Client authentication does not authorize a private source download."""
     node = create_source(context, confirmed_file(context))
     api = APIClient()
     api.force_authenticate(context.client)
@@ -184,6 +199,7 @@ def test_private_contract_source_is_hidden_from_client(context):
 
 
 def test_docx_prompt_retains_exact_package_bytes(context):
+    """Prompt capture retains the confirmed DOCX instead of a regenerated PDF."""
     raw = docx_bytes()
     source = confirmed_file(context, raw, 'agreement.docx')
     node = create_source(context, source)
@@ -200,6 +216,7 @@ def test_docx_prompt_retains_exact_package_bytes(context):
 
 
 def test_unextractable_original_keeps_an_explicit_warning(context):
+    """Unreadable original bytes cannot become a complete textual source."""
     source = confirmed_file(context, b'\x89PNG\r\n\x1a\noriginal image', 'agreement.png')
     node = create_source(context, source)
 
@@ -211,6 +228,7 @@ def test_unextractable_original_keeps_an_explicit_warning(context):
 
 
 def test_external_signed_copy_is_the_contractual_download(context):
+    """The verified signed copy becomes the canonical contractual download."""
     source = confirmed_file(context, docx_bytes(), 'agreement.docx')
     node = create_source(context, source)
     signed = pdf_bytes('The exact signed contract includes creating records.')
@@ -227,6 +245,7 @@ def test_external_signed_copy_is_the_contractual_download(context):
 
 
 def test_package_source_cannot_be_deleted_while_a_contract_uses_it(context):
+    """An explicit contractual reference protects its source from deletion."""
     source = confirmed_file(context)
     create_source(context, source)
 
@@ -237,6 +256,7 @@ def test_package_source_cannot_be_deleted_while_a_contract_uses_it(context):
 
 
 def test_database_rejects_two_contractual_sources(context):
+    """The database enforces source exclusivity when service checks are bypassed."""
     source = confirmed_file(context)
 
     with pytest.raises(IntegrityError), transaction.atomic():
