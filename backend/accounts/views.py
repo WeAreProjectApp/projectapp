@@ -2297,30 +2297,50 @@ def _handle_payment_approved(payment, payment_history_source=''):
     from accounts.models import PaymentHistory
     from accounts.services.payment_history import record_payment_status_change
 
-    old_status = payment.status
-    payment.status = Payment.STATUS_PAID
-    payment.paid_at = tz.now()
-    payment.save(update_fields=['wompi_transaction_id', 'status', 'paid_at'])
-    record_payment_status_change(
-        payment,
-        old_status,
-        Payment.STATUS_PAID,
-        source=payment_history_source or PaymentHistory.SOURCE_SYSTEM,
-    )
+    with transaction.atomic():
+        subscription_id, project_id = Payment.objects.values_list(
+            'subscription_id', 'subscription__project_id',
+        ).get(pk=payment.pk)
+        # Match financial/deletion writers: project, subscription, then payment.
+        if project_id:
+            Project.objects.select_for_update().filter(pk=project_id).first()
+        sub = HostingSubscription.objects.select_for_update().get(pk=subscription_id)
+        if sub.project_id and sub.project_id != project_id:
+            raise ValueError('La suscripción cambió de proyecto; vuelve a verificar el pago.')
+        current = Payment.objects.select_for_update().get(
+            pk=payment.pk, subscription_id=sub.pk,
+        )
+        if current.status == Payment.STATUS_PAID:
+            payment.refresh_from_db()
+            return
 
-    # A queued callback may carry a subscription loaded before deletion.
-    sub = HostingSubscription.objects.get(pk=payment.subscription_id)
-    if sub.retention_context_id or not sub.project_id:
-        return
-    sub.next_billing_date = payment.billing_period_end + relativedelta(days=1)
-    if sub.status == HostingSubscription.STATUS_PENDING:
-        sub.status = HostingSubscription.STATUS_ACTIVE
-    sub.save(update_fields=['next_billing_date', 'status', 'updated_at'])
+        old_status = current.status
+        current.status = Payment.STATUS_PAID
+        current.paid_at = tz.now()
+        current.wompi_transaction_id = payment.wompi_transaction_id
+        current.save(update_fields=['wompi_transaction_id', 'status', 'paid_at'])
+        record_payment_status_change(
+            current, old_status, Payment.STATUS_PAID,
+            source=payment_history_source or PaymentHistory.SOURCE_SYSTEM,
+            defer_email=True,
+        )
 
-    # Auto-renewal: generate the next billing cycle payment
-    _generate_next_payment(sub)
+        # Retained subscriptions receive historical settlement only.
+        if not sub.retention_context_id and sub.project_id:
+            sub.next_billing_date = current.billing_period_end + relativedelta(days=1)
+            if sub.status == HostingSubscription.STATUS_PENDING:
+                sub.status = HostingSubscription.STATUS_ACTIVE
+            sub.save(update_fields=['next_billing_date', 'status', 'updated_at'])
+            _generate_next_payment(sub)
+            transaction.on_commit(
+                lambda: _notify_payment_approved(current, sub), robust=True,
+            )
 
-    # Notify about payment
+    payment.refresh_from_db()
+
+
+def _notify_payment_approved(payment, sub):
+    """Best-effort payment notices after the financial transaction commits."""
     try:
         from accounts.models import Notification
         from accounts.services.notifications import notify, notify_project_admins
