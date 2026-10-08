@@ -6,9 +6,12 @@
 import WaiterProduct from '~/components/pages/WaiterProduct.vue'
 import { useWebPageJsonLd } from '~/composables/useSeoJsonLd'
 
-useSeoHead('waiter')
+const { t, locale } = useI18n()
 
-const { locale } = useI18n()
+useSeoHead('waiter')
+// useSeoHead only fills the meta tags; set the document title as well.
+useHead({ title: () => t('meta.waiter.title') })
+
 const isEn = computed(() => locale.value.startsWith('en'))
 
 useWebPageJsonLd({
