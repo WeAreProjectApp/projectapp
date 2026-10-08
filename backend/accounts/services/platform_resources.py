@@ -2,7 +2,7 @@
 import mimetypes
 from pathlib import PurePosixPath
 
-from django.db.models import Count
+from django.db.models import Count, Exists, OuterRef
 from django.utils import timezone
 from rest_framework.exceptions import NotFound, PermissionDenied, ValidationError
 
@@ -46,9 +46,10 @@ def _validate(serializer_type, data, **kwargs):
 
 
 def _resource(project, actor, resource_id, *, editable=False, request=None):
-    resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').filter(
-        project=project, pk=resource_id,
-    ).first()
+    from content.models import ProposalApprovalFile
+    resource = Deliverable.objects.select_related('uploaded_by', 'business_proposal').annotate(
+        _has_approval_files=Exists(ProposalApprovalFile.objects.filter(deliverable_id=OuterRef('pk'))),
+    ).filter(project=project, pk=resource_id).first()
     if resource is None:
         raise NotFound('Recurso no encontrado.')
     if editable and resource.is_archived:

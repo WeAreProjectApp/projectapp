@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 // Catches notices that misreport stored data, send during preview, ignore the
 // reviewed retry manifest, duplicate a stale retry, or present SMTP rejection as sent.
 import { test, expect } from '../helpers/test.js'

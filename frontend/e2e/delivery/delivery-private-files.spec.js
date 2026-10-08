@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 // Catches missing legal categories, public/incorrect file downloads, hidden JWT
 // permission errors, or duplicate downloads while the real response is pending.
 import { createHash } from 'node:crypto'

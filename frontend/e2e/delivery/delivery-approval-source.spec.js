@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 // Catches package selection that invents a signature, keeps a previous source,
 // publishes the new private contract, or converts an original non-PDF download.
 import { createHash } from 'node:crypto'

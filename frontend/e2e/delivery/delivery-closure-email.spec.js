@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
 import { backendUrl, assertTouchAction, authenticate, openWorkspace, submitDecision } from './helpers.js'
 import { viewportUse } from '../helpers/viewports.js'

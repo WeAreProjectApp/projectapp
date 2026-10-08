@@ -1751,11 +1751,11 @@ def deliverable_list_view(request, project_id):
 @permission_classes([IsAuthenticated])
 def deliverable_detail_view(request, project_id, deliverable_id):
     from accounts.services import platform_resources as resources
+    if request.method == 'GET':
+        return Response(resources.get_resource(project_id, request.user, deliverable_id, request=request))
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
-    if request.method == 'GET':
-        return Response(resources.get_resource(project_id, request.user, deliverable_id, request=request))
     if request.method == 'DELETE':
         resources.update_resource(project_id, request.user, deliverable_id, {'is_archived': True}, request=request)
         return Response({'detail': 'Entregable archivado.'})

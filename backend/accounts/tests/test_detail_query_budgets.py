@@ -1,8 +1,11 @@
 """Query and contract guards for optimized platform detail endpoints."""
-from datetime import date, datetime, timedelta, timezone as datetime_timezone
+from datetime import date, datetime, timedelta
+from datetime import timezone as datetime_timezone
 from decimal import Decimal
 
 import pytest
+from content.models import BusinessProposal, Document, DocumentType
+from content.services.document_type_codes import COLLECTION_ACCOUNT
 from django.contrib.auth import get_user_model
 from django.db import connection
 from django.db.models.signals import post_init
@@ -24,9 +27,6 @@ from accounts.models import (
 )
 from accounts.services.credential_cipher import encrypt_secret
 from accounts.services.tokens import get_tokens_for_user
-from content.models import BusinessProposal, Document, DocumentType
-from content.services.document_type_codes import COLLECTION_ACCOUNT
-
 
 User = get_user_model()
 pytestmark = pytest.mark.django_db

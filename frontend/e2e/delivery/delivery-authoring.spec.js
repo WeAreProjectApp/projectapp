@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
 import { addRequirement, assertTouchAction, authenticate, fixture, openWorkspace, publish } from './helpers.js'
 import { preparePrompt, roleGuidePayload } from './prompt-helpers.js'

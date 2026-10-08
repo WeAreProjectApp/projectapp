@@ -42,11 +42,14 @@ def project_for_resource_actor(project_id, actor, *, request=None, lock=False):
     query = Project.objects.select_related('client')
     if lock:
         query = query.select_for_update()
-    if not is_resource_admin(actor, request):
+    admin = is_resource_admin(actor, request)
+    if request is None and not admin:
         query = query.filter(client_id=actor.pk)
     project = query.filter(pk=project_id).first()
     if project is None:
         raise NotFound('Proyecto no encontrado.')
+    if request is not None and not admin and project.client_id != actor.pk:
+        raise PermissionDenied('No tienes acceso a este proyecto.')
     return project
 
 

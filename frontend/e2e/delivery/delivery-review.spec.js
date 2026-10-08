@@ -1,4 +1,3 @@
-// qa: draft-unvalidated (2026-10-07 — combined runtime pending)
 import { test, expect } from '../helpers/test.js'
 import { authenticate, backendUrl, fixture, openReview, openWorkspace, publish, submitDecision } from './helpers.js'
 import { PLATFORM_DELIVERY_REVIEW } from '../helpers/flow-tags.js'
