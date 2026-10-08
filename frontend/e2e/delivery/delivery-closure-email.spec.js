@@ -35,14 +35,14 @@ async function openClosureEmail(page, data) {
   await expect(page.getByTestId('delivery-closure-email')).toContainText('Prepara el correo y revisa su contenido exacto.')
 }
 
-async function enterPortalAndOpenWorkspace(page, request, data) {
+async function enterPortalAndOpenWorkspace(page, request, data, locale = 'es-co') {
   // Enter the closure flow at Platform; public Home is a separate journey.
   await authenticate(page, request, data, 'admin')
-  await page.goto('/es-co/platform', { waitUntil: 'domcontentloaded' })
+  await page.goto(`/${locale}/platform`, { waitUntil: 'domcontentloaded' })
   await waitForNuxtApp(page)
   if (page.viewportSize()?.width < 768) await page.getByRole('button', { name: 'Abrir navegación' }).click()
   await page.getByRole('link', { name: 'Proyectos', exact: true }).click()
-  await expect(page).toHaveURL(/\/platform\/projects\/?$/)
+  await expect(page).toHaveURL(new RegExp(`/${locale}/platform/projects/?$`))
   const project = page.getByTestId(`project-row-${data.project.id}`).or(page.getByTestId(`project-card-${data.project.id}`))
   await expect(project).toContainText(data.project.name)
   await project.click()
@@ -86,6 +86,28 @@ for (const viewport of ['portrait', 'compact', 'landscape', 'desktop', 'wide']) 
     })
   })
 }
+
+test.describe('delivery closure English portal', () => {
+  test.use(viewportUse('desktop'))
+  test('admin reaches the closure preview through the English Platform portal', {
+    tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:display'],
+  }, async ({ page, request }, testInfo) => {
+    // quality: allow-deep-link (the authenticated Platform portal is the flow entry; Proyectos, the project row, Entregas and the closure action are reached by UI clicks)
+    const data = await closureFixture(request, testInfo, 'closure-approved')
+    await enterPortalAndOpenWorkspace(page, request, data, 'en-us')
+    await expect(page).toHaveURL(new RegExp(`/en-us/platform/projects/${data.project.id}/delivery/?$`))
+    await openClosureEmail(page, data)
+    const message = 'Closure preview keeps the English portal route.'
+    await page.getByTestId('delivery-closure-message').fill(message)
+    await page.getByTestId('delivery-closure-prepare').click()
+    await expect(page.getByTestId('delivery-closure-preview')).toContainText(message)
+    await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
+    await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
+    const probe = await closureProbe(request, testInfo)
+    expect(probe.outbox_count).toBe(0)
+    expect(probe.emails).toHaveLength(1)
+  })
+})
 
 test('admin sends exactly one reviewed closure email', {
   tag: ['@flow:platform-delivery-closure-email', '@module:platform', '@priority:P1', '@role:platform-admin', '@outcome:success'],
