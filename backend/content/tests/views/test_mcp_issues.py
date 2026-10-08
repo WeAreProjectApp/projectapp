@@ -1,22 +1,29 @@
 """MCP ticket parity uses real connector transport and shared domain writes."""
-import io
 import hashlib
+import io
 from datetime import timedelta
 
 import pytest
+from accounts.models import (
+    BugReport,
+    DeliveryPromptSource,
+    DeliveryStage,
+    IssueResponse,
+    Project,
+    Requirement,
+    RequirementReview,
+)
+from accounts.services import issue_reports as issues
+from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
+from accounts.tests.delivery_authoring_helpers import build_authoring_context
+from accounts.tests.delivery_helpers import RECORDED_AT, publish, version
+from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 from django.core.files.base import ContentFile
 from django.test import override_settings
 from freezegun import freeze_time
 from PIL import Image
 from pypdf import PdfWriter
 
-from accounts.models import BugReport, DeliveryPromptSource, DeliveryStage, IssueResponse, Project, Requirement, RequirementReview
-from accounts.services import issue_reports as issues
-from accounts.tests.delivery_authoring_helpers import build_authoring_context
-from accounts.tests._delivery_fixtures import make_delivery_stage, make_requirement
-from accounts.tests.delivery_helpers import RECORDED_AT
-from accounts.tests.delivery_helpers import publish, version
-from accounts.tests.issue_browser_server import assert_memory_mailers, memory_mailers
 from content.models import Document, McpActionIntent, McpConnector, McpUpload
 
 pytestmark = pytest.mark.django_db

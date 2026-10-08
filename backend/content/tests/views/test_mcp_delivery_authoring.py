@@ -1,24 +1,34 @@
 """Explicit delivery authoring uses real MCP transport and retained source files."""
-from copy import deepcopy
 import hashlib
 import io
 import json
+from copy import deepcopy
 
 import pytest
-from django.core.files.base import ContentFile
-from reportlab.pdfgen.canvas import Canvas
-
 from accounts.models import (
-    ContractSignatureEvidence, DeliveryMessage, DeliveryPromptContext,
-    Project, ProjectContract, Requirement,
+    ContractSignatureEvidence,
+    DeliveryMessage,
+    DeliveryPromptContext,
+    Project,
+    ProjectContract,
+    Requirement,
 )
 from accounts.services import delivery_workflow as delivery
 from accounts.tests.delivery_helpers import RECORDED_AT
+from django.core.files.base import ContentFile
+from reportlab.pdfgen.canvas import Canvas
+
 from content.models import Document, McpUpload
 from content.tests.views.test_mcp_delivery import (
-    call_projects as call_projects, confirm, current_version, draft as draft,
+    call_projects as call_projects,
 )
-
+from content.tests.views.test_mcp_delivery import (
+    confirm,
+    current_version,
+)
+from content.tests.views.test_mcp_delivery import (
+    draft as draft,
+)
 
 pytestmark = pytest.mark.django_db
 AGREEMENT_TEXT = 'The agreement includes creating and editing a customer record.'

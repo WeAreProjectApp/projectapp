@@ -248,18 +248,22 @@ def create_browser_fixture(key, *, mode=None):
         )
     if publication.status_code not in (200, 201):
         raise RuntimeError(f'Fixture publication failed: {publication.data}')
-    if mode in {'closure-approved', 'closure-smtp-failure'}:
+    if mode in {'closure-approved', 'closure-smtp-failure', 'review-partial'}:
         api.force_authenticate(client)
+        decisions = [
+            {'requirement_id': item.pk, 'version': item.version, 'decision': 'approved'}
+            for item in (transfer, mail)
+        ]
+        if mode == 'review-partial':
+            decisions[0]['message'] = 'El traslado quedó conforme.'
+            decisions[1].update(decision='objected', message='El correo aún no llega.')
         reviewed = api.post(base + f'stages/{stage.pk}/review/', {
             'expected_version': publication.data['version'], 'request_id': f'close-{suffix}',
-            'decisions': [
-                {'requirement_id': item.pk, 'version': item.version, 'decision': 'approved'}
-                for item in (transfer, mail)
-            ],
+            'decisions': decisions,
             'message': 'Conformidad registrada desde la revisión.',
         }, format='json')
         if reviewed.status_code != 200:
-            raise RuntimeError(f'Fixture approval failed: {reviewed.data}')
+            raise RuntimeError(f'Fixture review failed: {reviewed.data}')
     result = {
         'fixture_key': key,
         'project': {'id': project.id, 'name': project.name},
