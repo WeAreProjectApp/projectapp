@@ -812,12 +812,12 @@ DELIVERY_CONTRACTS = (
     _contract(
         'accounts.ProjectContract',
         read_only='id project version created_at updated_at',
-        read_write='key title document proposal_document client_visible',
+        read_write='key title document proposal_document approval_file client_visible',
     ),
     _contract(
         'accounts.ContractAmendment',
         read_only='id version created_at updated_at',
-        read_write='key title contract document proposal_document client_visible',
+        read_write='key title contract document proposal_document approval_file client_visible',
     ),
     _contract(
         'accounts.DeliveryScope',

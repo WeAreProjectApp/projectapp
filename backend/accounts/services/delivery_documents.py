@@ -244,8 +244,10 @@ def document_options(project_id, actor):
     proposal_documents = ProposalDocument.objects.filter(
         Q(proposal__project_phases__project=project) | Q(proposal__deliverable__project=project),
     ).distinct()
+    from accounts.services.delivery_contract_sources import approval_file_options
     return {'documents': [{'id': doc.pk, 'uuid': str(doc.uuid), 'title': doc.title, 'requires_signature': doc.requires_signature} for doc in documents],
-            'proposal_documents': list(proposal_documents.values('id', 'title', 'document_type'))}
+            'proposal_documents': list(proposal_documents.values('id', 'title', 'document_type')),
+            'approval_files': approval_file_options(project)}
 
 
 def document_pdf(project_id, actor, link_id):
@@ -272,6 +274,12 @@ def contract_pdf(project_id, actor, kind, node_id):
     node = _node(project, kind, node_id)
     if not _level_visible(project, actor, 'contract' if kind == 'contracts' else 'amendment', node):
         raise NotFound('Contrato no habilitado para el cliente.')
+    if node.approval_file_id:
+        from accounts.services.delivery_contract_sources import approval_contract_source
+        source = approval_contract_source(node)
+        if source['content_type'] != 'application/pdf':
+            fail('Esta fuente conserva su formato original. Descarga su copia o registra el PDF firmado.', 'contract_source_not_pdf')
+        return validated_pdf_bytes(io.BytesIO(source['raw'])), node.title
     evidence = node.signature_evidence.first()
     if evidence:
         try:

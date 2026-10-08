@@ -646,12 +646,17 @@ class ProjectContract(RetainedProjectModel, DeliveryNode):
     project = models.ForeignKey(Project, on_delete=models.PROTECT, related_name='delivery_contracts', null=True, blank=True)
     document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
     proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
+    approval_file = models.ForeignKey('content.ProposalApprovalFile', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_contracts')
     client_visible = models.BooleanField(default=False)
 
     class Meta(DeliveryNode.Meta):
         constraints = [
             models.UniqueConstraint(fields=['project', 'key'], name='delivery_contract_key'),
-            models.CheckConstraint(condition=(models.Q(document__isnull=False, proposal_document__isnull=True) | models.Q(document__isnull=True, proposal_document__isnull=False)), name='delivery_contract_one_source'),
+            models.CheckConstraint(condition=(
+                models.Q(document__isnull=False, proposal_document__isnull=True, approval_file__isnull=True)
+                | models.Q(document__isnull=True, proposal_document__isnull=False, approval_file__isnull=True)
+                | models.Q(document__isnull=True, proposal_document__isnull=True, approval_file__isnull=False)
+            ), name='delivery_contract_one_source'),
         ]
 
 
@@ -659,12 +664,17 @@ class ContractAmendment(DeliveryNode):
     contract = models.ForeignKey(ProjectContract, on_delete=models.PROTECT, related_name='amendments')
     document = models.ForeignKey('content.Document', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_amendments')
     proposal_document = models.ForeignKey('content.ProposalDocument', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_amendments')
+    approval_file = models.ForeignKey('content.ProposalApprovalFile', on_delete=models.PROTECT, null=True, blank=True, related_name='delivery_amendments')
     client_visible = models.BooleanField(default=False)
 
     class Meta(DeliveryNode.Meta):
         constraints = [
             models.UniqueConstraint(fields=['contract', 'key'], name='delivery_amendment_key'),
-            models.CheckConstraint(condition=(models.Q(document__isnull=False, proposal_document__isnull=True) | models.Q(document__isnull=True, proposal_document__isnull=False)), name='delivery_amendment_one_source'),
+            models.CheckConstraint(condition=(
+                models.Q(document__isnull=False, proposal_document__isnull=True, approval_file__isnull=True)
+                | models.Q(document__isnull=True, proposal_document__isnull=False, approval_file__isnull=True)
+                | models.Q(document__isnull=True, proposal_document__isnull=True, approval_file__isnull=False)
+            ), name='delivery_amendment_one_source'),
         ]
 
     @property

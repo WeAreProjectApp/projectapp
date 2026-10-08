@@ -77,6 +77,7 @@ class ReplyClassificationSerializer(StrictSerializer):
 class ContractSerializer(NodeSerializer):
     document_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     proposal_document_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
+    approval_file_id = serializers.IntegerField(min_value=1, required=False, allow_null=True)
     client_visible = serializers.BooleanField(required=False)
 
 

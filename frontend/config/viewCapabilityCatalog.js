@@ -304,7 +304,7 @@ const platformCapabilities = [
     'Distingue lo aprobado y lo pendiente de revisión sin mezclarlo con la facturación.',
     [
       feature('platform-project-board', 'Validar las entregas del alcance',
-        'Organiza contratos y otrosíes, alcances, fases, etapas y requerimientos con documentos y rondas de revisión. Las guías explican accesos y casos permitidos o bloqueados para roles acreditados por las fuentes. Una etapa totalmente aprobada habilita un correo con el registro público completo de conversaciones y decisiones, vista previa, constancia PDF y documentos opcionales e historial privado.',
+        'Organiza contratos y otrosíes con fuentes documentales o archivos del paquete confirmado de aprobación, incluidos los personalizados. Seleccionar una copia privada no acredita firma y los archivos sin PDF conservan su formato original. Incluye alcances, fases, etapas y requerimientos con documentos y rondas de revisión. Las guías explican accesos y casos permitidos o bloqueados para roles acreditados por las fuentes. Una etapa totalmente aprobada habilita un correo con el registro público completo de conversaciones y decisiones, vista previa, constancia PDF y documentos opcionales e historial privado.',
         'El equipo revisa las fuentes y sus citas antes de aplicar borradores o enviar respuestas. El cliente conserva sus conformidades. El administrador decide cuándo enviar la constancia de cierre y debe revisar otra preparación para reenviarla; las guías y los correos conservan el alcance contractual.',
         ['/platform/projects/:id/delivery', '/platform/projects/:id/board', '/platform/board'],
         { icon: 'board', actors: ['client', 'team'], stage: 'Seguimiento' }),
