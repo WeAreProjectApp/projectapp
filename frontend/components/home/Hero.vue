@@ -167,16 +167,16 @@ const goToWhatsApp = () => {
 /* Glassmorphism — light variant, mirrors /platform platform-cover.css */
 .hero-glass {
   background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(22px) saturate(1.5);
   -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  backdrop-filter: blur(22px) saturate(1.5);
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
 }
 
 .hero-btn-glass {
   background: rgba(255, 255, 255, 0.55);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.4);
   box-shadow: 0 1px 10px rgba(0, 0, 0, 0.06);
 }
@@ -187,8 +187,8 @@ const goToWhatsApp = () => {
 /* Benefit bubbles — same frost, lighter footprint */
 .hero-bubble {
   background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(18px) saturate(1.4);
   -webkit-backdrop-filter: blur(18px) saturate(1.4);
+  backdrop-filter: blur(18px) saturate(1.4);
   border: 1px solid rgba(255, 255, 255, 0.25);
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
 }
