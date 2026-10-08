@@ -6,6 +6,16 @@ import { batchForScenario } from '../responsive/catalog-scenarios.js'
 import { waitForNuxtApp } from '../helpers/navigation.js'
 
 const responsiveScenario = 'frontend/pages/platform/projects/[id]/delivery.vue'
+const closureLocaleLabels = {
+  'es-co': {
+    deliveryNavigation: 'Entregas',
+    hint: 'Prepara el correo y revisa su contenido exacto.',
+  },
+  'en-us': {
+    deliveryNavigation: 'Deliveries',
+    hint: 'Prepare the email and review its exact contents.',
+  },
+}
 
 test.setTimeout(60_000)
 
@@ -30,9 +40,9 @@ async function closureProbe(request, testInfo) {
   return response.json()
 }
 
-async function openClosureEmail(page, data) {
+async function openClosureEmail(page, data, locale = 'es-co') {
   await page.getByTestId(`delivery-closure-email-open-${data.stage_id}`).click()
-  await expect(page.getByTestId('delivery-closure-email')).toContainText('Prepara el correo y revisa su contenido exacto.')
+  await expect(page.getByTestId('delivery-closure-email')).toContainText(closureLocaleLabels[locale].hint)
 }
 
 async function enterPortalAndOpenWorkspace(page, request, data, locale = 'es-co') {
@@ -46,7 +56,7 @@ async function enterPortalAndOpenWorkspace(page, request, data, locale = 'es-co'
   const project = page.getByTestId(`project-row-${data.project.id}`).or(page.getByTestId(`project-card-${data.project.id}`))
   await expect(project).toContainText(data.project.name)
   await project.click()
-  await page.getByRole('link', { name: 'Entregas', exact: true }).click()
+  await page.getByRole('link', { name: closureLocaleLabels[locale].deliveryNavigation, exact: true }).click()
   await expect(page.getByTestId(`delivery-stage-${data.stage_id}`)).toBeVisible()
 }
 
@@ -96,13 +106,13 @@ test.describe('delivery closure English portal', () => {
     const data = await closureFixture(request, testInfo, 'closure-approved')
     await enterPortalAndOpenWorkspace(page, request, data, 'en-us')
     await expect(page).toHaveURL(new RegExp(`/en-us/platform/projects/${data.project.id}/delivery/?$`))
-    await openClosureEmail(page, data)
+    await openClosureEmail(page, data, 'en-us')
     const message = 'Closure preview keeps the English portal route.'
     await page.getByTestId('delivery-closure-message').fill(message)
     await page.getByTestId('delivery-closure-prepare').click()
     await expect(page.getByTestId('delivery-closure-preview')).toContainText(message)
     await expect(page.getByTestId('delivery-closure-to')).toHaveText(data.client.email)
-    await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('El correo está preparado. Todavía no se ha enviado.')
+    await expect(page.getByTestId('delivery-closure-not-sent')).toHaveText('The email is prepared. It has not been sent yet.')
     const probe = await closureProbe(request, testInfo)
     expect(probe.outbox_count).toBe(0)
     expect(probe.emails).toHaveLength(1)
