@@ -274,6 +274,47 @@ class TestServeNuxtRenamedFinancingRedirect:
         assert response.status_code == 200  # SPA fallback, not a redirect
 
 
+class TestServeNuxtWaiterShortAliases:
+    """Short Spanish URLs of the Waiter legal pages 301 to their es-co route."""
+
+    @pytest.mark.parametrize(('path', 'location'), [
+        ('privacidad', '/es-co/waiter/privacy'),
+        ('terminos/', '/es-co/waiter/terms'),
+        ('eliminacion-de-datos', '/es-co/waiter/data-deletion'),
+        ('contacto', '/es-co/contact'),
+        ('waiter', '/es-co/waiter'),
+        ('waiter/privacy', '/es-co/waiter/privacy'),
+    ])
+    def test_short_alias_redirects_permanently(self, rf, path, location):
+        response = serve_nuxt(rf.get(f'/{path}'), path=path)
+
+        assert response.status_code == 301
+        assert response['Location'] == location
+
+    def test_alias_redirect_keeps_the_query_string(self, rf):
+        request = rf.get('/privacidad', {'utm_source': 'meta'})
+
+        response = serve_nuxt(request, path='privacidad')
+
+        assert response['Location'] == '/es-co/waiter/privacy?utm_source=meta'
+
+    @pytest.mark.parametrize('path', [
+        'es-co/waiter/privacy',
+        'en-us/waiter',
+        'privacidad-extra',
+        'waiters',
+    ])
+    def test_prefixed_or_similar_paths_are_not_redirected(
+        self, rf, frontend_dir, monkeypatch, path,
+    ):
+        import projectapp.views as views_mod
+        monkeypatch.setattr(views_mod, 'FRONTEND_DIR', frontend_dir)
+
+        response = serve_nuxt(rf.get(f'/{path}'), path=path)
+
+        assert response.status_code == 200  # SPA fallback, not a redirect
+
+
 class TestServeNuxtRootRedirect:
     """Tests root path redirect behavior."""
 

@@ -70,7 +70,11 @@ global.useRouter = jest.fn(() => ({ push: mockRouterPush }));
 import ContactPage from '../../components/pages/ContactPage.vue';
 
 function mountContactPage() {
-  return mount(ContactPage);
+  return mount(ContactPage, {
+    global: {
+      stubs: { CompanyDetails: { template: '<section data-testid="company-details-stub" />' } },
+    },
+  });
 }
 
 describe('ContactPage', () => {
@@ -78,6 +82,12 @@ describe('ContactPage', () => {
     const wrapper = mountContactPage();
 
     expect(wrapper.find('main').exists()).toBe(true);
+  });
+
+  it('renders the company details block required by the Meta review', () => {
+    const wrapper = mountContactPage();
+
+    expect(wrapper.find('[data-testid="company-details-stub"]').exists()).toBe(true);
   });
 
   it('renders the page title', () => {

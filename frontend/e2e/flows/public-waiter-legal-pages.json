@@ -1,0 +1,15 @@
+{
+  "id": "public-waiter-legal-pages",
+  "name": "Waiter Product and Legal Pages",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Open the public Waiter product page and reach its privacy policy, terms of service and data deletion instructions (the URLs registered in the Meta app review), each showing the verified legal identity in the legal footer.",
+  "expectedSpecs": 1,
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

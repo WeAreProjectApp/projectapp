@@ -460,6 +460,7 @@ export const PUBLIC_ROUTE_NOT_FOUND = ['@flow:public-route-not-found', '@module:
 export const PUBLIC_SECURE_LINK_CREATE = ['@flow:public-secure-link-create', '@module:public', '@priority:P1'];
 export const PUBLIC_SECURE_LINK_REVEAL = ['@flow:public-secure-link-reveal', '@module:public', '@priority:P1'];
 export const PUBLIC_TERMS_CONDITIONS = ['@flow:public-terms-conditions', '@module:public', '@priority:P4'];
+export const PUBLIC_WAITER_LEGAL_PAGES = ['@flow:public-waiter-legal-pages', '@module:public', '@priority:P2'];
 
 // ── authored extras (flow-tags.extra.js, appended verbatim) ──
 // Constantes autoradas NO derivables del registro — el generador las

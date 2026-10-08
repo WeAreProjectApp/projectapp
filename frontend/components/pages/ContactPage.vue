@@ -88,6 +88,8 @@
           </p>
 
         </form>
+
+        <CompanyDetails class="mt-20" />
       </div>
     </main>
   </div>
@@ -100,6 +102,7 @@ import { useLanguageStore } from '~/stores/language'
 import { useContactsStore } from '~/stores/contacts'
 import { useGtagConversions } from '~/composables/useGtagConversions'
 import gsap from 'gsap'
+import CompanyDetails from '~/components/legal/CompanyDetails.vue'
 import { waveEmoji as waveEmojiAnimation } from '~/animations'
 
 const router = useRouter()

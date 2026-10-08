@@ -23,6 +23,16 @@ VALID_LOCALES = ('en-us', 'es-co')
 # "Programa de Alianza" (2026-09); the explainer video still shows the old URL.
 RENAMED_PUBLIC_SLUGS = {'financing': 'partnership-program'}
 
+# Short Spanish aliases for the Waiter product and legal pages listed in the
+# Meta app review: unprefixed only, landing on es-co because Spanish is the
+# official text. `waiter/...` keeps its sub-path; the rest match exactly.
+SHORT_PUBLIC_ALIASES = {
+    'privacidad': 'es-co/waiter/privacy',
+    'terminos': 'es-co/waiter/terms',
+    'eliminacion-de-datos': 'es-co/waiter/data-deletion',
+    'contacto': 'es-co/contact',
+}
+
 # Códigos ISO-3166 alpha-2 de países hispanohablantes → locale es-co.
 SPANISH_COUNTRIES = frozenset({
     'CO', 'MX', 'AR', 'PE', 'CL', 'EC', 'VE', 'BO', 'PY', 'UY',
@@ -69,6 +79,21 @@ def _renamed_page_redirect(request, clean_path):
     return HttpResponsePermanentRedirect(location)
 
 
+def _short_alias_redirect(request, clean_path):
+    """301 an unprefixed short alias to its es-co page, keeping the query."""
+    if clean_path == 'waiter' or clean_path.startswith('waiter/'):
+        target = f'es-co/{clean_path}'
+    else:
+        target = SHORT_PUBLIC_ALIASES.get(clean_path)
+    if not target:
+        return None
+    location = f'/{target}'
+    query_string = request.META.get('QUERY_STRING', '')
+    if query_string:
+        location = f'{location}?{query_string}'
+    return HttpResponsePermanentRedirect(location)
+
+
 def serve_nuxt(request, path=''):
     """
     Serve pre-rendered Nuxt pages and public assets from backend/static/frontend/.
@@ -99,6 +124,10 @@ def serve_nuxt(request, path=''):
     renamed = _renamed_page_redirect(request, clean_path)
     if renamed:
         return renamed
+
+    alias = _short_alias_redirect(request, clean_path)
+    if alias:
+        return alias
 
     # Security: prevent path traversal
     resolved = os.path.realpath(os.path.join(FRONTEND_DIR, clean_path))

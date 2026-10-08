@@ -129,6 +129,13 @@ export default defineNuxtConfig({
         '/es-co/additional-modules',
         '/en-us/partnership-program',
         '/es-co/partnership-program',
+        // Waiter product + legal pages: public, linked from every footer and
+        // registered in the Meta app review, so they must exist as static HTML.
+        ...['en-us', 'es-co'].flatMap((locale) =>
+          ['waiter', 'waiter/privacy', 'waiter/terms', 'waiter/data-deletion'].map(
+            (page) => `/${locale}/${page}`,
+          ),
+        ),
         ...(await blogPrerenderRoutes()),
       ],
     },

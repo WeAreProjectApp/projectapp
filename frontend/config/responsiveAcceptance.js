@@ -191,8 +191,10 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/pages/privacy-policy.vue',
     'frontend/pages/proposal/',
     'frontend/pages/terms-and-conditions.vue',
+    'frontend/pages/waiter/',
+    'frontend/components/legal/',
   ], [
-    'Abrir home, landings, contacto, blog, portafolio y legales.',
+    'Abrir home, landings, contacto, blog, portafolio, legales y las páginas de Waiter.',
     'Abrir un linktree y usar sus acciones principales.',
     'Recorrer una propuesta y un diagnóstico compartidos.',
     'Explorar el catálogo de módulos, abrir detalles y descargar la selección.',
