@@ -909,6 +909,51 @@ describe('payment confirmation to the client', () => {
     expect(noticeValue(wrapper, 'date')).toMatch(/^[a-z]+ de \d{4}$/);
   });
 
+  it('says so when the address could not be verified', async () => {
+    const store = useAccountingStore();
+    jest.spyOn(store, 'fetchIncomePaymentConfirmation')
+      .mockResolvedValue({ success: false, message: 'Error de red' });
+    const wrapper = mountModal(
+      { record: billedRecord }, { components: { BaseCheckbox } },
+    );
+    await flushPromises();
+
+    expect(checkbox(wrapper).element.disabled).toBe(true);
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
+      .toContain('No se pudo verificar el correo del cliente');
+  });
+
+  it('tells that no email goes once unchecked', async () => {
+    const { wrapper } = await mountBilled();
+
+    await checkbox(wrapper).setValue(false);
+
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-hint"]').text())
+      .toBe('No se le enviará ningún correo al cliente.');
+  });
+
+  it('names the ledger as the destination of a personal income', async () => {
+    const { wrapper } = await mountBilled(sendable, {
+      record: { ...billedRecord, ledger: 'gustavo', ledger_label: 'Personal Gustavo' },
+    });
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(noticeValue(wrapper, 'destination')).toBe('Personal Gustavo');
+  });
+
+  it('falls back to the income when the server names nothing', async () => {
+    const { wrapper } = await mountBilled({
+      can_send: true, blocked_reason: '', recipient: 'pagos@acme.co',
+    });
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(noticeValue(wrapper, 'client')).toBe('Acme Soluciones');
+    expect(noticeValue(wrapper, 'project')).toBe('Sin proyecto');
+    expect(noticeValue(wrapper, 'account')).toBe('—');
+  });
+
   it('waits for the address before letting the settlement go', async () => {
     const store = useAccountingStore();
     jest.spyOn(store, 'fetchIncomePaymentConfirmation')

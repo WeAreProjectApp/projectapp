@@ -1058,6 +1058,24 @@ describe('CollectionAccountFormModal', () => {
       expect(row(wrapper, 'due')).toBe('Sin vencimiento (pago inmediato)');
     });
 
+    it('falls back to the form when the preview names nothing new', async () => {
+      const previewImpl = create_request.getMockImplementation();
+      create_request.mockImplementation(async (url, body) => {
+        const response = await previewImpl(url, body);
+        if (url.includes('preview')) {
+          const { issue_date, customer_name, project_name, billing_concept, ...older } = response.data;
+          response.data = older;
+        }
+        return response;
+      });
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+
+      expect(row(wrapper, 'issue')).toBe('Hoy');
+      expect(row(wrapper, 'project')).toBe('Sin proyecto');
+      expect(row(wrapper, 'concept')).toBe('Desarrollo módulo de reportes');
+    });
+
     it('keeps Esc away from the wizard while the notice is open', async () => {
       const wrapper = mountModal({ income: incomeFixture });
       await openNotice(wrapper);

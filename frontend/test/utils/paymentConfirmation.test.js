@@ -17,6 +17,10 @@ describe('formatPaymentDate', () => {
   it('is empty without a date', () => {
     expect(formatPaymentDate('', true)).toBe('');
   });
+
+  it('leaves a value it cannot read as a month untouched', () => {
+    expect(formatPaymentDate('2026-13', false)).toBe('2026-13');
+  });
 });
 
 describe('clientPendingAfter', () => {
@@ -34,6 +38,10 @@ describe('clientPendingAfter', () => {
 
   it('never goes below zero on the income itself', () => {
     expect(clientPendingAfter({ pending: 100, received: 150 })).toBe(0);
+  });
+
+  it('reads missing amounts as zero', () => {
+    expect(clientPendingAfter({})).toBe(0);
   });
 });
 
@@ -67,6 +75,18 @@ describe('payment confirmation notices', () => {
 
     expect(warning.detail).toBe('Sin valor recibido.');
     expect(warning.action).toBeUndefined();
+  });
+
+  it('falls back to a generic reason when the server gives none', () => {
+    const failed = paymentConfirmationWarning(
+      { requested: true, status: 'failed', recipient: 'pagos@acme.co', error: '' }, 7,
+    );
+    const skipped = paymentConfirmationWarning(
+      { requested: true, status: 'skipped', recipient: '', error: '' }, 7,
+    );
+
+    expect(failed.detail).toBe('El correo no salió.');
+    expect(skipped.detail).toBe('');
   });
 
   it('stays quiet when no confirmation was asked for', () => {
