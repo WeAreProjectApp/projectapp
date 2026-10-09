@@ -19,7 +19,8 @@ revoca o se reactiva.
 - **Reactivar:** desde el detalle del enlace, con nueva vigencia. Por defecto se
   reactiva el **mismo** enlace; si otra persona pudo abrirlo, marca "generar un
   enlace nuevo" y el anterior deja de funcionar.
-- **Editar:** título y asociaciones se pueden cambiar sin descifrar el secreto; **Editar contenido** carga sus campos de forma explícita. Guardar no cambia la URL, vigencia ni estado del enlace.
+- **Editar:** el título se renombra en línea desde el detalle (lápiz junto al título) sin descifrar el secreto; **Editar contenido**, la única opción de edición, está en el detalle y en el menú de tres puntos de la fila, carga los campos de forma explícita (queda en el historial como consulta) y permite cambiar tipo, contenido, título, cliente y proyecto. Guardar no cambia la URL, vigencia ni estado del enlace.
+- **Listado:** cada fila empieza con un botón de tres puntos que abre un modal con sus acciones; el botón «Actualizar datos» del panel recarga la tabla y los conteos.
 - **Eliminar:** borra permanentemente el enlace, contenido cifrado e historial; requiere confirmar en el panel o MCP. Revocar permite conservarlos.
 - **Ver en el panel:** muestra el contenido sin gastar el enlace y queda en el
   historial (quién y cuándo).

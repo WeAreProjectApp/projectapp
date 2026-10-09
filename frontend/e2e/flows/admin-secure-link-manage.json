@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin views, searches and filters secure links by ready, sent, opened, expired and revoked lifecycle states, including received links and audit history. The admin can manually mark an active team-created link as sent, which records the acknowledgement without sending a message; can reveal content without consuming the public link, copy its URL, edit it, revoke, reactivate or delete it. A recipient explicitly revealing the public link changes the displayed lifecycle to opened; reactivation returns it to ready.",
+  "description": "Admin views, searches and filters secure links by ready, sent, opened, expired and revoked lifecycle states, including received links and audit history, and reloads the list from the panel refresh button. Each row starts with an unlabeled three-dot button that opens an actions modal: detail and history, edit content, copy URL, manual sent mark, revoke or reactivate, and delete. The admin can manually mark an active team-created link as sent, which records the acknowledgement without sending a message; can reveal content without consuming the public link, rename the title in place from the detail, edit the content through a single edit option, revoke, reactivate or delete it. A recipient explicitly revealing the public link changes the displayed lifecycle to opened; reactivation returns it to ready.",
   "outcomes": [
     "success",
     "error",

@@ -116,16 +116,21 @@ describe('SecureLinkFormModal', () => {
     expect(wrapper.emitted('saved')[0][0].url).toBe('https://x#t');
   });
 
-  it('edits only metadata when the content was not loaded', async () => {
+  it('saves the loaded content with the title and associations of the edited link', async () => {
     const link = { id: 7, title: 'Viejo', secret_type: 'credentials', client: null, project: null, language: 'es' };
-    const wrapper = await mountForm({ link });
+    const wrapper = await mountForm({ link, initialFields: { password: 'old-secret' } });
     patch_request.mockResolvedValueOnce({ data: { ...link, title: 'Nuevo' } });
 
+    expect(wrapper.get('[data-testid="secure-link-field-password"]').element.value).toBe('old-secret');
     await wrapper.get('[data-testid="secure-link-title"]').setValue('Nuevo');
+    await wrapper.get('[data-testid="secure-link-field-password"]').setValue('new-secret');
     await wrapper.get('form').trigger('submit');
     await flushPromises();
 
-    expect(patch_request).toHaveBeenCalledWith('secure-links/7/', { title: 'Nuevo', client: null, project: null });
+    // Fails if editing drops the content again: the title alone is renamed from the detail.
+    expect(patch_request).toHaveBeenCalledWith('secure-links/7/', {
+      secret_type: 'credentials', title: 'Nuevo', fields: { password: 'new-secret' }, client: null, project: null,
+    });
   });
 
   it('shows the server error on the missing secret field', async () => {
