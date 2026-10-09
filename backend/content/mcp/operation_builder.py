@@ -12,6 +12,7 @@ def _op(
     confirm=False,
     assets=None,
     payload_schema=None,
+    query_schema=None,
 ):
     return panel_operation(
         name,
@@ -24,4 +25,5 @@ def _op(
         confirmation_message=description,
         asset_fields=assets,
         payload_schema=payload_schema,
+        query_schema=query_schema,
     )

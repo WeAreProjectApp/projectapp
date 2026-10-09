@@ -102,9 +102,9 @@ class TestProposalsMcp:
         tools = {tool['name']: tool for tool in response.data['result']['tools']}
         schema = tools['reassign_proposal_project']['inputSchema']
 
-        payload_schema = schema['properties'].get('data', schema)
-        assert {'target_project_id', 'reason', 'expected_impact_hash', 'request_id'} <= set(payload_schema['required'])
-        assert payload_schema['additionalProperties'] is False
+        assert {'target_project_id', 'reason', 'expected_impact_hash', 'request_id'} <= set(schema['required'])
+        assert schema['additionalProperties'] is False
+        assert 'data' not in schema['properties']
 
     def test_project_reassignment_rejects_an_unknown_argument(self, api_client, proposals_connector):
         """Fails if a misspelled reassignment argument reaches a partially defined correction."""

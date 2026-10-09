@@ -3,6 +3,14 @@
 import json
 import logging
 
+STRUCTURED_DETAIL_KEYS = frozenset({
+    'blockers', 'blocker_counts', 'planned', 'impact_hash', 'plan_hash',
+    'can_apply', 'guard_code', 'resolution', 'warnings', 'conflicts',
+})
+EXCLUDED_DETAIL_KEYS = frozenset({
+    'code', 'message', 'detail', 'ok', 'results', 'hint', 'matching_ids',
+})
+
 
 def normalize_error(payload, status_code=400):
     data = payload if isinstance(payload, dict) else {"detail": payload}
@@ -25,15 +33,7 @@ def normalize_error(payload, status_code=400):
             )
 
     for field, value in data.items():
-        if field not in {
-            "code",
-            "message",
-            "detail",
-            "ok",
-            "results",
-            "hint",
-            "matching_ids",
-        }:
+        if field not in EXCLUDED_DETAIL_KEYS | STRUCTURED_DETAIL_KEYS:
             visit(value, field)
     message = data.get("detail") or data.get("message")
     if message:

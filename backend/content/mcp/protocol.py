@@ -11,7 +11,7 @@ import json
 import logging
 import traceback
 
-from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.exceptions import APIException, ErrorDetail, ValidationError
 
 from content.mcp.errors import normalize_error
 from content.mcp.registry import public_tool
@@ -49,6 +49,8 @@ INVALID_REQUEST = -32600
 METHOD_NOT_FOUND = -32601
 INVALID_PARAMS = -32602
 INTERNAL_ERROR = -32603
+# Other connectors opt in here or with strict_arguments=True on a tool.
+STRICT_ARGUMENT_CONNECTORS = frozenset({'documents', 'projects'})
 
 
 class ToolError(Exception):
@@ -91,6 +93,33 @@ def _text_result(msg_id, payload, is_error=False, *, error=None, meta=None):
     if meta:
         result['_meta'] = meta
     return _result(msg_id, result)
+
+
+def _validate_top_level_arguments(tool, arguments):
+    strict_arguments = (
+        tool['strict_arguments'] if 'strict_arguments' in tool
+        else tool.get('connector') in STRICT_ARGUMENT_CONNECTORS
+    )
+    if not strict_arguments:
+        return
+    schema = tool.get('accepted_arguments_schema') or tool.get('input_schema', {})
+    if schema.get('additionalProperties') is not False:
+        return
+    unknown = set(arguments) - set(schema.get('properties', {}))
+    errors = {
+        name: [ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')]
+        for name in sorted(unknown)
+    }
+    missing = [name for name in schema.get('required', []) if name not in arguments]
+    errors.update({
+        name: [ErrorDetail(f'{name} es obligatorio.', code='required')]
+        for name in missing
+    })
+    if errors:
+        if len(missing) == 1:
+            errors['detail'] = f'{missing[0]} es obligatorio.'
+        message, code, details = normalize_error(errors)
+        raise ToolError(message, code=code, details=details)
 
 
 def handle_message(message, tools, server_name=None, context=None):
@@ -183,6 +212,7 @@ def handle_message(message, tools, server_name=None, context=None):
         try:
             if not isinstance(arguments, dict):
                 raise ToolError('Los argumentos deben ser un objeto JSON.')
+            _validate_top_level_arguments(tool, arguments)
             if (
                 tool.get('requires_confirmation')
                 and (not tool.get('confirmation_predicate') or tool['confirmation_predicate'](arguments))

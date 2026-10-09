@@ -1,7 +1,9 @@
 """Closed diagnostic catalogs; business messages never become audit content."""
 
+import re
+
 # These are identifiers from the MCP/domain contracts, not patterns that could
-# admit a caller's arbitrary text. New codes need an explicit catalog review.
+# admit a caller's arbitrary text. Owning modules explicitly register new codes.
 _MCP_DOMAIN_CODES = frozenset('''
     ATTACHMENT_CHANGED CONFIRMATION_EXPIRED CONFLICT EXPIRED_PREPARATION
     FORBIDDEN INTERNAL_ERROR INVALID_TEMPLATE NOT_EDITABLE NOT_FOUND
@@ -36,16 +38,29 @@ _MCP_DOMAIN_CODES = frozenset('''
 _MCP_ERROR_CODES = _MCP_DOMAIN_CODES | {
     code.upper() for code in _MCP_DOMAIN_CODES
 }
+_REGISTERED_MCP_DOMAIN_CODES = set()
+_MCP_DOMAIN_CODE_PATTERN = re.compile(r'^[A-Za-z][A-Za-z0-9_]{1,63}$')
 _JSONRPC_ERROR_CODES = frozenset({
     -32600, -32601, -32602, -32603, -32020, -32022,
 })
+
+
+def register_mcp_domain_codes(*codes):
+    """Extend the diagnostic catalog with identifiers owned by domain modules."""
+    for code in codes:
+        if not isinstance(code, str) or not _MCP_DOMAIN_CODE_PATTERN.fullmatch(code):
+            raise ValueError('MCP domain codes must be 2–64 character identifiers.')
+    _REGISTERED_MCP_DOMAIN_CODES.update(codes)
+    _REGISTERED_MCP_DOMAIN_CODES.update(code.upper() for code in codes)
 
 
 def safe_mcp_error_code(value):
     """Keep recognized identifiers while discarding arbitrary error content."""
     if type(value) is int and value in _JSONRPC_ERROR_CODES:
         return str(value)
-    if isinstance(value, str) and value in _MCP_ERROR_CODES:
+    if isinstance(value, str) and (
+        value in _MCP_ERROR_CODES or value in _REGISTERED_MCP_DOMAIN_CODES
+    ):
         return value
     return 'TOOL_ERROR'
 

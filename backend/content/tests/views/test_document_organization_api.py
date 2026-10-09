@@ -183,9 +183,9 @@ def test_capabilities_can_filter_and_summarize(rpc):
 def test_capabilities_document_folder_schema(rpc):
     result = rpc('describe_capabilities', {'tools': ['update_folder']})
     tool, = result['structuredContent']['tools']
-    schema = tool['input_schema']['properties']['data']
+    schema = tool['input_schema']
     assert schema['additionalProperties'] is False
-    assert set(schema['properties']) == {'name', 'parent_id', 'parent', 'order', 'client', 'project'}
+    assert set(schema['properties']) == {'folder_id', 'name', 'parent_id', 'parent', 'order', 'client', 'project', 'if_match'}
 
 
 def test_capabilities_describe_atomic_move_contract(rpc):

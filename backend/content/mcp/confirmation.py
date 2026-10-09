@@ -201,7 +201,13 @@ def cancel_action(arguments):
     context = current_mcp_context()
     if context is None or context.credential is None:
         raise ToolError('No existe contexto de credencial.', code='FORBIDDEN')
-    confirmation_id = arguments.get('confirmation_id')
+    try:
+        confirmation_id = str(uuid.UUID(str(arguments.get('confirmation_id'))))
+    except (AttributeError, ValueError) as exc:
+        raise ToolError(
+            'No existe una confirmación pendiente con ese id.',
+            code='NOT_FOUND',
+        ) from exc
     updated = McpActionIntent.objects.filter(
         pk=confirmation_id,
         connector=context.connector,
