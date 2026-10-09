@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.100.3
+// Registry version: 2.101.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -73,6 +73,9 @@ export const ADMIN_BLOG_LINKEDIN_PUBLISH = ['@flow:admin-blog-linkedin-publish',
 export const ADMIN_BLOG_LIST = ['@flow:admin-blog-list', '@module:admin', '@priority:P2'];
 export const ADMIN_BLOG_OVERDUE_DETECTION = ['@flow:admin-blog-overdue-detection', '@module:admin', '@priority:P2'];
 export const ADMIN_BLOG_PUBLISH_MODE = ['@flow:admin-blog-publish-mode', '@module:admin', '@priority:P2'];
+export const ADMIN_BUILDING_WITH_US_CONTRACT = ['@flow:admin-building-with-us-contract', '@module:admin', '@priority:P1'];
+export const ADMIN_BUILDING_WITH_US_DISTRIBUTION = ['@flow:admin-building-with-us-distribution', '@module:admin', '@priority:P1'];
+export const ADMIN_BUILDING_WITH_US_HISTORY = ['@flow:admin-building-with-us-history', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENT_ARCHIVED_TAB = ['@flow:admin-client-archived-tab', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENT_CHANGE_HISTORY = ['@flow:admin-client-change-history', '@module:admin', '@priority:P2'];
 export const ADMIN_CLIENT_COMMUNICATIONS = ['@flow:admin-client-communications', '@module:admin', '@priority:P1'];
@@ -438,6 +441,14 @@ export const PUBLIC_ADDITIONAL_MODULES_GUIDE = ['@flow:public-additional-modules
 export const PUBLIC_ADDITIONAL_MODULES_PDF = ['@flow:public-additional-modules-pdf', '@module:public', '@priority:P2'];
 export const PUBLIC_ADDITIONAL_MODULES_SHARE = ['@flow:public-additional-modules-share', '@module:public', '@priority:P1'];
 export const PUBLIC_ADDITIONAL_MODULES_THEME = ['@flow:public-additional-modules-theme', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_FAQ = ['@flow:public-building-with-us-faq', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_GUIDE = ['@flow:public-building-with-us-guide', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_LANGUAGE = ['@flow:public-building-with-us-language', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_LOAD = ['@flow:public-building-with-us-load', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_WITH_US_OVERVIEW = ['@flow:public-building-with-us-overview', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_WITH_US_PDF = ['@flow:public-building-with-us-pdf', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_SHARE = ['@flow:public-building-with-us-share', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_WITH_US_THEME = ['@flow:public-building-with-us-theme', '@module:public', '@priority:P2'];
 export const PUBLIC_CONTACT_SUBMIT = ['@flow:public-contact-submit', '@module:public', '@priority:P1'];
 export const PUBLIC_FINANCING_EXPLAINER = ['@flow:public-financing-explainer', '@module:public', '@priority:P2'];
 export const PUBLIC_FINANCING_GUIDE = ['@flow:public-financing-guide', '@module:public', '@priority:P2'];

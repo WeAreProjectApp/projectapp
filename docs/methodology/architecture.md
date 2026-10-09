@@ -1,3 +1,5 @@
+> **Building with Us — 2026-10-09:** `/building-with-us` presenta el programa público bilingüe de incubación; `/panel/building-with-us` reúne Programa y Contrato de solo lectura. El contenido del programa y el contrato mantienen versiones independientes y se editan exclusivamente mediante el conector MCP `building-with-us`, con vista previa y confirmación. El contrato conserva un espejo de solo lectura en la carpeta ProjectApp › Contratos del Gestor Documental; el panel consulta su estado y enlaza al documento.
+
 > **Integridad y avisos de entregas — 2026-10-07:** los cambios de ascendencia
 > validan el destino y las guías descendientes conservadas; la publicación
 > comprueba también otrosí y citas. Panel, Platform y sincronización técnica

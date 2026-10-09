@@ -1,0 +1,14 @@
+{
+  "id": "public-building-with-us-share",
+  "name": "Public Building with Us Share",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Abrir el diálogo y copiar la URL actual; ante rechazo del portapapeles, conservar el enlace seleccionable y leer el error.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

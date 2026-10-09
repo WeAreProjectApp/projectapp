@@ -1,0 +1,14 @@
+{
+  "id": "public-building-with-us-theme",
+  "name": "Public Building with Us Theme",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Cambiar al tema oscuro, recargar y recuperar una carga fallida conservando el tema guardado en página y controles.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

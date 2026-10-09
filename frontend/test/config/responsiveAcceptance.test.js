@@ -33,6 +33,32 @@ describe('responsive acceptance registry', () => {
     expect(modulesForChangedFiles(['frontend/pages/panel/mcps/index.vue'])).toEqual(['mcp']);
   });
 
+  it.each([
+    'frontend/pages/building-with-us/index.vue',
+    'frontend/components/BuildingWithUs/ProgramView.vue',
+    'frontend/components/BuildingWithUs/Onboarding.vue',
+    'frontend/components/BuildingWithUs/ProgramSkeleton.vue',
+    'frontend/composables/useBuildingWithUsTheme.js',
+    'frontend/utils/buildingWithUs.js',
+  ])('selects public acceptance for %s', (file) => {
+    expect(modulesForChangedFiles([file])).toEqual(['public']);
+  });
+
+  it.each([
+    'frontend/pages/panel/building-with-us/index.vue',
+    'frontend/components/BuildingWithUs/admin/ContractPanel.vue',
+  ])('selects commercial acceptance for %s', (file) => {
+    expect(modulesForChangedFiles([file])).toEqual(['commercial']);
+  });
+
+  it('assigns the Building with Us panel to commercial acceptance', () => {
+    expect(responsiveOwnerForView('admin-panel', {
+      file: 'frontend/pages/panel/building-with-us/index.vue',
+      url: '/panel/building-with-us',
+      audience: 'admin',
+    })).toBe('commercial');
+  });
+
   it('assigns the communications page to its focused responsive module', () => {
     const view = {
       file: 'frontend/pages/panel/communications/index.vue',

@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-with-us-history",
+  "name": "Admin Building with Us History",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Consultar la versión vigente, autor y nota; pulsar Ver más para cargar offset=20 y reintentar un fallo del historial.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

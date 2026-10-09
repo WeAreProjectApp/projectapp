@@ -1,0 +1,14 @@
+{
+  "id": "public-building-with-us-guide",
+  "name": "Public Building with Us Guide",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Recibir la guía de nueve pasos en la primera visita, avanzar, omitirla y reiniciarla desde el control flotante.",
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

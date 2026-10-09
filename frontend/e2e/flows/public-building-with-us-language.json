@@ -1,0 +1,13 @@
+{
+  "id": "public-building-with-us-language",
+  "name": "Public Building with Us Language",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Cambiar a English y leer el programa en inglés conservando la ruta pública localizada.",
+  "outcomes": [
+    "success"
+  ]
+}

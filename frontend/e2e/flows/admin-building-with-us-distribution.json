@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-with-us-distribution",
+  "name": "Admin Building with Us Distribution",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Navegar desde Comercial, copiar la URL inglesa, descargar el PDF y cambiar el idioma de la vista previa sin cambiar la URL del panel; reintentar un fallo del resumen.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

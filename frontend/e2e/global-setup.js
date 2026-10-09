@@ -2,10 +2,13 @@ import { execSync } from 'child_process';
 import { chromium } from '@playwright/test';
 import { mockApi } from './helpers/api.js';
 import { waitForNuxtApp } from './helpers/navigation.js';
+import { buildingWithUsApiFixture } from './helpers/building-with-us-fixture.js';
 import { getResponsiveBatch, getResponsiveScenario } from './responsive/catalog-scenarios.js';
 
 const WARMUP_UUID = '11111111-1111-4111-8111-111111111111';
 const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
+  'frontend/pages/building-with-us/index.vue': ['/es-co/building-with-us'],
+  'frontend/pages/panel/building-with-us/index.vue': ['/es-co/panel/building-with-us', '/es-co/panel/building-with-us?tab=contract'],
   'frontend/pages/panel/documents/index.vue': ['/en-us/panel/documents'],
   'frontend/pages/panel/documents/create.vue': [
     '/en-us/panel/documents',
@@ -113,7 +116,9 @@ const warmupAdminModule = { id: 1, category: 1, slug: 'warmup-module', name_es: 
 const warmupProposalDefaults = { id: 1, language: 'es', sections_json: [], default_slug_pattern: '{client_name}', default_expiration_days: 21, default_reminder_days: 7, default_urgency_reminder_days: 14, created_at: null, updated_at: null };
 const warmupDocument = { id: 1, title: 'Warmup document', status: 'draft', content_markdown: '# Warmup', client: null, project: null, language: 'es', template_style: 'professional', created_at: '2026-01-01T00:00:00Z' };
 
-function warmupApiFixture({ apiPath, method }) {
+function warmupApiFixture({ apiPath, method, route }) {
+  const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route });
+  if (buildingWithUs) return buildingWithUs;
   if (apiPath === 'auth/check/' && method === 'GET') {
     return json({ user: { username: 'admin', is_staff: true, is_superuser: true } });
   }
@@ -283,6 +288,8 @@ export default async function globalSetup() {
     '/panel',                               // SPA — admin dashboard
     '/panel/admins',                        // SPA — admin management
     '/es-co/panel/additional-modules',      // SPA — reusable sales catalog
+    '/es-co/panel/building-with-us',        // SPA — versioned program and contract
+    '/es-co/panel/building-with-us?tab=contract',
     '/panel/blog',                          // SPA — blog list
     '/panel/blog/create',                   // SPA — blog create
     '/panel/blog/1/edit',                   // SPA — blog edit (dynamic)
@@ -311,6 +318,7 @@ export default async function globalSetup() {
     '/proposal/warmup-prefetch',            // SPA — proposal viewer
     '/diagnostic/warmup-prefetch',          // SPA — diagnostic public viewer
     '/es-co/additional-modules',            // SSR — public additional modules catalog
+    '/es-co/building-with-us',               // SSR — public product incubation program
     '/es-co/additional-modules/share/11111111-1111-4111-8111-111111111111', // SPA — shared catalog
     '/blog',                                // SSR — public blog list
     '/landing-apps',                        // SSR — landing apps page
@@ -371,6 +379,7 @@ export default async function globalSetup() {
       localStorage.setItem('platform_refresh_token', 'e2e-warmup-platform-refresh');
       localStorage.setItem('platform_user', JSON.stringify(admin));
       localStorage.setItem('preferred_locale', 'en-us');
+      localStorage.setItem('projectapp-building-with-us-guide-seen', 'true');
     });
     await mockApi(page, warmupApiFixture);
     for (const route of warmupRoutes) {
