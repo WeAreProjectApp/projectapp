@@ -22,6 +22,19 @@
 > escritores revalidan cuentas emitidas tras los locks y antes de mutar pagos.
 
 
+## Integridad de datos (2026-10-09)
+
+Reglas con `@rule` en `content/services/data_integrity/rules/`; fixers con
+`register_fixer`, cuyo `plan` declara la clausura de filas que el escritor o sus
+signals pueden tocar. El motor captura esos campos antes y después
+(`snapshots.py`), exige el `impact_hash` de la vista previa bajo locks, es
+idempotente por `request_id`, revierte el lote si el hallazgo no desaparece y
+deshace con `revert` del fixer más restauración exacta. La agrupación de
+duplicados se hace en Python (intercalación `_ci` de MySQL frente a SQLite). Las
+pruebas viven en `content/tests/services/test_data_integrity_*.py`,
+`test_client_merge_*.py`, `test_document_folder_merge.py` y
+`content/tests/views/test_{data_integrity_views,mcp_data_integrity}.py`.
+
 ## Traslado auditado de datos conservados (2026-10-07)
 
 Lo conservado por una eliminación forzada deja de ser un callejón sin salida.
