@@ -1,5 +1,6 @@
 """Private, credential-owned proposal packages with confirmed delivery."""
 import hashlib
+import logging
 from functools import wraps
 from uuid import UUID
 
@@ -20,6 +21,8 @@ from content.models import BusinessProposal, ProposalFormalization
 from content.serializers.formalization import FormalizationPrepareSerializer
 from content.services import proposal_formalization_service as service
 from content.services.formalization_content import FormalizationError
+
+logger = logging.getLogger(__name__)
 
 ID = {'type': 'integer', 'minimum': 1}
 PREPARATION_ID = {'type': 'string', 'format': 'uuid'}
@@ -90,6 +93,8 @@ def prepare(arguments):
     except (BusinessProposal.DoesNotExist, ValueError, TypeError) as exc:
         raise ToolError('No existe esa propuesta.', code='NOT_FOUND') from exc
     payload = arguments.get('data', {})
+    if 'data' in arguments:
+        logger.info('[MCP] deprecated_envelope tool=%s keys=%s', 'prepare_proposal_formalization', sorted({'data'}))
     check_known_fields(payload, PREPARE_SCHEMA)
     flat = {key: value for key, value in arguments.items() if key not in {'proposal_id', 'data'}}
     check_known_fields(flat, PREPARE_SCHEMA)
@@ -155,7 +160,7 @@ def _tool(name, description, handler, *, prepare_tool=False, file_tool=False, se
     required = ['proposal_id']
     if prepare_tool:
         properties.update(PREPARE_SCHEMA['properties'])
-        properties['data'] = PREPARE_SCHEMA
+        required.extend(PREPARE_SCHEMA.get('required', []))
     else:
         properties['preparation_id'] = PREPARATION_ID
         required.append('preparation_id')
@@ -165,7 +170,7 @@ def _tool(name, description, handler, *, prepare_tool=False, file_tool=False, se
     schema = object_schema(properties, required)
 
     def checked(arguments):
-        check_known_fields(arguments, schema)
+        check_known_fields(arguments, tool.get('accepted_arguments_schema') or tool['input_schema'])
         return arguments
 
     tool = {
@@ -174,6 +179,10 @@ def _tool(name, description, handler, *, prepare_tool=False, file_tool=False, se
         'requires_confirmation': sensitive,
         'input_schema': schema, 'handler': lambda arguments: handler(checked(arguments)),
     }
+    if prepare_tool:
+        tool['accepted_arguments_schema'] = object_schema(
+            {**properties, 'data': PREPARE_SCHEMA}, ('proposal_id',),
+        )
     if sensitive:
         tool['durable_execution'] = True
         tool['prepare_arguments'] = checked

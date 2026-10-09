@@ -1,5 +1,6 @@
 """Discoverable proposal inputs derived from the Panel's validation contract."""
 from copy import deepcopy
+import logging
 
 from rest_framework.schemas.openapi import AutoSchema
 
@@ -17,27 +18,32 @@ from content.serializers.service_contract_settings import (
     CompanyServiceSettingsSerializer,
 )
 
+logger = logging.getLogger(__name__)
+
 
 def object_schema(properties, required=()):
-    schema = {'type': 'object', 'properties': properties, 'additionalProperties': False}
+    schema = {'type': 'object', 'properties': {key: _json_schema(value) for key, value in properties.items()},
+              'additionalProperties': False}
     if required:
         schema['required'] = list(required)
     return schema
 
 
 def _json_schema(value):
-    """Translate DRF's OpenAPI nullable flag into MCP JSON Schema types."""
+    """Translate DRF nullability and close objects with declared fields."""
     if isinstance(value, list):
         return [_json_schema(item) for item in value]
     if not isinstance(value, dict):
         return value
     result = {key: _json_schema(item) for key, item in value.items() if key != 'nullable'}
+    if result.get('type') == 'object' and 'properties' in result:
+        result['additionalProperties'] = False
     if value.get('nullable'):
         result = {'anyOf': [result, {'type': 'null'}]}
     return result
 
 
-def writable_schema(serializer_class, *, partial=False, exclude=()):
+def writable_schema(serializer_class, *, partial=False, exclude=(), open_fields=None):
     """Expose writable fields without instantiating objects or querying the DB."""
     serializer = serializer_class(partial=partial)
     schema = AutoSchema().map_serializer(serializer)
@@ -45,24 +51,38 @@ def writable_schema(serializer_class, *, partial=False, exclude=()):
         key: _json_schema(value) for key, value in schema['properties'].items()
         if not serializer.fields[key].read_only and key not in exclude
     }
+    for name, (description, reason) in (open_fields or {}).items():
+        properties[name] = {
+            'type': 'object', 'additionalProperties': True,
+            'description': description, 'x-mcp-open-reason': reason,
+        }
     required = () if partial else [key for key in schema.get('required', []) if key in properties]
     return object_schema(properties, required)
 
 
 def check_known_fields(payload, schema):
     """Reject misspelled fields instead of a successful, silent no-op."""
+    for keyword in ('anyOf', 'oneOf', 'allOf'):
+        for branch in schema.get(keyword, []):
+            if isinstance(payload, dict) and branch.get('type') == 'object':
+                check_known_fields(payload, branch)
+            elif isinstance(payload, list) and branch.get('type') == 'array':
+                check_known_fields(payload, branch)
+    if isinstance(payload, list) and schema.get('type') == 'array':
+        for item in payload:
+            check_known_fields(item, schema.get('items', {}))
+        return
+    if 'properties' not in schema:
+        return
     if not isinstance(payload, dict):
         raise ToolError('El contenido debe ser un objeto JSON.')
-    properties = schema.get('properties')
-    if properties is None:
-        return
+    properties = schema['properties']
     unknown = set(payload) - set(properties)
     if unknown and schema.get('additionalProperties') is False:
         raise ToolError('Campos no editables: ' + ', '.join(sorted(unknown)))
     for key, value in payload.items():
         field = properties.get(key, {})
-        if field.get('type') == 'object' and 'properties' in field:
-            check_known_fields(value, field)
+        check_known_fields(value, field)
 
 
 VARIANT = {'type': 'string', 'enum': ['combined', 'product', 'service']}
@@ -91,7 +111,12 @@ PAYLOAD_SCHEMAS = {
         'conflict_resolution': {'type': 'string', 'enum': ['use_origin']},
     }, ('contract_modality',)),
     'update_proposal_service_settings': writable_schema(CompanyServiceSettingsSerializer),
-    'update_proposal_section': writable_schema(ProposalSectionUpdateSerializer, partial=True),
+    'update_proposal_section': writable_schema(ProposalSectionUpdateSerializer, partial=True, open_fields={
+        'content_json': (
+            'Contenido JSON de la sección; sus claves dependen de section_type.',
+            'El serializer del panel valida el contenido según el tipo de sección.',
+        ),
+    }),
     'update_proposal_defaults': DEFAULTS_UPDATE,
     'update_email_template': writable_schema(EmailTemplateConfigSerializer, partial=True),
     'send_multi_proposal': object_schema({
@@ -110,11 +135,15 @@ TEXT = {'type': 'string'}
 FLAG = {'type': 'boolean'}
 NUMBER = {'type': 'integer', 'minimum': 1}
 IDS = {'type': 'array', 'items': NUMBER}
-JSON_OBJECT = {'type': 'object', 'additionalProperties': True}
+JSON_OBJECT = {
+    'type': 'object', 'additionalProperties': True,
+    'description': 'Contenido JSON de sección o referencia documental validado por el panel.',
+    'x-mcp-open-reason': 'Las claves dependen del tipo de sección o del documento referenciado.',
+}
 LANGUAGE = {'type': 'string', 'enum': ['es', 'en']}
 EMAIL = {'type': 'string', 'format': 'email'}
 COMPOSED_EMAIL = object_schema({
-    'recipient_email': {**EMAIL, 'description': 'Alias histórico para un destinatario; se conserva por compatibilidad.'},
+    'recipient_email': {**EMAIL, 'description': 'Alias obsoleto de recipient_emails; se sigue aceptando.'},
     'recipient_emails': {'type': 'array', 'items': EMAIL, 'maxItems': 10},
     'cc_emails': {'type': 'array', 'items': EMAIL, 'maxItems': 10},
     'subject': TEXT, 'greeting': TEXT, 'footer': TEXT,
@@ -123,12 +152,14 @@ COMPOSED_EMAIL = object_schema({
         TEXT,
     ]},
     'doc_refs': {'oneOf': [{'type': 'array', 'items': JSON_OBJECT}, TEXT]},
-}, ('subject',))
-COMPOSED_EMAIL['anyOf'] = [
-    {'required': ['recipient_emails']}, {'required': ['recipient_email']},
-]
+}, ('subject', 'recipient_emails'))
 PAYLOAD_SCHEMAS.update({
-    'update_proposal_from_json': writable_schema(ProposalFromJSONSerializer),
+    'update_proposal_from_json': writable_schema(ProposalFromJSONSerializer, open_fields={
+        'sections': (
+            'Secciones indexadas por su nombre JSON, con el contenido editable de cada una.',
+            'El panel valida las claves y el contenido según la sección de la propuesta.',
+        ),
+    }),
     'create_proposal_section': object_schema({'section_type': TEXT, 'title': TEXT}, ('section_type',)),
     'reorder_proposal_sections': object_schema({'sections': {
         'type': 'array', 'items': object_schema({'id': NUMBER, 'order': {'type': 'integer'}}, ('id', 'order')),
@@ -159,12 +190,15 @@ PAYLOAD_SCHEMAS.update({
 
 
 def guarded_arguments(arguments, tool):
-    """Accept the documented flat arguments or the existing data envelope."""
+    """Validate flat payload fields while preserving deprecated envelopes."""
     if not isinstance(arguments, dict):
         raise ToolError('Los argumentos deben ser un objeto JSON.')
     args = deepcopy(arguments)
     operation = tool['_panel_operation']
     data = args.get('data', {})
+    envelopes = {'data', 'query'} & args.keys()
+    if envelopes:
+        logger.info('[MCP] deprecated_envelope tool=%s keys=%s', tool['name'], sorted(envelopes))
     check_known_fields(data, operation['payload_schema'])
     payload = {
         key: value for key, value in args.items()
