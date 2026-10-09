@@ -1,4 +1,4 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import IncomeLiquidateModal from '../../../components/accounting/IncomeLiquidateModal.vue';
 
@@ -39,7 +39,7 @@ const expectedRecord = {
   payment_status: 'partial',
 };
 
-function mountModal(props = {}) {
+function mountModal(props = {}, stubs = {}) {
   return mount(IncomeLiquidateModal, {
     props: {
       open: true,
@@ -113,6 +113,7 @@ function mountModal(props = {}) {
           template: '<span :data-variant="variant"><slot /></span>',
         },
         PartnerSplitInput: PartnerSplitInputStub,
+        ...stubs,
       },
     },
   });
@@ -196,7 +197,7 @@ describe('IncomeLiquidateModal', () => {
     expect(payload.expected_incomes).toEqual([]);
   });
 
-  it('defaults the destination to pocket and omits the untouched split', async () => {
+  it('defaults the destination to pocket and omits a split left blank', async () => {
     const wrapper = mountModal();
 
     await wrapper.find('input[type="date"]').setValue('2026-11-17');
@@ -206,10 +207,28 @@ describe('IncomeLiquidateModal', () => {
     // Money defaults into the pocket; distributing to the partners is the
     // explicit choice.
     expect(payload.destination).toBe('pocket');
-    // Untouched split is omitted so the server applies its canonical
-    // 50/50 (split_half) — the client never re-implements the rounding.
+    // PartnerSplitInput fills the automatic split as soon as it mounts (this
+    // stub never does): a split still blank is left out, and the server's
+    // split_half applies the same whole-peso halves.
     expect(payload.gustavo_amount).toBeUndefined();
     expect(payload.carlos_amount).toBeUndefined();
+  });
+
+  // Bug caught: the modal opened on the pending amount with the 50/50 toggle
+  // on and both partner fields empty, so nobody saw what each partner got.
+  it('shows and submits the automatic split of the prefilled amount', async () => {
+    const wrapper = mountModal({}, { PartnerSplitInput: false });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="partner-split-gustavo"]').element.value).toBe('300000');
+    expect(wrapper.get('[data-testid="partner-split-carlos"]').element.value).toBe('300000');
+
+    await wrapper.find('input[type="date"]').setValue('2026-11-17');
+    await wrapper.find('form').trigger('submit');
+
+    const payload = wrapper.emitted('submit')[0][0];
+    expect(payload.gustavo_amount).toBe(300000);
+    expect(payload.carlos_amount).toBe(300000);
   });
 
   it('sends the split when the user fills it', async () => {
