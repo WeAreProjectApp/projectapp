@@ -1,3 +1,18 @@
+## 2026-10-09 — barrido de modales con campos demasiado anchos
+
+El modal de liquidar un ingreso esperado y otros 30 modales del panel usan el
+patrón compacto de ingresos y cuentas de cobro: ancho `form` (42 rem), campos
+cortos en filas de dos o tres y un campo corto sin pareja a media fila. A
+1440 × 900 liquidar baja de 1024 a 672 px. El patrón queda escrito en
+`frontend/components/base/README.md` («Field widths») y
+`docs/RESPONSIVE_STANDARD.md`. Las ayudas de campos dentro de filas pasan a la
+ayuda de la fila; la de «Plazo de pago» nunca se mostraba. El formulario
+compartido de enlaces seguros cambia también en la plataforma y en la página
+pública. Sin backend ni migraciones. Verificación: unas 300 pruebas unitarias y
+56 E2E con el medidor compartido `e2e/helpers/modal-layout.js` (contratos 20,
+liquidar 8, contabilidad 18, prioritarios 10), más tokens de diseño, contrato
+responsive y registro de flujos en verde.
+
 > **Límite REST/MCP de recursos — 2026-10-07:** preservado el rol administrativo de Platform frente a los flags Django staff/superuser. Las lecturas, escrituras y descargas del servicio compartido filtran por propietario cuando no existe ese rol; MCP admite su principal técnico únicamente con contexto, actor y credencial coincidentes. Verificados doce rechazos de cliente staff, positivos de admin/cliente y principal MCP sin perfil simulado; gate focal 100 y schema sin drift.
 
 > **Gestor de la plataforma — 2026-10-07:** `projects` incorpora adaptadores de recursos y modelo de datos sobre servicios compartidos con REST. Las operaciones conversacionales requieren confirmación, versión y recibo ligado al actor/credencial. El puente `approval_file_id`, los avisos duraderos y el almacenamiento privado se integraron en el worktree del conductor. El bloqueo HTTP del legado se probó con Nginx aislado y archivos ficticios; la conversión y el deploy real siguen el runbook, sin escrituras en la base desplegada.
