@@ -482,7 +482,8 @@ COMMUNICATION_TOOLS = [
         'description': (
             'Edita un hilo abierto localizado previamente. Permite corregir el '
             'título o asociar/desasociar un proyecto del mismo cliente; el cliente '
-            'histórico, la identidad y los mensajes del hilo se conservan.'
+            'histórico, la identidad y los mensajes del hilo se conservan. '
+            'Envía thread_id y al menos uno de title, project_id o folder_id.'
         ),
         'input_schema': {
             'type': 'object',
@@ -498,10 +499,6 @@ COMMUNICATION_TOOLS = [
                 },
             },
             'required': ['thread_id'],
-            'anyOf': [
-                {'required': ['title']},
-                {'required': ['project_id']},
-            ],
             'additionalProperties': False,
         },
         'handler': update_thread,
@@ -593,7 +590,8 @@ COMMUNICATION_TOOLS = [
             'Edita en el mismo registro un borrador saliente activo localizado '
             'previamente con get_thread. Permite corregir asunto, contenido, fecha, '
             'respuesta y documentos del cliente; conserva ID, hilo, canal y dirección. '
-            'No crea otro mensaje ni envía correo o WhatsApp.'
+            'No crea otro mensaje ni envía correo o WhatsApp. Envía message_id '
+            'y al menos uno de subject, content, document_ids, reply_to_id u occurred_at.'
         ),
         'input_schema': {
             'type': 'object',
@@ -626,13 +624,6 @@ COMMUNICATION_TOOLS = [
                 },
             },
             'required': ['message_id'],
-            'anyOf': [
-                {'required': ['subject']},
-                {'required': ['content']},
-                {'required': ['document_ids']},
-                {'required': ['reply_to_id']},
-                {'required': ['occurred_at']},
-            ],
             'additionalProperties': False,
         },
         'handler': update_message,
@@ -725,8 +716,6 @@ for _tool in COMMUNICATION_TOOLS:
             'type': ['integer', 'null'], 'minimum': 1,
             'description': 'Carpeta compatible; null deja el hilo sin carpeta.',
         }
-    if _tool['name'] == 'update_thread':
-        _tool['input_schema']['anyOf'].append({'required': ['folder_id']})
     if _tool['name'] == 'list_threads':
         _tool['input_schema']['properties']['folder'] = {
             'type': ['integer', 'string'],

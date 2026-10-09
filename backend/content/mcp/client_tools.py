@@ -22,6 +22,7 @@ from accounts.models import UserProfile
 from accounts.serializers import ProjectListSerializer
 from accounts.services import proposal_client_service
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas
 from content.serializers.diagnostic import DiagnosticListSerializer
 from content.serializers.proposal import ProposalListSerializer
 from content.serializers.proposal_clients import (
@@ -186,7 +187,7 @@ _CLIENT_ID_PROP = {
     'client_id': {'type': 'integer', 'description': 'ID del perfil de cliente.'},
 }
 
-CLIENT_TOOLS = [
+CLIENT_TOOLS = close_root_schemas([
     {
         'name': 'search_clients',
         'description': (
@@ -293,4 +294,4 @@ CLIENT_TOOLS = [
         },
         'handler': delete_client,
     },
-]
+])

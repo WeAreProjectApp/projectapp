@@ -25,6 +25,7 @@ import copy
 from django.db.models import ProtectedError
 
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas, open_object
 from content.models import (
     BusinessProposal,
     ProposalChangeLog,
@@ -252,13 +253,13 @@ _FROM_JSON_PROPS = {
         'default': True,
         'description': 'Muestra u oculta los términos contractuales genéricos.',
     },
-    'sections': {
-        'type': 'object',
-        'description': 'Dict de secciones camelCase → content_json. Requiere general.clientName. Usa get_proposal_template.',
-    },
+    'sections': open_object(
+        'Dict de secciones camelCase → content_json. Requiere general.clientName. Usa get_proposal_template.',
+        'El importador valida el contenido según el tipo de sección y admite claves variables de las plantillas.',
+    ),
 }
 
-PROPOSAL_TOOLS = [
+PROPOSAL_TOOLS = close_root_schemas([
     {
         'name': 'get_proposal_template',
         'description': (
@@ -385,4 +386,4 @@ PROPOSAL_TOOLS = [
         },
         'handler': create_share_link,
     },
-]
+])

@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from content.mcp.schema_policy import strip_private
+
 READ_PREFIXES = (
     'describe_', 'get_', 'list_', 'read_', 'search_', 'preview_', 'export_',
     'download_',
@@ -88,8 +90,8 @@ def public_tool(tool):
     return {
         'name': tool['name'], 'title': tool.get('title'),
         'description': tool['description'],
-        'inputSchema': deepcopy(tool['input_schema']),
-        'outputSchema': deepcopy(tool.get('output_schema', {})),
+        'inputSchema': strip_private(tool['input_schema']),
+        'outputSchema': strip_private(tool.get('output_schema', {})),
         'annotations': deepcopy(tool.get('annotations', {})),
     }
 

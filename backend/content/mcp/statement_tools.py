@@ -12,6 +12,7 @@ email; transaction/alias changes are silent).
 """
 from content.mcp.actor import mcp_actor
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas
 from content.models import (
     CreditCardStatement,
     CreditCardTransaction,
@@ -447,7 +448,7 @@ _STATEMENT_HEADER_PROPS = {
 _STATEMENT_ID_PROP = {'statement_id': {'type': 'integer'}}
 
 
-STATEMENT_TOOLS = [
+STATEMENT_TOOLS = close_root_schemas([
     {
         'name': 'get_statement_instructions',
         'area': 'cards',
@@ -495,6 +496,7 @@ STATEMENT_TOOLS = [
                     'type': 'array',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': _TX_PROPS,
                         'required': [
                             'transaction_date', 'raw_description', 'amount',
@@ -548,6 +550,7 @@ STATEMENT_TOOLS = [
                     'type': 'array',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': {
                             'raw_description': {'type': 'string'},
                             'merchant_name': {'type': 'string'},
@@ -720,4 +723,4 @@ STATEMENT_TOOLS = [
         },
         'handler': delete_merchant_alias,
     },
-]
+])
