@@ -1,13 +1,17 @@
 """Contracts that make model/tool drift fail loudly during delivery."""
 import re
+from datetime import date, datetime, timezone
 from itertools import product
 from unittest.mock import Mock, call
 
 import pytest
+from accounts.models import HostingSubscription, Payment, Project
 from django.apps import apps
 from django.urls import NoReverseMatch, resolve, reverse
 
 from content.mcp.contracts import MCP_MODEL_CONTRACTS
+from content.models import McpConnector, McpCredential
+from content.tests.mcp_parity import call_tool_inprocess
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
 CONNECTOR_SLUGS = tuple(MCP_MODEL_CONTRACTS)
@@ -168,6 +172,85 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
         'list_contract_mirrors',
     } <= tool_names
     assert len(TOOLS_BY_SLUG['documents']) == 66
+    mirror_listing = next(
+        tool for tool in TOOLS_BY_SLUG['documents']
+        if tool['name'] == 'list_contract_mirrors'
+    )
+    assert mirror_listing['annotations']['readOnlyHint'] is True
+
+
+def test_projects_hosting_contract_uses_lifecycle_actions(superuser, make_client_profile):
+    connector, _ = McpConnector.objects.get_or_create(
+        slug='projects', defaults={'name': 'Projects'},
+    )
+    credential = McpCredential.objects.create(
+        connector=connector, label='Hosting field contract', actor=superuser,
+    )
+    project = Project.objects.create(
+        name='Archived hosting payment', client=make_client_profile().user,
+    )
+    subscription = HostingSubscription.objects.create(
+        project=project, plan='quarterly', status='cancelled',
+        base_monthly_amount=100, effective_monthly_amount=100, billing_amount=300,
+        start_date=date(2026, 1, 1), next_billing_date=None,
+    )
+    archived_at = datetime(2026, 10, 9, 12, tzinfo=timezone.utc)
+    payment = Payment.objects.create(
+        subscription=subscription, amount=300, status=Payment.STATUS_VOIDED,
+        billing_period_start=date(2026, 1, 1), billing_period_end=date(2026, 3, 31),
+        due_date=date(2026, 1, 1), is_archived=True, archived_at=archived_at,
+    )
+    payment.full_clean()
+
+    hosting = call_tool_inprocess(
+        'projects', 'get_project_hosting', {'project_id': project.pk},
+        credential=credential,
+    )
+    rejected = call_tool_inprocess(
+        'projects', 'change_hosting_subscription', {
+            'subscription_id': subscription.pk, 'action': 'resume',
+            'reason': 'Revisar campos del ciclo', 'expected_impact_hash': 'unused',
+            'status': 'active', 'next_billing_date': '2026-04-01',
+        }, credential=credential,
+    )
+
+    assert hosting['subscription']['status'] == 'cancelled'
+    assert hosting['subscription']['next_billing_date'] is None
+    archived_payment = next(
+        row for row in hosting['subscription']['payments'] if row['id'] == payment.pk
+    )
+    assert archived_payment['status'] == 'voided'
+    assert archived_payment['is_archived'] is True
+    assert archived_payment['archived_at'] == archived_at
+    assert rejected['error']['code'] == 'unknown_field'
+    assert {row['field'] for row in rejected['error']['details']['errors']} == {
+        'status', 'next_billing_date',
+    }
+    subscription.refresh_from_db()
+    assert subscription.status == 'cancelled'
+    assert subscription.next_billing_date is None
+
+    contracts = {
+        slug: {contract.model_label: contract for contract in MCP_MODEL_CONTRACTS[slug]}
+        for slug in ('projects', 'accounting-billing')
+    }
+    project_subscription = contracts['projects']['accounts.HostingSubscription']
+    accounting_subscription = contracts['accounting-billing']['accounts.HostingSubscription']
+    lifecycle_fields = frozenset({'status', 'next_billing_date'})
+    assert project_subscription.read_write == lifecycle_fields
+    assert accounting_subscription.read_write == frozenset()
+    assert project_subscription.read_only == accounting_subscription.read_only - lifecycle_fields
+    assert project_subscription.excluded == accounting_subscription.excluded
+    assert {'status', 'is_archived', 'archived_at'} <= contracts['projects']['accounts.Payment'].read_only
+    assert contracts['projects']['accounts.Payment'] == contracts['accounting-billing']['accounts.Payment']
+
+    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['projects']}
+    assert len(tools) == len(TOOLS_BY_SLUG['projects']) == 164
+    assert tools['preview_hosting_subscription_change']['annotations']['readOnlyHint'] is True
+    assert tools['change_hosting_subscription']['requires_confirmation'] is True
+    assert 'change_hosting_subscription' not in {
+        tool['name'] for tool in TOOLS_BY_SLUG['accounting-billing']
+    }
 
 
 def test_communications_contract_exposes_archive_state():

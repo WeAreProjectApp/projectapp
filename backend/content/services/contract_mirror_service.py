@@ -73,7 +73,7 @@ def is_pinned_mirror_folder(folder) -> bool:
 
 
 def pinned_folder_state() -> dict:
-    from content.mcp.document_tools import _folder_path
+    from content.services.document_folder_paths import folder_path as _folder_path
 
     folder, source = pinned_mirror_folder()
     blocker = mirror_folder_archive_blocker(folder) if folder else None
@@ -91,7 +91,7 @@ def mirror_folder_archive_blocker(folder) -> dict | None:
     """Protect mirror contents while explaining how to release an ancestor."""
     if not folder_contains_mirror(folder):
         return None
-    from content.mcp.document_tools import _folder_path
+    from content.services.document_folder_paths import folder_path as _folder_path
 
     pinned, _source = pinned_mirror_folder()
     message = (

@@ -93,11 +93,11 @@ def mirror_metadata(document):
 
 
 def list_mirrors():
-    from content.mcp.document_tools import _folder_path
     from content.services.contract_mirror_service import (
         pinned_folder_state,
         pinned_mirror_folder,
     )
+    from content.services.document_folder_paths import folder_path as _folder_path
 
     template = default_template()
     folder, _source = pinned_mirror_folder(template)

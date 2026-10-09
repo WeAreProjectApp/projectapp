@@ -216,8 +216,9 @@ def _association_data(arguments, *, instance=None):
 # ── Payload shaping ──────────────────────────────────────────────────────────
 
 def _folder_path(folder):
-    names = [a.name for a in folder.get_ancestors()] + [folder.name]
-    return ' / '.join(names)
+    from content.services.document_folder_paths import folder_path
+
+    return folder_path(folder)
 
 
 def _folder_payload(folder):
