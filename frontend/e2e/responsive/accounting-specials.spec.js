@@ -278,6 +278,9 @@ const longModalFlows = Object.freeze([
       await page.getByRole('menuitem', { name: 'Registrar abono', exact: true }).click();
     },
     assert: (dialog) => expect(dialog.getByTestId('income-bulk-settle-modal')).toContainText('Registrar abono'),
+    layout: (dialog) => ({
+      lines: [{ fields: [dialog.getByTestId('income-bulk-settle-total'), dialog.getByTestId('income-bulk-settle-period')] }],
+    }),
   },
   {
     name: 'new income exposes its hosting period block',
@@ -499,6 +502,10 @@ for (const profile of RESPONSIVE_PROFILES) {
       const submit = page.getByTestId('hosting-form-submit');
       await expect(submit).toHaveText('Guardar');
       await assertSpecialModalGeometry(page, profile, dialog, submit);
+      // The long identification label wraps instead of pushing its control down.
+      await expectCompactModal(dialog, page.viewportSize(), {
+        lines: [{ fields: [page.getByTestId('hosting-form-identification'), page.getByTestId('hosting-form-monthly')], maxWidth: 210 }],
+      });
       await submit.click();
       await expect(dialog).toHaveCount(0);
       await expect(page.getByTestId('accounting-row-99')).toContainText(inlineClient.name);
@@ -523,6 +530,16 @@ for (const profile of RESPONSIVE_PROFILES) {
       await headerDialog.getByTestId('statement-header-purchases').fill('500000');
       await expect(headerSubmit).toHaveText('Guardar');
       await assertSpecialModalGeometry(page, profile, headerDialog, headerSubmit);
+      await expectCompactModal(headerDialog, page.viewportSize(), {
+        lines: [{
+          fields: [
+            headerDialog.getByTestId('statement-header-purchases'),
+            headerDialog.getByTestId('statement-header-previous-balance'),
+            headerDialog.getByTestId('statement-header-payments-total'),
+          ],
+          maxWidth: 210,
+        }],
+      });
       await headerSubmit.click();
       await expect(headerDialog).toHaveCount(0);
       await expect(page.getByTestId('statement-detail')).toContainText('500.000');
@@ -535,6 +552,12 @@ for (const profile of RESPONSIVE_PROFILES) {
       await transactionDialog.getByTestId('tx-amount-input').fill('120000');
       await expect(transactionSave).toHaveText('Guardar');
       await assertSpecialModalGeometry(page, profile, transactionDialog, transactionSave);
+      await expectCompactModal(transactionDialog, page.viewportSize(), {
+        lines: [
+          { fields: [transactionDialog.getByTestId('tx-date-input'), transactionDialog.getByTestId('tx-amount-input')] },
+          { fields: [transactionDialog.getByTestId('tx-merchant-input'), transactionDialog.getByTestId('statement-transaction-category')] },
+        ],
+      });
       await transactionSave.click();
       await expect(transactionDialog).toHaveCount(0);
       await expect(page.getByTestId('statement-tx-99')).toContainText('COMPRA EXITO CALLE 80');

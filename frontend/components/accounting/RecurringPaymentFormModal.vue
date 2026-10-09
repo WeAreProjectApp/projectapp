@@ -214,7 +214,11 @@ const modalFormId = useId();
         help-testid="recurring-payment-form-custom-months-help"
       >
         <BaseFormField label="Método de pago">
-          <BaseSelect v-model="form.payment_method" :options="paymentMethodOptions" />
+          <BaseSelect
+            v-model="form.payment_method"
+            :options="paymentMethodOptions"
+            data-testid="recurring-payment-form-method"
+          />
         </BaseFormField>
         <BaseFormField label="Frecuencia">
           <BaseSelect

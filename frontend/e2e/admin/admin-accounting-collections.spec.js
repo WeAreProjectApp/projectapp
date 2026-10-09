@@ -1062,6 +1062,10 @@ test.describe('Admin Accounting Collections', () => {
     await page.getByTestId('collection-form-income-option-8').click();
     await expect(page.getByTestId('collection-form-concept'))
       .toHaveValue('Desarrollo módulo de reportes');
+    // The zero-day rule reads under the city/term row, not inside the field
+    // where an aligned row would drop it.
+    await expect(page.getByTestId('collection-form-term-hint'))
+      .toHaveText('0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.');
 
     // The concepto corto heads the document; what was actually done goes in
     // its own field, several lines long, and only reaches the PDF.

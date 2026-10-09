@@ -11,6 +11,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_ACCOUNTING_CARDS } from '../helpers/flow-tags.js';
 import { expectNoBlankBand } from '../helpers/table-geometry.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 
 test.setTimeout(60_000);
 
@@ -239,6 +240,14 @@ test.describe('Admin Accounting Cards', () => {
     await expect(
       page.getByRole('heading', { name: 'Nuevo Registro de Tarjeta' }),
     ).toBeVisible();
+    // Card and date share a row; the amount keeps half of the next one.
+    const dialog = page.getByRole('dialog');
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [
+        { fields: [dialog.getByTestId('card-snapshot-card-select'), dialog.locator('form input[type="date"]')] },
+        { fields: [dialog.locator('form input[inputmode="numeric"]')] },
+      ],
+    });
 
     const dateValue = await page.locator('form input[type="date"]').inputValue();
     expect(dateValue).toMatch(/^\d{4}-\d{2}-\d{2}$/);
