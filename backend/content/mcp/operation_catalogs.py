@@ -260,6 +260,7 @@ LEDGER_PARITY_TOOLS = [
     _op('get_accounting_stats', 'Obtiene indicadores contables del año.', 'accounting-stats'),
     _op('duplicate_income_draft', 'Obtiene un borrador duplicado de un ingreso.', 'duplicate-income-draft', path=('record_id',)),
     _op('suggest_income_period', 'Sugiere el siguiente período para un ingreso.', 'suggest-income-period'),
+    _op('get_income_payment_confirmation', 'Indica a qué correo saldría la confirmación de pago de un ingreso, o por qué no puede salir.', 'income-payment-confirmation', path=('record_id',)),
     _op('bulk_assign_income_client', 'Asigna cliente a una selección de ingresos.', 'bulk-assign-income-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_income_project', 'Asigna proyecto a una selección de ingresos.', 'bulk-assign-income-project', 'POST', risk='sensitive', confirm=True),
     _op('reorder_recurring_payments', 'Reordena pagos recurrentes.', 'reorder-recurring-payments', 'POST', risk='write'),

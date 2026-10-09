@@ -461,6 +461,108 @@ def test_settle_income_rejects_a_liquid_record(
     assert income.liquid_records.count() == 0
 
 
+def _billed_income(make_income):
+    """An expected income whose issued cuenta names the client's address."""
+    from django.contrib.auth import get_user_model
+
+    from accounts.models import UserProfile
+    from content.models import DocumentCollectionAccount
+
+    user = get_user_model().objects.create_user(
+        username='ana@acme.co', email='ana@acme.co', first_name='Ana',
+    )
+    client, _ = UserProfile.objects.update_or_create(
+        user=user, defaults={'role': UserProfile.ROLE_CLIENT},
+    )
+    income = make_income(
+        total_amount=Decimal('1000.00'), gustavo_amount=Decimal('500.00'),
+        carlos_amount=Decimal('500.00'), client=client,
+    )
+    document = Document.objects.create(
+        document_type=DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0],
+        title='Cuenta Acme', commercial_status=Document.CommercialStatus.ISSUED,
+        income_record=income, client_user=user, public_number='PA-ACME-001',
+        total=income.total_amount,
+    )
+    DocumentCollectionAccount.objects.create(
+        document=document, customer_email='pagos@acme.co',
+    )
+    return income
+
+
+def _settle_with_confirmation(income):
+    return {
+        'record_id': income.id,
+        'concept': 'Abono parcial',
+        'period_date': '2026-08-26',
+        'total_amount': '400.00',
+        'send_payment_confirmation': True,
+    }
+
+
+def test_settle_income_refuses_the_client_email_without_a_preview(
+    api_client, superuser, make_income, mailoutbox,
+):
+    """The legacy connector runs settle directly, so it cannot email a client."""
+    income = _billed_income(make_income)
+    token = activate_connector('accounting')
+
+    response = call_tool(
+        api_client, 'accounting', token, 'settle_income',
+        _settle_with_confirmation(income),
+    )
+
+    assert response.data['result']['isError'] is True
+    assert 'confirm_action' in response.data['result']['content'][0]['text']
+    assert income.liquid_records.count() == 0
+    assert mailoutbox == []
+
+
+def test_ledger_preview_shows_the_payment_confirmation(
+    api_client, superuser, make_income, mailoutbox,
+):
+    income = _billed_income(make_income)
+    token = activate_connector('accounting-ledger')
+
+    response = call_tool(
+        api_client, 'accounting-ledger', token, 'settle_income',
+        _settle_with_confirmation(income),
+    )
+
+    preview = payload(response)
+    assert preview['confirmation_required'] is True
+    confirmation = preview['impact']['payment_confirmation']
+    assert confirmation['recipient'] == 'pagos@acme.co'
+    assert confirmation['pending_after'] == '600.00'
+    assert income.liquid_records.count() == 0
+    assert mailoutbox == []
+
+
+def test_ledger_confirmation_sends_after_the_commit(
+    api_client, superuser, make_income, mailoutbox,
+    django_capture_on_commit_callbacks,
+):
+    income = _billed_income(make_income)
+    token = activate_connector('accounting-ledger')
+    preview = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'settle_income',
+        _settle_with_confirmation(income),
+    ))
+
+    with django_capture_on_commit_callbacks(execute=True):
+        response = call_tool(
+            api_client, 'accounting-ledger', token, 'confirm_action',
+            {'confirmation_id': preview['confirmation_id']},
+        )
+
+    result = payload(response)['result']
+    assert result['payment_confirmation']['status'] == 'scheduled'
+    assert income.liquid_records.count() == 1
+    assert [message.to for message in mailoutbox] == [['pagos@acme.co']]
+
+
 def test_bulk_settle_incomes_creates_one_shared_movement(
     api_client, superuser, make_income,
 ):

@@ -784,6 +784,20 @@ class IncomeSettlementSerializer(serializers.Serializer):
     # without it. Resolving the gap where it shows up beats sending the
     # operator to another screen, and the money is never held for it.
     period = SettlementPeriodSerializer(required=False, allow_null=True)
+    # Opt-in client email, sent by the settle view after the commit. Off by
+    # default: MCP and `resolve_income_residual` share this serializer.
+    send_payment_confirmation = serializers.BooleanField(
+        required=False, default=False,
+    )
+
+    def validate(self, data):
+        # FlexiblePeriodField stores a month-only period as day 1, which an
+        # exact payment on the 1st also is. The confirmation email needs to
+        # know which one the operator meant, and only the raw input says so.
+        raw = self.initial_data.get('period_date')
+        month_only = isinstance(raw, str) and MONTH_PERIOD_RE.match(raw.strip())
+        data['period_date_precision'] = 'month' if month_only else 'day'
+        return data
 
 
 class SettlementAllocationSerializer(serializers.Serializer):
@@ -1818,6 +1832,7 @@ EMAIL_TEMPLATE_LABELS = {
     'accounting_statement_reminder': 'Recordatorio de extractos',
     'accounting_payment_calendar': 'Calendario de cobros y pagos',
     'collection_account_sent': 'Cuenta de cobro',
+    'income_payment_received_client': 'Confirmación de pago',
     'payment_status_team': 'Pago de hosting',
 }
 
@@ -1828,6 +1843,7 @@ EMAIL_TEMPLATE_LABELS = {
 RETRYABLE_TEMPLATE_KEYS = frozenset({
     'accounting_change',
     'collection_account_sent',
+    'income_payment_received_client',
     'payment_status_team',
 })
 RETRY_BLOCKED_REASON = (

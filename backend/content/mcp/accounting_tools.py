@@ -24,6 +24,7 @@ Each entry: {'name', 'description', 'input_schema', 'handler'}.
 """
 from accounts.models import Project
 from content.mcp.actor import mcp_actor
+from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
 from content.models import (
     AccountingChangeLog,
@@ -49,6 +50,7 @@ from content.services import (
     accounting_recurring_service,
     accounting_service,
     accounting_settlement_service,
+    income_payment_confirmation_service,
 )
 from content.utils import today_bogota
 from content.views.accounting import (
@@ -374,17 +376,40 @@ def get_income_detail(arguments):
     return accounting_income_detail_service.build_income_detail_payload(income)
 
 
-def settle_income(arguments):
-    """Register one payment through the same settlement flow as the panel."""
-    income = _get_instance_or_error('income', arguments.get('record_id'))
+def _validated_settlement(arguments):
     serializer = IncomeSettlementSerializer(data={
         key: value for key, value in arguments.items() if key != 'record_id'
     })
     if not serializer.is_valid():
         raise ToolError(_serializer_errors_to_message(serializer.errors))
+    return serializer.validated_data
+
+
+def _require_confirmed_client_email():
+    """A client email leaves only after someone reviewed its preview.
+
+    The ledger connector asks for confirm_action before running this tool,
+    and runs it with the confirmation bypass set. The legacy connector runs
+    it directly, so there the flag is refused before anything is written.
+    """
+    context = current_mcp_context()
+    if not (context and context.confirmation_bypass):
+        raise ToolError(
+            'La confirmación de pago al cliente solo se envía después de '
+            'revisar su vista previa: usa el conector del libro contable y '
+            'confírmala con confirm_action.',
+        )
+
+
+def settle_income(arguments):
+    """Register one payment through the same settlement flow as the panel."""
+    income = _get_instance_or_error('income', arguments.get('record_id'))
+    data = _validated_settlement(arguments)
+    if data.get('send_payment_confirmation'):
+        _require_confirmed_client_email()
     try:
         result = accounting_settlement_service.settle_expected_income(
-            income, serializer.validated_data, mcp_actor(),
+            income, data, mcp_actor(),
         )
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
@@ -398,7 +423,39 @@ def settle_income(arguments):
         'expected_incomes': IncomeRecordSerializer(
             result['expected_incomes'], many=True,
         ).data,
+        # The tool runs inside the MCP transaction: the email waits for its
+        # commit, so the result can only say it was scheduled.
+        'payment_confirmation': (
+            income_payment_confirmation_service.schedule_confirmation(result, data)
+        ),
     }
+
+
+_SETTLE_INCOME_DESCRIPTION = (
+    'Registra un abono a un ingreso esperado y resuelve el saldo entre '
+    'deducciones y nuevos ingresos esperados. Puede completar el período '
+    'de hosting. Crea los mismos registros, auditoría y efectos que el panel. '
+    'Con send_payment_confirmation=true le envía al cliente la confirmación '
+    'del pago después de registrarlo; la vista previa muestra el correo.'
+)
+
+
+def _settle_income_impact(arguments):
+    """The default preview, plus the email the client would receive."""
+    impact = {
+        'summary': _SETTLE_INCOME_DESCRIPTION,
+        'tool': 'settle_income',
+        'arguments': arguments,
+    }
+    if not arguments.get('send_payment_confirmation'):
+        return impact
+    income = _get_instance_or_error('income', arguments.get('record_id'))
+    impact['payment_confirmation'] = (
+        income_payment_confirmation_service.preview_confirmation(
+            income, _validated_settlement(arguments),
+        )
+    )
+    return impact
 
 
 def bulk_settle_incomes(arguments):
@@ -811,6 +868,16 @@ _SETTLEMENT_PROPS = {
             'required': ['concept', 'period_date', 'amount'],
         },
     },
+    'send_payment_confirmation': {
+        'type': 'boolean',
+        'default': False,
+        'description': (
+            'Envía al cliente la confirmación del pago, sin adjuntos, al correo '
+            'de la cuenta de cobro emitida. Sale después de confirm_action y de '
+            'registrarse la liquidación: el resultado informa scheduled y el '
+            'envío queda en el historial de correos.'
+        ),
+    },
     'period': {
         'type': ['object', 'null'],
         'description': 'Período de hosting que completa el ingreso esperado padre.',
@@ -918,17 +985,14 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'settle_income',
-        'description': (
-            'Registra un abono a un ingreso esperado y resuelve el saldo entre '
-            'deducciones y nuevos ingresos esperados. Puede completar el período '
-            'de hosting. Crea los mismos registros, auditoría y efectos que el panel.'
-        ),
+        'description': _SETTLE_INCOME_DESCRIPTION,
         'input_schema': {
             'type': 'object',
             'properties': _SETTLEMENT_PROPS,
             'required': ['record_id', 'concept', 'period_date', 'total_amount'],
         },
         'handler': settle_income,
+        'impact_builder': _settle_income_impact,
     },
     {
         'name': 'bulk_settle_incomes',

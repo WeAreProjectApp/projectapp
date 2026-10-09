@@ -69,6 +69,7 @@ export const TEMPLATE_KEY_OPTIONS = [
   { value: 'accounting_statement_reminder', label: 'Recordatorio de extractos' },
   { value: 'accounting_payment_calendar', label: 'Calendario de cobros y pagos' },
   { value: 'collection_account_sent', label: 'Cuenta de cobro' },
+  { value: 'income_payment_received_client', label: 'Confirmación de pago' },
   { value: 'payment_status_team', label: 'Pago de hosting' },
 ];
 

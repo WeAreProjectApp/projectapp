@@ -280,6 +280,27 @@ class TestPreviewEndpoint:
         ).first()
         assert seq is None or seq.last_value == 0
 
+    def test_preview_names_what_the_last_notice_shows(self, super_client):
+        """The panel's last notice reads these from the rolled-back issue."""
+        from freezegun import freeze_time
+
+        client = make_client()
+        with freeze_time('2026-08-10 15:00:00'):
+            response = super_client.post(
+                '/api/accounting/collection-accounts/preview/',
+                payload(
+                    client, make_income(),
+                    billing_concept='Desarrollo módulo de reportes',
+                ),
+                format='json',
+            )
+
+        assert response.status_code == 200, response.data
+        assert response.data['issue_date'] == '2026-08-10'
+        assert response.data['customer_name'] == 'Ana Pérez'
+        assert response.data['project_name'] == ''
+        assert response.data['billing_concept'] == 'Desarrollo módulo de reportes'
+
     def test_preview_surfaces_manual_number_collision(self, super_client):
         Document.objects.create(
             document_type=get_collection_account_document_type(),
