@@ -1,4 +1,3 @@
-from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 """
 Blog Publisher MCP: public JSON-RPC endpoint (token-authenticated) and
 the panel management endpoints backing /panel/mcps.
@@ -6,7 +5,6 @@ the panel management endpoints backing /panel/mcps.
 import logging
 import time
 import uuid
-from copy import deepcopy
 from urllib.parse import urlparse
 
 from django.conf import settings
@@ -29,38 +27,11 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
-from content.mcp.accounting_tools import ACCOUNTING_TOOLS
-from content.mcp.client_tools import CLIENT_TOOLS
-from content.mcp.commercial_module_tools import (
-    ADDITIONAL_MODULE_TOOLS,
-    PARTNERSHIP_PROGRAM_TOOLS,
-)
-from content.mcp.common_tools import build_common_tools
-from content.mcp.communication_tools import COMMUNICATION_TOOLS
 from content.mcp.confirmation import requires_durable_confirmation
+from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG  # noqa: F401
 from content.mcp.context import McpExecutionContext, use_mcp_context
-from content.mcp.diagnostic_tools import DIAGNOSTIC_TOOLS
-from content.mcp.document_thread_tools import DOCUMENT_THREAD_TOOLS
-from content.mcp.document_tools import DOCUMENT_TOOLS
-from content.mcp.linkedin_tools import LINKEDIN_TOOLS
-from content.mcp.linktree_template_tools import LINKTREE_TEMPLATE_TOOLS
-from content.mcp.operation_catalogs import (
-    BILLING_PARITY_TOOLS,
-    CARD_PARITY_TOOLS,
-    COMMERCIAL_PARITY_TOOLS,
-    COMMUNICATION_EMAIL_TOOLS,
-    CONTENT_PARITY_TOOLS,
-    DOCUMENT_PARITY_TOOLS,
-    LEDGER_PARITY_TOOLS,
-    OPERATIONS_TOOLS,
-    PROJECT_TOOLS,
-)
 from content.mcp.principal import service_actor_for_connector
 from content.mcp.errors import transport_exception_handler
-from content.mcp.registry import server_info as build_server_info
-from content.mcp.proposal_formalization_tools import PROPOSAL_FORMALIZATION_TOOLS
-from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
-from content.mcp.proposal_tools import PROPOSAL_TOOLS
 from content.mcp.protocol import (
     DEFAULT_PROTOCOL_VERSION,
     LEGACY_PROTOCOL_VERSIONS,
@@ -69,12 +40,9 @@ from content.mcp.protocol import (
     SUPPORTED_PROTOCOL_VERSIONS,
     handle_message,
 )
-from content.mcp.registry import infer_risk, normalize_tools
+from content.mcp.registry import infer_risk
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.platform_secure_link_tools import PLATFORM_SECURE_LINK_TOOLS
-from content.mcp.task_tools import TASK_TOOLS
-from content.mcp.tools import BLOG_TOOLS
-from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
 from content.models import (
     McpActionIntent,
     McpConnector,
@@ -89,133 +57,6 @@ logger = logging.getLogger(__name__)
 LAST_USED_TOUCH_SECONDS = 60
 MAX_MCP_RECENT_EVENTS = 10
 
-# Existing connector registries are compatibility surfaces. Canonical area
-# connectors below compose them with the Panel parity adapters.
-LEGACY_TOOLS_BY_SLUG = {
-    'blog': BLOG_TOOLS,
-    # Los hilos viven en su propio registro: son una relación entre documentos,
-    # no una operación sobre uno, y así el catálogo base queda legible.
-    'documents': DOCUMENT_TOOLS + DOCUMENT_THREAD_TOOLS,
-    'clients': CLIENT_TOOLS,
-    'communications': COMMUNICATION_TOOLS,
-    'tasks': TASK_TOOLS,
-    'accounting': ACCOUNTING_TOOLS,
-    'diagnostics': DIAGNOSTIC_TOOLS,
-    'proposals': PROPOSAL_TOOLS,
-    'linkedin-personal': LINKEDIN_TOOLS,
-}
-
-
-def _canonical_tools(tools):
-    result = []
-    for source in tools:
-        tool = deepcopy(source)
-        risk = tool.get('risk', infer_risk(tool['name']))
-        if tool['name'] in {'update_proposal_status', 'create_share_link'}:
-            risk = 'sensitive'
-        tool['risk'] = risk
-        if risk == 'sensitive':
-            tool['requires_confirmation'] = True
-        result.append(tool)
-    return result
-
-
-def _accounting_tools(*prefixes, exact=()):
-    return [
-        tool for tool in ACCOUNTING_TOOLS
-        if tool['name'] in exact or tool['name'].startswith(prefixes)
-    ]
-
-
-RAW_TOOLS_BY_SLUG = {
-    **LEGACY_TOOLS_BY_SLUG,
-    'documents': _canonical_tools(
-        DOCUMENT_TOOLS + DOCUMENT_THREAD_TOOLS + DOCUMENT_PARITY_TOOLS
-    ),
-    'communications': _canonical_tools(
-        COMMUNICATION_TOOLS + COMMUNICATION_EMAIL_TOOLS + SECURE_LINK_TOOLS + PLATFORM_SECURE_LINK_TOOLS
-    ),
-    'tasks': _canonical_tools(TASK_TOOLS),
-    'operations': OPERATIONS_TOOLS,
-    'partnership-program': _canonical_tools(PARTNERSHIP_PROGRAM_TOOLS),
-    'additional-modules': _canonical_tools(ADDITIONAL_MODULE_TOOLS),
-    'proposals': _canonical_tools(
-        PROPOSAL_TOOLS + PROPOSAL_PARITY_TOOLS + PROPOSAL_VIDEO_TOOLS
-        + PROPOSAL_FORMALIZATION_TOOLS
-    ),
-    'commercial': _canonical_tools(
-        CLIENT_TOOLS + PROPOSAL_TOOLS + DIAGNOSTIC_TOOLS + COMMERCIAL_PARITY_TOOLS
-        + PROPOSAL_VIDEO_TOOLS + PROPOSAL_FORMALIZATION_TOOLS
-        + [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]
-    ),
-    'projects': PROJECT_TOOLS,
-    'content': _canonical_tools(
-        BLOG_TOOLS + LINKEDIN_TOOLS + CONTENT_PARITY_TOOLS + LINKTREE_TEMPLATE_TOOLS
-    ),
-    'accounting-ledger': _canonical_tools(
-        _accounting_tools(
-            'list_income', 'get_income', 'create_income', 'update_income', 'delete_income',
-            'list_expense', 'get_expense', 'create_expense', 'update_expense', 'delete_expense',
-            'list_pocket', 'get_pocket', 'create_pocket', 'update_pocket', 'delete_pocket',
-            'list_recurring', 'get_recurring', 'create_recurring', 'update_recurring', 'delete_recurring',
-            'list_ads', 'get_ads', 'create_ads', 'update_ads', 'delete_ads',
-            'settle_', 'bulk_settle_', 'mute_income', 'set_recurring_',
-            'archive_recurring', 'restore_recurring', 'mute_recurring',
-            'bulk_action_recurring',
-            exact=(
-                'get_dashboard', 'get_receivables', 'get_income_detail',
-                'list_change_logs',
-            ),
-        ) + LEDGER_PARITY_TOOLS
-    ),
-    'accounting-billing': _canonical_tools(
-        _accounting_tools(
-            'list_hosting', 'get_hosting', 'create_hosting', 'update_hosting', 'delete_hosting',
-            'list_notification_recipient', 'get_notification_recipient',
-            'create_notification_recipient', 'update_notification_recipient',
-            'delete_notification_recipient',
-            exact=('get_settings', 'update_settings'),
-        ) + BILLING_PARITY_TOOLS + PLATFORM_BILLING_TOOLS
-    ),
-    'accounting-cards': _canonical_tools(
-        _accounting_tools(
-            'list_card_snapshot', 'get_card_snapshot', 'create_card_snapshot',
-            'update_card_snapshot', 'delete_card_snapshot',
-            'get_statement_', 'create_statement', 'resolve_merchants',
-            'save_merchant_aliases', 'update_statement', 'finalize_statement',
-            'reopen_statement', 'list_statements', 'delete_statement',
-            'list_merchant_aliases', 'update_merchant_alias', 'delete_merchant_alias',
-        ) + CARD_PARITY_TOOLS
-    ),
-}
-
-
-COMMON_TOOL_SLUGS = {
-    'partnership-program', 'additional-modules', 'proposals',
-    'operations', 'commercial', 'projects', 'documents', 'communications',
-    'content', 'tasks', 'accounting-ledger', 'accounting-billing',
-    'accounting-cards',
-}
-UPLOAD_TOOL_SLUGS = {
-    'partnership-program', 'additional-modules', 'proposals',
-    'commercial', 'projects', 'documents', 'communications', 'content', 'accounting-cards',
-}
-
-TOOLS_BY_SLUG = {
-    slug: normalize_tools(tools, slug)
-    for slug, tools in RAW_TOOLS_BY_SLUG.items()
-}
-for _slug in COMMON_TOOL_SLUGS:
-    _common = build_common_tools(
-        _slug,
-        lambda slug=_slug: TOOLS_BY_SLUG[slug],
-        include_uploads=_slug in UPLOAD_TOOL_SLUGS,
-    )
-    TOOLS_BY_SLUG[_slug] = normalize_tools(
-        [*TOOLS_BY_SLUG[_slug], *_common],
-        _slug,
-    )
-
 
 class McpEndpointThrottle(AnonRateThrottle):
     scope = 'mcp'
@@ -229,7 +70,7 @@ class McpEndpointThrottle(AnonRateThrottle):
         cannot evade the throttle by inventing paths.
         """
         slug = getattr(view, 'kwargs', {}).get('slug', '')
-        connector_scope = slug if slug in TOOLS_BY_SLUG else 'unknown'
+        connector_scope = slug if slug in CONNECTORS else 'unknown'
         ident = self.get_ident(request)
         return self.cache_format % {
             'scope': f'{self.scope}:{connector_scope}',
@@ -588,7 +429,7 @@ def _request_protocol(request, message):
     return MODERN_PROTOCOL_VERSION, True, None
 
 
-def _decorate_modern_result(payload, server_name, method):
+def _decorate_modern_result(payload, spec, method):
     if not isinstance(payload, dict) or not isinstance(payload.get('result'), dict):
         return
     result = payload['result']
@@ -599,7 +440,7 @@ def _decorate_modern_result(payload, server_name, method):
         result['_meta'] = meta
     meta.setdefault(
         'io.modelcontextprotocol/serverInfo',
-        build_server_info(server_name),
+        spec.server_info,
     )
     if method in {'server/discover', 'tools/list'}:
         result.setdefault('ttlMs', LIST_CACHE_TTL_MS)
@@ -650,7 +491,8 @@ def mcp_endpoint(request, slug, token=None):
             status=403,
         )
 
-    tools = TOOLS_BY_SLUG.get(slug)
+    spec = CONNECTORS.get(slug)
+    tools = TOOLS_BY_SLUG[spec.slug] if spec is not None else None
     connector = connector_for_log if (connector_for_log and connector_for_log.is_active) else None
     request_token = _request_token(request, token)
     credential = (
@@ -723,13 +565,12 @@ def mcp_endpoint(request, slug, token=None):
         http_status, payload = handle_message(
             message,
             tools,
-            server_name=f'projectapp-{slug}-mcp',
             context=context,
+            connector=spec,
         )
     method = message.get('method') if isinstance(message, dict) else ''
-    server_name = f'projectapp-{slug}-mcp'
     if is_modern:
-        _decorate_modern_result(payload, server_name, method)
+        _decorate_modern_result(payload, spec, method)
     duration_ms = max(0, round((time.monotonic() - started) * 1000))
 
     if isinstance(message, dict):
@@ -777,6 +618,7 @@ mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handle
 # ---------------------------------------------------------------------------
 
 def _connector_payload(connector):
+    spec = CONNECTORS.get(connector.slug)
     tools = TOOLS_BY_SLUG.get(connector.slug, [])
     if hasattr(connector, '_panel_recent_events'):
         recent_events = connector._panel_recent_events
@@ -836,6 +678,7 @@ def _connector_payload(connector):
     ]
     return {
         'slug': connector.slug,
+        'version': spec.version if spec is not None else None,
         'name': connector.name,
         'description': connector.description,
         'is_active': connector.is_active,
@@ -845,10 +688,7 @@ def _connector_payload(connector):
         'connection_status': connection_status,
         'tool_count': len(tools),
         'risk_counts': risk_counts,
-        'is_legacy': connector.slug in {
-            'accounting', 'blog', 'clients', 'diagnostics',
-            'linkedin-personal', 'proposals',
-        },
+        'is_legacy': bool(spec and spec.compatibility),
         'credentials': credentials,
         'recent_events': recent,
         'tools': [

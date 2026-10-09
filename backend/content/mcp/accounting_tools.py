@@ -832,16 +832,23 @@ _SETTLEMENT_PROPS = {
 
 def _build_ledger_tools():
     tools = []
+    areas = {
+        'income': 'ledger', 'expense': 'ledger', 'pocket': 'ledger',
+        'recurring': 'ledger', 'ads': 'ledger', 'hosting': 'billing',
+        'notification_recipient': 'billing', 'card_snapshot': 'cards',
+    }
     for key, fields in _ENTITY_FIELDS.items():
         label = _ENTITY_LABELS[key]
         tools.append({
             'name': f'list_{key}',
+            'area': areas[key],
             'description': f'Lista {label} con filtros (fechas, montos, categorías, búsqueda q).',
             'input_schema': _list_schema(key),
             'handler': _make_list(key),
         })
         tools.append({
             'name': f'get_{key}',
+            'area': areas[key],
             'description': (
                 f'Abre un registro de {label} por ID con todos los campos '
                 'vigentes de lectura del módulo contable.'
@@ -851,6 +858,7 @@ def _build_ledger_tools():
         })
         tools.append({
             'name': f'create_{key}',
+            'area': areas[key],
             'description': (
                 f'Crea un registro de {label} usando las mismas validaciones, '
                 'auditoría y efectos secundarios que el formulario del panel.'
@@ -864,6 +872,7 @@ def _build_ledger_tools():
         })
         tools.append({
             'name': f'update_{key}',
+            'area': areas[key],
             'description': f'Actualiza (parcial) un registro de {label}. Envía record_id + campos.',
             'input_schema': {
                 'type': 'object',
@@ -874,6 +883,7 @@ def _build_ledger_tools():
         })
         tools.append({
             'name': f'delete_{key}',
+            'area': areas[key],
             'description': f'Elimina un registro de {label}. Los movimientos de pocket auto-gestionados no se pueden borrar.',
             'input_schema': {'type': 'object', 'properties': _RECORD_ID_PROP, 'required': ['record_id']},
             'handler': _make_delete(key),
@@ -884,6 +894,7 @@ def _build_ledger_tools():
 _NON_CRUD_TOOLS = [
     {
         'name': 'get_dashboard',
+        'area': 'ledger',
         'description': (
             'Resumen contable del año: totales, split de socios, breakdown '
             'mensual, balance de pocket, costo recurrente, ads, hostings y '
@@ -895,6 +906,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_receivables',
+        'area': 'ledger',
         'description': (
             'Lista los ingresos esperados empresariales aún abiertos y '
             'resume la selección manual por probabilidad de cobro.'
@@ -904,6 +916,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_income_detail',
+        'area': 'ledger',
         'description': (
             'Abre un ingreso con su estado de cobro, pagos parciales, '
             'deducciones, movimiento de bolsillo compartido y cuenta de cobro '
@@ -918,6 +931,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'settle_income',
+        'area': 'ledger',
         'description': (
             'Registra un abono a un ingreso esperado y resuelve el saldo entre '
             'deducciones y nuevos ingresos esperados. Puede completar el período '
@@ -932,6 +946,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'bulk_settle_incomes',
+        'area': 'ledger',
         'description': (
             'Distribuye un único abono real entre varios ingresos esperados. '
             'Crea un solo movimiento de bolsillo; cualquier excedente queda como '
@@ -962,6 +977,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'list_change_logs',
+        'area': 'ledger',
         'description': (
             'Auditoría de cambios (paginada, 20/pág). Filtros: entity_type, '
             'object_id, action (created/updated/deleted), actor, date_from, '
@@ -983,6 +999,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_settings',
+        'area': 'billing',
         'description': (
             'Devuelve la configuración contable (notificaciones, recordatorios, '
             'tasa USD, vista por defecto de ingresos).'
@@ -992,6 +1009,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'mute_income',
+        'area': 'ledger',
         'description': (
             'Silencia los avisos de cobro de un ingreso esperado, o los '
             'reactiva con muted=false. Sin `until` el silencio dura hasta que '
@@ -1013,6 +1031,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_recurring_duplicate_draft',
+        'area': 'ledger',
         'description': (
             'Construye, sin guardar, el borrador para duplicar un pago '
             'recurrente. Recalcula la próxima fecha y limpia notas, archivo y avisos.'
@@ -1026,6 +1045,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'set_recurring_active',
+        'area': 'ledger',
         'description': (
             'Activa o desactiva un pago recurrente. Los archivados deben '
             'restaurarse antes de activarse.'
@@ -1042,6 +1062,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'archive_recurring',
+        'area': 'ledger',
         'description': 'Archiva y desactiva un pago recurrente sin borrar sus datos.',
         'input_schema': {
             'type': 'object',
@@ -1052,6 +1073,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'restore_recurring',
+        'area': 'ledger',
         'description': 'Restaura un pago recurrente archivado y lo deja inactivo.',
         'input_schema': {
             'type': 'object',
@@ -1062,6 +1084,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'mute_recurring',
+        'area': 'ledger',
         'description': (
             'Silencia o reactiva los avisos del próximo cobro de un pago '
             'recurrente vigente; admite una fecha futura de reanudación.'
@@ -1082,6 +1105,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'bulk_action_recurring',
+        'area': 'ledger',
         'description': (
             'Activa, desactiva o archiva una selección completa de pagos '
             'recurrentes en una sola transacción.'
@@ -1106,6 +1130,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'update_settings',
+        'area': 'billing',
         'description': (
             'Actualiza (parcial) la configuración contable: '
             'notifications_enabled (interruptor maestro de TODO el correo '
