@@ -290,17 +290,13 @@ describe('IncomeLiquidateModal', () => {
     expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
   });
 
-  // Falla si el modal vuelve al ancho de formulario amplio (64 rem).
-  it('opens at the compact form width', () => {
+  // Falla si el modal vuelve al ancho amplio (64 rem) o si la fecha y el
+  // destino vuelven a ocupar filas separadas.
+  it('pairs the payment date with the destination at the form width', () => {
     const wrapper = mountModal();
+    const row = paymentRow(wrapper);
 
     expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
-  });
-
-  // Falla si la fecha y el destino vuelven a ocupar filas separadas.
-  it('pairs the payment date with the destination', () => {
-    const row = paymentRow(mountModal());
-
     expect(row.props('cols')).toBe(2);
     expect(row.find('[data-testid="income-liquidate-destination"]').exists()).toBe(true);
   });
