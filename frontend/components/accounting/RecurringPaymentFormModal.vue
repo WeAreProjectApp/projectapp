@@ -86,7 +86,8 @@ const duplicateNeedsAnchor = computed(() => (
 const anchorHint = computed(() => (
   isMonthlyFrequency.value
     ? 'Con periodicidad mensual basta el día de cobro.'
-    : 'Cualquier cobro conocido. Sin ella este pago no genera avisos.'
+    : 'Cualquier cobro conocido. Sin ella este pago no genera avisos. '
+      + 'El próximo cobro se calcula desde la fecha de referencia.'
 ))
 
 watch(
@@ -206,7 +207,12 @@ const modalFormId = useId();
         </p>
       </div>
 
-      <BaseFormRow :cols="2" :gap="4">
+      <BaseFormRow
+        :cols="3"
+        :gap="4"
+        :help="isCustomFrequency ? 'El equivalente mensual es el precio dividido entre este número' : ''"
+        help-testid="recurring-payment-form-custom-months-help"
+      >
         <BaseFormField label="Método de pago">
           <BaseSelect v-model="form.payment_method" :options="paymentMethodOptions" />
         </BaseFormField>
@@ -217,64 +223,64 @@ const modalFormId = useId();
             data-testid="recurring-payment-form-frequency"
           />
         </BaseFormField>
+        <BaseFormField v-if="isCustomFrequency" label="Cada cuántos meses" required>
+          <BaseInput
+            v-model="form.custom_months"
+            type="number"
+            step="1"
+            min="1"
+            data-testid="recurring-payment-form-custom-months"
+          />
+        </BaseFormField>
       </BaseFormRow>
-
-      <BaseFormField
-        v-if="isCustomFrequency"
-        label="Cada cuántos meses"
-        hint="El equivalente mensual es el precio dividido entre este número"
-        required
-      >
-        <BaseInput
-          v-model="form.custom_months"
-          type="number"
-          step="1"
-          min="1"
-          data-testid="recurring-payment-form-custom-months"
-        />
-      </BaseFormField>
-
-      <BaseFormField
-        label="Fecha de referencia del cobro"
-        :hint="anchorHint"
-        :required="duplicateNeedsAnchor"
-      >
-        <BaseInput
-          v-model="form.cycle_anchor_date"
-          type="date"
-          :required="duplicateNeedsAnchor"
-          data-testid="recurring-payment-form-cycle-anchor-date"
-        />
-        <p
-          v-if="isDuplicate"
-          class="mt-1 text-xs"
-          :class="duplicateNeedsAnchor ? 'text-warning-strong' : 'text-text-subtle'"
-          data-testid="recurring-duplicate-schedule-notice"
-        >
-          {{ seed?.schedule_notice }}
-        </p>
-      </BaseFormField>
 
       <BaseFormRow
         :cols="2"
         :gap="4"
-        :help="isMonthlyFrequency ? '' : 'El próximo cobro se calcula desde la fecha de referencia.'"
+        :help="anchorHint"
+        help-testid="recurring-payment-form-anchor-help"
       >
+        <BaseFormField
+          label="Fecha de referencia del cobro"
+          :required="duplicateNeedsAnchor"
+        >
+          <BaseInput
+            v-model="form.cycle_anchor_date"
+            type="date"
+            :required="duplicateNeedsAnchor"
+            data-testid="recurring-payment-form-cycle-anchor-date"
+          />
+          <p
+            v-if="isDuplicate"
+            class="mt-1 text-xs"
+            :class="duplicateNeedsAnchor ? 'text-warning-strong' : 'text-text-subtle'"
+            data-testid="recurring-duplicate-schedule-notice"
+          >
+            {{ seed?.schedule_notice }}
+          </p>
+        </BaseFormField>
         <BaseFormField label="Día de cobro">
           <BaseInput v-model="form.billing_day" type="number" step="1" min="1" max="31" />
         </BaseFormField>
+      </BaseFormRow>
+
+      <BaseFormRow
+        :cols="2"
+        :gap="4"
+        help="Agrupa el recurrente en la vista por categorías"
+        help-testid="recurring-payment-form-category-help"
+      >
         <BaseFormField label="Tipo de costo">
           <BaseSegmented v-model="form.cost_type" :options="costTypeOptions" full-width />
         </BaseFormField>
+        <BaseFormField label="Categoría">
+          <BaseSelect
+            v-model="form.category"
+            :options="categoryOptions"
+            data-testid="recurring-payment-form-category"
+          />
+        </BaseFormField>
       </BaseFormRow>
-
-      <BaseFormField label="Categoría" hint="Agrupa el recurrente en la vista por categorías">
-        <BaseSelect
-          v-model="form.category"
-          :options="categoryOptions"
-          data-testid="recurring-payment-form-category"
-        />
-      </BaseFormField>
 
       <BaseFormField label="Activo">
         <BaseToggle v-model="form.is_active" aria-label="Activo" />

@@ -83,7 +83,9 @@ function frequencySelect(wrapper) {
 }
 
 const CUSTOM_MONTHS = '[data-testid="recurring-payment-form-custom-months"]';
+const CUSTOM_MONTHS_HELP = '[data-testid="recurring-payment-form-custom-months-help"]';
 const CYCLE_ANCHOR = '[data-testid="recurring-payment-form-cycle-anchor-date"]';
+const ANCHOR_HELP = '[data-testid="recurring-payment-form-anchor-help"]';
 
 describe('RecurringPaymentFormModal', () => {
   it('offers every frequency from the shortest cycle to the longest', () => {
@@ -109,11 +111,12 @@ describe('RecurringPaymentFormModal', () => {
     const wrapper = mountModal();
 
     expect(wrapper.find(CUSTOM_MONTHS).exists()).toBe(false);
+    expect(wrapper.find(CUSTOM_MONTHS_HELP).exists()).toBe(false);
 
     await frequencySelect(wrapper).setValue('custom');
 
     expect(wrapper.find(CUSTOM_MONTHS).exists()).toBe(true);
-    expect(wrapper.text()).toContain(
+    expect(wrapper.get(CUSTOM_MONTHS_HELP).text()).toBe(
       'El equivalente mensual es el precio dividido entre este número',
     );
   });
@@ -164,13 +167,15 @@ describe('RecurringPaymentFormModal', () => {
   it('warns that a non-monthly cycle needs the reference date to notify', async () => {
     const wrapper = mountModal();
 
-    expect(wrapper.text()).toContain(
+    expect(wrapper.get(ANCHOR_HELP).text()).toBe(
       'Con periodicidad mensual basta el día de cobro.',
     );
 
     await frequencySelect(wrapper).setValue('annual');
 
-    expect(wrapper.text()).toContain('Sin ella este pago no genera avisos.');
+    const help = wrapper.get(ANCHOR_HELP).text();
+    expect(help).toContain('Sin ella este pago no genera avisos.');
+    expect(help).toContain('El próximo cobro se calcula desde la fecha de referencia.');
   });
 
   it('clears the month count when a catalog frequency is picked back', async () => {

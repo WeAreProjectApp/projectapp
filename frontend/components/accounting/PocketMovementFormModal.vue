@@ -139,7 +139,7 @@ const modalFormId = useId();
       </BaseFormField>
       </BaseFormRow>
 
-      <BaseFormField v-if="showLedger" :label="ledgerLabel" required>
+      <BaseFormField v-if="showLedger" :label="ledgerLabel" required class="panel-portrait:max-w-md">
         <BaseSegmented
           v-model="form.ledger"
           :options="ledgerOptions"
