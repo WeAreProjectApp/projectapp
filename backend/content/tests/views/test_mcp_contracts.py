@@ -12,6 +12,7 @@ from content.views.mcp_blog import TOOLS_BY_SLUG
 
 CONNECTOR_SLUGS = tuple(MCP_MODEL_CONTRACTS)
 CANONICAL_CONNECTOR_SLUGS = (
+    'building-with-us',
     'operations', 'commercial', 'proposals', 'projects', 'documents', 'communications',
     'content', 'tasks', 'accounting-ledger', 'accounting-billing',
     'accounting-cards',

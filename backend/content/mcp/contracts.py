@@ -1382,6 +1382,18 @@ PARTNERSHIP_CONTRACTS = (
     _contract('content.FinancingAgreementEvent', read_only='id agreement event_type actor before_state after_state details created_at'),
 )
 MCP_MODEL_CONTRACTS['partnership-program'] = PARTNERSHIP_CONTRACTS + (VIDEO_RESOURCE_CONTRACT,)
+MCP_MODEL_CONTRACTS['building-with-us'] = (
+    _contract('content.BuildingWithUsProgram', read_only='id current_revision updated_at'),
+    _contract(
+        'content.BuildingWithUsProgramRevision',
+        read_only='id version author_label restored_from created_at',
+        read_write='content change_note',
+        excluded=_excluded(
+            'Autor y credencial fijados por la confirmación MCP; nunca se reciben como campos editables.',
+            'author credential',
+        ),
+    ),
+)
 MCP_MODEL_CONTRACTS['additional-modules'] = tuple(
     contract for contract in COMMERCIAL_CATALOG_CONTRACTS
     if contract.model_label.startswith('content.AdditionalModule')

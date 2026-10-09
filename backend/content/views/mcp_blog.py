@@ -36,6 +36,7 @@ from content.mcp.commercial_module_tools import (
     PARTNERSHIP_PROGRAM_TOOLS,
 )
 from content.mcp.common_tools import build_common_tools
+from content.mcp.building_with_us_tools import BUILDING_WITH_US_TOOLS
 from content.mcp.communication_tools import COMMUNICATION_TOOLS
 from content.mcp.confirmation import requires_durable_confirmation
 from content.mcp.context import McpExecutionContext, use_mcp_context
@@ -138,6 +139,7 @@ RAW_TOOLS_BY_SLUG = {
     'tasks': _canonical_tools(TASK_TOOLS),
     'operations': OPERATIONS_TOOLS,
     'partnership-program': _canonical_tools(PARTNERSHIP_PROGRAM_TOOLS),
+    'building-with-us': _canonical_tools(BUILDING_WITH_US_TOOLS),
     'additional-modules': _canonical_tools(ADDITIONAL_MODULE_TOOLS),
     'proposals': _canonical_tools(
         PROPOSAL_TOOLS + PROPOSAL_PARITY_TOOLS + PROPOSAL_VIDEO_TOOLS
@@ -191,6 +193,7 @@ RAW_TOOLS_BY_SLUG = {
 
 
 COMMON_TOOL_SLUGS = {
+    'building-with-us',
     'partnership-program', 'additional-modules', 'proposals',
     'operations', 'commercial', 'projects', 'documents', 'communications',
     'content', 'tasks', 'accounting-ledger', 'accounting-billing',

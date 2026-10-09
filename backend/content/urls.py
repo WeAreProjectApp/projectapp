@@ -7,6 +7,10 @@ from content.views.proposal_activity import list_proposal_activity
 from content.views.proposal_approval import approval_review, approval_file_download
 from content.views.proposal_module_interests import proposal_module_interests
 from content.views.document_move import move_document_batch
+from content.views.building_with_us import (
+    public_building_with_us_program, public_building_with_us_program_pdf,
+    admin_building_with_us_overview, admin_building_with_us_program_versions,
+)
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
@@ -405,6 +409,12 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/formalization/preparations/<uuid:preparation_id>/send/', send_formalization, name='formalization-send'),
     path('contacts/', contact_list, name='contact-list'),
     path('new-contact/', new_contact, name='new-contact'),
+
+    # Building with Us — public presentation and read-only Panel metadata
+    path('building-with-us/public/', public_building_with_us_program, name='public-building-with-us-program'),
+    path('building-with-us/public/pdf/', public_building_with_us_program_pdf, name='public-building-with-us-program-pdf'),
+    path('building-with-us/admin/', admin_building_with_us_overview, name='admin-building-with-us-overview'),
+    path('building-with-us/admin/program/versions/', admin_building_with_us_program_versions, name='admin-building-with-us-program-versions'),
 
     # Financing program — public informational resource
     path(

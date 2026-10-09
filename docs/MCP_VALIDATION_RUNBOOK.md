@@ -206,6 +206,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 |---|---:|---|
 | `operations` | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
 | `partnership-program` | 26 | Condiciones, formalización y recursos del Programa de Alianza |
+| `building-with-us` | 9 | Presentación bilingüe versionada, preview, confirmación, restauración y PDF; creado inactivo, sin uploads ni videos |
 | `additional-modules` | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
@@ -231,6 +232,90 @@ compatibilidad no se eliminan ni cambian de URL; permiten una transición gradua
 hacia los conectores agrupados por área.
 
 ## Preparación segura
+
+### Building with Us — presentación (PA-174, B1)
+
+La migración `0286_building_with_us_program` crea el conector `building-with-us`
+inactivo, sin credenciales, y la presentación inicial en español e inglés. Su
+versión MCP es `1.0.0`. No comparte herramientas con `commercial`; sus nueve
+herramientas incluyen los tres controles comunes. El contrato de la alianza y
+su espejo documental se incorporan en B2; el overview devuelve `contract: null`.
+
+El Panel sólo admite GET en `/api/building-with-us/admin/` y
+`/api/building-with-us/admin/program/versions/`. Todo cambio de presentación
+pasa por MCP con `if_match`, `change_note` y `confirm_action`. Las revisiones
+son inmutables: restaurar crea una nueva. La validación exige todos los campos
+de cada sección suministrada en ambos idiomas, ids y meses alineados, listas
+acotadas y ausencia de porcentajes, símbolos monetarios y códigos de moneda.
+
+Validar con una credencial temporal del entorno de pruebas:
+
+1. Leer `get_building_with_us_program`: comprobar `content.es`, `content.en`,
+   el orden de `sections`, metadatos de versión y `etag`.
+2. Llamar `preview_building_with_us_program_update` con `sections.hero.es` y
+   `sections.hero.en` completos. Revisar el diff y comprobar que la versión
+   pública sigue igual. Las secciones omitidas se conservan.
+3. Enviar esas secciones a `update_building_with_us_program` con el `if_match`
+   leído y un `change_note` significativo; revisar el impacto y confirmar con
+   `confirm_action`. Sin motivo no debe existir intención pendiente.
+4. Comprobar `/api/building-with-us/public/?lang=es` y `?lang=en`: nueva versión,
+   contenido localizado, `cta.whatsapp_url`, rutas canónicas y enlace PDF, sin
+   datos de video ni cifras económicas. Tras el commit debe solicitarse la
+   reconstrucción con motivo `building-with-us`. En producción se verifica la
+   solicitud y el consumo por el regenerator del toolkit, seguido del HTML de
+   ambas rutas; la aplicación no ejecuta el build dentro del worker.
+5. Listar `list_building_with_us_program_versions`, incluyendo contenido si se
+   desea: comprobar autor, fecha, motivo y orden descendente. Revisar también
+   la paginación de sólo metadatos del Panel.
+6. Enviar `restore_building_with_us_program_version` con `version_id`, el etag
+   actual y `change_note`; confirmar. Verificar una nueva versión con referencia
+   a la restaurada y una nueva solicitud de reconstrucción.
+7. Preparar otra actualización, publicar un cambio independiente y confirmar
+   la preparación anterior. Debe devolver `STALE_VERSION` sin escribir otra
+   revisión. Los etags se comprueban otra vez con el singleton bloqueado.
+8. Ejecutar `render_building_with_us_program_pdf` con `lang: es` o `en`; abrir
+   el `download_url` firmado y comprobar que contiene la presentación vigente.
+   El catálogo carece de herramientas de upload y video.
+
+Pruebas focales desde `backend/`, usando el Python autorizado de la sesión (sin
+exportar settings para pytest y sin ejecutar migrate):
+
+```bash
+PY=/home/dev_env/webapps/.wt/projectapp_staging/partner-split-auto-values/.venv/bin/python
+$PY -m pytest content/tests/services/test_building_with_us_program_service.py --no-cov -q
+$PY -m pytest content/tests/views/test_building_with_us_public.py --no-cov -q
+$PY -m pytest content/tests/views/test_building_with_us_mcp.py --no-cov -q
+```
+
+`test_mcp_contracts.py` y la selección de rebuild exceden veinte casos. Los
+siguientes grupos cubren sus selecciones completas sin exceder ese límite
+(MCP: 19, 19, 12 y 20; rebuild: 18 y 15). Revalidar los conteos con
+`--collect-only -q` si se agregan casos; correr hasta tres comandos por ciclo:
+
+```bash
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k model_fields_are_classified
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k tool_metadata_is_actionable
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k canonical_sensitive_tools
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k 'not model_fields_are_classified and not tool_metadata_is_actionable and not canonical_sensitive_tools'
+$PY -m pytest content/tests/services/test_frontend_build.py --no-cov -q -k '(Rebuild or rebuild) and (TestRebuildNeeded or TestRunFrontendRebuild)'
+$PY -m pytest content/tests/services/test_frontend_build.py --no-cov -q -k '(Rebuild or rebuild) and not (TestRebuildNeeded or TestRunFrontendRebuild)'
+```
+
+Completar con las regresiones acotadas:
+
+```bash
+$PY -m pytest content/tests/management/test_fake_data_contract.py --no-cov -q -k classifies
+$PY -m pytest content/tests/views/test_financing.py --no-cov -q -k sitemap
+DJANGO_SETTINGS_MODULE=projectapp.settings_test $PY manage.py makemigrations --check --dry-run
+```
+
+Desde la raíz, ejecutar el gate con `--include-file` para los tres archivos
+nuevos y los dos archivos de regresión editados (rutas completas desde
+`backend/`). El scanner no admite como filtros `conftest.py` ni archivos de
+fixtures sin tests; su integración se verifica con las pruebas que los usan.
+Usar `--junk-severity=error` y `--report-path /tmp/building-with-us-test-quality.json`.
+
+### Preparación general
 
 1. Ejecutar en una base de test o staging. Producción sólo admite consultas
    read-only hasta que el operador autorice una mutación concreta.

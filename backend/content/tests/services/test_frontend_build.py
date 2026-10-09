@@ -17,6 +17,8 @@ from content.models import (
     AdditionalModule,
     AdditionalModuleCategory,
     BlogPost,
+    BuildingWithUsProgram,
+    BuildingWithUsProgramRevision,
     ExplainerVideoSettings,
     FinancingPolicyRevision,
     HourPackage,
@@ -85,6 +87,8 @@ def write_marker_now(marker_path):
 
 class TestRebuildNeeded:
     def test_false_without_prerendered_content(self, db, marker_path):
+        BuildingWithUsProgram.objects.all().delete()
+        BuildingWithUsProgramRevision.objects.all().delete()
         AdditionalModule.objects.all().delete()
         AdditionalModuleCategory.objects.all().delete()
         FinancingPolicyRevision.objects.all().delete()
@@ -92,6 +96,18 @@ class TestRebuildNeeded:
         assert frontend_build.rebuild_needed() is False
 
     def test_true_when_never_built(self, published_post, marker_path):
+        assert frontend_build.rebuild_needed() is True
+
+    def test_true_again_after_program_revision(self, building_with_us_program, admin_user, marker_path):
+        """Fails if publishing a presentation keeps the previous static page fresh."""
+        from content.services.building_with_us_program_service import apply_update, read_program
+        from content.tests.building_with_us_fixtures import hero_update
+
+        with freeze_time('2030-01-01T12:00:00Z'):
+            write_marker_now(marker_path)
+        with freeze_time('2030-01-01T12:01:00Z'):
+            apply_update(hero_update(read_program()), actor=admin_user)
+
         assert frontend_build.rebuild_needed() is True
 
     def test_false_when_marker_is_newer_than_content(self, published_post, marker_path):
