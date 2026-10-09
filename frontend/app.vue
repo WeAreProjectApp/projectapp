@@ -78,7 +78,7 @@ const { trackWhatsAppClick } = useGtagConversions()
 
 const showNavbar = computed(() => {
   const path = route.path
-  return !path.includes('/panel') && !path.includes('/proposal') && !path.includes('/platform') && !path.includes('/diagnostic') && !path.includes('/additional-modules') && !path.includes('/partnership-program') && !path.includes('/lk/') && !path.includes('/secure-link')
+  return !path.includes('/panel') && !path.includes('/proposal') && !path.includes('/platform') && !path.includes('/diagnostic') && !path.includes('/additional-modules') && !path.includes('/partnership-program') && !path.includes('/building-with-us') && !path.includes('/lk/') && !path.includes('/secure-link')
 })
 
 // Public marketing routes only — gates the GTM noscript fallback to match the
@@ -94,7 +94,7 @@ const showWhatsApp = computed(() => {
 })
 
 const isCommercialDocument = computed(() => (
-  /\/(?:additional-modules|partnership-program)(?:\/|$)/.test(route.path)
+  /\/(?:additional-modules|partnership-program|building-with-us)(?:\/|$)/.test(route.path)
   && !route.path.includes('/panel/')
 ))
 
