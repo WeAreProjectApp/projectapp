@@ -146,6 +146,10 @@ function mockRequests() {
           total: '1490000.00',
           due_date: '2026-08-13',
           customer_email: 'ana@acme.co',
+          issue_date: '2026-08-05',
+          customer_name: 'Acme Soluciones',
+          project_name: 'Portal Acme',
+          billing_concept: 'Desarrollo módulo de reportes',
           pdf_url: '/api/accounting/collection-accounts/preview/tok123/PA-ACME-003.pdf',
         },
       });
@@ -177,7 +181,7 @@ function mountModal(props = {}) {
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
           name: 'BaseModal',
-          props: ['modelValue', 'kind', 'fullHeight'],
+          props: ['modelValue', 'kind', 'fullHeight', 'closeOnEsc', 'closeOnBackdrop', 'lockScroll'],
           emits: ['close'],
           template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
@@ -992,12 +996,92 @@ describe('CollectionAccountFormModal', () => {
     const previewPayload = create_request.mock.calls.at(-1)[1];
 
     await wrapper.find('[data-testid="collection-form-confirm"]').trigger('click');
+    await wrapper.find('[data-testid="confirm-modal-confirm"]').trigger('click');
     await flushPromises();
 
     const [confirmUrl, confirmPayload] = create_request.mock.calls.at(-1);
     expect(confirmUrl).toBe('accounting/collection-accounts/create/');
     expect(confirmPayload).toEqual(previewPayload);
     expect(wrapper.emitted('created')).toBeTruthy();
+  });
+
+  describe('last notice before sending', () => {
+    async function openNotice(wrapper) {
+      await flushPromises();
+      await selectClient(wrapper);
+      await wrapper.find('[data-testid="collection-form-preview"]').element.click();
+      await flushPromises();
+      await wrapper.find('[data-testid="collection-form-confirm"]').trigger('click');
+    }
+
+    const createCalls = () => create_request.mock.calls
+      .filter(([url]) => url === 'accounting/collection-accounts/create/');
+    const row = (wrapper, key) =>
+      wrapper.find(`[data-testid="collection-send-notice-${key}"]`).text();
+
+    it('names the cuenta before anything is sent', async () => {
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+
+      expect(createCalls()).toHaveLength(0);
+      expect(row(wrapper, 'number')).toBe('PA-ACME-003');
+      expect(row(wrapper, 'client')).toBe('Acme Soluciones');
+      expect(row(wrapper, 'project')).toBe('Portal Acme');
+      expect(row(wrapper, 'total')).toContain('1.490.000');
+      expect(row(wrapper, 'recipient')).toBe('ana@acme.co');
+    });
+
+    it('backing out keeps the preview and sends nothing', async () => {
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+
+      const back = wrapper.findAll('button')
+        .find((button) => button.text() === 'Volver a revisar');
+      await back.trigger('click');
+      await flushPromises();
+
+      expect(createCalls()).toHaveLength(0);
+      expect(wrapper.find('[data-testid="collection-send-notice-number"]').exists()).toBe(false);
+      expect(wrapper.find('[data-testid="collection-preview-subject"]').exists()).toBe(true);
+    });
+
+    it('reads a zero-day term as no due date', async () => {
+      const previewImpl = create_request.getMockImplementation();
+      create_request.mockImplementation(async (url, body) => {
+        const response = await previewImpl(url, body);
+        if (url.includes('preview')) response.data.due_date = null;
+        return response;
+      });
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+
+      expect(row(wrapper, 'due')).toBe('Sin vencimiento (pago inmediato)');
+    });
+
+    it('keeps Esc away from the wizard while the notice is open', async () => {
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+
+      const wizard = wrapper.findAllComponents({ name: 'BaseModal' })[0];
+      expect(wizard.props('closeOnEsc')).toBe(false);
+      expect(wizard.props('closeOnBackdrop')).toBe(false);
+    });
+
+    it('creates one cuenta and locks going back while it sends', async () => {
+      const wrapper = mountModal({ income: incomeFixture });
+      await openNotice(wrapper);
+      create_request.mockImplementation((url) => (
+        url.includes('preview') ? Promise.resolve({ data: {} }) : new Promise(() => {})
+      ));
+
+      await wrapper.find('[data-testid="confirm-modal-confirm"]').trigger('click');
+      await wrapper.find('[data-testid="collection-form-confirm"]').trigger('click');
+      await flushPromises();
+
+      expect(createCalls()).toHaveLength(1);
+      expect(wrapper.find('[data-testid="collection-form-back"]').attributes('disabled'))
+        .toBeDefined();
+    });
   });
 
   it('stays on the form when the preview request fails', async () => {

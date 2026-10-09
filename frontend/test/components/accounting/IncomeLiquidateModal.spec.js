@@ -1,6 +1,8 @@
-import { mount } from '@vue/test-utils';
+import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
 import IncomeLiquidateModal from '../../../components/accounting/IncomeLiquidateModal.vue';
+import BaseCheckbox from '../../../components/base/BaseCheckbox.vue';
+import { useAccountingStore } from '../../../stores/accounting';
 
 // The covered-period block leans on `useHostingPeriod`, which resolves the
 // accounting store at setup — even when the block itself stays hidden.
@@ -39,7 +41,7 @@ const expectedRecord = {
   payment_status: 'partial',
 };
 
-function mountModal(props = {}) {
+function mountModal(props = {}, { components = {} } = {}) {
   return mount(IncomeLiquidateModal, {
     props: {
       open: true,
@@ -48,6 +50,7 @@ function mountModal(props = {}) {
       ...props,
     },
     global: {
+      components,
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
@@ -766,5 +769,155 @@ describe('covered period of a hosting charge', () => {
     expect(wrapper.find('[data-testid="income-liquidate-submit-reason"]').text())
       .toContain('La fecha de fin debe ser posterior a la de inicio.');
     expect(await submit(wrapper)).toBeUndefined();
+  });
+});
+
+describe('payment confirmation to the client', () => {
+  const billedRecord = {
+    ...expectedRecord,
+    client: 7,
+    client_name: 'Acme Soluciones',
+    collection_account_status: 'issued',
+  };
+  const sendable = {
+    can_send: true,
+    blocked_reason: '',
+    recipient: 'pagos@acme.co',
+    client_name: 'Ana Ruiz',
+    project_name: 'Portal Acme',
+    collection_account_number: 'PA-ACME-001',
+    rescheduled_pending: '0.00',
+  };
+
+  async function mountBilled(context = sendable, props = {}) {
+    const store = useAccountingStore();
+    const fetchContext = jest
+      .spyOn(store, 'fetchIncomePaymentConfirmation')
+      .mockResolvedValue({ success: true, data: context });
+    const wrapper = mountModal(
+      { record: billedRecord, ...props },
+      { components: { BaseCheckbox } },
+    );
+    await flushPromises();
+    return { wrapper, fetchContext };
+  }
+
+  const checkbox = (wrapper) =>
+    wrapper.find('[data-testid="income-liquidate-send-confirmation"] input');
+  const noticeValue = (wrapper, key) =>
+    wrapper.find(`[data-testid="income-liquidate-notice-${key}"]`).text();
+
+  it('is checked by default and names the address it goes to', async () => {
+    const { wrapper, fetchContext } = await mountBilled();
+
+    expect(fetchContext).toHaveBeenCalledWith(42);
+    expect(checkbox(wrapper).element.checked).toBe(true);
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-hint"]').text())
+      .toContain('pagos@acme.co');
+  });
+
+  it('explains why it cannot go for an income with no client', async () => {
+    const wrapper = mountModal({}, { components: { BaseCheckbox } });
+    await flushPromises();
+
+    expect(checkbox(wrapper).element.disabled).toBe(true);
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
+      .toContain('no tiene cliente');
+  });
+
+  it('relays the server reason when the address is unusable', async () => {
+    const { wrapper } = await mountBilled({
+      ...sendable,
+      can_send: false,
+      blocked_reason: 'El correo del cliente (x@temp.example.com) es provisional.',
+    });
+
+    expect(checkbox(wrapper).element.checked).toBe(false);
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
+      .toContain('provisional');
+  });
+
+  it('cannot confirm a payment of zero', async () => {
+    const { wrapper } = await mountBilled();
+
+    await wrapper.find('[data-testid="split-total"]').setValue('0');
+
+    expect(checkbox(wrapper).element.disabled).toBe(true);
+    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
+      .toContain('Sin valor recibido');
+  });
+
+  it('shows the last notice before settling and emits nothing yet', async () => {
+    const { wrapper } = await mountBilled();
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(noticeValue(wrapper, 'client')).toBe('Ana Ruiz');
+    expect(noticeValue(wrapper, 'project')).toBe('Portal Acme');
+    expect(noticeValue(wrapper, 'account')).toBe('PA-ACME-001');
+    expect(noticeValue(wrapper, 'destination')).toBe('Bolsillo ProjectApp');
+    expect(noticeValue(wrapper, 'recipient')).toBe('pagos@acme.co');
+  });
+
+  it('states the balance the client still owes after the payment', async () => {
+    const { wrapper } = await mountBilled({ ...sendable, rescheduled_pending: '50000.00' });
+
+    await wrapper.find('[data-testid="split-total"]').setValue('400000');
+    await wrapper.find('form').trigger('submit');
+
+    // 600.000 pending - 400.000 received + 50.000 rescheduled earlier.
+    expect(noticeValue(wrapper, 'pending')).toContain('250.000');
+    expect(noticeValue(wrapper, 'amount')).toContain('400.000');
+  });
+
+  it('settles with the confirmation flag once the notice is confirmed', async () => {
+    const { wrapper } = await mountBilled();
+
+    await wrapper.find('form').trigger('submit');
+    await wrapper.find('[data-testid="confirm-modal-confirm"]').trigger('click');
+
+    const submitted = wrapper.emitted('submit');
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0][0].send_payment_confirmation).toBe(true);
+  });
+
+  it('settles straight away, without the flag, when unchecked', async () => {
+    const { wrapper } = await mountBilled();
+
+    await checkbox(wrapper).setValue(false);
+    await wrapper.find('form').trigger('submit');
+
+    const submitted = wrapper.emitted('submit');
+    expect(submitted).toHaveLength(1);
+    expect(submitted[0][0]).not.toHaveProperty('send_payment_confirmation');
+    expect(wrapper.find('[data-testid="income-liquidate-notice-recipient"]').exists())
+      .toBe(false);
+  });
+
+  it('reads a month-only payment date as its month', async () => {
+    const { wrapper } = await mountBilled();
+
+    await wrapper.find('[data-testid="income-liquidate-exact-date"]')
+      .setValue(false);
+    await wrapper.find('form').trigger('submit');
+
+    expect(noticeValue(wrapper, 'date')).toMatch(/^[a-z]+ de \d{4}$/);
+  });
+
+  it('waits for the address before letting the settlement go', async () => {
+    const store = useAccountingStore();
+    jest.spyOn(store, 'fetchIncomePaymentConfirmation')
+      .mockReturnValue(new Promise(() => {}));
+    const wrapper = mountModal(
+      { record: billedRecord }, { components: { BaseCheckbox } },
+    );
+    await flushPromises();
+
+    await wrapper.find('form').trigger('submit');
+
+    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(wrapper.find('[data-testid="income-liquidate-submit-reason"]').text())
+      .toContain('Verificando el correo');
   });
 });

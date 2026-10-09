@@ -359,6 +359,10 @@ import { downloadBlob, filenameFromDisposition } from '~/utils/downloadFile';
 import { formatMoney } from '~/utils/formatMoney';
 import { historySendsLink } from '~/utils/historyDeepLink';
 import {
+  paymentConfirmationDetail,
+  paymentConfirmationWarning,
+} from '~/utils/paymentConfirmation';
+import {
   NO_COLLECTION_GROUP_KEY,
   groupCollectionAccounts,
   sumCollectionAccountGroups,
@@ -918,10 +922,16 @@ async function handleLiquidateSubmit(payload) {
   const result = await store.settleIncome(incomeId, payload);
   if (result.success) {
     closeLiquidate();
+    const confirmation = result.data?.payment_confirmation;
     notify.success({
       title: 'Ingreso liquidado',
-      detail: 'Si el ingreso quedó pagado al 100%, la cuenta pasó a Pagada.',
+      detail: [
+        paymentConfirmationDetail(confirmation),
+        'Si el ingreso quedó pagado al 100%, la cuenta pasó a Pagada.',
+      ].filter(Boolean).join(' '),
     });
+    const warning = paymentConfirmationWarning(confirmation, incomeId);
+    if (warning) notify.warning(warning);
     loadRecords();
   } else {
     notify.error({ title: 'No se pudo liquidar', detail: result.message });

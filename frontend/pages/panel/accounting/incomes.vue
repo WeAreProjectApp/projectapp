@@ -700,6 +700,10 @@ import { describeProjectAssignmentResult } from '~/utils/projectAssignment';
 import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
 import { historySendsLink } from '~/utils/historyDeepLink';
+import {
+  paymentConfirmationDetail,
+  paymentConfirmationWarning,
+} from '~/utils/paymentConfirmation';
 import { PANEL_BREAKPOINTS } from '~/config/responsive';
 import {
   clientLabelOf,
@@ -1334,12 +1338,18 @@ async function handleLiquidateSubmit(payload) {
     () => store.settleIncome(incomeId, payload),
     {
       successTitle: 'Ingreso liquidado',
+      successDetail: (r) => paymentConfirmationDetail(r.data?.payment_confirmation),
       errorTitle: 'No se pudo liquidar',
       // Flash the expected row: it is the one whose state just changed.
       flashId: incomeId,
     },
   );
-  if (result.success) closeLiquidateModal();
+  if (!result.success) return;
+  closeLiquidateModal();
+  // The settlement stands; a confirmation that did not go out is a warning
+  // of its own, pointing at the history when it can be retried there.
+  const warning = paymentConfirmationWarning(result.data?.payment_confirmation, incomeId);
+  if (warning) notify.warning(warning);
 }
 
 function confirmWriteOff(record) {
