@@ -111,11 +111,11 @@ def accounting_area(area):
 
 CONNECTORS: dict[str, ConnectorSpec] = {
     'blog': ConnectorSpec(
-        'blog', '1.0.0', (BLOG_TOOLS,),
+        'blog', '1.1.0', (BLOG_TOOLS,),
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '3.1.0',
+        'documents', '3.2.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
@@ -125,49 +125,49 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         ),
     ),
     'clients': ConnectorSpec(
-        'clients', '1.0.0', (CLIENT_TOOLS,),
+        'clients', '1.1.0', (CLIENT_TOOLS,),
         compatibility=True, canonical_area='commercial',
     ),
     'communications': ConnectorSpec(
-        'communications', '2.0.0',
+        'communications', '2.1.0',
         (COMMUNICATION_TOOLS, COMMUNICATION_EMAIL_TOOLS, SECURE_LINK_TOOLS,
          PLATFORM_SECURE_LINK_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
     'tasks': ConnectorSpec(
-        'tasks', '2.0.0', (TASK_TOOLS,), confirm_sensitive=True,
+        'tasks', '2.1.0', (TASK_TOOLS,), confirm_sensitive=True,
     ),
     'accounting': ConnectorSpec(
-        'accounting', '1.0.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting', '1.1.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
         compatibility=True,
         canonical_area='accounting-ledger, accounting-billing o accounting-cards',
         notes=(ACCOUNTING_NOTE,),
     ),
     'diagnostics': ConnectorSpec(
-        'diagnostics', '1.0.0', (DIAGNOSTIC_TOOLS,),
+        'diagnostics', '1.1.0', (DIAGNOSTIC_TOOLS,),
         compatibility=True, canonical_area='commercial',
     ),
     'proposals': ConnectorSpec(
-        'proposals', '2.1.0',
+        'proposals', '2.2.0',
         (PROPOSAL_TOOLS, PROPOSAL_PARITY_TOOLS, PROPOSAL_VIDEO_TOOLS,
          PROPOSAL_FORMALIZATION_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
     'linkedin-personal': ConnectorSpec(
-        'linkedin-personal', '1.0.0', (LINKEDIN_TOOLS,),
+        'linkedin-personal', '1.1.0', (LINKEDIN_TOOLS,),
         compatibility=True, canonical_area='content',
     ),
-    'operations': ConnectorSpec('operations', '2.0.0', (OPERATIONS_TOOLS,)),
+    'operations': ConnectorSpec('operations', '2.1.0', (OPERATIONS_TOOLS,)),
     'partnership-program': ConnectorSpec(
-        'partnership-program', '2.0.0', (PARTNERSHIP_PROGRAM_TOOLS,),
+        'partnership-program', '2.1.0', (PARTNERSHIP_PROGRAM_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'additional-modules': ConnectorSpec(
-        'additional-modules', '2.0.0', (ADDITIONAL_MODULE_TOOLS,),
+        'additional-modules', '2.1.0', (ADDITIONAL_MODULE_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'commercial': ConnectorSpec(
-        'commercial', '2.0.0',
+        'commercial', '2.1.0',
         (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS,
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
@@ -175,24 +175,24 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'projects': ConnectorSpec(
-        'projects', '2.1.0', (PROJECT_TOOLS,), uploads=True,
+        'projects', '2.2.0', (PROJECT_TOOLS,), uploads=True,
     ),
     'content': ConnectorSpec(
-        'content', '2.0.0',
+        'content', '2.1.0',
         (BLOG_TOOLS, LINKEDIN_TOOLS, CONTENT_PARITY_TOOLS, LINKTREE_TEMPLATE_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
     'accounting-ledger': ConnectorSpec(
-        'accounting-ledger', '2.0.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting-ledger', '2.1.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
         confirm_sensitive=True, notes=(ACCOUNTING_NOTE,),
     ),
     'accounting-billing': ConnectorSpec(
-        'accounting-billing', '2.0.0',
+        'accounting-billing', '2.1.0',
         (accounting_area('billing'), BILLING_PARITY_TOOLS, PLATFORM_BILLING_TOOLS),
         confirm_sensitive=True,
     ),
     'accounting-cards': ConnectorSpec(
-        'accounting-cards', '2.0.0', (accounting_area('cards'), CARD_PARITY_TOOLS),
+        'accounting-cards', '2.1.0', (accounting_area('cards'), CARD_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
 }

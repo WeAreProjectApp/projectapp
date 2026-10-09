@@ -767,12 +767,19 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 
 ### MCP connector concurrency
 
-- Connector URLs remain token-authenticated capability URLs; tokens are not part of the throttle key.
-- Nine registered connectors — blog, documents, proposals, diagnostics, clients,
-  tasks, accounting, LinkedIn personal and communications — receive independent
-  per-IP buckets keyed by slug, allowing Codex to initialize configured domains in
-  parallel.
-- Unknown slugs share one `unknown` bucket. Never key untrusted paths directly without first checking them against `TOOLS_BY_SLUG`.
+- Los 18 conectores se declaran en `content/mcp/connectors.py` (`CONNECTORS`);
+  reciben buckets independientes por IP y slug. Las URLs históricas con token
+  y el endpoint canónico con Bearer coexisten; el token no forma parte del throttle.
+- Los slugs desconocidos comparten `unknown`. La pertenencia se comprueba contra
+  `CONNECTORS` antes de usar una ruta en la clave; `TOOLS_BY_SLUG` es el catálogo
+  compuesto de herramientas, no otro inventario de identidades.
+- `ConnectorSpec` es la autoridad de versión e instrucciones. Un cambio de
+  contrato público requiere incremento de versión, changelog y
+  `mcp_schema_report --write-fingerprints` desde `backend/` con
+  `DJANGO_SETTINGS_MODULE=projectapp.settings_test`. `connector_contracts.json`
+  guarda versión y SHA-256 del contrato; el SHA-256 excluye la versión y el
+  orden del catálogo. `test_mcp_connector_registry.py` detecta diferencias con
+  ese lock; el [runbook](../MCP_VALIDATION_RUNBOOK.md) describe medición local y remota.
 - `content/mcp/contracts.py` is the field-level anti-drift manifest. A model change
   in one of those domains must update its classification, tool schemas and
   descriptions in the same delivery; focused tests fail on missing or stale fields.
