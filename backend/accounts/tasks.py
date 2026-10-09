@@ -232,8 +232,9 @@ def _onboard_due_phases():
     from dateutil.relativedelta import relativedelta
     from django.db import transaction
 
-    from accounts.models import HostingSubscription, Payment, ProjectPhase
+    from accounts.models import HostingSubscription, Payment, Project, ProjectHosting, ProjectPhase
     from accounts.services.hosting_billing import prorated_amount, project_billing_amount
+    from content.services.project_state_service import project_allows_billing
 
     today = date.today()
     due_phases = ProjectPhase.objects.filter(project__isnull=False, retention_context__isnull=True).select_related(
@@ -254,18 +255,29 @@ def _onboard_due_phases():
     onboarded = 0
     for phase in due_phases:
         try:
-            sub = phase.project.hosting_subscription
-            if not sub.next_billing_date:
-                continue
-
-            months = sub.billing_months
-            cycle_end = sub.next_billing_date - relativedelta(days=1)
-            cycle_start = sub.next_billing_date - relativedelta(months=months)
-            join_date = max(phase.hosting_start_date, cycle_start)
-
-            prorated = prorated_amount(phase, sub.plan, join_date, cycle_start, cycle_end)
-
             with transaction.atomic():
+                project = Project.objects.select_for_update().get(pk=phase.project_id)
+                sub = HostingSubscription.objects.select_for_update().get(project=project)
+                if (
+                    sub.status != HostingSubscription.STATUS_ACTIVE or sub.is_archived
+                    or sub.retention_context_id or not sub.next_billing_date
+                    or not project_allows_billing(project)
+                ):
+                    continue
+                list(ProjectHosting.objects.select_for_update().filter(project=project).order_by('pk'))
+                list(Payment.objects.select_for_update().filter(subscription=sub).order_by('pk'))
+                phase = ProjectPhase.objects.select_for_update().get(pk=phase.pk)
+                if (
+                    phase.hosting_activated_at or phase.retention_context_id
+                    or phase.project_id != project.pk or not phase.hosting_start_date
+                    or phase.hosting_start_date > today
+                ):
+                    continue
+                months = sub.billing_months
+                cycle_end = sub.next_billing_date - relativedelta(days=1)
+                cycle_start = sub.next_billing_date - relativedelta(months=months)
+                join_date = max(phase.hosting_start_date, cycle_start)
+                prorated = prorated_amount(phase, sub.plan, join_date, cycle_start, cycle_end)
                 phase.hosting_activated_at = today
                 phase.save(update_fields=['hosting_activated_at'])
 
@@ -293,6 +305,7 @@ def _onboard_due_phases():
                 Payment.objects.filter(
                     subscription=sub,
                     status=Payment.STATUS_PENDING,
+                    is_archived=False,
                     billing_period_start__gte=sub.next_billing_date,
                 ).update(amount=new_amount)
 

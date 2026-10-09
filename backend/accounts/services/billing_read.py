@@ -83,7 +83,7 @@ def project_billing_options(project_id, actor):
 def payment_data(payment):
     return {name: getattr(payment, name) for name in (
         'id', 'amount', 'description', 'billing_period_start', 'billing_period_end', 'due_date',
-        'status', 'paid_at', 'created_at',
+        'status', 'paid_at', 'created_at', 'is_archived', 'archived_at',
     )}
 
 

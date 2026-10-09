@@ -198,11 +198,14 @@ def test_status_patch_keeps_payment_history_queries_constant(
     one_body = one_response.json()
     fifty_body = fifty_response.json()
 
-    assert (one_response.status_code, fifty_response.status_code) == (200, 200)
-    assert (one_body['status'], fifty_body['status']) == ('suspended', 'active')
-    assert (len(one_body['payments']), len(fifty_body['payments'])) == (1, 50)
-    assert [len(payment['history']) for payment in one_body['payments']] == [1]
-    assert {len(payment['history']) for payment in fifty_body['payments']} == {1}
+    assert (one_response.status_code, fifty_response.status_code) == (400, 400)
+    assert (one_body['code'], fifty_body['code']) == (
+        'subscription_lifecycle_required', 'subscription_lifecycle_required',
+    )
+    subscription.refresh_from_db()
+    assert subscription.status == HostingSubscription.STATUS_ACTIVE
+    assert _payment_selects(one_payment_queries.captured_queries) == []
+    assert _payment_selects(fifty_payment_queries.captured_queries) == []
     assert len(one_payment_queries) == len(fifty_payment_queries)
     assert len(fifty_payment_queries) <= MAX_SUBSCRIPTION_STATUS_PATCH_QUERIES
 
@@ -276,7 +279,8 @@ def test_client_status_patch_rejects_without_loading_payment_collections(
         )
 
     subscription.refresh_from_db()
-    assert response.status_code == 403
+    assert response.status_code == 400
+    assert response.json()['code'] == 'subscription_lifecycle_required'
     assert _payment_selects(rejected_queries.captured_queries) == []
     assert subscription.status == HostingSubscription.STATUS_ACTIVE
 

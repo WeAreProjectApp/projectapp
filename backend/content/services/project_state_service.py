@@ -94,6 +94,18 @@ def project_state_suggestion(project):
     ).order_by('order', 'id').first()
     if not target:
         return None
+    from accounts.services.hosting_subscription_lifecycle import is_manually_paused
+
+    if is_manually_paused(subscription):
+        return {
+            'state_id': target.pk,
+            'state_name': target.name,
+            'reason': 'hosting_subscription_paused',
+            'message': (
+                'Suscripción pausada manualmente. Revisa y confirma '
+                'si el proyecto también debe pasar a Suspendido.'
+            ),
+        }
     return {
         'state_id': target.pk,
         'state_name': target.name,
