@@ -253,13 +253,13 @@ class ProjectChangeClientSerializer(serializers.Serializer):
 
     ``mode`` is a bare CharField on purpose: the view maps an unknown value
     to its own ``invalid_mode`` code (the operator must choose move/detach
-    every time — there is no default to fall back to). The id lists are the
-    staleness token, not a selection: they must equal the CURRENT linked
-    sets or nothing runs.
+    every time — there is no default to fall back to). The hash freezes the
+    full preview. Legacy id lists remain supported for one Panel release.
     """
 
     client_profile_id = serializers.IntegerField()
     mode = serializers.CharField()
+    expected_impact_hash = serializers.CharField(required=False, max_length=64)
     hosting_ids = serializers.ListField(
         child=serializers.IntegerField(), required=False, default=list,
     )

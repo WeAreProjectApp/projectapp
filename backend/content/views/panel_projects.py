@@ -732,17 +732,16 @@ def preview_project_client_change(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@transaction.atomic
 def change_project_client(request, project_id):
     """Move the project to another client, cascading per the chosen mode.
 
     The generic update keeps refusing ``client`` (``client_immutable``):
     this endpoint is the only path, so an ownership change is always
-    explicit, previewed and audited. The hosting/income ids are the
-    staleness token — same PA-51 contract: the plan that was shown is the
-    plan that runs, or nothing runs (both checks fire before the service,
-    so its atomic block never opens on a stale preview).
+    explicit, previewed and audited. The full impact hash is rechecked under
+    the project lock; the Panel's legacy id lists remain a supported token.
     """
-    project = get_object_or_404(Project, pk=project_id)
+    project = get_object_or_404(Project.objects.select_for_update(), pk=project_id)
     if _project_is_terminal(project):
         return _terminal_change_client_error()
 
@@ -762,16 +761,30 @@ def change_project_client(request, project_id):
     if error:
         return error
 
+    expected_hash = serializer.validated_data.get('expected_impact_hash')
+    if expected_hash is not None:
+        preview = project_service.change_client_preview(project, profile, lock=True)
+        if preview['impact_hash'] != expected_hash:
+            return error_response(
+                'El impacto del proyecto cambió después de la vista previa.',
+                code='records_changed',
+                hint='La vista previa se actualizó. Revísala y vuelve a intentarlo.',
+                status=status.HTTP_409_CONFLICT,
+                errors={'changed_ids': [], 'impact_hash': preview['impact_hash']},
+            )
+        result = project_service.change_client_apply(project, profile, mode, request.user)
+        return Response({'project': _annotated_row(project.pk), **result})
+
     current_hostings = set(
-        HostingRecord.objects.filter(project=project)
+        HostingRecord.objects.select_for_update().filter(project=project)
         .values_list('pk', flat=True),
     )
     current_incomes = set(
-        IncomeRecord.objects.filter(project=project)
+        IncomeRecord.objects.select_for_update().filter(project=project)
         .values_list('pk', flat=True),
     )
     current_communications = set(
-        project.communication_threads.values_list('pk', flat=True),
+        project.communication_threads.select_for_update().values_list('pk', flat=True),
     )
     sent_hostings = set(serializer.validated_data['hosting_ids'])
     sent_incomes = set(serializer.validated_data['income_ids'])

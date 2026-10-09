@@ -56,6 +56,13 @@ _PROJECT_DELETE['impact_builder'] = lambda arguments: _PROJECT_DELETE_PREVIEW['h
     {'project_id': arguments['project_id']},
 )
 
+
+def _project_client_change_tools():
+    from content.mcp.project_client_change_tools import PROJECT_CLIENT_CHANGE_TOOLS
+
+    return PROJECT_CLIENT_CHANGE_TOOLS
+
+
 PROJECT_TOOLS = [
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; query.client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list'),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',)),
@@ -66,8 +73,7 @@ PROJECT_TOOLS = [
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',)),
     _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. query.client_profile_id filtra por perfil de cliente, query.page pagina de a 20 y query.integrity=1 agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit'),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
-    _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),
-    _op('change_project_client', 'Cambia el cliente y aplica la cascada previamente revisada.', 'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True),
+    *_project_client_change_tools(),
     _op('list_project_state_groups', 'Lista grupos del catálogo de estados de proyecto.', 'project-state-groups'),
     _op('create_project_state_group', 'Crea un grupo de estados de proyecto.', 'project-state-groups', 'POST', risk='write'),
     _op('list_project_states', 'Lista el catálogo de estados de proyecto.', 'project-states'),

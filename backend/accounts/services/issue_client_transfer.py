@@ -1,6 +1,10 @@
 """Preserve ticket history when a project's client relationship is changed."""
-from accounts.models import BugReport, ChangeRequest, Project
 from accounts.services.delivery_access import DeliveryConflict
+from accounts.services.project_client_transfer import (
+    ISSUE_CODE,
+    ISSUE_MESSAGE,
+    client_transfer_blockers,
+)
 
 
 def assert_issue_client_transfer_safe(project, new_client):
@@ -18,13 +22,8 @@ def assert_issue_client_transfer_safe(project, new_client):
     """
     if project.pk is None:
         return
-    owner_id = Project.objects.values_list('client_id', flat=True).get(pk=project.pk)
-    if owner_id == (new_client.pk if new_client is not None else None):
-        return
-    if (BugReport.objects.filter(project_id=project.pk).exists()
-            or ChangeRequest.objects.filter(project_id=project.pk).exists()):
-        raise DeliveryConflict({
-            'detail': 'El proyecto conserva bugs o solicitudes del cliente actual. '
-                      'Cambiar de cliente expondría esa historia.',
-            'code': 'issue_client_transfer_history',
-        })
+    evaluation = client_transfer_blockers(project, new_client, lock=True)
+    if any(row['code'] == ISSUE_CODE for row in evaluation['blockers']):
+        error = DeliveryConflict({'detail': ISSUE_MESSAGE, 'code': ISSUE_CODE})
+        error.detail.update(evaluation)
+        raise error
