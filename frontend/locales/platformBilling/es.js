@@ -13,5 +13,5 @@ export default {
   reconciledEvidence: 'Evidencias conciliadas', evidenceDifference: 'Las evidencias presentan importes o estados distintos; la asociación no confirma un pago.',
   evidenceKinds: { payment: 'Pago', cycle: 'Ciclo pagado' },
   modalities: { quarterly: 'Trimestral', semiannual: 'Semestral', nine_month: 'Cada 9 meses', monthly: 'Mensual (histórico)', annual: 'Anual (histórico)' },
-  states: { draft: 'Borrador', issued: 'Emitida', paid: 'Pagado', cancelled: 'Anulada', pending: 'Pendiente', processing: 'Procesando', overdue: 'Vencido', failed: 'Fallido', active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' },
+  states: { draft: 'Borrador', issued: 'Emitida', paid: 'Pagado', cancelled: 'Anulada', pending: 'Pendiente', processing: 'Procesando', overdue: 'Vencido', failed: 'Fallido', voided: 'Anulado', active: 'Activo', inactive: 'Inactivo', suspended: 'Suspendido' },
 }

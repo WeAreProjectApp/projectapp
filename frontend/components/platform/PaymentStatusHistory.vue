@@ -40,6 +40,7 @@ const STATUS_LABELS = {
   paid: 'Pagado',
   processing: 'Procesando',
   failed: 'Fallido',
+  voided: 'Anulado',
 }
 
 const SOURCE_LABELS = {
