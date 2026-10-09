@@ -12,7 +12,9 @@ from rest_framework.test import APIClient
 from content.services.building_with_us_content import FIGURES_PATTERN, SECTION_KEYS
 
 pytestmark = pytest.mark.django_db
-PANEL_PATHS = ['/api/building-with-us/admin/', '/api/building-with-us/admin/program/versions/']
+PANEL_PATHS = ['/api/building-with-us/admin/', '/api/building-with-us/admin/program/versions/',
+               '/api/building-with-us/admin/contract/', '/api/building-with-us/admin/contract/versions/',
+               '/api/building-with-us/admin/contract/pdf/']
 
 
 @pytest.mark.parametrize(('lang', 'title', 'canonical_path'), [
@@ -92,7 +94,8 @@ def test_overview_returns_program_metadata(building_with_us_program, admin_clien
     assert response.status_code == 200
     assert response.data['program']['version'] == 1
     assert response.data['program']['author'] == 'Sistema'
-    assert response.data['contract'] is None
+    assert response.data['contract']['version'] == 1
+    assert response.data['contract']['mirror']['status'] == 'not_initialized'
     assert response.data['connector'] == {'slug': 'building-with-us', 'is_active': False}
     assert response.data['public_paths'] == {'es': '/es-co/building-with-us', 'en': '/en-us/building-with-us'}
 
@@ -110,4 +113,39 @@ def test_versions_returns_paginated_metadata(changed_building_with_us_program, a
         'version_id': changed_building_with_us_program['version_id'], 'version': 1, 'author': 'Sistema',
         'created_at': initial.created_at.isoformat(),
         'change_note': changed_building_with_us_program['change_note'], 'restored_from_version_id': None,
+        'restored_from_version': None,
     }]
+
+
+def test_panel_contract_reads_the_private_seed(building_with_us_contract, admin_client):
+    """Fails if the private text endpoint loses the seeded contract's provenance."""
+    response = admin_client.get('/api/building-with-us/admin/contract/')
+
+    assert response.status_code == 200
+    assert response.data['markdown'] == building_with_us_contract.current_revision.markdown
+    assert response.data['version'] == 1
+    assert response.data['author'] == 'Sistema'
+    assert response.data['mirror']['status'] == 'not_initialized'
+
+
+def test_panel_contract_versions_returns_metadata(building_with_us_contract, admin_client):
+    """Fails if private history cannot page or unnecessarily includes full markdown."""
+    response = admin_client.get('/api/building-with-us/admin/contract/versions/', {'limit': 1, 'offset': 0})
+
+    assert response.status_code == 200
+    assert response.data['total'] == 1
+    assert response.data['versions'][0]['version_id'] == building_with_us_contract.current_revision_id
+    assert response.data['versions'][0]['restored_from_version'] is None
+    assert 'markdown' not in response.data['versions'][0]
+
+
+def test_panel_contract_pdf_renders_without_a_mirror(building_with_us_contract, admin_client):
+    """Fails if the private panel cannot download the current uninitialized contract."""
+    response = admin_client.get('/api/building-with-us/admin/contract/pdf/')
+    text = ' '.join(' '.join(page.extract_text() for page in PdfReader(BytesIO(response.content)).pages).split())
+
+    assert response.status_code == 200
+    assert response.content.startswith(b'%PDF-')
+    assert 'CONTRATO DE ALIANZA COMERCIAL BUILDING WITH US' in text
+    assert response['Content-Disposition'] == 'attachment; filename="contrato-building-with-us-v1.pdf"'
+    assert response['Cache-Control'] == 'private, no-store'

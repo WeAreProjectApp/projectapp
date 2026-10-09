@@ -109,6 +109,7 @@ def test_restore_appends_an_auditable_revision(changed_building_with_us_program,
     assert result['version'] == 3
     assert restored.restored_from_id == original['version_id']
     assert restored.content == original['content']
+    assert service.list_versions()['versions'][0]['restored_from_version'] == 1
 
 
 @pytest.mark.parametrize('operation', ['save', 'delete'])

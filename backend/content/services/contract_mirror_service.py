@@ -8,6 +8,10 @@ CONTRACT_MIRROR_MESSAGE = (
     'Esta plantilla contractual es de solo lectura y permanece en Contratos. '
     'Su contenido se actualiza mediante el MCP de propuestas o la consola del servidor.'
 )
+BUILDING_WITH_US_MIRROR_MESSAGE = (
+    'Este contrato es de sólo lectura y permanece en Contratos. '
+    'Su contenido se actualiza mediante el MCP de Building with Us.'
+)
 MIRROR_TITLE = 'Contrato unificado de producto y servicio'
 
 
@@ -25,12 +29,25 @@ def mirror_binding(document):
         return None
 
 
+def building_with_us_mirror(document):
+    if document is None or getattr(document, 'pk', None) is None:
+        return None
+    try:
+        return document.building_with_us_mirror
+    except ObjectDoesNotExist:
+        return None
+
+
+def mirror_read_only_message(document):
+    return BUILDING_WITH_US_MIRROR_MESSAGE if building_with_us_mirror(document) else CONTRACT_MIRROR_MESSAGE
+
+
 def is_contract_mirror(document):
-    return mirror_binding(document) is not None
+    return mirror_binding(document) is not None or building_with_us_mirror(document) is not None
 
 
 def mirror_documents(queryset):
-    return queryset.filter(Q(contract_template__isnull=False) | Q(contract_mirror__isnull=False))
+    return queryset.filter(Q(contract_template__isnull=False) | Q(contract_mirror__isnull=False) | Q(building_with_us_mirror__isnull=False))
 
 
 def folder_contains_mirror(folder):
@@ -60,6 +77,9 @@ def draft_content(template, variant):
 
 def mirror_markdown(document=None):
     from content.models import ContractTemplate
+    mirror = building_with_us_mirror(document)
+    if mirror:
+        return mirror.contract.current_revision.markdown
     binding = mirror_binding(document) if document else None
     template, variant = binding[:2] if binding else (ContractTemplate.get_default(), 'combined')
     return draft_content(template, variant)['snapshot'] if template else None
@@ -77,6 +97,11 @@ def render_mirror_pdf(template, variant):
 def mirror_pdf(document=None):
     from content.models import ContractTemplate
     from content.services.contract_template_validation import TEXT_FIELDS
+    mirror = building_with_us_mirror(document)
+    if mirror:
+        if mirror.revision_id != mirror.contract.current_revision_id:
+            return None
+        return bytes(mirror.pdf_content) if mirror.pdf_content else None
     binding = mirror_binding(document) if document else None
     if binding:
         template, variant, mirror = binding

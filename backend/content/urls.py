@@ -10,6 +10,7 @@ from content.views.document_move import move_document_batch
 from content.views.building_with_us import (
     public_building_with_us_program, public_building_with_us_program_pdf,
     admin_building_with_us_overview, admin_building_with_us_program_versions,
+    admin_building_with_us_contract, admin_building_with_us_contract_versions, admin_building_with_us_contract_pdf,
 )
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
@@ -415,6 +416,9 @@ urlpatterns = [
     path('building-with-us/public/pdf/', public_building_with_us_program_pdf, name='public-building-with-us-program-pdf'),
     path('building-with-us/admin/', admin_building_with_us_overview, name='admin-building-with-us-overview'),
     path('building-with-us/admin/program/versions/', admin_building_with_us_program_versions, name='admin-building-with-us-program-versions'),
+    path('building-with-us/admin/contract/', admin_building_with_us_contract, name='admin-building-with-us-contract'),
+    path('building-with-us/admin/contract/versions/', admin_building_with_us_contract_versions, name='admin-building-with-us-contract-versions'),
+    path('building-with-us/admin/contract/pdf/', admin_building_with_us_contract_pdf, name='admin-building-with-us-contract-pdf'),
 
     # Financing program — public informational resource
     path(

@@ -66,7 +66,8 @@ def list_versions(*, offset=0, limit=20, include_content=False):
     for row in queryset[offset:offset + limit]:
         item = {'version_id': row.pk, 'version': row.version, 'author': row.author_label,
                 'created_at': row.created_at.isoformat(), 'change_note': row.change_note,
-                'restored_from_version_id': row.restored_from_id}
+                'restored_from_version_id': row.restored_from_id,
+                'restored_from_version': row.restored_from.version if row.restored_from_id else None}
         if include_content:
             item['content'] = deepcopy(row.content)
         versions.append(item)
@@ -143,6 +144,9 @@ def apply_update(arguments, *, actor, credential=None, restore=False, expected_e
 
 
 def admin_overview():
+    from content.services.building_with_us_contract_service import read_contract
+    contract = read_contract()
     active = McpConnector.objects.filter(slug='building-with-us', is_active=True).exists()
-    return {'program': _metadata(_load()), 'contract': None,
+    return {'program': _metadata(_load()),
+            'contract': {key: contract[key] for key in ('version', 'version_id', 'updated_at', 'author', 'change_note', 'mirror')},
             'connector': {'slug': 'building-with-us', 'is_active': active}, 'public_paths': dict(PUBLIC_PATHS)}

@@ -116,3 +116,7 @@ BUILDING_WITH_US_TOOLS = [
      'impact_builder': lambda args: _impact(args, restore=True), 'etag_resolver': resource_etags},
     _RENDER,
 ]
+
+from content.mcp.building_with_us_contract_tools import BUILDING_WITH_US_CONTRACT_TOOLS
+
+BUILDING_WITH_US_TOOLS += BUILDING_WITH_US_CONTRACT_TOOLS

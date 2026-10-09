@@ -20,7 +20,7 @@ def test_connector_catalog_requires_confirmation(api_client, building_with_us_mc
     catalog = rpc_call(api_client, token, 'describe_capabilities', {})['structuredContent']
     tools = {tool['name']: tool for tool in catalog['tools']}
 
-    assert len(names) == 9
+    assert len(names) == 16
     assert not any('video' in name or 'upload' in name for name in names)
     assert tools['update_building_with_us_program']['requires_confirmation'] is True
     assert tools['restore_building_with_us_program_version']['requires_confirmation'] is True

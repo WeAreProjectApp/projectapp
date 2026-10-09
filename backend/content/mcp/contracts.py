@@ -118,6 +118,14 @@ MCP_MODEL_CONTRACTS = {
     'documents': (
         _CONTRACT_MIRROR_MODEL,
         _contract(
+            'content.BuildingWithUsContractMirror',
+            read_only='id document revision synced_at',
+            excluded=_excluded(
+                'Estado transaccional interno del contrato de alianza y su PDF; sólo se edita mediante el MCP Building with Us.',
+                'contract pdf_content',
+            ),
+        ),
+        _contract(
             'accounts.Project',
             read_only='id name client current_state',
             excluded=(
@@ -1392,6 +1400,21 @@ MCP_MODEL_CONTRACTS['building-with-us'] = (
             'Autor y credencial fijados por la confirmación MCP; nunca se reciben como campos editables.',
             'author credential',
         ),
+    ),
+    _contract('content.BuildingWithUsContract', read_only='id current_revision updated_at'),
+    _contract(
+        'content.BuildingWithUsContractRevision',
+        read_only='id version author_label restored_from created_at',
+        read_write='markdown change_note',
+        excluded=_excluded(
+            'Autor y credencial fijados por la confirmación MCP; nunca se reciben como campos editables.',
+            'author credential',
+        ),
+    ),
+    _contract(
+        'content.BuildingWithUsContractMirror',
+        read_only='id contract document revision synced_at',
+        excluded=_excluded('PDF derivado almacenado en la transacción de sincronización; se entrega sólo como descarga.', 'pdf_content'),
     ),
 )
 MCP_MODEL_CONTRACTS['additional-modules'] = tuple(

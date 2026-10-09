@@ -1,10 +1,12 @@
 """Public presentation and read-only Panel endpoints."""
 from django.http import HttpResponse
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 from rest_framework.decorators import api_view, authentication_classes, permission_classes
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
 from content.services import building_with_us_program_service as service
+from content.services import building_with_us_contract_service as contract_service
 from content.services.building_with_us_content import BuildingWithUsError
 from content.services.building_with_us_pdf_service import BuildingWithUsPdfService
 
@@ -64,3 +66,41 @@ def admin_building_with_us_program_versions(request):
         return Response(service.list_versions(limit=limit, offset=offset))
     except BuildingWithUsError as exc:
         return _error_response(exc)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_building_with_us_contract(request):
+    try:
+        return Response(contract_service.read_contract())
+    except BuildingWithUsError as exc:
+        return _error_response(exc)
+
+
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_building_with_us_contract_versions(request):
+    try:
+        limit = int(request.query_params.get('limit', '20'))
+        offset = int(request.query_params.get('offset', '0'))
+    except (ValueError, TypeError):
+        return Response({'limit': ['Usa un entero entre 1 y 50.'], 'offset': ['Usa un entero no negativo.']}, status=400)
+    try:
+        return Response(contract_service.list_versions(limit=limit, offset=offset))
+    except BuildingWithUsError as exc:
+        return _error_response(exc)
+
+
+@xframe_options_sameorigin
+@api_view(['GET'])
+@permission_classes([IsAdminUser])
+def admin_building_with_us_contract_pdf(request):
+    try:
+        pdf, version = contract_service.current_pdf()
+    except BuildingWithUsError as exc:
+        return _error_response(exc)
+    disposition = 'inline' if request.query_params.get('inline') == '1' else 'attachment'
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'{disposition}; filename="contrato-building-with-us-v{version}.pdf"'
+    response['Cache-Control'] = 'private, no-store'
+    return response
