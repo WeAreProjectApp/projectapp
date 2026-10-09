@@ -806,7 +806,7 @@ export const viewCatalogSections = [
         reference: 'vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Los ingresos con cliente requieren una cuenta de cobro emitida para liquidar o registrar abonos. La acción Liquidar muestra icono atenuado y cursor de indisponibilidad, explica el requisito y permite generar la cuenta o completar su borrador. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Los ingresos con cliente requieren una cuenta de cobro emitida para liquidar o registrar abonos. La acción Liquidar muestra icono atenuado y cursor de indisponibilidad, explica el requisito y permite generar la cuenta o completar su borrador. Al liquidar un ingreso con cliente ofrece enviarle la confirmación del pago al correo de su cuenta emitida, marcada por defecto y con el motivo visible cuando no está disponible; antes de enviar muestra un último aviso con concepto, cliente, proyecto, valor, fecha, destino y saldo pendiente. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Gastos',
@@ -886,7 +886,7 @@ export const viewCatalogSections = [
         reference: 'centro de gestion de cuentas de cobro: creacion con preview, envio y seguimiento',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite vincular y seleccionar explícitamente un contrato existente del proyecto o de sus propuestas sin copiar el documento. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa.',
+        notes: 'Completa nombre, identificación, correo, contacto y dirección desde la ficha del cliente, editable sin salir de la preparación. Cobro del proyecto muestra contrato o hosting también al abrir desde un ingreso, e identifica cada selección faltante. Permite vincular y seleccionar explícitamente un contrato existente del proyecto o de sus propuestas sin copiar el documento. Base, IVA y total consistentes entre preparación, ingreso vinculado, PDF y correo; emitidos conservan su archivo. El contexto de cuentas de proyecto se asocia o corrige con razón y versión; históricos permanecen pendientes hasta decisión administrativa. Confirmar y enviar abre un último aviso con número, cliente, proyecto, concepto, valor, emisión, vencimiento y destinatario antes de emitir; marcar pagada una cuenta de un ingreso esperado ofrece la misma confirmación de pago al cliente.',
       },
       {
         label: 'Contabilidad — Asociación de cuenta',

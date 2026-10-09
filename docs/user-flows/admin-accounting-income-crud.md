@@ -40,3 +40,18 @@ Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar 
 ## Cobro y liquidación (2026-10-06)
 
 Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
+
+## Confirmación de pago al cliente (2026-10-09)
+
+Liquidar un ingreso con cliente y cuenta emitida ofrece «Enviar al cliente la
+confirmación del pago», marcada en cada apertura. El destinatario es el correo
+de la cuenta emitida (`GET /api/accounting/incomes/:id/payment-confirmation/`).
+Sin cliente, con valor recibido 0, con un correo provisional o si no se pudo
+verificar, la casilla queda deshabilitada con el motivo al lado. Marcada,
+Liquidar abre un último aviso con concepto, cliente, proyecto, cuenta de cobro,
+valor recibido, fecha de pago (o el mes), destino del dinero, saldo pendiente
+tras el pago —incluidas las cuotas reprogramadas antes— y destinatario; sólo
+«Liquidar y enviar» manda `send_payment_confirmation`. Desmarcada, liquida
+como antes y sin aviso. El correo sale después del commit de la liquidación; si
+falla, la liquidación queda registrada, la página advierte con un enlace a los
+correos del ingreso y el envío se reintenta desde el Historial.

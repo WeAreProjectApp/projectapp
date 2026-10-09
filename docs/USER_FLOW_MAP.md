@@ -5949,7 +5949,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-card-catalog` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-cards` | admin | P2 | display,success,error | 10 |
 | `admin-accounting-collection-context` | admin | P1 | display,success,error,failure | — |
-| `admin-accounting-collection-create` | admin | P1 | display,success,error,failure | 11 |
+| `admin-accounting-collection-create` | admin | P1 | display,success,error,failure | 13 |
 | `admin-accounting-collection-detail` | admin | P1 | display,success,error,failure | — |
 | `admin-accounting-collection-grouping` | admin | P2 | display,success,failure | 4 |
 | `admin-accounting-collections` | admin | P2 | display,success,failure | 9 |
@@ -5968,7 +5968,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
 | `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 8 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
-| `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 37 |
+| `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 41 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
 | `admin-accounting-list-error-retry` | admin | P3 | failure,display | 1 |
 | `admin-accounting-pocket` | admin | P2 | display,success,error | 7 |
@@ -6509,6 +6509,21 @@ Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar 
 
 Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
 
+## Confirmación de pago al cliente (2026-10-09)
+
+Liquidar un ingreso con cliente y cuenta emitida ofrece «Enviar al cliente la
+confirmación del pago», marcada en cada apertura. El destinatario es el correo
+de la cuenta emitida (`GET /api/accounting/incomes/:id/payment-confirmation/`).
+Sin cliente, con valor recibido 0, con un correo provisional o si no se pudo
+verificar, la casilla queda deshabilitada con el motivo al lado. Marcada,
+Liquidar abre un último aviso con concepto, cliente, proyecto, cuenta de cobro,
+valor recibido, fecha de pago (o el mes), destino del dinero, saldo pendiente
+tras el pago —incluidas las cuotas reprogramadas antes— y destinatario; sólo
+«Liquidar y enviar» manda `send_payment_confirmation`. Desmarcada, liquida
+como antes y sin aviso. El correo sale después del commit de la liquidación; si
+falla, la liquidación queda registrada, la página advierte con un enlace a los
+correos del ingreso y el envío se reintenta desde el Historial.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
@@ -6636,7 +6651,7 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 - **Role:** superuser admin
 - **Priority:** P2
 - **Routes:** `/panel/accounting/history`
-- **Description:** The history exists to diagnose, so a row shows what was sent and can send it again. **Ver el correo:** `GET /api/accounting/email-log/<id>/body/` returns the message as delivered (stored once per send in `EmailBody`, shared by the sibling recipient rows) and the panel renders it in a sandboxed `srcdoc` iframe, the same way the composer previews a branded email; sends predating the feature say so instead of opening an empty modal. **Reintentar:** `POST /api/accounting/email-log/<id>/retry/` re-sends to the address on that row and to no one else, only for the notices tied to a single record (`accounting_change`, `collection_account_sent`, `payment_status_team`). The three digests show the menu entry disabled carrying its reason — re-running one would assemble today's summary, not the message that failed. That reason remains reachable through a focusable accessible proxy and one application tooltip, without a duplicate native `title`. The retry lands as a new row linked through `retry_of`, and a retry that fails again reports its cause. Both actions live in the row's leading three-dots menu, which only appears on a send that has one; opening it never expands the row.
+- **Description:** The history exists to diagnose, so a row shows what was sent and can send it again. **Ver el correo:** `GET /api/accounting/email-log/<id>/body/` returns the message as delivered (stored once per send in `EmailBody`, shared by the sibling recipient rows) and the panel renders it in a sandboxed `srcdoc` iframe, the same way the composer previews a branded email; sends predating the feature say so instead of opening an empty modal. **Reintentar:** `POST /api/accounting/email-log/<id>/retry/` re-sends to the address on that row and to no one else, only for the notices tied to a single record (`accounting_change`, `collection_account_sent`, `income_payment_received_client`, `payment_status_team`). The three digests show the menu entry disabled carrying its reason — re-running one would assemble today's summary, not the message that failed. That reason remains reachable through a focusable accessible proxy and one application tooltip, without a duplicate native `title`. The retry lands as a new row linked through `retry_of`, and a retry that fails again reports its cause. Both actions live in the row's leading three-dots menu, which only appears on a send that has one; opening it never expands the row.
 - **Steps:**
   1. Superuser opens the Envíos subtab and clicks the eye on a row → the delivered message opens in a modal.
   2. On a failed row, the retry icon re-sends to that recipient; the list and its counts reload so the new attempt is visible.
@@ -6796,7 +6811,7 @@ El resumen muestra base, IVA registrado y total de la cuenta, además del desglo
   1. Superuser clicks "Nueva cuenta de cobro" (or the income row action, which preselects and locks the income).
   2. Picks the client (snapshot + suggested consecutivo autofill; the selector warns before selection when it has no email); if needed, saves the canonical email inline without leaving or resetting the draft. Then narrows the income list by Alcance/Estado and picks the income from the modal-owned floating listbox, which cannot be clipped by the form panel and owns the only scrollbar while open; adjusts concept/value/terms.
   3. "Previsualizar" renders the real email and PDF; "Volver a editar" keeps state.
-  4. "Confirmar y enviar" creates+issues+emails; the row appears and the income flags as linked.
+  4. "Confirmar y enviar" opens the last notice (número, cliente, proyecto, concepto, valor total, emisión, vencimiento, correo); its "Emitir y enviar" creates+issues+emails, while Esc or "Volver a revisar" closes it without sending. The row appears and the income flags as linked.
 - **Coverage:** ✅ Covered (create-through-preview with payload assertions; selector warning for a client without email; complete visible blocker list; invalid inline email; explicit canonical email save preserving the draft; floating income list outside the clipping panel; alcance/estado chips with their counts + focus retention + explicit empty state + "Ver todos" widening + click-outside close; Liquidar routing on mark-paid; generate icon opens locked modal; linked row navigates focused)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
 
@@ -6818,6 +6833,17 @@ Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propon
 ## Cobro y liquidación (2026-10-06)
 
 Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explícitamente un documento del proyecto o contrato de una propuesta vinculada y se selecciona sin duplicar el original. Un rechazo conserva el formulario; cambiar de proyecto descarta respuestas de la consulta anterior.
+
+## Último aviso antes de enviar (2026-10-09)
+
+«Confirmar y enviar» ya no emite en el mismo clic: abre un último aviso que
+lista número, cliente, proyecto, concepto, valor total, fecha de emisión,
+fecha de vencimiento («Sin vencimiento (pago inmediato)» con plazo 0) y el
+correo al que sale. Esos datos vienen del mismo preview revertido, que ahora
+devuelve también `issue_date`, `customer_name`, `project_name` y
+`billing_concept`. Sólo «Emitir y enviar» emite y envía; Esc o «Volver a
+revisar» cierran el aviso y conservan el paso 2. Mientras envía, «Volver a
+editar» y un segundo envío quedan bloqueados, y Esc no cierra el asistente.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 

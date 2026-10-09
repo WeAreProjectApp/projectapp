@@ -1,3 +1,10 @@
+> **Confirmación antes de enviar — 2026-10-09:** un correo al cliente sale
+> sólo después de un último aviso con sus datos (`ConfirmModal` apilado, que
+> deja Esc, backdrop y scroll al modal de abajo) y, en la liquidación, después
+> del commit. `income_payment_confirmation_service` es el único resolvedor del
+> destinatario para panel, envío y vista previa del MCP; el conector
+> `accounting` sin vista previa rechaza el envío.
+
 > **Integridad y avisos de entregas — 2026-10-07:** los cambios de ascendencia
 > validan el destino y las guías descendientes conservadas; la publicación
 > comprueba también otrosí y citas. Panel, Platform y sincronización técnica

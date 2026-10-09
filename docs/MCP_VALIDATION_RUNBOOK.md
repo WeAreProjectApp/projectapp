@@ -214,7 +214,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `communications` | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 56 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-ledger` | 57 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones, confirmación de pago y exports |
 | `accounting-billing` | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 38 | Tarjetas, snapshots, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 7 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
@@ -429,6 +429,28 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
 4. Casos negativos: intentar seleccionar un ingreso personal, líquido,
    perdido o completamente pagado debe fallar sin modificarlo. Al liquidar por
    completo un candidato, debe salir automáticamente de la selección activa.
+
+### Libro contable: confirmación de pago al liquidar (2026-10-09)
+
+1. Elegir un ingreso esperado con cliente y cuenta de cobro emitida e invocar
+   `get_income_payment_confirmation` con su `record_id`. Debe responder
+   `can_send: true` y como `recipient` el correo de la cuenta emitida; sin
+   cliente, sin cuenta o con un correo provisional responde `can_send: false`
+   y el motivo en `blocked_reason`.
+2. En `accounting-ledger`, invocar `settle_income` con
+   `send_payment_confirmation: true`. La vista previa debe incluir
+   `impact.payment_confirmation` con destinatario, número de cuenta, asunto,
+   texto del correo y `pending_after`; nada se escribe ni se envía todavía.
+3. Confirmar con `confirm_action`. El resultado informa
+   `payment_confirmation.status = "scheduled"`: el correo sale después del
+   commit y queda en el historial de correos con la clave
+   `income_payment_received_client` y los targets del ingreso, el pago y la
+   cuenta. Un fallo de envío deja una fila `failed` reintentable desde el
+   Historial contable.
+4. En el conector de compatibilidad `accounting`, el mismo flag responde
+   `ToolError` antes de registrar nada: ese conector no tiene vista previa y un
+   correo al cliente nunca sale sin una. Sin el flag (valor por defecto),
+   `settle_income` se comporta como antes en ambos conectores.
 
 ### Comercial: visibilidad de los videos explicativos
 
@@ -796,7 +818,7 @@ documento antes enlazado ya se puede eliminar (el `PROTECT` lo bloqueaba).
 | Clients | métricas incluyen documentos, ingresos, hostings y comunicaciones | CRUD usa `proposal_client_service` | un hilo impide tratar/eliminar el cliente como huérfano |
 | Communications | hilo completo incluye ciclo de vida, mensajes, documentos, correcciones y revisiones; listado separa activos/archivados | cabecera y ciclo del hilo más crear/editar/eliminar borrador, confirmar envío, anular y corregir fecha convergen en `communication_service` sin enviar por el canal | transición repetida, comunicación madre, mensaje no editable, proyecto/documento ajeno o respuesta de otro hilo |
 | Tasks | detalle, comentarios y alertas reflejan el modelo actual | CRUD, archivo, orden y duplicación | comentario/alerta de otra tarea |
-| Accounting | detalle incluye pagos, deducciones, cuenta de cobro, período de hosting y ciclo de vida de recurrentes | `settle_income`/`bulk_settle_incomes` crean pagos; las seis tools de recurrentes preparan duplicado, cambian estado, archivan/restauran, silencian avisos y aplican lote por el mismo servicio del panel | no esperado, repetido, excedido, ID perdido o intento de activar/silenciar un recurrente archivado |
+| Accounting | detalle incluye pagos, deducciones, cuenta de cobro, período de hosting y ciclo de vida de recurrentes | `settle_income`/`bulk_settle_incomes` crean pagos (`settle_income` con `send_payment_confirmation` avisa al cliente tras `confirm_action`); las seis tools de recurrentes preparan duplicado, cambian estado, archivan/restauran, silencian avisos y aplican lote por el mismo servicio del panel | no esperado, repetido, excedido, ID perdido o intento de activar/silenciar un recurrente archivado |
 | Diagnostics | detalle expone slug, expiración y cliente | update permite esos campos y usa el serializer actual | slug duplicado o cliente inválido |
 | Proposals | detalle/template exponen metadata comercial completa, incluido `email_intro` | importación persiste el mensaje personalizado; reenvío permite editarlo; `update_proposal` con `technicalDocument` exige que cada ítem funcional quede referenciado en algún `linked_item_ids` | JSON incompleto, mensaje vacío al enviar/reenviar, transición inválida o detalle técnico sin trazar (`technical_item_coverage_incomplete`) |
 | LinkedIn | estado de token/post y errores de publicación | borrador, programación, edición, borrado y publicación de texto | token ausente/expirado o post no publicable |
