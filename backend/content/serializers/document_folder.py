@@ -239,11 +239,25 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         return data
 
     def validate(self, attrs):
+        """Apply the document association rule without a client-name snapshot."""
         if self.instance is not None:
-            from content.services.contract_mirror_service import folder_contains_mirror, CONTRACT_MIRROR_MESSAGE
-            if set(attrs) - {'order'} and folder_contains_mirror(self.instance):
-                raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
-        """Misma regla de asociación que los documentos, sin `client_name`."""
+            from content.services.contract_mirror_service import (
+                CONTRACT_MIRROR_FOLDER_PINNED,
+                CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+                is_pinned_mirror_folder,
+            )
+            association_changed = (
+                'client' in attrs
+                and getattr(attrs['client'], 'user_id', None) != self.instance.client_user_id
+            ) or (
+                'project' in attrs
+                and getattr(attrs['project'], 'pk', None) != self.instance.project_id
+            )
+            if association_changed and is_pinned_mirror_folder(self.instance):
+                raise serializers.ValidationError({
+                    'detail': CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+                    'code': CONTRACT_MIRROR_FOLDER_PINNED,
+                }, code=CONTRACT_MIRROR_FOLDER_PINNED)
         if self.instance is not None and self.instance.is_system_managed:
             raise serializers.ValidationError({'detail': 'Esta carpeta se administra automáticamente.', 'code': 'system_managed_folder'})
         if self.instance is None or {'name', 'parent'}.intersection(attrs):

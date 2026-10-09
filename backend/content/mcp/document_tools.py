@@ -1055,7 +1055,10 @@ DOCUMENT_TOOLS = [
             'Devuelve un documento markdown completo, incluida su asociación a '
             'cliente/proyecto, markdown, estados y notas privadas. El '
             'contrato vigente (is_contract_mirror) devuelve el borrador '
-            'completo en vivo: contenido de solo lectura; ubicación editable mediante folder_id.'
+            'completo en vivo: los espejos contractuales son de solo lectura y '
+            'no se pueden editar ni mover individualmente. movable indica si '
+            'el documento puede moverse y move_blockers explica los motivos '
+            'que lo impiden. Su carpeta sí puede renombrarse o moverse.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1100,8 +1103,10 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) es de solo lectura; '
-            'su contenido no se edita.'
+            'contrato vigente (is_contract_mirror) es un espejo de solo lectura '
+            'que no se puede editar ni mover. Consulta movable para saber si '
+            'un documento puede moverse y move_blockers para conocer los '
+            'motivos que lo impiden.'
         ),
         'input_schema': {
             'type': 'object',

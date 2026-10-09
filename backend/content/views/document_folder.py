@@ -228,6 +228,25 @@ def update_document_folder(request, folder_id):
     )
     if managed:
         return managed
+    from content.services.contract_mirror_service import (
+        CONTRACT_MIRROR_FOLDER_PINNED,
+        CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+        is_pinned_mirror_folder,
+    )
+    current_association = {
+        'client': getattr(getattr(folder.client_user, 'profile', None), 'pk', None),
+        'project': folder.project_id,
+    }
+    association_changed = any(
+        field in request.data
+        and str(request.data[field] or '') != str(current_id or '')
+        for field, current_id in current_association.items()
+    )
+    if association_changed and is_pinned_mirror_folder(folder):
+        return Response({
+            'detail': CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+            'code': CONTRACT_MIRROR_FOLDER_PINNED,
+        }, status=status.HTTP_409_CONFLICT)
     if _changes_client(folder, request) and (
         folder.documents.exists() or folder.children.exists()
     ):
@@ -306,10 +325,24 @@ def archive_document_folder(request, folder_id):
         or _system_managed_folder_error(folder)
     )
     if managed:
+        from content.services.contract_mirror_service import (
+            mirror_folder_archive_blocker,
+        )
+        blocker = mirror_folder_archive_blocker(folder)
+        if blocker:
+            return Response(
+                {'detail': blocker['message'], 'code': blocker['code'], **blocker['details']},
+                status=status.HTTP_409_CONFLICT,
+            )
         return managed
     try:
         counts = document_archive_service.archive_folder(folder)
     except document_archive_service.DocumentArchiveError as exc:
+        if exc.code == 'contract_mirror_folder_archive_blocked':
+            return Response(
+                {'detail': str(exc), 'code': exc.code, **exc.details},
+                status=status.HTTP_409_CONFLICT,
+            )
         # `detail` too: the MCP panel bridge only relays that key.
         return Response(
             {'error': str(exc), 'detail': str(exc), 'code': 'folder_archive_refused'},

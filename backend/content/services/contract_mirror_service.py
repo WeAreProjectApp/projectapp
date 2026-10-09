@@ -1,6 +1,15 @@
 """Read-only Document-manager windows onto the three current templates."""
+from content.models import Document, DocumentFolder
+from content.services.diagnostic_privacy import register_mcp_domain_codes
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
+
+CONTRACT_MIRROR_FOLDER_PINNED = 'contract_mirror_folder_pinned'
+CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE = (
+    'La carpeta de los espejos contractuales debe permanecer sin cliente ni proyecto.'
+)
+CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED = 'contract_mirror_folder_archive_blocked'
+register_mcp_domain_codes(CONTRACT_MIRROR_FOLDER_PINNED, CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED)
 
 CONTRACT_MIRROR_BLOCKER = 'contract_mirror'
 CONTRACT_MIRROR_CODE = 'contract_mirror_read_only'
@@ -34,8 +43,75 @@ def mirror_documents(queryset):
 
 
 def folder_contains_mirror(folder):
-    from content.models import Document
     return mirror_documents(Document.objects.filter(folder_id__in=[folder.pk, *folder.get_descendant_ids()])).exists()
+
+
+def pinned_mirror_folder(template=None) -> tuple[DocumentFolder | None, str]:
+    """Resolve the configured location, falling back to unambiguous live bindings."""
+    if template is None:
+        from content.services.contract_template_service import default_template
+        from content.services.contract_template_validation import ContractTemplateError
+        try:
+            template = default_template()
+        except ContractTemplateError as exc:
+            if exc.code != 'NOT_FOUND':
+                raise
+            return None, 'unpinned'
+    if template.mirror_folder_id is not None:
+        return template.mirror_folder, 'field'
+    folder_ids = set(Document.objects.filter(
+        Q(contract_mirror__template_id=template.pk) | Q(pk=template.mirror_document_id),
+    ).values_list('folder_id', flat=True))
+    if len(folder_ids) == 1 and None not in folder_ids:
+        return DocumentFolder.objects.get(pk=folder_ids.pop()), 'derived'
+    return None, 'unpinned'
+
+
+def is_pinned_mirror_folder(folder) -> bool:
+    pinned, _source = pinned_mirror_folder()
+    return bool(folder and pinned and folder.pk == pinned.pk)
+
+
+def pinned_folder_state() -> dict:
+    from content.mcp.document_tools import _folder_path
+
+    folder, source = pinned_mirror_folder()
+    blocker = mirror_folder_archive_blocker(folder) if folder else None
+    return {
+        'pinned_folder_id': folder.pk if folder else None,
+        'pin_source': source,
+        'folder_path': _folder_path(folder) if folder else None,
+        'folder_movable': bool(folder and not folder.is_archived),
+        'archive_blocked': blocker is not None,
+        'archive_block_reason': blocker['message'] if blocker else None,
+    }
+
+
+def mirror_folder_archive_blocker(folder) -> dict | None:
+    """Protect mirror contents while explaining how to release an ancestor."""
+    if not folder_contains_mirror(folder):
+        return None
+    from content.mcp.document_tools import _folder_path
+
+    pinned, _source = pinned_mirror_folder()
+    message = (
+        'Contratos guarda los espejos contractuales y no se puede archivar.'
+        if pinned and folder.pk == pinned.pk else
+        f'La carpeta «{folder.name}» contiene Contratos con los espejos contractuales; '
+        'mueve Contratos a otra carpeta primero.'
+    )
+    documents = mirror_documents(Document.objects.filter(
+        folder_id__in=[folder.pk, *folder.get_descendant_ids()],
+    ))
+    return {
+        'code': CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED,
+        'message': message,
+        'details': {
+            'contracts_folder_id': pinned.pk if pinned else None,
+            'contracts_folder_path': _folder_path(pinned) if pinned else None,
+            'mirror_document_ids': list(documents.order_by('pk').values_list('pk', flat=True)),
+        },
+    }
 
 
 def draft_content(template, variant):
