@@ -86,7 +86,9 @@ def _semester_one(api_client, token, income):
 
 @pytest.mark.parametrize('slug', ['accounting', 'accounting-ledger'])
 def test_connector_lists_five_expected_income_tools(api_client, slug):
-    connector = McpConnector.objects.create(slug=slug, name=slug, is_active=True)
+    connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
+    connector.is_active = True
+    connector.save(update_fields=['is_active'])
     token = connector.generate_token()
     response = api_client.post(f'/api/mcp/{slug}/{token}/', _rpc('tools/list'), format='json')
     names = {row['name'] for row in response.data['result']['tools']}
