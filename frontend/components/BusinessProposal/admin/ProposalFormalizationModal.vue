@@ -1,5 +1,5 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue';
 import EmailRecipientFields from '~/components/emails/EmailRecipientFields.vue';
 import { emailRecipient, recipientEmails } from '~/utils/emailRecipients';
 import { useProposalFormalizationStore } from '~/stores/proposal_formalization';
@@ -11,6 +11,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['close', 'sent']);
 const store = useProposalFormalizationStore();
+const fieldId = useId();
 const loading = ref(true);
 const busy = ref(false);
 const error = ref('');
@@ -149,7 +150,7 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
 </script>
 
 <template>
-  <BaseModal :model-value="true" kind="wizard" :close-on-backdrop="!busy" :close-on-esc="!busy" @close="emit('close')">
+  <BaseModal :model-value="true" :kind="preparation ? 'wizard' : 'form'" :close-on-backdrop="!busy" :close-on-esc="!busy" @close="emit('close')">
     <div class="space-y-5 p-4 panel-portrait:p-6" data-testid="formalization-modal">
       <div class="flex items-start justify-between gap-3">
         <div>
@@ -176,12 +177,14 @@ onBeforeUnmount(() => { alive = false; clearPdf(); });
           </label>
         </fieldset>
         <EmailRecipientFields v-model:toRecipients="toRecipients" v-model:ccRecipients="ccRecipients" test-id-prefix="formalization-recipients" />
-        <label class="block text-sm text-text-default">Asunto
-          <input v-model="fields.subject" maxlength="500" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" data-testid="formalization-subject" />
-        </label>
-        <label class="block text-sm text-text-default">Saludo
-          <input v-model="fields.greeting" maxlength="1000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" />
-        </label>
+        <BaseFormRow :cols="2" :gap="4">
+          <BaseFormField label="Asunto" :for="`${fieldId}-subject`">
+            <BaseInput :id="`${fieldId}-subject`" v-model="fields.subject" maxlength="500" data-testid="formalization-subject" />
+          </BaseFormField>
+          <BaseFormField label="Saludo" :for="`${fieldId}-greeting`">
+            <BaseInput :id="`${fieldId}-greeting`" v-model="fields.greeting" maxlength="1000" />
+          </BaseFormField>
+        </BaseFormRow>
         <label class="block text-sm text-text-default">Introducción
           <textarea v-model="fields.body" rows="3" maxlength="10000" class="mt-1 w-full rounded-lg border border-border-default bg-surface p-2" />
         </label>
