@@ -209,6 +209,9 @@ EXEMPT_MODELS = {
     # Adoption, undo and discard receipts exist only after an explicit operator
     # action on retained data; demo generation never fabricates that history.
     'content.ProjectRetentionOperation',
+    # Data-integrity fixes and undos exist only after an operator approves a
+    # reviewed preview; demo generation never fabricates that log.
+    'content.DataIntegrityOperation',
     # Retained authoring proof is created only by explicit administrative
     # source selection, never fabricated by automatic demo-data generation.
     # Authorized fake resets dissolve its protected graph in dependency order.

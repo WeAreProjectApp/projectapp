@@ -36,6 +36,7 @@ from content.models import (
     ProposalProjectReassignment,
     ProjectRetentionContext,
     ProjectRetentionOperation,
+    DataIntegrityOperation,
     QRCard,
     Task,
     WebAppDiagnostic,
@@ -223,6 +224,13 @@ class Command(BaseCommand):
         deleted, _ = ProposalProjectReassignment.objects.all().delete()
         self.stdout.write(self.style.SUCCESS(
             f'Deleted proposal project reassignment receipts ({deleted} rows)'
+        ))
+
+        # Integrity undo receipts protect the operation they revert.
+        DataIntegrityOperation.objects.filter(reverts__isnull=False).delete()
+        deleted, _ = DataIntegrityOperation.objects.all().delete()
+        self.stdout.write(self.style.SUCCESS(
+            f'Deleted data integrity operations ({deleted} rows)'
         ))
 
         # Undo receipts protect the operation they revert; both precede contexts.
