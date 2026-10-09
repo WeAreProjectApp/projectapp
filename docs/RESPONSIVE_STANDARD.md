@@ -106,7 +106,7 @@ el mismo problema.
 | Tabs de alta cardinalidad | Selector móvil de Contabilidad y `BaseTabs` | Selector durante compacto e intermedio; tira desde 1024 px, máximo dos filas. Si necesita una tercera, agrupar en “Más” o mantener selector. |
 | Filtros guardados | `ProposalFilterTabs` | Igual contrato que tabs: selector hasta 1023 px; tira visible desde 1024 px, máximo dos filas, sin cortar opciones. |
 | Modal | `BaseModal` | Único overlay canónico: margen exterior de 16 px, máximo 90dvh, body con scroll, encabezado/cierre y footer alcanzables, focus trap y bloqueo de scroll. `fullHeight` queda para workspaces. |
-| Fila de formulario | `BaseFormRow` + `BaseFormField` | Una columna por defecto; dos columnas solo cuando cada control conserva al menos 280 px útiles. En modal estrecho se apila aunque el viewport sea ancho. |
+| Fila de formulario | `BaseFormRow` + `BaseFormField` | Una columna por defecto; dos columnas solo cuando cada control de texto conserva al menos 280 px útiles. Los campos cortos (fecha, número, monto, select corto) pueden compartir filas de tres o cuatro columnas. En un modal `confirm` el texto se apila aunque el viewport sea ancho. Ancho por tipo de campo: `frontend/components/base/README.md`, «Field widths». |
 | Acciones por fila | Kebab de Documentos + `DocumentActionsSheet`; en Contabilidad `AccountingRowActionsButton` + `AccountingRowActionsModal` | Un solo disparador por fila. En tabla ocupa la primera columna de control, sin rótulo visible y con 56 px fijos; si hay selección, el orden es Casilla → Acciones → Contenido. Dropdown en ancho; hoja/modal de acciones en compacto o cuando hay muchas acciones (Contabilidad usa siempre el modal). «Detalle e historial» y «Ver nota» son entradas del menú, nunca botones junto al kebab. Nunca una hilera de botones que ensanche la tabla. |
 | Selección masiva | `BulkAssignBar` | Barra sticky compacta, contador, acción principal y un menú “Acciones”; siempre ofrece limpiar/cancelar. |
 | Navegación de calendario | Lista móvil de Blog Calendar | Vista semántica alternativa en compacto/intermedio cuando comprimir la grilla destruye legibilidad. |
@@ -159,8 +159,10 @@ columnas que muestra.
 
 - Todo modal nuevo o migrado usa `BaseModal`; no duplica Teleport, backdrop,
   z-index, Escape, focus trap ni scroll lock.
-- En 412 px ocupa el ancho disponible menos 32 px. En tableta/desktop respeta el
-  tamaño semántico (`sm`…`5xl`) y nunca excede `calc(100vw - 32px)`.
+- Bajo 640 px ocupa la pantalla completa. Desde 640 px respeta el `kind`
+  semántico (`confirm` 28 rem, `form` 42 rem, `form-wide`/`detail` 64 rem,
+  `wizard` 80 rem, `workspace` hasta 100 rem) y nunca excede
+  `calc(100vw - 32px)`. Crear y editar usa `form`; `form-wide` es la excepción.
 - El panel mide como máximo 90dvh. En formularios largos, header y footer quedan
   visibles y solo el cuerpo scrollea cuando sea necesario.
 - Confirmaciones siguen siendo pequeñas. Workspaces pueden usar `fullHeight` y
@@ -174,6 +176,10 @@ columnas que muestra.
   contenedor —incluidos padding y gap— deja 280 px útiles por campo.
 - Pares cortos y relacionados pueden compartir fila; textarea, uploads,
   markdown, mensajes y campos que dependen del ancho ocupan fila completa.
+- Un campo corto (fecha, select, monto, texto corto) no se estira a todo el
+  ancho: va con una pareja relacionada o solo en una fila de dos columnas. Los
+  campos cortos pueden usar filas de tres o cuatro columnas aunque queden bajo
+  280 px.
 - Label, control, hint y error pertenecen al mismo campo y no se reordenan.
 - `BaseFormRow` es la estructura canónica; `at="md"` o una futura condición por
   contenedor se usa donde el modal no alcanza el mínimo.
