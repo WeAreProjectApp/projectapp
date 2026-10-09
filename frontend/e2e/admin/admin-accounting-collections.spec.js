@@ -474,6 +474,11 @@ function buildHandler({
           total: '1490000.00',
           due_date: '2026-08-13',
           customer_email: body.customer.email,
+          // What the last notice lists, read from the same rolled-back issue.
+          issue_date: '2026-08-05',
+          customer_name: 'Acme Soluciones',
+          project_name: '',
+          billing_concept: body.billing_concept,
           pdf_url: PREVIEW_PDF_URL,
         }),
       };
@@ -1094,7 +1099,11 @@ test.describe('Admin Accounting Collections', () => {
       .evaluate((el) => el.scrollHeight - el.clientHeight);
     expect(panelOverflow).toBeLessThanOrEqual(1);
 
+    // Confirmar y enviar opens the last notice; only its confirm sends.
     await page.getByTestId('collection-form-confirm').click();
+    await expect(page.getByTestId('collection-send-notice-number')).toHaveText('PA-ACME-001');
+    await expect(page.getByTestId('collection-send-notice-recipient')).toHaveText('ana@acme.co');
+    await page.getByTestId('confirm-modal-confirm').click();
 
     await expect(page.getByText('Cuenta de cobro enviada')).toBeVisible();
     await expect(page.getByTestId('accounting-row-9')).toBeVisible();
@@ -1216,6 +1225,7 @@ test.describe('Admin Accounting Collections', () => {
     await page.getByTestId('billing-contract').selectOption('10');
     await page.getByTestId('collection-form-preview').click();
     await page.getByTestId('collection-form-confirm').click();
+    await page.getByTestId('confirm-modal-confirm').click();
 
     await expect(page.getByText('Cuenta de cobro enviada')).toBeVisible();
     // The draft inherited the income's project and the column reads the
@@ -1276,6 +1286,7 @@ test.describe('Admin Accounting Collections', () => {
     await expect(page.getByTestId('collection-preview-subject'))
       .toContainText('PA-ACME-001');
     await page.getByTestId('collection-form-confirm').click();
+    await page.getByTestId('confirm-modal-confirm').click();
 
     await expect(page.getByText('Cuenta de cobro enviada')).toBeVisible();
     await expect(page.getByTestId('accounting-row-9')).toBeVisible();
@@ -1284,6 +1295,35 @@ test.describe('Admin Accounting Collections', () => {
     );
     expect(createCall.body.client_profile_id).toBe(5);
     expect(createCall.body.income_record_id).toBe(8);
+  });
+
+  test('backing out of the last notice keeps the preview and sends nothing', {
+    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ calls }));
+    await gotoCollections(page);
+    await page.getByTestId('collection-create-button').click();
+    await page.getByTestId('collection-form-client').fill('Acme');
+    await page.getByTestId('client-autocomplete-option-5').click();
+    await page.getByTestId('collection-form-income').click();
+    await page.getByTestId('collection-form-income-scope-all').click();
+    await page.getByTestId('collection-form-income-option-8').click();
+    await page.getByTestId('collection-form-preview').click();
+
+    // Esc closes only the notice: the wizard and its preview stay open.
+    await page.getByTestId('collection-form-confirm').click();
+    await expect(page.getByTestId('collection-send-notice-client')).toHaveText('Acme Soluciones');
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('collection-send-notice-client')).toBeHidden();
+    await expect(page.getByTestId('collection-preview-subject')).toBeVisible();
+
+    await page.getByTestId('collection-form-confirm').click();
+    await page.getByRole('button', { name: 'Volver a revisar' }).click();
+    await expect(page.getByTestId('collection-preview-subject')).toBeVisible();
+    expect(calls.some(
+      (call) => call.apiPath === 'accounting/collection-accounts/create/',
+    )).toBe(false);
   });
 
   test('the income filters count what they hold and never drop the cursor', {
@@ -1510,6 +1550,69 @@ test.describe('Admin Accounting Collections', () => {
     expect(calls.some(
       (call) => call.apiPath.endsWith('/mark-paid/'),
     )).toBe(false);
+  });
+
+  test('marking a client cuenta as paid confirms the payment to the client', {
+    tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; the flow under test
+    // starts at the row's Marcar pagada action, which IS clicked)
+    const handler = buildHandler({
+      calls: [],
+      incomeDetail: {
+        ...ELIGIBLE_INCOME, client: 5, client_name: 'Acme Soluciones',
+        collection_account_status: 'issued',
+      },
+    });
+    let settled = null;
+    await mockApi(page, async (ctx) => {
+      if (ctx.apiPath === 'accounting/incomes/8/payment-confirmation/') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            can_send: true, blocked_reason: '', recipient: 'ana@acme.co',
+            client_name: 'Ana Pérez', project_name: '',
+            collection_account_number: 'PA-ACME-002', rescheduled_pending: '0.00',
+          }),
+        };
+      }
+      if (ctx.apiPath === 'accounting/incomes/8/settle/' && ctx.method === 'POST') {
+        settled = ctx.route.request().postDataJSON();
+        return {
+          status: 201,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            income: ELIGIBLE_INCOME, liquid: null, expenses: [], expected_incomes: [],
+            payment_confirmation: {
+              requested: true, status: 'sent', recipient: 'ana@acme.co', error: '',
+            },
+          }),
+        };
+      }
+      if (ctx.apiPath === 'accounting/collection-accounts/' && ctx.method === 'GET') {
+        const rows = makeRows();
+        rows[1].income_record_id = 8;
+        rows[1].income_kind = 'expected';
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ results: rows, meta: META }),
+        };
+      }
+      return handler(ctx);
+    });
+    await gotoCollections(page);
+
+    await chooseCollectionAction(page, 2, 'mark-paid');
+    await expect(page.getByTestId('income-liquidate-confirmation-hint'))
+      .toContainText('ana@acme.co');
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect(page.getByTestId('income-liquidate-notice-account')).toHaveText('PA-ACME-002');
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('Confirmación de pago enviada a ana@acme.co.')).toBeVisible();
+    expect(settled.send_payment_confirmation).toBe(true);
   });
 
   test('a hosting cuenta with no period completes it from the Liquidar modal', {
