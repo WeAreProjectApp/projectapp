@@ -13,6 +13,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { expectNoBlankBand } from '../helpers/table-geometry.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import {
   ADMIN_ACCOUNTING_COLLECTIONS,
   ADMIN_ACCOUNTING_COLLECTION_GROUPING,
@@ -1564,6 +1565,19 @@ test.describe('Admin Accounting Collections', () => {
     await chooseCollectionAction(page, 2, 'mark-paid');
     await expect(page.getByTestId('income-liquidate-period-start'))
       .toHaveValue('2026-10-01');
+    await expect(page.getByTestId('income-liquidate-period-cadence-hint'))
+      .toHaveText('Al elegir la periodicidad se calcula la fecha de fin del período.');
+    const dialog = page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true });
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [{
+        fields: [
+          dialog.getByTestId('income-liquidate-period-cadence'),
+          dialog.getByTestId('income-liquidate-period-start'),
+          dialog.getByTestId('income-liquidate-period-end'),
+        ],
+        maxWidth: 210,
+      }],
+    });
 
     // One choice completes the window: the end follows from the periodicity.
     await page.getByTestId('income-liquidate-period-cadence')

@@ -3,6 +3,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import { RESPONSIVE_PROFILES } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -250,6 +251,21 @@ const longModalFlows = Object.freeze([
       await page.getByTestId('income-action-liquidate-1').click();
     },
     assert: (dialog) => expect(dialog.getByTestId('income-liquidate-submit')).toHaveText('Liquidar'),
+    // The fixture is a hosting charge with no recorded window, so the period
+    // block renders below the payment row.
+    layout: (dialog) => ({
+      lines: [
+        { fields: [dialog.getByTestId('income-liquidate-period'), dialog.getByTestId('income-liquidate-destination')] },
+        {
+          fields: [
+            dialog.getByTestId('income-liquidate-period-cadence'),
+            dialog.getByTestId('income-liquidate-period-start'),
+            dialog.getByTestId('income-liquidate-period-end'),
+          ],
+          maxWidth: 210,
+        },
+      ],
+    }),
   },
   {
     name: 'bulk payment shows its allocation breakdown',
@@ -288,6 +304,7 @@ for (const profile of RESPONSIVE_PROFILES) {
         await expect(dialog).toHaveCount(1);
         await modalFlow.assert(dialog);
         await modalGeometryByProfile[profile](page, dialog);
+        if (modalFlow.layout) await expectCompactModal(dialog, page.viewportSize(), modalFlow.layout(dialog));
         await dialog.press('Escape');
         await expect(dialog).toHaveCount(0);
       });

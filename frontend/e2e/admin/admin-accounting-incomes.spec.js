@@ -17,6 +17,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import {
   ADMIN_ACCOUNTING_COLLECTION_CREATE,
   ADMIN_ACCOUNTING_INCOME_CLIENT,
@@ -1758,6 +1759,12 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await page.getByTestId('followup-concept-0').fill('Kore - saldo diciembre');
     await page.getByTestId('followup-period-0').fill('2026-12');
     await page.getByTestId('followup-amount-0').fill('100000');
+    // A month and an amount keep their own narrow tracks on one line.
+    await expectCompactModal(
+      page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true }),
+      page.viewportSize(),
+      { lines: [{ fields: [page.getByTestId('followup-period-0'), page.getByTestId('followup-amount-0')], maxWidth: 192 }] },
+    );
     await page.getByTestId('income-liquidate-submit').click();
 
     await expect.poll(() => calls.filter((c) => c.method === 'POST').length)
@@ -1770,6 +1777,41 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
         amount: 100000,
       },
     ]);
+  });
+
+  test('a personal settlement pairs the payment date with the amount paid', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    const personalRow = incomeRow({
+      id: 14,
+      concept: 'Gustavo - Asesoría',
+      ledger: 'gustavo',
+      ledger_label: 'Personal Gustavo',
+      total_amount: '500000.00',
+      gustavo_amount: '500000.00',
+      carlos_amount: '0.00',
+      pending_amount: '500000.00',
+    });
+    await mockApi(page, buildHandler({ rows: [personalRow], calls }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-14').click();
+    await page.getByTestId('income-action-liquidate-14').click();
+    const dialog = page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true });
+    await expect(dialog.getByTestId('partner-split-total')).toHaveCount(0);
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [{ fields: [dialog.getByTestId('income-liquidate-period'), dialog.getByTestId('income-liquidate-paid')] }],
+    });
+
+    await dialog.getByTestId('income-liquidate-period').fill('2026-11-17');
+    await dialog.getByTestId('income-liquidate-submit').click();
+
+    await expect.poll(() => calls.filter((c) => c.method === 'POST').length).toBe(1);
+    const { body } = calls.find((c) => c.method === 'POST');
+    expect(Number(body.total_amount)).toBe(500000);
+    expect(body.gustavo_amount).toBeUndefined();
+    expect(body.carlos_amount).toBeUndefined();
   });
 
   test('surfaces a backend rejection of the settlement and keeps the modal open', {
