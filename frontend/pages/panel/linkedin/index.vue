@@ -89,7 +89,7 @@
     </section>
 
     <!-- Create / edit modal -->
-    <BaseModal v-model="showModal" kind="form" padding="md">
+    <BaseModal v-model="showModal" kind="form">
       <form :id="modalFormId" novalidate @submit.prevent="savePost">
         <div class="space-y-4 px-6 py-5">
           <h2 class="text-lg font-semibold text-text-default">
@@ -129,15 +129,19 @@
           />
           </BaseFormField>
 
-          <BaseFormField
-            label="Programar publicación"
-            hint="Si queda vacío, el post se guarda como borrador."
+          <BaseFormRow
+            :cols="2"
+            :gap="4"
+            help="Si queda vacío, el post se guarda como borrador."
+            help-testid="linkedin-post-schedule-hint"
           >
-          <BaseInput
-            v-model="form.scheduledLocal"
-            type="datetime-local"
-          />
-          </BaseFormField>
+            <BaseFormField label="Programar publicación">
+              <BaseInput
+                v-model="form.scheduledLocal"
+                type="datetime-local"
+              />
+            </BaseFormField>
+          </BaseFormRow>
 
           <BaseAlert v-if="formGeneralError" variant="danger">{{ formGeneralError }}</BaseAlert>
         </div>
