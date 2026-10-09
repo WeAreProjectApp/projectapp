@@ -6135,7 +6135,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-project-access-secrets` | admin | P1 | display,success,failure | — |
 | `admin-project-actions-menu` | admin | P1 | display | 3 |
 | `admin-project-brand` | admin | P2 | success,error,failure,display | — |
-| `admin-project-change-client` | admin | P2 | display,success | 2 |
+| `admin-project-change-client` | admin | P2 | display,success,error | 3 |
 | `admin-project-change-history` | admin | P1 | display,success,failure | — |
 | `admin-project-client-access-policy` | admin | P1 | success,error,failure,display | — |
 | `admin-project-delete` | admin | P1 | success,error,failure | 22 |
@@ -7215,9 +7215,9 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Priority:** P2
 - **Routes:** `/panel/projects`
 - **API:** `GET /api/projects/<id>/change-client/preview/?client_profile_id=`, `POST /api/projects/<id>/change-client/`, `DELETE /api/accounts/projects/<id>/?force=1` (guarded)
-- **Description:** A project changes owner through ONE guided path — the form field stays immutable (`client_immutable`) and a ghost "Cambiar cliente…" entry opens the cascade. The preview names everything: movable records, incomes an active (non-cancelled) cuenta blocks (they detach and keep their client; anular y reemitir is the path for a wrong cuenta), draft cuentas that follow the project (fresh provisional snapshot) or their blocked income, ISSUED documents nothing touches, clientless rows left to the completion tools, and other documents that ride along. The mode — Mover | Desvincular — is chosen EVERY time (no preselection). The apply carries the preview's hosting/income ids as a staleness token (409 `records_not_found`/`records_changed` reload the preview) and runs in one transaction with an audit row per touched record. Hard-deleting a project now refuses with 409 `project_has_records` while anything is linked.
-- **Steps:** edit project → Cambiar cliente… → pick destination → read the impact → choose the mode → confirm → row and accounting lists refresh.
-- **Branches:** same client / unknown client / archived project answer 400 with their codes; missing mode keeps confirm disabled; 409 reloads the preview and drops the chosen mode.
+- **Description:** El campo de cliente del formulario conserva su valor (`client_immutable`); Cambiar cliente… abre el cambio guiado. Elegir el destino carga una vista previa con `can_apply`, `blockers`, `blocker_counts`, los planes `planned.move` y `planned.detach`, y un `impact_hash` común a ambos modos. Si la historia financiera, las entregas o los tickets impiden el cambio, el modal muestra sus motivos y orienta a crear un proyecto nuevo para el cliente destino; oculta los modos y deshabilita la confirmación. Si el cambio está permitido, presenta los registros afectados, conserva los documentos emitidos y exige elegir Mover o Desvincular cada vez. La confirmación envía `expected_impact_hash` y las listas de IDs de hosting, ingresos e hilos de la vista previa. El cambio se aplica en una transacción con auditoría por registro; la fila muestra el nuevo cliente. El borrado definitivo sigue respondiendo 409 `project_has_records` mientras haya registros vinculados.
+- **Steps:** editar proyecto → Cambiar cliente… → elegir destino → revisar impacto y motivos → si está permitido, elegir modo y confirmar → la fila y los listados contables se actualizan; si está bloqueado, cancelar y crear un proyecto nuevo para el cliente destino.
+- **Branches:** `display`: un cambio permitido muestra el impacto y mantiene la confirmación deshabilitada hasta elegir modo; `success`: Mover envía el hash revisado y actualiza el cliente visible; `error`: `can_apply: false` muestra los bloqueos y la guía de crear un proyecto nuevo, oculta los modos y mantiene la confirmación deshabilitada sin enviar ningún POST a `change-client/`, incluso al cancelar. Mismo cliente, cliente inexistente o proyecto terminal siguen respondiendo 400; 409 `records_not_found`/`records_changed` recarga la vista previa y descarta el modo elegido.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-project-change-client.spec.js`
 
