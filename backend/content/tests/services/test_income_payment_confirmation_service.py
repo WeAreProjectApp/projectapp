@@ -198,6 +198,7 @@ def test_payment_date_keeps_the_precision_the_operator_chose():
 
 
 def test_send_records_a_client_row_with_targets(billed_income, superuser, mailoutbox):
+    """The client's row names the income, the payment and the cuenta."""
     result, data = settle(billed_income, superuser)
     context = service.confirmation_context(billed_income)
     facts = service.settlement_values(billed_income, result['liquid'], data, context)

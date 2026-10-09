@@ -1300,6 +1300,8 @@ test.describe('Admin Accounting Collections', () => {
   test('backing out of the last notice keeps the preview and sends nothing', {
     tag: [...ADMIN_ACCOUNTING_COLLECTION_CREATE, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (the tab is a subnav entry; the flow under test
+    // starts at Nueva cuenta de cobro, which IS clicked)
     const calls = [];
     await mockApi(page, buildHandler({ calls }));
     await gotoCollections(page);

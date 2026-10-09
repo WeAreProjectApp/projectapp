@@ -773,6 +773,10 @@ describe('covered period of a hosting charge', () => {
 });
 
 describe('payment confirmation to the client', () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   const billedRecord = {
     ...expectedRecord,
     client: 7,

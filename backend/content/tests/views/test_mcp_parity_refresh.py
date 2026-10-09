@@ -523,6 +523,7 @@ def test_settle_income_refuses_the_client_email_without_a_preview(
 def test_ledger_preview_shows_the_payment_confirmation(
     api_client, superuser, make_income, mailoutbox,
 ):
+    """The preview is the MCP's last notice: it names what the client gets."""
     income = _billed_income(make_income)
     token = activate_connector('accounting-ledger')
 
@@ -544,6 +545,7 @@ def test_ledger_confirmation_sends_after_the_commit(
     api_client, superuser, make_income, mailoutbox,
     django_capture_on_commit_callbacks,
 ):
+    """Confirming settles, then the email waits for the MCP transaction."""
     income = _billed_income(make_income)
     token = activate_connector('accounting-ledger')
     preview = payload(call_tool(

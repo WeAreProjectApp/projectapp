@@ -139,6 +139,7 @@ class TestSettlingWithConfirmation:
         assert not EmailLog.objects.filter(template_key=TEMPLATE_KEY).exists()
 
     def test_a_failed_send_keeps_the_settlement(self, super_client):
+        """The payment is real: an SMTP failure never undoes its record."""
         income = billed_income()
 
         with patch(
