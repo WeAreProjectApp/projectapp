@@ -13,6 +13,7 @@ from content.mcp.communication_tools import COMMUNICATION_TOOLS
 from content.mcp.diagnostic_tools import DIAGNOSTIC_TOOLS
 from content.mcp.document_thread_tools import DOCUMENT_THREAD_TOOLS
 from content.mcp.document_tools import DOCUMENT_TOOLS
+from content.mcp.expected_income_tools import EXPECTED_INCOME_TOOLS
 from content.mcp.linkedin_tools import LINKEDIN_TOOLS
 from content.mcp.linktree_template_tools import LINKTREE_TEMPLATE_TOOLS
 from content.mcp.operation_catalogs import (
@@ -137,7 +138,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         'tasks', '2.0.0', (TASK_TOOLS,), confirm_sensitive=True,
     ),
     'accounting': ConnectorSpec(
-        'accounting', '1.0.0', (ACCOUNTING_TOOLS,),
+        'accounting', '1.0.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
         compatibility=True,
         canonical_area='accounting-ledger, accounting-billing o accounting-cards',
         notes=(ACCOUNTING_NOTE,),
@@ -182,7 +183,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'accounting-ledger': ConnectorSpec(
-        'accounting-ledger', '2.0.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS),
+        'accounting-ledger', '2.0.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
         confirm_sensitive=True, notes=(ACCOUNTING_NOTE,),
     ),
     'accounting-billing': ConnectorSpec(
