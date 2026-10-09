@@ -189,7 +189,7 @@ const panelCapabilities = [
     'Hace visibles los compromisos financieros y su impacto en la operación.',
     [
       feature('panel-financial-flow', 'Leer ingresos y gastos',
-        'Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. Los ingresos con cliente requieren una cuenta de cobro emitida antes de liquidar o abonar; Liquidar muestra icono atenuado, cursor de indisponibilidad y el motivo; los ingresos internos conservan su flujo. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Los ingresos con cliente requieren una cuenta de cobro emitida antes de liquidar o abonar; Liquidar muestra icono atenuado, cursor de indisponibilidad y el motivo; los ingresos internos conservan su flujo. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Expone la utilidad y los movimientos que la explican.',
         ['/panel/accounting', '/panel/accounting/incomes', '/panel/accounting/expenses'],
         { icon: 'dashboard', stage: 'Resultados' }),
