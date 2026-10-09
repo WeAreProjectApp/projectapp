@@ -1,5 +1,6 @@
 import { mount, flushPromises } from '@vue/test-utils'
 import ProjectBrandModal from '~/components/panel/projects/ProjectBrandModal.vue'
+import BaseFormField from '~/components/base/BaseFormField.vue'
 import BaseInput from '~/components/base/BaseInput.vue'
 import BaseSelect from '~/components/base/BaseSelect.vue'
 import { create_request, get_request, patch_request } from '~/stores/services/request_http'
@@ -12,7 +13,7 @@ global.useI18n = () => ({ t: key => key })
 global.useLocalePath = () => path => path
 const mountLibrary = () => mount(ProjectBrandModal, {
   props: { project: { id: 1, name: 'Brand project' } },
-  global: { components: { BaseInput, BaseSelect }, stubs: {
+  global: { components: { BaseFormField, BaseInput, BaseSelect }, stubs: {
     BaseModal: { template: '<div><slot /></div>' },
     BaseButton: { template: '<button :disabled="disabled"><slot /></button>', props: ['disabled'] },
     BaseActionButton: true, NuxtLink: { template: '<a><slot /></a>' },
