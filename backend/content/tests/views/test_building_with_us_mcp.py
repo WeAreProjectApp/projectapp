@@ -125,4 +125,6 @@ def test_render_rejects_invalid_language_values(api_client, building_with_us_mcp
 
     assert result['isError'] is True
     assert result['structuredContent']['error']['code'] == 'INVALID_LANGUAGE'
+    assert result['structuredContent']['error']['message'] == 'Usa es o en.'
+    assert result['structuredContent']['error']['details'] == {'path': 'lang'}
     assert McpUpload.objects.filter(credential=credential).count() == 0
