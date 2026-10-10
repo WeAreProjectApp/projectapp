@@ -35,7 +35,9 @@ jobs:
     timeout-minutes: 10
     services:
       mysql:
-        image: mysql:8.4
+        # Docker Hub's anonymous pull rate limit failed these jobs on GitHub-hosted runners.
+        # mirror.gcr.io serves the same official image.
+        image: mirror.gcr.io/library/mysql:8.4
         env:
           MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
           MYSQL_DATABASE: test_projectapp_delivery_migration
@@ -68,7 +70,7 @@ jobs:
     timeout-minutes: 15
     services:
       mysql:
-        image: mysql:8.4
+        image: mirror.gcr.io/library/mysql:8.4
         env:
           MYSQL_RANDOM_ROOT_PASSWORD: 'yes'
           MYSQL_DATABASE: test_projectapp_retention
