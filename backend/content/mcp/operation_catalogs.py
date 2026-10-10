@@ -18,6 +18,12 @@ from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
 from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
+from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
+from content.mcp.proposal_schemas import writable_schema
+from content.mcp.schema_policy import closed_object
+from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
+from accounts.serializers import UpdateProjectPhaseSerializer
+from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
 from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
 from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
@@ -101,7 +107,7 @@ PROJECT_TOOLS = [
     _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['upload_project_brand_asset']),
     _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id'), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['download_project_brand_asset']),
     _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['delete_project_brand_asset']),
-] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS + DATA_INTEGRITY_TOOLS
 
 
 DOCUMENT_PARITY_TOOLS = [
@@ -258,10 +264,25 @@ CONTENT_PARITY_TOOLS = [
 ]
 
 
+_INCOME_PAYMENT_CONFIRMATION = _op(
+    'get_income_payment_confirmation',
+    'Indica a qué correo saldría la confirmación de pago de un ingreso, o por qué no puede salir.',
+    'income-payment-confirmation', path=('record_id',),
+)
+_INCOME_PAYMENT_CONFIRMATION['input_schema'] = closed_object({
+    'record_id': {
+        'type': ['integer', 'string'],
+        'description': 'Identificador del ingreso cuya confirmación de pago se consulta.',
+    },
+    'if_match': _INCOME_PAYMENT_CONFIRMATION['input_schema']['properties']['if_match'],
+}, required=('record_id',))
+
+
 LEDGER_PARITY_TOOLS = [
     _op('get_accounting_stats', 'Obtiene indicadores contables del año.', 'accounting-stats'),
     _op('duplicate_income_draft', 'Obtiene un borrador duplicado de un ingreso.', 'duplicate-income-draft', path=('record_id',)),
     _op('suggest_income_period', 'Sugiere el siguiente período para un ingreso.', 'suggest-income-period'),
+    _INCOME_PAYMENT_CONFIRMATION,
     _op('bulk_assign_income_client', 'Asigna cliente a una selección de ingresos.', 'bulk-assign-income-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_income_project', 'Asigna proyecto a una selección de ingresos.', 'bulk-assign-income-project', 'POST', risk='sensitive', confirm=True),
     _op('reorder_recurring_payments', 'Reordena pagos recurrentes.', 'reorder-recurring-payments', 'POST', risk='write'),

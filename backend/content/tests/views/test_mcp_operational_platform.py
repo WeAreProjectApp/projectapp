@@ -12,6 +12,7 @@ from django.utils import timezone as tz
 from rest_framework.test import APIRequestFactory
 
 from content.mcp.common_tools import build_common_tools
+from content.mcp.connectors import CONNECTORS
 from content.mcp.confirmation import cancel_action, confirm_action, preview_sensitive_action
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.operation_catalogs import CARD_PARITY_TOOLS, LEDGER_PARITY_TOOLS
@@ -193,7 +194,7 @@ def confirmation_runtime(tasks_connector):
     tools = []
     tools.extend(normalize_tools([
         sensitive,
-        *build_common_tools('tasks', lambda: tools),
+        *build_common_tools(CONNECTORS['tasks'], lambda: tools),
     ], 'tasks'))
     context = McpExecutionContext(
         connector=connector,

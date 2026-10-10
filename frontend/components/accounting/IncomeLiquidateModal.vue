@@ -1,11 +1,15 @@
 <script setup>
 import { useId, computed, ref, watch } from 'vue'
+import ConfirmModal from '~/components/ConfirmModal.vue'
+import ConfirmationSummaryList from './ConfirmationSummaryList.vue'
 import PartnerSplitInput from './PartnerSplitInput.vue'
 import PeriodDateField from './PeriodDateField.vue'
 import { useHostingPeriod } from '~/composables/useHostingPeriod'
+import { useAccountingStore } from '~/stores/accounting'
 import { DEDUCTION_TYPE_OPTIONS as deductionOptions } from '~/utils/accountingDeductions'
 import { formatMoney } from '~/utils/formatMoney'
 import { todayISO } from '~/utils/periodDates'
+import { clientPendingAfter, formatPaymentDate } from '~/utils/paymentConfirmation'
 import { FREQUENCY_OPTIONS as cadenceOptions } from '~/utils/recurring'
 import { settlementBlockedReason } from '~/utils/incomeSettlement'
 
@@ -201,8 +205,101 @@ const hasIncompleteRow = computed(
   () => deductionErrors.value.some(Boolean) || followUpErrors.value.some(Boolean),
 )
 
+// ── Payment confirmation to the client ──
+// Opt-in email, checked by default whenever it can go. The address comes from
+// the server (the issued cuenta's), so the checkbox, the last notice and the
+// send all name the same one.
+const store = useAccountingStore()
+const sendConfirmation = ref(true)
+const confirmationContext = ref(null)
+const contextLoading = ref(false)
+const contextFailed = ref(false)
+const lastNoticeOpen = ref(false)
+const pendingPayload = ref(null)
+// A response for a record that is no longer open must not land.
+let contextRequest = 0
+
+const NO_CLIENT_REASON = 'Este ingreso no tiene cliente: no hay a quién enviar la confirmación.'
+const NO_AMOUNT_REASON = 'Sin valor recibido no hay pago que confirmar.'
+const CONTEXT_FAILED_REASON = 'No se pudo verificar el correo del cliente; la liquidación se registrará sin confirmación.'
+
+async function loadConfirmationContext(record) {
+  const request = ++contextRequest
+  confirmationContext.value = null
+  contextFailed.value = false
+  contextLoading.value = false
+  if (!record?.client || settlementBlockedReason(record)) return
+  contextLoading.value = true
+  const result = await store.fetchIncomePaymentConfirmation(record.id)
+  if (request !== contextRequest) return
+  contextLoading.value = false
+  if (result.success) confirmationContext.value = result.data
+  else contextFailed.value = true
+}
+
+/** Why the confirmation cannot go, or '' — shown beside the checkbox. */
+const confirmationUnavailableReason = computed(() => {
+  if (!props.record?.client) return NO_CLIENT_REASON
+  if (contextFailed.value) return CONTEXT_FAILED_REASON
+  const context = confirmationContext.value
+  if (context && !context.can_send) {
+    return context.blocked_reason || 'No se puede enviar la confirmación de pago.'
+  }
+  if (!(Number(form.value.total_amount) > 0)) return NO_AMOUNT_REASON
+  return ''
+})
+
+const confirmationChecked = computed(
+  () => sendConfirmation.value && !confirmationUnavailableReason.value,
+)
+const willSendConfirmation = computed(
+  () => confirmationChecked.value && Boolean(confirmationContext.value?.can_send),
+)
+// Checked while the address is still being read: Liquidar waits for it
+// rather than settling without the email the operator left on.
+const confirmationPending = computed(
+  () => confirmationChecked.value && contextLoading.value,
+)
+
+const confirmationHint = computed(() => {
+  if (confirmationUnavailableReason.value) return ''
+  if (contextLoading.value) return 'Verificando el correo del cliente…'
+  if (!sendConfirmation.value) return 'No se le enviará ningún correo al cliente.'
+  const recipient = confirmationContext.value?.recipient
+  if (!recipient) return ''
+  return `Le llegará a ${recipient}. Antes de liquidar verás un último aviso con los datos.`
+})
+
+const destinationLabel = computed(() => {
+  if (isPersonal.value) return props.record?.ledger_label || 'Contabilidad personal'
+  return destinationOptions.find((option) => option.value === form.value.destination)?.label ?? ''
+})
+
+/** The last notice: what the client will be told, plus where the money went. */
+const lastNoticeRows = computed(() => {
+  const context = confirmationContext.value ?? {}
+  const received = Number(form.value.total_amount || 0)
+  const pendingAfter = clientPendingAfter({
+    pending: pending.value,
+    received,
+    deductions: sumAmounts(activeDeductions.value),
+    rescheduled: context.rescheduled_pending,
+  })
+  return [
+    { key: 'concept', label: 'Concepto', value: form.value.concept },
+    { key: 'client', label: 'Cliente', value: context.client_name || props.record?.client_name || '—' },
+    { key: 'project', label: 'Proyecto', value: context.project_name || 'Sin proyecto' },
+    { key: 'account', label: 'Cuenta de cobro', value: context.collection_account_number || '—' },
+    { key: 'amount', label: 'Valor recibido', value: money(received) },
+    { key: 'date', label: 'Fecha de pago', value: formatPaymentDate(form.value.period_date, exactDate.value) },
+    { key: 'destination', label: 'Destino del dinero', value: destinationLabel.value },
+    { key: 'pending', label: 'Saldo pendiente tras el pago', value: pendingAfter > 0 ? money(pendingAfter) : 'Queda al día' },
+    { key: 'recipient', label: 'Se enviará a', value: context.recipient ?? '' },
+  ]
+})
+
 const canSubmit = computed(
-  () => !settlementBlockedReason(props.record) && !overAllocated.value && !hasIncompleteRow.value && !periodIncomplete.value,
+  () => !settlementBlockedReason(props.record) && !overAllocated.value && !hasIncompleteRow.value && !periodIncomplete.value && !confirmationPending.value,
 )
 
 /** Why the submit is blocked — shown next to the disabled button. */
@@ -210,6 +307,7 @@ const submitBlockReason = computed(() => {
   const billingReason = settlementBlockedReason(props.record)
   if (billingReason) return billingReason
   if (canSubmit.value) return ''
+  if (confirmationPending.value) return 'Verificando el correo de la confirmación de pago…'
   if (overAllocated.value) {
     return `La distribución supera el saldo por resolver por ${money(-unassigned.value)}.`
   }
@@ -291,6 +389,12 @@ watch(
     followUpsOpen.value = false
     autoExpanded.value = false
     overSource.value = null
+    // Every open starts with the email on: whether to skip it is decided per
+    // payment, never remembered from the previous one.
+    sendConfirmation.value = true
+    lastNoticeOpen.value = false
+    pendingPayload.value = null
+    loadConfirmationContext(props.record)
     // The window opens on the charge's own date — the same reading the backend
     // calls `original_date` when it duplicates an income with no window
     // recorded. Set before the form is replaced, so the composable's watchers
@@ -307,8 +411,8 @@ watch(
       period_date: todayISO(),
       // Default to what is still owed, not the full projection: the whole
       // point of liquidating is that they often pay late and short. The
-      // partner split stays empty on purpose — when neither amount is
-      // sent, the server applies its canonical 50/50 (split_half).
+      // partner split starts empty and PartnerSplitInput's auto mode splits
+      // this amount as it mounts, so the settlement sends the split on screen.
       total_amount: props.record.pending_amount ?? props.record.total_amount,
     }
   },
@@ -316,7 +420,26 @@ watch(
 )
 
 function onSubmit() {
-  if (!canSubmit.value) return
+  if (!canSubmit.value || props.saving) return
+  const payload = buildPayload()
+  if (!willSendConfirmation.value) {
+    emit('submit', payload)
+    return
+  }
+  // The last notice before the client's email: nothing is sent until the
+  // operator confirms the facts it lists.
+  pendingPayload.value = { ...payload, send_payment_confirmation: true }
+  lastNoticeOpen.value = true
+}
+
+function submitWithConfirmation() {
+  const payload = pendingPayload.value
+  pendingPayload.value = null
+  if (!payload || props.saving) return
+  emit('submit', payload)
+}
+
+function buildPayload() {
   // A cleared BaseCurrencyInput emits null; the server expects 0 for a
   // residual-only settlement (nothing received, shortfall fully allocated).
   const amount = form.value.total_amount
@@ -352,24 +475,29 @@ function onSubmit() {
     }
   }
   payload.notes = form.value.notes
-  emit('submit', payload)
+  return payload
 }
 
 const modalFormId = useId();
 </script>
 
 <template>
+  <!-- Esc and the backdrop stay with the last notice while it is open: every
+       BaseModal listens on window, so this one would close too and lose the
+       form underneath. -->
   <BaseModal
     :model-value="open"
-    kind="form-wide"
+    kind="form"
     title-id="income-liquidate-title"
+    :close-on-esc="!lastNoticeOpen && !saving"
+    :close-on-backdrop="!lastNoticeOpen && !saving"
     @close="emit('close')"
   >
     <div class="px-6 pt-6 pb-2">
       <h3 id="income-liquidate-title" class="text-lg font-bold text-text-default">
         Liquidar ingreso esperado
       </h3>
-      <p v-if="record" class="text-sm text-text-subtle mt-1">
+      <p v-if="record" class="text-sm text-text-subtle mt-1 break-words">
         Se registrará un ingreso líquido nuevo enlazado a
         <span class="font-medium text-text-default">{{ record.concept }}</span>
         ({{ record.period_label }}, {{ money(record.total_amount) }}). El ingreso
@@ -403,7 +531,7 @@ const modalFormId = useId();
         <BaseInput v-model="form.concept" required />
       </BaseFormField>
 
-      <BaseFormRow :cols="isPersonal ? 1 : 2" :gap="3">
+      <BaseFormRow :cols="2" :gap="4">
         <PeriodDateField
           v-model="form.period_date"
           v-model:exact="exactDate"
@@ -420,6 +548,14 @@ const modalFormId = useId();
             v-model="form.destination"
             :options="destinationOptions"
             full-width
+            data-testid="income-liquidate-destination"
+          />
+        </BaseFormField>
+        <BaseFormField v-else label="Valor pagado" required>
+          <BaseCurrencyInput
+            v-model="form.total_amount"
+            required
+            data-testid="income-liquidate-paid"
           />
         </BaseFormField>
       </BaseFormRow>
@@ -431,10 +567,6 @@ const modalFormId = useId();
         v-model:gustavoAmount="form.gustavo_amount"
         v-model:carlosAmount="form.carlos_amount"
       />
-
-      <BaseFormField v-else label="Valor pagado" required>
-        <BaseCurrencyInput v-model="form.total_amount" required />
-      </BaseFormField>
 
       <!-- The window this hosting charge covers, when it never recorded one.
            Optional by design: an untouched block settles exactly the same. -->
@@ -453,18 +585,20 @@ const modalFormId = useId();
           </p>
         </div>
 
-        <BaseFormRow :cols="3" :gap="3">
-          <BaseFormField
-          label="Periodicidad"
-          hint="Al elegirla se calcula la fecha de fin del período."
+        <BaseFormRow
+          :cols="3"
+          :gap="3"
+          help="Al elegir la periodicidad se calcula la fecha de fin del período."
+          help-testid="income-liquidate-period-cadence-hint"
         >
-          <BaseSelect
-            v-model="form.period_cadence"
-            :options="cadenceOptions"
-            placeholder="Elegir periodicidad"
-            data-testid="income-liquidate-period-cadence"
-          />
-        </BaseFormField>
+          <BaseFormField label="Periodicidad">
+            <BaseSelect
+              v-model="form.period_cadence"
+              :options="cadenceOptions"
+              placeholder="Elegir periodicidad"
+              data-testid="income-liquidate-period-cadence"
+            />
+          </BaseFormField>
 
           <BaseFormField label="Inicio del período">
             <BaseInput
@@ -635,7 +769,9 @@ const modalFormId = useId();
                 aria-label="Concepto del ingreso esperado"
                 :data-testid="`followup-concept-${index}`"
               />
-              <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_9rem_auto] gap-2 items-start">
+              <!-- Fixed tracks: a month and an amount need no more. justify-start
+                   keeps the auto track from swallowing the free space. -->
+              <div class="grid grid-cols-1 sm:grid-cols-[12rem_9rem_auto] sm:justify-start gap-2 items-start">
                 <BaseInput
                   v-model="row.period_date"
                   type="month"
@@ -688,6 +824,38 @@ const modalFormId = useId();
         <BaseTextarea v-model="form.notes" :rows="2" />
       </BaseFormField>
 
+      <!-- The client's confirmation. Hidden while the settlement itself is
+           blocked: the footer already says why nothing can happen. -->
+      <section
+        v-if="record && !settlementBlockedReason(record)"
+        class="rounded-lg border border-border-muted px-4 py-3 space-y-1"
+        data-testid="income-liquidate-confirmation"
+      >
+        <BaseControlGate
+          :reasons="[confirmationUnavailableReason]"
+          label="Confirmación de pago no disponible"
+          align="start"
+          testid="income-liquidate-confirmation-gate"
+        >
+          <BaseCheckbox
+            :model-value="confirmationChecked"
+            :disabled="Boolean(confirmationUnavailableReason)"
+            :disabled-reason="confirmationUnavailableReason"
+            data-testid="income-liquidate-send-confirmation"
+            @update:model-value="sendConfirmation = $event"
+          >
+            Enviar al cliente la confirmación del pago
+          </BaseCheckbox>
+        </BaseControlGate>
+        <p
+          v-if="confirmationHint"
+          class="text-xs text-text-subtle"
+          data-testid="income-liquidate-confirmation-hint"
+        >
+          {{ confirmationHint }}
+        </p>
+      </section>
+
     </form>
     <template #footer>
       <div class="space-y-2 border-t border-border-muted px-4 py-4 panel-portrait:px-6">
@@ -701,7 +869,12 @@ const modalFormId = useId();
           {{ saving ? '' : submitBlockReason }}
         </p>
         <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
-          <BaseButton type="button" variant="secondary" @click="emit('close')">
+          <BaseButton
+            type="button"
+            variant="secondary"
+            :disabled="saving"
+            @click="emit('close')"
+          >
             Cancelar
           </BaseButton>
           <BaseButton
@@ -719,4 +892,25 @@ const modalFormId = useId();
       </div>
     </template>
   </BaseModal>
+
+  <!-- Last notice before the client's email. A sibling, not a child: it
+       outlives anything the form re-renders, and it leaves the body scroll to
+       the modal that stays open underneath. -->
+  <ConfirmModal
+    v-model="lastNoticeOpen"
+    title="Último aviso: liquidar y avisar al cliente"
+    message="Al confirmar se registra la liquidación y le enviamos al cliente la confirmación del pago. El correo no se puede deshacer."
+    confirm-text="Liquidar y enviar"
+    cancel-text="Volver"
+    variant="info"
+    size="lg"
+    :lock-scroll="false"
+    @confirm="submitWithConfirmation"
+    @cancel="pendingPayload = null"
+  >
+    <ConfirmationSummaryList
+      :rows="lastNoticeRows"
+      testid="income-liquidate-notice"
+    />
+  </ConfirmModal>
 </template>

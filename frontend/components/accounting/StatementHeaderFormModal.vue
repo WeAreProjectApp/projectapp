@@ -63,7 +63,7 @@ const modalFormId = useId();
 </script>
 
 <template>
-  <BaseModal :model-value="open" kind="form-wide" title-id="statement-header-form-title" @close="emit('close')">
+  <BaseModal :model-value="open" kind="form" title-id="statement-header-form-title" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
       <h3 id="statement-header-form-title" class="text-lg font-bold text-text-default">
         Editar encabezado del extracto
@@ -74,27 +74,27 @@ const modalFormId = useId();
       </p>
     </div>
     <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
-      <BaseFormRow :cols="2" :gap="4">
+      <BaseFormRow :cols="3" :gap="4">
         <BaseFormField label="Total compras" required>
           <BaseCurrencyInput v-model="form.purchases_total" required data-testid="statement-header-purchases" />
         </BaseFormField>
         <BaseFormField label="Saldo anterior">
-          <BaseCurrencyInput v-model="form.previous_balance" />
+          <BaseCurrencyInput v-model="form.previous_balance" data-testid="statement-header-previous-balance" />
         </BaseFormField>
         <BaseFormField label="Pagos y abonos">
-          <BaseCurrencyInput v-model="form.payments_total" />
+          <BaseCurrencyInput v-model="form.payments_total" data-testid="statement-header-payments-total" />
         </BaseFormField>
         <BaseFormField label="Intereses y comisiones">
-          <BaseCurrencyInput v-model="form.interest_and_fees" />
+          <BaseCurrencyInput v-model="form.interest_and_fees" data-testid="statement-header-interest-and-fees" />
         </BaseFormField>
         <BaseFormField label="Saldo de cierre">
-          <BaseCurrencyInput v-model="form.closing_balance" />
+          <BaseCurrencyInput v-model="form.closing_balance" data-testid="statement-header-closing-balance" />
         </BaseFormField>
         <BaseFormField label="Pago mínimo">
-          <BaseCurrencyInput v-model="form.minimum_payment" />
+          <BaseCurrencyInput v-model="form.minimum_payment" data-testid="statement-header-minimum-payment" />
         </BaseFormField>
         <BaseFormField label="Fecha límite de pago">
-          <BaseInput v-model="form.due_date" type="date" />
+          <BaseInput v-model="form.due_date" type="date" data-testid="statement-header-due-date" />
         </BaseFormField>
       </BaseFormRow>
 

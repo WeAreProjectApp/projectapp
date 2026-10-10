@@ -68,7 +68,8 @@ def test_exclusions_match_the_modules_owned_by_pr_503(inventory):
 
 
 def test_alias_backlog_matches_the_accepted_envelopes(inventory):
-    current = {(row['connector'], row['name']) for row in inventory if row['aliases']}
+    current = {(row['connector'], row['name']) for row in inventory
+               if row['aliases'] and (row['connector'], row['name']) not in EXCLUDED_TOOLS}
 
     assert len(ALIAS_BACKLOG) <= INITIAL_ALIAS_COUNT, 'The initial ceiling cannot grow.'
     assert len(current) <= INITIAL_ALIAS_COUNT, (

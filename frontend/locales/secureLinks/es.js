@@ -23,8 +23,6 @@ export default {
   copyLink: 'Copiar enlace',
   copied: 'Enlace copiado',
   copyFailed: 'No se pudo copiar. Selecciona el enlace y cópialo manualmente.',
-  emailIt: 'Enviar por correo',
-  mailSubject: 'Enlace seguro de un solo uso',
   createAnother: 'Crear otro enlace',
   genericError: 'No pudimos procesar la solicitud. Inténtalo de nuevo.',
   loading: 'Verificando el enlace…',
@@ -71,6 +69,7 @@ export default {
     clientPlaceholder: 'Buscar cliente...',
     language: 'Idioma de la página que verá el destinatario',
     cancel: 'Cancelar', save: 'Guardar cambios', create: 'Generar enlace',
+    renameTitle: 'Editar título', saveTitle: 'Guardar',
   },
   fields: {
     show: 'Mostrar',

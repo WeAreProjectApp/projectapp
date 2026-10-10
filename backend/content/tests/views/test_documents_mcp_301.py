@@ -3,6 +3,7 @@ import json
 
 import pytest
 
+from content.mcp.connectors import CONNECTORS
 from content.models import Document, DocumentFolder, DocumentType, McpConnector
 
 pytestmark = pytest.mark.django_db
@@ -107,7 +108,7 @@ def test_discovery_uses_connector_version(rpc):
     discovered = rpc('initialize')['serverInfo']['version']
     capabilities = rpc('tools/call', name='describe_capabilities', arguments={'summary': True})['structuredContent']
 
-    assert discovered == capabilities['version'] == '4.0.0'
+    assert discovered == capabilities['version'] == CONNECTORS['documents'].version
 
 
 def test_mcp_folder_creation_records_provenance(rpc):

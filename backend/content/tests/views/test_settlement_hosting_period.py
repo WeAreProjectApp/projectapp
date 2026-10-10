@@ -20,7 +20,7 @@ from unittest.mock import patch
 
 import pytest
 
-from content.models import IncomeRecord
+from content.models import AccountingChangeLog, IncomeRecord
 from content.services import accounting_service
 
 pytestmark = pytest.mark.django_db
@@ -34,8 +34,8 @@ def settle_url(income):
 
 @pytest.fixture(autouse=True)
 def _mute_notifications():
-    with patch.object(accounting_service, '_notify'):
-        yield
+    with patch.object(accounting_service, '_notify') as notify:
+        yield notify
 
 
 @pytest.fixture
@@ -105,9 +105,8 @@ class TestSettlingIsNoLongerBlocked:
     ):
         """The child is the payment, not the service window.
 
-        Handing it the parent's window would rewrite `period_date` with the
-        window's start (the hosting rows' single axis) and report August's
-        money in July.
+        The parent's July service window must not replace the child's August
+        payment date or be repeated on every payment.
         """
         super_client.post(
             settle_url(hosting_income), settlement(), format='json',
@@ -191,9 +190,63 @@ class TestCompletingTheWindowWhileSettling:
         assert legacy_hosting_income.period_start == date(2026, 10, 1)
         assert legacy_hosting_income.period_end == date(2027, 3, 31)
         assert legacy_hosting_income.period_cadence == 'semiannual'
-        # Same derivation the income form applies: the window's start IS the
-        # hosting row's date.
+        # The stored expected-payment date is preserved; in this case it
+        # happens to match the completed window's start.
         assert legacy_hosting_income.period_date == date(2026, 10, 1)
+
+    def test_completing_a_legacy_window_keeps_its_expected_payment_month(
+        self, super_client, make_income,
+    ):
+        """Completing an October window keeps the legacy parent's November payment month."""
+        income = make_income(
+            origin=IncomeRecord.Origin.HOSTING,
+            period_date=date(2026, 11, 1),
+        )
+
+        response = super_client.post(
+            settle_url(income),
+            settlement(period={
+                'period_start': '2026-10-01',
+                'period_end': '2027-03-31',
+                'period_cadence': 'semiannual',
+            }),
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        income.refresh_from_db()
+        assert income.period_start == date(2026, 10, 1)
+        assert income.period_date == date(2026, 11, 1)
+
+    def test_completing_the_window_notifies_only_for_the_payment(
+        self, super_client, legacy_hosting_income, _mute_notifications,
+    ):
+        """The parent window edit is audited silently; only the liquid child notifies."""
+        response = super_client.post(
+            settle_url(legacy_hosting_income),
+            settlement(period={
+                'period_start': '2026-10-01',
+                'period_end': '2027-03-31',
+                'period_cadence': 'semiannual',
+            }),
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        parent_log = AccountingChangeLog.objects.get(
+            entity_type=AccountingChangeLog.EntityType.INCOME,
+            object_id=legacy_hosting_income.pk,
+            action=AccountingChangeLog.Action.UPDATED,
+        )
+        assert {change['field'] for change in parent_log.changes} == {
+            'period_start', 'period_end', 'period_cadence',
+        }
+        payment_log = AccountingChangeLog.objects.get(
+            entity_type=AccountingChangeLog.EntityType.INCOME,
+            object_id=response.data['liquid']['id'],
+            action=AccountingChangeLog.Action.CREATED,
+        )
+        _mute_notifications.assert_called_once_with(payment_log)
 
     def test_completing_the_window_does_not_drag_the_payment_with_it(
         self, super_client, legacy_hosting_income,

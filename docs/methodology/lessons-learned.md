@@ -994,6 +994,23 @@ A build step that prerenders pages by fetching the app's **own public API** is, 
 ## 20. Panel Modules Wave — MCP, Accounting, Client Signing (Jul 2026)
 
 ### MCP connector security (claude.ai remote connectors)
+
+- **Caché del cliente y deriva del servidor (2026-10-09).** Si una consulta limpia
+  `tools/list` coincide con `describe_capabilities` pero el agente muestra
+  definiciones antiguas, revisar la caché: conversación nueva en claude.ai,
+  quitar/agregar con la misma URL en Settings → Connectors, o una credencial
+  adicional de `/panel/mcps` sin rotar `Default`; reiniciar sesiones de Claude
+  Code/Codex. El hint `ttlMs: 300000` no evita toda caché de apps. El prefijo
+  «Input constraint» lo añade el cliente al reescribir combinadores de raíz a
+  la descripción; no es por sí solo deriva del servidor.
+- **Pruebas MCP con migraciones (2026-10-09).** Las migraciones de datos siembran
+  las filas de todos los `McpConnector`. Ejecutar los tests en el worktree con
+  `projectapp.settings_test`, sin `--nomigrations`; recuperar el conector con
+  `get_or_create` y activarlo en la fixture evita duplicar el slug sembrado.
+  Las pruebas de ingresos esperados y paridad verifican ese estado real de test;
+  no ejecutar `manage.py migrate` desde el worktree. Procedimiento:
+  [runbook MCP](../MCP_VALIDATION_RUNBOOK.md#verificación-automatizada).
+
 - The connector token is a **capability URL**: shown in full exactly once at generation, then only its **SHA-256 hash** is stored (`McpConnector`). Regenerating rotates the hash and instantly 404s the old URL.
 - The MCP endpoint (`content/views/mcp_blog.py`) validates **Origin** (DNS-rebinding defense) + token + active-state on every JSON-RPC call, and logs `handshake/tool_call/auth_error/origin_rejected` to `McpRequestLog` (the panel's connection-activity feed reads this).
 - Rate limits for a multi-connector client must be keyed by **IP + registered connector slug**, not IP alone: Codex starts its connectors concurrently, so a shared IP bucket turns legitimate sibling startups into HTTP 429 failures. Unknown slugs must collapse into one defensive bucket; using arbitrary path text would make the throttle bypassable.

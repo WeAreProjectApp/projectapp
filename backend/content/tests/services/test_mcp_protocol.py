@@ -44,21 +44,24 @@ class TestInitialize:
         assert resp['result']['capabilities'] == {'tools': {}}
         assert 'name' in resp['result']['serverInfo']
 
-    def test_initialize_uses_per_connector_server_name(self):
+    def test_initialize_uses_explicit_server_name(self):
         status, resp = handle_message(
             _rpc('initialize', {'protocolVersion': '2025-06-18'}), TOOLS,
             server_name='projectapp-documents-mcp',
         )
         assert status == 200
         assert resp['result']['serverInfo']['name'] == 'projectapp-documents-mcp'
-        assert resp['result']['serverInfo']['version']  # rest of identity kept
+        assert resp['result']['serverInfo']['version'] == '0.0.0'
 
     def test_initialize_without_server_name_uses_fallback(self):
         status, resp = handle_message(
             _rpc('initialize', {'protocolVersion': '2025-06-18'}), TOOLS,
         )
         assert status == 200
-        assert resp['result']['serverInfo']['name'] == 'projectapp-mcp'
+        assert resp['result']['serverInfo'] == {
+            'name': 'projectapp-mcp', 'version': '0.0.0',
+        }
+        assert 'instructions' not in resp['result']
 
     def test_initialize_with_unknown_version_falls_back_to_supported(self):
         status, resp = handle_message(

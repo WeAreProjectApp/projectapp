@@ -23,6 +23,7 @@ from django.db.models import Q
 
 from content.mcp.actor import mcp_actor
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas
 from content.models import Task, TaskAlert, TaskComment
 from content.serializers.task import (
     TaskAlertCreateSerializer,
@@ -285,9 +286,13 @@ _TASK_WRITE_PROPS = {
     'board_type': {'type': 'string', 'enum': _BOARD_ENUM},
     'assignee_id': {'type': ['integer', 'null'], 'description': 'ID de usuario staff (de list_task_assignees).'},
     'due_date': {'type': ['string', 'null'], 'description': 'Fecha límite YYYY-MM-DD.'},
+    'position': {
+        'type': 'integer',
+        'description': 'Posición en la columna; al crear se añade siempre al final. Para renumerar usa reorder_task.',
+    },
 }
 
-TASK_TOOLS = [
+TASK_TOOLS = close_root_schemas([
     {
         'name': 'list_tasks',
         'description': (
@@ -469,4 +474,4 @@ TASK_TOOLS = [
         },
         'handler': delete_task_alert,
     },
-]
+])

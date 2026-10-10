@@ -359,7 +359,7 @@
 
     <BaseModal
       v-model="credentialModal.open"
-      kind="form-wide"
+      kind="form"
       padding="md"
       :close-on-backdrop="false"
     >
@@ -371,10 +371,10 @@
           {{ credentialModal.connector?.name }} · asigna sólo las funciones necesarias.
         </p>
 
-        <div class="grid gap-4 panel-portrait:grid-cols-2">
-          <label class="space-y-1">
-            <span class="text-xs font-semibold text-text-muted">Etiqueta</span>
+        <BaseFormRow :cols="2" :gap="4">
+          <BaseFormField label="Etiqueta" for="mcp-credential-label">
             <BaseInput
+              id="mcp-credential-label"
               v-model="credentialModal.label"
               :disabled="Boolean(credentialModal.credentialId)"
               disabled-reason="La etiqueta identifica la credencial y no puede cambiarse después de crearla."
@@ -382,25 +382,27 @@
               placeholder="Ej. Automatización contable"
               data-testid="mcp-credential-label"
             />
-          </label>
-          <label class="space-y-1">
-            <span class="text-xs font-semibold text-text-muted">Vencimiento opcional</span>
+          </BaseFormField>
+          <BaseFormField label="Vencimiento opcional" for="mcp-credential-expiry">
             <BaseInput
+              id="mcp-credential-expiry"
               v-model="credentialModal.expiresAt"
               type="datetime-local"
               data-testid="mcp-credential-expiry"
             />
-          </label>
-        </div>
+          </BaseFormField>
+        </BaseFormRow>
 
-        <label class="block mt-4 space-y-1">
-          <span class="text-xs font-semibold text-text-muted">Alcance</span>
-          <BaseSelect
-            v-model="credentialModal.scopeMode"
-            :options="scopeOptions"
-            data-testid="mcp-credential-scope"
-          />
-        </label>
+        <BaseFormRow :cols="2" :gap="4" class="mt-4">
+          <BaseFormField label="Alcance" for="mcp-credential-scope">
+            <BaseSelect
+              id="mcp-credential-scope"
+              v-model="credentialModal.scopeMode"
+              :options="scopeOptions"
+              data-testid="mcp-credential-scope"
+            />
+          </BaseFormField>
+        </BaseFormRow>
 
         <p v-if="credentialModal.connector?.slug === 'communications'" class="mt-2 text-sm text-text-muted" data-testid="mcp-secret-permission-notice">
           {{ t('secureLinks.panel.mcpPermissionNotice') }}
@@ -494,6 +496,8 @@ import { KeyIcon } from '@heroicons/vue/24/outline';
 import BaseBadge from '~/components/base/BaseBadge.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue';
+import BaseFormField from '~/components/base/BaseFormField.vue';
+import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseSelect from '~/components/base/BaseSelect.vue';

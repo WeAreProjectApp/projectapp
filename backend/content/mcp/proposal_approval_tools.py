@@ -51,7 +51,7 @@ def _preview(arguments):
 
 
 def _prepare(tool, arguments, *, launch=False):
-    check_known_fields(arguments, tool['input_schema'])
+    check_known_fields(arguments, tool.get('accepted_arguments_schema') or tool['input_schema'])
     arguments = guarded_arguments(arguments, tool)
     if isinstance(arguments.get('proposal_id'), bool) or not isinstance(arguments.get('proposal_id'), (int, str)):
         raise ToolError('proposal_id debe identificar una propuesta.')

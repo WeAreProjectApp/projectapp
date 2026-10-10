@@ -1,10 +1,10 @@
 from content.mcp.confirmation import cancel_action, confirm_action
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
-from content.mcp.registry import connector_version, public_tool
+from content.mcp.registry import capability_entry, visible_tools
 
 
-def build_common_tools(connector_slug, tools_provider, *, include_uploads=False):
+def build_common_tools(connector, tools_provider):
     def describe_capabilities(arguments):
         requested = arguments.get('tools')
         summary = arguments.get('summary', False)
@@ -13,29 +13,14 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
         if 'tools' in arguments and (not isinstance(requested, list) or any(not isinstance(name, str) for name in requested)):
             raise ToolError('tools debe ser una lista de nombres.')
         context = current_mcp_context()
-        tools = [
-            tool for tool in tools_provider()
-            if context is None
-            or context.credential is None
-            or context.credential.allows(tool['name'])
-        ]
+        tools = visible_tools(
+            tools_provider(), context.credential if context is not None else None,
+        )
         return {
-            'connector': connector_slug,
-            'version': connector_version(connector_slug),
+            'connector': connector.slug,
+            'version': connector.version,
             'tools': [
-                {
-                    'name': tool['name'],
-                    'title': tool.get('title'),
-
-                    'risk': tool.get('risk'),
-                    'requires_confirmation': bool(tool.get('requires_confirmation')),
-                    **({} if summary else {
-                        'description': tool['description'],
-                        'input_schema': public_tool(tool)['inputSchema'],
-                        'output_schema': public_tool(tool)['outputSchema'],
-                        'annotations': tool.get('annotations', {}),
-                    }),
-                }
+                capability_entry(tool, summary=summary)
                 for tool in tools
                 if requested is None or tool['name'] in requested
             ],
@@ -46,15 +31,24 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
             'name': 'describe_capabilities',
             'title': 'Describe Capabilities',
             'description': (
-                'Describe todas las acciones disponibles, sus argumentos, '
-                'riesgo y necesidad de confirmación.'
+                'Describe las acciones visibles para esta credencial con el mismo '
+                'esquema que tools/list: argumentos, salida, anotaciones, riesgo y '
+                'si requieren confirmación. tools limita la respuesta a esos '
+                'nombres; summary=true devuelve sólo name, title, risk y '
+                'requires_confirmation.'
             ),
             'risk': 'read',
             'input_schema': {
                 'type': 'object', 'additionalProperties': False,
                 'properties': {
-                    'tools': {'type': 'array', 'items': {'type': 'string'}},
-                    'summary': {'type': 'boolean', 'default': False},
+                    'tools': {
+                        'type': 'array', 'items': {'type': 'string'},
+                        'description': 'Nombres de herramientas a describir; si se omite, se describen todas.',
+                    },
+                    'summary': {
+                        'type': 'boolean', 'default': False,
+                        'description': 'true devuelve sólo name, title, risk y requires_confirmation.',
+                    },
                 },
             },
             'handler': describe_capabilities,
@@ -63,14 +57,19 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
             'name': 'confirm_action',
             'title': 'Confirm Action',
             'description': (
-                'Ejecuta exactamente una acción sensible previsualizada, '
-                'usando su confirmation_id de un solo uso.'
+                'Ejecuta una acción previsualizada por su confirmation_id. Sólo '
+                'las herramientas con requires_confirmation=true generan vistas '
+                'previas; cada confirmation_id es de un solo uso y vence a los '
+                '10 minutos.'
             ),
             'risk': 'sensitive',
             'input_schema': {
                 'type': 'object',
                 'properties': {
-                    'confirmation_id': {'type': 'string', 'format': 'uuid'},
+                    'confirmation_id': {
+                        'type': 'string', 'format': 'uuid',
+                        'description': 'confirmation_id devuelto por la vista previa; de un solo uso, vence a los 10 minutos.',
+                    },
                 },
                 'required': ['confirmation_id'],
                 'additionalProperties': False,
@@ -85,7 +84,10 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
             'input_schema': {
                 'type': 'object',
                 'properties': {
-                    'confirmation_id': {'type': 'string', 'format': 'uuid'},
+                    'confirmation_id': {
+                        'type': 'string', 'format': 'uuid',
+                        'description': 'confirmation_id devuelto por la vista previa; de un solo uso, vence a los 10 minutos.',
+                    },
                 },
                 'required': ['confirmation_id'],
                 'additionalProperties': False,
@@ -93,14 +95,14 @@ def build_common_tools(connector_slug, tools_provider, *, include_uploads=False)
             'handler': cancel_action,
         },
     ]
-    if include_uploads:
+    if connector.uploads:
         from copy import deepcopy
 
         from content.mcp.upload_tools import UPLOAD_TOOLS, VIDEO_CONNECTORS
         uploads = deepcopy(UPLOAD_TOOLS)
-        if connector_slug not in VIDEO_CONNECTORS:
+        if connector.slug not in VIDEO_CONNECTORS:
             uploads[0]['input_schema']['properties']['content_type']['enum'].remove('video/mp4')
-        if connector_slug != 'projects':
+        if connector.slug != 'projects':
             uploads[0]['input_schema']['properties']['content_type']['enum'].remove('application/zip')
         tools.extend(uploads)
     return tools

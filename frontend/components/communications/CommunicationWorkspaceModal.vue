@@ -332,7 +332,7 @@
           </div>
         </section>
       </template>
-      <BaseModal v-model="moveFolderOpen" kind="form">
+      <BaseModal v-model="moveFolderOpen" kind="confirm">
         <form :id="modalFormId" v-if="currentThread" @submit.prevent="moveThread">
           <h2 class="mb-4 text-lg font-semibold">{{ t('communicationFiling.move') }}</h2>
           <CommunicationFolderPicker v-model="targetFolder" :client-id="currentThread.client_id" :project-id="currentThread.project_id" />

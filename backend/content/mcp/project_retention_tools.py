@@ -49,7 +49,7 @@ CLEANUP = _op(
 
 
 def _prepare(tool, serializer_class, arguments):
-    check_known_fields(arguments, tool['input_schema'])
+    check_known_fields(arguments, tool.get('accepted_arguments_schema') or tool['input_schema'])
     arguments = guarded_arguments(arguments, tool)
     data = arguments.pop('data', {})
     args = {**arguments, **data}

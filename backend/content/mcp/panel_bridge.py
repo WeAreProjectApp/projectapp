@@ -104,11 +104,12 @@ def _path_properties(path_params, *, explicit=False):
             )
         else:
             properties[name] = {'type': 'string'}
-        properties[name]['description'] = _PATH_DESCRIPTIONS.get(
-            name,
-            'Id del recurso que se consulta o modifica; entero positivo.'
-            if name.endswith('_id') else f'Valor de {name} en la ruta del Panel, como texto.',
-        )
+        if explicit:
+            properties[name]['description'] = _PATH_DESCRIPTIONS.get(
+                name,
+                'Id del recurso que se consulta o modifica; entero positivo.'
+                if name.endswith('_id') else f'Valor de {name} en la ruta del Panel, como texto.',
+            )
     return properties
 
 
@@ -234,9 +235,9 @@ def _execute(operation, arguments):
             permitted.update(query_schema.get('properties', {}))
             if envelope_aliases:
                 permitted.add('query')
+        if envelope_aliases:
+            permitted.update({'data', 'query'})
         _check_unknown_fields(args, permitted)
-    elif not is_get and 'query' in args:
-        _check_unknown_fields({'query': args['query']}, ())
     route_kwargs = {}
     for name in operation['path_params']:
         value = args.pop(name, None)
@@ -380,26 +381,28 @@ def panel_operation(
         },
     }
     explicit = payload_schema is not None or query_schema is not None
-    if explicit:
+    if explicit and (not envelope_aliases or query_schema is not None):
         properties = {
             **(payload_schema.get('properties', {}) if payload_schema is not None else {}),
             **(query_schema.get('properties', {}) if query_schema is not None else {}),
             **_path_properties(path_params, explicit=True),
             'if_match': properties['if_match'],
         }
-    elif operation['method'] != 'GET':
-        properties.pop('query')
+    elif payload_schema is not None:
+        # Keep existing published envelopes for connectors that retain aliases.
+        properties = {**_path_properties(path_params), **payload_schema['properties'],
+                      'data': payload_schema, 'if_match': properties['if_match']}
     if not envelope_aliases:
         properties.pop('data', None)
         properties.pop('query', None)
     for argument_name, config in operation['asset_fields'].items():
-        asset_schema = {
-            'type': 'string', 'format': 'uuid',
-            'description': 'UUID del asset temporal subido; aporta su archivo validado al Panel.',
-        }
+        asset_schema = {'type': 'string', 'format': 'uuid'}
+        if not envelope_aliases:
+            asset_schema['description'] = 'UUID del asset temporal subido; aporta su archivo validado al Panel.'
         properties[argument_name] = (
             {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True,
-             'description': 'UUIDs de los assets temporales subidos; al menos uno y sin repetir.'}
+             **({'description': 'UUIDs de los assets temporales subidos; al menos uno y sin repetir.'}
+                if not envelope_aliases else {})}
             if config.get('many') else asset_schema
         )
     tool = {
@@ -411,11 +414,12 @@ def panel_operation(
         'input_schema': {
             'type': 'object',
             'properties': properties,
-            'required': list(dict.fromkeys([
-                *path_params,
-                *(payload_schema.get('required', []) if payload_schema is not None else []),
-                *(query_schema.get('required', []) if query_schema is not None else []),
-            ])),
+            'required': (list(path_params) if envelope_aliases and query_schema is None else
+                         list(dict.fromkeys([
+                             *path_params,
+                             *(payload_schema.get('required', []) if payload_schema is not None else []),
+                             *(query_schema.get('required', []) if query_schema is not None else []),
+                         ]))),
             'additionalProperties': not explicit,
         },
         'handler': lambda arguments: _execute(operation, arguments),

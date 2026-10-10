@@ -12,6 +12,7 @@ email; transaction/alias changes are silent).
 """
 from content.mcp.actor import mcp_actor
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas
 from content.models import (
     CreditCardStatement,
     CreditCardTransaction,
@@ -447,9 +448,10 @@ _STATEMENT_HEADER_PROPS = {
 _STATEMENT_ID_PROP = {'statement_id': {'type': 'integer'}}
 
 
-STATEMENT_TOOLS = [
+STATEMENT_TOOLS = close_root_schemas([
     {
         'name': 'get_statement_instructions',
+        'area': 'cards',
         'description': (
             'LLAMA ESTA HERRAMIENTA PRIMERO antes de procesar cualquier '
             'extracto de tarjeta de crédito. Devuelve el flujo completo por '
@@ -462,6 +464,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'get_statement_status',
+        'area': 'cards',
         'description': (
             'Grilla de 12 meses del año: qué meses tienen extracto '
             'procesado/borrador/pendiente por tarjeta. Úsala para validar '
@@ -478,6 +481,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'create_statement',
+        'area': 'cards',
         'description': (
             'Crea un extracto en BORRADOR con todas sus transacciones en una '
             'sola llamada atómica. Los alias de comercio ya aprendidos se '
@@ -492,6 +496,7 @@ STATEMENT_TOOLS = [
                     'type': 'array',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': _TX_PROPS,
                         'required': [
                             'transaction_date', 'raw_description', 'amount',
@@ -507,6 +512,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'resolve_merchants',
+        'area': 'cards',
         'description': (
             'Busca descripciones crudas del extracto en los alias '
             'aprendidos. Devuelve resueltas (comercio + categoría), '
@@ -527,6 +533,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'save_merchant_aliases',
+        'area': 'cards',
         'description': (
             'Guarda alias de comercio APROBADOS EXPLÍCITAMENTE por el '
             'usuario en el chat (nunca los guardes sin aprobación). Los '
@@ -543,6 +550,7 @@ STATEMENT_TOOLS = [
                     'type': 'array',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': {
                             'raw_description': {'type': 'string'},
                             'merchant_name': {'type': 'string'},
@@ -567,6 +575,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'update_statement',
+        'area': 'cards',
         'description': 'Actualiza (parcial) el encabezado de un extracto.',
         'input_schema': {
             'type': 'object',
@@ -577,6 +586,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'update_statement_transaction',
+        'area': 'cards',
         'description': (
             'Corrige una transacción de un extracto en borrador (comercio, '
             'categoría, valor, cuotas...).'
@@ -593,6 +603,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'finalize_statement',
+        'area': 'cards',
         'description': (
             'Consolida un extracto: valida que la suma de transacciones '
             'cuadre con purchases_total (tolerancia ±1 COP) y lo marca como '
@@ -611,6 +622,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'reopen_statement',
+        'area': 'cards',
         'description': 'Devuelve un extracto procesado a borrador para corregirlo.',
         'input_schema': {
             'type': 'object',
@@ -621,6 +633,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'list_statements',
+        'area': 'cards',
         'description': (
             'Lista extractos. Filtros: year, card_name, status '
             '(draft/processed).'
@@ -637,6 +650,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'get_statement',
+        'area': 'cards',
         'description': (
             'Detalle completo de un extracto: encabezado, transacciones y '
             'totales por categoría.'
@@ -650,6 +664,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'delete_statement',
+        'area': 'cards',
         'description': (
             'Elimina un extracto EN BORRADOR con sus transacciones (para '
             'reprocesar). Los procesados requieren reopen_statement o el '
@@ -664,6 +679,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'list_merchant_aliases',
+        'area': 'cards',
         'description': 'Lista los alias de comercio aprendidos. Filtro: q.',
         'input_schema': {
             'type': 'object',
@@ -673,6 +689,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'update_merchant_alias',
+        'area': 'cards',
         'description': (
             'Corrige un alias aprendido (comercio, categoría, texto, flag '
             'de pasarela). El texto se normaliza al guardar (mayúsculas, '
@@ -694,6 +711,7 @@ STATEMENT_TOOLS = [
     },
     {
         'name': 'delete_merchant_alias',
+        'area': 'cards',
         'description': (
             'Elimina un alias global de comercio por ID. No reescribe '
             'transacciones históricas que ya fueron identificadas con él.'
@@ -705,4 +723,4 @@ STATEMENT_TOOLS = [
         },
         'handler': delete_merchant_alias,
     },
-]
+])

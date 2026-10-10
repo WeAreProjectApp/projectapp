@@ -199,3 +199,11 @@ cotejar schemas con `describe_capabilities`. El
 incluye guards, sonda sin escrituras, contratos bridge, nativas de entrega y
 el slice nativo de Proyectos de 22 casos. Esta nota describe PR 2 y no acredita
 su CI, merge ni operaciones ya ejecutadas en producción.
+
+## Integración con el registro y la integridad de datos
+
+El inventario conjunto es de 171 herramientas. Las siete herramientas de
+integridad de datos incorporadas por #502/#503 también reciben argumentos
+planos, sin `data` ni `query`; conservan las vistas previas, confirmación,
+huellas de impacto y deshacer. Las herramientas de historial mantienen los
+aliases tipados de #503 como excepción documentada del barrido.

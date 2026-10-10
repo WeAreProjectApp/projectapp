@@ -93,8 +93,10 @@ from content.services import (
     accounting_recurring_service,
     accounting_service,
     accounting_settlement_service,
+    income_payment_confirmation_service,
 )
 from content.services.email_log_service import attach_delivery_copies
+from content.services.entity_history import history_operation
 from content.utils import today_bogota
 from content.views.history_pagination import (
     email_body_response,
@@ -992,6 +994,7 @@ def create_income_record(request):
     return _create_record(request, 'income')
 
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def settle_income_record(request, record_id):
@@ -999,17 +1002,26 @@ def settle_income_record(request, record_id):
 
     With empty `deductions`/`expected_incomes` this behaves exactly like
     creating a liquid child through the plain create endpoint.
+
+    Non-atomic on purpose: the history middleware would otherwise hold the
+    whole request in one transaction, and the optional client confirmation
+    would leave before the settlement it announces is committed. The
+    settlement opens the same history operation the middleware would.
     """
     income = get_object_or_404(IncomeRecord, pk=record_id)
     serializer = IncomeSettlementSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     try:
-        result = accounting_settlement_service.settle_expected_income(
-            income, serializer.validated_data, request.user,
-        )
+        with history_operation(actor=request.user, source='http'):
+            result = accounting_settlement_service.settle_expected_income(
+                income, serializer.validated_data, request.user,
+            )
     except ValueError as exc:
         return error_response_from_exc(exc)
+    confirmation = income_payment_confirmation_service.confirm_settlement(
+        result, serializer.validated_data,
+    )
     # Explicit None: DRF serializes a None instance as {} via get_initial().
     return Response({
         'income': IncomeRecordSerializer(result['income']).data,
@@ -1021,7 +1033,25 @@ def settle_income_record(request, record_id):
         'expected_incomes': IncomeRecordSerializer(
             result['expected_incomes'], many=True,
         ).data,
+        'payment_confirmation': confirmation,
     }, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+@permission_classes([IsSuperUser])
+def income_payment_confirmation(request, record_id):
+    """Who would receive the payment confirmation of this income, or why not.
+
+    Read when the Liquidar modal opens, so its checkbox and last notice name
+    the same address the settle view will send to.
+    """
+    income = get_object_or_404(
+        IncomeRecord.objects.select_related('client__user', 'project'),
+        pk=record_id,
+    )
+    return Response(
+        income_payment_confirmation_service.confirmation_context(income),
+    )
 
 
 @api_view(['POST'])

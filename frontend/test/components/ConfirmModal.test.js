@@ -267,4 +267,16 @@ describe('ConfirmModal', () => {
       expect(hintAt).toBeLessThan(inputAt);
     });
   });
+
+  it('leaves the body scroll alone when stacked over another modal', async () => {
+    document.body.style.overflow = 'hidden';
+    const wrapper = mountModal({ lockScroll: false });
+
+    await wrapper.setProps({ modelValue: false });
+    await nextTick();
+
+    // The modal underneath is still open: closing this one must not free
+    // the page behind both.
+    expect(document.body.style.overflow).toBe('hidden');
+  });
 });

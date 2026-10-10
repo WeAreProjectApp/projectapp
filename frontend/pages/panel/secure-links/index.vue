@@ -56,6 +56,7 @@
       caption="Enlaces seguros de un solo uso"
       card-test-id-prefix="secure-link-row"
       table-min-width="60rem"
+      row-actions-layout="menu-start"
       interactive-rows
       @row-click="(row) => openDetail(row.id)"
     >
@@ -75,9 +76,25 @@
       <template #cell-expires_at="{ row }">{{ formatDateTime(row.expires_at) }}</template>
       <template #cell-consumed_at="{ row }">{{ row.consumed_at ? formatDateTime(row.consumed_at) : '—' }}</template>
       <template #row-actions="{ row }">
-        <BaseActionMenu :items="actionItems(row)" :testid="`secure-link-actions-${row.id}`" />
+        <BaseActionButton
+          action="more"
+          class="h-11 w-11 shrink-0"
+          :label="`Acciones de ${row.title}`"
+          :loading="openingContentId === row.id"
+          :data-testid="`secure-link-actions-${row.id}`"
+          @click.stop="actionsRow = row"
+        />
       </template>
     </BaseExploratoryList>
+
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.title || ''"
+      :subtitle="actionsRow?.type_label || ''"
+      :items="actionsRow ? actionItems(actionsRow) : []"
+      testid="secure-link-actions-modal"
+      @close="actionsRow = null"
+    />
 
     <div v-if="store.count > store.pageSize" class="mt-4 flex items-center justify-end gap-2 text-sm text-text-muted">
       <BaseButton variant="ghost" size="sm" :disabled="filters.page <= 1" disabled-reason="Ya estás en la primera página" @click="filters.page -= 1">Anterior</BaseButton>
@@ -136,15 +153,16 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, watch } from 'vue';
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseActionIcon from '~/components/base/BaseActionIcon.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import SecureLinkDetailModal from '~/components/secureLinks/SecureLinkDetailModal.vue';
@@ -153,6 +171,8 @@ import SecureLinkStatusBadge from '~/components/secureLinks/SecureLinkStatusBadg
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelNotify } from '~/composables/usePanelNotify';
+import { usePanelRefresh } from '~/composables/usePanelRefresh';
+import { contentFieldValues } from '~/composables/useSecureLinkForm';
 import { useSecureLinksStore } from '~/stores/secure_links';
 import { formatDateTime } from '~/utils/formatDate';
 
@@ -170,6 +190,8 @@ const filters = reactive({ tab: 'all', search: '', page: 1 });
 const formModal = reactive({ open: false, link: null, fields: null });
 const detailModal = reactive({ open: false, id: null });
 const createdModal = reactive({ open: false, url: '', expiresAt: null });
+const actionsRow = ref(null);
+const openingContentId = ref(null);
 
 const columns = [
   { key: 'title', label: 'Enlace', mobile: 'primary' },
@@ -247,9 +269,13 @@ onMounted(() => {
   load();
 });
 
+// The admin layout's bottom "Actualizar datos" button reloads this list.
+usePanelRefresh(load);
+
 function actionItems(row) {
   return [
-    { action: 'view', label: 'Ver detalle', testid: `secure-link-open-${row.id}`, onClick: () => openDetail(row.id) },
+    { action: 'view', label: 'Detalle e historial', testid: `secure-link-open-${row.id}`, onClick: () => openDetail(row.id) },
+    { action: 'edit', label: t('secureLinks.panel.editContent'), testid: `secure-link-edit-content-${row.id}`, onClick: () => editRowContent(row) },
     { action: 'copy', label: 'Copiar enlace', testid: `secure-link-copy-${row.id}`, onClick: () => copyRowUrl(row) },
     ...(!row.team_only && row.status === 'active' && !row.sent_at
       ? [{ action: 'complete', label: t('secureLinks.panel.markSent'), testid: `secure-link-mark-sent-${row.id}`, onClick: () => markSent(row) }] : []),
@@ -277,6 +303,19 @@ function openEdit({ link, fields }) {
 function openDetail(id) {
   detailModal.id = id;
   detailModal.open = true;
+}
+
+/** Same audited content read as the detail's "Editar contenido". */
+async function editRowContent(row) {
+  if (openingContentId.value) return;
+  openingContentId.value = row.id;
+  const result = await store.viewContent(row.id);
+  openingContentId.value = null;
+  if (!result.success) {
+    notify.error({ title: result.error.message });
+    return;
+  }
+  openEdit({ link: row, fields: contentFieldValues(result.data.fields) });
 }
 
 function onSaved(data) {

@@ -13,6 +13,7 @@ from django.utils import timezone as tz
 from django.utils.dateparse import parse_date
 
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import closed_object, close_root_schemas, open_object
 from content.models import BlogPost
 from content.serializers.blog import (
     BlogPostAdminDetailSerializer,
@@ -152,7 +153,51 @@ def get_blog_calendar(arguments):
 
 _POST_ID_PROP = {'post_id': {'type': 'integer', 'description': 'ID del blog post.'}}
 
-BLOG_TOOLS = [
+_BLOG_CREATE_PROPS = {
+    'title_es': {'type': 'string'},
+    'title_en': {'type': 'string'},
+    'excerpt_es': {'type': 'string'},
+    'excerpt_en': {'type': 'string'},
+    'content_json_es': open_object(
+        'Contenido estructurado del artículo en español; usa get_blog_template.',
+        'El serializer valida secciones de distintos tipos, cuyo contenido y claves dependen del artículo.',
+    ),
+    'content_json_en': open_object(
+        'Contenido estructurado del artículo en inglés; usa get_blog_template.',
+        'El serializer valida secciones de distintos tipos, cuyo contenido y claves dependen del artículo.',
+    ),
+    'category': {'type': 'string'},
+    'cover_image_url': {'type': 'string'},
+    'sources': {
+        'type': 'array',
+        'items': closed_object(
+            {'name': {'type': 'string'}, 'url': {'type': 'string'}},
+            ['name', 'url'],
+        ),
+    },
+    'read_time_minutes': {'type': 'integer'},
+    'is_featured': {'type': 'boolean'},
+    'is_published': {'type': 'boolean'},
+    'published_at': {'type': ['string', 'null'], 'description': 'ISO 8601 con timezone; null quita la programación.'},
+    'author': {'type': 'string'},
+    'meta_title_es': {'type': 'string'},
+    'meta_title_en': {'type': 'string'},
+    'meta_description_es': {'type': 'string'},
+    'meta_description_en': {'type': 'string'},
+    'meta_keywords_es': {'type': 'string'},
+    'meta_keywords_en': {'type': 'string'},
+    'cover_image_credit': {'type': 'string'},
+    'cover_image_credit_url': {'type': 'string'},
+    'linkedin_summary_es': {'type': 'string'},
+    'linkedin_summary_en': {'type': 'string'},
+}
+_BLOG_UPDATE_PROPS = {
+    **_POST_ID_PROP,
+    **_BLOG_CREATE_PROPS,
+    'slug': {'type': 'string', 'description': 'Identificador del artículo en la URL pública.'},
+}
+
+BLOG_TOOLS = close_root_schemas([
     {
         'name': 'get_blog_template',
         'description': (
@@ -172,32 +217,7 @@ BLOG_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
-            'properties': {
-                'title_es': {'type': 'string'},
-                'title_en': {'type': 'string'},
-                'excerpt_es': {'type': 'string'},
-                'excerpt_en': {'type': 'string'},
-                'content_json_es': {'type': 'object'},
-                'content_json_en': {'type': 'object'},
-                'category': {'type': 'string'},
-                'cover_image_url': {'type': 'string'},
-                'sources': {'type': 'array', 'items': {'type': 'object'}},
-                'read_time_minutes': {'type': 'integer'},
-                'is_featured': {'type': 'boolean'},
-                'is_published': {'type': 'boolean'},
-                'published_at': {'type': 'string', 'description': 'ISO 8601 con timezone.'},
-                'author': {'type': 'string'},
-                'meta_title_es': {'type': 'string'},
-                'meta_title_en': {'type': 'string'},
-                'meta_description_es': {'type': 'string'},
-                'meta_description_en': {'type': 'string'},
-                'meta_keywords_es': {'type': 'string'},
-                'meta_keywords_en': {'type': 'string'},
-                'cover_image_credit': {'type': 'string'},
-                'cover_image_credit_url': {'type': 'string'},
-                'linkedin_summary_es': {'type': 'string'},
-                'linkedin_summary_en': {'type': 'string'},
-            },
+            'properties': _BLOG_CREATE_PROPS,
             'required': ['title_es', 'title_en', 'excerpt_es', 'excerpt_en', 'content_json_es'],
         },
         'handler': create_blog_post,
@@ -205,16 +225,18 @@ BLOG_TOOLS = [
     {
         'name': 'update_blog_post',
         'description': (
-            'Actualiza campos de un post existente (parcial). Acepta los mismos '
-            'campos que create_blog_post más post_id. Para despublicar: '
-            'is_published=false.'
+            'Actualiza parcialmente un blog post: envía post_id y sólo los '
+            'campos a cambiar (mismos campos que create_blog_post, más slug). '
+            'Para despublicar: is_published=false.'
         ),
-        'input_schema': {
-            'type': 'object',
-            'properties': {**_POST_ID_PROP, 'title_es': {'type': 'string'}},
-            'required': ['post_id'],
-            'additionalProperties': True,
-        },
+        'input_schema': closed_object(_BLOG_UPDATE_PROPS, ['post_id']),
+        # The write serializer also accepts legacy HTML without advertising it
+        # as part of the structured JSON creation workflow.
+        'accepted_arguments_schema': closed_object({
+            **_BLOG_UPDATE_PROPS,
+            'content_es': {'type': 'string', 'description': 'Contenido HTML heredado en español.'},
+            'content_en': {'type': 'string', 'description': 'Contenido HTML heredado en inglés.'},
+        }, ['post_id']),
         'handler': update_blog_post,
     },
     {
@@ -272,4 +294,4 @@ BLOG_TOOLS = [
         },
         'handler': get_blog_calendar,
     },
-]
+])

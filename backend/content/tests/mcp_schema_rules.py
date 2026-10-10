@@ -1,6 +1,6 @@
 """Test-only schema policy for the documents/projects explicitness sweep.
 
-The structural rules mirror PR #503's ``schema_policy.schema_problems``.
+The structural rules extend the canonical ``schema_policy.schema_problems``.
 This sweep additionally forbids published root data/query envelopes and keeps
 auditing declared children of marked open objects. Backlogs are snapshots,
 never computed at import time: improvements must remove entries.
@@ -8,6 +8,8 @@ never computed at import time: improvements must remove entries.
 
 import ast
 from pathlib import Path
+
+from content.mcp.schema_policy import schema_problems as canonical_schema_problems
 
 OPEN_REASON_KEY = 'x-mcp-open-reason'
 COMBINATORS = ('anyOf', 'oneOf', 'allOf')
@@ -48,7 +50,9 @@ def _pointer(path, key):
 
 def schema_problems(tool, *, generic_ok=False, undescribed_ok=False):
     """Report policy violations as escaped JSON pointers into input_schema."""
-    problems = []
+    problems = canonical_schema_problems(
+        tool, generic_ok=generic_ok, undescribed_ok=undescribed_ok,
+    )
     name = tool.get('name', '<unnamed>')
     root = tool.get('input_schema')
 
@@ -145,7 +149,7 @@ def schema_problems(tool, *, generic_ok=False, undescribed_ok=False):
     if isinstance(properties, dict):
         for alias in sorted({'data', 'query'} & properties.keys()):
             report(_pointer('/properties', alias), 'published root data/query aliases are forbidden')
-    return problems
+    return list(dict.fromkeys(problems))
 
 
 # Wave 2 closed every in-scope contract and documented deliberate Panel-only reads.
@@ -175,6 +179,14 @@ EXCLUDED_TOOLS = {
 # Evidence names a scenario, not just a file containing unrelated preview and
 # apply tests. The scanner follows its same-file helpers without importing tests.
 PARITY_PAIRS = {
+    ('projects', 'preview_integrity_fixes'): (
+        'content/tests/views/test_mcp_data_integrity.py', 'test_confirmation_applies_once_and_replays_after',
+        ('apply_integrity_fixes', 'confirm_action'),
+    ),
+    ('projects', 'preview_integrity_operation_undo'): (
+        'content/tests/views/test_mcp_data_integrity.py', 'test_undo_goes_through_its_own_preview_and_confirmation',
+        ('undo_integrity_operation', 'confirm_action'),
+    ),
     ('documents', 'preview_move'): (
         'content/tests/views/test_ownership_parity.py', 'test_mcp_move_matches_preview',
         ('move_documents', 'update_folder', 'update_document'),

@@ -106,8 +106,8 @@ el mismo problema.
 | Tabs de alta cardinalidad | Selector móvil de Contabilidad y `BaseTabs` | Selector durante compacto e intermedio; tira desde 1024 px, máximo dos filas. Si necesita una tercera, agrupar en “Más” o mantener selector. |
 | Filtros guardados | `ProposalFilterTabs` | Igual contrato que tabs: selector hasta 1023 px; tira visible desde 1024 px, máximo dos filas, sin cortar opciones. |
 | Modal | `BaseModal` | Único overlay canónico: margen exterior de 16 px, máximo 90dvh, body con scroll, encabezado/cierre y footer alcanzables, focus trap y bloqueo de scroll. `fullHeight` queda para workspaces. |
-| Fila de formulario | `BaseFormRow` + `BaseFormField` | Una columna por defecto; dos columnas solo cuando cada control conserva al menos 280 px útiles. En modal estrecho se apila aunque el viewport sea ancho. |
-| Acciones por fila | Kebab de Documentos + `DocumentActionsSheet`; en Contabilidad `AccountingRowActionsButton` + `AccountingRowActionsModal` | Un solo disparador por fila. En tabla ocupa la primera columna de control, sin rótulo visible y con 56 px fijos; si hay selección, el orden es Casilla → Acciones → Contenido. Dropdown en ancho; hoja/modal de acciones en compacto o cuando hay muchas acciones (Contabilidad usa siempre el modal). «Detalle e historial» y «Ver nota» son entradas del menú, nunca botones junto al kebab. Nunca una hilera de botones que ensanche la tabla. |
+| Fila de formulario | `BaseFormRow` + `BaseFormField` | Una columna por defecto; dos columnas solo cuando cada control de texto conserva al menos 280 px útiles. Los campos cortos (fecha, número, monto, select corto) pueden compartir filas de tres o cuatro columnas. En un modal `confirm` el texto se apila aunque el viewport sea ancho. Ancho por tipo de campo: `frontend/components/base/README.md`, «Field widths». |
+| Acciones por fila | Kebab de Documentos + `DocumentActionsSheet`; en Contabilidad `AccountingRowActionsButton` + `AccountingRowActionsModal`; en listas exploratorias `BaseExploratoryList` (`menu-start`) + `BaseRowActionsModal` | Un solo disparador por fila. En tabla ocupa la primera columna de control, sin rótulo visible y con 56 px fijos; si hay selección, el orden es Casilla → Acciones → Contenido. En tarjeta, el kebab es el primer control. Dropdown en ancho; hoja/modal de acciones en compacto o cuando hay muchas acciones (Contabilidad y las listas exploratorias usan siempre el modal). «Detalle e historial» y «Ver nota» son entradas del menú, nunca botones junto al kebab. Nunca una hilera de botones que ensanche la tabla. |
 | Selección masiva | `BulkAssignBar` | Barra sticky compacta, contador, acción principal y un menú “Acciones”; siempre ofrece limpiar/cancelar. |
 | Navegación de calendario | Lista móvil de Blog Calendar | Vista semántica alternativa en compacto/intermedio cuando comprimir la grilla destruye legibilidad. |
 | Workspace multipanel | Editores de Documentos | Apilar hasta que cada panel tenga su mínimo; permitir split solo con al menos 480 px por panel; máximo exterior de 1600 px. |
@@ -131,8 +131,10 @@ navegable, pero no cancela gestos de movimiento: el wrapper debe conservar el
 paneo lateral iniciado sobre el botón. La decisión de producto del 2026-09-26
 consolidó así todas las tablas y listas de Contabilidad: el kebab va solo en su
 track y abre un modal cuya primera entrada es «Detalle e historial», seguida de
-«Ver nota» cuando el registro tiene nota. Las tablas con iconos sueltos fuera de
-Contabilidad siguen pendientes de la misma migración.
+«Ver nota» cuando el registro tiene nota. El 2026-10-09 se sumaron las listas
+exploratorias (Enlaces seguros, Blog, Portfolio, Paquetes de horas, LinkedIn,
+Linktrees y Tarjetas QR) con `BaseRowActionsModal`. Las tablas con iconos
+sueltos fuera de Contabilidad siguen pendientes de la misma migración.
 
 Como el track del kebab sólo se sostiene con `table-layout: fixed`, una tabla
 `menu-start` con política responsive no emite `<col>` para las columnas de
@@ -159,8 +161,10 @@ columnas que muestra.
 
 - Todo modal nuevo o migrado usa `BaseModal`; no duplica Teleport, backdrop,
   z-index, Escape, focus trap ni scroll lock.
-- En 412 px ocupa el ancho disponible menos 32 px. En tableta/desktop respeta el
-  tamaño semántico (`sm`…`5xl`) y nunca excede `calc(100vw - 32px)`.
+- Bajo 640 px ocupa la pantalla completa. Desde 640 px respeta el `kind`
+  semántico (`confirm` 28 rem, `form` 42 rem, `form-wide`/`detail` 64 rem,
+  `wizard` 80 rem, `workspace` hasta 100 rem) y nunca excede
+  `calc(100vw - 32px)`. Crear y editar usa `form`; `form-wide` es la excepción.
 - El panel mide como máximo 90dvh. En formularios largos, header y footer quedan
   visibles y solo el cuerpo scrollea cuando sea necesario.
 - Confirmaciones siguen siendo pequeñas. Workspaces pueden usar `fullHeight` y
@@ -174,6 +178,10 @@ columnas que muestra.
   contenedor —incluidos padding y gap— deja 280 px útiles por campo.
 - Pares cortos y relacionados pueden compartir fila; textarea, uploads,
   markdown, mensajes y campos que dependen del ancho ocupan fila completa.
+- Un campo corto (fecha, select, monto, texto corto) no se estira a todo el
+  ancho: va con una pareja relacionada o solo en una fila de dos columnas. Los
+  campos cortos pueden usar filas de tres o cuatro columnas aunque queden bajo
+  280 px.
 - Label, control, hint y error pertenecen al mismo campo y no se reordenan.
 - `BaseFormRow` es la estructura canónica; `at="md"` o una futura condición por
   contenedor se usa donde el modal no alcanza el mínimo.
@@ -203,7 +211,7 @@ columnas que muestra.
 | RSP-08 | P1 | Formularios | Persisten grillas manuales de dos columnas y filas sin el contrato de ancho mínimo. En el modal de Tareas a 412 px se observó overflow interno de 19 px y campos de 160 px. | Tareas, Admins, formularios/modales heredados | Fase 1; absorbe PA-45. |
 | RSP-09 | P1 | Selección masiva | Propuestas y Diagnósticos muestran varias acciones inline en su barra bulk, en vez del contador + acción principal + menú canónico. | Propuestas, Diagnósticos | Fase 2. |
 | RSP-10 | P1 | Workspace | Los editores de Documentos habilitan split en `lg`. Con 1195 px y sidebar expandida quedan ~891 px de página: dos paneles resultan de ~437 px, por debajo del mínimo de 480 px. Es una inferencia geométrica que debe fijarse con prueba de layout. | Documentos create/edit y previews multipanel equivalentes | Fase 3. |
-| RSP-11 | P1 | Menús de acciones | Blog, Portfolio, Paquetes, LinkedIn, QR y Linktrees conservan varias acciones directas por fila; consumen el ancho que deberían usar los datos. | Listados indicados | Fase 2. |
+| RSP-11 | P1 | Menús de acciones | Blog, Portfolio, Paquetes, LinkedIn, QR y Linktrees conservan varias acciones directas por fila; consumen el ancho que deberían usar los datos. | Listados indicados | Fase 2. 2026-10-09: el menú de cada fila ya es el kebab inicial con modal; quedan la copia y la activación directas de QR y Linktrees. |
 | RSP-12 | P1 | Tablas anidadas | Clientes contiene seis tablas internas de 500/600 px sin política de prioridad ni representación compacta; los acordeones densos trasladan la carga al scroll. | Clientes | Fase 2. |
 | RSP-13 | P2 | Panel de carpetas | Documentos apila correctamente bajo `lg`, pero a 1195 px el panel de carpetas por defecto (384 px) deja ~483 px al listado después del shell/handle. Es operable, pero queda en el límite. | Documentos | Fase 3; seguimiento de PA-61. |
 | RSP-14 | P2 | Breakpoints JS/CSS | Conviven cortes JS de 768, 1023 y 1024 con clases `md`/`lg`; el mismo ancho puede recibir decisiones distintas entre CSS, composables y estado persistido. | Shell, Documentos, Blog/LinkedIn y consumidores de `useIsMobile` | Fase 1. |

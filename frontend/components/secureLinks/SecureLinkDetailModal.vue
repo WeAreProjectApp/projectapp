@@ -4,8 +4,8 @@
       <div v-if="loading" class="py-10 text-center text-sm text-text-subtle">Cargando enlace…</div>
       <template v-else-if="detail">
         <div class="flex min-w-0 flex-col gap-2 panel-portrait:flex-row panel-portrait:items-start panel-portrait:justify-between">
-          <div class="min-w-0">
-            <h3 class="text-lg font-bold text-text-default [overflow-wrap:anywhere]">{{ detail.title }}</h3>
+          <div class="min-w-0 flex-1">
+            <SecureLinkTitleEditor :title="detail.title" :disabled="Boolean(busy)" :save="saveTitle" />
             <p class="text-sm text-text-muted">{{ detail.type_label }} · {{ detail.origin_label }}</p>
           </div>
           <SecureLinkStatusBadge :status="detail.lifecycle_status || detail.status" :team-only="detail.team_only" />
@@ -56,10 +56,6 @@
           <BaseButton variant="secondary" size="sm" :loading="busy === 'url'" data-testid="secure-link-copy-url" @click="copyUrl">
             <BaseActionIcon action="copy" />
             {{ urlFeedback.label || 'Copiar enlace' }}
-          </BaseButton>
-          <BaseButton variant="ghost" size="sm" data-testid="secure-link-edit" @click="editMetadata">
-            <BaseActionIcon action="edit" />
-            Editar
           </BaseButton>
           <BaseButton variant="ghost" size="sm" data-testid="secure-link-edit-content" @click="editContent">
             <BaseActionIcon action="edit" />
@@ -127,7 +123,9 @@ import BaseModal from '~/components/base/BaseModal.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import SecureLinkContent from '~/components/secureLinks/SecureLinkContent.vue';
 import SecureLinkStatusBadge from '~/components/secureLinks/SecureLinkStatusBadge.vue';
+import SecureLinkTitleEditor from '~/components/secureLinks/SecureLinkTitleEditor.vue';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
+import { contentFieldValues } from '~/composables/useSecureLinkForm';
 import { useSecureLinksStore } from '~/stores/secure_links';
 import { formatDateTime } from '~/utils/formatDate';
 
@@ -139,7 +137,7 @@ const emit = defineEmits(['update:modelValue', 'edit', 'changed']);
 const store = useSecureLinksStore();
 const { t } = useI18n();
 const loading = ref(false);
-const mutating = computed(() => ['revoke', 'reactivate', 'sent'].includes(busy.value));
+const mutating = computed(() => ['revoke', 'reactivate', 'sent', 'title'].includes(busy.value));
 const clipboard = useClipboardFeedback();
 
 const detail = ref(null);
@@ -227,14 +225,29 @@ function copyUrl() {
   return runAction('url', () => store.fetchLinkUrl(props.linkId), (result) => copyText(result.url));
 }
 
-function editMetadata() {
-  emit('edit', { link: detail.value, fields: null });
+/**
+ * In-place rename: a PATCH with the title alone, so the history records only
+ * that field. The response is the full detail, events included. Returns the
+ * store result for the editor's inline error.
+ */
+async function saveTitle(title) {
+  if (busy.value) return { success: false, stale: true };
+  const version = generation;
+  busy.value = 'title';
+  error.value = '';
+  const result = await store.updateLink(props.linkId, { title });
+  if (!current(version)) return { success: false, stale: true };
+  busy.value = '';
+  if (result.success) {
+    detail.value = result.data;
+    emit('changed');
+  }
+  return result;
 }
 
 function editContent() {
   return runAction('content', () => store.viewContent(props.linkId), (result) => {
-    const values = Object.fromEntries(result.data.fields.map((field) => [field.key, field.value]));
-    emit('edit', { link: detail.value, fields: values });
+    emit('edit', { link: detail.value, fields: contentFieldValues(result.data.fields) });
   });
 }
 

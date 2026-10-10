@@ -153,6 +153,43 @@ def test_panel_patch_updates_metadata_without_invalidating_the_public_token(
     assert content['title'] == 'Edited title'
 
 
+def test_panel_title_only_patch_renames_without_touching_the_rest(
+    staff_client, make_link, client_profile, project,
+):
+    """Falla si renombrar en línea cambia asociación, contenido o estado, o audita campos que no cambió."""
+    from secure_links import services
+
+    link, _url = make_link(title='Original', client=client_profile, project=project)
+    content_before = services.content_for(link)['fields']
+
+    response = staff_client.patch(f'{BASE}{link.pk}/', {'title': '  Renamed in place '}, format='json')
+
+    link.refresh_from_db()
+    event = link.events.get(kind=SecureLinkEvent.Kind.UPDATED)
+    assert response.status_code == 200
+    assert response.json()['title'] == 'Renamed in place'
+    assert response.json()['events'][0]['kind'] == SecureLinkEvent.Kind.UPDATED
+    assert (link.client_id, link.project_id) == (client_profile.pk, project.pk)
+    assert link.status == 'active'
+    assert services.content_for(link)['fields'] == content_before
+    assert event.details['fields'] == ['title']
+
+
+@pytest.mark.parametrize('title', ['', '   ', 'a' * 161])
+def test_panel_title_only_patch_rejects_an_invalid_title(staff_client, make_link, title):
+    """Falla si el renombrado en línea guarda un título vacío o de más de 160 caracteres."""
+    link, _url = make_link(title='Original')
+
+    response = staff_client.patch(f'{BASE}{link.pk}/', {'title': title}, format='json')
+
+    link.refresh_from_db()
+    assert response.status_code == 400
+    assert response.json()['code'] == 'invalid'
+    assert 'title' in response.json()
+    assert link.title == 'Original'
+    assert not link.events.filter(kind=SecureLinkEvent.Kind.UPDATED).exists()
+
+
 def test_panel_patch_encrypts_replacement_content_without_auditing_its_value(
     staff_client, make_link,
 ):
