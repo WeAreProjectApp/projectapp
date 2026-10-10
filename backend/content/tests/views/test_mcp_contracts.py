@@ -165,13 +165,14 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
         'update_document',
         'archive_document',
         'move_documents',
+        'preview_move',
         'render_document_pdf',
         'describe_capabilities',
         'confirm_action',
         'begin_upload',
         'list_contract_mirrors',
     } <= tool_names
-    assert len(TOOLS_BY_SLUG['documents']) == 66
+    assert len(TOOLS_BY_SLUG['documents']) == 67
     mirror_listing = next(
         tool for tool in TOOLS_BY_SLUG['documents']
         if tool['name'] == 'list_contract_mirrors'

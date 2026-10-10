@@ -138,7 +138,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.Document',
-            read_only='id slug status created_at updated_at tags',
+            read_only='id slug status created_at updated_at tags is_archived',
             read_write=(
                 'folder project client_user title is_client_visible '
                 'content_markdown client_name client_email_subject '
@@ -159,7 +159,7 @@ MCP_MODEL_CONTRACTS = {
                 | _excluded(_PANEL_ONLY, 'cover_type template_style')
                 | _excluded(
                     'Los documentos archivados quedan fuera de circulación para el MCP.',
-                    'is_archived archived_at archived_via_folder',
+                    'archived_at archived_via_folder',
                 )
             ),
         ),
@@ -178,13 +178,13 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.DocumentFolder',
-            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source creation_operation',
+            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source creation_operation is_archived',
             read_write='name parent project client_user order',
             excluded=(
                 _excluded(_AUTOMATION_STATE, 'system_key')
                 | _excluded(
                     'El archivado de carpetas es una cascada reservada al panel.',
-                    'is_archived archived_at archived_via_folder',
+                    'archived_at archived_via_folder',
                 )
             ),
         ),
