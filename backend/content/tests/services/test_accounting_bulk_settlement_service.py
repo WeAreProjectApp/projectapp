@@ -168,6 +168,7 @@ class TestAbonoHappyPath:
         settings = AccountingSettings.load()
         settings.notifications_enabled = True
         settings.save(update_fields=['notifications_enabled'])
+        NotificationRecipient.objects.all().delete()
         NotificationRecipient.objects.create(email='contabilidad@example.test')
 
         with django_capture_on_commit_callbacks(execute=True):

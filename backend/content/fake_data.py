@@ -229,6 +229,7 @@ EXEMPT_MODELS = {
     # Activity events and SMTP attempts arise from actual committed operations;
     # seeds must never fabricate delivery/acknowledgement or dispatch notices.
     'accounts.DeliveryNotificationEvent', 'accounts.DeliveryNotificationAttempt',
+    'content.IncomeCompletionNotice',
     # Operational mutex provisioned by migration, not fabricated demo data.
     'content.DocumentFolderMutationLock',
     # Immutable private packet copies require explicit real proposal review;
