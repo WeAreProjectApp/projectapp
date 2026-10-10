@@ -268,17 +268,35 @@ def test_approval_data_reaches_source_hash_validation(api_client, proposals_mcp,
 @pytest.mark.parametrize(('name', 'path'), [
     ('undo_retained_operation', 'operation_id'), ('delete_empty_retained_containers', 'context_id'),
 ])
-def test_retention_data_reaches_reason_validation(api_client, name, path, flat_panel_contract):
-    """Legacy retention calls must validate their reason before looking up the resource."""
+def test_retention_reason_is_validated_before_confirmation(api_client, name, path):
+    """Flat retention calls validate their reason before looking up the resource."""
     token = activate_connector('projects')
 
-    result = call_tool(api_client, 'projects', token, name, {path: 1, 'data': {
-        'reason': '', 'request_id': 'legacy-retention', 'expected_impact_hash': 'a' * 64,
-    }}).data['result']
+    result = call_tool(api_client, 'projects', token, name, {
+        path: 1, 'reason': '', 'request_id': 'flat-retention', 'expected_impact_hash': 'a' * 64,
+    }).data['result']
 
     assert result['isError'] is True
     assert result['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
     assert 'reason' in result['structuredContent']['error']['details']
+    assert McpActionIntent.objects.count() == 0
+
+
+@pytest.mark.parametrize(('name', 'path'), [
+    ('undo_retained_operation', 'operation_id'), ('delete_empty_retained_containers', 'context_id'),
+])
+def test_retention_rejects_a_deprecated_data_envelope(api_client, name, path):
+    """Projects 3.0 rejects a legacy envelope before creating a confirmation."""
+    token = activate_connector('projects')
+
+    result = call_tool(api_client, 'projects', token, name, {
+        path: 1, 'reason': 'Prueba de rechazo', 'request_id': 'unsupported-retention',
+        'expected_impact_hash': 'a' * 64, 'data': {'reason': 'Otro valor'},
+    }).data['result']
+
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'unknown_field'
+    assert result['structuredContent']['error']['details']['errors'][0]['field'] == 'data'
     assert McpActionIntent.objects.count() == 0
 
 

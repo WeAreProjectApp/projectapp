@@ -40,6 +40,11 @@ _SERVICE_SERIALIZERS = {
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
 _DELEGATED_QUERY_READS = {'preview_retained_container_cleanup': set(CONTAINER_KINDS)}
+_INTEGRITY_BRIDGE_NAMES = {
+    'describe_integrity_rules', 'list_integrity_findings', 'preview_integrity_fixes',
+    'apply_integrity_fixes', 'list_integrity_operations', 'preview_integrity_operation_undo',
+    'undo_integrity_operation',
+}
 
 
 def _serializer_class(path):
@@ -144,8 +149,8 @@ def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tool
                for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
                for key, schema in fragments.items())
 
-    assert len(original_bridge_tools) == 48
-    assert set(PROJECTS_BRIDGE_SCHEMAS) == set(original_bridge_tools)
+    assert len(original_bridge_tools) == 55
+    assert set(PROJECTS_BRIDGE_SCHEMAS) | _INTEGRITY_BRIDGE_NAMES == set(original_bridge_tools)
     assert failures == {name: [] for name in original_bridge_tools}, failures
 
 
