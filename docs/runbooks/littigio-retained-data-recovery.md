@@ -24,7 +24,7 @@ y respuesta se guarda fuera de Git, con fecha, IDs y huellas.
 
 | ID | Lectura |
 |---|---|
-| I1 | `list_project_retention_contexts` con `query.client_profile_id=61` y `query.integrity=1`: contextos de los proyectos 14 y 15, ids vivos por categoría, propuestas afectadas (#117), integridad vacía |
+| I1 | `list_project_retention_contexts` con `client_profile_id=61` e `integrity=true`, como argumentos planos desde Proyectos 3.0.0: contextos de los proyectos 14 y 15, ids vivos por categoría, propuestas afectadas (#117), integridad vacía |
 | I2 | `list_change_logs(entity_type="project", action="deleted")`, filas de 14 y 15 |
 | I3 | `get_project(16)`, `list_project_commercial_phases(16)`, `get_project_hosting(16)`, `get_project_billing_options(16)` |
 | I4 | `list_project_unlinked_records(16)`: registros con `retained`, `duplicates` y `threads` |

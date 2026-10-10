@@ -3,12 +3,17 @@ import json
 from decimal import Decimal
 
 import pytest
+from accounts.models import Deliverable, Project, ProjectPhase
 from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 
-from accounts.models import Deliverable, Project, ProjectPhase
-from content.models import BusinessProposal, IncomeRecord, McpConnector, ProjectRetentionContext
+from content.models import (
+    BusinessProposal,
+    IncomeRecord,
+    McpConnector,
+    ProjectRetentionContext,
+)
 
 pytestmark = pytest.mark.django_db
 AUDIT_URL = '/api/projects/retained-data/audit/'
@@ -146,7 +151,7 @@ def test_mcp_tool_returns_the_same_audit(api_client, projects_token, littigio):
     response = api_client.post(f'/api/mcp/projects/{projects_token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
         'params': {'name': 'list_project_retention_contexts',
-                   'arguments': {'query': {'client_profile_id': littigio['profile'].pk}}},
+                   'arguments': {'client_profile_id': littigio['profile'].pk}},
     }, format='json')
 
     result = json.loads(response.data['result']['content'][0]['text'])

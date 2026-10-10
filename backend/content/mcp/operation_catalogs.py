@@ -5,33 +5,28 @@ service, permissions, transaction and audit behavior. Domain-native tools remain
 the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
-from content.mcp.document_tools import _FOLDER_FIELDS
-from content.mcp.document_ownership_tools import (
-    CLIENT_POLICY_SCHEMA,
-    DOCUMENT_DECISIONS_SCHEMA,
-    EXPECTED_PLAN_HASH_SCHEMA,
-    POLICY_DESCRIPTION,
-    PORTAL_POLICY_SCHEMA,
-)
-from content.mcp.delivery_tools import DELIVERY_TOOLS
-from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
-from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
 from content.mcp.delivery_notification_tools import DELIVERY_NOTIFICATION_TOOLS
-from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
-from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
-from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
-from content.mcp.issue_tools import ISSUE_TOOLS
-from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
-from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
-from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
-from content.mcp.operation_builder import _op
+from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
+from content.mcp.delivery_tools import DELIVERY_TOOLS
+from content.mcp.document_ownership_tools import POLICY_DESCRIPTION
 from content.mcp.entity_history_tools import history_tools
+from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
+from content.mcp.issue_tools import ISSUE_TOOLS
+from content.mcp.operation_builder import _op
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
+from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
+from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
+from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
+from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
+from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.proposal_schemas import writable_schema
 from content.mcp.schema_policy import closed_object
 from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
 from accounts.serializers import UpdateProjectPhaseSerializer
 from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
+from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
+from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
 
 OPERATIONS_TOOLS = [
@@ -47,11 +42,13 @@ _PROJECT_DELETE_PREVIEW = _op(
     'preview_project_delete',
     'Comprueba si el proyecto está vacío y lista las dependencias que impiden eliminarlo.',
     'panel-projects-delete-preview', path=('project_id',),
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_project_delete'],
 )
 _PROJECT_DELETE = _op(
     'delete_project',
     'Elimina definitivamente un proyecto vacío. Revalida todas las dependencias; si tiene información relacionada exige conservarla mediante Cambiar estado.',
     'panel-projects-delete', 'DELETE', ('project_id',), 'sensitive', True,
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['delete_project'],
 )
 _delete_project_handler = _PROJECT_DELETE['handler']
 
@@ -80,109 +77,76 @@ def _project_create_tool():
 
 
 PROJECT_TOOLS = [
-    _op('list_projects', 'Lista proyectos y sus indicadores por estado; query.client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list'),
-    _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',)),
+    _op('list_projects', 'Lista proyectos y sus indicadores por estado; client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_projects']),
+    _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project']),
     _project_create_tool(),
-    _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
+    _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['update_project']),
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,
-    _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',)),
-    _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. query.client_profile_id filtra por perfil de cliente, query.page pagina de a 20 y query.integrity=1 agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit'),
-    _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
+    _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_unlinked_records']),
+    _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. client_profile_id filtra por perfil de cliente, page pagina de a 20 y integrity=true agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_retention_contexts']),
+    _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['assign_project_unlinked_records']),
     *_project_client_change_tools(),
-    _op('list_project_state_groups', 'Lista grupos del catálogo de estados de proyecto.', 'project-state-groups'),
-    _op('create_project_state_group', 'Crea un grupo de estados de proyecto.', 'project-state-groups', 'POST', risk='write'),
-    _op('list_project_states', 'Lista el catálogo de estados de proyecto.', 'project-states'),
-    _op('create_project_state', 'Crea un estado en el catálogo de proyectos.', 'project-states', 'POST', risk='write'),
-    _op('suggest_project_states', 'Busca estados de proyecto similares antes de crear.', 'project-state-suggestions'),
-    _op('update_project_state', 'Actualiza nombre, descripción, color y orden de un estado.', 'update-project-state', 'PATCH', ('state_id',), 'write'),
-    _op('retire_project_state', 'Retira un estado administrable del catálogo.', 'retire-project-state', 'POST', ('state_id',), 'sensitive', True),
-    _op('merge_project_state', 'Fusiona un estado de proyecto dentro de otro.', 'merge-project-state', 'POST', ('state_id',), 'sensitive', True),
-    _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',)),
-    _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True),
-    _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',)),
-    _op('list_project_commercial_phases', 'Consulta las fases comerciales asociadas a propuestas y sus fechas de hosting.', 'project-commercial-phases', path=('project_id',)),
-    _op('add_project_commercial_phase', 'Incorpora como fase una propuesta aceptada ya vinculada a este proyecto; la vinculación inicial requiere revisión de aprobación.', 'project-commercial-phases', 'POST', ('project_id',), 'write', payload_schema=writable_schema(AddCommercialPhaseSerializer)),
-    _op('update_project_commercial_phase', 'Actualiza la fecha de inicio del hosting de una fase, conservando su vínculo con la propuesta.', 'project-commercial-phase-detail', 'PATCH', ('project_id', 'phase_id'), 'write', payload_schema=writable_schema(UpdateProjectPhaseSerializer)),
-    _op('remove_project_commercial_phase', 'Desvincula una fase sin entrega ni hosting asociado; conserva la propuesta y sus archivos.', 'project-commercial-phase-detail', 'DELETE', ('project_id', 'phase_id'), 'sensitive', True),
-    _op('reorder_project_commercial_phases', 'Reordena todas las fases comerciales con identificadores únicos y posiciones consecutivas.', 'project-commercial-phases-reorder', 'PATCH', ('project_id',), 'write', payload_schema=writable_schema(ReorderCommercialPhasesSerializer)),
-    _op('get_project_brand', 'Consulta Linktrees y los archivos de marca del proyecto sin exponer rutas de almacenamiento privadas.', 'project-brand', path=('project_id',)),
-    _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, payload_schema=writable_schema(ProjectBrandAssetUploadSerializer, exclude=('file',))),
-    _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id')),
-    _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True),
+    _op('list_project_state_groups', 'Lista grupos del catálogo de estados de proyecto.', 'project-state-groups', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_state_groups']),
+    _op('create_project_state_group', 'Crea un grupo de estados de proyecto.', 'project-state-groups', 'POST', risk='write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['create_project_state_group']),
+    _op('list_project_states', 'Lista el catálogo de estados de proyecto.', 'project-states', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_states']),
+    _op('create_project_state', 'Crea un estado en el catálogo de proyectos.', 'project-states', 'POST', risk='write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['create_project_state']),
+    _op('suggest_project_states', 'Busca estados de proyecto similares antes de crear.', 'project-state-suggestions', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['suggest_project_states']),
+    _op('update_project_state', 'Actualiza nombre, descripción, color y orden de un estado.', 'update-project-state', 'PATCH', ('state_id',), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['update_project_state']),
+    _op('retire_project_state', 'Retira un estado administrable del catálogo.', 'retire-project-state', 'POST', ('state_id',), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['retire_project_state']),
+    _op('merge_project_state', 'Fusiona un estado de proyecto dentro de otro.', 'merge-project-state', 'POST', ('state_id',), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['merge_project_state']),
+    _op('preview_project_state_transition', 'Calcula consecuencias financieras y operativas de una transición.', 'panel-project-state-transition-preview', 'POST', ('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_project_state_transition']),
+    _op('apply_project_state_transition', 'Aplica una transición con el impact_token vigente.', 'panel-project-state-transition', 'POST', ('project_id',), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['apply_project_state_transition']),
+    _op('list_project_state_history', 'Lista episodios y eventos de estado de un proyecto.', 'panel-project-state-history', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_state_history']),
+    _op('list_project_commercial_phases', 'Consulta las fases comerciales asociadas a propuestas y sus fechas de hosting.', 'project-commercial-phases', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['list_project_commercial_phases']),
+    _op('add_project_commercial_phase', 'Incorpora como fase una propuesta aceptada ya vinculada a este proyecto; la vinculación inicial requiere revisión de aprobación.', 'project-commercial-phases', 'POST', ('project_id',), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['add_project_commercial_phase']),
+    _op('update_project_commercial_phase', 'Actualiza la fecha de inicio del hosting de una fase, conservando su vínculo con la propuesta.', 'project-commercial-phase-detail', 'PATCH', ('project_id', 'phase_id'), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['update_project_commercial_phase']),
+    _op('remove_project_commercial_phase', 'Desvincula una fase sin entrega ni hosting asociado; conserva la propuesta y sus archivos.', 'project-commercial-phase-detail', 'DELETE', ('project_id', 'phase_id'), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['remove_project_commercial_phase']),
+    _op('reorder_project_commercial_phases', 'Reordena todas las fases comerciales con identificadores únicos y posiciones consecutivas.', 'project-commercial-phases-reorder', 'PATCH', ('project_id',), 'write', envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['reorder_project_commercial_phases']),
+    _op('get_project_brand', 'Consulta Linktrees y los archivos de marca del proyecto sin exponer rutas de almacenamiento privadas.', 'project-brand', path=('project_id',), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['get_project_brand']),
+    _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['upload_project_brand_asset']),
+    _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id'), envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['download_project_brand_asset']),
+    _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True, envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['delete_project_brand_asset']),
 ] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS + DATA_INTEGRITY_TOOLS
 
 
-_UPDATE_FOLDER_SCHEMA = {
-    'type': 'object', 'additionalProperties': False,
-    'properties': {**_FOLDER_FIELDS, 'client_policy': CLIENT_POLICY_SCHEMA,
-                   'portal_policy': PORTAL_POLICY_SCHEMA, 'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA},
-}
-_MOVE_SCHEMA = {
-    'type': 'object', 'additionalProperties': False,
-    'properties': {
-        'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
-        'folder_id': {'type': ['integer', 'null'], 'minimum': 1},
-        'include_content': {'type': 'boolean', 'default': False},
-        'client_policy': CLIENT_POLICY_SCHEMA,
-        'portal_policy': PORTAL_POLICY_SCHEMA,
-        'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA,
-        'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
-    },
-    'required': ['document_ids', 'folder_id'],
-}
-
 DOCUMENT_PARITY_TOOLS = [
-    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado y propiedad antes/después por ID.' + POLICY_DESCRIPTION, 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
-    _op('browse_documents', 'Busca, filtra, ordena y pagina todo el inventario documental.', 'browse-documents'),
-    _op('get_document_counts', 'Obtiene conteos documentales para filtros y navegación.', 'document-counts'),
-    _op('get_document_navigation', 'Obtiene raíces, clientes y proyectos navegables.', 'document-navigation'),
-    _op('get_document_communication_usage', 'Lista comunicaciones que referencian el documento.', 'document-communication-usage', path=('document_id',)),
-    _op('get_document_email_usage', 'Lista correos que utilizaron el documento.', 'document-email-usage', path=('document_id',)),
-    _op('render_document_pdf', 'Genera el PDF vigente como asset temporal descargable.', 'download-document-pdf', path=('document_id',)),
-    _op('duplicate_document', 'Duplica un documento Markdown como borrador independiente.', 'duplicate-document', 'POST', ('document_id',), 'write'),
-    _op('archive_document', 'Archiva un documento individual de forma reversible.', 'archive-document', 'PATCH', ('document_id',), 'write'),
-    _op('unarchive_document', 'Restaura un documento archivado individualmente.', 'unarchive-document', 'PATCH', ('document_id',), 'write'),
-    _op('list_document_folders', 'Lista carpetas activas o archivadas con filtros del Panel.', 'list-document-folders'),
-    _op('get_project_folder_readiness', 'Revisa la disponibilidad de raíces documentales de proyectos.', 'project-folder-readiness'),
-    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta. Al cambiar de padre evalúa todo su subárbol; la propiedad se decide con las políticas, sin combinar client o project en ese movimiento.' + POLICY_DESCRIPTION, 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_UPDATE_FOLDER_SCHEMA),
-    _op('delete_folder', 'Elimina una carpeta vacía que el sistema permita eliminar.', 'delete-document-folder', 'DELETE', ('folder_id',), 'sensitive', True),
-    _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True),
-    _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write'),
-    _op('reorder_folders', 'Reordena carpetas hermanas con una lista explícita de ids.', 'reorder-document-folders', 'POST', risk='write'),
-    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta; portal_changes lista los documentos que darían acceso a un nuevo cliente.', 'preview-document-folder-client-change', path=('folder_id',), query_schema={
-        'type': 'object', 'additionalProperties': False,
-        'properties': {'client_profile_id': {'type': 'integer', 'minimum': 1}},
-        'required': ['client_profile_id'],
-    }),
-    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado. portal_policy: abort (default MCP) bloquea nueva audiencia, allow la permite y hide_new_exposure oculta los documentos que ganarían acceso.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True, payload_schema={
-        'type': 'object', 'additionalProperties': False,
-        'properties': {
-            'client_profile_id': {'type': 'integer', 'minimum': 1},
-            'mode': {'type': 'string', 'enum': ['propagate', 'folder_only']},
-            'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
-            'folder_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
-            'portal_policy': {**PORTAL_POLICY_SCHEMA, 'description': 'abort bloquea nueva audiencia; allow la permite; hide_new_exposure oculta los documentos que ganarían acceso.'},
-        },
-        'required': ['client_profile_id', 'mode'],
-    }),
-    _op('list_document_tags', 'Lista el catálogo de etiquetas documentales.', 'list-document-tags'),
-    _op('create_document_tag', 'Crea una etiqueta documental.', 'create-document-tag', 'POST', risk='write'),
-    _op('update_document_tag', 'Actualiza una etiqueta documental.', 'update-document-tag', 'PATCH', ('tag_id',), 'write'),
-    _op('delete_document_tag', 'Elimina una etiqueta documental no protegida.', 'delete-document-tag', 'DELETE', ('tag_id',), 'sensitive', True),
-    _op('list_document_state_groups', 'Lista grupos del workflow documental.', 'document-state-groups'),
-    _op('create_document_state_group', 'Crea un grupo de workflow documental.', 'document-state-groups', 'POST', risk='write'),
-    _op('update_document_state_group', 'Actualiza un grupo de workflow documental.', 'document-state-group-detail', 'PATCH', ('group_id',), 'write'),
-    _op('list_document_state_catalog', 'Lista estados activos o retirados del catálogo documental.', 'document-states'),
-    _op('create_document_state', 'Crea un estado documental administrable.', 'document-states', 'POST', risk='write'),
-    _op('suggest_document_states', 'Busca estados documentales similares.', 'document-state-suggestions'),
-    _op('update_document_state_catalog_item', 'Actualiza un estado documental.', 'update-document-state', 'PATCH', ('state_id',), 'write'),
-    _op('retire_document_state', 'Retira un estado documental.', 'retire-document-state', 'POST', ('state_id',), 'sensitive', True),
-    _op('merge_document_state', 'Fusiona un estado documental dentro de otro.', 'merge-document-state', 'POST', ('state_id',), 'sensitive', True),
-    _op('correct_document_state_opening', 'Corrige de forma auditada la fecha de apertura de un episodio.', 'correct-document-state-opening', 'PATCH', ('document_id', 'episode_id'), 'write'),
-    _op('list_document_state_history', 'Lista el histórico completo de estados del documento.', 'document-state-history', path=('document_id',)),
-    _op('update_document_note', 'Edita el contenido de una observación activa.', 'update-document-note', 'PATCH', ('document_id', 'note_id'), 'write'),
-    _op('list_document_note_events', 'Lista eventos atribuidos de observaciones.', 'document-note-events', path=('document_id',)),
+    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado y propiedad antes/después por ID.' + POLICY_DESCRIPTION, 'move-documents', 'POST', risk='write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['move_documents']),
+    _op('browse_documents', 'Busca, filtra, ordena y pagina todo el inventario documental.', 'browse-documents', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['browse_documents']),
+    _op('get_document_counts', 'Obtiene conteos documentales para filtros y navegación.', 'document-counts', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['get_document_counts']),
+    _op('get_document_navigation', 'Obtiene raíces, clientes y proyectos navegables.', 'document-navigation', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['get_document_navigation']),
+    _op('get_document_communication_usage', 'Lista comunicaciones que referencian el documento.', 'document-communication-usage', path=('document_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['get_document_communication_usage']),
+    _op('get_document_email_usage', 'Lista correos que utilizaron el documento.', 'document-email-usage', path=('document_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['get_document_email_usage']),
+    _op('render_document_pdf', 'Genera el PDF vigente como asset temporal descargable.', 'download-document-pdf', path=('document_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['render_document_pdf']),
+    _op('duplicate_document', 'Duplica un documento Markdown como borrador independiente.', 'duplicate-document', 'POST', ('document_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['duplicate_document']),
+    _op('archive_document', 'Archiva un documento individual de forma reversible.', 'archive-document', 'PATCH', ('document_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['archive_document']),
+    _op('unarchive_document', 'Restaura un documento archivado individualmente.', 'unarchive-document', 'PATCH', ('document_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['unarchive_document']),
+    _op('list_document_folders', 'Lista carpetas activas o archivadas con filtros del Panel.', 'list-document-folders', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_folders']),
+    _op('get_project_folder_readiness', 'Revisa la disponibilidad de raíces documentales de proyectos.', 'project-folder-readiness', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['get_project_folder_readiness']),
+    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta. Al cambiar de padre evalúa todo su subárbol; la propiedad se decide con las políticas, sin combinar client o project en ese movimiento.' + POLICY_DESCRIPTION, 'update-document-folder', 'PATCH', ('folder_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['update_folder']),
+    _op('delete_folder', 'Elimina una carpeta vacía que el sistema permita eliminar.', 'delete-document-folder', 'DELETE', ('folder_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['delete_folder']),
+    _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['archive_folder']),
+    _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['unarchive_folder']),
+    _op('reorder_folders', 'Reordena carpetas hermanas con una lista explícita de ids.', 'reorder-document-folders', 'POST', risk='write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['reorder_folders']),
+    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta; portal_changes lista los documentos que darían acceso a un nuevo cliente.', 'preview-document-folder-client-change', path=('folder_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['preview_folder_client_change']),
+    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado. portal_policy: abort (default MCP) bloquea nueva audiencia, allow la permite y hide_new_exposure oculta los documentos que ganarían acceso.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['change_folder_client']),
+    _op('list_document_tags', 'Lista el catálogo de etiquetas documentales.', 'list-document-tags', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_tags']),
+    _op('create_document_tag', 'Crea una etiqueta documental.', 'create-document-tag', 'POST', risk='write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['create_document_tag']),
+    _op('update_document_tag', 'Actualiza una etiqueta documental.', 'update-document-tag', 'PATCH', ('tag_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['update_document_tag']),
+    _op('delete_document_tag', 'Elimina una etiqueta documental no protegida.', 'delete-document-tag', 'DELETE', ('tag_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['delete_document_tag']),
+    _op('list_document_state_groups', 'Lista grupos del workflow documental.', 'document-state-groups', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_state_groups']),
+    _op('create_document_state_group', 'Crea un grupo de workflow documental.', 'document-state-groups', 'POST', risk='write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['create_document_state_group']),
+    _op('update_document_state_group', 'Actualiza un grupo de workflow documental.', 'document-state-group-detail', 'PATCH', ('group_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['update_document_state_group']),
+    _op('list_document_state_catalog', 'Lista estados activos o retirados del catálogo documental.', 'document-states', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_state_catalog']),
+    _op('create_document_state', 'Crea un estado documental administrable.', 'document-states', 'POST', risk='write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['create_document_state']),
+    _op('suggest_document_states', 'Busca estados documentales similares.', 'document-state-suggestions', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['suggest_document_states']),
+    _op('update_document_state_catalog_item', 'Actualiza un estado documental.', 'update-document-state', 'PATCH', ('state_id',), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['update_document_state_catalog_item']),
+    _op('retire_document_state', 'Retira un estado documental.', 'retire-document-state', 'POST', ('state_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['retire_document_state']),
+    _op('merge_document_state', 'Fusiona un estado documental dentro de otro.', 'merge-document-state', 'POST', ('state_id',), 'sensitive', True, envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['merge_document_state']),
+    _op('correct_document_state_opening', 'Corrige de forma auditada la fecha de apertura de un episodio.', 'correct-document-state-opening', 'PATCH', ('document_id', 'episode_id'), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['correct_document_state_opening']),
+    _op('list_document_state_history', 'Lista el histórico completo de estados del documento.', 'document-state-history', path=('document_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_state_history']),
+    _op('update_document_note', 'Edita el contenido de una observación activa.', 'update-document-note', 'PATCH', ('document_id', 'note_id'), 'write', envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['update_document_note']),
+    _op('list_document_note_events', 'Lista eventos atribuidos de observaciones.', 'document-note-events', path=('document_id',), envelope_aliases=False, **DOCUMENTS_BRIDGE_SCHEMAS['list_document_note_events']),
 ]
 
 
@@ -395,7 +359,6 @@ for _tool in DOCUMENT_PARITY_TOOLS:
     if _tool['name'] == 'change_folder_client':
         _tool['handler'] = _ownership_defaults(_tool['handler'], defaults=(('portal_policy', 'abort'),))
     if _tool['name'] == 'move_documents':
-        _tool['input_schema'] = _MOVE_SCHEMA
         _tool['output_schema'] = {
             'type': 'object',
             'properties': {
@@ -422,5 +385,4 @@ for _tool in DOCUMENT_PARITY_TOOLS:
         _tool['annotations'] = {'readOnlyHint': False, 'destructiveHint': False, 'idempotentHint': True, 'openWorldHint': False}
     if _tool['name'] in ('duplicate_document', 'archive_document', 'unarchive_document'):
         _tool['output_schema'] = DOCUMENT_WRITE_SCHEMA
-        _tool['input_schema']['properties']['include_content'] = {'type': 'boolean', 'default': False}
         _tool['description'] += ' Resumen por defecto; include_content=true añade markdown.'

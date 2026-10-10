@@ -83,7 +83,7 @@ def test_mcp_credential_scope_blocks_delivery_mutation(call_projects, draft):
 
     error = call_projects('create_delivery_scope', {
         'project_id': draft.project.pk, 'expected_version': 0,
-        'data': {'key': 'scope-blocked', 'title': 'Alcance bloqueado', 'contract_id': draft.contract.pk},
+        'key': 'scope-blocked', 'title': 'Alcance bloqueado', 'contract_id': draft.contract.pk,
     }, expect_error=True)
 
     assert error['code'] == 'FORBIDDEN'

@@ -1,22 +1,25 @@
 """Administrative ticket actions use the same validators and lifecycle as Platform."""
 from copy import deepcopy
 
+from accounts.services import issue_contract_reply as replies
+from accounts.services import issue_reports as issues
+from accounts.services.delivery_access import is_admin, project_for_actor
+from accounts.services.delivery_authoring import CITATION_SCHEMA, reply_schema
+from accounts.services.issue_evidence import attachment_for_actor
+from accounts.views_issue_reports import context_options, ticket_response
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
 from rest_framework.exceptions import APIException
 
-from accounts.services import issue_reports as issues
-from accounts.services import issue_contract_reply as replies
-from accounts.services.delivery_authoring import CITATION_SCHEMA, reply_schema
-from accounts.services.delivery_access import is_admin, project_for_actor
-from accounts.services.issue_evidence import attachment_for_actor
-from accounts.views_issue_reports import context_options, ticket_response
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
+from content.mcp.public_delivery_confirmation import (
+    ISSUE_PUBLIC_TOOLS,
+    configure_public_tool,
+)
 from content.mcp.upload_tools import consume_upload, store_artifact
-from content.mcp.public_delivery_confirmation import ISSUE_PUBLIC_TOOLS, configure_public_tool
 
 ID = {'type': 'integer', 'minimum': 1}
 VERSION = {'type': 'integer', 'minimum': 0}
@@ -38,6 +41,21 @@ CONTRACT_REPLY = {
     },
     'required': ['context_id', 'expected_version', 'expected_ticket_version', 'human_reviewed',
                  'classifications', 'source_references'],
+}
+ROOT_DESCRIPTIONS = {
+    'project_id': 'Identificador entero positivo del proyecto autorizado.',
+    'kind': 'Tipo de ticket: bug para un fallo o change para una solicitud de cambio.',
+    'ticket_id': 'Identificador entero positivo del ticket dentro del proyecto y tipo indicados.',
+    'status': 'Estado por el que filtrar; si se omite, incluye todos los estados.',
+    'include_archived': 'Incluye tickets archivados; false por defecto.',
+    'contract_id': 'Identificador entero positivo del contrato para consultar opciones del contexto.',
+    'source_requirement_id': 'Identificador entero positivo de la guía publicada que origina el ticket.',
+    'source_publication_id': 'Identificador entero positivo de la publicación histórica de la guía de origen.',
+    'expected_version': 'Versión vigente del ticket, entero desde 0; se revalida al confirmar.',
+    'attachment_id': 'Identificador entero positivo del adjunto privado del ticket.',
+    'context_id': 'UUID del contexto de respuesta capturado para este ticket.',
+    'source_key': 'Clave de una fuente incluida en el contexto de respuesta capturado.',
+    'items': 'Lista de hasta 500 evaluaciones; cada objeto requiere id y expected_version. Puede estar vacía.',
 }
 
 
@@ -94,7 +112,10 @@ def _evaluate(arguments, actor):
 
 
 def _comment(arguments, actor):
-    from accounts.serializers import BugCommentSerializer, ChangeRequestCommentSerializer
+    from accounts.serializers import (
+        BugCommentSerializer,
+        ChangeRequestCommentSerializer,
+    )
     comment = issues.comment_ticket(arguments['project_id'], actor, arguments['kind'], arguments['ticket_id'],
                                      _payload(arguments))
     serializer = BugCommentSerializer if arguments['kind'] == 'bug' else ChangeRequestCommentSerializer
@@ -160,8 +181,10 @@ def _etag(arguments):
 
 
 def _tool(name, description, handler, properties, required=(), *, risk='read'):
+    described = {key: {**field, 'description': ROOT_DESCRIPTIONS.get(key, field.get('description'))}
+                 for key, field in {'project_id': ID, **properties}.items()}
     schema = {'type': 'object', 'additionalProperties': False,
-              'properties': {'project_id': ID, **properties}, 'required': ['project_id', *required]}
+              'properties': described, 'required': ['project_id', *required]}
 
     def execute(arguments):
         def call():
@@ -216,8 +239,9 @@ def _validate(value, schema, path='arguments'):
             _validate(item, schema.get('items', {}), path)
 
 
-def _payload_schema(properties, required=()):
-    return {'type': 'object', 'additionalProperties': False, 'properties': properties, 'required': list(required)}
+def _payload_schema(properties, required=(), *, description='Datos del ticket para esta operación; sólo admite los campos declarados.'):
+    return {'type': 'object', 'additionalProperties': False, 'properties': properties,
+            'required': list(required), 'description': description}
 
 
 ISSUE_TOOLS = [
@@ -231,28 +255,32 @@ ISSUE_TOOLS = [
            'source_requirement_id': ID, 'source_publication_id': ID}),
     _tool('create_bug_report', 'Reporta un bug general sin guía obligatoria, o captura una publicación concreta.',
           lambda args, actor: _create(args, actor, 'bug'), {'payload': _payload_schema({
-              **SOURCE, 'request_id': RETRY, 'screenshot_asset_id': RETRY, 'title': TEXT, 'description': TEXT,
+              **SOURCE, 'request_id': RETRY,
+              'screenshot_asset_id': {**RETRY, 'description': 'UUID de una captura propia completada, PNG, JPEG o WebP, de hasta 5 MB.'},
+              'title': TEXT, 'description': TEXT,
               'severity': {'type': 'string', 'enum': ['critical', 'high', 'medium', 'low']},
               'steps_to_reproduce': {'type': 'array', 'items': TEXT}, 'expected_behavior': TEXT,
               'actual_behavior': TEXT, 'environment': {'type': 'string', 'enum': ['production', 'staging', 'dev']},
               'device_browser': TEXT, 'is_recurring': BOOL,
-          }, ('title',))}, ('payload',), risk='write'),
+          }, ('title',), description='Datos del bug: título obligatorio y origen opcional; severity es medium y environment es production por defecto.')}, ('payload',), risk='write'),
     _tool('create_change_request', 'Crea una solicitud de ampliación desde una guía publicada, sin aprobarla.',
           lambda args, actor: _create(args, actor, 'change'), {'payload': _payload_schema({
-              **SOURCE, 'request_id': RETRY, 'screenshot_asset_id': RETRY, 'title': TEXT, 'description': TEXT, 'module_or_screen': TEXT,
+              **SOURCE, 'request_id': RETRY,
+              'screenshot_asset_id': {**RETRY, 'description': 'UUID de una captura propia completada, PNG, JPEG o WebP, de hasta 5 MB.'},
+              'title': TEXT, 'description': TEXT, 'module_or_screen': TEXT,
               'suggested_priority': {'type': 'string', 'enum': ['critical', 'high', 'medium', 'low']}, 'is_urgent': BOOL,
-          }, ('title', 'source_requirement_id'))}, ('payload',), risk='write'),
+          }, ('title', 'source_requirement_id'), description='Datos de la solicitud: título y guía publicada obligatorios; suggested_priority es medium e is_urgent es false por defecto.')}, ('payload',), risk='write'),
     _tool('evaluate_issue_report', 'Cambia estado o responde con documentos. Resuelto por equipo no es conformidad del cliente. contract_reply exige contexto, citas verificadas y revisión humana explícita; sin él el alcance sigue indeterminado.',
           _evaluate, {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
               **MESSAGES, 'status': TEXT, 'admin_response': TEXT, 'contract_id': {'type': ['integer', 'null'], 'minimum': 1},
               'contract_reply': CONTRACT_REPLY,
               'linked_bug_id': {'type': ['integer', 'null'], 'minimum': 1},
               'estimated_cost': {'type': ['number', 'string', 'null']}, 'estimated_time': TEXT,
-          }, ('expected_version',))}, ('kind', 'ticket_id', 'payload'), risk='write'),
+          }, ('expected_version',), description='Evaluación del ticket con versión vigente y estado o respuesta; document_ids admite hasta 10 IDs únicos e is_internal es false por defecto.')}, ('kind', 'ticket_id', 'payload'), risk='write'),
     _tool('comment_issue_report', 'Comenta o reabre un bug resuelto con «sigue fallando», preservando historia.',
           _comment, {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
               **MESSAGES, 'content': TEXT, 'reopen': BOOL,
-          }, ('content', 'expected_version'))}, ('kind', 'ticket_id', 'payload'), risk='write'),
+          }, ('content', 'expected_version'), description='Comentario y versión vigente del ticket; is_internal y reopen son false por defecto, con hasta 10 documentos únicos.')}, ('kind', 'ticket_id', 'payload'), risk='write'),
     _tool('bulk_evaluate_issue_reports', 'Evalúa hasta 500 tickets, con resultado y error independiente por ticket.',
           lambda args, actor: issues.bulk_evaluate(args['project_id'], actor, args['kind'], args['items']),
           {'kind': KIND, 'items': {'type': 'array', 'maxItems': 500, 'items': _payload_schema({
@@ -266,7 +294,7 @@ ISSUE_TOOLS = [
     _tool('convert_change_request', 'Convierte una solicitud aprobada en una guía nueva y pendiente, dentro del contrato aplicable y una etapa editable.',
           _convert, {'ticket_id': ID, 'payload': _payload_schema({
               'stage_id': ID, 'expected_version': VERSION, 'issue_version': VERSION, 'request_id': RETRY,
-          }, ('stage_id', 'expected_version', 'issue_version'))}, ('ticket_id', 'payload'), risk='sensitive'),
+          }, ('stage_id', 'expected_version', 'issue_version'), description='Etapa de destino y versiones vigentes del espacio y de la solicitud; request_id es un UUID opcional de reintento.')}, ('ticket_id', 'payload'), risk='sensitive'),
     _tool('download_issue_attachment', 'Descarga los bytes históricos privados de un documento del ticket.',
           _download, {'attachment_id': ID}, ('attachment_id',)),
     _tool('get_issue_reply_options', 'Obtiene fuentes seleccionables y versiones para preparar una respuesta contractual del ticket; no elige contrato.',
@@ -285,7 +313,8 @@ ISSUE_TOOLS = [
               }, ('role', 'applicability_note'))},
               'missing_sources': {'type': 'array', 'items': TEXT, 'maxItems': 30},
               'uncertainties': {'type': 'array', 'items': TEXT, 'maxItems': 30}, 'instructions': TEXT,
-          }, ('expected_version', 'expected_ticket_version', 'request_id'))},
+          }, ('expected_version', 'expected_ticket_version', 'request_id'),
+              description='Selección de contrato y fuentes para responder al ticket, con versiones vigentes y UUID de reintento; hasta 30 elementos por lista.')},
           ('kind', 'ticket_id', 'payload'), risk='write'),
     _tool('get_issue_reply_context', 'Lee el contexto privado de autoría del ticket para revisión y auditoría administrativas.',
           lambda args, actor: replies.get_reply_context(args['project_id'], actor, args['kind'], args['ticket_id'], args['context_id']),
@@ -294,7 +323,8 @@ ISSUE_TOOLS = [
           lambda args, actor: replies.preview_reply(args['project_id'], actor, args['kind'], args['ticket_id'], _payload(args)),
           {'kind': KIND, 'ticket_id': ID, 'payload': _payload_schema({
               'expected_version': VERSION, 'expected_ticket_version': VERSION, 'payload': reply_schema(),
-          }, ('expected_version', 'expected_ticket_version', 'payload'))}, ('kind', 'ticket_id', 'payload')),
+          }, ('expected_version', 'expected_ticket_version', 'payload'),
+              description='Versiones vigentes del espacio y del ticket, junto al JSON v2 de respuesta con contexto y citas verificables.')}, ('kind', 'ticket_id', 'payload')),
     _tool('download_issue_reply_source', 'Descarga una fuente privada capturada del ticket como artefacto exclusivo de la credencial MCP.',
           _reply_source, {'kind': KIND, 'ticket_id': ID, 'context_id': RETRY, 'source_key': TEXT},
           ('kind', 'ticket_id', 'context_id', 'source_key')),

@@ -114,7 +114,7 @@ def test_public_contract_visibility_requires_confirmation(call_projects, public_
     ProjectContract.objects.filter(pk=public_project.contract.pk).update(client_visible=False)
     preview = call_projects('update_delivery_contract', {'project_id': public_project.project.pk,
         'node_id': public_project.contract.pk, 'expected_version': current_version(call_projects, public_project.project),
-        'data': {'client_visible': True}})
+        'client_visible': True})
     assert preview['confirmation_required'] is True
     assert ProjectContract.objects.get(pk=public_project.contract.pk).client_visible is False
 
@@ -123,8 +123,8 @@ def test_private_contract_creation_remains_direct(call_projects, public_project)
     """Fails if an unsigned private draft requires public-communication approval."""
     call_projects('create_delivery_contract', {'project_id': public_project.project.pk,
         'expected_version': current_version(call_projects, public_project.project),
-        'data': {'key': 'private-only', 'title': 'Private draft', 'document_id': public_project.document.pk,
-                 'client_visible': False}})
+        'key': 'private-only', 'title': 'Private draft', 'document_id': public_project.document.pk,
+        'client_visible': False})
     assert ProjectContract.objects.get(key='private-only').client_visible is False
 
 
@@ -203,7 +203,7 @@ def test_public_visibility_rejects_a_coercing_boolean(call_projects, public_proj
     ProjectContract.objects.filter(pk=public_project.contract.pk).update(client_visible=False)
     call_projects('update_delivery_contract', {'project_id': public_project.project.pk,
         'node_id': public_project.contract.pk, 'expected_version': current_version(call_projects, public_project.project),
-        'data': {'client_visible': 'true'}}, expect_error=True)
+        'client_visible': 'true'}, expect_error=True)
     assert ProjectContract.objects.get(pk=public_project.contract.pk).client_visible is False
 
 

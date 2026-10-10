@@ -2203,3 +2203,23 @@ La lectura de actividad usa páginas acotadas con cursor firmado por propuesta y
 orden `(created_at, pk)` para no saltar empates. La UI conserva páginas y notas
 locales ante respuestas tardías. Cliente/contactos y ajustes del correo guardan
 sólo su conjunto de campos; General no reenvía esos campos ni fechas sin cambios.
+
+## Esquemas explícitos de Documentos y Proyectos — 2026-10-10
+
+PR 2 fija el contrato objetivo documents **4.0.0 / 73 tools** y projects
+**3.0.0 / 164 tools**. Los catálogos de schemas de los 36/48 bridges declaran
+inputs reales del Panel; las nativas cierran y tipan objetos, incluidas las
+16 raíces de documentos/hilos antes abiertas. Se retiran los alias `data`/`query`
+de las herramientas convertidas; el dispatcher rechaza campos superiores
+desconocidos antes de callbacks/escrituras. Entregas y recursos usan campos
+planos; imports conservan `payload` v1/v2 y tickets su `payload` tipado.
+
+`PANEL_ONLY_FIELDS` documenta exclusiones deliberadas; el borrado MCP sólo
+admite `project_id`/`if_match` y el normalizador conserva el campo `message`.
+Los contratos compartidos y de historial de PR #503 quedan fuera; otros
+conectores conservan sus alias. Guards de explicitud, deriva y paridad permiten
+auditar preview/ejecución. La integración y publicación de versiones quedan
+bajo el orquestador; esta entrada no acredita CI ni deploy.
+Guías: [Documentos](../changelog/2026-10-10-documents-mcp-4.0.0.md),
+[Proyectos](../changelog/2026-10-10-projects-mcp-3.0.0.md) y
+[runbook de esquemas](../MCP_VALIDATION_RUNBOOK.md#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).

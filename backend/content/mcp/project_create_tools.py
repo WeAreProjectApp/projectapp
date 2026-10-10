@@ -25,11 +25,16 @@ ROOT_ADOPTION_HINT = (
 CREATE_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
-        'name': {'type': 'string', 'minLength': 1, 'maxLength': 200},
-        'client_profile_id': {'type': 'integer', 'minimum': 1},
-        'description': {'type': 'string', 'default': ''},
-        'state_id': {'type': 'integer', 'minimum': 1},
-        'root_folder_id': {'type': 'integer', 'minimum': 1},
+        'name': {'type': 'string', 'minLength': 1, 'maxLength': 200,
+                 'description': 'Nombre del proyecto, de 1 a 200 caracteres; una raíz manual homónima requiere confirmación.'},
+        'client_profile_id': {'type': 'integer', 'minimum': 1,
+                              'description': 'Identificador entero positivo de un perfil de cliente existente.'},
+        'description': {'type': 'string', 'default': '',
+                        'description': 'Descripción del proyecto; texto vacío por defecto.'},
+        'state_id': {'type': 'integer', 'minimum': 1,
+                     'description': 'Identificador de un estado activo del catálogo de proyectos; por defecto, el estado de desarrollo.'},
+        'root_folder_id': {'type': 'integer', 'minimum': 1,
+                           'description': 'Identificador de una carpeta raíz existente para adoptar tras confirmación, con las políticas estrictas de projects.'},
     },
     'required': ['name', 'client_profile_id'],
 }

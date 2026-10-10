@@ -8,20 +8,21 @@ from content.services.document_ownership_planner import (
 
 CLIENT_POLICY_SCHEMA = {
     'type': 'string', 'enum': list(CLIENT_POLICIES), 'default': 'abort_on_conflict',
-    'description': 'inherit adopta cliente y proyecto; keep conserva y bloquea conflictos; abort_on_conflict hereda sólo si no hay conflicto.',
+    'description': 'inherit adopta cliente y proyecto; keep conserva y bloquea conflictos; abort_on_conflict hereda sólo si no hay conflicto (por defecto).',
 }
 PORTAL_POLICY_SCHEMA = {
     'type': 'string', 'enum': list(PORTAL_POLICIES), 'default': 'abort',
-    'description': 'abort bloquea una nueva audiencia; allow la permite; hide_new_exposure oculta documentos que ganarían audiencia, también al restaurarse.',
+    'description': 'abort bloquea una nueva audiencia (por defecto); allow la permite; hide_new_exposure oculta documentos que ganarían audiencia, también al restaurarse.',
 }
 DOCUMENT_DECISIONS_SCHEMA = {
     'type': 'array', 'maxItems': 100,
+    'description': 'Hasta 100 decisiones por documento, sin repetir document_id; inherit adopta la propiedad y move exige otra carpeta destino. Por defecto ninguna.',
     'items': {
         'type': 'object', 'additionalProperties': False,
         'properties': {
-            'document_id': {'type': 'integer', 'minimum': 1},
+            'document_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del documento al que se aplica la decisión.'},
             'action': {'type': 'string', 'enum': ['inherit', 'move'], 'description': 'inherit adopta para este documento; move requiere otra destination_folder_id.'},
-            'destination_folder_id': {'type': 'integer', 'minimum': 1},
+            'destination_folder_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de otra carpeta destino; obligatorio sólo con action=move.'},
         },
         'required': ['document_id', 'action'],
     },
@@ -53,8 +54,10 @@ DOCUMENT_OWNERSHIP_TOOLS = [
         'input_schema': {
             'type': 'object', 'additionalProperties': False,
             'properties': {
-                'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
-                'folder_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
+                'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True,
+                                 'description': 'De 1 a 100 IDs positivos de documentos, sin repetidos; envía document_ids o folder_ids.'},
+                'folder_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True,
+                               'description': 'De 1 a 100 IDs positivos de carpetas con su subárbol, sin repetidos; envía folder_ids o document_ids.'},
                 'destination_folder_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Carpeta destino; null significa raíz sólo para carpetas.'},
                 'client_policy': CLIENT_POLICY_SCHEMA,
                 'portal_policy': PORTAL_POLICY_SCHEMA,

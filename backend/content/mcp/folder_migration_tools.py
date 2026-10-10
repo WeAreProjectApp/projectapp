@@ -16,42 +16,56 @@ from content.serializers.folder_migration import (
 from content.services import folder_migration_service as service
 
 ID = {'type': 'integer', 'minimum': 1}
-REASON = {'type': 'string', 'minLength': 3, 'maxLength': 2000}
-REQUEST = {'type': 'string', 'minLength': 1, 'maxLength': 100}
-HASH = {'type': 'string', 'pattern': '^[a-f0-9]{64}$'}
+REASON = {'type': 'string', 'minLength': 3, 'maxLength': 2000,
+          'description': 'Motivo auditable de la operación, de 3 a 2000 caracteres.'}
+REQUEST = {'type': 'string', 'minLength': 1, 'maxLength': 100,
+           'description': 'Clave de idempotencia de 1 a 100 caracteres; reutilizarla devuelve el recibo del mismo plan.'}
+HASH = {'type': 'string', 'pattern': '^[a-f0-9]{64}$',
+        'description': 'impact_hash de preview_folder_migration_undo, con 64 caracteres hexadecimales en minúsculas; rechaza cambios posteriores.'}
+MIGRATION_ID = {**ID, 'description': 'ID positivo del recibo de migración que se consulta o deshace.'}
 PROJECT_FIELDS = {
-    'name': {'type': 'string', 'minLength': 1, 'maxLength': 200},
-    'client_profile_id': {'type': 'integer'},
-    'description': {'type': 'string', 'default': ''},
-    'state_id': {'type': 'integer'},
+    'name': {'type': 'string', 'minLength': 1, 'maxLength': 200, 'description': 'Nombre del proyecto, de 1 a 200 caracteres.'},
+    'client_profile_id': {**ID, 'description': 'ID positivo del perfil de cliente del nuevo proyecto.'},
+    'description': {'type': 'string', 'default': '', 'description': 'Descripción del proyecto; por defecto vacía.'},
+    'state_id': {**ID, 'description': 'ID positivo de un estado activo del catálogo de proyectos; omitir usa el estado inicial.'},
 }
 MIGRATION_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
-        'source_folder_id': ID,
+        'source_folder_id': {**ID, 'description': 'ID positivo de la carpeta fuente que se adoptará o cuyo contenido se moverá.'},
         'strategy': {'type': 'string', 'enum': ['adopt_source', 'move_contents'],
                      'description': 'adopt_source convierte la fuente en raíz; move_contents mueve sus hijos y documentos a la raíz del proyecto.'},
         'target': {'type': 'object', 'additionalProperties': False,
-                   'properties': {'project_id': ID, 'create_project': {
+                   'description': 'Destino: elige exactamente project_id para un proyecto existente o create_project para crear uno.',
+                   'properties': {'project_id': {**ID, 'description': 'ID positivo del proyecto destino existente.'}, 'create_project': {
                        'type': 'object', 'additionalProperties': False, 'properties': PROJECT_FIELDS,
+                       'description': 'Datos del proyecto que se creará como destino; requiere nombre y perfil de cliente.',
                        'required': ['name', 'client_profile_id'],
                    }}, 'oneOf': [{'required': ['project_id']}, {'required': ['create_project']}]},
-        'include_folder_ids': {'type': 'array', 'items': ID, 'maxItems': 100, 'uniqueItems': True},
-        'include_document_ids': {'type': 'array', 'items': ID, 'maxItems': 100, 'uniqueItems': True},
+        'include_folder_ids': {'type': 'array', 'items': ID, 'maxItems': 100, 'uniqueItems': True,
+                               'description': 'Hasta 100 IDs positivos de hijos directos de la fuente, sin repetidos; sólo move_contents. Omitir mueve todos los hijos.'},
+        'include_document_ids': {'type': 'array', 'items': ID, 'maxItems': 100, 'uniqueItems': True,
+                                 'description': 'Hasta 100 IDs positivos de documentos directos de la fuente, sin repetidos; sólo move_contents. Omitir mueve todos los documentos directos.'},
         'client_policy': CLIENT_POLICY_SCHEMA, 'portal_policy': PORTAL_POLICY_SCHEMA,
         'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
-        'archive_source_when_empty': {'type': 'boolean'},
-        'source_rename_to': {'type': 'string', 'minLength': 1, 'maxLength': 120},
+        'archive_source_when_empty': {'type': 'boolean', 'default': False,
+                                      'description': 'Archiva la fuente si queda vacía tras move_contents; por defecto false.'},
+        'source_rename_to': {'type': 'string', 'minLength': 1, 'maxLength': 120,
+                             'description': 'Nuevo nombre de la fuente, de 1 a 120 caracteres, sin duplicar hermanas; omitir conserva el nombre salvo al adoptar la raíz.'},
     }, 'required': ['source_folder_id', 'strategy', 'target'],
 }
 APPLY_SCHEMA = {'type': 'object', 'additionalProperties': False,
-                'properties': {'plan_token': {'type': 'string', 'minLength': 1}, 'reason': REASON, 'request_id': REQUEST},
+                'properties': {'plan_token': {'type': 'string', 'minLength': 1,
+                                              'description': 'Token firmado de preview_folder_migration, ligado al actor y credencial; válido 30 minutos.'},
+                               'reason': REASON, 'request_id': REQUEST},
                 'required': ['plan_token', 'reason', 'request_id']}
 UNDO_SCHEMA = {'type': 'object', 'additionalProperties': False,
-               'properties': {'migration_id': ID, 'expected_impact_hash': HASH, 'reason': REASON, 'request_id': REQUEST},
+               'properties': {'migration_id': MIGRATION_ID, 'expected_impact_hash': HASH, 'reason': REASON, 'request_id': REQUEST},
                'required': ['migration_id', 'expected_impact_hash', 'reason', 'request_id']}
 ADOPT_SCHEMA = {'type': 'object', 'additionalProperties': False,
-                'properties': {'folder_id': ID, 'project_id': ID, 'client_policy': CLIENT_POLICY_SCHEMA,
+                'properties': {'folder_id': {**ID, 'description': 'ID positivo de la raíz manual activa que se adoptará.'},
+                               'project_id': {**ID, 'description': 'ID positivo del proyecto existente sin raíz o con plantilla descartable.'},
+                               'client_policy': CLIENT_POLICY_SCHEMA,
                                'portal_policy': PORTAL_POLICY_SCHEMA, 'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
                                'reason': REASON, 'request_id': REQUEST},
                 'required': ['folder_id', 'project_id', 'reason', 'request_id']}
@@ -163,11 +177,11 @@ FOLDER_MIGRATION_TOOLS = [
           impact_builder=_apply_preview, etag_resolver=lambda args: {'folder_migration': _apply_preview(args)['plan_hash']}),
     _tool('get_folder_migration',
           'Consulta el recibo de una migración: registros trasladados, carpetas creadas o archivadas y elementos pendientes con su motivo.',
-          {'type': 'object', 'additionalProperties': False, 'properties': {'migration_id': ID}, 'required': ['migration_id']},
+          {'type': 'object', 'additionalProperties': False, 'properties': {'migration_id': MIGRATION_ID}, 'required': ['migration_id']},
           lambda args: service.get_folder_migration(args['migration_id'])),
     _tool('preview_folder_migration_undo',
           'Previsualiza deshacer exactamente una migración: muestra cambios posteriores, contenido nuevo, uso del proyecto y el orden de deshacer requerido.',
-          {'type': 'object', 'additionalProperties': False, 'properties': {'migration_id': ID}, 'required': ['migration_id']},
+          {'type': 'object', 'additionalProperties': False, 'properties': {'migration_id': MIGRATION_ID}, 'required': ['migration_id']},
           lambda args: service.preview_undo_migration(args['migration_id'])),
     _tool('undo_folder_migration',
           'Deshace con confirmación y expected_impact_hash una migración sin pisar cambios posteriores. '

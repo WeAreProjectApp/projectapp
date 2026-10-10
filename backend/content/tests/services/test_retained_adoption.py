@@ -539,7 +539,7 @@ def test_mcp_cleanup_deletes_only_after_a_preview_backed_confirmation(api_client
     request = {'context_id': littigio['context'].pk, 'reason': 'Limpieza MCP',
                'selection': {'document_folders': [folder.pk]}}
     preview = _call(api_client, projects_token, 'preview_retained_container_cleanup', {
-        'context_id': littigio['context'].pk, 'query': {'document_folders': str(folder.pk)},
+        'context_id': littigio['context'].pk, 'document_folders': [folder.pk],
     })
 
     stale = _call(api_client, projects_token, 'delete_empty_retained_containers', {

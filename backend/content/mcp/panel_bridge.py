@@ -76,6 +76,24 @@ def _impact_for(operation, arguments):
     }
 
 
+_PATH_DESCRIPTIONS = {
+    'document_id': 'Id positivo del documento que se consulta o modifica.',
+    'folder_id': 'Id positivo de la carpeta documental que se consulta o modifica.',
+    'project_id': 'Id positivo del proyecto que se consulta o modifica.',
+    'tag_id': 'Id positivo de la etiqueta documental.',
+    'state_id': 'Id positivo del estado del catálogo documental o de proyectos.',
+    'group_id': 'Id positivo del grupo del catálogo de estados.',
+    'episode_id': 'Id positivo del episodio de estado del documento.',
+    'note_id': 'Id positivo de la observación del documento.',
+    'idea_id': 'Id positivo de la idea dentro del proyecto.',
+    'collection_id': 'Id positivo de la recopilación de ideas del proyecto.',
+    'phase_id': 'Id positivo de la fase comercial del proyecto.',
+    'operation_id': 'Id positivo del traslado auditado de datos conservados.',
+    'context_id': 'Id positivo del contexto de datos conservados del proyecto eliminado.',
+    'asset_id': 'Id positivo del archivo de marca dentro del proyecto.',
+}
+
+
 def _path_properties(path_params, *, explicit=False):
     properties = {}
     for name in path_params:
@@ -86,6 +104,12 @@ def _path_properties(path_params, *, explicit=False):
             )
         else:
             properties[name] = {'type': 'string'}
+        if explicit:
+            properties[name]['description'] = _PATH_DESCRIPTIONS.get(
+                name,
+                'Id del recurso que se consulta o modifica; entero positivo.'
+                if name.endswith('_id') else f'Valor de {name} en la ruta del Panel, como texto.',
+            )
     return properties
 
 
@@ -193,6 +217,9 @@ def _request_for(method, url, *, query, data, files, if_match):
 @transaction.atomic
 def _execute(operation, arguments):
     args = deepcopy(arguments)
+    envelope_aliases = operation.get('envelope_aliases', True)
+    if not envelope_aliases:
+        _check_unknown_fields({name: args[name] for name in ('data', 'query') if name in args}, ())
     payload_schema = operation.get('payload_schema')
     query_schema = operation.get('query_schema')
     explicit = payload_schema is not None or query_schema is not None
@@ -200,14 +227,15 @@ def _execute(operation, arguments):
     if explicit:
         permitted = (set(operation['path_params']) | set(operation['asset_fields'])
                      | {'if_match'})
-        if not is_get and payload_schema is not None:
+        if envelope_aliases and not is_get and payload_schema is not None:
             permitted.add('data')
         if payload_schema is not None:
             permitted.update(payload_schema.get('properties', {}))
         if query_schema is not None:
             permitted.update(query_schema.get('properties', {}))
-            permitted.add('query')
-        if operation.get('envelope_aliases', True):
+            if envelope_aliases:
+                permitted.add('query')
+        if envelope_aliases:
             permitted.update({'data', 'query'})
         _check_unknown_fields(args, permitted)
     route_kwargs = {}
@@ -364,10 +392,17 @@ def panel_operation(
         # Keep existing published envelopes for connectors that retain aliases.
         properties = {**_path_properties(path_params), **payload_schema['properties'],
                       'data': payload_schema, 'if_match': properties['if_match']}
+    if not envelope_aliases:
+        properties.pop('data', None)
+        properties.pop('query', None)
     for argument_name, config in operation['asset_fields'].items():
         asset_schema = {'type': 'string', 'format': 'uuid'}
+        if not envelope_aliases:
+            asset_schema['description'] = 'UUID del asset temporal subido; aporta su archivo validado al Panel.'
         properties[argument_name] = (
-            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True}
+            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True,
+             **({'description': 'UUIDs de los assets temporales subidos; al menos uno y sin repetir.'}
+                if not envelope_aliases else {})}
             if config.get('many') else asset_schema
         )
     tool = {
@@ -390,7 +425,7 @@ def panel_operation(
         'handler': lambda arguments: _execute(operation, arguments),
         '_panel_operation': operation,
     }
-    if explicit:
+    if explicit and envelope_aliases:
         accepted_properties = deepcopy(properties)
         if operation['method'] != 'GET' and payload_schema is not None:
             accepted_properties['data'] = deepcopy(payload_schema)

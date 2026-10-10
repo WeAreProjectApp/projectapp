@@ -56,6 +56,7 @@ def test_query_encoder_rejects_nested_values(value):
 
 @pytest.mark.parametrize('arguments', [{'force': True}, {'query': {'force': True}}])
 def test_generic_get_boolean_reaches_the_forced_preview(superuser, unused_project, arguments):
+    """Preserve query encoding and the published path shape of legacy bridges."""
     tool = _preview_tool()
 
     normal = tool['handler']({'project_id': unused_project.pk, 'query': {'force': False, 'optional': None}})
@@ -66,7 +67,9 @@ def test_generic_get_boolean_reaches_the_forced_preview(superuser, unused_projec
     assert forced['force'] is True
     assert forced['impact_token']
     assert forced['project']['id'] == unused_project.pk
-    assert tool['input_schema']['properties']['project_id'] == {'type': ['integer', 'string']}
+    assert tool['input_schema']['properties']['project_id'] == {
+        'type': ['integer', 'string'],
+    }
 
 
 @pytest.mark.parametrize(('query_schema', 'expected'), [
@@ -86,7 +89,7 @@ def test_get_query_list_uses_the_declared_encoding(query_schema, expected):
 
 @pytest.mark.parametrize('payload_schema', [None, {'type': 'object', 'properties': {}, 'additionalProperties': False}])
 def test_post_rejects_an_undeclared_query(payload_schema):
-    tool = _preview_tool(method='POST', payload_schema=payload_schema)
+    tool = _preview_tool(method='POST', payload_schema=payload_schema, envelope_aliases=False)
 
     with pytest.raises(ToolError) as rejected:
         tool['handler']({'project_id': 1, 'query': {'force': True}})
@@ -101,11 +104,11 @@ def test_post_rejects_an_undeclared_query(payload_schema):
 def test_query_only_post_rejects_a_body_without_a_payload_schema():
     tool = _op(
         'query_only_post', 'Comprueba un POST que sólo admite parámetros de consulta.',
-        'create-document-folder', method='POST', query_schema=QUERY_SCHEMA,
+        'create-document-folder', method='POST', query_schema=QUERY_SCHEMA, envelope_aliases=False,
     )
 
     with pytest.raises(ToolError) as rejected:
-        tool['handler']({'query': {'force': True}, 'data': {'name': 'Undeclared body'}})
+        tool['handler']({'force': True, 'data': {'name': 'Undeclared body'}})
 
     assert 'data' not in tool['input_schema']['properties']
     assert tool['input_schema']['additionalProperties'] is False
@@ -117,25 +120,25 @@ def test_query_only_post_rejects_a_body_without_a_payload_schema():
 
 def test_explicit_query_schema_publishes_a_closed_flat_contract(superuser, unused_project):
     schema = {**deepcopy(QUERY_SCHEMA), 'required': ['force']}
-    tool = normalize_tool(_preview_tool(query_schema=schema), 'projects')
+    tool = normalize_tool(_preview_tool(query_schema=schema, envelope_aliases=False), 'projects')
 
     _, response = handle_message({
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
         'params': {'name': tool['name'], 'arguments': {
-            'project_id': str(unused_project.pk), 'query': {'force': True, 'optional': None},
+            'project_id': str(unused_project.pk), 'force': True, 'optional': None,
         }},
     }, [tool])
 
     published = tool['input_schema']
-    accepted = tool['accepted_arguments_schema']
     assert published['additionalProperties'] is False
     assert {name: field for name, field in published['properties'].items() if name != 'if_match'} == {
-        **schema['properties'], 'project_id': {'type': 'integer', 'minimum': 1},
+        **schema['properties'], 'project_id': {
+            'type': 'integer', 'minimum': 1,
+            'description': 'Id positivo del proyecto que se consulta o modifica.',
+        },
     }
     assert published['required'] == ['project_id', 'force']
-    assert accepted['properties'] == {**published['properties'], 'query': schema}
-    assert accepted['required'] == ['project_id']
-    assert accepted['additionalProperties'] is False
+    assert 'accepted_arguments_schema' not in tool
     assert response['result']['structuredContent']['force'] is True
 
 
@@ -190,9 +193,9 @@ def test_declared_query_requires_its_fields():
 
 @pytest.mark.parametrize('convert', [int, str, lambda value: f'000{value}'], ids=['integer', 'digits', 'leading-zeroes'])
 def test_explicit_path_accepts_positive_identifiers(superuser, unused_project, convert):
-    tool = _preview_tool(query_schema=QUERY_SCHEMA)
+    tool = _preview_tool(query_schema=QUERY_SCHEMA, envelope_aliases=False)
 
-    result = tool['handler']({'project_id': convert(unused_project.pk), 'query': {'force': False}})
+    result = tool['handler']({'project_id': convert(unused_project.pk), 'force': False})
 
     assert result['can_delete'] is True
     assert result['project']['id'] == unused_project.pk
@@ -213,7 +216,7 @@ def test_explicit_path_rejects_invalid_identifiers(value):
 def test_get_payload_alias_is_rejected_before_dispatch():
     tool = normalize_tool(_preview_tool(payload_schema={
         'type': 'object', 'properties': {'force': {'type': 'boolean'}},
-    }), 'projects')
+    }, envelope_aliases=False), 'projects')
 
     _, response = handle_message({
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
@@ -250,14 +253,14 @@ def test_post_declared_query_keeps_the_body_separate(monkeypatch, superuser):
     }
     tool = normalize_tool(_op(
         'create_query_folder', 'Crea una carpeta con el contrato del Panel.', 'create-document-folder',
-        method='POST', query_schema=query_schema, payload_schema=payload_schema,
+        method='POST', query_schema=query_schema, payload_schema=payload_schema, envelope_aliases=False,
     ), 'documents')
 
     _, response = handle_message({
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
         'params': {'name': tool['name'], 'arguments': {
-            'data': {'name': 'Query folder'},
-            'flags': [True, False], 'query': {'flags': [True, False], 'ids': [2, 5], 'optional': None},
+            'name': 'Query folder',
+            'flags': [True, False], 'ids': [2, 5], 'optional': None,
             'if_match': 'example-etag',
         }},
     }, [tool])
@@ -270,10 +273,7 @@ def test_post_declared_query_keeps_the_body_separate(monkeypatch, superuser):
     assert DocumentFolder.objects.get(pk=result['id']).name == 'Query folder'
     assert tool['input_schema']['properties'].keys() == {'name', 'flags', 'ids', 'optional', 'if_match'}
     assert tool['input_schema']['required'] == ['name', 'flags', 'ids']
-    assert tool['accepted_arguments_schema'] == {
-        'type': 'object', 'additionalProperties': False, 'required': [],
-        'properties': {**tool['input_schema']['properties'], 'data': payload_schema, 'query': query_schema},
-    }
+    assert 'accepted_arguments_schema' not in tool
 
 
 def test_payload_alias_conflicts_use_field_errors():

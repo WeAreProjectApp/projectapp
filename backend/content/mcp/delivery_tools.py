@@ -8,24 +8,27 @@ confirmation, including a workspace-version check at confirmation time.
 from copy import deepcopy
 from uuid import UUID
 
-from django.core.files.uploadedfile import SimpleUploadedFile
-from django.db import transaction
-from django.utils import timezone
-from rest_framework.exceptions import APIException
-
+from accounts.serializers_delivery import NODE_SERIALIZERS
 from accounts.services import delivery_authoring as authoring
 from accounts.services import delivery_closure_email as closure_email
 from accounts.services import delivery_workflow as delivery
 from accounts.services._platform_authority import mcp_delivery_actor_is_bound
 from accounts.services.delivery_access import is_admin
+from django.core.files.uploadedfile import SimpleUploadedFile
+from django.db import transaction
+from django.utils import timezone
+from rest_framework.exceptions import APIException
+
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
+from content.mcp.public_delivery_confirmation import (
+    DELIVERY_PUBLIC_TOOLS,
+    configure_public_tool,
+)
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import McpUpload
-from content.mcp.public_delivery_confirmation import DELIVERY_PUBLIC_TOOLS, configure_public_tool
-
 
 ID = {'type': 'integer', 'minimum': 1}
 NULLABLE_ID = {'type': ['integer', 'null'], 'minimum': 1}
@@ -35,7 +38,7 @@ CITATION_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
         'source_key': {**TEXT, 'minLength': 1, 'maxLength': 100},
-        'locator': {**TEXT, 'minLength': 1, 'maxLength': 1000},
+        'locator': {**TEXT, 'minLength': 1, 'maxLength': 2048},
         'quote': {**TEXT, 'minLength': 1, 'maxLength': 20000},
     },
     'required': ['source_key', 'locator', 'quote'],
@@ -61,7 +64,7 @@ VERSION = {
     'description': 'Versión del espacio obtenida con get_delivery_overview.',
 }
 REQUEST_ID = {
-    'type': 'string', 'minLength': 1,
+    'type': 'string', 'minLength': 1, 'maxLength': 100,
     'description': 'Identificador estable de la operación; reutilizarlo al reintentar.',
 }
 LEVELS = ('project', 'contract', 'amendment', 'scope', 'phase', 'stage', 'requirement')
@@ -72,14 +75,21 @@ NODE_NAMES = {
 GUIDE_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
-        **{name: TEXT for name in (
-            'role', 'environment', 'preparation', 'data', 'expected_result',
-            'failure_signals',
+        'role': {**TEXT, 'maxLength': 300},
+        'environment': {**TEXT, 'maxLength': 500},
+        **{name: {**TEXT, 'maxLength': 20000} for name in (
+            'access', 'allowed_actions', 'blocked_actions', 'blocked_result',
+            'dependencies', 'preparation', 'data', 'expected_result', 'failure_signals',
         )},
-        'steps': {'type': 'array', 'items': TEXT},
+        **{name: {'type': 'array', 'items': {**TEXT, 'minLength': 1, 'maxLength': 3000},
+                  'maxItems': 100} for name in ('steps', 'blocked_steps')},
     },
 }
-COMMON_FIELDS = {'key': TEXT, 'title': TEXT}
+DESCRIPTION = {**TEXT, 'maxLength': 20000}
+COMMON_FIELDS = {
+    'key': {**TEXT, 'minLength': 1, 'maxLength': 100, 'pattern': '^[-a-zA-Z0-9_]+$'},
+    'title': {**TEXT, 'minLength': 1, 'maxLength': 300},
+}
 NODE_FIELDS = {
     'contracts': {
         **COMMON_FIELDS, 'document_id': NULLABLE_ID,
@@ -90,23 +100,78 @@ NODE_FIELDS = {
         'proposal_document_id': NULLABLE_ID, 'approval_file_id': NULLABLE_ID, 'client_visible': {'type': 'boolean'},
     },
     'scopes': {
-        **COMMON_FIELDS, 'description': TEXT, 'contract_id': ID,
+        **COMMON_FIELDS, 'description': DESCRIPTION, 'contract_id': ID,
         'amendment_id': NULLABLE_ID, 'is_current': {'type': 'boolean'},
     },
     'phases': {
-        **COMMON_FIELDS, 'description': TEXT, 'scope_id': ID,
+        **COMMON_FIELDS, 'description': DESCRIPTION, 'scope_id': ID,
         'commercial_phase_id': NULLABLE_ID, 'order': {'type': 'integer', 'minimum': 0},
     },
     'stages': {
-        **COMMON_FIELDS, 'description': TEXT, 'phase_id': ID,
+        **COMMON_FIELDS, 'description': DESCRIPTION, 'phase_id': ID,
         'order': {'type': 'integer', 'minimum': 0},
     },
     'requirements': {
-        **COMMON_FIELDS, 'description': TEXT, 'stage_id': ID,
+        **COMMON_FIELDS, 'description': DESCRIPTION, 'stage_id': ID,
         'guide': GUIDE_SCHEMA, 'order': {'type': 'integer', 'minimum': 0},
         'context_id': {**CONTEXT_ID, 'type': ['string', 'null']},
         'source_references': SOURCE_REFERENCES,
     },
+}
+ARGUMENT_DESCRIPTIONS = {
+    'project_id': 'Identificador positivo del proyecto autorizado de Platform.',
+    'node_id': 'Identificador positivo del elemento de entrega dentro del proyecto.',
+    'key': 'Clave del elemento: letras, números, guiones o guiones bajos; máximo 100 caracteres.',
+    'title': 'Título del elemento de entrega; máximo 300 caracteres.',
+    'description': 'Descripción del elemento de entrega; máximo 20000 caracteres; puede quedar vacía.',
+    'document_id': 'Identificador positivo del documento del mismo cliente y proyecto.',
+    'proposal_document_id': 'Identificador positivo de la fuente de propuesta del proyecto; null retira la fuente.',
+    'approval_file_id': 'Identificador positivo del archivo confirmado del proyecto; null retira la fuente.',
+    'client_visible': 'Indica si el cliente puede consultar el contrato u otrosí; un borrador nuevo es privado por defecto.',
+    'contract_id': 'Identificador positivo del contrato del proyecto seleccionado explícitamente.',
+    'amendment_id': 'Identificador positivo del otrosí que sustenta el alcance; null indica el contrato original.',
+    'is_current': 'Indica si este alcance es el vigente; al activarlo se desactivan los demás del contrato.',
+    'scope_id': 'Identificador positivo del alcance seleccionado dentro del proyecto.',
+    'commercial_phase_id': 'Identificador positivo de la fase comercial del proyecto; null elimina la asociación.',
+    'phase_id': 'Identificador positivo de la fase de entrega que contiene la etapa.',
+    'stage_id': 'Identificador positivo de la etapa de entrega dentro del proyecto.',
+    'order': 'Posición entera desde cero dentro del nivel de entrega.',
+    'guide': 'Guía de validación estructurada; admite borradores incompletos y exige los datos de publicación al publicar.',
+    'context_id': 'UUID de la captura de autoría conservada dentro del proyecto.',
+    'source_references': 'Citas de las fuentes capturadas: clave, localizador y fragmento literal verificable.',
+    'preparation_id': 'UUID del correo de cierre preparado por esta credencial en el proyecto.',
+    'file_id': 'Identificador positivo de un adjunto conservado del correo preparado.',
+    'message': 'Texto del mensaje o nota; máximo 20000 caracteres.',
+    'include_record_pdf': 'Incluye el PDF del acta de validación en el correo preparado; false por defecto.',
+    'document_snapshot_ids': 'Identificadores positivos de copias públicas conservadas para adjuntar; máximo 20.',
+    'preview_sha256': 'Huella SHA-256 de 64 caracteres de la vista previa revisada; debe coincidir al confirmar.',
+    'human_reviewed': 'Indica que una persona revisó el contenido exacto; debe ser true para enviarlo o compartir un borrador citado.',
+    'amendment_ids': 'Identificadores positivos de los otrosíes elegidos; máximo 30; lista vacía por defecto.',
+    'sources': 'Fuentes documentales elegidas con rol y nota de aplicabilidad; máximo 30; lista vacía por defecto.',
+    'missing_sources': 'Fuentes que faltan: hasta 30 textos de máximo 1000 caracteres; lista vacía por defecto.',
+    'uncertainties': 'Dudas de autoría: hasta 30 textos de máximo 2000 caracteres; lista vacía por defecto.',
+    'instructions': 'Instrucciones adicionales de autoría; máximo 10000 caracteres; texto vacío por defecto.',
+    'source_key': 'Clave no vacía de una fuente conservada dentro de la captura seleccionada.',
+    'decisions': 'Aprobaciones históricas explícitas: requerimiento, versión y decisión approved; al menos una.',
+    'evidence_message': 'Transcripción de la aprobación explícita del cliente; máximo 20000 caracteres.',
+    'evidence_document_ids': 'Identificadores positivos de documentos que respaldan la aprobación externa; máximo 20.',
+    'document_ids': 'Identificadores positivos de documentos del mismo cliente y proyecto asociados al mensaje; máximo 20.',
+    'client_statement': 'Debe ser true para declarar que la aprobación procede explícitamente del cliente.',
+    'original_reviewer': 'Nombre de quien aprobó externamente; máximo 300 caracteres; obligatorio sin mensaje entrante.',
+    'occurred_at': 'Fecha y hora ISO 8601 de la aprobación externa; obligatoria sin mensaje entrante.',
+    'evidence_channel': 'Canal de la aprobación externa: email, whatsapp o document; obligatorio sin mensaje entrante.',
+    'level': 'Nivel de entrega seleccionado: project, contract, amendment, scope, phase, stage o requirement.',
+    'target_id': 'Identificador positivo del destino dentro del nivel seleccionado; requiere level.',
+    'requirement_ids': 'Identificadores positivos de requerimientos del nivel seleccionado; máximo 100.',
+    'is_internal': 'Indica si el mensaje es privado para el equipo; false por defecto.',
+    'classifications': 'Clasificación contractual de las solicitudes con fundamento y citas verificables.',
+    'link_id': 'Identificador positivo de la asociación documental; para descargar, omite review_id y evidence_id.',
+    'review_id': 'Identificador positivo de la revisión; requiere evidence_id y excluye link_id al descargar.',
+    'evidence_id': 'Identificador positivo del respaldo documental congelado de review_id; excluye link_id.',
+    'kind': 'Tipo de fuente contractual: contracts para contrato o amendments para otrosí.',
+    'signer_name': 'Nombre del firmante externo; máximo 255 caracteres.',
+    'signed_at': 'Fecha y hora ISO 8601 de la firma externa.',
+    'attestation': 'Declaración administrativa sobre la firma externa; máximo 20000 caracteres.',
 }
 
 
@@ -193,7 +258,8 @@ def _read_node(arguments, actor, kind):
 
 
 def _mutate_node(arguments, actor, kind, *, delete=False):
-    data = deepcopy(arguments.get('data', {}))
+    data = {name: deepcopy(arguments[name]) for name in NODE_FIELDS[kind]
+            if name in arguments and not delete}
     data['expected_version'] = arguments['expected_version']
     if 'request_id' in arguments:
         data['request_id'] = arguments['request_id']
@@ -401,16 +467,17 @@ def _closure_send_impact(arguments):
 
 
 def _tool(name, description, handler, properties=None, required=(), *, risk='read',
-          one_of=None, durable_execution=False, impact_builder=None):
+          durable_execution=False, impact_builder=None):
     if durable_execution and risk != 'sensitive':
         raise ValueError('Durable execution requires explicit sensitive confirmation.')
     schema = {
         'type': 'object', 'additionalProperties': False,
-        'properties': {'project_id': ID, **(properties or {})},
+        'properties': deepcopy({
+            'project_id': {**ID, 'description': ARGUMENT_DESCRIPTIONS['project_id']},
+            **(properties or {}),
+        }),
         'required': ['project_id', *required],
     }
-    if one_of is not None:
-        schema['oneOf'] = one_of
 
     def execute(arguments):
         _validate(arguments, schema)
@@ -451,7 +518,9 @@ def _tool(name, description, handler, properties=None, required=(), *, risk='rea
 
 
 def _node_tools(kind, singular):
-    data_schema = {'type': 'object', 'properties': NODE_FIELDS[kind], 'additionalProperties': False}
+    fields = NODE_FIELDS[kind]
+    create_required = tuple(name for name, field in NODE_SERIALIZERS[kind]().fields.items()
+                            if field.required and name in fields)
     # Binding kind in the closure prevents generated tools from sharing the
     # final loop value and exposing a different entity than their schema.
     return [
@@ -465,15 +534,16 @@ def _node_tools(kind, singular):
             f'create_delivery_{singular}',
             f'Crea {singular} en borrador con las reglas contractuales vigentes de Platform.',
             lambda args, actor: _mutate_node(args, actor, kind),
-            {'expected_version': VERSION, 'request_id': REQUEST_ID, 'data': data_schema}, ('expected_version', 'data'),
+            {'expected_version': VERSION, 'request_id': REQUEST_ID, **fields},
+            ('expected_version', *create_required),
             risk='write',
         ),
         _tool(
             f'update_delivery_{singular}',
             f'Edita {singular} sin modificar evidencia aprobada ni omitir las reglas de Platform.',
             lambda args, actor: _mutate_node(args, actor, kind),
-            {'node_id': ID, 'expected_version': VERSION, 'request_id': REQUEST_ID, 'data': data_schema},
-            ('node_id', 'expected_version', 'data'), risk='write',
+            {'node_id': ID, 'expected_version': VERSION, 'request_id': REQUEST_ID, **fields},
+            ('node_id', 'expected_version'), risk='write',
         ),
         _tool(
             f'delete_delivery_{singular}',
@@ -490,7 +560,7 @@ DECISION_SCHEMA = {
     'properties': {
         'requirement_id': ID, 'version': {'type': 'integer', 'minimum': 1},
         'decision': {'type': 'string', 'enum': ['approved']},
-        'message': TEXT, 'environment': TEXT,
+        'message': {**TEXT, 'maxLength': 20000}, 'environment': {**TEXT, 'maxLength': 200},
     },
     'required': ['requirement_id', 'version', 'decision'],
 }
@@ -524,12 +594,17 @@ PROMPT_SELECTION = {
 }
 REPLY_PAYLOAD = {
     'type': 'object', 'additionalProperties': False,
+    'description': 'Respuesta JSON v2 con UUID de contexto, texto y clasificaciones citadas; no publica mensajes.',
     'properties': {
         'schema_version': {'type': 'integer', 'const': 2}, 'context_id': CONTEXT_ID,
         'response_text': {**TEXT, 'minLength': 1, 'maxLength': 20000},
         'classifications': CLASSIFICATIONS,
     },
     'required': ['schema_version', 'context_id', 'response_text', 'classifications'],
+}
+IMPORT_PAYLOAD = {
+    'description': 'Entrega JSON v1 manual o v2 con UUID de contexto y citas; importa sólo borradores, sin firmas ni aprobaciones.',
+    'oneOf': [delivery.import_schema(), authoring.guides_schema()],
 }
 DELIVERY_TOOLS = [
     _tool('prepare_delivery_stage_closure_email',
@@ -599,12 +674,12 @@ DELIVERY_TOOLS = [
     _tool('preview_delivery_import',
           'Valida JSON v1 manual o v2 con contexto y citas; previsualiza borradores sin guardar ni omitir su trazabilidad.',
           lambda args, actor: _import(args, actor, apply=False),
-          {'payload': {'type': 'object'}, 'expected_version': VERSION},
+          {'payload': IMPORT_PAYLOAD, 'expected_version': VERSION},
           ('payload', 'expected_version')),
     _tool('apply_delivery_import',
           'Aplica el JSON previsualizado sobre borradores de Platform tras confirmación; no declara firmas ni aprobaciones.',
           lambda args, actor: _import(args, actor, apply=True),
-          {'payload': {'type': 'object'}, 'expected_version': VERSION, 'request_id': REQUEST_ID},
+          {'payload': IMPORT_PAYLOAD, 'expected_version': VERSION, 'request_id': REQUEST_ID},
           ('payload', 'expected_version', 'request_id'), risk='sensitive'),
     _tool('publish_delivery_stage',
           'Publica o republica los pendientes de una etapa firmada tras confirmación; conserva las conformidades previas.',
@@ -615,14 +690,15 @@ DELIVERY_TOOLS = [
           _historical_approval, {
               'stage_id': ID, 'expected_version': VERSION, 'request_id': REQUEST_ID,
               'decisions': {'type': 'array', 'items': DECISION_SCHEMA, 'minItems': 1},
-              'evidence_message': TEXT, 'evidence_document_ids': DOCUMENT_IDS,
-              'message': TEXT, 'document_ids': DOCUMENT_IDS,
+              'evidence_message': {**TEXT, 'maxLength': 20000},
+              'evidence_document_ids': {**DOCUMENT_IDS, 'maxItems': 20},
+              'message': {**TEXT, 'maxLength': 20000}, 'document_ids': {**DOCUMENT_IDS, 'maxItems': 20},
               'client_statement': {'type': 'boolean', 'enum': [True]},
               'source_message_id': {**ID, 'description': 'Mensaje entrante recibido del mismo cliente/proyecto; la cita debe pertenecer a su contenido.'},
-              'original_reviewer': TEXT,
+              'original_reviewer': {**TEXT, 'minLength': 1, 'maxLength': 300},
               'occurred_at': {'type': 'string', 'format': 'date-time'},
               'evidence_channel': {'type': 'string', 'enum': ['email', 'whatsapp', 'document']},
-              'external_reference': {**TEXT, 'description': 'Referencia externa explícita; sin source_message_id también se requieren revisor, fecha, canal y documento de evidencia.'},
+              'external_reference': {**TEXT, 'minLength': 1, 'maxLength': 1000, 'description': 'Referencia externa explícita de máximo 1000 caracteres; sin source_message_id también se requieren revisor, fecha, canal y documento de evidencia.'},
           }, ('stage_id', 'expected_version', 'request_id', 'decisions',
               'evidence_message', 'client_statement'), risk='sensitive'),
     _tool('list_delivery_approval_evidence',
@@ -633,8 +709,9 @@ DELIVERY_TOOLS = [
           _message, {
               'expected_version': VERSION, 'request_id': REQUEST_ID,
               'level': {'type': 'string', 'enum': list(LEVELS)}, 'target_id': ID,
-              'requirement_ids': DOCUMENT_IDS, 'message': TEXT,
-              'document_ids': DOCUMENT_IDS, 'is_internal': {'type': 'boolean', 'default': False},
+              'requirement_ids': {**DOCUMENT_IDS, 'maxItems': 100},
+              'message': {**TEXT, 'minLength': 1, 'maxLength': 20000},
+              'document_ids': {**DOCUMENT_IDS, 'maxItems': 20}, 'is_internal': {'type': 'boolean', 'default': False},
               'context_id': CONTEXT_ID, 'source_references': SOURCE_REFERENCES,
               'classifications': CLASSIFICATIONS, 'human_reviewed': {'type': 'boolean'},
           }, ('expected_version', 'request_id', 'level', 'target_id', 'message'), risk='write'),
@@ -659,12 +736,7 @@ DELIVERY_TOOLS = [
           ('expected_version', 'link_id'), risk='write'),
     _tool('download_delivery_document_pdf',
           'Obtiene un PDF documental o el respaldo congelado de una revisión como artefacto temporal ligado a la credencial MCP.',
-          _document_pdf, {'link_id': ID, 'review_id': ID, 'evidence_id': ID}, one_of=[
-              {'required': ['link_id'], 'not': {'anyOf': [
-                  {'required': ['review_id']}, {'required': ['evidence_id']},
-              ]}},
-              {'required': ['review_id', 'evidence_id'], 'not': {'required': ['link_id']}},
-          ]),
+          _document_pdf, {'link_id': ID, 'review_id': ID, 'evidence_id': ID}),
     _tool('download_delivery_contract_pdf',
           'Obtiene el contrato u otrosí consultable antes de publicar etapas; devuelve un PDF temporal autorizado.',
           _contract_pdf, {'kind': CONTRACT_KIND, 'node_id': ID}, ('kind', 'node_id')),
@@ -675,12 +747,16 @@ DELIVERY_TOOLS = [
               'request_id': REQUEST_ID,
               'asset_id': {'type': 'string', 'format': 'uuid',
                            'description': 'PDF completo de begin_upload/upload_asset_chunk/complete_upload; máximo 10 MB.'},
-              'signer_name': TEXT, 'signed_at': {'type': 'string', 'format': 'date-time'},
-              'attestation': TEXT,
+              'signer_name': {**TEXT, 'minLength': 1, 'maxLength': 255},
+              'signed_at': {'type': 'string', 'format': 'date-time'},
+              'attestation': {**TEXT, 'minLength': 1, 'maxLength': 20000},
           }, ('kind', 'node_id', 'expected_version', 'request_id', 'asset_id',
               'signer_name', 'signed_at', 'attestation'), risk='sensitive'),
 ]
 
 for _public_tool in DELIVERY_TOOLS:
+    for _argument, _field in _public_tool['input_schema']['properties'].items():
+        if not _field.get('description'):
+            _field['description'] = ARGUMENT_DESCRIPTIONS[_argument]
     if _public_tool['name'] in DELIVERY_PUBLIC_TOOLS:
         configure_public_tool(_public_tool, _actor)

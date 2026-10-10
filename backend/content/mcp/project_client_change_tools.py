@@ -7,25 +7,19 @@ from content.mcp.errors import normalize_error
 from content.mcp.operation_builder import _op
 from content.mcp.proposal_schemas import check_known_fields, guarded_arguments
 from content.mcp.protocol import ToolError
+from content.mcp.schemas.projects_bridge import PROJECTS_BRIDGE_SCHEMAS
 from content.serializers.panel_projects import ProjectChangeClientSerializer
 from content.services.diagnostic_privacy import register_mcp_domain_codes
 
 register_mcp_domain_codes('project_client_change_blocked')
 
-_TARGET_SCHEMA = {
-    'type': 'integer', 'minimum': 1,
-    'description': 'Id del perfil del nuevo cliente propietario.',
-}
 PREVIEW = _op(
     'preview_project_client_change',
     'Evalúa la historia financiera, contractual, de entregas y tickets y los efectos de mover o '
     'desvincular los registros. can_apply y blockers reflejan las mismas reglas que change_project_client. '
     'Pasa impact_hash como expected_impact_hash a change_project_client después de revisar el impacto.',
     'panel-projects-change-client-preview', path=('project_id',),
-    query_schema={
-        'type': 'object', 'additionalProperties': False,
-        'properties': {'client_profile_id': _TARGET_SCHEMA}, 'required': ['client_profile_id'],
-    },
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_project_client_change'],
 )
 CHANGE = _op(
     'change_project_client',
@@ -35,31 +29,14 @@ CHANGE = _op(
     'conservan siempre su cliente original. '
     'Requiere expected_impact_hash vigente; la historia financiera o del cliente bloquea el traslado.',
     'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True,
-    payload_schema={
-        'type': 'object', 'additionalProperties': False,
-        'properties': {
-            'client_profile_id': _TARGET_SCHEMA,
-            'mode': {
-                'type': 'string', 'enum': ['move', 'detach'],
-                'description': 'move: los registros vinculados siguen al nuevo cliente. '
-                               'detach: conservan su cliente y pierden el proyecto.',
-            },
-            'expected_impact_hash': {
-                'type': 'string',
-                'description': 'impact_hash devuelto por la vista previa revisada.',
-            },
-        },
-        'required': ['client_profile_id', 'mode', 'expected_impact_hash'],
-    },
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['change_project_client'],
 )
 _change_handler = CHANGE['handler']
 
 
 def _prepare(arguments):
-    check_known_fields(arguments, CHANGE['accepted_arguments_schema'])
+    check_known_fields(arguments, CHANGE['input_schema'])
     args = guarded_arguments(arguments, CHANGE)
-    data = args.pop('data', {})
-    args.update(data)
     payload_fields = CHANGE['_panel_operation']['payload_schema']['properties']
     serializer = ProjectChangeClientSerializer(data={key: value for key, value in args.items() if key in payload_fields})
     serializer.fields['client_profile_id'] = serializers.IntegerField(min_value=1)

@@ -110,7 +110,6 @@ def _document_state(doc, project):
 
 def _contract_files(project, kind, arguments, node, *, lock=False):
     from accounts.services import delivery_contract_sources as sources
-    data = arguments.get('data', {})
     result = []
     if node is not None:
         signed = sources.signed_contract_source(node)
@@ -119,7 +118,7 @@ def _contract_files(project, kind, arguments, node, *, lock=False):
                 'filename': signed['filename'], 'size': len(signed['raw']), 'sha256': signed['sha256']})
             return result
     for field in sources.SOURCE_FIELDS:
-        identifier = data.get(field, getattr(node, field, None) if node is not None else None)
+        identifier = arguments.get(field, getattr(node, field, None) if node is not None else None)
         if not identifier:
             continue
         if field == 'document_id':
@@ -191,8 +190,12 @@ def _link_effect(project, arguments, *, unlink=False, lock=False):
 
 
 def _issue_effect(project, actor, name, arguments, *, lock=False):
+    payload = arguments.get('payload')
+    if payload is None:
+        payload = {key: value for key, value in arguments.items()
+                   if key not in {'project_id', 'kind', 'ticket_id'}}
     items = arguments['items'] if name == 'bulk_evaluate_issue_reports' else [{
-        'id': arguments['ticket_id'], **arguments['payload']}]
+        'id': arguments['ticket_id'], **payload}]
     states, files, public = [], [], False
     for index, item in enumerate(items):
         try:
@@ -248,7 +251,7 @@ def _snapshot(tool_name, arguments, actor, *, lock=False):
     else:
         kind = 'amendments' if tool_name.endswith('_amendment') else 'contracts'
         node = delivery._node(project, kind, arguments['node_id']) if 'node_id' in arguments else None
-        public = bool((node and node.client_visible) or arguments.get('data', {}).get('client_visible', False))
+        public = bool((node and node.client_visible) or arguments.get('client_visible', False))
         states = {'kind': kind, 'node_id': getattr(node, 'pk', None),
                   'current_visible': bool(node and node.client_visible),
                   'title': getattr(node, 'title', None), 'key': getattr(node, 'key', None)}

@@ -180,7 +180,7 @@ def test_real_folder_preview_does_not_write(django_user_model, superuser):
 
     preview = assert_no_writes(
         call_tool_inprocess, 'documents', 'preview_folder_client_change',
-        {'folder_id': folder.pk, 'query': {'client_profile_id': profile.pk}}, credential=credential,
+        {'folder_id': folder.pk, 'client_profile_id': profile.pk}, credential=credential,
     )
 
     assert 'error' not in preview

@@ -16,7 +16,6 @@ from django.utils import timezone
 from content.mcp.context import current_mcp_context
 from content.models import McpUpload
 
-
 UPLOAD_TTL_MINUTES = 15
 VIDEO_UPLOAD_TTL_MINUTES = 60
 VIDEO_CONNECTORS = {'partnership-program', 'additional-modules', 'proposals', 'commercial'}
@@ -278,8 +277,9 @@ def _validate_declared_content(upload):
     """Validate common file signatures after transport integrity succeeds."""
     content_type = upload.content_type
     if content_type == 'video/mp4':
-        from content.services.video_resource_service import probe_video
         from rest_framework.exceptions import ValidationError
+
+        from content.services.video_resource_service import probe_video
         try:
             with upload.file.open('rb') as source:
                 if source.read(12)[4:8] != b'ftyp':
@@ -430,10 +430,14 @@ UPLOAD_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'filename': {'type': 'string'},
-                'content_type': {'type': 'string', 'enum': sorted(ALLOWED_CONTENT_TYPES)},
-                'size': {'type': 'integer', 'minimum': 1},
-                'sha256': {'type': 'string', 'pattern': '^[0-9a-fA-F]{64}$'},
+                'filename': {'type': 'string',
+                             'description': 'Nombre del archivo; tras descartar la ruta debe tener hasta 255 caracteres y una extensión que coincida con el MIME.'},
+                'content_type': {'type': 'string', 'enum': sorted(ALLOWED_CONTENT_TYPES),
+                                 'description': 'Tipo MIME permitido para este conector; debe coincidir con la extensión y el contenido del archivo.'},
+                'size': {'type': 'integer', 'minimum': 1,
+                         'description': 'Tamaño total en bytes, desde 1 hasta el límite del servidor para este MIME; debe coincidir al completar.'},
+                'sha256': {'type': 'string', 'pattern': '^[0-9a-fA-F]{64}$',
+                           'description': 'SHA-256 del archivo completo: 64 caracteres hexadecimales, en mayúsculas o minúsculas.'},
             },
             'required': ['filename', 'content_type', 'size', 'sha256'],
             'additionalProperties': False,
@@ -447,10 +451,14 @@ UPLOAD_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'asset_id': {'type': 'string', 'format': 'uuid'},
-                'index': {'type': 'integer', 'minimum': 0},
-                'base64': {'type': 'string'},
-                'chunk_sha256': {'type': 'string', 'pattern': '^[0-9a-fA-F]{64}$'},
+                'asset_id': {'type': 'string', 'format': 'uuid',
+                             'description': 'UUID del upload pendiente devuelto por begin_upload, de esta credencial y conector.'},
+                'index': {'type': 'integer', 'minimum': 0,
+                          'description': 'Índice del siguiente chunk, desde 0; debe coincidir con next_chunk_index.'},
+                'base64': {'type': 'string',
+                           'description': 'Chunk en Base64 válido; al decodificar debe medir de 1 a 1048576 bytes (1 MiB).'},
+                'chunk_sha256': {'type': 'string', 'pattern': '^[0-9a-fA-F]{64}$',
+                                 'description': 'SHA-256 de este chunk decodificado: 64 caracteres hexadecimales, en mayúsculas o minúsculas.'},
             },
             'required': ['asset_id', 'index', 'base64', 'chunk_sha256'],
             'additionalProperties': False,
@@ -463,7 +471,8 @@ UPLOAD_TOOLS = [
         'risk': 'write',
         'input_schema': {
             'type': 'object',
-            'properties': {'asset_id': {'type': 'string', 'format': 'uuid'}},
+            'properties': {'asset_id': {'type': 'string', 'format': 'uuid',
+                                        'description': 'UUID del upload de esta credencial y conector; valida los bytes recibidos o devuelve el resultado si ya está completo.'}},
             'required': ['asset_id'],
             'additionalProperties': False,
         },
@@ -475,7 +484,8 @@ UPLOAD_TOOLS = [
         'risk': 'write',
         'input_schema': {
             'type': 'object',
-            'properties': {'asset_id': {'type': 'string', 'format': 'uuid'}},
+            'properties': {'asset_id': {'type': 'string', 'format': 'uuid',
+                                        'description': 'UUID del upload de esta credencial y conector que se descartará; no puede estar consumido ni expirado.'}},
             'required': ['asset_id'],
             'additionalProperties': False,
         },

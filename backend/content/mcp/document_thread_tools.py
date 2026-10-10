@@ -37,9 +37,17 @@ from content.services.document_thread_query import (
 )
 from content.services.document_thread_service import (
     DocumentThreadError,
+)
+from content.services.document_thread_service import (
     create_document_thread as service_create_thread,
+)
+from content.services.document_thread_service import (
     dissolve_document_thread as service_dissolve_thread,
+)
+from content.services.document_thread_service import (
     edit_document_thread_members as service_edit_members,
+)
+from content.services.document_thread_service import (
     update_document_thread as service_update_thread,
 )
 
@@ -284,17 +292,18 @@ def dissolve_document_thread(arguments):
 # ── Tool registry ────────────────────────────────────────────────────────────
 
 _THREAD_ID_PROP = {
-    'thread_id': {'type': 'integer', 'description': 'ID del hilo.'},
+    'thread_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del hilo.'},
 }
 
 _LINK_ITEM_SCHEMA = {
     'type': 'object',
     'properties': {
-        'document_id': {'type': 'integer'},
+        'document_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del documento markdown activo a enlazar.'},
         'occurred_on': {
-            'type': 'string',
+            'type': ['string', 'null'],
+            'format': 'date',
             'description': (
-                'Fecha real del hito en formato YYYY-MM-DD. Si se omite se usa '
+                'Fecha real del hito en formato YYYY-MM-DD. Si se omite o es null se usa '
                 'la fecha del documento.'
             ),
         },
@@ -315,10 +324,12 @@ DOCUMENT_THREAD_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 'document_id': {
                     'type': 'integer',
-                    'description': 'Documento cuyo hilo quieres consultar.',
+                    'minimum': 1,
+                    'description': 'ID positivo del documento cuyo hilo quieres consultar; envía document_id o thread_id.',
                 },
                 **_THREAD_ID_PROP,
             },
@@ -335,6 +346,7 @@ DOCUMENT_THREAD_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 'search': {
                     'type': 'string',
@@ -344,12 +356,14 @@ DOCUMENT_THREAD_TOOLS = [
                     ),
                 },
                 'client_id': {
-                    'type': 'integer',
-                    'description': 'Sólo hilos con algún documento de ese cliente.',
+                    'type': ['integer', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo del cliente; filtra hilos con algún documento suyo. Omitir o null no filtra.',
                 },
                 'project_id': {
-                    'type': 'integer',
-                    'description': 'Sólo hilos con algún documento de ese proyecto.',
+                    'type': ['integer', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo del proyecto; filtra hilos con algún documento suyo. Omitir o null no filtra.',
                 },
                 'order': {
                     'type': 'string',
@@ -357,11 +371,11 @@ DOCUMENT_THREAD_TOOLS = [
                     'default': 'recent',
                     'description': (
                         'recent = última edición; milestone = último hito; '
-                        'title = alfabético.'
+                        'title = alfabético. Por defecto recent.'
                     ),
                 },
-                'page': {'type': 'integer', 'default': 1},
-                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50},
+                'page': {'type': 'integer', 'default': 1, 'description': 'Página solicitada; por defecto 1. Valores menores se ajustan a 1.'},
+                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50, 'description': 'Hilos por página; por defecto 20, ajustados entre 1 y 50.'},
             },
         },
         'handler': list_document_threads,
@@ -377,6 +391,7 @@ DOCUMENT_THREAD_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 'title': {
                     'type': 'string',
@@ -391,6 +406,7 @@ DOCUMENT_THREAD_TOOLS = [
                     'minItems': 2,
                     'maxItems': 50,
                     'items': _LINK_ITEM_SCHEMA,
+                    'description': 'De 2 a 50 documentos markdown activos, cada uno con su ID y una fecha de hito opcional.',
                 },
             },
             'required': ['items'],
@@ -409,6 +425,7 @@ DOCUMENT_THREAD_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 **_THREAD_ID_PROP,
                 'title': {
@@ -427,7 +444,7 @@ DOCUMENT_THREAD_TOOLS = [
                 },
                 'unlink_document_ids': {
                     'type': 'array',
-                    'items': {'type': 'integer'},
+                    'items': {'type': 'integer', 'minimum': 1},
                     'uniqueItems': True,
                     'maxItems': 50,
                     'description': (
@@ -451,6 +468,7 @@ DOCUMENT_THREAD_TOOLS = [
         ),
         'input_schema': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': _THREAD_ID_PROP,
             'required': ['thread_id'],
         },

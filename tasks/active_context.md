@@ -2795,3 +2795,23 @@ Las allow-lists explícitas deben ampliarse y los conectores claude.ai
 reconectarse. El orden de merge con PR #503 puede exigir la versión siguiente.
 La integración, CI y deploy quedan bajo el cierre del orquestador; esta entrada
 no acredita esos pasos ni la semántica de locks MySQL a partir de SQLite.
+
+## 2026-10-10 — PR 2: esquemas explícitos, Documentos 4.0.0 / Proyectos 3.0.0
+
+Los commits `5561570b`, `e989828d`, `3887c60c`, `7350aaca` y `a33938b9`
+aportan schemas de entregas/recursos planos, catálogos de 36/48 bridges y el
+cierre de las 16 raíces nativas documentales. `f41afd3d` conecta los catálogos
+con los bridges; el retiro de alias y los pins completan el contrato objetivo
+**4.0.0 / 73 tools** y **3.0.0 / 164 tools**. Las llamadas con `data`/`query`
+deben migrar. Imports conservan `payload` v1/v2,
+tickets su objeto tipado, y otros conectores sus alias. Borrado MCP admite sólo
+`project_id`/`if_match`; las exclusiones del Panel tienen motivo y el campo de
+error `message` conserva su nombre.
+
+Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
+[Documentos](../docs/changelog/2026-10-10-documents-mcp-4.0.0.md),
+[Proyectos](../docs/changelog/2026-10-10-projects-mcp-3.0.0.md) y
+[verificación del contrato](../docs/MCP_VALIDATION_RUNBOOK.md#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).
+Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
+El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
+entrada documental no declara terminados esos pasos ni operaciones en producción.
