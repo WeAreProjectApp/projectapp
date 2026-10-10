@@ -23,6 +23,21 @@
 > historial conserva sus hechos y corrige la presentación del IVA antiguo al leer.
 
 
+## Integridad de datos (2026-10-09)
+
+Un catálogo fijo y versionado de reglas (`content/services/data_integrity/`)
+detecta datos huérfanos, duplicados e inconsistentes en clientes, proyectos,
+documentos, comunicaciones, contabilidad, propuestas y nombres, dentro de un
+alcance (todo, un cliente, un proyecto, una propuesta, un documento o un hilo).
+Las correcciones pasan por vista previa con `impact_hash`, se aplican con los
+escritores del dominio y quedan en `DataIntegrityOperation` (append-only) con
+antes/después por campo; el deshacer es exacto mientras nada cambie después.
+Incluye fusión de clientes duplicados (política explícita por relación con
+prueba anti-deriva) y de carpetas documentales hermanas; nunca borra. API del
+panel en `/api/projects/data-integrity/`, siete herramientas en el conector MCP
+`projects` y la skill de repo `data-integrity`. Migración nueva: `content.0286`.
+Detalle en `docs/DATA_INTEGRITY.md`.
+
 ## Traslado auditado de datos conservados (2026-10-07)
 
 Lo conservado por una eliminación forzada deja de ser un callejón sin salida.
