@@ -24,11 +24,9 @@ def rpc(api_client, superuser):
     return call
 
 
-@pytest.mark.parametrize('payload_location', ['flat', 'data'])
-def test_unknown_folder_field_reaches_text_client(rpc, payload_location):
+def test_unknown_folder_field_reaches_text_client(rpc):
     folder = DocumentFolder.objects.create(name='Original')
-    values = {'name': 'Changed', 'typo': 1}
-    arguments = {'folder_id': folder.pk, **{'flat': values, 'data': {'data': values}}[payload_location]}
+    arguments = {'folder_id': folder.pk, 'name': 'Changed', 'typo': 1}
 
     result = rpc('tools/call', name='update_folder', arguments=arguments)
 

@@ -216,6 +216,9 @@ def _request_for(method, url, *, query, data, files, if_match):
 @transaction.atomic
 def _execute(operation, arguments):
     args = deepcopy(arguments)
+    envelope_aliases = operation.get('envelope_aliases', True)
+    if not envelope_aliases:
+        _check_unknown_fields({name: args[name] for name in ('data', 'query') if name in args}, ())
     payload_schema = operation.get('payload_schema')
     query_schema = operation.get('query_schema')
     explicit = payload_schema is not None or query_schema is not None
@@ -223,13 +226,14 @@ def _execute(operation, arguments):
     if explicit:
         permitted = (set(operation['path_params']) | set(operation['asset_fields'])
                      | {'if_match'})
-        if not is_get and payload_schema is not None:
+        if envelope_aliases and not is_get and payload_schema is not None:
             permitted.add('data')
         if payload_schema is not None:
             permitted.update(payload_schema.get('properties', {}))
         if query_schema is not None:
             permitted.update(query_schema.get('properties', {}))
-            permitted.add('query')
+            if envelope_aliases:
+                permitted.add('query')
         _check_unknown_fields(args, permitted)
     elif not is_get and 'query' in args:
         _check_unknown_fields({'query': args['query']}, ())
@@ -339,6 +343,7 @@ def panel_operation(
     asset_fields=None,
     payload_schema=None,
     query_schema=None,
+    envelope_aliases=True,
 ):
     if len(description.strip()) < 40:
         description = (
@@ -355,6 +360,7 @@ def panel_operation(
         'asset_fields': asset_fields or {},
         'payload_schema': payload_schema,
         'query_schema': query_schema,
+        'envelope_aliases': envelope_aliases,
     }
     properties = {
         **_path_properties(path_params),
@@ -383,6 +389,9 @@ def panel_operation(
         }
     elif operation['method'] != 'GET':
         properties.pop('query')
+    if not envelope_aliases:
+        properties.pop('data', None)
+        properties.pop('query', None)
     for argument_name, config in operation['asset_fields'].items():
         asset_schema = {
             'type': 'string', 'format': 'uuid',
@@ -412,7 +421,7 @@ def panel_operation(
         'handler': lambda arguments: _execute(operation, arguments),
         '_panel_operation': operation,
     }
-    if explicit:
+    if explicit and envelope_aliases:
         accepted_properties = deepcopy(properties)
         if operation['method'] != 'GET' and payload_schema is not None:
             accepted_properties['data'] = deepcopy(payload_schema)

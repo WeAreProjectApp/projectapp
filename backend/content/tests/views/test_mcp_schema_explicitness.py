@@ -5,8 +5,9 @@ from unittest.mock import Mock
 
 import pytest
 
+from content.mcp.protocol import ToolError
 from content.mcp.schemas.projects_bridge import PANEL_ONLY_FIELDS
-from content.models import McpConnector, McpCredential
+from content.models import BusinessProposal, McpConnector, McpCredential
 from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 from content.tests.mcp_schema_rules import (
     ALIAS_BACKLOG,
@@ -169,6 +170,51 @@ def test_every_closed_tool_rejects_unknown_arguments_before_execution(monkeypatc
 
     assert {slug for slug, _ in probed} == set(CONNECTORS)
     assert not offenders, offenders
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(('slug', 'name', 'identifier'), [
+    ('documents', 'archive_folder', 'folder_id'),
+    ('projects', 'delete_project', 'project_id'),
+])
+@pytest.mark.parametrize('envelope', ['data', 'query'])
+def test_envelope_rejection_preserves_proposals_compatibility(monkeypatch, superuser, slug, name, identifier, envelope):
+    connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
+    credential = McpCredential.objects.create(connector=connector, actor=superuser, label='Flat envelope guard')
+    tool = next(tool for tool in TOOLS_BY_SLUG[slug] if tool['name'] == name)
+    handler = tool['handler']
+    boundary = Mock(side_effect=AssertionError('Envelope reached an execution callback.'))
+    arguments = {identifier: 1, envelope: {}}
+    with monkeypatch.context() as patch:
+        for callback in ('handler', 'impact_builder', 'prepare_arguments', 'confirmation_predicate', 'etag_resolver'):
+            if callable(tool.get(callback)):
+                patch.setitem(tool, callback, boundary)
+
+        result = assert_no_writes(call_tool_inprocess, slug, name, arguments, credential=credential)
+
+    assert result['error']['code'] == 'unknown_field'
+    assert result['error']['details']['errors'] == [{
+        'field': envelope, 'code': 'unknown_field', 'message': 'Campo desconocido o de solo lectura.',
+    }]
+    boundary.assert_not_called()
+    with pytest.raises(ToolError) as rejected:
+        assert_no_writes(handler, arguments)
+    assert rejected.value.code == 'unknown_field'
+    assert rejected.value.details['errors'][0]['field'] == envelope
+
+    proposals, _ = McpConnector.objects.get_or_create(slug='proposals', defaults={'name': 'Proposals'})
+    proposal_credential = McpCredential.objects.create(
+        connector=proposals, actor=superuser, label='Preserved proposal envelope',
+    )
+    proposal = BusinessProposal.objects.create(title='Original proposal', client_name='Alias client')
+
+    updated = call_tool_inprocess('proposals', 'update_proposal_settings', {
+        'proposal_id': proposal.pk, 'data': {'title': 'Proposal alias preserved'},
+    }, credential=proposal_credential)
+
+    proposal.refresh_from_db()
+    assert 'error' not in updated, updated
+    assert proposal.title == updated['title'] == 'Proposal alias preserved'
 
 
 def test_parity_pair_evidence_still_names_the_exercised_operations():

@@ -48,7 +48,7 @@ def rpc(api_client, superuser):
 def test_mcp_update_folder_accepts_parent_id(rpc):
     folder = DocumentFolder.objects.create(name='Original')
     parent = DocumentFolder.objects.create(name='Parent')
-    result = rpc('update_folder', {'folder_id': folder.pk, 'data': {'name': 'Changed', 'parent_id': parent.pk}})
+    result = rpc('update_folder', {'folder_id': folder.pk, 'name': 'Changed', 'parent_id': parent.pk})
     assert result['isError'] is False
     folder.refresh_from_db()
     assert folder.parent_id == parent.pk
@@ -57,7 +57,7 @@ def test_mcp_update_folder_accepts_parent_id(rpc):
 
 def test_mcp_update_folder_rejects_unknown_without_partial_save(rpc):
     folder = DocumentFolder.objects.create(name='Original')
-    result = rpc('update_folder', {'folder_id': folder.pk, 'data': {'name': 'Changed', 'typo': 1}})
+    result = rpc('update_folder', {'folder_id': folder.pk, 'name': 'Changed', 'typo': 1})
     assert result['isError'] is True
     folder.refresh_from_db()
     assert folder.name == 'Original'

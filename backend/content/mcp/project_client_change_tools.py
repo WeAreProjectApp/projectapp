@@ -19,7 +19,7 @@ PREVIEW = _op(
     'desvincular los registros. can_apply y blockers reflejan las mismas reglas que change_project_client. '
     'Pasa impact_hash como expected_impact_hash a change_project_client después de revisar el impacto.',
     'panel-projects-change-client-preview', path=('project_id',),
-    **PROJECTS_BRIDGE_SCHEMAS['preview_project_client_change'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_project_client_change'],
 )
 CHANGE = _op(
     'change_project_client',
@@ -29,16 +29,14 @@ CHANGE = _op(
     'conservan siempre su cliente original. '
     'Requiere expected_impact_hash vigente; la historia financiera o del cliente bloquea el traslado.',
     'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True,
-    **PROJECTS_BRIDGE_SCHEMAS['change_project_client'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['change_project_client'],
 )
 _change_handler = CHANGE['handler']
 
 
 def _prepare(arguments):
-    check_known_fields(arguments, CHANGE['accepted_arguments_schema'])
+    check_known_fields(arguments, CHANGE['input_schema'])
     args = guarded_arguments(arguments, CHANGE)
-    data = args.pop('data', {})
-    args.update(data)
     payload_fields = CHANGE['_panel_operation']['payload_schema']['properties']
     serializer = ProjectChangeClientSerializer(data={key: value for key, value in args.items() if key in payload_fields})
     serializer.fields['client_profile_id'] = serializers.IntegerField(min_value=1)

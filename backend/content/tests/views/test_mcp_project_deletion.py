@@ -65,8 +65,10 @@ def test_mcp_confirm_rechecks_dependencies(api_client, token, unused_project):
     assert income.project_id == unused_project.pk
 
 
-@pytest.mark.parametrize('arguments', [{'force': 'true'}, {'query': {'force': 'true'}}], ids=['flat', 'query-alias'])
-def test_mcp_cannot_request_forced_preview(api_client, token, unused_project, arguments):
+@pytest.mark.parametrize(('arguments', 'field'), [
+    ({'force': 'true'}, 'force'), ({'query': {'force': 'true'}}, 'query'),
+], ids=['flat', 'query-alias'])
+def test_mcp_cannot_request_forced_preview(api_client, token, unused_project, arguments, field):
     """The connector cannot inherit the panel superuser's destructive preview."""
     response = call_tool(api_client, 'projects', token, 'preview_project_delete', {
         'project_id': unused_project.pk, **arguments,
@@ -74,7 +76,7 @@ def test_mcp_cannot_request_forced_preview(api_client, token, unused_project, ar
 
     error = payload(response)['error']
     assert error['code'] == 'unknown_field'
-    assert [item['field'] for item in error['details']['errors']] == ['force']
+    assert [item['field'] for item in error['details']['errors']] == [field]
     assert not McpActionIntent.objects.exists()
     assert Project.objects.filter(pk=unused_project.pk).exists()
 

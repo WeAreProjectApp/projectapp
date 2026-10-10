@@ -77,16 +77,11 @@ def test_preview_reports_only_new_portal_exposure(folder_change, admin_client):
     assert ownership_state() == initial
 
 
-@pytest.mark.parametrize('arguments_style', ['flat', 'data'])
-def test_mcp_omitted_policy_refuses_exposure(folder_change, arguments_style):
+def test_mcp_omitted_policy_refuses_exposure(folder_change):
     case = folder_change
-    arguments = {
-        'flat': case.arguments,
-        'data': {'folder_id': case.folder.pk, 'data': panel_arguments(case)},
-    }[arguments_style]
     initial = ownership_state()
 
-    result = confirm_change(case, arguments)
+    result = confirm_change(case, case.arguments)
 
     assert result['error']['code'] == 'PORTAL_EXPOSURE'
     assert result['error']['details']['blockers'] == [{
@@ -113,15 +108,10 @@ def test_hide_new_exposure_reassigns_a_private_document(folder_change, admin_cli
     assert not _visible_docs_qs(SimpleNamespace(user=case.new.user)).filter(pk=case.document.pk).exists()
 
 
-@pytest.mark.parametrize('arguments_style', ['flat', 'data'])
-def test_mcp_allow_exposes_the_document(folder_change, arguments_style):
+def test_mcp_allow_exposes_the_document(folder_change):
     case = folder_change
-    arguments = {
-        'flat': {**case.arguments, 'portal_policy': 'allow'},
-        'data': {'folder_id': case.folder.pk, 'data': panel_arguments(case, portal_policy='allow')},
-    }[arguments_style]
 
-    result = confirm_change(case, arguments)
+    result = confirm_change(case, {**case.arguments, 'portal_policy': 'allow'})
 
     case.document.refresh_from_db()
     assert result['result']['moved']['documents'] == 1

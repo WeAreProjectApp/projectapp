@@ -21,22 +21,22 @@ UNDO_PREVIEW = _op(
     'Revisa si un traslado de datos conservados se puede deshacer exactamente (nada cambió después) '
     'y qué registros volverían a quedar sin proyecto y de solo consulta.',
     'panel-projects-retained-operation-undo', path=('operation_id',),
-    **PROJECTS_BRIDGE_SCHEMAS['preview_retained_operation_undo'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_retained_operation_undo'],
 )
 UNDO = _op(
     'undo_retained_operation',
     'Deshace un traslado de datos conservados: los registros vuelven a quedar sin proyecto y de solo '
     'consulta. Requiere el impacto vigente de preview_retained_operation_undo, motivo y request_id estable.',
     'panel-projects-retained-operation-undo', 'POST', ('operation_id',), 'sensitive', True,
-    **PROJECTS_BRIDGE_SCHEMAS['undo_retained_operation'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['undo_retained_operation'],
 )
 CLEANUP_PREVIEW = _op(
     'preview_retained_container_cleanup',
     'Lista los hilos, carpetas de comunicación y carpetas documentales conservados de un proyecto '
-    'eliminado y si están vacíos. query.communication_threads, query.communication_folders y '
-    'query.document_folders (ids separados por comas) limitan la selección.',
+    'eliminado y si están vacíos. communication_threads, communication_folders y '
+    'document_folders (listas de IDs o IDs separados por comas) limitan la selección.',
     'panel-projects-retained-context-cleanup', path=('context_id',),
-    **PROJECTS_BRIDGE_SCHEMAS['preview_retained_container_cleanup'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['preview_retained_container_cleanup'],
 )
 CLEANUP = _op(
     'delete_empty_retained_containers',
@@ -44,7 +44,7 @@ CLEANUP = _op(
     'sin contenido). Requiere el impacto vigente de preview_retained_container_cleanup con la misma '
     'selección, motivo y request_id estable.',
     'panel-projects-retained-context-cleanup', 'POST', ('context_id',), 'sensitive', True,
-    **PROJECTS_BRIDGE_SCHEMAS['delete_empty_retained_containers'],
+    envelope_aliases=False, **PROJECTS_BRIDGE_SCHEMAS['delete_empty_retained_containers'],
 )
 
 
