@@ -1,3 +1,27 @@
+> **Migración de carpetas por MCP — parte 2, 2026-10-10:**
+> `document_ownership_planner` previsualiza propiedad y audiencia con políticas
+> explícitas; `folder_migration_service` reutiliza ese plan para `adopt_source`
+> y `move_contents`, sin aprovisionar en lectura. El token firmado dura 30
+> minutos y liga actor/credencial; la confirmación replanifica bajo candados y
+> guarda todo en una transacción. `DocumentOwnershipOperation` conserva
+> antes/después, recibo e idempotencia; deshacer restaura exactamente y bloquea
+> cambios, contenido nuevo, uso del proyecto y orden posterior. Las
+> postcondiciones comprueban raíz única, ausencia de raíz manual homónima,
+> Contratos activo/sin dueño con sus espejos y estado igual al plan. Las altas
+> y renombres comparten la regla de nombre; `create_project(root_folder_id)`
+> exige confirmación y devuelve `document_root`. El pin contractual permanece
+> sin dueño aunque esté dentro del proyecto. Esquema nuevo: content.0287,
+> además del pin content.0286 y voided accounts.0082, sólo mediante deploy.
+> Contrato publicado: Documentos **3.2.0 / 73 tools**, Proyectos **2.2.0 / 164**.
+> [Changelog de Documentos](../changelog/2026-10-10-documents-mcp-3.2.0.md),
+> [changelog de Proyectos](../changelog/2026-10-10-projects-mcp-2.2.0.md),
+> [pin dentro del proyecto migrado](../CONTRACT_TEMPLATE_MCP.md#contratos-dentro-de-un-proyecto-migrado-2026-10-10)
+> y [validación/runbook de la parte 2](../MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
+> Los argumentos de movimiento se documentan por herramienta: decisiones sólo
+> en el batch; hash en batch/carpeta, políticas también en documento. Esta
+> entrada describe los commits funcionales de PR #504; no acredita deploy ni
+> ejecución del caso real. El plazo de cancelación de hosting sigue en el runbook.
+
 > **Contratos MCP, espejos y hosting — 2026-10-09:** los adaptadores explícitos
 > publican campos planos y conservan los alias tipados en
 > `accepted_arguments_schema`; la validación central revisa el nivel superior

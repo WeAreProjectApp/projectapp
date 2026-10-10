@@ -109,7 +109,7 @@ def test_discovery_uses_connector_version(rpc):
     discovered = rpc('initialize')['serverInfo']['version']
     capabilities = rpc('tools/call', name='describe_capabilities', arguments={'summary': True})['structuredContent']
 
-    assert discovered == capabilities['version'] == '3.1.0'
+    assert discovered == capabilities['version'] == '3.2.0'
 
 
 def test_mcp_folder_creation_records_provenance(rpc):

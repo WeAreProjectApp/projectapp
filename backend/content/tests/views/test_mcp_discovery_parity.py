@@ -26,9 +26,9 @@ def _discovery_contracts(tools, *, input_key, output_key):
     }
 
 
-@pytest.mark.parametrize('slug', ['documents', 'projects'])
+@pytest.mark.parametrize(('slug', 'expected_version'), [('documents', '3.2.0'), ('projects', '2.2.0')])
 @pytest.mark.parametrize('restricted', [False, True])
-def test_discovery_preserves_the_authorized_contract(slug, restricted, superuser):
+def test_discovery_preserves_the_authorized_contract(slug, expected_version, restricted, superuser):
     connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
     allowed = RESTRICTED_TOOLS[slug] if restricted else []
     credential = McpCredential.objects.create(
@@ -51,6 +51,7 @@ def test_discovery_preserves_the_authorized_contract(slug, restricted, superuser
     }
     assert any(tool['requires_confirmation'] for tool in described['tools'])
     assert described['connector'] == slug
+    assert described['version'] == expected_version
     assert all(tool['connector'] == slug for tool in TOOLS_BY_SLUG[slug])
     assert all(
         'accepted_arguments_schema' not in tool

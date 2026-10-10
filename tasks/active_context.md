@@ -2712,3 +2712,35 @@ durante Wompi/polling en
 Los pins son 66 tools de Documentos y 164 de Proyectos. Versiones y changelogs
 corresponden al cierre del conjunto en PR #504; esta revisión documental no
 acredita deploy, CI verde ni una nueva ejecución de las pruebas funcionales.
+
+## 2026-10-10 — Migración de carpetas por MCP, parte 2
+
+Los commits `9446a196`, `7f7927d5`, `55a31237`, `3886f01e` y `5e0ddd25`
+incorporan el planificador de propiedad/portal, `preview_move`, migración
+`adopt_source`/`move_contents`, recibos duraderos y deshacer, además de la
+regla de altas/renombres que nunca duplica una raíz manual homónima.
+`create_project(root_folder_id)` confirma el plan y devuelve `document_root`.
+Contratos sigue fijado por ID, activo y sin cliente/proyecto dentro del árbol
+migrado; sus espejos conservan la sincronización y la guarda de archivado.
+
+El cierre documental C8 fija **documents 3.2.0 / 73 tools** y
+**projects 2.2.0 / 164 tools**. Las dos pruebas de versión de Documentos y los
+cuatro casos de paridad completa/restringida pasaron en SQLite aislado (6/6).
+Las decisiones por documento están en `move_documents` y en migración;
+`update_folder` publica políticas/hash y `update_document` sólo políticas.
+La documentación refleja esa diferencia con el brief, sin atribuir argumentos
+todavía ausentes. No se ejecutó la suite completa ni el caso real en producción.
+
+Referencias: [changelog de Documentos](../docs/changelog/2026-10-10-documents-mcp-3.2.0.md),
+[changelog de Proyectos](../docs/changelog/2026-10-10-projects-mcp-2.2.0.md),
+[arquitectura de la parte 2](../docs/methodology/architecture.md) y
+[validación y procedimiento post-deploy](../docs/MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
+El procedimiento de producción captura evidencia por paso: migrar la 66 al
+cliente perfil 29 con decisiones para 235/241 y política explícita para 69;
+cancelar suscripción 3 de PRUEBA 7, conservando el pago 4 y anulando el 5.
+Sólo después del merge/deploy, antes del **2026-12-01 a las 06:00 UTC** para
+la cancelación. Migraciones por deploy: content.0286/0287 y accounts.0082.
+Las allow-lists explícitas deben ampliarse y los conectores claude.ai
+reconectarse. El orden de merge con PR #503 puede exigir la versión siguiente.
+La integración, CI y deploy quedan bajo el cierre del orquestador; esta entrada
+no acredita esos pasos ni la semántica de locks MySQL a partir de SQLite.

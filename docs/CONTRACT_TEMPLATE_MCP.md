@@ -112,6 +112,25 @@ omite la rama fijada y sus espejos, y los informa en `folders_pinned`,
 esa carpeta también exige moverla fuera del proyecto antes de continuar.
 Guion de comprobación: [Migración de carpetas por MCP — parte 1](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
 
+### Contratos dentro de un proyecto migrado (2026-10-10)
+
+`adopt_source`, `move_contents` y `adopt_folder_as_project_root` conservan el
+ID fijado aunque Contratos quede dentro de la raíz gestionada de un proyecto.
+La carpeta y sus espejos siguen **sin cliente ni proyecto**, activos y omitidos
+por la cascada de propiedad; pertenecer al árbol no les asigna el dueño de su
+ancestro. La sincronización contractual sigue usando el pin, con los tres
+espejos en la misma carpeta y `synchronized: true` tras una actualización válida.
+
+Las postcondiciones de la migración verifican carpeta activa/sin dueño y
+ubicación/propiedad de los espejos. Renombrar o mover Contratos y sus ancestros
+manuales sigue permitido; archivar Contratos o un ancestro que los contiene
+continúa bloqueado por `CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED`. La raíz
+gestionada conserva además sus restricciones propias. Una migración no elimina
+esta guarda: hay que mover Contratos fuera antes de archivar el ancestro.
+
+Validación y evidencia de producción:
+[Migración de carpetas por MCP — parte 2](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
+
 Los PDFs se conservan en `ContractTemplateMirror.pdf_content`, separados de los
 archivos inmutables de propuestas. Una confirmación guarda textos, versiones,
 PDFs y notas privadas en la misma transacción. Si falla un PDF o una nota,
