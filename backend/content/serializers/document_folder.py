@@ -4,7 +4,10 @@ from django.db.models.functions import Lower, Trim
 from rest_framework import serializers
 
 from content.models import DocumentFolder
-from content.models.document_folder import DocumentFolderMutationLock
+from content.models.document_folder import (
+    DocumentFolderMutationLock,
+    lock_document_folder_mutations,
+)
 from content.serializers.document import (
     ClientProjectReadMixin,
     apply_client_project_association,
@@ -164,7 +167,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
     def save(self, **kwargs):
         validated = self.validated_data
         if self.instance is not None and 'client_policy' in validated and 'parent' in validated:
-            DocumentFolderMutationLock.objects.select_for_update().filter(pk=1).first()
+            lock_document_folder_mutations()
             self.instance.refresh_from_db()
             current = type(self)(self.instance, data=self.initial_data, partial=self.partial, context=self.context)
             current.is_valid(raise_exception=True)

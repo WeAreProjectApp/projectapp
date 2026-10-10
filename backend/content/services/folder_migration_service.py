@@ -18,7 +18,7 @@ from content.models import (
     DocumentOwnershipOperation,
     DocumentState,
 )
-from content.models.document_folder import DocumentFolderMutationLock
+from content.models.document_folder import lock_document_folder_mutations
 from content.serializers.folder_migration import (
     FolderMigrationSerializer,
     MigrationApplySerializer,
@@ -374,7 +374,7 @@ def _require_plan(plan, expected_hash):
 
 def _lock_scope(plan, *, restore_project_ids=()):
     # The mutex precedes projects, then folders, then documents, all in pk order.
-    DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
+    lock_document_folder_mutations()
     folder_ids = set(plan['baseline']['folder_ids'])
     folder_ids.update(DocumentFolder.objects.filter(parent__isnull=True).values_list('pk', flat=True))
     folder_query = DocumentFolder.objects.filter(pk__in=folder_ids).order_by('pk')
