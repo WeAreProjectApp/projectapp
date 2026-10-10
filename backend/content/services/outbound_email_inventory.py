@@ -73,6 +73,7 @@ OUTBOUND_EMAIL_CHANNELS = {
 
     # Accounting and hosting notices sent to the agency.
     'accounting_change': ACCOUNTING,
+    'income_completed_account_pending': ACCOUNTING,
     'accounting_card_reminder': ACCOUNTING,
     'accounting_statement_reminder': ACCOUNTING,
     'accounting_payment_calendar': ACCOUNTING,

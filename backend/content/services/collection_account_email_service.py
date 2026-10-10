@@ -103,8 +103,12 @@ def build_collection_account_email(document, *, resend=False):
         rate_label = f' ({extension.vat_rate.normalize():f} %)' if extension.vat_rate is not None else ''
         markdown_sections.append(f'Valor antes de IVA: **${format_cop_email(document.total - document.tax_total)} COP**.')
         markdown_sections.append(f'IVA{rate_label}: **${format_cop_email(document.tax_total)} COP**.')
-    markdown_sections.append(f'Valor a pagar: **${total} COP**.')
-    if document.due_date:
+    is_paid = document.commercial_status == 'paid'
+    markdown_sections.append(
+        f'Valor pagado: **${total} COP**. Esta cuenta ya está pagada; no debes realizar otro pago.'
+        if is_paid else f'Valor a pagar: **${total} COP**.'
+    )
+    if document.due_date and not is_paid:
         # Its own line. Sharing the amount's line buried the one date the
         # client has to act on, and the house weekday format reads faster
         # than 19/08/2026 for a deadline.
@@ -112,7 +116,7 @@ def build_collection_account_email(document, *, resend=False):
             'Fecha límite de pago: '
             f'**{format_bogota_date(document.due_date)}**.'
         )
-    payment_methods = _payment_methods_section(document)
+    payment_methods = '' if is_paid else _payment_methods_section(document)
     if payment_methods:
         markdown_sections.append(payment_methods)
     markdown_sections.append(

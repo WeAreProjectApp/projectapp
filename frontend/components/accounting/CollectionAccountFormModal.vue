@@ -215,7 +215,9 @@ function applyIncome(income) {
     form.value.billing_concept = income.concept || '';
   }
   if (!form.value.unit_price) {
-    const amount = Number(income.pending_amount ?? income.total_amount ?? 0);
+    const amount = Number(income.payment_status === 'paid'
+      ? income.total_amount
+      : (income.pending_amount ?? income.total_amount ?? 0));
     form.value.unit_price = amount > 0 ? amount : null;
   }
   // A hosting income records the window it covers; the cuenta bills that
@@ -498,7 +500,9 @@ function pickIncome(option) {
 }
 
 function incomeAmountLabel(option) {
-  const amount = Number(option.pending_amount ?? option.total_amount ?? 0);
+  const amount = Number(option.payment_status === 'paid'
+    ? option.total_amount
+    : (option.pending_amount ?? option.total_amount ?? 0));
   return formatMoney(amount, 'COP');
 }
 
@@ -1431,7 +1435,7 @@ const modalFormId = useId();
       <VatAmountInput v-model="form.unit_price" v-model:rate="form.vat_rate" :reset-key="open"
           :error="amountValidationError"
           input-test-id="collection-form-amount" :disabled="selectedIncome?.kind === 'liquid' || Number(selectedIncome?.paid_amount || 0) > 0"
-          disabled-reason="Este ingreso ya tiene pagos; se conservan su saldo y su IVA." @capture="form.vat_capture = $event" />
+          disabled-reason="Este ingreso ya tiene pagos; se conservan su valor facturable y su IVA." @capture="form.vat_capture = $event" />
       <p class="text-xs text-text-muted" data-testid="collection-income-vat-hint">
         Al emitir, el valor y el IVA se actualizarán también en el ingreso si todavía no tiene pagos ni deducciones.
       </p>

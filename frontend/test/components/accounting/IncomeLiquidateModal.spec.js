@@ -331,23 +331,26 @@ describe('IncomeLiquidateModal', () => {
     expect(row.find('[data-testid="income-liquidate-paid"]').exists()).toBe(true);
   });
 
-  // Falla si una llamada directa liquida una fila local que aún necesita cuenta emitida.
-  it('does not emit settlement when a client account is still a draft', async () => {
+  // Falla si la ruta de ajustes vuelve a exigir una cuenta emitida antes del abono.
+  it('emits settlement when a client account is still a draft', async () => {
     const wrapper = mountModal({
       record: {
         ...expectedRecord,
         client: 12,
         collection_account_status: 'draft',
       },
-    });
+    }, { components: { BaseCheckbox } });
+    await flushPromises();
 
-    expect(wrapper.get('[data-testid="income-liquidate-submit"]').element.disabled).toBe(true);
-    expect(wrapper.get('[data-testid="income-liquidate-submit-reason"]').text())
-      .toBe('Primero genera y emite una cuenta de cobro para este ingreso.');
+    await wrapper.find('[data-testid="income-liquidate-send-confirmation"] input')
+      .setValue(false);
+
+    expect(wrapper.get('[data-testid="income-liquidate-submit"]').element.disabled).toBe(false);
+    expect(wrapper.get('[data-testid="income-liquidate-submit-reason"]').text()).toBe('');
 
     await wrapper.find('form').trigger('submit');
 
-    expect(wrapper.emitted('submit')).toBeUndefined();
+    expect(wrapper.emitted('submit')[0][0].total_amount).toBe('600000.00');
   });
 
   it('emits close when Cancelar is clicked', async () => {

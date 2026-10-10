@@ -280,11 +280,11 @@ describe('IncomeBulkSettleModal', () => {
     const wrapper = mountModal({ excludedCount: 2 });
 
     expect(wrapper.find('[data-testid="income-bulk-settle-excluded"]').text())
-      .toBe('Se excluyeron 2 seleccionados: requieren saldo pendiente, contabilidad de empresa y, si tienen cliente, una cuenta de cobro emitida.');
+      .toBe('Se excluyeron 2 seleccionados: requieren ser ingresos esperados de empresa con saldo pendiente.');
   });
 
-  // Falla si un reparto ya abierto acepta una fila que el servidor rechazará.
-  it('blocks submit for a selected draft account', () => {
+  // Falla si una cuenta en borrador vuelve a bloquear un abono válido.
+  it('allows submit for a selected draft account', () => {
     const blocked = expectedRow({
       id: 31,
       concept: 'Litigio - Primera cuenta',
@@ -292,12 +292,28 @@ describe('IncomeBulkSettleModal', () => {
       client_name: 'Marco David Camacho García',
       collection_account_status: 'draft',
     });
-    const wrapper = mountModal({ records: [THREE_RECORDS[0], blocked], excludedCount: 1 });
+    const wrapper = mountModal({ records: [THREE_RECORDS[0], blocked] });
 
-    expect(wrapper.get('[data-testid="income-bulk-settle-submit"]').element.disabled).toBe(true);
-    expect(wrapper.get('[data-testid="income-bulk-settle-submit-reason"]').text())
-      .toBe('Litigio - Primera cuenta: Primero genera y emite una cuenta de cobro para este ingreso.');
-    expect(wrapper.get('[data-testid="income-bulk-settle-excluded"]').text())
-      .toBe('Se excluyó 1 seleccionado: requiere saldo pendiente, contabilidad de empresa y, si tiene cliente, una cuenta de cobro emitida.');
+    expect(wrapper.get('[data-testid="income-bulk-settle-submit"]').element.disabled).toBe(false);
+    expect(wrapper.get('[data-testid="income-bulk-settle-submit-reason"]').text()).toBe('');
+  });
+
+  // Falla si la liquidación individual deja de abrir los ajustes avanzados.
+  it('emits the selected income from its individual advanced-settlement action', async () => {
+    const wrapper = mountModal({ records: [THREE_RECORDS[0]] });
+
+    expect(wrapper.get('[data-testid="income-bulk-settle-advanced"]').text())
+      .toBe('Liquidación con ajustes');
+
+    await wrapper.get('[data-testid="income-bulk-settle-advanced"]').trigger('click');
+
+    expect(wrapper.emitted('advanced')[0]).toEqual([THREE_RECORDS[0]]);
+  });
+
+  // Falla si los ajustes complejos aparecen sobre un reparto colectivo.
+  it('hides the advanced-settlement action for multiple selected incomes', () => {
+    const wrapper = mountModal();
+
+    expect(wrapper.find('[data-testid="income-bulk-settle-advanced"]').exists()).toBe(false);
   });
 });

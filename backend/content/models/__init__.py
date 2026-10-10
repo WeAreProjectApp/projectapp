@@ -157,3 +157,4 @@ from .project_retention import ProjectRetentionContext, ProjectRetentionOperatio
 from .proposal_project_reassignment import ProposalProjectReassignment
 
 from .data_integrity import DataIntegrityOperation
+from .income_completion_notice import IncomeCompletionNotice

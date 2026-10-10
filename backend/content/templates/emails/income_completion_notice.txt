@@ -1,0 +1,12 @@
+Ingreso completo: {{ concept }}
+
+Este ingreso quedó pagado al 100%. Se debe crear y emitir su cuenta de cobro, o completar el borrador existente.
+
+Cliente: {{ client_name }}
+{% if project_name %}Proyecto: {{ project_name }}
+{% endif %}Valor completo: ${{ formatted_total }} COP
+Saldo pendiente: $0 COP
+
+Abrir ingreso y crear la cuenta: {{ income_url }}
+
+Aviso interno del módulo contable · ProjectApp.

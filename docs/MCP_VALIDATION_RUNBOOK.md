@@ -801,21 +801,22 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `communications` | 2.1.1 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.1 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 2.2.0 | 62 | Ingresos esperados con ETag, liquidación con confirmación de pago por correo, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-ledger` | 2.3.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
 | `accounting-billing` | 2.1.1 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 2.1.1 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
 | `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 1.2.0 | 78 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, cinco herramientas de ingresos esperados y controles comunes |
+| `accounting` | 1.3.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos y controles comunes |
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
 Los 19 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-10, sin
-consultar datos reales: 1024 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: 1028 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
-esperados, y `accounting-cards` incorporó `get_statement`.
+esperados, y `accounting-cards` incorporó `get_statement`. Los dos conectores
+contables incorporan además `update_income_abono` y `delete_income_abono`.
 El barrido de PR 2 conserva esos conteos y fija como objetivo **4.0.0** y
 **3.0.0**, respectivamente. Los pins de discovery/capacidades deben verificar
 esas versiones además de la paridad de esquemas; ver el
@@ -1304,8 +1305,8 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
 
 ### Libro contable: ingresos esperados
 
-Disponible en `accounting` 1.2.0 (el «Gestor Contable» de claude.ai) y
-`accounting-ledger` 2.2.0. Ambos publican `list_expected_incomes`,
+Disponible en `accounting` 1.3.0 (el «Gestor Contable» de claude.ai) y
+`accounting-ledger` 2.3.0. Ambos publican `list_expected_incomes`,
 `get_expected_income`, `update_expected_income`, `create_expected_income` y
 `duplicate_expected_income`. Crear y duplicar siempre requieren vista previa
 y `confirm_action`; actualizar sólo la requiere si cambia dinero, IVA, reparto,
@@ -2552,3 +2553,37 @@ manifest. El guion y la condición de cierre tras deploy están en
 > conservando el espejo tras renombrarla. Sin un pin compartido, la ubicación
 > manual Contratos conserva sus bloqueos anteriores. Los recibos de migración
 > conservan su actor histórico al fusionar clientes o deshacer esa fusión.
+
+### Abonos sin cuenta emitida: crear, corregir y deshacer (2026-10-10)
+
+Validar con una credencial autorizada de `accounting-ledger` (2.3.0) y el
+conector compatible `accounting` (1.3.0), usando sólo datos de prueba:
+
+1. Consultar `list_income` para elegir uno o varios esperados de empresa con
+   saldo pendiente, sin cuenta o con borrador. Registrar `bulk_settle_incomes`
+   con `allocations`, `total_amount`, `period_date` y `notes`; en el conector
+   canónico confirmar la vista previa con `confirm_action`.
+2. Comprobar un único movimiento en `get_pocket`, sus montos por ingreso y los
+   estados `paid`/`partial`. El excedente sigue como saldo a favor del mismo
+   cliente; clientes mezclados con excedente deben rechazarse.
+3. Invocar `update_income_abono` con `record_id` del movimiento, importe, fecha,
+   notas y todo el nuevo reparto. En el canónico confirmar la acción. El ID del
+   movimiento debe conservarse y el reparto previo debe desaparecer. Un monto
+   superior al saldo disponible debe rechazarse sin cambiar datos.
+4. Invocar `delete_income_abono` con el mismo ID y confirmar cuando corresponda.
+   Deben borrarse movimiento e imputaciones, con los esperados otra vez pendientes.
+   Nunca eliminar por separado un hijo de un abono compartido.
+5. Completar un esperado sin cuenta. Verificar el aviso interno «Ingreso completo —
+   cuenta pendiente» en Historial, con cuerpo y vínculo al ingreso. Un fallo sólo
+   se reintenta para su destinatario; corregir y volver a pagar no genera otro evento.
+   Crear su cuenta por el importe completo debe dejarla pagada sin otra entrada.
+
+`settle_income` conserva los ajustes individuales; `create_income`, `update_income`
+y `delete_income` siguen sirviendo para pagos individuales no compartidos. Para
+cambiar el monto de un abono compartido se usa la corrección del conjunto.
+
+`requires_collection_account` es un dato de sólo lectura del ingreso, calculado
+con su saldo y sus documentos. `IncomeCompletionNotice` conserva el evento
+interno de envío y queda excluido del CRUD MCP: lo crea la operación financiera
+y su reintento se controla desde el Historial, para evitar avisos manuales
+duplicados o cambios independientes del pago.

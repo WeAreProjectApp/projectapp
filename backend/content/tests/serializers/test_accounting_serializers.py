@@ -53,21 +53,20 @@ def _collection_account_for(income, status):
 
 @pytest.mark.django_db
 class TestIncomeSettlementEligibilityProjection:
-    def test_client_expected_without_collection_account_is_blocked(self, make_income, make_client_profile):
-        """Falla si el panel ofrece liquidar un ingreso de cliente sin cuenta emitida."""
+    def test_client_expected_without_collection_account_is_settleable(self, make_income, make_client_profile):
+        """Falla si Liquidar vuelve a exigir emitir una cuenta antes de registrar el abono."""
         profile = make_client_profile()
         income = make_income(client=profile)
 
         data = IncomeRecordSerializer(income).data
 
         assert data['collection_account_status'] is None
-        assert data['can_settle'] is False
-        assert data['settlement_blocked_reason'] == (
-            'Primero genera y emite una cuenta de cobro para este ingreso.'
-        )
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
+        assert data['requires_collection_account'] is False
 
-    def test_client_expected_with_draft_collection_account_is_blocked(self, make_income, make_client_profile):
-        """Falla si un borrador desbloquea el pago antes de que la cuenta sea emitida."""
+    def test_client_expected_with_draft_collection_account_is_settleable(self, make_income, make_client_profile):
+        """Falla si un borrador impide registrar un abono parcial o completo."""
         profile = make_client_profile()
         income = make_income(client=profile)
         _collection_account_for(income, Document.CommercialStatus.DRAFT)
@@ -75,13 +74,11 @@ class TestIncomeSettlementEligibilityProjection:
         data = IncomeRecordSerializer(income).data
 
         assert data['collection_account_status'] == 'draft'
-        assert data['can_settle'] is False
-        assert data['settlement_blocked_reason'] == (
-            'Primero genera y emite una cuenta de cobro para este ingreso.'
-        )
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
 
-    def test_client_expected_with_cancelled_collection_account_is_blocked(self, make_income, make_client_profile):
-        """Falla si una cuenta anulada aparece vigente y habilita la liquidación."""
+    def test_client_expected_with_cancelled_collection_account_is_settleable(self, make_income, make_client_profile):
+        """Falla si una cuenta anulada vuelve a impedir liquidar el ingreso."""
         profile = make_client_profile()
         income = make_income(client=profile)
         _collection_account_for(income, Document.CommercialStatus.CANCELLED)
@@ -89,10 +86,8 @@ class TestIncomeSettlementEligibilityProjection:
         data = IncomeRecordSerializer(income).data
 
         assert data['collection_account_status'] is None
-        assert data['can_settle'] is False
-        assert data['settlement_blocked_reason'] == (
-            'Primero genera y emite una cuenta de cobro para este ingreso.'
-        )
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
 
     def test_client_expected_with_issued_collection_account_is_settleable(self, make_income, make_client_profile):
         """Falla si una cuenta emitida sigue mostrando un ingreso como bloqueado."""
@@ -118,10 +113,10 @@ class TestIncomeSettlementEligibilityProjection:
         assert data['settlement_blocked_reason'] == ''
 
     @pytest.mark.parametrize('mismatch', ['client', 'project'])
-    def test_issued_account_outside_the_income_context_stays_blocked(
+    def test_issued_account_outside_the_income_context_does_not_block_settlement(
         self, make_income, make_client_profile, mismatch,
     ):
-        """Falla si una cuenta emitida ajena habilita Liquidar en la interfaz."""
+        """Falla si una cuenta emitida ajena vuelve a bloquear un abono válido."""
         profile = make_client_profile()
         income = make_income(client=profile)
         account = _collection_account_for(income, Document.CommercialStatus.ISSUED)
@@ -134,10 +129,8 @@ class TestIncomeSettlementEligibilityProjection:
 
         data = IncomeRecordSerializer(income).data
 
-        assert data['can_settle'] is False
-        assert data['settlement_blocked_reason'] == (
-            'Primero genera y emite una cuenta de cobro para este ingreso.'
-        )
+        assert data['can_settle'] is True
+        assert data['settlement_blocked_reason'] == ''
 
     def test_list_eligibility_uses_one_query_for_several_client_incomes(
         self, make_income, make_client_profile, django_assert_num_queries,
@@ -156,7 +149,7 @@ class TestIncomeSettlementEligibilityProjection:
         with django_assert_num_queries(1):
             data = IncomeRecordSerializer(queryset, many=True).data
 
-        assert [row['can_settle'] for row in data] == [True, False]
+        assert [row['can_settle'] for row in data] == [True, True]
 
 
 class TestAccountingChangeDisplay:

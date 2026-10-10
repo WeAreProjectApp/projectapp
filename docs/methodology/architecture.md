@@ -843,6 +843,16 @@ incluyen pagos, deducciones y cuentas emitidas. La fecha de cobro de hosting
 es independiente de su ventana; duplicar conserva el desfase y los cambios de
 ventana se auditan. Ver el [guion de validación](../MCP_VALIDATION_RUNBOOK.md).
 
+Los abonos individuales y colectivos ya no dependen de una cuenta emitida.
+La corrección del abono conserva el `PocketMovement` y reemplaza sus hijos en
+una transacción con los bloqueos de facturación; la reversa elimina el conjunto
+completo. `update_income_abono` y `delete_income_abono` exponen esa unidad en
+los dos MCP contables. Un `IncomeCompletionNotice` por ingreso guarda el evento
+al completar el pago sin documento emitido; el envío interno sucede después del
+commit, con recuperación de pendientes por Huey y reintentos desde `EmailLog`.
+No se reconstruyen avisos históricos. Emitir una cuenta de un esperado ya pagado
+conserva el total y el IVA, marca el documento pagado y no crea otro movimiento.
+
 Comunicaciones combina herramientas nativas de hilos/mensajes con correo y
 enlaces seguros. Las primeras delegan en `communication_service.py`, conservan
 propiedad, ciclo, revisiones y referencias documentales del Panel; registrar

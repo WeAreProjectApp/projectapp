@@ -46,3 +46,7 @@ devuelve también `issue_date`, `customer_name`, `project_name` y
 `billing_concept`. Sólo «Emitir y enviar» emite y envía; Esc o «Volver a
 revisar» cierran el aviso y conservan el paso 2. Mientras envía, «Volver a
 editar» y un segundo envío quedan bloqueados, y Esc no cierra el asistente.
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Un esperado completamente pagado que aún no tiene cuenta permanece elegible: el selector y el formulario usan el total íntegro del ingreso, no saldo cero. Al emitir esa cuenta, queda pagada sin crear otro movimiento ni pedir otro pago; el envío al cliente sigue siendo explícito.

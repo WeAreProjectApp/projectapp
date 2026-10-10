@@ -8,10 +8,10 @@
     <div data-testid="income-bulk-settle-modal">
       <div class="px-6 pt-6 pb-2">
         <h3 id="income-bulk-settle-title" class="text-lg font-bold text-text-default">
-          Registrar abono
+          Liquidar
         </h3>
         <p class="text-sm text-text-muted mt-1">
-          Un solo pago repartido entre los ingresos esperados seleccionados.
+          Registra un abono completo o parcial sobre los ingresos esperados seleccionados.
           Se registrará un único movimiento en el Bolsillo ProjectApp.
         </p>
         <p
@@ -173,6 +173,16 @@
           />
         </BaseFormField>
 
+        <BaseButton
+          v-if="records.length === 1"
+          type="button"
+          variant="ghost"
+          :disabled="saving"
+          data-testid="income-bulk-settle-advanced"
+          @click="emit('advanced', records[0])"
+        >
+          Liquidación con ajustes
+        </BaseButton>
       </form>
     </div>
     <template #footer>
@@ -197,7 +207,7 @@
             aria-describedby="income-bulk-settle-submit-reason"
             data-testid="income-bulk-settle-submit"
           >
-            {{ saving ? 'Guardando...' : 'Registrar abono' }}
+            {{ saving ? 'Guardando...' : 'Liquidar' }}
           </BaseButton>
         </div>
       </div>
@@ -239,7 +249,7 @@ const props = defineProps({
   saving: { type: Boolean, default: false },
 });
 
-const emit = defineEmits(['close', 'submit']);
+const emit = defineEmits(['close', 'submit', 'advanced']);
 
 const form = ref({ total: null, period_date: '', notes: '' });
 const exactDate = ref(true);
@@ -277,8 +287,8 @@ const clientListLabel = computed(() => joinEs(clientLabels.value));
 
 const excludedNote = computed(() => (
   props.excludedCount === 1
-    ? 'Se excluyó 1 seleccionado: requiere saldo pendiente, contabilidad de empresa y, si tiene cliente, una cuenta de cobro emitida.'
-    : `Se excluyeron ${props.excludedCount} seleccionados: requieren saldo pendiente, contabilidad de empresa y, si tienen cliente, una cuenta de cobro emitida.`
+    ? 'Se excluyó 1 seleccionado: requiere ser un ingreso esperado de empresa con saldo pendiente.'
+    : `Se excluyeron ${props.excludedCount} seleccionados: requieren ser ingresos esperados de empresa con saldo pendiente.`
 ));
 
 function money(value) {

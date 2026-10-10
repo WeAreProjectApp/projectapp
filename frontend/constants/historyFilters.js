@@ -70,6 +70,7 @@ export const TEMPLATE_KEY_OPTIONS = [
   { value: 'accounting_payment_calendar', label: 'Calendario de cobros y pagos' },
   { value: 'collection_account_sent', label: 'Cuenta de cobro' },
   { value: 'income_payment_received_client', label: 'Confirmación de pago' },
+  { value: 'income_completed_account_pending', label: 'Ingreso completo — cuenta pendiente' },
   { value: 'payment_status_team', label: 'Pago de hosting' },
 ];
 

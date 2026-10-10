@@ -14,8 +14,8 @@ identically to the panel.
 Guardrails (mirror the panel):
 - Every accounting endpoint is superuser-only; writes are attributed to the MCP
   actor (see content.mcp.actor), which must be an active superuser.
-- Auto-managed pocket movements (income/expense-backed) are not editable or
-  deletable — the service raises, and we surface it as ToolError.
+- Shared abonos are corrected as a unit, retaining one pocket movement and
+  validating all allocations; deleting the movement reverses the whole abono.
 - Split invariants are validated by the write serializer + model.
 - This is sensitive financial data with a partner split; keep the connector
   inactive until you deliberately issue a token.
@@ -434,7 +434,7 @@ def settle_income(arguments):
 
 _SETTLE_INCOME_DESCRIPTION = (
     'Registra un abono a un ingreso esperado y resuelve el saldo entre '
-    'deducciones y nuevos ingresos esperados. Puede completar el período '
+    'deducciones y nuevos ingresos esperados, sin exigir cuenta de cobro emitida. Puede completar el período '
     'de hosting. Crea los mismos registros, auditoría y efectos que el panel. '
     'Con send_payment_confirmation=true le envía al cliente la confirmación '
     'del pago después de registrarlo; la vista previa muestra el correo.'
@@ -482,6 +482,36 @@ def bulk_settle_incomes(arguments):
         'results': IncomeRecordSerializer(records, many=True).data,
         'movement': PocketMovementSerializer(result['movement']).data,
     }
+
+
+def update_income_abono(arguments):
+    from content.services.accounting_abono_service import update_income_abono as update
+
+    movement = _get_instance_or_error('pocket', arguments.get('record_id'))
+    serializer = IncomeBulkSettlementSerializer(data=arguments)
+    if not serializer.is_valid():
+        raise ToolError(_serializer_errors_to_message(serializer.errors))
+    try:
+        result = update(movement.pk, serializer.validated_data, mcp_actor())
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return {
+        'movement': PocketMovementSerializer(result['movement']).data,
+        'incomes': IncomeRecordSerializer(result['incomes'], many=True).data,
+        'credit': IncomeRecordSerializer(result['credit']).data if result['credit'] else None,
+    }
+
+
+def delete_income_abono(arguments):
+    from content.services.accounting_abono_service import delete_income_abono as delete
+
+    movement = _get_instance_or_error('pocket', arguments.get('record_id'))
+    movement_id = movement.pk
+    try:
+        delete(movement_id, mcp_actor())
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return {'deleted': True, 'id': movement_id}
 
 
 def get_settings(arguments):
@@ -1001,7 +1031,9 @@ def _build_ledger_tools():
         tools.append({
             'name': f'delete_{key}',
             'area': areas[key],
-            'description': f'Elimina un registro de {label}. Los movimientos de pocket auto-gestionados no se pueden borrar.',
+            'description': (f'Elimina un registro de {label}. Eliminar un movimiento del bolsillo revierte sus registros vinculados.'
+                            if key in {'income', 'expense', 'pocket'} else
+                            f'Elimina un registro de {label}. Los movimientos de pocket auto-gestionados no se pueden borrar.'),
             'input_schema': closed_object(_RECORD_ID_PROP, ['record_id']),
             'handler': _make_delete(key),
         })
@@ -1009,7 +1041,32 @@ def _build_ledger_tools():
         key = tool['name'].split('_', 1)[1]
         if key in _ENTITY_NOTES:
             tool['description'] += ' ' + _ENTITY_NOTES[key]
+        if tool['name'] in {'update_income', 'update_pocket'}:
+            tool['description'] += ' Para corregir el importe y el reparto de un abono compartido usa update_income_abono con el ID del movimiento.'
+        if tool['name'] == 'delete_income':
+            tool['description'] += ' Un hijo de un abono compartido no se elimina aislado; usa delete_income_abono para deshacer el abono completo.'
     return tools
+
+
+_ABONO_PROPS = {
+    'allocations': {
+        'type': 'array',
+        'description': 'Reparto completo del abono: ingreso esperado y monto imputado a cada uno. No admite IDs repetidos.',
+        'items': {
+            'type': 'object',
+            'additionalProperties': False,
+            'properties': {
+                'income_id': {'type': 'integer', 'minimum': 1, 'description': 'ID del ingreso esperado de empresa.'},
+                'amount': {'type': ['number', 'string'], 'description': 'Importe positivo en COP, con máximo dos decimales.'},
+            },
+            'required': ['income_id', 'amount'],
+        },
+        'minItems': 1,
+    },
+    'total_amount': {'type': ['number', 'string'], 'description': 'Valor recibido en COP. Debe cubrir la suma imputada; el excedente es saldo a favor del mismo cliente.'},
+    'period_date': {'type': 'string', 'description': 'Fecha o período del abono.'},
+    'notes': {'type': 'string', 'description': 'Nota opcional del abono; al corregir, omitirla deja la nota vacía.'},
+}
 
 
 _NON_CRUD_TOOLS = close_root_schemas([
@@ -1066,33 +1123,44 @@ _NON_CRUD_TOOLS = close_root_schemas([
         'name': 'bulk_settle_incomes',
         'area': 'ledger',
         'description': (
-            'Distribuye un único abono real entre varios ingresos esperados. '
+            'Distribuye un único abono real entre uno o varios ingresos esperados, sin cuenta emitida. '
             'Crea un solo movimiento de bolsillo; cualquier excedente queda como '
             'saldo a favor cuando todos los ingresos pertenecen al mismo cliente.'
         ),
         'input_schema': {
             'type': 'object',
-            'properties': {
-                'allocations': {
-                    'type': 'array',
-                    'items': {
-                        'type': 'object',
-                        'additionalProperties': False,
-                        'properties': {
-                            'income_id': {'type': 'integer'},
-                            'amount': {'type': ['number', 'string']},
-                        },
-                        'required': ['income_id', 'amount'],
-                    },
-                    'minItems': 1,
-                },
-                'total_amount': {'type': ['number', 'string']},
-                'period_date': {'type': 'string', 'description': 'Fecha o período del abono.'},
-                'notes': {'type': 'string'},
-            },
+            'properties': _ABONO_PROPS,
             'required': ['allocations', 'total_amount', 'period_date'],
         },
         'handler': bulk_settle_incomes,
+    },
+    {
+        'name': 'update_income_abono',
+        'area': 'ledger',
+        'risk': 'sensitive',
+        'description': (
+            'Corrige un abono individual o colectivo del bolsillo: reemplaza importe, '
+            'fecha, notas y reparto completo de forma atómica, conservando el movimiento. '
+            'Consulta get_pocket antes; record_id es el movimiento, no un ingreso. '
+            'No requiere cuenta emitida. El excedente conserva las reglas de saldo a favor.'
+        ),
+        'input_schema': {
+            'type': 'object',
+            'properties': {**_RECORD_ID_PROP, **_ABONO_PROPS},
+            'required': ['record_id', 'allocations', 'total_amount', 'period_date'],
+        },
+        'handler': update_income_abono,
+    },
+    {
+        'name': 'delete_income_abono',
+        'area': 'ledger',
+        'description': (
+            'Deshace un abono del bolsillo, individual o colectivo: elimina su único '
+            'movimiento y todas sus imputaciones, incluido el saldo a favor. Los ingresos '
+            'recuperan su saldo pendiente. record_id es el id del movimiento de get_pocket.'
+        ),
+        'input_schema': {'type': 'object', 'properties': _RECORD_ID_PROP, 'required': ['record_id']},
+        'handler': delete_income_abono,
     },
     {
         'name': 'list_change_logs',

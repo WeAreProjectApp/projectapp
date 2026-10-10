@@ -67,4 +67,28 @@ describe('IncomePaymentStateCell', () => {
     expect(wrapper.text()).toContain('Pagado');
     expect(wrapper.find('[data-testid="income-muted-7"]').exists()).toBe(false);
   });
+
+  // Falla si un ingreso pagado deja de decir que todavía necesita su cuenta.
+  it('shows the pending collection-account cue after payment completes', () => {
+    const wrapper = mountCell({
+      payment_status: 'paid',
+      payment_status_label: 'Pagado',
+      requires_collection_account: true,
+    });
+
+    expect(wrapper.get('[data-testid="income-account-pending-7"]').text())
+      .toBe('Cuenta pendiente de emitir');
+  });
+
+  // Falla si la advertencia documental se muestra para ingresos que ya tienen cuenta.
+  it('keeps a paid income with an issued account free of the pending-account cue', () => {
+    const wrapper = mountCell({
+      payment_status: 'paid',
+      payment_status_label: 'Pagado',
+      requires_collection_account: false,
+    });
+
+    expect(wrapper.get('[data-testid="income-payment-7"]').text()).toContain('Pagado');
+    expect(wrapper.find('[data-testid="income-account-pending-7"]').exists()).toBe(false);
+  });
 });

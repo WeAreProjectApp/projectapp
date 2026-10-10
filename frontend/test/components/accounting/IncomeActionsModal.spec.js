@@ -156,6 +156,14 @@ describe('IncomeActionsModal', () => {
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
 
+  // Falla si la acción individual vuelve a usar un nombre distinto de Liquidar.
+  it('labels the individual settlement action Liquidar', () => {
+    const wrapper = mountModal(EXPECTED);
+
+    expect(wrapper.get('[data-testid="income-action-liquidate-42"]').text())
+      .toBe('Liquidar');
+  });
+
   const draftCollectionRecord = () => ({
     ...EXPECTED,
     client: 12,
@@ -164,30 +172,35 @@ describe('IncomeActionsModal', () => {
     collection_account_number: 'CC-042',
   });
 
-  // Falla si el menú deja liquidar una fila cuya cuenta de cobro aún no fue emitida.
-  it('blocks settlement and describes the issued-account requirement', async () => {
+  // Falla si la cuenta en borrador pierde su ruta de emisión al permitir el abono.
+  it('keeps the draft collection-account action available', () => {
+    const wrapper = mountModal(draftCollectionRecord());
+
+    expect(wrapper.get('[data-testid="income-action-view-collection-42"]').text())
+      .toBe('Completar y emitir cuenta de cobro');
+  });
+
+  // Falla si el menú vuelve a impedir liquidar sólo porque la cuenta sigue en borrador.
+  it('emits settlement for a draft collection account', async () => {
     const wrapper = mountModal(draftCollectionRecord());
     const settle = wrapper.get('[data-testid="income-action-liquidate-42"]');
 
-    expect(settle.element.disabled).toBe(true);
-    expect(settle.attributes('aria-describedby')).toBe('income-action-reason-liquidate-42');
-    expect(wrapper.get('#income-action-reason-liquidate-42').text())
-      .toBe('Primero genera y emite una cuenta de cobro para este ingreso.');
-    expect(wrapper.get('[data-testid="income-action-view-collection-42"]').text())
-      .toBe('Completar y emitir cuenta de cobro');
+    expect(settle.element.disabled).toBe(false);
+    expect(settle.attributes('aria-describedby')).toBeUndefined();
 
     await settle.trigger('click');
 
-    expect(wrapper.emitted('liquidate')).toBeUndefined();
+    expect(wrapper.emitted('liquidate')[0]).toEqual([draftCollectionRecord()]);
   });
 
-  // Falla si la acción bloqueada deja de comunicar visualmente que no se puede usar.
-  it('mutes the blocked settlement action and its icon', () => {
-    const wrapper = mountModal(draftCollectionRecord());
+  // Falla si un ingreso ya pagado ofrece una segunda liquidación.
+  it('explains why an already paid income cannot be liquidated again', () => {
+    const wrapper = mountModal({ ...draftCollectionRecord(), payment_status: 'paid', pending_amount: '0.00' });
     const settle = wrapper.get('[data-testid="income-action-liquidate-42"]');
 
-    expect(settle.classes()).toContain('cursor-not-allowed');
-    expect(settle.find('[class*="opacity-40"]').classes()).toContain('opacity-40');
+    expect(settle.element.disabled).toBe(true);
+    expect(settle.text())
+      .toContain('Este ingreso esperado ya está completamente pagado.');
   });
 
   it('emits settlement for an issued collection account', async () => {

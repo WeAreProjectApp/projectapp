@@ -306,20 +306,20 @@ describe('BulkAssignBar — a deleted record is not a filtered one', () => {
   });
 });
 
-describe('BulkAssignBar — Registrar abono behind settleEnabled', () => {
+describe('BulkAssignBar — Liquidar behind settleEnabled', () => {
   const INCOME_ROWS = [
     {
       id: 11, kind: 'expected', ledger: 'company',
-      pending_amount: '500000.00', client: 5, concept: 'Kore - Fase 2',
+      total_amount: '800000.00', pending_amount: '500000.00', client: 5, concept: 'Kore - Fase 2',
       collection_account_status: 'issued',
     },
     {
       id: 12, kind: 'expected', ledger: 'company',
-      pending_amount: '0.00', client: 5, concept: 'Kore - Fase 1',
+      total_amount: '300000.00', pending_amount: '0.00', client: 5, concept: 'Kore - Fase 1',
     },
     {
       id: 13, kind: 'liquid', ledger: 'company',
-      pending_amount: null, client: 5, concept: 'Kore - abono',
+      total_amount: '200000.00', pending_amount: null, client: 5, concept: 'Kore - abono',
     },
   ];
 
@@ -337,14 +337,27 @@ describe('BulkAssignBar — Registrar abono behind settleEnabled', () => {
   }
 
   it('offers the action only behind the prop, so Hostings stays untouched', () => {
-    expect(offers(mountIncomes(), 'Registrar abono')).toBe(true);
-    expect(offers(mountBar(), 'Registrar abono')).toBe(false);
+    expect(offers(mountIncomes(), 'Liquidar')).toBe(true);
+    expect(offers(mountBar(), 'Liquidar')).toBe(false);
   });
 
-  it('emits submit-settle with only the eligible ids and the excluded count', async () => {
+  // Falla si el resumen vuelve a mostrar el saldo como si fuera el valor original.
+  test.each([
+    [[11], 'Valor total seleccionado: $800.000 COP', 'Saldo pendiente seleccionado: $500.000 COP'],
+    [[11, 12, 13], 'Valor total seleccionado: $1.300.000 COP', 'Saldo pendiente seleccionado: $500.000 COP'],
+  ])('shows the selected money summary for ids %o', (selected, total, pending) => {
+    const wrapper = mountIncomes({ selected });
+
+    expect(wrapper.get('[data-testid="incomes-selected-total"]').text())
+      .toBe(total);
+    expect(wrapper.get('[data-testid="incomes-selected-pending"]').text())
+      .toBe(pending);
+  });
+
+  it('emits the settlement eligibility summary', async () => {
     const wrapper = mountIncomes({ selected: [11, 12, 13] });
 
-    await runAction(wrapper, 'Registrar abono');
+    await runAction(wrapper, 'Liquidar');
 
     expect(wrapper.emitted('submit-settle')[0][0]).toEqual({
       ids: [11],
@@ -354,24 +367,26 @@ describe('BulkAssignBar — Registrar abono behind settleEnabled', () => {
 
   it('goes dead with its reason on the item when nothing can take an abono', () => {
     const wrapper = mountIncomes({ selected: [12, 13] });
-    const item = action(wrapper, 'Registrar abono');
+    const item = action(wrapper, 'Liquidar');
 
     expect(item.find('button').element.disabled).toBe(true);
     // The reason rides on the item itself: a disabled Headless UI MenuItem
     // takes no focus and swallows the pointer, so a tooltip is unreachable.
-    expect(item.text()).toContain('los cobros a clientes requieren una cuenta de cobro emitida.');
+    expect(item.text()).toContain('Para liquidar se necesitan ingresos esperados de la empresa con saldo pendiente.');
   });
 
-  it('blocks a draft account before emitting a settlement request', async () => {
+  // Falla si la acción deja de enviar una fila válida sólo porque su cuenta está en borrador.
+  it('emits a settlement request for a draft collection account', async () => {
     const wrapper = mountIncomes({
       rows: [{ ...INCOME_ROWS[0], collection_account_status: 'draft' }],
       selected: [11],
     });
-    const item = action(wrapper, 'Registrar abono');
 
-    await runAction(wrapper, 'Registrar abono');
+    await runAction(wrapper, 'Liquidar');
 
-    expect(item.find('button').element.disabled).toBe(true);
-    expect(wrapper.emitted('submit-settle')).toBeUndefined();
+    expect(wrapper.emitted('submit-settle')[0][0]).toEqual({
+      ids: [11],
+      excludedCount: 0,
+    });
   });
 });

@@ -317,6 +317,26 @@ function buildHandler({
         }),
       };
     }
+    if (apiPath === 'accounting/incomes/bulk-settle/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ method, apiPath, body });
+      if (createStatus !== 201) {
+        return {
+          status: createStatus,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'Monto inválido', code: 'invalid_amount' }),
+        };
+      }
+      return {
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          updated: body.allocations.length,
+          results: rows,
+          movement: { id: 70, amount: String(body.total_amount) },
+        }),
+      };
+    }
     const settleMatch = apiPath.match(/^accounting\/incomes\/(\d+)\/settle\/$/);
     if (settleMatch && method === 'POST') {
       const body = route.request().postDataJSON();
@@ -558,6 +578,24 @@ async function gotoLocalizedIncomes(page) {
   await expect(
     page.getByRole('heading', { name: 'Ingresos', exact: true }),
   ).toBeVisible({ timeout: 40_000 });
+}
+
+async function openBasicIncomeAbono(page, incomeId) {
+  await page.getByTestId(`income-actions-${incomeId}`).click();
+  await page.getByTestId(`income-action-liquidate-${incomeId}`).click();
+  const modal = page.getByTestId('income-bulk-settle-modal');
+  await expect(modal).toBeVisible();
+  return modal;
+}
+
+async function switchToAdvancedIncomeSettlement(page) {
+  await page.getByTestId('income-bulk-settle-advanced').click();
+  await expect(page.getByRole('heading', { name: 'Liquidación con ajustes', exact: true }))
+    .toBeVisible();
+  await page.getByTestId('confirm-modal-confirm').click();
+  await expect(
+    page.getByRole('heading', { name: 'Liquidar ingreso esperado', exact: true }),
+  ).toBeVisible();
 }
 
 async function visibleIncomeIds(page) {
@@ -1653,55 +1691,49 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await expect(page.getByTestId('accounting-row-1')).toHaveCount(0);
   });
 
-  test('liquidating prefills the pending amount and keeps the expected row', {
+  // Bug caught: Liquidar used to force a collection account before recording
+  // money that had already arrived from the client.
+  test('Liquidar opens the basic one-income abono without requiring a collection account', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
     const listFetches = { count: 0 };
+    const pendingClientIncome = {
+      ...partialRow(),
+      client: 5,
+      client_name: 'Kore SAS',
+      has_collection_account: false,
+      collection_account_status: null,
+    };
     await mockApi(page, buildHandler({
-      rows: [partialRow()], calls, listFetches,
+      rows: [pendingClientIncome], calls, listFetches,
     }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
-    await expect(
-      page.getByRole('heading', { name: 'Liquidar ingreso esperado' }),
-    ).toBeVisible();
-    // Defaults to what is still owed, not the full projection.
-    await expect(page.getByTestId('partner-split-total')).toHaveValue('600.000');
-    // Bug caught: the 50/50 toggle was on but both partner fields stayed
-    // empty until the total was retyped.
-    await expect(page.getByTestId('partner-split-gustavo')).toHaveValue('300.000');
-    await expect(page.getByTestId('partner-split-carlos')).toHaveValue('300.000');
-
-    // The period input asks for the exact payment date by default.
-    await page.getByTestId('income-liquidate-period').fill('2026-11-17');
-    await page.getByTestId('income-liquidate-submit').click();
+    const modal = await openBasicIncomeAbono(page, 11);
+    const dialog = page.getByRole('dialog').filter({ has: modal });
+    await expect(modal).toContainText('Kore - Parcial');
+    await expect(modal.getByTestId('income-bulk-settle-total')).toHaveValue('600.000');
+    await modal.getByTestId('income-bulk-settle-period').fill('2026-11-17');
+    await dialog.getByTestId('income-bulk-settle-submit').click();
 
     await expect.poll(() => calls.filter((c) => c.method === 'POST').length)
       .toBe(1);
     const call = calls.find((c) => c.method === 'POST');
-    // The parent is identified by the URL; kind/ledger are derived server-side.
-    expect(call.apiPath).toBe('accounting/incomes/11/settle/');
+    expect(call.apiPath).toBe('accounting/incomes/bulk-settle/');
     expect(call.body.period_date).toBe('2026-11-17');
-    // Liquidated money defaults into the pocket.
-    expect(call.body.destination).toBe('pocket');
-    // The split saved is the split on screen.
-    expect(Number(call.body.gustavo_amount)).toBe(300000);
-    expect(Number(call.body.carlos_amount)).toBe(300000);
-    // Nothing allocated → behaves exactly like the old plain liquidation.
-    expect(call.body.deductions).toEqual([]);
-    expect(call.body.expected_incomes).toEqual([]);
+    expect(call.body.allocations).toEqual([{ income_id: 11, amount: 600000 }]);
+    expect(calls.some((c) => c.apiPath.includes('collection-accounts'))).toBe(false);
 
     // The parent's paid state is server-computed, so the list must refetch.
     await expect.poll(() => listFetches.count).toBeGreaterThan(1);
     await expect(page.getByTestId('accounting-row-11')).toBeVisible();
   });
 
-  // Bug caught: a client income could submit a settlement before its cuenta
-  // de cobro was issued, and stayed blocked after that account was emitted.
-  test('an issued collection account unlocks settlement after the blocked state reloads', {
+  // Bug caught: choosing adjustments jumped into the complex form silently,
+  // losing the chance to keep the simple abono or understand that its values
+  // will be reset.
+  test('Liquidar asks before switching the one-income abono to advanced adjustments', {
     tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -1714,38 +1746,24 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
       pending_amount: '600000.00',
       collection_account_status: null,
       has_collection_account: false,
-      can_settle: false,
     })];
     await mockApi(page, buildHandler({ rows, calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-21').click();
-    const blockedLiquidate = page.getByTestId('income-action-liquidate-21');
-    await expect(blockedLiquidate).toBeDisabled();
-    await expect(blockedLiquidate).toContainText(
-      'Primero genera y emite una cuenta de cobro para este ingreso.',
-    );
-    await expect(page.getByTestId('income-action-generate-collection-21'))
-      .toHaveText('Generar cuenta de cobro');
-    await page.keyboard.press('Escape');
+    const modal = await openBasicIncomeAbono(page, 21);
+    await expect(modal).toContainText('Litigio - primera cuenta de cobro');
+    await modal.getByTestId('income-bulk-settle-total').fill('550000');
+    await modal.getByTestId('income-bulk-settle-advanced').click();
+    await expect(page.getByRole('heading', { name: 'Liquidación con ajustes', exact: true }))
+      .toBeVisible();
+    await expect(page.getByText('El valor, la fecha y las notas se reiniciarán')).toBeVisible();
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0);
 
-    rows[0] = {
-      ...rows[0], has_collection_account: true, collection_account_status: 'issued',
-      collection_account_number: 'CC-LIT-001', can_settle: true,
-    };
-    await page.reload({ waitUntil: 'domcontentloaded' });
-    await waitForNuxtApp(page);
-    await expect(page.getByRole('heading', { name: 'Ingresos', exact: true })).toBeVisible();
-
-    await page.getByTestId('income-actions-21').click();
-    await expect(page.getByTestId('income-action-liquidate-21')).toBeEnabled();
-    await page.getByTestId('income-action-liquidate-21').click();
-    await page.getByTestId('income-liquidate-period').fill('2026-11-17');
-    await page.getByTestId('income-liquidate-submit').click();
-
-    await expect.poll(() => calls.filter((call) => (
-      call.apiPath === 'accounting/incomes/21/settle/'
-    )).length).toBe(1);
+    await page.getByTestId('confirm-modal-confirm').click();
+    await expect(
+      page.getByRole('heading', { name: 'Liquidar ingreso esperado', exact: true }),
+    ).toBeVisible();
+    await expect(page.getByTestId('partner-split-total')).toHaveValue('600.000');
   });
 
   test('books the shortfall of a settlement as a deduction expense', {
@@ -1755,8 +1773,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     // 600.000 pending, 592.000 received → an 8.000 gateway fee.
     await page.getByTestId('partner-split-total').fill('592000');
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
@@ -1788,8 +1806,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('partner-split-total').fill('0');
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
 
@@ -1818,8 +1836,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('partner-split-total').fill('500000');
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
 
@@ -1891,8 +1909,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
     await page.getByTestId('income-liquidate-submit').click();
 
@@ -1910,8 +1928,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('partner-split-total').fill('592000');
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
     // The deductions group auto-expands the moment the shortfall appears.
@@ -1938,8 +1956,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('partner-split-total').fill('592000');
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
     await expect(page.getByTestId('income-liquidate-deduction-0')).toBeVisible();
@@ -1968,8 +1986,8 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await mockApi(page, buildHandler({ rows: [partialRow()], calls }));
     await gotoIncomes(page);
 
-    await page.getByTestId('income-actions-11').click();
-    await page.getByTestId('income-action-liquidate-11').click();
+    await openBasicIncomeAbono(page, 11);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('partner-split-total').fill('592000');
     await expect(page.getByTestId('income-liquidate-deduction-0')).toBeVisible();
     await expect(page.getByTestId('income-liquidate-remaining'))
@@ -2075,8 +2093,8 @@ test.describe('Admin Accounting Incomes — confirmación de pago al cliente', (
 
   async function openLiquidate(page) {
     await gotoIncomes(page);
-    await page.getByTestId('income-actions-31').click();
-    await page.getByTestId('income-action-liquidate-31').click();
+    await openBasicIncomeAbono(page, 31);
+    await switchToAdvancedIncomeSettlement(page);
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
   }
 

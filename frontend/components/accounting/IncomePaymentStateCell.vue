@@ -38,7 +38,7 @@ const mutedTitle = computed(() => (
 <template>
   <span
     v-if="row.payment_status"
-    class="inline-flex items-center gap-1.5 whitespace-nowrap"
+    class="inline-flex flex-wrap items-center gap-1.5"
     :data-testid="`income-payment-${row.id}`"
   >
     <span
@@ -54,6 +54,13 @@ const mutedTitle = computed(() => (
       class="text-2xs text-warning-strong tabular-nums"
     >
       faltan {{ formatMoney(Number(row.pending_amount)) }}
+    </span>
+    <span
+      v-if="row.requires_collection_account"
+      class="text-2xs text-warning-strong"
+      :data-testid="`income-account-pending-${row.id}`"
+    >
+      Cuenta pendiente de emitir
     </span>
     <span
       v-if="row.reminders_muted"

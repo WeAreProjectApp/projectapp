@@ -65,6 +65,10 @@ ACCOUNTING_NOTE = (
     'Los recurrentes (recurring) son gastos periódicos y suscripciones que la '
     'empresa paga, no ingresos. Los ingresos (income) usan kind expected '
     '(por cobrar), liquid (recibido) o lost (perdido).'
+    ' Para abonar uno o varios esperados sin emitir cuenta usa bulk_settle_incomes; '
+    'settle_income conserva la liquidación individual con ajustes. Para corregir '
+    'todo el abono usa update_income_abono y para deshacerlo delete_income_abono, '
+    'con record_id del movimiento de bolsillo, consultable en get_pocket.'
 )
 
 
@@ -139,7 +143,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         'tasks', '2.1.0', (TASK_TOOLS,), confirm_sensitive=True,
     ),
     'accounting': ConnectorSpec(
-        'accounting', '1.2.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting', '1.3.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
         compatibility=True,
         canonical_area='accounting-ledger, accounting-billing o accounting-cards',
         notes=(ACCOUNTING_NOTE,),
@@ -187,7 +191,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'accounting-ledger': ConnectorSpec(
-        'accounting-ledger', '2.2.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting-ledger', '2.3.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
         confirm_sensitive=True, notes=(ACCOUNTING_NOTE,),
     ),
     'accounting-billing': ConnectorSpec(

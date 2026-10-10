@@ -37,6 +37,8 @@ defineEmits(['clear', 'select-all'])
       </span>
     </span>
 
+    <slot name="selection-summary" />
+
     <BaseButton
       v-if="!allFilteredSelected && filteredCount > 0"
       variant="ghost"

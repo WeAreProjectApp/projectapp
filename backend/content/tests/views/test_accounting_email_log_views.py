@@ -145,10 +145,13 @@ def test_label_map_matches_the_keys_the_senders_actually_write():
     from content.services.income_payment_confirmation_service import (
         TEMPLATE_KEY as PAYMENT_CONFIRMATION,
     )
+    from content.services.income_completion_notice_service import (
+        TEMPLATE_KEY as COMPLETION_NOTICE,
+    )
 
     assert set(EMAIL_TEMPLATE_LABELS) == {
         CHANGE, CARD_REMINDER, STATEMENT_REMINDER, CALENDAR,
-        COLLECTION, PAYMENT_CONFIRMATION, PAYMENT_STATUS,
+        COLLECTION, PAYMENT_CONFIRMATION, PAYMENT_STATUS, COMPLETION_NOTICE,
     }
 
 

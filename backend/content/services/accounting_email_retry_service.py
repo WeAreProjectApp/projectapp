@@ -102,10 +102,24 @@ def _retry_payment_confirmation(log):
     )
 
 
+def _retry_income_completion(log):
+    from content.models import IncomeCompletionNotice
+    from content.services.income_completion_notice_service import (
+        needs_collection_account, send_completion_notice,
+    )
+    notice = IncomeCompletionNotice.objects.filter(
+        pk=(log.metadata or {}).get('completion_notice_id'),
+    ).select_related('income').first()
+    if notice is None or not needs_collection_account(notice.income):
+        raise RetryError('Este ingreso ya no necesita el aviso de cuenta pendiente.')
+    return send_completion_notice(notice.pk, recipients=[log.recipient], retry_of=log)
+
+
 # One entry per notice that names a single record. `is_retryable` on the
 # serializer reads the same set, so the row and the endpoint cannot disagree
 # about what the button is allowed to do.
 RETRY_HANDLERS = {
+    'income_completed_account_pending': _retry_income_completion,
     'accounting_change': _retry_accounting_change,
     'collection_account_sent': _retry_collection_account,
     'income_payment_received_client': _retry_payment_confirmation,

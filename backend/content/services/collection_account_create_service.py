@@ -190,11 +190,12 @@ def _create_income_collection_account(
     except ValueError as exc:
         raise CollectionAccountError(str(exc)) from exc
     paid = paid_total_for_income(income) if income.kind == IncomeRecord.Kind.EXPECTED else income.total_amount
-    if rate is not None or 'vat_rate' in data or any('amount' in item for item in data['items']):
-        target = income.total_amount - paid if income.kind == IncomeRecord.Kind.EXPECTED else income.total_amount
+    if (paid and income.kind == IncomeRecord.Kind.EXPECTED) or rate is not None or 'vat_rate' in data or any('amount' in item for item in data['items']):
+        target = (income.total_amount if paid >= income.total_amount
+                  else income.total_amount - paid)
         financial_change = rate != income.vat_rate or document_total != target
         if financial_change and paid:
-            raise CollectionAccountError('Este ingreso ya tiene pagos o deducciones. La cuenta debe conservar el IVA y el saldo del ingreso.')
+            raise CollectionAccountError('Este ingreso ya tiene pagos o deducciones. La cuenta debe conservar su IVA y su valor facturable.')
         if financial_change:
             update = {'total_amount': document_total, 'vat_rate': rate}
             # Retain the current partner proportions when the gross charge changes.

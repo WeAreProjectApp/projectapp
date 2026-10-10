@@ -5959,7 +5959,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-export` | admin | P2 | success | 1 |
 | `admin-accounting-filters` | admin | P1 | display,success | 23 |
 | `admin-accounting-history` | admin | P2 | display,success | 6 |
-| `admin-accounting-history-diagnosis` | admin | P2 | display,success,error | 4 |
+| `admin-accounting-history-diagnosis` | admin | P2 | display,success,error,failure | 4 |
 | `admin-accounting-history-filters` | admin | P2 | display,success | 7 |
 | `admin-accounting-hosting-billing` | admin | P1 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-client` | admin | P1 | display,success,failure | 4 |
@@ -6477,6 +6477,10 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 - **Coverage:** ✅ Covered (client column + Sin cliente tab, bulk assignment confirming the scope before the payload, permanent catalog visible without typing, persisted A-Z/Z-A order, filtering and progressive loading inside the list-only scroll, five complete client rows, four-row review visible at once, full-screen compact modal, the disabled-assign guard, the unlink action sending only the linked rows, totals modal breakdown, grouped landing mode dictated by the backend setting, Mes/Total sorting within each group with browser persistence, session-only toggle back to classic writing nothing, la selección depurándose tras un borrado —clásica, agrupada y tras "Seleccionar los N filtrados"— y el 409 reconciliando)
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
 
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Vincular cliente y proyecto conserva su flujo. La barra añade valor total seleccionado y saldo pendiente seleccionado; la acción de pago se llama Liquidar y no requiere cuenta emitida.
+
 ### FLOW: `admin-accounting-income-crud`
 
 - **Module:** admin
@@ -6492,7 +6496,7 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
   4. Row edit prefills the modal and PATCHes `.../update/`.
   5. Row delete asks for confirmation and DELETEs `.../delete/`.
   6. An expected row shows its fulfilment state in its own "Cobro" column, computed from the liquid records linked to it: Pagado (light-green row), Parcial (amber row + the outstanding amount inline) or Pendiente (untinted, "—"). Its “Previsión” column allows immediate candidate and traffic-light changes as independent actions; choosing a color preserves the switch. The same pair is editable in the income form and readable in detail. Non-expected rows do not expose an active control, while a closed row can retain its historical classification.
-  7. "Liquidar" on an expected row opens a modal prefilled with the pending amount, with its automatic partner split already shown in the Gustavo and Carlos fields (Oct 2026: they stayed empty until the total was retyped); the destination defaults to Bolsillo ProjectApp (Socios is the explicit choice) and the payment period asks for the exact date by default, prefilled with today (the "Registrar el día exacto de pago" toggle downgrades the input to month-only when only the month is known). Submitting POSTs `/api/accounting/incomes/:id/settle/`, which registers a liquid record with `expected_income` set. The expected row is kept, so the projection and partial payments both survive.
+  7. Liquidar sobre un esperado de empresa abre el abono básico prellenado, incluso sin cuenta; registra un único movimiento del bolsillo. Liquidación con ajustes confirma el cambio a un formulario nuevo para deducciones/reprogramación. La contabilidad personal abre directamente el avanzado. Al completar sin cuenta emitida aparece Cuenta pendiente de emitir.
   8. If the amount received is below the pending balance, the modal reveals "Saldo por resolver" with a live remaining counter and two collapsible, repeatable groups (a fixed hint under the pending block announces the mechanism at open, and the deductions group auto-expands once per open the moment the shortfall appears — an untouched auto-added row neither blocks the submit nor reaches the payload, so leaving the balance pending stays one click). "No es un cobro pendiente, es un gasto" books the shortfall as an expense with its concept (Comisión plataforma de pago / Comisión bancaria / Retención en la fuente / Otro, the last one requiring free text). "Sí lo voy a cobrar: crear ingreso esperado" reschedules it as one or more new expected incomes inheriting the parent's ledger, destination and partner ratio. Both can be combined in one settlement. Since Aug 2026 the amount received may be 0 as long as the shortfall is fully allocated: a residual-only settlement that creates no liquid record and sends no payment email — the rescue path for old partial collections whose fee-sized residual would otherwise stay "Parcial" forever (also scriptable via the `resolve_income_residual` management command).
   9. "Marcar como perdido" writes the row off (PATCH `kind=lost`) after a ConfirmModal.
   10. "Duplicar" — offered on every row whatever its state, and in the income detail modal — GETs `/api/accounting/incomes/:id/duplicate-draft/` and opens the form seeded with the original's concept, amounts, split, ledger, client, project, origin and notes, always as "Esperado". It writes nothing: confirming goes through the ordinary create POST, which flashes the new row and announces it as "Ingreso duplicado" so it reads apart from a manual alta. While the draft is in flight the row's three-dots button spins and refuses a second click, since the action menu closes the moment it is clicked. (Ago 2026) The rule behind that list is that **the fields governing the shape of the form are always inherited** — `origin` (single date or covered window), `ledger` (partner split or single value) and `period_cadence` (the length of the window) — unless the intent of the action overrides them, and `kind` and `destination` are the two declared overrides. They are the ones that go unnoticed when the copied fields are enumerated and the ones that break the loudest when they are missing: the form opens configured for a different kind of income than the one being copied. The copy stays faithful rather than helpful: an original with no `origin` — most of the book, which predates the field — duplicates into a form with no origin, and a `BaseAlert` under the Origen control says exactly that ("El ingreso original no tiene origen registrado…") instead of letting a blank that explains nothing read as a copy that failed.
@@ -6516,17 +6520,13 @@ Internal accounting module for the company owners (Gustavo & Carlos). Every subv
 
 Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar de empresa a personal conserva el porcentaje elegido. Se captura total incluido por defecto o base antes del impuesto. El formulario y detalle muestran base, IVA y total; 0 significa Sin IVA y null histórico conserva IVA sin registrar. Al editar se respeta la tasa guardada. La cuenta emitida o los pagos impiden cambiar el IVA. Reparto y utilidad conservan sus reglas.
 
-## Cobro y liquidación (2026-10-06)
-
-Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
-
 ## Liquidar compacto (2026-10-09)
 
 El modal de liquidar usa el ancho de formulario (42 rem): a 1440 px pasa de 1024 a 672 px. La fecha de pago comparte fila con Destino en la contabilidad de la empresa, o con Valor pagado en la personal. La ayuda de periodicidad de un hosting sin período se lee bajo su fila. El mes y el monto de un ingreso esperado de seguimiento tienen anchos fijos, y un concepto largo se parte en vez de desplazar el cuerpo a 412 px.
 
 ## Confirmación de pago al cliente (2026-10-09)
 
-Liquidar un ingreso con cliente y cuenta emitida ofrece «Enviar al cliente la
+Liquidación con ajustes sobre un ingreso con cliente y cuenta emitida ofrece «Enviar al cliente la
 confirmación del pago», marcada en cada apertura. El destinatario es el correo
 de la cuenta emitida (`GET /api/accounting/incomes/:id/payment-confirmation/`).
 Sin cliente, con valor recibido 0, con un correo provisional o si no se pudo
@@ -6539,25 +6539,29 @@ como antes y sin aviso. El correo sale después del commit de la liquidación; s
 falla, la liquidación queda registrada, la página advierte con un enlace a los
 correos del ingreso y el envío se reintenta desde el Historial.
 
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Liquidación sin cuenta previa (2026-10-10): un esperado de empresa con saldo se puede Liquidar aunque todavía no tenga cuenta de cobro. La acción abre el mismo abono básico usado por selección múltiple aun para un solo ingreso; “Liquidación con ajustes” confirma que abre un formulario nuevo y conserva deducciones y reprogramación. La contabilidad personal sigue usando ese formulario avanzado. Al llegar a Pagado, un esperado de empresa sin cuenta emitida muestra “Cuenta pendiente de emitir” en Cobro y conserva Generar cuenta de cobro o Completar y emitir cuenta de cobro en sus acciones. La liquidación no falla si el aviso interno posterior no puede salir.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P1
 - **Routes:** `/panel/accounting/incomes`, `/panel/accounting/pocket`
 - **API:** `POST /api/accounting/incomes/bulk-settle/`, `GET /api/accounting/incomes/:id/detail/`, `GET /api/accounting/incomes/`, `GET /api/accounting/pocket/`
-- **Description:** Un abono: un solo pago del cliente que cubre varios ingresos esperados con UN único movimiento del bolsillo. Desde la selección múltiple de Ingresos, el menú **[Acciones]** de la barra inferior ofrece "Registrar abono" (solo esperados de la empresa con saldo pendiente; sin elegibles el ítem queda apagado con la razón impresa en el propio ítem —un MenuItem deshabilitado de Headless UI no toma foco ni recibe puntero, así que un tooltip sería inalcanzable—, y una selección parcialmente elegible abre el modal anunciando cuántos quedaron fuera). El modal lista los ingresos del más antiguo al más reciente con su pendiente y el total, prellena el valor con la suma de pendientes, propone el reparto (cada pendiente completo hasta agotar el valor; el último queda parcial) y lo recalcula en vivo hasta la primera edición manual — desde ahí "Recalcular reparto" es el camino de vuelta. El excedente se acepta como saldo a favor del cliente (hijo liquid sin padre sobre el mismo movimiento; se aplica después re-apuntando su `expected_income`), por lo que un excedente con clientes mezclados bloquea. Al confirmar, el backend crea UN `PocketMovement` + un hijo liquid por imputación compartiéndolo — el hijo ES el valor imputado por par, así que la columna Cobro, el filtro `payment_status` y los KPIs siguen derivando igual. Borrar el movimiento revierte el abono completo; borrar o redimensionar un hijo compartido se rechaza. En el Bolsillo, el movimiento de un abono muestra "Abono · N ingresos" y abre el reparto read-only. Y desde el ingreso: el detalle nombra el movimiento detrás de cada liquidación — el nacido de un abono compartido se rotula "Abono" y ofrece "Abono · N ingresos", que abre ese mismo reparto (con las hermanas) apilado sobre el detalle, que mientras tanto deja de responder a Esc y al backdrop; un movimiento 1:1 se nombra como texto y una liquidación que nunca pasó por el bolsillo muestra una raya.
-- **Steps:** seleccionar esperados → Registrar abono → revisar/ajustar el reparto → confirmar → filas Pagado/Parcial en la lista, un movimiento en el bolsillo.
+- **Description:** La selección muestra valor total y saldo pendiente. Liquidar aplica a uno o varios esperados de empresa con saldo, sin exigir cuenta emitida. El modal propone el reparto del más antiguo al más reciente y permite ajustes manuales; un único movimiento conserva los pagos completos, parciales y el saldo a favor. Sólo al elegir un ingreso ofrece Liquidación con ajustes, que confirma la apertura de un formulario nuevo. Al completar sin cuenta emitida aparece Cuenta pendiente de emitir. El reparto puede consultarse desde ingreso y bolsillo; borrar el movimiento deshace el abono completo.
+- **Steps:** seleccionar esperados → Liquidar → revisar/ajustar el reparto → confirmar → filas Pagado/Parcial en la lista, un movimiento en el bolsillo.
 - **Branches:** el reparto se consulta también desde el ingreso; valor menor deja el último parcial; valor exacto cubre todo sin tipear; excedente anuncia el saldo a favor; excedente con mezcla de clientes bloquea; 400 del backend deja el modal abierto; el reparto se consulta desde el movimiento del bolsillo.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
-## Cobro y liquidación (2026-10-06)
-
-Requisito de cobro (2026-10-06): las filas con cliente sólo participan cuando tienen cuenta emitida; las excluidas se explican antes del reparto. Una anulación concurrente causa rechazo atómico del servidor.
-
 ## Formulario compacto (2026-10-09)
 
 El modal de abono usa el ancho de formulario (42 rem). Valor recibido y fecha comparten fila, y el destino (Bolsillo ProjectApp) se lee debajo de ella en lugar de ocupar una fila propia.
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+La selección muestra valor total y saldo pendiente. Liquidar aplica a uno o varios esperados de empresa con saldo, sin exigir cuenta emitida. El modal propone el reparto del más antiguo al más reciente y admite ajustes manuales. Un único movimiento cubre pagos completos y parciales, con saldo a favor cuando corresponde. Sólo para uno ofrece Liquidación con ajustes: el aviso confirma que se abrirá un formulario nuevo sin trasladar valores. Al completar sin cuenta, la fila muestra Cuenta pendiente de emitir. Las validaciones, fallos de servidor, consulta del reparto y reversa completa conservan su comportamiento.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -6648,6 +6652,10 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-ads-history-settings.spec.js`
 
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Envíos incluye Ingreso completo — cuenta pendiente, con el ingreso objetivo, destinatarios y estado real de entrega. El aviso interno se crea una vez por ingreso al completarlo sin cuenta emitida.
+
 ### FLOW: `admin-accounting-history-filters`
 
 - **Module:** admin
@@ -6678,6 +6686,10 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
   4. Expanding a row names the records the email was about and, when applicable, the send it was a retry of.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-history-filters.spec.js`
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+El aviso interno de ingreso completo conserva cuerpo, objetivo y fallo en Historial. El reintento llega sólo a la dirección fallida y queda ligado por retry_of. No vuelve a liquidar ni crea otra notificación de completitud. Si el ingreso ya no necesita cuenta, se rechaza el reintento.
 
 ### FLOW: `admin-accounting-cards`
 
@@ -6819,6 +6831,10 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
 
 El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.
 
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Una cuenta emitida después del pago completo conserva el importe y el IVA del ingreso y queda pagada, sin otro movimiento ni instrucciones de pagar de nuevo.
+
 ### FLOW: `admin-accounting-collection-create`
 
 - **Module:** admin
@@ -6867,6 +6883,10 @@ devuelve también `issue_date`, `customer_name`, `project_name` y
 `billing_concept`. Sólo «Emitir y enviar» emite y envía; Esc o «Volver a
 revisar» cierran el aviso y conservan el paso 2. Mientras envía, «Volver a
 editar» y un segundo envío quedan bloqueados, y Esc no cierra el asistente.
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Un esperado completamente pagado que aún no tiene cuenta permanece elegible: el selector y el formulario usan el total íntegro del ingreso, no saldo cero. Al emitir esa cuenta, queda pagada sin crear otro movimiento ni pedir otro pago; el envío al cliente sigue siendo explícito.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 

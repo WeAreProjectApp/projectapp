@@ -15,6 +15,7 @@ from content.models import (
     DocumentType,
     IncomeRecord,
     McpConnector,
+    PocketMovement,
 )
 from content.services import accounting_service, diagnostic_service
 
@@ -622,3 +623,172 @@ def test_bulk_settle_incomes_rejects_a_repeated_income(
 
     assert response.data['result']['isError'] is True
     assert income.liquid_records.count() == 0
+
+
+def test_update_income_abono_replaces_the_shared_distribution_by_movement_id(
+    api_client, superuser, make_income,
+):
+    """Falla si el MCP corrige hijos aislados, crea otro movimiento o conserva el reparto anterior."""
+    first = make_income(
+        concept='Factura uno', total_amount=Decimal('500.00'),
+        gustavo_amount=Decimal('250.00'), carlos_amount=Decimal('250.00'),
+    )
+    second = make_income(
+        concept='Factura dos', total_amount=Decimal('300.00'),
+        gustavo_amount=Decimal('150.00'), carlos_amount=Decimal('150.00'),
+    )
+    token = activate_connector('accounting')
+    created = payload(call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+        'allocations': [
+            {'income_id': first.id, 'amount': '500.00'},
+            {'income_id': second.id, 'amount': '100.00'},
+        ],
+        'total_amount': '600.00', 'period_date': '2026-08-26',
+    }))
+
+    response = call_tool(api_client, 'accounting', token, 'update_income_abono', {
+        'record_id': created['movement']['id'],
+        'allocations': [
+            {'income_id': first.id, 'amount': '200.00'},
+            {'income_id': second.id, 'amount': '300.00'},
+        ],
+        'total_amount': '500.00', 'period_date': '2026-08-27',
+        'notes': 'Reparto corregido',
+    })
+
+    updated = payload(response)
+    assert response.data['result']['isError'] is False
+    assert updated['movement']['id'] == created['movement']['id']
+    assert updated['movement']['amount'] == '500.00'
+    assert sorted((row['expected_income_id'], row['amount']) for row in updated['movement']['allocations']) == [
+        (first.id, '200.00'), (second.id, '300.00'),
+    ]
+    assert {row['id']: row['payment_status'] for row in updated['incomes']} == {
+        first.id: 'partial', second.id: 'paid',
+    }
+
+
+def test_delete_income_abono_restores_pending_balances(
+    api_client, superuser, make_income,
+):
+    """Falla si deshacer un abono por MCP deja hijos contabilizados o saldos cerrados."""
+    first = make_income(total_amount=Decimal('500.00'))
+    second = make_income(concept='Factura dos', total_amount=Decimal('300.00'))
+    token = activate_connector('accounting')
+    created = payload(call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+        'allocations': [
+            {'income_id': first.id, 'amount': '500.00'},
+            {'income_id': second.id, 'amount': '100.00'},
+        ],
+        'total_amount': '600.00', 'period_date': '2026-08-26',
+    }))
+    movement_id = created['movement']['id']
+
+    response = call_tool(
+        api_client, 'accounting', token, 'delete_income_abono', {'record_id': movement_id},
+    )
+
+    assert response.data['result']['isError'] is False
+    assert payload(response) == {'deleted': True, 'id': movement_id}
+    assert PocketMovement.objects.filter(pk=movement_id).count() == 0
+    assert first.liquid_records.count() == 0
+    assert second.liquid_records.count() == 0
+    first.refresh_from_db()
+    second.refresh_from_db()
+    from content.services.accounting_settlement_service import income_payment_status
+    assert income_payment_status(first) == 'pending'
+    assert income_payment_status(second) == 'pending'
+
+
+def test_delete_income_abono_rejects_an_ordinary_pocket_movement(
+    api_client, superuser,
+):
+    """Falla si el MCP deja borrar como abono un movimiento de bolsillo sin imputaciones."""
+    movement = PocketMovement.objects.create(
+        concept='Ingreso sin reparto', movement_date='2026-08-26',
+        direction=PocketMovement.Direction.IN, amount=Decimal('50.00'),
+    )
+    token = activate_connector('accounting')
+
+    response = call_tool(
+        api_client, 'accounting', token, 'delete_income_abono', {'record_id': movement.id},
+    )
+
+    assert response.data['result']['isError'] is True
+    assert PocketMovement.objects.filter(pk=movement.pk).count() == 1
+
+
+def test_ledger_update_income_abono_applies_after_its_confirmation(
+    api_client, superuser, make_income,
+):
+    """Falla si el conector contable canónico modifica un abono sensible antes de confirmarlo."""
+    income = make_income(total_amount=Decimal('500.00'))
+    token = activate_connector('accounting-ledger')
+    created_preview = payload(call_tool(api_client, 'accounting-ledger', token, 'bulk_settle_incomes', {
+        'allocations': [
+            {'income_id': income.id, 'amount': '500.00'},
+        ],
+        'total_amount': '500.00', 'period_date': '2026-08-26',
+    }))
+    created = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'confirm_action',
+        {'confirmation_id': created_preview['confirmation_id']},
+    ))['result']
+    movement_id = created['movement']['id']
+
+    preview = payload(call_tool(api_client, 'accounting-ledger', token, 'update_income_abono', {
+        'record_id': movement_id,
+        'allocations': [
+            {'income_id': income.id, 'amount': '200.00'},
+        ],
+        'total_amount': '200.00', 'period_date': '2026-08-27',
+    }))
+
+    assert preview['confirmation_required'] is True
+    assert PocketMovement.objects.get(pk=movement_id).amount == Decimal('500.00')
+
+    confirmed = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'confirm_action',
+        {'confirmation_id': preview['confirmation_id']},
+    ))
+
+    assert (
+        confirmed['result']['movement']['id'],
+        PocketMovement.objects.get(pk=movement_id).amount,
+    ) == (movement_id, Decimal('200.00'))
+    allocation = confirmed['result']['movement']['allocations'][0]
+    assert len(confirmed['result']['movement']['allocations']) == 1
+    assert (allocation['expected_income_id'], allocation['amount']) == (income.id, '200.00')
+    assert confirmed['result']['incomes'][0]['payment_status'] == 'partial'
+
+
+def test_ledger_delete_income_abono_applies_after_its_confirmation(
+    api_client, superuser, make_income,
+):
+    """Falla si el conector contable canónico borra un abono sensible sin la confirmación del operador."""
+    income = make_income(total_amount=Decimal('500.00'))
+    token = activate_connector('accounting-ledger')
+    created_preview = payload(call_tool(api_client, 'accounting-ledger', token, 'bulk_settle_incomes', {
+        'allocations': [{'income_id': income.id, 'amount': '500.00'}],
+        'total_amount': '500.00', 'period_date': '2026-08-26',
+    }))
+    created = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'confirm_action',
+        {'confirmation_id': created_preview['confirmation_id']},
+    ))['result']
+    movement_id = created['movement']['id']
+
+    preview = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'delete_income_abono', {'record_id': movement_id},
+    ))
+
+    assert preview['confirmation_required'] is True
+    assert PocketMovement.objects.filter(pk=movement_id).count() == 1
+
+    confirmed = payload(call_tool(
+        api_client, 'accounting-ledger', token, 'confirm_action',
+        {'confirmation_id': preview['confirmation_id']},
+    ))
+
+    assert confirmed['result'] == {'deleted': True, 'id': movement_id}
+    assert PocketMovement.objects.filter(pk=movement_id).count() == 0

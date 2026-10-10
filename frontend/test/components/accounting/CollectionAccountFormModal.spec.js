@@ -330,6 +330,23 @@ describe('CollectionAccountFormModal', () => {
     ).toBe(1490000);
   });
 
+  // Falla si una cuenta creada después del pago vuelve a tomar el saldo cero.
+  it('prefills the full income amount after the income is paid', async () => {
+    const wrapper = mountModal({
+      income: {
+        ...incomeFixture,
+        total_amount: '1000000.00',
+        pending_amount: '0.00',
+        paid_amount: '1000000.00',
+        payment_status: 'paid',
+      },
+    });
+    await flushPromises();
+
+    expect(Number(wrapper.get('[data-testid="collection-form-amount"]').element.value))
+      .toBe(1000000);
+  });
+
   it('prefills the período facturado from a hosting income window', async () => {
     // The income already says what window this cuenta bills — re-typing it
     // was the gap that motivated recording the period at all.

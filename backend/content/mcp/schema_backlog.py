@@ -237,7 +237,6 @@ UNDESCRIBED_ARGUMENT_BACKLOG = frozenset({
     'update_statement_transaction',
     # accounting-ledger
     'bulk_action_recurring',
-    'bulk_settle_incomes',
     'create_ads',
     'create_expense',
     'create_income',
