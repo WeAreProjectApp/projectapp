@@ -229,9 +229,9 @@ def _execute(operation, arguments):
     query = {} if query is None and query_schema is None else query
     data = {} if data is None else data
     if not isinstance(query, dict):
-        _field_error('query', 'query debe ser un objeto JSON.')
+        _field_error('query', 'query y data deben ser objetos JSON.')
     if not isinstance(data, dict):
-        _field_error('data', 'data debe ser un objeto JSON.')
+        _field_error('data', 'query y data deben ser objetos JSON.')
     if query_schema is not None:
         query_fields = query_schema.get('properties', {})
         _check_unknown_fields(query, query_fields)
