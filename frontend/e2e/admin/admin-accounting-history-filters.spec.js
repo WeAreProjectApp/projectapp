@@ -103,8 +103,8 @@ const SEEDED_TABS = [
  * Filters the fixture the way the real endpoint does, so a test can tell a
  * wired-up filter from one that only repaints the same rows.
  */
-function filterRows(params) {
-  let rows = [SENT_ROW, FAILED_ROW, FAILED_DIGEST, INCOME_COMPLETION_FAILED_ROW];
+function filterRows(params, extraRows = []) {
+  let rows = [SENT_ROW, FAILED_ROW, FAILED_DIGEST, ...extraRows];
   if (params.status) {
     const wanted = params.status.split(',');
     rows = rows.filter((row) => wanted.includes(row.status));
@@ -132,8 +132,11 @@ function filterRows(params) {
   return rows;
 }
 
-function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
+function buildHandler({
+  calls, savedTabs, retryStatus = 201, includeIncomeCompletionNotice = false,
+}) {
   const tabs = savedTabs ?? SEEDED_TABS;
+  const extraRows = includeIncomeCompletionNotice ? [INCOME_COMPLETION_FAILED_ROW] : [];
   return async ({ route, apiPath, method }) => {
     const url = new URL(route.request().url());
 
@@ -149,7 +152,7 @@ function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
     if (apiPath === 'accounting/email-log/' && method === 'GET') {
       const params = Object.fromEntries(url.searchParams.entries());
       calls.push({ apiPath, method, params });
-      const rows = filterRows(params);
+      const rows = filterRows(params, extraRows);
       return {
         status: 200,
         contentType: 'application/json',
@@ -175,7 +178,7 @@ function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
           params[key] = Array.isArray(value) ? value.join(',') : value;
         }
         counts[String(spec.id)] = body.scope === 'sends'
-          ? filterRows(params).length
+          ? filterRows(params, extraRows).length
           : 0;
       }
       return {
@@ -484,7 +487,9 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
   }, async ({ page }) => {
     test.slow();
     const calls = [];
-    await mockApi(page, buildHandler({ calls, retryStatus: 503 }));
+    await mockApi(page, buildHandler({
+      calls, retryStatus: 503, includeIncomeCompletionNotice: true,
+    }));
 
     await page.goto('/panel/accounting/history?tab=sends&status=failed', {
       waitUntil: 'domcontentloaded',
