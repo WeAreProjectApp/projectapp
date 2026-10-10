@@ -32,6 +32,7 @@ content.DocumentStateEpisode.opened_by content.DocumentStateEpisode.closed_by
 content.DocumentStateEpisodeEvent.actor
 content.DocumentNote.created_by content.DocumentNote.resolved_by content.DocumentNote.deleted_by
 content.DocumentNoteEvent.actor content.ContractTemplateVersion.author
+content.BuildingWithUsProgramRevision.author content.BuildingWithUsContractRevision.author
 content.TaskComment.author content.WebAppDiagnostic.created_by content.DiagnosticAttachment.uploaded_by
 content.PocketMovement.created_by content.RecurringPayment.created_by content.IncomeRecord.created_by
 content.ExpenseRecord.created_by content.HostingRecord.created_by content.HostingCycle.created_by

@@ -9,6 +9,8 @@ from rest_framework.exceptions import PermissionDenied
 
 from content.models import (
     AccountingChangeLog,
+    BuildingWithUsContractRevision,
+    BuildingWithUsProgramRevision,
     BusinessProposal,
     ClientDocumentNumberSequence,
     CommunicationThread,
@@ -42,6 +44,24 @@ def _step(result):
 
 def _codes(blockers):
     return {row['code'] for row in blockers}
+
+
+@pytest.mark.parametrize('revision_model,content', [
+    (BuildingWithUsProgramRevision, {'content': {}}),
+    (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
+], ids=['program', 'contract'])
+def test_undo_preserves_alliance_revision_author(superuser, revision_model, content):
+    survivor, duplicate = client_pair()
+    revision = revision_model.objects.create(
+        version=revision_model.objects.count() + 1, author=duplicate.user,
+        change_note='Autoría original', **content,
+    )
+    _, result = run_client_merge(superuser, survivor, duplicate)
+
+    undo(superuser, result['operation_id'])
+
+    revision.refresh_from_db()
+    assert revision.author_id == duplicate.user_id
 
 
 def test_engine_undo_restores_every_live_column_in_the_merge_closure(superuser):
