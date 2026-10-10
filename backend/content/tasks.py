@@ -1592,6 +1592,19 @@ def send_accounting_change_email(change_log_id):
     return _send(change_log_id)
 
 
+@task()
+def send_income_completion_notice(notice_id):
+    from content.services.income_completion_notice_service import send_completion_notice
+    return send_completion_notice(notice_id)
+
+
+@periodic_task(crontab(minute='*/5'))
+@lock_task('income-completion-notice-recovery')
+def recover_income_completion_notices():
+    from content.services.income_completion_notice_service import recover_pending_notices
+    return recover_pending_notices()
+
+
 # 14:00 UTC = 09:00 Bogotá. America/Bogota does not observe DST, so the
 # offset (UTC-5) is stable year-round.
 @periodic_task(crontab(hour='14', minute='0'))

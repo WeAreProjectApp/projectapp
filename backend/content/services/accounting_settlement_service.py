@@ -51,7 +51,6 @@ from content.serializers.accounting import (
     split_half,
 )
 from content.services import accounting_service
-from content.services.income_settlement_policy import require_issued_accounts
 
 EntityType = AccountingChangeLog.EntityType
 
@@ -88,23 +87,31 @@ def income_payment_status(income):
 
 
 def _sync_linked_collection_accounts(income, user):
-    """Fully paid income → its linked issued cuenta de cobro becomes paid.
+    """Reflect payment corrections in issued accounts inside the money write.
 
-    Runs inside settle's transaction. Idempotent by construction: only
-    ISSUED documents are touched, so drafts stay drafts, cancelled stay
-    cancelled and an already-paid cuenta is never revisited.
+    Completing marks an issued account paid; reversing or reducing the payment
+    reopens a paid account. Drafts and cancelled accounts retain their state.
     """
-    if income_payment_status(income) != 'paid':
-        return
+    paid = income_payment_status(income) == 'paid'
     from content.services.collection_account_service import (
         mark_collection_account_paid,
     )
 
     linked = income.collection_documents.filter(
-        commercial_status=Document.CommercialStatus.ISSUED,
+        document_type__code='collection_account',
+        commercial_status=(Document.CommercialStatus.ISSUED if paid
+                           else Document.CommercialStatus.PAID),
     )
     for document in linked:
-        mark_collection_account_paid(document, acting_user=user)
+        if paid:
+            mark_collection_account_paid(document, acting_user=user)
+        else:
+            from content.services.collection_account_service import _log_status_transition, _status_snapshot
+            old_values = _status_snapshot(document)
+            document.commercial_status = Document.CommercialStatus.ISSUED
+            document.updated_by = user
+            document.save(update_fields=['commercial_status', 'updated_by', 'updated_at'])
+            _log_status_transition(document, old_values, user)
 
 
 def _proportional_split(parent, amount):
@@ -188,8 +195,6 @@ def settle_expected_income(income, data, user):
             f'(${pending:,.2f}).'
         )
 
-    require_issued_accounts([income], locked.documents.values())
-
     # After every refusal and before anything is created: a settlement that
     # will not happen must not leave the parent altered.
     if data.get('period'):
@@ -216,6 +221,8 @@ def settle_expected_income(income, data, user):
     income.refresh_from_db()
     _sync_linked_collection_accounts(income, user)
     accounting_service.deselect_receivable_if_closed(income, user)
+    from content.services.income_completion_notice_service import schedule_completion_notice
+    schedule_completion_notice(income, was_paid=False)
     return {
         'income': income,
         'liquid': liquid,
@@ -545,7 +552,6 @@ def bulk_settle_expected_incomes(data, user):
                 f'pendiente (${pending:,.2f}).'
             )
 
-    require_issued_accounts(parents, locked.documents.values())
     allocated = sum(amounts.values(), Decimal('0'))
     excess = data['total_amount'] - allocated
     credit_client = None
@@ -597,6 +603,8 @@ def bulk_settle_expected_incomes(data, user):
         income.refresh_from_db()
         _sync_linked_collection_accounts(income, user)
         accounting_service.deselect_receivable_if_closed(income, user)
+        from content.services.income_completion_notice_service import schedule_completion_notice
+        schedule_completion_notice(income, was_paid=False)
 
     # Exactly ONE email for the whole abono — the movement is the money
     # event; N child emails would read as N payments in the inbox.

@@ -2552,3 +2552,31 @@ manifest. El guion y la condición de cierre tras deploy están en
 > conservando el espejo tras renombrarla. Sin un pin compartido, la ubicación
 > manual Contratos conserva sus bloqueos anteriores. Los recibos de migración
 > conservan su actor histórico al fusionar clientes o deshacer esa fusión.
+
+### Abonos sin cuenta emitida: crear, corregir y deshacer (2026-10-10)
+
+Validar con una credencial autorizada de `accounting-ledger` (2.3.0) y el
+conector compatible `accounting` (1.3.0), usando sólo datos de prueba:
+
+1. Consultar `list_income` para elegir uno o varios esperados de empresa con
+   saldo pendiente, sin cuenta o con borrador. Registrar `bulk_settle_incomes`
+   con `allocations`, `total_amount`, `period_date` y `notes`; en el conector
+   canónico confirmar la vista previa con `confirm_action`.
+2. Comprobar un único movimiento en `get_pocket`, sus montos por ingreso y los
+   estados `paid`/`partial`. El excedente sigue como saldo a favor del mismo
+   cliente; clientes mezclados con excedente deben rechazarse.
+3. Invocar `update_income_abono` con `record_id` del movimiento, importe, fecha,
+   notas y todo el nuevo reparto. En el canónico confirmar la acción. El ID del
+   movimiento debe conservarse y el reparto previo debe desaparecer. Un monto
+   superior al saldo disponible debe rechazarse sin cambiar datos.
+4. Invocar `delete_income_abono` con el mismo ID y confirmar cuando corresponda.
+   Deben borrarse movimiento e imputaciones, con los esperados otra vez pendientes.
+   Nunca eliminar por separado un hijo de un abono compartido.
+5. Completar un esperado sin cuenta. Verificar el aviso interno «Ingreso completo —
+   cuenta pendiente» en Historial, con cuerpo y vínculo al ingreso. Un fallo sólo
+   se reintenta para su destinatario; corregir y volver a pagar no genera otro evento.
+   Crear su cuenta por el importe completo debe dejarla pagada sin otra entrada.
+
+`settle_income` conserva los ajustes individuales; `create_income`, `update_income`
+y `delete_income` siguen sirviendo para pagos individuales no compartidos. Para
+cambiar el monto de un abono compartido se usa la corrección del conjunto.

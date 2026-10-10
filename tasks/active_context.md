@@ -1,3 +1,27 @@
+# Liquidar ingresos sin cuenta y CRUD de abonos en MCP (2026-10-10)
+
+Complemento de PA-69: el menú de selección muestra valor total y saldo pendiente,
+y usa «Liquidar» para uno o varios esperados de empresa. La acción individual
+abre el mismo abono básico; «Liquidación con ajustes» abre explícitamente el
+formulario avanzado. No se exige cuenta emitida para registrar pagos.
+
+Al completar un esperado positivo de empresa sin cuenta emitida, se guarda un
+`IncomeCompletionNotice` único junto con el pago. Huey lo envía tras el commit a
+los destinatarios internos activos de Contabilidad; los pendientes se recuperan
+cada cinco minutos respetando el interruptor de avisos. El Historial conserva
+cuerpo, destinatarios y reintentos de fallos. Revertir y volver a pagar no crea
+otro aviso, y los ingresos pagados antes del cambio no se notifican retroactivamente.
+El listado muestra «Cuenta pendiente de emitir». Una cuenta creada después del
+pago conserva el total y el IVA y se emite ya pagada, sin mover dinero otra vez.
+
+`accounting` y `accounting-ledger` permiten crear abonos individuales/colectivos
+con las acciones existentes y corregirlos con `update_income_abono` o deshacerlos
+con `delete_income_abono`. Ambas usan el ID del movimiento del bolsillo; la
+corrección reemplaza importe, fecha, notas y reparto completo de forma atómica,
+conservando un solo movimiento. Las correcciones y reversas recalculan también
+el estado de las cuentas vinculadas. Migración de esquema: `content.0290`.
+Validación en curso en el worktree de sesión; no se escribieron datos del servicio.
+
 > **Integridad de datos — 2026-10-09:** motor de reglas de integridad con vista
 > previa, registro y deshacer, fusiones de clientes y carpetas, siete herramientas
 > en el conector `projects` y la skill `data-integrity`. Pendiente tras el

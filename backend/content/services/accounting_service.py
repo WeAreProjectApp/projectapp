@@ -467,8 +467,8 @@ def _ensure_pocket_update_allowed(entity_type, instance, serializer):
             'El valor de un abono no se puede editar: es la suma de los '
             'ingresos que cubre.',
             code='abono_amount_locked',
-            hint='Elimina el movimiento para deshacer el abono y regístralo '
-                 'de nuevo.',
+            hint='Desde el MCP usa update_income_abono para corregir el monto '
+                 'y el reparto juntos, o elimina el movimiento completo.',
         )
 
 
@@ -534,6 +534,8 @@ def create_record(entity_type, serializer, user, notify=True, *,
     """
     mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
     register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
+    expected = None
+    was_paid = False
     with transaction.atomic():
         if entity_type in (EntityType.HOSTING, EntityType.INCOME):
             from accounts.services.billing_locks import lock_billing_rows
@@ -550,14 +552,10 @@ def create_record(entity_type, serializer, user, notify=True, *,
                 if expected.pk not in locked.incomes:
                     from accounts.services.billing_access import BillingConflict
                     raise BillingConflict()
-                serializer.validated_data['expected_income'] = locked.incomes[expected.pk]
-                if serializer.validated_data.get('kind') == IncomeRecord.Kind.LIQUID and not serializer.context.get('settlement'):
-                    from rest_framework.exceptions import ValidationError
-                    from content.services.income_settlement_policy import require_issued_accounts
-                    try:
-                        require_issued_accounts([locked.incomes[expected.pk]], locked.documents.values())
-                    except ValueError as exc:
-                        raise ValidationError(str(exc)) from exc
+                expected = locked.incomes[expected.pk]
+                serializer.validated_data['expected_income'] = expected
+                from accounts.services.billing_locks import current_income_paid_total
+                was_paid = current_income_paid_total(expected) >= expected.total_amount
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
         if shared_pocket_movement is not None:
             instance = serializer.save(
@@ -571,6 +569,8 @@ def create_record(entity_type, serializer, user, notify=True, *,
             )
             if entity_type == EntityType.POCKET:
                 _sync_from_pocket(instance, mirror_ledger, user, is_create=True)
+        if expected and instance.kind == IncomeRecord.Kind.LIQUID and not serializer.context.get('settlement'):
+            _complete_linked_income(expected, was_paid, user)
         if entity_type == EntityType.HOSTING:
             from accounts.services.hosting_context import register_new_hosting_origin
             register_new_hosting_origin(instance, user)
@@ -598,7 +598,36 @@ def update_record(entity_type, instance, serializer, user, notify=True):
 
     See ``create_record`` for why ``notify=False`` exists.
     """
+    expected = None
+    was_paid = False
+    previous_expected = None
+    pocket_parents = []
     with transaction.atomic():
+        if entity_type == EntityType.POCKET:
+            from accounts.services.billing_locks import current_income_paid_total, lock_billing_rows
+            from accounts.services.billing_access import BillingConflict
+
+            discovered = list(IncomeRecord.objects.filter(pocket_movement=instance)
+                              .values_list('pk', 'expected_income_id'))
+            parent_ids = {parent_id for _, parent_id in discovered if parent_id}
+            locked = lock_billing_rows(
+                income_ids=[*parent_ids, *(pk for pk, _ in discovered)],
+                include_income_children=True, include_origin_documents=True,
+            )
+            instance = PocketMovement.objects.select_for_update().get(pk=instance.pk)
+            if sorted(discovered) != list(IncomeRecord.objects.filter(pocket_movement=instance)
+                                         .order_by('pk').values_list('pk', 'expected_income_id')):
+                raise BillingConflict()
+            serializer.instance = instance
+            serializer._validated_data = serializer.validate(dict(serializer.validated_data))
+            pocket_parents = [(locked.incomes[pk], current_income_paid_total(locked.incomes[pk])
+                               >= locked.incomes[pk].total_amount) for pk in sorted(parent_ids)]
+            if len(discovered) == 1 and parent_ids and 'amount' in serializer.validated_data:
+                parent = locked.incomes[next(iter(parent_ids))]
+                child = locked.incomes[discovered[0][0]]
+                available = parent.total_amount - current_income_paid_total(parent) + child.total_amount
+                if serializer.validated_data['amount'] > available:
+                    raise ValueError('El valor del abono supera el saldo disponible del ingreso.')
         if entity_type in (EntityType.HOSTING, EntityType.INCOME):
             from accounts.services.billing_locks import lock_billing_rows
             from accounts.services.billing_reassignment import validate_financial_reassignment
@@ -609,6 +638,7 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                             if 'expected_income' in serializer.validated_data else instance.expected_income)
             locked = lock_billing_rows(
                 income_ids=([instance.pk] + ([expected.pk] if expected else [])
+                            + ([instance.expected_income_id] if instance.expected_income_id else [])
                             if entity_type == EntityType.INCOME else []),
                 hosting_ids=[instance.pk] if entity_type == EntityType.HOSTING else [],
                 project_ids=[target.pk if target else None],
@@ -616,27 +646,25 @@ def update_record(entity_type, instance, serializer, user, notify=True):
             )
             instance = (locked.incomes if entity_type == EntityType.INCOME else locked.hostings)[instance.pk]
             serializer.instance = instance
+            if entity_type == EntityType.INCOME and instance.expected_income_id:
+                previous_expected = locked.incomes.get(instance.expected_income_id)
+                if previous_expected is None:
+                    from accounts.services.billing_access import BillingConflict
+                    raise BillingConflict()
             if (entity_type == EntityType.INCOME and 'expected_income' not in serializer.validated_data
                     and instance.expected_income_id != (expected.pk if expected else None)):
                 from accounts.services.billing_access import BillingConflict
                 raise BillingConflict()
-            if expected and 'expected_income' in serializer.validated_data:
-                serializer.validated_data['expected_income'] = locked.incomes[expected.pk]
+            if expected:
+                from accounts.services.billing_locks import current_income_paid_total
+                expected = locked.incomes[expected.pk]
+                was_paid = current_income_paid_total(expected) >= expected.total_amount
+                if 'expected_income' in serializer.validated_data:
+                    serializer.validated_data['expected_income'] = expected
             if target:
                 serializer.validated_data['project'] = locked.projects[target.pk]
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
             validate_financial_reassignment(instance, serializer.validated_data)
-            if (entity_type == EntityType.INCOME and expected
-                    and serializer.validated_data.get('kind', instance.kind) == IncomeRecord.Kind.LIQUID
-                    and (instance.kind != IncomeRecord.Kind.LIQUID
-                         or expected.pk != instance.expected_income_id
-                         or serializer.validated_data.get('total_amount', instance.total_amount) > instance.total_amount)):
-                from rest_framework.exceptions import ValidationError
-                from content.services.income_settlement_policy import require_issued_accounts
-                try:
-                    require_issued_accounts([locked.incomes[expected.pk]], locked.documents.values())
-                except ValueError as exc:
-                    raise ValidationError(str(exc)) from exc
         if (
             entity_type == EntityType.INCOME
             and {'total_amount', 'vat_rate'} & serializer.validated_data.keys()
@@ -660,6 +688,8 @@ def update_record(entity_type, instance, serializer, user, notify=True):
         )
         if entity_type == EntityType.POCKET:
             _sync_from_pocket(instance, mirror_ledger, user, is_create=False)
+            for parent, parent_was_paid in pocket_parents:
+                _complete_linked_income(parent, parent_was_paid, user)
         if (
             entity_type == EntityType.INCOME
             and instance.kind == IncomeRecord.Kind.EXPECTED
@@ -678,6 +708,11 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                 # that settle this income follow its project too.
                 _cascade_project_to_liquid_children(instance, user)
             _sync_project_to_draft_cuentas(instance, user)
+        if expected and instance.kind == IncomeRecord.Kind.LIQUID and not serializer.context.get('settlement'):
+            _complete_linked_income(expected, was_paid, user)
+        if previous_expected and previous_expected.pk != instance.expected_income_id:
+            from content.services.accounting_settlement_service import _sync_linked_collection_accounts
+            _sync_linked_collection_accounts(previous_expected, user)
     changes = compute_changes(
         entity_type, old_values, snapshot_values(instance, entity_type),
     )
@@ -698,6 +733,15 @@ def update_record(entity_type, instance, serializer, user, notify=True):
         if notify:
             _notify(change_log)
     return instance
+
+
+def _complete_linked_income(income, was_paid, user):
+    from content.services.accounting_settlement_service import _sync_linked_collection_accounts
+    from content.services.income_completion_notice_service import schedule_completion_notice
+
+    _sync_linked_collection_accounts(income, user)
+    deselect_receivable_if_closed(income, user)
+    schedule_completion_notice(income, was_paid=was_paid)
 
 
 def _refresh_hosting_snapshot(record):
@@ -1125,7 +1169,31 @@ def delete_record(entity_type, instance, user):
         if expense is not None:
             linked_records.append((EntityType.EXPENSE, expense))
 
+    affected_ids = {record.expected_income_id for _, record in linked_records
+                    if isinstance(record, IncomeRecord) and record.expected_income_id}
+    if entity_type == EntityType.INCOME and instance.expected_income_id:
+        affected_ids.add(instance.expected_income_id)
     with transaction.atomic():
+        from accounts.services.billing_locks import lock_billing_rows
+        income_ids = affected_ids | {record.pk for kind, record in linked_records
+                                     if kind == EntityType.INCOME}
+        if entity_type == EntityType.INCOME:
+            income_ids.add(instance.pk)
+        locked = lock_billing_rows(income_ids=income_ids, include_income_children=True,
+                                   include_origin_documents=True) if income_ids else None
+        if entity_type == EntityType.POCKET:
+            PocketMovement.objects.select_for_update().get(pk=instance.pk)
+            discovered = sorted((record.pk, record.expected_income_id)
+                                for kind, record in linked_records if kind == EntityType.INCOME)
+            current = list(IncomeRecord.objects.filter(pocket_movement=instance)
+                           .order_by('pk').values_list('pk', 'expected_income_id'))
+            if discovered != current:
+                from accounts.services.billing_access import BillingConflict
+                raise BillingConflict()
+        if linked_movement is not None:
+            linked_movement = PocketMovement.objects.select_for_update().get(pk=linked_movement.pk)
+            if entity_type == EntityType.INCOME and linked_movement.is_shared:
+                raise ValueError('El reparto cambió. Elimina el movimiento para deshacer el abono completo.')
         instance.delete()
         if linked_movement is not None:
             _log_pocket_removal(linked_movement, user)
@@ -1133,6 +1201,12 @@ def delete_record(entity_type, instance, user):
         for linked_record_type, linked_record in linked_records:
             log_entity_removal(linked_record_type, linked_record, user)
             linked_record.delete()
+
+        if locked:
+            from content.services.accounting_settlement_service import _sync_linked_collection_accounts
+            for income in locked.incomes.values():
+                if income.kind == IncomeRecord.Kind.EXPECTED:
+                    _sync_linked_collection_accounts(income, user)
 
     change_log = log_accounting_change(
         entity_type=entity_type,
