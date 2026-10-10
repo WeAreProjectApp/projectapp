@@ -37,7 +37,32 @@
         Calculando el impacto...
       </p>
 
-      <div v-if="preview && !isLoadingPreview" class="grid gap-4 panel-landscape:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]">
+      <BaseAlert
+        v-if="isBlocked && !isLoadingPreview"
+        variant="warning"
+        data-testid="project-change-client-blockers"
+      >
+        <h4 class="font-semibold mb-2">
+          No se puede cambiar el cliente de este proyecto
+        </h4>
+        <ul class="list-disc pl-4 space-y-1">
+          <li
+            v-for="blocker in blockers"
+            :key="`${blocker.code}-${blocker.resource_type}-${blocker.resource_id}`"
+          >
+            {{ blocker.message }}
+          </li>
+        </ul>
+        <p v-if="needsNewProject" class="mt-2" data-testid="project-change-client-resolution">
+          La historia financiera o de entregas queda con el cliente actual. Crea un proyecto nuevo para el cliente destino.
+        </p>
+      </BaseAlert>
+
+      <div
+        v-if="preview && !isLoadingPreview"
+        class="grid gap-4"
+        :class="{ 'panel-landscape:grid-cols-[minmax(0,1.15fr)_minmax(16rem,0.85fr)]': !isBlocked }"
+      >
         <div
           class="rounded-lg border border-border-muted bg-surface-muted divide-y divide-border-muted"
           data-testid="project-change-client-preview"
@@ -125,9 +150,9 @@
           </section>
         </div>
 
-        <!-- Sin preselección a propósito: la decisión de arrastrar o
-             desvincular se toma en cada cascada, nunca por default. -->
+        <!-- Each permitted cascade requires an explicit mode choice. -->
         <BaseFormField
+          v-if="!isBlocked"
           class="self-start rounded-xl border border-border-muted bg-surface-muted p-4 panel-landscape:sticky panel-landscape:top-4"
           label="¿Qué hacemos con los registros?"
           hint="Mover: siguen al proyecto con el nuevo cliente. Desvincular: conservan su cliente y pierden el proyecto."
@@ -164,7 +189,7 @@
               variant="primary"
               size="sm"
               :loading="store.isUpdating || isLoadingPreview"
-              :disabled="Boolean(confirmBlockReasons.length)"
+              :disabled="!canConfirm"
               :disabled-reason="confirmBlockReasons.join(' ')"
               :aria-describedby="describedBy"
               data-testid="project-change-client-confirm"
@@ -214,6 +239,12 @@ const mode = ref('');
 const isLoadingPreview = ref(false);
 const errorMessage = ref('');
 
+const isBlocked = computed(() => preview.value?.can_apply === false);
+const blockers = computed(() => preview.value?.blockers || []);
+const needsNewProject = computed(() => blockers.value.some(
+  (blocker) => blocker.resolution === 'create_new_project',
+));
+
 const movable = computed(() => {
   if (!preview.value) return [];
   return [
@@ -227,7 +258,7 @@ const movable = computed(() => {
 });
 
 const canConfirm = computed(() => Boolean(
-  preview.value && mode.value && !store.isUpdating && !isLoadingPreview.value,
+  preview.value && !isBlocked.value && mode.value && !store.isUpdating && !isLoadingPreview.value,
 ));
 
 const confirmBlockReasons = computed(() => [
@@ -235,7 +266,10 @@ const confirmBlockReasons = computed(() => [
   clientId.value != null && !preview.value && !isLoadingPreview.value
     ? (errorMessage.value || 'Vuelve a cargar el impacto del cambio.')
     : '',
-  preview.value && !mode.value ? 'Elige qué hacer con los registros vinculados.' : '',
+  isBlocked.value ? 'No se puede cambiar el cliente de este proyecto.' : '',
+  preview.value && !isBlocked.value && !mode.value
+    ? 'Elige qué hacer con los registros vinculados.'
+    : '',
 ].filter(Boolean));
 
 watch(() => props.open, (open) => {
@@ -270,6 +304,7 @@ async function loadPreview() {
 }
 
 async function confirmChange() {
+  if (!canConfirm.value) return;
   errorMessage.value = '';
   const result = await store.changeClient(props.project.id, {
     client_profile_id: clientId.value,
@@ -277,7 +312,7 @@ async function confirmChange() {
     hosting_ids: preview.value.hosting_ids,
     income_ids: preview.value.income_ids,
     communication_thread_ids: preview.value.communication_thread_ids,
-  });
+  }, preview.value);
   if (result.success) {
     const { moved, detached } = result.data;
     const parts = [];

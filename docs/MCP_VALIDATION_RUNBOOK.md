@@ -5,9 +5,10 @@ Las plantillas contractuales independientes se administran desde Propuestas
 Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar
 lectura de las tres variantes, preview sin escritura, campos obligatorios,
 rechazo por etag, confirmación, coherencia, historial/restauración y reversión
-del lote si falla un PDF o una nota. Comprobar `list_contract_mirrors` y que el
-panel rechace también movimiento, archivado y cambios de las carpetas que
-contienen los espejos. Los contratos ya guardados o firmados conservan sus bytes.
+del lote si falla un PDF o una nota. Comprobar `list_contract_mirrors`: el pin
+por ID permite renombrar y mover la carpeta y sus ancestros, mientras bloquea
+su archivado y la asignación de cliente/proyecto a la carpeta fijada. Los
+contratos ya guardados o firmados conservan sus bytes.
 
 ## Tickets de proyecto: bugs y solicitudes contextualizadas
 
@@ -26,6 +27,10 @@ rechaza raíces automáticas de proyecto; estas protecciones se validan junto
 con los contratos de modelo antes de publicar cambios del gestor.
 
 Última revisión integral: 2026-09-04.
+Última revisión focal de carpetas: 2026-10-10; Documentos **3.2.0 / 73 tools**
+y Proyectos **2.2.0 / 164 tools**. Notas de versión:
+[Documentos 3.2.0](changelog/2026-10-10-documents-mcp-3.2.0.md) y
+[Proyectos 2.2.0](changelog/2026-10-10-projects-mcp-2.2.0.md).
 Revisión focal de registro, esquemas e ingresos esperados: 2026-10-09.
 
 Este documento es el procedimiento repetible para validar la plataforma MCP de
@@ -39,6 +44,410 @@ adaptadores de paridad viven en
 Versiones, compatibilidad, fuentes, uploads e instrucciones se declaran en
 `ConnectorSpec`. Ver el [changelog de esta entrega](changelog/2026-10-09-mcp-connectors-schema-registry.md)
 y la [medición antes/después](audits/2026-10-09-mcp-schema-parity.md).
+
+## Migración de carpetas por MCP — parte 1 (2026-10)
+
+Revisión focal del 2026-10-09 sobre los commits `74ca0073` (framework),
+`484997f6` (espejos), `870bacf2` (cambio de cliente), `e676c1c1` (hosting),
+`388b1fae` y `7d5526b5` (UI/E2E), y `ba83a834` (contratos y conteos).
+Ejecutar las comprobaciones mutantes en datos aislados de test/staging, con
+Wompi y correo simulados. Son criterios de validación, no resultados de un
+despliegue ni asignación de una versión nueva.
+
+1. **Framework — descubrimiento.** Comparar `tools/list` con
+   `describe_capabilities` en `documents` y `projects`, con credencial completa
+   y restringida: mismos nombres, títulos, descripciones, input/output schemas
+   y anotaciones. Los adaptadores con `payload_schema` o `query_schema`
+   explícito publican campos planos y `additionalProperties: false`, sin
+   envelopes `data`/`query`.
+2. **Framework — compatibilidad de argumentos.** Revisar el contrato interno
+   `accepted_arguments_schema`: conserva los alias tipados `data` para cuerpos
+   y `query` cuando hay query declarada, con los required de ruta. Probar alias
+   y argumentos planos con el mismo resultado; valores contradictorios o claves
+   desconocidas dentro del alias deben fallar antes de escribir.
+3. **Framework — query encoding.** Verificar booleanos como `true`/`false`,
+   listas CSV por defecto en queries explícitas o repetidas con
+   `x-query-encoding: repeat`. Un null permitido se omite; uno no nullable se
+   rechaza. Comprobar el mismo encoding en GET y métodos con body: una query
+   declarada llega a la vista; una `query` no declarada en POST se rechaza en
+   lugar de descartarse.
+4. **Framework — validación central.** En schemas cerrados, probar un campo
+   desconocido y uno required ausente: `details.errors` conserva `field`,
+   `code` (`unknown_field` o `required`) y `message`. La validación central
+   cubre el nivel superior, usa `accepted_arguments_schema` si existe y, por
+   defecto, se activa en `documents`/`projects`; una tool puede optar mediante
+   `strict_arguments`. Un schema abierto queda fuera de este control y los
+   serializers/handlers conservan la validación de tipos y reglas de negocio.
+   Comprobar que `blockers`, `planned`, `impact_hash` y `can_apply` mantienen
+   su estructura al normalizar un error.
+5. **Framework — cancelación.** `cancel_action` con UUID malformado o sin
+   intent pendiente de la misma credencial responde `NOT_FOUND`, sin excepción
+   interna ni modificación de otra confirmación.
+6. **Espejos — pin y flags.** `list_contract_mirrors` devuelve los tres espejos
+   y `pinned_folder`, con `pinned_folder_id`, `pin_source`, `folder_path`,
+   `folder_movable`, `archive_blocked` y `archive_block_reason`. En una réplica
+   correctamente inicializada, comprobar pin persistido (`field`), carpeta
+   activa/movible y los tres `synchronized: true`. Los flags y la ruta de cada
+   espejo deben coincidir con las operaciones disponibles.
+7. **Espejos — reorganización.** Renombrar y mover Contratos y luego un
+   ancestro manual. Releer el listado: cambian las rutas, permanece el ID del
+   pin y los tres espejos siguen `synchronized: true`. Una actualización
+   contractual válida sigue sincronizando Markdown, PDF y notas en esa carpeta.
+8. **Espejos — archivado y dueño.** Archivar Contratos o un ancestro que aún
+   contiene espejos devuelve `CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED`; el Panel
+   responde 409 `contract_mirror_folder_archive_blocked`, con ID/ruta de la
+   carpeta fijada y IDs de espejos. Cambiar cliente o proyecto de la carpeta
+   fijada devuelve 409 `contract_mirror_folder_pinned` (MCP:
+   `CONTRACT_MIRROR_FOLDER_PINNED`). Ningún rechazo altera asociaciones ni
+   archivado. El cambio de cliente de un ancestro omite la rama fijada y la
+   informa como pinned; el borrado forzado exige moverla fuera primero.
+9. **Cambio de cliente — preview y bloqueo.**
+   `preview_project_client_change` con `project_id` y `client_profile_id`
+   devuelve `can_apply`, `blockers`, `blocker_counts`, `planned.move`,
+   `planned.detach`, `financial_history` e `impact_hash` independiente del modo.
+   Comparar con el evaluador compartido y las tres guardas. Un proyecto con
+   historia, incluida una suscripción cancelada, no crea un intent al llamar
+   `change_project_client` con el hash vigente: devuelve
+   `PROJECT_CLIENT_CHANGE_BLOCKED` y `details.blockers[].resolution:
+   create_new_project`. Si el bloqueo aparece antes de `confirm_action`, el
+   rechazo añade `details.guard_code` y conserva dueño e historia.
+10. **Cambio de cliente — impacto obsoleto.** Con preview inicialmente
+    permitido, cambiar el conjunto vinculado y enviar el hash anterior como
+    `expected_impact_hash`: `STALE_VERSION` al preparar la acción, sin escritura.
+    Confirmar también una intención cuyo impacto cambió: debe rechazarse y
+    requerir nueva revisión. El endpoint del Panel revalida bajo lock y usa
+    409 `records_changed`; mantiene las listas de IDs legacy.
+11. **Hosting — cancelación confirmada.** Encadenar
+    `preview_hosting_subscription_change` (`subscription_id`, `action: cancel`,
+    `effective_date` opcional) → `change_hosting_subscription` con motivo y
+    `expected_impact_hash` → `confirm_action` → `get_project_hosting` con el
+    `project_id`. Antes de confirmar no hay cambios. Después, suscripción
+    `cancelled`, próxima fecha null y los cobros abiertos futuros del preview
+    en `subscription.payments` como `voided`, archivados y con historia. En la
+    réplica del caso PRUEBA, conservar el pago recibido 4 y anular el pendiente
+    futuro 5; no usar esos IDs para mutar producción durante esta validación.
+12. **Hosting — fecha y transiciones.** Probar `pause` desde `active`/`pending`
+    a `suspended`, con evento de pausa manual; `resume` sólo desde esa pausa y
+    `cancel` como terminal. Sólo se anulan cobros abiertos activos con
+    `due_date > effective_date`; los ya causados se conservan cobrables. Al
+    reanudar, restaurar los anulados por esa pausa todavía futuros; si no quedan,
+    iniciar un ciclo desde la fecha de reanudación. Validar fecha futura,
+    suspensión por fallos, retención, archivado, proyecto sin facturación y
+    pago en proceso con transacción Wompi como bloqueos.
+13. **Hosting — entradas de pago.** Los endpoints de link, widget, tarjeta
+    nueva y tarjeta guardada rechazan pagos archivados o `voided`. Una aprobación
+    tardía sobre un cobro anulado registra `paid`, desarchiva el cobro y conserva
+    `settled_after_void`, su evento y aviso al administrador, sin reactivar ni
+    generar otro ciclo. Simular al proveedor; no intentar un cobro real.
+14. **Hosting — automatismos y rechecks.** El pago manual conserva cancelación
+    o pausa; `_generate_next_payment` omite archivados y no genera para esas
+    suscripciones. La tarjeta guardada se revalida bajo lock antes de Wompi y
+    `_onboard_due_phases` relee sus estados bajo lock. PATCH `status` de la
+    suscripción devuelve 400 `subscription_lifecycle_required`. Registrar el
+    trade-off: los locks siguen durante la llamada externa y su polling;
+    **claim-then-call** es seguimiento pendiente.
+15. **UI y E2E.** En Cambiar cliente, un preview bloqueado muestra los motivos
+    y la orientación de crear un proyecto nuevo, oculta los modos y deshabilita
+    Confirmar sin enviar POST. El permitido exige modo y envía el hash revisado.
+    Verificar «Anulado» en pagos/historial y «Anulado»/«Voided» en los locales
+    de billing. El flow `admin-project-change-client` registra display, success
+    y error con APIs simuladas.
+16. **Contratos y conteos.** El inventario vigente, completado por la parte 2,
+    contiene **73** tools de Documentos y **164** de Proyectos.
+    `ContractTemplate.mirror_folder` queda excluido de
+    escritura en propuestas y observable en Documentos; los flags de archivo de
+    Payment son read-only. Sólo `projects` clasifica `HostingSubscription.status`
+    y `next_billing_date` como modificables mediante la acción de ciclo de vida:
+    rechazar esos campos directos en su payload; `accounting-billing` conserva
+    su lectura.
+
+Referencias: [Carpeta Contratos fijada por ID](CONTRACT_TEMPLATE_MCP.md#carpeta-contratos-fijada-por-id-2026-10-09),
+[Evaluación compartida y vista previa](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09)
+y [Ciclo de vida de la suscripción](PLATFORM_PROJECT_BILLING.md#ciclo-de-vida-de-la-suscripción).
+
+Cobertura focal existente, para seleccionar lotes de hasta 20 tests y un máximo
+de tres comandos por ciclo, desde `backend/` con
+`../.venv/bin/pytest <archivo> -v --no-cov`:
+
+| Frente | Archivos |
+| --- | --- |
+| Framework | `content/tests/views/test_mcp_discovery_parity.py`, `test_mcp_query_encoding.py`, `test_mcp_parity_harness.py`; `content/tests/services/test_mcp_error_contract.py` |
+| Pin y espejo | `content/tests/services/test_contract_mirror_pin.py`; `content/tests/views/test_contract_template_mirrors.py` |
+| Cambio de cliente | `content/tests/services/test_project_client_transfer_blockers.py`; `content/tests/views/test_mcp_project_client_change.py`, `test_panel_projects_change_client.py` |
+| Hosting y dinero | `accounts/tests/billing/test_hosting_subscription_lifecycle.py`, `test_payment_lifecycle_guards.py`; `content/tests/views/test_mcp_hosting_subscription.py` |
+| Contratos/pins | `content/tests/views/test_mcp_contracts.py` |
+| Frontend | `frontend/test/components/ProjectChangeClientModal.test.js`; `frontend/e2e/admin/admin-project-change-client.spec.js` |
+
+La tabla enumera cobertura existente; no acredita una nueva ejecución ni el
+comportamiento de locks MySQL a partir de SQLite.
+
+### Nota post-deploy
+
+Las credenciales con allow-list explícita deben añadir las tools nuevas que
+necesiten: en esta parte, `preview_hosting_subscription_change` y
+`change_hosting_subscription`. Verificar también el acceso a `confirm_action`
+y las lecturas del recorrido. El alcance de la credencial limita tanto
+descubrimiento como ejecución. Después del deploy, reconectar los conectores
+de claude.ai para refrescar `tools/list` y comprobar sus schemas y permisos.
+
+## Migración de carpetas por MCP — parte 2 (2026-10)
+
+Revisión documental del 2026-10-10 sobre los commits `9446a196` (políticas),
+`7f7927d5` (pin de preview), `55a31237` (migración y deshacer), `3886f01e`
+(contrato de recibos/conteo), `5e0ddd25` (raíces sin duplicados), `c40f3822`
+(sincronización, exposición latente y adopción estricta) y `92beb803`
+(audiencia al deshacer y cambio de cliente de carpeta), junto con `3bd28f84`
+(guardas de concurrencia de facturación) y los de la parte 1.
+Versiones objetivo de este corte: **documents 3.2.0** y
+**projects 2.2.0**. Validar con datos aislados, proveedor de pagos y correo
+simulados. La lista siguiente describe criterios, no acredita su ejecución
+en producción ni el merge/deploy de PR #504.
+
+1. **Descubrimiento y permisos.** Comparar `tools/list` y
+   `describe_capabilities` con credenciales completas y restringidas: versiones,
+   nombres y contratos iguales; inventario completo 73/164. Una allow-list
+   antigua no incorpora tools nuevas automáticamente. Comprobar
+   `preview_move` y las seis herramientas de migración sólo en Documentos.
+2. **Preview de movimiento y políticas.** Llamar `preview_move` con
+   `document_ids` o `folder_ids`, `destination_folder_id`, `client_policy`,
+   `portal_policy` y decisiones opcionales. Verificar ausencia de escrituras,
+   filas `before`/`after`, audiencia real/latente, estados, bloqueos, totales y
+   `plan_hash`. Probar `inherit`, `keep`, `abort_on_conflict` y `abort`, `allow`,
+   `hide_new_exposure`; un destino sin dueño conserva la propiedad anterior.
+   Con `abort`, un documento archivado marcado visible que ganaría audiencia
+   al restaurarse bloquea con `portal_exposure_latent` y `can_apply: false`;
+   `hide_new_exposure` oculta tanto la exposición actual como la latente.
+   MCP usa `abort_on_conflict`/`abort` por defecto. `move_documents` admite
+   ambas políticas, `document_decisions` y `expected_plan_hash`; `update_folder`
+   admite políticas y hash al cambiar padre; `update_document` admite sólo las
+   políticas al cambiar carpeta. No suponer decisiones en `update_folder` ni
+   decisiones/hash en `update_document`: esa ampliación no está en este corte.
+   Comparar el resultado con el preview; un hash obsoleto donde está soportado
+   devuelve `STALE_MOVE_PLAN`, sin cambios parciales.
+3. **Las dos estrategias de migración.** Probar
+   `preview_folder_migration` con destino exclusivo `project_id` o
+   `create_project`. `adopt_source` exige raíz manual activa, sin retención ni
+   `managed_client`; admite proyecto sin raíz o plantilla descartable sin
+   documentos, reutiliza Entregables/QA manuales y bloquea categorías automáticas
+   homónimas. `move_contents` admite filtros de hijos/documentos directos y
+   requiere `source_rename_to` si la fuente raíz choca con el nombre destino.
+   No hay sufijos silenciosos. Probar contenido archivado: también impide
+   `archive_source_when_empty` mientras permanezca en la fuente. El preview
+   no crea carpetas, proyectos, mutexes ni recibos.
+4. **Token y vigencia.** Capturar `plan_hash` y `plan_token`; el token firmado
+   dura 30 minutos y está ligado al actor/credencial. Expiración y alteración
+   producen `PLAN_TOKEN_INVALID`; otra credencial/actor, `FORBIDDEN`. Cambiar
+   el alcance después del preview o de preparar `apply_folder_migration`
+   produce `STALE_VERSION`. Ninguno de esos casos crea la migración. Un plan
+   bloqueado devuelve `CONFLICT` con `details.blockers` antes de confirmar.
+5. **Confirmación y postcondiciones.** Aplicar con token, motivo y `request_id`,
+   revisar el impacto y ejecutar `confirm_action`. Comprobar una sola raíz
+   gestionada, ninguna manual homónima, la carpeta fijada activa/sin dueño con
+   todos los espejos y la ubicación/propiedad/visibilidad de cada fila igual al
+   plan. Verificar por separado que los espejos siguen sincronizados. Una falla
+   inyectada de escritura o postcondición debe revertir el árbol y el proyecto.
+   La raíz adoptada sigue el nombre, cliente y estado activo al guardar después
+   el proyecto, con padre null. `_synchronize_root` sólo tolera la colisión de
+   nombre con una raíz manual: conserva el nombre de la raíz gestionada y
+   registra el choque. Inyectar cualquier otro fallo de sincronización en un
+   guardado posterior: debe propagarse y revertir tanto el proyecto como su
+   árbol, sin guardar un proyecto cuya raíz quedó desincronizada.
+6. **Recibo e idempotencia.** `get_folder_migration(migration_id)` debe devolver
+   el mismo reporte de aplicación: origen/destino, cambios antes/después, IDs
+   creados/eliminados, archivados, pendientes y motivo. Comprobar la audiencia
+   original en `before.portal_audience` de los documentos de `moved`; el recibo
+   conserva también la de los documentos sin cambios, visible en `restore`
+   del preview de deshacer. El mismo `request_id`, plan, actor y credencial
+   devuelve el resultado original; otro plan con ese
+   ID devuelve `REQUEST_ID_CONFLICT`. Guardar el ID del recibo para deshacer.
+7. **Deshacer y sus bloqueos.** Usar `preview_folder_migration_undo`, pasar su
+   `impact_hash` como `expected_impact_hash` a `undo_folder_migration` con
+   motivo/request ID y confirmar. Comparar con la instantánea original de
+   propiedad, ubicación, visibilidad y archivo; sólo se elimina el proyecto
+   creado si sigue sin uso. Probar `changed_since`, `new_content_since`,
+   `project_in_use`, `already_reverted` y `changed_since` con `reason: lifo`
+   ante una operación posterior que toca las mismas filas. Los cambios de
+   contenido Markdown o `updated_at` por sí solos no son cambios de propiedad.
+   Un documento que adquirió un vínculo congelado debe impedir restaurar
+   su propiedad; un impacto obsoleto o una falla de escritura no deja cambios.
+   Cambiar el dueño del proyecto original después de migrar: si la restauración
+   daría acceso a otro cliente, el preview y el rechazo incluyen
+   `undo_audience_changed` en `blockers`, con documento y audiencias antes/después.
+   Recalcular bajo candados al aplicar; si el impacto cambió desde el preview,
+   devolver `STALE_VERSION` sin restauración parcial. Con audiencia original
+   intacta, deshacer debe recuperar el acceso de ese cliente. Para recibos
+   antiguos sin audiencia registrada, bloquear si se abriría acceso; permitir
+   sólo la restauración sin audiencia en el portal.
+8. **Adopción directa.** `adopt_folder_as_project_root` con `folder_id`,
+   `project_id`, políticas/decisiones, motivo y `request_id` debe mostrar un
+   plan `adopt_source` en la confirmación. Revalidar, confirmar, releer el
+   recibo y deshacer por el mismo motor; no crea una raíz paralela.
+9. **Alta de proyecto con raíz.** En Proyectos, llamar `create_project` con
+   `name`, `client_profile_id` y `root_folder_id`, y sólo `description`/`state_id`
+   como opciones de proyecto. Comprobar el esquema cerrado: `client_policy`,
+   `portal_policy` y `document_decisions` se rechazan como `unknown_field`.
+   Toda adopción usa `abort_on_conflict` y `abort`, sin decisiones. Un plan
+   bloqueado devuelve `CONFLICT`, `details.blockers` y la pista en
+   `details.hint` a `preview_folder_migration`/`apply_folder_migration` de
+   Documentos, sin crear proyecto ni intención. Una confirmación pendiente
+   preparada con políticas permisivas o decisiones anteriores devuelve
+   `STALE_VERSION`. En un plan permitido no se crea antes de confirmar;
+   el resultado incluye `document_root.folder_id`, `adopted: true` y
+   `migration_id`. El alta sin colisión es inmediata y devuelve
+   `adopted: false`/`migration_id: null`. Una raíz homónima adoptable sin ID
+   explícito también exige confirmación y conserva una sola raíz.
+10. **Regla de nombre al crear y renombrar.** Probar en Panel, Platform y MCP
+    raíces manuales homónimas con espacios/mayúsculas y archivadas. Las altas
+    adoptan sólo una candidata segura o devuelven `PROJECT_ROOT_NAME_CONFLICT`
+    con IDs/rutas/motivos. La adopción automática rechaza cualquier documento
+    marcado visible, activo o archivado, aunque hoy no tenga audiencia.
+    La 66 con espejos requiere revisión por las tools de Documentos. Un
+    renombre en colisión se rechaza sin adopción implícita. Raíces gestionadas
+    de otro proyecto o cliente no bloquean proyectos homónimos; un save posterior
+    no debe crear otra raíz ni renombrar sobre una manual en conflicto.
+11. **Cliente de carpeta y políticas de portal.** Llamar
+    `preview_folder_client_change` con `folder_id` y `client_profile_id`:
+    `portal_changes` identifica los documentos que ganarían audiencia con
+    `document_id`, `before_audience` y `after_audience`, sin escrituras.
+    En `change_folder_client` con `mode: propagate`, omitir `portal_policy`
+    por MCP equivale a `abort`, tanto con argumentos planos como con `data`:
+    nueva audiencia devuelve `PORTAL_EXPOSURE` con bloqueos y conserva el árbol.
+    Probar `allow` (audiencia aprobada) y `hide_new_exposure` (nuevo dueño,
+    `is_client_visible: false` sólo en los documentos que ganarían acceso).
+    `folder_only` conserva dueño y visibilidad de los documentos. Una petición
+    del Panel sin política conserva la cascada legacy; una política inválida
+    se rechaza antes de escribir.
+12. **Facturación y carreras.** Interponer pausa o cancelación entre la lectura
+    de acceso y el PATCH de ajustes de suscripción: la relectura bajo candados
+    y la escritura limitada a campos solicitados/derivados deben conservar
+    el estado y la próxima fecha decididos por el ciclo de vida. Un PATCH vacío
+    no escribe ni actualiza la fecha de modificación.
+    En `card-pay`, simular cambios durante la tokenización o la espera del
+    token de aceptación. Antes de crear la transacción Wompi, releer bajo
+    candados proyecto → suscripción → hosting → pago y exigir pago sin archivar
+    en `pending`/`overdue`/`failed`, suscripción activa/pendiente sin archivar
+    ni contexto de retención y ligada al proyecto, y que `project_allows_billing`
+    permita facturar.
+    Si deja de ser elegible, responder HTTP 400 sin enviar el cobro al proveedor
+    ni escribir historia de pago. Reanudar y cobrar con tarjeta nueva o guardada
+    deben usar `project_allows_billing`; incluir un proyecto sin estado
+    clasificado con `state_review_required: true` como caso bloqueado.
+    Simular Wompi y correo. La relectura comprobada en SQLite no certifica
+    la exclusión concurrente de los locks de MySQL REPEATABLE READ.
+
+Referencias de comportamiento, para elegir lotes de hasta 20 tests y no ampliar
+el barrido por la carga del host:
+
+| Frente | Cobertura existente |
+| --- | --- |
+| Plan y movimientos | [Planificador](../backend/content/tests/services/test_ownership_planner.py), [paridad REST/MCP](../backend/content/tests/views/test_ownership_parity.py), [guardas](../backend/content/tests/services/test_ownership_move_guards.py) |
+| Migración y tokens | [Motor de migración](../backend/content/tests/services/test_folder_migration.py), [guardas de migración](../backend/content/tests/services/test_folder_migration_guards.py), [recorrido MCP](../backend/content/tests/views/test_mcp_folder_migration.py) |
+| Deshacer | [Bloqueos y restauración](../backend/content/tests/services/test_folder_migration_undo.py), [audiencia original y recibos antiguos](../backend/content/tests/services/test_folder_migration_undo_audience.py) |
+| Cliente de carpeta | [Exposición y políticas REST/MCP](../backend/content/tests/views/test_folder_client_change_exposure.py) |
+| Raíz y alta | [Regla compartida](../backend/content/tests/services/test_project_root_adoption.py), [alta por MCP](../backend/content/tests/views/test_mcp_create_project_root.py), [sincronización y rollback](../backend/content/tests/services/test_project_document_folder_service.py) |
+| Facturación y carreras | [PATCH, tarjeta y revisión de estado](../backend/accounts/tests/billing/test_billing_race_guards.py) |
+| Versión y discovery | [Pin de Documentos](../backend/content/tests/views/test_documents_mcp_301.py), [capacidades](../backend/content/tests/views/test_document_organization_api.py), [paridad de conectores](../backend/content/tests/views/test_mcp_discovery_parity.py) |
+
+El deploy aplica `content.0286_contracttemplate_mirror_folder`,
+`content.0287_document_ownership_operation` y
+`accounts.0082_hosting_payment_voided_status`. Para Documentos, las allow-lists
+explícitas deben incorporar `preview_move`, `preview_folder_migration`,
+`apply_folder_migration`, `get_folder_migration`,
+`preview_folder_migration_undo`, `undo_folder_migration` y
+`adopt_folder_as_project_root` según el alcance necesario. Para Proyectos,
+añadir las dos tools de hosting indicadas en la parte 1. Permitir confirmaciones
+y lecturas del recorrido y reconectar claude.ai. El orden de integración con
+PR #503 puede exigir el número siguiente y nuevos pins; comprobar las versiones
+realmente publicadas antes de la operación.
+
+### Runbook post-despliegue del caso real
+
+**Ejecutar sólo después del merge y del deploy**, desde los conectores de
+producción con el alcance autorizado. Este procedimiento no se ejecuta desde
+el worktree. Los IDs siguientes provienen de la lectura del 2026-10-09 y deben
+revalidarse: carpeta manual ProjectApp 66, estimaciones 69, Contratos 121,
+documentos de otro cliente 235/241, cliente destino perfil 29 y proyecto
+histórico PRUEBA 7 con suscripción 3 y pagos 4/5. Cancelar la 3 no habilita
+el cambio de cliente del proyecto histórico: la historia financiera se conserva.
+La migración de la 66 se realiza por el conector **Documentos**, mediante
+`preview_folder_migration`/`apply_folder_migration`. No usar `create_project`
+de Proyectos para este caso: las decisiones de 235/241 y la política del portal
+de 69 requieren las herramientas de Documentos.
+
+Guardar evidencia de cada paso en el registro privado de la operación:
+argumentos revisados, request ID, respuestas, hashes, IDs de confirmación y
+recibos. No guardar secretos de credencial ni tokens firmados en Git.
+**El paso 5 debe completarse antes del 2026-12-01 a las 06:00 UTC**, fecha del
+débito automático del pago 5 ($4.800). Si el deploy se demora, el plan alterno
+de retirar la tarjeta guardada requiere una decisión operativa separada; no
+declarar cancelación por haber llegado al plazo.
+
+1. **Credenciales y reconexión.** En el Panel, ampliar las allow-lists de
+   Documentos y Proyectos con las tools anteriores, confirmaciones y lecturas.
+   Reconectar ambos conectores en claude.ai. Consultar `tools/list` y
+   `describe_capabilities` y comparar versiones, schemas y alcance. Revalidar
+   que el deploy aplicó las migraciones citadas. **Evidencia:** SHA desplegado,
+   migraciones aplicadas, IDs/etiquetas de credenciales sin secreto y respuestas
+   nuevas de discovery/capacidades (73/164 con alcance completo).
+2. **Espejos antes de migrar.** Llamar `list_contract_mirrors` sin argumentos.
+   Exigir `pinned_folder.pinned_folder_id: 121`, `folder_movable: true`, carpeta
+   activa/sin dueño y los tres `synchronized: true` (documentos 104/239/205).
+   `pinned_folder_id` es un campo de salida, no un filtro de la herramienta.
+   **Evidencia:** listado completo con IDs, pin, ruta, versiones y flags antes
+   del cambio. Si no coincide, resolver el pin/sincronización antes del paso 3.
+3. **Plan de la carpeta 66.** En el conector Documentos, llamar
+   `preview_folder_migration` con
+   `source_folder_id: 66` y
+   `target: {create_project: {name: "ProjectApp", client_profile_id: 29}}`.
+   Elegir `strategy: adopt_source` para conservar la 66 como raíz, o
+   `strategy: move_contents` con `source_rename_to: "ProjectApp anterior"`
+   y `archive_source_when_empty: true` para crear raíz y archivar la fuente
+   realmente vacía. `target.create_project` es el destino del plan de Documentos,
+   no la herramienta `create_project` de Proyectos. Revalidar que el nombre
+   elegido está libre. En ambos caminos, como argumentos del preview,
+   enviar `client_policy: abort_on_conflict`, `document_decisions` para **235 y
+   241** y una `portal_policy` explícita para las estimaciones visibles de **69**.
+   Para cada documento, decidir `action: inherit` si se autoriza adoptar el
+   dueño del destino, o `action: move` con una `destination_folder_id` ya
+   verificada que conserve el destino adecuado; no inventar ese ID. Para 69,
+   elegir `hide_new_exposure` si no se autoriza abrir acceso al cliente 29,
+   `allow` sólo si se autoriza esa audiencia, o `abort` para detenerla.
+   Incluir la exposición latente de estimaciones archivadas al restaurarse.
+   Exigir `can_apply: true`, cero bloqueos y filas revisadas de esos IDs; Contratos
+   debe aparecer pinned y sin dueño. **Evidencia:** argumentos finales, políticas
+   y decisiones aprobadas, filas 235/241 y de 69, pin 121, árbol final, avisos y
+   `plan_hash`; guardar el token de 30 minutos únicamente en el registro privado.
+   Si vence o cambia el árbol, repetir este paso antes de aplicar.
+4. **Aplicación, recibo y tres comprobaciones.** Llamar
+   `apply_folder_migration` en Documentos con el token vigente, motivo y
+   `request_id` único; revisar el impacto, ejecutar `confirm_action` con su
+   `confirmation_id` y
+   consultar `get_folder_migration` con el `migration_id` recibido. Comprobar:
+   **(a)** `list_folders` con `{name: "ProjectApp", parent_id: null}` devuelve
+   una sola raíz y su ID coincide con `root_folder_id` del recibo;
+   **(b)** `get_project_folder_readiness` sin argumentos devuelve `status: ready`
+   y la raíz del nuevo proyecto está gestionada; **(c)** `list_contract_mirrors`
+   conserva pin 121 y los tres espejos sincronizados, activos y sin dueño.
+   Releer las filas de 69 para comprobar la visibilidad aprobada y la carpeta
+   de estimaciones activa; conservar sus IDs. Con `move_contents`, verificar
+   además fuente 66 renombrada/archivada o el motivo de pendientes del reporte.
+   **Evidencia:** impacto confirmado, request/confirmation/migration IDs,
+   reporte completo y respuestas de las tres comprobaciones, más visibilidad
+   posterior de 69. No declarar la migración completa si alguna difiere del plan.
+5. **Detener el débito de PRUEBA antes del plazo.** Llamar
+   `preview_hosting_subscription_change` con
+   `{subscription_id: 3, action: "cancel"}` y revisar `can_apply`, bloqueos,
+   `voided_payments` y `kept_history`. Exigir que el pago 5 se anule y el pago
+   recibido 4 se conserve. Llamar `change_hosting_subscription` con la misma
+   acción/fecha efectiva, motivo y `expected_impact_hash` del preview; revisar
+   y ejecutar `confirm_action`. Consultar `get_project_hosting` con
+   `{project_id: 7}`: suscripción 3 `cancelled`, próxima fecha null, pago 5
+   `voided` con `is_archived: true`/`archived_at`, y pago 4 pagado con su historia.
+   **Evidencia:** timestamp UTC anterior al **2026-12-01 06:00 UTC**, preview y
+   hash, impacto/confirmación, evento de cancelación e historial de pago,
+   y lectura final del hosting de 7. Si hay bloqueo o el 5 no figura en el
+   preview, detener la aplicación y revisar el estado actual; no intentar un
+   cobro real para verificarlo.
 
 ## Intereses y contratos de propuestas (2026-09-29)
 
@@ -256,8 +665,8 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 2.1.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 2.1.0 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 2.2.0 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 2.3.0 | 169 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial e integridad de datos |
-| `documents` | 3.2.0 | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `projects` | 2.4.0 | 171 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
+| `documents` | 3.3.0 | 73 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 2.1.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
@@ -272,7 +681,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 
 Los 18 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-10, sin
-consultar datos reales: 999 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: 1008 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`.
@@ -1204,9 +1613,12 @@ reglas contables; la paridad de esquemas por sí sola no demuestra esas reglas.
 - Comunicaciones expone 50 herramientas, incluidos preview, envío confirmado, enlaces seguros,
   adjuntos, templates y entregabilidad; sus rechazos dejan la base consistente.
 - Los MCP existentes devuelven y aceptan los campos descritos en su contrato;
-  Documentos expone 66 herramientas y conserva edición Markdown con ETag,
-  papelera, observaciones, hilos, uploads y artefactos. Los espejos de contrato
-  no son editables ni movibles.
+  Documentos 3.2.0 expone 73 herramientas y conserva edición Markdown con ETag,
+  papelera, observaciones, hilos, uploads y artefactos; añade migración/adopción
+  confirmada, recibo y deshacer con las postcondiciones de la parte 2.
+- Proyectos 2.2.0 expone 164 herramientas; el cambio de cliente previsualiza las
+  mismas guardas que ejecuta y el ciclo de hosting exige impacto vigente y
+  confirmación, conservando los pagos y su historia.
 - Las operaciones que requieren confirmación usan intent ligado a credencial,
   confirman una sola vez y dejan evidencia. Las instrucciones describen también
   ejecución directa de compatibilidad y cambios descriptivos de ingresos
@@ -1766,8 +2178,9 @@ Comprobar antes del rollout:
 ## Gestor de la plataforma — incremento 2026-10-07
 
 `projects` conserva su identidad y se presenta como Gestor de la plataforma.
-Ese incremento se entregó en 2.1.0; la versión vigente del registro es 2.2.0.
-Consultar la matriz de entrega para recursos, modelo de datos,
+La ampliación de carpetas y hosting convive con integridad de datos y el registro
+central; su versión de integración es 2.4.0. Consultar la matriz de entrega para
+recursos, modelo de datos,
 fuentes confirmadas y avisos. Los contratos de campos incluyen recursos y sus
 relaciones, `ProposalApprovalFile` y eventos/intentos de aviso, con archivos,
 HTML, snapshots e idempotencia interna excluidos de escritura conversacional.
@@ -1801,3 +2214,8 @@ deniegan las URLs antiguas. QA debe incluir las cuatro familias y los datos
 retenidos, junto con bytes originales, cliente ajeno, archivados y replay del
 manifest. El guion y la condición de cierre tras deploy están en
 `docs/PLATFORM_RESOURCE_MEDIA.md`.
+
+> Integración de #503 y #504 (2026-10-10): las versiones vigentes de esta
+> etapa son Documentos 3.3.0 / 73 herramientas y Proyectos 2.4.0 / 171.
+> Los incrementos evitan reutilizar versiones del registro ya publicado en main.
+> Los changelogs 3.2.0 / 2.2.0 conservan el alcance original de la migración.

@@ -84,7 +84,8 @@ def test_mcp_external_attestation_cannot_claim_a_portal_signature(call_projects,
         'attestation': 'PDF externo', 'method': 'portal',
     }, expect_error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'unknown_field'
+    assert 'method' in {row['field'] for row in error['details']['errors']}
     assert not McpActionIntent.objects.filter(tool_name='attest_external_delivery_signature').exists()
 
 

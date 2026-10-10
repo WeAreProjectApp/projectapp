@@ -69,7 +69,7 @@ def _collection_documents_qs(project):
     )
 
 
-def linked_sets(project):
+def linked_sets(project, *, lock=False):
     """Everything pointing at the project, grouped by how the cascade treats it.
 
     ``blocked_income_pks``: incomes with a non-cancelled cuenta — their client
@@ -78,81 +78,177 @@ def linked_sets(project):
     with the project. Income-backed drafts always belong to a blocked income
     (an active draft blocks it by definition), so they detach with it.
     """
-    hostings = list(
-        HostingRecord.objects.filter(project=project)
-        .select_related('client__user'),
+    from accounts.models import (
+        CollectionAccountContext,
+        HostingSubscription,
+        Payment,
+        ProjectHosting,
     )
-    incomes = list(
-        IncomeRecord.objects.filter(project=project)
-        .select_related('client__user'),
-    )
-    blocked_income_pks = set(
-        IncomeRecord.objects.filter(project=project)
-        .filter(collection_documents__isnull=False)
-        .exclude(
-            collection_documents__commercial_status=(
-                Document.CommercialStatus.CANCELLED
-            ),
-        )
-        .values_list('pk', flat=True),
-    )
-    cuentas = _collection_documents_qs(project)
-    drafts = list(
-        cuentas.filter(commercial_status=Document.CommercialStatus.DRAFT)
-        .select_related('collection_account'),
-    )
-    communication_threads = list(
-        CommunicationThread.objects.filter(project=project)
-        .select_related('client__user')
-        .order_by('id')
-    )
-    try:
-        managed_root = project.document_root_folder
-    except DocumentFolder.DoesNotExist:
+    from content.models import CommunicationFolder
+
+    def rows(qs):
+        qs = qs.order_by('pk')
+        return qs.select_for_update() if lock else qs
+
+    subscriptions = list(rows(HostingSubscription.objects.filter(project=project)))
+    project_hostings = list(rows(ProjectHosting.objects.filter(project=project)))
+    payments = list(rows(Payment.objects.filter(subscription_id__in=[row.pk for row in subscriptions])))
+    hostings = list(rows(HostingRecord.objects.filter(project=project).select_related('client__user')))
+    incomes = list(rows(IncomeRecord.objects.filter(project=project).select_related('client__user')))
+    income_accounts = list(rows(Document.objects.filter(income_record_id__in=[row.pk for row in incomes])))
+    blocked_income_pks = {
+        row.income_record_id for row in income_accounts
+        if row.commercial_status != Document.CommercialStatus.CANCELLED
+    }
+    cuentas = list(rows(_collection_documents_qs(project).select_related('collection_account')))
+    drafts = [row for row in cuentas if row.commercial_status == Document.CommercialStatus.DRAFT]
+    contexts = list(rows(CollectionAccountContext.objects.filter(document_id__in=[row.pk for row in cuentas])))
+    communication_threads = list(rows(CommunicationThread.objects.filter(project=project).select_related('client__user')))
+    communication_folders = list(rows(CommunicationFolder.objects.filter(project=project)))
+    managed_root = rows(DocumentFolder.objects.filter(managed_project=project)).first()
+    if managed_root is None:
         managed_folders = []
     else:
-        managed_ids = {managed_root.pk, *managed_root.get_descendant_ids()}
-        managed_folders = list(
-            DocumentFolder.objects.filter(
-                pk__in=managed_ids,
-                project=project,
-            ).order_by('id')
-        )
+        managed_ids = {managed_root.pk}
+        frontier = [managed_root.pk]
+        while frontier:
+            frontier = list(rows(DocumentFolder.objects.filter(parent_id__in=frontier)).values_list('pk', flat=True))
+            managed_ids.update(frontier)
+        managed_folders = list(rows(DocumentFolder.objects.filter(pk__in=managed_ids, project=project)))
+    other_documents = list(rows(Document.objects.filter(project=project).exclude(document_type__code=COLLECTION_ACCOUNT)))
     return {
         'hostings': hostings,
         'incomes': incomes,
         'blocked_income_pks': blocked_income_pks,
         'draft_following': [d for d in drafts if d.income_record_id is None],
         'draft_detaching': [d for d in drafts if d.income_record_id is not None],
-        'issued_accounts': list(
-            cuentas.filter(commercial_status__in=(
-                Document.CommercialStatus.ISSUED,
-                Document.CommercialStatus.PAID,
-            )),
-        ),
+        'issued_accounts': [row for row in cuentas if row.commercial_status in (
+            Document.CommercialStatus.ISSUED, Document.CommercialStatus.PAID,
+        )],
+        'collection_accounts': cuentas,
+        'income_accounts': income_accounts,
+        'collection_account_contexts': contexts,
+        'subscriptions': subscriptions,
+        'project_hostings': project_hostings,
+        'payments': payments,
+        'liquid_children': list(rows(IncomeRecord.objects.filter(expected_income_id__in=[
+            row.pk for row in incomes if row.kind == IncomeRecord.Kind.EXPECTED
+        ]))),
         # A conversation is historical evidence for its original client. It
         # never follows a project to a different owner; it loses only the
         # project scope and remains reachable from that original client.
         'communication_threads': communication_threads,
+        'communication_folders': communication_folders,
         'managed_folders': managed_folders,
         # Contracts and other non-cuenta documents document the project and
         # travel with it implicitly; they are reported, never rewritten.
-        'other_documents_count': (
-            Document.objects.filter(project=project)
-            .exclude(document_type__code=COLLECTION_ACCOUNT)
-            .count()
-        ),
+        'other_documents': other_documents,
+        'other_documents_count': len(other_documents),
     }
 
 
-def change_client_preview(project, new_profile):
+def plan_client_change(sets, mode):
+    """Pure cascade decisions used both to describe and to execute a mode."""
+    linked_income_ids = {row.pk for row in sets['incomes']}
+    independent_incomes = [
+        row for row in sets['incomes'] if row.expected_income_id not in linked_income_ids
+    ]
+    moving = mode == MODE_MOVE
+    records = {
+        'hostings_move': [row.pk for row in sets['hostings'] if moving and row.client_id is not None],
+        'hostings_detach': [row.pk for row in sets['hostings'] if not moving],
+        'incomes_move': [row.pk for row in independent_incomes
+                         if moving and row.client_id is not None and row.pk not in sets['blocked_income_pks']],
+        'incomes_detach': [row.pk for row in independent_incomes
+                           if not moving or (row.client_id is not None and row.pk in sets['blocked_income_pks'])],
+        'draft_accounts_move': [row.pk for row in sets['draft_following'] if moving],
+        'draft_accounts_detach': [row.pk for row in sets['draft_detaching']] + [
+            row.pk for row in sets['draft_following'] if not moving
+        ],
+        'project_folders_move': [row.pk for row in sets['managed_folders']],
+        'communication_threads_detach': [row.pk for row in sets['communication_threads']],
+        'communication_folders_detach': [row.pk for row in sets['communication_folders']],
+    }
+    records['liquid_children_move'] = [row.pk for row in sets['liquid_children']
+                                       if row.expected_income_id in records['incomes_move']]
+    records['liquid_children_detach'] = [row.pk for row in sets['liquid_children']
+                                         if row.expected_income_id in records['incomes_detach']]
+    return {
+        'moved': {
+            'hostings': len(records['hostings_move']), 'incomes': len(records['incomes_move']),
+            'draft_accounts': len(records['draft_accounts_move']),
+            'project_folders': len(records['project_folders_move']),
+        },
+        'detached': {
+            'hostings': len(records['hostings_detach']), 'incomes': len(records['incomes_detach']),
+            'draft_accounts': len(records['draft_accounts_detach']),
+        },
+        'detached_communications': len(records['communication_threads_detach']),
+        'skipped': {
+            'issued_accounts': len(sets['issued_accounts']),
+            'clientless': sum(row.client_id is None for row in sets['hostings'] + independent_incomes) if moving else 0,
+            'other_documents': sets['other_documents_count'],
+        },
+        'records': records,
+    }
+
+
+def _client_change_impact(project, new_profile, sets, evaluation, *, lock=False):
+    """Hash all identities, including hidden financial history and capped tails."""
+    import hashlib
+    import json
+
+    from accounts.services.project_client_transfer import transfer_history_ids
+
+    payments = sets['payments']
+    financial_history = {
+        'subscriptions': [{
+            'id': subscription.pk,
+            'payments': [{'id': payment.pk, 'status': payment.status, 'due_date': payment.due_date.isoformat()}
+                         for payment in payments if payment.subscription_id == subscription.pk],
+        } for subscription in sets['subscriptions']],
+        'project_hosting_ids': [row.pk for row in sets['project_hostings']],
+        'hosting_record_ids': [row.pk for row in sets['hostings']],
+        'issued_accounts': [{'id': row.pk, 'status': row.commercial_status} for row in sets['collection_accounts']
+                            if row.commercial_status != Document.CommercialStatus.DRAFT],
+        'collection_account_contexts': [{
+            'id': row.pk, 'document_id': row.document_id, 'nature': row.nature,
+            'contract_id': row.contract_id, 'amendment_id': row.amendment_id, 'project_hosting_id': row.hosting_id,
+        } for row in sets['collection_account_contexts']],
+    }
+    planned = {mode: plan_client_change(sets, mode) for mode in MODES}
+    identities = {name: sorted(row.pk for row in rows) for name, rows in sets.items() if isinstance(rows, list)}
+    history_ids = transfer_history_ids(project, lock=lock)
+    canonical = {
+        'target_profile_id': new_profile.pk, 'target_owner_id': new_profile.user_id,
+        'current_owner_id': project.client_id,
+        'linked_sets': identities, 'history_ids': history_ids,
+        'blocked_income_ids': sorted(sets['blocked_income_pks']),
+        'blockers': [{'code': row['code'], 'resource_type': row['resource_type'], 'resource_id': row['resource_id']}
+                     for row in evaluation['blockers']],
+        'financial_history': financial_history, 'planned': planned,
+    }
+    encoded = json.dumps(canonical, sort_keys=True, separators=(',', ':'), ensure_ascii=False, default=str).encode('utf-8')
+    return {
+        **evaluation, 'can_apply': not any(evaluation['blocker_counts'].values()),
+        'planned': planned, 'financial_history': financial_history,
+        'impact_hash': hashlib.sha256(encoded).hexdigest(),
+    }
+
+
+def change_client_preview(project, new_profile, *, lock=False):
     """The full impact of moving ``project`` to ``new_profile``, labelled.
 
-    This is the list the operator confirms against; the apply endpoint gets
-    the hosting/income ids back as a staleness token, so the plan that runs
-    is exactly the plan that was shown.
+    The hash describes both modes, so the operator can choose either after
+    reviewing it. Legacy Panel clients can still echo the linked id lists.
     """
-    sets = linked_sets(project)
+    from accounts.models import Project
+    from accounts.services.project_client_transfer import client_transfer_blockers
+
+    if lock:
+        project = Project.objects.select_for_update().get(pk=project.pk)
+    evaluation = client_transfer_blockers(project, new_profile.user, lock=lock)
+    sets = linked_sets(project, lock=lock)
     blocked = sets['blocked_income_pks']
     current_profile = getattr(project.client, 'profile', None)
 
@@ -191,6 +287,7 @@ def change_client_preview(project, new_profile):
         ]
     )
     return {
+        **_client_change_impact(project, new_profile, sets, evaluation, lock=lock),
         'project': {'id': project.pk, 'name': project.name},
         'current_client': _profile_payload(current_profile),
         'new_client': _profile_payload(new_profile),
@@ -293,28 +390,25 @@ def change_client_apply(project, new_profile, mode, user):
     email — the bulk convention.
     """
     from accounts.models import Project
-    from accounts.services.billing_reassignment import validate_project_billing_reassignment
-    from accounts.services.delivery_client_transfer import assert_delivery_client_transfer_safe
-    from accounts.services.issue_client_transfer import assert_issue_client_transfer_safe
+    from accounts.services.billing_reassignment import (
+        validate_project_billing_reassignment,
+    )
+    from accounts.services.delivery_client_transfer import (
+        assert_delivery_client_transfer_safe,
+    )
+    from accounts.services.issue_client_transfer import (
+        assert_issue_client_transfer_safe,
+    )
+
     original_project = project
     project = Project.objects.select_for_update().get(pk=project.pk)
     # P0 integrates finance -> delivery -> issues -> access revoke -> save.
     validate_project_billing_reassignment(project, new_profile.user)
     project = assert_delivery_client_transfer_safe(original_project, new_profile.user, actor=user)
     assert_issue_client_transfer_safe(project, new_profile.user)
-    sets = linked_sets(project)
-    blocked = sets['blocked_income_pks']
-    # A liquid child whose expected parent is also linked rides with the
-    # parent through the cascade helpers — processing it as its own row
-    # could move it to the new client while a blocked parent stays behind,
-    # splitting one deal across two clients.
-    linked_income_pks = {record.pk for record in sets['incomes']}
-
-    def follows_its_parent(record):
-        return (
-            record.expected_income_id is not None
-            and record.expected_income_id in linked_income_pks
-        )
+    sets = linked_sets(project, lock=True)
+    plan = plan_client_change(sets, mode)
+    records = plan['records']
 
     old_project_values = accounting_service.snapshot_values(
         project, EntityType.PROJECT,
@@ -322,39 +416,19 @@ def change_client_apply(project, new_profile, mode, user):
     if project.client_id != new_profile.user_id:
         from accounts.services.project_client_access import revoke_grants
         revoke_grants(project, actor=user)
-    project.client = new_profile.user
-    project.save(update_fields=['client', 'updated_at'])
-    _log_diff(EntityType.PROJECT, project, old_project_values, user)
-
-    moved = {
-        'hostings': 0,
-        'incomes': 0,
-        'draft_accounts': 0,
-        # The Project post-save synchronization already moved this managed
-        # tree when project.save() above completed.
-        'project_folders': len(sets['managed_folders']),
-    }
-    detached = {'hostings': 0, 'incomes': 0, 'draft_accounts': 0}
-    skipped = {
-        'issued_accounts': len(sets['issued_accounts']),
-        'clientless': 0,
-        'other_documents': sets['other_documents_count'],
-    }
+    moved = plan['moved']
+    detached = plan['detached']
+    skipped = plan['skipped']
 
     # Always preserve the original client on historical conversations. Both
     # cascade modes only detach their project pointer.
     #
-    # La comunicación madre se desprende como cualquier otra: sus mensajes son
-    # correspondencia con el cliente ANTERIOR y moverlos al nuevo los expondría.
-    # Al soltar el proyecto deja de ser madre —si no, `managed_project` quedaría
-    # apuntando a un proyecto que ya no es el suyo y la CheckConstraint lo
-    # rechazaría—, y el proyecto recibe una madre nueva bajo su nuevo dueño.
-    # Es la diferencia deliberada con el gestor documental, donde la carpeta raíz
-    # SÍ sigue al proyecto: allá se mueve organización, acá correspondencia.
-    detached_communications = len(sets['communication_threads'])
+    # The old managed thread becomes ordinary historical correspondence; a
+    # fresh thread is provisioned for the new owner after the cascade.
+    detached_communications = plan['detached_communications']
     if detached_communications:
         CommunicationThread.objects.filter(
-            pk__in=[thread.pk for thread in sets['communication_threads']],
+            pk__in=records['communication_threads_detach'],
         ).update(
             project=None,
             managed_project=None,
@@ -365,78 +439,43 @@ def change_client_apply(project, new_profile, mode, user):
 
     # Old correspondence folders remain with their historical client.
     from content.models import CommunicationFolder
-    CommunicationFolder.objects.filter(project=project).update(project=None)
+    CommunicationFolder.objects.filter(pk__in=records['communication_folders_detach']).update(project=None)
 
-    if mode == MODE_MOVE:
-        for record in sets['hostings']:
-            if record.client_id is None:
-                # No client to move from; the row keeps the project and is
-                # completed later via bulk-assign-client.
-                skipped['clientless'] += 1
-                continue
-            old_values = accounting_service.snapshot_values(
-                record, EntityType.HOSTING,
-            )
+    # Detach historical threads before post-save synchronization can replace
+    # their client with the new project owner.
+    project.client = new_profile.user
+    project.save(update_fields=['client', 'updated_at'])
+    _log_diff(EntityType.PROJECT, project, old_project_values, user)
+
+    for record in sets['hostings']:
+        if record.pk in records['hostings_detach']:
+            _detach_record(EntityType.HOSTING, record, user)
+        elif record.pk in records['hostings_move']:
+            old_values = accounting_service.snapshot_values(record, EntityType.HOSTING)
             record.client = new_profile
-            update_fields = ['client', 'updated_at']
-            # A stale billing snapshot routes the next cuenta to the wrong
-            # inbox — same rule as every client reassignment.
-            update_fields += accounting_service._refresh_hosting_snapshot(record)
+            update_fields = ['client', 'updated_at'] + accounting_service._refresh_hosting_snapshot(record)
             record.save(update_fields=update_fields)
             _log_diff(EntityType.HOSTING, record, old_values, user)
-            moved['hostings'] += 1
-        for record in sets['incomes']:
-            if follows_its_parent(record):
-                continue
-            if record.client_id is None:
-                skipped['clientless'] += 1
-                continue
-            if record.pk in blocked:
-                _detach_record(EntityType.INCOME, record, user)
-                if record.kind == IncomeRecord.Kind.EXPECTED:
-                    accounting_service._cascade_project_to_liquid_children(
-                        record, user,
-                    )
-                detached['incomes'] += 1
-                continue
-            old_values = accounting_service.snapshot_values(
-                record, EntityType.INCOME,
-            )
+    for record in sets['incomes']:
+        if record.pk in records['incomes_detach']:
+            _detach_record(EntityType.INCOME, record, user)
+            if record.kind == IncomeRecord.Kind.EXPECTED:
+                accounting_service._cascade_project_to_liquid_children(record, user)
+        elif record.pk in records['incomes_move']:
+            old_values = accounting_service.snapshot_values(record, EntityType.INCOME)
             record.client = new_profile
             record.save(update_fields=['client', 'updated_at'])
             _log_diff(EntityType.INCOME, record, old_values, user)
             if record.kind == IncomeRecord.Kind.EXPECTED:
-                accounting_service._cascade_client_to_liquid_children(
-                    record, user,
-                )
-            moved['incomes'] += 1
-        for document in sets['draft_following']:
+                accounting_service._cascade_client_to_liquid_children(record, user)
+    for document in sets['draft_following'] + sets['draft_detaching']:
+        if document.pk in records['draft_accounts_move']:
             _move_draft(document, new_profile, user)
-            moved['draft_accounts'] += 1
-        for document in sets['draft_detaching']:
+        elif document.pk in records['draft_accounts_detach']:
             _detach_draft(document, user)
-            detached['draft_accounts'] += 1
-    else:
-        for record in sets['hostings']:
-            _detach_record(EntityType.HOSTING, record, user)
-            detached['hostings'] += 1
-        for record in sets['incomes']:
-            if follows_its_parent(record):
-                continue
-            _detach_record(EntityType.INCOME, record, user)
-            if record.kind == IncomeRecord.Kind.EXPECTED:
-                accounting_service._cascade_project_to_liquid_children(
-                    record, user,
-                )
-            detached['incomes'] += 1
-        for document in sets['draft_following'] + sets['draft_detaching']:
-            _detach_draft(document, user)
-            detached['draft_accounts'] += 1
 
-    # El proyecto quedó sin madre al desprenderse la anterior: se le da una nueva
-    # bajo su nuevo dueño. Va acá, explícito, y no en el signal de update: éste
-    # sólo sincroniza madres existentes —igual que en carpetas, donde adoptar una
-    # raíz histórica exige revisión—, y quien la quitó fue esta operación.
+    # Updating a project only synchronizes existing managed threads. This
+    # operation detached the old one, so explicitly provision its replacement.
     from content.services.project_communication_service import ensure_project_thread
 
     ensure_project_thread(project)

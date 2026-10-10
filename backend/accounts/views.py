@@ -879,6 +879,7 @@ def _project_detail_queryset(queryset):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def project_list_view(request):
     """
     GET  — Admin sees all projects; client sees only their own.
@@ -937,22 +938,45 @@ def project_list_view(request):
     if proposal:
         payment_milestones, hosting_tiers = _extract_proposal_financial_data(proposal)
 
-    project = Project.objects.create(
-        name=data['name'],
-        description=data.get('description', ''),
-        client_id=data['client_id'],
-        status=data.get('status', Project.STATUS_DEVELOPMENT),
-        progress=data.get('progress', 0),
-        start_date=data.get('start_date'),
-        estimated_end_date=data.get('estimated_end_date'),
-        hosting_start_date=data.get('hosting_start_date'),
-        payment_milestones=payment_milestones,
-        hosting_tiers=hosting_tiers,
+    from content.services.project_document_folder_service import (
+        auto_adopt_project_root,
+        lock_project_root_names,
+        project_document_root_result,
+        project_root_name_decision,
+        record_project_creation_extras,
     )
+
+    lock_project_root_names()
+    decision = project_root_name_decision(data['name'])
+    platform_fields = {
+        'progress': data.get('progress', 0),
+        'start_date': data.get('start_date'),
+        'estimated_end_date': data.get('estimated_end_date'),
+        'hosting_start_date': data.get('hosting_start_date'),
+        'payment_milestones': payment_milestones,
+        'hosting_tiers': hosting_tiers,
+    }
+    if decision['decision'] == 'adopt':
+        project = auto_adopt_project_root({
+            'name': data['name'], 'description': data.get('description', ''),
+            'client_profile_id': UserProfile.objects.get(user_id=data['client_id']).pk,
+        }, decision['folder_id'], actor=request.user)
+        for field, value in platform_fields.items():
+            setattr(project, field, value)
+        project.save(update_fields=[*platform_fields, 'updated_at'])
+    else:
+        project = Project.objects.create(
+            name=data['name'], description=data.get('description', ''),
+            client_id=data['client_id'],
+            status=data.get('status', Project.STATUS_DEVELOPMENT),
+            **platform_fields,
+        )
+    document_root = project_document_root_result(project)
     from content.services import project_service
-    project_service.log_project_event(
-        project, project_service.Action.CREATED, {}, request.user,
-    )
+    if not document_root['adopted']:
+        project_service.log_project_event(
+            project, project_service.Action.CREATED, {}, request.user,
+        )
 
     if proposal:
         from accounts.models import Deliverable, ProjectPhase
@@ -977,7 +1001,7 @@ def project_list_view(request):
     from accounts.models import Notification
     from accounts.services.notifications import notify
     client = User.objects.get(id=data['client_id'])
-    notify(
+    notification = notify(
         user=client,
         type=Notification.TYPE_GENERAL,
         title=f'Nuevo proyecto: {project.name}',
@@ -986,9 +1010,14 @@ def project_list_view(request):
         related_object_type='project',
         related_object_id=project.id,
     )
+    if document_root['adopted']:
+        record_project_creation_extras(project, document_root['migration_id'], notification)
 
     return Response(
-        ProjectDetailSerializer(project, context={'request': request}).data,
+        {
+            **ProjectDetailSerializer(project, context={'request': request}).data,
+            'document_root': document_root,
+        },
         status=status.HTTP_201_CREATED,
     )
 
@@ -2254,15 +2283,24 @@ def _generate_next_payment(subscription):
     """
     from dateutil.relativedelta import relativedelta
 
-    if not HostingSubscription.objects.filter(
+    from accounts.services.hosting_subscription_lifecycle import is_manually_paused
+
+    # Refresh lifecycle guards without discarding the caller's billing state.
+    guard_subscription = HostingSubscription.objects.filter(
         pk=subscription.pk, retention_context__isnull=True, project__isnull=False,
-    ).exists():
+    ).only('pk', 'retention_context_id', 'project_id', 'status').first()
+    if (
+        not guard_subscription
+        or guard_subscription.status == HostingSubscription.STATUS_CANCELLED
+        or is_manually_paused(guard_subscription)
+    ):
         return None
 
     # Check if there's already a pending/processing payment
     existing = Payment.objects.filter(
         subscription=subscription,
         status__in=[Payment.STATUS_PENDING, Payment.STATUS_PROCESSING],
+        is_archived=False,
     ).exists()
     if existing:
         return None
@@ -2295,6 +2333,7 @@ def _handle_payment_approved(payment, payment_history_source=''):
     from dateutil.relativedelta import relativedelta
 
     from accounts.models import PaymentHistory
+    from accounts.services.hosting_subscription_lifecycle import is_manually_paused
     from accounts.services.payment_history import record_payment_status_change
 
     with transaction.atomic():
@@ -2315,18 +2354,42 @@ def _handle_payment_approved(payment, payment_history_source=''):
             return
 
         old_status = current.status
+        historical_settlement = (
+            old_status == Payment.STATUS_VOIDED or current.is_archived
+            or sub.status == HostingSubscription.STATUS_CANCELLED or is_manually_paused(sub, lock=True)
+        )
         current.status = Payment.STATUS_PAID
         current.paid_at = tz.now()
         current.wompi_transaction_id = payment.wompi_transaction_id
-        current.save(update_fields=['wompi_transaction_id', 'status', 'paid_at'])
+        if historical_settlement:
+            current.is_archived = False
+            current.archived_at = None
+        current.save(update_fields=['wompi_transaction_id', 'status', 'paid_at', 'is_archived', 'archived_at'])
+        metadata = {}
+        if historical_settlement and sub.project_id:
+            from accounts.models import BillingContextEvent
+            event = BillingContextEvent.objects.create(
+                project_id=sub.project_id, actor=None,
+                operation='hosting_subscription.settled_after_void',
+                reason='Cobro confirmado después de anular, archivar, pausar o cancelar.',
+                before={'subscription_id': sub.pk, 'payment_id': current.pk,
+                        'payment_status': old_status, 'subscription_status': sub.status},
+                after={'subscription_id': sub.pk, 'payment_id': current.pk,
+                       'payment_status': current.status, 'subscription_status': sub.status},
+            )
+            metadata['event_id'] = event.pk
+            transaction.on_commit(lambda: _notify_payment_approved(current, sub), robust=True)
+        if historical_settlement:
+            metadata['settled_after_void'] = True
         record_payment_status_change(
             current, old_status, Payment.STATUS_PAID,
             source=payment_history_source or PaymentHistory.SOURCE_SYSTEM,
+            metadata=metadata,
             defer_email=True,
         )
 
         # Retained subscriptions receive historical settlement only.
-        if not sub.retention_context_id and sub.project_id:
+        if not historical_settlement and not sub.retention_context_id and sub.project_id:
             sub.next_billing_date = current.billing_period_end + relativedelta(days=1)
             if sub.status == HostingSubscription.STATUS_PENDING:
                 sub.status = HostingSubscription.STATUS_ACTIVE
@@ -2346,6 +2409,16 @@ def _notify_payment_approved(payment, sub):
         from accounts.services.notifications import notify, notify_project_admins
         from content.utils import format_bogota_date, format_cop_email
         project = sub.project
+        if payment.history.filter(metadata__settled_after_void=True).exists():
+            notify_project_admins(
+                project, Notification.TYPE_GENERAL,
+                f'Cobro tardío recibido: {project.name}',
+                message=(f'Se recibieron ${format_cop_email(payment.amount)} COP de un cobro '
+                         'anulado o fuera del ciclo vigente. La suscripción conserva su estado '
+                         'y no se generaron nuevos cobros. Revisa este ingreso.'),
+                related_object_type='payment', related_object_id=payment.pk,
+            )
+            return
         notify(
             user=project.client,
             type=Notification.TYPE_GENERAL,
@@ -2396,6 +2469,7 @@ def _poll_transaction_status(
     return None
 
 
+@transaction.atomic
 def _charge_payment_with_source(payment, history_source=''):
     """
     Charge a Payment using its subscription's stored Wompi payment source.
@@ -2405,17 +2479,38 @@ def _charge_payment_with_source(payment, history_source=''):
     import hashlib
     import time
 
+    from content.services.project_state_service import project_allows_billing
     from django.conf import settings as dj_settings
 
-    from accounts.models import PaymentHistory
+    from accounts.models import PaymentHistory, ProjectHosting
+    from accounts.services.hosting_subscription_lifecycle import PaymentChargeSkipped
     from accounts.services.payment_history import record_payment_status_change
     from accounts.services.wompi import charge_with_payment_source
 
     # Re-read ownership rather than trusting a queued task's cached relation.
-    sub = HostingSubscription.objects.get(pk=payment.subscription_id)
+    project_id = HostingSubscription.objects.values_list('project_id', flat=True).get(pk=payment.subscription_id)
+    project = None
+    if project_id:
+        project = Project.objects.select_for_update().filter(pk=project_id).first()
+    sub = HostingSubscription.objects.select_for_update().get(pk=payment.subscription_id)
+    list(ProjectHosting.objects.select_for_update().filter(subscription=sub).order_by('pk'))
+    current = Payment.objects.select_for_update().get(pk=payment.pk, subscription_id=sub.pk)
+    queued_status = payment.status
+    for field in Payment._meta.concrete_fields:
+        setattr(payment, field.attname, getattr(current, field.attname))
     payment.subscription = sub
     if sub.retention_context_id or not sub.project_id:
         raise ValueError('La suscripción se conserva sin proyecto y no permite nuevos cobros.')
+    if (
+        payment.status != queued_status or payment.is_archived or payment.status not in (
+            Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED,
+        ) or sub.status not in (HostingSubscription.STATUS_ACTIVE, HostingSubscription.STATUS_PENDING)
+        or sub.is_archived or sub.project_id != project_id
+        or project is None or not project_allows_billing(project)
+    ):
+        logger.info('STORED_CHARGE_SKIPPED payment_id=%s subscription_id=%s', payment.pk, sub.pk)
+        raise PaymentChargeSkipped()
+    sub.project = project
     if not sub.wompi_payment_source_id:
         raise ValueError('La suscripción no tiene una tarjeta guardada.')
 
@@ -2535,7 +2630,7 @@ def project_subscription_view(request, project_id):
            Required: { plan: 'quarterly'|'semiannual'|'nine_month' }
            Only works if no subscription exists yet and the project has phases
            with at least one already started.
-    PATCH — Change hosting plan (admin or client) or status (admin only).
+    PATCH — Change hosting plan (admin or client) or archive visibility (admin).
     """
     related_fields = ('hosting_subscription',) if request.method == 'PATCH' else ()
     proj, err = _get_project_or_403(request, project_id, related_fields=related_fields)
@@ -2602,72 +2697,82 @@ def project_subscription_view(request, project_id):
             )
         return Response(HostingSubscriptionSerializer(sub).data)
 
+    if 'status' in request.data:
+        return Response({
+            'code': 'subscription_lifecycle_required',
+            'detail': 'Usa el ciclo de vida de la suscripción (pausar, cancelar o reanudar) desde el Gestor de Proyectos.',
+        }, status=status.HTTP_400_BAD_REQUEST)
+
     serializer = UpdateSubscriptionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     data = dict(serializer.validated_data)
 
-    # Client can only change plan, not status
-    if 'status' in data and not is_admin:
+    if 'is_archived' in data and not is_admin:
         return Response(
-            {'detail': 'Solo los administradores pueden cambiar el estado de la suscripción.'},
+            {'detail': 'Solo los administradores pueden archivar la suscripción.'},
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    if 'is_archived' in data:
-        if not is_admin:
+    with transaction.atomic():
+        # A lifecycle decision may have committed after the access check.
+        proj = Project.objects.select_for_update().get(pk=proj.pk)
+        try:
+            sub = HostingSubscription.objects.select_for_update().get(project=proj)
+        except HostingSubscription.DoesNotExist:
             return Response(
-                {'detail': 'Solo los administradores pueden archivar la suscripción.'},
-                status=status.HTTP_403_FORBIDDEN,
+                {'detail': 'No hay suscripción de hosting para este proyecto.'},
+                status=status.HTTP_404_NOT_FOUND,
             )
-        flag = data.pop('is_archived')
-        sub.updated_at = timezone.now()
-        if flag:
-            archive_record(sub, extra_update_fields=('updated_at',))
-        else:
-            unarchive_record(sub, extra_update_fields=('updated_at',))
+        update_fields = []
 
-    if 'plan' in data and data['plan'] != sub.plan:
-        # The frequency is locked once the first payment is settled; until
-        # then (status pending) the client may still change it.
-        if not is_admin and sub.status != HostingSubscription.STATUS_PENDING:
-            return Response(
-                {'detail': 'La frecuencia ya no se puede cambiar. Escríbenos para ajustarla.'},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        from decimal import Decimal
-
-        from dateutil.relativedelta import relativedelta
-
-        from accounts.services.hosting_billing import project_billing_amount
-
-        sub.plan = data['plan']
-        sub.billing_amount = project_billing_amount(proj, data['plan'])
-        months = sub.billing_months
-        sub.effective_monthly_amount = round(sub.billing_amount / Decimal(months), 2)
-
-        # While still pending, realign the unpaid first payment + cycle.
-        if sub.status == HostingSubscription.STATUS_PENDING:
-            first = (
-                sub.payments.filter(status=Payment.STATUS_PENDING, is_archived=False)
-                .order_by('billing_period_start').first()
-            )
-            if first:
-                billing_end = (
-                    first.billing_period_start
-                    + relativedelta(months=months) - relativedelta(days=1)
+        if 'plan' in data and data['plan'] != sub.plan:
+            # The frequency is locked once the first payment is settled; until
+            # then (status pending) the client may still change it.
+            if not is_admin and sub.status != HostingSubscription.STATUS_PENDING:
+                return Response(
+                    {'detail': 'La frecuencia ya no se puede cambiar. Escríbenos para ajustarla.'},
+                    status=status.HTTP_403_FORBIDDEN,
                 )
-                first.amount = sub.billing_amount
-                first.billing_period_end = billing_end
-                first.description = (
-                    f'Hosting {sub.plan_label} — '
-                    f'{first.billing_period_start} a {billing_end}'
+
+            from decimal import Decimal
+
+            from dateutil.relativedelta import relativedelta
+
+            from accounts.services.hosting_billing import project_billing_amount
+
+            sub.plan = data['plan']
+            sub.billing_amount = project_billing_amount(proj, data['plan'])
+            months = sub.billing_months
+            sub.effective_monthly_amount = round(sub.billing_amount / Decimal(months), 2)
+            update_fields.extend(['plan', 'billing_amount', 'effective_monthly_amount'])
+
+            # While still pending, realign the unpaid first payment + cycle.
+            if sub.status == HostingSubscription.STATUS_PENDING:
+                first = (
+                    sub.payments.select_for_update()
+                    .filter(status=Payment.STATUS_PENDING, is_archived=False)
+                    .order_by('billing_period_start').first()
                 )
-                first.save(update_fields=['amount', 'billing_period_end', 'description'])
-                sub.next_billing_date = billing_end + relativedelta(days=1)
-    if 'status' in data:
-        sub.status = data['status']
-    sub.save()
+                if first:
+                    billing_end = (
+                        first.billing_period_start
+                        + relativedelta(months=months) - relativedelta(days=1)
+                    )
+                    first.amount = sub.billing_amount
+                    first.billing_period_end = billing_end
+                    first.description = (
+                        f'Hosting {sub.plan_label} — '
+                        f'{first.billing_period_start} a {billing_end}'
+                    )
+                    first.save(update_fields=['amount', 'billing_period_end', 'description'])
+                    sub.next_billing_date = billing_end + relativedelta(days=1)
+                    update_fields.append('next_billing_date')
+
+        if 'is_archived' in data and data['is_archived'] != sub.is_archived:
+            archive_action = archive_record if data['is_archived'] else unarchive_record
+            archive_action(sub, extra_update_fields=(*update_fields, 'updated_at'))
+        elif update_fields:
+            sub.save(update_fields=[*update_fields, 'updated_at'])
 
     prefetch_related_objects([sub], _subscription_payment_prefetch())
     return Response(HostingSubscriptionSerializer(sub).data)
@@ -2710,6 +2815,7 @@ def project_payments_view(request, project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated, IsAdminRole])
+@transaction.atomic
 def register_manual_payment_view(request, project_id):
     """Admin registers a manual (off-platform) hosting payment for a project."""
     from decimal import Decimal
@@ -2722,6 +2828,7 @@ def register_manual_payment_view(request, project_id):
     proj, err = _get_project_or_403(request, project_id)
     if err:
         return err
+    Project.objects.select_for_update().get(pk=proj.pk)
 
     ser = _ManualSer(data=request.data)
     if not ser.is_valid():
@@ -2738,8 +2845,11 @@ def register_manual_payment_view(request, project_id):
     next_billing = billing_period_end + relativedelta(days=1)
 
     try:
-        sub = HostingSubscription.objects.get(project=proj)
-        if not sub.next_billing_date or next_billing > sub.next_billing_date:
+        sub = HostingSubscription.objects.select_for_update().get(project=proj)
+        from accounts.services.hosting_subscription_lifecycle import is_manually_paused
+        if sub.status != HostingSubscription.STATUS_CANCELLED and not is_manually_paused(sub, lock=True) and (
+            not sub.next_billing_date or next_billing > sub.next_billing_date
+        ):
             sub.next_billing_date = next_billing
             sub.status = HostingSubscription.STATUS_ACTIVE
             sub.save(update_fields=['next_billing_date', 'status'])
@@ -2797,7 +2907,7 @@ def payment_generate_link_view(request, project_id, payment_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
+    if payment.is_archived or payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
         return Response(
             {'detail': 'Solo se pueden generar links para pagos pendientes, vencidos o fallidos.'},
             status=status.HTTP_400_BAD_REQUEST,
@@ -2844,7 +2954,7 @@ def payment_widget_data_view(request, project_id, payment_id):
             status=status.HTTP_404_NOT_FOUND,
         )
 
-    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_PROCESSING, Payment.STATUS_FAILED):
+    if payment.is_archived or payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_PROCESSING, Payment.STATUS_FAILED):
         return Response(
             {'detail': 'Este pago no está disponible para cobro.'},
             status=status.HTTP_400_BAD_REQUEST,
@@ -2893,7 +3003,10 @@ def payment_card_pay_view(request, project_id, payment_id):
     import hashlib
     import time
 
+    from content.services.project_state_service import project_allows_billing
     from django.conf import settings as django_settings
+
+    from accounts.models import ProjectHosting
 
     proj, err = _get_project_or_403(request, project_id)
     if err:
@@ -2906,7 +3019,7 @@ def payment_card_pay_view(request, project_id, payment_id):
     except Payment.DoesNotExist:
         return Response({'detail': 'Pago no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
+    if payment.is_archived or payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
         return Response({'detail': 'Este pago no está disponible para cobro.'}, status=status.HTTP_400_BAD_REQUEST)
 
     card_number = request.data.get('card_number', '')
@@ -2918,47 +3031,69 @@ def payment_card_pay_view(request, project_id, payment_id):
     if not all([card_number, exp_month, exp_year, cvc, card_holder]):
         return Response({'detail': 'Todos los campos de la tarjeta son requeridos.'}, status=status.HTTP_400_BAD_REQUEST)
 
-    from django.utils import timezone as tz
-
     try:
-        from accounts.services.wompi import tokenize_card, get_acceptance_token, create_card_transaction
+        from accounts.services.wompi import (
+            create_card_transaction,
+            get_acceptance_token,
+            tokenize_card,
+        )
 
         card_token = tokenize_card(card_number, exp_month, exp_year, cvc, card_holder)['id']
         acceptance_token = get_acceptance_token()
 
-        ts = int(time.time())
-        reference = f'PA{payment.id}P{proj.id}T{ts}'
-        amount_in_cents = int(payment.amount * 100)
-        integrity_str = f'{reference}{amount_in_cents}COP{django_settings.WOMPI_INTEGRITY_SECRET}'
-        signature = hashlib.sha256(integrity_str.encode()).hexdigest()
+        with transaction.atomic():
+            # Tokenization may outlast a pause, cancel or project-state change.
+            proj = Project.objects.select_for_update().get(pk=proj.pk)
+            sub = HostingSubscription.objects.select_for_update().get(pk=payment.subscription_id)
+            list(ProjectHosting.objects.select_for_update().filter(subscription=sub).order_by('pk'))
+            payment = Payment.objects.select_for_update().get(pk=payment.pk, subscription_id=sub.pk)
+            if (
+                payment.is_archived or payment.status not in (
+                    Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED,
+                ) or sub.status not in (HostingSubscription.STATUS_ACTIVE, HostingSubscription.STATUS_PENDING)
+                or sub.is_archived or sub.retention_context_id or sub.project_id != proj.pk
+                or not project_allows_billing(proj)
+            ):
+                return Response(
+                    {'detail': 'Este pago no está disponible para cobro.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            sub.project = proj
+            payment.subscription = sub
 
-        txn_data = create_card_transaction(payment, card_token, acceptance_token, reference, signature)
-        validate_transaction_binding(payment, txn_data, expected_reference=reference)
+            ts = int(time.time())
+            reference = f'PA{payment.id}P{proj.id}T{ts}'
+            amount_in_cents = int(payment.amount * 100)
+            integrity_str = f'{reference}{amount_in_cents}COP{django_settings.WOMPI_INTEGRITY_SECRET}'
+            signature = hashlib.sha256(integrity_str.encode()).hexdigest()
 
-        txn_id = txn_data.get('id', '')
-        txn_status = txn_data.get('status', '')
+            txn_data = create_card_transaction(payment, card_token, acceptance_token, reference, signature)
+            validate_transaction_binding(payment, txn_data, expected_reference=reference)
 
-        payment.wompi_transaction_id = str(txn_id)
+            txn_id = txn_data.get('id', '')
+            txn_status = txn_data.get('status', '')
 
-        from accounts.models import PaymentHistory
-        from accounts.services.payment_history import record_payment_status_change
+            payment.wompi_transaction_id = str(txn_id)
 
-        if txn_status == 'APPROVED':
-            _handle_payment_approved(payment, PaymentHistory.SOURCE_API)
-        elif txn_status == 'PENDING':
-            old_status = payment.status
-            payment.status = Payment.STATUS_PROCESSING
-            payment.save(update_fields=['wompi_transaction_id', 'status'])
-            record_payment_status_change(
-                payment, old_status, Payment.STATUS_PROCESSING, PaymentHistory.SOURCE_API,
-            )
-        elif txn_status in ('DECLINED', 'ERROR', 'VOIDED'):
-            old_status = payment.status
-            payment.status = Payment.STATUS_FAILED
-            payment.save(update_fields=['wompi_transaction_id', 'status'])
-            record_payment_status_change(
-                payment, old_status, Payment.STATUS_FAILED, PaymentHistory.SOURCE_API,
-            )
+            from accounts.models import PaymentHistory
+            from accounts.services.payment_history import record_payment_status_change
+
+            if txn_status == 'APPROVED':
+                _handle_payment_approved(payment, PaymentHistory.SOURCE_API)
+            elif txn_status == 'PENDING':
+                old_status = payment.status
+                payment.status = Payment.STATUS_PROCESSING
+                payment.save(update_fields=['wompi_transaction_id', 'status'])
+                record_payment_status_change(
+                    payment, old_status, Payment.STATUS_PROCESSING, PaymentHistory.SOURCE_API,
+                )
+            elif txn_status in ('DECLINED', 'ERROR', 'VOIDED'):
+                old_status = payment.status
+                payment.status = Payment.STATUS_FAILED
+                payment.save(update_fields=['wompi_transaction_id', 'status'])
+                record_payment_status_change(
+                    payment, old_status, Payment.STATUS_FAILED, PaymentHistory.SOURCE_API,
+                )
 
         return Response({
             'payment_id': payment.id,
@@ -3313,7 +3448,7 @@ def payment_charge_stored_view(request, project_id, payment_id):
     except Payment.DoesNotExist:
         return Response({'detail': 'Pago no encontrado.'}, status=status.HTTP_404_NOT_FOUND)
 
-    if payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
+    if payment.is_archived or payment.status not in (Payment.STATUS_PENDING, Payment.STATUS_OVERDUE, Payment.STATUS_FAILED):
         return Response(
             {'detail': 'Este pago no está disponible para cobro.'},
             status=status.HTTP_400_BAD_REQUEST,
@@ -3328,6 +3463,11 @@ def payment_charge_stored_view(request, project_id, payment_id):
     try:
         txn_data = _charge_payment_with_source(payment)
     except WompiPaymentBindingError as exc:
+        if exc.reason == 'payment-not-payable':
+            return Response(
+                {'detail': 'Este pago no está disponible para cobro.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         logger.warning('Stored charge binding rejected for payment %s: %s', payment.id, exc.reason)
         return Response(
             {'detail': 'No se pudo verificar la transacción del pago.'},

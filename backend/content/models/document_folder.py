@@ -224,3 +224,9 @@ class DocumentFolderMutationLock(models.Model):
     uniqueness migration that would fail on legacy names.
     """
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+
+
+def lock_document_folder_mutations():
+    """Ensure and lock the shared mutex inside the caller's transaction."""
+    DocumentFolderMutationLock.objects.get_or_create(pk=1)
+    return DocumentFolderMutationLock.objects.select_for_update().get(pk=1)

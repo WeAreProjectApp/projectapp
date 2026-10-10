@@ -73,11 +73,17 @@ def synchronize_project_document_folder(
     if raw:
         return
     from content.services.project_document_folder_service import (
+        adopt_project_root,
         ensure_project_folder,
         synchronize_existing_project_folder,
     )
 
     if created:
+        pending_root = getattr(instance, '_pending_root_adoption', None)
+        if pending_root is not None:
+            del instance._pending_root_adoption
+            adopt_project_root(instance, pending_root)
+            return
         ensure_project_folder(instance)
         return
     synchronize_existing_project_folder(instance)

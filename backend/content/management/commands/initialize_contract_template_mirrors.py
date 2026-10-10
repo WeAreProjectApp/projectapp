@@ -14,7 +14,7 @@ from content.services.contract_template_validation import ContractTemplateError,
 
 
 class Command(BaseCommand):
-    help = 'Inicializa los tres espejos en Contratos; sin --apply sólo informa.'
+    help = 'Inicializa los tres espejos en la carpeta indicada por ID; sin --apply sólo informa.'
 
     def add_arguments(self, parser):
         parser.add_argument('--apply', action='store_true')
@@ -31,9 +31,14 @@ class Command(BaseCommand):
         try:
             with transaction.atomic():
                 template = default_template(lock=True)
-                folder = DocumentFolder.objects.select_for_update().get(pk=options['folder_id'], name='Contratos', is_archived=False)
+                folder = DocumentFolder.objects.select_for_update().get(pk=options['folder_id'], is_archived=False)
+                if template.mirror_folder_id is not None and template.mirror_folder_id != folder.pk:
+                    raise CommandError(f'Los espejos ya están fijados a la carpeta {template.mirror_folder_id}; no se re-fijan.')
                 if folder.client_user_id or folder.project_id:
                     raise CommandError('Contratos debe ser una carpeta interna sin cliente ni proyecto.')
+                if template.mirror_folder_id is None:
+                    template.mirror_folder = folder
+                    template.save(update_fields=['mirror_folder'])
                 actor = get_user_model().objects.get(pk=options['actor_id']) if options['actor_id'] else get_user_model().objects.filter(is_active=True, is_superuser=True).order_by('pk').first()
                 if actor is None or not actor.is_active or not actor.is_staff:
                     raise CommandError('Se requiere un administrador activo como autor.')

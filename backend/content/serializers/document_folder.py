@@ -4,7 +4,10 @@ from django.db.models.functions import Lower, Trim
 from rest_framework import serializers
 
 from content.models import DocumentFolder
-from content.models.document_folder import DocumentFolderMutationLock
+from content.models.document_folder import (
+    DocumentFolderMutationLock,
+    lock_document_folder_mutations,
+)
 from content.serializers.document import (
     ClientProjectReadMixin,
     apply_client_project_association,
@@ -14,18 +17,38 @@ from content.services.document_archive_service import (
     DocumentArchiveError,
     ensure_active_target,
 )
+from content.services.document_ownership_planner import CLIENT_POLICIES, PORTAL_POLICIES
 
 FOLDER_WRITE_FIELDS = {'name', 'parent', 'parent_id', 'order', 'client', 'project'}
+FOLDER_POLICY_FIELDS = {'client_policy', 'portal_policy', 'expected_plan_hash'}
 
 
-def validate_folder_input(data):
+def validate_folder_input(data, *, allow_policies=False):
     if not hasattr(data, 'keys'):
         raise serializers.ValidationError({'detail': 'El payload debe ser un objeto.'})
-    unknown = set(data) - FOLDER_WRITE_FIELDS
+    unknown = set(data) - (FOLDER_WRITE_FIELDS | FOLDER_POLICY_FIELDS if allow_policies else FOLDER_WRITE_FIELDS)
     if unknown:
         raise serializers.ValidationError({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unknown)})
     if 'parent' in data and 'parent_id' in data and data['parent'] != data['parent_id']:
         raise serializers.ValidationError({'parent_id': 'parent y parent_id deben coincidir.'})
+
+
+def validate_folder_name(name, parent, instance=None, *, planned_siblings=()):
+    """Use one duplicate-name rule for ordinary writes and planned siblings."""
+    matches = DocumentFolder.objects.annotate(normalized_name=Lower(Trim('name'))).filter(
+        parent=parent, normalized_name=name.strip().lower(),
+    ).exclude(pk=getattr(instance, 'pk', None))
+    matching_ids = set(matches.values_list('pk', flat=True))
+    matching_ids.update(
+        sibling.pk for sibling in planned_siblings
+        if sibling.pk != getattr(instance, 'pk', None)
+        and sibling.name.strip().lower() == name.strip().lower()
+    )
+    if matching_ids:
+        raise serializers.ValidationError({
+            'name': 'Ya existe una carpeta con ese nombre aquí',
+            'code': 'duplicate_folder_name', 'matching_ids': sorted(matching_ids),
+        })
 
 
 class DocumentFolderChangeClientSerializer(serializers.Serializer):
@@ -103,6 +126,9 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         source='project.name', read_only=True, default=None,
     )
     is_system_managed = serializers.BooleanField(read_only=True)
+    client_policy = serializers.ChoiceField(choices=CLIENT_POLICIES, required=False, write_only=True)
+    portal_policy = serializers.ChoiceField(choices=PORTAL_POLICIES, required=False, write_only=True)
+    expected_plan_hash = serializers.RegexField(r'^[a-f0-9]{64}$', required=False, write_only=True)
 
     class Meta:
         model = DocumentFolder
@@ -116,6 +142,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
             'archived_document_count', 'archived_children_count',
             'created_at', 'updated_at', 'created_by', 'creation_source', 'creation_operation',
             'is_archived', 'archived_at', 'archived_cause',
+            'client_policy', 'portal_policy', 'expected_plan_hash',
         )
         # `is_archived`/`archived_at` son read-only a propósito: update_document_folder
         # usa este mismo serializer para PATCH, y dejarlos escribibles permitiría
@@ -127,7 +154,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         )
 
     def to_internal_value(self, data):
-        validate_folder_input(data)
+        validate_folder_input(data, allow_policies=self.instance is not None)
         if isinstance(data, dict) or hasattr(data, 'dict'):
             data = data.copy()
             if 'parent_id' in data:
@@ -138,6 +165,32 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
 
     @transaction.atomic
     def save(self, **kwargs):
+        validated = self.validated_data
+        if self.instance is not None and 'client_policy' in validated and 'parent' in validated:
+            lock_document_folder_mutations()
+            self.instance.refresh_from_db()
+            current = type(self)(self.instance, data=self.initial_data, partial=self.partial, context=self.context)
+            current.is_valid(raise_exception=True)
+            validated = current.validated_data
+        if self._policy_parent_change(validated):
+            from content.services.document_ownership_planner import apply_ownership_plan
+
+            parent = validated['parent']
+            apply_ownership_plan({
+                'folder_ids': [self.instance.pk],
+                'destination_folder_id': parent.pk if parent else None,
+                'client_policy': validated['client_policy'],
+                'portal_policy': validated.get('portal_policy', 'abort'),
+            }, actor=getattr(self.context.get('request'), 'user', None),
+                expected_plan_hash=validated.get('expected_plan_hash'))
+            self.instance.refresh_from_db()
+            remaining = {key: value for key, value in self.initial_data.items()
+                         if key not in FOLDER_POLICY_FIELDS | {'parent', 'parent_id'}}
+            if remaining:
+                current = type(self)(self.instance, data=remaining, partial=True, context=self.context)
+                current.is_valid(raise_exception=True)
+                self.instance = super(DocumentFolderSerializer, current).save(**kwargs)
+            return self.instance
         # Migration seeds this row; get_or_create also supports migration-free tests.
         DocumentFolderMutationLock.objects.get_or_create(pk=1)
         DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
@@ -145,8 +198,15 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
             self.instance.refresh_from_db()
         current = type(self)(self.instance, data=self.initial_data, partial=self.partial, context=self.context)
         current.is_valid(raise_exception=True)
+        for name in FOLDER_POLICY_FIELDS:
+            current.validated_data.pop(name, None)
         self.instance = super(DocumentFolderSerializer, current).save(**kwargs)
         return self.instance
+
+    def _policy_parent_change(self, attrs):
+        return (self.instance is not None and 'client_policy' in attrs and 'parent' in attrs
+                and (getattr(attrs['parent'], 'pk', None) != self.instance.parent_id
+                     or attrs.get('expected_plan_hash') is not None))
 
     def get_created_by(self, obj):
         if obj.creation_source in ('system', 'mcp'):
@@ -239,11 +299,33 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
         return data
 
     def validate(self, attrs):
+        """Apply the document association rule without a client-name snapshot."""
+        if self._policy_parent_change(attrs):
+            if {'client', 'project'}.intersection(attrs):
+                raise serializers.ValidationError({
+                    'client_policy': 'El movimiento decide la propiedad. No combines client o project con el cambio de padre.',
+                })
+            # The planner reuses this serializer without policy fields, and
+            # returns the same movement validation as structured row blockers.
+            return attrs
         if self.instance is not None:
-            from content.services.contract_mirror_service import folder_contains_mirror, CONTRACT_MIRROR_MESSAGE
-            if set(attrs) - {'order'} and folder_contains_mirror(self.instance):
-                raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
-        """Misma regla de asociación que los documentos, sin `client_name`."""
+            from content.services.contract_mirror_service import (
+                CONTRACT_MIRROR_FOLDER_PINNED,
+                CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+                is_pinned_mirror_folder,
+            )
+            association_changed = (
+                'client' in attrs
+                and getattr(attrs['client'], 'user_id', None) != self.instance.client_user_id
+            ) or (
+                'project' in attrs
+                and getattr(attrs['project'], 'pk', None) != self.instance.project_id
+            )
+            if association_changed and is_pinned_mirror_folder(self.instance):
+                raise serializers.ValidationError({
+                    'detail': CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+                    'code': CONTRACT_MIRROR_FOLDER_PINNED,
+                }, code=CONTRACT_MIRROR_FOLDER_PINNED)
         if self.instance is not None and self.instance.is_system_managed:
             raise serializers.ValidationError({'detail': 'Esta carpeta se administra automáticamente.', 'code': 'system_managed_folder'})
         if self.instance is None or {'name', 'parent'}.intersection(attrs):
@@ -251,15 +333,7 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
             parent = attrs.get('parent', getattr(self.instance, 'parent', None))
             changed = self.instance is None or (name, getattr(parent, 'pk', None)) != (self.instance.name, self.instance.parent_id)
             if changed:
-                matches = DocumentFolder.objects.annotate(normalized_name=Lower(Trim('name'))).filter(
-                    parent=parent, normalized_name=name.lower(),
-                ).exclude(pk=getattr(self.instance, 'pk', None))
-                matching_ids = list(matches.values_list('pk', flat=True))
-                if matching_ids:
-                    raise serializers.ValidationError({
-                        'name': 'Ya existe una carpeta con ese nombre aquí',
-                        'code': 'duplicate_folder_name', 'matching_ids': matching_ids,
-                    })
+                validate_folder_name(name, parent, self.instance)
         if self.instance is not None and self.instance.managed_project_id:
             protected = {'name', 'parent', 'client', 'project'}
             if protected.intersection(attrs):
@@ -305,6 +379,9 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
 
     def validate_parent(self, value):
         """Impide que una carpeta sea su propio padre o descienda de sí misma."""
+        if (self.instance is not None and self.initial_data.get('client_policy') is not None
+                and getattr(value, 'pk', None) != self.instance.parent_id):
+            return value
         if value is None:
             return value
         if value.is_system_managed:

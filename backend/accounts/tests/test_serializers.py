@@ -372,6 +372,7 @@ class TestCreateProjectSerializer:
 # UpdateProjectSerializer
 # =========================================================================
 
+@pytest.mark.django_db
 class TestUpdateProjectSerializer:
     """Validate the editable project fields."""
 

@@ -44,8 +44,8 @@
     "version": "1.1.0"
   },
   "documents": {
-    "sha256": "524af63b9ea2536881d6743529de9b7c30f309b856ee5f96783fb72bb029aadb",
-    "version": "3.2.0"
+    "sha256": "e1bc2b0a350748f1ab4ed6337465dfaa2fa50f7cf2d9804761bc23eb747bd06d",
+    "version": "3.3.0"
   },
   "linkedin-personal": {
     "sha256": "ee941a9ec6f3e89568e093df14311c6cbd0bca595198a2a5950528af429c6d6a",
@@ -60,8 +60,8 @@
     "version": "2.1.0"
   },
   "projects": {
-    "sha256": "f7aed76b5a0d44a2982ec587214b637cf3964d4c0baae70b0662c2384aca69a9",
-    "version": "2.3.0"
+    "sha256": "da17fe6773b88dcba32342c3356a3a0205faffb0dbaf5fe93d7d61558a508f87",
+    "version": "2.4.0"
   },
   "proposals": {
     "sha256": "28e89762fd1af7bdce46697cb548274f008386d71f538d564880df7391224adc",

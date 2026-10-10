@@ -42,11 +42,18 @@ describe('PaymentStatusHistory', () => {
     expect(wrapper.findAll('li').length).toBe(2);
   });
 
-  it('shows status transition labels', () => {
-    const wrapper = mountPaymentStatusHistory();
+  // Catches a voided payment showing its raw status instead of a localized transition.
+  it.each([
+    ['pending', 'paid', 'Pendiente → Pagado'],
+    ['pending', 'voided', 'Pendiente → Anulado'],
+  ])('shows localized labels for the %s → %s transition', (fromStatus, toStatus, expectedLabel) => {
+    const wrapper = mountPaymentStatusHistory({
+      payment: {
+        history: [{ ...baseHistory[0], from_status: fromStatus, to_status: toStatus }],
+      },
+    });
 
-    expect(wrapper.text()).toContain('Pendiente');
-    expect(wrapper.text()).toContain('Pagado');
+    expect(wrapper.text()).toContain(expectedLabel);
   });
 
   it('shows source label when source is present', () => {

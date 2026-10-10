@@ -6,6 +6,13 @@ the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
 from content.mcp.document_tools import _FOLDER_FIELDS
+from content.mcp.document_ownership_tools import (
+    CLIENT_POLICY_SCHEMA,
+    DOCUMENT_DECISIONS_SCHEMA,
+    EXPECTED_PLAN_HASH_SCHEMA,
+    POLICY_DESCRIPTION,
+    PORTAL_POLICY_SCHEMA,
+)
 from content.mcp.delivery_tools import DELIVERY_TOOLS
 from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
 from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
@@ -15,6 +22,7 @@ from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
+from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
 from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.entity_history_tools import history_tools
@@ -58,18 +66,30 @@ _PROJECT_DELETE['impact_builder'] = lambda arguments: _PROJECT_DELETE_PREVIEW['h
     {'project_id': arguments['project_id']},
 )
 
+
+def _project_client_change_tools():
+    from content.mcp.project_client_change_tools import PROJECT_CLIENT_CHANGE_TOOLS
+
+    return PROJECT_CLIENT_CHANGE_TOOLS
+
+
+def _project_create_tool():
+    from content.mcp.project_create_tools import CREATE_PROJECT
+
+    return CREATE_PROJECT
+
+
 PROJECT_TOOLS = [
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; query.client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list'),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',)),
-    _op('create_project', 'Crea un proyecto con las validaciones del Panel.', 'panel-projects-create', 'POST', risk='write'),
+    _project_create_tool(),
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,
     _op('list_project_unlinked_records', 'Previsualiza registros del cliente todavía sin proyecto, incluidos los conservados de un proyecto eliminado (retained: proyecto de origen, duplicates: posibles duplicados) y sus hilos de comunicación conservados.', 'panel-projects-unlinked-records', path=('project_id',)),
     _op('list_project_retention_contexts', 'Audita los datos conservados sin proyecto tras eliminaciones forzadas: por proyecto eliminado, cliente y categoría, cuántos quedaron al eliminar y cuántos siguen conservados (con sus ids), más las propuestas cuyo entregable o fase quedó conservado. query.client_profile_id filtra por perfil de cliente, query.page pagina de a 20 y query.integrity=1 agrega las filas conservadas que volvieron a tener proyecto.', 'panel-projects-retained-data-audit'),
     _op('assign_project_unlinked_records', 'Asigna al proyecto el conjunto explícito de registros previsualizados (hosting_ids, income_ids, document_ids, thread_ids y reason opcional). Los conservados de un proyecto eliminado del mismo cliente salen de solo consulta con una operación auditada que se puede deshacer; sus cuentas e ingresos vinculados viajan juntos.', 'panel-projects-assign-unlinked', 'POST', ('project_id',), 'sensitive', True),
-    _op('preview_project_client_change', 'Calcula el impacto de cambiar el cliente propietario del proyecto.', 'panel-projects-change-client-preview', path=('project_id',)),
-    _op('change_project_client', 'Cambia el cliente y aplica la cascada previamente revisada.', 'panel-projects-change-client', 'POST', ('project_id',), 'sensitive', True),
+    *_project_client_change_tools(),
     _op('list_project_state_groups', 'Lista grupos del catálogo de estados de proyecto.', 'project-state-groups'),
     _op('create_project_state_group', 'Crea un grupo de estados de proyecto.', 'project-state-groups', 'POST', risk='write'),
     _op('list_project_states', 'Lista el catálogo de estados de proyecto.', 'project-states'),
@@ -90,22 +110,30 @@ PROJECT_TOOLS = [
     _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, payload_schema=writable_schema(ProjectBrandAssetUploadSerializer, exclude=('file',))),
     _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id')),
     _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True),
-] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + DATA_INTEGRITY_TOOLS
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS + DATA_INTEGRITY_TOOLS
 
 
-_FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
+_UPDATE_FOLDER_SCHEMA = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {**_FOLDER_FIELDS, 'client_policy': CLIENT_POLICY_SCHEMA,
+                   'portal_policy': PORTAL_POLICY_SCHEMA, 'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA},
+}
 _MOVE_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
         'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
         'folder_id': {'type': ['integer', 'null'], 'minimum': 1},
         'include_content': {'type': 'boolean', 'default': False},
+        'client_policy': CLIENT_POLICY_SCHEMA,
+        'portal_policy': PORTAL_POLICY_SCHEMA,
+        'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA,
+        'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
     },
     'required': ['document_ids', 'folder_id'],
 }
 
 DOCUMENT_PARITY_TOOLS = [
-    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado por ID.', 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
+    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado y propiedad antes/después por ID.' + POLICY_DESCRIPTION, 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
     _op('browse_documents', 'Busca, filtra, ordena y pagina todo el inventario documental.', 'browse-documents'),
     _op('get_document_counts', 'Obtiene conteos documentales para filtros y navegación.', 'document-counts'),
     _op('get_document_navigation', 'Obtiene raíces, clientes y proyectos navegables.', 'document-navigation'),
@@ -117,13 +145,27 @@ DOCUMENT_PARITY_TOOLS = [
     _op('unarchive_document', 'Restaura un documento archivado individualmente.', 'unarchive-document', 'PATCH', ('document_id',), 'write'),
     _op('list_document_folders', 'Lista carpetas activas o archivadas con filtros del Panel.', 'list-document-folders'),
     _op('get_project_folder_readiness', 'Revisa la disponibilidad de raíces documentales de proyectos.', 'project-folder-readiness'),
-    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta.', 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_FOLDER_SCHEMA),
+    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta. Al cambiar de padre evalúa todo su subárbol; la propiedad se decide con las políticas, sin combinar client o project en ese movimiento.' + POLICY_DESCRIPTION, 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_UPDATE_FOLDER_SCHEMA),
     _op('delete_folder', 'Elimina una carpeta vacía que el sistema permita eliminar.', 'delete-document-folder', 'DELETE', ('folder_id',), 'sensitive', True),
     _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True),
     _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write'),
     _op('reorder_folders', 'Reordena carpetas hermanas con una lista explícita de ids.', 'reorder-document-folders', 'POST', risk='write'),
-    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta.', 'preview-document-folder-client-change', path=('folder_id',)),
-    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True),
+    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta; portal_changes lista los documentos que darían acceso a un nuevo cliente.', 'preview-document-folder-client-change', path=('folder_id',), query_schema={
+        'type': 'object', 'additionalProperties': False,
+        'properties': {'client_profile_id': {'type': 'integer', 'minimum': 1}},
+        'required': ['client_profile_id'],
+    }),
+    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado. portal_policy: abort (default MCP) bloquea nueva audiencia, allow la permite y hide_new_exposure oculta los documentos que ganarían acceso.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True, payload_schema={
+        'type': 'object', 'additionalProperties': False,
+        'properties': {
+            'client_profile_id': {'type': 'integer', 'minimum': 1},
+            'mode': {'type': 'string', 'enum': ['propagate', 'folder_only']},
+            'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
+            'folder_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
+            'portal_policy': {**PORTAL_POLICY_SCHEMA, 'description': 'abort bloquea nueva audiencia; allow la permite; hide_new_exposure oculta los documentos que ganarían acceso.'},
+        },
+        'required': ['client_profile_id', 'mode'],
+    }),
     _op('list_document_tags', 'Lista el catálogo de etiquetas documentales.', 'list-document-tags'),
     _op('create_document_tag', 'Crea una etiqueta documental.', 'create-document-tag', 'POST', risk='write'),
     _op('update_document_tag', 'Actualiza una etiqueta documental.', 'update-document-tag', 'PATCH', ('tag_id',), 'write'),
@@ -335,7 +377,23 @@ CARD_PARITY_TOOLS = [
 ]
 
 
+def _ownership_defaults(handler, *, defaults=(('client_policy', 'abort_on_conflict'), ('portal_policy', 'abort'))):
+    def wrapped(arguments):
+        arguments = dict(arguments)
+        nested = arguments.get('data')
+        nested = nested if isinstance(nested, dict) else {}
+        for name, value in defaults:
+            if name not in arguments and name not in nested:
+                arguments[name] = value
+        return handler(arguments)
+    return wrapped
+
+
 for _tool in DOCUMENT_PARITY_TOOLS:
+    if _tool['name'] in ('move_documents', 'update_folder'):
+        _tool['handler'] = _ownership_defaults(_tool['handler'])
+    if _tool['name'] == 'change_folder_client':
+        _tool['handler'] = _ownership_defaults(_tool['handler'], defaults=(('portal_policy', 'abort'),))
     if _tool['name'] == 'move_documents':
         _tool['input_schema'] = _MOVE_SCHEMA
         _tool['output_schema'] = {
@@ -352,6 +410,8 @@ for _tool in DOCUMENT_PARITY_TOOLS:
                         'code': {'type': 'string'},
                         'message': {'type': 'string'},
                         'move_blockers': {'type': 'array', 'items': {'type': 'string'}},
+                        'before': {'type': 'object'},
+                        'after': {'type': 'object'},
                         'document': DOCUMENT_WRITE_SCHEMA,
                     },
                     'required': ['id', 'status', 'moved'],

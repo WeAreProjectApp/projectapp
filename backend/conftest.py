@@ -2,6 +2,10 @@ import os
 
 import coverage as coverage_module
 import pytest
+
+# Import before time freezes: DRF otherwise captures freezegun's fake_time as
+# a bound throttle timer that keeps breaking requests after the freeze ends.
+import rest_framework.throttling  # noqa: F401
 from rest_framework.test import APIClient
 
 # Bar widths: per-file bars use MINI, the TOTAL row uses WIDE

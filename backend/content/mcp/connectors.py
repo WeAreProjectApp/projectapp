@@ -115,7 +115,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '3.2.0',
+        'documents', '3.3.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
@@ -175,7 +175,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'projects': ConnectorSpec(
-        'projects', '2.3.0', (PROJECT_TOOLS,), uploads=True,
+        'projects', '2.4.0', (PROJECT_TOOLS,), uploads=True,
     ),
     'content': ConnectorSpec(
         'content', '2.1.0',

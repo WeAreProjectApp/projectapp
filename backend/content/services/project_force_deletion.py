@@ -114,6 +114,13 @@ class ProjectDeletionPlan:
         self._include_document_threads()
         self._check_owners()
         self.inventory = self.rows.copy()
+        from content.services.contract_mirror_service import pinned_mirror_folder
+        pinned_folder, _source = pinned_mirror_folder()
+        if pinned_folder and _key(pinned_folder) in self.inventory:
+            self._conflict(
+                pinned_folder,
+                'Mueve Contratos fuera del proyecto antes de eliminarlo: guarda los espejos contractuales que deben conservarse.',
+            )
         known_keys = {CATEGORIES[model._meta.label_lower]['key']
                       for model, _ in self.inventory if model._meta.label_lower in CATEGORIES}
         if set(self.delete_keys) - known_keys:

@@ -89,6 +89,104 @@ privados del emisor. Las relaciones contradictorias no conceden acceso a un
 segundo cliente. Las opciones contractuales del cliente vienen exclusivamente
 de sus cuentas visibles y no conceden acceso a documentos de contratos.
 
+## Ciclo de vida de la suscripción
+
+Incremento del 2026-10-09: `accounts/services/hosting_subscription_lifecycle.py`
+comparte `plan_change` y `apply_change`. En el MCP `projects`,
+`preview_hosting_subscription_change` es lectura y `change_hosting_subscription`
+es sensible: exige motivo, `expected_impact_hash` y `confirm_action`. El preview
+no escribe y muestra `can_apply`, `blockers`, `warnings`, antes/después de la
+suscripción, `voided_payments`, `restored_payments`, `generated_payment`,
+`kept_history` e `impact_hash`.
+
+| Acción | Estado de origen | Resultado |
+| --- | --- | --- |
+| `pause` | `active` o `pending` | `suspended`; pausa manual identificada por el último `BillingContextEvent` de ciclo de vida, `hosting_subscription.pause`. |
+| `cancel` | `active`, `pending` o `suspended` | `cancelled`, terminal; `next_billing_date` pasa a null. |
+| `resume` | `suspended` por pausa manual | `active`; restaura cobros todavía futuros o abre un ciclo nuevo. Una suspensión por fallos de pago se bloquea con `suspended_by_payment_failure`. |
+
+Reusar `suspended` no añade un estado de suscripción. La pausa no cambia el
+estado del proyecto y su sugerencia en el Panel deja de atribuirla a cobros
+fallidos. Cada decisión guarda actor, motivo y antes/después en
+`BillingContextEvent`, incluidos los IDs de pagos anulados, restaurados o creados.
+
+### Cobros futuros e historia conservada
+
+`effective_date` es una fecha hasta hoy UTC, por defecto hoy; el MCP la congela
+al preparar la confirmación. Pausar o cancelar anula los pagos abiertos activos
+con **`due_date > effective_date`**: `pending`, `failed`, `overdue` o `processing`
+sin transacción Wompi en curso. Pasan a `Payment.status=voided`, con
+`is_archived=true` y `archived_at`; cada transición desde el estado anterior
+registra `PaymentHistory` con origen manual y referencia al evento. No se borran
+los cobros ni su historia. La migración
+`accounts.0082_hosting_payment_voided_status` añade `voided` a Payment y a los
+estados de PaymentHistory; se aplica durante deploy.
+
+Los pagos ya causados (`due_date <= effective_date`) siguen cobrables y aparecen
+en `due_payments_remain_collectible`, pero la pausa/cancelación detiene su débito
+automático. Los pagos recibidos, su historia, los ciclos contables y las cuentas
+de cobro se conservan. Hosting contable e ingresos esperados se revisan por
+separado (`accounting_records_untouched`); un link externo aún publicado se
+advierte como `payment_link_outstanding`.
+
+Reanudar restaura sólo los pagos anulados por el evento de esa pausa que siguen
+archivados, en `voided` y con vencimiento posterior a la fecha de reanudación.
+Recuperan su estado anterior, se desarchivan y añaden historia. Si no queda
+ninguno todavía futuro, crea un cobro pendiente y un ciclo desde la fecha de
+reanudación, sin cobrar el tiempo pausado. Una cancelación no admite reanudación.
+
+Bloqueos adicionales: suscripción retenida, sin proyecto o archivada;
+transición inválida; fecha futura; pago `processing` con transacción Wompi
+(`payment_in_flight`); y estado del proyecto que impide facturar al reanudar
+(`project_blocks_billing`). El hash se revalida antes de ejecutar, con orden de
+locks proyecto → suscripción → ProjectHosting → pagos por pk y lecturas actuales.
+
+`get_project_hosting` incluye los pagos anulados en `subscription.payments`, con
+`status`, `is_archived` y `archived_at` read-only. Platform y el historial de
+pagos muestran «Anulado»; los locales de billing usan «Anulado»/«Voided». En
+`content/mcp/contracts.py`, `HostingSubscription.status` y `next_billing_date`
+se clasifican como modificables en `projects` exclusivamente mediante la acción
+de ciclo de vida; `accounting-billing` conserva ambos como read-only. Ningún
+payload permite fijarlos directamente.
+
+### Guardas de los caminos de cobro
+
+| Camino | Garantía del incremento |
+| --- | --- |
+| Link, widget, tarjeta nueva y tarjeta guardada | Los cuatro endpoints de pago rechazan pagos archivados y estados no cobrables, incluido `voided`. |
+| `_generate_next_payment` | Omite pagos archivados al buscar cobros abiertos y no genera para una suscripción cancelada o en pausa manual. |
+| Aprobación tardía | Registra el cobro real como `paid`, lo desarchiva y añade `PaymentHistory.metadata.settled_after_void`, evento `hosting_subscription.settled_after_void` y aviso al administrador después del commit. No reactiva la suscripción ni genera otro ciclo. |
+| Registro manual de pago | Conserva cancelación o pausa manual, sin avanzar su próxima fecha ni reactivarla. |
+| `_charge_payment_with_source` | Relee y bloquea proyecto, suscripción, ProjectHosting y pago antes de Wompi; un trabajo encolado con estado obsoleto, cobro archivado o suscripción no cobrable se rechaza sin llamar al proveedor. |
+| `_onboard_due_phases` | Relee bajo lock el proyecto, la suscripción y la fase antes de activar hosting o crear un prorrateo; exige suscripción activa y proyecto habilitado para facturar. |
+| PATCH de `/api/accounts/projects/<id>/subscription/` con `status` | HTTP 400 `subscription_lifecycle_required`; el cambio debe usar el servicio de ciclo de vida. |
+
+**Trade-off vigente:** `_charge_payment_with_source` mantiene la transacción y
+los locks durante la llamada a Wompi **y su polling**. Esto serializa la decisión
+con la pausa/cancelación, pero prolonga los bloqueos mientras responde el proveedor.
+Seguimiento pendiente: un flujo **claim-then-call** que reserve el intento bajo
+lock, libere la transacción antes de llamar y concilie después el resultado de
+forma idempotente. Ese flujo todavía no está implementado.
+
+Cobertura focal: `accounts/tests/billing/test_hosting_subscription_lifecycle.py`,
+`accounts/tests/billing/test_payment_lifecycle_guards.py`,
+`content/tests/views/test_mcp_hosting_subscription.py` y los contratos de
+`content/tests/views/test_mcp_contracts.py`. Se simula Wompi; SQLite valida los
+rechecks y rollback, no la exclusión real de locks MySQL. Recorrido:
+[Migración de carpetas por MCP — parte 1](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
+
+### Cambio de cliente e historia financiera
+
+Las guardas financieras, de entregas y tickets comparten
+`accounts/services/project_client_transfer.py`. El preview publica los bloqueos
+y un `impact_hash` independiente del modo; el cambio revalida esa huella bajo
+lock. Una suscripción cancelada sigue siendo historia financiera y bloquea
+transferir el proyecto a otro cliente. La resolución es crear un proyecto nuevo;
+`rebase_with_history` queda diferido por la tarjeta del cliente anterior, el
+acceso por `project.client` y la falta de una marca de proyecto interno.
+Contrato y errores:
+[Evaluación compartida y vista previa](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09).
+
 ## Propiedad e integración
 
 P2 es dueño de `accounts/billing_models.py`, servicios `billing_*` y

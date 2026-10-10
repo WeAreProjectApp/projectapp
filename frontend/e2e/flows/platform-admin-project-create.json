@@ -6,7 +6,7 @@
     "platform-admin"
   ],
   "priority": "P3",
-  "description": "Admin creates a new project via modal form with name, description, client selector, start date, and estimated end date.",
+  "description": "Admin creates a new project via modal form with name, description, client selector, start date, and estimated end date. A manual root folder already using the project name triggers a server-side conflict error when it cannot be adopted automatically; a safe homonymous manual root is automatically adopted without creating a duplicate folder, and the adoption can be undone.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

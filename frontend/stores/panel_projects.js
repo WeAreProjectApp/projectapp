@@ -270,11 +270,15 @@ export const usePanelProjectsStore = defineStore('panel_projects', {
      * unbounded and multi-module), so the accounting lists that are already
      * loaded refetch instead of map-replacing.
      */
-    async changeClient(id, payload) {
+    async changeClient(id, payload, preview = null) {
       this.isUpdating = true;
       try {
+        const requestPayload = { ...payload };
+        if (preview?.impact_hash) {
+          requestPayload.expected_impact_hash = preview.impact_hash;
+        }
         const response = await create_request(
-          `projects/${id}/change-client/`, payload,
+          `projects/${id}/change-client/`, requestPayload,
         );
         const accounting = useAccountingStore();
         const documentStore = useDocumentStore();

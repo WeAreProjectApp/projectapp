@@ -19,15 +19,18 @@ document_type helpers as the panel so the PDF pipeline stays identical.
 """
 import json
 
-from content.services.contract_template_service import mirror_metadata
-
 from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
+from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
 from content.mcp.actor import mcp_actor
+from content.mcp.document_ownership_tools import (
+    CLIENT_POLICY_SCHEMA,
+    PORTAL_POLICY_SCHEMA,
+)
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.models import (
@@ -38,7 +41,6 @@ from content.models import (
     DocumentStateEpisode,
 )
 from content.serializers.document import (
-    DocumentCreateUpdateSerializer,
     apply_client_project_association,
 )
 from content.serializers.document_folder import (
@@ -52,6 +54,7 @@ from content.services.contract_mirror_service import (
     is_contract_mirror,
     mirror_markdown,
 )
+from content.services.contract_template_service import mirror_metadata
 from content.services.document_content import build_content_json
 from content.services.document_note_service import (
     DocumentNoteError,
@@ -64,6 +67,11 @@ from content.services.document_note_service import (
 from content.services.document_notes import (
     DocumentNotesValidationError,
     normalize_client_custom_notes,
+)
+from content.services.document_ownership_planner import (
+    OwnershipPlanError,
+    apply_ownership_plan,
+    portal_audience,
 )
 from content.services.document_state_service import (
     DocumentStateError,
@@ -216,8 +224,9 @@ def _association_data(arguments, *, instance=None):
 # ── Payload shaping ──────────────────────────────────────────────────────────
 
 def _folder_path(folder):
-    names = [a.name for a in folder.get_ancestors()] + [folder.name]
-    return ' / '.join(names)
+    from content.services.document_folder_paths import folder_path
+
+    return folder_path(folder)
 
 
 def _folder_payload(folder):
@@ -589,30 +598,64 @@ def create_document(arguments):
     return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
 
+@transaction.atomic
 def update_document(arguments):
-    doc = _get_markdown_doc_or_error(arguments.get('document_id'))
-    if doc.is_generated_snapshot:
+    moving = 'folder_id' in arguments
+    doc = (Document.objects.select_related('document_type', 'project').filter(pk=arguments.get('document_id')).first()
+           if moving else None) or _get_markdown_doc_or_error(arguments.get('document_id'))
+    if doc.is_generated_snapshot and not moving:
         raise ToolError(
             'Un documento generado no admite cambios manuales.',
             code='NOT_EDITABLE',
             details={'edit_blockers': ['generated_snapshot']},
         )
     _check_document_etag(doc, arguments)
-    changes = set(arguments) - {'document_id', 'include_content', 'if_match'}
-    if is_contract_mirror(doc):
+    changes = set(arguments) - {'document_id', 'include_content', 'if_match', 'client_policy', 'portal_policy'}
+    if is_contract_mirror(doc) and not moving:
         _refuse_contract_mirror(doc)
-    if changes == {'folder_id'}:
-        serializer = _valid_serializer(DocumentCreateUpdateSerializer(
-            doc, data={'folder_id': arguments['folder_id']}, partial=True,
-        ))
-        doc = serializer.save(updated_by=mcp_actor())
-        return document_write_payload(doc, include_content=arguments.get('include_content', False))
+    if moving:
+        try:
+            plan = apply_ownership_plan({
+                'document_ids': [doc.pk], 'destination_folder_id': arguments['folder_id'],
+                'client_policy': arguments.get('client_policy', 'abort_on_conflict'),
+                'portal_policy': arguments.get('portal_policy', 'abort'),
+            }, actor=mcp_actor())
+        except OwnershipPlanError as exc:
+            raise ToolError(str(exc.detail['detail']), code=exc.code.upper(), details=exc.details) from exc
+        doc = _get_markdown_doc_or_error(doc.pk)
+        planned = plan['rows'][0]
+        # A metadata update cannot undo the ownership or exposure decision of
+        # the move that was just validated. The transaction rolls back both.
+        if {'client_id', 'project_id'}.intersection(arguments):
+            association = _association_data(arguments, instance=doc)
+            proposed_owner = (getattr(association.get('client_user', doc.client_user), 'pk', None),
+                              getattr(association.get('project', doc.project), 'pk', None))
+            if proposed_owner != (doc.client_user_id, doc.project_id):
+                raise ToolError('El movimiento decide cliente y proyecto; usa client_policy para elegir la propiedad.',
+                    code='OWNERSHIP_PLAN_BLOCKED', details={'blockers': [{
+                        'code': 'ownership_conflict', 'message': 'La propiedad enviada contradice el plan.',
+                        'resource_type': 'document', 'resource_id': doc.pk,
+                    }]})
+        if arguments.get('is_client_visible') is True:
+            audience = portal_audience({**planned['after'], 'is_client_visible': True})
+            new_exposure = audience is not None and audience != planned['before']['portal_audience']
+            policy = arguments.get('portal_policy', 'abort')
+            if new_exposure and policy == 'abort':
+                raise ToolError('El movimiento daría acceso a un nuevo cliente en el portal.',
+                    code='OWNERSHIP_PLAN_BLOCKED', details={'blockers': [{
+                        'code': 'portal_exposure', 'message': 'La visibilidad enviada daría acceso a un nuevo cliente.',
+                        'resource_type': 'document', 'resource_id': doc.pk,
+                    }]})
+            if new_exposure and policy == 'hide_new_exposure':
+                arguments = {**arguments, 'is_client_visible': False}
+        if changes == {'folder_id'}:
+            return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
-    if 'markdown' in arguments and 'content_markdown' in arguments:
-        if arguments['markdown'] != arguments['content_markdown']:
-            raise ToolError(
-                'markdown y content_markdown no pueden contener valores distintos.'
-            )
+    if ('markdown' in arguments and 'content_markdown' in arguments
+            and arguments['markdown'] != arguments['content_markdown']):
+        raise ToolError(
+            'markdown y content_markdown no pueden contener valores distintos.'
+        )
     if 'content_markdown' in arguments and 'markdown' not in arguments:
         arguments = {**arguments, 'markdown': arguments['content_markdown']}
 
@@ -636,10 +679,6 @@ def update_document(arguments):
             raise ToolError('is_client_visible debe ser true o false.')
         doc.is_client_visible = arguments['is_client_visible']
         update_fields.add('is_client_visible')
-
-    if 'folder_id' in arguments:
-        doc.folder = _resolve_folder(arguments.get('folder_id'))
-        update_fields.add('folder')
 
     if any(
         field in arguments for field in ('client_id', 'project_id', 'client_name')
@@ -1055,7 +1094,10 @@ DOCUMENT_TOOLS = [
             'Devuelve un documento markdown completo, incluida su asociación a '
             'cliente/proyecto, markdown, estados y notas privadas. El '
             'contrato vigente (is_contract_mirror) devuelve el borrador '
-            'completo en vivo: contenido de solo lectura; ubicación editable mediante folder_id.'
+            'completo en vivo: los espejos contractuales son de solo lectura y '
+            'no se pueden editar ni mover individualmente. movable indica si '
+            'el documento puede moverse y move_blockers explica los motivos '
+            'que lo impiden. Su carpeta sí puede renombrarse o moverse.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1100,8 +1142,12 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) es de solo lectura; '
-            'su contenido no se edita.'
+            'contrato vigente (is_contract_mirror) es un espejo de solo lectura '
+            'que no se puede editar ni mover. Consulta movable para saber si '
+            'un documento puede moverse y move_blockers para conocer los '
+            'motivos que lo impiden. Al cambiar folder_id, client_policy '
+            'usa abort_on_conflict por defecto y portal_policy usa abort; '
+            'cliente y proyecto enviados deben coincidir con el plan de movimiento.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1119,8 +1165,10 @@ DOCUMENT_TOOLS = [
                 },
                 'folder_id': {
                     'type': ['integer', 'null'],
-                    'description': 'Carpeta destino (null para mover a la raíz).',
+                    'description': 'Carpeta destino activa; el movimiento usa las políticas de propiedad y portal.',
                 },
+                'client_policy': CLIENT_POLICY_SCHEMA,
+                'portal_policy': PORTAL_POLICY_SCHEMA,
                 'is_client_visible': {
                     'type': 'boolean',
                     'description': 'Mostrar este documento en el portal del cliente.',
@@ -1377,4 +1425,11 @@ for _tool in DOCUMENT_TOOLS:
         _tool['handler'] = _validated_document_tool(_tool['handler'], _schema['properties'])
 
 from content.mcp.contract_template_tools import CONTRACT_MIRROR_TOOLS
+
 DOCUMENT_TOOLS += CONTRACT_MIRROR_TOOLS
+from content.mcp.document_ownership_tools import DOCUMENT_OWNERSHIP_TOOLS
+
+DOCUMENT_TOOLS += DOCUMENT_OWNERSHIP_TOOLS
+from content.mcp.folder_migration_tools import FOLDER_MIGRATION_TOOLS
+
+DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS

@@ -138,7 +138,7 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.Document',
-            read_only='id slug status created_at updated_at tags',
+            read_only='id slug status created_at updated_at tags is_archived',
             read_write=(
                 'folder project client_user title is_client_visible '
                 'content_markdown client_name client_email_subject '
@@ -159,7 +159,7 @@ MCP_MODEL_CONTRACTS = {
                 | _excluded(_PANEL_ONLY, 'cover_type template_style')
                 | _excluded(
                     'Los documentos archivados quedan fuera de circulación para el MCP.',
-                    'is_archived archived_at archived_via_folder',
+                    'archived_at archived_via_folder',
                 )
             ),
         ),
@@ -178,13 +178,32 @@ MCP_MODEL_CONTRACTS = {
         ),
         _contract(
             'content.DocumentFolder',
-            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source creation_operation',
+            read_only='id slug managed_project managed_client created_at updated_at created_by creation_source creation_operation is_archived',
             read_write='name parent project client_user order',
             excluded=(
                 _excluded(_AUTOMATION_STATE, 'system_key')
                 | _excluded(
                     'El archivado de carpetas es una cascada reservada al panel.',
-                    'is_archived archived_at archived_via_folder',
+                    'archived_at archived_via_folder',
+                )
+            ),
+        ),
+        _contract(
+            'content.DocumentOwnershipOperation',
+            read_only=(
+                'id plan_hash items created_folder_ids deleted_folder_snapshots '
+                'created_project_id report reverts'
+            ),
+            excluded=(
+                _excluded(
+                    'Metadatos de auditoría administrados por el servidor; '
+                    'no se incluyen en los reportes MCP de migración.',
+                    'kind origin reason actor credential created_at',
+                )
+                | _excluded(
+                    'Solicitud normalizada e idempotencia internas; el MCP '
+                    'devuelve el plan y el recibo, no la entrada persistida.',
+                    'request_id input',
                 )
             ),
         ),
@@ -448,9 +467,15 @@ MCP_MODEL_CONTRACTS = {
             'content.ContractTemplate',
             read_only='id name created_at updated_at',
             read_write='content_markdown product_content_markdown service_content_markdown',
-            excluded=_excluded(
-                'Selección y vínculo legado administrados por el servidor; las ediciones MCP son versionadas y confirmadas.',
-                'is_default mirror_document',
+            excluded=(
+                _excluded(
+                    'Selección y vínculo legado administrados por el servidor; las ediciones MCP son versionadas y confirmadas.',
+                    'is_default mirror_document',
+                )
+                | _excluded(
+                    'Configuración fijada por el inicializador; observable mediante list_contract_mirrors en documents y nunca editable por MCP.',
+                    'mirror_folder',
+                )
             ),
         ),
         _contract(
@@ -1281,7 +1306,7 @@ BILLING_CATALOG_CONTRACTS = (
 )
 
 
-from content.mcp.issue_contracts import build_issue_contracts  # noqa: E402
+from content.mcp.issue_contracts import build_issue_contracts
 
 MCP_MODEL_CONTRACTS.update({
     # Read-only aggregate; every source model remains governed by its domain
@@ -1412,8 +1437,8 @@ MCP_MODEL_CONTRACTS['proposals'] += (_contract(
 PROJECT_BILLING_CONTRACTS = (
     _contract('accounts.HostingSubscription', read_only='id project plan base_monthly_amount discount_percent effective_monthly_amount billing_amount status start_date next_billing_date card_brand card_last_four created_at updated_at',
               excluded=_excluded(_AUTOMATION_STATE, 'wompi_payment_source_id card_exp_month card_exp_year is_archived archived_at')),
-    _contract('accounts.Payment', read_only='id subscription amount description billing_period_start billing_period_end due_date status paid_at created_at',
-              excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at is_archived archived_at')),
+    _contract('accounts.Payment', read_only='id subscription amount description billing_period_start billing_period_end due_date status paid_at created_at is_archived archived_at',
+              excluded=_excluded(_AUTOMATION_STATE, 'wompi_transaction_id wompi_payment_link_id wompi_payment_link_url charge_attempts last_charge_error next_retry_at')),
     _contract('accounts.ProjectHosting', read_only='id project version created_at updated_at', read_write='subscription operational_accounting_source'),
     _contract('accounts.ProjectHostingAccountingSource', read_only='id created_at', read_write='hosting hosting_record'),
     _contract('accounts.CollectionAccountContext', read_only='id document version updated_at', read_write='nature contract amendment hosting'),
@@ -1421,5 +1446,23 @@ PROJECT_BILLING_CONTRACTS = (
     _contract('accounts.HostingEvidence', read_only='id', read_write='group payment cycle document'),
     _contract('accounts.BillingContextEvent', read_only='id project document actor operation reason before after created_at'),
 )
-for _billing_connector in ('projects', 'accounting-billing'):
-    MCP_MODEL_CONTRACTS[_billing_connector] += PROJECT_BILLING_CONTRACTS
+
+# Lifecycle fields change only through change_hosting_subscription in projects.
+PROJECT_HOSTING_SUBSCRIPTION_CONTRACT = _contract(
+    'accounts.HostingSubscription',
+    read_only=(
+        'id project plan base_monthly_amount discount_percent effective_monthly_amount '
+        'billing_amount start_date card_brand card_last_four created_at updated_at'
+    ),
+    read_write='status next_billing_date',
+    excluded=_excluded(
+        _AUTOMATION_STATE,
+        'wompi_payment_source_id card_exp_month card_exp_year is_archived archived_at',
+    ),
+)
+MCP_MODEL_CONTRACTS['accounting-billing'] += PROJECT_BILLING_CONTRACTS
+MCP_MODEL_CONTRACTS['projects'] += tuple(
+    PROJECT_HOSTING_SUBSCRIPTION_CONTRACT
+    if contract.model_label == 'accounts.HostingSubscription' else contract
+    for contract in PROJECT_BILLING_CONTRACTS
+)

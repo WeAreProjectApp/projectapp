@@ -43,6 +43,14 @@ class ContractTemplate(models.Model):
             'lectura (PDF y Markdown). No guarda una copia del texto.'
         ),
     )
+    # Pin the mirror location by ID so folder renames and moves stay valid.
+    mirror_folder = models.ForeignKey(
+        'content.DocumentFolder',
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name='+',
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

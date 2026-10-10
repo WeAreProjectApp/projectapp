@@ -58,16 +58,16 @@ def test_documents_capabilities_describe_mirror_discovery(api_client, coherent_t
     assert 'last_synced_at' in result['tools'][0]['output_schema']['properties']['mirrors']['items']['properties']
 
 
-def test_contract_folder_cannot_be_reparented(admin_client, initialized_contract_mirrors):
+def test_contract_folder_can_be_reparented(admin_client, initialized_contract_mirrors):
     folder = initialized_contract_mirrors.mirrors.get(variant='product').document.folder
     another = DocumentFolder.objects.create(name='Destino')
 
     response = admin_client.patch(reverse('update-document-folder', args=[folder.pk]),
         {'parent_id': another.pk}, format='json')
 
-    assert response.status_code == 400
+    assert response.status_code == 200
     folder.refresh_from_db()
-    assert folder.parent_id is None
+    assert folder.parent_id == another.pk
 
 
 def test_confirmation_detects_a_changed_mirror_binding(api_client, initialized_contract_mirrors, proposals_mcp):

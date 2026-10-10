@@ -1679,12 +1679,14 @@ class Payment(models.Model):
     STATUS_PAID = 'paid'
     STATUS_FAILED = 'failed'
     STATUS_OVERDUE = 'overdue'
+    STATUS_VOIDED = 'voided'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pendiente'),
         (STATUS_PROCESSING, 'Procesando'),
         (STATUS_PAID, 'Pagado'),
         (STATUS_FAILED, 'Fallido'),
         (STATUS_OVERDUE, 'Vencido'),
+        (STATUS_VOIDED, 'Anulado'),
     ]
 
     subscription = models.ForeignKey(

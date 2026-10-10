@@ -70,13 +70,66 @@ incoherencia bloquea update y restore.
 ## Gestor documental y transacción
 
 `list_contract_mirrors` devuelve `document_id`, título, `variant`, `folder_id`,
-`version`, `last_synced_at` y `synchronized` para cada variante. Una vinculación
+`folder_path`, `folder_movable`, `version`, `last_synced_at` y `synchronized`
+para cada variante, además del bloque `pinned_folder`. Una vinculación
 pendiente o un PDF no disponible aparece explícitamente como no sincronizado.
 Los tres documentos se consultan como las cuentas de cobro: PDF, Markdown,
 versión y fecha. No ofrecen editar, guardar, renombrar, mover, arrastrar,
-duplicar, archivar ni eliminar. Se bloquean también cambios de carpeta/ancestros
-que puedan desplazarlos, reasignarlos o archivarlos. Las observaciones privadas
-usan el gestor de notas existente.
+duplicar, archivar ni eliminar individualmente. Las observaciones privadas usan
+el gestor de notas existente.
+
+### Carpeta Contratos fijada por ID (2026-10-09)
+
+`ContractTemplate.mirror_folder` fija la ubicación por ID, con FK nullable y
+`PROTECT`; el nombre «Contratos» deja de ser la identidad de la carpeta. La
+migración `content.0286_contracttemplate_mirror_folder` hace backfill desde las
+vinculaciones existentes, incluido `mirror_document` legacy, cuando identifican
+una sola carpeta. Una ubicación ambigua queda sin pin persistido. El resolver
+usa el campo, luego una carpeta derivada única de los vínculos actuales y, si
+no puede resolverla, informa `unpinned`.
+
+`pinned_folder` expone `pinned_folder_id`, `pin_source` (`field`, `derived` o
+`unpinned`), `folder_path`, `folder_movable`, `archive_blocked` y
+`archive_block_reason`. Son lecturas: ninguna herramienta MCP cambia el pin.
+La sincronización compara el ID y el estado activo de la carpeta, junto con la
+revisión y el PDF del espejo. Sin pin resoluble, una actualización contractual
+falla con `MIRROR_SYNC_FAILED`, `stage: folder_pin` y `applied: false`.
+
+Contratos y sus ancestros manuales pueden renombrarse, moverse y reordenarse;
+los espejos siguen dentro de la misma carpeta y mantienen `synchronized: true`.
+Se conservan las restricciones propias de carpetas administradas automáticamente.
+Archivar la carpeta o un ancestro que contiene espejos devuelve HTTP 409
+`contract_mirror_folder_archive_blocked` (MCP:
+`CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED`), con `contracts_folder_id`,
+`contracts_folder_path` y `mirror_document_ids`. Para liberar un ancestro hay
+que mover primero la carpeta de los espejos fuera de él.
+
+La carpeta fijada permanece sin cliente ni proyecto. Intentar cambiar esas
+asociaciones devuelve HTTP 409 `contract_mirror_folder_pinned` (MCP:
+`CONTRACT_MIRROR_FOLDER_PINNED`). El cambio de cliente de una carpeta superior
+omite la rama fijada y sus espejos, y los informa en `folders_pinned`,
+`documents_pinned` y sus totales. El borrado forzado de un proyecto que contiene
+esa carpeta también exige moverla fuera del proyecto antes de continuar.
+Guion de comprobación: [Migración de carpetas por MCP — parte 1](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
+
+### Contratos dentro de un proyecto migrado (2026-10-10)
+
+`adopt_source`, `move_contents` y `adopt_folder_as_project_root` conservan el
+ID fijado aunque Contratos quede dentro de la raíz gestionada de un proyecto.
+La carpeta y sus espejos siguen **sin cliente ni proyecto**, activos y omitidos
+por la cascada de propiedad; pertenecer al árbol no les asigna el dueño de su
+ancestro. La sincronización contractual sigue usando el pin, con los tres
+espejos en la misma carpeta y `synchronized: true` tras una actualización válida.
+
+Las postcondiciones de la migración verifican carpeta activa/sin dueño y
+ubicación/propiedad de los espejos. Renombrar o mover Contratos y sus ancestros
+manuales sigue permitido; archivar Contratos o un ancestro que los contiene
+continúa bloqueado por `CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED`. La raíz
+gestionada conserva además sus restricciones propias. Una migración no elimina
+esta guarda: hay que mover Contratos fuera antes de archivar el ancestro.
+
+Validación y evidencia de producción:
+[Migración de carpetas por MCP — parte 2](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
 
 Los PDFs se conservan en `ContractTemplateMirror.pdf_content`, separados de los
 archivos inmutables de propuestas. Una confirmación guarda textos, versiones,
@@ -111,6 +164,12 @@ Conserva los IDs 104 y 205, crea el producto y respalda el texto manual anterior
 `imported_markdown`. Los títulos son «Contrato unificado de producto y servicio»,
 «Contrato de producto — desarrollo e implementación de software» y «Contrato de
 servicio — hosting, mantenimiento y soporte». Todos permanecen en Contratos.
+
+El inicializador busca `--folder-id` por pk y exige una carpeta activa sin
+cliente ni proyecto, aunque haya sido renombrada. Con `--apply` persiste el pin
+si todavía no existe; repetir con el mismo ID es idempotente. Si la plantilla
+ya tiene otro `mirror_folder_id`, rechaza re-fijarla y revierte el lote. Sin
+`--apply` sólo informa y no fija ninguna carpeta.
 
 `apply_contract_template_adjustments` relee el documento 237, comprueba sus
 instrucciones y produce un lote con los nuevos parágrafos de duración/renovación

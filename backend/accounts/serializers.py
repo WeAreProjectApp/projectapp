@@ -620,6 +620,14 @@ class CreateProjectSerializer(serializers.Serializer):
                 )
         return value
 
+    def validate(self, attrs):
+        from content.services.project_document_folder_service import (
+            project_root_name_decision,
+        )
+
+        project_root_name_decision(attrs['name'])
+        return attrs
+
 
 class UpdateProjectSerializer(serializers.Serializer):
     name = serializers.CharField(max_length=200, required=False)
@@ -630,6 +638,13 @@ class UpdateProjectSerializer(serializers.Serializer):
     production_url = serializers.URLField(required=False, allow_blank=True, max_length=500)
     staging_url = serializers.URLField(required=False, allow_blank=True, max_length=500)
     repository_url = serializers.URLField(required=False, allow_blank=True, max_length=500)
+
+    def validate_name(self, value):
+        from content.services.project_document_folder_service import (
+            validate_project_root_rename,
+        )
+
+        return validate_project_root_rename(value)
 
 
 # =========================================================================
