@@ -88,6 +88,7 @@ async function correctOpening(episode) {
           <BaseInput
             v-model="correctedAt"
             type="datetime-local"
+            class="panel-portrait:max-w-[17rem]"
             :max="new Date().toISOString().slice(0, 16)"
             :disabled="correctionBusy"
           />

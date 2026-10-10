@@ -125,14 +125,14 @@ const modalFormId = useId();
       </ul>
     </template>
     <BaseModal v-model="modalOpen" kind="form">
-      <form :id="modalFormId" @submit.prevent="save">
+      <form :id="modalFormId" class="px-6 py-4" @submit.prevent="save">
         <h2 class="text-lg font-semibold text-text-default">{{ t(deleting ? 'communicationFiling.delete' : (form.id ? 'communicationFiling.edit' : 'communicationFiling.create')) }}</h2>
         <BaseAlert v-if="error" variant="danger" class="mt-3">{{ error }}</BaseAlert>
         <p v-if="deleting" class="my-4 text-sm text-text-muted">{{ t('communicationFiling.confirmDelete') }}</p>
-        <div v-else class="my-4 space-y-3">
+        <BaseFormRow v-else :cols="2" :gap="4" class="my-4">
           <BaseFormField :label="t('communicationFiling.name')"><BaseInput v-model="form.name" required maxlength="120" data-testid="communication-folder-name" /></BaseFormField>
           <BaseFormField :label="t('communicationFiling.parent')"><BaseSelect v-model="form.parent" :options="parentOptions" data-testid="communication-folder-parent" /></BaseFormField>
-        </div>
+        </BaseFormRow>
       </form>
       <template #footer>
         <BaseModalActions>

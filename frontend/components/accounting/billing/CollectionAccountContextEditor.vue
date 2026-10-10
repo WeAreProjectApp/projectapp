@@ -51,7 +51,7 @@ watch(() => [props.accountId, props.projectId], load, { immediate: true })
     <h3 class="font-semibold text-text-default">Asociación del cobro al proyecto</h3>
     <p class="text-sm text-text-muted">La clasificación no modifica el documento emitido, sus importes ni sus pagos.</p>
     <p v-if="loading" role="status">Cargando asociación…</p>
-    <form v-else class="space-y-3" @submit.prevent="save">
+    <form v-else class="max-w-2xl space-y-3" @submit.prevent="save">
       <BillingContextFields v-model="context" :options="options" :payments="payments" />
       <label class="block text-sm text-text-default">Razón de la asociación o corrección<textarea v-model="reason" required class="mt-1 w-full rounded-xl border border-border-default bg-surface p-3" /></label>
       <BaseButton type="submit" :loading="saving" :disabled="!valid || !reason.trim()" disabled-reason="Selecciona naturaleza y vínculo, e indica la razón de la asociación.">Guardar asociación</BaseButton>

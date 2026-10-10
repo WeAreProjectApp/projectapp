@@ -7,6 +7,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { PANEL_VIEWPORTS, viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import { batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -175,6 +176,9 @@ test.describe('mcp responsive special', () => {
     const cancel = dialog.getByRole('button', { name: 'Cancelar', exact: true });
     await expect(form).toContainText('Editar credencial');
     await expect(cancel).toHaveText('Cancelar');
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [{ fields: [dialog.getByTestId('mcp-credential-label'), dialog.getByTestId('mcp-credential-expiry')] }],
+    });
     await assertResponsiveScenario(page, testInfo, scenario, {
       profile: 'portrait',
       modalLocator: dialog,

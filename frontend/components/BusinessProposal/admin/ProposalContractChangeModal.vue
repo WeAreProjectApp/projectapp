@@ -79,7 +79,7 @@ async function cancel() {
 </script>
 
 <template>
-  <BaseModal :model-value="true" kind="form-wide" :close-on-esc="!busy" :close-on-backdrop="!busy" @close="cancel">
+  <BaseModal :model-value="true" kind="form" :close-on-esc="!busy" :close-on-backdrop="!busy" @close="cancel">
     <div class="space-y-4 p-5" data-testid="proposal-contract-change-modal">
       <h2 class="text-lg font-semibold text-text-default">{{ snapshotId ? 'Restaurar contratos anteriores' : 'Cambiar modalidad de contrato' }}</h2>
       <p class="text-sm text-text-muted">Se conservará una copia de los contratos actuales. El estado comercial, las firmas y los envíos anteriores se mantienen.</p>
@@ -90,13 +90,12 @@ async function cancel() {
           <BaseTextarea :id="`${id}-note`" v-model="note" maxlength="4000" :disabled="busy" disabled-reason="Espera a que termine la operación." data-testid="contract-change-note" />
           <p v-if="fieldErrors.change_note" class="text-sm text-danger-strong">{{ fieldErrors.change_note }}</p>
         </div>
-        <div v-if="modality === 'split' && !snapshotId" class="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div v-for="field in termFields" :key="field.key">
-            <label :for="`${id}-${field.key}`" class="text-sm text-text-default">{{ field.label }}</label>
+        <BaseFormRow v-if="modality === 'split' && !snapshotId" :cols="3" :gap="4">
+          <BaseFormField v-for="field in termFields" :key="field.key" :label="field.label" :for="`${id}-${field.key}`" label-policy="wrap">
             <BaseInput :id="`${id}-${field.key}`" v-model="terms[field.key]" :disabled="busy" disabled-reason="Espera a que termine la operación." :data-testid="`contract-change-${field.key}`" />
             <p v-if="fieldErrors[field.key]" class="text-sm text-danger-strong">{{ fieldErrors[field.key] }}</p>
-          </div>
-        </div>
+          </BaseFormField>
+        </BaseFormRow>
         <label v-if="conflict" class="flex items-start gap-2 text-sm text-text-default">
           <input v-model="resolveConflict" type="checkbox" :disabled="busy" data-testid="contract-change-resolve-conflict" />
           Conservar el personalizado del destino en la instantánea y trasladar el contrato de origen.

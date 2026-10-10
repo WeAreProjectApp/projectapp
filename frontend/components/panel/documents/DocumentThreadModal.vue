@@ -88,7 +88,7 @@
                     <input
                       v-model="member.occurred_on"
                       type="date"
-                      class="mt-1 w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-default"
+                      class="mt-1 block w-full rounded-lg border border-border-default bg-surface px-3 py-2 text-sm text-text-default panel-portrait:w-48"
                       :data-testid="`thread-date-${member.document.id}`"
                     >
                   </label>

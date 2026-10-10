@@ -30,24 +30,26 @@
             <!-- New folder form -->
             <div class="px-6 pt-5 pb-4 flex-shrink-0 space-y-3">
               <form class="space-y-3" novalidate @submit.prevent="handleCreate">
-                <BaseFormField label="Nombre" required :error="newNameError">
-                  <BaseInput
-                    v-model="newName"
-                    type="text"
-                    placeholder="Nombre de la nueva carpeta"
-                    :error="!!newNameError"
-                    data-testid="folder-manager-new-name"
-                    @update:model-value="newNameError = ''"
-                  />
-                </BaseFormField>
-                <BaseFormField label="Dentro de">
-                  <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
-                    <option value="">Ninguna (carpeta raíz)</option>
-                    <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
-                      {{ opt.label }}
-                    </option>
-                  </BaseSelect>
-                </BaseFormField>
+                <BaseFormRow :cols="2" :gap="4">
+                  <BaseFormField label="Nombre" required :error="newNameError">
+                    <BaseInput
+                      v-model="newName"
+                      type="text"
+                      placeholder="Nombre de la nueva carpeta"
+                      :error="!!newNameError"
+                      data-testid="folder-manager-new-name"
+                      @update:model-value="newNameError = ''"
+                    />
+                  </BaseFormField>
+                  <BaseFormField label="Dentro de">
+                    <BaseSelect v-model="newParent" data-testid="folder-manager-parent">
+                      <option value="">Ninguna (carpeta raíz)</option>
+                      <option v-for="opt in createOptions" :key="opt.id" :value="String(opt.id)">
+                        {{ opt.label }}
+                      </option>
+                    </BaseSelect>
+                  </BaseFormField>
+                </BaseFormRow>
                 <div class="flex justify-end">
                   <BaseButton
                     type="submit"

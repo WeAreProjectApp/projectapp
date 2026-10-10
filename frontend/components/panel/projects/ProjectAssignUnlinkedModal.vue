@@ -129,18 +129,19 @@
         </section>
 
         <div v-if="selectedRetainedCount > 0" class="mt-4" data-testid="project-assign-unlinked-retained-note">
-          <label for="project-assign-unlinked-reason" class="block text-sm text-text-default">
-            Motivo del traslado (opcional)
-          </label>
-          <BaseInput
-            id="project-assign-unlinked-reason"
-            v-model="reason"
-            data-testid="project-assign-unlinked-reason"
-          />
-          <p class="text-xs text-text-subtle mt-1">
-            Los datos conservados de un proyecto eliminado dejan de ser de solo consulta y
-            quedan en este proyecto. El traslado queda registrado y se puede deshacer.
-          </p>
+          <BaseFormRow :cols="2" :gap="4" help-testid="project-assign-unlinked-reason-hint">
+            <BaseFormField label="Motivo del traslado (opcional)" for="project-assign-unlinked-reason">
+              <BaseInput
+                id="project-assign-unlinked-reason"
+                v-model="reason"
+                data-testid="project-assign-unlinked-reason"
+              />
+            </BaseFormField>
+            <template #help>
+              Los datos conservados de un proyecto eliminado dejan de ser de solo consulta y
+              quedan en este proyecto. El traslado queda registrado y se puede deshacer.
+            </template>
+          </BaseFormRow>
         </div>
       </template>
     </div>
@@ -186,6 +187,8 @@ import { computed, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseCheckbox from '~/components/base/BaseCheckbox.vue';
+import BaseFormField from '~/components/base/BaseFormField.vue';
+import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';

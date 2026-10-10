@@ -78,40 +78,46 @@
     />
 
     <!-- Create modal -->
-    <BaseModal v-model="formModal.open" kind="form" padding="md">
+    <BaseModal v-model="formModal.open" kind="form">
       <form :id="modalFormId" novalidate data-testid="linktree-form" @submit.prevent="onSubmit">
         <div class="space-y-4 px-6 py-5">
           <h3 class="text-lg font-bold text-text-default">Nuevo linktree</h3>
 
-          <BaseFormField v-slot="{ invalid, errorId }" label="Nombre interno" for="linktree-name" required :error="formErrors.name">
-            <BaseInput
-              id="linktree-name"
-              v-model="formModal.name"
-              data-testid="linktree-name-input"
-              :error="invalid"
-              :aria-describedby="errorId"
-              @update:model-value="formErrors.name = ''"
-            />
-          </BaseFormField>
-
-          <BaseFormField
-            label="Handle"
-            for="linktree-handle"
-            required
-            hint="La URL pública queda como /lk/@handle — minúsculas, números, punto, guion y guion bajo."
-            :error="formErrors.handle"
-            v-slot="{ invalid, errorId }"
+          <BaseFormRow
+            :cols="2"
+            :gap="4"
+            help="La URL pública queda como /lk/@handle — minúsculas, números, punto, guion y guion bajo."
+            help-testid="linktree-handle-hint"
           >
-            <BaseInput
-              id="linktree-handle"
-              v-model="formModal.handle"
-              placeholder="@mi_handle"
-              data-testid="linktree-handle-input"
-              :error="invalid"
-              :aria-describedby="errorId"
-              @update:model-value="formErrors.handle = ''"
-            />
-          </BaseFormField>
+            <BaseFormField v-slot="{ invalid, errorId }" label="Nombre interno" for="linktree-name" required :error="formErrors.name">
+              <BaseInput
+                id="linktree-name"
+                v-model="formModal.name"
+                data-testid="linktree-name-input"
+                :error="invalid"
+                :aria-describedby="errorId"
+                @update:model-value="formErrors.name = ''"
+              />
+            </BaseFormField>
+
+            <BaseFormField
+              label="Handle"
+              for="linktree-handle"
+              required
+              :error="formErrors.handle"
+              v-slot="{ invalid, errorId }"
+            >
+              <BaseInput
+                id="linktree-handle"
+                v-model="formModal.handle"
+                placeholder="@mi_handle"
+                data-testid="linktree-handle-input"
+                :error="invalid"
+                :aria-describedby="errorId"
+                @update:model-value="formErrors.handle = ''"
+              />
+            </BaseFormField>
+          </BaseFormRow>
 
           <BaseFormField label="Tipo" for="linktree-kind">
             <BaseSegmented
@@ -156,6 +162,7 @@ import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
+import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseToggle from '~/components/base/BaseToggle.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';

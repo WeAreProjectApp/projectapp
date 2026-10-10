@@ -8,6 +8,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 
 test.setTimeout(60_000);
 
@@ -338,6 +339,17 @@ for (const alias of ['compact', 'portrait']) {
       await stageCustomDocuments(page);
       await expect(modal.getByTestId('approval-custom-document')).toHaveCount(2);
       await expect.poll(() => page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - document.documentElement.clientWidth)).toBeLessThanOrEqual(1);
+      // Each staged document keeps its title and type on one line from portrait up.
+      const annex = modal.getByTestId('approval-custom-document').nth(1);
+      await expectCompactModal(page.getByRole('dialog'), page.viewportSize(), {
+        lines: [{
+          fields: [
+            annex.getByRole('textbox', { name: 'Document title', exact: true }),
+            annex.getByRole('combobox', { name: 'Document type', exact: true }),
+          ],
+          maxWidth: 600,
+        }],
+      });
       await page.keyboard.press('Escape');
       await expect(modal).toHaveCount(0);
       await expect(opener).toBeFocused();

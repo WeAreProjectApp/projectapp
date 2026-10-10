@@ -1417,38 +1417,39 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
-      <!-- The hint only holds for the days mode; the fixed-date mode shares
+      <!-- The help only holds for the days mode; the fixed-date mode shares
            this field, where a 0 would mean nothing. -->
-      <BaseFormRow :cols="2" :gap="4">
+      <BaseFormRow
+        :cols="2"
+        :gap="4"
+        :help="form.term === 'days'
+          ? '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.'
+          : ''"
+        help-testid="collection-form-term-hint"
+      >
         <BaseFormField label="Ciudad">
           <BaseInput v-model="form.city" placeholder="Ciudad de emisión" />
         </BaseFormField>
-      <BaseFormField
-        label="Plazo de pago"
-        :error="dueDateValidationError"
-        :hint="form.term === 'days'
-          ? '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.'
-          : undefined"
-      >
-        <div class="space-y-2">
-          <BaseSegmented v-model="form.term" :options="termOptions" full-width />
-          <BaseInput
-            v-if="form.term === 'days'"
-            v-model="form.payment_term_days"
-            type="number"
-            min="0"
-            max="120"
-            data-testid="collection-form-term-days"
-          />
-          <BaseInput
-            v-else
-            v-model="form.due_date"
-            type="date"
-            :error="!!dueDateValidationError"
-            data-testid="collection-form-due-date"
-          />
-        </div>
-      </BaseFormField>
+        <BaseFormField label="Plazo de pago" :error="dueDateValidationError">
+          <div class="space-y-2">
+            <BaseSegmented v-model="form.term" :options="termOptions" full-width />
+            <BaseInput
+              v-if="form.term === 'days'"
+              v-model="form.payment_term_days"
+              type="number"
+              min="0"
+              max="120"
+              data-testid="collection-form-term-days"
+            />
+            <BaseInput
+              v-else
+              v-model="form.due_date"
+              type="date"
+              :error="!!dueDateValidationError"
+              data-testid="collection-form-due-date"
+            />
+          </div>
+        </BaseFormField>
       </BaseFormRow>
 
       <!-- Editable customer snapshot -->

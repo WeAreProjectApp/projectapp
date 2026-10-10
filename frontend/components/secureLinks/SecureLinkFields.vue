@@ -6,7 +6,7 @@
         {{ t('secureLinks.moreDetails') }}
       </BaseButton>
       <BaseCollapse v-if="group.fields.length" :id="group.optional ? detailsId : undefined" :open="!group.optional || showDetails">
-      <div class="space-y-4">
+      <BaseFormRow :cols="2" :gap="4">
     <BaseFormField
       v-for="field in group.fields"
       :key="field.key"
@@ -15,6 +15,7 @@
       :for="`${idPrefix}-${field.key}`"
       :required="field.required"
       :error="errors?.[field.key] || ''"
+      :class="{ 'panel-portrait:col-span-2': isWide(field) }"
     >
       <BaseTextarea
         v-if="isMultiline(field)"
@@ -59,7 +60,7 @@
         />
       </div>
     </BaseFormField>
-      </div>
+      </BaseFormRow>
       </BaseCollapse>
     </template>
   </div>
@@ -69,6 +70,7 @@
 import { computed, reactive, ref, useId, watch } from 'vue';
 import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
+import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseTextarea from '~/components/base/BaseTextarea.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
@@ -111,6 +113,14 @@ function labelFor(field) {
 
 function isMultiline(field) {
   return field.kind === 'textarea' || (field.kind === 'secret' && field.max_length > 2000);
+}
+
+// One-line values that are long by nature (a token, a subject) keep the full
+// row; every other one-line field takes half of it.
+const LONG_SINGLE_LINE_KEYS = new Set(['secret_key', 'subject']);
+
+function isWide(field) {
+  return isMultiline(field) || LONG_SINGLE_LINE_KEYS.has(field.key);
 }
 
 function inputType(field) {

@@ -126,20 +126,23 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
-      <BaseFormField label="Disponible" required>
-        <BaseCurrencyInput v-model="form.available_amount" required />
-        <p
-          v-if="debtPreview"
-          id="card-snapshot-debt-preview"
-          class="text-xs mt-1"
-          :class="availableExceedsLimit ? 'text-danger-strong' : 'text-text-subtle'"
-          data-testid="card-snapshot-debt-preview"
-        >
-          {{ availableExceedsLimit
-            ? 'El disponible no puede superar el cupo de la tarjeta.'
-            : debtPreview }}
-        </p>
-      </BaseFormField>
+      <!-- Alone in a two-column row: an amount needs half the width. -->
+      <BaseFormRow :cols="2" :gap="4">
+        <BaseFormField label="Disponible" required>
+          <BaseCurrencyInput v-model="form.available_amount" required />
+        </BaseFormField>
+        <template v-if="debtPreview" #help>
+          <span
+            id="card-snapshot-debt-preview"
+            :class="availableExceedsLimit ? 'text-danger-strong' : 'text-text-subtle'"
+            data-testid="card-snapshot-debt-preview"
+          >
+            {{ availableExceedsLimit
+              ? 'El disponible no puede superar el cupo de la tarjeta.'
+              : debtPreview }}
+          </span>
+        </template>
+      </BaseFormRow>
 
       <BaseFormField label="Notas">
         <BaseTextarea v-model="form.notes" :rows="3" />
