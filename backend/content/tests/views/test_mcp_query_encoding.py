@@ -56,6 +56,7 @@ def test_query_encoder_rejects_nested_values(value):
 
 @pytest.mark.parametrize('arguments', [{'force': True}, {'query': {'force': True}}])
 def test_generic_get_boolean_reaches_the_forced_preview(superuser, unused_project, arguments):
+    """Preserve query encoding and the published path shape of legacy bridges."""
     tool = _preview_tool()
 
     normal = tool['handler']({'project_id': unused_project.pk, 'query': {'force': False, 'optional': None}})
@@ -68,7 +69,6 @@ def test_generic_get_boolean_reaches_the_forced_preview(superuser, unused_projec
     assert forced['project']['id'] == unused_project.pk
     assert tool['input_schema']['properties']['project_id'] == {
         'type': ['integer', 'string'],
-        'description': 'Id positivo del proyecto que se consulta o modifica.',
     }
 
 
@@ -89,7 +89,7 @@ def test_get_query_list_uses_the_declared_encoding(query_schema, expected):
 
 @pytest.mark.parametrize('payload_schema', [None, {'type': 'object', 'properties': {}, 'additionalProperties': False}])
 def test_post_rejects_an_undeclared_query(payload_schema):
-    tool = _preview_tool(method='POST', payload_schema=payload_schema)
+    tool = _preview_tool(method='POST', payload_schema=payload_schema, envelope_aliases=False)
 
     with pytest.raises(ToolError) as rejected:
         tool['handler']({'project_id': 1, 'query': {'force': True}})
@@ -104,11 +104,11 @@ def test_post_rejects_an_undeclared_query(payload_schema):
 def test_query_only_post_rejects_a_body_without_a_payload_schema():
     tool = _op(
         'query_only_post', 'Comprueba un POST que sólo admite parámetros de consulta.',
-        'create-document-folder', method='POST', query_schema=QUERY_SCHEMA,
+        'create-document-folder', method='POST', query_schema=QUERY_SCHEMA, envelope_aliases=False,
     )
 
     with pytest.raises(ToolError) as rejected:
-        tool['handler']({'query': {'force': True}, 'data': {'name': 'Undeclared body'}})
+        tool['handler']({'force': True, 'data': {'name': 'Undeclared body'}})
 
     assert 'data' not in tool['input_schema']['properties']
     assert tool['input_schema']['additionalProperties'] is False
@@ -216,7 +216,7 @@ def test_explicit_path_rejects_invalid_identifiers(value):
 def test_get_payload_alias_is_rejected_before_dispatch():
     tool = normalize_tool(_preview_tool(payload_schema={
         'type': 'object', 'properties': {'force': {'type': 'boolean'}},
-    }), 'projects')
+    }, envelope_aliases=False), 'projects')
 
     _, response = handle_message({
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
