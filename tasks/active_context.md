@@ -36,6 +36,10 @@ pública. Sin backend ni migraciones. Verificación: unas 300 pruebas unitarias 
 liquidar 8, contabilidad 18, prioritarios 10), más tokens de diseño, contrato
 responsive y registro de flujos en verde.
 
+# Building with Us — F3 (2026-10-09)
+
+F1 y F2 incorporaron la página pública bilingüe y el panel de solo lectura con Programa y Contrato. F3 registra ambas páginas en los catálogos y la aceptación responsiva, añade once recorridos con documentación y pruebas E2E, y comparte fixtures de los siete endpoints. Programa y contrato conservan versiones propias; sus ediciones se realizan sólo mediante el MCP `building-with-us`. El contrato tiene un espejo de lectura en ProjectApp › Contratos del Gestor Documental. La verificación focal incluye navegación, distribución, historial, Markdown, reintentos y los cinco perfiles; el trabajo paralelo de backend se mantiene separado.
+
 > **Límite REST/MCP de recursos — 2026-10-07:** preservado el rol administrativo de Platform frente a los flags Django staff/superuser. Las lecturas, escrituras y descargas del servicio compartido filtran por propietario cuando no existe ese rol; MCP admite su principal técnico únicamente con contexto, actor y credencial coincidentes. Verificados doce rechazos de cliente staff, positivos de admin/cliente y principal MCP sin perfil simulado; gate focal 100 y schema sin drift.
 
 
@@ -2802,7 +2806,7 @@ Los commits `5561570b`, `e989828d`, `3887c60c`, `7350aaca` y `a33938b9`
 aportan schemas de entregas/recursos planos, catálogos de 36/48 bridges y el
 cierre de las 16 raíces nativas documentales. `f41afd3d` conecta los catálogos
 con los bridges; el retiro de alias y los pins completan el contrato objetivo
-**4.0.0 / 73 tools** y **3.0.0 / 164 tools**. Las llamadas con `data`/`query`
+**4.0.0 / 73 tools** y **3.0.0 / 171 tools**. Las llamadas con `data`/`query`
 deben migrar. Imports conservan `payload` v1/v2,
 tickets su objeto tipado, y otros conectores sus alias. Borrado MCP admite sólo
 `project_id`/`if_match`; las exclusiones del Panel tienen motivo y el campo de

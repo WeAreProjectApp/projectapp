@@ -1,3 +1,5 @@
+> **Building with Us — 2026-10-09:** el experto de negocio puede evaluar una alianza de producto desde una presentación ES/EN con aportes de ambas partes, modelos, periodos de incubación, alcance, hitos y FAQ; ofrece guía, tema persistente, PDF, compartir y WhatsApp, sin video ni cifras comerciales públicas. El equipo distribuye el programa y consulta Programa y Contrato en un panel de solo lectura. Las versiones se modifican exclusivamente mediante el MCP `building-with-us`; el Gestor Documental conserva una copia contractual de lectura en ProjectApp › Contratos.
+
 > **Operación de entregas — 2026-10-07:** los archivos confirmados al revisar
 > una propuesta pueden sustentar contratos y otrosí sin inferir firma ni
 > aceptación. El Gestor de la plataforma mantiene `projects` y administra la

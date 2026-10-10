@@ -12,6 +12,8 @@
 > mismo correo. El preview de cuentas de cobro devuelve además `issue_date`,
 > `customer_name`, `project_name` y `billing_concept` para el último aviso.
 
+> **Building with Us — 2026-10-09:** la página pública usa `GET /api/building-with-us/public/?lang=es|en` y su PDF; el panel usa sesión/CSRF y `stores/building_with_us.js` para consultar resumen, vista previa, contrato, PDF e historiales con `limit=20&offset=`. Programa y contrato son versionados y sólo se editan desde el MCP `building-with-us`; el espejo en ProjectApp › Contratos es de lectura. Los mocks E2E compartidos reproducen los siete endpoints y los estados synchronized, out_of_sync y not_initialized. Catálogos, flujos por archivo y matriz responsiva incluyen ambas páginas.
+
 > **Archivos privados — 2026-10-07:** `accounts.0081_private_platform_resource_files`
 > cambia el storage de las cuatro familias y amplía sus nombres a 500 caracteres.
 > `content.0285_merge_platform_manager_retention` une las dos hojas 0284;

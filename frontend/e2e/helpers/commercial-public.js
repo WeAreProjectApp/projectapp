@@ -1,6 +1,7 @@
 import { expect } from './test.js'
 import { mockApi } from './api.js'
 import { financingProgramFixture } from './financing-fixture.js'
+import { buildingWithUsApiFixture, buildingWithUsProgramFixture } from './building-with-us-fixture.js'
 import { waitForNuxtApp } from './navigation.js'
 
 export const commercialModule = {
@@ -11,18 +12,22 @@ export const commercialModule = {
   implementation_requirements: ['Contenido de marca'],
 }
 export const commercialPages = [
-  { name: 'catalog', path: '/es-co/additional-modules', prefix: 'additional-modules', root: 'additional-modules-catalog', share: 'additional-modules-share-floating', flow: 'public-additional-modules-theme' },
-  { name: 'selection', path: '/es-co/additional-modules/share/11111111-1111-4111-8111-111111111111', prefix: 'additional-modules', root: 'additional-modules-catalog', share: 'additional-modules-share-floating', flow: 'public-additional-modules-theme' },
-  { name: 'partnership', path: '/es-co/partnership-program', prefix: 'financing', root: 'financing-program', share: 'financing-share', flow: 'public-financing-theme' },
+  { name: 'catalog', path: '/es-co/additional-modules', prefix: 'additional-modules', root: 'additional-modules-catalog', share: 'additional-modules-share-floating', flow: 'public-additional-modules-theme', shareFlow: 'public-additional-modules-share', guideFlow: 'public-additional-modules-guide', guideTitle: 'Empieza por el video', cardId: 'additional-module-card-landing-page', cardSummary: commercialModule.summary },
+  { name: 'selection', path: '/es-co/additional-modules/share/11111111-1111-4111-8111-111111111111', prefix: 'additional-modules', root: 'additional-modules-catalog', share: 'additional-modules-share-floating', flow: 'public-additional-modules-theme', shareFlow: 'public-additional-modules-share', cardId: 'additional-module-card-landing-page', cardSummary: commercialModule.summary },
+  { name: 'partnership', path: '/es-co/partnership-program', prefix: 'financing', root: 'financing-program', share: 'financing-share', flow: 'public-financing-theme', shareFlow: 'public-financing-share', guideFlow: 'public-financing-guide', guideTitle: 'Empieza por el video', cardId: 'financing-option-five-year', cardSummary: financingProgramFixture().options[0].summary },
+  { name: 'building-with-us', path: '/es-co/building-with-us', prefix: 'building-with-us', root: 'building-with-us-program', share: 'building-with-us-share', flow: 'public-building-with-us-theme', shareFlow: 'public-building-with-us-share', guideFlow: 'public-building-with-us-guide', guideTitle: 'Una alianza para construir', cardId: 'building-with-us-model-monthly-investment', cardSummary: buildingWithUsProgramFixture().participation_models.items[0].summary },
 ]
 
 export async function setupCommercialPublic(page, { fail = false, video = false, categories } = {}) {
   await page.addInitScript(() => {
     localStorage.setItem('projectapp-additional-modules-guide-seen', 'true')
     localStorage.setItem('projectapp-financing-guide-seen', 'true')
+    localStorage.setItem('projectapp-building-with-us-guide-seen', 'true')
   })
-  await mockApi(page, ({ apiPath }) => {
+  await mockApi(page, ({ apiPath, method, route }) => {
     if (fail) return { status: 503, contentType: 'application/json', body: '{}' }
+    const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route })
+    if (buildingWithUs) return buildingWithUs
     const catalogCategories = categories || [{ slug: 'marketing', name: 'Marketing', modules: [commercialModule] }]
     const catalog = {
       language: 'es', total_modules: catalogCategories.reduce((total, category) => total + category.modules.length, 0),
@@ -59,8 +64,7 @@ export async function expectReadableHeading(page, entry) {
 }
 
 export async function expectLayeredCard(page, entry) {
-  const cardId = entry.prefix === 'financing' ? 'financing-option-five-year' : 'additional-module-card-landing-page'
-  const summary = entry.prefix === 'financing' ? financingProgramFixture().options[0].summary : commercialModule.summary
+  const { cardId, cardSummary: summary } = entry
   const card = page.getByTestId(cardId)
   const pageBackground = await page.getByTestId(entry.root).evaluate((root) => getComputedStyle(root).backgroundColor)
   await expect(card).not.toHaveCSS('background-color', pageBackground)

@@ -482,8 +482,8 @@ class DocumentCreateUpdateSerializer(serializers.ModelSerializer):
 
     def to_internal_value(self, data):
         if self.instance is not None and self.instance.is_contract_mirror:
-            from content.services.contract_mirror_service import CONTRACT_MIRROR_MESSAGE
-            raise serializers.ValidationError({'detail': CONTRACT_MIRROR_MESSAGE})
+            from content.services.contract_mirror_service import mirror_read_only_message
+            raise serializers.ValidationError({'detail': mirror_read_only_message(self.instance)})
         return super().to_internal_value(data)
 
     def validate(self, attrs):

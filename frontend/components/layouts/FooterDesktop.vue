@@ -232,6 +232,7 @@ const solutions = computed(() => {
     { name: s.blog || 'Blog', href: '/blog' },
     { name: t('additionalModules.title'), href: '/additional-modules' },
     { name: t('financing.title'), href: '/partnership-program' },
+    { name: t('buildingWithUs.title'), href: '/building-with-us' },
   ];
 });
 

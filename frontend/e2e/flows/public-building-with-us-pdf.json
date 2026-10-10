@@ -1,0 +1,14 @@
+{
+  "id": "public-building-with-us-pdf",
+  "name": "Public Building with Us PDF",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Descargar el PDF localizado; si falla la solicitud, leer el aviso sin perder el programa.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

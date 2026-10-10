@@ -149,6 +149,8 @@ SEEDED_MODELS = {
 }
 
 DERIVED_MODELS = {
+    'content.BuildingWithUsProgramRevision',
+    'content.BuildingWithUsContractRevision', 'content.BuildingWithUsContractMirror',
     'accounts.BugComment', 'accounts.ChangeRequestComment',
     # Captured by ticket operations, never fabricated as independent history.
     'accounts.IssueContext', 'accounts.IssueResponse',
@@ -194,6 +196,8 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'content.BuildingWithUsProgram',
+    'content.BuildingWithUsContract',
     'content.AccountingSettings', 'content.AdditionalModule',
     'content.AdditionalModuleCategory', 'content.ConfidentialityTemplate',
     'content.ContractTemplate', 'content.DiagnosticDefaultConfig',

@@ -9,6 +9,8 @@ from django.db.models.signals import post_save
 
 from content.models import (
     AccountingChangeLog,
+    BuildingWithUsContractRevision,
+    BuildingWithUsProgramRevision,
     BusinessProposal,
     ClientDocumentNumberSequence,
     CommunicationFolder,
@@ -17,6 +19,7 @@ from content.models import (
     Document,
     DocumentCollectionAccount,
     DocumentFolder,
+    DocumentOwnershipOperation,
     EntityRevision,
     WebAppDiagnostic,
 )
@@ -39,6 +42,23 @@ from content.tests.data_integrity_merge_factories import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.mark.parametrize('revision_model,content', [
+    (BuildingWithUsProgramRevision, {'content': {}}),
+    (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
+], ids=['program', 'contract'])
+def test_merge_preserves_alliance_revision_author(superuser, revision_model, content):
+    survivor, duplicate = client_pair()
+    revision = revision_model.objects.create(
+        version=revision_model.objects.count() + 1, author=duplicate.user,
+        change_note='Autoría original', **content,
+    )
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    revision.refresh_from_db()
+    assert revision.author_id == duplicate.user_id
+
+
 def test_engine_retires_the_duplicate_without_deleting_it(superuser):
     """Fails if the engine deletes D or leaves the duplicate-email finding unresolved."""
     survivor, duplicate = client_pair()
@@ -59,6 +79,19 @@ def test_engine_retires_the_duplicate_without_deleting_it(superuser):
                                           history__entity_type='client', history__object_id=duplicate.pk).exists()
     receipt = AccountingChangeLog.objects.filter(entity_type='client', object_id=duplicate.pk).first()
     assert any(row['field'] == 'merged_into' and row['new'] == survivor.pk for row in receipt.changes)
+
+
+def test_merge_preserves_folder_migration_actor(superuser):
+    survivor, duplicate = client_pair()
+    receipt = DocumentOwnershipOperation.objects.create(
+        kind='migration', origin='panel', request_id='original-migration',
+        plan_hash='a' * 64, reason='Autoría original', actor=duplicate.user,
+    )
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    receipt.refresh_from_db()
+    assert receipt.actor_id == duplicate.user_id
 
 
 def test_contact_fills_preserve_account_scoped_preferences(superuser):

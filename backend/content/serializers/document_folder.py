@@ -300,6 +300,26 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
 
     def validate(self, attrs):
         """Apply the document association rule without a client-name snapshot."""
+        if self.instance is not None:
+            from content.models import BuildingWithUsContractMirror
+            from content.services.contract_mirror_service import is_pinned_mirror_folder
+
+            # Before a shared pin exists, keep the alliance's named location stable.
+            alliance_folder = BuildingWithUsContractMirror.objects.filter(
+                document__folder=self.instance,
+            ).exists()
+            changed = any(
+                field in attrs and attrs[field] != getattr(self.instance, attribute)
+                for field, attribute in (
+                    ('name', 'name'), ('parent', 'parent'),
+                    ('client', 'client_user'), ('project', 'project'),
+                )
+            )
+            if alliance_folder and changed and not is_pinned_mirror_folder(self.instance):
+                raise serializers.ValidationError({
+                    'detail': 'La carpeta del espejo de Building with Us debe conservar su ubicación contractual.',
+                    'code': 'contract_mirror_folder_pinned',
+                })
         if self._policy_parent_change(attrs):
             if {'client', 'project'}.intersection(attrs):
                 raise serializers.ValidationError({

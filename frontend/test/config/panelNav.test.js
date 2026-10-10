@@ -37,9 +37,10 @@ describe('getPanelNavSections', () => {
     const sections = getPanelNavSections(identityLocalePath);
 
     expect(sections.map((s) => s.label)).not.toContain('Website content');
+    expect(sections.map((s) => s.label)).toContain('Contenido ProjectApp');
   });
 
-  it('groups the conversation registry and real email sender under Comunicaciones', () => {
+  it('groups customer communication tools under Comunicaciones', () => {
     const sections = getPanelNavSections(identityLocalePath);
     const communications = sections.find((s) => s.id === 'communications');
 
@@ -79,6 +80,17 @@ describe('getPanelNavSections', () => {
     const labels = commercial.items.filter((item) => !item.divider).map((item) => item.label);
 
     expect(labels.indexOf('Programa de Alianza')).toBe(labels.indexOf('Módulos adicionales') + 1);
+  });
+
+  it('places Building with Us immediately after the partnership program', () => {
+    const commercial = getPanelNavSections(identityLocalePath)
+      .find((section) => section.id === 'commercial');
+    const partnershipIndex = commercial.items.findIndex((item) => item.label === 'Programa de Alianza');
+
+    expect(commercial.items[partnershipIndex + 1]).toEqual({
+      label: 'Building with Us', href: '/panel/building-with-us', icon: 'handshake',
+    });
+    expect(commercial.items[partnershipIndex + 2]).toEqual({ divider: true });
   });
 
   describe('Plataforma section', () => {

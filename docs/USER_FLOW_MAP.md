@@ -6003,6 +6003,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-blog-list` | admin | P2 | display | 1 |
 | `admin-blog-overdue-detection` | admin | P2 | — | 0 |
 | `admin-blog-publish-mode` | admin | P2 | display,success | 1 |
+| `admin-building-with-us-contract` | admin | P1 | display,success,failure | — |
+| `admin-building-with-us-distribution` | admin | P1 | display,success,failure | — |
+| `admin-building-with-us-history` | admin | P2 | display,success,failure | — |
 | `admin-client-archived-tab` | admin | P2 | display,success,failure | 1 |
 | `admin-client-change-history` | admin | P2 | display,success,failure | — |
 | `admin-client-communications` | admin | P1 | display,success,error,failure | 15 |
@@ -6351,6 +6354,14 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `public-additional-modules-pdf` | public | P2 | success,failure | 2 |
 | `public-additional-modules-share` | public | P1 | success,display,failure | 4 |
 | `public-additional-modules-theme` | public | P2 | success,display,failure | 2 |
+| `public-building-with-us-faq` | public | P2 | success | — |
+| `public-building-with-us-guide` | public | P2 | display,success | — |
+| `public-building-with-us-language` | public | P2 | success | — |
+| `public-building-with-us-load` | public | P1 | failure,success | — |
+| `public-building-with-us-overview` | public | P1 | display,success | — |
+| `public-building-with-us-pdf` | public | P2 | success,failure | — |
+| `public-building-with-us-share` | public | P2 | success,failure | — |
+| `public-building-with-us-theme` | public | P2 | success,failure | — |
 | `public-contact-submit` | public | P1 | success,error | 1 |
 | `public-financing-explainer` | public | P2 | display,success,failure | 4 |
 | `public-financing-guide` | public | P2 | success,display | 2 |
@@ -7584,6 +7595,119 @@ Fuente: reporte contextual en `DeliveryWorkspace.vue` e historial en `DeliverySt
 Administrador y cliente escriben un mensaje, seleccionan los requerimientos tratados y pueden asociar documentos existentes. El mensaje es obligatorio; los adjuntos son opcionales. El cliente sólo puede responder en contenido publicado que pertenece a su proyecto.
 
 `delivery-review.spec.js` comprueba que una respuesta sin adjuntos persiste al volver. Las respuestas no otorgan conformidad ni sustituyen la decisión explícita del cliente.
+
+
+## Section 34 — Building with Us (Oct 9, 2026)
+
+### FLOW: `public-building-with-us-overview`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Navegar desde el pie público, leer industrias y aportes de cada parte, consultar periodos de incubación y saltar a un modelo desde el índice.
+- **Outcomes:** `display`, `success`
+- **Evidence:** frontend/pages/building-with-us/index.vue; frontend/components/BuildingWithUs/ProgramView.vue; GET /api/building-with-us/public/?lang=es; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-language`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Cambiar a English y leer el programa en inglés conservando la ruta pública localizada.
+- **Outcomes:** `success`
+- **Evidence:** frontend/components/BuildingWithUs/ProgramView.vue; frontend/pages/building-with-us/index.vue; GET /api/building-with-us/public/?lang=en; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-load`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Abrir un enlace público con la API indisponible, leer el error y reintentar hasta recuperar el programa.
+- **Outcomes:** `failure`, `success`
+- **Evidence:** frontend/pages/building-with-us/index.vue; GET /api/building-with-us/public/; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-faq`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Expandir una pregunta frecuente y leer la respuesta sobre la participación ganada por hitos.
+- **Outcomes:** `success`
+- **Evidence:** frontend/components/BuildingWithUs/ProgramView.vue; building-with-us-faq-trigger-0; building-with-us-faq-panel-0; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-pdf`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Descargar el PDF localizado; si falla la solicitud, leer el aviso sin perder el programa.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** frontend/components/BuildingWithUs/ProgramView.vue; GET /api/building-with-us/public/pdf/?lang=es; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-share`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Abrir el diálogo y copiar la URL actual; ante rechazo del portapapeles, conservar el enlace seleccionable y leer el error.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** frontend/components/BuildingWithUs/ProgramView.vue; frontend/components/PublicDocumentShareButton.vue; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-guide`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Recibir la guía de nueve pasos en la primera visita, avanzar, omitirla y reiniciarla desde el control flotante.
+- **Outcomes:** `display`, `success`
+- **Evidence:** frontend/components/BuildingWithUs/Onboarding.vue; frontend/components/PublicGuidedTour.vue; projectapp-building-with-us-guide-seen; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `public-building-with-us-theme`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-with-us`
+- **Interaction:** Cambiar al tema oscuro, recargar y recuperar una carga fallida conservando el tema guardado en página y controles.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** frontend/composables/useBuildingWithUsTheme.js; frontend/components/BuildingWithUs/ProgramView.vue; projectapp-building-with-us-theme; `frontend/e2e/public/building-with-us.spec.js`.
+
+### FLOW: `admin-building-with-us-distribution`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/building-with-us`
+- **Interaction:** Navegar desde Comercial, copiar la URL inglesa, descargar el PDF y cambiar el idioma de la vista previa sin cambiar la URL del panel; reintentar un fallo del resumen.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/config/panelNav.js; frontend/components/BuildingWithUs/admin/DistributionCard.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+### FLOW: `admin-building-with-us-history`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/building-with-us`
+- **Interaction:** Consultar la versión vigente, autor y nota; pulsar Ver más para cargar offset=20 y reintentar un fallo del historial.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/components/BuildingWithUs/admin/VersionHistory.vue; frontend/stores/building_with_us.js; GET /api/building-with-us/admin/program/versions/?limit=20&offset=20; GET /api/building-with-us/admin/contract/versions/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+### FLOW: `admin-building-with-us-contract`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/building-with-us`
+- **Interaction:** Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/components/BuildingWithUs/admin/ContractPanel.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/contract/; GET /api/building-with-us/admin/contract/pdf/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
 
 
 ## Unsectioned flows

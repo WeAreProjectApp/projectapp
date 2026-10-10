@@ -74,11 +74,13 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/AdditionalModules/ModuleFormModal.vue',
     'frontend/components/AdditionalModules/ShareHistoryModal.vue',
     'frontend/components/BusinessProposal/admin/',
+    'frontend/components/BuildingWithUs/admin/',
     'frontend/components/WebAppDiagnostic/admin/',
     'frontend/components/proposals/',
     'frontend/components/Financing/',
     'frontend/pages/panel/defaults.vue',
     'frontend/pages/panel/additional-modules/',
+    'frontend/pages/panel/building-with-us/',
     'frontend/pages/panel/partnership-program/',
     'frontend/pages/panel/financing/',
     'frontend/pages/panel/diagnostics/',
@@ -92,6 +94,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Crear o editar un paquete de horas.',
     'Administrar, reordenar, seleccionar y compartir módulos adicionales.',
     'Copiar, abrir, descargar y previsualizar el Programa de Alianza, y mostrar u ocultar su video.',
+    'Consultar Programa y Contrato de Building with Us, cambiar el idioma de la vista previa y leer historial y estado del espejo sin desbordar el panel.',
     'Crear, editar y gestionar el ciclo de vida de un otrosí de financiación.',
   ]),
   emails: module('emails', [
@@ -162,12 +165,17 @@ export const RESPONSIVE_MODULES = Object.freeze({
   ]),
   public: module('public', [
     'frontend/components/AdditionalModules/CatalogView.vue',
+    'frontend/components/BuildingWithUs/ProgramView.vue',
+    'frontend/components/BuildingWithUs/Onboarding.vue',
+    'frontend/components/BuildingWithUs/ProgramSkeleton.vue',
     'frontend/components/ExplainerVideoCard.vue',
     'frontend/components/Financing/',
     'frontend/components/PublicGuidedTour.vue',
     'frontend/components/PublicDocumentAction.vue',
     'frontend/components/PublicDocumentShareButton.vue',
     'frontend/composables/usePublicDocumentTheme.js',
+    'frontend/composables/useBuildingWithUsTheme.js',
+    'frontend/utils/buildingWithUs.js',
     'frontend/composables/useExplainerVideos.js',
     'frontend/components/BusinessProposal/',
     'frontend/components/Linktree/',
@@ -180,6 +188,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/layouts/default.vue',
     'frontend/pages/about-us.vue',
     'frontend/pages/additional-modules/',
+    'frontend/pages/building-with-us/',
     'frontend/pages/blog/',
     'frontend/pages/contact',
     'frontend/pages/diagnostic/',
@@ -199,6 +208,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Recorrer una propuesta y un diagnóstico compartidos.',
     'Explorar el catálogo de módulos, abrir detalles y descargar la selección.',
     'Comparar las dos opciones de alianza, expandir condiciones y descargar el booklet.',
+    'Recorrer los modelos de Building with Us, expandir una FAQ y usar idioma, guía, tema, compartir y PDF sin cubrir el contenido.',
     'Reproducir el video explicativo y recorrer el tour guiado sin desbordar el hero.',
     'Reproducir el video de bienvenida de propuestas sobre sus cuatro opciones y detenerlo al elegir una.',
     'Confirmar que controles flotantes no cubren el contenido.',
@@ -275,7 +285,7 @@ export function responsiveOwnerForView(sectionId, view) {
   if (url === '/panel/communications' || url === '/panel/secure-links') return 'communications';
   if (file === 'frontend/pages/panel/documents/create.vue' || file === 'frontend/pages/panel/documents/[id]/edit.vue') return 'canvas';
   if (url === '/panel/emails' || url.includes('/email-')) return 'emails';
-  if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url === '/panel/defaults') return 'commercial';
+  if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url.startsWith('/panel/building-with-us') || url === '/panel/defaults') return 'commercial';
   if (url.startsWith('/panel/blog') || url.startsWith('/panel/linkedin') || url.startsWith('/panel/portfolio') || url.startsWith('/panel/qr-cards') || url.startsWith('/panel/linktrees')) return 'content';
   if (url === '/panel' || url.startsWith('/panel/tasks') || url.startsWith('/panel/admins') || url === '/panel/views') return 'dashboard';
   return null;

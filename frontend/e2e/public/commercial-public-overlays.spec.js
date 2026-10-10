@@ -5,7 +5,7 @@ test.setTimeout(60_000)
 
 for (const entry of commercialPages) {
   test(`${entry.name} shares the exact URL in a themed dialog`, {
-    tag: [...(entry.prefix === 'financing' ? ['@flow:public-financing-share'] : ['@flow:public-additional-modules-share']), '@outcome:success', '@role:guest'],
+    tag: [`@flow:${entry.shareFlow}`, '@outcome:success', '@role:guest'],
   }, async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write'])
     await setupCommercialPublic(page)
@@ -23,7 +23,7 @@ for (const entry of commercialPages) {
   })
 
   test(`${entry.name} keeps the saved theme while recovering from a load failure`, {
-    tag: [...(entry.prefix === 'financing' ? ['@flow:public-financing-theme'] : ['@flow:public-additional-modules-theme']), '@outcome:failure', '@role:guest'],
+    tag: [`@flow:${entry.flow}`, '@outcome:failure', '@role:guest'],
   }, async ({ page }) => {
     await setupCommercialPublic(page, { fail: true })
     await page.addInitScript((key) => localStorage.setItem(key, 'dark'), `projectapp-${entry.prefix}-theme`)
@@ -59,9 +59,9 @@ test('catalog modal restores light colors under an inherited dark panel', {
   await expect(page.getByTestId('additional-module-detail-modal')).toHaveCSS('background-color', 'rgb(10, 31, 28)')
 })
 
-for (const entry of [commercialPages[0], commercialPages[2]]) {
+for (const entry of commercialPages.filter((page) => page.guideFlow)) {
   test(`${entry.name} guide follows the local dark theme`, {
-    tag: [...(entry.prefix === 'financing' ? ['@flow:public-financing-guide'] : ['@flow:public-additional-modules-guide']), '@outcome:success', '@role:guest'],
+    tag: [`@flow:${entry.guideFlow}`, '@outcome:success', '@role:guest'],
   }, async ({ page }) => {
     await setupCommercialPublic(page, { video: true })
     await openCommercial(page, entry)
@@ -70,7 +70,7 @@ for (const entry of [commercialPages[0], commercialPages[2]]) {
     await page.getByTestId(`${entry.prefix}-guide-restart`).click()
 
     await expect(page.getByTestId(`${entry.prefix}-guide`)).toHaveCSS('background-color', 'rgb(19, 54, 47)')
-    await expect(page.getByTestId(`${entry.prefix}-guide`)).toContainText('Empieza por el video')
+    await expect(page.getByTestId(`${entry.prefix}-guide`)).toContainText(entry.guideTitle)
     await page.getByRole('button', { name: 'Omitir' }).click()
     await expect(page.getByTestId(`${entry.prefix}-guide`)).toHaveCount(0)
   })

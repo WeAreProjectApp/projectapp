@@ -10,7 +10,7 @@ for (const entry of commercialPages) {
       test.setTimeout(60_000)
 
       test('keeps public controls readable when switching theme', {
-        tag: [...(entry.prefix === 'financing' ? ['@flow:public-financing-theme'] : ['@flow:public-additional-modules-theme']), '@outcome:success', '@role:guest'],
+        tag: [`@flow:${entry.flow}`, '@outcome:success', '@role:guest'],
       }, async ({ page }, testInfo) => {
         await setupCommercialPublic(page)
         await openCommercial(page, entry)

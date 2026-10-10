@@ -663,3 +663,8 @@ def non_deferring_constraints():
 from content.tests.contract_template_fixtures import (
     source_237_markdown, coherent_template, initialized_contract_mirrors, proposals_mcp,
 )
+from content.tests.building_with_us_fixtures import (
+    building_with_us_program, building_with_us_mcp, changed_building_with_us_program,
+    building_with_us_contract, building_with_us_contract_folder, initialized_building_with_us_mirror,
+    building_with_us_documents_mcp,
+)

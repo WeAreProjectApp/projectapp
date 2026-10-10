@@ -1,0 +1,14 @@
+{
+  "id": "public-building-with-us-load",
+  "name": "Public Building with Us Load",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Abrir un enlace público con la API indisponible, leer el error y reintentar hasta recuperar el programa.",
+  "outcomes": [
+    "failure",
+    "success"
+  ]
+}

@@ -43,6 +43,8 @@
 > destinatario para panel, envío y vista previa del MCP; el conector
 > `accounting` sin vista previa rechaza el envío.
 
+> **Building with Us — 2026-10-09:** `/building-with-us` presenta el programa público bilingüe de incubación; `/panel/building-with-us` reúne Programa y Contrato de solo lectura. El contenido del programa y el contrato mantienen versiones independientes y se editan exclusivamente mediante el conector MCP `building-with-us`, con vista previa y confirmación. El contrato conserva un espejo de solo lectura en la carpeta ProjectApp › Contratos del Gestor Documental; el panel consulta su estado y enlaza al documento.
+
 > **Integridad y avisos de entregas — 2026-10-07:** los cambios de ascendencia
 > validan el destino y las guías descendientes conservadas; la publicación
 > comprueba también otrosí y citas. Panel, Platform y sincronización técnica
@@ -2207,7 +2209,7 @@ sólo su conjunto de campos; General no reenvía esos campos ni fechas sin cambi
 ## Esquemas explícitos de Documentos y Proyectos — 2026-10-10
 
 PR 2 fija el contrato objetivo documents **4.0.0 / 73 tools** y projects
-**3.0.0 / 164 tools**. Los catálogos de schemas de los 36/48 bridges declaran
+**3.0.0 / 171 tools**. Los catálogos de schemas de los 36/48 bridges declaran
 inputs reales del Panel; las nativas cierran y tipan objetos, incluidas las
 16 raíces de documentos/hilos antes abiertas. Se retiran los alias `data`/`query`
 de las herramientas convertidas; el dispatcher rechaza campos superiores
@@ -2223,3 +2225,10 @@ bajo el orquestador; esta entrada no acredita CI ni deploy.
 Guías: [Documentos](../changelog/2026-10-10-documents-mcp-4.0.0.md),
 [Proyectos](../changelog/2026-10-10-projects-mcp-3.0.0.md) y
 [runbook de esquemas](../MCP_VALIDATION_RUNBOOK.md#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).
+
+La integración con PR #503 incorpora las siete herramientas de integridad de
+datos al contrato plano de Proyectos. Building with Us comparte el pin
+contractual por ID; las fusiones de clientes preservan los autores de sus
+revisiones y de los recibos de migración de carpetas. Los aliases documentados
+de historial mantienen su compatibilidad. Estos contratos se registran en
+`connectors.py` y sus huellas se regeneran en `connector_contracts.json`.

@@ -32,6 +32,7 @@ content.DocumentStateEpisode.opened_by content.DocumentStateEpisode.closed_by
 content.DocumentStateEpisodeEvent.actor
 content.DocumentNote.created_by content.DocumentNote.resolved_by content.DocumentNote.deleted_by
 content.DocumentNoteEvent.actor content.ContractTemplateVersion.author
+content.BuildingWithUsProgramRevision.author content.BuildingWithUsContractRevision.author
 content.TaskComment.author content.WebAppDiagnostic.created_by content.DiagnosticAttachment.uploaded_by
 content.PocketMovement.created_by content.RecurringPayment.created_by content.IncomeRecord.created_by
 content.ExpenseRecord.created_by content.HostingRecord.created_by content.HostingCycle.created_by
@@ -49,6 +50,7 @@ content.FinancingAgreementEvent.actor content.ProposalFormalization.created_by
 content.VideoResource.updated_by content.ProposalApprovalFile.created_by
 content.ProjectRetentionContext.created_by content.ProjectRetentionOperation.actor
 content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor
+content.DocumentOwnershipOperation.actor
 accounts.UserProfile.archived_by accounts.UserProfile.created_by
 accounts.ProjectAdminAccess.updated_by accounts.ProjectAccessNote.created_by accounts.ProjectAccessNote.updated_by
 accounts.DeliveryPublication.published_by accounts.DeliveryDocumentLink.created_by
