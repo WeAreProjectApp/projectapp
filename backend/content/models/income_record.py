@@ -81,7 +81,9 @@ class IncomeRecord(RetainedProjectModel, VatBreakdownMixin, PartnerSplitMixin, A
         blank=True,
         default='',
     )
-    # Month granularity by default (serializer accepts "YYYY-MM" → day 1);
+    # When the money is expected (or received), independently of what service
+    # window the charge covers. Month granularity by default (serializer
+    # accepts "YYYY-MM" → day 1);
     # a day other than 1 records the exact payment date when it is known.
     period_date = models.DateField()
     # The service window a hosting income covers — only origin=hosting carries
@@ -90,9 +92,10 @@ class IncomeRecord(RetainedProjectModel, VatBreakdownMixin, PartnerSplitMixin, A
     # balance inherit the origin but not the window, which stays on the
     # expected record that was billed). `period_end` is INCLUSIVE: start +
     # cadence months − 1 day, so the next cycle starts the day after it. For
-    # hosting rows `period_date` is derived from `period_start`, keeping every
-    # ordering/KPI/filter on one axis — another reason the children keep out
-    # of it: theirs is the day the money moved, not the day the window opened.
+    # hosting creates, `period_date` defaults to `period_start` only when
+    # omitted. Window edits keep an independent expected-payment date and
+    # move it with the start only if the stored date already followed it.
+    # Reminders, ordering, KPIs and filters use that expected-payment date.
     # Cadence reuses the recurring-payments catalog rather than growing a third one.
     period_start = models.DateField(null=True, blank=True)
     period_end = models.DateField(null=True, blank=True)

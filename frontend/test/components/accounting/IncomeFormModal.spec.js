@@ -524,8 +524,8 @@ describe('IncomeFormModal', () => {
       origin: 'hosting',
       is_receivable_candidate: false,
       collection_confidence: '',
-      // Hosting sends the window and lets the backend derive period_date
-      // from its start — two values would be two chances to disagree.
+      // The payment date follows the start until the operator edits it.
+      period_date: '2027-03-01',
       period_start: '2027-03-01',
       period_end: '',
       period_cadence: '',
@@ -586,7 +586,7 @@ describe('IncomeFormModal', () => {
       expect(wrapper.find('[data-testid="income-form-period-end"]').element.value).toBe('');
     });
 
-    it('submits the window instead of the single date for hosting', async () => {
+    it('submits the hosting window with its following payment date', async () => {
       const wrapper = mountModal();
       await segmentedButton(wrapper, 'Hosting').trigger('click');
 
@@ -599,7 +599,7 @@ describe('IncomeFormModal', () => {
       expect(payload.period_start).toBe('2026-08-15');
       expect(payload.period_end).toBe('2027-02-14');
       expect(payload.period_cadence).toBe('semiannual');
-      expect(payload.period_date).toBeUndefined();
+      expect(payload.period_date).toBe('2026-08-15');
     });
 
     it('hints when the seed proposed the window from the recorded period', async () => {
@@ -807,6 +807,162 @@ describe('IncomeFormModal', () => {
         'La fecha de fin debe ser posterior a la de inicio.',
       );
       expect(wrapper.emitted('submit')).toBeUndefined();
+    });
+  });
+
+  describe('hosting billing date', () => {
+    it('follows the window start until the payment date is edited', async () => {
+      const wrapper = await mountHostingCreate();
+
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-10-01');
+
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-12-01');
+      expect(wrapper.get('[data-testid="income-form-billing-date-hint"]').text())
+        .toBe('Coincide con el inicio del período. Cámbiala si el cliente paga en otro mes.');
+    });
+
+    it('stops following once an independent payment date is written', async () => {
+      const wrapper = await mountHostingCreate();
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      await wrapper.get('[data-testid="income-form-period-cadence"]').setValue('semiannual');
+
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('2026-11-01');
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+      await wrapper.get('form').trigger('submit');
+
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-11-01');
+      expect(wrapper.get('[data-testid="income-form-billing-date-hint"]').text())
+        .toBe('Independiente del período cubierto: ordena el ingreso y sus avisos de cobro.');
+      expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-01');
+    });
+
+    it('preserves a stored payment month apart from the window when editing', async () => {
+      const wrapper = mountModal({
+        record: {
+          ...EDIT_RECORD,
+          origin: 'hosting',
+          period_start: '2026-10-01',
+          period_end: '2027-03-31',
+          period_cadence: 'semiannual',
+          period_date: '2026-11-01',
+        },
+      });
+      await flushPromises();
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-11-01');
+
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+      await wrapper.get('form').trigger('submit');
+
+      expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-01');
+    });
+
+    it('fills an offset duplicate with the seed payment date', async () => {
+      const wrapper = mountModal({
+        seed: {
+          ...DUPLICATE_SEED,
+          period_date_source: 'income_period',
+          period_start: '2027-04-01',
+          period_end: '2027-09-30',
+          period_cadence: 'semiannual',
+          period_date: '2027-05-01',
+        },
+      });
+      await flushPromises();
+
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2027-05-01');
+      await wrapper.get('form').trigger('submit');
+
+      expect(wrapper.emitted('submit')[0][0]).toMatchObject({
+        period_start: '2027-04-01',
+        period_date: '2027-05-01',
+      });
+    });
+
+    it('follows a month-only start as day one in exact payment mode', async () => {
+      const wrapper = await mountHostingCreate();
+
+      await wrapper.get('[data-testid="income-form-exact-date"]').trigger('click');
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10');
+
+      const billing = wrapper.get('[data-testid="income-form-billing-date"]');
+      expect(billing.attributes('type')).toBe('date');
+      expect(billing.element.value).toBe('2026-10-01');
+    });
+
+    it('recognizes a month-only payment matching the start as following', async () => {
+      const wrapper = await mountHostingCreate();
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('2026-11-01');
+
+      await wrapper.get('[data-testid="income-form-billing-date-exact"]').trigger('click');
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('2026-10');
+
+      expect(wrapper.get('[data-testid="income-form-billing-date-hint"]').text())
+        .toContain('Coincide con el inicio del período.');
+    });
+
+    it('resumes following when the payment date is cleared', async () => {
+      const wrapper = await mountHostingCreate();
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('2026-11-01');
+
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('');
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-12-01');
+    });
+
+    it('keeps an independent payment date when switching back to hosting', async () => {
+      const wrapper = await mountHostingCreate();
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      await segmentedButton(wrapper, 'Desarrollo').trigger('click');
+      await wrapper.get('[data-testid="income-form-period"]').setValue('2026-11-01');
+
+      await segmentedButton(wrapper, 'Hosting').trigger('click');
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+
+      expect(wrapper.get('[data-testid="income-form-billing-date"]').element.value)
+        .toBe('2026-11-01');
+    });
+
+    it('resets payment granularity on a fresh opening', async () => {
+      const wrapper = await mountHostingCreate();
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-10-01');
+      await wrapper.get('[data-testid="income-form-billing-date-exact"]').trigger('click');
+      await wrapper.get('[data-testid="income-form-billing-date"]').setValue('2026-11');
+      await wrapper.setProps({ open: false });
+      await wrapper.setProps({ open: true });
+
+      await segmentedButton(wrapper, 'Hosting').trigger('click');
+      await wrapper.get('[data-testid="income-form-period-start"]').setValue('2026-12-01');
+
+      const billing = wrapper.get('[data-testid="income-form-billing-date"]');
+      expect(billing.attributes('type')).toBe('date');
+      expect(billing.element.value).toBe('2026-12-01');
+    });
+
+    it.each([
+      { kind: 'Esperado', exactLabel: 'Fecha de cobro esperada', monthLabel: 'Mes de cobro esperado' },
+      { kind: 'Líquido', exactLabel: 'Fecha de cobro', monthLabel: 'Mes de cobro' },
+      { kind: 'Perdido', exactLabel: 'Fecha de cobro', monthLabel: 'Mes de cobro' },
+    ])('labels the $kind payment date in the chosen granularity', async ({ kind, exactLabel, monthLabel }) => {
+      const wrapper = await mountHostingCreate();
+      await segmentedButton(wrapper, kind).trigger('click');
+      expect(wrapper.text()).toContain(exactLabel);
+
+      await wrapper.get('[data-testid="income-form-billing-date-exact"]').trigger('click');
+
+      expect(wrapper.text()).toContain(monthLabel);
+      expect(wrapper.text()).toContain('Registrar el día exacto de cobro');
     });
   });
 

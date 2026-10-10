@@ -92,6 +92,7 @@ def tool_text(response):
 def test_tool_catalog_exposes_update_message_schema(
     api_client, communications_connector,
 ):
+    """The published contract states the edit constraint without a root combinator."""
     _, token = communications_connector
 
     response = api_client.post(
@@ -111,9 +112,8 @@ def test_tool_catalog_exposes_update_message_schema(
         'reply_to_id', 'occurred_at',
     }
     assert schema['additionalProperties'] is False
-    assert {entry['required'][0] for entry in schema['anyOf']} == {
-        'subject', 'content', 'document_ids', 'reply_to_id', 'occurred_at',
-    }
+    assert not {'anyOf', 'oneOf', 'allOf'} & schema.keys()
+    assert 'al menos uno de subject, content, document_ids, reply_to_id u occurred_at' in tool['description']
     assert 'No crea otro mensaje ni envía' in tool['description']
 
 

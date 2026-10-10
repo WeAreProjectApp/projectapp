@@ -21,6 +21,7 @@ Each entry: {'name', 'description', 'input_schema', 'handler'}.
 from accounts.models import UserProfile
 from accounts.services.proposal_client_service import update_client_profile
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import closed_object, close_root_schemas, open_object
 from content.models import (
     DiagnosticChangeLog,
     DiagnosticSection,
@@ -287,7 +288,18 @@ def get_diagnostic_template(arguments):
 _DIAG_ID_PROP = {'diagnostic_id': {'type': 'integer', 'description': 'ID del diagnóstico.'}}
 _STATUS_ENUM = [s.value for s in WebAppDiagnostic.Status]
 
-DIAGNOSTIC_TOOLS = [
+_SECTION_WRITE_PROPS = {
+    'title': {'type': 'string'},
+    'order': {'type': 'integer'},
+    'is_enabled': {'type': 'boolean'},
+    'visibility': {'type': 'string'},
+    'content_json': open_object(
+        'Contenido JSON de la sección, según su tipo.',
+        'Cada tipo de sección tiene su propio contenido validado por el serializer del Panel.',
+    ),
+}
+
+DIAGNOSTIC_TOOLS = close_root_schemas([
     {
         'name': 'list_diagnostics',
         'description': 'Lista diagnósticos. Filtros: status, client (client_id).',
@@ -348,10 +360,16 @@ DIAGNOSTIC_TOOLS = [
                 },
                 'investment_amount': {'type': ['number', 'string', 'null']},
                 'currency': {'type': 'string', 'enum': ['COP', 'USD']},
-                'payment_terms': {'type': 'object'},
+                'payment_terms': open_object(
+                    'Condiciones de pago del diagnóstico.',
+                    'El Panel guarda condiciones de pago configurables como JSON libre.',
+                ),
                 'duration_label': {'type': 'string'},
                 'size_category': {'type': 'string', 'enum': ['small', 'medium', 'large']},
-                'radiography': {'type': 'object'},
+                'radiography': open_object(
+                    'Radiografía técnica del diagnóstico.',
+                    'La radiografía conserva claves variables según la aplicación diagnosticada.',
+                ),
                 'client_name': {'type': 'string'},
                 'client_email': {'type': 'string'},
                 'client_phone': {'type': 'string'},
@@ -373,11 +391,7 @@ DIAGNOSTIC_TOOLS = [
             'properties': {
                 **_DIAG_ID_PROP,
                 'section_id': {'type': 'integer'},
-                'title': {'type': 'string'},
-                'order': {'type': 'integer'},
-                'is_enabled': {'type': 'boolean'},
-                'visibility': {'type': 'string'},
-                'content_json': {'type': 'object'},
+                **_SECTION_WRITE_PROPS,
             },
             'required': ['diagnostic_id', 'section_id'],
         },
@@ -385,14 +399,23 @@ DIAGNOSTIC_TOOLS = [
     },
     {
         'name': 'bulk_update_diagnostic_sections',
-        'description': 'Actualiza varias secciones en una llamada. sections = lista de {id, ...campos}.',
+        'description': (
+            'Actualiza varias secciones en una llamada. sections = lista de '
+            '{id, ...campos}; si se omite, devuelve el diagnóstico sin cambios.'
+        ),
         'input_schema': {
             'type': 'object',
             'properties': {
                 **_DIAG_ID_PROP,
-                'sections': {'type': 'array', 'items': {'type': 'object'}},
+                'sections': {
+                    'type': 'array',
+                    'items': closed_object(
+                        {'id': {'type': 'integer'}, **_SECTION_WRITE_PROPS},
+                        ['id'],
+                    ),
+                },
             },
-            'required': ['diagnostic_id', 'sections'],
+            'required': ['diagnostic_id'],
         },
         'handler': bulk_update_diagnostic_sections,
     },
@@ -458,4 +481,4 @@ DIAGNOSTIC_TOOLS = [
         'input_schema': {'type': 'object', 'properties': _DIAG_ID_PROP, 'required': ['diagnostic_id']},
         'handler': delete_diagnostic,
     },
-]
+])

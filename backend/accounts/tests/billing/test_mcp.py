@@ -13,6 +13,7 @@ from accounts.billing_models import (
 from accounts.models import Project, ProjectContract, UserProfile
 from accounts.services.hosting_context import reconcile_hosting
 from content.mcp.common_tools import build_common_tools
+from content.mcp.connectors import CONNECTORS
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.contracts import MCP_MODEL_CONTRACTS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
@@ -37,7 +38,7 @@ def _rpc(name, arguments, msg_id=1):
 def _billing_tools():
     tools = []
     tools.extend(normalize_tools(
-        [*PLATFORM_BILLING_TOOLS, *build_common_tools('accounting-billing', lambda: tools)],
+        [*PLATFORM_BILLING_TOOLS, *build_common_tools(CONNECTORS['accounting-billing'], lambda: tools)],
         'accounting-billing',
     ))
     return tools

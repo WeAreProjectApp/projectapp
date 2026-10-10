@@ -1,10 +1,14 @@
 """Owned MCP confirmations over the same contract plan as the panel."""
+import logging
+
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
 from content.models import BusinessProposal
 from content.serializers.proposal import ProposalDetailSerializer
 from content.services import proposal_contract_modality as service
+
+logger = logging.getLogger(__name__)
 
 SERVICE_PARAMS = {'type': 'object', 'additionalProperties': False, 'properties': {
     key: {'oneOf': [{'type': 'integer', 'minimum': 1, 'maximum': 999}, {'type': 'string'}]}
@@ -48,6 +52,9 @@ def _payload(arguments, *, restore=False):
     if set(arguments) - allowed or not isinstance(arguments.get('data', {}), dict):
         raise ToolError('Hay argumentos desconocidos.')
     payload = dict(arguments.get('data', {}))
+    if 'data' in arguments:
+        name = 'restore_proposal_contract_snapshot' if restore else 'update_proposal_contract_modality'
+        logger.info('[MCP] deprecated_envelope tool=%s keys=%s', name, sorted({'data'}))
     if set(payload) - fields:
         raise ToolError('Hay campos no editables en data.')
     for field in fields & set(arguments):
@@ -99,11 +106,12 @@ def configure_modality_tool(tool):
         impact_builder=_impact, etag_resolver=_etags, handler=_apply,
         description='Cambia single/split en cualquier estado. Fuera de negociación exige change_note y devuelve una vista previa para confirm_action o cancel_action. Conserva personalizados y documentos anteriores; split exige los tres plazos del servicio.')
     tool['input_schema'] = {'type': 'object', 'additionalProperties': False,
-        'properties': {'proposal_id': {'type': 'integer', 'minimum': 1}, **CHANGE_PROPERTIES,
+        'properties': {'proposal_id': {'type': 'integer', 'minimum': 1}, **CHANGE_PROPERTIES},
+        'required': ['proposal_id', 'contract_modality']}
+    tool['accepted_arguments_schema'] = {**tool['input_schema'],
+        'properties': {**tool['input_schema']['properties'],
             'data': {'type': 'object', 'additionalProperties': False, 'properties': CHANGE_PROPERTIES}},
-        'required': ['proposal_id'],
-        'anyOf': [{'required': ['contract_modality']},
-                  {'required': ['data'], 'properties': {'data': {'required': ['contract_modality']}}}]}
+        'required': ['proposal_id']}
 
 
 RESTORE_PROPERTIES = {'snapshot_id': {'type': 'integer', 'minimum': 1},
@@ -147,3 +155,10 @@ CONTRACT_SNAPSHOT_TOOLS = [
      'prepare_arguments': lambda args: _prepare(args, restore=True), 'impact_builder': lambda args: _impact(args, restore=True),
      'etag_resolver': _etags, 'handler': lambda args: _apply(args, restore=True)},
 ]
+
+CONTRACT_SNAPSHOT_TOOLS[-1]['accepted_arguments_schema'] = {
+    **CONTRACT_SNAPSHOT_TOOLS[-1]['input_schema'],
+    'properties': {**CONTRACT_SNAPSHOT_TOOLS[-1]['input_schema']['properties'],
+        'data': {'type': 'object', 'additionalProperties': False, 'properties': RESTORE_PROPERTIES}},
+    'required': ['proposal_id'],
+}
