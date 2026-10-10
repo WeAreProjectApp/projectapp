@@ -1,7 +1,7 @@
 # Guion de validación y mantenimiento de MCP
 
 Las plantillas contractuales independientes se administran desde Propuestas
-(2.1.0) y se consultan en Documentos (3.2.0) como espejos de solo lectura.
+(2.1.0) y se consultan en Documentos (4.0.0) como espejos de solo lectura.
 Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar
 lectura de las tres variantes, preview sin escritura, campos obligatorios,
 rechazo por etag, confirmación, coherencia, historial/restauración y reversión
@@ -27,10 +27,13 @@ rechaza raíces automáticas de proyecto; estas protecciones se validan junto
 con los contratos de modelo antes de publicar cambios del gestor.
 
 Última revisión integral: 2026-09-04.
-Última revisión focal de carpetas: 2026-10-10; Documentos **3.2.0 / 73 tools**
-y Proyectos **2.2.0 / 164 tools**. Notas de versión:
-[Documentos 3.2.0](changelog/2026-10-10-documents-mcp-3.2.0.md) y
-[Proyectos 2.2.0](changelog/2026-10-10-projects-mcp-2.2.0.md).
+Última revisión focal de esquemas: 2026-10-10; contrato objetivo de PR 2:
+Documentos **4.0.0 / 73 tools** y Proyectos **3.0.0 / 164 tools**. Notas de
+versión y migración de callers:
+[Documentos 4.0.0](changelog/2026-10-10-documents-mcp-4.0.0.md) y
+[Proyectos 3.0.0](changelog/2026-10-10-projects-mcp-3.0.0.md).
+Comprobar las versiones publicadas antes de operar; esta revisión documental
+no acredita despliegue ni CI del conjunto.
 
 Este documento es el procedimiento repetible para validar la plataforma MCP de
 ProjectApp: transporte moderno y compatible, credenciales con alcance,
@@ -39,6 +42,129 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 `backend/content/views/mcp_blog.py`; los adaptadores de paridad viven en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
+
+## Esquemas explícitos — documents 4.0.0 y projects 3.0.0 (2026-10-10)
+
+PR 2 cambia el contrato de entrada, sin añadir herramientas ni modificar datos.
+Los ejemplos operativos de este guion usan la forma nueva. Las revisiones
+fechadas de PR #504 conservan sus versiones como referencia histórica; no
+confundirlas con los pins requeridos para este barrido.
+El [inventario inicial](audits/2026-10-10-documents-projects-schema-inventory.md)
+registra el punto de partida, no el contrato final.
+
+### Comprobaciones del contrato
+
+1. **Versiones y descubrimiento.** Exigir Documentos **4.0.0 / 73 tools** y
+   Proyectos **3.0.0 / 164 tools** en registry, initialize/discovery y
+   capacidades. Comparar `tools/list` con `describe_capabilities`, con
+   credenciales completas y limitadas: mismos schemas, descripciones y
+   anotaciones para las herramientas autorizadas. Los pins de
+   [discovery de Documentos](../backend/content/tests/views/test_documents_mcp_301.py),
+   [capacidades documentales](../backend/content/tests/views/test_document_organization_api.py)
+   y [contratos/conteos](../backend/content/tests/views/test_mcp_contracts.py)
+   deben corresponder a las versiones nuevas.
+2. **Explicitud y deriva.** Cada herramienta convertida publica una raíz
+   object cerrada, sin combinador superior ni propiedades `data`/`query`.
+   Cada argumento superior tiene tipo y descripción; `required` es subconjunto
+   de `properties`; los objetos anidados están cerrados o son mapas tipados.
+   Auditar los 36 bridges de Documentos y los 48 de Proyectos contra las
+   lecturas de vistas/serializers/servicios. Los backlogs de explicitud, alias
+   y deriva deben quedar vacíos, con techo cero. Las exclusiones
+   `describe_capabilities`, `confirm_action`, `cancel_action` y el historial
+   `*_history` llevan el motivo `owned by PR #503`; no se usan para esconder
+   otra herramienta pendiente. El historial excluido conserva su contrato.
+3. **Desconocidos antes de efectos.** Vía `handle_message`, completar primero
+   los obligatorios y añadir una clave superior desconocida. Exigir
+   `unknown_field` con esa clave en `details.errors[*].field`, cero llamadas a
+   handler, preparación, impacto, predicado de confirmación o ETag, y cero
+   escrituras SQL. Repetir con `data` y `query` en herramientas convertidas de
+   ambos conectores. El guard de frontera debe demostrar también que un alias
+   de Propuestas sigue funcionando; Propuestas/Comercial y los demás
+   conectores conservan su compatibilidad.
+4. **Dieciséis raíces nativas de Documentos.** La sonda dedicada cubre las
+   once de documentos/notas/estados: `add_document_note`,
+   `close_document_state`, `delete_document`, `delete_document_notes`,
+   `finish_document_note`, `list_deleted_document_notes`,
+   `list_document_states`, `list_documents`, `read_document`,
+   `restore_document_note` y `set_document_state`; y las cinco de hilos:
+   `get_document_thread`, `list_document_threads`, `create_document_thread`,
+   `update_document_thread`, `dissolve_document_thread`. Además se auditan los
+   schemas nativos de alta/edición, migración, propiedad y uploads compartidos.
+   No alcanza con que un listado ignore el argumento: debe rechazarlo antes
+   de ejecutar o escribir.
+5. **Errores de `message`.** Omitir `message` de `add_delivery_message` con los
+   demás requeridos presentes: `VALIDATION_ERROR`, fila con `field: message`
+   y `code: required`, sin handler. Probar también ErrorDetail escalar, lista
+   y objeto anidado de un serializer: conservar `message`/`message.subject`
+   en lugar de `non_field_errors`. El texto principal del envelope y los
+   bloques `blockers`, `planned`, `can_apply`, `impact_hash` y `plan_hash`
+   permanecen intactos; texto y `structuredContent` deben coincidir.
+6. **Entregas planas e imports.** Crear/editar cada una de las seis entidades
+   con sus campos planos y confirmar cuando afecta contenido público.
+   Verificar que preparación, instantánea y revalidación usan esos mismos
+   campos, incluida la selección de fuente. `preview_delivery_import` y
+   `apply_delivery_import` conservan `payload`, con los contratos existentes
+   v1/v2 seleccionados por `payload.schema_version`: v1 manual, v2 con contexto
+   y citas. El combinador está dentro de `payload`, no en la raíz. Rechazar
+   envelopes y mantener las validaciones de propiedad, citas, versiones e
+   inmutabilidad del servicio. El preview no guarda; aplicar usa confirmación,
+   transacción e idempotencia.
+7. **Recursos planos y slice nativo de Proyectos.** Comprobar metadata de
+   recursos, `title`/`category` de adjuntos, `name`/`order` de carpetas,
+   `title`/`folder_id` de PDFs del cliente y `entities` del modelo de datos,
+   todos planos donde se declaran. Los uploads siguen usando UUIDs propios y
+   sus límites; no rutas de storage. `upload_project_resource_attachment`
+   rechaza `description`, que su serializer ignoraba; la descripción del
+   recurso permanece. El archivo nativo de Proyectos contiene **22 casos**:
+   cinco verifican las familias resources/issues/billing/hosting/create;
+   nueve comprueban escrituras, uploads, carpetas y modelo de datos planos;
+   ocho rechazan `data` antes de callbacks/escrituras. Tickets conserva su
+   objeto tipado `payload`.
+8. **Inputs exclusivos del Panel y borrado.** El guard de deriva consume
+   `PANEL_ONLY_FIELDS` de
+   [projects_bridge.py](../backend/content/mcp/schemas/projects_bridge.py),
+   con motivo por campo. Las listas legacy de `change_project_client`
+   (`hosting_ids`, `income_ids`, `communication_thread_ids`) se rechazan en MCP:
+   usar `mode` y `expected_impact_hash` con el plan del servidor. Los campos
+   de cliente/estado que `update_project` siempre rechaza siguen fuera.
+   `preview_project_delete` y `delete_project` sólo admiten `project_id` y
+   `if_match` opcional; `force`, `delete_keys`, `confirmation` e `impact_token`
+   producen `unknown_field`, sin intención ni borrado. Con proyecto vacío y
+   llamada válida, preview y confirmación siguen evaluando las mismas
+   dependencias. `if_match` es concurrencia optimista, no control de purga.
+9. **Paridad completa.** Cada `preview_*` debe tener pareja de ejecución en el
+   arnés o figurar en la lista explícita de excepciones con motivo. La sonda
+   no reemplaza los escenarios de éxito/error que prueban el comportamiento
+   observable de esa pareja.
+
+### Cobertura y lotes de verificación
+
+Desde `backend/` del worktree, usar
+`../.venv/bin/pytest <archivo> -v --no-cov -k '<selección>'`. No exportar
+`DJANGO_SETTINGS_MODULE`/`DJANGO_ENV`, leer `.env`, instalar dependencias ni
+ejecutar migraciones sobre una base real. Máximo veinte casos por comando y
+tres comandos por ciclo. Las selecciones siguientes son recetas de
+verificación; esta revisión documental no acredita nuevas corridas.
+
+| Frente | Archivo y selección por lote |
+| --- | --- |
+| Política/backlogs/exclusiones/paridad/frontera | [test_mcp_schema_explicitness.py](../backend/content/tests/views/test_mcp_schema_explicitness.py): `-k 'not policy_reports_a_mutated_contract_at_its_pointer and not every_closed_tool_rejects_unknown_arguments_before_execution'`; ciclo separado del lote de mutaciones `-k policy_reports_a_mutated_contract_at_its_pointer` (13 casos). |
+| Sonda global de desconocidos | Mismo archivo: `-k every_closed_tool_rejects_unknown_arguments_before_execution` (un caso recorre las raíces cerradas por `handle_message`, con callbacks interceptados y cero escrituras). |
+| Bridge de Documentos | [test_mcp_documents_bridge_schemas.py](../backend/content/tests/views/test_mcp_documents_bridge_schemas.py): `-k batch1` y `-k batch2` (18 contratos cada uno), luego `-k 'not test_document_bridge_contract_matches_its_view'` para cobertura y transporte plano. |
+| Bridge de Proyectos | [test_mcp_projects_bridge_schemas.py](../backend/content/tests/views/test_mcp_projects_bridge_schemas.py): separar `-k 'project_delete or legacy_panel'` del resto con `-k 'not project_delete and not legacy_panel'`; comprobar filtros, ideas, actualización, impacto y exclusiones. |
+| Nativas de Documentos y errores | [test_mcp_documents_native_schemas.py](../backend/content/tests/views/test_mcp_documents_native_schemas.py): `-k formerly_open_root` (16 casos), luego `-k 'not formerly_open_root'` para política, uploads y nombre de campo `message`. |
+| Nativas de entregas | [test_mcp_delivery_native_schemas.py](../backend/content/tests/views/test_mcp_delivery_native_schemas.py): separar `-k 'native_delivery_catalog or import_tools'` de `-k 'not native_delivery_catalog and not import_tools'`; CRUD plano, envelopes rechazados y revalidación de fuentes públicas. |
+| Slice nativo de Proyectos, 22 casos | [test_mcp_projects_native_schemas.py](../backend/content/tests/views/test_mcp_projects_native_schemas.py): `-k native_policy` (5), luego `-k 'not native_policy'` (17); no ejecutar los 22 juntos. |
+| Inventario de vistas | [test_mcp_view_inventory.py](../backend/content/tests/views/test_mcp_view_inventory.py): AST, serializers, opacidad, assets y evidencia de parejas, sin ejecutar la vista para inventariarla. |
+| Discovery y eliminación | [test_mcp_discovery_parity.py](../backend/content/tests/views/test_mcp_discovery_parity.py), los pins del punto 1 y [test_mcp_project_deletion.py](../backend/content/tests/views/test_mcp_project_deletion.py): seleccionar los casos de Documentos/Proyectos; no agrupar si supera veinte. |
+
+Para cada lote guardar comando, SHA, selección, número de casos y resultado;
+registrar las exclusiones reales. El cierre requiere revisión del registro y
+pins, no sólo que existan estos archivos. Las
+[guías de Documentos](changelog/2026-10-10-documents-mcp-4.0.0.md#migración-de-llamadas-mcp)
+y [Proyectos](changelog/2026-10-10-projects-mcp-3.0.0.md#migración-de-llamadas-mcp)
+muestran ejemplos antes/después. Reconectar ambos conectores tras el deploy
+para retirar schemas cacheados; los allow-lists, tokens y permisos permanecen.
 
 ## Migración de carpetas por MCP — parte 1 (2026-10)
 
@@ -55,17 +181,19 @@ despliegue ni asignación de una versión nueva.
    y anotaciones. Los adaptadores con `payload_schema` o `query_schema`
    explícito publican campos planos y `additionalProperties: false`, sin
    envelopes `data`/`query`.
-2. **Framework — compatibilidad de argumentos.** Revisar el contrato interno
-   `accepted_arguments_schema`: conserva los alias tipados `data` para cuerpos
-   y `query` cuando hay query declarada, con los required de ruta. Probar alias
-   y argumentos planos con el mismo resultado; valores contradictorios o claves
-   desconocidas dentro del alias deben fallar antes de escribir.
+2. **Framework — argumentos planos.** En las herramientas convertidas de
+   `documents`/`projects`, los campos del cuerpo y filtros van directamente en
+   `arguments`; ya no se aceptan alias internos `data`/`query`. Probar ambas
+   envolturas como campos desconocidos antes de cualquier callback o escritura.
+   Los demás conectores conservan sus alias. Descubrimiento, confirmación y
+   `*_history`, compartidos con PR #503, se verifican aparte del barrido.
 3. **Framework — query encoding.** Verificar booleanos como `true`/`false`,
    listas CSV por defecto en queries explícitas o repetidas con
    `x-query-encoding: repeat`. Un null permitido se omite; uno no nullable se
    rechaza. Comprobar el mismo encoding en GET y métodos con body: una query
-   declarada llega a la vista; una `query` no declarada en POST se rechaza en
-   lugar de descartarse.
+   declarada llega a la vista mediante su campo plano; un filtro no declarado
+   en POST se rechaza en lugar de descartarse. `query` como envelope tampoco
+   se acepta en las herramientas convertidas.
 4. **Framework — validación central.** En schemas cerrados, probar un campo
    desconocido y uno required ausente: `details.errors` conserva `field`,
    `code` (`unknown_field` o `required`) y `message`. La validación central
@@ -74,7 +202,9 @@ despliegue ni asignación de una versión nueva.
    `strict_arguments`. Un schema abierto queda fuera de este control y los
    serializers/handlers conservan la validación de tipos y reglas de negocio.
    Comprobar que `blockers`, `planned`, `impact_hash` y `can_apply` mantienen
-   su estructura al normalizar un error.
+   su estructura al normalizar un error. Si el serializer tiene un campo
+   llamado `message`, `details.errors[*].field` debe conservar `message` o su
+   ruta anidada, nunca sustituirlo por `non_field_errors`.
 5. **Framework — cancelación.** `cancel_action` con UUID malformado o sin
    intent pendiente de la misma credencial responde `NOT_FOUND`, sin excepción
    interna ni modificación de otra confirmación.
@@ -193,8 +323,9 @@ Revisión documental del 2026-10-10 sobre los commits `9446a196` (políticas),
 (sincronización, exposición latente y adopción estricta) y `92beb803`
 (audiencia al deshacer y cambio de cliente de carpeta), junto con `3bd28f84`
 (guardas de concurrencia de facturación) y los de la parte 1.
-Versiones objetivo de este corte: **documents 3.2.0** y
-**projects 2.2.0**. Validar con datos aislados, proveedor de pagos y correo
+Versiones de ese corte de PR #504: **documents 3.2.0** y
+**projects 2.2.0**; PR 2 requiere los pins 4.0.0/3.0.0 de la sección de
+esquemas explícitos. Validar con datos aislados, proveedor de pagos y correo
 simulados. La lista siguiente describe criterios, no acredita su ejecución
 en producción ni el merge/deploy de PR #504.
 
@@ -305,7 +436,7 @@ en producción ni el merge/deploy de PR #504.
     `portal_changes` identifica los documentos que ganarían audiencia con
     `document_id`, `before_audience` y `after_audience`, sin escrituras.
     En `change_folder_client` con `mode: propagate`, omitir `portal_policy`
-    por MCP equivale a `abort`, tanto con argumentos planos como con `data`:
+    por MCP equivale a `abort`, con argumentos planos; `data` se rechaza:
     nueva audiencia devuelve `PORTAL_EXPOSURE` con bloqueos y conserva el árbol.
     Probar `allow` (audiencia aprobada) y `hide_new_exposure` (nuevo dueño,
     `is_client_visible: false` sólo en los documentos que ganarían acceso).
@@ -636,8 +767,10 @@ Los conteos de `commercial` y `proposals` incluyen los controles comunes y se
 verificaron contra `TOOLS_BY_SLUG` el 2026-10-07 en settings de test, sin consultar datos reales.
 Los conteos de `documents` (73) y `projects` (164) están fijados en
 `content/tests/views/test_mcp_contracts.py` al corte `3886f01e` del 2026-10-10.
-Sus versiones de este corte son 3.2.0 y 2.2.0, respectivamente; los pins de
-discovery/capacidades verifican la versión además de la paridad de esquemas.
+El barrido de PR 2 conserva esos conteos y fija como objetivo **4.0.0** y
+**3.0.0**, respectivamente. Los pins de discovery/capacidades deben verificar
+esas versiones además de la paridad de esquemas; ver el
+[cierre de esquemas explícitos](#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).
 
 Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
@@ -776,11 +909,11 @@ real y su historial, pero no renueva hosting ni crea nuevos avisos o cargos.
    (filas que siguen conservadas, con sus `ids`) y `unlisted` (conservadas pero
    fuera del índice). `tracked: false` indica categorías sin vínculo directo al
    proyecto: siguen a su registro padre y no tienen conteo propio.
-2. Repetir con `query.client_profile_id` de un cliente con datos conservados y
+2. Repetir con `client_profile_id` plano de un cliente con datos conservados y
    comprobar que sólo aparecen sus contextos; `proposals` lista las propuestas
    cuyo entregable o fase comercial quedó conservado.
-3. Con `query.integrity=1`, `integrity` debe venir vacío; una fila conservada que
-   volvió a tener proyecto aparece como `retained_with_project`.
+3. Con `integrity: true` plano, `integrity` debe venir vacío; una fila conservada
+   que volvió a tener proyecto aparece como `retained_with_project`.
 4. `get_proposal_approval` de una propuesta con entregable conservado responde
    sin error, con `linked_project.retained = true` y
    `project_reassignment_required = true`; `review_proposal_approval` (salvo
@@ -1296,12 +1429,17 @@ qué queda fuera del MCP.
 - Comunicaciones expone 43 operaciones, incluidos preview, envío confirmado, enlaces seguros,
   adjuntos, templates y entregabilidad; sus rechazos dejan la base consistente.
 - Los MCP existentes devuelven y aceptan los campos descritos en su contrato;
-  Documentos 3.2.0 expone 73 herramientas y conserva edición Markdown con ETag,
+  Documentos 4.0.0 expone 73 herramientas y conserva edición Markdown con ETag,
   papelera, observaciones, hilos, uploads y artefactos; añade migración/adopción
   confirmada, recibo y deshacer con las postcondiciones de la parte 2.
-- Proyectos 2.2.0 expone 164 herramientas; el cambio de cliente previsualiza las
+- Proyectos 3.0.0 expone 164 herramientas; el cambio de cliente previsualiza las
   mismas guardas que ejecuta y el ciclo de hosting exige impacto vigente y
   confirmación, conservando los pagos y su historia.
+- Los contratos convertidos de Documentos/Proyectos son planos, cerrados,
+  tipados y descritos; no publican ni aceptan `data`/`query`. Los backlogs de
+  explicitud, alias y deriva quedan vacíos, con techo cero, salvo las exclusiones
+  documentadas de PR #503. La sonda de desconocidos prueba cero callbacks y
+  cero escrituras; la paridad de previews tiene pareja o motivo explícito.
 - Toda acción sensible exige intent ligado a credencial, confirma una sola vez
   y deja evidencia; toda credencial respeta alcance, expiración y revocación.
 - No se alteraron tokens, prefijos, estados activos ni `last_used_at` de
@@ -1609,8 +1747,9 @@ Validar en entorno de pruebas, con documentos descartables:
 
 1. `describe_capabilities` con `tools: ["update_folder", "move_documents"]` y
    `summary: true`; repetir sin summary y comprobar el esquema concreto.
-2. Mover carpeta con `data.parent_id`; probar alias `parent`, campo desconocido,
-   ciclo, raíz administrada y destino protegido. Un rechazo no renombra nada.
+2. Mover carpeta con `parent_id` plano; probar alias de campo `parent`, campo
+   desconocido, ciclo, raíz administrada y destino protegido. Un rechazo no
+   renombra nada.
 3. Crear dos carpetas del mismo nombre/padre (también si la primera está
    archivada): la segunda responde error con IDs coincidentes. El mutex vuelve
    a validar al guardar; no se intenta sanear duplicados históricos.
@@ -1829,7 +1968,7 @@ secretos ni aceptan una entidad arbitraria al consultar historial.
 | `projects` | `list_project_history`, `get_project_history_version`, `compare_project_history` | Historial del proyecto, con credenciales protegidas |
 | `projects` y `accounting-billing` | `link_project_billing_contract` | Fuente del mismo proyecto/cliente, versión vigente, permiso contable y confirmación; no emite ni altera dinero |
 
-`list_projects` admite `query.client_profile_id` para solicitar únicamente los
+`list_projects` admite `client_profile_id` plano para solicitar únicamente los
 proyectos del cliente elegido. La ficha y la raíz documental existentes son la
 fuente de la relación; el título de un contrato nunca asigna su proyecto.
 Las operaciones documentales `update_document` y `move_documents` ya permiten
@@ -1859,9 +1998,9 @@ Comprobar antes del rollout:
 ## Gestor de la plataforma — incremento 2026-10-07
 
 `projects` conserva su identidad y se presenta como Gestor de la plataforma,
-versión 2.1.0 en ese corte (actual: 2.2.0). Consultar la matriz de entrega para
-recursos, modelo de datos,
-fuentes confirmadas y avisos. Los contratos de campos incluyen recursos y sus
+versión 2.1.0 en ese corte (objetivo de PR 2: 3.0.0). Consultar la matriz de
+entrega para recursos, modelo de datos, fuentes confirmadas y avisos. Los
+contratos de campos incluyen recursos y sus
 relaciones, `ProposalApprovalFile` y eventos/intentos de aviso, con archivos,
 HTML, snapshots e idempotencia interna excluidos de escritura conversacional.
 

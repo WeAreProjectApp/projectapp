@@ -9,6 +9,24 @@ Las operaciones invocan `accounts.services.delivery_workflow` y
 Las fases de ejecución son distintas de las fases
 comerciales de hosting; su vínculo es de trazabilidad y no emite cargos.
 
+## Contrato MCP 3.0.0 — argumentos planos (2026-10-10)
+
+Las herramientas de entrega y recursos publican schemas cerrados, tipados y
+descritos. Los CRUD reciben directamente los campos editoriales en `arguments`,
+junto con `project_id`, `expected_version` y los demás controles declarados;
+los envelopes `data`/`query` se rechazan con `unknown_field` antes del handler o
+de preparar una confirmación. Preparación, instantánea y revalidación de efectos
+públicos usan los mismos campos planos.
+
+Los tickets conservan su objeto tipado `payload`. También lo conservan
+`preview_delivery_import` y `apply_delivery_import`: embeben los contratos v1
+manual/v2 citado, seleccionados por `payload.schema_version`. Los objetos de
+dominio no se aplanan; cada herramienta declara cuáles admite.
+Los contratos compartidos de descubrimiento/confirmación y el historial de
+PR #503 quedan fuera del barrido; otros conectores conservan sus alias.
+Ejemplos antes/después y errores:
+[guía de migración de Proyectos 3.0.0](changelog/2026-10-10-projects-mcp-3.0.0.md#migración-de-llamadas-mcp).
+
 ## Matriz acción de interfaz → herramienta
 
 Los nombres entre llaves indican seis herramientas concretas, una por entidad:
@@ -95,9 +113,9 @@ ejecuta un modelo ni envía correo desde este flujo.
 - Usar un `request_id` estable para importación, publicación, respuestas,
   constancias y aprobaciones externas. Reintentar una confirmación ejecutada
   devuelve su resultado y no repite la operación.
-- Los CRUD reciben `data` con los campos editoriales publicados por su esquema.
+- Los CRUD reciben los campos editoriales planos publicados por su esquema.
   No admiten estados, versión interna, firma ni decisión arbitraria.
-- En requerimientos, `data.context_id` y `data.source_references` deben conservar
+- En requerimientos, `context_id` y `source_references` deben conservar
   la procedencia validada. En mensajes, `classifications` corresponde al campo
   persistido `reply_classifications`; el actor siempre procede de la credencial.
 - Los documentos de etapas/requerimientos heredan su publicación en **lista,
@@ -170,7 +188,8 @@ vínculo con la copia y el snapshot anteriores.
 El mismo conector conserva proyectos, estados, fases comerciales, historial,
 entregas, ideas, permisos de consulta, cobros y tickets. Clientes y Propuestas
 conservan sus conectores propios. La etiqueta no cambia el slug, las credenciales,
-la activación ni los permisos existentes. La versión compatible es 2.1.0.
+la activación ni los permisos existentes. El corte inicial fue 2.1.0; el
+contrato 3.0.0 requiere migrar las llamadas envueltas a argumentos planos.
 
 **2026-10-09 — guardas de cliente y hosting:** el cambio de cliente usa la
 [evaluación compartida y el impacto de ambos modos](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09),
@@ -210,6 +229,12 @@ propietario dentro del bloqueo del proyecto. Los recibos reutilizan
 incluye actor, credencial y propietario; no existe otro contador o tabla de
 reintentos. Las consultas devuelven `version`, `project_id` y `result`.
 
+Recursos usa `title`, `description` y `category` planos donde se declaran;
+carpetas usa `name`/`order`, archivos del cliente `title`/`folder_id`, y el modelo
+de datos `entities`, con objetos tipados. `upload_project_resource_attachment`
+sólo declara `title` y `category` como metadata: se retira la `description` que
+su serializer ignoraba. El recurso conserva su propia descripción.
+
 Los archivos se cargan mediante assets propios. PDF conserva las reglas de
 categoría y los archivos del cliente tienen máximo 15 MB. Diseños admite ZIP
 solamente en `projects`, sin extracción: se comprueba estructura, cantidad,
@@ -238,7 +263,7 @@ servicio y sus migraciones precede a la validación combinada de los avisos.
 ## Fuente del paquete aprobado y verificación focal
 
 `create_delivery_contract` y `create_delivery_amendment` aceptan
-`data.approval_file_id`, exclusivamente frente a `document_id` o
+`approval_file_id` plano, exclusivamente frente a `document_id` o
 `proposal_document_id`. El servicio compartido exige pertenencia al proyecto y
 cliente y coincidencia con el manifest confirmado. El registro empieza privado
 y sin firma. El conector no transforma ese cierre administrativo en aceptación,
