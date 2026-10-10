@@ -29,6 +29,8 @@ def _lock_abono(movement_id, target_ids=()):
     movement = PocketMovement.objects.select_for_update().filter(pk=movement_id).first()
     if movement is None:
         raise ValueError('El movimiento ya no existe. Actualiza el bolsillo.')
+    if not parent_ids and not movement.source_ref.startswith('abono:'):
+        raise ValueError('Este movimiento no corresponde a un abono de ingresos esperados.')
     children = list(IncomeRecord.objects.select_for_update().filter(
         pocket_movement=movement,
     ).order_by('pk'))

@@ -99,9 +99,12 @@ def _sync_linked_collection_accounts(income, user):
 
     linked = income.collection_documents.filter(
         document_type__code='collection_account',
+        project_id=income.project_id,
         commercial_status=(Document.CommercialStatus.ISSUED if paid
                            else Document.CommercialStatus.PAID),
     )
+    if income.client_id:
+        linked = linked.filter(client_user_id=income.client.user_id)
     for document in linked:
         if paid:
             mark_collection_account_paid(document, acting_user=user)

@@ -557,6 +557,8 @@ def create_record(entity_type, serializer, user, notify=True, *,
                 from accounts.services.billing_locks import current_income_paid_total
                 was_paid = current_income_paid_total(expected) >= expected.total_amount
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
+            if expected and not serializer.context.get('settlement'):
+                _validate_linked_payment(expected, serializer.validated_data)
         if shared_pocket_movement is not None:
             instance = serializer.save(
                 created_by=user, pocket_movement=shared_pocket_movement,
@@ -665,6 +667,8 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                 serializer.validated_data['project'] = locked.projects[target.pk]
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
             validate_financial_reassignment(instance, serializer.validated_data)
+            if expected and not serializer.context.get('settlement'):
+                _validate_linked_payment(expected, serializer.validated_data, instance)
         if (
             entity_type == EntityType.INCOME
             and {'total_amount', 'vat_rate'} & serializer.validated_data.keys()
@@ -710,7 +714,8 @@ def update_record(entity_type, instance, serializer, user, notify=True):
             _sync_project_to_draft_cuentas(instance, user)
         if expected and instance.kind == IncomeRecord.Kind.LIQUID and not serializer.context.get('settlement'):
             _complete_linked_income(expected, was_paid, user)
-        if previous_expected and previous_expected.pk != instance.expected_income_id:
+        if previous_expected and (previous_expected.pk != instance.expected_income_id
+                                  or instance.kind != IncomeRecord.Kind.LIQUID):
             from content.services.accounting_settlement_service import _sync_linked_collection_accounts
             _sync_linked_collection_accounts(previous_expected, user)
     changes = compute_changes(
@@ -733,6 +738,27 @@ def update_record(entity_type, instance, serializer, user, notify=True):
         if notify:
             _notify(change_log)
     return instance
+
+
+def _validate_linked_payment(income, data, instance=None):
+    """Recheck the generic MCP/REST payment against its locked available balance."""
+    from accounts.services.billing_locks import current_income_paid_total
+
+    kind = data.get('kind', instance.kind if instance else None)
+    if kind != IncomeRecord.Kind.LIQUID:
+        return
+    amount = data.get('total_amount', instance.total_amount if instance else Decimal('0'))
+    if (instance is not None and instance.kind == kind
+            and instance.expected_income_id == income.pk and amount == instance.total_amount):
+        return
+    if income.kind != IncomeRecord.Kind.EXPECTED:
+        raise ValueError('El pago debe vincularse a un ingreso esperado vigente.')
+    available = income.total_amount - current_income_paid_total(income)
+    if (instance is not None and instance.kind == IncomeRecord.Kind.LIQUID
+            and instance.expected_income_id == income.pk):
+        available += instance.total_amount
+    if amount > available:
+        raise ValueError('El valor del abono supera el saldo disponible del ingreso. Registra el excedente como saldo a favor mediante el reparto de abonos.')
 
 
 def _complete_linked_income(income, was_paid, user):
