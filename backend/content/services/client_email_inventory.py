@@ -48,6 +48,9 @@ CLIENT_EMAIL_CHANNELS = {
     # Billing documents sent to the customer. Initial issue, resend and retry
     # intentionally share one key and one family.
     'collection_account_sent': COLLECTIONS,
+    # Optional confirmation that a payment was received, sent when settling
+    # an income; it carries no attachment.
+    'income_payment_received_client': COLLECTIONS,
 
     # Platform operational confirmations (security credentials are excluded).
     'document_signed_client': PLATFORM,

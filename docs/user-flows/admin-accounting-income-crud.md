@@ -44,3 +44,18 @@ Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta em
 ## Liquidar compacto (2026-10-09)
 
 El modal de liquidar usa el ancho de formulario (42 rem): a 1440 px pasa de 1024 a 672 px. La fecha de pago comparte fila con Destino en la contabilidad de la empresa, o con Valor pagado en la personal. La ayuda de periodicidad de un hosting sin período se lee bajo su fila. El mes y el monto de un ingreso esperado de seguimiento tienen anchos fijos, y un concepto largo se parte en vez de desplazar el cuerpo a 412 px.
+
+## Confirmación de pago al cliente (2026-10-09)
+
+Liquidar un ingreso con cliente y cuenta emitida ofrece «Enviar al cliente la
+confirmación del pago», marcada en cada apertura. El destinatario es el correo
+de la cuenta emitida (`GET /api/accounting/incomes/:id/payment-confirmation/`).
+Sin cliente, con valor recibido 0, con un correo provisional o si no se pudo
+verificar, la casilla queda deshabilitada con el motivo al lado. Marcada,
+Liquidar abre un último aviso con concepto, cliente, proyecto, cuenta de cobro,
+valor recibido, fecha de pago (o el mes), destino del dinero, saldo pendiente
+tras el pago —incluidas las cuotas reprogramadas antes— y destinatario; sólo
+«Liquidar y enviar» manda `send_payment_confirmation`. Desmarcada, liquida
+como antes y sin aviso. El correo sale después del commit de la liquidación; si
+falla, la liquidación queda registrada, la página advierte con un enlace a los
+correos del ingreso y el envío se reintenta desde el Historial.

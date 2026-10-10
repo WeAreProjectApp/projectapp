@@ -298,6 +298,31 @@ describe('useAccountingStore', () => {
       expect(result.message).toContain('saldo')
     })
 
+    it('fetchIncomePaymentConfirmation reads who would receive the email', async () => {
+      get_request.mockResolvedValue({
+        data: { can_send: true, recipient: 'pagos@acme.co' },
+      })
+
+      const result = await store.fetchIncomePaymentConfirmation(7)
+
+      expect(get_request).toHaveBeenCalledWith(
+        'accounting/incomes/7/payment-confirmation/',
+      )
+      expect(result).toEqual({
+        success: true, data: { can_send: true, recipient: 'pagos@acme.co' },
+      })
+      expect(store.isUpdating).toBe(false)
+    })
+
+    it('fetchIncomePaymentConfirmation reports a failure without state writes', async () => {
+      get_request.mockRejectedValue(apiError(404, { detail: 'No encontrado.' }))
+
+      const result = await store.fetchIncomePaymentConfirmation(99)
+
+      expect(result.success).toBe(false)
+      expect(store.error).toBeNull()
+    })
+
     it('updateRecord patches update/ and replaces the record', async () => {
       store.expenses = [{ id: 5, concept: 'Viejo' }, { id: 6 }]
       patch_request.mockResolvedValue({ data: { id: 5, concept: 'Nuevo' } })

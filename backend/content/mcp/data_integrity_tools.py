@@ -4,11 +4,14 @@ Fixes and undos require the current preview's impact hash, a reason and a
 stable request_id, and always go through the confirmation step, exactly like
 the retention exits (``project_retention_tools``): MCP never skips the preview.
 """
+from copy import deepcopy
+
 from rest_framework.exceptions import ValidationError
 
 from content.mcp.operation_builder import _op
 from content.mcp.proposal_schemas import check_known_fields, guarded_arguments, writable_schema
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import closed_object, open_object
 from content.serializers.data_integrity import FixApplySerializer, FixPreviewSerializer, UndoSerializer
 
 RULES = _op(
@@ -59,6 +62,59 @@ UNDO = _op(
     'panel-data-integrity-operation-undo', 'POST', ('operation_id',), 'sensitive', True,
     payload_schema=writable_schema(UndoSerializer),
 )
+
+
+_FIELD_DESCRIPTIONS = {
+    'scope': 'Ámbito de la revisión: tipo de registro e identificador.',
+    'fixes': 'Correcciones seleccionadas, con la huella vigente de cada hallazgo.',
+    'reason': 'Motivo de la corrección o del deshacer; queda en el registro.',
+    'request_id': 'Identificador estable de esta solicitud para evitar repetirla.',
+    'expected_impact_hash': 'Hash de impacto obtenido en la vista previa vigente.',
+}
+
+
+def _close_integrity_input(tool, query_properties=None):
+    properties = deepcopy(tool['input_schema']['properties'])
+    properties.pop('query', None)
+    properties.pop('data', None)
+    payload = tool['_panel_operation']['payload_schema']
+    if payload is not None:
+        for name, field in payload['properties'].items():
+            field['description'] = _FIELD_DESCRIPTIONS[name]
+        if 'fixes' in payload['properties']:
+            payload['properties']['fixes']['maxItems'] = 20
+            payload['properties']['fixes']['minItems'] = 1
+            payload['properties']['fixes']['items']['properties']['params'] = open_object(
+                'Parámetros específicos de la corrección elegida.',
+                'Las claves dependen de rule_id y fix_kind; el motor valida sus valores por regla.',
+            )
+        properties.update(deepcopy(payload['properties']))
+        properties['data'] = {**deepcopy(payload), 'description': 'Datos de la corrección, validados por el serializer del Panel.'}
+    elif query_properties is not None:
+        properties['query'] = closed_object(query_properties, description='Filtros de la consulta de integridad.')
+    for name in tool['_panel_operation']['path_params']:
+        properties[name]['description'] = 'Identificador de la operación de integridad registrada.'
+    tool['input_schema'] = closed_object(properties, tool['input_schema'].get('required', ()))
+
+
+_close_integrity_input(RULES, {})
+_close_integrity_input(FINDINGS, {
+    'scope_kind': {'type': 'string', 'enum': ['all', 'client', 'project', 'proposal', 'document', 'thread'],
+                   'description': 'Tipo de registro que delimita la revisión.', 'default': 'all'},
+    'scope_id': {'type': 'integer', 'minimum': 1, 'description': 'Identificador del registro que se revisa.'},
+    'scope_query': {'type': 'string', 'maxLength': 200, 'description': 'Texto para buscar un cliente o proyecto sin un id conocido.'},
+    'domains': {'type': ['string', 'array'], 'items': {'type': 'string'}, 'description': 'Dominios que se revisan, como lista o texto separado por comas.'},
+    'rule_ids': {'type': ['string', 'array'], 'items': {'type': 'string'}, 'description': 'Reglas que se revisan, como lista o texto separado por comas.'},
+    'severity': {'type': ['string', 'array'], 'items': {'type': 'string'}, 'description': 'Gravedades que se incluyen, como lista o texto separado por comas.'},
+    'page': {'type': 'integer', 'minimum': 1, 'description': 'Página de resultados, con 50 hallazgos por página.', 'default': 1},
+})
+_close_integrity_input(OPERATIONS, {
+    'rule_id': {'type': 'string', 'description': 'Regla de integridad por la que se filtra el registro.'},
+    'page': {'type': 'integer', 'minimum': 1, 'description': 'Página del registro, con 20 operaciones por página.', 'default': 1},
+})
+_close_integrity_input(UNDO_PREVIEW, {})
+for _integrity_tool in (PREVIEW, APPLY, UNDO):
+    _close_integrity_input(_integrity_tool)
 
 
 def _prepare(tool, serializer_class, arguments):

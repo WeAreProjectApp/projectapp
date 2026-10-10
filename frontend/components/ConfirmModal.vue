@@ -5,6 +5,7 @@
     :kind="size === 'md' ? 'confirm' : ''"
     :close-on-backdrop="!hideCancel && !loading"
     :close-on-esc="!hideCancel && !loading"
+    :lock-scroll="lockScroll"
     @update:model-value="(v) => !v && handleCancel()"
   >
     <!-- Header -->
@@ -142,6 +143,9 @@ const props = defineProps({
   // Acción de confirmación en vuelo (opt-in del composable): el botón gira,
   // el resto se bloquea y el modal no se puede cerrar hasta que termine.
   loading: { type: Boolean, default: false },
+  // Un aviso apilado sobre otro modal lo apaga: al cerrarse liberaría el
+  // scroll del body mientras el modal de abajo sigue abierto.
+  lockScroll: { type: Boolean, default: true },
 })
 
 const emit = defineEmits(['update:modelValue', 'confirm', 'cancel', 'secondary'])

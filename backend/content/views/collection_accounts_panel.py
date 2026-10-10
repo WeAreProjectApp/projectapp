@@ -207,6 +207,19 @@ def preview_collection_account_view(request):
                     document.due_date.isoformat() if document.due_date else None
                 ),
                 'customer_email': document.collection_account.customer_email,
+                # Read from the rolled-back issue too, so the panel's last
+                # notice names what the confirm step will really emit.
+                'issue_date': (
+                    document.issue_date.isoformat() if document.issue_date else None
+                ),
+                'customer_name': document.collection_account.customer_name,
+                'project_name': (
+                    document.project.name if document.project_id
+                    else document.collection_account.customer_project_name
+                ),
+                'billing_concept': (
+                    document.collection_account.billing_concept or document.title
+                ),
             }
             transaction.set_rollback(True)
     except CollectionAccountError as exc:

@@ -80,7 +80,10 @@ def test_documents_inventory_lists_every_channel():
 
 
 def test_collection_inventory_lists_every_channel():
-    assert _channels_for(COLLECTIONS) == {'collection_account_sent'}
+    assert _channels_for(COLLECTIONS) == {
+        'collection_account_sent',
+        'income_payment_received_client',
+    }
 
 
 def test_accounting_inventory_lists_every_channel():
@@ -128,5 +131,5 @@ def test_security_inventory_lists_every_channel():
     }
 
 
-def test_inventory_contains_63_unique_channels():
-    assert len(OUTBOUND_EMAIL_CHANNELS) == 63
+def test_inventory_contains_64_unique_channels():
+    assert len(OUTBOUND_EMAIL_CHANNELS) == 64

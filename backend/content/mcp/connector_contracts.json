@@ -1,7 +1,7 @@
 {
   "accounting": {
-    "sha256": "d025370a71f71d73b5d9b805b08a8f36e7b42e57f397012599515fd14e98b0e0",
-    "version": "1.1.0"
+    "sha256": "45d7f76137f231ed6b981bab2c3da13f9f63d362acee79b9330f7c9994550dfb",
+    "version": "1.2.0"
   },
   "accounting-billing": {
     "sha256": "fcf670bdefdbb947883c41b27dde29514ad07f9a00d0ba3244aad1b0189f8dc8",
@@ -12,8 +12,8 @@
     "version": "2.1.0"
   },
   "accounting-ledger": {
-    "sha256": "4c8edbf1841f633982c9c712ad7d21b58613fb5fced101053bfe88a5ede2a6d7",
-    "version": "2.1.0"
+    "sha256": "2ce6ef278d1c3787e17848259d4f2168c11562b50f71f6ba53a9d6c014c367b1",
+    "version": "2.2.0"
   },
   "additional-modules": {
     "sha256": "35471953f6632b16726c53e0d07297ae0bc9b03a26811a9af368f8a54ace3328",
@@ -60,8 +60,8 @@
     "version": "2.1.0"
   },
   "projects": {
-    "sha256": "6482297144a6b4467e59221951d45ac9da4af0b61772141f86058610132d2b4d",
-    "version": "2.2.0"
+    "sha256": "f7aed76b5a0d44a2982ec587214b637cf3964d4c0baae70b0662c2384aca69a9",
+    "version": "2.3.0"
   },
   "proposals": {
     "sha256": "28e89762fd1af7bdce46697cb548274f008386d71f538d564880df7391224adc",

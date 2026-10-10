@@ -4,6 +4,7 @@ import json
 import pytest
 from accounts.models import ProjectPhase
 
+from content.mcp.contract_report import CONTRACTS_PATH
 from content.mcp.registry import connector_version
 from content.models import DataIntegrityOperation, McpActionIntent, McpConnector
 from content.tests.data_integrity_helpers import (
@@ -69,7 +70,7 @@ def test_projects_connector_exposes_the_tools_with_the_right_risk():
         assert (tools[name]['risk'], tools[name]['requires_confirmation']) == ('sensitive', True)
     for name in set(TOOL_NAMES) - {'apply_integrity_fixes', 'undo_integrity_operation'}:
         assert tools[name]['risk'] == 'read'
-    assert connector_version('projects') == '2.2.0'
+    assert connector_version('projects') == json.loads(CONTRACTS_PATH.read_text())['projects']['version']
 
 
 def test_findings_are_listed_through_the_connector(api_client, token, gap):

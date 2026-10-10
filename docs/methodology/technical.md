@@ -1,3 +1,17 @@
+> **Confirmación antes de enviar — 2026-10-09:** `POST accounting/incomes/<id>/settle/`
+> acepta `send_payment_confirmation` (falso por defecto; MCP y
+> `resolve_income_residual` comparten el serializer) y responde
+> `payment_confirmation = {requested, status, recipient, error}` con estado
+> `not_requested|sent|failed|skipped` (`scheduled` en MCP). La vista es
+> `@transaction.non_atomic_requests` y abre su propio `history_operation`: el
+> middleware de historial envuelve todo POST en un atomic y el correo saldría
+> antes del commit. `GET accounting/incomes/<id>/payment-confirmation/` expone
+> el destinatario (`customer_email` de la cuenta emitida que exige
+> `require_issued_accounts`). La clave `income_payment_received_client` (familia
+> Cuentas de cobro) guarda sus datos en la metadata del log para reintentar el
+> mismo correo. El preview de cuentas de cobro devuelve además `issue_date`,
+> `customer_name`, `project_name` y `billing_concept` para el último aviso.
+
 > **Archivos privados — 2026-10-07:** `accounts.0081_private_platform_resource_files`
 > cambia el storage de las cuatro familias y amplía sus nombres a 500 caracteres.
 > `content.0285_merge_platform_manager_retention` une las dos hojas 0284;

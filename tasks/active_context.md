@@ -51,6 +51,18 @@ responsive y registro de flujos en verde.
 > presupuestos. IMAP no autenticó y el Gestor Documental no estuvo disponible;
 > el formato Vástago se contrastó únicamente con referencias locales.
 
+# Confirmación antes de enviar (2026-10-09)
+
+Rama `feat/09102026-confirm-before-send`, sobre `origin/main`. Emitir una
+cuenta de cobro y liquidar un ingreso con cliente muestran un último aviso con
+los datos clave antes de que salga el correo. Liquidar ofrece la confirmación
+de pago al cliente, marcada por defecto, sin adjuntos y registrada sólo en el
+historial de correos. El correo sale tras el commit de la liquidación y se
+reintenta desde el Historial con los mismos datos. El MCP del libro contable
+lo previsualiza antes de `confirm_action`. Hallazgos fuera de alcance: la
+liquidación de un ingreso personal envía `destination: 'pocket'` (posible
+400) y la creación de cuentas envía su correo antes del commit del middleware.
+
 # Datos conservados sin proyecto — PR-1, traslado auditado (2026-10-07)
 
 «Asignar registros sin proyecto» acepta los registros conservados del mismo

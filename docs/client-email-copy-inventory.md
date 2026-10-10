@@ -1,6 +1,6 @@
 # Inventario universal de correos salientes
 
-**Actualizado:** 2026-09-28
+**Actualizado:** 2026-10-09
 
 **Fuente ejecutable:** `backend/content/services/outbound_email_inventory.py`
 
@@ -12,7 +12,10 @@ claves registradas aquí; por eso una salida nueva no puede pasar a producción
 sin declarar su familia y queda cubierta por la regla de copia por
 construcción.
 
-## Inventario completo (58 canales)
+## Inventario (59 canales documentados)
+
+La fuente ejecutable registra 64 canales; las filas que faltan aquí son de
+entregas de Platform y formalización, y se completan con su propia revisión.
 
 | # | Familia configurable | Clave de plantilla | Salida / disparador |
 |---:|---|---|---|
@@ -52,6 +55,7 @@ construcción.
 | 34 | Documentos y comunicaciones | `proposal_email` | Correo manual asociado a una propuesta. |
 | 58 | Documentos y comunicaciones | `secure_link_received_team` | Aviso interno de enlace seguro creado por un cliente; no incluye el enlace ni el contenido. |
 | 35 | Cuentas de cobro | `collection_account_sent` | Emisión, reenvío o retry manual de una cuenta de cobro. |
+| 59 | Cuentas de cobro | `income_payment_received_client` | Confirmación opcional al cliente de que su pago fue recibido, al liquidar un ingreso (sin adjuntos; reintentable desde el Historial). |
 | 36 | Contabilidad | `accounting_change` | Aviso interno de cambio contable. |
 | 37 | Contabilidad | `accounting_card_reminder` | Recordatorio interno de tarjeta. |
 | 38 | Contabilidad | `accounting_statement_reminder` | Recordatorio interno de extracto. |
