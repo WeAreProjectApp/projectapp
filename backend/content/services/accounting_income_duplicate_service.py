@@ -96,6 +96,23 @@ def next_period_date(income):
     return add_months(income.period_date, months)
 
 
+def next_billing_date(income, next_start):
+    """Expected-payment date of the window opening on ``next_start``, keeping
+    the original's offset from its own start (an Oct window paid in Nov makes
+    the Apr window paid in May). Whole-month moves shift by months
+    (``add_months`` clamps the day); other windows move by the same days.
+    """
+    if not income.period_start or income.period_date == income.period_start:
+        return next_start
+    months = (
+        (next_start.year - income.period_start.year) * 12
+        + next_start.month - income.period_start.month
+    )
+    if add_months(income.period_start, months) == next_start:
+        return add_months(income.period_date, months)
+    return income.period_date + (next_start - income.period_start)
+
+
 def build_cycle_options(income):
     """One candidate next date per offered cadence, counted from the original.
 
@@ -249,7 +266,7 @@ def build_income_duplicate_draft(income):
         # The recorded window beats the hosting lookup: it is first-hand data
         # on this very charge, while the lookup infers from the catalog.
         period_start, period_end = next_period_range(income)
-        period_date = period_start
+        period_date = next_billing_date(income, period_start)
         period_date_source = INCOME_PERIOD
     elif anchor['source'] == HOSTING_CYCLE:
         period_date = date.fromisoformat(anchor['start'])

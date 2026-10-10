@@ -29,6 +29,7 @@
       caption="Tarjetas QR y sus destinos"
       card-test-id-prefix="qr-card-row"
       table-min-width="58rem"
+      row-actions-layout="menu-start"
     >
       <template #cell-short_link="{ row: card }">
         <div class="flex min-w-0 items-center gap-2">
@@ -65,12 +66,23 @@
       </template>
 
       <template #row-actions="{ row: card }">
-        <BaseActionMenu
-          :items="qrCardActionItems(card)"
-          :testid="`qr-card-actions-${card.id}`"
+        <BaseActionButton
+          action="more"
+          class="h-11 w-11 shrink-0"
+          :label="`Acciones de ${card.name}`"
+          :data-testid="`qr-card-actions-${card.id}`"
+          @click.stop="actionsRow = card"
         />
       </template>
     </BaseExploratoryList>
+
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.name || ''"
+      :items="actionsRow ? qrCardActionItems(actionsRow) : []"
+      testid="qr-card-actions-modal"
+      @close="actionsRow = null"
+    />
 
     <!-- Create / edit modal -->
     <BaseModal v-model="formModal.open" kind="form" padding="md">
@@ -160,9 +172,9 @@
 </template>
 
 <script setup>
-import { useId, computed, onMounted, reactive } from 'vue';
+import { useId, computed, onMounted, reactive, ref } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -171,6 +183,7 @@ import BaseSelect from '~/components/base/BaseSelect.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import DownloadQrModal from '~/components/panel/qr-cards/DownloadQrModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
@@ -193,6 +206,7 @@ const formModal = reactive({
 });
 const formErrors = reactive({ name: '', destination_url: '', linktree: '' });
 const downloadModal = reactive({ open: false, card: null });
+const actionsRow = ref(null);
 
 const qrCardColumns = [
   { key: 'name', label: 'Nombre', mobile: 'primary' },

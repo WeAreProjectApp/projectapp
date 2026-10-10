@@ -1,4 +1,14 @@
-import { addMonths, nextPeriodEnd, previousDay } from '~/utils/periodDates';
+import { addMonths, nextPeriodEnd, previousDay, sameDay } from '~/utils/periodDates';
+
+describe('sameDay', () => {
+  it('treats a month as its first day', () => {
+    expect(sameDay('2026-11', '2026-11-01')).toBe(true);
+  });
+
+  it('distinguishes different days of the same month', () => {
+    expect(sameDay('2026-11-01', '2026-11-02')).toBe(false);
+  });
+});
 
 describe('addMonths', () => {
   it('advances by whole months keeping the day', () => {

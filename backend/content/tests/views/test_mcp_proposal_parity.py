@@ -271,7 +271,8 @@ class TestProposalMcpSettings:
 
         proposal.refresh_from_db()
         assert result['isError'] is True
-        assert _payload(result)['error']['code'] == 'VALIDATION_ERROR'
+        # The incoming central validator classifies unknown root fields separately.
+        assert _payload(result)['error']['code'] in {'VALIDATION_ERROR', 'unknown_field'}
         assert proposal.title == original_title
 
     def test_defaults_read_uses_the_requested_english_language(

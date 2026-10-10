@@ -96,13 +96,14 @@ def _create_project_with_aggregates(profile):
 
 @pytest.mark.django_db
 class TestClientsMcpToolList:
-    def test_exposes_the_six_tools(self, api_client, clients_connector):
+    def test_exposes_client_actions_with_control_tools(self, api_client, clients_connector):
         _, token = clients_connector
         response = api_client.post(_url(token), _rpc('tools/list'), format='json')
         names = [t['name'] for t in response.data['result']['tools']]
         assert names == [
             'search_clients', 'list_clients', 'get_client',
             'create_client', 'update_client', 'delete_client',
+            'describe_capabilities', 'confirm_action', 'cancel_action',
         ]
 
 

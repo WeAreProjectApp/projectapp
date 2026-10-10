@@ -25,14 +25,10 @@ REASSIGN = _op('reassign_proposal_project',
                'Corrige el proyecto conservando fases, recursos, archivos aprobados e historial (desde un proyecto eliminado, con los mismos ids); requiere impacto vigente, motivo y request_id estable.',
                'proposal-project-reassignment', 'POST', ('proposal_id',), 'sensitive', True,
                payload_schema=writable_schema(ProposalProjectReassignmentSerializer))
-REASSIGN['input_schema']['anyOf'] = [
-    {'required': ['data']},
-    {'required': ['target_project_id', 'reason', 'expected_impact_hash', 'request_id']},
-]
 
 
 def _prepare(arguments):
-    check_known_fields(arguments, REASSIGN['input_schema'])
+    check_known_fields(arguments, REASSIGN.get('accepted_arguments_schema') or REASSIGN['input_schema'])
     arguments = guarded_arguments(arguments, REASSIGN)
     data = arguments.pop('data', {})
     args = {**arguments, **data}

@@ -22,6 +22,12 @@ def history_active():
     return _operation.get() is not None and not _disabled.get()
 
 
+def current_history_operation_id():
+    """The ``EntityRevision.operation_id`` the active write will use, if any."""
+    op = _operation.get()
+    return op.operation_id if op is not None and not _disabled.get() else None
+
+
 @dataclass
 class HistoryOperation:
     actor: object = None

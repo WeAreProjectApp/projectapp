@@ -125,7 +125,10 @@ test('a client creates a confidential message for the team and gets the URL to s
   await page.getByTestId('secure-link-public-submit').click();
 
   await expect(page.getByTestId('secure-link-create-url')).toContainText(`#${SECURE_LINK_TOKEN}`);
-  await expect(page.getByTestId('secure-link-create-mail')).toHaveAttribute('href', /^mailto:team@projectapp\.co/);
+  // The client copies the URL and sends it through their own channel: a mailto shortcut opened
+  // whatever mail program the computer had by default.
+  await expect(page.getByTestId('secure-link-create-copy')).toBeVisible();
+  await expect(page.getByTestId('secure-link-create-mail')).toHaveCount(0);
   expect(calls[0]).toMatchObject({
     secret_type: 'confidential_message',
     fields: { message: 'La clave se comparte por el canal acordado.' },

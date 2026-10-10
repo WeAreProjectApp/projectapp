@@ -58,11 +58,12 @@ def _call(api_client, token, name, arguments):
 @pytest.mark.django_db
 class TestAccountingMcpToolList:
     def test_exposes_per_ledger_and_non_crud_tools(self, api_client, accounting_connector):
+        """The compatibility endpoint retains its accounting actions plus controls."""
         _, token = accounting_connector
         response = api_client.post(_url(token), _rpc('tools/list'), format='json')
         names = [t['name'] for t in response.data['result']['tools']]
-        # 8 ledgers × 5 CRUD + 15 non-CRUD + 15 statement tools = 70
-        assert len(names) == 70
+        # 8 entities × 5 CRUD + 15 non-CRUD + 15 statement tools + 5 expected-income tools + 3 controls.
+        assert len(names) == 78
         for expected in (
             'list_income', 'create_expense', 'delete_pocket', 'get_hosting',
             'update_recurring', 'get_dashboard', 'list_change_logs',
@@ -76,10 +77,13 @@ class TestAccountingMcpToolList:
             'get_recurring_duplicate_draft', 'set_recurring_active',
             'archive_recurring', 'restore_recurring', 'mute_recurring',
             'bulk_action_recurring',
+            'list_expected_incomes', 'get_expected_income', 'update_expected_income',
+            'create_expected_income', 'duplicate_expected_income',
+            'describe_capabilities', 'confirm_action', 'cancel_action',
         ):
             assert expected in names
 
-    def test_registry_length_matches_endpoint(self):
+    def test_source_registry_keeps_accounting_actions(self):
         assert len(ACCOUNTING_TOOLS) == 70
 
 

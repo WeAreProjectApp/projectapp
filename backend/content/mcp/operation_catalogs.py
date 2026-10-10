@@ -15,6 +15,7 @@ from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.issue_tools import ISSUE_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
+from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.entity_history_tools import history_tools
 from content.mcp.proposal_schemas import writable_schema
@@ -88,7 +89,7 @@ PROJECT_TOOLS = [
     _op('upload_project_brand_asset', 'Adjunta un asset validado a la biblioteca de marca del proyecto, con título y categoría.', 'project-brand', 'POST', ('project_id',), 'write', assets={'asset_id': {'field': 'file'}}, payload_schema=writable_schema(ProjectBrandAssetUploadSerializer, exclude=('file',))),
     _op('download_project_brand_asset', 'Descarga un archivo de marca autorizado como asset temporal perteneciente a esta credencial.', 'project-brand-asset', path=('project_id', 'asset_id')),
     _op('delete_project_brand_asset', 'Elimina un archivo de la biblioteca de marca del proyecto tras confirmación explícita.', 'project-brand-asset', 'DELETE', ('project_id', 'asset_id'), 'sensitive', True),
-] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS
+] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + DATA_INTEGRITY_TOOLS
 
 
 _FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}

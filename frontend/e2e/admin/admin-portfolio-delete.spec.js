@@ -1,12 +1,14 @@
 /**
  * E2E tests for admin portfolio work deletion.
  *
- * Covers: delete button visible in list, confirm dialog triggers API call.
+ * Covers: row menu button visible in list, its delete entry's confirm dialog
+ * triggers the API call.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PORTFOLIO_DELETE } from '../helpers/flow-tags.js';
+import { chooseRowAction } from '../helpers/row-actions.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -38,7 +40,7 @@ test.describe('Admin Portfolio Delete', () => {
     const table = page.locator('table');
     await expect(table.getByText('Proyecto a Borrar')).toBeVisible();
     const row = table.getByRole('row', { name: /Proyecto a Borrar/ });
-    await expect(row.getByRole('button', { name: 'Acciones' })).toBeVisible();
+    await expect(row.getByTestId('portfolio-work-actions-1')).toBeVisible();
   });
 
   test('delete button triggers confirm dialog', {
@@ -58,10 +60,11 @@ test.describe('Admin Portfolio Delete', () => {
     });
     await page.goto('/panel/portfolio');
 
-    const table = page.locator('table');
-    const row = table.getByRole('row', { name: /Proyecto a Borrar/ });
-    await row.getByRole('button', { name: 'Acciones' }).click();
-    await row.getByRole('menuitem', { name: 'Eliminar' }).click();
+    await chooseRowAction(page, {
+      kebab: 'portfolio-work-actions-1',
+      menu: 'portfolio-work-actions-modal',
+      action: 'portfolio-work-delete-1',
+    });
 
     const modal = page.getByRole('dialog', { name: 'Eliminar trabajo' });
     await expect(modal).toBeVisible();

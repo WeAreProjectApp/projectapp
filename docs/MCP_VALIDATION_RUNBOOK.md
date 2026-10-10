@@ -1,7 +1,7 @@
 # Guion de validación y mantenimiento de MCP
 
 Las plantillas contractuales independientes se administran desde Propuestas
-(2.1.0) y se consultan en Documentos (3.1.0) como espejos de solo lectura.
+(2.2.0) y se consultan en Documentos (3.2.0) como espejos de solo lectura.
 Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar
 lectura de las tres variantes, preview sin escritura, campos obligatorios,
 rechazo por etag, confirmación, coherencia, historial/restauración y reversión
@@ -26,14 +26,19 @@ rechaza raíces automáticas de proyecto; estas protecciones se validan junto
 con los contratos de modelo antes de publicar cambios del gestor.
 
 Última revisión integral: 2026-09-04.
+Revisión focal de registro, esquemas e ingresos esperados: 2026-10-09.
 
 Este documento es el procedimiento repetible para validar la plataforma MCP de
 ProjectApp: transporte moderno y compatible, credenciales con alcance,
 confirmación de operaciones sensibles, uploads temporales y paridad operativa
 con las áreas del Panel. La fuente ejecutable del inventario está en
-`backend/content/views/mcp_blog.py`; los adaptadores de paridad viven en
+`backend/content/mcp/connectors.py` (`CONNECTORS` y `TOOLS_BY_SLUG`); los
+adaptadores de paridad viven en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
+Versiones, compatibilidad, fuentes, uploads e instrucciones se declaran en
+`ConnectorSpec`. Ver el [changelog de esta entrega](changelog/2026-10-09-mcp-connectors-schema-registry.md)
+y la [medición antes/después](audits/2026-10-09-mcp-schema-parity.md).
 
 ## Intereses y contratos de propuestas (2026-09-29)
 
@@ -77,10 +82,23 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 - Cada conector ejecuta como un principal técnico no interactivo
   `mcp_<slug>`, con contraseña inutilizable. No toma prestada la identidad del
   primer superusuario humano.
-- Las lecturas y ediciones reversibles se ejecutan directamente. Toda acción
-  externa, financiera o irreversible responde primero con
-  `confirmation_id`, impacto y vencimiento; `confirm_action` ejecuta una sola
-  vez los mismos argumentos y `cancel_action` descarta el intent.
+- `tools/list` y `describe_capabilities` comparten `registry.public_tool` y el
+  alcance de credencial. Identidad y versión proceden del mismo registro en
+  `initialize`, `server/discover` y metadata moderna; ambos handshakes entregan
+  las instrucciones propias del conector.
+- Las herramientas nativas de propuestas actualizadas publican argumentos planos. Los sobres
+  `data`/`query` y aliases históricos admitidos siguen funcionando en ejecución;
+  el uso de sobres se registra como `deprecated_envelope`. Su forma privada
+  `accepted_arguments_schema` nunca se publica. Los adaptadores genéricos
+  pendientes permanecen en el backlog. El puente Panel compartido aún publica
+  `data` en algunos payloads explícitos (por ejemplo, `update_proposal_settings`
+  y `review_proposal_approval`); su proyección plana depende del trabajo paralelo.
+- La confirmación depende de cada herramienta y de sus instrucciones. Las que
+  la requieren devuelven `confirmation_id`, impacto y vencimiento;
+  `confirm_action` ejecuta los mismos argumentos y `cancel_action` descarta el
+  intent. `update_expected_income` sólo previsualiza si el cambio afecta dinero,
+  IVA, reparto, contabilidad, cliente o proyecto. Las herramientas existentes
+  de los cinco conectores de compatibilidad conservan ejecución directa.
 - Los módulos con archivos exponen `begin_upload`, PUT firmado o
   `upload_asset_chunk`, `complete_upload` y `abort_upload`. Tamaño, MIME y
   SHA-256 se verifican antes de que un `asset_id` pueda consumirse; descargas y
@@ -97,6 +115,25 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
   decisión explícita del superusuario en `/panel/mcps`.
 - Los handlers MCP reutilizan serializers y servicios del panel. Una regla que
   impide una acción en la interfaz también la impide por conversación.
+- La política de `schema_policy.py` exige objetos cerrados, argumentos tipados y
+  descritos, sin combinadores de raíz; los objetos libres necesitan motivo
+  documentado. `schema_backlog.py` mantiene excepciones que sólo pueden reducirse
+  para adaptadores genéricos, descripciones pendientes y esquemas diferidos.
+  Los objetos de propuestas con campos definidos rechazan claves desconocidas
+  también en listas y objetos anidados.
+- Los esquemas publicados son el contrato; esta rama no añade un validador
+  central de argumentos. Los desconocidos o faltantes se rechazan en cada
+  handler/serializer; las tools de ingresos esperados usan `unknown_field` para
+  claves desconocidas. `accepted_arguments_schema` es privado y conserva las
+  formas aceptadas en ejecución. La rama `feat/09102026-mcp-folder-migration`
+  incorpora validación central opt-in en `protocol.py` para Documentos,
+  Proyectos o tools con `strict_arguments`, usando ese esquema privado cuando
+  existe; no se atribuye ese validador a esta entrega.
+- Un cambio del contrato público requiere incrementar la versión en
+  `ConnectorSpec`, escribir un changelog y ejecutar
+  `mcp_schema_report --write-fingerprints`. Las huellas se versionan en
+  `backend/content/mcp/connector_contracts.json` y las pruebas detectan deriva.
+  La versión se almacena aparte del SHA-256 del contrato.
 - En propuestas, `_meta.optional_metadata.email_intro` del template/artifact se
   persiste como `BusinessProposal.email_intro`. Debe ser texto plano específico
   del cliente y conectar problema, solución y resultado. `send_proposal`,
@@ -147,6 +184,16 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
   proyectos del cliente y cancela su facturación futura, y eso exige la vista
   previa del panel. El archivado de un hilo de comunicaciones sólo cambia su
   visibilidad y sí está expuesto mediante una acción de dominio específica.
+  Única excepción: la fusión de clientes duplicados del motor de integridad
+  (`apply_integrity_fixes`, regla CL1-CL3) archiva el cliente que se fusiona
+  como último paso, después de comprobar que ya no le queda ningún proyecto,
+  así que no hay nada que suspender ni facturación que cancelar.
+- **Integridad de datos.** El motor nunca borra registros para resolver un
+  duplicado, nunca escribe filas conservadas (`retention_context`), raíces
+  gestionadas fuera de una fusión, carpetas de sistema ni documentos generados,
+  y nunca reescribe historial, logs ni evidencia. Toda corrección queda en
+  `DataIntegrityOperation` con valores antes/después y se deshace exacta
+  mientras nadie haya cambiado esos datos (`docs/DATA_INTEGRITY.md`).
 - `update_message` edita sólo un borrador saliente activo;
   `delete_draft` aplica la misma condición; `mark_message_sent` registra un
   hecho externo y no contacta proveedores. El envío real pertenece a las
@@ -202,29 +249,33 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 
 ## Inventario vigente
 
-| Slug | Herramientas | Alcance |
-|---|---:|---|
-| `operations` | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
-| `partnership-program` | 26 | Condiciones, formalización y recursos del Programa de Alianza |
-| `additional-modules` | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
-| `commercial` | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
-| `proposals` | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 132 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
-| `documents` | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
-| `communications` | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
-| `content` | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
-| `tasks` | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 56 | Ingresos, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
-| `accounting-billing` | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
-| `accounting-cards` | 38 | Tarjetas, snapshots, extractos, transacciones, alias, imports y recordatorios |
-| `blog` | 7 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
-| `clients` | 6 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 70 | Conector de compatibilidad: catálogo contable monolítico anterior |
-| `diagnostics` | 13 | Conector de compatibilidad: diagnósticos y secciones |
-| `linkedin-personal` | 7 | Conector de compatibilidad: LinkedIn personal |
+| Slug | Versión | Herramientas | Alcance |
+|---|---|---:|---|
+| `operations` | 2.1.0 | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
+| `partnership-program` | 2.1.0 | 26 | Condiciones, formalización y recursos del Programa de Alianza |
+| `additional-modules` | 2.1.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
+| `commercial` | 2.1.0 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
+| `proposals` | 2.2.0 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
+| `projects` | 2.2.0 | 169 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial e integridad de datos |
+| `documents` | 3.2.0 | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `communications` | 2.1.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
+| `content` | 2.1.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
+| `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
+| `accounting-ledger` | 2.1.0 | 61 | Ingresos esperados con ETag y confirmación, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-billing` | 2.1.0 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
+| `accounting-cards` | 2.1.0 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
+| `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
+| `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
+| `accounting` | 1.1.0 | 78 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, cinco herramientas de ingresos esperados y controles comunes |
+| `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
+| `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
-Los conteos de `commercial` y `proposals` incluyen los controles comunes y se
-verificaron contra `TOOLS_BY_SLUG` el 2026-10-07 en settings de test, sin consultar datos reales.
+Los 18 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
+`mcp_schema_report` local con `projectapp.settings_test` el 2026-10-09, sin
+consultar datos reales: 998 herramientas sumadas entre catálogos, incluidas las
+compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
+uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
+esperados, y `accounting-cards` incorporó `get_statement`.
 
 Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
@@ -245,6 +296,40 @@ hacia los conectores agrupados por área.
 5. Para una acción sensible, validar primero el preview, luego confirmar una
    sola vez y repetir `confirm_action` para comprobar respuesta replay-safe.
 6. Al terminar, desactivar el conector y revocar la credencial temporal.
+
+Desde `backend/` del worktree, medir primero el registro local con settings de
+test. No carga la `.env` enlazada ni consulta datos reales:
+
+```bash
+DJANGO_SETTINGS_MODULE=projectapp.settings_test ../.venv/bin/python manage.py mcp_schema_report
+```
+
+El comando consulta `initialize`, `server/discover`, `tools/list` y
+`describe_capabilities` sin ejecutar herramientas de negocio. Sin `--slug`
+revisa los 18; se puede repetir `--slug` para un caso focal. `--format json`
+permite guardar un resultado procesable. Tras un cambio de contrato y su
+incremento de versión, regenerar el lock en modo local:
+
+```bash
+DJANGO_SETTINGS_MODULE=projectapp.settings_test ../.venv/bin/python manage.py mcp_schema_report --write-fingerprints
+```
+
+Para consultar el servidor desplegado como cliente limpio, usar `--remote` con
+la URL base del host. Cargar previamente tokens Bearer en variables de entorno
+`MCP_TOKEN_<SLUG>`: slug en mayúsculas y guiones reemplazados por `_`
+(por ejemplo, `MCP_TOKEN_ACCOUNTING_LEDGER` y `MCP_TOKEN_LINKEDIN_PERSONAL`).
+Sin `--slug` hacen falta las 18 variables; no escribir sus valores en este guion
+ni imprimirlos. `--token-env-template` permite otra convención con `{SLUG}`.
+
+```bash
+DJANGO_SETTINGS_MODULE=projectapp.settings_test ../.venv/bin/python manage.py mcp_schema_report --remote 'https://<host>'
+```
+
+La consulta usa `/api/mcp/<slug>/`, Bearer y cabeceras sin caché, sin redirecciones.
+El modo remoto no calcula huellas ni tamaños de backlog local y no admite
+`--write-fingerprints` ni `--print-backlog`. Compara las vías del servidor entre
+sí: también hay que contrastar versiones y conteos con el inventario local,
+pues un servidor antiguo puede ser internamente consistente.
 
 Petición base compatible para una llamada manual (sustituir los marcadores
 localmente y no guardarlos en el historial del shell):
@@ -286,11 +371,42 @@ usa HTTP 200, con `result.isError=true`, `structuredContent.error.code` y texto
 accionable. Un envelope moderno inválido responde HTTP 400; token, slug inválido
 o inactividad responden 404 para no revelar conectores.
 
-Toda herramienta marcada `requires_confirmation=true` usa dos llamadas. La
-primera invocación devuelve un `confirmation_id` sin ejecutar; la segunda llama
-`confirm_action` con ese ID. El intent vence a los diez minutos, queda ligado a
-conector y credencial, conserva la huella exacta de argumentos y no vuelve a
-ejecutarse ante un replay.
+Una operación que requiere confirmación usa dos llamadas: la primera devuelve
+un `confirmation_id` sin ejecutar y la segunda llama `confirm_action` con ese
+ID. Consultar `requires_confirmation` y la descripción: `update_expected_income`
+aplica su condición de cambio sensible y puede ejecutar directamente un cambio
+descriptivo. El intent vence a los diez minutos, queda ligado a conector y
+credencial, conserva la huella exacta de argumentos y no vuelve a ejecutarse
+ante un replay.
+
+## Verificación post-deploy y caché de clientes
+
+1. Repetir el informe `--remote` sin `--slug`, con las 18 credenciales cargadas
+   por entorno. Es una consulta de descubrimiento como cliente limpio; no
+   modifica registros ni ejecuta operaciones contables. Para contrastar los
+   conteos completos, usar credenciales con acceso al catálogo completo.
+2. Exigir código 0 y contrastar las versiones con «Inventario vigente».
+   `tools/list` y `describe_capabilities` deben coincidir en nombres, esquemas,
+   descripción, título y anotaciones; las instrucciones de ambos handshakes
+   también. El informe local y la prueba de huellas comprueban el lock del repo;
+   el informe remoto no calcula ese SHA-256.
+3. Abrir una conversación nueva en claude.ai. El descubrimiento moderno anuncia
+   `ttlMs: 300000` (cinco minutos) y caché privada; las apps de escritorio o móvil
+   pueden conservar definiciones propias además de ese hint.
+4. Si la consulta limpia ya muestra las herramientas vigentes pero el agente
+   conserva definiciones antiguas, quitar y volver a agregar el conector en
+   **claude.ai Settings → Connectors**, con la misma URL. Si se necesita otra
+   credencial, crear una en `/panel/mcps`; no rotar `Default`, porque invalidaría
+   las conexiones que aún la utilizan. Revisar además activación y revocación.
+5. Reiniciar las sesiones de Claude Code y Codex que tenían el catálogo anterior.
+   El prefijo **Input constraint** lo añade el cliente al reescribir `anyOf` o
+   `oneOf` de raíz a texto en la descripción; si sólo aparece en un catálogo
+   almacenado por el cliente, no demuestra deriva del servidor.
+
+La incidencia reportada de «Gestor de Contenido» con HTTP 405 desde claude.ai el
+2026-10-09 se registra en la [auditoría](audits/2026-10-09-mcp-schema-parity.md).
+Su posible relación con activación o token rotado necesita diagnóstico aparte;
+la paridad local no confirma conectividad del cliente ni esa hipótesis.
 
 ## Caso crítico: editar un documento en borrador
 
@@ -322,7 +438,13 @@ disolver o reemplazar evidencia sí conserva el flujo preview + confirm.
 
 ## Barrido de paridad por área
 
-Para cada conector canónico, ejecutar `describe_capabilities` con una credencial
+Ejecutar `mcp_schema_report` sin `--slug` para abarcar los 18 conectores,
+incluidos los cinco de compatibilidad; después repetir con `--remote` tras el
+deploy. Debe terminar con código 0, sin diferencias de nombres, campos públicos,
+identidad, versiones o instrucciones. La paridad no significa que los backlogs
+de contratos explícitos y descripciones estén vacíos.
+
+Para cada conector, ejecutar `describe_capabilities` con una credencial
 sin alcance y con otra limitada. La primera debe coincidir con `tools/list`; la
 segunda sólo muestra herramientas autorizadas más `describe_capabilities`,
 `confirm_action` y `cancel_action`.
@@ -410,6 +532,35 @@ Los adaptadores resuelven la misma ruta DRF del Panel mediante
 serializer y servicio existentes decidan permisos, validación y transacción.
 No se implementa un segundo CRUD con escrituras ORM paralelas.
 
+### Proyectos: integridad de datos (2026-10-09)
+
+1. `describe_integrity_rules` devuelve `catalog_version` y cada regla con
+   dominio, gravedad, `fix_kinds` y `fixable_kinds` (las correcciones que el
+   motor sabe aplicar).
+2. `list_integrity_findings` con `query.scope_kind=client` y
+   `query.scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
+   hallazgo; con un `scope_id` devuelve hallazgos con `fingerprint`, `inputs`,
+   `suggestion` y, si aplica, `tool`. Repetir la búsqueda devuelve los mismos
+   fingerprints, también en `scope_kind=all`.
+3. `preview_integrity_fixes` con un hallazgo que exige una decisión y sin
+   `params` informa `input_required`; con los `params` correctos no tiene
+   bloqueos y devuelve `impact_hash`. No escribe nada.
+4. `apply_integrity_fixes` con un `expected_impact_hash` viejo responde
+   `STALE_VERSION`; con un lote bloqueado, `CONFLICT` con los bloqueos; con el
+   hash vigente pide confirmación y no escribe hasta `confirm_action`. Repetir la
+   confirmación devuelve el mismo resultado sin aplicar dos veces.
+5. Tras confirmar, el hallazgo desaparece de `list_integrity_findings` y
+   `list_integrity_operations` muestra la operación con `source=mcp:projects` y
+   el actor técnico del conector.
+6. Editar a mano uno de los registros corregidos y pedir
+   `preview_integrity_operation_undo`: informa `changed_since`. Sin esa edición,
+   `undo_integrity_operation` (con `expected_impact_hash`, `reason` y
+   `request_id`) pide confirmación, restaura los valores anteriores y una
+   segunda vista previa informa `already_reverted`.
+7. Un hallazgo `report_only` o `existing_tool` nunca se aplica por el motor: la
+   vista previa lo bloquea y, en el segundo caso, nombra la herramienta que lo
+   corrige con su propia vista previa.
+
 ### Libro contable: previsión manual de cobro
 
 1. Invocar `get_receivables` sin argumentos. Debe listar únicamente ingresos
@@ -429,6 +580,91 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
 4. Casos negativos: intentar seleccionar un ingreso personal, líquido,
    perdido o completamente pagado debe fallar sin modificarlo. Al liquidar por
    completo un candidato, debe salir automáticamente de la selección activa.
+
+### Libro contable: ingresos esperados
+
+Disponible en `accounting` 1.1.0 (el «Gestor Contable» de claude.ai) y
+`accounting-ledger` 2.1.0. Ambos publican `list_expected_incomes`,
+`get_expected_income`, `update_expected_income`, `create_expected_income` y
+`duplicate_expected_income`. Crear y duplicar siempre requieren vista previa
+y `confirm_action`; actualizar sólo la requiere si cambia dinero, IVA, reparto,
+contabilidad, cliente o proyecto. Un cambio descriptivo aislado se aplica
+directamente. Los argumentos están en la raíz; no usar `amount`, `kind` ni
+claves internas de confirmación en estas cinco herramientas.
+
+Reproducir el caso #172 en test/staging con las fixtures de
+`test_mcp_expected_income_flow.py`: cliente G&M #54, proyecto #8, ingreso esperado
+de empresa por 760000, reparto 380000/380000, origen sin clasificar, IVA sin
+registrar y cobro en noviembre de 2026, sin pagos, deducciones ni cuenta emitida.
+Los IDs ilustran esa fixture; no ejecutar este guion sobre un registro real sin
+autorizar su cambio.
+
+1. `list_expected_incomes` con `{"client_id": 54, "q": "G&M", "origin": ["none"]}`
+   debe encontrar #172 sin inferir el origen a partir del concepto. Comprobar
+   importes, fecha de cobro, paginación y bloqueos.
+2. `get_expected_income` con `{"income_id": 172}` devuelve ingreso, pagos,
+   deducciones, cuenta, `editability` y `etag`. Guardar la huella de 64 caracteres
+   para `if_match`; incluye pagos/deducciones/cuentas aunque `updated_at` del
+   ingreso no haya cambiado.
+3. Invocar `update_expected_income` con el siguiente payload y el ETag leído:
+
+```json
+{
+  "income_id": 172,
+  "if_match": "<etag-de-get_expected_income>",
+  "concept": "G&M (Hosting: Semestral) – Semestre 1",
+  "total_amount": "4200000",
+  "gustavo_amount": "2100000",
+  "carlos_amount": "2100000",
+  "company_amount": "0",
+  "period_date": "2026-11-01",
+  "period_start": "2026-10-01",
+  "period_end": "2027-03-31",
+  "period_cadence": "semiannual",
+  "origin": "hosting",
+  "notes": "Propuesta Fase IA 2027 §11 (doc #84). Reajuste por renovación: % aumento SMMLV + 8%."
+}
+```
+
+4. Exigir `confirmation_required=true`; revisar antes/después, reparto, IVA,
+   avisos y efectos secundarios en `impact`. El ingreso sigue por 760000 y aún
+   no hay cambio contable. Llamar `confirm_action` con su `confirmation_id` y
+   verificar por `get_expected_income` y Panel: total 4200000, ventana de
+   octubre a marzo, cobro en noviembre, cliente/proyecto conservados, historial
+   y aviso contable habitual. Repetir la confirmación no duplica la escritura.
+5. Invocar `duplicate_expected_income` con
+   `{"income_id": 172, "overrides": {"concept": "G&M (Hosting: Semestral) – Semestre 2", "total_amount": "4200000", "collection_confidence": "medium"}}`.
+   Revisar la nueva ventana 2027-04-01 a 2027-09-30 y cobro 2027-05-01:
+   `period_rule.rule=kept_payment_offset`. Confirmar y leer el nuevo ID.
+   Es otro esperado; no copia pagos, deducciones ni cuenta de cobro.
+6. Comprobar también `create_expected_income` con concepto, origen, `vat_rate`
+   explícito (`null` conserva IVA sin registrar), total o base y fecha de cobro:
+   no crea fila antes de confirmar. Un cambio sólo de notas debe ser directo;
+   un cambio idéntico no escribe historial ni envía aviso.
+
+Sin reparto explícito se usa `split_half` del Panel. Al cambiar el total se
+recalcula un reparto automático; uno personalizado se conserva con aviso. La
+empresa recibe el residual y una contabilidad personal pertenece al 100 % a su
+dueño. Base, IVA y total deben coincidir exactamente.
+
+| Caso negativo | Resultado que comprobar |
+| --- | --- |
+| Cambiar finanzas, cliente o proyecto con pagos, deducciones, liquidación completa o cuenta emitida/pagada | `INCOME_LOCKED`, con campos y bloqueos; los datos conservados bloquean además toda edición. |
+| `if_match` viejo, o pago/cuenta/cambio después de la vista previa | `STALE_VERSION`; releer y preparar otra vista previa, sin sobrescribir. |
+| Reparto explícito que no suma el total | `VALIDATION_ERROR`, `details.reason=split_mismatch`. |
+| Base/IVA incompatibles con tasa y total | `VALIDATION_ERROR`, `details.reason=vat_mismatch`, con cálculo esperado. |
+| Clave desconocida en raíz o `overrides`, como `amount` | `unknown_field`, con ruta del campo; no crear intent ni escribir. |
+| Leer/editar/duplicar un líquido, perdido u otro kind con estas tools | `NOT_EXPECTED_INCOME`; usar la herramienta del dominio correspondiente. |
+
+**Mes de cobro propio en hosting.** `period_start` / `period_end` delimitan el
+servicio y `period_date` ordena cobros, filtros y avisos. Una fecha explícita
+prevalece sobre la ventana. Al crear sin ella toma el inicio; al editar sin ella
+sigue un inicio movido sólo si ya coincidían en el registro guardado. Una fecha
+independiente y la de un hosting histórico sobreviven al completar o cambiar su
+ventana. Duplicar conserva el desfase de cobro. Comprobar en el formulario
+«Mes de cobro esperado» y su opción de día exacto; al editarlo deja de seguir
+automáticamente el inicio. Inicio, fin y periodicidad se auditan en
+`TRACKED_FIELDS`, además de la fecha de cobro.
 
 ### Comercial: visibilidad de los videos explicativos
 
@@ -803,9 +1039,58 @@ documento antes enlazado ya se puede eliminar (el `PROTECT` lo bloqueaba).
 
 ## Verificación automatizada
 
-Desde `backend/`, con el virtualenv del clon principal y nunca con la suite
-completa. Cada comando respeta el máximo de 20 tests; iniciar otro ciclo después
-de tres comandos.
+Desde `backend/` del worktree, con el virtualenv disponible y
+`projectapp.settings_test` (fijado por `pytest.ini`), nunca con la suite completa.
+Ejecutar **con migraciones**, sin `--nomigrations`: las migraciones de datos
+siembran las filas de `McpConnector`; las fixtures deben recuperarlas con
+`get_or_create`, no recrearlas a ciegas. Cada comando respeta el máximo de 20
+tests; iniciar otro ciclo después de tres comandos.
+
+Para el registro y las 18 huellas, un ciclo de tres lotes:
+
+```bash
+../.venv/bin/pytest content/tests/services/test_mcp_connector_registry.py -v --no-cov -k 'explicit_semver'
+../.venv/bin/pytest content/tests/services/test_mcp_connector_registry.py -v --no-cov -k 'fingerprint_matches_versioned_lock'
+../.venv/bin/pytest content/tests/services/test_mcp_connector_registry.py -v --no-cov -k 'not explicit_semver and not fingerprint_matches_versioned_lock'
+```
+
+`test_mcp_registry_parity.py` recorre los 18 por HTTP: catálogo completo,
+credencial limitada, versiones de handshakes/metadata y correspondencia entre
+instrucciones y confirmación. Ejecutar las primeras tres selecciones en un ciclo
+y las últimas dos en el siguiente (16, 8, 16, 16 y 16 casos):
+
+En la última selección, `[content]` identifica el parámetro del conector;
+`content` sin corchetes coincide también con la carpeta y selecciona todo el archivo.
+
+```bash
+../.venv/bin/pytest content/tests/views/test_mcp_registry_parity.py -v --no-cov -k 'accounting'
+../.venv/bin/pytest content/tests/views/test_mcp_registry_parity.py -v --no-cov -k 'documents or proposals'
+../.venv/bin/pytest content/tests/views/test_mcp_registry_parity.py -v --no-cov -k 'blog or clients or diagnostics or linkedin'
+../.venv/bin/pytest content/tests/views/test_mcp_registry_parity.py -v --no-cov -k 'operations or partnership or additional or projects'
+../.venv/bin/pytest content/tests/views/test_mcp_registry_parity.py -v --no-cov -k 'commercial or communications or [content] or tasks'
+```
+
+Agregar las regresiones focales según el contrato afectado, siempre en
+selecciones de hasta 20 casos; no ejecutar enteros los archivos parametrizados
+que superan ese límite:
+
+- `content/tests/services/test_mcp_schema_policy.py`: objetos cerrados, tipos,
+  descripciones, metadatos privados y backlogs sin crecimiento ni excepciones
+  obsoletas; filtrar por prueba y, cuando corresponda, por slug.
+- `content/tests/views/test_mcp_deprecated_envelopes.py`: sobres y aliases
+  existentes, argumentos publicados planos y rechazo de claves anidadas.
+- `content/tests/management/test_mcp_schema_report.py`: informe local, modo remoto
+  simulado sin secretos y rechazo de huellas cambiadas sin incremento de versión.
+- `content/tests/services/test_accounting_expected_income_service.py`,
+  `content/tests/views/test_mcp_expected_income_flow.py` y
+  `content/tests/views/test_mcp_expected_income_guards.py`: reparto, IVA, ETag,
+  preview/confirmación, duplicación, bloqueos y campos desconocidos.
+- `content/tests/views/test_income_period_fields.py`,
+  `content/tests/views/test_income_duplicate_draft.py` y
+  `content/tests/views/test_settlement_hosting_period.py`: fecha de cobro
+  independiente, desfase en duplicados y auditoría de ventanas de hosting.
+
+Los siguientes comandos conservan la regresión de plataforma operativa:
 
 ```bash
 /home/ryzepeck/webapps/projectapp/backend/venv/bin/python -m pytest \
@@ -837,8 +1122,8 @@ superar 20 tests por ejecución:
 Luego ejecutar una regresión mínima de los handlers compartidos modificados y:
 
 ```bash
-/home/ryzepeck/webapps/projectapp/backend/venv/bin/python manage.py check
-/home/ryzepeck/webapps/projectapp/backend/venv/bin/python manage.py makemigrations --check --dry-run
+DJANGO_SETTINGS_MODULE=projectapp.settings_test ../.venv/bin/python manage.py check
+DJANGO_SETTINGS_MODULE=projectapp.settings_test ../.venv/bin/python manage.py makemigrations --check --dry-run
 python3 scripts/test_quality_gate.py --repo-root . \
   --report-path test-results/test-quality-audit-report.json
 ```
@@ -869,24 +1154,41 @@ la misma entrega:
 4. Agregar una prueba observable de éxito y otra de error cuando cambie una
    regla; actualizar este guion si cambia la operación manual.
 5. Ejecutar los archivos MCP anteriores y la regresión compartida mínima.
+6. Si cambia el contrato público, incrementar `ConnectorSpec.version`, escribir
+   su changelog, ejecutar `mcp_schema_report --write-fingerprints` y revisar el
+   diff de `connector_contracts.json`; después ejecutar el informe sin flags de
+   escritura y la prueba de huellas.
 
 `test_mcp_contracts.py` falla ante campos sin clasificar, nombres duplicados,
 descripciones demasiado vagas o schemas que dejan de ser objetos. Esa falla es
 una solicitud de revisión: nunca se resuelve ocultando el campo sin explicar por
 qué queda fuera del MCP.
 
+`test_mcp_connector_registry.py` comprueba identidad, límites contables y el
+lock versionado. `test_mcp_registry_parity.py` comprueba por HTTP ambos
+descubrimientos y sus instrucciones. `test_mcp_schema_policy.py` conserva la
+política estricta y sus tres backlogs; `test_mcp_deprecated_envelopes.py`
+comprueba compatibilidad y rechazo anidado; `test_mcp_schema_report.py`
+comprueba informe local/remoto y el incremento obligatorio de versión. Las
+pruebas del servicio y de flujo/guardas de ingresos esperados sostienen las
+reglas contables; la paridad de esquemas por sí sola no demuestra esas reglas.
+
 ## Criterio de cierre
 
-- Los 16 conectores aparecen en el registro y `tools/list` coincide con este
-  inventario; los diez canónicos cubren las áreas operativas y los seis
-  históricos permanecen compatibles.
-- Comunicaciones expone 43 operaciones, incluidos preview, envío confirmado, enlaces seguros,
+- Los 18 conectores de `CONNECTORS` aparecen en el inventario: 13 canónicos y
+  5 de compatibilidad. `mcp_schema_report` termina con código 0; lista y
+  capacidades coinciden, y versiones e instrucciones proceden del registro.
+  Las huellas y los backlogs siguen verificados por sus pruebas.
+- Comunicaciones expone 50 herramientas, incluidos preview, envío confirmado, enlaces seguros,
   adjuntos, templates y entregabilidad; sus rechazos dejan la base consistente.
 - Los MCP existentes devuelven y aceptan los campos descritos en su contrato;
-  Documentos expone 64 herramientas y conserva edición Markdown con ETag,
-  papelera, observaciones, hilos, uploads y artefactos.
-- Toda acción sensible exige intent ligado a credencial, confirma una sola vez
-  y deja evidencia; toda credencial respeta alcance, expiración y revocación.
+  Documentos expone 66 herramientas y conserva edición Markdown con ETag,
+  papelera, observaciones, hilos, uploads y artefactos. Los espejos de contrato
+  no son editables ni movibles.
+- Las operaciones que requieren confirmación usan intent ligado a credencial,
+  confirman una sola vez y dejan evidencia. Las instrucciones describen también
+  ejecución directa de compatibilidad y cambios descriptivos de ingresos
+  esperados; toda credencial respeta alcance, expiración y revocación.
 - No se alteraron tokens, prefijos, estados activos ni `last_used_at` de
   conectores existentes durante la migración; los nuevos quedan inactivos.
 - Tests focales, regresión, Django check, migraciones sin drift y quality gate
@@ -1441,8 +1743,9 @@ Comprobar antes del rollout:
 
 ## Gestor de la plataforma — incremento 2026-10-07
 
-`projects` conserva su identidad y se presenta como Gestor de la plataforma,
-versión 2.1.0. Consultar la matriz de entrega para recursos, modelo de datos,
+`projects` conserva su identidad y se presenta como Gestor de la plataforma.
+Ese incremento se entregó en 2.1.0; la versión vigente del registro es 2.2.0.
+Consultar la matriz de entrega para recursos, modelo de datos,
 fuentes confirmadas y avisos. Los contratos de campos incluyen recursos y sus
 relaciones, `ProposalApprovalFile` y eventos/intentos de aviso, con archivos,
 HTML, snapshots e idempotencia interna excluidos de escritura conversacional.

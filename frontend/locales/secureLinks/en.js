@@ -23,8 +23,6 @@ export default {
   copyLink: 'Copy link',
   copied: 'Link copied',
   copyFailed: 'Could not copy. Select the link and copy it manually.',
-  emailIt: 'Send by email',
-  mailSubject: 'One-time secure link',
   createAnother: 'Create another link',
   genericError: 'We could not process the request. Please try again.',
   loading: 'Checking the link…',
@@ -71,6 +69,7 @@ export default {
     clientPlaceholder: 'Search clients...',
     language: 'Language of the recipient page',
     cancel: 'Cancel', save: 'Save changes', create: 'Generate link',
+    renameTitle: 'Edit title', saveTitle: 'Save',
   },
   fields: {
     show: 'Show',

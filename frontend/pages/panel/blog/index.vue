@@ -1,5 +1,14 @@
 <template>
   <div>
+    <!-- Before ConfirmModal: modals stack in template order, so the
+         confirmation an entry opens lands above this fading menu. -->
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.title_es || ''"
+      :items="actionsRow ? blogActionItems(actionsRow) : []"
+      testid="blog-post-actions-modal"
+      @close="actionsRow = null"
+    />
     <ConfirmModal
       v-model="confirmState.open"
       :title="confirmState.title"
@@ -53,6 +62,7 @@
         :rows="posts"
         caption="Publicaciones del blog"
         card-test-id-prefix="blog-post-row"
+        row-actions-layout="menu-start"
       >
         <template #cell-title_es="{ row: post }">
           <NuxtLink
@@ -66,7 +76,13 @@
         </template>
         <template #cell-date="{ row: post }">{{ formatDate(post.published_at || post.created_at) }}</template>
         <template #row-actions="{ row: post }">
-          <BaseActionMenu :items="blogActionItems(post)" :testid="`blog-post-actions-${post.id}`" />
+          <BaseActionButton
+            action="more"
+            class="h-11 w-11 shrink-0"
+            :label="`Acciones de ${post.title_es}`"
+            :data-testid="`blog-post-actions-${post.id}`"
+            @click.stop="actionsRow = post"
+          />
         </template>
       </BaseExploratoryList>
 
@@ -88,13 +104,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useBlogStore } from '~/stores/blog';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import BasePagination from '~/components/base/BasePagination.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import { formatDate } from '~/utils/formatDate';
 
 const localePath = useLocalePath();
@@ -104,6 +121,7 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 const blogStore = useBlogStore();
 const posts = computed(() => blogStore.posts);
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
+const actionsRow = ref(null);
 const blogColumns = [
   { key: 'title_es', label: 'Título', mobile: 'primary' },
   { key: 'status', label: 'Estado', mobile: 'secondary' },
@@ -112,10 +130,10 @@ const blogColumns = [
 
 function blogActionItems(post) {
   return [
-    { action: 'edit', label: 'Editar', to: localePath(`/panel/blog/${post.id}/edit`) },
-    { action: 'duplicate', label: 'Duplicar', onClick: () => handleDuplicate(post) },
+    { action: 'edit', label: 'Editar', to: localePath(`/panel/blog/${post.id}/edit`), testid: `blog-post-edit-${post.id}` },
+    { action: 'duplicate', label: 'Duplicar', onClick: () => handleDuplicate(post), testid: `blog-post-duplicate-${post.id}` },
     { divider: true },
-    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(post) },
+    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(post), testid: `blog-post-delete-${post.id}` },
   ];
 }
 

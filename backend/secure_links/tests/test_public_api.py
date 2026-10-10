@@ -1,5 +1,6 @@
 """Anonymous endpoints: status, reveal and client-side creation."""
 
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 import pytest
@@ -129,3 +130,26 @@ def test_team_notice_email_never_contains_link_or_content(mailoutbox, settings):
     body = message.body + str(message.alternatives)
     assert token_from(response.json()['url']) not in body
     assert 'Cliente-Clave-1' not in body and f'link={link.pk}' in body
+
+
+def test_team_notice_shows_bogota_dates_in_spanish(mailoutbox, settings):
+    """Falla si las fechas del aviso no se muestran en español con la hora de Bogotá."""
+    from secure_links.tasks import send_received_notice
+
+    settings.NOTIFICATION_EMAIL = 'equipo@projectapp.co'
+    with patch('secure_links.views.notify_team_secure_link_received'):
+        APIClient().post(CREATE_URL, _public_payload(), format='json')
+    link = SecureLink.objects.get()
+    SecureLink.objects.filter(pk=link.pk).update(
+        created_at=datetime(2026, 10, 9, 20, 15, tzinfo=timezone.utc),
+        expires_at=datetime(2026, 10, 16, 20, 15, tzinfo=timezone.utc),
+    )
+
+    send_received_notice(link.pk)
+
+    message, = mailoutbox
+    html_body = message.alternatives[0].content
+    assert 'Vie, 9 oct 2026, 15:15' in message.body
+    assert 'Vie, 16 oct 2026, 15:15' in message.body
+    assert 'Vie, 9 oct 2026, 15:15' in html_body
+    assert 'Vie, 16 oct 2026, 15:15' in html_body

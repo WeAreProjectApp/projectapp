@@ -151,7 +151,7 @@ const panelCapabilities = [
         'Da continuidad a los mensajes enviados desde distintos módulos.', ['/panel/emails'],
         { icon: 'send', stage: 'Comunicación' }),
       feature('panel-secure-links', 'Compartir información sensible',
-        'Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones plegables. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; conserva edición, eliminación confirmada, reactivación e historial.',
+        'Genera la URL con un formulario de campos esenciales, dropdown de tipos y opciones plegables. Permite marcar el envío manual y distinguir enlaces listos, enviados, abiertos, vencidos y revocados; renombra el título en línea, edita el contenido desde el detalle o desde los tres puntos de la fila y conserva eliminación confirmada, reactivación e historial.',
         'Evita pegar secretos en correos o WhatsApp sin perder el control de quién los abrió.', ['/panel/secure-links'],
         { icon: 'key', stage: 'Comunicación' }),
     ],
@@ -189,7 +189,7 @@ const panelCapabilities = [
     'Hace visibles los compromisos financieros y su impacto en la operación.',
     [
       feature('panel-financial-flow', 'Leer ingresos y gastos',
-        'Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. Los ingresos con cliente requieren una cuenta de cobro emitida antes de liquidar o abonar; Liquidar muestra icono atenuado, cursor de indisponibilidad y el motivo; los ingresos internos conservan su flujo. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Resume resultados, estima la cartera pendiente por cobrar y permite gestionar entradas y salidas de dinero con captura base/total incluido y desglose de IVA, propuesto al 19 % en nuevos registros. Editar conserva la tasa guardada. El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Los ingresos con cliente requieren una cuenta de cobro emitida antes de liquidar o abonar; Liquidar muestra icono atenuado, cursor de indisponibilidad y el motivo; los ingresos internos conservan su flujo. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Expone la utilidad y los movimientos que la explican.',
         ['/panel/accounting', '/panel/accounting/incomes', '/panel/accounting/expenses'],
         { icon: 'dashboard', stage: 'Resultados' }),

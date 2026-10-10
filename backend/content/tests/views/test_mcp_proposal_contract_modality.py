@@ -77,8 +77,8 @@ def accepted_mcp_proposal(accepted_proposal, contract_template):
     return accepted_proposal
 
 
-def test_modality_tool_schema_requires_mode_at_root_or_data(api_client, mcp_access):
-    """Fails if MCP publishes a modality tool schema that cannot express the required target mode."""
+def test_modality_tool_schema_requires_flat_mode(api_client, mcp_access):
+    """Fails if MCP discovery hides the required flat target mode behind an envelope or constraint."""
     token, _ = mcp_access
     tools = api_client.post(f'/api/mcp/proposals/{token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list', 'params': {},
@@ -88,7 +88,10 @@ def test_modality_tool_schema_requires_mode_at_root_or_data(api_client, mcp_acce
     assert schema['properties']['change_note']['type'] == 'string'
     assert set(schema['properties']['contract_params']['properties']) == set(TERMS)
     assert schema['properties']['conflict_resolution']['enum'] == ['use_origin']
-    assert any('contract_modality' in branch.get('required', []) for branch in schema['anyOf'])
+    assert schema['required'] == ['proposal_id', 'contract_modality']
+    assert 'data' not in schema['properties']
+    assert not {'anyOf', 'oneOf', 'allOf'} & schema.keys()
+    assert schema['additionalProperties'] is False
 
 
 def test_accepted_mcp_change_requires_confirmation_then_returns_variant_sources(
