@@ -24,6 +24,14 @@ from content.services.income_completion_notice_service import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def completion_notice_delivery_defaults():
+    settings = AccountingSettings.load()
+    settings.notifications_enabled = False
+    settings.save(update_fields=['notifications_enabled'])
+    NotificationRecipient.objects.all().delete()
+
+
 def _paid_income(**overrides):
     fields = {
         'concept': 'Entrega fase dos', 'kind': IncomeRecord.Kind.EXPECTED,
