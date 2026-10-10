@@ -1,13 +1,20 @@
 /**
  * E2E tests for admin hour-package deletion.
  *
- * Covers: delete opens the ConfirmModal, confirming sends DELETE and removes
- * the row, cancelling keeps the row.
+ * Covers: the row menu's delete entry opens the ConfirmModal, confirming sends
+ * DELETE and removes the row, cancelling keeps the row.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_HOUR_PACKAGES_DELETE } from '../helpers/flow-tags.js';
+import { chooseRowAction } from '../helpers/row-actions.js';
+
+const deleteFirstPackage = {
+  kebab: 'hour-package-actions-1',
+  menu: 'hour-package-actions-modal',
+  action: 'hour-package-delete-1',
+};
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -48,11 +55,10 @@ test.describe('Admin Hour Packages Delete', () => {
     const table = page.locator('table');
     await expect(table.getByRole('link', { name: 'Paquete Ágil', exact: true })).toBeVisible();
 
-    const packageRow = table.getByRole('row', { name: /Paquete Ágil/ });
-    await packageRow.getByRole('button', { name: 'Acciones' }).click();
-    await packageRow.getByRole('menuitem', { name: 'Eliminar' }).click();
-    await expect(page.getByText('¿Eliminar "Paquete Ágil"?')).toBeVisible();
-    await page.getByRole('button', { name: 'Eliminar', exact: true }).last().click();
+    await chooseRowAction(page, deleteFirstPackage);
+    const dialog = page.getByRole('dialog', { name: 'Eliminar paquete' });
+    await expect(dialog.getByText('¿Eliminar "Paquete Ágil"?')).toBeVisible();
+    await dialog.getByTestId('confirm-modal-confirm').click();
 
     await expect(table.getByRole('link', { name: 'Paquete Ágil', exact: true })).toBeHidden();
     await expect(table.getByRole('link', { name: 'Paquete Pro', exact: true })).toBeVisible();
@@ -66,12 +72,12 @@ test.describe('Admin Hour Packages Delete', () => {
     await page.goto('/panel/hour-packages');
 
     const table = page.locator('table');
-    const packageRow = table.getByRole('row', { name: /Paquete Ágil/ });
-    await packageRow.getByRole('button', { name: 'Acciones' }).click();
-    await packageRow.getByRole('menuitem', { name: 'Eliminar' }).click();
-    await expect(page.getByText('¿Eliminar "Paquete Ágil"?')).toBeVisible();
-    await page.getByRole('button', { name: /Cancelar/ }).click();
+    await chooseRowAction(page, deleteFirstPackage);
+    const dialog = page.getByRole('dialog', { name: 'Eliminar paquete' });
+    await expect(dialog.getByText('¿Eliminar "Paquete Ágil"?')).toBeVisible();
+    await dialog.getByRole('button', { name: 'Cancelar' }).click();
 
+    await expect(dialog).toBeHidden();
     await expect(table.getByRole('link', { name: 'Paquete Ágil', exact: true })).toBeVisible();
     expect(wasDeleteCalled()).toBe(false);
   });

@@ -8303,9 +8303,9 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 
 - **Módulo / rol:** enlaces seguros / administrador del panel.
 - **Ruta:** `/panel/secure-links`; `?link=<id>` abre el detalle.
-- **Display:** pestañas con conteos de Listo para compartir, Enviado, Abierto, Vencido y Revocado, más Recibidos; detalle con historial y fecha de envío. Cancelar una eliminación conserva el registro.
-- **Success:** marcar manualmente como enviado un enlace saliente activo sin enviar correo ni revelar contenido; consultar contenido sin consumir el enlace; editar datos o contenido explícitamente, eliminar con confirmación, revocar o reactivar. Reactivar vuelve a Listo y limpia la marca actual conservando el historial; revelar como destinatario produce Abierto.
-- **Error:** campos inválidos al editar conservan el borrador y muestran el error junto al campo; un registro inexistente muestra error visible.
+- **Display:** pestañas con conteos de Listo para compartir, Enviado, Abierto, Vencido y Revocado, más Recibidos; cada fila empieza con un botón de tres puntos sin encabezado (56 px) que abre un modal con Detalle e historial, Editar contenido, Copiar enlace, Marcar como enviado, Revocar o Reactivar y Eliminar; detalle con historial y fecha de envío y una sola opción de editar. Cancelar una eliminación conserva el registro.
+- **Success:** marcar manualmente como enviado un enlace saliente activo sin enviar correo ni revelar contenido; consultar contenido sin consumir el enlace; renombrar el título en línea desde el detalle (sólo el título, sin descifrar); editar el contenido desde el detalle o desde la fila; eliminar con confirmación, revocar o reactivar; recargar la tabla con el botón «Actualizar datos». Reactivar vuelve a Listo y limpia la marca actual conservando el historial; revelar como destinatario produce Abierto.
+- **Error:** un título o campos inválidos al editar conservan el borrador y muestran el error junto al campo; Esc cancela el renombrado sin cerrar el detalle; un registro inexistente muestra error visible.
 - **Failure:** errores de consulta ofrecen reintento; un fallo al guardar/eliminar/marcar enviado conserva los datos o la fila y muestra el error. Respuestas atrasadas no sustituyen el enlace abierto ni reponen secretos tras cerrar.
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
 - **Cobertura:** `e2e/admin/admin-secure-links.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
@@ -8845,7 +8845,7 @@ consulta de la conversación pública que originó el prompt.
 
 - **Módulo / rol:** enlaces seguros / cliente sin sesión.
 - **Ruta:** `/{locale}/secure-link`, compartida desde el panel con **Enlace para clientes**.
-- **Success:** empieza en Mensaje confidencial o permite elegir otra plantilla desde el dropdown; Personalizado muestra nombre y contenido. Campos, remitente, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar o abrir en el cliente de correo manualmente; sólo el equipo puede abrirla y recibe un aviso sin enlace ni contenido.
+- **Success:** empieza en Mensaje confidencial o permite elegir otra plantilla desde el dropdown; Personalizado muestra nombre y contenido. Campos, remitente, vigencia (1–7 días) y captcha generan una URL de un solo uso para copiar y enviar por el canal del cliente (la página no ofrece un atajo de correo); sólo el equipo puede abrirla y recibe un aviso sin enlace ni contenido.
 - **Error:** los campos obligatorios faltantes o un captcha fallido se muestran en el formulario sin crear el enlace.
 - **Failure:** catálogo no disponible ofrece reintento con envío bloqueado; HTML del servidor se reemplaza por un aviso y se preservan los campos.
 - **Display:** campos esenciales visibles y opcionales bajo Más detalles. Crear otro enlace vuelve al formulario sin contenido del anterior.

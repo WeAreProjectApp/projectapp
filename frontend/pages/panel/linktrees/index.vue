@@ -29,6 +29,7 @@
       caption="Linktrees y estado de publicación"
       card-test-id-prefix="linktree-row"
       table-min-width="58rem"
+      row-actions-layout="menu-start"
     >
       <template #cell-public_url="{ row: tree }">
         <div class="flex min-w-0 items-center gap-2">
@@ -58,12 +59,23 @@
       </template>
 
       <template #row-actions="{ row: tree }">
-        <BaseActionMenu
-          :items="linktreeActionItems(tree)"
-          :testid="`linktree-actions-${tree.id}`"
+        <BaseActionButton
+          action="more"
+          class="h-11 w-11 shrink-0"
+          :label="`Acciones de ${tree.name}`"
+          :data-testid="`linktree-actions-${tree.id}`"
+          @click.stop="actionsRow = tree"
         />
       </template>
     </BaseExploratoryList>
+
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.name || ''"
+      :items="actionsRow ? linktreeActionItems(actionsRow) : []"
+      testid="linktree-actions-modal"
+      @close="actionsRow = null"
+    />
 
     <!-- Create modal -->
     <BaseModal v-model="formModal.open" kind="form" padding="md">
@@ -138,9 +150,9 @@
 </template>
 
 <script setup>
-import { useId, onMounted, reactive } from 'vue';
+import { useId, onMounted, reactive, ref } from 'vue';
 import BaseButton from '~/components/base/BaseButton.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -148,6 +160,7 @@ import BaseToggle from '~/components/base/BaseToggle.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { useClipboardFeedback } from '~/composables/useClipboardFeedback';
@@ -165,6 +178,7 @@ const lp = (path) => localePath(path);
 
 const formModal = reactive({ open: false, name: '', handle: '', kind: 'personal' });
 const formErrors = reactive({ name: '', handle: '' });
+const actionsRow = ref(null);
 
 const linktreeColumns = [
   { key: 'name', label: 'Nombre', mobile: 'primary' },

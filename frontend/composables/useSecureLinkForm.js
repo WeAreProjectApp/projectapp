@@ -1,6 +1,14 @@
 import { computed, nextTick, ref } from 'vue';
 import { useSecureLinksStore } from '~/stores/secure_links';
 
+/**
+ * Revealed content (`[{ key, value }]`) as the `{ key: value }` map the form
+ * edits. Used by every entry point to "Editar contenido".
+ */
+export function contentFieldValues(fields = []) {
+  return Object.fromEntries(fields.map((field) => [field.key, field.value]));
+}
+
 /** Shared catalog loading, validation and visible errors for both creators. */
 export function useSecureLinkForm(formElement, selectedType, t) {
   const store = useSecureLinksStore();

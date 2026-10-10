@@ -2,12 +2,15 @@
  * E2E tests for the admin hour-packages list.
  *
  * Covers: renders package list with derived currency, switching the
- * nationality tab refetches and shows that country's prices, empty state.
+ * nationality tab refetches and shows that country's prices, empty state,
+ * row actions as a leading kebab column that opens the actions menu.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_HOUR_PACKAGES_LIST } from '../helpers/flow-tags.js';
+import { openRowMenu } from '../helpers/row-actions.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -121,6 +124,43 @@ test.describe('Admin Hour Packages List', () => {
     // The table is hidden below the sm breakpoint; the card list takes over.
     await expect(page.getByRole('table')).toBeHidden({ timeout: 20_000 });
     await expect(page.getByText('Paquete Ágil').first()).toBeVisible();
+  });
+
+  test('row actions lead the table and open the package menu in place', {
+    tag: [...ADMIN_HOUR_PACKAGES_LIST, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the list-entry path is covered by the owning flow; this test isolates the leading kebab column and its menu)
+    await setupMock(page);
+    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+
+    const row = page.getByTestId('hour-package-row-1');
+    await expect(row).toContainText('Paquete Ágil', { timeout: 20_000 });
+    const leadingHeaders = await page.getByTestId('hour-package-row-actions-header').evaluate((header) => (
+      Array.from(header.parentElement.children).slice(0, 2).map((cell) => ({
+        testId: cell.getAttribute('data-testid'),
+        label: cell.getAttribute('aria-label'),
+        text: cell.textContent.trim(),
+      }))
+    ));
+    expect(leadingHeaders).toEqual([
+      { testId: 'hour-package-row-actions-header', label: 'Acciones', text: '' },
+      { testId: null, label: null, text: 'Paquete' },
+    ]);
+    await expectNoBlankBand(row.locator('xpath=ancestor::table'));
+
+    // The kebab names its package for assistive tech only: no visible text.
+    const kebab = row.getByTestId('hour-package-row-actions-cell-1').getByTestId('hour-package-actions-1');
+    await expect(kebab).toHaveAccessibleName('Acciones de Paquete Ágil');
+    await expect(kebab).toHaveText('');
+
+    const listUrl = page.url();
+    await openRowMenu(page, { kebab: 'hour-package-actions-1', menu: 'hour-package-actions-modal' });
+    const menu = page.getByTestId('hour-package-actions-modal');
+    await expect(menu.getByRole('heading')).toHaveText('Paquete Ágil');
+    await expect(menu.getByRole('listitem')).toHaveText(['Editar', 'Eliminar']);
+    await expect(menu.getByTestId('hour-package-edit-1')).toHaveAttribute('href', /\/panel\/hour-packages\/1\/edit$/);
+    await expect(menu.getByTestId('hour-package-delete-1')).toBeVisible();
+    await expect(page).toHaveURL(listUrl);
   });
 });
 
