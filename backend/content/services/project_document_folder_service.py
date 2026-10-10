@@ -171,6 +171,41 @@ def synchronize_existing_project_folder(project):
 
 
 @transaction.atomic
+def adopt_project_root(project, folder):
+    """Adopt a reviewed manual root without provisioning a competing tree.
+
+    The migration engine owns policy validation and any disposable-root
+    replacement. All constrained root markers change in one save.
+    """
+    from django.db.models.functions import Lower, Trim
+
+    folder.name = project.name
+    folder.parent_id = None
+    folder.managed_project = project
+    folder.project = project
+    folder.client_user_id = project.client_id
+    folder.is_archived = False
+    folder.archived_at = None
+    folder.archived_via_folder_id = None
+    folder.save(update_fields=[
+        'name', 'parent', 'managed_project', 'project', 'client_user',
+        'is_archived', 'archived_at', 'archived_via_folder', 'updated_at',
+    ])
+    for order, (name, kind) in enumerate(PROJECT_FOLDER_TEMPLATE):
+        key = project_category_system_key(project.pk, kind) if kind else None
+        query = DocumentFolder.objects.filter(system_key=key) if key else folder.children.annotate(
+            normalized_name=Lower(Trim('name')),
+        ).filter(normalized_name=name.lower())
+        if not query.exists():
+            DocumentFolder.objects.create(
+                name=name, parent=folder, order=order, project=project,
+                client_user_id=project.client_id, system_key=key,
+                creation_source='system', creation_operation='adopt_project_root.template',
+            )
+    return folder
+
+
+@transaction.atomic
 def ensure_project_folder(project):
     """Return the project's single managed root, creating it when absent.
 

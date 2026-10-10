@@ -87,6 +87,21 @@ class OwnershipPlanInputSerializer(StrictInputMixin, serializers.Serializer):
         return attrs
 
 
+class DestinationOwnerSerializer(StrictInputMixin, serializers.Serializer):
+    client_user_id = serializers.IntegerField(min_value=1, allow_null=True)
+    project_id = serializers.JSONField()
+
+    def validate_project_id(self, value):
+        if value is None or value == 'new_project' or type(value) is int and value > 0:
+            return value
+        raise serializers.ValidationError('Usa un proyecto existente o new_project.')
+
+    def validate(self, attrs):
+        if attrs['project_id'] == 'new_project' and attrs['client_user_id'] is None:
+            raise serializers.ValidationError('El proyecto nuevo necesita un cliente.')
+        return attrs
+
+
 def portal_audience(document_state):
     """Return the authorized client user, without queries or mutable objects.
 
@@ -165,6 +180,9 @@ def _read_scope(data, *, lock):
     folder_values = list(DocumentFolder.objects.filter(pk__in=involved_ids).values(*folder_fields))
     project_ids = {row['project_id'] for row in document_values + folder_values} | {row['managed_project_id'] for row in folder_values}
     project_ids.discard(None)
+    override = data.get('destination_owner')
+    if override and type(override['project_id']) is int:
+        project_ids.add(override['project_id'])
     document_ids = {row['pk'] for row in document_values}
     if lock:
         # Do not join nullable relations in locking reads: lock only these
@@ -190,6 +208,8 @@ def _read_scope(data, *, lock):
     if set(decisions) - (set(documents) | set(data['document_ids'])):
         raise serializers.ValidationError({'document_decisions': 'Las decisiones deben pertenecer a documentos del alcance.'})
     users = {obj.client_user_id for obj in list(folders.values()) + list(documents.values())} | {obj.client_id for obj in projects.values()}
+    if override:
+        users.add(override['client_user_id'])
     profiles = dict(UserProfile.objects.filter(user_id__in=users).values_list('user_id', 'pk'))
     pinned_ids = _descendants([pinned.pk], topology) if pinned else set()
     return scope_ids, folders, documents, projects, profiles, pinned_ids
@@ -233,14 +253,14 @@ def _state(item, *, folders, projects, profiles, delivery_audience=None):
     return state
 
 
-def _owner(state, destination, policy, projects):
+def _owner(state, destination, policy, projects, destination_owner=None):
     """Keep project/client pairs coherent without ever removing an owner."""
     current = (state['client_user_id'], state['project_id'])
-    if destination is None:
+    if destination is None and destination_owner is None:
         return current, None
-    project_id = destination.project_id
+    project_id = destination_owner['project_id'] if destination_owner is not None else destination.project_id
     project_client = projects[project_id].client_id if project_id in projects else None
-    target = (destination.client_user_id or project_client, project_id)
+    target = ((destination_owner['client_user_id'] if destination_owner is not None else destination.client_user_id) or project_client, project_id)
     if target == (None, None):
         return current, None
     client = current[0] or (state['project_client_user_id'] if current[1] else None)
@@ -265,7 +285,7 @@ def _validation_blockers(serializer, row, *, default_code='validation_error'):
     return [_blocker(default_code if code == 'VALIDATION_ERROR' else code.lower(), message, row)]
 
 
-def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, projects, profiles, pinned_ids, delivery_audience):
+def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, projects, profiles, pinned_ids, delivery_audience, destination_owner=None):
     from content.serializers.document import DocumentCreateUpdateSerializer
     from content.serializers.document_folder import DocumentFolderSerializer
 
@@ -281,7 +301,7 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
         item.is_generated_snapshot or item.deliverable_id or _linked(item)
         or before['is_collection_account'] and item.commercial_status != Document.CommercialStatus.DRAFT
     )
-    proposed, conflict = _owner(before, destination, policy, projects)
+    proposed, conflict = _owner(before, destination, policy, projects, destination_owner)
     ownership_changed = proposed != (before['client_user_id'], before['project_id'])
     if pinned:
         row['status'] = 'pinned'
@@ -300,6 +320,8 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
         after['client_profile_id'] = profiles.get(proposed[0])
         project = projects.get(proposed[1])
         after['project_client_user_id'] = project.client_id if project else None
+        if proposed[1] == 'new_project':
+            after['project_client_user_id'] = destination_owner['client_user_id']
     if direct:
         after['folder_or_parent_id'] = destination_id
         if destination_id is not None and destination is None:
@@ -307,15 +329,19 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
         elif document:
             for code in movement_blockers(item):
                 row['blockers'].append(_blocker(code, 'El documento no admite este movimiento.', row))
-            if destination_id is None:
+            if destination_id is None and destination_owner is None:
                 row['blockers'].append(_blocker('folder_required', 'Elige una carpeta destino para el documento.', row))
             if not row['blockers']:
                 # Explicit ownership suppresses the legacy inheritance here;
                 # it is only validation, never a serializer save.
                 payload = {'folder_id': destination_id, 'client': after['client_profile_id'], 'project': after['project_id']}
+                if after['project_id'] == 'new_project':
+                    payload['project'] = None
+                if destination_id is None and destination_owner is not None:
+                    payload.pop('folder_id')
                 default_code = 'folder_archived' if destination and destination.is_archived else 'folder_not_movable' if destination and destination.is_system_managed else 'validation_error'
                 row['blockers'].extend(_validation_blockers(DocumentCreateUpdateSerializer(item, data=payload, partial=True), row, default_code=default_code))
-        elif item.parent_id != destination_id:
+        elif item.parent_id != destination_id and not (destination_id is None and destination_owner is not None):
             default_code = 'folder_archived' if destination and destination.is_archived else 'folder_not_movable' if destination and destination.is_system_managed else 'validation_error'
             row['blockers'].extend(_validation_blockers(DocumentFolderSerializer(item, data={'parent': destination_id}, partial=True), row, default_code=default_code))
         if item.retention_context_id and after['folder_or_parent_id'] != before['folder_or_parent_id']:
@@ -323,6 +349,8 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
             after['folder_or_parent_id'] = before['folder_or_parent_id']
     if not document and ownership_changed and not pinned and not frozen and not conflict:
         payload = {'client': after['client_profile_id'], 'project': after['project_id']}
+        if after['project_id'] == 'new_project':
+            payload['project'] = None
         row['blockers'].extend(_validation_blockers(DocumentFolderSerializer(item, data=payload, partial=True), row))
     if document:
         if (after['client_user_id'], after['project_id']) != (before['client_user_id'], before['project_id']):
@@ -331,7 +359,8 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
             )
             try:
                 validate_document_reassignment(item, changes={
-                    'client_user_id': after['client_user_id'], 'project_id': after['project_id'],
+                    'client_user_id': after['client_user_id'],
+                    'project_id': None if after['project_id'] == 'new_project' else after['project_id'],
                 })
             except serializers.ValidationError as exc:
                 message, code, _details = normalize_error(exc.detail)
@@ -370,7 +399,7 @@ def _fingerprint(folders, documents, projects, pinned_ids):
     }
 
 
-def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, client_policy, portal_policy='abort', document_decisions=(), lock=False):
+def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, client_policy, portal_policy='abort', document_decisions=(), lock=False, destination_owner=None):
     """Plan an entire subtree and explicit document exceptions without writes."""
     serializer = OwnershipPlanInputSerializer(data={
         'document_ids': list(document_ids), 'folder_ids': list(folder_ids),
@@ -379,6 +408,16 @@ def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, cli
     })
     serializer.is_valid(raise_exception=True)
     data = serializer.validated_data
+    if destination_owner is not None:
+        owner_serializer = DestinationOwnerSerializer(data=destination_owner)
+        owner_serializer.is_valid(raise_exception=True)
+        data['destination_owner'] = owner_serializer.validated_data
+        destination_owner = data['destination_owner']
+        override = data['destination_owner']
+        if override['client_user_id'] is not None and not UserProfile.objects.clients().filter(user_id=override['client_user_id']).exists():
+            raise serializers.ValidationError({'destination_owner': 'Ese cliente no existe.'})
+        if type(override['project_id']) is int and not Project.objects.filter(pk=override['project_id'], client_id=override['client_user_id']).exists():
+            raise serializers.ValidationError({'destination_owner': 'El proyecto y el cliente deben coincidir.'})
     scope_ids, folders, documents, projects, profiles, pinned_ids = _read_scope(data, lock=lock)
     decisions = {row['document_id']: row for row in data['document_decisions']}
     audiences = _delivery_audiences(documents)
@@ -397,11 +436,14 @@ def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, cli
             else:
                 decision = decisions.get(pk, {}) if kind == 'document' else {}
                 destination_id = decision.get('destination_folder_id', data['destination_folder_id'])
+                adopting_destination = (data['destination_folder_id'] is None and destination_id in roots
+                                        and folders[destination_id].parent_id is None)
                 row = _plan_row(
                     item, destination_id, direct=pk in roots if kind == 'folder' else pk in data['document_ids'] or decision.get('action') == 'move',
                     policy='inherit' if decision.get('action') == 'inherit' else data['client_policy'],
                     portal_policy=data['portal_policy'], folders=folders, projects=projects, profiles=profiles,
                     pinned_ids=pinned_ids, delivery_audience=audiences.get(pk),
+                    destination_owner=destination_owner if destination_id == data['destination_folder_id'] or adopting_destination else None,
                 )
             rows.append(row)
     # The serializer's name validator also compares siblings that this plan
@@ -409,6 +451,7 @@ def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, cli
     from content.serializers.document_folder import validate_folder_name
     for row in rows:
         if (row['resource_type'] != 'folder' or row['id'] not in roots
+                or destination_folder_id is None and destination_owner is not None
                 or row['before']['folder_or_parent_id'] == row['after']['folder_or_parent_id']):
             continue
         try:
@@ -425,8 +468,8 @@ def plan_ownership(*, document_ids=(), folder_ids=(), destination_folder_id, cli
     canonical = json.dumps({'input': data, 'rows': rows, 'fingerprint': fingerprint}, sort_keys=True, separators=(',', ':'), ensure_ascii=False)
     destination = folders.get(destination_folder_id)
     return {
-        'destination_owner': {'client_profile_id': profiles.get(destination.client_user_id or getattr(projects.get(destination.project_id), 'client_id', None)) if destination else None,
-                              'project_id': destination.project_id if destination else None},
+        'destination_owner': {'client_profile_id': profiles.get(destination_owner['client_user_id']) if destination_owner is not None else profiles.get(destination.client_user_id or getattr(projects.get(destination.project_id), 'client_id', None)) if destination else None,
+                              'project_id': destination_owner['project_id'] if destination_owner is not None else destination.project_id if destination else None},
         'rows': rows, 'totals': {**dict(Counter(row['status'] for row in rows)), 'folders': sum(row['resource_type'] == 'folder' for row in rows), 'documents': sum(row['resource_type'] == 'document' for row in rows)},
         'can_apply': not blockers, 'blockers': blockers, 'warnings': warnings,
         'plan_hash': hashlib.sha256(canonical.encode()).hexdigest(),

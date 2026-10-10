@@ -42,6 +42,7 @@ from .document import Document
 from .document_thread import DocumentThread, DocumentThreadItem
 from .document_type import DocumentType
 from .document_folder import DocumentFolder
+from .document_ownership_operation import DocumentOwnershipOperation  # noqa: F401 -- Public model export.
 from .document_tag import DocumentTag
 from .document_state import (
     DocumentState,

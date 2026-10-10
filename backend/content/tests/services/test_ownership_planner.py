@@ -256,3 +256,42 @@ def test_hash_detects_ownership_changes(owners, superuser):
     assert rejected.value.code == 'stale_move_plan'
     assert rejected.value.status_code == 409
     assert ownership_state() == before_apply
+
+
+@pytest.mark.parametrize('project_kind', ['existing', 'new'])
+def test_destination_owner_override_plans_a_manual_root(owners, project_kind):
+    source = DocumentFolder.objects.create(name='Future project root')
+    visible = Document.objects.create(title='Future portal exposure', folder=source, is_client_visible=True)
+    project_id = {'existing': owners.project.pk, 'new': 'new_project'}[project_kind]
+    args = {'folder_ids': [source.pk], 'destination_folder_id': None, 'client_policy': 'abort_on_conflict',
+            'destination_owner': {'client_user_id': owners.owner.user_id, 'project_id': project_id}}
+
+    blocked = assert_no_writes(plan_ownership, **args)
+    hidden = assert_no_writes(plan_ownership, **args, portal_policy='hide_new_exposure')
+
+    document = next(row for row in hidden['rows'] if row['resource_type'] == 'document')
+    assert blocked['blockers'][0]['code'] == 'portal_exposure'
+    assert hidden['can_apply'] is True
+    assert hidden['destination_owner'] == {'client_profile_id': owners.owner.pk, 'project_id': project_id}
+    assert (document['after']['project_id'], document['after']['client_user_id']) == (project_id, owners.owner.user_id)
+    assert document['after']['is_client_visible'] is False
+    visible.refresh_from_db()
+    assert visible.project_id is None
+    assert visible.is_client_visible is True
+
+
+def test_destination_owner_override_replaces_the_folder_owner(owners):
+    document = Document.objects.create(title='Future destination ownership', document_type=owners.kind)
+    target = {'client_user_id': owners.foreign.user_id, 'project_id': owners.foreign_project.pk}
+    args = {'document_ids': [document.pk], 'destination_folder_id': owners.destination.pk, 'client_policy': 'inherit'}
+
+    plan = assert_no_writes(plan_ownership, **args, destination_owner=target)
+    normalized = assert_no_writes(plan_ownership, **args, destination_owner={**target, 'client_user_id': str(target['client_user_id'])})
+
+    assert plan == normalized
+    assert plan['can_apply'] is True
+    assert plan['rows'][0]['after']['client_user_id'] == owners.foreign.user_id
+    assert plan['rows'][0]['after']['project_id'] == owners.foreign_project.pk
+    assert plan['rows'][0]['after']['folder_or_parent_id'] == owners.destination.pk
+    owners.destination.refresh_from_db()
+    assert owners.destination.client_user_id == owners.owner.user_id
