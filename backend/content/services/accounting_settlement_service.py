@@ -236,8 +236,12 @@ def _complete_parent_period(income, period, user):
     It goes through the ordinary write serializer, without the `settlement`
     context, precisely because this IS someone describing the charge: the
     same rules the income form obeys apply — the end must come after the
-    start, `period_date` is re-derived from the start, and the change lands in
-    the accounting changelog like any other edit.
+    start, and the change lands in the accounting changelog like any other
+    edit. The window says WHAT the charge covers; `period_date` says WHEN the
+    money is expected. Completing a legacy window keeps the parent's date;
+    moving an existing window follows its start only if the stored date
+    already followed it. This parent edit skips the change email because the
+    liquid child notifies for the settlement.
     """
     if income.origin != IncomeRecord.Origin.HOSTING:
         raise ValueError(

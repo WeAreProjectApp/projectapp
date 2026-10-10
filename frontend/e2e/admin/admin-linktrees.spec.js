@@ -5,12 +5,15 @@
  *   - Creating a linktree (name + handle) lands on the editor.
  *   - Saving buttons that violate tier cardinality surfaces the backend error.
  *   - Deleting a linktree after confirmation.
+ *   - Each row leads with an actions button that opens its menu in place.
  *   - Assigning a linktree as a QR card destination.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_LINKTREES } from '../helpers/flow-tags.js';
+import { openRowMenu } from '../helpers/row-actions.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 test.setTimeout(60_000);
 
@@ -169,6 +172,41 @@ test.describe('Admin Linktrees', () => {
 
     await expect(page.getByText('Sin linktrees todavía')).toBeVisible();
     await expect(page.getByTestId(`linktree-row-${TREE_ID}`)).not.toBeVisible();
+  });
+
+  test('renders row actions as a leading menu that opens without navigating', {
+    tag: [...ADMIN_LINKTREES, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (admin panel E2E specs enter routes directly; this test isolates the row-actions layout and menu contract)
+    await setupLinktreesMock(page, { trees: [existingTree] });
+    await page.goto('/panel/linktrees', { waitUntil: 'domcontentloaded' });
+
+    const actionsHeader = page.getByTestId('linktree-row-actions-header');
+    await expect(actionsHeader).toBeVisible();
+    const leadingHeaders = await actionsHeader.evaluate((header) => (
+      Array.from(header.parentElement.children).slice(0, 2).map((cell) => ({
+        testId: cell.getAttribute('data-testid'),
+        label: cell.getAttribute('aria-label'),
+        text: cell.textContent.trim(),
+      }))
+    ));
+    expect(leadingHeaders).toEqual([
+      { testId: 'linktree-row-actions-header', label: 'Acciones', text: '' },
+      { testId: null, label: null, text: 'Nombre' },
+    ]);
+    await expectNoBlankBand(actionsHeader.locator('xpath=ancestor::table'));
+
+    const kebab = page.getByTestId(`linktree-actions-${TREE_ID}`);
+    await expect(kebab).toHaveAccessibleName('Acciones de Gustavo');
+    await expect(kebab).toHaveText('');
+
+    const listUrl = page.url();
+    await openRowMenu(page, { kebab: `linktree-actions-${TREE_ID}`, menu: 'linktree-actions-modal' });
+    const menu = page.getByTestId('linktree-actions-modal');
+    await expect(menu.getByRole('heading')).toHaveText('Gustavo');
+    await expect(menu.getByRole('listitem')).toHaveText(['Editar', 'Eliminar']);
+    await expect(menu.getByTestId(`linktree-edit-${TREE_ID}`)).toHaveAttribute('href', new RegExp(`/panel/linktrees/${TREE_ID}/edit$`));
+    await expect(page).toHaveURL(listUrl);
   });
 
   test('assigns a linktree as QR card destination', {

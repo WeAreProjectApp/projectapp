@@ -2,6 +2,8 @@
 import { computed, ref, useId, watch } from 'vue';
 import { useDebounceFn } from '@vueuse/core';
 import BaseFloatingListbox from '~/components/base/BaseFloatingListbox.vue';
+import ConfirmModal from '~/components/ConfirmModal.vue';
+import ConfirmationSummaryList from '~/components/accounting/ConfirmationSummaryList.vue';
 import ClientAutocomplete from '~/components/ui/ClientAutocomplete.vue';
 import ClientFormFields from '~/components/clients/ClientFormFields.vue';
 import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
@@ -17,6 +19,7 @@ import { useAccountingStore } from '~/stores/accounting';
 import { useProposalClientsStore } from '~/stores/proposal_clients';
 import { clientCustomerSnapshot, clientFormPayload, emptyClientForm } from '~/utils/billingCode';
 import { downloadUrl } from '~/utils/downloadFile';
+import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
 
 /**
@@ -41,6 +44,9 @@ const notify = usePanelNotify();
 const step = ref('form');
 const previewing = ref(false);
 const saving = ref(false);
+// The last notice over the preview: «Confirmar y enviar» opens it, and only
+// its own confirm issues the cuenta and sends the email.
+const sendConfirmOpen = ref(false);
 const validationAttempted = ref(false);
 const preview = ref(null);
 // Served by the backend, not a blob: the viewer names its download after the
@@ -975,7 +981,36 @@ async function probePdf() {
   }
 }
 
+/**
+ * What the last notice lists. Read from the preview, which ran the real
+ * issue pipeline and rolled it back, so it names what confirming emits.
+ */
+const sendNoticeRows = computed(() => {
+  const data = preview.value ?? {};
+  return [
+    { key: 'number', label: 'Número', value: data.public_number || '—' },
+    { key: 'client', label: 'Cliente', value: data.customer_name || selectedClientName.value || '—' },
+    { key: 'project', label: 'Proyecto', value: data.project_name || 'Sin proyecto' },
+    { key: 'concept', label: 'Concepto', value: data.billing_concept || form.value.billing_concept },
+    { key: 'total', label: 'Valor total', value: formatMoney(Number(data.total ?? 0), 'COP') },
+    { key: 'issue', label: 'Fecha de emisión', value: data.issue_date ? formatDate(data.issue_date) : 'Hoy' },
+    {
+      key: 'due',
+      label: 'Fecha de vencimiento',
+      value: data.due_date ? formatDate(data.due_date) : 'Sin vencimiento (pago inmediato)',
+    },
+    { key: 'recipient', label: 'Se enviará a', value: data.customer_email || '—' },
+  ];
+});
+
+function askSendConfirmation() {
+  if (saving.value || !preview.value) return;
+  sendConfirmOpen.value = true;
+}
+
 async function confirmSend() {
+  // The email cannot be undone: one click, one cuenta.
+  if (saving.value) return;
   saving.value = true;
   const result = await store.createCollectionAccount(buildPayload());
   saving.value = false;
@@ -1029,11 +1064,16 @@ const modalFormId = useId();
 </script>
 
 <template>
+  <!-- Esc and the backdrop belong to whatever is stacked on top: every
+       BaseModal listens on window, so this wizard would close with it and
+       lose the draft. -->
   <BaseModal
     :model-value="open"
     :kind="step === 'preview' ? 'workspace' : 'form'"
     :full-height="step === 'preview'"
     title-id="collection-form-title"
+    :close-on-esc="!sendConfirmOpen && !saving && !showIncomeForm"
+    :close-on-backdrop="!sendConfirmOpen && !saving && !showIncomeForm"
     @close="close"
   >
     <div class="shrink-0 px-6 pt-6 pb-2 flex items-center justify-between gap-3">
@@ -1417,38 +1457,39 @@ const modalFormId = useId();
         </BaseFormField>
       </BaseFormRow>
 
-      <!-- The hint only holds for the days mode; the fixed-date mode shares
+      <!-- The help only holds for the days mode; the fixed-date mode shares
            this field, where a 0 would mean nothing. -->
-      <BaseFormRow :cols="2" :gap="4">
+      <BaseFormRow
+        :cols="2"
+        :gap="4"
+        :help="form.term === 'days'
+          ? '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.'
+          : ''"
+        help-testid="collection-form-term-hint"
+      >
         <BaseFormField label="Ciudad">
           <BaseInput v-model="form.city" placeholder="Ciudad de emisión" />
         </BaseFormField>
-      <BaseFormField
-        label="Plazo de pago"
-        :error="dueDateValidationError"
-        :hint="form.term === 'days'
-          ? '0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.'
-          : undefined"
-      >
-        <div class="space-y-2">
-          <BaseSegmented v-model="form.term" :options="termOptions" full-width />
-          <BaseInput
-            v-if="form.term === 'days'"
-            v-model="form.payment_term_days"
-            type="number"
-            min="0"
-            max="120"
-            data-testid="collection-form-term-days"
-          />
-          <BaseInput
-            v-else
-            v-model="form.due_date"
-            type="date"
-            :error="!!dueDateValidationError"
-            data-testid="collection-form-due-date"
-          />
-        </div>
-      </BaseFormField>
+        <BaseFormField label="Plazo de pago" :error="dueDateValidationError">
+          <div class="space-y-2">
+            <BaseSegmented v-model="form.term" :options="termOptions" full-width />
+            <BaseInput
+              v-if="form.term === 'days'"
+              v-model="form.payment_term_days"
+              type="number"
+              min="0"
+              max="120"
+              data-testid="collection-form-term-days"
+            />
+            <BaseInput
+              v-else
+              v-model="form.due_date"
+              type="date"
+              :error="!!dueDateValidationError"
+              data-testid="collection-form-due-date"
+            />
+          </div>
+        </BaseFormField>
       </BaseFormRow>
 
       <!-- Editable customer snapshot -->
@@ -1692,6 +1733,7 @@ const modalFormId = useId();
         <BaseButton
           type="button"
           variant="secondary"
+          :disabled="saving"
           data-testid="collection-form-back"
           @click="step = 'form'"
         >
@@ -1702,7 +1744,7 @@ const modalFormId = useId();
           variant="primary"
           :disabled="saving"
           data-testid="collection-form-confirm"
-          @click="confirmSend"
+          @click="askSendConfirmation"
         >
           {{ saving ? 'Enviando...' : 'Confirmar y enviar' }}
         </BaseButton>
@@ -1718,4 +1760,24 @@ const modalFormId = useId();
     @close="showIncomeForm = false"
     @submit="handleIncomeCreated"
   />
+
+  <!-- Last notice before the email leaves. A sibling of the wizard, so a step
+       change never unmounts it, and it leaves the body scroll to the wizard
+       that stays open underneath. -->
+  <ConfirmModal
+    v-model="sendConfirmOpen"
+    title="Último aviso: emitir y enviar la cuenta de cobro"
+    message="Al confirmar se emite la cuenta con su consecutivo y el correo sale al cliente con el PDF adjunto. No se puede deshacer."
+    confirm-text="Emitir y enviar"
+    cancel-text="Volver a revisar"
+    variant="info"
+    size="lg"
+    :lock-scroll="false"
+    @confirm="confirmSend"
+  >
+    <ConfirmationSummaryList
+      :rows="sendNoticeRows"
+      testid="collection-send-notice"
+    />
+  </ConfirmModal>
 </template>

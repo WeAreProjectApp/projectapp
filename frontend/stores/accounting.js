@@ -729,6 +729,23 @@ export const useAccountingStore = defineStore('accounting', {
     },
 
     /**
+     * fetchIncomePaymentConfirmation: who would receive the client's payment
+     * confirmation for this income, or why it cannot go. Read when the
+     * Liquidar modal opens; no state writes, like the cuenta preview.
+     */
+    async fetchIncomePaymentConfirmation(incomeId) {
+      try {
+        const response = await get_request(
+          `accounting/incomes/${incomeId}/payment-confirmation/`,
+        );
+        return { success: true, data: response.data };
+      } catch (error) {
+        console.error(`Error reading payment confirmation of income ${incomeId}:`, error);
+        return { success: false, ...normalizeApiError(error) };
+      }
+    },
+
+    /**
      * bulkSettleIncomes: register one abono distributed across several
      * expected incomes — one pocket movement, one liquid child per
      * allocation. Replaces the refreshed rows in place; the page still

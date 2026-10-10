@@ -13,6 +13,7 @@ _MCP_DOMAIN_CODES = frozenset('''
     billing_conflict citation_limit citation_message citation_normative
     citation_quote citation_source client_already_archived client_email_required
     client_evidence_required client_not_archived content_unavailable
+    confirmation_required income_locked not_expected_income
     context_contract_required context_destination context_mode context_owner
     context_required context_retained context_scope context_stage_required
     context_too_large context_unpublished contract_unsigned decision_reason_required

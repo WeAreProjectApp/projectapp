@@ -35,7 +35,7 @@
               <BaseTextarea v-model="form.description" rows="3" />
             </BaseFormField>
 
-            <BaseFormRow>
+            <BaseFormRow :cols="3" :gap="4">
               <BaseFormField label="Status">
                 <BaseSelect v-model="form.status" :options="statusOptions" />
               </BaseFormField>
@@ -46,13 +46,12 @@
                   data-testid="task-priority-select"
                 />
               </BaseFormField>
+              <BaseFormField label="Tablero">
+                <BaseSelect v-model="form.board_type" :options="boardOptions" />
+              </BaseFormField>
             </BaseFormRow>
 
-            <BaseFormField label="Tablero">
-              <BaseSelect v-model="form.board_type" :options="boardOptions" />
-            </BaseFormField>
-
-            <BaseFormRow>
+            <BaseFormRow :cols="2" :gap="4">
               <BaseFormField label="Due date">
                 <BaseInput v-model="form.due_date" type="date" />
               </BaseFormField>

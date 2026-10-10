@@ -17,35 +17,37 @@
         </p>
       </div>
 
-      <BaseFormField
-        label="Nombre"
-        for="folder-form-name"
-        required
-        :error="nameError"
-      >
-        <BaseInput
-          id="folder-form-name"
-          v-model="form.name"
-          type="text"
-          placeholder="Nombre de la carpeta"
-          :error="!!nameError"
-          data-testid="folder-form-name"
-          @update:model-value="nameError = ''"
-        />
-      </BaseFormField>
-
-      <BaseFormField label="Dentro de" for="folder-form-parent">
-        <BaseSelect
-          id="folder-form-parent"
-          v-model="form.parent"
-          data-testid="folder-form-parent"
+      <BaseFormRow :cols="2" :gap="4">
+        <BaseFormField
+          label="Nombre"
+          for="folder-form-name"
+          required
+          :error="nameError"
         >
-          <option :value="null">Ninguna (carpeta raíz)</option>
-          <option v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
-            {{ opt.label }}
-          </option>
-        </BaseSelect>
-      </BaseFormField>
+          <BaseInput
+            id="folder-form-name"
+            v-model="form.name"
+            type="text"
+            placeholder="Nombre de la carpeta"
+            :error="!!nameError"
+            data-testid="folder-form-name"
+            @update:model-value="nameError = ''"
+          />
+        </BaseFormField>
+
+        <BaseFormField label="Dentro de" for="folder-form-parent">
+          <BaseSelect
+            id="folder-form-parent"
+            v-model="form.parent"
+            data-testid="folder-form-parent"
+          >
+            <option :value="null">Ninguna (carpeta raíz)</option>
+            <option v-for="opt in parentOptions" :key="opt.id" :value="opt.id">
+              {{ opt.label }}
+            </option>
+          </BaseSelect>
+        </BaseFormField>
+      </BaseFormRow>
 
       <BaseFormField label="Cliente" :hint="inheritedNotice">
         <ClientAutocomplete

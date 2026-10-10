@@ -153,3 +153,5 @@ from .proposal_contract_snapshot import (
 from .project_retention import ProjectRetentionContext, ProjectRetentionOperation
 
 from .proposal_project_reassignment import ProposalProjectReassignment
+
+from .data_integrity import DataIntegrityOperation

@@ -505,7 +505,7 @@
               <BaseActionButton action="close" label="Cerrar registro de actividad" size="md" @click="quickLogProposal = null" />
             </div>
             <p class="text-xs text-text-muted mb-4">{{ quickLogProposal.client_name }} — {{ quickLogProposal.title }}</p>
-            <div class="space-y-3">
+            <BaseFormRow :cols="2" :gap="4">
               <BaseFormField label="Tipo de actividad">
                 <BaseSelect v-model="quickLogType">
                   <option value="call">📞 Llamada</option>
@@ -524,7 +524,7 @@
                   @keyup.enter="confirmQuickLog"
                 />
               </BaseFormField>
-            </div>
+            </BaseFormRow>
           </div>
         </template>
         <template #footer>

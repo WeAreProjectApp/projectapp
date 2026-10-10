@@ -17,6 +17,7 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import {
   ADMIN_ACCOUNTING_COLLECTION_CREATE,
   ADMIN_ACCOUNTING_INCOME_CLIENT,
@@ -138,6 +139,12 @@ function buildHandler({
   savedTabs = [], duplicateDraftStatus = 200,
   muteStatus = 200,
   collectionProjectContext = null,
+  // Who the payment confirmation would go to (GET …/payment-confirmation/).
+  // Null answers like an income whose cuenta names no usable address, so a
+  // test that does not care never meets the last notice.
+  paymentConfirmation = null,
+  // How the settle endpoint reports the confirmation it was asked to send.
+  paymentConfirmationStatus = 'sent',
   // Landing mode the mocked backend setting dictates. Production defaults to
   // 'grouped'; the mock pins 'classic' because almost every test in this file
   // exercises the classic presentation or its pagination — without this
@@ -298,6 +305,18 @@ function buildHandler({
         }),
       };
     }
+    if (/^accounting\/incomes\/\d+\/payment-confirmation\/$/.test(apiPath) && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(paymentConfirmation ?? {
+          can_send: false,
+          blocked_reason: 'La cuenta de cobro no tiene el correo del cliente.',
+          recipient: '',
+          rescheduled_pending: '0.00',
+        }),
+      };
+    }
     const settleMatch = apiPath.match(/^accounting\/incomes\/(\d+)\/settle\/$/);
     if (settleMatch && method === 'POST') {
       const body = route.request().postDataJSON();
@@ -321,6 +340,15 @@ function buildHandler({
           expected_incomes: (body.expected_incomes || []).map((e, index) => (
             incomeRow({ id: 300 + index, concept: e.concept })
           )),
+          payment_confirmation: body.send_payment_confirmation
+            ? {
+              requested: true,
+              status: paymentConfirmationStatus,
+              recipient: paymentConfirmation?.recipient ?? '',
+              error: paymentConfirmationStatus === 'sent'
+                ? '' : 'El correo no salió. Puedes reintentarlo desde Historial › Correos.',
+            }
+            : { requested: false, status: 'not_requested', recipient: '', error: '' },
         }),
       };
     }
@@ -974,11 +1002,11 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     expect(created.body.concept).toBe('Kore - Hosting anual');
     // Born pending whatever the original was — the point of the action.
     expect(created.body.kind).toBe('expected');
-    // The window travels; period_date is the backend's to derive.
+    // The payment date follows the window start until it is edited.
     expect(created.body.period_start).toBe('2027-02-01');
     expect(created.body.period_end).toBe('2028-01-31');
     expect(created.body.period_cadence).toBe('annual');
-    expect(created.body.period_date).toBeUndefined();
+    expect(created.body.period_date).toBe('2027-02-01');
   });
 
   test('a duplicate opens on the original business line, date block included', {
@@ -1306,6 +1334,40 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     await expect(page.getByText('No se pudo guardar')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Nuevo ingreso' })).toBeVisible();
   });
+
+  test('a hosting income records the month its payment is expected apart from the window', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    test.setTimeout(60_000);
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [], calls }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('incomes-new-button').click();
+    await page.getByTestId('income-form-concept').fill('Hosting Acme semestral');
+    await page.getByRole('tab', { name: 'Hosting' }).click();
+    await page.getByTestId('income-form-period-start').fill('2026-10-01');
+    await page.getByTestId('income-form-period-cadence').selectOption('semiannual');
+
+    await expect(page.getByTestId('income-form-billing-date')).toHaveValue('2026-10-01');
+    await expect(page.getByTestId('income-form-billing-date-hint'))
+      .toHaveText('Coincide con el inicio del período. Cámbiala si el cliente paga en otro mes.');
+    await page.getByTestId('income-form-billing-date').fill('2026-11-01');
+    await expect(page.getByTestId('income-form-billing-date-hint'))
+      .toHaveText('Independiente del período cubierto: ordena el ingreso y sus avisos de cobro.');
+    await page.getByTestId('partner-split-total').fill('550000');
+    await page.getByTestId('income-form-submit').click();
+
+    await expect(page.getByText('Ingreso creado')).toBeVisible();
+    const created = calls.find((call) => call.apiPath === 'accounting/incomes/create/');
+    expect(created.method).toBe('POST');
+    expect(created.body).toMatchObject({
+      period_start: '2026-10-01',
+      period_end: '2027-03-31',
+      period_cadence: 'semiannual',
+      period_date: '2026-11-01',
+    });
+  });
 });
 
 test.describe('Admin Accounting Income Reminder Mute', () => {
@@ -1608,6 +1670,10 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     ).toBeVisible();
     // Defaults to what is still owed, not the full projection.
     await expect(page.getByTestId('partner-split-total')).toHaveValue('600.000');
+    // Bug caught: the 50/50 toggle was on but both partner fields stayed
+    // empty until the total was retyped.
+    await expect(page.getByTestId('partner-split-gustavo')).toHaveValue('300.000');
+    await expect(page.getByTestId('partner-split-carlos')).toHaveValue('300.000');
 
     // The period input asks for the exact payment date by default.
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
@@ -1621,6 +1687,9 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     expect(call.body.period_date).toBe('2026-11-17');
     // Liquidated money defaults into the pocket.
     expect(call.body.destination).toBe('pocket');
+    // The split saved is the split on screen.
+    expect(Number(call.body.gustavo_amount)).toBe(300000);
+    expect(Number(call.body.carlos_amount)).toBe(300000);
     // Nothing allocated → behaves exactly like the old plain liquidation.
     expect(call.body.deductions).toEqual([]);
     expect(call.body.expected_incomes).toEqual([]);
@@ -1758,6 +1827,12 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await page.getByTestId('followup-concept-0').fill('Kore - saldo diciembre');
     await page.getByTestId('followup-period-0').fill('2026-12');
     await page.getByTestId('followup-amount-0').fill('100000');
+    // A month and an amount keep their own narrow tracks on one line.
+    await expectCompactModal(
+      page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true }),
+      page.viewportSize(),
+      { lines: [{ fields: [page.getByTestId('followup-period-0'), page.getByTestId('followup-amount-0')], maxWidth: 192 }] },
+    );
     await page.getByTestId('income-liquidate-submit').click();
 
     await expect.poll(() => calls.filter((c) => c.method === 'POST').length)
@@ -1770,6 +1845,41 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
         amount: 100000,
       },
     ]);
+  });
+
+  test('a personal settlement pairs the payment date with the amount paid', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    const personalRow = incomeRow({
+      id: 14,
+      concept: 'Gustavo - Asesoría',
+      ledger: 'gustavo',
+      ledger_label: 'Personal Gustavo',
+      total_amount: '500000.00',
+      gustavo_amount: '500000.00',
+      carlos_amount: '0.00',
+      pending_amount: '500000.00',
+    });
+    await mockApi(page, buildHandler({ rows: [personalRow], calls }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-actions-14').click();
+    await page.getByTestId('income-action-liquidate-14').click();
+    const dialog = page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true });
+    await expect(dialog.getByTestId('partner-split-total')).toHaveCount(0);
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [{ fields: [dialog.getByTestId('income-liquidate-period'), dialog.getByTestId('income-liquidate-paid')] }],
+    });
+
+    await dialog.getByTestId('income-liquidate-period').fill('2026-11-17');
+    await dialog.getByTestId('income-liquidate-submit').click();
+
+    await expect.poll(() => calls.filter((c) => c.method === 'POST').length).toBe(1);
+    const { body } = calls.find((c) => c.method === 'POST');
+    expect(Number(body.total_amount)).toBe(500000);
+    expect(body.gustavo_amount).toBeUndefined();
+    expect(body.carlos_amount).toBeUndefined();
   });
 
   test('surfaces a backend rejection of the settlement and keeps the modal open', {
@@ -1932,6 +2042,131 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     await page.getByTestId('income-actions-12').click();
     await expect(page.getByTestId('income-action-write-off-12')).toHaveCount(0);
     await page.keyboard.press('Escape');
+  });
+});
+
+test.describe('Admin Accounting Incomes — confirmación de pago al cliente', () => {
+  const billedRow = () => incomeRow({
+    id: 31,
+    concept: 'Portal Acme - Inicio 40%',
+    total_amount: '1000000.00',
+    paid_amount: '400000.00',
+    pending_amount: '600000.00',
+    payment_status: 'partial',
+    payment_status_label: 'Parcial',
+    client: 5,
+    client_name: 'Acme Soluciones',
+    has_collection_account: true,
+    collection_account_status: 'issued',
+    collection_account_number: 'PA-ACME-001',
+  });
+  const sendable = {
+    can_send: true,
+    blocked_reason: '',
+    recipient: 'pagos@acme.co',
+    client_name: 'Ana Pérez',
+    project_name: 'Portal Acme',
+    collection_account_number: 'PA-ACME-001',
+    rescheduled_pending: '0.00',
+  };
+  const settleCalls = (calls) => calls.filter(
+    (call) => call.apiPath === 'accounting/incomes/31/settle/',
+  );
+
+  async function openLiquidate(page) {
+    await gotoIncomes(page);
+    await page.getByTestId('income-actions-31').click();
+    await page.getByTestId('income-action-liquidate-31').click();
+    await page.getByTestId('income-liquidate-period').fill('2026-11-17');
+  }
+
+  test('a billed income settles after a last notice and confirms the payment', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [billedRow()], calls, paymentConfirmation: sendable,
+    }));
+    await openLiquidate(page);
+    await expect(page.getByTestId('income-liquidate-confirmation-hint'))
+      .toContainText('pagos@acme.co');
+
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect(page.getByTestId('income-liquidate-notice-client')).toHaveText('Ana Pérez');
+    await expect(page.getByTestId('income-liquidate-notice-project')).toHaveText('Portal Acme');
+    await expect(page.getByTestId('income-liquidate-notice-pending')).toHaveText('Queda al día');
+    // Esc closes only the notice: the form is still there and nothing settled.
+    await page.keyboard.press('Escape');
+    await expect(page.getByTestId('income-liquidate-notice-client')).toBeHidden();
+    await expect(page.getByRole('heading', { name: 'Liquidar ingreso esperado' })).toBeVisible();
+    expect(settleCalls(calls)).toHaveLength(0);
+
+    await page.getByTestId('income-liquidate-submit').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('Confirmación de pago enviada a pagos@acme.co.')).toBeVisible();
+    await expect.poll(() => settleCalls(calls).length).toBe(1);
+    expect(settleCalls(calls)[0].body.send_payment_confirmation).toBe(true);
+  });
+
+  test('unchecking the confirmation settles without a notice or an email', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [billedRow()], calls, paymentConfirmation: sendable,
+    }));
+    await openLiquidate(page);
+
+    await page.getByRole('checkbox', { name: 'Enviar al cliente la confirmación del pago' })
+      .uncheck();
+    await page.getByTestId('income-liquidate-submit').click();
+
+    await expect.poll(() => settleCalls(calls).length).toBe(1);
+    expect(settleCalls(calls)[0].body).not.toHaveProperty('send_payment_confirmation');
+    await expect(page.getByTestId('income-liquidate-notice-client')).toHaveCount(0);
+  });
+
+  test('an unusable address keeps the confirmation off and says why', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [billedRow()], calls,
+      paymentConfirmation: {
+        ...sendable, can_send: false,
+        blocked_reason: 'El correo del cliente (cliente_5@temp.example.com) es provisional; actualízalo en su ficha.',
+      },
+    }));
+    await openLiquidate(page);
+
+    await expect(page.getByRole('checkbox', { name: 'Enviar al cliente la confirmación del pago' }))
+      .toBeDisabled();
+    await expect(page.getByTestId('income-liquidate-confirmation-gate-reasons'))
+      .toContainText('es provisional');
+    await page.getByTestId('income-liquidate-submit').click();
+
+    await expect.poll(() => settleCalls(calls).length).toBe(1);
+    expect(settleCalls(calls)[0].body).not.toHaveProperty('send_payment_confirmation');
+  });
+
+  test('a confirmation that did not go out warns and leads to the income emails', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [billedRow()], calls, paymentConfirmation: sendable,
+      paymentConfirmationStatus: 'failed',
+    }));
+    await openLiquidate(page);
+
+    await page.getByTestId('income-liquidate-submit').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+
+    await expect(page.getByText('La confirmación de pago no salió')).toBeVisible();
+    await page.getByRole('button', { name: 'Ver correos de este ingreso' }).click();
+    await expect(page).toHaveURL(/\/panel\/accounting\/history\?.*entity_type=income/);
+    await expect(page).toHaveURL(/object_id=31/);
   });
 });
 

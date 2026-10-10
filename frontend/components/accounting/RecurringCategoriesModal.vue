@@ -122,7 +122,13 @@ function onDragEnd() {
         </template>
       </draggable>
 
-      <form class="space-y-3 pt-2" novalidate @submit.prevent="onCreate">
+      <BaseFormRow
+        as="form"
+        layout="field-action"
+        class="pt-2"
+        novalidate
+        @submit.prevent="onCreate"
+      >
         <BaseFormField label="Nueva categoría" required :error="newNameError">
           <BaseInput
             v-model="newName"
@@ -132,18 +138,19 @@ function onDragEnd() {
             @update:model-value="newNameError = ''"
           />
         </BaseFormField>
-        <div class="flex justify-end">
+        <BaseFormRowAction>
           <BaseButton
             type="submit"
             variant="secondary"
             :loading="saving"
+            class="w-full panel-portrait:w-auto"
             data-testid="recurring-category-create"
           >
             <BaseActionIcon action="create" />
             <span>Agregar</span>
           </BaseButton>
-        </div>
-      </form>
+        </BaseFormRowAction>
+      </BaseFormRow>
 
     </div>
     <template #footer>

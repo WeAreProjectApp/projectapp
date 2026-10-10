@@ -1,3 +1,17 @@
+> **Confirmación antes de enviar — 2026-10-09:** `POST accounting/incomes/<id>/settle/`
+> acepta `send_payment_confirmation` (falso por defecto; MCP y
+> `resolve_income_residual` comparten el serializer) y responde
+> `payment_confirmation = {requested, status, recipient, error}` con estado
+> `not_requested|sent|failed|skipped` (`scheduled` en MCP). La vista es
+> `@transaction.non_atomic_requests` y abre su propio `history_operation`: el
+> middleware de historial envuelve todo POST en un atomic y el correo saldría
+> antes del commit. `GET accounting/incomes/<id>/payment-confirmation/` expone
+> el destinatario (`customer_email` de la cuenta emitida que exige
+> `require_issued_accounts`). La clave `income_payment_received_client` (familia
+> Cuentas de cobro) guarda sus datos en la metadata del log para reintentar el
+> mismo correo. El preview de cuentas de cobro devuelve además `issue_date`,
+> `customer_name`, `project_name` y `billing_concept` para el último aviso.
+
 > **Archivos privados — 2026-10-07:** `accounts.0081_private_platform_resource_files`
 > cambia el storage de las cuatro familias y amplía sus nombres a 500 caracteres.
 > `content.0285_merge_platform_manager_retention` une las dos hojas 0284;
@@ -21,6 +35,19 @@
 > `collection_account_status`, `can_settle` y `settlement_blocked_reason`. Los
 > escritores revalidan cuentas emitidas tras los locks y antes de mutar pagos.
 
+
+## Integridad de datos (2026-10-09)
+
+Reglas con `@rule` en `content/services/data_integrity/rules/`; fixers con
+`register_fixer`, cuyo `plan` declara la clausura de filas que el escritor o sus
+signals pueden tocar. El motor captura esos campos antes y después
+(`snapshots.py`), exige el `impact_hash` de la vista previa bajo locks, es
+idempotente por `request_id`, revierte el lote si el hallazgo no desaparece y
+deshace con `revert` del fixer más restauración exacta. La agrupación de
+duplicados se hace en Python (intercalación `_ci` de MySQL frente a SQLite). Las
+pruebas viven en `content/tests/services/test_data_integrity_*.py`,
+`test_client_merge_*.py`, `test_document_folder_merge.py` y
+`content/tests/views/test_{data_integrity_views,mcp_data_integrity}.py`.
 
 ## Traslado auditado de datos conservados (2026-10-07)
 
@@ -767,12 +794,19 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 
 ### MCP connector concurrency
 
-- Connector URLs remain token-authenticated capability URLs; tokens are not part of the throttle key.
-- Nine registered connectors — blog, documents, proposals, diagnostics, clients,
-  tasks, accounting, LinkedIn personal and communications — receive independent
-  per-IP buckets keyed by slug, allowing Codex to initialize configured domains in
-  parallel.
-- Unknown slugs share one `unknown` bucket. Never key untrusted paths directly without first checking them against `TOOLS_BY_SLUG`.
+- Los 18 conectores se declaran en `content/mcp/connectors.py` (`CONNECTORS`);
+  reciben buckets independientes por IP y slug. Las URLs históricas con token
+  y el endpoint canónico con Bearer coexisten; el token no forma parte del throttle.
+- Los slugs desconocidos comparten `unknown`. La pertenencia se comprueba contra
+  `CONNECTORS` antes de usar una ruta en la clave; `TOOLS_BY_SLUG` es el catálogo
+  compuesto de herramientas, no otro inventario de identidades.
+- `ConnectorSpec` es la autoridad de versión e instrucciones. Un cambio de
+  contrato público requiere incremento de versión, changelog y
+  `mcp_schema_report --write-fingerprints` desde `backend/` con
+  `DJANGO_SETTINGS_MODULE=projectapp.settings_test`. `connector_contracts.json`
+  guarda versión y SHA-256 del contrato; el SHA-256 excluye la versión y el
+  orden del catálogo. `test_mcp_connector_registry.py` detecta diferencias con
+  ese lock; el [runbook](../MCP_VALIDATION_RUNBOOK.md) describe medición local y remota.
 - `content/mcp/contracts.py` is the field-level anti-drift manifest. A model change
   in one of those domains must update its classification, tool schemas and
   descriptions in the same delivery; focused tests fail on missing or stale fields.

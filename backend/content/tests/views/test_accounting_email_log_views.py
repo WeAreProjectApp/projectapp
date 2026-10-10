@@ -142,11 +142,30 @@ def test_label_map_matches_the_keys_the_senders_actually_write():
     from content.services.collection_account_email_service import (
         TEMPLATE_KEY as COLLECTION,
     )
+    from content.services.income_payment_confirmation_service import (
+        TEMPLATE_KEY as PAYMENT_CONFIRMATION,
+    )
 
     assert set(EMAIL_TEMPLATE_LABELS) == {
         CHANGE, CARD_REMINDER, STATEMENT_REMINDER, CALENDAR,
-        COLLECTION, PAYMENT_STATUS,
+        COLLECTION, PAYMENT_CONFIRMATION, PAYMENT_STATUS,
     }
+
+
+def test_frontend_template_options_mirror_the_label_map():
+    """The history's template filter lists its options in the frontend; a
+    key missing there leaves that notice unreachable from the filter."""
+    import re
+    from pathlib import Path
+
+    source = (
+        Path(__file__).resolve().parents[4]
+        / 'frontend' / 'constants' / 'historyFilters.js'
+    ).read_text()
+    block = source.split('TEMPLATE_KEY_OPTIONS = [', 1)[1].split('];', 1)[0]
+    options = dict(re.findall(r"value: '([a-z_]+)', label: '([^']+)'", block))
+
+    assert options == EMAIL_TEMPLATE_LABELS
 
 
 @pytest.mark.django_db

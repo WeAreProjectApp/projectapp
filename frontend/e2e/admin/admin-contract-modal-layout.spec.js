@@ -5,6 +5,10 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_CONTRACT_MODALITY } from '../helpers/flow-tags.js';
 import { PANEL_VIEWPORTS } from '../../config/responsive.js';
 import { buildProposal, buildHandler, openDocuments } from '../helpers/contract-modals.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
+
+// Leave room for font rendering while rejecting the previous taller layout.
+const CONTENT_HEIGHT_LIMIT = { combined: 1024, product: 800, service: 1024 };
 
 async function openContract(page, variant) {
   await setAuthLocalStorage(page, {
@@ -19,25 +23,13 @@ async function openContract(page, variant) {
   return page.getByRole('dialog');
 }
 
-async function expectCompactLayout(dialog, viewport, variant) {
-  // quality: allow-fragile-selector (BaseModal publishes these stable geometry hooks for its panel and scrolling body)
-  const panel = await dialog.locator('[data-modal-kind]').boundingBox();
-  const body = await dialog.locator('[data-modal-body]').evaluate(el => ({
-    width: el.clientWidth, content: el.scrollWidth, height: el.scrollHeight,
-  }));
-  const city = await dialog.getByLabel('Ciudad del contrato').boundingBox();
-  const date = await dialog.getByLabel('Fecha del contrato').boundingBox();
-  expect(panel.width).toBeLessThanOrEqual(Math.min(viewport.width, 672));
-  expect(body.content).toBeLessThanOrEqual(body.width + 1);
-  if (viewport.width < 640) {
-    expect(date.y).toBeGreaterThan(city.y + city.height);
-  } else {
-    expect(Math.abs(date.y - city.y)).toBeLessThanOrEqual(1);
-    expect(date.width).toBeLessThanOrEqual(320);
-    // Leave room for font rendering while rejecting the previous taller layout.
-    const contentHeightLimit = { combined: 1024, product: 800, service: 1024 };
-    expect(body.height).toBeLessThanOrEqual(contentHeightLimit[variant]);
-  }
+function expectCompactLayout(dialog, viewport, variant) {
+  return expectCompactModal(dialog, viewport, {
+    lines: [{
+      fields: [dialog.getByLabel('Ciudad del contrato'), dialog.getByLabel('Fecha del contrato')],
+    }],
+    maxBodyHeight: CONTENT_HEIGHT_LIMIT[variant],
+  });
 }
 
 for (const [profile, viewport] of Object.entries(PANEL_VIEWPORTS)) {

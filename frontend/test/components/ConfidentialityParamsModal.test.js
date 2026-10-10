@@ -25,8 +25,8 @@ function mountModal(storedParams = {}) {
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         BaseModal: {
-          props: ['modelValue', 'size'],
-          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
+          props: ['modelValue', 'kind'],
+          template: '<div v-if="modelValue" :data-kind="kind"><slot /><slot name="footer" /></div>',
         },
         BaseButton: {
           props: ['variant', 'size', 'loading', 'disabled', 'type'],
@@ -93,5 +93,13 @@ describe('ConfidentialityParamsModal — identificación del consultor', () => {
     await wrapper.find('form').trigger('submit');
 
     expect(updateConfidentialityParams).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('ConfidentialityParamsModal — ancho del modal', () => {
+  it('opens at the form width', async () => {
+    const wrapper = await open();
+
+    expect(wrapper.attributes('data-kind')).toBe('form');
   });
 });

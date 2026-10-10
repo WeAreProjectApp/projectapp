@@ -170,7 +170,7 @@ vínculo con la copia y el snapshot anteriores.
 El mismo conector conserva proyectos, estados, fases comerciales, historial,
 entregas, ideas, permisos de consulta, cobros y tickets. Clientes y Propuestas
 conservan sus conectores propios. La etiqueta no cambia el slug, las credenciales,
-la activación ni los permisos existentes. La versión compatible es 2.1.0.
+la activación ni los permisos existentes. La versión compatible es 2.2.0.
 
 **2026-10-09 — guardas de cliente y hosting:** el cambio de cliente usa la
 [evaluación compartida y el impacto de ambos modos](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09),

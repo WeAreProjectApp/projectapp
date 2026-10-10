@@ -1,10 +1,12 @@
-Enlace seguro recibido — ProjectApp
+{% load date_filters %}Enlace seguro recibido — ProjectApp
+
+Compartió información confidencial con el equipo desde la página pública de Enlaces seguros. Solo se puede abrir desde el panel, con sesión iniciada.
 
 Enviado por: {{ creator_name }}{% if creator_email %} <{{ creator_email }}>{% endif %}
 Tipo: {{ type_label }}
 Título: {{ title }}
-Creado: {{ created_at }}
-Vence: {{ expires_at }}
+Creado: {{ created_at|bogota_datetime }}
+Vence: {{ expires_at|bogota_datetime }}
 
 Ábrelo desde el panel (requiere sesión): {{ panel_url }}
 

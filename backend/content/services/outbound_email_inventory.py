@@ -66,8 +66,10 @@ OUTBOUND_EMAIL_CHANNELS = {
     # link token or the protected content.
     'secure_link_received_team': DOCUMENTS_COMMUNICATIONS,
 
-    # Billing documents sent to customers.
+    # Billing documents sent to customers, and the confirmation that their
+    # payment was received (opt-in when settling an income).
     'collection_account_sent': COLLECTIONS,
+    'income_payment_received_client': COLLECTIONS,
 
     # Accounting and hosting notices sent to the agency.
     'accounting_change': ACCOUNTING,

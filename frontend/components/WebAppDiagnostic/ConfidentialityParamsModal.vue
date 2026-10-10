@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :model-value="visible" kind="form-wide" @update:model-value="(open) => { if (!open) $emit('cancel') }">
+  <BaseModal :model-value="visible" kind="form" @update:model-value="(open) => { if (!open) $emit('cancel') }">
     <div class="flex flex-col">
           <div class="sticky top-0 bg-surface border-b border-border-muted px-6 py-4 rounded-t-2xl z-10">
             <h2 class="text-lg font-semibold text-text-default">Acuerdo de Confidencialidad</h2>
@@ -34,7 +34,6 @@
                   label="Representante legal"
                   for="confidentiality-client-representative"
                   size="sm"
-                  class="sm:col-span-2"
                 >
                   <BaseInput
                     id="confidentiality-client-representative"
@@ -43,7 +42,7 @@
                     size="sm"
                   />
                 </BaseFormField>
-                <BaseFormField label="Correo electrónico" for="confidentiality-client-email" size="sm" class="sm:col-span-2">
+                <BaseFormField label="Correo electrónico" for="confidentiality-client-email" size="sm">
                   <BaseInput id="confidentiality-client-email" v-model="form.client_email" type="email" size="sm" />
                 </BaseFormField>
               </BaseFormRow>
@@ -87,9 +86,23 @@
                 Datos del acuerdo
               </h3>
               <div class="space-y-3">
-                <BaseFormField label="Ciudad" for="confidentiality-city" size="sm">
-                  <BaseInput id="confidentiality-city" v-model="form.contract_city" type="text" size="sm" />
-                </BaseFormField>
+                <BaseFormRow :cols="2" :gap="3" at="sm">
+                  <BaseFormField label="Ciudad" for="confidentiality-city" size="sm">
+                    <BaseInput id="confidentiality-city" v-model="form.contract_city" type="text" size="sm" />
+                  </BaseFormField>
+                  <BaseFormField
+                    label="Cláusula penal (valor)"
+                    for="confidentiality-penal-clause"
+                    size="sm"
+                  >
+                    <BaseInput
+                      id="confidentiality-penal-clause"
+                      v-model="form.penal_clause_value"
+                      type="text"
+                      size="sm"
+                    />
+                  </BaseFormField>
+                </BaseFormRow>
                 <BaseFormRow :cols="3" :gap="3" at="sm">
                   <BaseFormField label="Día" for="confidentiality-day" size="sm">
                     <BaseInput id="confidentiality-day" v-model="form.contract_day" type="text" placeholder="Ej: 16" size="sm" />
@@ -101,18 +114,6 @@
                     <BaseInput id="confidentiality-year" v-model="form.contract_year" type="text" placeholder="Ej: 2026" size="sm" />
                   </BaseFormField>
                 </BaseFormRow>
-                <BaseFormField
-                  label="Cláusula penal (valor)"
-                  for="confidentiality-penal-clause"
-                  size="sm"
-                >
-                  <BaseInput
-                    id="confidentiality-penal-clause"
-                    v-model="form.penal_clause_value"
-                    type="text"
-                    size="sm"
-                  />
-                </BaseFormField>
               </div>
             </section>
 

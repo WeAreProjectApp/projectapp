@@ -13,3 +13,7 @@
 ## Cobro y liquidación (2026-10-06)
 
 Requisito de cobro (2026-10-06): las filas con cliente sólo participan cuando tienen cuenta emitida; las excluidas se explican antes del reparto. Una anulación concurrente causa rechazo atómico del servidor.
+
+## Formulario compacto (2026-10-09)
+
+El modal de abono usa el ancho de formulario (42 rem). Valor recibido y fecha comparten fila, y el destino (Bolsillo ProjectApp) se lee debajo de ella en lugar de ocupar una fila propia.

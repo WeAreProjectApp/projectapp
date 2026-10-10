@@ -16,7 +16,8 @@ from content.views.accounting import (
     accounting_dashboard, accounting_stats, accounting_receivables,
     list_income_records, create_income_record, retrieve_income_record,
     retrieve_income_detail, list_client_projects,
-    settle_income_record, bulk_assign_income_client, mute_income_reminders,
+    settle_income_record, income_payment_confirmation,
+    bulk_assign_income_client, mute_income_reminders,
     bulk_assign_income_project, bulk_settle_income_records,
     duplicate_income_draft, suggest_income_period,
     update_income_record, delete_income_record,
@@ -374,11 +375,21 @@ from content.views.project_retention import (
     client_retained_project_data, retained_context_cleanup, retained_operation_undo,
     retained_project_data_audit, retained_project_file, reveal_retained_project_secret,
 )
+from content.views.data_integrity import (
+    data_integrity_findings, data_integrity_fix_apply, data_integrity_fix_preview,
+    data_integrity_operation_undo, data_integrity_operations, data_integrity_rules,
+)
 
 urlpatterns = [
     path('projects/retained-data/audit/', retained_project_data_audit, name='panel-projects-retained-data-audit'),
     path('projects/retained-operations/<int:operation_id>/undo/', retained_operation_undo, name='panel-projects-retained-operation-undo'),
     path('projects/retained-contexts/<int:context_id>/cleanup/', retained_context_cleanup, name='panel-projects-retained-context-cleanup'),
+    path('projects/data-integrity/rules/', data_integrity_rules, name='panel-data-integrity-rules'),
+    path('projects/data-integrity/findings/', data_integrity_findings, name='panel-data-integrity-findings'),
+    path('projects/data-integrity/fixes/preview/', data_integrity_fix_preview, name='panel-data-integrity-fix-preview'),
+    path('projects/data-integrity/fixes/apply/', data_integrity_fix_apply, name='panel-data-integrity-fix-apply'),
+    path('projects/data-integrity/operations/', data_integrity_operations, name='panel-data-integrity-operations'),
+    path('projects/data-integrity/operations/<int:operation_id>/undo/', data_integrity_operation_undo, name='panel-data-integrity-operation-undo'),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/', client_retained_project_data),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/files/<str:field_name>/', retained_project_file),
     path('proposals/client-profiles/<int:client_id>/retained-project-data/<int:context_id>/<str:category>/<str:record_id>/reveal/', reveal_retained_project_secret),
@@ -1227,6 +1238,7 @@ urlpatterns = [
     path('accounting/incomes/create/', create_income_record, name='create-income-record'),
     path('accounting/incomes/<int:record_id>/detail/', retrieve_income_detail, name='retrieve-income-detail'),
     path('accounting/incomes/<int:record_id>/settle/', settle_income_record, name='settle-income-record'),
+    path('accounting/incomes/<int:record_id>/payment-confirmation/', income_payment_confirmation, name='income-payment-confirmation'),
     path('accounting/incomes/<int:record_id>/mute/', mute_income_reminders, name='mute-income-reminders'),
     path('accounting/incomes/<int:record_id>/duplicate-draft/', duplicate_income_draft, name='duplicate-income-draft'),
     path('accounting/incomes/period-suggestion/', suggest_income_period, name='suggest-income-period'),

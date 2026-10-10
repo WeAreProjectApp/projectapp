@@ -12,13 +12,12 @@ from django.urls import NoReverseMatch, resolve, reverse
 from content.mcp.contracts import MCP_MODEL_CONTRACTS
 from content.models import McpConnector, McpCredential
 from content.tests.mcp_parity import call_tool_inprocess
+from content.mcp.connectors import CONNECTORS
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
 CONNECTOR_SLUGS = tuple(MCP_MODEL_CONTRACTS)
-CANONICAL_CONNECTOR_SLUGS = (
-    'operations', 'commercial', 'proposals', 'projects', 'documents', 'communications',
-    'content', 'tasks', 'accounting-ledger', 'accounting-billing',
-    'accounting-cards',
+CANONICAL_CONNECTOR_SLUGS = tuple(
+    slug for slug, spec in CONNECTORS.items() if not spec.compatibility
 )
 TOOL_NAME = re.compile(r'^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$')
 pytestmark = pytest.mark.django_db
@@ -252,7 +251,7 @@ def test_projects_hosting_contract_uses_lifecycle_actions(superuser, make_client
     assert contracts['projects']['accounts.Payment'] == contracts['accounting-billing']['accounts.Payment']
 
     tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['projects']}
-    assert len(tools) == len(TOOLS_BY_SLUG['projects']) == 164
+    assert len(tools) == len(TOOLS_BY_SLUG['projects']) == 171
     assert tools['preview_hosting_subscription_change']['annotations']['readOnlyHint'] is True
     assert tools['change_hosting_subscription']['requires_confirmation'] is True
     assert 'change_hosting_subscription' not in {

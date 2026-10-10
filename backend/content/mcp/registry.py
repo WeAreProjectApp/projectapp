@@ -1,5 +1,7 @@
 from copy import deepcopy
 
+from content.mcp.schema_policy import strip_private
+
 READ_PREFIXES = (
     'describe_', 'get_', 'list_', 'read_', 'search_', 'preview_', 'export_',
     'download_',
@@ -62,11 +64,32 @@ def normalize_tools(tools, connector_slug):
     return normalized
 
 
-CONNECTOR_VERSIONS = {'documents': '3.2.0', 'proposals': '2.1.0', 'projects': '2.2.0'}
-
-
 def connector_version(slug, default='2.0.0'):
-    return CONNECTOR_VERSIONS.get(slug, default)
+    from content.mcp.connectors import CONNECTORS
+
+    connector = CONNECTORS.get(slug)
+    return connector.version if connector is not None else default
+
+
+def with_sensitive_confirmation(tools):
+    result = []
+    for source in tools:
+        tool = deepcopy(source)
+        risk = tool.get('risk', infer_risk(tool['name']))
+        if tool['name'] in {'update_proposal_status', 'create_share_link'}:
+            risk = 'sensitive'
+        tool['risk'] = risk
+        if risk == 'sensitive':
+            tool['requires_confirmation'] = True
+        result.append(tool)
+    return result
+
+
+def visible_tools(tools, credential):
+    return [
+        tool for tool in tools
+        if credential is None or credential.allows(tool['name'])
+    ]
 
 
 def public_tool(tool):
@@ -74,13 +97,25 @@ def public_tool(tool):
     return {
         'name': tool['name'], 'title': tool.get('title'),
         'description': tool['description'],
-        'inputSchema': deepcopy(tool['input_schema']),
-        'outputSchema': deepcopy(tool.get('output_schema', {})),
+        'inputSchema': strip_private(tool['input_schema']),
+        'outputSchema': strip_private(tool.get('output_schema', {})),
         'annotations': deepcopy(tool.get('annotations', {})),
     }
 
 
-def server_info(server_name=None):
-    slug = (server_name or '').removeprefix('projectapp-').removesuffix('-mcp')
-    return {'name': server_name or 'projectapp-mcp',
-            'version': connector_version(slug, default='1.0.0')}
+def capability_entry(tool, *, summary):
+    public = public_tool(tool)
+    entry = {
+        'name': public['name'],
+        'title': public['title'],
+        'risk': tool.get('risk'),
+        'requires_confirmation': bool(tool.get('requires_confirmation')),
+    }
+    if not summary:
+        entry.update({
+            'description': public['description'],
+            'input_schema': public['inputSchema'],
+            'output_schema': public['outputSchema'],
+            'annotations': public['annotations'],
+        })
+    return entry

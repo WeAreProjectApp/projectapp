@@ -71,6 +71,7 @@ confirmaciones y acciones contables.
 | `components/accounting/RecurringMuteModal.vue` | 1 | Pie compartido |
 | `components/accounting/RecurringPaymentFormModal.vue` | 1 | Pie compartido |
 | `components/accounting/StatementHeaderFormModal.vue` | 1 | Pie compartido |
+| `components/base/BaseRowActionsModal.vue` | 1 | Pie de cierre de menú. |
 | `components/base/PdfPreviewModal.vue` | 1 | Sin pie global |
 | `components/clients/ClientArchiveModal.vue` | 1 | Pie compartido |
 | `components/clients/ClientEmailsModal.vue` | 1 | Pie compartido |

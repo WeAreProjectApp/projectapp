@@ -19,6 +19,7 @@ from django.utils import timezone
 
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import OPEN_REASON_KEY
 from content.mcp.upload_tools import consume_upload, store_artifact
 from content.models import Linktree, LinktreeTemplateClick, McpUpload
 from content.services.linktree_templates import library, service
@@ -914,6 +915,7 @@ LINKTREE_TEMPLATE_TOOLS = [
                             'content': {
                                 'type': ['string', 'object'],
                                 'description': 'Texto UTF-8 del archivo; manifest.json admite un objeto.',
+                                OPEN_REASON_KEY: 'El lector del paquete valida manifest.json, cuyas claves incluyen slots y recursos variables.',
                             },
                             'base64': {'type': 'string', 'description': 'Binario en base64 (imágenes de hasta 800 KB).'},
                             'asset_id': {

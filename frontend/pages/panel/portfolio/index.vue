@@ -1,5 +1,14 @@
 <template>
   <div>
+    <!-- Before ConfirmModal: modals stack in template order, so the
+         confirmation an entry opens lands above this fading menu. -->
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.title_es || ''"
+      :items="actionsRow ? portfolioActionItems(actionsRow) : []"
+      testid="portfolio-work-actions-modal"
+      @close="actionsRow = null"
+    />
     <ConfirmModal
       v-model="confirmState.open"
       :title="confirmState.title"
@@ -39,6 +48,7 @@
         :rows="pagedWorks"
         caption="Trabajos del portafolio"
         card-test-id-prefix="portfolio-work-row"
+        row-actions-layout="menu-start"
       >
         <template #cell-title_es="{ row: work }">
           <NuxtLink :to="localePath(`/panel/portfolio/${work.id}/edit`)" class="block min-w-0 max-w-full text-sm font-medium leading-tight text-text-default [overflow-wrap:anywhere] transition-colors hover:text-text-brand">{{ work.title_es }}</NuxtLink>
@@ -49,7 +59,13 @@
         </template>
         <template #cell-date="{ row: work }">{{ formatDate(work.published_at || work.created_at) }}</template>
         <template #row-actions="{ row: work }">
-          <BaseActionMenu :items="portfolioActionItems(work)" :testid="`portfolio-work-actions-${work.id}`" />
+          <BaseActionButton
+            action="more"
+            class="h-11 w-11 shrink-0"
+            :label="`Acciones de ${work.title_es}`"
+            :data-testid="`portfolio-work-actions-${work.id}`"
+            @click.stop="actionsRow = work"
+          />
         </template>
       </BaseExploratoryList>
 
@@ -70,13 +86,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { usePortfolioWorksStore } from '~/stores/portfolio_works';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import BasePagination from '~/components/base/BasePagination.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import { usePagination } from '~/composables/usePagination';
 import { formatDate } from '~/utils/formatDate';
 
@@ -87,6 +104,7 @@ definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 const portfolioStore = usePortfolioWorksStore();
 const works = computed(() => portfolioStore.works);
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
+const actionsRow = ref(null);
 const portfolioColumns = [
   { key: 'title_es', label: 'Título', mobile: 'primary' },
   { key: 'status', label: 'Estado', mobile: 'secondary' },
@@ -96,10 +114,10 @@ const portfolioColumns = [
 
 function portfolioActionItems(work) {
   return [
-    { action: 'edit', label: 'Editar', to: localePath(`/panel/portfolio/${work.id}/edit`) },
-    { action: 'duplicate', label: 'Duplicar', onClick: () => handleDuplicate(work) },
+    { action: 'edit', label: 'Editar', to: localePath(`/panel/portfolio/${work.id}/edit`), testid: `portfolio-work-edit-${work.id}` },
+    { action: 'duplicate', label: 'Duplicar', onClick: () => handleDuplicate(work), testid: `portfolio-work-duplicate-${work.id}` },
     { divider: true },
-    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(work) },
+    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(work), testid: `portfolio-work-delete-${work.id}` },
   ];
 }
 

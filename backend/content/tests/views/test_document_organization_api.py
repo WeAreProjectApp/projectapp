@@ -4,6 +4,7 @@ import json
 import pytest
 from django.urls import reverse
 
+from content.mcp.connectors import CONNECTORS
 from content.models import (
     ContractTemplate,
     Document,
@@ -177,7 +178,7 @@ def test_mirror_mixed_update_is_atomic(admin_client, mirror):
 def test_capabilities_can_filter_and_summarize(rpc):
     result = rpc('describe_capabilities', {'tools': ['update_folder', 'move_documents'], 'summary': True})
     data = result['structuredContent']
-    assert data['version'] == '3.2.0'
+    assert data['version'] == CONNECTORS['documents'].version
     assert {tool['name'] for tool in data['tools']} == {'update_folder', 'move_documents'}
     assert set(data['tools'][0]) == {'name', 'title', 'risk', 'requires_confirmation'}
 
