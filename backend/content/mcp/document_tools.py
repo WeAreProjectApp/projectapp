@@ -48,7 +48,7 @@ from content.serializers.document_folder import (
 )
 from content.services.contract_mirror_service import (
     CONTRACT_MIRROR_BLOCKER,
-    CONTRACT_MIRROR_MESSAGE,
+    mirror_read_only_message,
     is_contract_mirror,
     mirror_markdown,
 )
@@ -98,7 +98,7 @@ def _markdown_qs():
     return (
         Document.objects
         .filter(document_type__code=MARKDOWN, is_archived=False)
-        .select_related('folder', 'project', 'client_user__profile', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision')
+        .select_related('folder', 'project', 'client_user__profile', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision', 'building_with_us_mirror__revision')
         .prefetch_related('tags')
     )
 
@@ -107,7 +107,7 @@ def _refuse_contract_mirror(doc):
     """The window onto the one contract is read-only for every caller."""
     if is_contract_mirror(doc):
         raise ToolError(
-            CONTRACT_MIRROR_MESSAGE,
+            mirror_read_only_message(doc),
             code='NOT_EDITABLE',
             details={'edit_blockers': [CONTRACT_MIRROR_BLOCKER]},
         )

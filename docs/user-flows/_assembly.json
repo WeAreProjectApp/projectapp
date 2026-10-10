@@ -306,6 +306,22 @@
         "platform-delivery-review",
         "platform-delivery-responses"
       ]
+    },
+    {
+      "title": "Section 34 — Building with Us (Oct 9, 2026)",
+      "flows": [
+        "public-building-with-us-overview",
+        "public-building-with-us-language",
+        "public-building-with-us-load",
+        "public-building-with-us-faq",
+        "public-building-with-us-pdf",
+        "public-building-with-us-share",
+        "public-building-with-us-guide",
+        "public-building-with-us-theme",
+        "admin-building-with-us-distribution",
+        "admin-building-with-us-history",
+        "admin-building-with-us-contract"
+      ]
     }
   ]
 }

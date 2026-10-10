@@ -378,7 +378,7 @@ function childCountLabel(node) {
         <div
           ref="stageRef"
           tabindex="0"
-          class="relative min-h-[42rem] touch-none overflow-hidden rounded-2xl border border-border-muted bg-surface outline-none focus:ring-2 focus:ring-inset focus:ring-focus-ring/40 panel-desktop:min-h-[44rem]"
+          class="relative self-start min-h-[42rem] touch-none overflow-hidden rounded-2xl border border-border-muted bg-surface outline-none focus:ring-2 focus:ring-inset focus:ring-focus-ring/40 panel-desktop:min-h-[44rem]"
           aria-label="Constelación de capacidades. Usa Tab para recorrer nodos, las flechas para girar y Escape para volver."
           data-testid="view-explorer-stage"
           @keydown="handleStageKeydown"

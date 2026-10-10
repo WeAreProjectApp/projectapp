@@ -1,19 +1,26 @@
-import { mount } from '@vue/test-utils';
+import { enableAutoUnmount, mount } from '@vue/test-utils';
+
+enableAutoUnmount(afterEach);
 
 global.useLocalePath = jest.fn(() => (path) => path);
 global.useI18n = jest.fn(() => ({
   t: jest.fn((key) => ({
     'additionalModules.title': 'Additional modules',
     'financing.title': 'Partnership Program',
+    'buildingWithUs.title': 'Building with Us',
   }[key] || key)),
 }));
 global.requestAnimationFrame = jest.fn(() => 0);
 global.cancelAnimationFrame = jest.fn();
-global.IntersectionObserver = jest.fn(() => ({
-  observe: jest.fn(),
-  disconnect: jest.fn(),
-  unobserve: jest.fn(),
-}));
+global.IntersectionObserver = jest.fn(() => {
+  const observed = new Set();
+  return {
+    observed,
+    observe: jest.fn((element) => observed.add(element)),
+    disconnect: jest.fn(() => observed.clear()),
+    unobserve: jest.fn((element) => observed.delete(element)),
+  };
+});
 
 Object.defineProperty(HTMLVideoElement.prototype, 'play', {
   configurable: true,
@@ -80,6 +87,7 @@ jest.mock('vue3-lottie', () => ({
 }));
 
 import { nextTick } from 'vue';
+import { gsap } from 'gsap';
 import FooterDesktop from '../../components/layouts/FooterDesktop.vue';
 
 function mountFooterDesktop() {
@@ -87,7 +95,7 @@ function mountFooterDesktop() {
     attachTo: document.body,
     global: {
       stubs: {
-        Email: true,
+        Email: { props: ['visible'], template: '<div v-if="visible" role="dialog" data-testid="footer-email-dialog" />' },
         Teleport: true,
         LegalFooter: { props: ['variant'], template: '<div data-testid="legal-footer-stub" :data-variant="variant" />' },
         NuxtLink: { props: ['to'], template: '<a :href="to" v-bind="$attrs"><slot /></a>' },
@@ -99,6 +107,7 @@ function mountFooterDesktop() {
 afterEach(() => {
   document.body.innerHTML = '';
   document.body.style.overflow = '';
+  jest.clearAllMocks();
 });
 
 describe('FooterDesktop', () => {
@@ -152,6 +161,13 @@ describe('FooterDesktop', () => {
       .toBe('Partnership Program');
   });
 
+  it('renders the Building with Us public link', () => {
+    const wrapper = mountFooterDesktop();
+
+    expect(wrapper.get('a[href="/building-with-us"]').attributes('aria-label'))
+      .toBe('Building with Us');
+  });
+
   // ── modal open / close ────────────────────────────────────────────────────
 
   it('clicking the Play Reel ball shows the modal dialog', async () => {
@@ -192,23 +208,31 @@ describe('FooterDesktop', () => {
 
   // ── mouse tracking ────────────────────────────────────────────────────────
 
-  it('mousemove on footer does not throw', async () => {
+  it('moves the portfolio control toward the pointer', async () => {
     const wrapper = mountFooterDesktop();
+    const ball = wrapper.get('button[aria-label="Play our web design portfolio showcase video"]');
+    const frame = requestAnimationFrame.mock.calls.at(-1)[0];
 
-    await expect(
-      wrapper.find('footer').trigger('mousemove', { clientX: 150, clientY: 200 }),
-    ).resolves.not.toThrow();
+    await wrapper.get('footer').trigger('mousemove', { clientX: 150, clientY: 200 });
+    frame();
+
+    const motion = gsap.to.mock.calls.find(([element]) => element === ball.element)[1];
+    expect(motion.x).toBeGreaterThan(0);
+    expect(motion.y).toBeGreaterThan(0);
   });
 
-  it('mousemove on modal does not throw', async () => {
+  it('moves the close control toward the modal pointer', async () => {
     const wrapper = mountFooterDesktop();
+    await wrapper.get('button[aria-label="Play our web design portfolio showcase video"]').trigger('click');
+    const ball = wrapper.get('button[aria-label="Close video"]');
+    const frame = requestAnimationFrame.mock.calls.at(-1)[0];
 
-    await wrapper.find('button[aria-label="Play our web design portfolio showcase video"]').trigger('click');
-    await nextTick();
+    await wrapper.get('[role="dialog"]').trigger('mousemove', { clientX: window.innerWidth, clientY: window.innerHeight });
+    frame();
 
-    await expect(
-      wrapper.find('[role="dialog"]').trigger('mousemove', { clientX: 50, clientY: 80 }),
-    ).resolves.not.toThrow();
+    const motion = gsap.to.mock.calls.find(([element]) => element === ball.element)[1];
+    expect(motion.x).toBeGreaterThan(0);
+    expect(motion.y).toBeGreaterThan(0);
   });
 
   // ── showModal watch effects ───────────────────────────────────────────────
@@ -250,19 +274,22 @@ describe('FooterDesktop', () => {
     const wrapper = mountFooterDesktop();
     const observerInstance =
       IntersectionObserver.mock.results[IntersectionObserver.mock.results.length - 1].value;
+    expect(observerInstance.observed.has(wrapper.get('video[preload="auto"]').element)).toBe(true);
 
     wrapper.unmount();
 
-    expect(observerInstance.disconnect).toHaveBeenCalled();
+    expect(observerInstance.observed.size).toBe(0);
   });
 
   // ── email CTA ─────────────────────────────────────────────────────────────
 
-  it('clicking the email CTA link does not throw', async () => {
+  it('opens the email contact dialog from its link', async () => {
     const wrapper = mountFooterDesktop();
 
     const emailLink = wrapper.find('a[aria-label="Email our web design team"]');
-    await expect(emailLink.trigger('click')).resolves.not.toThrow();
+    await emailLink.trigger('click');
+
+    expect(wrapper.get('[data-testid="footer-email-dialog"]').attributes('role')).toBe('dialog');
   });
 
   it('renders the Waiter legal strip in its overlay variant', () => {

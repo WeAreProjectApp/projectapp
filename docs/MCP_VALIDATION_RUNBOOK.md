@@ -253,6 +253,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 |---|---|---:|---|
 | `operations` | 2.1.0 | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
 | `partnership-program` | 2.1.0 | 26 | Condiciones, formalización y recursos del Programa de Alianza |
+| `building-with-us` | 1.0.0 | 16 | Presentación pública bilingüe y contrato privado versionados, preview, confirmación, restauración, PDF e inicialización del espejo; creado inactivo, sin uploads ni videos |
 | `additional-modules` | 2.1.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 2.1.0 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 2.2.0 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
@@ -270,9 +271,9 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
-Los 18 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
+Los 19 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-10, sin
-consultar datos reales: 999 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: 1015 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`.
@@ -282,6 +283,183 @@ compatibilidad no se eliminan ni cambian de URL; permiten una transición gradua
 hacia los conectores agrupados por área.
 
 ## Preparación segura
+
+### Building with Us — presentación (PA-174, B1)
+
+La migración `0286_building_with_us_program` crea el conector `building-with-us`
+inactivo, sin credenciales, y la presentación inicial en español e inglés. Su
+versión MCP es `1.0.0`. No comparte herramientas con `commercial`; sus dieciséis
+herramientas incluyen los tres controles comunes, las seis de presentación y
+las siete contractuales de B2. El overview devuelve metadatos independientes
+de programa y contrato, incluido el estado del espejo documental.
+
+El Panel sólo admite GET en `/api/building-with-us/admin/` y
+`/api/building-with-us/admin/program/versions/`. Todo cambio de presentación
+pasa por MCP con `if_match`, `change_note` y `confirm_action`. Las revisiones
+son inmutables: restaurar crea una nueva. La validación exige todos los campos
+de cada sección suministrada en ambos idiomas, ids y meses alineados, listas
+acotadas y ausencia de porcentajes, símbolos monetarios y códigos de moneda.
+
+Validar con una credencial temporal del entorno de pruebas:
+
+1. Leer `get_building_with_us_program`: comprobar `content.es`, `content.en`,
+   el orden de `sections`, metadatos de versión y `etag`.
+2. Llamar `preview_building_with_us_program_update` con `sections.hero.es` y
+   `sections.hero.en` completos. Revisar el diff y comprobar que la versión
+   pública sigue igual. Las secciones omitidas se conservan.
+3. Enviar esas secciones a `update_building_with_us_program` con el `if_match`
+   leído y un `change_note` significativo; revisar el impacto y confirmar con
+   `confirm_action`. Sin motivo no debe existir intención pendiente.
+4. Comprobar `/api/building-with-us/public/?lang=es` y `?lang=en`: nueva versión,
+   contenido localizado, `cta.whatsapp_url`, rutas canónicas y enlace PDF, sin
+   datos de video ni cifras económicas. Tras el commit debe solicitarse la
+   reconstrucción con motivo `building-with-us`. En producción se verifica la
+   solicitud y el consumo por el regenerator del toolkit, seguido del HTML de
+   ambas rutas; la aplicación no ejecuta el build dentro del worker.
+5. Listar `list_building_with_us_program_versions`, incluyendo contenido si se
+   desea: comprobar autor, fecha, motivo y orden descendente. Revisar también
+   la paginación de sólo metadatos del Panel.
+6. Enviar `restore_building_with_us_program_version` con `version_id`, el etag
+   actual y `change_note`; confirmar. Verificar una nueva versión con referencia
+   a la restaurada y una nueva solicitud de reconstrucción.
+7. Preparar otra actualización, publicar un cambio independiente y confirmar
+   la preparación anterior. Debe devolver `STALE_VERSION` sin escribir otra
+   revisión. Los etags se comprueban otra vez con el singleton bloqueado.
+8. Ejecutar `render_building_with_us_program_pdf` con `lang: es` o `en`; abrir
+   el `download_url` firmado y comprobar que contiene la presentación vigente.
+   El catálogo carece de herramientas de upload y video.
+
+Pruebas focales desde `backend/`, usando el Python autorizado de la sesión (sin
+exportar settings para pytest y sin ejecutar migrate):
+
+```bash
+PY=/home/dev_env/webapps/.wt/projectapp_staging/partner-split-auto-values/.venv/bin/python
+$PY -m pytest content/tests/services/test_building_with_us_program_service.py --no-cov -q
+$PY -m pytest content/tests/views/test_building_with_us_public.py --no-cov -q -k panel_rejects
+$PY -m pytest content/tests/views/test_building_with_us_public.py --no-cov -q -k 'not panel_rejects'
+$PY -m pytest content/tests/views/test_building_with_us_mcp.py --no-cov -q
+```
+
+`test_mcp_contracts.py` y la selección de rebuild exceden veinte casos. Los
+siguientes grupos cubren sus selecciones completas sin exceder ese límite
+(MCP: 19, 19, 12 y 20; rebuild: 18 y 15). Revalidar los conteos con
+`--collect-only -q` si se agregan casos; correr hasta tres comandos por ciclo:
+
+```bash
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k model_fields_are_classified
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k tool_metadata_is_actionable
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k canonical_sensitive_tools
+$PY -m pytest content/tests/views/test_mcp_contracts.py --no-cov -q -k 'not model_fields_are_classified and not tool_metadata_is_actionable and not canonical_sensitive_tools'
+$PY -m pytest content/tests/services/test_frontend_build.py --no-cov -q -k '(Rebuild or rebuild) and (TestRebuildNeeded or TestRunFrontendRebuild)'
+$PY -m pytest content/tests/services/test_frontend_build.py --no-cov -q -k '(Rebuild or rebuild) and not (TestRebuildNeeded or TestRunFrontendRebuild)'
+```
+
+Completar con las regresiones acotadas:
+
+```bash
+$PY -m pytest content/tests/management/test_fake_data_contract.py --no-cov -q -k classifies
+$PY -m pytest content/tests/views/test_financing.py --no-cov -q -k sitemap
+DJANGO_SETTINGS_MODULE=projectapp.settings_test $PY manage.py makemigrations --check --dry-run
+```
+
+Desde la raíz, ejecutar el gate con `--include-file` para los tres archivos
+nuevos y los dos archivos de regresión editados (rutas completas desde
+`backend/`). El scanner no admite como filtros `conftest.py` ni archivos de
+fixtures sin tests; su integración se verifica con las pruebas que los usan.
+Usar `--junk-severity=error` y `--report-path /tmp/building-with-us-test-quality.json`.
+
+### Building with Us — contrato y espejo (PA-175, B2)
+
+La migración `0287_building_with_us_contract` incorpora el contrato privado v1:
+21 cláusulas completas, Condiciones particulares y anexos de alcance e hitos.
+Los importes y porcentajes de referencia sólo viven en ese contrato. No se
+aplica el bloqueo de cifras de la presentación pública. No se admiten tokens
+`{placeholder}`: los espacios se escriben literalmente `XXX-XXX-XXX`.
+
+El Panel sólo lee `/api/building-with-us/admin/contract/`, `contract/versions/`
+y `contract/pdf/`. El PDF usa el renderizador Markdown del Gestor, sus portadas
+y estilo, y marca de agua; `?inline=1` permite previsualizarlo. Si hay un espejo
+sincronizado se entrega su copia guardada; si falta o quedó desactualizado, el
+Panel genera la versión vigente sin escribir. La descarga desde el documento
+del Gestor rechaza un PDF cuya revisión ya no es la actual.
+
+Validar con una credencial temporal del conector `building-with-us`:
+
+1. Leer `get_building_with_us_contract`: verificar Markdown, versión, autor,
+   `change_note`, `etag` y `mirror.status`. Inicialmente es `not_initialized`.
+   `update_building_with_us_contract` debe rechazar aplicar antes de inicializar
+   el espejo con `MIRROR_NOT_INITIALIZED`.
+2. Elegir una carpeta manual **Contratos** del espacio interno ProjectApp,
+   activa y sin cliente, proyecto ni `system_key`. Preparar
+   `initialize_building_with_us_contract_mirror` con `folder_id` y confirmar
+   mediante `confirm_action`. El preview no crea documentos. La confirmación
+   comprueba hashes del contrato, espejo y carpeta, guarda un documento interno
+   de sólo lectura con PDF y dos notas privadas: versión inicial e inventario de
+   las catorce decisiones pendientes. Repetir debe producir `noop` sin nuevas
+   notas. Un espejo desactualizado se repara explícitamente con `resync`.
+3. Previsualizar `preview_building_with_us_contract_update` con exactamente
+   `markdown` o `patches`; revisar `diff`, `placeholders: []` y `document_to_sync`.
+   Los patches admiten las mismas operaciones y selección literal que las
+   plantillas de propuestas. Enviar `update_building_with_us_contract` con
+   `if_match` y `change_note` y confirmar. Revisar nueva versión, PDF guardado,
+   fecha del documento y nota privada. Un fallo en cualquiera revierte todo.
+4. Desde `documents`, llamar `read_document` con el id del espejo: devuelve el
+   Markdown vivo del contrato BWU, `contract_variant: building_with_us`, versión,
+   fecha de sincronización, `is_contract_mirror: true` y
+   `edit_blockers: ["contract_mirror"]`. Editar, mover o archivar el documento
+   está bloqueado; la carpeta que lo contiene tampoco se renombra ni archiva.
+   `list_contract_mirrors` conserva exclusivamente combined/product/service.
+   Documentos sigue en **66 herramientas**, versión **3.1.0**.
+5. Consultar `list_building_with_us_contract_versions`, opcionalmente con
+   `include_content: true`. Restaurar mediante
+   `restore_building_with_us_contract_version` con `version_id`, `if_match` y
+   `change_note`, seguido de `confirm_action`: crea una revisión nueva y
+   sincroniza el espejo. `restored_from_version` es el número de versión de
+   origen; `restored_from_version_id` identifica su fila. Programa expone ambas
+   referencias también.
+6. Preparar un cambio; alterar la versión o el espejo/documento; confirmar la
+   preparación anterior. Debe devolver `STALE_VERSION` sin revisión adicional.
+   Para inicialización, repetir cambiando la carpeta después del preview:
+   también debe rechazarse. Los escritores vuelven a comprobar etags bajo
+   bloqueo en orden contrato → espejo → documento.
+7. Llamar `render_building_with_us_contract_pdf` con `{}` y abrir su URL temporal
+   firmada: `contrato-building-with-us-v<version>.pdf`, `application/pdf`.
+   El adaptador libera los archivos de la respuesta interna sin emitir
+   `request_finished`: el request MCP mantiene abierta su transacción hasta
+   conservar el artefacto y registrar la llamada. Se verifica también el PDF
+   de B1 y el cierre de un `FileResponse` real.
+
+La alternativa operativa es `initialize_building_with_us_contract_mirror`:
+sin `--apply` imprime el estado en JSON; con `--apply` exige `--folder-id` y
+admite `--actor-id` de un staff activo, o toma el primer superusuario activo.
+**Nunca ejecutar su aplicación desde un worktree de sesión**; corresponde al
+despliegue autorizado. Los tests lo ejecutan sólo en SQLite aislado.
+
+Desde `backend/`, con el mismo `PY` autorizado, ejecutar por separado y en
+ciclos de hasta tres comandos (todos estos archivos tienen como máximo veinte
+casos):
+
+```bash
+$PY -m pytest content/tests/services/test_building_with_us_contract_service.py --no-cov -q
+$PY -m pytest content/tests/views/test_building_with_us_contract_mirror.py --no-cov -q
+$PY -m pytest content/tests/views/test_building_with_us_contract_mcp.py --no-cov -q
+$PY -m pytest content/tests/management/test_building_with_us_mirror_command.py --no-cov -q
+$PY -m pytest content/tests/views/test_contract_mirror_document.py --no-cov -q
+$PY -m pytest content/tests/views/test_contract_template_mirrors.py content/tests/management/test_contract_template_mirrors.py --no-cov -q
+$PY -m pytest content/tests/views/test_contract_template_mcp.py --no-cov -q
+$PY -m pytest content/tests/views/test_document_organization_api.py --no-cov -q -k mirror
+$PY -m pytest content/tests/management/test_fake_data_contract.py --no-cov -q -k classifies
+$PY -m pytest content/tests/management/test_fake_data_contract.py --no-cov -q -k fake_reset_clears_retained_document_ownership
+DJANGO_SETTINGS_MODULE=projectapp.settings_test $PY manage.py makemigrations --check --dry-run
+```
+
+Completar los lotes B1 y los cuatro grupos de `test_mcp_contracts.py` indicados
+arriba. Desde la raíz, ejecutar `scripts/test_quality_gate.py` con
+`--junk-severity=error` y `--include-file` por cada uno de los cuatro tests B2
+y los tres tests B1 editados. Fixtures y `conftest.py` se verifican mediante los
+tests que los consumen; no son filtros admitidos por el scanner.
+
+### Preparación general
 
 1. Ejecutar en una base de test o staging. Producción sólo admite consultas
    read-only hasta que el operador autorice una mutación concreta.

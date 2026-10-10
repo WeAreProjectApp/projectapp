@@ -44,7 +44,7 @@ from content.services.collection_account_service import (
 )
 from content.services.contract_mirror_service import (
     CONTRACT_MIRROR_CODE,
-    CONTRACT_MIRROR_MESSAGE,
+    mirror_read_only_message,
     is_contract_mirror,
     mirror_pdf,
 )
@@ -442,6 +442,7 @@ def retrieve_document(request, document_id):
         ).select_related(
             'document_type', 'folder', 'project', 'client_user__profile',
             'thread_item__thread', 'collection_account', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
+            'building_with_us_mirror__revision',
         ).prefetch_related(
             Prefetch(
                 'document_notes',
@@ -499,13 +500,13 @@ def _contract_mirror_read_only_error(document):
     if not is_contract_mirror(document):
         return None
     response = error_response(
-        CONTRACT_MIRROR_MESSAGE,
+        mirror_read_only_message(document),
         code=CONTRACT_MIRROR_CODE,
         hint='Descárgalo en PDF o en Markdown desde este documento.',
         status=status.HTTP_409_CONFLICT,
     )
     # The MCP panel bridge only relays `detail`.
-    response.data['detail'] = CONTRACT_MIRROR_MESSAGE
+    response.data['detail'] = mirror_read_only_message(document)
     return response
 
 

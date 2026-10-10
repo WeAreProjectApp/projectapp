@@ -5,6 +5,7 @@ global.useI18n = jest.fn(() => ({
   t: jest.fn((key) => ({
     'additionalModules.title': 'Additional modules',
     'financing.title': 'Partnership Program',
+    'buildingWithUs.title': 'Building with Us',
   }[key] || key)),
 }));
 global.IntersectionObserver = jest.fn(() => ({
@@ -117,6 +118,13 @@ describe('FooterMobile', () => {
 
     expect(wrapper.get('a[href="/partnership-program"]').attributes('aria-label'))
       .toBe('Partnership Program');
+  });
+
+  it('renders the Building with Us public link', () => {
+    const wrapper = mountFooterMobile();
+
+    expect(wrapper.get('a[href="/building-with-us"]').attributes('aria-label'))
+      .toBe('Building with Us');
   });
 
   it('renders the Waiter legal strip in its overlay variant', () => {

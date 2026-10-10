@@ -212,10 +212,11 @@ test.describe('Admin View Map', () => {
     await page.getByTestId('view-explorer-motion-toggle').click();
     await page.getByTestId('view-explorer-node-public-experiences').click();
 
-    await expect(page.locator('[data-testid^="view-explorer-node-public-"]')).toHaveCount(7);
+    await expect(page.locator('[data-testid^="view-explorer-node-public-"]')).toHaveCount(8);
     await expect(page.getByTestId('view-explorer-center')).toContainText('Experiencias públicas');
     await expect(page.getByTestId('view-explorer-node-public-additional-modules-experience')).toBeVisible();
     await expect(page.getByTestId('view-explorer-node-public-financing-experience')).toBeVisible();
+    await expect(page.getByTestId('view-explorer-node-public-building-with-us-experience')).toBeVisible();
     await expect(page.getByTestId('view-explorer-node-public-content-proof')).toBeVisible();
   });
 

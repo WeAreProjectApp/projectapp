@@ -23,6 +23,10 @@
     "sha256": "d5e8cf0df0220bc1b1e9ab4c41cba8d7937dd0d90427bf189461a2941f095e7a",
     "version": "1.1.0"
   },
+  "building-with-us": {
+    "sha256": "3ab462aefa489e32bc47f2fad6a83ebcd9cfa0e8b5ea441e0867870e8b56e3ff",
+    "version": "1.0.0"
+  },
   "clients": {
     "sha256": "9348847c35396031714b1e87da7478cf351daf17cd14d4f2bc096edb216d977e",
     "version": "1.1.0"

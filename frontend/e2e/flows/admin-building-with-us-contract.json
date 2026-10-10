@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-with-us-contract",
+  "name": "Admin Building with Us Contract",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

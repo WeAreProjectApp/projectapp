@@ -250,6 +250,23 @@ export const viewCatalogSections = [
     ],
   },
   {
+    id: 'public-building-with-us',
+    label: 'Building with Us (público)',
+    description: 'Programa de incubación de productos con expertos de negocio.',
+    views: [
+      {
+        label: 'Building with Us',
+        url: '/building-with-us',
+        group: 'Building with Us',
+        file: 'frontend/pages/building-with-us/index.vue',
+        reference: 'presentación pública bilingüe de aportes, modelos de participación, periodos de incubación, alcance y participación ganada por hitos',
+        notes: 'Índice de modelos, FAQ expandible, guía reiniciable de nueve pasos, tema local persistente, PDF, diálogo para compartir y WhatsApp. Sin video; condiciones particulares acordadas en privado.',
+        audience: 'public',
+        viewType: 'readonly',
+      },
+    ],
+  },
+  {
     id: 'public-proposals',
     label: 'Propuestas publicas',
     description: 'Vistas que ve el cliente al abrir una propuesta compartida.',
@@ -362,6 +379,16 @@ export const viewCatalogSections = [
         notes: 'Configuración incluye Recursos para cargar, sustituir, quitar y restaurar el video general por idioma.',
         audience: 'admin',
         viewType: 'list',
+      },
+      {
+        label: 'Building with Us',
+        url: '/panel/building-with-us',
+        group: 'Building with Us',
+        file: 'frontend/pages/panel/building-with-us/index.vue',
+        reference: 'consulta y distribución del programa y del contrato de alianza versionados',
+        notes: 'Dos pestañas: Programa y Contrato, de solo lectura. Copia URLs, descarga PDFs, previsualiza ES/EN, consulta historial paginado y estado del espejo en el Gestor Documental. Las ediciones se realizan sólo mediante el conector MCP building-with-us.',
+        audience: 'admin',
+        viewType: 'readonly',
       },
       {
         label: 'Crear otrosí de financiación',

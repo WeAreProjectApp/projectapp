@@ -25,6 +25,13 @@ describe('SidebarIcon', () => {
     expect(wrapper.find('circle[r="10"]').exists()).toBe(false);
   });
 
+  it('renders dedicated handshake paths for Building with Us', () => {
+    const wrapper = mountIcon('handshake');
+
+    expect(wrapper.findAll('path')).toHaveLength(3);
+    expect(wrapper.find('circle[r="10"]').exists()).toBe(false);
+  });
+
   it('renders the fallback circle for an unrecognized icon name', () => {
     const wrapper = mountIcon('not-a-real-icon');
 

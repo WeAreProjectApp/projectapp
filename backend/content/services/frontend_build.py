@@ -3,9 +3,9 @@ Frontend prerender regeneration.
 
 The public site is a static `nuxi generate` build served by Django from
 backend/static/frontend/ (see projectapp.views.serve_nuxt). Blog posts, the
-canonical additional-modules catalog and the Partnership Program are
+canonical additional-modules catalog, the Partnership Program and Building with Us are
 prerendered into that build, so their static HTML goes stale after a publish or
-a catalog/policy change. What happens next depends on
+a catalog/policy/presentation change. What happens next depends on
 ``settings.FRONTEND_REBUILD_MODE``:
 
 ``request`` (production)
@@ -100,11 +100,12 @@ def rebuild_mode():
 
 
 def latest_published_change():
-    """Most recent change that affects a prerendered public content surface."""
+    """Latest blog, catalog, policy, video or Building with Us revision change."""
     from content.models import (
         AdditionalModule,
         AdditionalModuleCategory,
         BlogPost,
+        BuildingWithUsProgramRevision,
         ExplainerVideoSettings,
         FinancingPolicyRevision,
         HourPackage,
@@ -126,6 +127,8 @@ def latest_published_change():
         # Partnership Program: revisions are immutable, so a publish is a new
         # row; the page names the included monthly package from the catalog.
         (FinancingPolicyRevision.objects.all(), 'created_at'),
+        # Building with Us publishes append-only presentation revisions.
+        (BuildingWithUsProgramRevision.objects.all(), 'created_at'),
         (
             HourPackage.objects.filter(
                 nationality=INCLUDED_PACKAGE_NATIONALITY,

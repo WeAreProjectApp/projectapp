@@ -1,0 +1,13 @@
+{
+  "id": "public-building-with-us-faq",
+  "name": "Public Building with Us FAQ",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Expandir una pregunta frecuente y leer la respuesta sobre la participación ganada por hitos.",
+  "outcomes": [
+    "success"
+  ]
+}

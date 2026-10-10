@@ -15,8 +15,8 @@
       </div>
 
       <div class="absolute bottom-0 right-0 w-full h-2/3 p-3">
-        <div class="relative h-full rounded-b-xl bg-window-black bg-opacity-40 backdrop-blur-md flex flex-col justify-between py-4">
-            <nav aria-label="Mobile website sections" class="grid grid-cols-2 auto-rows-min text-white">
+        <div class="relative h-full overflow-y-auto overscroll-contain rounded-b-xl bg-window-black bg-opacity-40 backdrop-blur-md flex flex-col justify-between gap-4 py-4">
+            <nav aria-label="Mobile website sections" class="grid shrink-0 grid-cols-2 auto-rows-min text-white">
               <NuxtLink
                 :to="item.absolute ? item.href : localePath(item.href)" 
                 v-for="item in solutions" 
@@ -31,7 +31,7 @@
                 </div>
               </NuxtLink>
             </nav>
-            <div class="ps-4 mt-2">
+            <div class="shrink-0 ps-4 mt-2">
                 <a 
                   href="https://www.instagram.com/projectapp.co/" 
                   target="_blank" 
@@ -77,7 +77,7 @@
                   {{ globalMessages.sign_in || 'Sign In' }}
                 </NuxtLink>
             </div>
-            <div class="ps-4 pb-2">
+            <div class="shrink-0 ps-4 pb-2">
               <div class="flex gap-3 mb-2">
                 <NuxtLink
                   :to="localePath('/terms-and-conditions')"
@@ -126,6 +126,7 @@ const solutions = computed(() => [
   { name: globalMessages.value?.solutions?.blog || 'Blog', href: '/blog' },
   { name: t('additionalModules.title'), href: '/additional-modules' },
   { name: t('financing.title'), href: '/partnership-program' },
+  { name: t('buildingWithUs.title'), href: '/building-with-us' },
 ]);
 
 const mainVideo = ref(null);

@@ -60,7 +60,15 @@ def _artifact_payload(response, operation):
             request=context.request,
         )
     finally:
-        response.close()
+        # This internal response doesn't finish the outer MCP request. Calling
+        # close() would emit request_finished and close its DB transaction too.
+        for closer in response._resource_closers:
+            try:
+                closer()
+            except Exception:
+                pass
+        response._resource_closers.clear()
+        response.closed = True
 
 
 def _impact_for(operation, arguments):

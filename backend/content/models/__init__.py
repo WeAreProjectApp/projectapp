@@ -22,6 +22,8 @@ from .business_proposal import BusinessProposal, ProposalAlert
 from .proposal_section import ProposalSection
 from .proposal_project_stage import ProposalProjectStage
 from .blog_post import BlogPost
+from .building_with_us import BuildingWithUsRevision, BuildingWithUsProgram, BuildingWithUsProgramRevision
+from .building_with_us_contract import BuildingWithUsContract, BuildingWithUsContractRevision, BuildingWithUsContractMirror
 from .proposal_view_event import ProposalViewEvent
 from .proposal_section_view import ProposalSectionView
 from .proposal_change_log import ProposalChangeLog
