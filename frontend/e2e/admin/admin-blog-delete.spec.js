@@ -1,12 +1,13 @@
 /**
  * E2E tests for admin blog post deletion.
  *
- * Covers: delete button + confirm dialog triggers the delete API and closes.
+ * Covers: the row menu's delete entry + confirm dialog triggers the delete API and closes.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_BLOG_DELETE } from '../helpers/flow-tags.js';
+import { chooseRowAction } from '../helpers/row-actions.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -38,9 +39,11 @@ test.describe('Admin Blog Delete', () => {
     const table = page.locator('table');
     await expect(table.getByText('Post a Borrar')).toBeVisible();
 
-    const row = table.getByRole('row', { name: /Post a Borrar/ });
-    await row.getByRole('button', { name: 'Acciones' }).click();
-    await row.getByRole('menuitem', { name: 'Eliminar' }).click();
+    await chooseRowAction(page, {
+      kebab: 'blog-post-actions-1',
+      menu: 'blog-post-actions-modal',
+      action: 'blog-post-delete-1',
+    });
     const modal = page.getByRole('dialog', { name: 'Eliminar post' });
     await expect(modal).toBeVisible();
 

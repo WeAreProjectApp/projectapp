@@ -184,6 +184,16 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
   proyectos del cliente y cancela su facturación futura, y eso exige la vista
   previa del panel. El archivado de un hilo de comunicaciones sólo cambia su
   visibilidad y sí está expuesto mediante una acción de dominio específica.
+  Única excepción: la fusión de clientes duplicados del motor de integridad
+  (`apply_integrity_fixes`, regla CL1-CL3) archiva el cliente que se fusiona
+  como último paso, después de comprobar que ya no le queda ningún proyecto,
+  así que no hay nada que suspender ni facturación que cancelar.
+- **Integridad de datos.** El motor nunca borra registros para resolver un
+  duplicado, nunca escribe filas conservadas (`retention_context`), raíces
+  gestionadas fuera de una fusión, carpetas de sistema ni documentos generados,
+  y nunca reescribe historial, logs ni evidencia. Toda corrección queda en
+  `DataIntegrityOperation` con valores antes/después y se deshace exacta
+  mientras nadie haya cambiado esos datos (`docs/DATA_INTEGRITY.md`).
 - `update_message` edita sólo un borrador saliente activo;
   `delete_draft` aplica la misma condición; `mark_message_sent` registra un
   hecho externo y no contacta proveedores. El envío real pertenece a las
@@ -246,7 +256,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 2.1.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 2.1.0 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 2.2.0 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 2.2.0 | 162 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
+| `projects` | 2.2.0 | 169 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial e integridad de datos |
 | `documents` | 3.2.0 | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 2.1.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
@@ -262,7 +272,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 
 Los 18 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-09, sin
-consultar datos reales: 991 herramientas sumadas entre catálogos, incluidas las
+consultar datos reales: 998 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`.
@@ -521,6 +531,35 @@ Los adaptadores resuelven la misma ruta DRF del Panel mediante
 `APIRequestFactory`, autentican el principal técnico y dejan que la vista,
 serializer y servicio existentes decidan permisos, validación y transacción.
 No se implementa un segundo CRUD con escrituras ORM paralelas.
+
+### Proyectos: integridad de datos (2026-10-09)
+
+1. `describe_integrity_rules` devuelve `catalog_version` y cada regla con
+   dominio, gravedad, `fix_kinds` y `fixable_kinds` (las correcciones que el
+   motor sabe aplicar).
+2. `list_integrity_findings` con `query.scope_kind=client` y
+   `query.scope_query` de un nombre ambiguo devuelve `scope_candidates` y ningún
+   hallazgo; con un `scope_id` devuelve hallazgos con `fingerprint`, `inputs`,
+   `suggestion` y, si aplica, `tool`. Repetir la búsqueda devuelve los mismos
+   fingerprints, también en `scope_kind=all`.
+3. `preview_integrity_fixes` con un hallazgo que exige una decisión y sin
+   `params` informa `input_required`; con los `params` correctos no tiene
+   bloqueos y devuelve `impact_hash`. No escribe nada.
+4. `apply_integrity_fixes` con un `expected_impact_hash` viejo responde
+   `STALE_VERSION`; con un lote bloqueado, `CONFLICT` con los bloqueos; con el
+   hash vigente pide confirmación y no escribe hasta `confirm_action`. Repetir la
+   confirmación devuelve el mismo resultado sin aplicar dos veces.
+5. Tras confirmar, el hallazgo desaparece de `list_integrity_findings` y
+   `list_integrity_operations` muestra la operación con `source=mcp:projects` y
+   el actor técnico del conector.
+6. Editar a mano uno de los registros corregidos y pedir
+   `preview_integrity_operation_undo`: informa `changed_since`. Sin esa edición,
+   `undo_integrity_operation` (con `expected_impact_hash`, `reason` y
+   `request_id`) pide confirmación, restaura los valores anteriores y una
+   segunda vista previa informa `already_reverted`.
+7. Un hallazgo `report_only` o `existing_tool` nunca se aplica por el motor: la
+   vista previa lo bloquea y, en el segundo caso, nombra la herramienta que lo
+   corrige con su propia vista previa.
 
 ### Libro contable: previsión manual de cobro
 

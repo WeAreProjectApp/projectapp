@@ -69,9 +69,13 @@ def month_label(date_value):
 
 
 def split_half(total):
-    """50/50 split; the odd cent goes deterministically to Carlos."""
-    gustavo = (total / 2).quantize(TWO_PLACES, rounding=ROUND_DOWN)
-    return gustavo, total - gustavo
+    """50/50 split in whole pesos; the odd peso and any cent stay with ProjectApp.
+
+    Same rule as the panel's PartnerSplitInput, so a record saved without a
+    split matches the one the operator sees on screen.
+    """
+    half = (total / 2).to_integral_value(rounding=ROUND_DOWN).quantize(TWO_PLACES)
+    return half, half
 
 
 class MonthPeriodField(serializers.DateField):

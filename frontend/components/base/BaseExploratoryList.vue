@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useIsMobile } from '~/composables/useIsMobile'
-import { textPolicyClass } from '~/utils/tableLayout'
+import { ROW_ACTION_LAYOUTS, ROW_ACTION_MENU_TRACK, textPolicyClass } from '~/utils/tableLayout'
 
 const props = defineProps({
   /**
@@ -25,6 +25,16 @@ const props = defineProps({
   sortDir: { type: String, default: 'asc' },
   showActions: { type: Boolean, default: true },
   showSelection: { type: Boolean, default: false },
+  /**
+   * `inline-end` keeps the labeled trailing column. `menu-start` is for a
+   * single three-dot button: a header-less 56 px track after the checkbox and
+   * before the data, and the first control of each mobile card.
+   */
+  rowActionsLayout: {
+    type: String,
+    default: ROW_ACTION_LAYOUTS.INLINE_END,
+    validator: (value) => Object.values(ROW_ACTION_LAYOUTS).includes(value),
+  },
   interactiveRows: { type: Boolean, default: false },
   rowClass: { type: [String, Array, Object, Function], default: '' },
   cardTestIdPrefix: { type: String, default: 'responsive-row' },
@@ -32,6 +42,16 @@ const props = defineProps({
 
 const emit = defineEmits(['sort', 'row-click', 'row-auxclick'])
 const { isMobile } = useIsMobile()
+
+const hasMenuStart = computed(() => (
+  props.showActions && props.rowActionsLayout === ROW_ACTION_LAYOUTS.MENU_START
+))
+const hasTrailingActions = computed(() => props.showActions && !hasMenuStart.value)
+const menuTrackStyle = {
+  width: ROW_ACTION_MENU_TRACK,
+  minWidth: ROW_ACTION_MENU_TRACK,
+  maxWidth: ROW_ACTION_MENU_TRACK,
+}
 
 const primaryColumns = computed(() => props.columns.filter((column) => column.mobile === 'primary'))
 const detailColumns = computed(() => props.columns.filter((column) => ['secondary', 'meta'].includes(column.mobile)))
@@ -81,6 +101,13 @@ function activateCard(row, event) {
               </div>
             </th>
             <th
+              v-if="hasMenuStart"
+              :style="menuTrackStyle"
+              class="w-14 min-w-14 max-w-14 px-1.5 py-2 text-center"
+              :data-testid="`${cardTestIdPrefix}-actions-header`"
+              aria-label="Acciones"
+            />
+            <th
               v-for="column in columns"
               :key="column.key"
               class="px-4 py-3"
@@ -98,7 +125,7 @@ function activateCard(row, event) {
               </button>
               <template v-else>{{ column.label }}</template>
             </th>
-            <th v-if="showActions" class="px-4 py-3 text-right">Acciones</th>
+            <th v-if="hasTrailingActions" class="px-4 py-3 text-right">Acciones</th>
           </tr>
         </thead>
         <tbody class="divide-y divide-border-muted">
@@ -120,6 +147,16 @@ function activateCard(row, event) {
               <slot name="row-select" :row="row" />
             </td>
             <td
+              v-if="hasMenuStart"
+              :style="menuTrackStyle"
+              class="w-14 min-w-14 max-w-14 px-1.5 py-1.5 text-center whitespace-nowrap"
+              :data-testid="`${cardTestIdPrefix}-actions-cell-${row[rowKey]}`"
+              @click.stop
+              @auxclick.stop
+            >
+              <slot name="row-actions" :row="row" />
+            </td>
+            <td
               v-for="column in columns"
               :key="column.key"
               class="px-4 py-3 text-text-default"
@@ -131,7 +168,7 @@ function activateCard(row, event) {
                 </slot>
               </div>
             </td>
-            <td v-if="showActions" class="px-4 py-3 text-right" @click.stop>
+            <td v-if="hasTrailingActions" class="px-4 py-3 text-right" @click.stop>
               <div class="flex flex-wrap items-center justify-end gap-1" @click.stop>
                 <slot name="row-actions" :row="row" />
               </div>
@@ -169,6 +206,16 @@ function activateCard(row, event) {
           <div v-if="showSelection" class="shrink-0 pt-0.5" @click.stop @keydown.stop>
             <slot name="row-select" :row="row" />
           </div>
+          <div
+            v-if="hasMenuStart"
+            class="-my-1.5 -ml-1.5 shrink-0"
+            :data-testid="`${cardTestIdPrefix}-actions-cell-${row[rowKey]}`"
+            @click.stop
+            @auxclick.stop
+            @keydown.stop
+          >
+            <slot name="row-actions" :row="row" />
+          </div>
           <div class="min-w-0 flex-1 space-y-1">
             <div v-for="column in primaryColumns" :key="column.key" class="min-w-0">
               <p v-if="primaryColumns.length > 1" class="text-2xs font-semibold uppercase tracking-wider text-text-subtle">
@@ -205,7 +252,7 @@ function activateCard(row, event) {
           </div>
         </dl>
 
-        <div v-if="showActions" class="mt-3 flex flex-wrap items-center justify-end gap-1 border-t border-border-muted pt-3" @click.stop @keydown.stop>
+        <div v-if="hasTrailingActions" class="mt-3 flex flex-wrap items-center justify-end gap-1 border-t border-border-muted pt-3" @click.stop @keydown.stop>
           <slot name="row-actions" :row="row" />
         </div>
       </article>
