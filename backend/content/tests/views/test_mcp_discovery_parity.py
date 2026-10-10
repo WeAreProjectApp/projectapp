@@ -26,7 +26,7 @@ def _discovery_contracts(tools, *, input_key, output_key):
     }
 
 
-@pytest.mark.parametrize(('slug', 'expected_version'), [('documents', '3.2.0'), ('projects', '2.2.0')])
+@pytest.mark.parametrize(('slug', 'expected_version'), [('documents', '4.0.0'), ('projects', '3.0.0')])
 @pytest.mark.parametrize('restricted', [False, True])
 def test_discovery_preserves_the_authorized_contract(slug, expected_version, restricted, superuser):
     connector, _ = McpConnector.objects.get_or_create(slug=slug, defaults={'name': slug})
