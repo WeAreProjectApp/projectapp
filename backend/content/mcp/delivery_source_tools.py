@@ -19,5 +19,8 @@ def _download(arguments, actor):
 DELIVERY_SOURCE_TOOLS = [
     _tool('download_delivery_contract_source',
           'Descarga la copia contractual autorizada del paquete confirmado en su formato original; si consta firma, conserva el PDF firmado exacto.',
-          _download, {'kind': CONTRACT_KIND, 'node_id': ID}, ('kind', 'node_id')),
+          _download, {
+              'kind': {**CONTRACT_KIND, 'description': 'Tipo de fuente contractual: contracts para contrato o amendments para otrosí.'},
+              'node_id': {**ID, 'description': 'Identificador positivo del contrato u otrosí del proyecto cuya copia original se descarga.'},
+          }, ('kind', 'node_id')),
 ]

@@ -418,7 +418,7 @@ def test_mcp_cited_requirement_cannot_remove_its_context(call_projects, selected
     error = call_projects('update_delivery_requirement', {
         'project_id': selected_project.project.pk, 'node_id': selected_project.requirement.pk,
         'expected_version': current_version(call_projects, selected_project.project),
-        'data': {'context_id': None, 'source_references': []},
+        'context_id': None, 'source_references': [],
     }, expect_error=True)
 
     selected_project.requirement.refresh_from_db()

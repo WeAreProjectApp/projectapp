@@ -16,6 +16,7 @@ from content.mcp.protocol import ToolError
 
 NOTICE_VERSION = {'type': 'integer', 'minimum': 1,
                   'description': 'Versión del aviso obtenida con get_delivery_notification_event.'}
+EVENT_ID = {**CONTEXT_ID, 'description': 'UUID del evento de aviso de entrega dentro del proyecto.'}
 
 
 def _service():
@@ -43,18 +44,22 @@ DELIVERY_NOTIFICATION_TOOLS = [
     _tool('list_delivery_notification_events', 'Consulta eventos e intentos de avisos de entrega con paginación y estado explícitos.',
           lambda args, actor: _call(_service().list_events, args['project_id'], actor,
                                    page=args.get('page', 1), status=args.get('status')),
-          {'page': {'type': 'integer', 'minimum': 1}, 'status': {'type': 'string',
-           'enum': ['pending', 'sending', 'sent', 'failed', 'unknown', 'cancelled']}}),
+          {'page': {'type': 'integer', 'minimum': 1, 'default': 1,
+                    'description': 'Número de página desde uno; 1 por defecto.'},
+           'status': {'type': 'string',
+                      'description': 'Estado del aviso: pending, sending, sent, failed, unknown o cancelled; sin valor se incluyen todos.',
+                      'enum': ['pending', 'sending', 'sent', 'failed', 'unknown', 'cancelled']}}),
     _tool('get_delivery_notification_event', 'Consulta un aviso y sus intentos sin secretos, HTML ni rutas de almacenamiento.',
           lambda args, actor: _call(_service().get_event, args['project_id'], actor, args['event_id']),
-          {'event_id': CONTEXT_ID}, ('event_id',)),
+          {'event_id': EVENT_ID}, ('event_id',)),
     _tool('preview_delivery_notification_retry', 'Muestra el contenido, destinatarios y hash de un fallo confirmado sin ejecutar SMTP.',
           lambda args, actor: _call(_service().retry_impact, args['project_id'], actor,
                                    args['event_id'], args['expected_version']),
-          {'event_id': CONTEXT_ID, 'expected_version': NOTICE_VERSION}, ('event_id', 'expected_version')),
+          {'event_id': EVENT_ID, 'expected_version': NOTICE_VERSION}, ('event_id', 'expected_version')),
     _tool('retry_delivery_notification_event', 'Reintenta un fallo confirmado tras confirmar el aviso exacto; estados sending o unknown permanecen bloqueados.',
-          _retry, {'event_id': CONTEXT_ID, 'expected_version': NOTICE_VERSION, 'request_id': REQUEST_ID,
-                   'preview_sha256': {**TEXT, 'minLength': 64, 'maxLength': 64}},
+          _retry, {'event_id': EVENT_ID, 'expected_version': NOTICE_VERSION, 'request_id': REQUEST_ID,
+                   'preview_sha256': {**TEXT, 'minLength': 64, 'maxLength': 64,
+                                      'description': 'Huella SHA-256 de 64 caracteres del aviso exacto obtenido en la vista previa; debe coincidir al confirmar.'}},
           ('event_id', 'expected_version', 'request_id', 'preview_sha256'),
           risk='sensitive', durable_execution=True, impact_builder=_impact),
 ]

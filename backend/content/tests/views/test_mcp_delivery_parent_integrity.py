@@ -31,8 +31,8 @@ def traced(call_projects):
     call_projects('update_delivery_requirement', {
         'project_id': context.project.pk, 'node_id': context.first.pk,
         'expected_version': current_version(call_projects, context.project),
-        'data': {'context_id': prepared['id'], 'source_references': [citation(prepared)],
-                 'guide': {**context.first.guide, 'role': ''}},
+        'context_id': prepared['id'], 'source_references': [citation(prepared)],
+        'guide': {**context.first.guide, 'role': ''},
     })
     context.first.refresh_from_db()
     return context, prepared
@@ -46,7 +46,7 @@ def test_mcp_phase_move_cannot_change_a_descendant_guide_contract(call_projects,
 
     error = call_projects('update_delivery_phase', {
         'project_id': context.project.pk, 'node_id': context.phase.pk,
-        'expected_version': expected, 'data': {'scope_id': destination.pk},
+        'expected_version': expected, 'scope_id': destination.pk,
     }, expect_error=True)
 
     context.phase.refresh_from_db()
@@ -63,7 +63,7 @@ def test_mcp_stage_move_preserves_a_compatible_draft_context(call_projects, trac
     call_projects('update_delivery_stage', {
         'project_id': context.project.pk, 'node_id': context.stage.pk,
         'expected_version': current_version(call_projects, context.project),
-        'data': {'phase_id': destination.pk},
+        'phase_id': destination.pk,
     })
 
     context.stage.refresh_from_db()

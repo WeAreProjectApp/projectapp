@@ -24,7 +24,7 @@ pytestmark = pytest.mark.django_db
 def contract_arguments(call, context):
     """Edit a visible title without changing its signed contractual source."""
     return {'project_id': context.project.pk, 'node_id': context.contract.pk,
-        'expected_version': current_version(call, context.project), 'data': {'title': 'Reviewed public title'}}
+        'expected_version': current_version(call, context.project), 'title': 'Reviewed public title'}
 
 
 def document_arguments(call, context, doc):
@@ -46,7 +46,9 @@ def test_signed_contract_preview_uses_the_evidence_when_live_cache_is_missing(ca
 def test_signed_contract_confirmation_ignores_an_unexposed_live_draft_edit(call_projects, public_project, superuser):
     """Fails if a draft not served to the client invalidates its signed source."""
     sign_contract(public_project, superuser)
-    arguments = {**contract_arguments(call_projects, public_project), 'data': {'client_visible': False}}
+    arguments = contract_arguments(call_projects, public_project)
+    arguments.pop('title')
+    arguments['client_visible'] = False
     preview = call_projects('update_delivery_contract', arguments)
     public_project.document.content_markdown = '# Changed live draft only'
     public_project.document.save(update_fields=['content_markdown'])
