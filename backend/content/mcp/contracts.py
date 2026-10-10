@@ -189,6 +189,25 @@ MCP_MODEL_CONTRACTS = {
             ),
         ),
         _contract(
+            'content.DocumentOwnershipOperation',
+            read_only=(
+                'id plan_hash items created_folder_ids deleted_folder_snapshots '
+                'created_project_id report reverts'
+            ),
+            excluded=(
+                _excluded(
+                    'Metadatos de auditoría administrados por el servidor; '
+                    'no se incluyen en los reportes MCP de migración.',
+                    'kind origin reason actor credential created_at',
+                )
+                | _excluded(
+                    'Solicitud normalizada e idempotencia internas; el MCP '
+                    'devuelve el plan y el recibo, no la entrada persistida.',
+                    'request_id input',
+                )
+            ),
+        ),
+        _contract(
             'content.DocumentStateEpisode',
             read_only='id opened_by closed_by created_at updated_at',
             read_write='document state opened_at closed_at outcome close_note origin',
