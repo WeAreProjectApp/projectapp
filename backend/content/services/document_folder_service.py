@@ -18,15 +18,21 @@ Modos (el operador elige cada vez; no hay default):
 - ``propagate``: el contenido alcanzable sigue a la carpeta al nuevo cliente.
 - ``folder_only``: sólo cambia la carpeta; el contenido se queda como está.
 """
-from content.services.entity_history import historical_write
 import logging
+from copy import copy
 
-from django.db import transaction
-from rest_framework.exceptions import ValidationError
-
+from accounts.models import Project
 from content.models import AccountingChangeLog, Document, DocumentFolder
 from content.services import accounting_service
+from content.services.document_ownership_planner import (
+    OwnershipPlanError,
+    portal_audience,
+)
 from content.services.document_type_codes import COLLECTION_ACCOUNT
+from content.services.entity_history import historical_write
+from django.contrib.auth import get_user_model
+from django.db import transaction
+from rest_framework.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -35,6 +41,56 @@ EntityType = AccountingChangeLog.EntityType
 MODE_PROPAGATE = 'propagate'
 MODE_FOLDER_ONLY = 'folder_only'
 MODES = (MODE_PROPAGATE, MODE_FOLDER_ONLY)
+
+
+def document_portal_audience(document, state=None, *, lock=False):
+    """Resolve the planner's audience for a current or hypothetical document."""
+    from accounts.services.delivery_documents import PortalDocumentIndex
+
+    candidate = copy(document)
+    for field in ('client_user_id', 'project_id', 'is_client_visible', 'is_archived'):
+        if state is not None and field in state:
+            setattr(candidate, field, state[field])
+    # A locking read resolves the current owner under MySQL REPEATABLE READ.
+    projects = Project.objects.filter(pk=candidate.project_id)
+    project = (projects.select_for_update() if lock else projects).first() if candidate.project_id else None
+    candidate.project = project
+    owner_id = project.client_id if project else candidate.client_user_id
+    linked = (document.delivery_links.exists() or document.delivery_contracts.exists()
+              or document.delivery_amendments.exists())
+    delivery_audience = None
+    if linked and owner_id is not None:
+        owner = get_user_model().objects.get(pk=owner_id)
+        if PortalDocumentIndex(owner, [candidate]).visible(candidate):
+            delivery_audience = owner_id
+    return portal_audience({
+        'client_user_id': candidate.client_user_id, 'project_id': candidate.project_id,
+        'project_client_user_id': project.client_id if project else None,
+        'is_client_visible': candidate.is_client_visible, 'is_archived': candidate.is_archived,
+        'is_collection_account': getattr(document.document_type, 'code', None) == COLLECTION_ACCOUNT,
+        'delivery_linked': linked, 'delivery_audience': delivery_audience,
+    })
+
+
+def _reassignment_changes(record, new_user):
+    changes = {'client_user': new_user}
+    if record.project_id and record.project.client_id != new_user.pk:
+        changes['project'] = None
+    return changes
+
+
+def _portal_changes(documents, new_user):
+    changes = []
+    for document in documents:
+        after = {'client_user_id': new_user.pk, 'project_id': document.project_id}
+        if 'project' in _reassignment_changes(document, new_user):
+            after['project_id'] = None
+        before_audience = document_portal_audience(document)
+        after_audience = document_portal_audience(document, after)
+        if after_audience is not None and after_audience != before_audience:
+            changes.append({'document_id': document.pk, 'before_audience': before_audience,
+                            'after_audience': after_audience})
+    return changes
 
 
 def _profile_payload(profile):
@@ -202,6 +258,7 @@ def change_client_preview(folder, new_profile):
         ],
         'folder_ids': [f.pk for f in sets['folders_move']],
         'document_ids': [d.pk for d in sets['documents_move']],
+        'portal_changes': _portal_changes(sets['documents_move'], new_profile.user),
         'totals': {
             'folders': len(sets['folders_move']),
             'documents': len(sets['documents_move']),
@@ -214,26 +271,27 @@ def change_client_preview(folder, new_profile):
     }
 
 
-def _reassign(entity_type, record, new_user, user):
+def _reassign(entity_type, record, new_user, user, *, hide_new_exposure=False):
     """Mueve un registro al nuevo cliente y desvincula un proyecto ajeno."""
     old_values = accounting_service.snapshot_values(record, entity_type)
     fields = ['client_user']
     from accounts.services.billing_reassignment import validate_document_reassignment
-    changes = {'client_user': new_user}
-    if record.project_id and record.project.client_id != new_user.pk:
-        changes['project'] = None
+    changes = _reassignment_changes(record, new_user)
     validate_document_reassignment(record, changes=changes, lock=True)
     record.client_user = new_user
-    if record.project_id and record.project.client_id != new_user.pk:
+    if 'project' in changes:
         record.project = None
         fields.append('project')
+    if hide_new_exposure:
+        record.is_client_visible = False
+        fields.append('is_client_visible')
     record.save(update_fields=[*fields, 'updated_at'])
     accounting_service.log_entity_diff(entity_type, record, old_values, user)
 
 
 @historical_write
 @transaction.atomic
-def change_client_apply(folder, new_profile, mode, user):
+def change_client_apply(folder, new_profile, mode, user, *, portal_policy=None):
     """Mueve la carpeta a ``new_profile`` y hace la cascada según ``mode``.
 
     Una sola transacción: una carpeta a medio mover parte en dos las cifras
@@ -251,6 +309,16 @@ def change_client_apply(folder, new_profile, mode, user):
     sets['documents_move'] = [locked.documents.get(doc.pk, doc) for doc in sets['documents_move']]
     new_user = new_profile.user
 
+    exposures = _portal_changes(sets['documents_move'], new_user) if mode == MODE_PROPAGATE and portal_policy else []
+    if exposures and portal_policy == 'abort':
+        raise OwnershipPlanError(
+            'El cambio daría acceso a un nuevo cliente en el portal.', code='portal_exposure',
+            blockers=[{'code': 'portal_exposure', 'message': 'El cambio daría acceso a un nuevo cliente en el portal.',
+                       'resource_type': 'document', 'resource_id': row['document_id'], **row}
+                      for row in exposures],
+        )
+    hidden_ids = {row['document_id'] for row in exposures} if portal_policy == 'hide_new_exposure' else set()
+
     _reassign(EntityType.DOCUMENT_FOLDER, folder, new_user, user)
 
     moved = {'folders': 0, 'documents': 0}
@@ -267,7 +335,8 @@ def change_client_apply(folder, new_profile, mode, user):
             _reassign(EntityType.DOCUMENT_FOLDER, child, new_user, user)
             moved['folders'] += 1
         for document in sets['documents_move']:
-            _reassign(EntityType.DOCUMENT, document, new_user, user)
+            _reassign(EntityType.DOCUMENT, document, new_user, user,
+                      hide_new_exposure=document.pk in hidden_ids)
             moved['documents'] += 1
 
     logger.info(

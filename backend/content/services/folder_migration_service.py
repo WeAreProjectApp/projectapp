@@ -32,6 +32,7 @@ from content.services.contract_mirror_service import (
     pinned_mirror_folder,
 )
 from content.services.diagnostic_privacy import register_mcp_domain_codes
+from content.services.document_folder_service import document_portal_audience
 from content.services.document_ownership_planner import (
     OwnershipPlanError,
     apply_ownership_plan,
@@ -79,7 +80,7 @@ DOCUMENT_FIELDS = (
 register_mcp_domain_codes(
     'plan_token_invalid', 'source_name_conflict', 'template_name_conflict', 'migration_blocked',
     'undo_blocked', 'changed_since', 'new_content_since', 'project_in_use', 'already_reverted',
-    'request_id_conflict',
+    'request_id_conflict', 'undo_audience_changed',
 )
 
 
@@ -371,7 +372,7 @@ def _require_plan(plan, expected_hash):
         raise FolderMigrationError('La migración tiene bloqueos; no se modificó ningún registro.', blockers=plan['blockers'])
 
 
-def _lock_scope(plan):
+def _lock_scope(plan, *, restore_project_ids=()):
     # The mutex precedes projects, then folders, then documents, all in pk order.
     DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
     folder_ids = set(plan['baseline']['folder_ids'])
@@ -387,6 +388,7 @@ def _lock_scope(plan):
     previous_documents = {row.pk: document_guard(row) for row in document_query}
     projects = {value for row in plan['rows'] for state in ('before', 'after')
                 for value in [row[state].get('project_id')] if type(value) is int}
+    projects.update(restore_project_ids)
     if type(plan['project_actions']['project_id']) is int:
         projects.add(plan['project_actions']['project_id'])
     projects.update(DocumentFolder.objects.filter(pk__in=folder_ids, project__isnull=False).values_list('project_id', flat=True))
@@ -540,7 +542,8 @@ def apply_folder_migration(plan_token, reason, request_id, *, actor, credential=
     data = plan['input']
     tracked = {('content.documentfolder', pk): _state(row) for pk in plan['baseline']['folder_ids']
                if (row := DocumentFolder.objects.filter(pk=pk).first()) is not None}
-    tracked.update({('content.document', pk): _state(row) for pk in plan['baseline']['document_ids']
+    tracked.update({('content.document', pk): {**_state(row), 'portal_audience': document_portal_audience(row, lock=True)}
+                    for pk in plan['baseline']['document_ids']
                     if (row := Document.objects.filter(pk=pk).first()) is not None})
     source = DocumentFolder.objects.get(pk=data['source_folder_id'])
     for rename in plan['renames']:
@@ -595,7 +598,8 @@ def apply_folder_migration(plan_token, reason, request_id, *, actor, credential=
     report = {
         'migration_id': operation.pk, 'operation_id': operation.pk, 'strategy': data['strategy'],
         'project_id': project.pk, 'root_folder_id': root.pk, 'source_folder_id': source.pk,
-        'plan_hash': plan['plan_hash'], 'moved': [item for item in items if item['before'] != item['after']],
+        'plan_hash': plan['plan_hash'],
+        'moved': [item for item in items if any(item['before'][key] != value for key, value in item['after'].items())],
         'archived_folder_ids': archived, 'pending': pending, 'pending_reason': 'La fuente conserva elementos.' if pending else None,
         'created_folder_ids': created, 'created_project_id': created_project_id,
         'deleted_folder_ids': [row['id'] for row in deleted], 'warnings': plan['warnings'],
@@ -646,6 +650,10 @@ def preview_undo_migration(operation_id, *, lock=False):
             changed.append({'model': item['model'], 'id': item['id']})
         elif row is not None and isinstance(row, Document) and _undo_would_change_frozen_document(item, row, lock=lock):
             changed.append({'model': item['model'], 'id': item['id'], 'reason': 'ownership_frozen'})
+        if isinstance(row, Document):
+            audience_blocker = _undo_audience_blocker(item, row, lock=lock)
+            if audience_blocker:
+                blockers.append(audience_blocker)
     for pk in operation.created_folder_ids:
         row = _current(DocumentFolder.objects.filter(pk=pk), lock).first()
         value = _state(row) if row else None
@@ -687,6 +695,18 @@ def preview_undo_migration(operation_id, *, lock=False):
     return impact
 
 
+def _undo_audience_blocker(item, document, *, lock=False):
+    restored_audience = document_portal_audience(document, item['before'], lock=lock)
+    original_audience = item['before'].get('portal_audience')
+    if restored_audience is not None and restored_audience != original_audience:
+        return _block(
+            'undo_audience_changed', f'Deshacer daría acceso a un nuevo cliente al documento «{document.title}».',
+            resource_type='document', resource_id=document.pk, document_id=document.pk,
+            before_audience=original_audience, after_audience=restored_audience,
+        )
+    return None
+
+
 def _undo_would_change_frozen_document(item, document, *, lock):
     pair = ('client_user_id', 'project_id')
     ownership_changed = any(item['before'][key] != item['after'][key] for key in pair)
@@ -706,7 +726,8 @@ def _undo_would_change_frozen_document(item, document, *, lock):
 def _restore_values(model, pk, state):
     row = model.objects.get(pk=pk)
     capture_instance(row)
-    model.objects.filter(pk=pk).update(**state)
+    fields = DOCUMENT_FIELDS if model is Document else FOLDER_FIELDS
+    model.objects.filter(pk=pk).update(**{key: value for key, value in state.items() if key in fields})
 
 
 def _delete_created_folders(ids):
@@ -738,7 +759,9 @@ def undo_migration(operation_id, expected_impact_hash, reason, request_id, *, ac
         raise NotFound('Migración no encontrada.')
     impact = preview_undo_migration(operation_id)
     _lock_scope({'baseline': {'folder_ids': impact['contents']['folder_ids'], 'document_ids': impact['contents']['document_ids']},
-                 'rows': [], 'project_actions': {'project_id': operation.report['project_id']}})
+                 'rows': [], 'project_actions': {'project_id': operation.report['project_id']}},
+                restore_project_ids={item['before']['project_id'] for item in operation.items
+                                     if item['before']['project_id'] is not None})
     operation = DocumentOwnershipOperation.objects.select_for_update().get(pk=operation_id)
     replay = _replay(request_id, expected_impact_hash, actor, credential, lock=True)
     if replay is not None:
@@ -759,6 +782,10 @@ def undo_migration(operation_id, expected_impact_hash, reason, request_id, *, ac
         DocumentFolder.objects.filter(pk=row.pk).update(created_at=snapshot['created_at'])
     for item in operation.items:
         model = MODELS[item['model']]
+        if model is Document:
+            blocker = _undo_audience_blocker(item, model.objects.get(pk=item['id']), lock=True)
+            if blocker:
+                raise FolderMigrationError('No se puede deshacer la migración.', code='undo_blocked', blockers=[blocker])
         _restore_values(model, item['id'], item['before'])
         undo_items.append({'model': item['model'], 'id': item['id'], 'before': item['after'], 'after': _state(model.objects.get(pk=item['id']))})
     _delete_created_folders(operation.created_folder_ids)

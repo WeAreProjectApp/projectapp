@@ -148,8 +148,22 @@ DOCUMENT_PARITY_TOOLS = [
     _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True),
     _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write'),
     _op('reorder_folders', 'Reordena carpetas hermanas con una lista explícita de ids.', 'reorder-document-folders', 'POST', risk='write'),
-    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta.', 'preview-document-folder-client-change', path=('folder_id',)),
-    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True),
+    _op('preview_folder_client_change', 'Calcula la cascada de cambiar el cliente de una carpeta; portal_changes lista los documentos que darían acceso a un nuevo cliente.', 'preview-document-folder-client-change', path=('folder_id',), query_schema={
+        'type': 'object', 'additionalProperties': False,
+        'properties': {'client_profile_id': {'type': 'integer', 'minimum': 1}},
+        'required': ['client_profile_id'],
+    }),
+    _op('change_folder_client', 'Aplica el cambio de cliente de carpeta previamente revisado. portal_policy: abort (default MCP) bloquea nueva audiencia, allow la permite y hide_new_exposure oculta los documentos que ganarían acceso.', 'change-document-folder-client', 'POST', ('folder_id',), 'sensitive', True, payload_schema={
+        'type': 'object', 'additionalProperties': False,
+        'properties': {
+            'client_profile_id': {'type': 'integer', 'minimum': 1},
+            'mode': {'type': 'string', 'enum': ['propagate', 'folder_only']},
+            'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
+            'folder_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}},
+            'portal_policy': {**PORTAL_POLICY_SCHEMA, 'description': 'abort bloquea nueva audiencia; allow la permite; hide_new_exposure oculta los documentos que ganarían acceso.'},
+        },
+        'required': ['client_profile_id', 'mode'],
+    }),
     _op('list_document_tags', 'Lista el catálogo de etiquetas documentales.', 'list-document-tags'),
     _op('create_document_tag', 'Crea una etiqueta documental.', 'create-document-tag', 'POST', risk='write'),
     _op('update_document_tag', 'Actualiza una etiqueta documental.', 'update-document-tag', 'PATCH', ('tag_id',), 'write'),
@@ -346,12 +360,12 @@ CARD_PARITY_TOOLS = [
 ]
 
 
-def _ownership_defaults(handler):
+def _ownership_defaults(handler, *, defaults=(('client_policy', 'abort_on_conflict'), ('portal_policy', 'abort'))):
     def wrapped(arguments):
         arguments = dict(arguments)
         nested = arguments.get('data')
         nested = nested if isinstance(nested, dict) else {}
-        for name, value in (('client_policy', 'abort_on_conflict'), ('portal_policy', 'abort')):
+        for name, value in defaults:
             if name not in arguments and name not in nested:
                 arguments[name] = value
         return handler(arguments)
@@ -361,6 +375,8 @@ def _ownership_defaults(handler):
 for _tool in DOCUMENT_PARITY_TOOLS:
     if _tool['name'] in ('move_documents', 'update_folder'):
         _tool['handler'] = _ownership_defaults(_tool['handler'])
+    if _tool['name'] == 'change_folder_client':
+        _tool['handler'] = _ownership_defaults(_tool['handler'], defaults=(('portal_policy', 'abort'),))
     if _tool['name'] == 'move_documents':
         _tool['input_schema'] = _MOVE_SCHEMA
         _tool['output_schema'] = {

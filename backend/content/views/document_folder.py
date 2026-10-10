@@ -485,7 +485,17 @@ def change_document_folder_client(request, folder_id):
     if managed:
         return managed
 
+    from rest_framework import serializers
+
+    from content.services.document_ownership_planner import (
+        PORTAL_POLICIES,
+        OwnershipPlanError,
+    )
+
     serializer = DocumentFolderChangeClientSerializer(data=request.data)
+    serializer.fields['portal_policy'] = serializers.ChoiceField(
+        choices=PORTAL_POLICIES, required=False,
+    )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     mode = serializer.validated_data['mode']
@@ -517,9 +527,16 @@ def change_document_folder_client(request, folder_id):
     if error:
         return error
 
-    result = document_folder_service.change_client_apply(
-        folder, profile, mode, request.user,
-    )
+    try:
+        result = document_folder_service.change_client_apply(
+            folder, profile, mode, request.user,
+            portal_policy=serializer.validated_data.get('portal_policy'),
+        )
+    except OwnershipPlanError as exc:
+        return error_response(
+            exc.detail['detail'], code=exc.code, status=exc.status_code,
+            errors={**exc.details, 'details': exc.details, 'detail': exc.detail['detail']},
+        )
     return Response({
         'folder': _folder_payload(
             folder, scope='archived' if folder.is_archived else 'active',
