@@ -1608,6 +1608,10 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     ).toBeVisible();
     // Defaults to what is still owed, not the full projection.
     await expect(page.getByTestId('partner-split-total')).toHaveValue('600.000');
+    // Bug caught: the 50/50 toggle was on but both partner fields stayed
+    // empty until the total was retyped.
+    await expect(page.getByTestId('partner-split-gustavo')).toHaveValue('300.000');
+    await expect(page.getByTestId('partner-split-carlos')).toHaveValue('300.000');
 
     // The period input asks for the exact payment date by default.
     await page.getByTestId('income-liquidate-period').fill('2026-11-17');
@@ -1621,6 +1625,9 @@ test.describe('Admin Accounting Incomes: liquidation, write-off and paid state',
     expect(call.body.period_date).toBe('2026-11-17');
     // Liquidated money defaults into the pocket.
     expect(call.body.destination).toBe('pocket');
+    // The split saved is the split on screen.
+    expect(Number(call.body.gustavo_amount)).toBe(300000);
+    expect(Number(call.body.carlos_amount)).toBe(300000);
     // Nothing allocated → behaves exactly like the old plain liquidation.
     expect(call.body.deductions).toEqual([]);
     expect(call.body.expected_incomes).toEqual([]);
