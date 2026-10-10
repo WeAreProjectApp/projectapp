@@ -15,6 +15,11 @@ EXCLUDED_DETAIL_KEYS = frozenset({
 def normalize_error(payload, status_code=400):
     data = payload if isinstance(payload, dict) else {"detail": payload}
     errors = []
+    # Serializer fields carry codes or containers; an envelope message is text.
+    message_value = data.get('message')
+    message_is_field_error = isinstance(message_value, (dict, list, tuple)) or (
+        getattr(message_value, 'code', None) is not None
+    )
 
     def visit(value, path):
         if isinstance(value, dict):
@@ -33,12 +38,16 @@ def normalize_error(payload, status_code=400):
             )
 
     for field, value in data.items():
-        if field not in EXCLUDED_DETAIL_KEYS | STRUCTURED_DETAIL_KEYS:
+        if field not in EXCLUDED_DETAIL_KEYS | STRUCTURED_DETAIL_KEYS or (
+            field == 'message' and message_is_field_error
+        ):
             visit(value, field)
-    message = data.get("detail") or data.get("message")
+    message_key = 'detail' if data.get('detail') else 'message'
+    message = data.get(message_key)
     if message:
         if isinstance(message, (dict, list, tuple)):
-            visit(message, "")
+            if message_key == 'detail':
+                visit(message, "")
             message = "; ".join(row["message"] for row in errors)
         else:
             message = str(message)

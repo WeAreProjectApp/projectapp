@@ -992,12 +992,13 @@ def restore_document_note(arguments):
 # ── Registry ─────────────────────────────────────────────────────────────────
 
 _DOCUMENT_ID_PROP = {
-    'document_id': {'type': 'integer', 'description': 'ID del documento markdown.'},
+    'document_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del documento markdown.'},
 }
 
 _CLIENT_PROJECT_PROPS = {
     'client_id': {
         'type': ['integer', 'null'],
+        'minimum': 1,
         'description': (
             'ID del perfil de cliente; null desvincula. Usa el MCP de clientes '
             'para localizarlo.'
@@ -1005,6 +1006,7 @@ _CLIENT_PROJECT_PROPS = {
     },
     'project_id': {
         'type': ['integer', 'null'],
+        'minimum': 1,
         'description': (
             'ID del proyecto; debe pertenecer al cliente seleccionado. Si se '
             'envía sin client_id, el cliente se deriva del proyecto.'
@@ -1052,7 +1054,7 @@ DOCUMENT_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'folder_id': {'type': 'integer', 'description': 'ID de la carpeta a renombrar.'},
+                'folder_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la carpeta a renombrar.'},
                 'name': {'type': 'string', 'description': 'Nuevo nombre.'},
             },
             'required': ['folder_id', 'name'],
@@ -1071,19 +1073,22 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 'folder_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de carpeta, "none" (raíz) o "all" (todas).',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de carpeta, "none" (raíz) o "all" (todas); omitir o null no filtra.',
                 },
                 'client_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de cliente, "none" (sin cliente) o "all".',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de cliente, "none" (sin cliente) o "all"; omitir o null no filtra.',
                 },
                 'project_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de proyecto, "none" (sin proyecto) o "all".',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de proyecto, "none" (sin proyecto) o "all"; omitir o null no filtra.',
                 },
-                'page': {'type': 'integer', 'default': 1},
-                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50},
+                'page': {'type': 'integer', 'default': 1, 'description': 'Página solicitada; por defecto 1. Valores menores se ajustan a 1.'},
+                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50, 'description': 'Documentos por página; por defecto 20, ajustados entre 1 y 50.'},
             },
         },
         'handler': list_documents,
@@ -1119,11 +1124,11 @@ DOCUMENT_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'title': {'type': 'string'},
+                'title': {'type': 'string', 'description': 'Título del documento; no puede quedar vacío tras quitar espacios.'},
                 'markdown': {'type': 'string', 'description': 'Contenido en Markdown.'},
-                'folder_id': {'type': ['integer', 'null'], 'description': 'Carpeta destino (opcional).'},
-                'language': {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
-                'client_name': {'type': 'string'},
+                'folder_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo de la carpeta destino; omitir o null guarda en raíz.'},
+                'language': {'type': 'string', 'enum': sorted(LANGUAGE_CHOICES), 'default': 'es', 'description': 'Idioma del documento: es o en; por defecto es.'},
+                'client_name': {'type': ['string', 'null'], 'description': 'Nombre del cliente para el documento; omitir o null deja el nombre vacío si no se deriva de una asociación.'},
                 **_CLIENT_PROJECT_PROPS,
                 **_COVER_FLAG_PROPS,
                 **_CLIENT_NOTE_PROPS,
@@ -1153,8 +1158,8 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'title': {'type': 'string'},
-                'markdown': {'type': 'string'},
+                'title': {'type': 'string', 'description': 'Nuevo título no vacío; omitir conserva el actual.'},
+                'markdown': {'type': 'string', 'description': 'Nuevo contenido Markdown no vacío; omitir conserva el actual.'},
                 'content_markdown': {
                     'type': 'string',
                     'description': 'Alias compatible obsoleto de markdown.',
@@ -1165,6 +1170,7 @@ DOCUMENT_TOOLS = [
                 },
                 'folder_id': {
                     'type': ['integer', 'null'],
+                    'minimum': 1,
                     'description': 'Carpeta destino activa; el movimiento usa las políticas de propiedad y portal.',
                 },
                 'client_policy': CLIENT_POLICY_SCHEMA,
@@ -1173,9 +1179,9 @@ DOCUMENT_TOOLS = [
                     'type': 'boolean',
                     'description': 'Mostrar este documento en el portal del cliente.',
                 },
-                'client_name': {'type': 'string'},
+                'client_name': {'type': ['string', 'null'], 'description': 'Nombre del cliente para el documento; null equivale a vacío. Al cambiar de cliente puede derivarse de su perfil; omitir conserva el actual salvo ese cambio.'},
                 **_CLIENT_PROJECT_PROPS,
-                'language': {'type': 'string', 'enum': ['es', 'en']},
+                'language': {'type': 'string', 'enum': sorted(LANGUAGE_CHOICES), 'description': 'Idioma del documento: es o en; omitir conserva el actual.'},
                 **_COVER_FLAG_PROPS,
                 **_CLIENT_NOTE_PROPS,
             },
@@ -1202,10 +1208,10 @@ DOCUMENT_TOOLS = [
                     'description': 'Fragmento de Markdown a añadir al final.',
                 },
                 'separator': {
-                    'type': 'string',
+                    'type': ['string', 'null'],
                     'description': (
                         'Texto entre el contenido existente y el fragmento '
-                        '(default: línea en blanco "\\n\\n").'
+                        '(omitir o null: línea en blanco "\\n\\n").'
                     ),
                 },
                 'if_match': {
@@ -1247,10 +1253,11 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'state_id': {'type': 'integer'},
+                'state_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del estado activo a abrir; consulta list_document_states.'},
                 'opened_at': {
-                    'type': 'string',
-                    'description': 'Fecha/hora real ISO 8601 (opcional).',
+                    'type': ['string', 'null'],
+                    'format': 'date-time',
+                    'description': 'Fecha y hora real ISO 8601; omitir o null usa la fecha y hora actuales.',
                 },
             },
             'required': ['document_id', 'state_id'],
@@ -1267,13 +1274,14 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'episode_id': {'type': 'integer'},
+                'episode_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del episodio abierto de este documento.'},
                 'outcome': {
                     'type': 'string',
                     'enum': ['completed', 'removed'],
                     'default': 'completed',
+                    'description': 'completed registra trabajo realizado; removed quita la marca. Por defecto completed.',
                 },
-                'note': {'type': 'string', 'maxLength': 500},
+                'note': {'type': 'string', 'maxLength': 500, 'description': 'Nota de cierre, hasta 500 caracteres sin espacios exteriores; por defecto vacía.'},
             },
             'required': ['document_id', 'episode_id'],
         },
@@ -1289,9 +1297,9 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'title': {'type': 'string', 'maxLength': 120},
-                'content': {'type': 'string'},
-                'mark_needs_fix': {'type': 'boolean', 'default': False},
+                'title': {'type': 'string', 'maxLength': 120, 'description': 'Título de la observación, hasta 120 caracteres; por defecto vacío.'},
+                'content': {'type': 'string', 'description': 'Contenido privado de la observación; debe ser texto no vacío.'},
+                'mark_needs_fix': {'type': 'boolean', 'default': False, 'description': 'Abre o enlaza la señal Solucionar bug; por defecto false.'},
             },
             'required': ['document_id', 'content'],
         },
@@ -1307,17 +1315,19 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'note_id': {'type': 'integer'},
+                'note_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la observación activa de este documento.'},
                 'outcome': {
                     'type': 'string',
                     'enum': ['resolved', 'discarded'],
                     'default': 'resolved',
+                    'description': 'resolved resuelve la observación; discarded la descarta. Por defecto resolved.',
                 },
-                'resolution_note': {'type': 'string', 'maxLength': 500},
-                'close_linked_state': {'type': 'boolean', 'default': False},
+                'resolution_note': {'type': 'string', 'maxLength': 500, 'description': 'Nota de resolución, hasta 500 caracteres; por defecto vacía.'},
+                'close_linked_state': {'type': 'boolean', 'default': False, 'description': 'Solicita cerrar la señal enlazada cuando corresponde; por defecto false.'},
                 'move_cycle_to_bug_attended': {
                     'type': 'boolean',
                     'default': False,
+                    'description': 'Al resolver, solicita abrir Bug atendido en el ciclo; por defecto false.',
                 },
             },
             'required': ['document_id', 'note_id'],
@@ -1336,10 +1346,11 @@ DOCUMENT_TOOLS = [
                 **_DOCUMENT_ID_PROP,
                 'note_ids': {
                     'type': 'array',
-                    'items': {'type': 'integer'},
+                    'items': {'type': 'integer', 'minimum': 1},
                     'minItems': 1,
                     'maxItems': 100,
                     'uniqueItems': True,
+                    'description': 'IDs positivos de 1 a 100 observaciones de este documento, sin repetidos.',
                 },
             },
             'required': ['document_id', 'note_ids'],
@@ -1369,7 +1380,7 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'note_id': {'type': 'integer'},
+                'note_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la observación de este documento que se restaurará.'},
             },
             'required': ['document_id', 'note_id'],
         },
@@ -1379,12 +1390,12 @@ DOCUMENT_TOOLS = [
 
 
 _FOLDER_FIELDS = {
-    'name': {'type': 'string', 'minLength': 1, 'maxLength': 120},
-    'parent_id': {'type': ['integer', 'null'], 'minimum': 1},
+    'name': {'type': 'string', 'minLength': 1, 'maxLength': 120, 'description': 'Nombre de la carpeta, de 1 a 120 caracteres; debe ser único entre sus hermanas.'},
+    'parent_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo de la carpeta padre; omitir o null crea en raíz.'},
     'parent': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Alias compatible de parent_id.'},
-    'order': {'type': 'integer', 'minimum': 0},
-    'client': {'type': ['integer', 'null'], 'minimum': 1},
-    'project': {'type': ['integer', 'null'], 'minimum': 1},
+    'order': {'type': 'integer', 'minimum': 0, 'description': 'Orden de la carpeta entre sus hermanas, desde 0; por defecto 0.'},
+    'client': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo del perfil de cliente; null deja sin cliente salvo el que derive del proyecto. Omitir client y project hereda del padre.'},
+    'project': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo del proyecto, compatible con el cliente; null deja sin proyecto. Omitir client y project hereda del padre.'},
 }
 
 
@@ -1406,6 +1417,7 @@ def _validated_document_tool(handler, properties):
 
 for _tool in DOCUMENT_TOOLS:
     _schema = _tool['input_schema']
+    _schema['additionalProperties'] = False
     if _tool['name'] == 'create_folder':
         _schema['properties'] = _FOLDER_FIELDS.copy()
         _tool['description'] += ' Rechaza nombres duplicados, incluso archivados. El slug permanece estable.'
@@ -1418,10 +1430,12 @@ for _tool in DOCUMENT_TOOLS:
         _tool['description'] += ' El slug no cambia al renombrar.'
     if _tool['name'] in ('create_document', 'update_document', 'append_document'):
         _tool['output_schema'] = DOCUMENT_WRITE_SCHEMA
-        _schema['properties']['include_content'] = {'type': 'boolean', 'default': False}
+        _schema['properties']['include_content'] = {
+            'type': 'boolean', 'default': False,
+            'description': 'Añade el Markdown a la respuesta una sola vez; por defecto false devuelve sólo el resumen.',
+        }
         _tool['description'] += ' Devuelve un resumen; include_content=true añade markdown una sola vez.'
     if _tool['name'] in ('create_folder', 'rename_folder', 'list_folders', 'create_document', 'update_document', 'append_document'):
-        _schema['additionalProperties'] = False
         _tool['handler'] = _validated_document_tool(_tool['handler'], _schema['properties'])
 
 from content.mcp.contract_template_tools import CONTRACT_MIRROR_TOOLS

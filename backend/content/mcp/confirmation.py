@@ -10,6 +10,17 @@ from content.mcp.context import bypass_confirmation, current_mcp_context
 from content.models import McpActionIntent, McpCredential
 
 INTENT_TTL_MINUTES = 10
+CANCEL_ACTION_INPUT_SCHEMA = {
+    'type': 'object',
+    'properties': {
+        'confirmation_id': {
+            'type': 'string', 'format': 'uuid',
+            'description': 'UUID de la confirmación pendiente de esta credencial y conector; cancela la intención sin ejecutar su acción.',
+        },
+    },
+    'required': ['confirmation_id'],
+    'additionalProperties': False,
+}
 
 
 def canonical_arguments_hash(arguments):
