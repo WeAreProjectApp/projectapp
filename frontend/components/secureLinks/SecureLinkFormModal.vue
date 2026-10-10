@@ -11,7 +11,7 @@
         </BaseAlert>
 
         <SecureLinkTypeField
-          v-if="editingContent" v-model="form.secretType" v-model:custom-name="form.fields.custom_name"
+          v-model="form.secretType" v-model:custom-name="form.fields.custom_name"
           :types="store.types" :language="uiLanguage" :disabled="!catalogReady || store.isUpdating"
           :disabled-reason="t('secureLinks.typesPending')" :error="errors.secret_type" :custom-error="errors.custom_name"
         />
@@ -35,7 +35,7 @@
         </BaseFormField>
 
         <SecureLinkFields
-          v-if="editingContent && catalogReady"
+          v-if="catalogReady"
           :key="fieldsVersion"
           :language="uiLanguage"
           :disabled="store.isUpdating"
@@ -98,7 +98,7 @@
     <template #footer>
       <BaseModalActions>
         <BaseButton type="button" variant="ghost" size="sm" data-testid="secure-link-cancel" :disabled="store.isUpdating" :disabled-reason="t('secureLinks.panel.saving')" @click="requestClose(false)">{{ t('secureLinks.panel.cancel') }}</BaseButton>
-        <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" :disabled="editingContent && !catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
+        <BaseButton type="submit" :form="modalFormId" variant="primary" size="sm" :loading="store.isUpdating" :disabled="!catalogReady" :disabled-reason="t('secureLinks.typesPending')" data-testid="secure-link-save">
           {{ t(link ? 'secureLinks.panel.save' : 'secureLinks.panel.create') }}
         </BaseButton>
       </BaseModalActions>
@@ -127,7 +127,11 @@ const props = defineProps({
   modelValue: { type: Boolean, default: false },
   /** Existing link row when editing; null to create. */
   link: { type: Object, default: null },
-  /** Current decrypted values when editing (ephemeral, from the content view). */
+  /**
+   * Current decrypted values when editing (ephemeral, from the audited content
+   * view). Editing always goes through the content: the title alone is renamed
+   * in place from the detail.
+   */
   initialFields: { type: Object, default: null },
 });
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -138,7 +142,6 @@ const formElement = ref(null);
 const fieldsVersion = ref(0);
 const showConfiguration = ref(false);
 const configurationId = useId();
-const editingContent = computed(() => !props.link || Boolean(props.initialFields));
 
 const form = reactive({
   secretType: 'confidential_message', title: '', fields: {}, client: null, clientLabel: '',
@@ -161,7 +164,7 @@ watch(() => props.modelValue, (open) => {
   showConfiguration.value = false;
   resetErrors();
   typesError.value = false;
-  if (editingContent.value) loadTypes();
+  loadTypes();
   Object.assign(form, {
     secretType: props.link?.secret_type || 'confidential_message',
     title: props.link?.title || '',
@@ -196,11 +199,11 @@ function requestClose(value) {
 }
 
 async function submit() {
-  if (store.isUpdating || (editingContent.value && !catalogReady.value)) return;
+  if (store.isUpdating || !catalogReady.value) return;
   resetErrors();
   if (!form.title.trim()) errors.value.title = t('secureLinks.panel.titleRequired');
   else if ([...form.title.trim()].length > 160) errors.value.title = t('secureLinks.validation.maxLength', { max: 160 });
-  if (editingContent.value) validateFields(form.fields);
+  validateFields(form.fields);
   if (Object.keys(errors.value).length || generalError.value) {
     await focusError();
     return;
@@ -212,10 +215,6 @@ async function submit() {
     client: form.client || null,
     project: form.project || null,
   };
-  if (!editingContent.value) {
-    delete payload.secret_type;
-    delete payload.fields;
-  }
   const result = props.link
     ? await store.updateLink(props.link.id, payload)
     : await store.createLink({ ...payload, language: form.language, validity_days: form.validityDays });
@@ -223,7 +222,7 @@ async function submit() {
   if (!result.success) {
     mapErrors(result.error, [
       'title', 'client', 'project', ...(!props.link ? ['language', 'validity_days'] : []),
-      ...(editingContent.value ? ['secret_type', ...(selectedType.value?.fields || []).map((field) => field.key)] : []),
+      'secret_type', ...(selectedType.value?.fields || []).map((field) => field.key),
     ]);
     return;
   }

@@ -188,7 +188,8 @@ prefer the bare class without `/N`.
 | `BaseResizeHandle` | Accessible, natively hinted vertical separator shared by panels and tables: pointer capture, Arrow/Home/End keyboard control and double-click reset |
 | `BaseOverflowText` | `text`, `to`, `lines` (1/2), `stretch`, `expandable`, `testId`, `contentClasses`; measures real clipping (including after web-font readiness), adds one floating `BaseTooltip` only on overflow and exposes an in-place touch disclosure |
 | `BaseResponsiveTable` | `columns`, `rows` plus legacy accounting-table props. Comparative tables declare explicit `responsive` `keep`/`group`/`hide` policy and exactly one `primary`; `textPolicy` is `wrap`/`truncate`/`atomic`; opt-in resizing uses `columnWidth` on every column plus `columnWidthsKey`; `rowActionsLayout="menu-start"` reserves a fixed leading kebab track (after selection) and sizes the data columns per viewport profile (auto layout below 1024 px, re-shared percentages from there up), while `inline-end` preserves loose-icon rows; supports `caption`, `testIdPrefix`, `rowClass` and custom-only actions |
-| `BaseExploratoryList` | Exploratory CRUD list: one table from 1024 px and one stacked-card representation below it. Every column declares `mobile` as `primary`/`secondary`/`meta`/`hidden` and may opt into the same `textPolicy` contract |
+| `BaseExploratoryList` | Exploratory CRUD list: one table from 1024 px and one stacked-card representation below it. Every column declares `mobile` as `primary`/`secondary`/`meta`/`hidden` and may opt into the same `textPolicy` contract; `rowActionsLayout="menu-start"` puts the single kebab in a header-less 56 px track after selection and at the start of each card, while `inline-end` keeps the labeled trailing column |
+| `BaseRowActionsModal` | `open`, `title`, `subtitle`, `items`, `testid`, `lockScroll`; emits `close`. The modal behind a row kebab: takes the same entries as `BaseActionMenu` (`to` → NuxtLink, `href` → new tab, buttons close first and run `onClick` on the next tick) |
 | `BasePageShell` | `width` (`narrow`/`content`/`panel`/`full`), `as` — `panel` caps general content at 1400 px; the admin layout applies it globally |
 | `BaseAlert`     | `variant` (`info`/`success`/`warning`/`danger`), `title`, `dismissible`. Icon via `#icon` slot, body via default slot |
 | `BaseEmptyState` | `title`, `description`. Icon via `#icon`, custom body via default, CTA via `#actions` |
@@ -379,8 +380,9 @@ accounting table and list: the kebab alone leads the row and opens an actions
 modal (accounting uses `AccountingRowActionsModal` and
 `AccountingRowActionsButton`) whose first entry is «Detalle e historial»,
 followed by «Ver nota» when the record has a note. Nothing else sits beside the
-kebab — a second button in the fixed 56 px track overflows onto the data. The
-remaining `inline-end` tables outside accounting are pending migration.
+kebab — a second button in the fixed 56 px track overflows onto the data. Since
+2026-10-09 the exploratory lists follow it too (`BaseExploratoryList` with
+`BaseRowActionsModal`). The remaining `inline-end` tables are pending migration.
 
 A `<col>` is a column even when every cell under it is hidden, so a
 `menu-start` table with a responsive policy emits `<col>` only for its control
@@ -399,12 +401,28 @@ role explicitly:
   { key: 'name', label: 'Nombre', mobile: 'primary' },
   { key: 'status', label: 'Estado', mobile: 'secondary' },
   { key: 'internal_id', label: 'ID', mobile: 'hidden' },
-]" :rows="rows">
+]" :rows="rows" row-actions-layout="menu-start">
   <template #row-actions="{ row }">
-    <BaseActionMenu :items="actionsFor(row)" />
+    <BaseActionButton
+      action="more"
+      class="h-11 w-11 shrink-0"
+      :label="`Acciones de ${row.name}`"
+      @click.stop="actionsRow = row"
+    />
   </template>
 </BaseExploratoryList>
+<BaseRowActionsModal
+  :open="actionsRow !== null"
+  :title="actionsRow?.name || ''"
+  :items="actionsRow ? actionsFor(actionsRow) : []"
+  testid="example-actions-modal"
+  @close="actionsRow = null"
+/>
 ```
+
+`actionsFor(row)` returns the same entries a `BaseActionMenu` takes, so a list
+keeps its item builder and its entry test ids when it moves to the modal. The
+kebab's "Acciones de …" is an accessible name only, never visible text.
 
 ### Tabs and filters
 
@@ -459,10 +477,11 @@ its form, so clicking it and pressing Enter submit the same form. The named
 slot is optional: consumers without a footer retain the legacy layout.
 See [the panel inventory](../../../docs/PANEL_MODAL_FOOTERS.md) for the sweep.
 
-Use `BaseActionMenu` for row overflow and `BaseBulkActionBar` for selections;
-do not lay an unbounded number of actions side by side. Accounting tables open
-their row kebab into a modal instead (`AccountingRowActionsModal`): their
-wrappers scroll horizontally and would clip a dropdown on the last rows. `BaseButton` and
+Use `BaseActionMenu` for overflow outside tables and `BaseBulkActionBar` for
+selections; do not lay an unbounded number of actions side by side. Table and
+list rows open their kebab into a modal instead (`AccountingRowActionsModal` in
+accounting, `BaseRowActionsModal` elsewhere): their wrappers scroll
+horizontally and would clip a dropdown on the last rows. `BaseButton` and
 `BaseDropdown` enforce a 44px target for coarse pointers.
 
 Hover may enhance an action, never be the only way to discover it. A control

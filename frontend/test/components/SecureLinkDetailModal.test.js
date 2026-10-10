@@ -14,7 +14,7 @@ jest.mock('../../stores/services/request_http', () => ({
   delete_request: jest.fn(),
 }));
 
-const { get_request, create_request } = require('../../stores/services/request_http');
+const { get_request, create_request, patch_request } = require('../../stores/services/request_http');
 
 global.useI18n = jest.fn(() => ({ t: (key) => key }));
 
@@ -184,15 +184,36 @@ describe('SecureLinkDetailModal', () => {
     expect(wrapper.text()).toContain('Replacement link');
   });
 
-  it('opens metadata editing without requesting decrypted content', async () => {
+  it('offers a single edit option, through the content', async () => {
     const wrapper = mountModal();
     await flushPromises();
 
-    await wrapper.get('[data-testid="secure-link-edit"]').trigger('click');
+    // Fails if the detail shows a second "Editar" beside "Editar contenido" again.
+    expect(wrapper.findAll('[data-testid="secure-link-edit"]')).toHaveLength(0);
+    expect(wrapper.findAll('[data-testid="secure-link-edit-content"]')).toHaveLength(1);
+  });
 
-    // Fails if changing a title or association requires decrypting the secret.
-    expect(wrapper.emitted('edit')[0][0]).toEqual({ link: baseDetail, fields: null });
+  it('renames the link in place with a title-only update', async () => {
+    const renamed = {
+      ...baseDetail,
+      title: 'Admin del portal',
+      events: [{ id: 2, kind: 'updated', kind_label: 'Editado', actor_name: 'Admin', ip_address: '', details: {}, created_at: '2026-10-09T15:00:00Z' }],
+    };
+    const wrapper = mountModal();
+    await flushPromises();
+    patch_request.mockResolvedValueOnce({ data: renamed });
+
+    await wrapper.get('[data-testid="secure-link-title-edit"]').trigger('click');
+    await wrapper.get('[data-testid="secure-link-title-input"]').setValue('  Admin del portal ');
+    await wrapper.get('[data-testid="secure-link-title-form"]').trigger('submit');
+    await flushPromises();
+
+    // Fails if renaming decrypts the secret or sends the associations along with the title.
+    expect(patch_request).toHaveBeenCalledWith('secure-links/7/', { title: 'Admin del portal' });
     expect(create_request).not.toHaveBeenCalled();
+    expect(wrapper.emitted('changed')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="secure-link-title-editor"] h3').text()).toBe('Admin del portal');
+    expect(wrapper.get('[data-testid="secure-link-events"]').text()).toContain('Editado');
   });
 
   it('loads decrypted fields before opening content editing', async () => {

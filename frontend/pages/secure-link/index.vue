@@ -14,10 +14,6 @@
             <BaseActionIcon action="copy" />
             {{ copyFeedback.label || t('secureLinks.copyLink') }}
           </BaseButton>
-          <BaseButton as="a" variant="secondary" :to="mailtoHref" data-testid="secure-link-create-mail">
-            <BaseActionIcon action="send" />
-            {{ t('secureLinks.emailIt') }}
-          </BaseButton>
           <BaseButton variant="ghost" data-testid="secure-link-create-another" @click="reset">
             {{ t('secureLinks.createAnother') }}
           </BaseButton>
@@ -124,7 +120,6 @@ import { formatDateTime } from '~/utils/formatDate';
 
 definePageMeta({ layout: false });
 
-const TEAM_EMAIL = 'team@projectapp.co';
 const { t, locale } = useI18n();
 const config = useRuntimeConfig();
 const store = useSecureLinksStore();
@@ -148,11 +143,6 @@ const selectedType = computed(() => store.typeByKey(form.secretType));
 const { errors, generalError, loadingTypes, typesError, catalogReady, loadTypes, resetErrors, validateFields, mapErrors, focusError } = useSecureLinkForm(formElement, selectedType, t);
 const validityOptions = computed(() => [1, 3, 7].map((days) => ({ value: days, label: t('secureLinks.days', days) })));
 const copyFeedback = computed(() => clipboard.feedbackFor('secure-link-public-url'));
-const mailtoHref = computed(() => (
-  created.value
-    ? `mailto:${TEAM_EMAIL}?subject=${encodeURIComponent(t('secureLinks.mailSubject'))}&body=${encodeURIComponent(created.value.url)}`
-    : undefined
-));
 
 useHead(() => ({
   title: t('secureLinks.pageTitle'),
