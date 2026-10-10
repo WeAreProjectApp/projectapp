@@ -32,15 +32,6 @@ def inventory():
     return build_inventory()
 
 
-def _ratchet(actual, backlog, ceiling):
-    assert len(backlog) <= ceiling, 'The initial ceiling cannot grow.'
-    assert len(actual) <= ceiling, f'Initial ceiling exceeded: {len(actual)} > {ceiling}'
-    assert actual == set(backlog), (
-        f'New failures: {sorted(actual - set(backlog))}; '
-        f'remove resolved entries: {sorted(set(backlog) - actual)}'
-    )
-
-
 def test_published_tools_outside_the_backlog_satisfy_the_policy(inventory):
     candidates = [row for row in inventory
                   if (row['connector'], row['name']) not in OPEN_SCHEMA_BACKLOG
@@ -49,7 +40,7 @@ def test_published_tools_outside_the_backlog_satisfy_the_policy(inventory):
     offenders = {(row['connector'], row['name']): row['schema_problems']
                  for row in candidates if row['schema_problems']}
 
-    assert candidates, 'The explicitness guard must exercise published tools.'
+    assert len(candidates) > 0, 'The explicitness guard must exercise published tools.'
     assert not offenders, offenders
 
 
@@ -57,7 +48,14 @@ def test_open_schema_backlog_matches_the_current_failures(inventory):
     current = {(row['connector'], row['name']) for row in inventory
                if row['schema_problems'] and (row['connector'], row['name']) not in EXCLUDED_TOOLS}
 
-    _ratchet(current, OPEN_SCHEMA_BACKLOG, INITIAL_OPEN_SCHEMA_COUNT)
+    assert len(OPEN_SCHEMA_BACKLOG) <= INITIAL_OPEN_SCHEMA_COUNT, 'The initial ceiling cannot grow.'
+    assert len(current) <= INITIAL_OPEN_SCHEMA_COUNT, (
+        f'Initial ceiling exceeded: {len(current)} > {INITIAL_OPEN_SCHEMA_COUNT}'
+    )
+    assert current == set(OPEN_SCHEMA_BACKLOG), (
+        f'New failures: {sorted(current - set(OPEN_SCHEMA_BACKLOG))}; '
+        f'remove resolved entries: {sorted(set(OPEN_SCHEMA_BACKLOG) - current)}'
+    )
 
 
 def test_exclusions_match_the_modules_owned_by_pr_503(inventory):
@@ -72,13 +70,27 @@ def test_exclusions_match_the_modules_owned_by_pr_503(inventory):
 def test_alias_backlog_matches_the_accepted_envelopes(inventory):
     current = {(row['connector'], row['name']) for row in inventory if row['aliases']}
 
-    _ratchet(current, ALIAS_BACKLOG, INITIAL_ALIAS_COUNT)
+    assert len(ALIAS_BACKLOG) <= INITIAL_ALIAS_COUNT, 'The initial ceiling cannot grow.'
+    assert len(current) <= INITIAL_ALIAS_COUNT, (
+        f'Initial ceiling exceeded: {len(current)} > {INITIAL_ALIAS_COUNT}'
+    )
+    assert current == set(ALIAS_BACKLOG), (
+        f'New failures: {sorted(current - set(ALIAS_BACKLOG))}; '
+        f'remove resolved entries: {sorted(set(ALIAS_BACKLOG) - current)}'
+    )
 
 
 def test_drift_backlog_matches_resolved_explicit_views(inventory):
     current = schema_drift(inventory)
 
-    _ratchet(current, DRIFT_BACKLOG, INITIAL_DRIFT_COUNT)
+    assert len(DRIFT_BACKLOG) <= INITIAL_DRIFT_COUNT, 'The initial ceiling cannot grow.'
+    assert len(current) <= INITIAL_DRIFT_COUNT, (
+        f'Initial ceiling exceeded: {len(current)} > {INITIAL_DRIFT_COUNT}'
+    )
+    assert current == set(DRIFT_BACKLOG), (
+        f'New failures: {sorted(current - set(DRIFT_BACKLOG))}; '
+        f'remove resolved entries: {sorted(set(DRIFT_BACKLOG) - current)}'
+    )
 
 
 def test_panel_only_read_exemptions_keep_their_reasons(inventory):
@@ -165,7 +177,9 @@ def test_every_closed_tool_rejects_unknown_arguments_before_execution(monkeypatc
                         offenders.append((key, result))
                 except AssertionError as exc:
                     offenders.append((key, str(exc)))
-                if boundary.called:
+                try:
+                    boundary.assert_not_called()
+                except AssertionError:
                     offenders.append((key, 'An execution callback ran.'))
 
     assert {slug for slug, _ in probed} == set(CONNECTORS)
