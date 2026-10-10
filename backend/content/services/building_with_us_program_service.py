@@ -61,7 +61,7 @@ def serialize_public_program(lang):
 def list_versions(*, offset=0, limit=20, include_content=False):
     if type(offset) is not int or offset < 0 or type(limit) is not int or not 1 <= limit <= 50 or type(include_content) is not bool:
         raise BuildingWithUsError('Usa offset >= 0, limit entre 1 y 50 e include_content booleano.')
-    queryset = BuildingWithUsProgramRevision.objects.all()
+    queryset = BuildingWithUsProgramRevision.objects.select_related('restored_from')
     versions = []
     for row in queryset[offset:offset + limit]:
         item = {'version_id': row.pk, 'version': row.version, 'author': row.author_label,

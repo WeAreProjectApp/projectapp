@@ -123,7 +123,7 @@ def _mirror_status(contract, mirror):
         'document_id': document.pk if document else None,
         'title': document.title if document else CONTRACT_TITLE,
         'folder_id': folder.pk if folder else None,
-        'folder_path': ' › '.join(['ProjectApp', *[row.name for row in folder.get_ancestors()], folder.name]) if folder else None,
+        'folder_path': ' › '.join([*[row.name for row in folder.get_ancestors()], folder.name]) if folder else None,
         'version': mirror.revision.version if mirror else None,
         'last_synced_at': mirror.synced_at.isoformat() if mirror else None,
     }

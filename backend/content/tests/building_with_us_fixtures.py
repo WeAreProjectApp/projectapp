@@ -61,7 +61,8 @@ def building_with_us_contract(db):
 
 @pytest.fixture
 def building_with_us_contract_folder(db):
-    return DocumentFolder.objects.create(name='Contratos')
+    root = DocumentFolder.objects.create(name='ProjectApp')
+    return DocumentFolder.objects.create(name='Contratos', parent=root)
 
 
 @pytest.fixture
