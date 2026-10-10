@@ -80,13 +80,14 @@ def test_move_request_requires_staff(api_client, documents):
 
 def test_mcp_move_request_returns_per_id_error_details(api_client, superuser, documents):
     first, _ = documents
+    target = DocumentFolder.objects.create(name='MCP missing-id destination')
     connector, _ = McpConnector.objects.get_or_create(slug='documents', defaults={'name': 'Documents'})
     connector.is_active = True
     connector.save()
     token = connector.generate_token()
     response = api_client.post(f'/api/mcp/documents/{token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
-        'params': {'name': 'move_documents', 'arguments': {'document_ids': [first.pk, 999999], 'folder_id': None}},
+        'params': {'name': 'move_documents', 'arguments': {'document_ids': [first.pk, 999999], 'folder_id': target.pk}},
     }, format='json')
     result = response.data['result']
     assert result['isError'] is True

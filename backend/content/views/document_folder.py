@@ -209,8 +209,15 @@ def update_document_folder(request, folder_id):
     Basta mirar los hijos DIRECTOS: si la rama guarda algo, o cuelga del propio
     folder o cuelga de una subcarpeta suya, así que una de las dos existe.
     """
-    validate_folder_input(request.data)
+    validate_folder_input(request.data, allow_policies=True)
     folder = get_object_or_404(DocumentFolder, pk=folder_id)
+    if 'client_policy' in request.data and {'parent', 'parent_id'}.intersection(request.data):
+        parent_id = request.data.get('parent', request.data.get('parent_id'))
+        if parent_id != folder.parent_id or 'expected_plan_hash' in request.data:
+            serializer = DocumentFolderSerializer(folder, data=request.data, partial=True, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
     managed = (
         _managed_folder_error(folder)
         or _system_managed_folder_error(folder)
@@ -257,7 +264,7 @@ def update_document_folder(request, folder_id):
             hint='Usa el endpoint change-client para elegir si se propaga.',
             status=status.HTTP_409_CONFLICT,
         )
-    serializer = DocumentFolderSerializer(folder, data=request.data, partial=True)
+    serializer = DocumentFolderSerializer(folder, data=request.data, partial=True, context={'request': request})
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()

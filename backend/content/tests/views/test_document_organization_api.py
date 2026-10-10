@@ -158,7 +158,9 @@ def test_mcp_move_rejects_generated_markdown(rpc, doc):
     result = rpc('update_document', {'document_id': doc.pk, 'folder_id': folder.pk})
 
     assert result['isError'] is True
-    assert result['structuredContent']['error']['code'] == 'NOT_EDITABLE'
+    error = result['structuredContent']['error']
+    assert error['code'] == 'OWNERSHIP_PLAN_BLOCKED'
+    assert {row['code'] for row in error['details']['blockers']} == {'generated_snapshot'}
     doc.refresh_from_db()
     assert doc.folder_id is None
 
@@ -185,7 +187,8 @@ def test_capabilities_document_folder_schema(rpc):
     tool, = result['structuredContent']['tools']
     schema = tool['input_schema']
     assert schema['additionalProperties'] is False
-    assert set(schema['properties']) == {'folder_id', 'name', 'parent_id', 'parent', 'order', 'client', 'project', 'if_match'}
+    assert set(schema['properties']) == {'folder_id', 'name', 'parent_id', 'parent', 'order', 'client', 'project', 'if_match',
+                                        'client_policy', 'portal_policy', 'expected_plan_hash'}
 
 
 def test_capabilities_describe_atomic_move_contract(rpc):

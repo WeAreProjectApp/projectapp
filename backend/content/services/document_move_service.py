@@ -3,6 +3,10 @@
 from content.mcp.errors import normalize_error
 from content.models import Document, DocumentFolder
 from content.serializers.document import DocumentCreateUpdateSerializer
+from content.services.document_ownership_planner import (
+    OwnershipPlanError,
+    apply_ownership_plan,
+)
 from content.services.document_write_service import (
     document_write_payload,
     movement_blockers,
@@ -21,10 +25,61 @@ def _failure(pk, code, message, **details):
             'message': message, 'reason': details.pop('reason', message), **details}
 
 
+def _policy_results(document_ids, plan, *, include_content=False, applied=False):
+    rows = {row['id']: row for row in plan['rows'] if row['resource_type'] == 'document'}
+    documents = {doc.pk: doc for doc in Document.objects.filter(pk__in=document_ids).select_related('folder', 'document_type')}
+    results = []
+    for pk in document_ids:
+        row = rows[pk]
+        common = {'before': row['before'], 'after': row['after']}
+        if applied:
+            moved = row['before'] != row['after']
+            results.append({'id': pk, 'status': 'moved' if moved else 'unchanged',
+                            'moved': moved, **common,
+                            'document': document_write_payload(documents[pk], include_content=include_content)})
+        elif row['blockers']:
+            blocker = row['blockers'][0]
+            results.append(_failure(pk, blocker['code'], blocker['message'], **common,
+                                    reason=', '.join(item['code'] for item in row['blockers']),
+                                    move_blockers=[item['code'] for item in row['blockers']]))
+        else:
+            results.append({'id': pk, 'status': 'aborted', 'moved': False, **common,
+                            'code': 'batch_aborted', 'message': 'Lote cancelado por errores en otros documentos.',
+                            'reason': 'Lote cancelado por errores en otros documentos.'})
+    return results
+
+
+def _policy_move(document_ids, folder_id, *, actor, include_content, client_policy, portal_policy, expected_plan_hash, document_decisions):
+    try:
+        plan = apply_ownership_plan({
+            'document_ids': document_ids, 'destination_folder_id': folder_id,
+            'client_policy': client_policy, 'portal_policy': portal_policy,
+            'document_decisions': document_decisions,
+        }, actor=actor, expected_plan_hash=expected_plan_hash)
+    except OwnershipPlanError as exc:
+        results = (_policy_results(document_ids, exc.plan) if exc.plan is not None else [
+            {'id': pk, 'status': 'aborted', 'moved': False, 'code': exc.code,
+             'message': str(exc.detail['detail']), 'before': {}, 'after': {}}
+            for pk in document_ids
+        ])
+        exc.details['results'] = results
+        exc.detail['results'] = results
+        raise
+    except DatabaseError as exc:
+        raise DocumentMoveError([_failure(pk, 'write_failed', 'No se pudo guardar el movimiento; no se modificó ningún documento.') for pk in document_ids]) from exc
+    return {'ok': True, 'results': _policy_results(document_ids, plan, include_content=include_content, applied=True),
+            'plan_hash': plan['plan_hash'], 'warnings': plan['warnings']}
+
+
 @transaction.atomic
-def move_documents(document_ids, folder_id, *, actor, include_content=False):
+def move_documents(document_ids, folder_id, *, actor, include_content=False, client_policy=None,
+                   portal_policy='abort', expected_plan_hash=None, document_decisions=()):
     if not actor or not actor.is_active or not actor.is_staff:
         raise DocumentMoveError([_failure(pk, "permission_denied", "No tienes permiso para mover documentos.") for pk in document_ids])
+    if client_policy is not None:
+        return _policy_move(document_ids, folder_id, actor=actor, include_content=include_content,
+                            client_policy=client_policy, portal_policy=portal_policy,
+                            expected_plan_hash=expected_plan_hash, document_decisions=document_decisions)
     documents = {
         doc.pk: doc
         for doc in Document.objects.select_for_update()

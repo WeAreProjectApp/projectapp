@@ -5,25 +5,36 @@ service, permissions, transaction and audit behavior. Domain-native tools remain
 the preferred rich interface; these close the operational gaps without forking
 business logic.
 """
-from content.mcp.document_tools import _FOLDER_FIELDS
-from content.mcp.delivery_tools import DELIVERY_TOOLS
-from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
-from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
-from content.mcp.delivery_notification_tools import DELIVERY_NOTIFICATION_TOOLS
-from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
-from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
-from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
-from content.mcp.issue_tools import ISSUE_TOOLS
-from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
-from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
-from content.mcp.operation_builder import _op
-from content.mcp.entity_history_tools import history_tools
-from content.mcp.proposal_schemas import writable_schema
-from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
 from accounts.serializers import UpdateProjectPhaseSerializer
-from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
+
+from content.mcp.delivery_notification_tools import DELIVERY_NOTIFICATION_TOOLS
+from content.mcp.delivery_source_tools import DELIVERY_SOURCE_TOOLS
+from content.mcp.delivery_tools import DELIVERY_TOOLS
+from content.mcp.document_ownership_tools import (
+    CLIENT_POLICY_SCHEMA,
+    DOCUMENT_DECISIONS_SCHEMA,
+    EXPECTED_PLAN_HASH_SCHEMA,
+    POLICY_DESCRIPTION,
+    PORTAL_POLICY_SCHEMA,
+)
+from content.mcp.document_tools import _FOLDER_FIELDS
+from content.mcp.entity_history_tools import history_tools
+from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
+from content.mcp.issue_tools import ISSUE_TOOLS
+from content.mcp.operation_builder import _op
+from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
+from content.mcp.platform_resource_tools import PLATFORM_RESOURCE_TOOLS
+from content.mcp.project_client_access_tools import PROJECT_CLIENT_ACCESS_TOOLS
+from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
+from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.proposal_operations import PROPOSAL_PARITY_TOOLS
+from content.mcp.proposal_schemas import writable_schema
+from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
 from content.services.document_write_service import DOCUMENT_WRITE_SCHEMA
+from content.views.project_administration import (
+    AddCommercialPhaseSerializer,
+    ReorderCommercialPhasesSerializer,
+)
 
 OPERATIONS_TOOLS = [
     _op(
@@ -98,19 +109,27 @@ PROJECT_TOOLS = [
 ] + history_tools('project') + DELIVERY_TOOLS + PROJECT_IDEA_TOOLS + PROJECT_CLIENT_ACCESS_TOOLS + PLATFORM_BILLING_TOOLS + ISSUE_TOOLS + PLATFORM_RESOURCE_TOOLS + DELIVERY_NOTIFICATION_TOOLS + DELIVERY_SOURCE_TOOLS + PROJECT_RETENTION_TOOLS + HOSTING_SUBSCRIPTION_TOOLS
 
 
-_FOLDER_SCHEMA = {'type': 'object', 'properties': _FOLDER_FIELDS, 'additionalProperties': False}
+_UPDATE_FOLDER_SCHEMA = {
+    'type': 'object', 'additionalProperties': False,
+    'properties': {**_FOLDER_FIELDS, 'client_policy': CLIENT_POLICY_SCHEMA,
+                   'portal_policy': PORTAL_POLICY_SCHEMA, 'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA},
+}
 _MOVE_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
         'document_ids': {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 100, 'uniqueItems': True},
         'folder_id': {'type': ['integer', 'null'], 'minimum': 1},
         'include_content': {'type': 'boolean', 'default': False},
+        'client_policy': CLIENT_POLICY_SCHEMA,
+        'portal_policy': PORTAL_POLICY_SCHEMA,
+        'expected_plan_hash': EXPECTED_PLAN_HASH_SCHEMA,
+        'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
     },
     'required': ['document_ids', 'folder_id'],
 }
 
 DOCUMENT_PARITY_TOOLS = [
-    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado por ID.', 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
+    _op('move_documents', 'Mueve documentos activos de forma atómica: todos o ninguno, con resultado y propiedad antes/después por ID.' + POLICY_DESCRIPTION, 'move-documents', 'POST', risk='write', payload_schema=_MOVE_SCHEMA),
     _op('browse_documents', 'Busca, filtra, ordena y pagina todo el inventario documental.', 'browse-documents'),
     _op('get_document_counts', 'Obtiene conteos documentales para filtros y navegación.', 'document-counts'),
     _op('get_document_navigation', 'Obtiene raíces, clientes y proyectos navegables.', 'document-navigation'),
@@ -122,7 +141,7 @@ DOCUMENT_PARITY_TOOLS = [
     _op('unarchive_document', 'Restaura un documento archivado individualmente.', 'unarchive-document', 'PATCH', ('document_id',), 'write'),
     _op('list_document_folders', 'Lista carpetas activas o archivadas con filtros del Panel.', 'list-document-folders'),
     _op('get_project_folder_readiness', 'Revisa la disponibilidad de raíces documentales de proyectos.', 'project-folder-readiness'),
-    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta.', 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_FOLDER_SCHEMA),
+    _op('update_folder', 'Actualiza nombre, padre y metadatos permitidos de una carpeta. Al cambiar de padre evalúa todo su subárbol; la propiedad se decide con las políticas, sin combinar client o project en ese movimiento.' + POLICY_DESCRIPTION, 'update-document-folder', 'PATCH', ('folder_id',), 'write', payload_schema=_UPDATE_FOLDER_SCHEMA),
     _op('delete_folder', 'Elimina una carpeta vacía que el sistema permita eliminar.', 'delete-document-folder', 'DELETE', ('folder_id',), 'sensitive', True),
     _op('archive_folder', 'Archiva una carpeta y la cascada informada por el Panel.', 'archive-document-folder', 'PATCH', ('folder_id',), 'sensitive', True),
     _op('unarchive_folder', 'Restaura una carpeta y los elementos archivados por ella.', 'unarchive-document-folder', 'PATCH', ('folder_id',), 'write'),
@@ -325,7 +344,21 @@ CARD_PARITY_TOOLS = [
 ]
 
 
+def _ownership_defaults(handler):
+    def wrapped(arguments):
+        arguments = dict(arguments)
+        nested = arguments.get('data')
+        nested = nested if isinstance(nested, dict) else {}
+        for name, value in (('client_policy', 'abort_on_conflict'), ('portal_policy', 'abort')):
+            if name not in arguments and name not in nested:
+                arguments[name] = value
+        return handler(arguments)
+    return wrapped
+
+
 for _tool in DOCUMENT_PARITY_TOOLS:
+    if _tool['name'] in ('move_documents', 'update_folder'):
+        _tool['handler'] = _ownership_defaults(_tool['handler'])
     if _tool['name'] == 'move_documents':
         _tool['input_schema'] = _MOVE_SCHEMA
         _tool['output_schema'] = {
@@ -342,6 +375,8 @@ for _tool in DOCUMENT_PARITY_TOOLS:
                         'code': {'type': 'string'},
                         'message': {'type': 'string'},
                         'move_blockers': {'type': 'array', 'items': {'type': 'string'}},
+                        'before': {'type': 'object'},
+                        'after': {'type': 'object'},
                         'document': DOCUMENT_WRITE_SCHEMA,
                     },
                     'required': ['id', 'status', 'moved'],
