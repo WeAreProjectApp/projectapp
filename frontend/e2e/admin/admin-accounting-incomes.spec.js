@@ -974,11 +974,11 @@ test.describe('Admin Accounting Incomes CRUD', () => {
     expect(created.body.concept).toBe('Kore - Hosting anual');
     // Born pending whatever the original was — the point of the action.
     expect(created.body.kind).toBe('expected');
-    // The window travels; period_date is the backend's to derive.
+    // The payment date follows the window start until it is edited.
     expect(created.body.period_start).toBe('2027-02-01');
     expect(created.body.period_end).toBe('2028-01-31');
     expect(created.body.period_cadence).toBe('annual');
-    expect(created.body.period_date).toBeUndefined();
+    expect(created.body.period_date).toBe('2027-02-01');
   });
 
   test('a duplicate opens on the original business line, date block included', {
@@ -1305,6 +1305,40 @@ test.describe('Admin Accounting Incomes CRUD', () => {
 
     await expect(page.getByText('No se pudo guardar')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Nuevo ingreso' })).toBeVisible();
+  });
+
+  test('a hosting income records the month its payment is expected apart from the window', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    test.setTimeout(60_000);
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [], calls }));
+    await gotoIncomes(page);
+
+    await page.getByTestId('incomes-new-button').click();
+    await page.getByTestId('income-form-concept').fill('Hosting Acme semestral');
+    await page.getByRole('tab', { name: 'Hosting' }).click();
+    await page.getByTestId('income-form-period-start').fill('2026-10-01');
+    await page.getByTestId('income-form-period-cadence').selectOption('semiannual');
+
+    await expect(page.getByTestId('income-form-billing-date')).toHaveValue('2026-10-01');
+    await expect(page.getByTestId('income-form-billing-date-hint'))
+      .toHaveText('Coincide con el inicio del período. Cámbiala si el cliente paga en otro mes.');
+    await page.getByTestId('income-form-billing-date').fill('2026-11-01');
+    await expect(page.getByTestId('income-form-billing-date-hint'))
+      .toHaveText('Independiente del período cubierto: ordena el ingreso y sus avisos de cobro.');
+    await page.getByTestId('partner-split-total').fill('550000');
+    await page.getByTestId('income-form-submit').click();
+
+    await expect(page.getByText('Ingreso creado')).toBeVisible();
+    const created = calls.find((call) => call.apiPath === 'accounting/incomes/create/');
+    expect(created.method).toBe('POST');
+    expect(created.body).toMatchObject({
+      period_start: '2026-10-01',
+      period_end: '2027-03-31',
+      period_cadence: 'semiannual',
+      period_date: '2026-11-01',
+    });
   });
 });
 

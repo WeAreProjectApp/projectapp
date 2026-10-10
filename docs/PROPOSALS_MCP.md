@@ -26,12 +26,18 @@ Los contratos y correos no tienen una copia independiente de su lógica de negoc
 | Videos | Consulta, sustitución, retiro y restauración del video genérico; consulta, sustitución y retiro del personalizado; visibilidad global y por propuesta |
 
 `tools/list` y `describe_capabilities` publican los campos y el riesgo de cada
-herramienta, filtrados por el alcance de la credencial. Los argumentos existentes
-siguen funcionando; los adaptadores aceptan campos planos o un objeto `data`.
-No repetir el mismo campo en ambas formas. El lanzamiento requiere ahora una
-revisión explícita; no admite el antiguo reinicio con `force`. Las lecturas aceptan parámetros planos
-o `query`. `update_proposal` conserva su contrato de importación JSON completo;
+herramienta, filtrados por el alcance de la credencial. Los argumentos se publican
+como campos planos. Los sobres `data` para escrituras y `query` para lecturas
+están obsoletos, pero se siguen aceptando para conservar los clientes existentes
+y se registran como `deprecated_envelope`. No repetir el mismo campo en ambas
+formas. El lanzamiento requiere ahora una
+revisión explícita; no admite el antiguo reinicio con `force`.
+`update_proposal` conserva su contrato de importación JSON completo;
 para un ajuste aislado usar `update_proposal_settings`.
+
+Los objetos con campos definidos rechazan claves desconocidas también dentro de
+listas y objetos anidados. El contenido variable de secciones y las referencias
+documentales conservan sus claves abiertas y la validación del panel.
 
 Los campos calculados, las respuestas privadas del cliente y los timestamps de
 automatización no admiten escritura directa. Los datos de empresa y la plantilla

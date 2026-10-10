@@ -14,8 +14,7 @@ import traceback
 from rest_framework.exceptions import APIException, ValidationError
 
 from content.mcp.errors import normalize_error
-from content.mcp.registry import public_tool
-from content.mcp.registry import server_info as build_server_info
+from content.mcp.registry import public_tool, visible_tools
 from content.services.diagnostic_privacy import safe_mcp_error_code
 
 logger = logging.getLogger(__name__)
@@ -93,12 +92,12 @@ def _text_result(msg_id, payload, is_error=False, *, error=None, meta=None):
     return _result(msg_id, result)
 
 
-def handle_message(message, tools, server_name=None, context=None):
+def handle_message(message, tools, server_name=None, context=None, *, connector=None):
     """
     Handle one JSON-RPC message. Returns (http_status, response_dict|None).
     Notifications (no 'id') return (202, None) per Streamable HTTP transport.
-    server_name overrides the serverInfo name so each connector (blog,
-    documents, proposals, ...) identifies itself instead of a shared default.
+    connector supplies the server identity and instructions. Without one,
+    server_name overrides the fallback identity used by dispatcher unit tests.
     """
     if not isinstance(message, dict):
         return _error(None, INVALID_REQUEST, 'Expected a single JSON-RPC request object.')
@@ -119,7 +118,9 @@ def handle_message(message, tools, server_name=None, context=None):
         return _error(msg_id, INVALID_PARAMS, 'params must be a JSON object.')
 
     if method == 'server/discover':
-        server_info = build_server_info(server_name)
+        server_info = connector.server_info if connector is not None else {
+            'name': server_name or 'projectapp-mcp', 'version': '0.0.0',
+        }
         return _result(msg_id, {
             'resultType': 'complete',
             'supportedVersions': [MODERN_PROTOCOL_VERSION],
@@ -127,10 +128,7 @@ def handle_message(message, tools, server_name=None, context=None):
             '_meta': {
                 'io.modelcontextprotocol/serverInfo': server_info,
             },
-            'instructions': (
-                'Usa tools/list para descubrir acciones. Las operaciones sensibles '
-                'devuelven una vista previa que se ejecuta con confirm_action.'
-            ),
+            **({'instructions': connector.instructions} if connector is not None else {}),
             'ttlMs': LIST_CACHE_TTL_MS,
             'cacheScope': 'private',
         })
@@ -141,25 +139,23 @@ def handle_message(message, tools, server_name=None, context=None):
             requested if requested in LEGACY_PROTOCOL_VERSIONS
             else DEFAULT_PROTOCOL_VERSION
         )
-        server_info = build_server_info(server_name)
+        server_info = connector.server_info if connector is not None else {
+            'name': server_name or 'projectapp-mcp', 'version': '0.0.0',
+        }
         return _result(msg_id, {
             'protocolVersion': version,
             'capabilities': {'tools': {}},
             'serverInfo': server_info,
+            **({'instructions': connector.instructions} if connector is not None else {}),
         })
 
     if method == 'ping':
         return _result(msg_id, {})
 
     if method == 'tools/list':
-        visible_tools = [
-            tool for tool in tools
-            if not context
-            or not context.credential
-            or context.credential.allows(tool['name'])
-        ]
+        visible = visible_tools(tools, context.credential if context else None)
         return _result(msg_id, {
-            'tools': [public_tool(tool) for tool in visible_tools],
+            'tools': [public_tool(tool) for tool in visible],
         })
 
     if method == 'tools/call':

@@ -34,7 +34,9 @@ vence a los diez minutos y rechaza cambios posteriores a la vista previa.
 `service_termination_notice_days`. Los valores numéricos se convierten a su
 representación contractual habitual; también se admite redacción personalizada.
 La nota es opcional durante negociación y obligatoria en los demás estados.
-Se conserva el formato anterior de argumentos anidados en `data`.
+El schema publicado exige `proposal_id` y `contract_modality` como campos planos.
+El formato anterior de argumentos anidados en `data` está obsoleto, pero se
+sigue aceptando y se registra como `deprecated_envelope`.
 
 Una respuesta con `confirmation_required` contiene `confirmation_id` e
 `impact`. Después de revisar, usar `confirm_action` o `cancel_action` con ese

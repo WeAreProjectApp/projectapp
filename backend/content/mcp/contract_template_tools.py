@@ -1,10 +1,14 @@
 """Versioned default-contract operations with the server's durable confirmation."""
+import logging
+
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
 from content.services import contract_template_service as service
 from content.services.contract_template_consistency import check_consistency
 from content.services.contract_template_validation import ContractTemplateError
+
+logger = logging.getLogger(__name__)
 
 VARIANT = {'type': 'string', 'enum': ['combined', 'product', 'service']}
 PATCH = {
@@ -42,6 +46,8 @@ def _read(arguments):
     _known(query, ['variant'])
     if 'variant' in arguments and 'variant' in query and arguments['variant'] != query['variant']:
         raise ToolError('variant y query.variant deben coincidir.')
+    if 'query' in arguments:
+        logger.info('[MCP] deprecated_envelope tool=%s keys=%s', 'get_proposal_contract_template', sorted({'query'}))
     return _run(service.read_template, arguments.get('variant', query.get('variant', 'combined')))
 
 
@@ -93,7 +99,7 @@ def _schema(*, sensitive=False, restore=False):
         'oneOf': [{'required': [source], 'not': {'anyOf': [{'required': [other]} for other in sources if other != source]}} for source in sources],
     }
     return {
-        **related,
+        'type': 'object', 'additionalProperties': False,
         'properties': {**fields, 'change_note': {'type': 'string', 'minLength': 1, 'maxLength': 4000},
             'related_updates': {'type': 'array', 'maxItems': 2, 'items': related}},
         'required': ['variant', *(['if_match', 'change_note'] if sensitive else []), *(['version_id'] if restore else [])],
@@ -113,25 +119,32 @@ def _mirrors(arguments):
 CONTRACT_TEMPLATE_TOOLS = [
     {'name': 'get_proposal_contract_template', 'risk': 'read',
      'description': 'Lee la plantilla predeterminada combined (default), product o service: markdown, placeholders, version, updated_at y etag. El gestor muestra su espejo de solo lectura.',
-     'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {'variant': {**VARIANT, 'default': 'combined'}, 'query': {'type': 'object', 'additionalProperties': False, 'properties': {'variant': VARIANT}}}}, 'handler': _read},
+     'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {'variant': {**VARIANT, 'default': 'combined'}}}, 'handler': _read},
     {'name': 'preview_proposal_contract_template_update', 'risk': 'read',
-     'description': 'Valida markdown o patches literales, campos obligatorios y coherencia; devuelve diff y documentos afectados. related_updates permite coordinar variantes. No guarda cambios.',
+     'description': 'Exige exactamente uno de markdown o patches literales; valida campos obligatorios y coherencia, y devuelve diff y documentos afectados. related_updates permite coordinar variantes. No guarda cambios.',
      'input_schema': _schema(), 'handler': _preview},
     {'name': 'update_proposal_contract_template', 'risk': 'sensitive', 'requires_confirmation': True,
-     'description': 'Previsualiza una actualización con if_match y change_note. Sólo confirm_action guarda versiones, PDFs y notas en una transacción; un fallo revierte todo. related_updates permite un lote coherente. Sólo afecta contratos nuevos o regenerados.',
+     'description': 'Exige exactamente uno de markdown o patches, con if_match y change_note. Sólo confirm_action guarda versiones, PDFs y notas en una transacción; un fallo revierte todo. related_updates permite un lote coherente. Sólo afecta contratos nuevos o regenerados.',
      'input_schema': _schema(sensitive=True), 'handler': _apply,
      'prepare_arguments': _prepare_sensitive, 'impact_builder': _impact, 'etag_resolver': service.resource_etags},
     {'name': 'list_proposal_contract_template_versions', 'risk': 'read',
      'description': 'Lista las versiones inmutables de una variante con autor, fecha, motivo y markdown; limit 1–50 y offset.',
      'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {'variant': VARIANT, 'limit': {'type': 'integer', 'minimum': 1, 'maximum': 50}, 'offset': {'type': 'integer', 'minimum': 0}}, 'required': ['variant']}, 'handler': _versions},
     {'name': 'restore_proposal_contract_template_version', 'risk': 'sensitive', 'requires_confirmation': True,
-     'description': 'Previsualiza la restauración como nueva versión. Exige variant, version_id, if_match y change_note; confirm_action valida coherencia y sincroniza espejos atómicamente. related_updates puede restaurar las variantes dependientes.',
+     'description': 'Previsualiza la restauración como nueva versión. Exige variant, version_id, if_match y change_note; no admite markdown ni patches en el contrato principal. confirm_action valida coherencia y sincroniza espejos atómicamente. related_updates puede restaurar las variantes dependientes.',
      'input_schema': _schema(sensitive=True, restore=True), 'handler': lambda args: _apply(args, restore=True),
      'prepare_arguments': lambda args: _prepare_sensitive(args, restore=True), 'impact_builder': lambda args: _impact(args, restore=True), 'etag_resolver': service.resource_etags},
     {'name': 'check_proposal_contract_templates_consistency', 'risk': 'read',
      'description': 'Compara cláusulas de producto y servicio con el combinado conservando cifras y obligaciones; ignora formato, numeración y referencias. Reporta cláusulas ausentes o diferentes y bloquea guardados incoherentes.',
      'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {}}, 'handler': _consistency},
 ]
+
+CONTRACT_TEMPLATE_TOOLS[0]['accepted_arguments_schema'] = {
+    **CONTRACT_TEMPLATE_TOOLS[0]['input_schema'],
+    'properties': {**CONTRACT_TEMPLATE_TOOLS[0]['input_schema']['properties'],
+        'query': {'type': 'object', 'additionalProperties': False, 'properties': {'variant': VARIANT}}},
+    'required': [],
+}
 
 CONTRACT_MIRROR_TOOLS = [
     {'name': 'list_contract_mirrors', 'risk': 'read',

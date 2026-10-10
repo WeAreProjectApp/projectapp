@@ -774,16 +774,33 @@ frontend-only and does not change the Documents API or schema.
 
 Remote MCP connectors enter through `/api/mcp/<slug>/<token>/`. Django validates the capability token, connector active state and allowed Origin before dispatching JSON-RPC tools. Anonymous throttling is isolated by `client IP + registered connector slug`; concurrent startup traffic for one connector therefore cannot exhaust another connector's quota. Any unregistered slug maps to the shared `unknown` bucket so callers cannot evade throttling by manufacturing paths.
 
-`TOOLS_BY_SLUG` dispatches nine module catalogs: blog, documents, proposals,
-diagnostics, clients, tasks, accounting, LinkedIn personal and communications.
-The Communications catalog exposes fourteen tools: list/open/create/edit,
-close/reopen and archive/restore threads; create/edit/delete outgoing drafts;
-record a confirmed send; annul historical messages; and correct their date. Its
-writes delegate to `communication_service.py`, so client ownership, project
-scope, thread lifecycle, direction/channel/status transitions, reply linkage,
-audit history and protected Document references are identical to the panel.
-Draft edits lock the row and append `CommunicationMessageRevision` inside the
-same transaction. No message tool invokes provider delivery.
+Los 18 conectores (13 canónicos y 5 de compatibilidad) se declaran en
+`content/mcp/connectors.py`: `CONNECTORS` define identidad, versión, fuentes,
+uploads e instrucciones, y `TOOLS_BY_SLUG` compone sus herramientas.
+`registry.public_tool` alimenta lista y capacidades con el mismo alcance.
+Los handshakes y la metadata moderna anuncian la versión del mismo registro.
+
+`schema_policy.py` exige objetos cerrados, argumentos tipados y descritos,
+sin combinadores de raíz; los objetos libres requieren motivo documentado.
+`schema_backlog.py` conserva excepciones que sólo se reducen. Las herramientas
+nativas de propuestas actualizadas publican campos planos; el puente Panel
+compartido aún publica algunos sobres. Los obsoletos siguen admitidos y
+`accepted_arguments_schema` es privado. En esta entrega validan
+los handlers/serializers, sin validador central nuevo.
+
+`accounting` y `accounting-ledger` incorporan listar, leer, actualizar, crear y
+duplicar ingresos esperados mediante `accounting_expected_income_service` y el
+serializer del Panel. Crear/duplicar siempre requieren confirmación; actualizar
+la requiere ante cambios financieros o de cliente/proyecto. ETag y bloqueos
+incluyen pagos, deducciones y cuentas emitidas. La fecha de cobro de hosting
+es independiente de su ventana; duplicar conserva el desfase y los cambios de
+ventana se auditan. Ver el [guion de validación](../MCP_VALIDATION_RUNBOOK.md).
+
+Comunicaciones combina herramientas nativas de hilos/mensajes con correo y
+enlaces seguros. Las primeras delegan en `communication_service.py`, conservan
+propiedad, ciclo, revisiones y referencias documentales del Panel; registrar
+un envío externo no invoca al proveedor. El envío real usa herramientas separadas
+con confirmación.
 
 MCP parity is an architectural boundary, not informal documentation.
 `content/mcp/contracts.py` classifies every concrete field of every exposed model

@@ -806,7 +806,7 @@ export const viewCatalogSections = [
         reference: 'vista de ingresos esperados y liquidos del modulo contable con estado de cobro por ingreso',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Los ingresos con cliente requieren una cuenta de cobro emitida para liquidar o registrar abonos. La acción Liquidar muestra icono atenuado y cursor de indisponibilidad, explica el requisito y permite generar la cuenta o completar su borrador. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'El modal de ingresos de hosting permite registrar el mes o día de cobro esperado por separado del período cubierto; sigue el inicio del período hasta elegir una fecha distinta y conserva la fecha independiente al editar o duplicar. Los ingresos con cliente requieren una cuenta de cobro emitida para liquidar o registrar abonos. La acción Liquidar muestra icono atenuado y cursor de indisponibilidad, explica el requisito y permite generar la cuenta o completar su borrador. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Gastos',
