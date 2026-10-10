@@ -64,6 +64,13 @@ def normalize_tools(tools, connector_slug):
     return normalized
 
 
+def connector_version(slug, default='2.0.0'):
+    from content.mcp.connectors import CONNECTORS
+
+    connector = CONNECTORS.get(slug)
+    return connector.version if connector is not None else default
+
+
 def with_sensitive_confirmation(tools):
     result = []
     for source in tools:

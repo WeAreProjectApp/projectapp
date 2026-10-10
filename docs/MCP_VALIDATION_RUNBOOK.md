@@ -256,23 +256,23 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 2.1.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 2.1.0 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 2.2.0 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 2.2.0 | 169 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial e integridad de datos |
+| `projects` | 2.3.0 | 169 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial e integridad de datos |
 | `documents` | 3.2.0 | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 2.1.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 2.1.0 | 61 | Ingresos esperados con ETag y confirmación, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-ledger` | 2.2.0 | 62 | Ingresos esperados con ETag, liquidación con confirmación de pago por correo, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
 | `accounting-billing` | 2.1.0 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 2.1.0 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
 | `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 1.1.0 | 78 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, cinco herramientas de ingresos esperados y controles comunes |
+| `accounting` | 1.2.0 | 78 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, cinco herramientas de ingresos esperados y controles comunes |
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
 Los 18 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
-`mcp_schema_report` local con `projectapp.settings_test` el 2026-10-09, sin
-consultar datos reales: 998 herramientas sumadas entre catálogos, incluidas las
+`mcp_schema_report` local con `projectapp.settings_test` el 2026-10-10, sin
+consultar datos reales: 999 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`.
@@ -583,8 +583,8 @@ No se implementa un segundo CRUD con escrituras ORM paralelas.
 
 ### Libro contable: ingresos esperados
 
-Disponible en `accounting` 1.1.0 (el «Gestor Contable» de claude.ai) y
-`accounting-ledger` 2.1.0. Ambos publican `list_expected_incomes`,
+Disponible en `accounting` 1.2.0 (el «Gestor Contable» de claude.ai) y
+`accounting-ledger` 2.2.0. Ambos publican `list_expected_incomes`,
 `get_expected_income`, `update_expected_income`, `create_expected_income` y
 `duplicate_expected_income`. Crear y duplicar siempre requieren vista previa
 y `confirm_action`; actualizar sólo la requiere si cambia dinero, IVA, reparto,

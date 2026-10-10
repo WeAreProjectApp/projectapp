@@ -19,6 +19,7 @@ from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.operation_builder import _op
 from content.mcp.entity_history_tools import history_tools
 from content.mcp.proposal_schemas import writable_schema
+from content.mcp.schema_policy import closed_object
 from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
 from accounts.serializers import UpdateProjectPhaseSerializer
 from content.serializers.project_brand import ProjectBrandAssetUploadSerializer
@@ -257,11 +258,25 @@ CONTENT_PARITY_TOOLS = [
 ]
 
 
+_INCOME_PAYMENT_CONFIRMATION = _op(
+    'get_income_payment_confirmation',
+    'Indica a qué correo saldría la confirmación de pago de un ingreso, o por qué no puede salir.',
+    'income-payment-confirmation', path=('record_id',),
+)
+_INCOME_PAYMENT_CONFIRMATION['input_schema'] = closed_object({
+    'record_id': {
+        'type': ['integer', 'string'],
+        'description': 'Identificador del ingreso cuya confirmación de pago se consulta.',
+    },
+    'if_match': _INCOME_PAYMENT_CONFIRMATION['input_schema']['properties']['if_match'],
+}, required=('record_id',))
+
+
 LEDGER_PARITY_TOOLS = [
     _op('get_accounting_stats', 'Obtiene indicadores contables del año.', 'accounting-stats'),
     _op('duplicate_income_draft', 'Obtiene un borrador duplicado de un ingreso.', 'duplicate-income-draft', path=('record_id',)),
     _op('suggest_income_period', 'Sugiere el siguiente período para un ingreso.', 'suggest-income-period'),
-    _op('get_income_payment_confirmation', 'Indica a qué correo saldría la confirmación de pago de un ingreso, o por qué no puede salir.', 'income-payment-confirmation', path=('record_id',)),
+    _INCOME_PAYMENT_CONFIRMATION,
     _op('bulk_assign_income_client', 'Asigna cliente a una selección de ingresos.', 'bulk-assign-income-client', 'POST', risk='sensitive', confirm=True),
     _op('bulk_assign_income_project', 'Asigna proyecto a una selección de ingresos.', 'bulk-assign-income-project', 'POST', risk='sensitive', confirm=True),
     _op('reorder_recurring_payments', 'Reordena pagos recurrentes.', 'reorder-recurring-payments', 'POST', risk='write'),
