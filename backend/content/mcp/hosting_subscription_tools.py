@@ -17,7 +17,8 @@ register_mcp_domain_codes(
 )
 
 FIELDS = {
-    'subscription_id': {'type': 'integer', 'minimum': 1},
+    'subscription_id': {'type': 'integer', 'minimum': 1,
+                        'description': 'Identificador entero positivo de la suscripción de hosting.'},
     'action': {
         'type': 'string', 'enum': ['pause', 'cancel', 'resume'],
         'description': (
@@ -151,8 +152,10 @@ HOSTING_SUBSCRIPTION_TOOLS = [
         'input_schema': {
             'type': 'object', 'additionalProperties': False,
             'properties': {
-                **FIELDS, 'reason': {'type': 'string', 'minLength': 3, 'maxLength': 500},
-                'expected_impact_hash': {'type': 'string', 'minLength': 1},
+                **FIELDS, 'reason': {'type': 'string', 'minLength': 3, 'maxLength': 500,
+                                    'description': 'Motivo de la pausa, cancelación o reanudación, de 3 a 500 caracteres.'},
+                'expected_impact_hash': {'type': 'string', 'minLength': 1,
+                                         'description': 'impact_hash no vacío de preview_hosting_subscription_change; se revalida al confirmar.'},
             },
             'required': ['subscription_id', 'action', 'reason', 'expected_impact_hash'],
         },
