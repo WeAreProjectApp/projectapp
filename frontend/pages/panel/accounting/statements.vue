@@ -119,22 +119,33 @@
         {{ txForm.id ? 'Editar transacción' : 'Agregar transacción' }}
       </h3>
       <div class="space-y-3">
-        <BaseFormField label="Fecha" required>
-          <BaseInput v-model="txForm.transaction_date" type="date" data-testid="tx-date-input" />
-        </BaseFormField>
+        <BaseFormRow :cols="2" :gap="4">
+          <BaseFormField label="Fecha" required>
+            <BaseInput v-model="txForm.transaction_date" type="date" data-testid="tx-date-input" />
+          </BaseFormField>
+          <BaseFormField label="Valor (COP)">
+            <BaseCurrencyInput v-model="txForm.amount" allow-negative data-testid="tx-amount-input" />
+          </BaseFormField>
+        </BaseFormRow>
         <BaseFormField label="Descripción del extracto" required>
           <BaseInput v-model="txForm.raw_description" data-testid="tx-description-input" />
         </BaseFormField>
-        <BaseFormField label="Comercio">
-          <AccountingMerchantInput
-            v-model="txForm.merchant_name"
-            :options="merchantOptions"
-            test-id="tx-merchant-input"
-          />
-        </BaseFormField>
-        <BaseFormField label="Categoría">
-          <BaseSelect v-model="txForm.category" :options="categoryOptions" />
-        </BaseFormField>
+        <BaseFormRow :cols="2" :gap="4">
+          <BaseFormField label="Comercio">
+            <AccountingMerchantInput
+              v-model="txForm.merchant_name"
+              :options="merchantOptions"
+              test-id="tx-merchant-input"
+            />
+          </BaseFormField>
+          <BaseFormField label="Categoría">
+            <BaseSelect
+              v-model="txForm.category"
+              :options="categoryOptions"
+              data-testid="statement-transaction-category"
+            />
+          </BaseFormField>
+        </BaseFormRow>
         <BaseFormField label="Cuota">
           <div class="flex items-center gap-2">
             <BaseInput
@@ -155,9 +166,6 @@
               data-testid="tx-installment-total"
             />
           </div>
-        </BaseFormField>
-        <BaseFormField label="Valor (COP)">
-          <BaseCurrencyInput v-model="txForm.amount" allow-negative data-testid="tx-amount-input" />
         </BaseFormField>
         <BaseFormField label="Notas">
           <BaseTextarea v-model="txForm.notes" :rows="2" />

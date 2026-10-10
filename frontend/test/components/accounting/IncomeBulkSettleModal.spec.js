@@ -43,9 +43,10 @@ function mountModal(props = {}) {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
-          props: ['modelValue', 'size'],
+          props: ['modelValue', 'kind'],
           emits: ['update:modelValue', 'close'],
-          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
+          template:
+            '<div v-if="modelValue" :data-modal-kind="kind"><slot /><slot name="footer" /></div>',
         },
         BaseFormField: {
           props: ['label', 'hint', 'error', 'required', 'for', 'size'],
@@ -254,6 +255,25 @@ describe('IncomeBulkSettleModal', () => {
     await wrapper.find('form').trigger('submit');
 
     expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-08');
+  });
+
+  it('opens at the form width', () => {
+    const wrapper = mountModal();
+
+    expect(wrapper.get('[data-modal-kind]').attributes('data-modal-kind')).toBe('form');
+  });
+
+  it('names the destination pocket below the payment row', () => {
+    const wrapper = mountModal();
+
+    const help = wrapper.get('[data-testid="income-bulk-settle-destination-help"]');
+    const total = wrapper.get('[data-testid="income-bulk-settle-total"]');
+    // Same row as Valor recibido: the help belongs to that group.
+    expect(help.element.parentElement.contains(total.element)).toBe(true);
+    expect(help.get('[data-testid="income-bulk-settle-destination"]').text())
+      .toBe('Bolsillo ProjectApp');
+    expect(help.text())
+      .toContain('El pago entra como un único movimiento al bolsillo de la empresa.');
   });
 
   it('announces how many selected rows were excluded', () => {

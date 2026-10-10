@@ -52,7 +52,8 @@ function mountModal(props = {}, stubs = {}) {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
-          props: ['modelValue', 'size'],
+          name: 'BaseModal',
+          props: ['modelValue', 'size', 'kind'],
           emits: ['update:modelValue', 'close'],
           template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
@@ -117,6 +118,13 @@ function mountModal(props = {}, stubs = {}) {
       },
     },
   });
+}
+
+// The BaseFormRow that holds the payment date.
+function paymentRow(wrapper) {
+  return wrapper
+    .findAllComponents({ name: 'BaseFormRow' })
+    .find((row) => row.find('[data-testid="income-liquidate-period"]').exists());
 }
 
 describe('IncomeLiquidateModal', () => {
@@ -299,6 +307,25 @@ describe('IncomeLiquidateModal', () => {
     await wrapper.find('form').trigger('submit');
 
     expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
+  });
+
+  // Falla si el modal vuelve al ancho amplio (64 rem) o si la fecha y el
+  // destino vuelven a ocupar filas separadas.
+  it('pairs the payment date with the destination at the form width', () => {
+    const wrapper = mountModal();
+    const row = paymentRow(wrapper);
+
+    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
+    expect(row.props('cols')).toBe(2);
+    expect(row.find('[data-testid="income-liquidate-destination"]').exists()).toBe(true);
+  });
+
+  // Falla si el valor pagado personal vuelve a una fila propia a todo el ancho.
+  it('pairs the payment date with the amount paid on a personal ledger', () => {
+    const row = paymentRow(mountModal({ record: { ...expectedRecord, ledger: 'gustavo' } }));
+
+    expect(row.props('cols')).toBe(2);
+    expect(row.find('[data-testid="income-liquidate-paid"]').exists()).toBe(true);
   });
 
   // Falla si una llamada directa liquida una fila local que aún necesita cuenta emitida.
@@ -718,6 +745,15 @@ describe('covered period of a hosting charge', () => {
     expect(
       wrapper.find('[data-testid="income-liquidate-period-start"]').element.value,
     ).toBe('2026-10-01');
+  });
+
+  // Falla si la ayuda vuelve al campo, donde la fila alineada la oculta.
+  it('explains the periodicity below the period row', () => {
+    const wrapper = mountModal({ record: legacyHosting });
+
+    expect(
+      wrapper.get('[data-testid="income-liquidate-period-cadence-hint"]').text(),
+    ).toContain('periodicidad');
   });
 
   it('computes the end of the period from the periodicity', async () => {

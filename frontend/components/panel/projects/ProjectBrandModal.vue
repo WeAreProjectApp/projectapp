@@ -112,7 +112,7 @@ onMounted(load)
             <h3 class="font-semibold text-text-default">Linktrees</h3>
             <p class="text-sm text-text-subtle">{{ t('projectBrand.linktreeHint') }}</p>
             <div class="flex flex-col gap-2 panel-portrait:flex-row">
-              <BaseSelect v-model="selectedTree" :options="choices" :aria-label="t('projectBrand.chooseLinktree')" />
+              <BaseSelect v-model="selectedTree" :options="choices" :aria-label="t('projectBrand.chooseLinktree')" class="panel-portrait:max-w-md" />
               <BaseButton :disabled="busy || !selectedTree" :disabled-reason="busy ? t('projectBrand.saving') : t('projectBrand.chooseLinktree')" @click="associate(selectedTree, project.id)">{{ t('projectBrand.link') }}</BaseButton>
             </div>
             <p v-if="!trees.length" class="text-sm text-text-subtle">{{ t('projectBrand.noLinktrees') }}</p>
@@ -127,14 +127,18 @@ onMounted(load)
             <h3 class="font-semibold text-text-default">{{ t('projectBrand.library') }}</h3>
             <p class="text-sm text-text-subtle">{{ t('projectBrand.privateHint') }}</p>
             <form class="space-y-3 rounded-xl border border-border-muted p-3" @submit.prevent="upload">
-              <label class="block text-sm text-text-default" for="brand-title">{{ t('projectBrand.assetTitle') }}</label>
-              <BaseInput id="brand-title" v-model="title" required maxlength="200" />
-              <label class="block text-sm text-text-default" for="brand-category">{{ t('projectBrand.category') }}</label>
-              <BaseSelect id="brand-category" v-model="category" :options="categories" />
-              <label class="block text-sm text-text-default" for="brand-file">{{ t('projectBrand.file') }}</label>
-              <!-- design-tokens: allow-raw-input — native file picker. -->
-              <input id="brand-file" ref="fileInput" type="file" required class="block w-full min-w-0 text-sm text-text-default" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.zip,.ai,.eps,.psd,.fig,.sketch,.docx,.pptx,.txt,.md,.json,.ttf,.otf,.woff,.woff2" @change="file = $event.target.files?.[0] || null" />
-              <p class="text-xs text-text-subtle">{{ t('projectBrand.formats') }}</p>
+              <BaseFormRow :cols="2" :lg="3" :gap="4" :help="t('projectBrand.formats')" help-testid="project-brand-formats">
+                <BaseFormField :label="t('projectBrand.assetTitle')" for="brand-title">
+                  <BaseInput id="brand-title" v-model="title" required maxlength="200" />
+                </BaseFormField>
+                <BaseFormField :label="t('projectBrand.category')" for="brand-category">
+                  <BaseSelect id="brand-category" v-model="category" :options="categories" />
+                </BaseFormField>
+                <BaseFormField :label="t('projectBrand.file')" for="brand-file">
+                  <!-- design-tokens: allow-raw-input — native file picker. -->
+                  <input id="brand-file" ref="fileInput" type="file" required class="block w-full min-w-0 text-sm text-text-default" accept=".pdf,.png,.jpg,.jpeg,.webp,.svg,.zip,.ai,.eps,.psd,.fig,.sketch,.docx,.pptx,.txt,.md,.json,.ttf,.otf,.woff,.woff2" @change="file = $event.target.files?.[0] || null" />
+                </BaseFormField>
+              </BaseFormRow>
               <BaseButton type="submit" :disabled="busy" :disabled-reason="t('projectBrand.saving')">{{ t('projectBrand.upload') }}</BaseButton>
             </form>
             <p v-if="!assets.length" class="text-sm text-text-subtle">{{ t('projectBrand.noAssets') }}</p>

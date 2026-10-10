@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import { ADMIN_PROPOSAL_FORMALIZATION_DELIVERY } from '../helpers/flow-tags.js';
 
 const PROPOSAL_ID = 451;
@@ -183,6 +184,10 @@ test.describe('Admin proposal formalization delivery', () => {
     await page.getByTestId('proposal-formalization-open').click();
     const modal = page.getByRole('dialog').filter({ has: page.getByTestId('formalization-modal') });
     await expect(modal.getByTestId('formalization-subject')).toHaveValue('Documentación para formalizar Portal de formalización');
+    // Editing is a form: subject and greeting share a row inside the 42rem panel.
+    await expectCompactModal(modal, page.viewportSize(), {
+      lines: [{ fields: [modal.getByTestId('formalization-subject'), modal.getByLabel('Saludo')] }],
+    });
     await modal.getByTestId('formalization-select-technical').uncheck();
     await modal.getByLabel('Anexo de seguridad').check();
     await modal.getByTestId('formalization-prepare').click();
@@ -193,6 +198,9 @@ test.describe('Admin proposal formalization delivery', () => {
     await expect(modal.getByTestId('formalization-email-preview')).toHaveAttribute('title', 'Correo de formalización');
     await expect(modal.getByRole('listitem')).toHaveCount(3);
     await expect(modal.getByText('Contrato final.pdf')).toBeVisible();
+    // The prepared review needs the room: the panel widens again.
+    // quality: allow-fragile-selector (BaseModal publishes its semantic width as data-modal-kind)
+    await expect(modal.locator('[data-modal-kind="wizard"]')).toHaveCount(1);
     await assertNoHorizontalOverflow(page);
 
     await modal.getByTestId('formalization-send').click();

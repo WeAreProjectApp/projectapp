@@ -16,6 +16,7 @@
       <BaseFormRow
         as="form"
         :cols="2"
+        :lg="4"
         :gap="4"
         class="bg-surface-raised rounded-xl p-4"
         @submit.prevent="submit"
@@ -38,7 +39,7 @@
         </BaseFormField>
         <!-- Not a field: spans the full width and the three bands, so it sits
              below the inputs instead of landing in a label cell. -->
-        <div class="sm:col-span-2 sm:row-span-3 flex flex-wrap items-center justify-between gap-3">
+        <div class="col-span-full panel-portrait:row-span-3 flex flex-wrap items-center justify-between gap-3">
           <label class="flex items-center gap-2 text-sm text-text-default">
             <BaseToggle v-model="form.advance_validity" aria-label="Extender vigencia" />
             <span>

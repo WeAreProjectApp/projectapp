@@ -13,6 +13,8 @@ jest.mock('../../stores/proposal_formalization', () => ({
 }));
 
 import ProposalFormalizationModal from '../../components/BusinessProposal/admin/ProposalFormalizationModal.vue';
+import BaseFormField from '../../components/base/BaseFormField.vue';
+import BaseInput from '../../components/base/BaseInput.vue';
 
 const proposal = {
   id: 55,
@@ -65,7 +67,8 @@ const EmailRecipientFieldsStub = {
 };
 
 const BaseModalStub = {
-  template: '<div><slot /><slot name="footer" /></div>',
+  props: ['kind'],
+  template: '<div :data-kind="kind"><slot /><slot name="footer" /></div>',
 };
 
 function availableDocuments(overrides = {}) {
@@ -81,6 +84,7 @@ function mountModal() {
   return mount(ProposalFormalizationModal, {
     props: { proposal, documents: [] },
     global: {
+      components: { BaseFormField, BaseInput },
       stubs: {
         BaseModal: BaseModalStub,
         BaseButton: {
@@ -217,6 +221,20 @@ describe('ProposalFormalizationModal', () => {
 
     expect(wrapper.get('[data-testid="formalization-prepare"]').text()).toBe('Preparar vista previa');
     expect(wrapper.findAll('[data-testid="formalization-send"]')).toHaveLength(0);
+  });
+
+  it('widens the modal only for the prepared review', async () => {
+    // Falla si el borrador editable hereda el ancho del asistente o la revisión preparada pierde espacio para la vista previa.
+    const wrapper = await renderEditableModal();
+    mockFormalizationStore.prepare.mockResolvedValue(structuredClone(preparedPackage));
+    expect(wrapper.attributes('data-kind')).toBe('form');
+
+    await wrapper.get('[data-testid="formalization-prepare"]').trigger('click');
+    await flushPromises();
+    expect(wrapper.attributes('data-kind')).toBe('wizard');
+
+    await wrapper.findAll('button').find((button) => button.text() === 'Volver a editar').trigger('click');
+    expect(wrapper.attributes('data-kind')).toBe('form');
   });
 
   it('returns a stale preparation to the editable draft while retaining its subject', async () => {

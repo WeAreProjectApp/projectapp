@@ -31,3 +31,7 @@ Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propon
 ## Cobro y liquidación (2026-10-06)
 
 Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explícitamente un documento del proyecto o contrato de una propuesta vinculada y se selecciona sin duplicar el original. Un rechazo conserva el formulario; cambiar de proyecto descarta respuestas de la consulta anterior.
+
+## Ayuda del plazo de pago (2026-10-09)
+
+La ayuda «0 días = pago inmediato» se lee bajo la fila Ciudad / Plazo de pago mientras el plazo está en días. Antes estaba dentro del campo, en una fila alineada, y nunca se mostraba.

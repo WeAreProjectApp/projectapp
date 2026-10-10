@@ -448,8 +448,8 @@ up to `90dvh`; short confirmations do not become tall workspaces.
 | Kind | Maximum from 640 px | Purpose |
 |---|---:|---|
 | `confirm` | 28rem | Brief confirmation |
-| `form` | 42rem | Simple / one-column form |
-| `form-wide` | 64rem | Normal two-column form |
+| `form` | 42rem | Create/edit form — the default: full-row text plus rows of two (or three/four short) fields; see [Field widths](#field-widths) |
+| `form-wide` | 64rem | Exception: three or more free-text fields side by side, or an embedded table/editor that needs the room — say why in a comment |
 | `wizard` | 80rem | Multi-step assistant |
 | `detail` | 64rem | Read-only detail |
 | `workspace` | `min(90vw, 100rem)` | Preview or working surface |
@@ -461,7 +461,7 @@ const formId = useId()
 </script>
 
 <BaseModal v-model="open" kind="form">
-  <form :id="formId" class="p-4 panel-portrait:p-6" @submit.prevent="save">…</form>
+  <form :id="formId" class="px-6 py-4 space-y-4" @submit.prevent="save">…</form>
   <template #footer>
     <BaseModalActions>
       <BaseButton variant="ghost" @click="open = false">Cancelar</BaseButton>
@@ -540,6 +540,52 @@ Notes:
   the row's `help` prop or `#help` slot.
 
 Live demo: `/panel/styleguide`, section 4.
+
+### Field widths
+
+Text controls are `w-full`, so a field is exactly as wide as its row track: the
+modal kind and the row's column count decide every width. Inside a `form` modal
+(42rem, about 622 px usable from 640 px up) a two-column track is about 303 px,
+a three-column track about 199 px and a four-column track about 146 px. Pick
+the track by field type:
+
+| Field type | In a form row | In a repeatable unlabelled line |
+|---|---|---|
+| Date, month, date-time | Half track next to a related field; a third in a row of short fields | `12rem` |
+| Select with short options | Half track | `11rem` |
+| Select whose options are sentences | Full row | The rest of the line |
+| Amount, number, percentage | Half track; a quarter inside a composite (value + VAT) | `9rem` |
+| Short text (ID, email, phone, port, username) | Half track | — |
+| One-line long text (concept, subject) | Full row alone; half track with a natural partner | The rest of the line |
+| Textarea, Markdown, client/project pickers, search | Full row | — |
+| Segmented control | Its own cell; alone with 3+ options, `panel-portrait:max-w-md` | — |
+| Checkbox, switch | Natural width, aligned with the neighbouring control | — |
+
+- A short field without a partner sits alone in a two-column row, so it keeps
+  the half track instead of stretching across the modal:
+
+  ```vue
+  <BaseFormRow :cols="2" :gap="4">
+    <BaseFormField label="Fecha de corte">…</BaseFormField>
+  </BaseFormRow>
+  ```
+
+- Pair fields that belong together (start/end, amount/date, bank/account type)
+  and keep the reading order: the DOM order is the stacked order below 640 px.
+- Free text keeps at least 280 px per column, which allows two columns in a
+  `form` modal. Rows of three or four columns are for short fields only.
+- A field `hint` is dropped in every aligned row (`cols > 1`, `lg > 1` or
+  `layout="field-action"`), including the hint of a component whose root is a
+  `BaseFormField`, such as `PeriodDateField`. Move the copy to the row's `help`
+  and give it a `help-testid`, so a test can prove it renders.
+- `lg` adds columns from 1024 px. Inside a 42rem `form` modal the extra columns
+  never pay off; keep it for `detail`/`workspace` modals and filter bars.
+- Below 640 px the modal is fullscreen, every row stacks in DOM order and
+  `BaseModalActions` stacks the actions full width with the primary first. No
+  field needs its own narrow-screen override.
+- Repeatable line editors without visible labels (deduction or follow-up lines)
+  may keep a hand-written `grid-cols-1 sm:grid-cols-[…]` with the fixed tracks
+  of the last column. Labelled fields always use `BaseFormRow`.
 
 ### Modals that hold a workspace, not a form
 

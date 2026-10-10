@@ -293,7 +293,9 @@
             label="Proyecto"
             testid="communication-thread-project"
           />
-          <CommunicationFolderPicker v-model="threadForm.folder" :client-id="threadForm.client" :project-id="threadForm.project" />
+          <BaseFormRow :cols="2" :gap="4">
+            <CommunicationFolderPicker v-model="threadForm.folder" :client-id="threadForm.client" :project-id="threadForm.project" />
+          </BaseFormRow>
           <BaseAlert v-if="threadFormErrors.folder" variant="danger">{{ threadFormErrors.folder }}</BaseAlert>
           <BaseFormField
             v-slot="{ invalid, errorId }"

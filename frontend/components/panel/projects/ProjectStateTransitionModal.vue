@@ -327,30 +327,33 @@ async function applyState() {
         {{ project.state_suggestion.message }}
       </BaseAlert>
 
-      <BaseFormField
-        v-slot="{ invalid, errorId }"
-        label="Nuevo estado"
-        required
-        :error="stateError"
-      >
-        <select
-          v-model="selectedStateId"
-          aria-label="Nuevo estado del proyecto"
-          :aria-invalid="invalid || undefined"
-          :aria-describedby="errorId"
-          data-testid="project-state-target"
-          class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
+      <!-- Alone in a two-column row: a state name needs half the width. -->
+      <BaseFormRow :cols="2" :gap="4">
+        <BaseFormField
+          v-slot="{ invalid, errorId }"
+          label="Nuevo estado"
+          required
+          :error="stateError"
         >
-          <option value="">Selecciona el estado real…</option>
-          <option
-            v-for="state in stateStore.activeStates.filter((item) => item.id !== project?.current_state?.id)"
-            :key="state.id"
-            :value="state.id"
+          <select
+            v-model="selectedStateId"
+            aria-label="Nuevo estado del proyecto"
+            :aria-invalid="invalid || undefined"
+            :aria-describedby="errorId"
+            data-testid="project-state-target"
+            class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
           >
-            {{ state.name }}
-          </option>
-        </select>
-      </BaseFormField>
+            <option value="">Selecciona el estado real…</option>
+            <option
+              v-for="state in stateStore.activeStates.filter((item) => item.id !== project?.current_state?.id)"
+              :key="state.id"
+              :value="state.id"
+            >
+              {{ state.name }}
+            </option>
+          </select>
+        </BaseFormField>
+      </BaseFormRow>
 
       <div v-if="selectedState" class="rounded-lg bg-surface-raised px-3 py-3 text-sm" data-testid="project-state-selected-help">
         <div class="flex items-center gap-2">
@@ -374,7 +377,7 @@ async function applyState() {
         type="datetime-local"
         :max="new Date().toISOString().slice(0, 16)"
         aria-label="Fecha efectiva de la transición"
-        class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm"
+        class="w-full rounded-lg border border-input-border bg-input-bg px-3 py-2 text-sm panel-portrait:max-w-[17rem]"
       />
 
       <section

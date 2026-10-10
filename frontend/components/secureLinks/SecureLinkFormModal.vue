@@ -1,5 +1,5 @@
 <template>
-  <BaseModal :model-value="modelValue" kind="form" padding="md" :close-on-backdrop="!store.isUpdating" :close-on-esc="!store.isUpdating" @update:model-value="requestClose">
+  <BaseModal :model-value="modelValue" kind="form" :close-on-backdrop="!store.isUpdating" :close-on-esc="!store.isUpdating" @update:model-value="requestClose">
     <form :id="modalFormId" ref="formElement" autocomplete="off" novalidate data-testid="secure-link-form" @submit.prevent="submit">
       <fieldset :disabled="store.isUpdating" class="space-y-4 px-6 py-5">
         <h3 class="text-lg font-bold text-text-default">{{ t(link ? 'secureLinks.panel.editTitle' : 'secureLinks.panel.newTitle') }}</h3>
@@ -70,7 +70,7 @@
         />
         <BaseAlert v-if="errors.project" variant="danger" tabindex="-1">{{ errors.project }}</BaseAlert>
 
-        <template v-if="!link">
+        <BaseFormRow v-if="!link" :cols="2" :gap="4">
           <BaseFormField label-policy="wrap" :label="t('secureLinks.panel.language')" for="secure-link-language" :error="errors.language">
             <BaseSegmented
               id="secure-link-language"
@@ -87,7 +87,7 @@
               data-testid="secure-link-validity"
             />
           </BaseFormField>
-        </template>
+        </BaseFormRow>
         </div>
         </BaseCollapse>
 
@@ -111,6 +111,7 @@ import { useId, computed, onBeforeUnmount, reactive, ref, watch } from 'vue';
 import BaseAlert from '~/components/base/BaseAlert.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
+import BaseFormRow from '~/components/base/BaseFormRow.vue';
 import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseModalActions from '~/components/base/BaseModalActions.vue';

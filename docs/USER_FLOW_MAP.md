@@ -6509,6 +6509,10 @@ Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar 
 
 Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
 
+## Liquidar compacto (2026-10-09)
+
+El modal de liquidar usa el ancho de formulario (42 rem): a 1440 px pasa de 1024 a 672 px. La fecha de pago comparte fila con Destino en la contabilidad de la empresa, o con Valor pagado en la personal. La ayuda de periodicidad de un hosting sin período se lee bajo su fila. El mes y el monto de un ingreso esperado de seguimiento tienen anchos fijos, y un concepto largo se parte en vez de desplazar el cuerpo a 412 px.
+
 ### FLOW: `admin-accounting-income-bulk-settle`
 - **Module:** admin
 - **Role:** admin
@@ -6524,6 +6528,10 @@ Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta em
 ## Cobro y liquidación (2026-10-06)
 
 Requisito de cobro (2026-10-06): las filas con cliente sólo participan cuando tienen cuenta emitida; las excluidas se explican antes del reparto. Una anulación concurrente causa rechazo atómico del servidor.
+
+## Formulario compacto (2026-10-09)
+
+El modal de abono usa el ancho de formulario (42 rem). Valor recibido y fecha comparten fila, y el destino (Bolsillo ProjectApp) se lee debajo de ella en lugar de ocupar una fila propia.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -6818,6 +6826,10 @@ Hereda IVA del ingreso; si un ingreso sin pagos no tiene tasa registrada, propon
 ## Cobro y liquidación (2026-10-06)
 
 Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explícitamente un documento del proyecto o contrato de una propuesta vinculada y se selecciona sin duplicar el original. Un rechazo conserva el formulario; cambiar de proyecto descarta respuestas de la consulta anterior.
+
+## Ayuda del plazo de pago (2026-10-09)
+
+La ayuda «0 días = pago inmediato» se lee bajo la fila Ciudad / Plazo de pago mientras el plazo está en días. Antes estaba dentro del campo, en una fila alineada, y nunca se mostraba.
 
 ### FLOW: `admin-accounting-hosting-cycles`
 

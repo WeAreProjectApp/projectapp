@@ -357,9 +357,9 @@ const modalFormId = useId();
 
 
       <BaseFormRow :cols="3" :gap="3">
-      <BaseFormField label="Identificación del cliente (NIT/CC)">
-        <BaseInput v-model="form.client_identification" data-testid="hosting-form-identification" />
-      </BaseFormField>
+        <BaseFormField label="Identificación del cliente (NIT/CC)" label-policy="wrap">
+          <BaseInput v-model="form.client_identification" data-testid="hosting-form-identification" />
+        </BaseFormField>
         <BaseFormField label="Valor por mes" required>
           <BaseCurrencyInput v-model="form.monthly_value" data-testid="hosting-form-monthly" required />
         </BaseFormField>
@@ -371,10 +371,6 @@ const modalFormId = useId();
           />
         </BaseFormField>
       </BaseFormRow>
-
-      <BaseFormField label="Beneficio">
-        <BaseInput v-model="form.benefit" data-testid="hosting-form-benefit" />
-      </BaseFormField>
 
       <BaseFormRow :cols="2" :gap="4">
         <BaseFormField label="Vigente desde" for="hosting-form-valid-from">
@@ -399,9 +395,16 @@ const modalFormId = useId();
         — se calculan desde el histórico de ciclos (acción "Ciclos de pago" en la tabla).
       </p>
 
-      <BaseFormField label="Activo">
-        <BaseToggle v-model="form.is_active" aria-label="Activo" />
-      </BaseFormField>
+      <BaseFormRow :cols="2" :gap="4">
+        <BaseFormField label="Beneficio">
+          <BaseInput v-model="form.benefit" data-testid="hosting-form-benefit" />
+        </BaseFormField>
+        <BaseFormField label="Activo">
+          <div class="flex min-h-10 items-center">
+            <BaseToggle v-model="form.is_active" aria-label="Activo" />
+          </div>
+        </BaseFormField>
+      </BaseFormRow>
 
       <BaseFormField label="Notas">
         <BaseTextarea v-model="form.notes" :rows="3" />

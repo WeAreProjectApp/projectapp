@@ -40,3 +40,7 @@ Los ingresos nuevos empiezan con IVA del 19% en cualquier contabilidad; cambiar 
 ## Cobro y liquidación (2026-10-06)
 
 Cobro antes de liquidar (2026-10-06): un esperado con cliente requiere cuenta emitida. Liquidar explica su bloqueo y ofrece generar la cuenta o completar su borrador; los ingresos internos mantienen su liquidación directa. También se revalida antes de registrar abonos.
+
+## Liquidar compacto (2026-10-09)
+
+El modal de liquidar usa el ancho de formulario (42 rem): a 1440 px pasa de 1024 a 672 px. La fecha de pago comparte fila con Destino en la contabilidad de la empresa, o con Valor pagado en la personal. La ayuda de periodicidad de un hosting sin período se lee bajo su fila. El mes y el monto de un ingreso esperado de seguimiento tienen anchos fijos, y un concepto largo se parte en vez de desplazar el cuerpo a 412 px.

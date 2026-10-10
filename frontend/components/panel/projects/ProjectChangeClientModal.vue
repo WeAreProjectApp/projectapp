@@ -18,6 +18,7 @@
     <div class="px-6 py-4 space-y-4" data-testid="project-change-client-modal">
       <ClientAutocomplete
         v-model="clientId"
+        class="panel-portrait:max-w-xl"
         test-id="project-change-client-picker"
         placeholder="Buscar el cliente destino..."
         :show-linked-hint="false"
