@@ -1,3 +1,7 @@
+> **Integridad de datos — 2026-10-09:** entrega de sesión del motor, la API, las
+> herramientas MCP y la skill `data-integrity`. Siguiente: corregir en origen la
+> creación de clientes provisionales repetidos (propuestas sin correo).
+
 > **Seguimiento de entregas — 2026-10-07, p0x:** preparación y validación
 > coordinada en worktrees propios. Aplicados el puente contractual, MCP de
 > recursos/modelo de datos, avisos, integridad de jerarquía y archivos privados.
