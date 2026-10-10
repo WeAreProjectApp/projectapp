@@ -14,6 +14,32 @@ def settlement_blocked_reason(*, kind, pending, client_id, account_status):
     return ''
 
 
+def issued_collection_account(income):
+    """The issued or paid cuenta that satisfies the rule below, or None.
+
+    Same match as ``require_issued_accounts``: a cuenta de cobro of this
+    income, issued or paid, for its project and its client's user. Newest
+    first, so a re-issue after a cancellation is the one that answers.
+    """
+    from content.models import Document
+
+    if not income.client_id:
+        return None
+    return (
+        Document.objects
+        .filter(
+            income_record=income,
+            document_type__code='collection_account',
+            commercial_status__in=ISSUED_ACCOUNT_STATUSES,
+            project_id=income.project_id,
+            client_user_id=income.client.user_id,
+        )
+        .select_related('collection_account')
+        .order_by('-created_at', '-pk')
+        .first()
+    )
+
+
 def require_issued_accounts(incomes, documents):
     """Called after billing locks and before any financial write."""
     from accounts.models import UserProfile

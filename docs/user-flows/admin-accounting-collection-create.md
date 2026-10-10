@@ -9,7 +9,7 @@
   1. Superuser clicks "Nueva cuenta de cobro" (or the income row action, which preselects and locks the income).
   2. Picks the client (snapshot + suggested consecutivo autofill; the selector warns before selection when it has no email); if needed, saves the canonical email inline without leaving or resetting the draft. Then narrows the income list by Alcance/Estado and picks the income from the modal-owned floating listbox, which cannot be clipped by the form panel and owns the only scrollbar while open; adjusts concept/value/terms.
   3. "Previsualizar" renders the real email and PDF; "Volver a editar" keeps state.
-  4. "Confirmar y enviar" creates+issues+emails; the row appears and the income flags as linked.
+  4. "Confirmar y enviar" opens the last notice (número, cliente, proyecto, concepto, valor total, emisión, vencimiento, correo); its "Emitir y enviar" creates+issues+emails, while Esc or "Volver a revisar" closes it without sending. The row appears and the income flags as linked.
 - **Coverage:** ✅ Covered (create-through-preview with payload assertions; selector warning for a client without email; complete visible blocker list; invalid inline email; explicit canonical email save preserving the draft; floating income list outside the clipping panel; alcance/estado chips with their counts + focus retention + explicit empty state + "Ver todos" widening + click-outside close; Liquidar routing on mark-paid; generate icon opens locked modal; linked row navigates focused)
 - **E2E Spec:** `e2e/admin/admin-accounting-collections.spec.js`, `e2e/admin/admin-accounting-incomes.spec.js`
 
@@ -35,3 +35,14 @@ Contratos existentes (2026-10-06): desde Cobro del proyecto se registra explíci
 ## Ayuda del plazo de pago (2026-10-09)
 
 La ayuda «0 días = pago inmediato» se lee bajo la fila Ciudad / Plazo de pago mientras el plazo está en días. Antes estaba dentro del campo, en una fila alineada, y nunca se mostraba.
+
+## Último aviso antes de enviar (2026-10-09)
+
+«Confirmar y enviar» ya no emite en el mismo clic: abre un último aviso que
+lista número, cliente, proyecto, concepto, valor total, fecha de emisión,
+fecha de vencimiento («Sin vencimiento (pago inmediato)» con plazo 0) y el
+correo al que sale. Esos datos vienen del mismo preview revertido, que ahora
+devuelve también `issue_date`, `customer_name`, `project_name` y
+`billing_concept`. Sólo «Emitir y enviar» emite y envía; Esc o «Volver a
+revisar» cierran el aviso y conservan el paso 2. Mientras envía, «Volver a
+editar» y un segundo envío quedan bloqueados, y Esc no cierra el asistente.

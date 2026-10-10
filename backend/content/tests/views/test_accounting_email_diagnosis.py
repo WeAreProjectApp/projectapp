@@ -219,6 +219,71 @@ class TestRetryingTheSend:
         assert mailoutbox[-1].to == ['cliente@test.com']
         assert response.data['retry_of'] == log.id
 
+    def _payment_confirmation_log(self, liquid_id, income_id):
+        return make_log(
+            template_key='income_payment_received_client',
+            recipient='cliente@test.com',
+            subject='Confirmación de pago — Cuenta de cobro PA-KORE-001',
+            metadata={
+                'income_id': income_id, 'liquid_id': liquid_id,
+                'document_id': None, 'public_number': 'PA-KORE-001',
+                'greeting_name': 'Ana', 'concept': 'Pago Kore',
+                'project_name': '', 'amount': '400000.00',
+                'payment_date': '2026-07-15', 'payment_date_precision': 'day',
+                'pending_after': '600000.00',
+            },
+        )
+
+    def test_a_payment_confirmation_retry_rebuilds_the_same_email(
+        self, super_client, mailoutbox,
+    ):
+        """The retry states the balance the client was told, not today's."""
+        from datetime import date
+
+        from content.models import IncomeRecord
+
+        expected = IncomeRecord.objects.create(
+            concept='Kore', kind=IncomeRecord.Kind.EXPECTED,
+            period_date=date(2026, 7, 1), total_amount=Decimal('1000000.00'),
+        )
+        liquid = IncomeRecord.objects.create(
+            concept='Pago Kore', kind=IncomeRecord.Kind.LIQUID,
+            period_date=date(2026, 7, 15), total_amount=Decimal('400000.00'),
+            expected_income=expected,
+        )
+        log = self._payment_confirmation_log(liquid.id, expected.id)
+
+        response = super_client.post(
+            f'/api/accounting/email-log/{log.id}/retry/',
+        )
+
+        assert response.status_code == 201
+        assert response.data['retry_of'] == log.id
+        assert mailoutbox[-1].to == ['cliente@test.com']
+        assert mailoutbox[-1].subject == log.subject
+        assert 'Saldo pendiente: $600.000 COP' in mailoutbox[-1].body
+
+    def test_a_payment_confirmation_for_an_undone_payment_is_refused(
+        self, super_client, mailoutbox,
+    ):
+        log = self._payment_confirmation_log(liquid_id=9999, income_id=9998)
+
+        response = super_client.post(
+            f'/api/accounting/email-log/{log.id}/retry/',
+        )
+
+        assert response.status_code == 400
+        assert 'ya no existe' in response.data['error']
+        assert mailoutbox == []
+
+    def test_every_retryable_notice_has_a_handler(self):
+        from content.serializers.accounting import RETRYABLE_TEMPLATE_KEYS
+        from content.services.accounting_email_retry_service import (
+            RETRY_HANDLERS,
+        )
+
+        assert RETRYABLE_TEMPLATE_KEYS == frozenset(RETRY_HANDLERS)
+
     def test_is_superuser_only(self, admin_client):
         log = make_log()
         assert admin_client.post(

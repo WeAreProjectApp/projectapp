@@ -1021,3 +1021,31 @@ class TestPocketMovementAllocations:
 
         assert [row['allocation_count'] for row in data] == [2]
         assert 'linked_expense_id' not in data[0]
+
+
+class TestIncomeSettlementPaymentConfirmation:
+    def _validated(self, **overrides):
+        from content.serializers.accounting import IncomeSettlementSerializer
+
+        data = {
+            'concept': 'Pago Kore', 'period_date': '2026-07-15',
+            'total_amount': '400000.00',
+        }
+        data.update(overrides)
+        serializer = IncomeSettlementSerializer(data=data)
+        assert serializer.is_valid(), serializer.errors
+        return serializer.validated_data
+
+    def test_the_client_email_is_off_unless_asked(self):
+        assert self._validated()['send_payment_confirmation'] is False
+        assert self._validated(
+            send_payment_confirmation=True,
+        )['send_payment_confirmation'] is True
+
+    def test_the_payment_date_keeps_the_precision_typed(self):
+        month = self._validated(period_date='2026-07')
+        exact_first = self._validated(period_date='2026-07-01')
+
+        assert month['period_date'] == exact_first['period_date'] == date(2026, 7, 1)
+        assert month['period_date_precision'] == 'month'
+        assert exact_first['period_date_precision'] == 'day'

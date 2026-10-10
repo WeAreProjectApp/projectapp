@@ -42,6 +42,7 @@ EXPECTED_CHANNELS = (
     ('proposal_email', DOCUMENTS_MANUAL),
     ('delivery_stage_approved_client', DOCUMENTS_MANUAL),
     ('collection_account_sent', COLLECTIONS),
+    ('income_payment_received_client', COLLECTIONS),
     ('document_signed_client', PLATFORM),
     ('delivery_published_client', PLATFORM),
     ('delivery_message_client', PLATFORM),

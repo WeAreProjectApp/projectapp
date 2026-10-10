@@ -72,12 +72,43 @@ def _retry_payment_status(log):
     )
 
 
+def _retry_payment_confirmation(log):
+    """Re-send the same confirmation from the facts stored on the row.
+
+    Re-reading the income would state today's balance, not the one the
+    client was told about. The payment must still exist, though: confirming
+    a settlement that was undone would tell the client something false.
+    """
+    from content.models import IncomeRecord
+    from content.services.income_payment_confirmation_service import (
+        send_payment_confirmation_email,
+        values_from_metadata,
+    )
+
+    values = values_from_metadata(log.metadata)
+    if not values.get('liquid_id'):
+        raise RetryError(
+            'Este envío no guardó qué pago confirmaba, así que no se puede '
+            'reconstruir.',
+        )
+    if not IncomeRecord.objects.filter(
+        id=values['liquid_id'],
+        kind=IncomeRecord.Kind.LIQUID,
+        expected_income_id=values.get('income_id'),
+    ).exists():
+        raise RetryError('El pago que confirmaba este correo ya no existe.')
+    return send_payment_confirmation_email(
+        values, recipient=log.recipient, client=log.client_id, retry_of=log,
+    )
+
+
 # One entry per notice that names a single record. `is_retryable` on the
 # serializer reads the same set, so the row and the endpoint cannot disagree
 # about what the button is allowed to do.
 RETRY_HANDLERS = {
     'accounting_change': _retry_accounting_change,
     'collection_account_sent': _retry_collection_account,
+    'income_payment_received_client': _retry_payment_confirmation,
     'payment_status_team': _retry_payment_status,
 }
 
