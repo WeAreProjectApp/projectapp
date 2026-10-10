@@ -2256,10 +2256,15 @@ def _generate_next_payment(subscription):
 
     from accounts.services.hosting_subscription_lifecycle import is_manually_paused
 
-    subscription = HostingSubscription.objects.filter(
+    # Refresh lifecycle guards without discarding the caller's billing state.
+    guard_subscription = HostingSubscription.objects.filter(
         pk=subscription.pk, retention_context__isnull=True, project__isnull=False,
-    ).first()
-    if not subscription or subscription.status == HostingSubscription.STATUS_CANCELLED or is_manually_paused(subscription):
+    ).only('pk', 'retention_context_id', 'project_id', 'status').first()
+    if (
+        not guard_subscription
+        or guard_subscription.status == HostingSubscription.STATUS_CANCELLED
+        or is_manually_paused(guard_subscription)
+    ):
         return None
 
     # Check if there's already a pending/processing payment
