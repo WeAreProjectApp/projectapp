@@ -7,6 +7,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, Throttled
 
 from content.mcp.common_tools import build_common_tools
+from content.mcp.connectors import CONNECTORS
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.errors import normalize_error, transport_exception_handler
 from content.mcp.panel_bridge import _error_message
@@ -149,7 +150,7 @@ def confirmation_contract(db):
 
 @pytest.mark.parametrize('confirmation_id', ['malformed-id', 123, None])
 def test_cancel_action_rejects_a_malformed_id(confirmation_contract, confirmation_id):
-    tools = build_common_tools('tasks', lambda: tools)
+    tools = build_common_tools(CONNECTORS['tasks'], lambda: tools)
 
     with use_mcp_context(confirmation_contract):
         _, response = handle_message({
@@ -175,7 +176,7 @@ def test_confirm_action_preserves_domain_blockers(confirmation_contract):
         'input_schema': {'type': 'object', 'properties': {}, 'additionalProperties': False},
         'handler': blocked,
     }]
-    tools.extend(build_common_tools('tasks', lambda: tools))
+    tools.extend(build_common_tools(CONNECTORS['tasks'], lambda: tools))
     with use_mcp_context(confirmation_contract):
         _, preview = handle_message({
             'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
