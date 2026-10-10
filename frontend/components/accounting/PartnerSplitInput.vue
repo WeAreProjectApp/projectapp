@@ -72,7 +72,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import VatAmountInput from './VatAmountInput.vue';
 import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
 import BaseToggle from '~/components/base/BaseToggle.vue';
@@ -90,19 +90,34 @@ const props = defineProps({
 
 const emit = defineEmits(['update:total', 'update:gustavoAmount', 'update:carlosAmount', 'update:vatRate', 'vatCapture']);
 
-const autoSplit = ref(true);
-
 function toNumber(value) {
   const n = Number(value);
   return Number.isFinite(n) ? n : 0;
 }
 
-// Integer COP split that always sums exactly to the total.
+const isBlank = (value) => value === '' || value == null;
+
+// Whole-peso halves: when the total does not split evenly, the odd peso (and
+// any cent) stays with ProjectApp — the same rule as the server's split_half,
+// and the remainder line below shows it.
 function splitFrom(totalValue) {
-  const n = Math.max(0, Math.floor(toNumber(totalValue)));
-  const gustavo = Math.floor(n / 2);
-  return { gustavo, carlos: n - gustavo };
+  const half = Math.floor(Math.max(0, toNumber(totalValue)) / 2);
+  return { gustavo: half, carlos: half };
 }
+
+/** The partner amounts already are the automatic split of `totalValue`. */
+function isAutoSplit(totalValue, gustavo, carlos) {
+  const split = splitFrom(totalValue);
+  return toNumber(gustavo) === split.gustavo && toNumber(carlos) === split.carlos;
+}
+
+// Auto mode only while the amounts are empty or already are the automatic
+// split: a split the record chose (or one left behind by a switch of
+// Contabilidad) opens in manual mode instead of being overwritten.
+const autoSplit = ref(
+  (isBlank(props.gustavoAmount) && isBlank(props.carlosAmount))
+  || isAutoSplit(props.total, props.gustavoAmount, props.carlosAmount),
+);
 
 function emitSplit(totalValue) {
   const { gustavo, carlos } = splitFrom(totalValue);
@@ -119,6 +134,18 @@ function onToggleAuto(value) {
   autoSplit.value = value;
   if (value) emitSplit(props.total);
 }
+
+// Auto mode owns the partner amounts: a total that arrives already filled —
+// the pending amount Liquidar opens on, the one kept across a switch back to
+// Empresa — is split too, not only the one typed here.
+watch(
+  () => props.total,
+  (value) => {
+    if (!autoSplit.value || isBlank(value)) return;
+    if (!isAutoSplit(value, props.gustavoAmount, props.carlosAmount)) emitSplit(value);
+  },
+  { immediate: true },
+);
 
 const sumExceedsTotal = computed(
   () =>

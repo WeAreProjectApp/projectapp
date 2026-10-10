@@ -307,8 +307,8 @@ watch(
       period_date: todayISO(),
       // Default to what is still owed, not the full projection: the whole
       // point of liquidating is that they often pay late and short. The
-      // partner split stays empty on purpose — when neither amount is
-      // sent, the server applies its canonical 50/50 (split_half).
+      // partner split starts empty and PartnerSplitInput's auto mode splits
+      // this amount as it mounts, so the settlement sends the split on screen.
       total_amount: props.record.pending_amount ?? props.record.total_amount,
     }
   },
