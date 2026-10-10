@@ -5,6 +5,7 @@ from unittest.mock import Mock
 
 import pytest
 
+from content.mcp.schemas.projects_bridge import PANEL_ONLY_FIELDS
 from content.models import McpConnector, McpCredential
 from content.tests.mcp_parity import assert_no_writes, call_tool_inprocess
 from content.tests.mcp_schema_rules import (
@@ -58,9 +59,9 @@ def test_open_schema_backlog_matches_the_current_failures(inventory):
     _ratchet(current, OPEN_SCHEMA_BACKLOG, INITIAL_OPEN_SCHEMA_COUNT)
 
 
-def test_history_exclusions_match_the_owned_module(inventory):
+def test_exclusions_match_the_modules_owned_by_pr_503(inventory):
     owned = {(row['connector'], row['name']) for row in inventory
-             if row['module'] == 'content.mcp.entity_history_tools'}
+             if row['schema_module'] in {'content.mcp.entity_history_tools', 'content.mcp.common_tools'}}
 
     assert set(EXCLUDED_TOOLS) == owned
     assert set(EXCLUDED_TOOLS.values()) == {'owned by PR #503'}
@@ -77,6 +78,21 @@ def test_drift_backlog_matches_resolved_explicit_views(inventory):
     current = schema_drift(inventory)
 
     _ratchet(current, DRIFT_BACKLOG, INITIAL_DRIFT_COUNT)
+
+
+def test_panel_only_read_exemptions_keep_their_reasons(inventory):
+    rows = {row['name']: row for row in inventory
+            if row['connector'] == 'projects' and row['name'] in PANEL_ONLY_FIELDS}
+
+    assert set(rows) == set(PANEL_ONLY_FIELDS)
+    assert all(isinstance(reason, str) and reason.strip()
+               for fields in PANEL_ONLY_FIELDS.values() for reason in fields.values())
+    assert {name: row['panel_only_fields'] for name, row in rows.items()} == PANEL_ONLY_FIELDS
+    client_change = rows['change_project_client']
+    assert set(client_change['undeclared_data']) == set(PANEL_ONLY_FIELDS['change_project_client'])
+    missing_reason = deepcopy(client_change)
+    missing_reason['panel_only_fields']['hosting_ids'] = ''
+    assert schema_drift([missing_reason]) == {('projects', 'change_project_client', 'data', 'hosting_ids')}
 
 
 def _sample(schema):

@@ -1,14 +1,11 @@
-"""Contract and Panel behavior of the independently prepared Documents schemas."""
-
-from copy import deepcopy
+"""Published Documents bridge contracts match Panel inputs and behavior."""
 
 import pytest
 from django.urls import reverse
 
 from content.mcp.confirmation import confirm_action, preview_sensitive_action
 from content.mcp.context import McpExecutionContext, use_mcp_context
-from content.mcp.operation_catalogs import DOCUMENT_PARITY_TOOLS, _ownership_defaults
-from content.mcp.panel_bridge import panel_operation
+from content.mcp.operation_catalogs import DOCUMENT_PARITY_TOOLS
 from content.mcp.protocol import ToolError
 from content.mcp.schemas.documents_bridge import DOCUMENTS_BRIDGE_SCHEMAS
 from content.models import (
@@ -64,27 +61,7 @@ _DELEGATED_READS = {
 
 
 def _build_tool(name):
-    original = _ORIGINAL_TOOLS[name]
-    operation = original['_panel_operation']
-    tool = panel_operation(
-        name=name,
-        description=original['description'],
-        route_name=operation['route_name'],
-        method=operation['method'],
-        path_params=operation['path_params'],
-        risk=operation['risk'],
-        requires_confirmation=operation['requires_confirmation'],
-        confirmation_message=operation['confirmation_message'],
-        asset_fields=deepcopy(operation['asset_fields']),
-        **deepcopy(DOCUMENTS_BRIDGE_SCHEMAS[name]),
-    )
-    if name in ('move_documents', 'update_folder'):
-        tool['handler'] = _ownership_defaults(tool['handler'])
-    elif name == 'change_folder_client':
-        tool['handler'] = _ownership_defaults(
-            tool['handler'], defaults=(('portal_policy', 'abort'),),
-        )
-    return tool
+    return _ORIGINAL_TOOLS[name]
 
 
 def _assert_serializer_payload(name, row, payload):
@@ -145,6 +122,7 @@ def test_catalog_covers_the_documents_panel_bridge():
 def test_document_bridge_contract_matches_its_view(name):
     tool = _build_tool(name)
     fragments = DOCUMENTS_BRIDGE_SCHEMAS[name]
+    assert all(tool['_panel_operation'][key] == schema for key, schema in fragments.items())
     row = inventory_tool(
         'documents', tool,
         definitions={name: 'content.mcp.operation_catalogs'},

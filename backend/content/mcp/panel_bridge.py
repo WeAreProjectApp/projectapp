@@ -76,6 +76,24 @@ def _impact_for(operation, arguments):
     }
 
 
+_PATH_DESCRIPTIONS = {
+    'document_id': 'Id positivo del documento que se consulta o modifica.',
+    'folder_id': 'Id positivo de la carpeta documental que se consulta o modifica.',
+    'project_id': 'Id positivo del proyecto que se consulta o modifica.',
+    'tag_id': 'Id positivo de la etiqueta documental.',
+    'state_id': 'Id positivo del estado del catálogo documental o de proyectos.',
+    'group_id': 'Id positivo del grupo del catálogo de estados.',
+    'episode_id': 'Id positivo del episodio de estado del documento.',
+    'note_id': 'Id positivo de la observación del documento.',
+    'idea_id': 'Id positivo de la idea dentro del proyecto.',
+    'collection_id': 'Id positivo de la recopilación de ideas del proyecto.',
+    'phase_id': 'Id positivo de la fase comercial del proyecto.',
+    'operation_id': 'Id positivo del traslado auditado de datos conservados.',
+    'context_id': 'Id positivo del contexto de datos conservados del proyecto eliminado.',
+    'asset_id': 'Id positivo del archivo de marca dentro del proyecto.',
+}
+
+
 def _path_properties(path_params, *, explicit=False):
     properties = {}
     for name in path_params:
@@ -86,6 +104,11 @@ def _path_properties(path_params, *, explicit=False):
             )
         else:
             properties[name] = {'type': 'string'}
+        properties[name]['description'] = _PATH_DESCRIPTIONS.get(
+            name,
+            'Id del recurso que se consulta o modifica; entero positivo.'
+            if name.endswith('_id') else f'Valor de {name} en la ruta del Panel, como texto.',
+        )
     return properties
 
 
@@ -361,9 +384,13 @@ def panel_operation(
     elif operation['method'] != 'GET':
         properties.pop('query')
     for argument_name, config in operation['asset_fields'].items():
-        asset_schema = {'type': 'string', 'format': 'uuid'}
+        asset_schema = {
+            'type': 'string', 'format': 'uuid',
+            'description': 'UUID del asset temporal subido; aporta su archivo validado al Panel.',
+        }
         properties[argument_name] = (
-            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True}
+            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True,
+             'description': 'UUIDs de los assets temporales subidos; al menos uno y sin repetir.'}
             if config.get('many') else asset_schema
         )
     tool = {

@@ -9,7 +9,6 @@ from accounts.models_project_ideas import ProjectIdea
 from accounts.tests.project_collaboration_helpers import context
 
 from content.mcp.context import McpExecutionContext, use_mcp_context
-from content.mcp.panel_bridge import panel_operation
 from content.mcp.protocol import ToolError
 from content.mcp.schemas.projects_bridge import (
     PANEL_ONLY_FIELDS,
@@ -28,19 +27,6 @@ from content.tests.mcp_schema_rules import EXCLUDED_TOOLS, schema_problems
 from content.tests.mcp_view_inventory import inventory_tool
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
-# The shared constructor currently omits these generated descriptions. The
-# integrator owns that fix; this fixture supplies it without altering payloads.
-_GENERATED_DESCRIPTIONS = {
-    'project_id': 'Id del proyecto que se consulta o modifica.',
-    'idea_id': 'Id de la idea dentro del proyecto.',
-    'collection_id': 'Id de la recopilación de ideas dentro del proyecto.',
-    'state_id': 'Id del estado del catálogo de proyectos.',
-    'phase_id': 'Id de la fase comercial dentro del proyecto.',
-    'operation_id': 'Id de la operación de traslado de datos conservados.',
-    'context_id': 'Id del contexto de datos conservados del proyecto eliminado.',
-    'asset_id': 'Id numérico del archivo de marca dentro del proyecto.',
-}
-
 # These views pass a whole map to a service. Each service validates with the
 # named serializer before reading the map; no free-form payload is involved.
 _SERVICE_SERIALIZERS = {
@@ -54,24 +40,6 @@ _SERVICE_SERIALIZERS = {
 _VIEW_PAYLOAD_FIELDS = {'create_project_state': {'confirm_similar'}}
 _CREATE_DEFAULT_FIELDS = {'create_project_state': {'group'}}
 _DELEGATED_QUERY_READS = {'preview_retained_container_cleanup': set(CONTAINER_KINDS)}
-
-
-def _rebuild(original, schemas):
-    operation = {**original['_panel_operation'], **deepcopy(schemas)}
-    rebuilt = panel_operation(description=original['description'], **operation)
-    for root in (rebuilt['input_schema'], rebuilt['accepted_arguments_schema']):
-        for name in operation['path_params']:
-            root['properties'][name].setdefault('description', _GENERATED_DESCRIPTIONS[name])
-        for name in operation['asset_fields']:
-            root['properties'][name].setdefault(
-                'description', 'UUID del asset temporal subido; el Panel recibe su archivo validado.',
-            )
-    # Keep confirmation preparation, impact and etag guards when evaluating a
-    # rebuilt tool. Its handler uses the new schemas for the Panel request.
-    for name in ('prepare_arguments', 'confirmation_predicate', 'impact_builder', 'etag_resolver'):
-        if name in original:
-            rebuilt[name] = original[name]
-    return rebuilt
 
 
 def _serializer_class(path):
@@ -156,10 +124,7 @@ def original_bridge_tools():
 
 @pytest.fixture(scope='module')
 def bridge_tools(original_bridge_tools):
-    return {
-        name: _rebuild(original_bridge_tools[name], schemas)
-        for name, schemas in PROJECTS_BRIDGE_SCHEMAS.items()
-    }
+    return original_bridge_tools
 
 
 @pytest.fixture
@@ -175,6 +140,9 @@ def panel_case(db):
 
 def test_projects_bridge_family_has_complete_closed_schemas(original_bridge_tools, bridge_tools):
     failures = {name: schema_problems(tool) for name, tool in bridge_tools.items()}
+    assert all(bridge_tools[name]['_panel_operation'][key] == schema
+               for name, fragments in PROJECTS_BRIDGE_SCHEMAS.items()
+               for key, schema in fragments.items())
 
     assert len(original_bridge_tools) == 48
     assert set(PROJECTS_BRIDGE_SCHEMAS) == set(original_bridge_tools)

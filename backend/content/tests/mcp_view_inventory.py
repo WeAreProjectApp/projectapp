@@ -17,6 +17,7 @@ from importlib import import_module
 from django.urls import NoReverseMatch, Resolver404, resolve, reverse
 from rest_framework import serializers
 
+from content.mcp.schemas.projects_bridge import PANEL_ONLY_FIELDS
 from content.tests.mcp_schema_rules import CONNECTORS, schema_problems
 
 _CHANNELS = {'query_params': 'query', 'GET': 'query', 'data': 'data', 'FILES': 'files'}
@@ -374,6 +375,9 @@ def inventory_tool(connector, tool, *, definitions=None):
     handler_module = tool['handler'].__module__
     definitions = _bridge_definitions() if definitions is None else definitions
     module = definitions.get(tool['name'], handler_module) if operation else handler_module
+    schema_module = definitions.get(tool['name'], _native_origin(tool['handler'])) if not operation else module
+    if tool['name'] in {'describe_capabilities', 'confirm_action', 'cancel_action'}:
+        schema_module = 'content.mcp.common_tools'
     root = tool['input_schema']
     properties = root.get('properties', {})
     problems = schema_problems(tool)
@@ -382,9 +386,9 @@ def inventory_tool(connector, tool, *, definitions=None):
              else 'partially typed' if problems else 'explicit')
     row = {
         'connector': connector, 'name': tool['name'], 'module': module,
-        'schema_module': definitions.get(tool['name'], _native_origin(tool['handler'])) if not operation else module,
+        'schema_module': schema_module,
         'family': f'{connector}-bridge' if operation else 'natives',
-        'excluded': module == 'content.mcp.entity_history_tools',
+        'excluded': schema_module in {'content.mcp.entity_history_tools', 'content.mcp.common_tools'},
         'method': operation['method'] if operation else None,
         'route_name': operation['route_name'] if operation else None,
         'path': None, 'view': None, 'input_schema': deepcopy(root),
@@ -396,6 +400,8 @@ def inventory_tool(connector, tool, *, definitions=None):
         'explicit_bridge': bool(operation and (operation.get('payload_schema') is not None or operation.get('query_schema') is not None)),
         'query_reads': [], 'data_reads': [], 'files_reads': [],
         'serializers': [], 'helpers': [], 'opaque': [],
+        'panel_only_fields': deepcopy(PANEL_ONLY_FIELDS.get(tool['name'], {}))
+        if connector == 'projects' and operation else {},
     }
     if operation:
         try:
@@ -426,11 +432,12 @@ def build_inventory(tools_by_slug=None):
 
 
 def schema_drift(inventory):
-    """Compare only explicit bridge contracts whose full read set is known."""
+    """Compare known explicit reads, retaining documented Panel-only exclusions."""
     return {
         (row['connector'], row['name'], channel, name)
         for row in inventory if row['explicit_bridge'] and not row['opaque'] and not row['excluded']
         for channel in ('query', 'data') for name in row[f'undeclared_{channel}']
+        if not row.get('panel_only_fields', {}).get(name, '').strip()
     }
 
 

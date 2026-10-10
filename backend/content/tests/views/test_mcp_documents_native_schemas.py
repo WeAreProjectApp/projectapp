@@ -5,7 +5,6 @@ from unittest.mock import Mock
 import pytest
 from rest_framework import serializers
 
-from content.mcp.confirmation import CANCEL_ACTION_INPUT_SCHEMA
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import handle_message
 from content.models import McpConnector, McpCredential
@@ -40,15 +39,6 @@ def test_published_native_contracts_pass_schema_policy(slug, names):
     problems = {name: schema_problems(tools[name]) for name in names}
 
     assert problems == {name: [] for name in names}, problems
-
-
-def test_cancel_action_reusable_contract_passes_schema_policy():
-    # common_tools belongs to PR #503; its builder must import this contract.
-    tool = {'name': 'cancel_action', 'input_schema': CANCEL_ACTION_INPUT_SCHEMA}
-
-    problems = schema_problems(tool)
-
-    assert not problems, problems
 
 
 @pytest.fixture
