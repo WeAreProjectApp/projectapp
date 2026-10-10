@@ -5,6 +5,7 @@ import json
 from datetime import date, datetime
 
 from content.models import Document, HostingCycle, HostingRecord, IncomeRecord
+from content.services.project_state_service import project_allows_billing
 from dateutil.relativedelta import relativedelta
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import transaction
@@ -31,7 +32,6 @@ OPEN_STATUSES = (
     Payment.STATUS_PENDING, Payment.STATUS_FAILED, Payment.STATUS_OVERDUE,
     Payment.STATUS_PROCESSING,
 )
-BLOCKS_BILLING = ('suspended', 'completed', 'decommissioned')
 
 
 class PaymentChargeSkipped(WompiPaymentBindingError):
@@ -182,7 +182,7 @@ def plan_change(subscription, action, effective_date=None, *, lock=False):
     if action == 'resume' and subscription.status == 'suspended' and not manual_pause:
         issue(blockers, 'suspended_by_payment_failure', 'La suspensión fue por cobros fallidos; no corresponde a una pausa manual.')
     state = getattr(project, 'current_state', None) if project else None
-    if action == 'resume' and state and state.operational_effect in BLOCKS_BILLING:
+    if action == 'resume' and project and not project_allows_billing(project):
         issue(blockers, 'project_blocks_billing', 'El estado del proyecto impide reanudar la facturación.', 'project', project.pk)
 
     voided, restored = [], []
