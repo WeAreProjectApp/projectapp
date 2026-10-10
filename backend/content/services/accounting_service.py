@@ -667,6 +667,7 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                 serializer.validated_data['project'] = locked.projects[target.pk]
             serializer._validated_data = serializer.validate(dict(serializer.validated_data))
             validate_financial_reassignment(instance, serializer.validated_data)
+            _ensure_shared_child_update_allowed(entity_type, instance, serializer)
             if expected and not serializer.context.get('settlement'):
                 _validate_linked_payment(expected, serializer.validated_data, instance)
         if (
@@ -679,7 +680,6 @@ def update_record(entity_type, instance, serializer, user, notify=True):
                 serializer.context.get('settlement'),
             )
         _ensure_pocket_update_allowed(entity_type, instance, serializer)
-        _ensure_shared_child_update_allowed(entity_type, instance, serializer)
         mirror_ledger = _pop_mirror_ledger(entity_type, serializer)
         register_in_pocket = _pop_register_in_pocket(entity_type, serializer)
         old_values = snapshot_values(instance, entity_type)
