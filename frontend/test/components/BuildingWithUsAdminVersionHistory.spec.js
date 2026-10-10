@@ -15,7 +15,7 @@ jest.mock('#imports', () => ({
 
 const makeVersion = (overrides = {}) => ({
   version_id: 42, version: 3, author: 'Ana', created_at: '2026-10-09T15:00:00Z',
-  change_note: 'Aporte del experto actualizado', restored_from_version_id: null, ...overrides,
+  change_note: 'Aporte del experto actualizado', restored_from_version_id: null, restored_from_version: null, ...overrides,
 });
 const mounted = [];
 function mountHistory(overrides = {}) {
@@ -71,9 +71,15 @@ describe('BuildingWithUsAdminVersionHistory', () => {
   });
 
   it('identifies the source of a restored version', () => {
-    const wrapper = mountHistory({ versions: [makeVersion({ restored_from_version_id: 40 })] });
+    const wrapper = mountHistory({ versions: [makeVersion({ restored_from_version_id: 40, restored_from_version: 1 })] });
 
-    expect(wrapper.get('[data-testid="building-with-us-program-version-42"]').text()).toContain('Restaurada desde la versión 40');
+    expect(wrapper.get('[data-testid="building-with-us-program-version-42"]').text()).toContain('Restaurada desde la versión 1');
+  });
+
+  it.each([null, undefined])('hides the restored source without a version number (%s)', (restoredFromVersion) => {
+    const wrapper = mountHistory({ versions: [makeVersion({ restored_from_version_id: 40, restored_from_version: restoredFromVersion })] });
+
+    expect(wrapper.get('[data-testid="building-with-us-program-version-42"]').text()).not.toContain('Restaurada desde la versión');
   });
 
   it('shows an empty history message', () => {

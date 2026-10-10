@@ -4,6 +4,7 @@ import BaseBadge from '../../components/base/BaseBadge.vue'
 import BaseSegmented from '../../components/base/BaseSegmented.vue'
 import ProgramView from '../../components/BuildingWithUs/ProgramView.vue'
 import messages from '../../locales/buildingWithUs/es'
+import englishMessages from '../../locales/buildingWithUs/en'
 
 enableAutoUnmount(afterEach)
 
@@ -246,6 +247,28 @@ describe('BuildingWithUsProgramView', () => {
     await flushPromises()
 
     expect(filename).toBe('alianza-producto.pdf')
+  })
+
+  it.each([
+    ['es', messages, 'Hablar por WhatsApp'],
+    ['en', englishMessages, 'Chat on WhatsApp'],
+  ])('localizes the %s hero WhatsApp label', (language, localeMessages, label) => {
+    global.useI18n = () => ({ t: (key) => localeMessages[key.split('.').pop()] || key })
+    const wrapper = mountProgram({ language })
+
+    expect(wrapper.get('[data-testid="building-with-us-whatsapp-hero"]').text()).toBe(label)
+  })
+
+  it.each([
+    ['es', messages, 'Hablar por WhatsApp'],
+    ['en', englishMessages, 'Chat on WhatsApp'],
+  ])('localizes the %s empty final CTA label', (language, localeMessages, label) => {
+    global.useI18n = () => ({ t: (key) => localeMessages[key.split('.').pop()] || key })
+    const program = createProgram()
+    program.cta.button_label = ''
+    const wrapper = mountProgram({ program, language })
+
+    expect(wrapper.get('[data-testid="building-with-us-whatsapp-cta"]').text()).toBe(label)
   })
 
   it('replaces an unsafe WhatsApp destination', () => {

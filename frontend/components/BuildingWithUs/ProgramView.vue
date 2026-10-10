@@ -149,7 +149,7 @@ async function downloadPdf() {
                 size="lg"
                 data-testid="building-with-us-whatsapp-hero"
               >
-                WhatsApp
+                {{ t('buildingWithUs.whatsappCta') }}
               </BaseButton>
               <BaseButton
                 v-if="downloadUrl"
@@ -347,7 +347,7 @@ async function downloadPdf() {
           <h2 v-if="program.cta.title" class="max-w-3xl text-3xl font-light sm:text-5xl">{{ program.cta.title }}</h2>
           <p v-if="program.cta.body" class="mt-5 max-w-3xl text-base leading-7 opacity-85">{{ program.cta.body }}</p>
           <BaseButton as="a" :to="safeWhatsappUrl(program.cta.whatsapp_url)" target="_blank" rel="noopener noreferrer" variant="accent" size="lg" v-bind="{ textPolicy: 'wrap' }" class="mt-7" data-testid="building-with-us-whatsapp-cta">
-            {{ program.cta.button_label || 'WhatsApp' }}
+            {{ program.cta.button_label || t('buildingWithUs.whatsappCta') }}
           </BaseButton>
         </div>
       </section>

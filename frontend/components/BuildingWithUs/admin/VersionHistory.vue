@@ -28,7 +28,7 @@ const title = computed(() => t(`buildingWithUsAdmin.history.${props.kind}Title`)
     <ol v-if="versions.length" class="mt-4 space-y-3">
       <li v-for="version in versions" :key="version.version_id" :data-testid="`building-with-us-${kind}-version-${version.version_id}`">
         <BuildingWithUsAdminVersionSummary :summary="version" />
-        <p v-if="version.restored_from_version_id" class="mt-2 break-words text-sm text-text-subtle">{{ t('buildingWithUsAdmin.history.restoredFrom', { version: version.restored_from_version_id }) }}</p>
+        <p v-if="version.restored_from_version != null" class="mt-2 break-words text-sm text-text-subtle">{{ t('buildingWithUsAdmin.history.restoredFrom', { version: version.restored_from_version }) }}</p>
       </li>
     </ol>
     <p v-else-if="!isLoading && !error" class="mt-4 text-sm text-text-subtle">{{ t('buildingWithUsAdmin.history.empty') }}</p>

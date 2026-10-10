@@ -75,8 +75,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/platformIssues/en.js'),
     import('~/locales/platformSecureLinks/en.js'),
     import('~/locales/waiter/en.js'),
-    import('../../locales/buildingWithUs/en.js'),
-    import('../../locales/buildingWithUsAdmin/en.js'),
+    import('~/locales/buildingWithUs/en.js'),
+    import('~/locales/buildingWithUsAdmin/en.js'),
   ])
 
   return {

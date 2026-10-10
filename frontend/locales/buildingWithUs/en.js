@@ -6,6 +6,7 @@ export default {
   serviceType: 'Software product incubation and development partnership',
   spanish: 'Español',
   english: 'English',
+  whatsappCta: 'Chat on WhatsApp',
   toggleTheme: 'Toggle theme',
   downloadPdf: 'Download PDF',
   generatingPdf: 'Generating PDF',

@@ -154,6 +154,7 @@ function versionSummary(kind, version = 21) {
     version, version_id: (kind === 'program' ? 100 : 200) + version,
     updated_at: updatedAt, author: { ...author },
     change_note: kind === 'program' ? 'Programa actualizado con aportes verificables.' : 'Contrato de alianza publicado.',
+    restored_from_version_id: null, restored_from_version: null,
     etag: `building-with-us-${kind}-${version}`,
   };
 }

@@ -6,6 +6,7 @@ export default {
   serviceType: 'Alianza de incubación y desarrollo de productos de software',
   spanish: 'Español',
   english: 'English',
+  whatsappCta: 'Hablar por WhatsApp',
   toggleTheme: 'Cambiar tema',
   downloadPdf: 'Descargar PDF',
   generatingPdf: 'Generando PDF',

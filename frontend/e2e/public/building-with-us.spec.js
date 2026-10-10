@@ -53,6 +53,7 @@ test.describe('Public Building with Us', () => {
       /Diseño y desarrollo[\s\S]*Infraestructura y operación/,
     ]);
     await expect(page.getByTestId('building-with-us-period-0')).toContainText(program.incubation_periods.items[0].title);
+    await expect(page.getByTestId('building-with-us-whatsapp-hero')).toHaveText('Hablar por WhatsApp');
     await expect(page.getByTestId('building-with-us-whatsapp-cta')).toHaveAttribute('href', program.cta.whatsapp_url);
     await expect(page.getByRole('navigation', { name: 'Main navigation' })).toHaveCount(0);
     await expect(page.locator('video')).toHaveCount(0);
@@ -81,6 +82,7 @@ test.describe('Public Building with Us', () => {
     await expect(page).toHaveURL(/\/en-us\/building-with-us$/);
     await expect(page.getByRole('heading', { name: englishProgram.hero.title, exact: true })).toHaveText(englishProgram.hero.title);
     await expect(page.getByTestId('building-with-us-industries')).toContainText('Healthcare');
+    await expect(page.getByTestId('building-with-us-whatsapp-hero')).toHaveText('Chat on WhatsApp');
   });
 
   test('expands the answer about earned participation', {
