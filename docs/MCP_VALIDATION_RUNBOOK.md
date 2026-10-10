@@ -5,9 +5,10 @@ Las plantillas contractuales independientes se administran desde Propuestas
 Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar
 lectura de las tres variantes, preview sin escritura, campos obligatorios,
 rechazo por etag, confirmación, coherencia, historial/restauración y reversión
-del lote si falla un PDF o una nota. Comprobar `list_contract_mirrors` y que el
-panel rechace también movimiento, archivado y cambios de las carpetas que
-contienen los espejos. Los contratos ya guardados o firmados conservan sus bytes.
+del lote si falla un PDF o una nota. Comprobar `list_contract_mirrors`: el pin
+por ID permite renombrar y mover la carpeta y sus ancestros, mientras bloquea
+su archivado y la asignación de cliente/proyecto a la carpeta fijada. Los
+contratos ya guardados o firmados conservan sus bytes.
 
 ## Tickets de proyecto: bugs y solicitudes contextualizadas
 
@@ -34,6 +35,150 @@ con las áreas del Panel. La fuente ejecutable del inventario está en
 `backend/content/views/mcp_blog.py`; los adaptadores de paridad viven en
 `backend/content/mcp/operation_catalogs.py` y la clasificación de campos en
 `backend/content/mcp/contracts.py`.
+
+## Migración de carpetas por MCP — parte 1 (2026-10)
+
+Revisión focal del 2026-10-09 sobre los commits `74ca0073` (framework),
+`484997f6` (espejos), `870bacf2` (cambio de cliente), `e676c1c1` (hosting),
+`388b1fae` y `7d5526b5` (UI/E2E), y `ba83a834` (contratos y conteos).
+Ejecutar las comprobaciones mutantes en datos aislados de test/staging, con
+Wompi y correo simulados. Son criterios de validación, no resultados de un
+despliegue ni asignación de una versión nueva.
+
+1. **Framework — descubrimiento.** Comparar `tools/list` con
+   `describe_capabilities` en `documents` y `projects`, con credencial completa
+   y restringida: mismos nombres, títulos, descripciones, input/output schemas
+   y anotaciones. Los adaptadores con `payload_schema` o `query_schema`
+   explícito publican campos planos y `additionalProperties: false`, sin
+   envelopes `data`/`query`.
+2. **Framework — compatibilidad de argumentos.** Revisar el contrato interno
+   `accepted_arguments_schema`: conserva los alias tipados `data` para cuerpos
+   y `query` cuando hay query declarada, con los required de ruta. Probar alias
+   y argumentos planos con el mismo resultado; valores contradictorios o claves
+   desconocidas dentro del alias deben fallar antes de escribir.
+3. **Framework — query encoding.** Verificar booleanos como `true`/`false`,
+   listas CSV por defecto en queries explícitas o repetidas con
+   `x-query-encoding: repeat`. Un null permitido se omite; uno no nullable se
+   rechaza. Comprobar el mismo encoding en GET y métodos con body: una query
+   declarada llega a la vista; una `query` no declarada en POST se rechaza en
+   lugar de descartarse.
+4. **Framework — validación central.** En schemas cerrados, probar un campo
+   desconocido y uno required ausente: `details.errors` conserva `field`,
+   `code` (`unknown_field` o `required`) y `message`. La validación central
+   cubre el nivel superior, usa `accepted_arguments_schema` si existe y, por
+   defecto, se activa en `documents`/`projects`; una tool puede optar mediante
+   `strict_arguments`. Un schema abierto queda fuera de este control y los
+   serializers/handlers conservan la validación de tipos y reglas de negocio.
+   Comprobar que `blockers`, `planned`, `impact_hash` y `can_apply` mantienen
+   su estructura al normalizar un error.
+5. **Framework — cancelación.** `cancel_action` con UUID malformado o sin
+   intent pendiente de la misma credencial responde `NOT_FOUND`, sin excepción
+   interna ni modificación de otra confirmación.
+6. **Espejos — pin y flags.** `list_contract_mirrors` devuelve los tres espejos
+   y `pinned_folder`, con `pinned_folder_id`, `pin_source`, `folder_path`,
+   `folder_movable`, `archive_blocked` y `archive_block_reason`. En una réplica
+   correctamente inicializada, comprobar pin persistido (`field`), carpeta
+   activa/movible y los tres `synchronized: true`. Los flags y la ruta de cada
+   espejo deben coincidir con las operaciones disponibles.
+7. **Espejos — reorganización.** Renombrar y mover Contratos y luego un
+   ancestro manual. Releer el listado: cambian las rutas, permanece el ID del
+   pin y los tres espejos siguen `synchronized: true`. Una actualización
+   contractual válida sigue sincronizando Markdown, PDF y notas en esa carpeta.
+8. **Espejos — archivado y dueño.** Archivar Contratos o un ancestro que aún
+   contiene espejos devuelve `CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED`; el Panel
+   responde 409 `contract_mirror_folder_archive_blocked`, con ID/ruta de la
+   carpeta fijada y IDs de espejos. Cambiar cliente o proyecto de la carpeta
+   fijada devuelve 409 `contract_mirror_folder_pinned` (MCP:
+   `CONTRACT_MIRROR_FOLDER_PINNED`). Ningún rechazo altera asociaciones ni
+   archivado. El cambio de cliente de un ancestro omite la rama fijada y la
+   informa como pinned; el borrado forzado exige moverla fuera primero.
+9. **Cambio de cliente — preview y bloqueo.**
+   `preview_project_client_change` con `project_id` y `client_profile_id`
+   devuelve `can_apply`, `blockers`, `blocker_counts`, `planned.move`,
+   `planned.detach`, `financial_history` e `impact_hash` independiente del modo.
+   Comparar con el evaluador compartido y las tres guardas. Un proyecto con
+   historia, incluida una suscripción cancelada, no crea un intent al llamar
+   `change_project_client` con el hash vigente: devuelve
+   `PROJECT_CLIENT_CHANGE_BLOCKED` y `details.blockers[].resolution:
+   create_new_project`. Si el bloqueo aparece antes de `confirm_action`, el
+   rechazo añade `details.guard_code` y conserva dueño e historia.
+10. **Cambio de cliente — impacto obsoleto.** Con preview inicialmente
+    permitido, cambiar el conjunto vinculado y enviar el hash anterior como
+    `expected_impact_hash`: `STALE_VERSION` al preparar la acción, sin escritura.
+    Confirmar también una intención cuyo impacto cambió: debe rechazarse y
+    requerir nueva revisión. El endpoint del Panel revalida bajo lock y usa
+    409 `records_changed`; mantiene las listas de IDs legacy.
+11. **Hosting — cancelación confirmada.** Encadenar
+    `preview_hosting_subscription_change` (`subscription_id`, `action: cancel`,
+    `effective_date` opcional) → `change_hosting_subscription` con motivo y
+    `expected_impact_hash` → `confirm_action` → `get_project_hosting` con el
+    `project_id`. Antes de confirmar no hay cambios. Después, suscripción
+    `cancelled`, próxima fecha null y los cobros abiertos futuros del preview
+    en `subscription.payments` como `voided`, archivados y con historia. En la
+    réplica del caso PRUEBA, conservar el pago recibido 4 y anular el pendiente
+    futuro 5; no usar esos IDs para mutar producción durante esta validación.
+12. **Hosting — fecha y transiciones.** Probar `pause` desde `active`/`pending`
+    a `suspended`, con evento de pausa manual; `resume` sólo desde esa pausa y
+    `cancel` como terminal. Sólo se anulan cobros abiertos activos con
+    `due_date > effective_date`; los ya causados se conservan cobrables. Al
+    reanudar, restaurar los anulados por esa pausa todavía futuros; si no quedan,
+    iniciar un ciclo desde la fecha de reanudación. Validar fecha futura,
+    suspensión por fallos, retención, archivado, proyecto sin facturación y
+    pago en proceso con transacción Wompi como bloqueos.
+13. **Hosting — entradas de pago.** Los endpoints de link, widget, tarjeta
+    nueva y tarjeta guardada rechazan pagos archivados o `voided`. Una aprobación
+    tardía sobre un cobro anulado registra `paid`, desarchiva el cobro y conserva
+    `settled_after_void`, su evento y aviso al administrador, sin reactivar ni
+    generar otro ciclo. Simular al proveedor; no intentar un cobro real.
+14. **Hosting — automatismos y rechecks.** El pago manual conserva cancelación
+    o pausa; `_generate_next_payment` omite archivados y no genera para esas
+    suscripciones. La tarjeta guardada se revalida bajo lock antes de Wompi y
+    `_onboard_due_phases` relee sus estados bajo lock. PATCH `status` de la
+    suscripción devuelve 400 `subscription_lifecycle_required`. Registrar el
+    trade-off: los locks siguen durante la llamada externa y su polling;
+    **claim-then-call** es seguimiento pendiente.
+15. **UI y E2E.** En Cambiar cliente, un preview bloqueado muestra los motivos
+    y la orientación de crear un proyecto nuevo, oculta los modos y deshabilita
+    Confirmar sin enviar POST. El permitido exige modo y envía el hash revisado.
+    Verificar «Anulado» en pagos/historial y «Anulado»/«Voided» en los locales
+    de billing. El flow `admin-project-change-client` registra display, success
+    y error con APIs simuladas.
+16. **Contratos y conteos.** Documentos conserva **66** tools y Proyectos
+    **164** en este corte. `ContractTemplate.mirror_folder` queda excluido de
+    escritura en propuestas y observable en Documentos; los flags de archivo de
+    Payment son read-only. Sólo `projects` clasifica `HostingSubscription.status`
+    y `next_billing_date` como modificables mediante la acción de ciclo de vida:
+    rechazar esos campos directos en su payload; `accounting-billing` conserva
+    su lectura.
+
+Referencias: [Carpeta Contratos fijada por ID](CONTRACT_TEMPLATE_MCP.md#carpeta-contratos-fijada-por-id-2026-10-09),
+[Evaluación compartida y vista previa](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09)
+y [Ciclo de vida de la suscripción](PLATFORM_PROJECT_BILLING.md#ciclo-de-vida-de-la-suscripción).
+
+Cobertura focal existente, para seleccionar lotes de hasta 20 tests y un máximo
+de tres comandos por ciclo, desde `backend/` con
+`../.venv/bin/pytest <archivo> -v --no-cov`:
+
+| Frente | Archivos |
+| --- | --- |
+| Framework | `content/tests/views/test_mcp_discovery_parity.py`, `test_mcp_query_encoding.py`, `test_mcp_parity_harness.py`; `content/tests/services/test_mcp_error_contract.py` |
+| Pin y espejo | `content/tests/services/test_contract_mirror_pin.py`; `content/tests/views/test_contract_template_mirrors.py` |
+| Cambio de cliente | `content/tests/services/test_project_client_transfer_blockers.py`; `content/tests/views/test_mcp_project_client_change.py`, `test_panel_projects_change_client.py` |
+| Hosting y dinero | `accounts/tests/billing/test_hosting_subscription_lifecycle.py`, `test_payment_lifecycle_guards.py`; `content/tests/views/test_mcp_hosting_subscription.py` |
+| Contratos/pins | `content/tests/views/test_mcp_contracts.py` |
+| Frontend | `frontend/test/components/ProjectChangeClientModal.test.js`; `frontend/e2e/admin/admin-project-change-client.spec.js` |
+
+La tabla enumera cobertura existente; no acredita una nueva ejecución ni el
+comportamiento de locks MySQL a partir de SQLite.
+
+### Nota post-deploy
+
+Las credenciales con allow-list explícita deben añadir las tools nuevas que
+necesiten: en esta parte, `preview_hosting_subscription_change` y
+`change_hosting_subscription`. Verificar también el acceso a `confirm_action`
+y las lecturas del recorrido. El alcance de la credencial limita tanto
+descubrimiento como ejecución. Después del deploy, reconectar los conectores
+de claude.ai para refrescar `tools/list` y comprobar sus schemas y permisos.
 
 ## Intereses y contratos de propuestas (2026-09-29)
 
@@ -209,7 +354,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `additional-modules` | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 132 | Proyectos, asignaciones, estados, transiciones, documentos asociados e historial |
+| `projects` | 164 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial y ciclo de vida de hosting |
 | `documents` | 66 | Documentos Markdown editables, carpetas, estados, tags, observaciones, hilos, correo, imports y exports |
 | `communications` | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
@@ -225,6 +370,8 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 
 Los conteos de `commercial` y `proposals` incluyen los controles comunes y se
 verificaron contra `TOOLS_BY_SLUG` el 2026-10-07 en settings de test, sin consultar datos reales.
+Los conteos de `documents` (66) y `projects` (164) están fijados en
+`content/tests/views/test_mcp_contracts.py` al corte `ba83a834` del 2026-10-09.
 
 Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
@@ -883,8 +1030,11 @@ qué queda fuera del MCP.
 - Comunicaciones expone 43 operaciones, incluidos preview, envío confirmado, enlaces seguros,
   adjuntos, templates y entregabilidad; sus rechazos dejan la base consistente.
 - Los MCP existentes devuelven y aceptan los campos descritos en su contrato;
-  Documentos expone 64 herramientas y conserva edición Markdown con ETag,
+  Documentos expone 66 herramientas y conserva edición Markdown con ETag,
   papelera, observaciones, hilos, uploads y artefactos.
+- Proyectos expone 164 herramientas; el cambio de cliente previsualiza las
+  mismas guardas que ejecuta y el ciclo de hosting exige impacto vigente y
+  confirmación, conservando los pagos y su historia.
 - Toda acción sensible exige intent ligado a credencial, confirma una sola vez
   y deja evidencia; toda credencial respeta alcance, expiración y revocación.
 - No se alteraron tokens, prefijos, estados activos ni `last_used_at` de

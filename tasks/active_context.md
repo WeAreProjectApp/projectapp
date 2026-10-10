@@ -2699,3 +2699,16 @@ un socket ocioso detenía su servidor WSGI de un hilo. La aceptación de conexio
 ahora usa hilos y la ejecución de la aplicación se serializa para preservar
 SQLite. La reproducción del bloqueo y cinco regresiones focales pasan; su
 regresión de navegador se comprueba antes de cerrar el PR.
+
+## 2026-10-09 — Contratos MCP, espejos y ciclo de hosting
+
+Los commits `74ca0073`, `484997f6`, `870bacf2`, `e676c1c1`, `388b1fae`,
+`7d5526b5` y `ba83a834` incorporan el framework de argumentos explícitos,
+espejos fijados por ID, guards compartidos del cambio de cliente y ciclo
+confirmado de hosting, con UI/E2E de bloqueos y pagos «Anulado». La documentación
+de ese corte enlaza reglas, errores, historia conservada y el trade-off de locks
+durante Wompi/polling en
+[el guion de la parte 1](../docs/MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
+Los pins son 66 tools de Documentos y 164 de Proyectos. Versiones y changelogs
+corresponden al cierre del conjunto en PR #504; esta revisión documental no
+acredita deploy, CI verde ni una nueva ejecución de las pruebas funcionales.

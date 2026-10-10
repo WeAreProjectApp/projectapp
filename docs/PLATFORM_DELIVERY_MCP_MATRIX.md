@@ -172,6 +172,17 @@ entregas, ideas, permisos de consulta, cobros y tickets. Clientes y Propuestas
 conservan sus conectores propios. La etiqueta no cambia el slug, las credenciales,
 la activación ni los permisos existentes. La versión compatible es 2.1.0.
 
+**2026-10-09 — guardas de cliente y hosting:** el cambio de cliente usa la
+[evaluación compartida y el impacto de ambos modos](ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09),
+incluidas las entregas y los tickets; un bloqueo conserva esa historia y orienta
+a crear otro proyecto. Las suscripciones incorporan
+[pausa, cancelación y reanudación confirmadas](PLATFORM_PROJECT_BILLING.md#ciclo-de-vida-de-la-suscripción),
+con cobros futuros `voided`. Los
+[espejos fijados por ID](CONTRACT_TEMPLATE_MCP.md#carpeta-contratos-fijada-por-id-2026-10-09)
+permiten reorganizar su carpeta conservando la sincronización. El
+[guion focal de la parte 1](MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10)
+cubre framework, UI/E2E y los pins de 66 tools de Documentos y 164 de Proyectos.
+
 | Acción | Herramientas |
 | --- | --- |
 | Consultar recursos | `list_project_resources`, `get_project_resource` |
