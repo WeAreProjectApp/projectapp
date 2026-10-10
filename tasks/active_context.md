@@ -20,7 +20,9 @@ con `delete_income_abono`. Ambas usan el ID del movimiento del bolsillo; la
 corrección reemplaza importe, fecha, notas y reparto completo de forma atómica,
 conservando un solo movimiento. Las correcciones y reversas recalculan también
 el estado de las cuentas vinculadas. Migración de esquema: `content.0290`.
-Validación en curso en el worktree de sesión; no se escribieron datos del servicio.
+La validación usa SQLite aislado y un navegador con respuestas HTTP simuladas en
+el worktree de sesión; no se escribieron datos del servicio. El deploy debe
+aplicar `content.0290` para habilitar el registro duradero de avisos.
 
 > **Integridad de datos — 2026-10-09:** motor de reglas de integridad con vista
 > previa, registro y deshacer, fusiones de clientes y carpetas, siete herramientas
@@ -120,8 +122,9 @@ trasladar al eliminar, en PR-2. Ninguna escritura sobre la base desplegada.
 # Cobro y liquidación de ingresos (2026-10-06)
 
 Se incorpora el vínculo explícito de contratos existentes desde la preparación de
-cuentas. Liquidación y abonos de ingresos con cliente requieren una cuenta emitida;
-los ingresos sin cliente mantienen su flujo. El historial muestra IVA en porcentajes
+cuentas. En ese cambio, liquidación y abonos de ingresos con cliente requerían una
+cuenta emitida; el complemento de PA-69 del 2026-10-10 elimina esa condición.
+El historial muestra IVA en porcentajes
 y los correos de cambios usan etiquetas por acción con datos neutros. La validación
 se realiza en SQLite aislado y navegador con fronteras HTTP simuladas; sin escrituras
 en la base desplegada ni emisión de documentos reales.

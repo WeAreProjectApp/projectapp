@@ -13,6 +13,7 @@ from content.models import (
     Document,
     IncomeRecord,
     IssuerProfile,
+    PocketMovement,
 )
 from content.services.collection_account_create_service import (
     create_income_collection_account,
@@ -100,6 +101,26 @@ class TestHappyPath:
         )
 
         assert document.issue_date == issue_date
+
+    def test_account_created_after_full_payment_uses_original_total_as_paid(self):
+        """Falla si facturar después del abono crea una cuenta por saldo cero o vuelve a cobrarla."""
+        client = make_client()
+        income = make_income()
+        IncomeRecord.objects.create(
+            concept='Abono completo', kind=IncomeRecord.Kind.LIQUID,
+            period_date='2026-08-02', total_amount=income.total_amount,
+            gustavo_amount=income.gustavo_amount, carlos_amount=income.carlos_amount,
+            expected_income=income,
+        )
+        movements_before = PocketMovement.objects.count()
+
+        document = create_income_collection_account(
+            payload(client, income), persist_snapshot=False,
+        )
+
+        assert document.total == income.total_amount
+        assert document.commercial_status == Document.CommercialStatus.PAID
+        assert PocketMovement.objects.count() == movements_before
 
     def test_issues_with_per_client_number_and_nit_snapshot(self):
         client = make_client(nit='901234567')

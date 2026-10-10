@@ -31,19 +31,19 @@ describe('isSettleEligible', () => {
     expect(isSettleEligible(expectedRow({ ledger: 'gustavo' }))).toBe(false);
   });
 
-  // Falla si el abono masivo vuelve a incluir una fila de cliente sin cuenta emitida.
+  // Falla si el abono masivo vuelve a excluir una fila cobrable sólo por no tener cuenta.
   test.each(['', 'draft', 'cancelled'])(
-    'excludes a client row whose collection account is %s',
+    'includes a client row whose collection account is %s',
     (collectionAccountStatus) => {
       expect(isSettleEligible(expectedRow({
         client: 5,
         collection_account_status: collectionAccountStatus,
-      }))).toBe(false);
+      }))).toBe(true);
     },
   );
 
   test.each(['issued', 'paid'])(
-    'includes a client row whose collection account is %s',
+    'keeps a client row eligible when its collection account is %s',
     (collectionAccountStatus) => {
       expect(isSettleEligible(expectedRow({
         client: 5,
