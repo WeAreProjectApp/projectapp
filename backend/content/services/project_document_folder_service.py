@@ -101,8 +101,7 @@ def _automatic_adoption_plan(name, folder):
             blockers.append({'code': row['status'], 'resource_type': row['resource_type'], 'resource_id': row['id']})
         elif before.get('client_user_id') is not None or before.get('project_id') is not None:
             blockers.append({'code': 'ownership_conflict', 'resource_type': row['resource_type'], 'resource_id': row['id']})
-        elif (row['resource_type'] == 'document' and before.get('is_client_visible')
-              and not before.get('is_archived') and not before.get('is_collection_account')):
+        elif row['resource_type'] == 'document' and before.get('is_client_visible'):
             blockers.append({'code': 'portal_exposure', 'resource_type': 'document', 'resource_id': row['id']})
     templates, _transferred, _discarded = _template_actions(folder, None, None, blockers)
     plan.update(
@@ -321,12 +320,8 @@ def project_folder_readiness():
 
 
 def _synchronize_root(root, project, *, created):
-    try:
-        with transaction.atomic():
-            return _update_root(root, project, created=created)
-    except Exception:
-        logger.exception('Could not synchronize document root %s for project %s', root.pk, project.pk)
-        return root
+    with transaction.atomic():
+        return _update_root(root, project, created=created)
 
 
 def _update_root(root, project, *, created):

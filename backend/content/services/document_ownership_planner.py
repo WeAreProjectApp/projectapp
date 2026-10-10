@@ -35,7 +35,7 @@ CLIENT_POLICIES = ('inherit', 'keep', 'abort_on_conflict')
 PORTAL_POLICIES = ('abort', 'allow', 'hide_new_exposure')
 register_mcp_domain_codes(
     'ownership_conflict', 'ownership_conflict_keep', 'ownership_frozen',
-    'portal_exposure', 'stale_move_plan', 'ownership_plan_blocked',
+    'portal_exposure', 'portal_exposure_latent', 'stale_move_plan', 'ownership_plan_blocked',
 )
 
 
@@ -373,6 +373,8 @@ def _plan_row(item, destination_id, *, direct, policy, portal_policy, folders, p
         row['latent_exposure'] = bool(latent)
         if exposure and portal_policy == 'abort':
             row['blockers'].append(_blocker('portal_exposure', 'El movimiento daría acceso a un nuevo cliente en el portal.', row))
+        if latent and portal_policy == 'abort':
+            row['blockers'].append(_blocker('portal_exposure_latent', 'El documento daría acceso a un nuevo cliente en el portal si se restaurara.', row))
         if (exposure or latent) and portal_policy == 'hide_new_exposure':
             after['is_client_visible'] = False
             after['portal_audience'] = portal_audience(after)

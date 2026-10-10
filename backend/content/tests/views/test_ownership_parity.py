@@ -131,6 +131,26 @@ def _assert_pair_result(case, tool, plan, result, blocked):
             assert case.doc.title == 'Updated during move'
 
 
+def test_mcp_refuses_latent_portal_exposure(move_case):
+    case = move_case
+    Document.objects.filter(pk=case.doc.pk).update(is_client_visible=True, is_archived=True)
+    arguments = {'folder_ids': [case.source.pk], 'destination_folder_id': case.target.pk}
+    pair = PreviewApplyPair(
+        'latent portal exposure', lambda args: _call(case, 'preview_move', args),
+        lambda args, plan: _apply_move(case, 'update_folder', args, plan), predicted=_prediction,
+    )
+
+    plan, result = check_pair(pair, arguments)
+
+    document_row = next(row for row in plan['rows'] if row['resource_type'] == 'document')
+    assert document_row['latent_exposure'] is True
+    assert document_row['after']['portal_audience'] is None
+    assert result.code == 'OWNERSHIP_PLAN_BLOCKED'
+    assert result.details['blockers'] == plan['blockers']
+    assert [(row['code'], row['resource_id']) for row in plan['blockers']] == [('portal_exposure_latent', case.doc.pk)]
+    assert [(row['code'], row['resource_id']) for row in plan['warnings']] == [('latent_exposure', case.doc.pk)]
+
+
 def test_folder_only_document_patch_matches_preview(move_case):
     arguments = {'document_ids': [move_case.doc.pk], 'destination_folder_id': move_case.target.pk}
     pair = PreviewApplyPair('single folder patch', lambda args: _call(move_case, 'preview_move', args),

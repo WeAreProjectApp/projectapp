@@ -152,8 +152,36 @@ def _apply_exposure(args, plan, actor, archived, visible):
         before = ownership_state()
         with pytest.raises(OwnershipPlanError) as rejected:
             apply_ownership_plan(args, actor=actor, expected_plan_hash=plan['plan_hash'])
-        assert [row['code'] for row in rejected.value.details['blockers']] == ['portal_exposure']
+        assert [row['code'] for row in rejected.value.details['blockers']] == ['portal_exposure', 'portal_exposure_latent']
         assert ownership_state() == before
+
+
+@pytest.mark.parametrize(('portal_policy', 'visible'), [('allow', True), ('hide_new_exposure', False)])
+def test_archived_document_policy_controls_restored_audience(owners, superuser, portal_policy, visible):
+    from accounts.document_views import _visible_docs_qs
+
+    source = DocumentFolder.objects.create(name='Archived history source')
+    archived = Document.objects.create(
+        title='Archived private history', folder=source, document_type=owners.kind,
+        client_user=owners.foreign.user, is_client_visible=True, is_archived=True,
+    )
+    args = {
+        'folder_ids': [source.pk], 'destination_folder_id': owners.destination.pk,
+        'client_policy': 'inherit', 'portal_policy': portal_policy,
+    }
+    plan = assert_no_writes(plan_ownership, **args)
+
+    applied = apply_ownership_plan(args, actor=superuser, expected_plan_hash=plan['plan_hash'])
+
+    archived.refresh_from_db()
+    assert applied == plan
+    document_row = next(row for row in plan['rows'] if row['resource_type'] == 'document')
+    assert document_row['latent_exposure'] is True
+    assert (archived.client_user_id, archived.project_id) == (owners.owner.user_id, owners.project.pk)
+    assert (archived.is_archived, archived.is_client_visible) == (True, visible)
+    assert not _visible_docs_qs(SimpleNamespace(user=owners.owner.user)).filter(pk=archived.pk).exists()
+    Document.objects.filter(pk=archived.pk).update(is_archived=False)
+    assert _visible_docs_qs(SimpleNamespace(user=owners.owner.user)).filter(pk=archived.pk).exists() is visible
 
 
 @pytest.mark.parametrize('policy', CLIENT_POLICIES)

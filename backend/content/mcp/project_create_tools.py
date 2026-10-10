@@ -7,11 +7,6 @@ from django.db import transaction
 from content.mcp.actor import mcp_actor
 from content.mcp.confirmation import canonical_arguments_hash
 from content.mcp.context import current_mcp_context
-from content.mcp.document_ownership_tools import (
-    CLIENT_POLICY_SCHEMA,
-    DOCUMENT_DECISIONS_SCHEMA,
-    PORTAL_POLICY_SCHEMA,
-)
 from content.mcp.operation_builder import _op
 from content.mcp.protocol import ToolError
 from content.models import McpActionIntent
@@ -23,6 +18,10 @@ from content.services.project_document_folder_service import (
 )
 
 PROJECT_FIELDS = ('name', 'client_profile_id', 'description', 'state_id')
+ROOT_ADOPTION_HINT = (
+    'Para decidir propietarios o exposición usa '
+    'preview_folder_migration/apply_folder_migration del conector documents.'
+)
 CREATE_SCHEMA = {
     'type': 'object', 'additionalProperties': False,
     'properties': {
@@ -31,9 +30,6 @@ CREATE_SCHEMA = {
         'description': {'type': 'string', 'default': ''},
         'state_id': {'type': 'integer', 'minimum': 1},
         'root_folder_id': {'type': 'integer', 'minimum': 1},
-        'client_policy': CLIENT_POLICY_SCHEMA,
-        'portal_policy': PORTAL_POLICY_SCHEMA,
-        'document_decisions': DOCUMENT_DECISIONS_SCHEMA,
     },
     'required': ['name', 'client_profile_id'],
 }
@@ -76,23 +72,25 @@ def _preview(arguments):
         _payload, plan = migration.plan_from_token(
             arguments['_plan_token'], actor=mcp_actor(), credential=_credential(),
         )
+        if (plan['input']['client_policy'] != 'abort_on_conflict'
+                or plan['input']['portal_policy'] != 'abort'
+                or plan['input']['document_decisions']):
+            raise ToolError(
+                'La adopción requiere una nueva vista previa con las políticas estrictas de projects.',
+                code='STALE_VERSION', details={'hint': ROOT_ADOPTION_HINT},
+            )
         return plan
     payload = _project_payload(arguments)
     root_id = arguments.get('root_folder_id')
-    policies = {'client_policy': 'abort_on_conflict', 'portal_policy': 'abort'}
     if root_id is None:
         decision = project_root_name_decision(payload['name'])
         if decision['decision'] != 'adopt':
             raise ToolError('El proyecto no requiere adoptar una carpeta.', code='CONFLICT')
         root_id = decision['folder_id']
-    else:
-        policies.update({
-            key: arguments[key] for key in ('client_policy', 'portal_policy', 'document_decisions')
-            if key in arguments
-        })
     return migration.preview_folder_migration({
         'source_folder_id': root_id, 'strategy': 'adopt_source',
-        'target': {'create_project': payload}, **policies,
+        'target': {'create_project': payload},
+        'client_policy': 'abort_on_conflict', 'portal_policy': 'abort',
     }, actor=mcp_actor(), credential=_credential())
 
 
@@ -100,8 +98,8 @@ def _impact(arguments):
     plan = _preview(arguments)
     if not plan['can_apply']:
         raise ToolError(
-            'La raíz no se puede adoptar con esas políticas.', code='CONFLICT',
-            details={'blockers': plan['blockers']},
+            'La raíz no se puede adoptar con las políticas estrictas de projects.', code='CONFLICT',
+            details={'blockers': plan['blockers'], 'hint': ROOT_ADOPTION_HINT},
         )
     return plan
 
@@ -162,8 +160,10 @@ CREATE_PROJECT = {
     'description': (
         'Crea un proyecto sin duplicar nunca una raíz manual homónima. '
         'root_folder_id adopta una raíz revisada mediante confirm_action; '
-        'client_policy decide la propiedad (por defecto abort_on_conflict), '
-        'portal_policy la exposición (por defecto abort) y document_decisions las excepciones. '
+        'la adopción siempre usa abort_on_conflict para la propiedad y abort para el portal, '
+        'incluida la exposición de documentos archivados al restaurarse. '
+        'Para decidir propietarios o exposición usa preview_folder_migration/apply_folder_migration '
+        'del conector documents. '
         'Una raíz homónima segura también requiere confirmación; sin adopción el alta es inmediata.'
     ),
     'input_schema': CREATE_SCHEMA, 'output_schema': {'type': 'object'},

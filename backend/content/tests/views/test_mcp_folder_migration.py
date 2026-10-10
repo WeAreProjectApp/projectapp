@@ -43,11 +43,16 @@ def projectapp_tree(make_client_profile, initialized_contract_mirrors, superuser
     pinned.parent = source
     pinned.save(update_fields=['parent'])
     estimate = Document.objects.create(title='Visible estimate', folder=folders['Requirement Estimates'], is_client_visible=True)
+    archived_estimate = Document.objects.create(
+        title='Archived visible estimate', folder=folders['Requirement Estimates'],
+        is_client_visible=True, is_archived=True,
+    )
     first = Document.objects.create(title='Foreign 235', folder=source, client_user=foreign.user)
     second = Document.objects.create(title='Foreign 241', folder=source, client_user=foreign.user)
     foreign_folder = DocumentFolder.objects.create(name='Client B documents', client_user=foreign.user, creation_source='panel')
     return SimpleNamespace(owner=owner, foreign=foreign, source=source, pinned=pinned,
-                           estimate=estimate, first=first, second=second, foreign_folder=foreign_folder)
+                           estimate=estimate, archived_estimate=archived_estimate,
+                           first=first, second=second, foreign_folder=foreign_folder)
 
 
 def invoke(credential, tool, args):
@@ -85,6 +90,7 @@ def test_real_projectapp_migration_preserves_contracts(projectapp_tree, document
     blocked, _error = check_pair(migration_pair(credential), args)
     assert {row['resource_id'] for row in blocked['blockers'] if row['code'] == 'ownership_conflict'} == {case.first.pk, case.second.pk}
     assert {row['resource_id'] for row in blocked['blockers'] if row['code'] == 'portal_exposure'} == {case.estimate.pk}
+    assert {row['resource_id'] for row in blocked['blockers'] if row['code'] == 'portal_exposure_latent'} == {case.archived_estimate.pk}
     args.update(portal_policy='hide_new_exposure', document_decisions=[
         {'document_id': case.first.pk, 'action': 'move', 'destination_folder_id': case.foreign_folder.pk},
         {'document_id': case.second.pk, 'action': 'move', 'destination_folder_id': case.foreign_folder.pk},
@@ -99,8 +105,10 @@ def test_real_projectapp_migration_preserves_contracts(projectapp_tree, document
     assert Project.objects.get(pk=report['project_id']).document_root_folder.pk == report['root_folder_id']
     case.pinned.refresh_from_db()
     case.estimate.refresh_from_db()
+    case.archived_estimate.refresh_from_db()
     assert (case.pinned.client_user_id, case.pinned.project_id, case.pinned.is_archived) == (None, None, False)
     assert case.estimate.is_client_visible is False
+    assert (case.archived_estimate.is_archived, case.archived_estimate.is_client_visible) == (True, False)
     mirrors = assert_no_writes(invoke, credential, 'list_contract_mirrors', {})
     assert [row['synchronized'] for row in mirrors['mirrors']] == [True, True, True]
     assert not Document.objects.filter(folder=case.pinned).filter(project__isnull=False).exists()

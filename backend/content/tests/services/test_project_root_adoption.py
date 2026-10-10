@@ -109,9 +109,13 @@ def test_generated_snapshot_prevents_automatic_adoption():
     assert Document.objects.get(pk=document.pk).project_id is None
 
 
-def test_visible_unassigned_document_prevents_automatic_portal_exposure():
+@pytest.mark.parametrize('archived', [False, True])
+def test_visible_unassigned_document_prevents_automatic_adoption(archived):
     source = DocumentFolder.objects.create(name='ProjectApp')
-    document = Document.objects.create(title='Visible estimate', folder=source, is_client_visible=True)
+    document = Document.objects.create(
+        title='Visible estimate', folder=source, is_client_visible=True, is_archived=archived,
+    )
+    before = ownership_state()
 
     with pytest.raises(roots.ProjectRootNameConflict) as error:
         roots.project_root_name_decision('ProjectApp')
@@ -120,6 +124,8 @@ def test_visible_unassigned_document_prevents_automatic_portal_exposure():
         'code': 'portal_exposure', 'resource_type': 'document', 'resource_id': document.pk,
     }]
     assert Document.objects.get(pk=document.pk).is_client_visible is True
+    assert ownership_state() == before
+    assert not Project.objects.exists()
 
 
 def test_multiple_manual_homonyms_are_reported_in_stable_order():
@@ -198,6 +204,8 @@ def test_existing_same_name_project_save_preserves_old_root_name(make_client_pro
     project.save(update_fields=['description', 'updated_at'])
 
     root = roots.require_project_folder(project)
+    project.refresh_from_db()
+    assert project.description == 'Save unrelated historical data'
     assert root.name == 'Old name'
     assert root.project_id == root.managed_project_id == project.pk
     assert str(manual.pk) in caplog.text
