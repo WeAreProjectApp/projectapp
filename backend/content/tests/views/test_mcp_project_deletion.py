@@ -1,12 +1,16 @@
 """MCP shares the panel dependency checks and confirms permanent deletion."""
 import pytest
-
 from accounts.models import Project
-from content.models import McpConnector
-from content.tests.views.test_panel_project_deletion import unused_project, add_income
+
+from content.models import McpActionIntent, McpConnector
 from content.tests.views.test_mcp_parity_refresh import call_tool, payload
+from content.tests.views.test_panel_project_deletion import add_income
+from content.tests.views.test_panel_project_deletion import (
+    unused_project as _unused_project,
+)
 
 pytestmark = pytest.mark.django_db
+unused_project = _unused_project
 
 
 @pytest.fixture
@@ -61,29 +65,40 @@ def test_mcp_confirm_rechecks_dependencies(api_client, token, unused_project):
     assert income.project_id == unused_project.pk
 
 
-def test_mcp_cannot_request_forced_preview(api_client, token, unused_project):
+@pytest.mark.parametrize(('arguments', 'field'), [
+    ({'force': 'true'}, 'force'), ({'query': {'force': 'true'}}, 'query'),
+], ids=['flat', 'query-alias'])
+def test_mcp_cannot_request_forced_preview(api_client, token, unused_project, arguments, field):
     """The connector cannot inherit the panel superuser's destructive preview."""
     response = call_tool(api_client, 'projects', token, 'preview_project_delete', {
-        'project_id': unused_project.pk, 'query': {'force': 'true'},
+        'project_id': unused_project.pk, **arguments,
     })
 
-    assert payload(response)['error']['code'] == 'FORBIDDEN'
+    error = payload(response)['error']
+    assert error['code'] == 'unknown_field'
+    assert [item['field'] for item in error['details']['errors']] == [field]
+    assert not McpActionIntent.objects.exists()
     assert Project.objects.filter(pk=unused_project.pk).exists()
 
 
-def test_mcp_confirmation_cannot_inject_forced_delete(api_client, token, unused_project):
-    """A confirmed MCP command still cannot purge a project's dependencies."""
+@pytest.mark.parametrize(('arguments', 'fields'), [
+    ({'force': True}, ['force']),
+    ({'delete_keys': ['incomes']}, ['delete_keys']),
+    ({'data': {'force': True, 'confirmation': 'DELETE', 'impact_token': 'x' * 64}},
+     ['data']),
+], ids=['force', 'delete-keys', 'data-alias'])
+def test_mcp_forced_delete_is_rejected_before_confirmation(api_client, token, unused_project, arguments, fields):
+    """Unknown Panel deletion controls never create a confirmation intent."""
     income = add_income(unused_project)
-    preview = call_tool(api_client, 'projects', token, 'delete_project', {
+    response = call_tool(api_client, 'projects', token, 'delete_project', {
         'project_id': unused_project.pk,
-        'data': {'force': True, 'confirmation': 'DELETE', 'impact_token': 'x' * 64},
+        **arguments,
     })
 
-    response = call_tool(api_client, 'projects', token, 'confirm_action', {
-        'confirmation_id': payload(preview)['confirmation_id'],
-    })
-
-    assert payload(response)['error']['code'] == 'FORBIDDEN'
+    error = payload(response)['error']
+    assert error['code'] == 'unknown_field'
+    assert sorted(item['field'] for item in error['details']['errors']) == fields
+    assert not McpActionIntent.objects.exists()
     assert Project.objects.filter(pk=unused_project.pk).exists()
     income.refresh_from_db()
     assert income.project_id == unused_project.pk

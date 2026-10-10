@@ -2,15 +2,16 @@
 from types import SimpleNamespace
 
 import pytest
-from django.contrib.auth import get_user_model
-from django.test import RequestFactory
-from rest_framework.exceptions import ValidationError
-
 from accounts.admin import ProjectAdmin
 from accounts.forms_billing import BillingProjectAdminConflict, BillingProjectAdminForm
 from accounts.models import (
-    CollectionAccountContext, ContractAmendment, DeliveryWorkspace,
-    Project, ProjectContract, ProjectHosting, UserProfile,
+    CollectionAccountContext,
+    ContractAmendment,
+    DeliveryWorkspace,
+    Project,
+    ProjectContract,
+    ProjectHosting,
+    UserProfile,
 )
 from accounts.services.billing_context import associate_account
 from content.admin import admin_site
@@ -19,8 +20,17 @@ from content.mcp.delivery_tools import DELIVERY_TOOLS
 from content.mcp.principal import service_actor_for_connector
 from content.mcp.protocol import handle_message
 from content.mcp.registry import normalize_tools
-from content.models import AccountingChangeLog, Document, EntityHistory, EntityRevision, McpConnector
+from content.models import (
+    AccountingChangeLog,
+    Document,
+    EntityHistory,
+    EntityRevision,
+    McpConnector,
+)
 from content.services.project_service import MODE_DETACH, MODE_MOVE, change_client_apply
+from django.contrib.auth import get_user_model
+from django.test import RequestFactory
+from rest_framework.exceptions import ValidationError
 
 pytestmark = pytest.mark.django_db
 
@@ -198,6 +208,7 @@ def test_contract_mcp_rejects_a_project_field(project, contract, new_client):
         }, normalize_tools(DELIVERY_TOOLS, 'projects'), context=context)
 
     contract.refresh_from_db()
-    assert response['result']['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
+    assert response['result']['structuredContent']['error']['code'] == 'unknown_field'
+    assert response['result']['structuredContent']['error']['details']['errors'][0]['field'] == 'data'
     assert contract.project_id == project.pk
     assert not DeliveryWorkspace.objects.filter(project=project).exists()

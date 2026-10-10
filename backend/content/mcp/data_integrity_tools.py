@@ -22,10 +22,10 @@ RULES = _op(
 )
 FINDINGS = _op(
     'list_integrity_findings',
-    'Busca datos huérfanos, duplicados e inconsistentes. query.scope_kind (all, client, project, proposal, '
-    'document, thread) con query.scope_id, o query.scope_query (texto) para un cliente o proyecto: si no hay '
-    'exactamente una coincidencia devuelve scope_candidates. query.domains, query.rule_ids y query.severity '
-    'filtran (separados por comas); query.page pagina de a 50. Cada hallazgo trae fingerprint, entradas a '
+    'Busca datos huérfanos, duplicados e inconsistentes. scope_kind (all, client, project, proposal, '
+    'document, thread) con scope_id, o scope_query (texto) para un cliente o proyecto: si no hay '
+    'exactamente una coincidencia devuelve scope_candidates. domains, rule_ids y severity '
+    'filtran (separados por comas); page pagina de a 50. Cada hallazgo trae fingerprint, entradas a '
     'elegir, sugerencia y, si aplica, la herramienta existente que lo corrige.',
     'panel-data-integrity-findings',
 )
@@ -46,7 +46,7 @@ APPLY = _op(
 OPERATIONS = _op(
     'list_integrity_operations',
     'Lista el registro de correcciones de integridad y sus deshacer, de la más reciente a la más antigua; '
-    'query.rule_id filtra por regla y query.page pagina de a 20.',
+    'rule_id filtra por regla y page pagina de a 20.',
     'panel-data-integrity-operations',
 )
 UNDO_PREVIEW = _op(
@@ -77,7 +77,10 @@ def _close_integrity_input(tool, query_properties=None):
     properties = deepcopy(tool['input_schema']['properties'])
     properties.pop('query', None)
     properties.pop('data', None)
-    payload = tool['_panel_operation']['payload_schema']
+    operation = tool['_panel_operation']
+    operation['envelope_aliases'] = False
+    tool.pop('accepted_arguments_schema', None)
+    payload = operation['payload_schema']
     if payload is not None:
         for name, field in payload['properties'].items():
             field['description'] = _FIELD_DESCRIPTIONS[name]
@@ -89,12 +92,13 @@ def _close_integrity_input(tool, query_properties=None):
                 'Las claves dependen de rule_id y fix_kind; el motor valida sus valores por regla.',
             )
         properties.update(deepcopy(payload['properties']))
-        properties['data'] = {**deepcopy(payload), 'description': 'Datos de la corrección, validados por el serializer del Panel.'}
     elif query_properties is not None:
-        properties['query'] = closed_object(query_properties, description='Filtros de la consulta de integridad.')
+        operation['query_schema'] = closed_object(query_properties)
+        properties.update(deepcopy(query_properties))
     for name in tool['_panel_operation']['path_params']:
         properties[name]['description'] = 'Identificador de la operación de integridad registrada.'
-    tool['input_schema'] = closed_object(properties, tool['input_schema'].get('required', ()))
+    required = [*operation['path_params'], *(payload.get('required', []) if payload is not None else [])]
+    tool['input_schema'] = closed_object(properties, required)
 
 
 _close_integrity_input(RULES, {})

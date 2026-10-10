@@ -19,6 +19,7 @@ from content.models import (
     Document,
     DocumentCollectionAccount,
     DocumentFolder,
+    DocumentOwnershipOperation,
     EntityRevision,
     WebAppDiagnostic,
 )
@@ -78,6 +79,19 @@ def test_engine_retires_the_duplicate_without_deleting_it(superuser):
                                           history__entity_type='client', history__object_id=duplicate.pk).exists()
     receipt = AccountingChangeLog.objects.filter(entity_type='client', object_id=duplicate.pk).first()
     assert any(row['field'] == 'merged_into' and row['new'] == survivor.pk for row in receipt.changes)
+
+
+def test_merge_preserves_folder_migration_actor(superuser):
+    survivor, duplicate = client_pair()
+    receipt = DocumentOwnershipOperation.objects.create(
+        kind='migration', origin='panel', request_id='original-migration',
+        plan_hash='a' * 64, reason='Autoría original', actor=duplicate.user,
+    )
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    receipt.refresh_from_db()
+    assert receipt.actor_id == duplicate.user_id
 
 
 def test_contact_fills_preserve_account_scoped_preferences(superuser):

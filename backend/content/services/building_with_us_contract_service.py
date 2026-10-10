@@ -101,8 +101,12 @@ def validate_markdown(markdown):
 
 
 def _allowed_folder(folder):
-    return bool(folder and folder.name == 'Contratos' and not folder.is_archived
-                and not folder.client_user_id and not folder.project_id and not folder.system_key)
+    if not folder or folder.is_archived or folder.client_user_id or folder.project_id or folder.system_key:
+        return False
+    from content.services.contract_mirror_service import pinned_mirror_folder
+
+    pinned, _source = pinned_mirror_folder()
+    return folder.pk == pinned.pk if pinned else folder.name == 'Contratos'
 
 
 def _folder(folder_id, *, lock=False):

@@ -1,10 +1,22 @@
 """Protect explicit billing associations when accounting labels are reassigned."""
 from copy import copy
+
+from content.models import Document
 from django.db import transaction
-from accounts.models import CollectionAccountContext, HostingSubscription, ProjectHosting, ProjectHostingAccountingSource
+from rest_framework.exceptions import ValidationError
+
+from accounts.models import (
+    CollectionAccountContext,
+    ProjectHosting,
+    ProjectHostingAccountingSource,
+)
 from accounts.services.billing_access import invalid
 from accounts.services.billing_context import _lock_context, resolve_context
-from content.models import Document, HostingRecord
+from accounts.services.project_client_transfer import (
+    BILLING_CODE,
+    BILLING_MESSAGE,
+    client_transfer_blockers,
+)
 
 
 @transaction.atomic
@@ -12,26 +24,11 @@ def validate_project_billing_reassignment(project, client):
     """Central project writers call this before changing a financial owner."""
     if not project.pk:
         return
-    from accounts.models import Project
-    from content.models import DocumentType
-    # Current reads are required even when the caller's transaction already
-    # opened a repeatable-read snapshot before waiting for the project lock.
-    project = Project.objects.select_for_update().get(pk=project.pk)
-    if client.pk == project.client_id:
-        return
-    has_hosting = (ProjectHosting.objects.select_for_update().filter(project=project).exists()
-                   or HostingSubscription.objects.select_for_update().filter(project=project).exists()
-                   or HostingRecord.objects.select_for_update().filter(project=project).exists())
-    type_ids = DocumentType.objects.filter(code='collection_account').values_list('pk', flat=True)
-    accounts = list(Document.objects.select_for_update().filter(
-        project=project, document_type_id__in=type_ids,
-    ).order_by('pk'))
-    has_accounts = (any(doc.commercial_status != 'draft' for doc in accounts)
-                    or CollectionAccountContext.objects.select_for_update().filter(
-                        document_id__in=[doc.pk for doc in accounts],
-                    ).exists())
-    if has_accounts or has_hosting:
-        invalid('El proyecto tiene cuentas o hosting con historia financiera; no puede trasladarse a otro cliente.')
+    evaluation = client_transfer_blockers(project, client, lock=True)
+    if any(row['code'] == BILLING_CODE for row in evaluation['blockers']):
+        error = ValidationError({'detail': BILLING_MESSAGE})
+        error.detail.update(evaluation)
+        raise error
 
 
 @transaction.atomic

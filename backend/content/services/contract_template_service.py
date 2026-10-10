@@ -97,7 +97,14 @@ def mirror_metadata(document):
 
 
 def list_mirrors():
+    from content.services.contract_mirror_service import (
+        pinned_folder_state,
+        pinned_mirror_folder,
+    )
+    from content.services.document_folder_paths import folder_path as _folder_path
+
     template = default_template()
+    folder, _source = pinned_mirror_folder(template)
     mirrors = {row.variant: row for row in template.mirrors.select_related('document__folder', 'revision')}
     rows = []
     for key in VARIANTS:
@@ -106,15 +113,17 @@ def list_mirrors():
             'variant': key, 'document_id': mirror.document_id if mirror else None,
             'title': mirror.document.title if mirror else MIRROR_TITLES[key],
             'folder_id': mirror.document.folder_id if mirror else None,
+            'folder_path': _folder_path(mirror.document.folder) if mirror and mirror.document.folder_id else None,
+            'folder_movable': bool(folder and not folder.is_archived and mirror and mirror.document.folder_id == folder.pk),
             'version': mirror.revision.version if mirror else None,
             'last_synced_at': mirror.synced_at.isoformat() if mirror else None,
             'synchronized': bool(mirror and mirror.revision.markdown == text(template, key)
                 and mirror.revision.template_id == template.pk and mirror.revision.variant == key
                 and mirror.pdf_content and bytes(mirror.pdf_content).startswith(b'%PDF-')
                 and not mirror.document.is_archived and mirror.document.folder_id
-                and mirror.document.folder.name == 'Contratos' and not mirror.document.folder.is_archived),
+                and folder and mirror.document.folder_id == folder.pk and not folder.is_archived),
         })
-    return {'mirrors': rows}
+    return {'mirrors': rows, 'pinned_folder': pinned_folder_state()}
 
 
 def _entries(arguments, *, restore=False):
@@ -224,12 +233,21 @@ def _synchronize(template, revision, mirror, *, actor, note, diff):
 
 @transaction.atomic
 def apply_update(arguments, *, actor, credential=None, restore=False, expected_etags=None):
+    from content.services.contract_mirror_service import pinned_mirror_folder
+
     template = default_template(lock=True)
     mirrors = {row.variant: row for row in template.mirrors.select_for_update().select_related('document', 'document__folder', 'revision').order_by('pk')}
     documents = list(Document.objects.select_for_update().filter(pk__in=[m.document_id for m in mirrors.values()]).order_by('pk'))
     documents_by_id = {row.pk: row for row in documents}
     if expected_etags is not None and expected_etags != resource_etags(template=template):
         raise ContractTemplateError('Las plantillas cambiaron desde la vista previa.', code='STALE_VERSION')
+    folder, source = pinned_mirror_folder(template)
+    if source == 'unpinned':
+        hint = 'Ejecuta initialize_contract_template_mirrors con --apply y --folder-id para fijar la carpeta de los espejos.'
+        raise ContractTemplateError(
+            f'Los espejos no tienen una carpeta fijada; no se aplicó ningún cambio. {hint}',
+            code='MIRROR_SYNC_FAILED', details={'stage': 'folder_pin', 'applied': False, 'hint': hint},
+        )
     prepared = prepare_update(arguments, restore=restore, require_match=True, template=template)
     if not prepared['consistency']['consistent']:
         raise ContractTemplateError('Las variantes no son coherentes; corrige el lote antes de guardar.',
@@ -238,7 +256,7 @@ def apply_update(arguments, *, actor, credential=None, restore=False, expected_e
     for change in prepared['changes']:
         key = change['variant']
         mirror = mirrors.get(key)
-        if mirror is None or documents_by_id[mirror.document_id].is_archived or not mirror.document.folder_id or mirror.document.folder.name != 'Contratos' or mirror.document.folder.is_archived or mirror.revision.template_id != template.pk or mirror.revision.variant != key:
+        if mirror is None or documents_by_id[mirror.document_id].is_archived or documents_by_id[mirror.document_id].folder_id != folder.pk or folder.is_archived or mirror.revision.template_id != template.pk or mirror.revision.variant != key:
             raise ContractTemplateError('El espejo no está vinculado correctamente a esta variante en Contratos; no se aplicó ningún cambio.',
                 code='MIRROR_SYNC_FAILED', details={'variant': key, 'document_id': change['document_id'], 'stage': 'mirror', 'applied': False})
         mirror.document = documents_by_id[mirror.document_id]

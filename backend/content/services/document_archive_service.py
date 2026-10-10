@@ -41,6 +41,11 @@ _ARCHIVE_FIELDS = ['is_archived', 'archived_at', 'archived_via_folder']
 class DocumentArchiveError(ValueError):
     """Operación de archivado rechazada por una regla de negocio."""
 
+    def __init__(self, message, *, code='folder_archive_refused', details=None):
+        super().__init__(message)
+        self.code = code
+        self.details = details or {}
+
 
 def _restore_chain(folder):
     """Desarchiva las carpetas que hacen visible a `folder`, `folder` incluida.
@@ -168,7 +173,10 @@ def archive_folder(folder):
     descendant_ids = folder.get_descendant_ids()
     scope_ids = {folder.pk} | descendant_ids
     # The bulk update below skips save(), so the check has to happen first.
-    _refuse_contract_mirror(Document.objects.filter(folder_id__in=scope_ids))
+    from content.services.contract_mirror_service import mirror_folder_archive_blocker
+    blocker = mirror_folder_archive_blocker(folder)
+    if blocker:
+        raise DocumentArchiveError(blocker['message'], code=blocker['code'], details=blocker['details'])
 
     folders_count = DocumentFolder.objects.filter(
         pk__in=descendant_ids, is_archived=False,

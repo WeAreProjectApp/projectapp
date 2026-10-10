@@ -4,7 +4,7 @@ Covers:
 - payment_card_pay_view: missing fields, not found, not payable, APPROVED, PENDING,
   DECLINED/ERROR/VOIDED, 502 error
 - project_subscription_view PATCH: admin archives/unarchives, client forbidden to archive,
-  admin changes status
+  status changes require the subscription lifecycle
 - project_subscription_view GET: archived subscription hidden from client
 - payment_generate_link_view: 404 (payment not found), 502 (service exception)
 """
@@ -390,19 +390,20 @@ class TestProjectSubscriptionPatchEdgeCases:
 
         assert resp.status_code == 403
 
-    def test_admin_changes_subscription_status(
+    def test_admin_status_patch_requires_lifecycle(
         self, api_client, admin_headers, project, subscription,
     ):
-        """Admin can change subscription status to cancelled."""
+        """Status changes require a previewed lifecycle decision even for admins."""
         url = f'/api/accounts/projects/{project.id}/subscription/'
         resp = api_client.patch(
             url, {'status': HostingSubscription.STATUS_CANCELLED},
             format='json', **admin_headers,
         )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
+        assert resp.json()['code'] == 'subscription_lifecycle_required'
         subscription.refresh_from_db()
-        assert subscription.status == HostingSubscription.STATUS_CANCELLED
+        assert subscription.status == HostingSubscription.STATUS_ACTIVE
 
 
 # ===========================================================================

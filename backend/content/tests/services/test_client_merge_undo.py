@@ -17,6 +17,7 @@ from content.models import (
     DataIntegrityOperation,
     Document,
     DocumentCollectionAccount,
+    DocumentOwnershipOperation,
 )
 from content.services import client_merge
 from content.services.data_integrity import catalog, engine
@@ -62,6 +63,20 @@ def test_undo_preserves_alliance_revision_author(superuser, revision_model, cont
 
     revision.refresh_from_db()
     assert revision.author_id == duplicate.user_id
+
+
+def test_undo_preserves_folder_migration_actor(superuser):
+    survivor, duplicate = client_pair()
+    receipt = DocumentOwnershipOperation.objects.create(
+        kind='migration', origin='panel', request_id='original-migration',
+        plan_hash='a' * 64, reason='Autoría original', actor=duplicate.user,
+    )
+    _, result = run_client_merge(superuser, survivor, duplicate)
+
+    undo(superuser, result['operation_id'])
+
+    receipt.refresh_from_db()
+    assert receipt.actor_id == duplicate.user_id
 
 
 def test_engine_undo_restores_every_live_column_in_the_merge_closure(superuser):

@@ -1,15 +1,27 @@
 """Administrative billing tools over the same validation as Panel and Platform."""
 from copy import deepcopy
-from rest_framework.exceptions import APIException
 
 from accounts.serializers_billing_context import (
-    BillingContextAssignmentSerializer, BillingContractLinkSerializer, HostingEvidenceSerializer, HostingReconciliationSerializer,
+    BillingContextAssignmentSerializer,
+    BillingContractLinkSerializer,
+    HostingEvidenceSerializer,
+    HostingReconciliationSerializer,
 )
 from accounts.services.billing_access import require_billing_admin
 from accounts.services.billing_context import associate_account, context_data
 from accounts.services.billing_contracts import link_billing_contract
-from accounts.services.billing_read import account_for_actor, project_billing_options, project_hosting_read
-from accounts.services.hosting_context import hosting_inventory, reconcile_evidence, reconcile_hosting
+from accounts.services.billing_read import (
+    account_for_actor,
+    project_billing_options,
+    project_hosting_read,
+)
+from accounts.services.hosting_context import (
+    hosting_inventory,
+    reconcile_evidence,
+    reconcile_hosting,
+)
+from rest_framework.exceptions import APIException
+
 from content.mcp.actor import mcp_actor
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
@@ -25,6 +37,24 @@ ASSOCIATION = {**COMMON, 'billing_nature': {'type': 'string', 'enum': ['contract
 IDENTITY = {**COMMON, 'subscription_id': NULL_ID, 'hosting_record_ids': IDS, 'operational_record_id': NULL_ID}
 EVIDENCE = {**COMMON, 'label': {'type': 'string', 'minLength': 1, 'maxLength': 200},
             'group_id': NULL_ID, 'payment_ids': IDS, 'cycle_ids': IDS, 'document_ids': IDS}
+PAYLOAD_DESCRIPTIONS = {
+    BillingContractLinkSerializer: (
+        'Fuente contractual existente: source_type y source_id, versión vigente del espacio '
+        'y request_id estable de hasta 100 caracteres.'
+    ),
+    BillingContextAssignmentSerializer: (
+        'Asociación explícita de la cuenta a contract o hosting, con versión vigente '
+        'y motivo de 1 a 2000 caracteres; los vínculos opcionales admiten null.'
+    ),
+    HostingReconciliationSerializer: (
+        'Identidad de la suscripción y registros de hosting que se asociarán, con versión vigente '
+        'y motivo de 1 a 2000 caracteres; los identificadores opcionales admiten null.'
+    ),
+    HostingEvidenceSerializer: (
+        'Grupo de evidencias existentes: versión, motivo de 1 a 2000 caracteres y etiqueta '
+        'de 1 a 200; las listas de IDs son vacías por defecto y group_id admite null.'
+    ),
+}
 
 
 def _validate(arguments, schema, serializer_class=None):
@@ -66,11 +96,12 @@ def _associate(arguments, actor, payload):
 
 def _tool(name, description, operation, *, serializer=None, fields=None, required=(), sensitive=False,
           payload_required=None, prepare_operation=None, version_getter=None, impact_builder=None):
-    properties = {'project_id': ID}
+    properties = {'project_id': {**ID, 'description': 'Identificador entero positivo del proyecto autorizado.'}}
     if required:
-        properties['account_id'] = ID
+        properties['account_id'] = {**ID, 'description': 'Identificador entero positivo de la cuenta de cobro dentro del proyecto.'}
     if serializer:
         properties['payload'] = {'type': 'object', 'additionalProperties': False, 'properties': fields,
+                                 'description': PAYLOAD_DESCRIPTIONS[serializer],
                                  'required': list(payload_required) if payload_required is not None else ['expected_version', 'reason'] + (['billing_nature'] if serializer == BillingContextAssignmentSerializer else ['label'] if serializer == HostingEvidenceSerializer else [])}
     schema = {'type': 'object', 'additionalProperties': False, 'properties': properties,
               'required': ['project_id', *required] + (['payload'] if serializer else [])}

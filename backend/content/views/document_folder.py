@@ -209,8 +209,15 @@ def update_document_folder(request, folder_id):
     Basta mirar los hijos DIRECTOS: si la rama guarda algo, o cuelga del propio
     folder o cuelga de una subcarpeta suya, así que una de las dos existe.
     """
-    validate_folder_input(request.data)
+    validate_folder_input(request.data, allow_policies=True)
     folder = get_object_or_404(DocumentFolder, pk=folder_id)
+    if 'client_policy' in request.data and {'parent', 'parent_id'}.intersection(request.data):
+        parent_id = request.data.get('parent', request.data.get('parent_id'))
+        if parent_id != folder.parent_id or 'expected_plan_hash' in request.data:
+            serializer = DocumentFolderSerializer(folder, data=request.data, partial=True, context={'request': request})
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
     managed = (
         _managed_folder_error(folder)
         or _system_managed_folder_error(folder)
@@ -228,6 +235,25 @@ def update_document_folder(request, folder_id):
     )
     if managed:
         return managed
+    from content.services.contract_mirror_service import (
+        CONTRACT_MIRROR_FOLDER_PINNED,
+        CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+        is_pinned_mirror_folder,
+    )
+    current_association = {
+        'client': getattr(getattr(folder.client_user, 'profile', None), 'pk', None),
+        'project': folder.project_id,
+    }
+    association_changed = any(
+        field in request.data
+        and str(request.data[field] or '') != str(current_id or '')
+        for field, current_id in current_association.items()
+    )
+    if association_changed and is_pinned_mirror_folder(folder):
+        return Response({
+            'detail': CONTRACT_MIRROR_FOLDER_PINNED_MESSAGE,
+            'code': CONTRACT_MIRROR_FOLDER_PINNED,
+        }, status=status.HTTP_409_CONFLICT)
     if _changes_client(folder, request) and (
         folder.documents.exists() or folder.children.exists()
     ):
@@ -238,7 +264,7 @@ def update_document_folder(request, folder_id):
             hint='Usa el endpoint change-client para elegir si se propaga.',
             status=status.HTTP_409_CONFLICT,
         )
-    serializer = DocumentFolderSerializer(folder, data=request.data, partial=True)
+    serializer = DocumentFolderSerializer(folder, data=request.data, partial=True, context={'request': request})
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     serializer.save()
@@ -306,10 +332,24 @@ def archive_document_folder(request, folder_id):
         or _system_managed_folder_error(folder)
     )
     if managed:
+        from content.services.contract_mirror_service import (
+            mirror_folder_archive_blocker,
+        )
+        blocker = mirror_folder_archive_blocker(folder)
+        if blocker:
+            return Response(
+                {'detail': blocker['message'], 'code': blocker['code'], **blocker['details']},
+                status=status.HTTP_409_CONFLICT,
+            )
         return managed
     try:
         counts = document_archive_service.archive_folder(folder)
     except document_archive_service.DocumentArchiveError as exc:
+        if exc.code == 'contract_mirror_folder_archive_blocked':
+            return Response(
+                {'detail': str(exc), 'code': exc.code, **exc.details},
+                status=status.HTTP_409_CONFLICT,
+            )
         # `detail` too: the MCP panel bridge only relays that key.
         return Response(
             {'error': str(exc), 'detail': str(exc), 'code': 'folder_archive_refused'},
@@ -445,7 +485,17 @@ def change_document_folder_client(request, folder_id):
     if managed:
         return managed
 
+    from rest_framework import serializers
+
+    from content.services.document_ownership_planner import (
+        PORTAL_POLICIES,
+        OwnershipPlanError,
+    )
+
     serializer = DocumentFolderChangeClientSerializer(data=request.data)
+    serializer.fields['portal_policy'] = serializers.ChoiceField(
+        choices=PORTAL_POLICIES, required=False,
+    )
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     mode = serializer.validated_data['mode']
@@ -477,9 +527,16 @@ def change_document_folder_client(request, folder_id):
     if error:
         return error
 
-    result = document_folder_service.change_client_apply(
-        folder, profile, mode, request.user,
-    )
+    try:
+        result = document_folder_service.change_client_apply(
+            folder, profile, mode, request.user,
+            portal_policy=serializer.validated_data.get('portal_policy'),
+        )
+    except OwnershipPlanError as exc:
+        return error_response(
+            exc.detail['detail'], code=exc.code, status=exc.status_code,
+            errors={**exc.details, 'details': exc.details, 'detail': exc.detail['detail']},
+        )
     return Response({
         'folder': _folder_payload(
             folder, scope='archived' if folder.is_archived else 'active',

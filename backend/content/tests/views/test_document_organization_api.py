@@ -49,7 +49,7 @@ def rpc(api_client, superuser):
 def test_mcp_update_folder_accepts_parent_id(rpc):
     folder = DocumentFolder.objects.create(name='Original')
     parent = DocumentFolder.objects.create(name='Parent')
-    result = rpc('update_folder', {'folder_id': folder.pk, 'data': {'name': 'Changed', 'parent_id': parent.pk}})
+    result = rpc('update_folder', {'folder_id': folder.pk, 'name': 'Changed', 'parent_id': parent.pk})
     assert result['isError'] is False
     folder.refresh_from_db()
     assert folder.parent_id == parent.pk
@@ -58,7 +58,7 @@ def test_mcp_update_folder_accepts_parent_id(rpc):
 
 def test_mcp_update_folder_rejects_unknown_without_partial_save(rpc):
     folder = DocumentFolder.objects.create(name='Original')
-    result = rpc('update_folder', {'folder_id': folder.pk, 'data': {'name': 'Changed', 'typo': 1}})
+    result = rpc('update_folder', {'folder_id': folder.pk, 'name': 'Changed', 'typo': 1})
     assert result['isError'] is True
     folder.refresh_from_db()
     assert folder.name == 'Original'
@@ -159,7 +159,9 @@ def test_mcp_move_rejects_generated_markdown(rpc, doc):
     result = rpc('update_document', {'document_id': doc.pk, 'folder_id': folder.pk})
 
     assert result['isError'] is True
-    assert result['structuredContent']['error']['code'] == 'NOT_EDITABLE'
+    error = result['structuredContent']['error']
+    assert error['code'] == 'OWNERSHIP_PLAN_BLOCKED'
+    assert {row['code'] for row in error['details']['blockers']} == {'generated_snapshot'}
     doc.refresh_from_db()
     assert doc.folder_id is None
 
@@ -184,9 +186,10 @@ def test_capabilities_can_filter_and_summarize(rpc):
 def test_capabilities_document_folder_schema(rpc):
     result = rpc('describe_capabilities', {'tools': ['update_folder']})
     tool, = result['structuredContent']['tools']
-    schema = tool['input_schema']['properties']['data']
+    schema = tool['input_schema']
     assert schema['additionalProperties'] is False
-    assert set(schema['properties']) == {'name', 'parent_id', 'parent', 'order', 'client', 'project'}
+    assert set(schema['properties']) == {'folder_id', 'name', 'parent_id', 'parent', 'order', 'client', 'project', 'if_match',
+                                        'client_policy', 'portal_policy', 'expected_plan_hash'}
 
 
 def test_capabilities_describe_atomic_move_contract(rpc):

@@ -1,17 +1,18 @@
 """Behavioral coverage for automatic project roots in Documents."""
 import pytest
+from accounts.models import Project, UserProfile
 from rest_framework.exceptions import PermissionDenied
 
-from accounts.models import Project, UserProfile
 from content.models import DocumentFolder, ProjectRetentionContext
+from content.services import project_document_folder_service as roots
+from content.services.project_document_folder_service import (
+    ensure_project_folder,
+)
 from content.services.project_force_deletion import (
     force_delete_project,
     forced_deletion_preview,
 )
-from content.services.project_document_folder_service import (
-    ensure_project_folder,
-)
-
+from content.tests.mcp_parity import ownership_state
 
 pytestmark = pytest.mark.django_db
 
@@ -130,6 +131,27 @@ def test_project_client_change_synchronizes_its_folder_tree(
     root = DocumentFolder.objects.get(managed_project=project)
     assert root.client_user_id == user.id
     assert not root.children.exclude(client_user=user).exists()
+
+
+def test_root_synchronization_failure_rolls_back_project_save(project, make_client_profile, monkeypatch):
+    new_owner = make_client_profile()
+    before_project = Project.objects.filter(pk=project.pk).values('name', 'client_id', 'updated_at').get()
+    before_tree = ownership_state()
+    update_root = roots._update_root
+
+    def fail_after_root_update(root, changed_project, *, created):
+        update_root(root, changed_project, created=created)
+        raise RuntimeError('Injected root synchronization failure')
+
+    monkeypatch.setattr(roots, '_update_root', fail_after_root_update)
+    project.name = 'Renamed project'
+    project.client = new_owner.user
+
+    with pytest.raises(RuntimeError, match='Injected root synchronization failure'):
+        project.save(update_fields=['name', 'client', 'updated_at'])
+
+    assert Project.objects.filter(pk=project.pk).values('name', 'client_id', 'updated_at').get() == before_project
+    assert ownership_state() == before_tree
 
 
 def test_empty_force_selection_retains_project_root_as_read_only(project, superuser):

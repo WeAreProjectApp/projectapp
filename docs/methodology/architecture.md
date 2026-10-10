@@ -1,3 +1,41 @@
+> **Migración de carpetas por MCP — parte 2, 2026-10-10:**
+> `document_ownership_planner` previsualiza propiedad y audiencia con políticas
+> explícitas; `folder_migration_service` reutiliza ese plan para `adopt_source`
+> y `move_contents`, sin aprovisionar en lectura. El token firmado dura 30
+> minutos y liga actor/credencial; la confirmación replanifica bajo candados y
+> guarda todo en una transacción. `DocumentOwnershipOperation` conserva
+> antes/después, recibo e idempotencia; deshacer restaura exactamente y bloquea
+> cambios, contenido nuevo, uso del proyecto y orden posterior. Las
+> postcondiciones comprueban raíz única, ausencia de raíz manual homónima,
+> Contratos activo/sin dueño con sus espejos y estado igual al plan. Las altas
+> y renombres comparten la regla de nombre; `create_project(root_folder_id)`
+> exige confirmación y devuelve `document_root`. El pin contractual permanece
+> sin dueño aunque esté dentro del proyecto. Esquema nuevo: content.0287,
+> además del pin content.0286 y voided accounts.0082, sólo mediante deploy.
+> Contrato publicado: Documentos **3.2.0 / 73 tools**, Proyectos **2.2.0 / 164**.
+> [Changelog de Documentos](../changelog/2026-10-10-documents-mcp-3.2.0.md),
+> [changelog de Proyectos](../changelog/2026-10-10-projects-mcp-2.2.0.md),
+> [pin dentro del proyecto migrado](../CONTRACT_TEMPLATE_MCP.md#contratos-dentro-de-un-proyecto-migrado-2026-10-10)
+> y [validación/runbook de la parte 2](../MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
+> Los argumentos de movimiento se documentan por herramienta: decisiones sólo
+> en el batch; hash en batch/carpeta, políticas también en documento. Esta
+> entrada describe los commits funcionales de PR #504; no acredita deploy ni
+> ejecución del caso real. El plazo de cancelación de hosting sigue en el runbook.
+
+> **Contratos MCP, espejos y hosting — 2026-10-09:** los adaptadores explícitos
+> publican campos planos y conservan los alias tipados en
+> `accepted_arguments_schema`; la validación central revisa el nivel superior
+> de schemas cerrados de Documentos/Proyectos. El
+> [pin contractual por ID](../CONTRACT_TEMPLATE_MCP.md#carpeta-contratos-fijada-por-id-2026-10-09)
+> permite reorganizar la carpeta sin perder sincronización y conserva sus
+> guardas de dueño/archivado. La
+> [evaluación compartida del cambio de cliente](../ISSUE_CLIENT_TRANSFER_INTEGRATION.md#evaluación-compartida-y-vista-previa-2026-10-09)
+> alinea preview, Panel y MCP; el
+> [ciclo de vida de hosting](../PLATFORM_PROJECT_BILLING.md#ciclo-de-vida-de-la-suscripción)
+> conserva historia con pagos `voided` y registra pausas manuales por evento.
+> El cobro con tarjeta guardada mantiene locks durante Wompi y su polling;
+> claim-then-call queda pendiente. Contratos, UI/E2E y conteos 66/164:
+> [validación de la parte 1](../MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
 > **Confirmación antes de enviar — 2026-10-09:** un correo al cliente sale
 > sólo después de un último aviso con sus datos (`ConfirmModal` apilado, que
 > deja Esc, backdrop y scroll al modal de abajo) y, en la liquidación, después
@@ -2167,3 +2205,30 @@ La lectura de actividad usa páginas acotadas con cursor firmado por propuesta y
 orden `(created_at, pk)` para no saltar empates. La UI conserva páginas y notas
 locales ante respuestas tardías. Cliente/contactos y ajustes del correo guardan
 sólo su conjunto de campos; General no reenvía esos campos ni fechas sin cambios.
+
+## Esquemas explícitos de Documentos y Proyectos — 2026-10-10
+
+PR 2 fija el contrato objetivo documents **4.0.0 / 73 tools** y projects
+**3.0.0 / 171 tools**. Los catálogos de schemas de los 36/48 bridges declaran
+inputs reales del Panel; las nativas cierran y tipan objetos, incluidas las
+16 raíces de documentos/hilos antes abiertas. Se retiran los alias `data`/`query`
+de las herramientas convertidas; el dispatcher rechaza campos superiores
+desconocidos antes de callbacks/escrituras. Entregas y recursos usan campos
+planos; imports conservan `payload` v1/v2 y tickets su `payload` tipado.
+
+`PANEL_ONLY_FIELDS` documenta exclusiones deliberadas; el borrado MCP sólo
+admite `project_id`/`if_match` y el normalizador conserva el campo `message`.
+Los contratos compartidos y de historial de PR #503 quedan fuera; otros
+conectores conservan sus alias. Guards de explicitud, deriva y paridad permiten
+auditar preview/ejecución. La integración y publicación de versiones quedan
+bajo el orquestador; esta entrada no acredita CI ni deploy.
+Guías: [Documentos](../changelog/2026-10-10-documents-mcp-4.0.0.md),
+[Proyectos](../changelog/2026-10-10-projects-mcp-3.0.0.md) y
+[runbook de esquemas](../MCP_VALIDATION_RUNBOOK.md#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).
+
+La integración con PR #503 incorpora las siete herramientas de integridad de
+datos al contrato plano de Proyectos. Building with Us comparte el pin
+contractual por ID; las fusiones de clientes preservan los autores de sus
+revisiones y de los recibos de migración de carpetas. Los aliases documentados
+de historial mantienen su compatibilidad. Estos contratos se registran en
+`connectors.py` y sus huellas se regeneran en `connector_contracts.json`.

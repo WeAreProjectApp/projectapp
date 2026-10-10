@@ -41,7 +41,7 @@ def _update_tool():
 def _arguments(authority):
     context = authority.delivery
     return {'project_id': context.project.pk, 'node_id': context.first.pk,
-        'expected_version': version(context), 'data': {'title': 'Bound technical principal edit'}}
+        'expected_version': version(context), 'title': 'Bound technical principal edit'}
 
 
 def test_bound_mcp_principal_can_edit_without_creating_a_profile(authority):

@@ -6,11 +6,13 @@ import pytest
 from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, Throttled
 
-from content.mcp.errors import transport_exception_handler
-from content.mcp.context import McpExecutionContext
+from content.mcp.common_tools import build_common_tools
+from content.mcp.context import McpExecutionContext, use_mcp_context
+from content.mcp.errors import normalize_error, transport_exception_handler
 from content.mcp.panel_bridge import _error_message
-from content.mcp.protocol import handle_message
-
+from content.mcp.protocol import ToolError, handle_message
+from content.models import McpActionIntent, McpConnector, McpCredential
+from content.services import diagnostic_privacy
 
 PRIVATE_MARKER = 'SYNTHETIC_PRIVATE_P5_20261001'
 
@@ -136,3 +138,275 @@ def test_domain_permission_denied_keeps_forbidden_code():
     error = json.loads(response['result']['content'][0]['text'])['error']
     assert error['code'] == 'FORBIDDEN'
     assert error['message'] == 'Los datos conservados sin proyecto sólo permiten consulta.'
+
+
+@pytest.fixture
+def confirmation_contract(db):
+    connector, _ = McpConnector.objects.get_or_create(slug='tasks', defaults={'name': 'Tasks'})
+    credential = McpCredential.objects.create(connector=connector, label='Error contract')
+    return McpExecutionContext(connector=connector, credential=credential, request_id='confirmation-errors')
+
+
+@pytest.mark.parametrize('confirmation_id', ['malformed-id', 123, None])
+def test_cancel_action_rejects_a_malformed_id(confirmation_contract, confirmation_id):
+    tools = build_common_tools('tasks', lambda: tools)
+
+    with use_mcp_context(confirmation_contract):
+        _, response = handle_message({
+            'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+            'params': {'name': 'cancel_action', 'arguments': {'confirmation_id': confirmation_id}},
+        }, tools, context=confirmation_contract)
+
+    assert response['result']['structuredContent']['error'] == {
+        'code': 'NOT_FOUND', 'message': 'No existe una confirmación pendiente con ese id.', 'details': {},
+    }
+    assert not McpActionIntent.objects.filter(credential=confirmation_contract.credential).exists()
+
+
+def test_confirm_action_preserves_domain_blockers(confirmation_contract):
+    blockers = [{'code': 'new_dependency', 'message': 'Apareció una dependencia.'}]
+
+    def blocked(_arguments):
+        raise ToolError('La acción está bloqueada.', code='SOME_CODE', details={'blockers': blockers})
+
+    tools = [{
+        'name': 'blocked_action', 'description': 'Previsualiza una acción con bloqueos de dominio.',
+        'requires_confirmation': True,
+        'input_schema': {'type': 'object', 'properties': {}, 'additionalProperties': False},
+        'handler': blocked,
+    }]
+    tools.extend(build_common_tools('tasks', lambda: tools))
+    with use_mcp_context(confirmation_contract):
+        _, preview = handle_message({
+            'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+            'params': {'name': 'blocked_action', 'arguments': {}},
+        }, tools, context=confirmation_contract)
+        confirmation_id = preview['result']['structuredContent']['confirmation_id']
+        _, response = handle_message({
+            'jsonrpc': '2.0', 'id': 2, 'method': 'tools/call',
+            'params': {'name': 'confirm_action', 'arguments': {'confirmation_id': confirmation_id}},
+        }, tools, context=confirmation_contract)
+
+    assert response['result']['structuredContent']['error'] == {
+        'code': 'SOME_CODE', 'message': 'La acción está bloqueada.', 'details': {'blockers': blockers},
+    }
+    assert json.loads(response['result']['content'][0]['text']) == response['result']['structuredContent']
+    intent = McpActionIntent.objects.get(pk=confirmation_id)
+    assert intent.status == McpActionIntent.STATUS_PENDING
+
+
+@pytest.mark.parametrize(('arguments', 'expected_code', 'field_codes'), [
+    ({'record_id': 7, 'typo': True}, 'unknown_field', [('typo', 'unknown_field')]),
+    ({}, 'VALIDATION_ERROR', [('record_id', 'required')]),
+    ({'typo': True}, 'VALIDATION_ERROR', [('typo', 'unknown_field'), ('record_id', 'required')]),
+])
+def test_dispatcher_validates_before_sensitive_preview(confirmation_contract, arguments, expected_code, field_codes):
+    tool = {
+        'name': 'delete_record', 'description': 'Elimina el registro después de confirmarlo.',
+        'requires_confirmation': True,
+        'strict_arguments': True,
+        'input_schema': {
+            'type': 'object', 'properties': {'record_id': {'type': 'integer'}},
+            'required': ['record_id'], 'additionalProperties': False,
+        },
+        'handler': _internal_failure,
+    }
+
+    with use_mcp_context(confirmation_contract):
+        _, response = handle_message({
+            'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+            'params': {'name': tool['name'], 'arguments': arguments},
+        }, [tool], context=confirmation_contract)
+
+    error = response['result']['structuredContent']['error']
+    assert error['code'] == expected_code
+    assert [(row['field'], row['code']) for row in error['details']['errors']] == field_codes
+    assert not McpActionIntent.objects.filter(credential=confirmation_contract.credential).exists()
+
+
+def test_missing_required_field_keeps_its_public_message():
+    tool = {
+        'name': 'echo', 'connector': 'documents', 'input_schema': {
+            'type': 'object', 'properties': {'value': {}}, 'required': ['value'],
+            'additionalProperties': False,
+        }, 'handler': lambda args: args,
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call', 'params': {'name': 'echo'},
+    }, [tool])
+
+    error = response['result']['structuredContent']['error']
+    assert error['message'] == 'value es obligatorio.'
+    assert error['details']['errors'] == [{'field': 'value', 'code': 'required', 'message': 'value es obligatorio.'}]
+
+
+@pytest.mark.parametrize('extra_schema', [{}, {'additionalProperties': True}], ids=['implicit-open', 'explicit-open'])
+def test_dispatcher_preserves_open_schema_handler_validation(extra_schema):
+    received = []
+    arguments = {'legacy_filter': True}
+
+    def validate(args):
+        received.append(args)
+        raise ToolError('Falta el valor para ejecutar esta herramienta.', code='VALUE_REQUIRED', details={'origin': 'handler'})
+
+    tool = {
+        'name': 'open_validation', 'connector': 'projects', 'input_schema': {
+            'type': 'object', 'properties': {'value': {}}, 'required': ['value'], **extra_schema,
+        }, 'handler': validate,
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+        'params': {'name': tool['name'], 'arguments': arguments},
+    }, [tool])
+
+    assert received == [arguments]
+    assert response['result']['structuredContent']['error'] == {
+        'code': 'VALUE_REQUIRED', 'message': 'Falta el valor para ejecutar esta herramienta.',
+        'details': {'origin': 'handler'},
+    }
+
+
+def test_dispatcher_leaves_types_to_the_handler():
+    tool = {
+        'name': 'echo', 'connector': 'documents', 'input_schema': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {'value': {'type': 'integer'}}, 'required': ['value'],
+        }, 'handler': lambda args: {'seen': args['value']},
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+        'params': {'name': 'echo', 'arguments': {'value': 'handler decides'}},
+    }, [tool])
+
+    assert response['result']['isError'] is False
+    assert response['result']['structuredContent'] == {'seen': 'handler decides'}
+
+
+def test_dispatcher_accepts_a_private_legacy_argument():
+    tool = {
+        'name': 'legacy_echo', 'connector': 'documents',
+        'input_schema': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {'value': {'type': 'string'}}, 'required': ['value'],
+        },
+        'accepted_arguments_schema': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {'value': {'type': 'string'}, 'legacy_value': {'type': 'string'}},
+            'required': [],
+        },
+        'handler': lambda args: {'seen': args['legacy_value']},
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+        'params': {'name': tool['name'], 'arguments': {'legacy_value': 'Compatibility value'}},
+    }, [tool])
+
+    assert 'legacy_value' not in tool['input_schema']['properties']
+    assert response['result']['isError'] is False
+    assert response['result']['structuredContent'] == {'seen': 'Compatibility value'}
+
+
+@pytest.mark.parametrize('scope', [
+    {'connector': 'documents'}, {'connector': 'projects'},
+    {'connector': 'communications', 'strict_arguments': True},
+], ids=['documents-default', 'projects-default', 'other-connector-opt-in'])
+def test_closed_tool_rejects_unknown_arguments_in_its_strict_scope(scope):
+    received = []
+    tool = {
+        'name': 'scoped_echo', **scope,
+        'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {}},
+        'handler': lambda args: received.append(args),
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+        'params': {'name': tool['name'], 'arguments': {'legacy_value': 'Legacy'}},
+    }, [tool])
+
+    assert response['result']['structuredContent']['error']['code'] == 'unknown_field'
+    assert response['result']['structuredContent']['error']['details']['errors'][0]['field'] == 'legacy_value'
+    assert received == []
+
+
+@pytest.mark.parametrize('scope', [
+    {'connector': 'communications'}, {},
+    {'connector': 'documents', 'strict_arguments': False},
+    {'connector': 'projects', 'strict_arguments': False},
+], ids=['other-connector-default', 'no-connector-default', 'documents-opt-out', 'projects-opt-out'])
+def test_closed_tool_keeps_handler_validation_outside_its_strict_scope(scope):
+    received = []
+    arguments = {'legacy_value': 'Legacy'}
+
+    def validate(args):
+        received.append(args)
+        raise ToolError('Falta el valor.', code='VALUE_REQUIRED', details={'origin': 'handler'})
+
+    tool = {
+        'name': 'scoped_validation', **scope,
+        'input_schema': {
+            'type': 'object', 'additionalProperties': False,
+            'properties': {'value': {}}, 'required': ['value'],
+        },
+        'handler': validate,
+    }
+
+    _, response = handle_message({
+        'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',
+        'params': {'name': tool['name'], 'arguments': arguments},
+    }, [tool])
+
+    assert received == [arguments]
+    assert response['result']['structuredContent']['error'] == {
+        'code': 'VALUE_REQUIRED', 'message': 'Falta el valor.', 'details': {'origin': 'handler'},
+    }
+
+
+def test_normalize_error_preserves_planner_details():
+    structured = {
+        'blockers': [{'code': 'pinned_folder', 'message': 'Carpeta fijada.'}],
+        'blocker_counts': {'pinned_folder': 1}, 'planned': {'move': [4]},
+        'impact_hash': 'impact', 'plan_hash': 'plan', 'can_apply': False,
+        'guard_code': 'pinned_folder', 'resolution': 'choose_destination',
+        'warnings': ['Advertencia.'], 'conflicts': [{'document_id': 9}],
+    }
+    payload = {'code': 'folder_blocked', 'message': 'Bloqueado.', **structured,
+               'folder_id': [serializers.ErrorDetail('Destino inválido.', code='invalid')]}
+
+    message, code, details = normalize_error(payload)
+
+    assert (message, code) == ('Bloqueado.', 'FOLDER_BLOCKED')
+    assert {name: details[name] for name in structured} == structured
+    assert details['errors'] == [{'field': 'folder_id', 'code': 'invalid', 'message': 'Destino inválido.'}]
+
+
+def test_registered_codes_extend_the_diagnostic_catalog(monkeypatch):
+    monkeypatch.setattr(diagnostic_privacy, '_REGISTERED_MCP_DOMAIN_CODES', set())
+    original = diagnostic_privacy._MCP_DOMAIN_CODES
+    assert diagnostic_privacy.safe_mcp_error_code('registered_slice_code') == 'TOOL_ERROR'
+
+    diagnostic_privacy.register_mcp_domain_codes('registered_slice_code', 'MixedCase_2', 'a' * 64)
+    diagnostic_privacy.register_mcp_domain_codes('registered_slice_code')
+
+    expected = {
+        'registered_slice_code': 'registered_slice_code',
+        'REGISTERED_SLICE_CODE': 'REGISTERED_SLICE_CODE',
+        'MixedCase_2': 'MixedCase_2', 'MIXEDCASE_2': 'MIXEDCASE_2',
+        'a' * 64: 'a' * 64, 'VALIDATION_ERROR': 'VALIDATION_ERROR',
+        -32602: '-32602', 'arbitrary message': 'TOOL_ERROR',
+    }
+    assert {value: diagnostic_privacy.safe_mcp_error_code(value) for value in expected} == expected
+    assert diagnostic_privacy._MCP_DOMAIN_CODES is original
+
+
+@pytest.mark.parametrize('invalid_code', ['', 'a', '1code', '_code', 'two words', 'x\n', 'a' * 65, None])
+def test_registration_rejects_invalid_identifiers(monkeypatch, invalid_code):
+    monkeypatch.setattr(diagnostic_privacy, '_REGISTERED_MCP_DOMAIN_CODES', set())
+
+    with pytest.raises(ValueError):
+        diagnostic_privacy.register_mcp_domain_codes('atomic_valid_code', invalid_code)
+
+    assert diagnostic_privacy.safe_mcp_error_code('atomic_valid_code') == 'TOOL_ERROR'

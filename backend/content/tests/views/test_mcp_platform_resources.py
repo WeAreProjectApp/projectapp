@@ -46,7 +46,7 @@ def asset(call_projects):
 
 def arguments(project, asset):
     return {'project_id': project.pk, 'asset_id': str(asset.pk), 'expected_version': 0,
-            'request_id': 'resource-create', 'data': {'title': 'Manual', 'category': 'documents'}}
+            'request_id': 'resource-create', 'title': 'Manual', 'category': 'documents'}
 
 
 def test_resource_preview_preserves_the_database(call_projects, project, asset):
@@ -109,7 +109,7 @@ def test_admin_can_rename_an_archived_resource_folder(call_projects, project, su
     folder = DeliverableClientFolder.objects.create(deliverable=resource, created_by=superuser, name='Original')
     confirm(call_projects, 'update_project_resource_folder', {'project_id': project.pk,
         'resource_id': resource.pk, 'folder_id': folder.pk, 'expected_version': 0,
-        'request_id': 'archived-folder', 'data': {'name': 'Renamed'}})
+        'request_id': 'archived-folder', 'name': 'Renamed'})
     folder.refresh_from_db()
     assert folder.name == 'Renamed'
     resource.refresh_from_db()
@@ -153,16 +153,16 @@ def test_resource_scope_rejects_an_ungranted_tool(call_projects, project):
 
 def test_resource_create_rejects_a_read_only_field(call_projects, project, asset):
     payload = arguments(project, asset)
-    payload['data']['uploaded_by'] = project.client_id
+    payload['uploaded_by'] = project.client_id
     error = call_projects('create_project_resource', payload, expect_error=True)
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'unknown_field'
     assert not McpActionIntent.objects.filter(tool_name='create_project_resource').exists()
 
 
 def test_data_model_preview_preserves_the_existing_entities(call_projects, project):
     original = ProjectDataModelEntity.objects.create(project=project, name='Original')
     preview = call_projects('preview_project_data_model', {'project_id': project.pk,
-        'expected_version': 0, 'data': {'entities': [{'name': 'Replacement'}]}})
+        'expected_version': 0, 'entities': [{'name': 'Replacement'}]})
     assert preview['after'][0]['name'] == 'Replacement'
     assert ProjectDataModelEntity.objects.get(pk=original.pk).name == 'Original'
 
@@ -170,13 +170,13 @@ def test_data_model_preview_preserves_the_existing_entities(call_projects, proje
 def test_data_model_import_replaces_the_reviewed_entities(call_projects, project):
     ProjectDataModelEntity.objects.create(project=project, name='Original')
     confirm(call_projects, 'import_project_data_model', {'project_id': project.pk,
-        'expected_version': 0, 'request_id': 'model', 'data': {'entities': [{'name': 'Replacement'}]}})
+        'expected_version': 0, 'request_id': 'model', 'entities': [{'name': 'Replacement'}]})
     assert list(ProjectDataModelEntity.objects.filter(project=project).values_list('name', flat=True)) == ['Replacement']
 
 
 def test_data_model_import_rejects_a_changed_workspace(call_projects, project, asset):
     preview = call_projects('import_project_data_model', {'project_id': project.pk,
-        'expected_version': 0, 'request_id': 'model', 'data': {'entities': [{'name': 'Replacement'}]}})
+        'expected_version': 0, 'request_id': 'model', 'entities': [{'name': 'Replacement'}]})
     confirm(call_projects, 'create_project_resource', arguments(project, asset))
     error = call_projects('confirm_action', {'confirmation_id': preview['confirmation_id']}, expect_error=True)
     assert error['code'] == 'STALE_VERSION'

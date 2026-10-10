@@ -148,7 +148,7 @@ CONTRACT_TEMPLATE_TOOLS[0]['accepted_arguments_schema'] = {
 
 CONTRACT_MIRROR_TOOLS = [
     {'name': 'list_contract_mirrors', 'risk': 'read',
-     'description': 'Lista los tres espejos en Contratos, con document_id, variant, version, last_synced_at y synchronized. Son de solo lectura; las plantillas se editan desde el MCP de propuestas.',
+     'description': 'Lista los tres espejos contractuales, con document_id, variant, version, last_synced_at, synchronized, folder_path y folder_movable. Están fijados a su carpeta por ID: la carpeta puede renombrarse o moverse, pero no archivarse mientras guarde los espejos. pinned_folder informa la carpeta fijada y el motivo del bloqueo de archivado. Los espejos son de solo lectura y no se editan ni se mueven individualmente; las plantillas se editan desde el MCP de propuestas.',
      'input_schema': {'type': 'object', 'additionalProperties': False, 'properties': {}},
      'handler': _mirrors},
 ]
@@ -166,13 +166,25 @@ READ_OUTPUT = {
 }
 CONTRACT_TEMPLATE_TOOLS[0]['output_schema'] = READ_OUTPUT
 CONTRACT_MIRROR_TOOLS[0]['output_schema'] = {
-    'type': 'object', 'required': ['mirrors'],
-    'properties': {'mirrors': {'type': 'array', 'items': {
+    'type': 'object', 'required': ['mirrors', 'pinned_folder'],
+    'properties': {'pinned_folder': {
+        'type': 'object',
+        'properties': {
+            'pinned_folder_id': {'type': ['integer', 'null']},
+            'pin_source': {'type': 'string', 'enum': ['field', 'derived', 'unpinned']},
+            'folder_path': {'type': ['string', 'null']},
+            'folder_movable': {'type': 'boolean'},
+            'archive_blocked': {'type': 'boolean'},
+            'archive_block_reason': {'type': ['string', 'null']},
+        },
+        'required': ['pinned_folder_id', 'pin_source', 'folder_path', 'folder_movable', 'archive_blocked', 'archive_block_reason'],
+    }, 'mirrors': {'type': 'array', 'items': {
         'type': 'object', 'properties': {
             'variant': VARIANT, 'document_id': {'type': ['integer', 'null']},
             'title': {'type': 'string'}, 'folder_id': {'type': ['integer', 'null']},
+            'folder_path': {'type': ['string', 'null']}, 'folder_movable': {'type': 'boolean'},
             'version': {'type': ['integer', 'null']}, 'last_synced_at': {'type': ['string', 'null']},
             'synchronized': {'type': 'boolean'},
-        }, 'required': ['variant', 'document_id', 'version', 'last_synced_at', 'synchronized'],
+        }, 'required': ['variant', 'document_id', 'folder_path', 'folder_movable', 'version', 'last_synced_at', 'synchronized'],
     }}},
 }

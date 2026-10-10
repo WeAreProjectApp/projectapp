@@ -32,7 +32,7 @@ const mockClients = [
   },
 ];
 
-function setupCreateProjectMocks(page) {
+function setupCreateProjectMocks(page, createResponse = null) {
   return mockApi(page, async ({ apiPath, method }) => {
     if (apiPath === 'accounts/me/' && method === 'GET') return meResponse(mockPlatformAdmin);
     if (apiPath === 'accounts/proposals/' && method === 'GET') {
@@ -42,7 +42,7 @@ function setupCreateProjectMocks(page) {
       return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
     }
     if (apiPath === 'accounts/projects/' && method === 'POST') {
-      return {
+      return createResponse ?? {
         status: 201,
         contentType: 'application/json',
         body: JSON.stringify({
@@ -112,6 +112,41 @@ test.describe('Platform Admin Project Create', () => {
     await page.getByRole('button', { name: /crear proyecto/i }).click();
 
     await expect(page.getByRole('heading', { name: 'Nuevo proyecto' })).not.toBeVisible({ timeout: 5000 });
+  });
+
+  // Catches a manual root conflict being hidden or a rejected project being inserted.
+  test('server root folder conflict keeps the create modal open', {
+    tag: [...PLATFORM_ADMIN_PROJECT_CREATE, '@role:platform-admin', '@outcome:error'],
+  }, async ({ page }) => {
+    await setupCreateProjectMocks(page, {
+      status: 400,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        detail: 'Ya existe una carpeta manual con el nombre del proyecto.',
+        code: 'project_root_name_conflict',
+        folder_ids: [66],
+        paths: ['ProjectApp'],
+        reasons: [{ code: 'pinned', resource_type: 'folder', resource_id: 121 }],
+        hint: 'Usa create_project con root_folder_id tras revisar preview_folder_migration, o renombra la carpeta existente.',
+      }),
+    });
+    await page.goto('/platform/projects', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByText('No hay proyectos creados.', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: /nuevo proyecto/i }).click();
+
+    const clientSelect = page.getByRole('combobox').filter({ has: page.locator('option[value="9002"]') });
+    await expect(clientSelect).toBeVisible({ timeout: 20_000 });
+    await page.getByPlaceholder(/plataforma e-commerce/i).fill('ProjectApp');
+    await clientSelect.selectOption({ value: '9002' });
+    const createResponse = page.waitForResponse((response) =>
+      response.request().method() === 'POST' && response.url().endsWith('/api/accounts/projects/'));
+    await page.getByRole('button', { name: /crear proyecto/i }).click();
+
+    expect((await createResponse).status()).toBe(400);
+    await expect(page.getByText('Ya existe una carpeta manual con el nombre del proyecto.', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Nuevo proyecto', exact: true })).toBeVisible();
+    await expect(page.getByText('No hay proyectos creados.', { exact: true })).toBeVisible();
+    await expect(page.getByTestId(/^project-(row|card)-/)).toHaveCount(0);
   });
 
   test('cancel button closes modal without submitting', {

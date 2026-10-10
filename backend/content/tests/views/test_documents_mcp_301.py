@@ -25,11 +25,9 @@ def rpc(api_client, superuser):
     return call
 
 
-@pytest.mark.parametrize('payload_location', ['flat', 'data'])
-def test_unknown_folder_field_reaches_text_client(rpc, payload_location):
+def test_unknown_folder_field_reaches_text_client(rpc):
     folder = DocumentFolder.objects.create(name='Original')
-    values = {'name': 'Changed', 'typo': 1}
-    arguments = {'folder_id': folder.pk, **{'flat': values, 'data': {'data': values}}[payload_location]}
+    arguments = {'folder_id': folder.pk, 'name': 'Changed', 'typo': 1}
 
     result = rpc('tools/call', name='update_folder', arguments=arguments)
 
@@ -49,10 +47,12 @@ def test_folder_cycle_reaches_text_client(rpc, destination_kind):
 
     result = rpc('tools/call', name='update_folder', arguments={'folder_id': parent.pk, 'parent_id': destination})
 
-    error = json.loads(result['content'][0]['text'])['error']
-    assert error['code'] == 'folder_cycle'
-    assert error['details']['errors'][0]['field'] == 'parent'
-    assert error['details']['errors'][0]['message'] in error['message']
+    payload = json.loads(result['content'][0]['text'])
+    assert payload == result['structuredContent']
+    error = payload['error']
+    assert error['code'] == 'OWNERSHIP_PLAN_BLOCKED'
+    blocker, = error['details']['blockers']
+    assert (blocker['code'], blocker['resource_type'], blocker['resource_id']) == ('folder_cycle', 'folder', parent.pk)
     parent.refresh_from_db()
     assert parent.parent_id is None
 

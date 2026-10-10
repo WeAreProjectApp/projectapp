@@ -13,5 +13,5 @@ export default {
   reconciledEvidence: 'Reconciled evidence', evidenceDifference: 'The evidence contains different amounts or statuses; association does not confirm payment.',
   evidenceKinds: { payment: 'Payment', cycle: 'Paid cycle' },
   modalities: { quarterly: 'Quarterly', semiannual: 'Semiannual', nine_month: 'Every 9 months', monthly: 'Monthly (historical)', annual: 'Annual (historical)' },
-  states: { draft: 'Draft', issued: 'Issued', paid: 'Paid', cancelled: 'Cancelled', pending: 'Pending', processing: 'Processing', overdue: 'Overdue', failed: 'Failed', active: 'Active', inactive: 'Inactive', suspended: 'Suspended' },
+  states: { draft: 'Draft', issued: 'Issued', paid: 'Paid', cancelled: 'Cancelled', pending: 'Pending', processing: 'Processing', overdue: 'Overdue', failed: 'Failed', voided: 'Voided', active: 'Active', inactive: 'Inactive', suspended: 'Suspended' },
 }

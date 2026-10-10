@@ -893,6 +893,7 @@ function paymentBorderClass(s) {
     paid: 'border-border-default',
     processing: 'border-blue-500/20 dark:border-blue-500/15',
     failed: 'border-red-500/20 dark:border-red-500/15',
+    voided: 'border-border-default',
   }
   return map[s] || 'border-border-default'
 }
@@ -901,12 +902,13 @@ function paymentIconBg(s) {
   const map = {
     pending: 'bg-amber-500/10', overdue: 'bg-red-500/10',
     paid: 'bg-emerald-500/10', processing: 'bg-blue-500/10', failed: 'bg-red-500/10',
+    voided: 'bg-surface-raised',
   }
   return map[s] || 'bg-surface-raised'
 }
 
 function paymentIcon(s) {
-  const map = { pending: '⏳', overdue: '⚠️', paid: '✅', processing: '🔄', failed: '❌' }
+  const map = { pending: '⏳', overdue: '⚠️', paid: '✅', processing: '🔄', failed: '❌', voided: '➖' }
   return map[s] || '💳'
 }
 
@@ -917,12 +919,13 @@ function paymentStatusClass(s) {
     paid: 'bg-emerald-500/15 text-text-brand',
     processing: 'bg-blue-500/15 text-blue-600 dark:text-blue-400',
     failed: 'bg-red-500/15 text-red-600 dark:text-red-400',
+    voided: 'bg-surface-raised text-text-muted',
   }
   return map[s] || map.pending
 }
 
 function paymentStatusLabel(s) {
-  const map = { pending: 'Pendiente', overdue: 'Vencido', paid: 'Pagado', processing: 'Procesando', failed: 'Fallido' }
+  const map = { pending: 'Pendiente', overdue: 'Vencido', paid: 'Pagado', processing: 'Procesando', failed: 'Fallido', voided: 'Anulado' }
   return map[s] || s
 }
 

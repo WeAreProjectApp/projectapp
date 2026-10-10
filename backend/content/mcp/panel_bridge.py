@@ -1,6 +1,7 @@
 import json
 import re
 from copy import deepcopy
+from urllib.parse import urlencode
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import transaction
@@ -83,14 +84,116 @@ def _impact_for(operation, arguments):
     }
 
 
-def _path_properties(path_params):
+_PATH_DESCRIPTIONS = {
+    'document_id': 'Id positivo del documento que se consulta o modifica.',
+    'folder_id': 'Id positivo de la carpeta documental que se consulta o modifica.',
+    'project_id': 'Id positivo del proyecto que se consulta o modifica.',
+    'tag_id': 'Id positivo de la etiqueta documental.',
+    'state_id': 'Id positivo del estado del catálogo documental o de proyectos.',
+    'group_id': 'Id positivo del grupo del catálogo de estados.',
+    'episode_id': 'Id positivo del episodio de estado del documento.',
+    'note_id': 'Id positivo de la observación del documento.',
+    'idea_id': 'Id positivo de la idea dentro del proyecto.',
+    'collection_id': 'Id positivo de la recopilación de ideas del proyecto.',
+    'phase_id': 'Id positivo de la fase comercial del proyecto.',
+    'operation_id': 'Id positivo del traslado auditado de datos conservados.',
+    'context_id': 'Id positivo del contexto de datos conservados del proyecto eliminado.',
+    'asset_id': 'Id positivo del archivo de marca dentro del proyecto.',
+}
+
+
+def _path_properties(path_params, *, explicit=False):
     properties = {}
     for name in path_params:
         if name.endswith('_id'):
-            properties[name] = {'type': ['integer', 'string']}
+            properties[name] = (
+                {'type': 'integer', 'minimum': 1}
+                if explicit else {'type': ['integer', 'string']}
+            )
         else:
             properties[name] = {'type': 'string'}
+        if explicit:
+            properties[name]['description'] = _PATH_DESCRIPTIONS.get(
+                name,
+                'Id del recurso que se consulta o modifica; entero positivo.'
+                if name.endswith('_id') else f'Valor de {name} en la ruta del Panel, como texto.',
+            )
     return properties
+
+
+def _validation_error(errors, *, message=None):
+    if message is not None:
+        errors = {**errors, 'detail': message}
+    detail, code, fields = normalize_error(errors)
+    raise ToolError(detail, code=code, details=fields)
+
+
+def _field_error(field, message, *, code='invalid'):
+    _validation_error({field: [serializers.ErrorDetail(message, code=code)]}, message=message)
+
+
+def _check_unknown_fields(values, properties):
+    unknown = set(values) - set(properties)
+    if unknown:
+        _validation_error({
+            name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')]
+            for name in sorted(unknown)
+        })
+
+
+def _merge_alias(values, arguments, alias):
+    conflicts = sorted(key for key in arguments if key in values and arguments[key] != values[key])
+    if conflicts:
+        message = f'Campos contradictorios entre {alias} y argumentos.'
+        _validation_error({
+            name: [serializers.ErrorDetail(message, code='invalid')]
+            for name in conflicts
+        }, message=message)
+    values.update(arguments)
+
+
+def _allows_null(schema):
+    field_type = schema.get('type', ())
+    return (
+        field_type == 'null'
+        or isinstance(field_type, list) and 'null' in field_type
+        or schema.get('nullable') is True
+        or any(_allows_null(option) for key in ('anyOf', 'oneOf') for option in schema.get(key, []))
+    )
+
+
+def encode_query_value(value, *, encoding='csv', field='query'):
+    """Encode JSON query values consistently for GET and body-bearing requests."""
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return 'true' if value else 'false'
+    if isinstance(value, (int, float, str)):
+        return str(value)
+    if isinstance(value, list):
+        if any(isinstance(item, (dict, list)) for item in value):
+            _field_error(field, 'La lista de consulta debe contener valores simples.')
+        items = [encode_query_value(item, field=field) for item in value if item is not None]
+        if encoding == 'repeat':
+            return items
+        if encoding == 'csv':
+            return ','.join(items)
+        _field_error(field, 'La codificación de consulta no es válida.')
+    _field_error(field, 'El valor de consulta debe ser un valor simple o una lista.')
+
+
+def _encode_query(query, schema):
+    properties = schema.get('properties', {}) if schema is not None else {}
+    default_encoding = 'repeat' if schema is None else 'csv'
+    encoded = {}
+    for name, value in query.items():
+        field_schema = properties.get(name, {})
+        if value is None and name in properties and not _allows_null(field_schema):
+            _field_error(name, 'Este campo no puede ser nulo.', code='null')
+        item = encode_query_value(value, encoding=field_schema.get('x-query-encoding', default_encoding), field=name)
+        if item is not None:
+            encoded[name] = item
+    return encoded
 
 
 def _request_for(method, url, *, query, data, files, if_match):
@@ -103,6 +206,8 @@ def _request_for(method, url, *, query, data, files, if_match):
     method = method.lower()
     if method == 'get':
         return factory.get(url, data=query, secure=secure, **headers)
+    if query:
+        url = f'{url}?{urlencode(query, doseq=True)}'
     # Multipart cannot encode nested objects; the Panel parsers accept JSON strings.
     encoded = {key: json.dumps(value) if isinstance(value, (dict, list)) else value
                for key, value in data.items()} if files else data
@@ -120,25 +225,60 @@ def _request_for(method, url, *, query, data, files, if_match):
 @transaction.atomic
 def _execute(operation, arguments):
     args = deepcopy(arguments)
-    if operation.get('payload_schema'):
+    envelope_aliases = operation.get('envelope_aliases', True)
+    if not envelope_aliases:
+        _check_unknown_fields({name: args[name] for name in ('data', 'query') if name in args}, ())
+    payload_schema = operation.get('payload_schema')
+    query_schema = operation.get('query_schema')
+    explicit = payload_schema is not None or query_schema is not None
+    is_get = operation['method'] == 'GET'
+    if explicit:
         permitted = (set(operation['path_params']) | set(operation['asset_fields'])
-                     | {'data', 'if_match', 'query'} | set(operation['payload_schema']['properties']))
-        unexpected = set(args) - permitted
-        if unexpected:
-            message, code, details = normalize_error({name: [serializers.ErrorDetail('Campo desconocido o de solo lectura.', code='unknown_field')] for name in sorted(unexpected)})
-            raise ToolError(message, code=code, details=details)
+                     | {'if_match'})
+        if envelope_aliases and not is_get and payload_schema is not None:
+            permitted.add('data')
+        if payload_schema is not None:
+            permitted.update(payload_schema.get('properties', {}))
+        if query_schema is not None:
+            permitted.update(query_schema.get('properties', {}))
+            if envelope_aliases:
+                permitted.add('query')
+        if envelope_aliases:
+            permitted.update({'data', 'query'})
+        _check_unknown_fields(args, permitted)
     route_kwargs = {}
     for name in operation['path_params']:
         value = args.pop(name, None)
         if value in (None, ''):
-            raise ToolError(f'{name} es obligatorio.')
+            _field_error(name, f'{name} es obligatorio.', code='required')
+        if explicit and name.endswith('_id'):
+            if isinstance(value, str) and re.fullmatch(r'[0-9]+', value):
+                try:
+                    value = int(value)
+                except ValueError:
+                    _field_error(name, f'{name} debe ser un identificador positivo.')
+            if type(value) is not int or value < 1:
+                _field_error(name, f'{name} debe ser un identificador positivo.')
         route_kwargs[name] = value
     query = args.pop('query', {})
     data = args.pop('data', {})
-    query = {} if query is None else query
+    query = {} if query is None and query_schema is None else query
     data = {} if data is None else data
-    if not isinstance(query, dict) or not isinstance(data, dict):
-        raise ToolError('query y data deben ser objetos JSON.')
+    if not isinstance(query, dict):
+        _field_error('query', 'query y data deben ser objetos JSON.')
+    if not isinstance(data, dict):
+        _field_error('data', 'query y data deben ser objetos JSON.')
+    if query_schema is not None:
+        query_fields = query_schema.get('properties', {})
+        _check_unknown_fields(query, query_fields)
+        declared = {name: args.pop(name) for name in query_fields if name in args}
+        _merge_alias(query, declared, 'query')
+        missing = [name for name in query_schema.get('required', []) if name not in query]
+        if missing:
+            _validation_error({
+                name: [serializers.ErrorDetail(f'{name} es obligatorio.', code='required')]
+                for name in missing
+            }, message=f'{missing[0]} es obligatorio.' if len(missing) == 1 else None)
     if_match = args.pop('if_match', '') or ''
     files = {}
     uploads = []
@@ -148,9 +288,9 @@ def _execute(operation, arguments):
             continue
         asset_ids = asset_id if config.get('many') else [asset_id]
         if not isinstance(asset_ids, list) or not asset_ids or any(not isinstance(item, str) for item in asset_ids):
-            raise ToolError(f'{argument_name} debe contener identificadores de archivo.')
+            _field_error(argument_name, f'{argument_name} debe contener identificadores de archivo.')
         if len(set(asset_ids)) != len(asset_ids):
-            raise ToolError('No repitas archivos adjuntos.')
+            _field_error(argument_name, 'No repitas archivos adjuntos.', code='duplicate')
         attachments = []
         for selected_asset_id in asset_ids:
             upload = consume_upload(
@@ -163,14 +303,15 @@ def _execute(operation, arguments):
                 ))
             uploads.append(upload)
         files[config['field']] = attachments if config.get('many') else attachments[0]
-    if operation['method'] == 'GET':
+    if is_get:
         query.update(args)
     else:
-        if operation.get('payload_schema'):
-            conflicts = [key for key in args if key in data and args[key] != data[key]]
-            if conflicts:
-                raise ToolError('Campos contradictorios entre data y argumentos.', details={'fields': conflicts})
-        data.update(args)
+        if payload_schema is not None:
+            _check_unknown_fields(data, payload_schema.get('properties', {}))
+            _merge_alias(data, args, 'data')
+        else:
+            data.update(args)
+    query = _encode_query(query, query_schema)
     url = reverse(operation['route_name'], kwargs=route_kwargs)
     request = _request_for(
         operation['method'],
@@ -210,6 +351,8 @@ def panel_operation(
     confirmation_message='',
     asset_fields=None,
     payload_schema=None,
+    query_schema=None,
+    envelope_aliases=True,
 ):
     if len(description.strip()) < 40:
         description = (
@@ -225,6 +368,8 @@ def panel_operation(
         'confirmation_message': confirmation_message or description,
         'asset_fields': asset_fields or {},
         'payload_schema': payload_schema,
+        'query_schema': query_schema,
+        'envelope_aliases': envelope_aliases,
     }
     properties = {
         **_path_properties(path_params),
@@ -243,13 +388,29 @@ def panel_operation(
             'description': 'ETag leído previamente, cuando el recurso lo ofrece.',
         },
     }
-    if payload_schema:
+    explicit = payload_schema is not None or query_schema is not None
+    if explicit and (not envelope_aliases or query_schema is not None):
+        properties = {
+            **(payload_schema.get('properties', {}) if payload_schema is not None else {}),
+            **(query_schema.get('properties', {}) if query_schema is not None else {}),
+            **_path_properties(path_params, explicit=True),
+            'if_match': properties['if_match'],
+        }
+    elif payload_schema is not None:
+        # Keep existing published envelopes for connectors that retain aliases.
         properties = {**_path_properties(path_params), **payload_schema['properties'],
                       'data': payload_schema, 'if_match': properties['if_match']}
+    if not envelope_aliases:
+        properties.pop('data', None)
+        properties.pop('query', None)
     for argument_name, config in operation['asset_fields'].items():
         asset_schema = {'type': 'string', 'format': 'uuid'}
+        if not envelope_aliases:
+            asset_schema['description'] = 'UUID del asset temporal subido; aporta su archivo validado al Panel.'
         properties[argument_name] = (
-            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True}
+            {'type': 'array', 'items': asset_schema, 'minItems': 1, 'uniqueItems': True,
+             **({'description': 'UUIDs de los assets temporales subidos; al menos uno y sin repetir.'}
+                if not envelope_aliases else {})}
             if config.get('many') else asset_schema
         )
     tool = {
@@ -261,12 +422,29 @@ def panel_operation(
         'input_schema': {
             'type': 'object',
             'properties': properties,
-            'required': list(path_params),
-            'additionalProperties': not bool(payload_schema),
+            'required': (list(path_params) if envelope_aliases and query_schema is None else
+                         list(dict.fromkeys([
+                             *path_params,
+                             *(payload_schema.get('required', []) if payload_schema is not None else []),
+                             *(query_schema.get('required', []) if query_schema is not None else []),
+                         ]))),
+            'additionalProperties': not explicit,
         },
         'handler': lambda arguments: _execute(operation, arguments),
         '_panel_operation': operation,
     }
+    if explicit and envelope_aliases:
+        accepted_properties = deepcopy(properties)
+        if operation['method'] != 'GET' and payload_schema is not None:
+            accepted_properties['data'] = deepcopy(payload_schema)
+        if query_schema is not None:
+            accepted_properties['query'] = deepcopy(query_schema)
+        tool['accepted_arguments_schema'] = {
+            'type': 'object',
+            'properties': accepted_properties,
+            'required': list(dict.fromkeys(path_params)),
+            'additionalProperties': False,
+        }
     if requires_confirmation:
         tool['impact_builder'] = lambda arguments: _impact_for(operation, arguments)
     return tool

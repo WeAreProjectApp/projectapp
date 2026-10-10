@@ -50,6 +50,7 @@ content.FinancingAgreementEvent.actor content.ProposalFormalization.created_by
 content.VideoResource.updated_by content.ProposalApprovalFile.created_by
 content.ProjectRetentionContext.created_by content.ProjectRetentionOperation.actor
 content.ProposalProjectReassignment.actor content.DataIntegrityOperation.actor
+content.DocumentOwnershipOperation.actor
 accounts.UserProfile.archived_by accounts.UserProfile.created_by
 accounts.ProjectAdminAccess.updated_by accounts.ProjectAccessNote.created_by accounts.ProjectAccessNote.updated_by
 accounts.DeliveryPublication.published_by accounts.DeliveryDocumentLink.created_by

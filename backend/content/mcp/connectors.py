@@ -116,7 +116,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '3.2.0',
+        'documents', '4.0.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
@@ -130,7 +130,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='commercial',
     ),
     'communications': ConnectorSpec(
-        'communications', '2.1.0',
+        'communications', '2.1.1',
         (COMMUNICATION_TOOLS, COMMUNICATION_EMAIL_TOOLS, SECURE_LINK_TOOLS,
          PLATFORM_SECURE_LINK_TOOLS),
         uploads=True, confirm_sensitive=True,
@@ -149,7 +149,7 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='commercial',
     ),
     'proposals': ConnectorSpec(
-        'proposals', '2.2.0',
+        'proposals', '2.2.1',
         (PROPOSAL_TOOLS, PROPOSAL_PARITY_TOOLS, PROPOSAL_VIDEO_TOOLS,
          PROPOSAL_FORMALIZATION_TOOLS),
         uploads=True, confirm_sensitive=True,
@@ -163,15 +163,15 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         'building-with-us', '1.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
     'partnership-program': ConnectorSpec(
-        'partnership-program', '2.1.0', (PARTNERSHIP_PROGRAM_TOOLS,),
+        'partnership-program', '2.1.1', (PARTNERSHIP_PROGRAM_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'additional-modules': ConnectorSpec(
-        'additional-modules', '2.1.0', (ADDITIONAL_MODULE_TOOLS,),
+        'additional-modules', '2.1.1', (ADDITIONAL_MODULE_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'commercial': ConnectorSpec(
-        'commercial', '2.1.0',
+        'commercial', '2.1.1',
         (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS,
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
@@ -179,10 +179,10 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'projects': ConnectorSpec(
-        'projects', '2.3.0', (PROJECT_TOOLS,), uploads=True,
+        'projects', '3.0.0', (PROJECT_TOOLS,), uploads=True,
     ),
     'content': ConnectorSpec(
-        'content', '2.1.0',
+        'content', '2.1.1',
         (BLOG_TOOLS, LINKEDIN_TOOLS, CONTENT_PARITY_TOOLS, LINKTREE_TEMPLATE_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
@@ -191,12 +191,12 @@ CONNECTORS: dict[str, ConnectorSpec] = {
         confirm_sensitive=True, notes=(ACCOUNTING_NOTE,),
     ),
     'accounting-billing': ConnectorSpec(
-        'accounting-billing', '2.1.0',
+        'accounting-billing', '2.1.1',
         (accounting_area('billing'), BILLING_PARITY_TOOLS, PLATFORM_BILLING_TOOLS),
         confirm_sensitive=True,
     ),
     'accounting-cards': ConnectorSpec(
-        'accounting-cards', '2.1.0', (accounting_area('cards'), CARD_PARITY_TOOLS),
+        'accounting-cards', '2.1.1', (accounting_area('cards'), CARD_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
     ),
 }

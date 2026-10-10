@@ -207,6 +207,8 @@ CATALOG_MODELS = {
 }
 
 EXEMPT_MODELS = {
+    # Ownership receipts are created only by the migration engine, never by demo seeds.
+    'content.DocumentOwnershipOperation',
     # Provenance is created only by an explicitly confirmed forced deletion;
     # demo generation must never fabricate a deleted project or its ownership.
     'content.ProjectRetentionContext',

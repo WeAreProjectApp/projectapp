@@ -19,15 +19,18 @@ document_type helpers as the panel so the PDF pipeline stays identical.
 """
 import json
 
-from content.services.contract_template_service import mirror_metadata
-
 from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
+from django.db import transaction
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 from rest_framework import serializers
 
 from content.mcp.actor import mcp_actor
+from content.mcp.document_ownership_tools import (
+    CLIENT_POLICY_SCHEMA,
+    PORTAL_POLICY_SCHEMA,
+)
 from content.mcp.errors import normalize_error
 from content.mcp.protocol import ToolError
 from content.models import (
@@ -38,7 +41,6 @@ from content.models import (
     DocumentStateEpisode,
 )
 from content.serializers.document import (
-    DocumentCreateUpdateSerializer,
     apply_client_project_association,
 )
 from content.serializers.document_folder import (
@@ -52,6 +54,7 @@ from content.services.contract_mirror_service import (
     is_contract_mirror,
     mirror_markdown,
 )
+from content.services.contract_template_service import mirror_metadata
 from content.services.document_content import build_content_json
 from content.services.document_note_service import (
     DocumentNoteError,
@@ -64,6 +67,11 @@ from content.services.document_note_service import (
 from content.services.document_notes import (
     DocumentNotesValidationError,
     normalize_client_custom_notes,
+)
+from content.services.document_ownership_planner import (
+    OwnershipPlanError,
+    apply_ownership_plan,
+    portal_audience,
 )
 from content.services.document_state_service import (
     DocumentStateError,
@@ -216,8 +224,9 @@ def _association_data(arguments, *, instance=None):
 # ── Payload shaping ──────────────────────────────────────────────────────────
 
 def _folder_path(folder):
-    names = [a.name for a in folder.get_ancestors()] + [folder.name]
-    return ' / '.join(names)
+    from content.services.document_folder_paths import folder_path
+
+    return folder_path(folder)
 
 
 def _folder_payload(folder):
@@ -589,30 +598,64 @@ def create_document(arguments):
     return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
 
+@transaction.atomic
 def update_document(arguments):
-    doc = _get_markdown_doc_or_error(arguments.get('document_id'))
-    if doc.is_generated_snapshot:
+    moving = 'folder_id' in arguments
+    doc = (Document.objects.select_related('document_type', 'project').filter(pk=arguments.get('document_id')).first()
+           if moving else None) or _get_markdown_doc_or_error(arguments.get('document_id'))
+    if doc.is_generated_snapshot and not moving:
         raise ToolError(
             'Un documento generado no admite cambios manuales.',
             code='NOT_EDITABLE',
             details={'edit_blockers': ['generated_snapshot']},
         )
     _check_document_etag(doc, arguments)
-    changes = set(arguments) - {'document_id', 'include_content', 'if_match'}
-    if is_contract_mirror(doc):
+    changes = set(arguments) - {'document_id', 'include_content', 'if_match', 'client_policy', 'portal_policy'}
+    if is_contract_mirror(doc) and not moving:
         _refuse_contract_mirror(doc)
-    if changes == {'folder_id'}:
-        serializer = _valid_serializer(DocumentCreateUpdateSerializer(
-            doc, data={'folder_id': arguments['folder_id']}, partial=True,
-        ))
-        doc = serializer.save(updated_by=mcp_actor())
-        return document_write_payload(doc, include_content=arguments.get('include_content', False))
+    if moving:
+        try:
+            plan = apply_ownership_plan({
+                'document_ids': [doc.pk], 'destination_folder_id': arguments['folder_id'],
+                'client_policy': arguments.get('client_policy', 'abort_on_conflict'),
+                'portal_policy': arguments.get('portal_policy', 'abort'),
+            }, actor=mcp_actor())
+        except OwnershipPlanError as exc:
+            raise ToolError(str(exc.detail['detail']), code=exc.code.upper(), details=exc.details) from exc
+        doc = _get_markdown_doc_or_error(doc.pk)
+        planned = plan['rows'][0]
+        # A metadata update cannot undo the ownership or exposure decision of
+        # the move that was just validated. The transaction rolls back both.
+        if {'client_id', 'project_id'}.intersection(arguments):
+            association = _association_data(arguments, instance=doc)
+            proposed_owner = (getattr(association.get('client_user', doc.client_user), 'pk', None),
+                              getattr(association.get('project', doc.project), 'pk', None))
+            if proposed_owner != (doc.client_user_id, doc.project_id):
+                raise ToolError('El movimiento decide cliente y proyecto; usa client_policy para elegir la propiedad.',
+                    code='OWNERSHIP_PLAN_BLOCKED', details={'blockers': [{
+                        'code': 'ownership_conflict', 'message': 'La propiedad enviada contradice el plan.',
+                        'resource_type': 'document', 'resource_id': doc.pk,
+                    }]})
+        if arguments.get('is_client_visible') is True:
+            audience = portal_audience({**planned['after'], 'is_client_visible': True})
+            new_exposure = audience is not None and audience != planned['before']['portal_audience']
+            policy = arguments.get('portal_policy', 'abort')
+            if new_exposure and policy == 'abort':
+                raise ToolError('El movimiento daría acceso a un nuevo cliente en el portal.',
+                    code='OWNERSHIP_PLAN_BLOCKED', details={'blockers': [{
+                        'code': 'portal_exposure', 'message': 'La visibilidad enviada daría acceso a un nuevo cliente.',
+                        'resource_type': 'document', 'resource_id': doc.pk,
+                    }]})
+            if new_exposure and policy == 'hide_new_exposure':
+                arguments = {**arguments, 'is_client_visible': False}
+        if changes == {'folder_id'}:
+            return document_write_payload(doc, include_content=arguments.get('include_content', False))
 
-    if 'markdown' in arguments and 'content_markdown' in arguments:
-        if arguments['markdown'] != arguments['content_markdown']:
-            raise ToolError(
-                'markdown y content_markdown no pueden contener valores distintos.'
-            )
+    if ('markdown' in arguments and 'content_markdown' in arguments
+            and arguments['markdown'] != arguments['content_markdown']):
+        raise ToolError(
+            'markdown y content_markdown no pueden contener valores distintos.'
+        )
     if 'content_markdown' in arguments and 'markdown' not in arguments:
         arguments = {**arguments, 'markdown': arguments['content_markdown']}
 
@@ -636,10 +679,6 @@ def update_document(arguments):
             raise ToolError('is_client_visible debe ser true o false.')
         doc.is_client_visible = arguments['is_client_visible']
         update_fields.add('is_client_visible')
-
-    if 'folder_id' in arguments:
-        doc.folder = _resolve_folder(arguments.get('folder_id'))
-        update_fields.add('folder')
 
     if any(
         field in arguments for field in ('client_id', 'project_id', 'client_name')
@@ -953,12 +992,13 @@ def restore_document_note(arguments):
 # ── Registry ─────────────────────────────────────────────────────────────────
 
 _DOCUMENT_ID_PROP = {
-    'document_id': {'type': 'integer', 'description': 'ID del documento markdown.'},
+    'document_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del documento markdown.'},
 }
 
 _CLIENT_PROJECT_PROPS = {
     'client_id': {
         'type': ['integer', 'null'],
+        'minimum': 1,
         'description': (
             'ID del perfil de cliente; null desvincula. Usa el MCP de clientes '
             'para localizarlo.'
@@ -966,6 +1006,7 @@ _CLIENT_PROJECT_PROPS = {
     },
     'project_id': {
         'type': ['integer', 'null'],
+        'minimum': 1,
         'description': (
             'ID del proyecto; debe pertenecer al cliente seleccionado. Si se '
             'envía sin client_id, el cliente se deriva del proyecto.'
@@ -1013,7 +1054,7 @@ DOCUMENT_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'folder_id': {'type': 'integer', 'description': 'ID de la carpeta a renombrar.'},
+                'folder_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la carpeta a renombrar.'},
                 'name': {'type': 'string', 'description': 'Nuevo nombre.'},
             },
             'required': ['folder_id', 'name'],
@@ -1032,19 +1073,22 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 'folder_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de carpeta, "none" (raíz) o "all" (todas).',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de carpeta, "none" (raíz) o "all" (todas); omitir o null no filtra.',
                 },
                 'client_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de cliente, "none" (sin cliente) o "all".',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de cliente, "none" (sin cliente) o "all"; omitir o null no filtra.',
                 },
                 'project_id': {
-                    'type': ['integer', 'string'],
-                    'description': 'ID de proyecto, "none" (sin proyecto) o "all".',
+                    'type': ['integer', 'string', 'null'],
+                    'minimum': 1,
+                    'description': 'ID positivo de proyecto, "none" (sin proyecto) o "all"; omitir o null no filtra.',
                 },
-                'page': {'type': 'integer', 'default': 1},
-                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50},
+                'page': {'type': 'integer', 'default': 1, 'description': 'Página solicitada; por defecto 1. Valores menores se ajustan a 1.'},
+                'page_size': {'type': 'integer', 'default': 20, 'maximum': 50, 'description': 'Documentos por página; por defecto 20, ajustados entre 1 y 50.'},
             },
         },
         'handler': list_documents,
@@ -1055,7 +1099,10 @@ DOCUMENT_TOOLS = [
             'Devuelve un documento markdown completo, incluida su asociación a '
             'cliente/proyecto, markdown, estados y notas privadas. El '
             'contrato vigente (is_contract_mirror) devuelve el borrador '
-            'completo en vivo: contenido de solo lectura; ubicación editable mediante folder_id.'
+            'completo en vivo: los espejos contractuales son de solo lectura y '
+            'no se pueden editar ni mover individualmente. movable indica si '
+            'el documento puede moverse y move_blockers explica los motivos '
+            'que lo impiden. Su carpeta sí puede renombrarse o moverse.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1077,11 +1124,11 @@ DOCUMENT_TOOLS = [
         'input_schema': {
             'type': 'object',
             'properties': {
-                'title': {'type': 'string'},
+                'title': {'type': 'string', 'description': 'Título del documento; no puede quedar vacío tras quitar espacios.'},
                 'markdown': {'type': 'string', 'description': 'Contenido en Markdown.'},
-                'folder_id': {'type': ['integer', 'null'], 'description': 'Carpeta destino (opcional).'},
-                'language': {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
-                'client_name': {'type': 'string'},
+                'folder_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo de la carpeta destino; omitir o null guarda en raíz.'},
+                'language': {'type': 'string', 'enum': sorted(LANGUAGE_CHOICES), 'default': 'es', 'description': 'Idioma del documento: es o en; por defecto es.'},
+                'client_name': {'type': ['string', 'null'], 'description': 'Nombre del cliente para el documento; omitir o null deja el nombre vacío si no se deriva de una asociación.'},
                 **_CLIENT_PROJECT_PROPS,
                 **_COVER_FLAG_PROPS,
                 **_CLIENT_NOTE_PROPS,
@@ -1100,15 +1147,19 @@ DOCUMENT_TOOLS = [
             'client_email_subject, client_email_body, client_whatsapp_message, '
             'client_custom_notes. Al '
             'cambiar el markdown se reprocesa el contenido para el PDF. El '
-            'contrato vigente (is_contract_mirror) es de solo lectura; '
-            'su contenido no se edita.'
+            'contrato vigente (is_contract_mirror) es un espejo de solo lectura '
+            'que no se puede editar ni mover. Consulta movable para saber si '
+            'un documento puede moverse y move_blockers para conocer los '
+            'motivos que lo impiden. Al cambiar folder_id, client_policy '
+            'usa abort_on_conflict por defecto y portal_policy usa abort; '
+            'cliente y proyecto enviados deben coincidir con el plan de movimiento.'
         ),
         'input_schema': {
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'title': {'type': 'string'},
-                'markdown': {'type': 'string'},
+                'title': {'type': 'string', 'description': 'Nuevo título no vacío; omitir conserva el actual.'},
+                'markdown': {'type': 'string', 'description': 'Nuevo contenido Markdown no vacío; omitir conserva el actual.'},
                 'content_markdown': {
                     'type': 'string',
                     'description': 'Alias compatible obsoleto de markdown.',
@@ -1119,15 +1170,18 @@ DOCUMENT_TOOLS = [
                 },
                 'folder_id': {
                     'type': ['integer', 'null'],
-                    'description': 'Carpeta destino (null para mover a la raíz).',
+                    'minimum': 1,
+                    'description': 'Carpeta destino activa; el movimiento usa las políticas de propiedad y portal.',
                 },
+                'client_policy': CLIENT_POLICY_SCHEMA,
+                'portal_policy': PORTAL_POLICY_SCHEMA,
                 'is_client_visible': {
                     'type': 'boolean',
                     'description': 'Mostrar este documento en el portal del cliente.',
                 },
-                'client_name': {'type': 'string'},
+                'client_name': {'type': ['string', 'null'], 'description': 'Nombre del cliente para el documento; null equivale a vacío. Al cambiar de cliente puede derivarse de su perfil; omitir conserva el actual salvo ese cambio.'},
                 **_CLIENT_PROJECT_PROPS,
-                'language': {'type': 'string', 'enum': ['es', 'en']},
+                'language': {'type': 'string', 'enum': sorted(LANGUAGE_CHOICES), 'description': 'Idioma del documento: es o en; omitir conserva el actual.'},
                 **_COVER_FLAG_PROPS,
                 **_CLIENT_NOTE_PROPS,
             },
@@ -1154,10 +1208,10 @@ DOCUMENT_TOOLS = [
                     'description': 'Fragmento de Markdown a añadir al final.',
                 },
                 'separator': {
-                    'type': 'string',
+                    'type': ['string', 'null'],
                     'description': (
                         'Texto entre el contenido existente y el fragmento '
-                        '(default: línea en blanco "\\n\\n").'
+                        '(omitir o null: línea en blanco "\\n\\n").'
                     ),
                 },
                 'if_match': {
@@ -1199,10 +1253,11 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'state_id': {'type': 'integer'},
+                'state_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del estado activo a abrir; consulta list_document_states.'},
                 'opened_at': {
-                    'type': 'string',
-                    'description': 'Fecha/hora real ISO 8601 (opcional).',
+                    'type': ['string', 'null'],
+                    'format': 'date-time',
+                    'description': 'Fecha y hora real ISO 8601; omitir o null usa la fecha y hora actuales.',
                 },
             },
             'required': ['document_id', 'state_id'],
@@ -1219,13 +1274,14 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'episode_id': {'type': 'integer'},
+                'episode_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo del episodio abierto de este documento.'},
                 'outcome': {
                     'type': 'string',
                     'enum': ['completed', 'removed'],
                     'default': 'completed',
+                    'description': 'completed registra trabajo realizado; removed quita la marca. Por defecto completed.',
                 },
-                'note': {'type': 'string', 'maxLength': 500},
+                'note': {'type': 'string', 'maxLength': 500, 'description': 'Nota de cierre, hasta 500 caracteres sin espacios exteriores; por defecto vacía.'},
             },
             'required': ['document_id', 'episode_id'],
         },
@@ -1241,9 +1297,9 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'title': {'type': 'string', 'maxLength': 120},
-                'content': {'type': 'string'},
-                'mark_needs_fix': {'type': 'boolean', 'default': False},
+                'title': {'type': 'string', 'maxLength': 120, 'description': 'Título de la observación, hasta 120 caracteres; por defecto vacío.'},
+                'content': {'type': 'string', 'description': 'Contenido privado de la observación; debe ser texto no vacío.'},
+                'mark_needs_fix': {'type': 'boolean', 'default': False, 'description': 'Abre o enlaza la señal Solucionar bug; por defecto false.'},
             },
             'required': ['document_id', 'content'],
         },
@@ -1259,17 +1315,19 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'note_id': {'type': 'integer'},
+                'note_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la observación activa de este documento.'},
                 'outcome': {
                     'type': 'string',
                     'enum': ['resolved', 'discarded'],
                     'default': 'resolved',
+                    'description': 'resolved resuelve la observación; discarded la descarta. Por defecto resolved.',
                 },
-                'resolution_note': {'type': 'string', 'maxLength': 500},
-                'close_linked_state': {'type': 'boolean', 'default': False},
+                'resolution_note': {'type': 'string', 'maxLength': 500, 'description': 'Nota de resolución, hasta 500 caracteres; por defecto vacía.'},
+                'close_linked_state': {'type': 'boolean', 'default': False, 'description': 'Solicita cerrar la señal enlazada cuando corresponde; por defecto false.'},
                 'move_cycle_to_bug_attended': {
                     'type': 'boolean',
                     'default': False,
+                    'description': 'Al resolver, solicita abrir Bug atendido en el ciclo; por defecto false.',
                 },
             },
             'required': ['document_id', 'note_id'],
@@ -1288,10 +1346,11 @@ DOCUMENT_TOOLS = [
                 **_DOCUMENT_ID_PROP,
                 'note_ids': {
                     'type': 'array',
-                    'items': {'type': 'integer'},
+                    'items': {'type': 'integer', 'minimum': 1},
                     'minItems': 1,
                     'maxItems': 100,
                     'uniqueItems': True,
+                    'description': 'IDs positivos de 1 a 100 observaciones de este documento, sin repetidos.',
                 },
             },
             'required': ['document_id', 'note_ids'],
@@ -1321,7 +1380,7 @@ DOCUMENT_TOOLS = [
             'type': 'object',
             'properties': {
                 **_DOCUMENT_ID_PROP,
-                'note_id': {'type': 'integer'},
+                'note_id': {'type': 'integer', 'minimum': 1, 'description': 'ID positivo de la observación de este documento que se restaurará.'},
             },
             'required': ['document_id', 'note_id'],
         },
@@ -1331,12 +1390,12 @@ DOCUMENT_TOOLS = [
 
 
 _FOLDER_FIELDS = {
-    'name': {'type': 'string', 'minLength': 1, 'maxLength': 120},
-    'parent_id': {'type': ['integer', 'null'], 'minimum': 1},
+    'name': {'type': 'string', 'minLength': 1, 'maxLength': 120, 'description': 'Nombre de la carpeta, de 1 a 120 caracteres; debe ser único entre sus hermanas.'},
+    'parent_id': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo de la carpeta padre; omitir o null crea en raíz.'},
     'parent': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'Alias compatible de parent_id.'},
-    'order': {'type': 'integer', 'minimum': 0},
-    'client': {'type': ['integer', 'null'], 'minimum': 1},
-    'project': {'type': ['integer', 'null'], 'minimum': 1},
+    'order': {'type': 'integer', 'minimum': 0, 'description': 'Orden de la carpeta entre sus hermanas, desde 0; por defecto 0.'},
+    'client': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo del perfil de cliente; null deja sin cliente salvo el que derive del proyecto. Omitir client y project hereda del padre.'},
+    'project': {'type': ['integer', 'null'], 'minimum': 1, 'description': 'ID positivo del proyecto, compatible con el cliente; null deja sin proyecto. Omitir client y project hereda del padre.'},
 }
 
 
@@ -1358,6 +1417,7 @@ def _validated_document_tool(handler, properties):
 
 for _tool in DOCUMENT_TOOLS:
     _schema = _tool['input_schema']
+    _schema['additionalProperties'] = False
     if _tool['name'] == 'create_folder':
         _schema['properties'] = _FOLDER_FIELDS.copy()
         _tool['description'] += ' Rechaza nombres duplicados, incluso archivados. El slug permanece estable.'
@@ -1370,11 +1430,20 @@ for _tool in DOCUMENT_TOOLS:
         _tool['description'] += ' El slug no cambia al renombrar.'
     if _tool['name'] in ('create_document', 'update_document', 'append_document'):
         _tool['output_schema'] = DOCUMENT_WRITE_SCHEMA
-        _schema['properties']['include_content'] = {'type': 'boolean', 'default': False}
+        _schema['properties']['include_content'] = {
+            'type': 'boolean', 'default': False,
+            'description': 'Añade el Markdown a la respuesta una sola vez; por defecto false devuelve sólo el resumen.',
+        }
         _tool['description'] += ' Devuelve un resumen; include_content=true añade markdown una sola vez.'
     if _tool['name'] in ('create_folder', 'rename_folder', 'list_folders', 'create_document', 'update_document', 'append_document'):
-        _schema['additionalProperties'] = False
         _tool['handler'] = _validated_document_tool(_tool['handler'], _schema['properties'])
 
 from content.mcp.contract_template_tools import CONTRACT_MIRROR_TOOLS
+
 DOCUMENT_TOOLS += CONTRACT_MIRROR_TOOLS
+from content.mcp.document_ownership_tools import DOCUMENT_OWNERSHIP_TOOLS
+
+DOCUMENT_TOOLS += DOCUMENT_OWNERSHIP_TOOLS
+from content.mcp.folder_migration_tools import FOLDER_MIGRATION_TOOLS
+
+DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS

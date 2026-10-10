@@ -84,6 +84,35 @@ def test_initialization_is_idempotent(initialized_building_with_us_mirror, admin
     assert BuildingWithUsContractMirror.objects.count() == 1
 
 
+def test_pinned_folder_rename_preserves_alliance_sync(
+    initialized_contract_mirrors, building_with_us_contract, superuser,
+):
+    folder = initialized_contract_mirrors.mirror_folder
+    initialized = service.initialize_mirror(folder.pk, actor=superuser)
+    folder.name = 'Acuerdos contractuales'
+    folder.save(update_fields=['name', 'updated_at'])
+
+    result = service.apply_update(contract_update(service.read_contract()), actor=superuser)
+
+    assert result['mirror']['status'] == 'synchronized'
+    assert result['mirror']['document_id'] == initialized['mirror']['document_id']
+    assert result['mirror']['folder_id'] == folder.pk
+    assert result['mirror']['folder_path'] == 'Acuerdos contractuales'
+
+
+def test_alliance_initialization_requires_the_shared_pin(
+    initialized_contract_mirrors, building_with_us_contract, superuser,
+):
+    root = DocumentFolder.objects.create(name='Otro árbol')
+    another = DocumentFolder.objects.create(name='Contratos', parent=root)
+
+    with pytest.raises(BuildingWithUsError) as error:
+        service.initialize_mirror(another.pk, actor=superuser)
+
+    assert error.value.code == 'FOLDER_NOT_ALLOWED'
+    assert not BuildingWithUsContractMirror.objects.exists()
+
+
 @pytest.mark.parametrize('kind', ['name', 'archived', 'client', 'system'])
 def test_initialization_rejects_disallowed_folders(admin_user, kind):
     """Fails if contractual text can be mirrored outside an active internal folder."""

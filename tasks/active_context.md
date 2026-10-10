@@ -2754,3 +2754,68 @@ un socket ocioso detenía su servidor WSGI de un hilo. La aceptación de conexio
 ahora usa hilos y la ejecución de la aplicación se serializa para preservar
 SQLite. La reproducción del bloqueo y cinco regresiones focales pasan; su
 regresión de navegador se comprueba antes de cerrar el PR.
+
+## 2026-10-09 — Contratos MCP, espejos y ciclo de hosting
+
+Los commits `74ca0073`, `484997f6`, `870bacf2`, `e676c1c1`, `388b1fae`,
+`7d5526b5` y `ba83a834` incorporan el framework de argumentos explícitos,
+espejos fijados por ID, guards compartidos del cambio de cliente y ciclo
+confirmado de hosting, con UI/E2E de bloqueos y pagos «Anulado». La documentación
+de ese corte enlaza reglas, errores, historia conservada y el trade-off de locks
+durante Wompi/polling en
+[el guion de la parte 1](../docs/MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-1-2026-10).
+Los pins son 66 tools de Documentos y 164 de Proyectos. Versiones y changelogs
+corresponden al cierre del conjunto en PR #504; esta revisión documental no
+acredita deploy, CI verde ni una nueva ejecución de las pruebas funcionales.
+
+## 2026-10-10 — Migración de carpetas por MCP, parte 2
+
+Los commits `9446a196`, `7f7927d5`, `55a31237`, `3886f01e` y `5e0ddd25`
+incorporan el planificador de propiedad/portal, `preview_move`, migración
+`adopt_source`/`move_contents`, recibos duraderos y deshacer, además de la
+regla de altas/renombres que nunca duplica una raíz manual homónima.
+`create_project(root_folder_id)` confirma el plan y devuelve `document_root`.
+Contratos sigue fijado por ID, activo y sin cliente/proyecto dentro del árbol
+migrado; sus espejos conservan la sincronización y la guarda de archivado.
+
+El cierre documental C8 fija **documents 3.2.0 / 73 tools** y
+**projects 2.2.0 / 164 tools**. Las dos pruebas de versión de Documentos y los
+cuatro casos de paridad completa/restringida pasaron en SQLite aislado (6/6).
+Las decisiones por documento están en `move_documents` y en migración;
+`update_folder` publica políticas/hash y `update_document` sólo políticas.
+La documentación refleja esa diferencia con el brief, sin atribuir argumentos
+todavía ausentes. No se ejecutó la suite completa ni el caso real en producción.
+
+Referencias: [changelog de Documentos](../docs/changelog/2026-10-10-documents-mcp-3.2.0.md),
+[changelog de Proyectos](../docs/changelog/2026-10-10-projects-mcp-2.2.0.md),
+[arquitectura de la parte 2](../docs/methodology/architecture.md) y
+[validación y procedimiento post-deploy](../docs/MCP_VALIDATION_RUNBOOK.md#migración-de-carpetas-por-mcp--parte-2-2026-10).
+El procedimiento de producción captura evidencia por paso: migrar la 66 al
+cliente perfil 29 con decisiones para 235/241 y política explícita para 69;
+cancelar suscripción 3 de PRUEBA 7, conservando el pago 4 y anulando el 5.
+Sólo después del merge/deploy, antes del **2026-12-01 a las 06:00 UTC** para
+la cancelación. Migraciones por deploy: content.0286/0287 y accounts.0082.
+Las allow-lists explícitas deben ampliarse y los conectores claude.ai
+reconectarse. El orden de merge con PR #503 puede exigir la versión siguiente.
+La integración, CI y deploy quedan bajo el cierre del orquestador; esta entrada
+no acredita esos pasos ni la semántica de locks MySQL a partir de SQLite.
+
+## 2026-10-10 — PR 2: esquemas explícitos, Documentos 4.0.0 / Proyectos 3.0.0
+
+Los commits `5561570b`, `e989828d`, `3887c60c`, `7350aaca` y `a33938b9`
+aportan schemas de entregas/recursos planos, catálogos de 36/48 bridges y el
+cierre de las 16 raíces nativas documentales. `f41afd3d` conecta los catálogos
+con los bridges; el retiro de alias y los pins completan el contrato objetivo
+**4.0.0 / 73 tools** y **3.0.0 / 171 tools**. Las llamadas con `data`/`query`
+deben migrar. Imports conservan `payload` v1/v2,
+tickets su objeto tipado, y otros conectores sus alias. Borrado MCP admite sólo
+`project_id`/`if_match`; las exclusiones del Panel tienen motivo y el campo de
+error `message` conserva su nombre.
+
+Changelogs con ejemplos antes/después y runbook de guards/slices preparados:
+[Documentos](../docs/changelog/2026-10-10-documents-mcp-4.0.0.md),
+[Proyectos](../docs/changelog/2026-10-10-projects-mcp-3.0.0.md) y
+[verificación del contrato](../docs/MCP_VALIDATION_RUNBOOK.md#esquemas-explícitos--documents-400-y-projects-300-2026-10-10).
+Los controles compartidos y `*_history` de PR #503 quedan fuera del barrido.
+El orquestador revisa código, versiones/pins, commits, CI y publicación; esta
+entrada documental no declara terminados esos pasos ni operaciones en producción.

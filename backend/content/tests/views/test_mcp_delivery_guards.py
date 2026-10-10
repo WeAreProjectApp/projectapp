@@ -56,7 +56,7 @@ def test_mcp_cannot_rewrite_a_signed_contract_before_publication(call_projects, 
     error = confirm(call_projects, 'update_delivery_contract', {
         'project_id': draft.project.pk, 'node_id': draft.contract.pk,
         'expected_version': workspace_version,
-        'data': {'title': 'Contrato reemplazado'},
+        'title': 'Contrato reemplazado',
     }, expect_error=True)
 
     draft.contract.refresh_from_db()
@@ -84,7 +84,8 @@ def test_mcp_external_attestation_cannot_claim_a_portal_signature(call_projects,
         'attestation': 'PDF externo', 'method': 'portal',
     }, expect_error=True)
 
-    assert error['code'] == 'VALIDATION_ERROR'
+    assert error['code'] == 'unknown_field'
+    assert 'method' in {row['field'] for row in error['details']['errors']}
     assert not McpActionIntent.objects.filter(tool_name='attest_external_delivery_signature').exists()
 
 

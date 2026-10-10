@@ -4,6 +4,7 @@ from rest_framework.response import Response
 
 from content.serializers.document_move import MoveDocumentsSerializer
 from content.services.document_move_service import DocumentMoveError, move_documents
+from content.services.document_ownership_planner import OwnershipPlanError
 from content.services.document_write_service import document_write_options
 
 
@@ -15,6 +16,8 @@ def move_document_batch(request):
     serializer.is_valid(raise_exception=True)
     try:
         return Response(move_documents(**serializer.validated_data, actor=request.user))
+    except OwnershipPlanError as exc:
+        return Response({'ok': False, **exc.detail}, status=exc.status_code)
     except DocumentMoveError as exc:
         return Response(
             {

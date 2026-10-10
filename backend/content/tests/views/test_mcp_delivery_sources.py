@@ -26,7 +26,7 @@ def test_mcp_creates_an_unsigned_contract_from_an_approval_file(call_projects, s
     source = confirmed_file(source_context)
     response = call_projects('create_delivery_contract', {'project_id': source_context.project.pk,
         'expected_version': 0, 'request_id': 'mcp-approval-source',
-        'data': {'key': 'mcp-approved-source', 'title': 'Confirmed agreement', 'approval_file_id': source.pk}})
+        'key': 'mcp-approved-source', 'title': 'Confirmed agreement', 'approval_file_id': source.pk})
     contract = ProjectContract.objects.get(pk=response['result']['id'])
     assert contract.approval_file_id == source.pk
     assert contract.client_visible is False

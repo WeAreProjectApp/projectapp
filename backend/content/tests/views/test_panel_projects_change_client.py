@@ -85,6 +85,14 @@ class TestPreviewEndpoint:
         assert response.data['hosting_ids'] == [hosting.pk]
         assert response.data['income_ids'] == [income.pk]
         assert response.data['totals']['move'] == 2
+        assert response.data['can_apply'] is False
+        assert response.data['blocker_counts']['hosting_record'] == 1
+        assert response.data['blockers'][0]['resource_id'] == hosting.pk
+        assert response.data['blockers'][0]['resolution'] == 'create_new_project'
+        assert response.data['financial_history']['hosting_record_ids'] == [hosting.pk]
+        assert response.data['planned']['move']['records']['incomes_move'] == [income.pk]
+        assert response.data['planned']['detach']['records']['incomes_detach'] == [income.pk]
+        assert len(response.data['impact_hash']) == 64
 
     def test_the_destination_must_exist_and_differ(
         self, admin_client, make_client_profile,
@@ -114,6 +122,42 @@ class TestPreviewEndpoint:
 
 
 class TestApplyEndpoint:
+    @pytest.mark.parametrize('mode', ['move', 'detach'])
+    def test_current_hash_applies_the_reviewed_plan(self, admin_client, make_client_profile, mode):
+        owner, target = make_client_profile(), make_client_profile()
+        project = make_project(owner)
+        income = make_income(owner, project)
+        preview = admin_client.get(preview_url(project.pk, target.pk)).data
+
+        response = admin_client.post(apply_url(project.pk), {
+            'client_profile_id': target.pk, 'mode': mode, 'expected_impact_hash': preview['impact_hash'],
+        }, format='json')
+
+        assert response.status_code == 200, response.data
+        assert response.data['moved'] == preview['planned'][mode]['moved']
+        assert response.data['detached'] == preview['planned'][mode]['detached']
+        assert response.data['project']['client']['profile_id'] == target.pk
+        income.refresh_from_db()
+        assert (income.pk in preview['planned'][mode]['records']['incomes_move']) == (income.client_id == target.pk)
+        assert (income.pk in preview['planned'][mode]['records']['incomes_detach']) == (income.project_id is None)
+
+    def test_stale_hash_returns_records_changed_without_writes(self, admin_client, make_client_profile):
+        owner, target = make_client_profile(), make_client_profile()
+        project = make_project(owner)
+        preview = admin_client.get(preview_url(project.pk, target.pk)).data
+        make_income(owner, project)
+
+        response = admin_client.post(apply_url(project.pk), {
+            'client_profile_id': target.pk, 'mode': 'move', 'expected_impact_hash': preview['impact_hash'],
+        }, format='json')
+
+        assert response.status_code == 409
+        assert response.data['code'] == 'records_changed'
+        assert response.data['changed_ids'] == []
+        assert response.data['impact_hash'] != preview['impact_hash']
+        assert 'Revísala' in response.data['hint']
+        assert Project.objects.get(pk=project.pk).client_id == owner.user_id
+
     def test_mode_is_required_and_explicit(
         self, admin_client, make_client_profile,
     ):
@@ -206,6 +250,7 @@ class TestApplyEndpoint:
         target = make_client_profile()
         project = make_project(owner)
         hosting = make_hosting(owner, project)
+        preview = admin_client.get(preview_url(project.pk, target.pk)).data
 
         response = admin_client.post(apply_url(project.pk), {
             'client_profile_id': target.pk,
@@ -217,6 +262,11 @@ class TestApplyEndpoint:
 
         assert response.status_code == 400
         assert 'historia financiera' in response.data['detail']
+        hash_response = admin_client.post(apply_url(project.pk), {
+            'client_profile_id': target.pk, 'mode': 'move', 'expected_impact_hash': preview['impact_hash'],
+        }, format='json')
+        assert hash_response.status_code == 400
+        assert hash_response.data['blockers'] == response.data['blockers']
         project.refresh_from_db()
         hosting.refresh_from_db()
         assert project.client_id == owner.user_id

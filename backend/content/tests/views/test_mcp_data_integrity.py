@@ -76,7 +76,7 @@ def test_projects_connector_exposes_the_tools_with_the_right_risk():
 def test_findings_are_listed_through_the_connector(api_client, token, gap):
     """Fails if the connector cannot scan a scope or loses the fingerprint the fixes need."""
     result = _call(api_client, token, 'list_integrity_findings', {
-        'query': {'scope_kind': 'project', 'scope_id': gap['project'].pk, 'rule_ids': 'PJ7'},
+        'scope_kind': 'project', 'scope_id': gap['project'].pk, 'rule_ids': 'PJ7',
     })
 
     assert [row['fingerprint'] for row in result['results']] == [gap['finding'].fingerprint]

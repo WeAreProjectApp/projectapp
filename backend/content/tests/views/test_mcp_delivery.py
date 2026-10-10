@@ -150,7 +150,7 @@ def test_mcp_creates_a_node_in_the_project(call_projects, draft, kind):
 
     call_projects(f'create_delivery_{kind}', {
         'project_id': draft.project.pk, 'expected_version': current_version(call_projects, draft.project),
-        'data': {'key': 'new-node', 'title': 'Entrega legible', **data},
+        'key': 'new-node', 'title': 'Entrega legible', **data,
     })
 
     assert model.objects.get(key='new-node').title == 'Entrega legible'
@@ -160,7 +160,7 @@ def test_mcp_updates_a_pending_requirement_guide(call_projects, draft):
     call_projects('update_delivery_requirement', {
         'project_id': draft.project.pk, 'node_id': draft.requirement.pk,
         'expected_version': current_version(call_projects, draft.project),
-        'data': {'guide': {**GUIDE, 'expected_result': 'Se confirma el guardado.'}},
+        'guide': {**GUIDE, 'expected_result': 'Se confirma el guardado.'},
     })
 
     draft.requirement.refresh_from_db()
@@ -171,12 +171,12 @@ def test_mcp_rejects_a_stale_workspace_version(call_projects, draft):
     version = current_version(call_projects, draft.project)
     call_projects('update_delivery_requirement', {
         'project_id': draft.project.pk, 'node_id': draft.requirement.pk,
-        'expected_version': version, 'data': {'title': 'Primera edición'},
+        'expected_version': version, 'title': 'Primera edición',
     })
 
     error = call_projects('update_delivery_requirement', {
         'project_id': draft.project.pk, 'node_id': draft.requirement.pk,
-        'expected_version': version, 'data': {'title': 'Edición perdida'},
+        'expected_version': version, 'title': 'Edición perdida',
     }, expect_error=True)
 
     draft.requirement.refresh_from_db()
@@ -192,8 +192,8 @@ def test_mcp_rejects_a_contract_from_another_project(call_projects, draft):
 
     error = call_projects('create_delivery_amendment', {
         'project_id': draft.project.pk, 'expected_version': current_version(call_projects, draft.project),
-        'data': {'key': 'invalid', 'title': 'Otrosí inválido',
-                 'contract_id': foreign.pk, 'document_id': draft.document.pk},
+        'key': 'invalid', 'title': 'Otrosí inválido',
+        'contract_id': foreign.pk, 'document_id': draft.document.pk,
     }, expect_error=True)
 
     assert error['code'] == 'NOT_FOUND'
@@ -240,7 +240,7 @@ def test_mcp_confirmation_rejects_a_changed_workspace(call_projects, draft):
     })
     call_projects('update_delivery_requirement', {
         'project_id': draft.project.pk, 'node_id': draft.requirement.pk,
-        'expected_version': version, 'data': {'title': 'Guía revisada'},
+        'expected_version': version, 'title': 'Guía revisada',
     })
 
     error = call_projects('confirm_action', {'confirmation_id': preview['confirmation_id']}, expect_error=True)
@@ -290,7 +290,7 @@ def test_mcp_rejects_editing_a_requirement_with_conformity(call_projects, publis
     error = call_projects('update_delivery_requirement', {
         'project_id': published.project.pk, 'node_id': published.requirement.pk,
         'expected_version': current_version(call_projects, published.project),
-        'data': {'title': 'Reemplazar evidencia aprobada'},
+        'title': 'Reemplazar evidencia aprobada',
     }, expect_error=True)
 
     published.requirement.refresh_from_db()

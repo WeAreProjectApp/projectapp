@@ -1,12 +1,14 @@
 """Keep the previous client's frozen delivery history under its owner."""
 from django.db import transaction
-from django.db.models import Q
+from rest_framework.exceptions import ValidationError
 
-from accounts.models import (
-    ContractAmendment, ContractSignatureEvidence, DeliveryMessage, DeliveryPromptContext,
-    DeliveryPublication, Project, ProjectContract,
+from accounts.models import Project
+from accounts.services.delivery_access import DeliveryConflict, require_admin
+from accounts.services.project_client_transfer import (
+    DELIVERY_CODE,
+    DELIVERY_MESSAGE,
+    client_transfer_blockers,
 )
-from accounts.services.delivery_access import DeliveryConflict, fail, require_admin
 
 
 def assert_delivery_client_transfer_safe(project, new_client, *, actor=None):
@@ -24,18 +26,9 @@ def assert_delivery_client_transfer_safe(project, new_client, *, actor=None):
             raise DeliveryConflict('El cliente del proyecto cambió. Revisa el propietario actual antes de continuar.')
         if current.client_id == new_client.pk:
             return current
-        frozen = (
-            DeliveryPublication.objects.filter(stage__phase__scope__contract__project=current).exists()
-            or DeliveryPromptContext.objects.filter(project=current).exists()
-            or ContractSignatureEvidence.objects.filter(
-                Q(contract__project=current) | Q(amendment__contract__project=current),
-            ).exists()
-            or ProjectContract.objects.filter(project=current, document__signed_at__isnull=False).exists()
-            or ContractAmendment.objects.filter(contract__project=current, document__signed_at__isnull=False).exists()
-            or DeliveryMessage.objects.filter(project=current, is_internal=False).exists()
-        )
-        if frozen:
-            fail('Este proyecto conserva entregas, firmas, fuentes o conversaciones del cliente actual. '
-                 'No puedes transferirlo a otra persona porque expondría esa historia. '
-                 'Crea un proyecto separado para el nuevo cliente.', 'delivery_client_history_frozen')
+        evaluation = client_transfer_blockers(current, new_client, lock=True)
+        if any(row['code'] == DELIVERY_CODE for row in evaluation['blockers']):
+            error = ValidationError({'detail': DELIVERY_MESSAGE, 'code': DELIVERY_CODE})
+            error.detail.update(evaluation)
+            raise error
         return current

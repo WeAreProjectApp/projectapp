@@ -487,7 +487,8 @@ class TestProjectSubscription:
             format='json', **client_headers,
         )
 
-        assert resp.status_code == 403
+        assert resp.status_code == 400
+        assert resp.json()['code'] == 'subscription_lifecycle_required'
 
 
 # =========================================================================

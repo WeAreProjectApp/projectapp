@@ -150,14 +150,14 @@ def test_project_mcp_filters_project_rows_by_the_requested_client_profile(call):
     """Fails if an MCP proposal selector receives projects from a different client."""
     c = context()
 
-    result = call('list_projects', {'query': {'client_profile_id': c.client.profile.pk}})
+    result = call('list_projects', {'client_profile_id': c.client.profile.pk})
 
     assert [row['id'] for row in result['results']] == [c.project.pk]
 
 
 def test_project_mcp_rejects_an_invalid_client_profile_filter(call):
     """Fails if a malformed client selector silently returns unrelated projects."""
-    result = call('list_projects', {'query': {'client_profile_id': 0}}, error=True)
+    result = call('list_projects', {'client_profile_id': 0}, error=True)
 
     assert result['code'] == 'INVALID_CLIENT_PROFILE'
 
