@@ -15,7 +15,7 @@ from accounts.services.project_catalog_service import (
     ACTIVE_PROJECT_EFFECTS,
 )
 from content.models import DocumentFolder
-from content.models.document_folder import DocumentFolderMutationLock
+from content.models.document_folder import lock_document_folder_mutations
 from content.services.diagnostic_privacy import register_mcp_domain_codes
 from django.db import IntegrityError, transaction
 from django.db.models import Q
@@ -135,7 +135,7 @@ def validate_project_root_rename(name, *, exclude_folder_id=None):
 
 def lock_project_root_names():
     """Serialize root creation with the reviewed tree mutation engine."""
-    DocumentFolderMutationLock.objects.select_for_update().get(pk=1)
+    lock_document_folder_mutations()
 
 
 def auto_adopt_project_root(data, folder_id, *, actor):

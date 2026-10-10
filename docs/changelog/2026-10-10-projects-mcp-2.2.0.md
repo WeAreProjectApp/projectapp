@@ -67,8 +67,20 @@ aviso al administrador, sin reactivar ni generar otro ciclo.
 
 PATCH directo de `status` de la suscripción devuelve HTTP 400
 `subscription_lifecycle_required` (MCP: `SUBSCRIPTION_LIFECYCLE_REQUIRED`);
-el cambio debe usar el servicio de ciclo de vida. Entre los bloqueos del
-preview están `subscription_retained`,
+el cambio debe usar el servicio de ciclo de vida. El PATCH de ajustes relee
+proyecto y suscripción bajo candados y guarda sólo los campos solicitados y
+los derivados del cambio de plan. No revierte una pausa o cancelación concurrente;
+un PATCH vacío no escribe, tampoco actualiza la fecha de modificación.
+
+En `card-pay`, después de tokenizar la tarjeta y antes de crear la transacción
+Wompi, se releen proyecto, suscripción, hosting y pago bajo candados. El pago
+debe estar sin archivar y en `pending`, `overdue` o `failed`; la suscripción,
+activa o pendiente, sin archivar ni contexto de retención y ligada al mismo
+proyecto.
+Reanudar y los cobros con tarjeta nueva o guardada usan `project_allows_billing`:
+también bloquean proyectos sin estado clasificado que requieren revisión.
+
+Entre los bloqueos del preview están `subscription_retained`,
 `subscription_without_project`, `subscription_archived`, `invalid_transition`,
 `payment_in_flight`, `effective_date_in_future`, `suspended_by_payment_failure`
 y, al reanudar, `project_blocks_billing`. Un plan bloqueado devuelve
@@ -78,9 +90,10 @@ y, al reanudar, `project_blocks_billing`. Un plan bloqueado devuelve
 `subscription.payments`, incluidos los anulados. El Panel muestra «Anulado» y
 los locales de billing usan «Anulado»/«Voided».
 
-El cobro con tarjeta guardada **mantiene los locks durante la llamada a Wompi
-y su polling**. El recheck protege el estado, pero aumenta la contención y el
-tiempo de la transacción. El seguimiento pendiente es **claim-then-call**:
+Los cobros con tarjeta nueva o guardada **mantienen los locks durante la llamada
+a Wompi; el de tarjeta guardada, además, durante su polling**. El recheck protege
+el estado, pero aumenta la contención y el tiempo de la transacción.
+El seguimiento pendiente es **claim-then-call**:
 reservar el pago como en proceso antes de contactar al proveedor y separar la
 llamada de los locks, conservando los controles de aprobación. SQLite no
 certifica estos locks bajo MySQL REPEATABLE READ.
@@ -88,30 +101,45 @@ Contrato: [ciclo de vida de hosting](../PLATFORM_PROJECT_BILLING.md#ciclo-de-vid
 
 ## Crear proyectos con una raíz documental existente
 
-`create_project` publica `name`, `client_profile_id`, `description`, `state_id`,
-`root_folder_id`, `client_policy`, `portal_policy` y `document_decisions` en un
-esquema cerrado. Con `root_folder_id` adopta una raíz manual mediante el motor
-de migración y muestra el plan completo; requiere `confirm_action`. Los
-defaults son `abort_on_conflict` y `abort`.
+`create_project` publica un esquema cerrado con `name` y `client_profile_id`
+obligatorios, y `description`, `state_id` y `root_folder_id` opcionales.
+Ya no acepta `client_policy`, `portal_policy` ni `document_decisions`.
+Con `root_folder_id` adopta una raíz manual mediante el motor de migración y
+muestra el plan completo; requiere `confirm_action`. Toda adopción desde
+Proyectos usa **`abort_on_conflict` y `abort`, sin decisiones por documento**,
+incluida la protección frente a exposición latente de archivados visibles.
+
+Un plan bloqueado devuelve `CONFLICT` con `details.blockers` y `details.hint`
+para usar `preview_folder_migration`/`apply_folder_migration` del conector
+Documentos. Las confirmaciones pendientes preparadas con las políticas
+permisivas o decisiones anteriores devuelven `STALE_VERSION` y requieren una
+nueva revisión.
 
 Sin raíz explícita, el alta es inmediata si no hay colisión. Si existe una raíz
 manual homónima que admite adopción segura, también exige confirmación. La
 respuesta incluye `document_root` con `folder_id`, `adopted` y `migration_id`
 (null cuando se creó una raíz nueva).
+La adopción automática rechaza cualquier documento marcado visible, tanto
+activo como archivado; no basta con que hoy carezca de audiencia.
 
 Nunca se duplica una raíz manual homónima. La comparación recorta espacios e
 ignora mayúsculas, incluye archivadas y excluye raíces gestionadas de clientes
 u otros proyectos: los proyectos homónimos siguen siendo legales. Una raíz
 ambigua, conservada, con conflictos, espejos o elementos congelados exige
 resolver `PROJECT_ROOT_NAME_CONFLICT`, con IDs, rutas, motivos y orientación
-a `root_folder_id`/migración. La carpeta 66 con Contratos requiere revisión
-explícita. Renombrar un proyecto tampoco puede apropiarse implícitamente de
+a `root_folder_id`/migración. La carpeta 66 con Contratos, las decisiones de
+235/241 y la política del portal de 69 requieren las herramientas de Documentos.
+Renombrar un proyecto tampoco puede apropiarse implícitamente de
 una raíz manual homónima; bloquea hasta resolverla.
 
 La regla se comparte entre altas y renombres del Panel y Platform. Las altas
 son atómicas; la adopción guarda nombre, padre, dueño y marcador de raíz juntos,
 reutiliza la plantilla admisible y deja recibo para deshacer. Las operaciones de
 migración se descubren en **Documentos 3.2.0**, sin duplicarlas en Proyectos.
+En guardados posteriores, `_synchronize_root` sólo tolera la colisión de nombre
+con una raíz manual: conserva el nombre previo de la raíz y registra el choque.
+Cualquier otro fallo revierte el guardado del proyecto y los cambios de su
+árbol documental.
 
 ## Evaluación de `rebase_with_history`
 
@@ -122,9 +150,10 @@ No existe una marca de proyecto interno que acote ese comportamiento.
 
 Cancelar hosting no desbloquea el cambio de cliente: la guarda financiera
 considera la historia de suscripciones y hosting aunque estén cancelados.
-La resolución disponible es `create_new_project`, con raíz adoptada/migrada
-y decisiones explícitas, conservando el proyecto histórico. La cascada existente
-del cambio de cliente tampoco reescribe todos los documentos que no son cuentas
+La resolución disponible es `create_new_project`, conservando el proyecto
+histórico. La raíz adoptada/migrada y las decisiones explícitas se tramitan por
+las herramientas de Documentos. La cascada existente del cambio de cliente
+tampoco reescribe todos los documentos que no son cuentas
 de cobro; esa brecha permanece como seguimiento.
 
 ## Despliegue y validación

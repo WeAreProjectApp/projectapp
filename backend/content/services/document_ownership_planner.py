@@ -14,7 +14,7 @@ from accounts.models import (
 )
 from content.mcp.errors import normalize_error
 from content.models import AccountingChangeLog, Document, DocumentFolder
-from content.models.document_folder import DocumentFolderMutationLock
+from content.models.document_folder import lock_document_folder_mutations
 from content.serializers.strict_input import StrictInputMixin
 from content.services import accounting_service
 from content.services.contract_mirror_service import (
@@ -159,8 +159,8 @@ def _documents(query):
 
 def _read_scope(data, *, lock):
     if lock:
-        # The migration seeds the mutex. A preview never creates it.
-        DocumentFolderMutationLock.objects.select_for_update().filter(pk=1).first()
+        # Read-only previews never create the mutex.
+        lock_document_folder_mutations()
     topology = dict(DocumentFolder.objects.values_list('pk', 'parent_id'))
     scope_ids = _descendants(data['folder_ids'], topology)
     query = Q(pk__in=data['document_ids']) | Q(folder_id__in=scope_ids)
