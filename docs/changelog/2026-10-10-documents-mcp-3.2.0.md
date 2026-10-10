@@ -61,7 +61,9 @@ propiedad del destino, conservarla con bloqueo ante incompatibilidad, o heredar
 sólo sin conflictos. Un destino sin dueño no elimina el propietario existente.
 `portal_policy` admite `abort`, `allow` y `hide_new_exposure`: bloquear una
 nueva audiencia, permitirla u ocultar sólo los documentos que ganarían acceso.
-También se evalúa la exposición latente de documentos archivados al restaurar.
+`abort` también bloquea con `portal_exposure_latent` los documentos archivados
+marcados visibles que ganarían audiencia al restaurarse. `hide_new_exposure`
+oculta tanto la exposición actual como la latente.
 Los defaults MCP son **`abort_on_conflict` y `abort`**.
 
 Los argumentos efectivamente disponibles en este corte son:
@@ -84,6 +86,19 @@ Se conserva la atomicidad del lote y la protección de espejos, cuentas emitidas
 registros conservados y vínculos contractuales/de entrega. El Panel sin políticas
 mantiene su ruta de herencia anterior.
 
+## Cambio de cliente de carpetas
+
+`preview_folder_client_change` recibe `folder_id` y `client_profile_id` y añade
+`portal_changes`: documentos que ganarían acceso para otro cliente, con
+`document_id`, `before_audience` y `after_audience`.
+
+`change_folder_client` acepta `portal_policy: abort|allow|hide_new_exposure`.
+En modo `propagate`, `abort` rechaza la nueva audiencia sin cambios parciales;
+`allow` la permite y `hide_new_exposure` reasigna ocultando sólo los documentos
+que ganarían acceso. MCP usa **`abort` por defecto**, también con el alias
+`data`. `folder_only` conserva el dueño y la visibilidad de los documentos.
+Las peticiones del Panel sin política conservan el comportamiento legacy.
+
 ## Migración de carpetas y deshacer
 
 Documentos incorpora seis herramientas: `preview_folder_migration`,
@@ -95,6 +110,13 @@ Documentos incorpora seis herramientas: `preview_folder_migration`,
 La migración requiere `source_folder_id`, `strategy` y un destino exclusivo:
 `target.project_id` o `target.create_project` con `name`, `client_profile_id`,
 `description` y `state_id` opcionales. Usa las mismas políticas y decisiones.
+`target.create_project` es el destino del motor de Documentos, no una llamada
+a la herramienta `create_project` de Proyectos. Esa herramienta sólo admite
+adopción con `abort_on_conflict` y `abort`, sin decisiones; las políticas de
+propietario o portal y las excepciones por documento se tramitan mediante
+`preview_folder_migration`/`apply_folder_migration` de Documentos. La adopción
+automática por nombre rechaza cualquier documento marcado visible, archivado
+o no.
 
 - `adopt_source` convierte una raíz manual activa y no conservada en la raíz
   gestionada. El proyecto existente debe carecer de raíz o tener sólo una
@@ -115,9 +137,15 @@ y ligado al actor y la credencial. `apply_folder_migration` recibe token,
 Las postcondiciones exigen una sola raíz gestionada, ninguna raíz manual
 homónima, Contratos activo/sin dueño con todos sus espejos, y ubicación,
 propiedad y visibilidad iguales al plan. Un fallo revierte todo. El recibo
-duradero registra antes/después, IDs creados/eliminados, lo movido, archivado y
-pendiente. Repetir el mismo `request_id`, plan, actor y credencial devuelve el
-resultado original; `get_folder_migration` lo consulta por `migration_id`.
+duradero registra antes/después, la audiencia original del portal por documento,
+IDs creados/eliminados, lo movido, archivado y pendiente. Repetir el mismo
+`request_id`, plan, actor y credencial devuelve el resultado original;
+`get_folder_migration` lo consulta por `migration_id`.
+
+En los guardados posteriores del proyecto, `_synchronize_root` sólo tolera el
+choque de nombre con una raíz manual: conserva el nombre de la raíz gestionada
+y registra el conflicto. Cualquier otro fallo revierte el guardado del proyecto
+y la sincronización de su árbol.
 
 Deshacer exige el `expected_impact_hash` del preview, motivo, `request_id` y
 confirmación. Restaura exactamente ubicación, dueño, visibilidad y archivado,
@@ -126,6 +154,12 @@ creados si siguen sin uso. Bloquea cambios posteriores (`changed_since`),
 contenido nuevo (`new_content_since`), proyecto en uso (`project_in_use`), una
 operación ya revertida (`already_reverted`) y operaciones posteriores sobre
 los mismos registros (`changed_since` con `reason: lifo`).
+
+También recalcula bajo candados la audiencia que tendría cada documento al
+restaurarse. Si daría acceso a un cliente distinto de la audiencia original,
+por ejemplo porque el proyecto original cambió de dueño, bloquea con
+`undo_audience_changed`. Los recibos antiguos sin audiencia registrada sólo
+permiten restaurar cuando no se abre acceso en el portal.
 
 `adopt_folder_as_project_root` usa el mismo motor `adopt_source` para un
 proyecto existente, con políticas, decisiones, motivo, request ID y plan
@@ -140,11 +174,12 @@ filas de `blockers` permanecen tal como los entrega el planificador.
 | Códigos MCP | Motivo |
 | --- | --- |
 | `CONTRACT_MIRROR_FOLDER_PINNED`, `CONTRACT_MIRROR_FOLDER_ARCHIVE_BLOCKED` | Propiedad y archivo de Contratos protegidos |
-| `OWNERSHIP_CONFLICT`, `OWNERSHIP_CONFLICT_KEEP`, `OWNERSHIP_FROZEN`, `PORTAL_EXPOSURE`, `OWNERSHIP_PLAN_BLOCKED` | Conflictos o exposición en movimientos |
+| `OWNERSHIP_CONFLICT`, `OWNERSHIP_CONFLICT_KEEP`, `OWNERSHIP_FROZEN`, `PORTAL_EXPOSURE`, `PORTAL_EXPOSURE_LATENT`, `OWNERSHIP_PLAN_BLOCKED` | Conflictos o exposición actual/latente en movimientos |
 | `STALE_MOVE_PLAN` | El movimiento cambió respecto del hash revisado |
 | `PLAN_TOKEN_INVALID`, `REQUEST_ID_CONFLICT` | Token vencido/alterado o request ID de otro plan |
 | `SOURCE_NAME_CONFLICT`, `TEMPLATE_NAME_CONFLICT`, `MIGRATION_BLOCKED`, `UNDO_BLOCKED` | Nombres, requisitos de migración o deshacer |
 | `CHANGED_SINCE`, `NEW_CONTENT_SINCE`, `PROJECT_IN_USE`, `ALREADY_REVERTED` | Motivos de bloqueo de deshacer |
+| `undo_audience_changed` en `details.blockers` | Deshacer abriría acceso a una audiencia distinta de la registrada; un recibo antiguo no acredita esa audiencia |
 | `PROJECT_ROOT_NAME_CONFLICT` | La raíz manual requiere una decisión explícita al crear o renombrar |
 
 Se reutilizan `CONFLICT` para planes bloqueados al preparar confirmaciones,
@@ -154,8 +189,8 @@ credencial/actor. Un token de otra credencial no es un token vencido.
 ## Compatibilidad y despliegue
 
 Los movimientos MCP ahora **abortan por defecto ante conflictos entre clientes**
-y nueva exposición en el portal. Las automatizaciones que dependían de herencia
-deben revisar el preview y elegir políticas. Los argumentos superiores
+y nueva exposición actual o latente en el portal. Las automatizaciones que
+dependían de herencia deben revisar el preview y elegir políticas. Los argumentos superiores
 desconocidos de herramientas con esquema cerrado ahora devuelven `unknown_field`.
 
 El deploy aplica [content.0286](../../backend/content/migrations/0286_contracttemplate_mirror_folder.py)

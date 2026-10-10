@@ -189,8 +189,11 @@ de claude.ai para refrescar `tools/list` y comprobar sus schemas y permisos.
 
 Revisión documental del 2026-10-10 sobre los commits `9446a196` (políticas),
 `7f7927d5` (pin de preview), `55a31237` (migración y deshacer), `3886f01e`
-(contrato de recibos/conteo) y `5e0ddd25` (raíces sin duplicados), junto con
-los de la parte 1. Versiones objetivo de este corte: **documents 3.2.0** y
+(contrato de recibos/conteo), `5e0ddd25` (raíces sin duplicados), `c40f3822`
+(sincronización, exposición latente y adopción estricta) y `92beb803`
+(audiencia al deshacer y cambio de cliente de carpeta), junto con `3bd28f84`
+(guardas de concurrencia de facturación) y los de la parte 1.
+Versiones objetivo de este corte: **documents 3.2.0** y
 **projects 2.2.0**. Validar con datos aislados, proveedor de pagos y correo
 simulados. La lista siguiente describe criterios, no acredita su ejecución
 en producción ni el merge/deploy de PR #504.
@@ -206,6 +209,9 @@ en producción ni el merge/deploy de PR #504.
    filas `before`/`after`, audiencia real/latente, estados, bloqueos, totales y
    `plan_hash`. Probar `inherit`, `keep`, `abort_on_conflict` y `abort`, `allow`,
    `hide_new_exposure`; un destino sin dueño conserva la propiedad anterior.
+   Con `abort`, un documento archivado marcado visible que ganaría audiencia
+   al restaurarse bloquea con `portal_exposure_latent` y `can_apply: false`;
+   `hide_new_exposure` oculta tanto la exposición actual como la latente.
    MCP usa `abort_on_conflict`/`abort` por defecto. `move_documents` admite
    ambas políticas, `document_decisions` y `expected_plan_hash`; `update_folder`
    admite políticas y hash al cambiar padre; `update_document` admite sólo las
@@ -236,11 +242,18 @@ en producción ni el merge/deploy de PR #504.
    plan. Verificar por separado que los espejos siguen sincronizados. Una falla
    inyectada de escritura o postcondición debe revertir el árbol y el proyecto.
    La raíz adoptada sigue el nombre, cliente y estado activo al guardar después
-   el proyecto, con padre null.
+   el proyecto, con padre null. `_synchronize_root` sólo tolera la colisión de
+   nombre con una raíz manual: conserva el nombre de la raíz gestionada y
+   registra el choque. Inyectar cualquier otro fallo de sincronización en un
+   guardado posterior: debe propagarse y revertir tanto el proyecto como su
+   árbol, sin guardar un proyecto cuya raíz quedó desincronizada.
 6. **Recibo e idempotencia.** `get_folder_migration(migration_id)` debe devolver
    el mismo reporte de aplicación: origen/destino, cambios antes/después, IDs
-   creados/eliminados, archivados, pendientes y motivo. El mismo `request_id`,
-   plan, actor y credencial devuelve el resultado original; otro plan con ese
+   creados/eliminados, archivados, pendientes y motivo. Comprobar la audiencia
+   original en `before.portal_audience` de los documentos de `moved`; el recibo
+   conserva también la de los documentos sin cambios, visible en `restore`
+   del preview de deshacer. El mismo `request_id`, plan, actor y credencial
+   devuelve el resultado original; otro plan con ese
    ID devuelve `REQUEST_ID_CONFLICT`. Guardar el ID del recibo para deshacer.
 7. **Deshacer y sus bloqueos.** Usar `preview_folder_migration_undo`, pasar su
    `impact_hash` como `expected_impact_hash` a `undo_folder_migration` con
@@ -252,23 +265,70 @@ en producción ni el merge/deploy de PR #504.
    contenido Markdown o `updated_at` por sí solos no son cambios de propiedad.
    Un documento que adquirió un vínculo congelado debe impedir restaurar
    su propiedad; un impacto obsoleto o una falla de escritura no deja cambios.
+   Cambiar el dueño del proyecto original después de migrar: si la restauración
+   daría acceso a otro cliente, el preview y el rechazo incluyen
+   `undo_audience_changed` en `blockers`, con documento y audiencias antes/después.
+   Recalcular bajo candados al aplicar; si el impacto cambió desde el preview,
+   devolver `STALE_VERSION` sin restauración parcial. Con audiencia original
+   intacta, deshacer debe recuperar el acceso de ese cliente. Para recibos
+   antiguos sin audiencia registrada, bloquear si se abriría acceso; permitir
+   sólo la restauración sin audiencia en el portal.
 8. **Adopción directa.** `adopt_folder_as_project_root` con `folder_id`,
    `project_id`, políticas/decisiones, motivo y `request_id` debe mostrar un
    plan `adopt_source` en la confirmación. Revalidar, confirmar, releer el
    recibo y deshacer por el mismo motor; no crea una raíz paralela.
 9. **Alta de proyecto con raíz.** En Proyectos, llamar `create_project` con
-   `root_folder_id` y las políticas/decisiones elegidas. No crea antes de
-   confirmar; el resultado incluye `document_root.folder_id`, `adopted: true`
-   y `migration_id`. El alta sin colisión es inmediata y devuelve
+   `name`, `client_profile_id` y `root_folder_id`, y sólo `description`/`state_id`
+   como opciones de proyecto. Comprobar el esquema cerrado: `client_policy`,
+   `portal_policy` y `document_decisions` se rechazan como `unknown_field`.
+   Toda adopción usa `abort_on_conflict` y `abort`, sin decisiones. Un plan
+   bloqueado devuelve `CONFLICT`, `details.blockers` y la pista en
+   `details.hint` a `preview_folder_migration`/`apply_folder_migration` de
+   Documentos, sin crear proyecto ni intención. Una confirmación pendiente
+   preparada con políticas permisivas o decisiones anteriores devuelve
+   `STALE_VERSION`. En un plan permitido no se crea antes de confirmar;
+   el resultado incluye `document_root.folder_id`, `adopted: true` y
+   `migration_id`. El alta sin colisión es inmediata y devuelve
    `adopted: false`/`migration_id: null`. Una raíz homónima adoptable sin ID
    explícito también exige confirmación y conserva una sola raíz.
 10. **Regla de nombre al crear y renombrar.** Probar en Panel, Platform y MCP
     raíces manuales homónimas con espacios/mayúsculas y archivadas. Las altas
     adoptan sólo una candidata segura o devuelven `PROJECT_ROOT_NAME_CONFLICT`
-    con IDs/rutas/motivos; la 66 con espejos requiere revisión explícita. Un
+    con IDs/rutas/motivos. La adopción automática rechaza cualquier documento
+    marcado visible, activo o archivado, aunque hoy no tenga audiencia.
+    La 66 con espejos requiere revisión por las tools de Documentos. Un
     renombre en colisión se rechaza sin adopción implícita. Raíces gestionadas
     de otro proyecto o cliente no bloquean proyectos homónimos; un save posterior
     no debe crear otra raíz ni renombrar sobre una manual en conflicto.
+11. **Cliente de carpeta y políticas de portal.** Llamar
+    `preview_folder_client_change` con `folder_id` y `client_profile_id`:
+    `portal_changes` identifica los documentos que ganarían audiencia con
+    `document_id`, `before_audience` y `after_audience`, sin escrituras.
+    En `change_folder_client` con `mode: propagate`, omitir `portal_policy`
+    por MCP equivale a `abort`, tanto con argumentos planos como con `data`:
+    nueva audiencia devuelve `PORTAL_EXPOSURE` con bloqueos y conserva el árbol.
+    Probar `allow` (audiencia aprobada) y `hide_new_exposure` (nuevo dueño,
+    `is_client_visible: false` sólo en los documentos que ganarían acceso).
+    `folder_only` conserva dueño y visibilidad de los documentos. Una petición
+    del Panel sin política conserva la cascada legacy; una política inválida
+    se rechaza antes de escribir.
+12. **Facturación y carreras.** Interponer pausa o cancelación entre la lectura
+    de acceso y el PATCH de ajustes de suscripción: la relectura bajo candados
+    y la escritura limitada a campos solicitados/derivados deben conservar
+    el estado y la próxima fecha decididos por el ciclo de vida. Un PATCH vacío
+    no escribe ni actualiza la fecha de modificación.
+    En `card-pay`, simular cambios durante la tokenización o la espera del
+    token de aceptación. Antes de crear la transacción Wompi, releer bajo
+    candados proyecto → suscripción → hosting → pago y exigir pago sin archivar
+    en `pending`/`overdue`/`failed`, suscripción activa/pendiente sin archivar
+    ni contexto de retención y ligada al proyecto, y que `project_allows_billing`
+    permita facturar.
+    Si deja de ser elegible, responder HTTP 400 sin enviar el cobro al proveedor
+    ni escribir historia de pago. Reanudar y cobrar con tarjeta nueva o guardada
+    deben usar `project_allows_billing`; incluir un proyecto sin estado
+    clasificado con `state_review_required: true` como caso bloqueado.
+    Simular Wompi y correo. La relectura comprobada en SQLite no certifica
+    la exclusión concurrente de los locks de MySQL REPEATABLE READ.
 
 Referencias de comportamiento, para elegir lotes de hasta 20 tests y no ampliar
 el barrido por la carga del host:
@@ -277,8 +337,10 @@ el barrido por la carga del host:
 | --- | --- |
 | Plan y movimientos | [Planificador](../backend/content/tests/services/test_ownership_planner.py), [paridad REST/MCP](../backend/content/tests/views/test_ownership_parity.py), [guardas](../backend/content/tests/services/test_ownership_move_guards.py) |
 | Migración y tokens | [Motor de migración](../backend/content/tests/services/test_folder_migration.py), [guardas de migración](../backend/content/tests/services/test_folder_migration_guards.py), [recorrido MCP](../backend/content/tests/views/test_mcp_folder_migration.py) |
-| Deshacer | [Bloqueos y restauración](../backend/content/tests/services/test_folder_migration_undo.py) |
-| Raíz y alta | [Regla compartida](../backend/content/tests/services/test_project_root_adoption.py), [alta por MCP](../backend/content/tests/views/test_mcp_create_project_root.py) |
+| Deshacer | [Bloqueos y restauración](../backend/content/tests/services/test_folder_migration_undo.py), [audiencia original y recibos antiguos](../backend/content/tests/services/test_folder_migration_undo_audience.py) |
+| Cliente de carpeta | [Exposición y políticas REST/MCP](../backend/content/tests/views/test_folder_client_change_exposure.py) |
+| Raíz y alta | [Regla compartida](../backend/content/tests/services/test_project_root_adoption.py), [alta por MCP](../backend/content/tests/views/test_mcp_create_project_root.py), [sincronización y rollback](../backend/content/tests/services/test_project_document_folder_service.py) |
+| Facturación y carreras | [PATCH, tarjeta y revisión de estado](../backend/accounts/tests/billing/test_billing_race_guards.py) |
 | Versión y discovery | [Pin de Documentos](../backend/content/tests/views/test_documents_mcp_301.py), [capacidades](../backend/content/tests/views/test_document_organization_api.py), [paridad de conectores](../backend/content/tests/views/test_mcp_discovery_parity.py) |
 
 El deploy aplica `content.0286_contracttemplate_mirror_folder`,
@@ -302,6 +364,10 @@ revalidarse: carpeta manual ProjectApp 66, estimaciones 69, Contratos 121,
 documentos de otro cliente 235/241, cliente destino perfil 29 y proyecto
 histórico PRUEBA 7 con suscripción 3 y pagos 4/5. Cancelar la 3 no habilita
 el cambio de cliente del proyecto histórico: la historia financiera se conserva.
+La migración de la 66 se realiza por el conector **Documentos**, mediante
+`preview_folder_migration`/`apply_folder_migration`. No usar `create_project`
+de Proyectos para este caso: las decisiones de 235/241 y la política del portal
+de 69 requieren las herramientas de Documentos.
 
 Guardar evidencia de cada paso en el registro privado de la operación:
 argumentos revisados, request ID, respuestas, hashes, IDs de confirmación y
@@ -324,13 +390,16 @@ declarar cancelación por haber llegado al plazo.
    `pinned_folder_id` es un campo de salida, no un filtro de la herramienta.
    **Evidencia:** listado completo con IDs, pin, ruta, versiones y flags antes
    del cambio. Si no coincide, resolver el pin/sincronización antes del paso 3.
-3. **Plan de la carpeta 66.** Llamar `preview_folder_migration` con
+3. **Plan de la carpeta 66.** En el conector Documentos, llamar
+   `preview_folder_migration` con
    `source_folder_id: 66` y
    `target: {create_project: {name: "ProjectApp", client_profile_id: 29}}`.
    Elegir `strategy: adopt_source` para conservar la 66 como raíz, o
    `strategy: move_contents` con `source_rename_to: "ProjectApp anterior"`
    y `archive_source_when_empty: true` para crear raíz y archivar la fuente
-   realmente vacía. Revalidar que el nombre elegido está libre. En ambos caminos,
+   realmente vacía. `target.create_project` es el destino del plan de Documentos,
+   no la herramienta `create_project` de Proyectos. Revalidar que el nombre
+   elegido está libre. En ambos caminos, como argumentos del preview,
    enviar `client_policy: abort_on_conflict`, `document_decisions` para **235 y
    241** y una `portal_policy` explícita para las estimaciones visibles de **69**.
    Para cada documento, decidir `action: inherit` si se autoriza adoptar el
@@ -338,14 +407,16 @@ declarar cancelación por haber llegado al plazo.
    verificada que conserve el destino adecuado; no inventar ese ID. Para 69,
    elegir `hide_new_exposure` si no se autoriza abrir acceso al cliente 29,
    `allow` sólo si se autoriza esa audiencia, o `abort` para detenerla.
+   Incluir la exposición latente de estimaciones archivadas al restaurarse.
    Exigir `can_apply: true`, cero bloqueos y filas revisadas de esos IDs; Contratos
    debe aparecer pinned y sin dueño. **Evidencia:** argumentos finales, políticas
    y decisiones aprobadas, filas 235/241 y de 69, pin 121, árbol final, avisos y
    `plan_hash`; guardar el token de 30 minutos únicamente en el registro privado.
    Si vence o cambia el árbol, repetir este paso antes de aplicar.
 4. **Aplicación, recibo y tres comprobaciones.** Llamar
-   `apply_folder_migration` con el token vigente, motivo y `request_id` único;
-   revisar el impacto, ejecutar `confirm_action` con su `confirmation_id` y
+   `apply_folder_migration` en Documentos con el token vigente, motivo y
+   `request_id` único; revisar el impacto, ejecutar `confirm_action` con su
+   `confirmation_id` y
    consultar `get_folder_migration` con el `migration_id` recibido. Comprobar:
    **(a)** `list_folders` con `{name: "ProjectApp", parent_id: null}` devuelve
    una sola raíz y su ID coincide con `root_folder_id` del recibo;
