@@ -22,6 +22,16 @@ function parse(value) {
   return { year: +match[1], month: +match[2], day: match[3] ? +match[3] : 1 }
 }
 
+/** Compare calendar days, treating 'YYYY-MM' as the first of that month. */
+export function sameDay(a, b) {
+  const left = parse(a)
+  const right = parse(b)
+  return !!left && !!right
+    && left.year === right.year
+    && left.month === right.month
+    && left.day === right.day
+}
+
 function lastDayOf(year, month) {
   return new Date(Date.UTC(year, month, 0)).getUTCDate()
 }

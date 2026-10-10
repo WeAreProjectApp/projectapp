@@ -6,7 +6,7 @@
     "guest"
   ],
   "priority": "P1",
-  "description": "A guest creates a team-only one-time secure link from the public page. Confidential message is the default; required and Custom fields are directly available while optional type fields use More details. After valid captcha and submission, the guest receives a URL to copy or manually open in a mail client; the page creates no draft or automatic delivery flow. Field validation, catalog retry and recoverable server failures keep the input available for retry.",
+  "description": "A guest creates a team-only one-time secure link from the public page. Confidential message is the default; required and Custom fields are directly available while optional type fields use More details. After valid captcha and submission, the guest receives a URL to copy and send through their own channel; the page offers no mail shortcut and creates no draft or automatic delivery flow. Field validation, catalog retry and recoverable server failures keep the input available for retry.",
   "outcomes": [
     "success",
     "error",

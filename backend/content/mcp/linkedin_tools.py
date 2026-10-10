@@ -24,6 +24,7 @@ from datetime import timedelta
 from django.utils import timezone
 
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import close_root_schemas
 from content.models import LinkedInPost
 from content.serializers.linkedin_post import LinkedInPostSerializer
 from content.services.linkedin_post_service import (
@@ -205,7 +206,7 @@ def publish_post(arguments):
 
 # ── Registry ─────────────────────────────────────────────────────────────────
 
-LINKEDIN_TOOLS = [
+LINKEDIN_TOOLS = close_root_schemas([
     {
         'name': 'get_connection_status',
         'description': (
@@ -332,4 +333,4 @@ LINKEDIN_TOOLS = [
         },
         'handler': publish_post,
     },
-]
+])

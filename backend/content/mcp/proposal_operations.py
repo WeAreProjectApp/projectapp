@@ -10,7 +10,6 @@ def _op(*args, **kwargs):
         kwargs['assets'] = {'attachment_asset_ids': {'field': 'attachments', 'many': True}}
     tool = panel_op(*args, payload_schema=schema, **kwargs)
     if schema:
-        tool['input_schema']['properties']['query'] = {'type': 'object', 'additionalProperties': True}
         handler = tool['handler']
         tool['handler'] = lambda arguments: handler(guarded_arguments(arguments, tool))
         if tool['requires_confirmation']:

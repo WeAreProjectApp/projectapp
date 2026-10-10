@@ -10,6 +10,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import {
   ADMIN_PROJECT_LIFECYCLE_STATES,
@@ -550,6 +551,10 @@ test.describe('Admin project lifecycle states', () => {
       'project-state-impact',
       'base-modal-actions',
     ]);
+    // A state name needs half of the row, not the whole modal width.
+    await expectCompactModal(modal, page.viewportSize(), {
+      lines: [{ fields: [modal.getByTestId('project-state-target')] }],
+    });
     const actions = page.getByTestId('base-modal-actions');
     await actions.scrollIntoViewIfNeeded();
     await expect(actions.getByRole('button')).toHaveCount(2);

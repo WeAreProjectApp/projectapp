@@ -26,6 +26,7 @@ from accounts.models import Project
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
 from content.mcp.protocol import ToolError
+from content.mcp.schema_policy import closed_object, close_root_schemas
 from content.models import (
     AccountingChangeLog,
     AccountingSettings,
@@ -512,7 +513,15 @@ _ENTITY_FIELDS = {
         'props': {
             'concept': {'type': 'string'},
             'kind': {'type': 'string', 'enum': ['expected', 'liquid', 'lost']},
-            'period_date': {'type': 'string', 'description': 'Periodo YYYY-MM.'},
+            'period_date': {
+                'type': 'string',
+                'description': (
+                    'Fecha o mes del ingreso (YYYY-MM o YYYY-MM-DD). En hosting '
+                    'es el mes de cobro esperado, independiente del período '
+                    'cubierto: si no lo envías, al crear toma period_start y '
+                    'al editar lo sigue sólo si coincidían.'
+                ),
+            },
             'total_amount': {'type': ['number', 'string'], 'description': 'Total con IVA incluido; alternativa a amount.'},
             'amount': {'type': ['number', 'string'], 'description': 'Importe de captura; no combinar con total_amount.'},
             'amount_mode': {'type': 'string', 'enum': ['before_vat', 'vat_included']},
@@ -565,7 +574,7 @@ _ENTITY_FIELDS = {
                 'type': 'string',
                 'description': (
                     'Inicio del período cubierto (YYYY-MM-DD o YYYY-MM). Solo '
-                    'origin=hosting; define además period_date.'
+                    'origin=hosting.'
                 ),
             },
             'period_end': {
@@ -588,9 +597,13 @@ _ENTITY_FIELDS = {
             },
             'gustavo_amount': {'type': ['number', 'string']},
             'carlos_amount': {'type': ['number', 'string']},
+            'expected_income': {
+                'type': ['integer', 'null'],
+                'description': 'ID del ingreso esperado padre de un abono; null quita el vínculo.',
+            },
             'notes': {'type': 'string'},
         },
-        'required': ['concept', 'kind', 'period_date', 'origin'],
+        'required': ['concept', 'kind', 'origin'],
     },
     'expense': {
         'props': {
@@ -601,6 +614,15 @@ _ENTITY_FIELDS = {
             'amount_mode': {'type': 'string', 'enum': ['before_vat', 'vat_included']},
             'vat_rate': {'type': ['number', 'string', 'null'], 'description': 'IVA entre 0 y 100; 0 = Sin IVA, null = sin registrar.'},
             'category': {'type': 'string', 'enum': ['business', 'personal']},
+            'deduction_type': {
+                'type': 'string',
+                'enum': ['', *ExpenseRecord.DeductionType.values],
+                'description': 'Tipo de deducción existente; sólo la liquidación puede asignarlo o cambiarlo.',
+            },
+            'register_in_pocket': {
+                'type': 'boolean',
+                'description': 'Registra el gasto en el bolsillo de empresa; true por defecto.',
+            },
             'ledger': {'type': 'string', 'enum': _LEDGER_ENUM},
             'gustavo_amount': {'type': ['number', 'string']},
             'carlos_amount': {'type': ['number', 'string']},
@@ -622,6 +644,9 @@ _ENTITY_FIELDS = {
                 ),
             },
             'client_name': {'type': 'string'},
+            'client_email': {'type': 'string', 'description': 'Correo de facturación; si se omite se toma del cliente.'},
+            'client_contact_name': {'type': 'string', 'description': 'Nombre de contacto para facturación.'},
+            'client_identification': {'type': 'string', 'description': 'Identificación del cliente para facturación.'},
             'project_name': {
                 'type': 'string',
                 'description': (
@@ -656,6 +681,7 @@ _ENTITY_FIELDS = {
             'movement_date': {'type': 'string', 'description': 'YYYY-MM-DD.'},
             'direction': {'type': 'string', 'enum': ['in', 'out']},
             'amount': {'type': ['number', 'string']},
+            'ledger': {'type': 'string', 'enum': _LEDGER_ENUM, 'description': 'Libro contable del movimiento.'},
             'notes': {'type': 'string'},
         },
         'required': ['concept', 'movement_date', 'direction', 'amount'],
@@ -758,10 +784,24 @@ _ENTITY_LABELS = {
     'expense': 'gastos',
     'hosting': 'hostings',
     'pocket': 'movimientos de pocket',
-    'recurring': 'pagos recurrentes',
+    'recurring': 'gastos recurrentes',
     'ads': 'gasto en ads',
     'card_snapshot': 'snapshots de tarjeta',
     'notification_recipient': 'destinatarios de notificación',
+}
+
+_ENTITY_NOTES = {
+    'income': (
+        'kind: expected = ingreso esperado por cobrar (proyección), liquid = '
+        'dinero recibido, lost = castigado (no se cobrará); cancelled sólo '
+        'aparece en lecturas. Para editar ingresos esperados con vista previa, '
+        'ETag y reparto del Panel usa list_expected_incomes, get_expected_income, '
+        'update_expected_income, create_expected_income o duplicate_expected_income.'
+    ),
+    'recurring': (
+        'Son gastos periódicos y suscripciones que la empresa paga '
+        '(salidas de dinero), no ingresos.'
+    ),
 }
 
 
@@ -779,7 +819,18 @@ def _list_schema(key):
         'amount_max': {'type': ['number', 'string']},
     })
     for field in config.get('choice_filters', ()):
-        props[field] = {'type': 'string', 'description': 'Uno o varios valores separados por coma.'}
+        model_field = config['model']._meta.get_field(field)
+        choices = [str(value) for value, _ in model_field.flatchoices if value != '']
+        if choices:
+            values = ', '.join(choices)
+        elif model_field.is_relation:
+            values = 'IDs de categoría (list_recurring_categories)'
+        else:
+            values = 'nombres existentes en el catálogo de tarjetas'
+        props[field] = {
+            'type': 'string',
+            'description': f"Uno o varios valores separados por coma: {values}. 'none' incluye los valores sin clasificar.",
+        }
     for field in config.get('bool_filters', ()):
         props[field] = {'type': 'boolean'}
     if config.get('archive_scope'):
@@ -828,7 +879,7 @@ def _list_schema(key):
                 "(pagado). 'all' no filtra."
             ),
         }
-    return {'type': 'object', 'properties': props}
+    return closed_object(props)
 
 
 _RECORD_ID_PROP = {'record_id': {'type': 'integer', 'description': 'ID del registro.'}}
@@ -847,6 +898,7 @@ _SETTLEMENT_PROPS = {
         'description': 'Comisiones, retenciones u otros descuentos que no se cobrarán después.',
         'items': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 'type': {'type': 'string', 'enum': [value for value, _ in ExpenseRecord.DeductionType.choices]},
                 'detail': {'type': 'string', 'description': 'Obligatorio cuando type=other.'},
@@ -860,6 +912,7 @@ _SETTLEMENT_PROPS = {
         'description': 'Partes del saldo que sí se cobrarán después como nuevos ingresos esperados.',
         'items': {
             'type': 'object',
+            'additionalProperties': False,
             'properties': {
                 'concept': {'type': 'string'},
                 'period_date': {'type': 'string'},
@@ -880,6 +933,7 @@ _SETTLEMENT_PROPS = {
     },
     'period': {
         'type': ['object', 'null'],
+        'additionalProperties': False,
         'description': 'Período de hosting que completa el ingreso esperado padre.',
         'properties': {
             'period_start': {'type': 'string'},
@@ -899,58 +953,69 @@ _SETTLEMENT_PROPS = {
 
 def _build_ledger_tools():
     tools = []
+    areas = {
+        'income': 'ledger', 'expense': 'ledger', 'pocket': 'ledger',
+        'recurring': 'ledger', 'ads': 'ledger', 'hosting': 'billing',
+        'notification_recipient': 'billing', 'card_snapshot': 'cards',
+    }
     for key, fields in _ENTITY_FIELDS.items():
         label = _ENTITY_LABELS[key]
         tools.append({
             'name': f'list_{key}',
+            'area': areas[key],
             'description': f'Lista {label} con filtros (fechas, montos, categorías, búsqueda q).',
             'input_schema': _list_schema(key),
             'handler': _make_list(key),
         })
         tools.append({
             'name': f'get_{key}',
+            'area': areas[key],
             'description': (
                 f'Abre un registro de {label} por ID con todos los campos '
                 'vigentes de lectura del módulo contable.'
             ),
-            'input_schema': {'type': 'object', 'properties': _RECORD_ID_PROP, 'required': ['record_id']},
+            'input_schema': closed_object(_RECORD_ID_PROP, ['record_id']),
             'handler': _make_get(key),
         })
         tools.append({
             'name': f'create_{key}',
+            'area': areas[key],
             'description': (
                 f'Crea un registro de {label} usando las mismas validaciones, '
                 'auditoría y efectos secundarios que el formulario del panel.'
             ),
-            'input_schema': {
-                'type': 'object',
-                'properties': fields['props'],
-                'required': fields['required'],
-            },
+            'input_schema': closed_object(fields['props'], fields['required']),
+            # Legacy create callers may send record_id; the handler drops it.
+            'accepted_arguments_schema': closed_object(
+                {**fields['props'], **_RECORD_ID_PROP}, fields['required'],
+            ),
             'handler': _make_create(key),
         })
         tools.append({
             'name': f'update_{key}',
+            'area': areas[key],
             'description': f'Actualiza (parcial) un registro de {label}. Envía record_id + campos.',
-            'input_schema': {
-                'type': 'object',
-                'properties': {**_RECORD_ID_PROP, **fields['props']},
-                'required': ['record_id'],
-            },
+            'input_schema': closed_object({**_RECORD_ID_PROP, **fields['props']}, ['record_id']),
             'handler': _make_update(key),
         })
         tools.append({
             'name': f'delete_{key}',
+            'area': areas[key],
             'description': f'Elimina un registro de {label}. Los movimientos de pocket auto-gestionados no se pueden borrar.',
-            'input_schema': {'type': 'object', 'properties': _RECORD_ID_PROP, 'required': ['record_id']},
+            'input_schema': closed_object(_RECORD_ID_PROP, ['record_id']),
             'handler': _make_delete(key),
         })
+    for tool in tools:
+        key = tool['name'].split('_', 1)[1]
+        if key in _ENTITY_NOTES:
+            tool['description'] += ' ' + _ENTITY_NOTES[key]
     return tools
 
 
-_NON_CRUD_TOOLS = [
+_NON_CRUD_TOOLS = close_root_schemas([
     {
         'name': 'get_dashboard',
+        'area': 'ledger',
         'description': (
             'Resumen contable del año: totales, split de socios, breakdown '
             'mensual, balance de pocket, costo recurrente, ads, hostings y '
@@ -962,6 +1027,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_receivables',
+        'area': 'ledger',
         'description': (
             'Lista los ingresos esperados empresariales aún abiertos y '
             'resume la selección manual por probabilidad de cobro.'
@@ -971,6 +1037,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_income_detail',
+        'area': 'ledger',
         'description': (
             'Abre un ingreso con su estado de cobro, pagos parciales, '
             'deducciones, movimiento de bolsillo compartido y cuenta de cobro '
@@ -985,6 +1052,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'settle_income',
+        'area': 'ledger',
         'description': _SETTLE_INCOME_DESCRIPTION,
         'input_schema': {
             'type': 'object',
@@ -996,6 +1064,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'bulk_settle_incomes',
+        'area': 'ledger',
         'description': (
             'Distribuye un único abono real entre varios ingresos esperados. '
             'Crea un solo movimiento de bolsillo; cualquier excedente queda como '
@@ -1008,6 +1077,7 @@ _NON_CRUD_TOOLS = [
                     'type': 'array',
                     'items': {
                         'type': 'object',
+                        'additionalProperties': False,
                         'properties': {
                             'income_id': {'type': 'integer'},
                             'amount': {'type': ['number', 'string']},
@@ -1026,6 +1096,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'list_change_logs',
+        'area': 'ledger',
         'description': (
             'Auditoría de cambios (paginada, 20/pág). Filtros: entity_type, '
             'object_id, action (created/updated/deleted), actor, date_from, '
@@ -1047,6 +1118,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_settings',
+        'area': 'billing',
         'description': (
             'Devuelve la configuración contable (notificaciones, recordatorios, '
             'tasa USD, vista por defecto de ingresos).'
@@ -1056,6 +1128,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'mute_income',
+        'area': 'ledger',
         'description': (
             'Silencia los avisos de cobro de un ingreso esperado, o los '
             'reactiva con muted=false. Sin `until` el silencio dura hasta que '
@@ -1077,8 +1150,9 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'get_recurring_duplicate_draft',
+        'area': 'ledger',
         'description': (
-            'Construye, sin guardar, el borrador para duplicar un pago '
+            'Construye, sin guardar, el borrador para duplicar un gasto '
             'recurrente. Recalcula la próxima fecha y limpia notas, archivo y avisos.'
         ),
         'input_schema': {
@@ -1090,8 +1164,9 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'set_recurring_active',
+        'area': 'ledger',
         'description': (
-            'Activa o desactiva un pago recurrente. Los archivados deben '
+            'Activa o desactiva un gasto recurrente. Los archivados deben '
             'restaurarse antes de activarse.'
         ),
         'input_schema': {
@@ -1106,7 +1181,8 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'archive_recurring',
-        'description': 'Archiva y desactiva un pago recurrente sin borrar sus datos.',
+        'area': 'ledger',
+        'description': 'Archiva y desactiva un gasto recurrente sin borrar sus datos.',
         'input_schema': {
             'type': 'object',
             'properties': _RECORD_ID_PROP,
@@ -1116,7 +1192,8 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'restore_recurring',
-        'description': 'Restaura un pago recurrente archivado y lo deja inactivo.',
+        'area': 'ledger',
+        'description': 'Restaura un gasto recurrente archivado y lo deja inactivo.',
         'input_schema': {
             'type': 'object',
             'properties': _RECORD_ID_PROP,
@@ -1126,8 +1203,9 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'mute_recurring',
+        'area': 'ledger',
         'description': (
-            'Silencia o reactiva los avisos del próximo cobro de un pago '
+            'Silencia o reactiva los avisos del próximo cobro de un gasto '
             'recurrente vigente; admite una fecha futura de reanudación.'
         ),
         'input_schema': {
@@ -1146,8 +1224,9 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'bulk_action_recurring',
+        'area': 'ledger',
         'description': (
-            'Activa, desactiva o archiva una selección completa de pagos '
+            'Activa, desactiva o archiva una selección completa de gastos '
             'recurrentes en una sola transacción.'
         ),
         'input_schema': {
@@ -1170,6 +1249,7 @@ _NON_CRUD_TOOLS = [
     },
     {
         'name': 'update_settings',
+        'area': 'billing',
         'description': (
             'Actualiza (parcial) la configuración contable: '
             'notifications_enabled (interruptor maestro de TODO el correo '
@@ -1210,7 +1290,7 @@ _NON_CRUD_TOOLS = [
         },
         'handler': update_settings,
     },
-]
+])
 
 from content.mcp.statement_tools import STATEMENT_TOOLS  # noqa: E402
 

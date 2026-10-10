@@ -1,8 +1,7 @@
 <template>
   <BaseModal
     :model-value="open"
-    kind="detail"
-    size="xl"
+    kind="form"
     title-id="income-bulk-settle-title"
     @close="emit('close')"
   >
@@ -33,39 +32,32 @@
       </div>
 
       <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
-        <BaseFormRow :cols="2" :gap="3">
-        <BaseFormField label="Valor recibido" required>
-          <BaseCurrencyInput
-            v-model="form.total"
+        <BaseFormRow :cols="2" :gap="3" help-testid="income-bulk-settle-destination-help">
+          <BaseFormField label="Valor recibido" required>
+            <BaseCurrencyInput
+              v-model="form.total"
+              required
+              data-testid="income-bulk-settle-total"
+            />
+          </BaseFormField>
+
+          <PeriodDateField
+            v-model="form.period_date"
+            v-model:exact="exactDate"
+            label-exact="Fecha en que se recibió el pago"
+            label-month="Mes en que se recibió el pago"
+            toggle-label="Registrar el día exacto de pago"
             required
-            data-testid="income-bulk-settle-total"
+            input-testid="income-bulk-settle-period"
+            toggle-testid="income-bulk-settle-exact-date"
           />
-        </BaseFormField>
 
-        <PeriodDateField
-          v-model="form.period_date"
-          v-model:exact="exactDate"
-          label-exact="Fecha en que se recibió el pago"
-          label-month="Mes en que se recibió el pago"
-          toggle-label="Registrar el día exacto de pago"
-          required
-          input-testid="income-bulk-settle-period"
-          toggle-testid="income-bulk-settle-exact-date"
-        />
-
+          <template #help>
+            Destino:
+            <span class="font-medium text-text-default" data-testid="income-bulk-settle-destination">Bolsillo ProjectApp</span>.
+            El pago entra como un único movimiento al bolsillo de la empresa.
+          </template>
         </BaseFormRow>
-
-        <BaseFormField
-          label="Destino"
-          hint="El pago entra como un único movimiento al bolsillo de la empresa."
-        >
-          <p
-            class="text-sm text-text-default py-2"
-            data-testid="income-bulk-settle-destination"
-          >
-            Bolsillo ProjectApp
-          </p>
-        </BaseFormField>
 
         <!-- El reparto: la tabla renderiza en el MISMO orden en que el dinero
              llena (más antiguo primero) — mostrado en otro orden, el prellenado

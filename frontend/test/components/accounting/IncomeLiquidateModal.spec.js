@@ -41,7 +41,7 @@ const expectedRecord = {
   payment_status: 'partial',
 };
 
-function mountModal(props = {}, { components = {} } = {}) {
+function mountModal(props = {}, { components = {}, ...stubs } = {}) {
   return mount(IncomeLiquidateModal, {
     props: {
       open: true,
@@ -55,7 +55,8 @@ function mountModal(props = {}, { components = {} } = {}) {
         Teleport: { template: '<div><slot /></div>' },
         Transition: { template: '<div><slot /></div>' },
         BaseModal: {
-          props: ['modelValue', 'size'],
+          name: 'BaseModal',
+          props: ['modelValue', 'size', 'kind'],
           emits: ['update:modelValue', 'close'],
           template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
         },
@@ -116,9 +117,17 @@ function mountModal(props = {}, { components = {} } = {}) {
           template: '<span :data-variant="variant"><slot /></span>',
         },
         PartnerSplitInput: PartnerSplitInputStub,
+        ...stubs,
       },
     },
   });
+}
+
+// The BaseFormRow that holds the payment date.
+function paymentRow(wrapper) {
+  return wrapper
+    .findAllComponents({ name: 'BaseFormRow' })
+    .find((row) => row.find('[data-testid="income-liquidate-period"]').exists());
 }
 
 describe('IncomeLiquidateModal', () => {
@@ -199,7 +208,7 @@ describe('IncomeLiquidateModal', () => {
     expect(payload.expected_incomes).toEqual([]);
   });
 
-  it('defaults the destination to pocket and omits the untouched split', async () => {
+  it('defaults the destination to pocket and omits a split left blank', async () => {
     const wrapper = mountModal();
 
     await wrapper.find('input[type="date"]').setValue('2026-11-17');
@@ -209,10 +218,28 @@ describe('IncomeLiquidateModal', () => {
     // Money defaults into the pocket; distributing to the partners is the
     // explicit choice.
     expect(payload.destination).toBe('pocket');
-    // Untouched split is omitted so the server applies its canonical
-    // 50/50 (split_half) — the client never re-implements the rounding.
+    // PartnerSplitInput fills the automatic split as soon as it mounts (this
+    // stub never does): a split still blank is left out, and the server's
+    // split_half applies the same whole-peso halves.
     expect(payload.gustavo_amount).toBeUndefined();
     expect(payload.carlos_amount).toBeUndefined();
+  });
+
+  // Bug caught: the modal opened on the pending amount with the 50/50 toggle
+  // on and both partner fields empty, so nobody saw what each partner got.
+  it('shows and submits the automatic split of the prefilled amount', async () => {
+    const wrapper = mountModal({}, { PartnerSplitInput: false });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="partner-split-gustavo"]').element.value).toBe('300000');
+    expect(wrapper.get('[data-testid="partner-split-carlos"]').element.value).toBe('300000');
+
+    await wrapper.find('input[type="date"]').setValue('2026-11-17');
+    await wrapper.find('form').trigger('submit');
+
+    const payload = wrapper.emitted('submit')[0][0];
+    expect(payload.gustavo_amount).toBe(300000);
+    expect(payload.carlos_amount).toBe(300000);
   });
 
   it('sends the split when the user fills it', async () => {
@@ -283,6 +310,25 @@ describe('IncomeLiquidateModal', () => {
     await wrapper.find('form').trigger('submit');
 
     expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
+  });
+
+  // Falla si el modal vuelve al ancho amplio (64 rem) o si la fecha y el
+  // destino vuelven a ocupar filas separadas.
+  it('pairs the payment date with the destination at the form width', () => {
+    const wrapper = mountModal();
+    const row = paymentRow(wrapper);
+
+    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
+    expect(row.props('cols')).toBe(2);
+    expect(row.find('[data-testid="income-liquidate-destination"]').exists()).toBe(true);
+  });
+
+  // Falla si el valor pagado personal vuelve a una fila propia a todo el ancho.
+  it('pairs the payment date with the amount paid on a personal ledger', () => {
+    const row = paymentRow(mountModal({ record: { ...expectedRecord, ledger: 'gustavo' } }));
+
+    expect(row.props('cols')).toBe(2);
+    expect(row.find('[data-testid="income-liquidate-paid"]').exists()).toBe(true);
   });
 
   // Falla si una llamada directa liquida una fila local que aún necesita cuenta emitida.
@@ -702,6 +748,15 @@ describe('covered period of a hosting charge', () => {
     expect(
       wrapper.find('[data-testid="income-liquidate-period-start"]').element.value,
     ).toBe('2026-10-01');
+  });
+
+  // Falla si la ayuda vuelve al campo, donde la fila alineada la oculta.
+  it('explains the periodicity below the period row', () => {
+    const wrapper = mountModal({ record: legacyHosting });
+
+    expect(
+      wrapper.get('[data-testid="income-liquidate-period-cadence-hint"]').text(),
+    ).toContain('periodicidad');
   });
 
   it('computes the end of the period from the periodicity', async () => {

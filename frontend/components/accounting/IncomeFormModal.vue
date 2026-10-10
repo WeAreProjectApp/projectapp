@@ -12,7 +12,7 @@ import { useProposalClientsStore } from '~/stores/proposal_clients'
 import { useHostingPeriod } from '~/composables/useHostingPeriod'
 import { clientFormPayload, emptyClientForm } from '~/utils/billingCode'
 import { formatDate } from '~/utils/formatDate'
-import { todayISO } from '~/utils/periodDates'
+import { sameDay, todayISO } from '~/utils/periodDates'
 import { RECEIVABLE_CONFIDENCE_OPTIONS } from '~/utils/receivables'
 import { FREQUENCY_OPTIONS } from '~/utils/recurring'
 
@@ -101,11 +101,25 @@ function defaultForm() {
 const form = ref(defaultForm())
 // Exact day by default; the toggle downgrades to month-only.
 const exactDate = ref(true)
+const billingDateExact = ref(true)
+const billingFollowsStart = ref(true)
 
 const isPersonal = computed(() => form.value.ledger !== 'company')
-// Hosting is a service window, not a point payment: the date block swaps to
-// start + end + cadence, and the backend derives period_date from the start.
+// Hosting records a covered window plus a payment date: the latter follows
+// the start until the operator chooses an independent collection date.
 const isHosting = computed(() => form.value.origin === 'hosting')
+
+watch(() => form.value.period_start, (start) => {
+  if (!isHosting.value || !billingFollowsStart.value || !start) return
+  form.value.period_date = (billingDateExact.value && start.length === 7)
+    ? `${start}-01`
+    : start
+})
+
+function onBillingDateEdited(value) {
+  billingFollowsStart.value = !value || sameDay(value, form.value.period_start)
+}
+
 const forecastApplicable = computed(() => (
   form.value.kind === 'expected' && form.value.ledger === 'company'
 ))
@@ -198,6 +212,11 @@ const cadenceHint = 'Al elegirla se calcula la fecha de fin del período.'
 const HOSTING_CYCLE_HINT = 'Siguiente ciclo del hosting. Ajústala si no corresponde.'
 
 const periodDateHint = computed(() => (showsCycleHint.value ? HOSTING_CYCLE_HINT : ''))
+
+const billingDateHint = computed(() => (billingFollowsStart.value
+  ? 'Coincide con el inicio del período. Cámbiala si el cliente paga en otro mes.'
+  : 'Independiente del período cubierto: ordena el ingreso y sus avisos de cobro.'
+))
 
 /**
  * Where this duplicate's window is counted from, said out loud. Duplicating
@@ -293,8 +312,15 @@ const periodDateTouched = ref(false)
  * outgoing one so the operator never re-types it.
  */
 function onOriginChange() {
-  if (isHosting.value && !form.value.period_start && periodDateTouched.value) {
-    form.value.period_start = form.value.period_date
+  if (isHosting.value) {
+    if (!form.value.period_start && periodDateTouched.value) {
+      form.value.period_start = form.value.period_date
+    }
+    billingFollowsStart.value = !periodDateTouched.value || !form.value.period_start
+      || sameDay(form.value.period_date, form.value.period_start)
+    if (billingFollowsStart.value && form.value.period_start) {
+      form.value.period_date = form.value.period_start
+    }
   } else if (!isHosting.value && !form.value.period_date && form.value.period_start) {
     form.value.period_date = form.value.period_start
   }
@@ -355,6 +381,7 @@ watch(
     // records, whose real day was never captured); the toggle still
     // downgrades when only the month is known.
     exactDate.value = true
+    billingDateExact.value = true
     // Prefilling writes start, end and cadence at once: the period watchers
     // must not treat that batch as the operator choosing a cadence and
     // recompute an end the record already stated.
@@ -363,6 +390,10 @@ watch(
     // belonged to the record that was being saved, not to this one.
     submitAttempted.value = false
     const source = props.record || props.seed
+    // Keep a stored payment offset on edits and duplicate drafts: hydrating
+    // their window must not replace an independent collection date.
+    billingFollowsStart.value = !source || !source.period_start || !source.period_date
+      || sameDay(source.period_date, source.period_start)
     // A stored date is an answer, not boilerplate.
     periodDateTouched.value = !!source
     if (source) applyRecord(source)
@@ -458,8 +489,9 @@ function onSubmit() {
     origin: form.value.origin,
   }
   if (isHosting.value) {
-    // The backend derives period_date from the start of the window; sending
-    // both would just be two chances to disagree.
+    // The payment date orders the income and its reminders independently of
+    // the window it covers; an empty date falls back to the window's start.
+    payload.period_date = form.value.period_date || form.value.period_start
     payload.period_start = form.value.period_start
     payload.period_end = form.value.period_end
     payload.period_cadence = form.value.period_cadence
@@ -679,6 +711,21 @@ const modalFormId = useId();
           </BaseButton>
         </div>
       </div>
+
+      <PeriodDateField
+        v-if="isHosting"
+        v-model="form.period_date"
+        v-model:exact="billingDateExact"
+        :label-exact="form.kind === 'expected' ? 'Fecha de cobro esperada' : 'Fecha de cobro'"
+        :label-month="form.kind === 'expected' ? 'Mes de cobro esperado' : 'Mes de cobro'"
+        toggle-label="Registrar el día exacto de cobro"
+        required
+        input-testid="income-form-billing-date"
+        toggle-testid="income-form-billing-date-exact"
+        :hint="billingDateHint"
+        hint-testid="income-form-billing-date-hint"
+        @update:model-value="onBillingDateEdited"
+      />
 
       <BaseFormField label="Contabilidad" class="panel-portrait:max-w-md">
         <BaseSegmented v-model="form.ledger" :options="ledgerOptions" full-width />

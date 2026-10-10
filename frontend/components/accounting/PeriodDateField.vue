@@ -18,10 +18,10 @@ defineProps({
   inputTestid: { type: String, default: '' },
   toggleTestid: { type: String, default: '' },
   /**
-   * Forwarded to the inner `BaseFormField` rather than rendered by the parent
-   * next to this component: inside a `BaseFormRow` only a direct child field
-   * inherits the shared hint band, and a wrapper around it would break the
-   * alignment of the whole row.
+   * Forwarded to the inner `BaseFormField`, which shows it only when this
+   * component stands alone. Inside an aligned `BaseFormRow` (more than one
+   * column) the field drops hints by design: pass that copy to the row's
+   * `help` instead of wrapping this component, which would break the row.
    */
   hint: { type: String, default: '' },
   hintTestid: { type: String, default: '' },

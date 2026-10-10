@@ -37,6 +37,7 @@ const scopedPaths = [
   'components/base/BaseActionMenu.vue',
   'components/base/BaseDropdown.vue',
   'components/base/BaseResponsiveTable.vue',
+  'components/base/BaseRowActionsModal.vue',
   'components/base/BasePagination.vue',
   'components/base/BaseFilterTabs.vue',
   'components/base/BaseAlert.vue',

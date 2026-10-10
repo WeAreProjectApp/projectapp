@@ -1,5 +1,14 @@
 <template>
   <div>
+    <!-- Before ConfirmModal: modals stack in template order, so the
+         confirmation an entry opens lands above this fading menu. -->
+    <BaseRowActionsModal
+      :open="actionsRow !== null"
+      :title="actionsRow?.name_es || ''"
+      :items="actionsRow ? packageActionItems(actionsRow) : []"
+      testid="hour-package-actions-modal"
+      @close="actionsRow = null"
+    />
     <ConfirmModal
       v-model="confirmState.open"
       :title="confirmState.title"
@@ -72,6 +81,7 @@
             caption="Paquetes de horas y precios"
             card-test-id-prefix="hour-package-row"
             table-min-width="64rem"
+            row-actions-layout="menu-start"
           >
             <template #cell-name_es="{ row: pkg }">
               <NuxtLink :to="localePath(`/panel/hour-packages/${pkg.id}/edit`)" class="block min-w-0 max-w-full text-sm font-medium leading-tight text-text-default [overflow-wrap:anywhere] transition-colors hover:text-text-brand">{{ pkg.name_es }}</NuxtLink>
@@ -87,7 +97,13 @@
             <template #cell-total="{ row: pkg }"><span class="font-medium">{{ formatMoney(totalPrice(pkg), pkg.currency) }}</span></template>
             <template #cell-status="{ row: pkg }"><span class="inline-flex rounded-full px-2.5 py-1 text-xs font-medium" :class="statusBadgeClass(pkg)">{{ pkg.is_active ? 'Activo' : 'Inactivo' }}</span></template>
             <template #row-actions="{ row: pkg }">
-              <BaseActionMenu :items="packageActionItems(pkg)" :testid="`hour-package-actions-${pkg.id}`" />
+              <BaseActionButton
+                action="more"
+                class="h-11 w-11 shrink-0"
+                :label="`Acciones de ${pkg.name_es}`"
+                :data-testid="`hour-package-actions-${pkg.id}`"
+                @click.stop="actionsRow = pkg"
+              />
             </template>
           </BaseExploratoryList>
 
@@ -214,8 +230,9 @@ import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import BasePagination from '~/components/base/BasePagination.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import HourPackagesCards from '~/components/hour-packages/PackagesCards.vue';
 import HourPackagesCompare from '~/components/hour-packages/PackagesCompare.vue';
 import { usePagination } from '~/composables/usePagination';
@@ -261,12 +278,13 @@ const activeSection = ref('catalog');
 const viewMode = ref('table');
 const restoreNationality = ref('COL');
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
+const actionsRow = ref(null);
 
 function packageActionItems(pkg) {
   return [
-    { action: 'edit', label: 'Editar', to: localePath(`/panel/hour-packages/${pkg.id}/edit`) },
+    { action: 'edit', label: 'Editar', to: localePath(`/panel/hour-packages/${pkg.id}/edit`), testid: `hour-package-edit-${pkg.id}` },
     { divider: true },
-    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(pkg) },
+    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => handleDelete(pkg), testid: `hour-package-delete-${pkg.id}` },
   ];
 }
 

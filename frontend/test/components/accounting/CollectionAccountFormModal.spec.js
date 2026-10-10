@@ -908,21 +908,30 @@ describe('CollectionAccountFormModal', () => {
     expect(create_request.mock.calls.at(-1)[1].payment_term_days).toBe(0);
   });
 
-  it('explains what a zero plazo does, and only while days are being asked', async () => {
+  // The hint lives in the row help: a field hint inside an aligned row is
+  // never rendered, which is how this copy went missing in the app.
+  it('explains a zero plazo below the term row', async () => {
     const wrapper = mountModal({ income: incomeFixture });
     await flushPromises();
 
-    expect(wrapper.text()).toContain('0 días = pago inmediato');
+    expect(wrapper.get('[data-testid="collection-form-term-hint"]').text())
+      .toBe('0 días = pago inmediato: la cuenta sale sin fecha de vencimiento.');
     expect(wrapper.find('[data-testid="collection-form-term-days"]').attributes('min'))
       .toBe('0');
+  });
 
-    // Switching to a fixed date drops the hint: a 0 means nothing there.
+  it('drops the zero-plazo hint for a fixed date', async () => {
+    const wrapper = mountModal({ income: incomeFixture });
+    await flushPromises();
+    expect(wrapper.find('[data-testid="collection-form-term-hint"]').exists()).toBe(true);
+
+    // A 0 means nothing once the plazo is a date.
     await wrapper.findAll('button')
       .find((b) => b.text() === 'Fecha fija')
       .trigger('click');
     await flushPromises();
 
-    expect(wrapper.text()).not.toContain('0 días = pago inmediato');
+    expect(wrapper.find('[data-testid="collection-form-term-hint"]').exists()).toBe(false);
   });
 
   it('sends the long description as the detail line, not the short concept', async () => {

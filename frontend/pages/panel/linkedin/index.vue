@@ -1,16 +1,5 @@
 <template>
   <div>
-    <ConfirmModal
-      v-model="confirmState.open"
-      :title="confirmState.title"
-      :message="confirmState.message"
-      :confirm-text="confirmState.confirmText"
-      :cancel-text="confirmState.cancelText"
-      :variant="confirmState.variant"
-      @confirm="handleConfirmed"
-      @cancel="handleCancelled"
-    />
-
     <header class="mb-8 flex flex-col gap-3 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-between">
       <div>
         <h1 class="text-2xl font-semibold text-text-default">LinkedIn</h1>
@@ -71,6 +60,7 @@
         :rows="posts"
         caption="Publicaciones de LinkedIn"
         card-test-id-prefix="linkedin-post-row"
+        row-actions-layout="menu-start"
       >
         <template #cell-commentary="{ row: post }">
           <p class="line-clamp-3 min-w-0 max-w-full text-sm text-text-default [overflow-wrap:anywhere]">{{ post.commentary }}</p>
@@ -83,13 +73,27 @@
           <span v-else>—</span>
         </template>
         <template #row-actions="{ row: post }">
-          <BaseActionMenu :items="linkedinActionItems(post)" :testid="`linkedin-post-actions-${post.id}`" />
+          <BaseActionButton
+            action="more"
+            class="h-11 w-11 shrink-0"
+            :label="`Acciones de ${postTitle(post)}`"
+            :data-testid="`linkedin-post-actions-${post.id}`"
+            @click.stop="actionsRow = post"
+          />
         </template>
       </BaseExploratoryList>
+
+      <BaseRowActionsModal
+        :open="actionsRow !== null"
+        :title="actionsRow ? postTitle(actionsRow) : ''"
+        :items="actionsRow ? linkedinActionItems(actionsRow) : []"
+        testid="linkedin-post-actions-modal"
+        @close="actionsRow = null"
+      />
     </section>
 
     <!-- Create / edit modal -->
-    <BaseModal v-model="showModal" kind="form" padding="md">
+    <BaseModal v-model="showModal" kind="form">
       <form :id="modalFormId" novalidate @submit.prevent="savePost">
         <div class="space-y-4 px-6 py-5">
           <h2 class="text-lg font-semibold text-text-default">
@@ -129,15 +133,19 @@
           />
           </BaseFormField>
 
-          <BaseFormField
-            label="Programar publicación"
-            hint="Si queda vacío, el post se guarda como borrador."
+          <BaseFormRow
+            :cols="2"
+            :gap="4"
+            help="Si queda vacío, el post se guarda como borrador."
+            help-testid="linkedin-post-schedule-hint"
           >
-          <BaseInput
-            v-model="form.scheduledLocal"
-            type="datetime-local"
-          />
-          </BaseFormField>
+            <BaseFormField label="Programar publicación">
+              <BaseInput
+                v-model="form.scheduledLocal"
+                type="datetime-local"
+              />
+            </BaseFormField>
+          </BaseFormRow>
 
           <BaseAlert v-if="formGeneralError" variant="danger">{{ formGeneralError }}</BaseAlert>
         </div>
@@ -161,6 +169,19 @@
         </BaseModalActions>
       </template>
     </BaseModal>
+
+    <!-- Last on purpose: teleported modals stack in template order, and the
+         confirmation opens from the row menu and from the edit modal. -->
+    <ConfirmModal
+      v-model="confirmState.open"
+      :title="confirmState.title"
+      :message="confirmState.message"
+      :confirm-text="confirmState.confirmText"
+      :cancel-text="confirmState.cancelText"
+      :variant="confirmState.variant"
+      @confirm="handleConfirmed"
+      @cancel="handleCancelled"
+    />
   </div>
 </template>
 
@@ -172,8 +193,9 @@ import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
-import BaseActionMenu from '~/components/base/BaseActionMenu.vue';
+import BaseActionButton from '~/components/base/BaseActionButton.vue';
 import BaseExploratoryList from '~/components/base/BaseExploratoryList.vue';
+import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import { formatDate, formatDateTime } from '~/utils/formatDate';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
@@ -202,26 +224,46 @@ const saving = ref(false);
 const publishingId = ref(null);
 const actionMsg = ref('');
 const actionError = ref('');
+const actionsRow = ref(null);
+
+const POST_TITLE_MAX = 80;
+
+/**
+ * A post has no title of its own: its text names it, and that text runs up to
+ * 3000 characters. The actions button's accessible name and the actions menu
+ * header take a one-line excerpt instead of reading out the whole post.
+ */
+function postTitle(post) {
+  const text = (post.commentary || '').replace(/\s+/g, ' ').trim();
+  if (!text) return `Publicación ${post.id}`;
+  return text.length > POST_TITLE_MAX ? `${text.slice(0, POST_TITLE_MAX - 1).trimEnd()}…` : text;
+}
 
 function linkedinActionItems(post) {
   const items = [];
   if (post.status !== 'published') {
     items.push(
-      { action: 'edit', label: 'Editar', onClick: () => openEdit(post) },
+      { action: 'edit', label: 'Editar', testid: `linkedin-post-edit-${post.id}`, onClick: () => openEdit(post) },
       {
         action: 'publish',
         label: publishingId.value === post.id ? 'Publicando…' : 'Publicar ahora',
         disabled: publishingId.value === post.id,
         description: publishingId.value === post.id ? 'La publicación ya está en curso.' : '',
+        testid: `linkedin-post-publish-${post.id}`,
         onClick: () => askPublish(post),
       },
     );
   } else if (post.linkedin_post_id) {
-    items.push({ action: 'open-external', label: 'Ver en LinkedIn', href: linkedinPostUrl(post) });
+    items.push({
+      action: 'open-external',
+      label: 'Ver en LinkedIn',
+      href: linkedinPostUrl(post),
+      testid: `linkedin-post-open-${post.id}`,
+    });
   }
   items.push(
     { divider: true },
-    { action: 'delete', label: 'Eliminar', danger: true, onClick: () => askDelete(post) },
+    { action: 'delete', label: 'Eliminar', danger: true, testid: `linkedin-post-delete-${post.id}`, onClick: () => askDelete(post) },
   );
   return items;
 }

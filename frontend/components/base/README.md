@@ -188,7 +188,8 @@ prefer the bare class without `/N`.
 | `BaseResizeHandle` | Accessible, natively hinted vertical separator shared by panels and tables: pointer capture, Arrow/Home/End keyboard control and double-click reset |
 | `BaseOverflowText` | `text`, `to`, `lines` (1/2), `stretch`, `expandable`, `testId`, `contentClasses`; measures real clipping (including after web-font readiness), adds one floating `BaseTooltip` only on overflow and exposes an in-place touch disclosure |
 | `BaseResponsiveTable` | `columns`, `rows` plus legacy accounting-table props. Comparative tables declare explicit `responsive` `keep`/`group`/`hide` policy and exactly one `primary`; `textPolicy` is `wrap`/`truncate`/`atomic`; opt-in resizing uses `columnWidth` on every column plus `columnWidthsKey`; `rowActionsLayout="menu-start"` reserves a fixed leading kebab track (after selection) and sizes the data columns per viewport profile (auto layout below 1024 px, re-shared percentages from there up), while `inline-end` preserves loose-icon rows; supports `caption`, `testIdPrefix`, `rowClass` and custom-only actions |
-| `BaseExploratoryList` | Exploratory CRUD list: one table from 1024 px and one stacked-card representation below it. Every column declares `mobile` as `primary`/`secondary`/`meta`/`hidden` and may opt into the same `textPolicy` contract |
+| `BaseExploratoryList` | Exploratory CRUD list: one table from 1024 px and one stacked-card representation below it. Every column declares `mobile` as `primary`/`secondary`/`meta`/`hidden` and may opt into the same `textPolicy` contract; `rowActionsLayout="menu-start"` puts the single kebab in a header-less 56 px track after selection and at the start of each card, while `inline-end` keeps the labeled trailing column |
+| `BaseRowActionsModal` | `open`, `title`, `subtitle`, `items`, `testid`, `lockScroll`; emits `close`. The modal behind a row kebab: takes the same entries as `BaseActionMenu` (`to` → NuxtLink, `href` → new tab, buttons close first and run `onClick` on the next tick) |
 | `BasePageShell` | `width` (`narrow`/`content`/`panel`/`full`), `as` — `panel` caps general content at 1400 px; the admin layout applies it globally |
 | `BaseAlert`     | `variant` (`info`/`success`/`warning`/`danger`), `title`, `dismissible`. Icon via `#icon` slot, body via default slot |
 | `BaseEmptyState` | `title`, `description`. Icon via `#icon`, custom body via default, CTA via `#actions` |
@@ -379,8 +380,9 @@ accounting table and list: the kebab alone leads the row and opens an actions
 modal (accounting uses `AccountingRowActionsModal` and
 `AccountingRowActionsButton`) whose first entry is «Detalle e historial»,
 followed by «Ver nota» when the record has a note. Nothing else sits beside the
-kebab — a second button in the fixed 56 px track overflows onto the data. The
-remaining `inline-end` tables outside accounting are pending migration.
+kebab — a second button in the fixed 56 px track overflows onto the data. Since
+2026-10-09 the exploratory lists follow it too (`BaseExploratoryList` with
+`BaseRowActionsModal`). The remaining `inline-end` tables are pending migration.
 
 A `<col>` is a column even when every cell under it is hidden, so a
 `menu-start` table with a responsive policy emits `<col>` only for its control
@@ -399,12 +401,28 @@ role explicitly:
   { key: 'name', label: 'Nombre', mobile: 'primary' },
   { key: 'status', label: 'Estado', mobile: 'secondary' },
   { key: 'internal_id', label: 'ID', mobile: 'hidden' },
-]" :rows="rows">
+]" :rows="rows" row-actions-layout="menu-start">
   <template #row-actions="{ row }">
-    <BaseActionMenu :items="actionsFor(row)" />
+    <BaseActionButton
+      action="more"
+      class="h-11 w-11 shrink-0"
+      :label="`Acciones de ${row.name}`"
+      @click.stop="actionsRow = row"
+    />
   </template>
 </BaseExploratoryList>
+<BaseRowActionsModal
+  :open="actionsRow !== null"
+  :title="actionsRow?.name || ''"
+  :items="actionsRow ? actionsFor(actionsRow) : []"
+  testid="example-actions-modal"
+  @close="actionsRow = null"
+/>
 ```
+
+`actionsFor(row)` returns the same entries a `BaseActionMenu` takes, so a list
+keeps its item builder and its entry test ids when it moves to the modal. The
+kebab's "Acciones de …" is an accessible name only, never visible text.
 
 ### Tabs and filters
 
@@ -430,8 +448,8 @@ up to `90dvh`; short confirmations do not become tall workspaces.
 | Kind | Maximum from 640 px | Purpose |
 |---|---:|---|
 | `confirm` | 28rem | Brief confirmation |
-| `form` | 42rem | Simple / one-column form |
-| `form-wide` | 64rem | Normal two-column form |
+| `form` | 42rem | Create/edit form — the default: full-row text plus rows of two (or three/four short) fields; see [Field widths](#field-widths) |
+| `form-wide` | 64rem | Exception: three or more free-text fields side by side, or an embedded table/editor that needs the room — say why in a comment |
 | `wizard` | 80rem | Multi-step assistant |
 | `detail` | 64rem | Read-only detail |
 | `workspace` | `min(90vw, 100rem)` | Preview or working surface |
@@ -443,7 +461,7 @@ const formId = useId()
 </script>
 
 <BaseModal v-model="open" kind="form">
-  <form :id="formId" class="p-4 panel-portrait:p-6" @submit.prevent="save">…</form>
+  <form :id="formId" class="px-6 py-4 space-y-4" @submit.prevent="save">…</form>
   <template #footer>
     <BaseModalActions>
       <BaseButton variant="ghost" @click="open = false">Cancelar</BaseButton>
@@ -459,10 +477,11 @@ its form, so clicking it and pressing Enter submit the same form. The named
 slot is optional: consumers without a footer retain the legacy layout.
 See [the panel inventory](../../../docs/PANEL_MODAL_FOOTERS.md) for the sweep.
 
-Use `BaseActionMenu` for row overflow and `BaseBulkActionBar` for selections;
-do not lay an unbounded number of actions side by side. Accounting tables open
-their row kebab into a modal instead (`AccountingRowActionsModal`): their
-wrappers scroll horizontally and would clip a dropdown on the last rows. `BaseButton` and
+Use `BaseActionMenu` for overflow outside tables and `BaseBulkActionBar` for
+selections; do not lay an unbounded number of actions side by side. Table and
+list rows open their kebab into a modal instead (`AccountingRowActionsModal` in
+accounting, `BaseRowActionsModal` elsewhere): their wrappers scroll
+horizontally and would clip a dropdown on the last rows. `BaseButton` and
 `BaseDropdown` enforce a 44px target for coarse pointers.
 
 Hover may enhance an action, never be the only way to discover it. A control
@@ -521,6 +540,52 @@ Notes:
   the row's `help` prop or `#help` slot.
 
 Live demo: `/panel/styleguide`, section 4.
+
+### Field widths
+
+Text controls are `w-full`, so a field is exactly as wide as its row track: the
+modal kind and the row's column count decide every width. Inside a `form` modal
+(42rem, about 622 px usable from 640 px up) a two-column track is about 303 px,
+a three-column track about 199 px and a four-column track about 146 px. Pick
+the track by field type:
+
+| Field type | In a form row | In a repeatable unlabelled line |
+|---|---|---|
+| Date, month, date-time | Half track next to a related field; a third in a row of short fields | `12rem` |
+| Select with short options | Half track | `11rem` |
+| Select whose options are sentences | Full row | The rest of the line |
+| Amount, number, percentage | Half track; a quarter inside a composite (value + VAT) | `9rem` |
+| Short text (ID, email, phone, port, username) | Half track | — |
+| One-line long text (concept, subject) | Full row alone; half track with a natural partner | The rest of the line |
+| Textarea, Markdown, client/project pickers, search | Full row | — |
+| Segmented control | Its own cell; alone with 3+ options, `panel-portrait:max-w-md` | — |
+| Checkbox, switch | Natural width, aligned with the neighbouring control | — |
+
+- A short field without a partner sits alone in a two-column row, so it keeps
+  the half track instead of stretching across the modal:
+
+  ```vue
+  <BaseFormRow :cols="2" :gap="4">
+    <BaseFormField label="Fecha de corte">…</BaseFormField>
+  </BaseFormRow>
+  ```
+
+- Pair fields that belong together (start/end, amount/date, bank/account type)
+  and keep the reading order: the DOM order is the stacked order below 640 px.
+- Free text keeps at least 280 px per column, which allows two columns in a
+  `form` modal. Rows of three or four columns are for short fields only.
+- A field `hint` is dropped in every aligned row (`cols > 1`, `lg > 1` or
+  `layout="field-action"`), including the hint of a component whose root is a
+  `BaseFormField`, such as `PeriodDateField`. Move the copy to the row's `help`
+  and give it a `help-testid`, so a test can prove it renders.
+- `lg` adds columns from 1024 px. Inside a 42rem `form` modal the extra columns
+  never pay off; keep it for `detail`/`workspace` modals and filter bars.
+- Below 640 px the modal is fullscreen, every row stacks in DOM order and
+  `BaseModalActions` stacks the actions full width with the primary first. No
+  field needs its own narrow-screen override.
+- Repeatable line editors without visible labels (deduction or follow-up lines)
+  may keep a hand-written `grid-cols-1 sm:grid-cols-[…]` with the fixed tracks
+  of the last column. Labelled fields always use `BaseFormRow`.
 
 ### Modals that hold a workspace, not a form
 

@@ -410,6 +410,34 @@ class TestRecordedPeriod:
         assert response.data['period_date'] == '2027-08-15'
         assert response.data['period_date_source'] == 'income_period'
 
+    @pytest.mark.parametrize('start, end, billing, cadence, next_start, next_end, next_billing', [
+        ('2026-10-01', '2027-03-31', '2026-11-01', 'semiannual',
+         '2027-04-01', '2027-09-30', '2027-05-01'),
+        ('2026-01-01', '2026-01-31', '2026-01-31', 'monthly',
+         '2026-02-01', '2026-02-28', '2026-02-28'),
+        ('2026-03-01', '2026-03-15', '2026-03-10', 'custom',
+         '2026-03-16', '2026-03-30', '2026-03-25'),
+    ], ids=['semester_offset', 'month_end_clamp', 'day_offset'])
+    def test_the_expected_payment_date_keeps_its_window_offset(
+        self, super_client, make_income, start, end, billing, cadence,
+        next_start, next_end, next_billing,
+    ):
+        """The next charge shifts its expected-payment date with its covered window."""
+        income = make_income(
+            origin=IncomeRecord.Origin.HOSTING,
+            period_date=date.fromisoformat(billing),
+            period_start=date.fromisoformat(start),
+            period_end=date.fromisoformat(end),
+            period_cadence=cadence,
+        )
+
+        response = super_client.get(url(income))
+
+        assert response.status_code == 200, response.data
+        assert response.data['period_start'] == next_start
+        assert response.data['period_end'] == next_end
+        assert response.data['period_date'] == next_billing
+
     def test_the_recorded_window_beats_the_hosting_lookup(
         self, super_client, make_income, make_client_profile,
     ):

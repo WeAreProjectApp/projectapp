@@ -142,7 +142,7 @@ function close() { if (!saving.value) emit('close'); }
 </script>
 
 <template>
-  <BaseModal :model-value="visible" kind="form-wide" :close-on-esc="!saving" :close-on-backdrop="!saving" @close="close">
+  <BaseModal :model-value="visible" kind="form" :close-on-esc="!saving" :close-on-backdrop="!saving" @close="close">
     <div class="space-y-5 px-6 py-6" data-testid="proposal-approval-modal">
       <h2 class="break-words text-lg font-bold text-text-default">{{ text.title }}</h2>
       <p v-if="loading" role="status" class="text-text-muted">{{ text.loading }}</p>
@@ -171,9 +171,11 @@ function close() { if (!saving.value) emit('close'); }
             <p v-if="projectReadError" role="status" class="text-sm text-warning-strong">{{ text.projectReadError }}</p>
           </BaseFormField>
           <div v-if="createProject" class="space-y-3 rounded-lg border border-border-default p-4">
-            <BaseFormField :label="text.projectName" required :error="messageFor(errors.new_project?.name)"><BaseInput v-model="project.name" data-testid="approval-project-name" :aria-label="text.projectName" /></BaseFormField>
+            <BaseFormRow :cols="2" :gap="4">
+              <BaseFormField :label="text.projectName" required :error="messageFor(errors.new_project?.name)"><BaseInput v-model="project.name" data-testid="approval-project-name" :aria-label="text.projectName" /></BaseFormField>
+              <BaseFormField :label="text.state" :error="messageFor(errors.new_project?.state_id)"><BaseSelect v-model="project.state_id" :options="stateOptions" :aria-label="text.state" /></BaseFormField>
+            </BaseFormRow>
             <BaseFormField :label="text.description" :error="messageFor(errors.new_project?.description)"><BaseTextarea v-model="project.description" :rows="2" :aria-label="text.description" /></BaseFormField>
-            <BaseFormField :label="text.state" :error="messageFor(errors.new_project?.state_id)"><BaseSelect v-model="project.state_id" :options="stateOptions" :aria-label="text.state" /></BaseFormField>
           </div>
         </template>
         <section class="space-y-2 rounded-lg bg-surface-raised p-4 text-sm text-text-default">
@@ -194,8 +196,10 @@ function close() { if (!saving.value) emit('close'); }
               <BaseFormField :label="text.custom" :error="fieldError('custom_documents')"><input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" :aria-label="text.custom" data-testid="approval-custom-files" class="block w-full min-w-0 text-sm text-text-default" @change="addFiles" /></BaseFormField>
               <div v-for="(item,index) in documents" :key="index" class="space-y-2 rounded-lg border border-border-default p-3" data-testid="approval-custom-document">
                 <p class="break-all text-sm text-text-default">{{ item.file.name }} · {{ (item.file.size / 1024).toFixed(1) }} KB</p>
-                <BaseInput v-model="item.title" :aria-label="text.documentTitle" />
-                <BaseSelect v-model="item.document_type" :options="typeOptions" :aria-label="text.documentType" />
+                <div class="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_11rem]">
+                  <BaseInput v-model="item.title" :aria-label="text.documentTitle" />
+                  <BaseSelect v-model="item.document_type" :options="typeOptions" :aria-label="text.documentType" />
+                </div>
                 <p v-if="item.error || customError(index)" role="alert" class="text-sm text-danger-strong">{{ item.error || customError(index) }}</p>
                 <BaseButton type="button" variant="secondary" size="sm" :aria-label="`${text.remove} ${item.file.name}`" @click="documents.splice(index,1)">{{ text.remove }}</BaseButton>
               </div>

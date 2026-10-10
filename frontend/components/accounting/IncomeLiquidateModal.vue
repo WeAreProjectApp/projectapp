@@ -411,8 +411,8 @@ watch(
       period_date: todayISO(),
       // Default to what is still owed, not the full projection: the whole
       // point of liquidating is that they often pay late and short. The
-      // partner split stays empty on purpose — when neither amount is
-      // sent, the server applies its canonical 50/50 (split_half).
+      // partner split starts empty and PartnerSplitInput's auto mode splits
+      // this amount as it mounts, so the settlement sends the split on screen.
       total_amount: props.record.pending_amount ?? props.record.total_amount,
     }
   },
@@ -487,7 +487,7 @@ const modalFormId = useId();
        form underneath. -->
   <BaseModal
     :model-value="open"
-    kind="form-wide"
+    kind="form"
     title-id="income-liquidate-title"
     :close-on-esc="!lastNoticeOpen && !saving"
     :close-on-backdrop="!lastNoticeOpen && !saving"
@@ -497,7 +497,7 @@ const modalFormId = useId();
       <h3 id="income-liquidate-title" class="text-lg font-bold text-text-default">
         Liquidar ingreso esperado
       </h3>
-      <p v-if="record" class="text-sm text-text-subtle mt-1">
+      <p v-if="record" class="text-sm text-text-subtle mt-1 break-words">
         Se registrará un ingreso líquido nuevo enlazado a
         <span class="font-medium text-text-default">{{ record.concept }}</span>
         ({{ record.period_label }}, {{ money(record.total_amount) }}). El ingreso
@@ -531,7 +531,7 @@ const modalFormId = useId();
         <BaseInput v-model="form.concept" required />
       </BaseFormField>
 
-      <BaseFormRow :cols="isPersonal ? 1 : 2" :gap="3">
+      <BaseFormRow :cols="2" :gap="4">
         <PeriodDateField
           v-model="form.period_date"
           v-model:exact="exactDate"
@@ -548,6 +548,14 @@ const modalFormId = useId();
             v-model="form.destination"
             :options="destinationOptions"
             full-width
+            data-testid="income-liquidate-destination"
+          />
+        </BaseFormField>
+        <BaseFormField v-else label="Valor pagado" required>
+          <BaseCurrencyInput
+            v-model="form.total_amount"
+            required
+            data-testid="income-liquidate-paid"
           />
         </BaseFormField>
       </BaseFormRow>
@@ -559,10 +567,6 @@ const modalFormId = useId();
         v-model:gustavoAmount="form.gustavo_amount"
         v-model:carlosAmount="form.carlos_amount"
       />
-
-      <BaseFormField v-else label="Valor pagado" required>
-        <BaseCurrencyInput v-model="form.total_amount" required />
-      </BaseFormField>
 
       <!-- The window this hosting charge covers, when it never recorded one.
            Optional by design: an untouched block settles exactly the same. -->
@@ -581,18 +585,20 @@ const modalFormId = useId();
           </p>
         </div>
 
-        <BaseFormRow :cols="3" :gap="3">
-          <BaseFormField
-          label="Periodicidad"
-          hint="Al elegirla se calcula la fecha de fin del período."
+        <BaseFormRow
+          :cols="3"
+          :gap="3"
+          help="Al elegir la periodicidad se calcula la fecha de fin del período."
+          help-testid="income-liquidate-period-cadence-hint"
         >
-          <BaseSelect
-            v-model="form.period_cadence"
-            :options="cadenceOptions"
-            placeholder="Elegir periodicidad"
-            data-testid="income-liquidate-period-cadence"
-          />
-        </BaseFormField>
+          <BaseFormField label="Periodicidad">
+            <BaseSelect
+              v-model="form.period_cadence"
+              :options="cadenceOptions"
+              placeholder="Elegir periodicidad"
+              data-testid="income-liquidate-period-cadence"
+            />
+          </BaseFormField>
 
           <BaseFormField label="Inicio del período">
             <BaseInput
@@ -763,7 +769,9 @@ const modalFormId = useId();
                 aria-label="Concepto del ingreso esperado"
                 :data-testid="`followup-concept-${index}`"
               />
-              <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_9rem_auto] gap-2 items-start">
+              <!-- Fixed tracks: a month and an amount need no more. justify-start
+                   keeps the auto track from swallowing the free space. -->
+              <div class="grid grid-cols-1 sm:grid-cols-[12rem_9rem_auto] sm:justify-start gap-2 items-start">
                 <BaseInput
                   v-model="row.period_date"
                   type="month"

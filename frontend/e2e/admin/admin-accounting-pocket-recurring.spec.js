@@ -9,6 +9,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import {
   ADMIN_ACCOUNTING_POCKET,
   ADMIN_ACCOUNTING_RECURRING,
@@ -1244,6 +1245,13 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
     ).toBeVisible({ timeout: 25_000 });
 
     await page.getByTestId('recurring-new-button').click();
+    const dialog = page.getByRole('dialog');
+    await expectCompactModal(dialog, page.viewportSize(), {
+      lines: [{
+        fields: [dialog.getByTestId('recurring-payment-form-method'), dialog.getByTestId('recurring-payment-form-frequency')],
+        maxWidth: 210,
+      }],
+    });
     await page.locator('form input[type="text"]').first().fill('Netflix');
     await page.locator('form input[inputmode="numeric"]').first().fill('39800');
     await page.getByTestId('recurring-payment-form-submit').click();

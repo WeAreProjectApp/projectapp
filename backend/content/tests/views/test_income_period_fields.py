@@ -1,12 +1,13 @@
 """API tests for the covered period of hosting incomes.
 
-A hosting income is a service window, not a point payment: with
-``origin=hosting`` the write serializer demands ``period_start``,
-``period_end`` and ``period_cadence``, and derives ``period_date`` from the
-start so every ordering, KPI and filter keeps its single axis. Legacy hosting
-rows predate the fields — a partial PATCH that touches neither the origin nor
-the period must keep working, while the panel form always sends ``origin``
-and therefore completes the period on the first edit (gradual backfill).
+With ``origin=hosting`` the write serializer demands ``period_start``,
+``period_end`` and ``period_cadence`` to describe WHAT the charge covers.
+``period_date`` independently says WHEN the money is expected, defaulting to
+the start on create only when omitted. Window edits move that date only when
+the stored row already followed its start. Legacy hosting rows predate the
+window fields — completing them keeps the stored expected-payment date.
+A partial PATCH that touches neither the origin nor the window still works,
+while the panel form sends ``origin`` and completes the window on first edit.
 """
 from datetime import date
 from decimal import Decimal
@@ -14,16 +15,17 @@ from unittest.mock import patch
 
 import pytest
 
-from content.models import IncomeRecord
+from content.models import AccountingChangeLog, IncomeRecord
 from content.services import accounting_service
+from content.services.entity_history_registry import field_labels
 
 pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture(autouse=True)
 def _mute_notifications():
-    with patch.object(accounting_service, '_notify'):
-        yield
+    with patch.object(accounting_service, '_notify') as notify:
+        yield notify
 
 
 def hosting_payload(**overrides):
@@ -59,6 +61,20 @@ class TestCreateHosting:
         assert record.period_end == date(2027, 8, 14)
         assert record.period_cadence == 'annual'
         assert record.period_date == date(2026, 8, 15)
+
+    def test_an_explicit_expected_payment_month_wins(self, super_client):
+        """An October semester can be expected in November, even after revalidation."""
+        response = super_client.post(
+            CREATE_URL,
+            hosting_payload(
+                period_start='2026-10-01', period_end='2027-03-31',
+                period_cadence='semiannual', period_date='2026-11',
+            ),
+            format='json',
+        )
+
+        assert response.status_code == 201, response.data
+        assert IncomeRecord.objects.get().period_date == date(2026, 11, 1)
 
     def test_month_shorthand_starts_the_window_on_day_one(self, super_client):
         """The exact-day toggle applies to the start: 'YYYY-MM' → day 1."""
@@ -240,6 +256,85 @@ class TestUpdate:
         assert response.status_code == 200, response.data
         income.refresh_from_db()
         assert income.period_date == date(2026, 9, 1)
+
+    @pytest.mark.parametrize('window_edit', [
+        {'period_end': '2027-04-30'},
+        {'period_start': '2026-09-01', 'period_end': '2027-02-28'},
+    ], ids=['end_only', 'moved_start'])
+    def test_an_independent_expected_payment_month_survives_a_window_edit(
+        self, super_client, make_income, window_edit,
+    ):
+        """Editing the covered window keeps an independently scheduled November payment."""
+        income = make_income(
+            origin=IncomeRecord.Origin.HOSTING,
+            period_date=date(2026, 11, 1),
+            period_start=date(2026, 10, 1),
+            period_end=date(2027, 3, 31),
+            period_cadence='semiannual',
+        )
+
+        response = super_client.patch(record_url(income), window_edit, format='json')
+
+        assert response.status_code == 200, response.data
+        income.refresh_from_db()
+        assert income.period_date == date(2026, 11, 1)
+
+    def test_an_explicit_expected_payment_month_wins_during_a_window_edit(
+        self, super_client, make_income,
+    ):
+        """An explicit date overrides the start even when the stored row followed it."""
+        income = make_income(
+            origin=IncomeRecord.Origin.HOSTING,
+            period_date=date(2026, 10, 1),
+            period_start=date(2026, 10, 1),
+            period_end=date(2027, 3, 31),
+            period_cadence='semiannual',
+        )
+
+        response = super_client.patch(
+            record_url(income),
+            {'period_start': '2027-04-01', 'period_end': '2027-09-30',
+             'period_date': '2027-05'},
+            format='json',
+        )
+
+        assert response.status_code == 200, response.data
+        income.refresh_from_db()
+        assert income.period_date == date(2027, 5, 1)
+
+
+class TestPeriodAudit:
+    @pytest.mark.parametrize('field, value, label, old, new', [
+        ('period_start', '2026-09-01', 'Inicio del período cubierto',
+         '2026-10-01', '2026-09-01'),
+        ('period_end', '2027-04-30', 'Fin del período cubierto',
+         '2027-03-31', '2027-04-30'),
+        ('period_cadence', 'quarterly', 'Periodicidad del período',
+         'Semestral', 'Trimestral'),
+    ])
+    def test_a_window_edit_is_audited_with_its_label(
+        self, super_client, make_income, _mute_notifications,
+        field, value, label, old, new,
+    ):
+        """Window edits produce a labeled diff with dates or the cadence display name."""
+        income = make_income(
+            origin=IncomeRecord.Origin.HOSTING,
+            period_date=date(2026, 11, 1),
+            period_start=date(2026, 10, 1),
+            period_end=date(2027, 3, 31),
+            period_cadence='semiannual',
+        )
+
+        response = super_client.patch(record_url(income), {field: value}, format='json')
+
+        assert response.status_code == 200, response.data
+        log = AccountingChangeLog.objects.get(
+            entity_type=AccountingChangeLog.EntityType.INCOME,
+            object_id=income.pk, action=AccountingChangeLog.Action.UPDATED,
+        )
+        assert log.changes == [{'field': field, 'label': label, 'old': old, 'new': new}]
+        assert field_labels()[field] == label
+        _mute_notifications.assert_called_once_with(log)
 
 
 class TestRead:

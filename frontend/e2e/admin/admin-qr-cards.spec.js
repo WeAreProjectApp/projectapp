@@ -6,11 +6,14 @@
  *   - Editing a card's destination_url.
  *   - Toggling a card's active state.
  *   - Deleting a card requires confirmation; cancelling keeps it, confirming removes it.
+ *   - Each row leads with an actions button that opens its menu in place.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_QR_CARDS } from '../helpers/flow-tags.js';
+import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 test.setTimeout(60_000);
 
@@ -120,11 +123,16 @@ test.describe('Admin QR Cards', () => {
     await page.goto('/panel/qr-cards');
     await page.waitForLoadState('domcontentloaded');
 
-    await page.getByTestId(`qr-card-actions-${existingCard.id}`).click();
-    await page.getByTestId(`qr-card-delete-${existingCard.id}`).click();
-    await expect(page.getByText(/dejará de funcionar/)).toBeVisible();
-    await page.getByRole('button', { name: 'Cancelar' }).click();
+    await chooseRowAction(page, {
+      kebab: `qr-card-actions-${existingCard.id}`,
+      menu: 'qr-card-actions-modal',
+      action: `qr-card-delete-${existingCard.id}`,
+    });
+    const confirmDialog = page.getByRole('dialog', { name: 'Eliminar tarjeta' });
+    await expect(confirmDialog).toContainText('dejará de funcionar');
+    await confirmDialog.getByRole('button', { name: 'Cancelar', exact: true }).click();
 
+    await expect(confirmDialog).toHaveCount(0);
     await expect(page.getByTestId(`qr-card-row-${existingCard.id}`)).toBeVisible();
   });
 
@@ -141,5 +149,39 @@ test.describe('Admin QR Cards', () => {
 
     await expect(page.getByText('Sin tarjetas todavía')).toBeVisible();
     await expect(page.getByTestId(`qr-card-row-${existingCard.id}`)).not.toBeVisible();
+  });
+
+  test('renders row actions as a leading menu that opens without navigating', {
+    tag: [...ADMIN_QR_CARDS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (admin panel E2E specs enter routes directly; this test isolates the row-actions layout and menu contract)
+    await setupQrCardsMock(page, { cards: [existingCard] });
+    await page.goto('/panel/qr-cards', { waitUntil: 'domcontentloaded' });
+
+    const actionsHeader = page.getByTestId('qr-card-row-actions-header');
+    await expect(actionsHeader).toBeVisible();
+    const leadingHeaders = await actionsHeader.evaluate((header) => (
+      Array.from(header.parentElement.children).slice(0, 2).map((cell) => ({
+        testId: cell.getAttribute('data-testid'),
+        label: cell.getAttribute('aria-label'),
+        text: cell.textContent.trim(),
+      }))
+    ));
+    expect(leadingHeaders).toEqual([
+      { testId: 'qr-card-row-actions-header', label: 'Acciones', text: '' },
+      { testId: null, label: null, text: 'Nombre' },
+    ]);
+    await expectNoBlankBand(actionsHeader.locator('xpath=ancestor::table'));
+
+    const kebab = page.getByTestId(`qr-card-actions-${existingCard.id}`);
+    await expect(kebab).toHaveAccessibleName('Acciones de Tarjeta evento X');
+    await expect(kebab).toHaveText('');
+
+    const listUrl = page.url();
+    await openRowMenu(page, { kebab: `qr-card-actions-${existingCard.id}`, menu: 'qr-card-actions-modal' });
+    const menu = page.getByTestId('qr-card-actions-modal');
+    await expect(menu.getByRole('heading')).toHaveText('Tarjeta evento X');
+    await expect(menu.getByRole('listitem')).toHaveText(['Descargar QR', 'Editar', 'Eliminar']);
+    await expect(page).toHaveURL(listUrl);
   });
 });

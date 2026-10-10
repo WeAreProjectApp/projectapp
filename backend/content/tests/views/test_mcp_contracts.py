@@ -8,13 +8,12 @@ from django.apps import apps
 from django.urls import NoReverseMatch, resolve, reverse
 
 from content.mcp.contracts import MCP_MODEL_CONTRACTS
+from content.mcp.connectors import CONNECTORS
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
 CONNECTOR_SLUGS = tuple(MCP_MODEL_CONTRACTS)
-CANONICAL_CONNECTOR_SLUGS = (
-    'operations', 'commercial', 'proposals', 'projects', 'documents', 'communications',
-    'content', 'tasks', 'accounting-ledger', 'accounting-billing',
-    'accounting-cards',
+CANONICAL_CONNECTOR_SLUGS = tuple(
+    slug for slug, spec in CONNECTORS.items() if not spec.compatibility
 )
 TOOL_NAME = re.compile(r'^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$')
 pytestmark = pytest.mark.django_db

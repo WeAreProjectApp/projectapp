@@ -31,9 +31,13 @@ function change(key, value) {
       </div>
     </template>
     <template v-if="modelValue.billing_nature === 'hosting'">
-      <label class="block text-sm text-text-default">Hosting
-        <select data-testid="billing-hosting" :value="modelValue.project_hosting_id || ''" :class="fieldClass" @change="change('project_hosting_id', $event.target.value)"><option value="">Seleccionar…</option><option v-if="options?.hosting_id" :value="options.hosting_id">Hosting de {{ options.project_name }}</option></select>
-      </label>
+      <!-- Hosting holds one short option: half the width. The period options
+           are sentences, so that select keeps the full row. -->
+      <div class="grid grid-cols-1 gap-3 panel-portrait:grid-cols-2">
+        <label class="block min-w-0 text-sm text-text-default">Hosting
+          <select data-testid="billing-hosting" :value="modelValue.project_hosting_id || ''" :class="fieldClass" @change="change('project_hosting_id', $event.target.value)"><option value="">Seleccionar…</option><option v-if="options?.hosting_id" :value="options.hosting_id">Hosting de {{ options.project_name }}</option></select>
+        </label>
+      </div>
       <p v-if="!options?.hosting_id" class="text-sm text-text-muted">El proyecto requiere asociación administrativa de su hosting.</p>
       <label v-if="payments.length" class="block text-sm text-text-default">Período de hosting que estás cobrando
         <select data-testid="billing-payment" :value="modelValue.hosting_payment_id || ''" :class="fieldClass" @change="change('hosting_payment_id', $event.target.value)"><option value="">Selecciona el período…</option><option v-for="payment in payments" :key="payment.id" :value="payment.id">#{{ payment.id }} · {{ payment.billing_period_start }} — {{ payment.billing_period_end }} · {{ payment.amount }} · {{ payment.status }}</option></select>

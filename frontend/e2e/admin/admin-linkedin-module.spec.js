@@ -5,6 +5,7 @@
  *   - Disconnected state shows "Conectar LinkedIn" button.
  *   - Connected state shows profile name and token expiry date.
  *   - Posts list renders rows with status chips.
+ *   - Each row leads with an actions button that opens its menu in place.
  *   - Create modal saves a draft and the list refreshes.
  *   - Publish now (with confirm) flips the row to published.
  *   - Publish API failure surfaces an inline error message.
@@ -16,6 +17,8 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_LINKEDIN_MODULE } from '../helpers/flow-tags.js';
+import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
+import { expectNoBlankBand } from '../helpers/table-geometry.js';
 
 test.setTimeout(60_000);
 
@@ -136,6 +139,40 @@ test.describe('Admin LinkedIn module', () => {
     await expect(page.getByText('Borrador', { exact: true })).toBeVisible();
   });
 
+  test('renders row actions as a leading menu that opens without navigating', {
+    tag: [...ADMIN_LINKEDIN_MODULE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (admin panel E2E specs enter routes directly; this test isolates the row-actions layout and menu contract)
+    await setupPageMock(page);
+    await gotoModule(page);
+
+    const actionsHeader = page.getByTestId('linkedin-post-row-actions-header');
+    await expect(actionsHeader).toBeVisible();
+    const leadingHeaders = await actionsHeader.evaluate((header) => (
+      Array.from(header.parentElement.children).slice(0, 2).map((cell) => ({
+        testId: cell.getAttribute('data-testid'),
+        label: cell.getAttribute('aria-label'),
+        text: cell.textContent.trim(),
+      }))
+    ));
+    expect(leadingHeaders).toEqual([
+      { testId: 'linkedin-post-row-actions-header', label: 'Acciones', text: '' },
+      { testId: null, label: null, text: 'Texto' },
+    ]);
+    await expectNoBlankBand(actionsHeader.locator('xpath=ancestor::table'));
+
+    const kebab = page.getByTestId('linkedin-post-actions-1');
+    await expect(kebab).toHaveAccessibleName('Acciones de Borrador de prueba para LinkedIn');
+    await expect(kebab).toHaveText('');
+
+    const listUrl = page.url();
+    await openRowMenu(page, { kebab: 'linkedin-post-actions-1', menu: 'linkedin-post-actions-modal' });
+    const menu = page.getByTestId('linkedin-post-actions-modal');
+    await expect(menu.getByRole('heading')).toHaveText('Borrador de prueba para LinkedIn');
+    await expect(menu.getByRole('listitem')).toHaveText(['Editar', 'Publicar ahora', 'Eliminar']);
+    await expect(page).toHaveURL(listUrl);
+  });
+
   test('create modal saves a draft and refreshes the list', {
     tag: [...ADMIN_LINKEDIN_MODULE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
@@ -158,11 +195,13 @@ test.describe('Admin LinkedIn module', () => {
     await setupPageMock(page);
     await gotoModule(page);
 
-    const postRow = page.getByTestId('linkedin-post-row-1');
-    await postRow.getByRole('button', { name: 'Acciones' }).click();
-    await postRow.getByRole('menuitem', { name: 'Publicar ahora' }).click();
-    // Confirm modal
-    await page.getByRole('button', { name: 'Publicar', exact: true }).click();
+    await chooseRowAction(page, {
+      kebab: 'linkedin-post-actions-1',
+      menu: 'linkedin-post-actions-modal',
+      action: 'linkedin-post-publish-1',
+    });
+    await page.getByRole('dialog', { name: 'Publicar en LinkedIn' })
+      .getByRole('button', { name: 'Publicar', exact: true }).click();
 
     await expect(page.getByText('Publicado en LinkedIn correctamente.')).toBeVisible();
     // Scope to tbody: "Publicado" also matches the table column header
@@ -183,10 +222,13 @@ test.describe('Admin LinkedIn module', () => {
     });
     await gotoModule(page);
 
-    const postRow = page.getByTestId('linkedin-post-row-1');
-    await postRow.getByRole('button', { name: 'Acciones' }).click();
-    await postRow.getByRole('menuitem', { name: 'Publicar ahora' }).click();
-    await page.getByRole('button', { name: 'Publicar', exact: true }).click();
+    await chooseRowAction(page, {
+      kebab: 'linkedin-post-actions-1',
+      menu: 'linkedin-post-actions-modal',
+      action: 'linkedin-post-publish-1',
+    });
+    await page.getByRole('dialog', { name: 'Publicar en LinkedIn' })
+      .getByRole('button', { name: 'Publicar', exact: true }).click();
 
     await expect(page.getByText(/LinkedIn API error/)).toBeVisible();
     // The failure must not have flipped the row — it stays in "Borrador", never reaches "Publicado".

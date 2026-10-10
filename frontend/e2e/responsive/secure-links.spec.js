@@ -4,6 +4,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { chooseSecureLinkType, json, revealedContent, secureLinkRow, secureLinkTypes } from '../helpers/secure-links.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { expectCompactModal } from '../helpers/modal-layout.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
 test.setTimeout(60_000);
@@ -74,6 +75,10 @@ for (const profile of RESPONSIVE_PROFILES) {
       await page.goto('/es-co/panel', { waitUntil: 'domcontentloaded' });
       await enterByProfile[profile](page);
       await page.getByTestId('secure-links-new').click();
+      // Language and validity share one row inside the 42rem form panel.
+      await expectCompactModal(page.getByRole('dialog'), page.viewportSize(), {
+        lines: [{ fields: [page.getByTestId('secure-link-language'), page.getByTestId('secure-link-validity')] }],
+      });
       await chooseSecureLinkType(page, { name: 'Personalizado' });
       await page.getByTestId('secure-link-title').fill('Referencia');
       await page.getByTestId('secure-link-field-custom_name').fill('Instrucciones');

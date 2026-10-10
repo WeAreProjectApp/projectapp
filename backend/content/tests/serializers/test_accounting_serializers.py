@@ -239,13 +239,16 @@ class TestPartnerSplitDefaults:
         assert serializer.validated_data['gustavo_amount'] == Decimal('640000.00')
         assert serializer.validated_data['carlos_amount'] == Decimal('640000.00')
 
-    def test_odd_cent_goes_to_carlos(self):
+    @pytest.mark.parametrize('total', ['101.00', '100.01'])
+    def test_odd_remainder_stays_with_the_company(self, total):
+        # Whole-peso halves, the same split the panel shows: the odd peso and
+        # any cent stay with ProjectApp instead of going to one partner.
         serializer = IncomeRecordCreateUpdateSerializer(
-            data=income_payload(total_amount='100.01'),
+            data=income_payload(total_amount=total),
         )
         assert serializer.is_valid(), serializer.errors
         assert serializer.validated_data['gustavo_amount'] == Decimal('50.00')
-        assert serializer.validated_data['carlos_amount'] == Decimal('50.01')
+        assert serializer.validated_data['carlos_amount'] == Decimal('50.00')
 
     def test_explicit_split_is_preserved(self):
         serializer = ExpenseRecordCreateUpdateSerializer(data={

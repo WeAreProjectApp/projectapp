@@ -54,7 +54,7 @@ const BaseActionButtonStub = {
   emits: ['click'],
   template: '<button v-bind="$attrs" :aria-label="label" @click="$emit(\'click\', $event)">{{ label }}<slot /></button>',
 };
-const BaseModalStub = { props: ['modelValue'], template: '<div v-if="modelValue" role="dialog"><slot /></div>' };
+const BaseModalStub = { props: ['modelValue', 'kind'], template: '<div v-if="modelValue" role="dialog" :data-modal-kind="kind"><slot /></div>' };
 const BaseCollapseStub = { props: ['open'], template: '<div v-if="open"><slot /></div>' };
 const BaseInputStub = {
   props: ['modelValue'], emits: ['update:modelValue'],
@@ -276,5 +276,17 @@ describe('CommunicationWorkspaceModal', () => {
 
     expect(timeline.scrollTo).toHaveBeenNthCalledWith(1, { top: 0, behavior: 'smooth' });
     expect(timeline.scrollTo).toHaveBeenNthCalledWith(2, { top: 812, behavior: 'smooth' });
+  });
+
+  // Falla si mover el hilo vuelve a abrir un formulario ancho para un único selector.
+  it('opens the folder move as a confirmation-width dialog', async () => {
+    const wrapper = mountModal();
+    await flushPromises();
+
+    await wrapper.get('[data-testid="communication-move-folder"]').trigger('click');
+
+    const moveDialog = wrapper.get('[role="dialog"] [role="dialog"]');
+    expect(moveDialog.text()).toContain('Mover a carpeta');
+    expect(moveDialog.attributes('data-modal-kind')).toBe('confirm');
   });
 });

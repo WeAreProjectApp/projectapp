@@ -1312,6 +1312,14 @@ MCP_MODEL_CONTRACTS.update({
                 'Huella interna de idempotencia; la auditoría expone la operación, no su hash.',
                 'payload_hash',
             ),
+        ), _contract(
+            'content.DataIntegrityOperation',
+            # Written only by the data-integrity engine (apply and undo).
+            read_only='id kind source catalog_version scope request_id impact_hash reason steps history_operation_id reverts actor created_at',
+            excluded=_excluded(
+                'Huella interna de idempotencia; el registro expone la operación, no su hash.',
+                'payload_hash',
+            ),
         ))
     ),
     'content': (
