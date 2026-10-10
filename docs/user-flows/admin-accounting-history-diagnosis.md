@@ -12,3 +12,7 @@
   4. Expanding a row names the records the email was about and, when applicable, the send it was a retry of.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-accounting-history-filters.spec.js`
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+El aviso interno de ingreso completo conserva cuerpo, objetivo y fallo en Historial. El reintento llega sólo a la dirección fallida y queda ligado por retry_of. No vuelve a liquidar ni crea otra notificación de completitud. Si el ingreso ya no necesita cuenta, se rechaza el reintento.

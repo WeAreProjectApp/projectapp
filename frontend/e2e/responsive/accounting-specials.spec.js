@@ -249,6 +249,10 @@ const longModalFlows = Object.freeze([
       await openIncomesFromPanel(page);
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-liquidate-1').click();
+      await page.getByTestId('income-bulk-settle-advanced').click();
+      await expect(page.getByRole('heading', { name: 'Liquidación con ajustes', exact: true }))
+        .toBeVisible();
+      await page.getByTestId('confirm-modal-confirm').click();
     },
     assert: (dialog) => expect(dialog.getByTestId('income-liquidate-submit')).toHaveText('Liquidar'),
     // The fixture is a hosting charge with no recorded window, so the period
@@ -270,14 +274,16 @@ const longModalFlows = Object.freeze([
   {
     name: 'bulk payment shows its allocation breakdown',
     flow: 'admin-accounting-income-bulk-settle',
-    dialog: (page) => page.getByRole('dialog', { name: 'Registrar abono', exact: true }),
+    outcome: 'display',
+    dialog: (page) => page.getByRole('dialog', { name: 'Liquidar', exact: true }),
     open: async (page) => {
       await page.goto('/en-us/panel/accounting/incomes?accounting_incomeTab=all', { waitUntil: 'domcontentloaded' });
       await page.getByTestId('accounting-row-1').getByRole('checkbox').click();
       await page.getByTestId('incomes-bulk-actions').click();
-      await page.getByRole('menuitem', { name: 'Registrar abono', exact: true }).click();
+      await page.getByRole('menuitem', { name: 'Liquidar', exact: true }).click();
     },
-    assert: (dialog) => expect(dialog.getByTestId('income-bulk-settle-modal')).toContainText('Registrar abono'),
+    assert: (dialog) => expect(dialog.getByTestId('income-bulk-settle-coverage'))
+      .toHaveText('Quedan pagados: 1 · parciales: 0 · sin abono: 0'),
     layout: (dialog) => ({
       lines: [{ fields: [dialog.getByTestId('income-bulk-settle-total'), dialog.getByTestId('income-bulk-settle-period')] }],
     }),

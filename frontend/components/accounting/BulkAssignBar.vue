@@ -9,7 +9,14 @@
     :testid-prefix="testidPrefix"
     @select-all="selectAllFiltered"
     @clear="clearSelection"
-  />
+  >
+    <template v-if="settleEnabled" #selection-summary>
+      <span class="flex flex-wrap gap-x-3 gap-y-1 text-xs tabular-nums text-text-muted">
+        <span :data-testid="`${testidPrefix}-selected-total`">Valor total seleccionado: {{ formatMoney(selectionTotals.total / 100, 'COP') }}</span>
+        <span :data-testid="`${testidPrefix}-selected-pending`">Saldo pendiente seleccionado: {{ formatMoney(selectionTotals.pending / 100, 'COP') }}</span>
+      </span>
+    </template>
+  </BaseBulkActionBar>
 
   <BulkAssignModal
     :open="assignTarget !== null"
@@ -57,6 +64,7 @@ import ProjectBulkAssignSummary from '~/components/accounting/ProjectBulkAssignS
 import BaseBulkActionBar from '~/components/base/BaseBulkActionBar.vue';
 import { useConfirmModal } from '~/composables/useConfirmModal';
 import { isSettleEligible } from '~/utils/settleAllocation';
+import { formatMoney } from '~/utils/formatMoney';
 import { buildAssignmentPlan, describeAssignmentPlan } from '~/utils/clientAssignment';
 import {
   buildProjectAssignmentPlan,
@@ -118,6 +126,18 @@ const assignTarget = ref(null);
 const pendingPlan = ref(null);
 const pendingPlanKind = ref('client');
 
+const selectionTotals = computed(() => {
+  const selected = new Set(props.selected);
+  return props.rows.reduce((totals, row) => {
+    if (!selected.has(row.id)) return totals;
+    totals.total += Math.round(Number(row.total_amount || 0) * 100);
+    if (row.kind === 'expected') {
+      totals.pending += Math.max(0, Math.round(Number(row.pending_amount || 0) * 100));
+    }
+    return totals;
+  }, { total: 0, pending: 0 });
+});
+
 const allFilteredSelected = computed(
   () => props.filteredIds.length > 0
     && props.filteredIds.every((id) => props.selected.includes(id)),
@@ -157,7 +177,7 @@ const settleEligibleIds = computed(() => {
 /** Empty string = the abono action is live. */
 const settleBlockedReason = computed(() => {
   if (!props.settleEnabled || settleEligibleIds.value.length > 0) return '';
-  return 'Para abonar se necesitan esperados de la empresa con saldo pendiente; los cobros a clientes requieren una cuenta de cobro emitida.';
+  return 'Para liquidar se necesitan ingresos esperados de la empresa con saldo pendiente.';
 });
 
 /**
@@ -211,7 +231,7 @@ const actionItems = computed(() => {
   if (props.settleEnabled) {
     items.push({ divider: true }, {
       action: 'settle',
-      label: 'Registrar abono',
+      label: 'Liquidar',
       disabled: settleEligibleIds.value.length === 0,
       description: settleBlockedReason.value,
       onClick: emitSettle,

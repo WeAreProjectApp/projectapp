@@ -292,6 +292,14 @@ def issue_collection_account(
     # a deadline either. A date set explicitly on the draft still stands.
 
     recalculate_document_totals(document)
+    if document.income_record_id:
+        from content.services.accounting_settlement_service import income_payment_status
+        income = document.income_record
+        if (income.kind == 'expected' and income_payment_status(income) == 'paid'
+                and (document.total != income.total_amount or ext.vat_rate != income.vat_rate)):
+            raise CollectionAccountError(
+                'El ingreso ya está pagado. Ajusta el borrador para conservar el valor completo y el IVA del ingreso.',
+            )
     old_values = _status_snapshot(document)
     document.commercial_status = Document.CommercialStatus.ISSUED
     document.updated_by = acting_user
@@ -299,6 +307,11 @@ def issue_collection_account(
     document.save()
     ext.save()
     _log_status_transition(document, old_values, acting_user)
+    if document.income_record_id:
+        from content.services.accounting_settlement_service import income_payment_status
+        income = document.income_record
+        if income.kind == 'expected' and income_payment_status(income) == 'paid':
+            mark_collection_account_paid(document, acting_user=acting_user)
     # Preserve the public service's in-memory update contract for callers that
     # archive the PDF from the supplied instance. This is a current read too.
     original_document.refresh_from_db(from_queryset=Document.objects.select_for_update())

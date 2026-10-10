@@ -14,6 +14,7 @@ import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
+import { viewportUse } from '../helpers/viewports.js';
 import {
   ADMIN_ACCOUNTING_INCOME_BULK_SETTLE,
 } from '../helpers/flow-tags.js';
@@ -89,7 +90,9 @@ function applySettle(rows, body) {
   return rows.filter((row) => row.kind === 'expected' || row.id === 900);
 }
 
-function buildHandler({ rows, calls, settleStatus = 201 }) {
+function buildHandler({
+  rows, calls, settleStatus = 201, requireCollectionAccountOnPaid = false,
+}) {
   return async ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -127,6 +130,11 @@ function buildHandler({ rows, calls, settleStatus = 201 }) {
         };
       }
       const results = applySettle(rows, body);
+      if (requireCollectionAccountOnPaid) {
+        rows.filter((row) => row.payment_status === 'paid').forEach((row) => {
+          row.requires_collection_account = true;
+        });
+      }
       return {
         status: 201,
         contentType: 'application/json',
@@ -148,11 +156,11 @@ function buildHandler({ rows, calls, settleStatus = 201 }) {
   };
 }
 
-async function gotoIncomes(page) {
+async function gotoIncomes(page, { hydrationTimeout } = {}) {
   await page.goto('/en-us/panel/accounting/incomes?accounting_incomeTab=all', {
     waitUntil: 'domcontentloaded',
   });
-  await waitForNuxtApp(page);
+  await waitForNuxtApp(page, hydrationTimeout ? { timeout: hydrationTimeout } : undefined);
   await expect(
     page.getByRole('heading', { name: 'Ingresos', exact: true }),
   ).toBeVisible({ timeout: 15_000 });
@@ -162,7 +170,7 @@ async function openSettleModal(page, ids) {
   for (const id of ids) {
     await page.getByTestId(`accounting-select-${id}`).check();
   }
-  await bulkAction(page, 'incomes', 'Registrar abono');
+  await bulkAction(page, 'incomes', 'Liquidar');
   await expect(page.getByTestId('income-bulk-settle-modal')).toBeVisible();
 }
 
@@ -194,35 +202,9 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     await expect(page.getByTestId('incomes-bulk-bar')).toHaveCount(0);
   });
 
-  // Bug caught: a draft cuenta from a client row could still enter the bulk
-  // payment request even though the backend must reject that settlement.
-  test('a client row with a draft collection account keeps Registrar abono blocked', {
-    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:error'],
-  }, async ({ page }) => {
-    const calls = [];
-    await mockApi(page, buildHandler({
-      rows: [incomeRow({
-        id: 11, client: 5, client_name: 'Kore SAS', has_collection_account: true,
-        collection_account_status: 'draft', collection_account_number: 'CC-DRAFT-001',
-      })],
-      calls,
-    }));
-    await gotoIncomes(page);
-
-    await page.getByTestId('accounting-select-11').check();
-    await page.getByTestId('incomes-bulk-actions').click();
-    const blockedAction = page.getByRole('menuitem', { name: 'Registrar abono' });
-    await expect(blockedAction).toBeDisabled();
-    await expect(blockedAction).toContainText(
-      'los cobros a clientes requieren una cuenta de cobro emitida.',
-    );
-    expect(calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/'))
-      .toHaveLength(0);
-  });
-
-  // Bug caught: excluding a draft client row used to remove every selected
-  // row, including client accounts that were already issued and payable.
-  test('an issued client row stays payable while a draft row is excluded', {
+  // Bug caught: accounts that were not emitted used to hide a received payment
+  // and make the selected balance look like the original invoice value.
+  test('a client row without an emitted account shows both totals and accepts its abono', {
     tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -231,6 +213,8 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
         incomeRow({
           id: 11, client: 5, client_name: 'Kore SAS', has_collection_account: true,
           collection_account_status: 'draft', collection_account_number: 'CC-DRAFT-001',
+          total_amount: '1000000.00', paid_amount: '200000.00', pending_amount: '800000.00',
+          payment_status: 'partial', payment_status_label: 'Parcial',
         }),
         incomeRow({
           id: 12, concept: 'Kore - cuenta emitida', period: '2026-06',
@@ -243,20 +227,55 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     }));
     await gotoIncomes(page);
 
-    await openSettleModal(page, [11, 12]);
-    await expect(page.getByTestId('income-bulk-settle-excluded'))
-      .toContainText('Se excluyó 1 seleccionado');
-    await expect(page.getByTestId('income-bulk-settle-modal'))
-      .toContainText('Kore - cuenta emitida');
-    await expect(page.getByTestId('income-bulk-settle-modal'))
-      .not.toContainText('Kore - Fase 2 Entrega');
+    await page.getByTestId('accounting-select-11').check();
+    await page.getByTestId('accounting-select-12').check();
+    await expect(page.getByTestId('incomes-selected-total')).toHaveText(
+      'Valor total seleccionado: $2.000.000 COP',
+    );
+    await expect(page.getByTestId('incomes-selected-pending')).toHaveText(
+      'Saldo pendiente seleccionado: $1.800.000 COP',
+    );
+    await bulkAction(page, 'incomes', 'Liquidar');
+    await expect(page.getByTestId('income-bulk-settle-modal')).toContainText('Kore - Fase 2 Entrega');
+    await expect(page.getByTestId('income-bulk-settle-modal')).toContainText('Kore - cuenta emitida');
     await page.getByTestId('income-bulk-settle-submit').click();
 
     await expect.poll(() => calls.filter((call) => (
       call.apiPath === 'accounting/incomes/bulk-settle/'
     )).length).toBe(1);
-    const settle = calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/');
-    expect(settle.body.allocations).toEqual([{ income_id: 12, amount: 1000000 }]);
+    expect(calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body)
+      .toMatchObject({ allocations: [
+        { income_id: 11, amount: 800000 },
+        { income_id: 12, amount: 1000000 },
+      ] });
+  });
+
+  // Bug caught: after receiving all the money, the list said only "Pagado"
+  // and hid the next operational step: emit the collection account.
+  test('a completed client income shows its pending collection account', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({
+      rows: [incomeRow({
+        id: 11, client: 5, client_name: 'Kore SAS', has_collection_account: false,
+        collection_account_status: null, total_amount: '500000.00', pending_amount: '500000.00',
+      })],
+      calls, requireCollectionAccountOnPaid: true,
+    }));
+    await gotoIncomes(page);
+
+    await openSettleModal(page, [11]);
+    await page.getByTestId('income-bulk-settle-submit').click();
+
+    await expect.poll(() => calls.filter((call) => (
+      call.apiPath === 'accounting/incomes/bulk-settle/'
+    )).length).toBe(1);
+    await expect(page.getByTestId('income-payment-11').filter({ visible: true }))
+      .toContainText('Pagado');
+    await expect(page.getByTestId('income-account-pending-11').filter({ visible: true })).toHaveText(
+      'Cuenta pendiente de emitir',
+    );
   });
 
   test('the prefilled valor covers several incomes exactly and all turn Pagado', {
@@ -554,3 +573,54 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     await expect(reparto.getByTestId('pocket-allocations-total')).toContainText('900.000');
   });
 });
+
+const SELECTED_SUMMARY_PROFILES = [
+  { profile: 'compact', hydrationTimeout: undefined, slow: false },
+  { profile: 'portrait', hydrationTimeout: undefined, slow: false },
+  { profile: 'landscape', hydrationTimeout: undefined, slow: false },
+  { profile: 'desktop', hydrationTimeout: undefined, slow: false },
+  { profile: 'wide', hydrationTimeout: 90_000, slow: true },
+];
+
+for (const { profile, hydrationTimeout, slow } of SELECTED_SUMMARY_PROFILES) {
+  test.describe(`selected abono summary at ${profile}`, () => {
+    test.use(viewportUse(profile));
+
+    // Bug caught: at a narrow width the selected totals could overflow the
+    // action bar and leave the payment action unreachable.
+    test('wraps both selected totals and keeps Liquidar reachable', {
+      tag: [
+        ...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE,
+        '@role:admin',
+        '@outcome:success',
+        '@responsive-special:accounting',
+        `@viewport:${profile}`,
+      ],
+    }, async ({ page }) => {
+      test.slow(slow);
+      const rows = [
+        incomeRow({ id: 11, total_amount: '500000.00', pending_amount: '500000.00' }),
+        incomeRow({ id: 12, total_amount: '300000.00', pending_amount: '300000.00' }),
+      ];
+      await setAuthLocalStorage(page, {
+        token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true },
+      });
+      await mockApi(page, buildHandler({ rows, calls: [] }));
+      await gotoIncomes(page, { hydrationTimeout });
+
+      await page.getByTestId('accounting-select-11').check();
+      await page.getByTestId('accounting-select-12').check();
+      const summary = page.getByTestId('incomes-bulk-bar');
+      await expect(page.getByTestId('incomes-selected-total')).toHaveText(
+        'Valor total seleccionado: $800.000 COP',
+      );
+      await expect(page.getByTestId('incomes-selected-pending')).toHaveText(
+        'Saldo pendiente seleccionado: $800.000 COP',
+      );
+      expect(await summary.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+
+      await bulkAction(page, 'incomes', 'Liquidar');
+      await expect(page.getByTestId('income-bulk-settle-modal')).toContainText('Kore - Fase 2 Entrega');
+    });
+  });
+}

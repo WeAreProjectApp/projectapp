@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import {
   ADMIN_ACCOUNTING_HISTORY_DIAGNOSIS,
   ADMIN_ACCOUNTING_HISTORY_FILTERS,
@@ -55,6 +56,15 @@ const FAILED_ROW = {
   retry_blocked_reason: '',
 };
 
+const INCOME_COMPLETION_FAILED_ROW = {
+  ...FAILED_ROW,
+  id: 4,
+  template_key: 'income_completed_account_pending',
+  template_label: 'Ingreso completo pendiente de cuenta de cobro',
+  recipient: 'contabilidad@projectapp.co',
+  subject: '[Contabilidad] Ingreso completo: emitir cuenta de cobro',
+};
+
 // A digest that failed: the case where the button exists but must refuse.
 const FAILED_DIGEST = {
   ...SENT_ROW,
@@ -93,8 +103,8 @@ const SEEDED_TABS = [
  * Filters the fixture the way the real endpoint does, so a test can tell a
  * wired-up filter from one that only repaints the same rows.
  */
-function filterRows(params) {
-  let rows = [SENT_ROW, FAILED_ROW, FAILED_DIGEST];
+function filterRows(params, extraRows = []) {
+  let rows = [SENT_ROW, FAILED_ROW, FAILED_DIGEST, ...extraRows];
   if (params.status) {
     const wanted = params.status.split(',');
     rows = rows.filter((row) => wanted.includes(row.status));
@@ -122,8 +132,11 @@ function filterRows(params) {
   return rows;
 }
 
-function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
+function buildHandler({
+  calls, savedTabs, retryStatus = 201, includeIncomeCompletionNotice = false,
+}) {
   const tabs = savedTabs ?? SEEDED_TABS;
+  const extraRows = includeIncomeCompletionNotice ? [INCOME_COMPLETION_FAILED_ROW] : [];
   return async ({ route, apiPath, method }) => {
     const url = new URL(route.request().url());
 
@@ -139,7 +152,7 @@ function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
     if (apiPath === 'accounting/email-log/' && method === 'GET') {
       const params = Object.fromEntries(url.searchParams.entries());
       calls.push({ apiPath, method, params });
-      const rows = filterRows(params);
+      const rows = filterRows(params, extraRows);
       return {
         status: 200,
         contentType: 'application/json',
@@ -165,7 +178,7 @@ function buildHandler({ calls, savedTabs, retryStatus = 201 }) {
           params[key] = Array.isArray(value) ? value.join(',') : value;
         }
         counts[String(spec.id)] = body.scope === 'sends'
-          ? filterRows(params).length
+          ? filterRows(params, extraRows).length
           : 0;
       }
       return {
@@ -463,6 +476,33 @@ test.describe('Admin Accounting History — filters and diagnosis', () => {
     await page.getByTestId('email-log-actions-2').click();
     await page.getByTestId('email-log-retry-2').click();
 
+    await expect(page.getByText('No se pudo reintentar el envío')).toBeVisible();
+    await expect(page.getByText(/SMTP down/)).toBeVisible();
+  });
+
+  // Bug caught: a delivery outage could reject the retry without leaving the
+  // operator any visible reason to retry it later from the email history.
+  test('a server failure while retrying an income-completion notice stays visible', {
+    tag: [...ADMIN_ACCOUNTING_HISTORY_DIAGNOSIS, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    test.slow();
+    const calls = [];
+    await mockApi(page, buildHandler({
+      calls, retryStatus: 503, includeIncomeCompletionNotice: true,
+    }));
+
+    await page.goto('/panel/accounting/history?tab=sends&status=failed', {
+      waitUntil: 'domcontentloaded',
+    });
+    await waitForNuxtApp(page, { timeout: 60_000 });
+    await expect(page.getByTestId('email-log-row-4')).toBeVisible({ timeout: 25_000 });
+
+    await page.getByTestId('email-log-actions-4').click();
+    await page.getByTestId('email-log-retry-4').click();
+
+    await expect.poll(() => calls.filter((c) => (
+      c.apiPath === 'accounting/email-log/4/retry/'
+    )).length).toBe(1);
     await expect(page.getByText('No se pudo reintentar el envío')).toBeVisible();
     await expect(page.getByText(/SMTP down/)).toBeVisible();
   });

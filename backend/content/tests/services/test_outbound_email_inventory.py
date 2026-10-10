@@ -89,6 +89,7 @@ def test_collection_inventory_lists_every_channel():
 def test_accounting_inventory_lists_every_channel():
     assert _channels_for(ACCOUNTING) == {
         'accounting_change',
+        'income_completed_account_pending',
         'accounting_card_reminder',
         'accounting_statement_reminder',
         'accounting_payment_calendar',
@@ -131,5 +132,5 @@ def test_security_inventory_lists_every_channel():
     }
 
 
-def test_inventory_contains_64_unique_channels():
-    assert len(OUTBOUND_EMAIL_CHANNELS) == 64
+def test_inventory_contains_65_unique_channels():
+    assert len(OUTBOUND_EMAIL_CHANNELS) == 65

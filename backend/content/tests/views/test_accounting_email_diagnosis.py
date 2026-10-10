@@ -283,6 +283,7 @@ class TestRetryingTheSend:
         )
 
         assert RETRYABLE_TEMPLATE_KEYS == frozenset(RETRY_HANDLERS)
+        assert 'income_completed_account_pending' in RETRY_HANDLERS
 
     def test_is_superuser_only(self, admin_client):
         log = make_log()

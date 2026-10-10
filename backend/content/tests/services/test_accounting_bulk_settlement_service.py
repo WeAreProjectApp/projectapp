@@ -9,7 +9,10 @@ from unittest.mock import patch
 
 import pytest
 
-from content.models import AccountingChangeLog, Document, DocumentType, IncomeRecord, PocketMovement
+from content.models import (
+    AccountingChangeLog, AccountingSettings, Document, DocumentType, IncomeRecord,
+    NotificationRecipient, PocketMovement,
+)
 from content.services import accounting_service
 from content.services.accounting_settlement_service import (
     _paid_total,
@@ -153,6 +156,40 @@ class TestAbonoHappyPath:
         assert child.destination == IncomeRecord.Destination.POCKET
         assert child.gustavo_amount == child.carlos_amount
         assert child.source_ref == f'abono:{result["movement"].pk}'
+
+    def test_paid_client_income_without_account_delivers_one_durable_notice(
+        self, superuser, make_client_profile, django_capture_on_commit_callbacks, mailoutbox,
+    ):
+        """Falla si liquidar sin cuenta previa vuelve a bloquearse o duplica su aviso al rehacer el abono."""
+        from content.models import IncomeCompletionNotice
+        from content.services.accounting_abono_service import delete_income_abono
+
+        parent = make_expected(client=make_client_profile(company='Kore SAS'))
+        settings = AccountingSettings.load()
+        settings.notifications_enabled = True
+        settings.save(update_fields=['notifications_enabled'])
+        NotificationRecipient.objects.create(email='contabilidad@example.test')
+
+        with django_capture_on_commit_callbacks(execute=True):
+            first = bulk_settle_expected_incomes(
+                abono([(parent, '1000000.00')], '1000000.00'), superuser,
+            )
+
+        assert Document.objects.filter(income_record=parent).count() == 0
+        assert income_payment_status(parent) == 'paid'
+        assert IncomeCompletionNotice.objects.filter(income=parent).count() == 1
+
+        delete_income_abono(first['movement'].pk, superuser)
+        parent.refresh_from_db()
+        assert income_payment_status(parent) == 'pending'
+
+        with django_capture_on_commit_callbacks(execute=True):
+            bulk_settle_expected_incomes(
+                abono([(parent, '1000000.00')], '1000000.00'), superuser,
+            )
+
+        assert IncomeCompletionNotice.objects.filter(income=parent).count() == 1
+        assert [message.to for message in mailoutbox] == [['contabilidad@example.test']]
 
 
 class TestSaldoAFavor:

@@ -12,17 +12,8 @@ function expectedIncome(overrides = {}) {
 }
 
 describe('settlementBlockedReason', () => {
-  // Falla si una fila local todavía no refrescada permite liquidar una cuenta sin emitir.
+  // Falla si una fila local vuelve a impedir registrar un abono válido sin cuenta emitida.
   test.each(['', 'draft', 'cancelled'])(
-    'blocks a client income whose collection account is %s',
-    (collectionAccountStatus) => {
-      expect(settlementBlockedReason(expectedIncome({
-        collection_account_status: collectionAccountStatus,
-      }))).toBe('Primero genera y emite una cuenta de cobro para este ingreso.');
-    },
-  );
-
-  test.each(['issued', 'paid'])(
     'allows a client income whose collection account is %s',
     (collectionAccountStatus) => {
       expect(settlementBlockedReason(expectedIncome({
@@ -31,8 +22,13 @@ describe('settlementBlockedReason', () => {
     },
   );
 
-  it('allows an expected income without a client', () => {
-    expect(settlementBlockedReason(expectedIncome({ client: null }))).toBe('');
+  // Falla si las restricciones de saldo y tipo dejan de proteger el abono.
+  test.each([
+    [{ kind: 'liquid' }, 'Solo se puede liquidar un ingreso esperado.'],
+    [{ payment_status: 'paid', pending_amount: '0.00' }, 'Este ingreso esperado ya está completamente pagado.'],
+    [{ can_settle: false }, 'Actualiza el ingreso antes de liquidarlo.'],
+  ])('keeps the concrete local blocker for %o', (overrides, expected) => {
+    expect(settlementBlockedReason(expectedIncome(overrides))).toBe(expected);
   });
 
   it('keeps the server blocker over the stale-row calculation', () => {

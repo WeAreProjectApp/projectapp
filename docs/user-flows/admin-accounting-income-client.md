@@ -21,3 +21,7 @@
   - [Record deleted while the confirmation was open] `POST /api/accounting/incomes/bulk-assign-client/` responde **409 `records_not_found`** nombrando `missing_ids` y **no escribe nada** — una edición masiva se confirma contra un alcance nombrado, así que corre entera o no corre. El panel descarta esos ids de la selección y recarga la lista.
 - **Coverage:** ✅ Covered (client column + Sin cliente tab, bulk assignment confirming the scope before the payload, permanent catalog visible without typing, persisted A-Z/Z-A order, filtering and progressive loading inside the list-only scroll, five complete client rows, four-row review visible at once, full-screen compact modal, the disabled-assign guard, the unlink action sending only the linked rows, totals modal breakdown, grouped landing mode dictated by the backend setting, Mes/Total sorting within each group with browser persistence, session-only toggle back to classic writing nothing, la selección depurándose tras un borrado —clásica, agrupada y tras "Seleccionar los N filtrados"— y el 409 reconciliando)
 - **E2E Spec:** `e2e/admin/admin-accounting-incomes.spec.js`
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Vincular cliente y proyecto conserva su flujo. La barra añade valor total seleccionado y saldo pendiente seleccionado; la acción de pago se llama Liquidar y no requiere cuenta emitida.

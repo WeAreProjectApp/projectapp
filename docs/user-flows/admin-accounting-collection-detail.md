@@ -14,3 +14,7 @@
 #### IVA opcional
 
 El resumen muestra base, IVA registrado y total de la cuenta, además del desglose independiente del ingreso vinculado. Las cuentas de hosting también muestran IVA; un histórico sin tasa se distingue de Sin IVA.
+
+## Liquidación y cuenta pendiente (2026-10-10)
+
+Una cuenta emitida después del pago completo conserva el importe y el IVA del ingreso y queda pagada, sin otro movimiento ni instrucciones de pagar de nuevo.

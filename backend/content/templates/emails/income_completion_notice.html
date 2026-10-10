@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Ingreso completo — cuenta pendiente</title></head>
+<body style="font-family:Arial,Helvetica,sans-serif;color:#1f2933;">
+  <h1>Ingreso completo: {{ concept }}</h1>
+  <p>Este ingreso quedó <strong>pagado al 100%</strong>. Se debe crear y emitir su cuenta de cobro, o completar el borrador existente.</p>
+  <p>Cliente: {{ client_name }}{% if project_name %}<br>Proyecto: {{ project_name }}{% endif %}</p>
+  <p>Valor completo: <strong>${{ formatted_total }} COP</strong><br>Saldo pendiente: $0 COP</p>
+  <p><a href="{{ income_url }}">Abrir ingreso y crear la cuenta</a></p>
+  <p>Aviso interno del módulo contable · ProjectApp.</p>
+</body>
+</html>

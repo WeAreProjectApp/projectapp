@@ -4,8 +4,10 @@ from decimal import Decimal
 from unittest.mock import patch
 
 import pytest
+from django.db import connection
+from django.test.utils import CaptureQueriesContext
 
-from content.models import AccountingChangeLog, ExpenseRecord, IncomeRecord
+from content.models import AccountingChangeLog, Document, DocumentType, ExpenseRecord, IncomeRecord
 from content.services import accounting_service
 
 
@@ -428,6 +430,68 @@ class TestIncomePaymentState:
         row = super_client.get(f'/api/accounting/incomes/{expected.id}/').data
         assert row['payment_status'] == 'paid'
         assert row['pending_amount'] == '0.00'
+
+    def test_paid_client_incomes_without_accounts_are_flagged_without_per_row_queries(
+        self, super_client, make_client_profile, make_income,
+    ):
+        """Falla si el aviso de cuenta pendiente usa una consulta extra por cada ingreso pagado del listado."""
+        client = make_client_profile()
+        first = make_income(
+            kind=IncomeRecord.Kind.EXPECTED, client=client,
+            total_amount=Decimal('100.00'),
+        )
+        make_income(
+            kind=IncomeRecord.Kind.LIQUID, client=client,
+            total_amount=Decimal('100.00'), expected_income=first,
+        )
+
+        with CaptureQueriesContext(connection) as one_income:
+            one_response = super_client.get('/api/accounting/incomes/')
+
+        first_row = next(row for row in one_response.data['results'] if row['id'] == first.pk)
+        second = make_income(
+            concept='Entrega segunda', kind=IncomeRecord.Kind.EXPECTED,
+            client=client, total_amount=Decimal('100.00'),
+        )
+        make_income(
+            kind=IncomeRecord.Kind.LIQUID, client=client,
+            total_amount=Decimal('100.00'), expected_income=second,
+        )
+        third = make_income(
+            concept='Entrega tercera', kind=IncomeRecord.Kind.EXPECTED,
+            client=client, total_amount=Decimal('100.00'),
+        )
+        make_income(
+            kind=IncomeRecord.Kind.LIQUID, client=client,
+            total_amount=Decimal('100.00'), expected_income=third,
+        )
+        issued = make_income(
+            concept='Entrega facturada', kind=IncomeRecord.Kind.EXPECTED,
+            client=client, total_amount=Decimal('100.00'),
+        )
+        make_income(
+            kind=IncomeRecord.Kind.LIQUID, client=client,
+            total_amount=Decimal('100.00'), expected_income=issued,
+        )
+        collection_type = DocumentType.objects.get_or_create(
+            code='collection_account', defaults={'name': 'Cuenta de cobro'},
+        )[0]
+        Document.objects.create(
+            title='Cuenta emitida', document_type=collection_type,
+            commercial_status=Document.CommercialStatus.ISSUED,
+            income_record=issued, client_user=client.user,
+        )
+
+        with CaptureQueriesContext(connection) as several_incomes:
+            several_response = super_client.get('/api/accounting/incomes/')
+
+        rows = {row['id']: row for row in several_response.data['results']}
+        assert first_row['requires_collection_account'] is True
+        assert rows[first.pk]['requires_collection_account'] is True
+        assert rows[second.pk]['requires_collection_account'] is True
+        assert rows[third.pk]['requires_collection_account'] is True
+        assert rows[issued.pk]['requires_collection_account'] is False
+        assert len(several_incomes) <= len(one_income)
 
     def test_fully_written_off_zero_total_expected_reads_paid(
         self, super_client, make_income,

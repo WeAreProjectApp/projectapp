@@ -601,6 +601,7 @@
       :saving="store.isUpdating"
       @close="closeBulkSettle"
       @submit="handleBulkSettleSubmit"
+      @advanced="confirmAdvancedSettlement"
     />
 
     <IncomeMuteModal
@@ -1323,8 +1324,29 @@ function openLiquidateModal(record) {
     notify.error({ title: 'No se puede liquidar el ingreso', detail: reason });
     return;
   }
+  if (record.ledger === 'company') {
+    openBulkSettle({ ids: [record.id], excludedCount: 0 });
+  } else {
+    openAdvancedSettlement(record);
+  }
+}
+
+function openAdvancedSettlement(record) {
   liquidatingRecord.value = record;
   isLiquidateModalOpen.value = true;
+}
+
+function confirmAdvancedSettlement(record) {
+  requestConfirm({
+    title: 'Liquidación con ajustes',
+    message: 'Se abrirá un formulario nuevo para deducciones y reprogramación. El valor, la fecha y las notas se reiniciarán; todavía no se registrará el abono.',
+    confirmText: 'Abrir ajustes',
+    cancelText: 'Volver al abono',
+    onConfirm: () => {
+      closeBulkSettle();
+      openAdvancedSettlement(record);
+    },
+  });
 }
 
 function closeLiquidateModal() {
