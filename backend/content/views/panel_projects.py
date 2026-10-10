@@ -357,6 +357,7 @@ def _annotated_row(project_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@transaction.atomic
 def create_panel_project(request):
     if 'status' in request.data:
         return Response({
@@ -372,14 +373,23 @@ def create_panel_project(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     project = serializer.save()
-    project_service.log_project_event(
-        project, project_service.Action.CREATED, {}, request.user,
+    from content.services.project_document_folder_service import (
+        project_document_root_result,
     )
+
+    document_root = project_document_root_result(project)
+    if not document_root['adopted']:
+        project_service.log_project_event(
+            project, project_service.Action.CREATED, {}, request.user,
+        )
     logger.info(
         'Panel project %s created for client profile %s',
         project.pk, serializer.client_profile.pk,
     )
-    return Response(_annotated_row(project.pk), status=status.HTTP_201_CREATED)
+    return Response(
+        {**_annotated_row(project.pk), 'document_root': document_root},
+        status=status.HTTP_201_CREATED,
+    )
 
 
 @api_view(['PATCH'])

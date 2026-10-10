@@ -879,6 +879,7 @@ def _project_detail_queryset(queryset):
 
 @api_view(['GET', 'POST'])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def project_list_view(request):
     """
     GET  — Admin sees all projects; client sees only their own.
@@ -937,22 +938,45 @@ def project_list_view(request):
     if proposal:
         payment_milestones, hosting_tiers = _extract_proposal_financial_data(proposal)
 
-    project = Project.objects.create(
-        name=data['name'],
-        description=data.get('description', ''),
-        client_id=data['client_id'],
-        status=data.get('status', Project.STATUS_DEVELOPMENT),
-        progress=data.get('progress', 0),
-        start_date=data.get('start_date'),
-        estimated_end_date=data.get('estimated_end_date'),
-        hosting_start_date=data.get('hosting_start_date'),
-        payment_milestones=payment_milestones,
-        hosting_tiers=hosting_tiers,
+    from content.services.project_document_folder_service import (
+        auto_adopt_project_root,
+        lock_project_root_names,
+        project_document_root_result,
+        project_root_name_decision,
+        record_project_creation_extras,
     )
+
+    lock_project_root_names()
+    decision = project_root_name_decision(data['name'])
+    platform_fields = {
+        'progress': data.get('progress', 0),
+        'start_date': data.get('start_date'),
+        'estimated_end_date': data.get('estimated_end_date'),
+        'hosting_start_date': data.get('hosting_start_date'),
+        'payment_milestones': payment_milestones,
+        'hosting_tiers': hosting_tiers,
+    }
+    if decision['decision'] == 'adopt':
+        project = auto_adopt_project_root({
+            'name': data['name'], 'description': data.get('description', ''),
+            'client_profile_id': UserProfile.objects.get(user_id=data['client_id']).pk,
+        }, decision['folder_id'], actor=request.user)
+        for field, value in platform_fields.items():
+            setattr(project, field, value)
+        project.save(update_fields=[*platform_fields, 'updated_at'])
+    else:
+        project = Project.objects.create(
+            name=data['name'], description=data.get('description', ''),
+            client_id=data['client_id'],
+            status=data.get('status', Project.STATUS_DEVELOPMENT),
+            **platform_fields,
+        )
+    document_root = project_document_root_result(project)
     from content.services import project_service
-    project_service.log_project_event(
-        project, project_service.Action.CREATED, {}, request.user,
-    )
+    if not document_root['adopted']:
+        project_service.log_project_event(
+            project, project_service.Action.CREATED, {}, request.user,
+        )
 
     if proposal:
         from accounts.models import Deliverable, ProjectPhase
@@ -977,7 +1001,7 @@ def project_list_view(request):
     from accounts.models import Notification
     from accounts.services.notifications import notify
     client = User.objects.get(id=data['client_id'])
-    notify(
+    notification = notify(
         user=client,
         type=Notification.TYPE_GENERAL,
         title=f'Nuevo proyecto: {project.name}',
@@ -986,9 +1010,14 @@ def project_list_view(request):
         related_object_type='project',
         related_object_id=project.id,
     )
+    if document_root['adopted']:
+        record_project_creation_extras(project, document_root['migration_id'], notification)
 
     return Response(
-        ProjectDetailSerializer(project, context={'request': request}).data,
+        {
+            **ProjectDetailSerializer(project, context={'request': request}).data,
+            'document_root': document_root,
+        },
         status=status.HTTP_201_CREATED,
     )
 

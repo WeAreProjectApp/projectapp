@@ -6,10 +6,11 @@ model's FK points at ``auth.User``), and each row carries the counts of
 accounting records hanging off the project.
 """
 
-from rest_framework import serializers
-
 from accounts.models import Project, UserProfile
 from accounts.services.proposal_client_service import build_client_display_name
+from django.db import transaction
+from rest_framework import serializers
+
 from content.models import DocumentState, DocumentStateGroup
 from content.serializers.document_state import DocumentStateSummarySerializer
 from content.services.project_state_service import (
@@ -139,7 +140,39 @@ class CreatePanelProjectSerializer(serializers.Serializer):
         self.client_profile = profile
         return value
 
+    def validate(self, attrs):
+        if not self.context.get('folder_migration'):
+            from content.services.project_document_folder_service import (
+                project_root_name_decision,
+            )
+
+            project_root_name_decision(attrs['name'])
+        return attrs
+
+    @transaction.atomic
     def create(self, validated_data):
+        from content.services.project_document_folder_service import (
+            auto_adopt_project_root,
+            lock_project_root_names,
+            project_root_name_decision,
+        )
+
+        lock_project_root_names()
+        decision = project_root_name_decision(validated_data['name'])
+        request = self.context.get('request')
+        if decision['decision'] == 'adopt':
+            from content.mcp.actor import mcp_actor
+
+            data = {
+                'name': validated_data['name'],
+                'description': validated_data.get('description', ''),
+                'client_profile_id': self.client_profile.pk,
+            }
+            if validated_data.get('state'):
+                data['state_id'] = validated_data['state'].pk
+            return auto_adopt_project_root(
+                data, decision['folder_id'], actor=request.user if request else mcp_actor(),
+            )
         state = validated_data.pop('state', None)
         if state is None:
             state = DocumentState.objects.get(
@@ -154,7 +187,6 @@ class CreatePanelProjectSerializer(serializers.Serializer):
             current_state=state,
             status=LEGACY_STATUS_BY_EFFECT[state.operational_effect],
         )
-        request = self.context.get('request')
         initialize_project_state(
             project,
             state,
@@ -214,6 +246,15 @@ class UpdatePanelProjectSerializer(serializers.ModelSerializer):
     class Meta:
         model = Project
         fields = ['name', 'description']
+
+    def validate_name(self, value):
+        from content.services.project_document_folder_service import (
+            validate_project_root_rename,
+        )
+
+        if self.instance is None or value != self.instance.name:
+            validate_project_root_rename(value)
+        return value
 
 
 class ProjectTransitionPreviewSerializer(serializers.Serializer):

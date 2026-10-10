@@ -71,10 +71,16 @@ def _project_client_change_tools():
     return PROJECT_CLIENT_CHANGE_TOOLS
 
 
+def _project_create_tool():
+    from content.mcp.project_create_tools import CREATE_PROJECT
+
+    return CREATE_PROJECT
+
+
 PROJECT_TOOLS = [
     _op('list_projects', 'Lista proyectos y sus indicadores por estado; query.client_profile_id limita el resultado al perfil de cliente seleccionado.', 'panel-projects-list'),
     _op('get_project', 'Consulta el cliente, estado, indicadores y metadatos comerciales de un proyecto sin revelar sus credenciales.', 'panel-project-detail', path=('project_id',)),
-    _op('create_project', 'Crea un proyecto con las validaciones del Panel.', 'panel-projects-create', 'POST', risk='write'),
+    _project_create_tool(),
     _op('update_project', 'Actualiza nombre y metadatos editables de un proyecto.', 'panel-projects-update', 'PATCH', ('project_id',), 'write'),
     _PROJECT_DELETE_PREVIEW,
     _PROJECT_DELETE,

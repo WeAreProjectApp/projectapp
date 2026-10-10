@@ -46,7 +46,9 @@ from content.services.project_deletion_service import (
 from content.services.project_document_folder_service import (
     PROJECT_FOLDER_TEMPLATE,
     adopt_project_root,
+    clear_project_creation_extras,
     project_category_system_key,
+    project_creation_undo_allowances,
     require_project_folder,
 )
 from content.services.project_state_service import (
@@ -105,7 +107,7 @@ def _item(row, before=None):
 
 
 def _normalized(data):
-    serializer = FolderMigrationSerializer(data=data)
+    serializer = FolderMigrationSerializer(data=data, context={'folder_migration': True})
     serializer.is_valid(raise_exception=True)
     return dict(serializer.data)
 
@@ -149,7 +151,9 @@ def _target(data, *, lock=False):
         if project is None:
             raise NotFound('Proyecto no encontrado.')
         return project, project.name, {'client_user_id': project.client_id, 'project_id': project.pk}, None
-    serializer = CreatePanelProjectSerializer(data=data['target']['create_project'])
+    serializer = CreatePanelProjectSerializer(
+        data=data['target']['create_project'], context={'folder_migration': True},
+    )
     serializer.is_valid(raise_exception=True)
     state = serializer.validated_data.get('state') or DocumentState.objects.get(
         catalog='projects', system_key=Project.STATUS_DEVELOPMENT, is_active=True, merged_into__isnull=True,
@@ -416,7 +420,9 @@ def _replay(request_id, plan_hash, actor, credential, *, lock=False):
 
 
 def _create_project(data, *, actor, source=None):
-    serializer = CreatePanelProjectSerializer(data=data, context={'request': SimpleNamespace(user=actor)})
+    serializer = CreatePanelProjectSerializer(
+        data=data, context={'request': SimpleNamespace(user=actor), 'folder_migration': True},
+    )
     serializer.is_valid(raise_exception=True)
     validated = serializer.validated_data
     state = validated.get('state') or DocumentState.objects.get(
@@ -619,6 +625,7 @@ def _undo_project_blockers(operation, project, *, lock):
         pk__in=known['content.documentfolder'] | set(operation.created_folder_ids),
     ), lock).values_list('pk', flat=True)))
     subtraction = {'documents': removable_docs, 'document_folders': removable_folders}
+    subtraction.update(project_creation_undo_allowances(operation, project, lock=lock))
     return [{**row, 'count': row['count'] - subtraction.get(row['key'], 0)} for row in blockers
             if row['count'] > subtraction.get(row['key'], 0)]
 
@@ -756,6 +763,7 @@ def undo_migration(operation_id, expected_impact_hash, reason, request_id, *, ac
         undo_items.append({'model': item['model'], 'id': item['id'], 'before': item['after'], 'after': _state(model.objects.get(pk=item['id']))})
     _delete_created_folders(operation.created_folder_ids)
     if operation.created_project_id:
+        clear_project_creation_extras(operation)
         delete_empty_project(operation.created_project_id, actor=actor)
     undo = DocumentOwnershipOperation.objects.create(
         kind='undo', origin='mcp' if credential else 'panel', request_id=request_id,
