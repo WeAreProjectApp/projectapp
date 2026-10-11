@@ -210,6 +210,27 @@ test.describe('Public Building on Demand', () => {
     await expect(page.getByRole('heading', { name: program.hero.title, exact: true })).toHaveText(program.hero.title);
   });
 
+  test('preserves the saved theme while retrying a failed load', {
+    tag: ['@flow:public-building-on-demand-theme', '@role:guest', '@outcome:failure'],
+  }, async ({ page }) => {
+    const scenario = { programUnavailable: true };
+    await setupApi(page, scenario);
+    await page.addInitScript(() => {
+      localStorage.setItem('projectapp-building-on-demand-theme', 'dark');
+    });
+    // quality: allow-deep-link (a saved public URL must retain its local theme even when the live program cannot load)
+    await page.goto('/es-co/building-on-demand', { waitUntil: 'domcontentloaded' });
+    await expect(page.getByRole('heading', { name: 'No pudimos cargar Building on Demand.', exact: true })).toHaveText('No pudimos cargar Building on Demand.');
+    await expect(page.getByTestId('building-on-demand-public-page')).toHaveAttribute('data-theme', 'dark');
+    scenario.programUnavailable = false;
+
+    await page.getByRole('button', { name: 'Reintentar', exact: true }).click();
+
+    await expect(page.getByRole('heading', { name: program.hero.title, exact: true })).toHaveText(program.hero.title);
+    await expect(page.getByTestId('building-on-demand-program')).toHaveAttribute('data-theme', 'dark');
+    await expect(page.getByRole('button', { name: 'Cambiar tema', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  });
+
   test('introduces the program on the first visit', {
     tag: ['@flow:public-building-on-demand-guide', '@role:guest', '@outcome:display'],
   }, async ({ page }) => {
