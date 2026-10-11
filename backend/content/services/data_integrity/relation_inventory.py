@@ -172,6 +172,7 @@ _decide(exempt('Evento, evidencia o instantánea inmutable: se informa, nunca se
     content.DocumentNoteEvent.document content.EmailAttachmentSnapshot.source_document
 ''')
 _decide(exempt('Espejo de sistema de sólo lectura.'), '''
+    content.BuildingOnDemandContractMirror.document
     content.BuildingWithUsContractMirror.document content.ContractTemplate.mirror_document
     content.ContractTemplateMirror.document
 ''')
