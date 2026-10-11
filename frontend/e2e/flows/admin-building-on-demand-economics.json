@@ -1,0 +1,14 @@
+{
+  "id": "admin-building-on-demand-economics",
+  "name": "Admin Building on Demand Economics",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Abrir la pestaña Economía desde Células para consultar costos internos y horas de equilibrio por nivel y plazo; reintentar si la API no entrega los cálculos.",
+  "outcomes": [
+    "display",
+    "failure"
+  ]
+}

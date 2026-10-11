@@ -322,6 +322,25 @@
         "admin-building-with-us-history",
         "admin-building-with-us-contract"
       ]
+    },
+    {
+      "title": "Section 35 — Building on Demand (Oct 10, 2026)",
+      "flows": [
+        "public-building-on-demand-load",
+        "public-building-on-demand-overview",
+        "public-building-on-demand-terms",
+        "public-building-on-demand-estimator",
+        "public-building-on-demand-theme",
+        "public-building-on-demand-guide",
+        "public-building-on-demand-pdf",
+        "public-building-on-demand-share",
+        "public-building-on-demand-language",
+        "public-building-on-demand-faq",
+        "admin-building-on-demand-program",
+        "admin-building-on-demand-history",
+        "admin-building-on-demand-economics",
+        "admin-building-on-demand-contract"
+      ]
     }
   ]
 }

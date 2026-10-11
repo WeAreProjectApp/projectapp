@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-on-demand-program",
+  "name": "Admin Building on Demand Program",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Entrar a Células desde Comercial, consultar la revisión y el conector MCP, copiar los enlaces públicos, descargar el PDF y cambiar el idioma de la vista previa; reintentar un fallo del resumen.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

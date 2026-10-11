@@ -1,0 +1,14 @@
+{
+  "id": "public-building-on-demand-theme",
+  "name": "Public Building on Demand Theme",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Alternar el tema de la presentación y sus controles flotantes; conservar la preferencia al recargar y al recuperar una carga fallida mediante Reintentar.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

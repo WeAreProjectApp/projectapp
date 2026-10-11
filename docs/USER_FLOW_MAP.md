@@ -6003,6 +6003,10 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-blog-list` | admin | P2 | display | 1 |
 | `admin-blog-overdue-detection` | admin | P2 | — | 0 |
 | `admin-blog-publish-mode` | admin | P2 | display,success | 1 |
+| `admin-building-on-demand-contract` | admin | P1 | display,success,failure | — |
+| `admin-building-on-demand-economics` | admin | P1 | display,failure | — |
+| `admin-building-on-demand-history` | admin | P2 | success,failure | — |
+| `admin-building-on-demand-program` | admin | P1 | display,success,failure | — |
 | `admin-building-with-us-contract` | admin | P1 | display,success,failure | — |
 | `admin-building-with-us-distribution` | admin | P1 | display,success,failure | — |
 | `admin-building-with-us-history` | admin | P2 | display,success,failure | — |
@@ -6354,6 +6358,16 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `public-additional-modules-pdf` | public | P2 | success,failure | 2 |
 | `public-additional-modules-share` | public | P1 | success,display,failure | 4 |
 | `public-additional-modules-theme` | public | P2 | success,display,failure | 2 |
+| `public-building-on-demand-estimator` | public | P1 | display,success | — |
+| `public-building-on-demand-faq` | public | P2 | success | — |
+| `public-building-on-demand-guide` | public | P2 | display,success | — |
+| `public-building-on-demand-language` | public | P2 | success | — |
+| `public-building-on-demand-load` | public | P1 | failure,success | — |
+| `public-building-on-demand-overview` | public | P1 | display | — |
+| `public-building-on-demand-pdf` | public | P2 | success,failure | — |
+| `public-building-on-demand-share` | public | P2 | success,failure | — |
+| `public-building-on-demand-terms` | public | P1 | success | — |
+| `public-building-on-demand-theme` | public | P2 | success,failure | — |
 | `public-building-with-us-faq` | public | P2 | success | — |
 | `public-building-with-us-guide` | public | P2 | display,success | — |
 | `public-building-with-us-language` | public | P2 | success | — |
@@ -7728,6 +7742,177 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Interaction:** Abrir Contrato, consultar Markdown y el espejo sincronizado en ProjectApp/Contratos; leer la advertencia desactualizada o sin inicializar, descargar PDF y reintentar un fallo del contrato.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/BuildingWithUs/admin/ContractPanel.vue; frontend/pages/panel/building-with-us/index.vue; GET /api/building-with-us/admin/contract/; GET /api/building-with-us/admin/contract/pdf/; `frontend/e2e/admin/admin-building-with-us.spec.js`.
+
+
+## Section 35 — Building on Demand (Oct 10, 2026)
+
+### FLOW: `public-building-on-demand-load`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Abrir el enlace público con la API indisponible, leer «No pudimos cargar Building on Demand.» y pulsar Reintentar para recuperar la presentación.
+- **Outcomes:** `failure`, `success`
+- **Result:** El aviso se reemplaza por el programa vigente después de una respuesta válida; durante la carga se presenta un esqueleto.
+- **Evidence:** `frontend/pages/building-on-demand/index.vue:25`; `frontend/pages/building-on-demand/index.vue:126`; GET `/api/building-on-demand/public/?lang=es`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** No hay formulario público ni validación de permisos. La validación de parámetros de la API corresponde a pruebas de backend.
+
+### FLOW: `public-building-on-demand-overview`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Desde el inicio público, usar el enlace Building on Demand del pie y consultar la célula Scrum compartida, sus roles y los tres niveles.
+- **Outcomes:** `display`
+- **Result:** Starter, Business y Enterprise presentan bolsas mensuales de 96, 192 y 288 horas; Business figura como recomendado. Las tarjetas muestran precio mensual, roles y servidor, sin tarifa por hora ni costos internos.
+- **Evidence:** `frontend/components/layouts/FooterDesktop.vue:236`; `frontend/components/layouts/FooterMobile.vue:130`; `frontend/components/BuildingOnDemand/ProgramView.vue:155`; `frontend/components/BuildingOnDemand/TierCard.vue:34`; GET `/api/building-on-demand/public/?lang=es`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** La navegación y los datos visibles son el comportamiento de consulta. Los fallos de la carga pertenecen a `public-building-on-demand-load`.
+
+### FLOW: `public-building-on-demand-terms`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Seleccionar Mensual, 3 meses, 6 meses o 9 meses en el selector de plazo y comparar las tarjetas actualizadas.
+- **Outcomes:** `success`
+- **Result:** Cambian el precio mensual, descuento, total y ahorro a partir de los cálculos entregados por la API. En 9 meses los precios mensuales son 1.530.000, 3.360.000 y 7.200.000 COP, más IVA; la nota aclara que la bolsa se renueva cada mes y no se acumula.
+- **Evidence:** `frontend/components/BuildingOnDemand/TermSelector.vue:20`; `frontend/components/BuildingOnDemand/ProgramView.vue:195`; `frontend/components/BuildingOnDemand/TierCard.vue:82`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** El selector usa opciones cerradas y actualiza la vista localmente: no envía datos ni tiene un fallo de escritura.
+
+### FLOW: `public-building-on-demand-estimator`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Desde el pie público, consultar las tareas y la explicación del estimador vacío; añadir o quitar unidades, describir el pedido y leer el rango, el encaje por nivel y el enlace para pedir una estimación formal por WhatsApp.
+- **Outcomes:** `display`, `success`
+- **Result:** Sin selección aparecen tareas, cantidades en cero y la aclaración de que la estimación formal se aprueba antes de empezar. Al seleccionar tareas, el rango es el total del pedido, comparado con cada bolsa mensual. Una tarea que requiere diseño, arquitectura o levantamiento de requerimientos puede elevar la sugerencia a Business aunque quepa en Starter; DevOps continuo requiere Enterprise. El enlace incluye tareas, cantidades, descripción, rango y nivel sugerido.
+- **Evidence:** `frontend/components/BuildingOnDemand/BagEstimator.vue:53`; `frontend/components/BuildingOnDemand/BagEstimator.vue:142`; `frontend/utils/buildingOnDemand.js:66`; `frontend/utils/buildingOnDemand.js:117`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** La compatibilidad de roles es información de la estimación, no un error de permiso. Las cantidades están limitadas a cero–diez y la descripción a mil caracteres; no existe un envío validable ni una llamada de cálculo que pueda fallar.
+
+### FLOW: `public-building-on-demand-theme`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Pulsar Cambiar tema en el control flotante y volver a cargar la presentación; ante una carga fallida, pulsar Reintentar para recuperar el programa con el tema guardado.
+- **Outcomes:** `success`, `failure`
+- **Result:** La página y sus controles alternan entre claro y oscuro y recuperan la preferencia al recargar. El aviso de carga y el programa recuperado conservan ese mismo tema.
+- **Evidence:** `frontend/components/BuildingOnDemand/ProgramView.vue:254`; `frontend/composables/useBuildingOnDemandTheme.js:3`; `frontend/pages/building-on-demand/index.vue:126`; `projectapp-building-on-demand-theme`; `frontend/e2e/public/building-on-demand.spec.js`; `frontend/e2e/public/commercial-public-overlays.spec.js`.
+- **Scope:** Este flujo verifica la conservación de la preferencia durante el fallo y la recuperación; el aviso y la recuperación de contenido también se registran en `public-building-on-demand-load`.
+
+### FLOW: `public-building-on-demand-guide`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Entrar desde el pie público en una primera visita, consultar el primer paso y avanzar en la guía; omitirla y volver a iniciarla con Repetir la guía.
+- **Outcomes:** `display`, `success`
+- **Result:** Nueve pasos explican producto, célula, plazo, nivel recomendado, bolsa, estimador, hosting, acciones y reinicio. La preferencia evita repetirla automáticamente en visitas posteriores.
+- **Evidence:** `frontend/components/BuildingOnDemand/Onboarding.vue:12`; `frontend/components/BuildingOnDemand/ProgramView.vue:47`; `frontend/components/BuildingOnDemand/ProgramView.vue:253`; `frontend/components/PublicGuidedTour.vue`; `projectapp-building-on-demand-guide-seen`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** La guía opera sobre el contenido cargado y no solicita datos al servidor; no se inicia automáticamente en la vista previa del panel.
+
+### FLOW: `public-building-on-demand-pdf`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Pulsar Descargar PDF en el control flotante de la presentación y consultar el aviso cuando la solicitud no logra descargar el archivo.
+- **Outcomes:** `success`, `failure`
+- **Result:** Se descarga `building-on-demand-es.pdf` o `building-on-demand-en.pdf` según el idioma. Si falla la descarga, aparece «No pudimos descargar el PDF. Vuelve a intentarlo.» sin ocultar el programa. El documento público no incluye la economía interna ni el contrato.
+- **Evidence:** `frontend/components/BuildingOnDemand/ProgramView.vue:75`; `frontend/components/BuildingOnDemand/ProgramView.vue:251`; GET `/api/building-on-demand/public/pdf/?lang=es`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** Los datos privados del PDF se comprueban en backend; el navegador verifica el archivo entregado o el aviso de la solicitud fallida.
+
+### FLOW: `public-building-on-demand-share`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Abrir Compartir Building on Demand y pulsar Copiar enlace; si el portapapeles rechaza la copia, consultar el aviso y el enlace disponible para copiar manualmente.
+- **Outcomes:** `success`, `failure`
+- **Result:** El diálogo conserva la URL actual y muestra «Enlace copiado» tras copiarla al portapapeles. Si la copia falla, aparece «No pudimos copiar el enlace. Selecciónalo y cópialo manualmente.» y el enlace permanece visible. Se puede cerrar el diálogo sin perder la presentación.
+- **Evidence:** `frontend/components/BuildingOnDemand/ProgramView.vue:252`; `frontend/components/PublicDocumentShareButton.vue:47`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Gap:** El rechazo de la opción de compartir con otras aplicaciones tiene un aviso visible propio; no se da por cubierto al probar el rechazo del portapapeles.
+
+### FLOW: `public-building-on-demand-language`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/es-co/building-on-demand` → `/en-us/building-on-demand`
+- **Interaction:** Pulsar English en el selector de idioma y leer la presentación en inglés.
+- **Outcomes:** `success`
+- **Result:** La ruta pasa al idioma seleccionado y la API entrega el programa localizado, conservando los mismos niveles, plazos y bolsas.
+- **Evidence:** `frontend/pages/building-on-demand/index.vue:114`; `frontend/components/BuildingOnDemand/ProgramView.vue:117`; GET `/api/building-on-demand/public/?lang=en`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** Los idiomas son opciones cerradas. La carga fallida de un idioma utiliza el mismo aviso y reintento que `public-building-on-demand-load`.
+
+### FLOW: `public-building-on-demand-faq`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Expandir una pregunta frecuente sobre la bolsa de horas y volver a contraerla.
+- **Outcomes:** `success`
+- **Result:** El control cambia su estado expandido y revela la respuesta correspondiente; las horas sin usar vencen al finalizar el mes y no se acumulan.
+- **Evidence:** `frontend/components/BuildingOnDemand/ProgramView.vue:54`; `frontend/components/BuildingOnDemand/ProgramView.vue:227`; `frontend/e2e/public/building-on-demand.spec.js`.
+- **Scope:** El acordeón usa respuestas ya cargadas: no hay validación de entrada ni solicitud al servidor al expandirlo.
+
+### FLOW: `admin-building-on-demand-program`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/cells` (`?tab=program` también abre Programa)
+- **Interaction:** Abrir Comercial → Células, consultar la revisión vigente y el estado del conector; copiar la URL pública, descargar PDF y cambiar el idioma de la vista previa. Si falla el resumen, pulsar Reintentar.
+- **Outcomes:** `display`, `success`, `failure`
+- **Result:** Se muestran versión, autor, fecha y nota junto a los enlaces ES/EN y la vista previa. La administración corresponde exclusivamente al conector MCP `building-on-demand`; el panel consulta y distribuye el contenido.
+- **Evidence:** `frontend/config/panelNav.js:57`; `frontend/pages/panel/cells/index.vue:78`; `frontend/components/BuildingOnDemand/admin/DistributionCard.vue:39`; `frontend/components/BuildingOnDemand/admin/McpHint.vue:16`; GET `/api/building-on-demand/admin/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
+- **Gap:** El rechazo del portapapeles, el fallo del PDF y el reintento de una vista previa fallida tienen controles propios; no se consideran cubiertos por el reintento del resumen. El acceso sin sesión corresponde al guard del panel.
+
+### FLOW: `admin-building-on-demand-history`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/cells`
+- **Interaction:** Consultar el historial del programa y pulsar Ver más; si falla una página, pulsar Reintentar para recuperar las versiones restantes.
+- **Outcomes:** `success`, `failure`
+- **Result:** El historial muestra versión, autor, fecha, nota y origen de una restauración. Con 21 revisiones, Ver más añade la versión pendiente a las primeras veinte usando `offset=20`; los errores no borran lo ya cargado.
+- **Evidence:** `frontend/pages/panel/cells/index.vue:90`; `frontend/components/BuildingOnDemand/admin/VersionHistory.vue:24`; `frontend/stores/building_on_demand.js:135`; GET `/api/building-on-demand/admin/program/versions/?limit=20&offset=20`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
+- **Gap:** Contrato monta otro historial con el mismo componente y su propio endpoint. Su paginación y su estado vacío requieren evidencia específica y no se dan por cubiertos al probar el historial del programa.
+
+### FLOW: `admin-building-on-demand-economics`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/cells?tab=economics`
+- **Interaction:** Desde Comercial → Células, abrir Economía para consultar la referencia y los cálculos internos; ante un fallo de carga, pulsar Reintentar.
+- **Outcomes:** `display`, `failure`
+- **Result:** La referencia indica costo por hora de 55.000 COP e IVA del 19 %. El hosting mensual con IVA es 46.291, 116.501 y 200.991 COP; en Mensual las horas de equilibrio son 31,9, 74,2 y 170,9, equivalentes al 33 %, 39 % y 59 % de cada bolsa. Los cálculos los entrega el backend y no se publican en la presentación ni en el PDF público.
+- **Evidence:** `frontend/pages/panel/cells/index.vue:121`; `frontend/components/BuildingOnDemand/admin/EconomicsTable.vue:89`; GET `/api/building-on-demand/admin/economics/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
+- **Scope:** Es una consulta de datos internos sin campos editables. El acceso de una persona sin permisos se comprueba en el guard y en los endpoints del panel, no mediante un formulario de este módulo.
+
+### FLOW: `admin-building-on-demand-contract`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/cells?tab=contract`
+- **Interaction:** Abrir Contrato desde Células para consultar la revisión, el contenido y su copia en ProjectApp › Contratos; leer los estados Sincronizado, Desactualizado, Sin inicializar o todavía no disponible, descargar PDF y reintentar un fallo de carga.
+- **Outcomes:** `display`, `success`, `failure`
+- **Result:** La copia muestra el estado y los metadatos de sincronización y permite abrir el documento del Gestor Documental cuando existe. El contrato y su copia se administran desde MCP; el panel no edita ni sincroniza. `contract: null` con respuesta 404 muestra que el contrato todavía no está disponible, mientras un fallo del servidor presenta Reintentar.
+- **Evidence:** `frontend/pages/panel/cells/index.vue:124`; `frontend/components/BuildingOnDemand/admin/ContractPanel.vue:42`; `frontend/stores/building_on_demand.js:48`; GET `/api/building-on-demand/admin/contract/`; GET `/api/building-on-demand/admin/contract/pdf/`; `frontend/e2e/admin/admin-building-on-demand.spec.js`.
+- **Scope:** Los estados del espejo son resultados de consulta, no errores de entrada. Su historial y el fallo de descarga de PDF requieren evidencia adicional a la lectura del contrato.
 
 
 ## Unsectioned flows

@@ -1,0 +1,13 @@
+{
+  "id": "public-building-on-demand-language",
+  "name": "Public Building on Demand Language",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Cambiar de Español a English para leer el programa en inglés desde su ruta pública localizada.",
+  "outcomes": [
+    "success"
+  ]
+}

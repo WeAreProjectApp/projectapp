@@ -1,3 +1,15 @@
+> **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
+> (recomendado) y Enterprise para evolucionar un producto con una célula Scrum
+> compartida de siete personas. La presentación ES/EN muestra bolsa mensual,
+> roles, plazos y hosting, con estimador, guía, tema persistente, PDF, compartir
+> y WhatsApp. La bolsa se renueva cada mes, no se acumula ni se transfiere;
+> cada tarea requiere estimación formal aprobada y no promete alcance ni fecha
+> fija. Los precios públicos son por nivel/plazo con IVA indicado, sin precio
+> por hora; los tiempos de respuesta son objetivos. Células distribuye y
+> consulta programa, economía y contrato; la edición se reserva al MCP dedicado
+> de una ola posterior. El Markdown contractual es la fuente y su copia en
+> ProjectApp › Contratos permanece de lectura, sin importación inversa.
+
 > **Building with Us — 2026-10-09:** el experto de negocio puede evaluar una alianza de producto desde una presentación ES/EN con aportes de ambas partes, modelos, periodos de incubación, alcance, hitos y FAQ; ofrece guía, tema persistente, PDF, compartir y WhatsApp, sin video ni cifras comerciales públicas. El equipo distribuye el programa y consulta Programa y Contrato en un panel de solo lectura. Las versiones se modifican exclusivamente mediante el MCP `building-with-us`; el Gestor Documental conserva una copia contractual de lectura en ProjectApp › Contratos.
 
 > **Operación de entregas — 2026-10-07:** los archivos confirmados al revisar
@@ -937,7 +949,7 @@ compatibility redirect.
 - **Panel Login** (`/panel/login`) — dedicated login page for admin panel
 - **Panel Admins** (`/panel/admins`) — admin user management (invite, list, manage admin accounts)
 - **Internal Kanban Task Board** (`/panel/tasks`) — admin-only Kanban board for managing internal ProjectApp team work. Four columns: TO DO, In Progress, Blocked, Done. Tasks have title, description, status, priority (low/medium/high), assignee (FK to any admin User, optional), and due_date (optional). Cards display priority badge and due_date highlighted in red when overdue. Drag-and-drop between columns and reorder within columns via vuedraggable. Create/edit modal with confirm-guarded delete. Tasks are independent — no FK link to proposals or documents.
-- **View Map operational Explorer** (`/panel/views`) — a third presentation mode complements the complete route list and module map with three understandable product spaces: **Panel interno**, **Plataforma de clientes** and **Experiencias públicas**. Each space exposes its main modules and representative submodules with stage, audience, purpose and operational value; the Panel and Platform each provide eight main modules, while the public space connects acquisition, content/proof, additional modules, financing, proposals and diagnostics. Hover and focus update the context without changing the URL, while selection creates a shareable `node` link. Users may navigate freely or start a guided space tour persisted with `tour=<space-id>`; exiting preserves the current module. Compact and portrait profiles use cards, and landscape or wider profiles use the orbital layout with relationships. Search, drag, keyboard rotation, zoom, pause and reduced-motion support remain available. Route names and source files are secondary disclosure, and all context is curated product information rather than live business data.
+- **View Map operational Explorer** (`/panel/views`) — a third presentation mode complements the complete route list and module map with three understandable product spaces: **Panel interno**, **Plataforma de clientes** and **Experiencias públicas**. Each space exposes its main modules and representative submodules with stage, audience, purpose and operational value; the Panel and Platform each provide eight main modules, while the public space connects acquisition, content/proof, additional modules, financing, Building with Us, Building on Demand, proposals, diagnostics and secure links. Hover and focus update the context without changing the URL, while selection creates a shareable `node` link. Users may navigate freely or start a guided space tour persisted with `tour=<space-id>`; exiting preserves the current module. Compact and portrait profiles use cards, and landscape or wider profiles use the orbital layout with relationships. Search, drag, keyboard rotation, zoom, pause and reduced-motion support remain available. Route names and source files are secondary disclosure, and all context is curated product information rather than live business data.
 - **Responsive panel contract** — the internal panel is validated at 412, 835,
   1195, 1440 and 2560 px. Shared primitives own table column priorities,
   tab/filter collapse, modal widths and stacking, navigation, bulk/row actions,

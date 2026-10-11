@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-on-demand-contract",
+  "name": "Admin Building on Demand Contract",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Abrir Contrato para leer su contenido y la copia del Gestor Documental sincronizada, desactualizada o sin inicializar; consultar el estado todavía no disponible, descargar PDF y reintentar un fallo del contrato.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

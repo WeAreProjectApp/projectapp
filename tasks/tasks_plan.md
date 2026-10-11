@@ -1,3 +1,13 @@
+> **Building on Demand — 2026-10-10, segunda ola en integración:** programa
+> público ES/EN y panel Células de lectura con Programa, Economía y Contrato;
+> backend del programa versionado y cálculos de bolsa/precios/equilibrio.
+> Se incorporan catálogos, aceptación responsiva y recorridos E2E; el backend
+> contractual se integra en paralelo, con Markdown autoritativo y espejo de
+> lectura de tres estados, sin importación inversa. Pendientes: conector MCP
+> dedicado en una ola posterior, decisiones comerciales, calibración del
+> estimador PA-178, revisión del solapamiento con Paquetes de horas y validación
+> en navegador por el conductor. No acredita despliegue.
+
 > **Integridad de datos — 2026-10-09:** entrega de sesión del motor, la API, las
 > herramientas MCP y la skill `data-integrity`. Siguiente: corregir en origen la
 > creación de clientes provisionales repetidos (propuestas sin correo).

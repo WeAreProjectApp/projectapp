@@ -1,0 +1,14 @@
+{
+  "id": "public-building-on-demand-estimator",
+  "name": "Public Building on Demand Estimator",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Consultar las tareas del estimador vacío y seleccionar cantidades para leer el rango total del pedido, su encaje por nivel y la sugerencia según horas y roles; preparar el resumen para WhatsApp.",
+  "outcomes": [
+    "display",
+    "success"
+  ]
+}

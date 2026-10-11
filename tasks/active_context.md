@@ -1,3 +1,34 @@
+# Building on Demand — 2026-10-10
+
+Implementado en la rama de sesión: programa público ES/EN en
+`/building-on-demand`, entrada desde el footer y panel Comercial › Células en
+`/panel/cells`. La presentación compara Starter, Business (recomendado) y
+Enterprise, permite elegir plazo y estimar el pedido frente a la bolsa y los
+roles de cada nivel, y ofrece guía, tema persistente, PDF, compartir y WhatsApp.
+La siembra inicial define bolsas mensuales de 96, 192 y 288 horas. Precios por
+plazo, descuentos, totales y economía se calculan en el backend; costos internos
+y datos del proveedor quedan fuera de la web y el PDF públicos.
+
+Células es de solo lectura: Programa muestra distribución, versión, historial
+y vista previa ES/EN; Economía muestra los números internos; Contrato admite
+la consulta y el estado todavía no disponible. Programa, economía y contrato
+se administrarán únicamente desde el MCP `building-on-demand`, con vista
+previa y confirmación; el conector dedicado se construye en una ola posterior.
+El backend del contrato se integra en paralelo en esta segunda ola. Su Markdown
+versionado es la fuente autoritativa; ProjectApp › Contratos conserva sólo un
+espejo de lectura. No se importan ediciones del Gestor Documental. Los estados
+del espejo son `synchronized`, `out_of_sync` y `not_initialized`.
+
+Pendientes: cerrar las decisiones comerciales de la oferta antes de publicarla;
+calibrar los rangos del estimador con la calculadora de requerimientos (PA-178);
+y revisar el solapamiento de precios con Paquetes de horas para distinguir ambas
+ofertas. Las horas del estimador representan el pedido completo, que se compara
+con la bolsa mensual; cada tarea conserva su estimación formal y aprobación
+previas. Los tiempos de respuesta son objetivos, no un SLA. La integración de
+catálogos, contrato responsivo y flujos E2E pertenece a esta ola; su ejecución
+en navegador queda a cargo del conductor. Esta entrada no acredita despliegue
+ni pruebas E2E aprobadas.
+
 # Liquidar ingresos sin cuenta y CRUD de abonos en MCP (2026-10-10)
 
 Complemento de PA-69: el menú de selección muestra valor total y saldo pendiente,

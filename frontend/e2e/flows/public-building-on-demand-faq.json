@@ -1,0 +1,13 @@
+{
+  "id": "public-building-on-demand-faq",
+  "name": "Public Building on Demand FAQ",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Expandir una pregunta frecuente para consultar las condiciones de la bolsa mensual y contraer la respuesta desde el mismo control.",
+  "outcomes": [
+    "success"
+  ]
+}

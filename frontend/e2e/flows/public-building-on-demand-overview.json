@@ -1,0 +1,13 @@
+{
+  "id": "public-building-on-demand-overview",
+  "name": "Public Building on Demand Overview",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Entrar desde el pie público y consultar la célula Scrum compartida, los tres niveles, Business recomendado y sus bolsas mensuales, roles y servidores incluidos.",
+  "outcomes": [
+    "display"
+  ]
+}
