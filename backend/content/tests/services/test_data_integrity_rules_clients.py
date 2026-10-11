@@ -6,6 +6,7 @@ import pytest
 from accounts.models import Project, UserProfile
 
 from content.services.data_integrity.types import MERGE_CLIENTS, REPORT_ONLY
+from content.tests.data_integrity_documents_factories import make_communication_folder
 from content.tests.data_integrity_helpers import make_project, make_proposal, scan
 from content.tests.data_integrity_projects_factories import (
     make_retention_context,
@@ -165,6 +166,15 @@ def test_orphan_scan_scoped_to_one_client_reports_only_that_client(make_client_p
     make_client_profile(company='Ajeno')
 
     assert [finding.evidence['profile'] for finding in _found('CL4', 'client', mine.pk)] == [mine.pk]
+
+
+def test_client_held_by_a_communication_folder_is_not_an_orphan(make_client_profile):
+    """Fails if CL4 sends to manual deletion a client whose communication folder makes that delete fail."""
+    held = make_client_profile(company='Con carpeta')
+    make_communication_folder(held)
+    orphan = make_client_profile(company='Sin nada')
+
+    assert [finding.evidence['profile'] for finding in _found('CL4')] == [orphan.pk]
 
 
 # ── CL5 · project owned by a non-client ──────────────────────────────────────

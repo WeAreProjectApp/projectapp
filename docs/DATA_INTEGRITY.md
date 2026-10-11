@@ -19,6 +19,9 @@ Proyectos), y el panel a través de `/api/projects/data-integrity/`.
 | Registro de operaciones | `content.DataIntegrityOperation` (append-only) |
 | API del panel | `backend/content/views/data_integrity.py` |
 | Herramientas MCP | `backend/content/mcp/data_integrity_tools.py` (conector `projects`) |
+| Inventario de relaciones | `backend/content/services/data_integrity/relation_inventory.py` |
+| Comando de sólo lectura | `manage.py audit_data_integrity` (`backend/content/management/commands/`) |
+| Qué impide borrar un cliente | `backend/accounts/services/client_deletion.py` |
 
 ## Cómo funciona
 
@@ -69,8 +72,76 @@ Proyectos), y el panel a través de `/api/projects/data-integrity/`.
    registrados, bloqueos en vez de excepciones; `apply` con el escritor del dominio;
    `revert` cuando el escritor deja auditoría.
 4. Pruebas en `backend/content/tests/services/test_data_integrity_rules_*.py`: datos
-   sucios y limpios, un alcance, aplicar y deshacer.
+   sucios (fabricados con un `QuerySet.update` crudo, como se cuelan en la vida real) y
+   limpios (sin falsos positivos, incluidas las excepciones de negocio), un alcance,
+   aplicar y deshacer.
 5. Si cambia lo que el catálogo promete, subir `CATALOG_VERSION`.
+6. Si la regla mira una relación hacia un ancla, citarla en `relation_inventory.py`.
+
+## Catálogo 1.1.0
+
+Suma 14 reglas de sólo reporte a las 37 de la 1.0.0, y CL4 pasa a su versión 2:
+
+| Regla | Qué detecta |
+|---|---|
+| CL6 | Cliente sin actividad comercial que conserva registros que impiden su borrado o que quedarían sin cliente |
+| PJ8 | Alianza, carpeta de comunicaciones, aviso o evidencia de entrega, o contexto de autoría apuntando al proyecto de otro cliente |
+| PJ9 | Fila conservada que el índice de su borrado no lista |
+| DC9, DC10 | Documento en una carpeta de otro cliente o de otro proyecto (la carpeta organiza y no es dueña: puede ser intencional) |
+| DC11 | Documento activo sin carpeta (los borradores de cuenta de cobro se excluyen: se archivan al emitirse o anularse) |
+| DC12 | Número público repetido entre cuentas de cobro |
+| CM6 | Adjunto con un documento de otro cliente |
+| AC9 | Ingreso con más de una cuenta de cobro sin anular |
+| AC10 | Cuenta de cobro con otro proyecto o cliente que su ingreso (la que sólo no tiene el proyecto del ingreso es de PJ1) |
+| AC11 | Reparto entre socios que viola `PartnerSplitMixin.clean()` |
+| AC12 | Ingreso esperado pagado por encima de su total |
+| AC13 | Movimiento del bolsillo que no cuadra con su ingreso o gasto |
+| PR9 | Precio histórico de una propuesta sin las claves que leen `save()` y, con descuento, el cálculo del descuento |
+
+**CL4 v2 y la guarda de borrado comparten una sola fuente.**
+- `client_deletion.deletion_blockers()` recorre las relaciones que recorre el `Collector`
+  de Django al borrar el usuario del cliente: las ocultas (`related_name='+'`) incluidas y
+  siguiendo las cadenas CASCADE. Cada PROTECT o RESTRICT que encuentra es un bloqueo, y
+  se suma `Project.client`.
+- Esa misma fuente usan la guarda (`delete_orphan_client`), el filtro de huérfanos del
+  panel y del MCP, `is_orphan`, los conteos por estado y CL4.
+- Antes la guarda contaba 6 relaciones de más de 30. Un cliente con una carpeta de
+  comunicaciones, una alianza o un proyecto conservado parecía borrable y el borrado
+  terminaba en un 500. Además, ese 500 dejaba borrados el avatar y la portada, porque el
+  perfil se borraba antes que el usuario.
+- **Hoy:**
+  - la guarda responde 400 `client_has_protected_references` con las relaciones y sus
+    conteos;
+  - el borrado es un solo `user.delete()`;
+  - si aun así Django rechaza el borrado, la vista y el MCP responden 400 o `ToolError`.
+
+## Inventario de relaciones
+
+`relation_inventory.py` decide, para cada FK, O2O o M2M hacia un ancla (proyecto, cliente,
+propuesta, documento, carpeta, hilo, ingreso u hosting), una de tres cosas:
+- qué reglas lo miran (`covered`);
+- por qué ninguna lo hace (`exempt`: autoría, evidencia inmutable, logs, hijos en
+  cascada);
+- qué falta (`gap`).
+
+La autoría hacia el cliente se toma de `client_merge_policy.AUTHORSHIP_RELATIONS`. La
+prueba `test_data_integrity_relation_inventory.py` falla en tres casos:
+- ante una relación sin decisión, así que lo desconocido nunca pasa;
+- ante una decisión de una relación que ya no existe;
+- ante una regla citada que el catálogo no tiene.
+
+Al agregar un modelo con FK a un ancla hay que decidirla ahí.
+
+## Detección en producción sin MCP
+
+`manage.py audit_data_integrity` corre el mismo catálogo:
+- sin `--apply`, sin locks y sin filas de auditoría;
+- imprime ids de regla, conteos y `modelo:id`, nunca etiquetas, mensajes ni evidencia;
+- `--format json --output <archivo nuevo>` escribe un reporte 0600 y rechaza rutas del
+  repositorio, `STATIC_ROOT`, `MEDIA_ROOT` y la media privada;
+- `--coverage` agrega el resumen del inventario de relaciones.
+
+Lo corre el operador en el VPS después del deploy; una sesión nunca.
 
 ## Fusiones
 

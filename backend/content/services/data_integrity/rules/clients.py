@@ -9,8 +9,6 @@ CL4 (orphan clients) and CL5 (projects owned by a non-client) only report.
 """
 from collections import defaultdict
 
-from django.db.models import Exists, OuterRef
-
 from content.services.data_integrity.catalog import rule
 from content.services.data_integrity.hashing import digits, normalized
 from content.services.data_integrity.scope import PROFILE, PROJECT, USER, client_label
@@ -121,23 +119,19 @@ def detect_duplicate_cedula(scope):
                                  f'{len(profiles)} clientes comparten la cédula {number}.', _suggest(profiles))
 
 
-@rule(id='CL4', domain='clients', severity='low', fix_kinds=(REPORT_ONLY,),
+@rule(id='CL4', domain='clients', severity='low', fix_kinds=(REPORT_ONLY,), version=2,
       title='Cliente sin ningún registro',
-      description='Un cliente activo sin propuestas, proyectos, diagnósticos, ingresos, hostings ni conversaciones. '
-                  'Si ya no se necesita, se borra a mano desde la pestaña «Huérfanos» de Clientes.')
+      description='Un cliente activo sin propuestas, proyectos, diagnósticos, ingresos, hostings, conversaciones ni '
+                  'ningún otro registro que impida borrarlo. Si ya no se necesita, se borra a mano desde la pestaña '
+                  '«Huérfanos» de Clientes.')
 def detect_orphan_client(scope):
-    from accounts.models import Project, UserProfile
-    from content.models import BusinessProposal, CommunicationThread, HostingRecord, IncomeRecord, WebAppDiagnostic
-    # Match the orphan tab's six relations, including retained history. Base
-    # managers keep an archived or retained relation from looking like no data.
-    related = (
-        (BusinessProposal, 'client_id', 'pk'), (Project, 'client_id', 'user_id'),
-        (WebAppDiagnostic, 'client_id', 'pk'), (IncomeRecord, 'client_id', 'pk'),
-        (HostingRecord, 'client_id', 'pk'), (CommunicationThread, 'client_id', 'pk'),
-    )
-    rows = UserProfile._base_manager.filter(role=UserProfile.ROLE_CLIENT, archived_at__isnull=True)
-    for model, field, owner in related:
-        rows = rows.filter(~Exists(model._base_manager.filter(**{field: OuterRef(owner)})))
+    from accounts.models import UserProfile
+    from accounts.services.client_deletion import blocked_condition
+    # The orphan tab's cut and the delete guard's: nothing that would stop
+    # deleting the client's user. The six business relations are part of it;
+    # base managers keep archived or retained rows from looking like no data.
+    rows = (UserProfile._base_manager.filter(role=UserProfile.ROLE_CLIENT, archived_at__isnull=True)
+            .exclude(blocked_condition('user_id')))
     rows = scope.limit(rows.select_related('user'), PROFILE)
     for profile in rows.order_by('pk'):
         label = client_label(profile)
@@ -145,9 +139,9 @@ def detect_orphan_client(scope):
             rule_id='CL4',
             subjects=(RecordRef(PROFILE, profile.pk, label),),
             evidence={'profile': profile.pk},
-            message=f'«{label}» no tiene propuestas, proyectos, diagnósticos, ingresos, hostings ni '
-                    'conversaciones. Si ya no lo necesitas, bórralo a mano desde la pestaña «Huérfanos» '
-                    'de Clientes.',
+            message=f'«{label}» no tiene propuestas, proyectos, diagnósticos, ingresos, hostings, '
+                    'conversaciones ni otros registros que impidan borrarlo. Si ya no lo necesitas, bórralo a '
+                    'mano desde la pestaña «Huérfanos» de Clientes.',
         )
 
 
@@ -167,4 +161,91 @@ def detect_project_owner_without_client_profile(scope):
             evidence={'project': pk, 'user': user_id, 'role': role},
             message=f'El proyecto «{name}» pertenece a {email}, que {owner}. Así no aparece en Clientes ni recibe '
                     'su conversación principal: crea el perfil de cliente o pasa el proyecto al cliente correcto.',
+        )
+
+
+# ── CL6 · client with no business left but rows that condition its delete ───
+
+def _trace_relations():
+    """SET_NULL relations to the client that are not authorship: what a delete leaves without client.
+
+    Read from the merge policy's canonical inventory (``discover_relations``,
+    hidden fields included), so a new relation shows up here on its own.
+    """
+    from django.db.models import SET_NULL
+    from content.services.client_merge_policy import AUTHORSHIP_RELATIONS, discover_relations
+    return tuple(relation for key, relation in sorted(discover_relations().items())
+                 if relation.field.remote_field.on_delete is SET_NULL and key not in AUTHORSHIP_RELATIONS)
+
+
+def _has_traces(relations):
+    """True when any trace relation has a row for the outer client profile, in the same query."""
+    from functools import reduce
+    from operator import or_
+
+    from django.contrib.auth import get_user_model
+    from django.db.models import Exists, OuterRef
+    user_model = get_user_model()
+    return reduce(or_, (
+        Exists(relation.model._base_manager.filter(
+            **{relation.field.attname: OuterRef('user_id' if relation.target is user_model else 'pk')}))
+        for relation in relations
+    ))
+
+
+def _trace_counts(profile, relations):
+    counts = {}
+    for relation in relations:
+        rows = relation.rows_for(profile).count()
+        if rows:
+            counts[relation.key] = rows
+    return counts
+
+
+def _counted_text(counts):
+    return ', '.join(f'{name} ({rows})' for name, rows in sorted(counts.items()))
+
+
+@rule(id='CL6', domain='clients', severity='low', fix_kinds=(REPORT_ONLY,),
+      title='Cliente sin actividad comercial con registros que condicionan su borrado',
+      description='Un cliente sin propuestas, proyectos, diagnósticos, ingresos, hostings ni conversaciones conserva '
+                  'otros registros: unos impiden borrarlo (carpetas de comunicaciones, alianzas, proyectos conservados, '
+                  'registros de entrega…) y otros quedarían sin cliente si se borra (documentos, carpetas del gestor, '
+                  'correos, enlaces). Es informativa: dice qué hay antes de decidir.')
+def detect_client_with_residual_records(scope):
+    # A client whose only residue is a SET_NULL trace is also a CL4 orphan: it
+    # can be deleted, by design. CL6 tells what that delete would leave behind.
+    from django.db.models import Exists, OuterRef, Q
+    from accounts.models import Project, UserProfile
+    from accounts.services.client_deletion import blocker_counts, deletion_blocked_annotation
+    from content.models import BusinessProposal, CommunicationThread, HostingRecord, IncomeRecord, WebAppDiagnostic
+    business = (
+        (BusinessProposal, 'client_id', 'pk'), (Project, 'client_id', 'user_id'),
+        (WebAppDiagnostic, 'client_id', 'pk'), (IncomeRecord, 'client_id', 'pk'),
+        (HostingRecord, 'client_id', 'pk'), (CommunicationThread, 'client_id', 'pk'),
+    )
+    rows = UserProfile._base_manager.filter(role=UserProfile.ROLE_CLIENT, archived_at__isnull=True)
+    for model, field, owner in business:
+        rows = rows.filter(~Exists(model._base_manager.filter(**{field: OuterRef(owner)})))
+    traces = _trace_relations()
+    # One query picks the clients holding anything; only those get per-relation counts.
+    rows = (rows.annotate(deletion_blocked=deletion_blocked_annotation())
+            .filter(Q(deletion_blocked=True) | _has_traces(traces)))
+    for profile in scope.limit(rows.select_related('user'), PROFILE).order_by('pk'):
+        blocking = blocker_counts(profile.user_id) if profile.deletion_blocked else {}
+        leftovers = _trace_counts(profile, traces)
+        if not blocking and not leftovers:
+            continue  # nothing that blocks or would be detached: CL4 alone covers it
+        label = client_label(profile)
+        parts = []
+        if blocking:
+            parts.append(f'Impiden borrarlo: {_counted_text(blocking)}.')
+        if leftovers:
+            parts.append(f'Quedarían sin cliente si se borra: {_counted_text(leftovers)}.')
+        yield Finding(
+            rule_id='CL6',
+            subjects=(RecordRef(PROFILE, profile.pk, label),),
+            evidence={'profile': profile.pk, 'blocking': sorted(blocking), 'traces': sorted(leftovers)},
+            message=f'«{label}» no tiene propuestas, proyectos, diagnósticos, ingresos, hostings ni conversaciones, '
+                    f'pero conserva otros registros. {" ".join(parts)}',
         )

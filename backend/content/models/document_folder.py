@@ -53,8 +53,10 @@ class DocumentFolder(RetainedProjectModel, models.Model):
 
     creation_operation = models.CharField(max_length=160, blank=True, default='', editable=False)
 
-    # Asociación. SET_NULL como en Document: borrar un cliente o un proyecto
-    # no puede llevarse por delante la organización del gestor.
+    # Asociación. PROTECT como en Document (#482): el borrado forzado de un
+    # proyecto elimina o conserva cada carpeta a propósito, nunca de rebote.
+    # El cliente (`client_user`) sí es SET_NULL: borrar un cliente no puede
+    # llevarse por delante la organización del gestor.
     project = models.ForeignKey('accounts.Project', on_delete=models.PROTECT, null=True, blank=True, related_name='document_folders')
     # Sólo las raíces creadas y mantenidas por el ciclo de vida de Project
     # llevan este vínculo. `project` sigue siendo la asociación heredable de

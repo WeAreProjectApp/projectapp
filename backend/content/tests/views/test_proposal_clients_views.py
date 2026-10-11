@@ -1166,6 +1166,72 @@ class TestDeleteProposalClient:
         assert response.data['error'] == 'client_not_found'
 
 
+def _retain_project_for(profile, admin_user, original_project_id):
+    """A retained project context: PROTECT on the client's user, outside the six counted relations."""
+    from content.models import ProjectRetentionContext
+
+    return ProjectRetentionContext.objects.create(
+        client=profile.user, original_project_id=original_project_id,
+        project_name='Proyecto retenido', created_by=admin_user,
+    )
+
+
+class TestDeleteProtectedClient:
+    """H1: a client held by a relation outside the six counted ones never yields a 500."""
+
+    def test_delete_with_a_retained_project_returns_400_naming_the_relation(
+        self, admin_client, admin_user, orphan_client,
+    ):
+        """Fails if deleting a client held by a retained project returns a 500 instead of a 400 naming it."""
+        _retain_project_for(orphan_client, admin_user, 9101)
+
+        response = admin_client.delete(reverse('delete-proposal-client', args=[orphan_client.pk]))
+
+        assert response.status_code == 400
+        assert response.data == {
+            'error': 'client_has_protected_references', 'count': 1,
+            'relations': {'content.projectretentioncontext.client': 1},
+        }
+        assert UserProfile.objects.filter(pk=orphan_client.pk).exists()
+
+    def test_delete_refused_by_django_keeps_the_avatar_and_returns_400(
+        self, admin_client, admin_user, orphan_client,
+    ):
+        """Fails if a delete Django refuses erases the avatar first or surfaces as a 500.
+
+        The guard is bypassed to exercise the safety net: deleting the profile
+        before its user used to remove the avatar file and then fail.
+        """
+        from django.core.files.base import ContentFile
+
+        storage = UserProfile._meta.get_field('avatar').storage
+        avatar_name = storage.save('avatars/held-client.png', ContentFile(b'avatar-bytes'))
+        UserProfile.objects.filter(pk=orphan_client.pk).update(avatar=avatar_name)
+        _retain_project_for(orphan_client, admin_user, 9102)
+
+        with patch('accounts.services.client_deletion.blocker_counts', return_value={}):
+            response = admin_client.delete(reverse('delete-proposal-client', args=[orphan_client.pk]))
+
+        assert response.status_code == 400
+        assert response.data['relations'] == {'content.projectretentioncontext': 1}
+        assert storage.exists(avatar_name)
+        assert UserProfile.objects.filter(pk=orphan_client.pk).exists()
+
+    def test_client_held_by_a_retained_project_is_not_offered_as_orphan(
+        self, admin_client, admin_user, orphan_client,
+    ):
+        """Fails if the orphan tab, its count or the row flag offer to delete a client the guard refuses."""
+        _retain_project_for(orphan_client, admin_user, 9103)
+
+        orphans = admin_client.get(reverse('list-proposal-clients'), {'orphans': 'true'}).data
+        counts = admin_client.get(reverse('proposal-client-status-counts')).data
+        listed = admin_client.get(reverse('list-proposal-clients')).data
+
+        assert orphan_client.pk not in [row['id'] for row in orphans]
+        assert counts['orphans'] == 0
+        assert next(row for row in listed if row['id'] == orphan_client.pk)['is_orphan'] is False
+
+
 # ---------------------------------------------------------------------------
 # Proposal create/update wiring (client_id resolution)
 # ---------------------------------------------------------------------------
