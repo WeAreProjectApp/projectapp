@@ -44,6 +44,7 @@ from content.services.collection_account_service import (
 )
 from content.services.contract_mirror_service import (
     CONTRACT_MIRROR_CODE,
+    MODULE_MIRROR_RELATIONS,
     mirror_read_only_message,
     is_contract_mirror,
     mirror_pdf,
@@ -442,7 +443,7 @@ def retrieve_document(request, document_id):
         ).select_related(
             'document_type', 'folder', 'project', 'client_user__profile',
             'thread_item__thread', 'collection_account', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
-            'building_with_us_mirror__revision',
+            *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
         ).prefetch_related(
             Prefetch(
                 'document_notes',

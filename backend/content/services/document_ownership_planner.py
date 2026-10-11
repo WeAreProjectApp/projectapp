@@ -18,6 +18,7 @@ from content.models.document_folder import lock_document_folder_mutations
 from content.serializers.strict_input import StrictInputMixin
 from content.services import accounting_service
 from content.services.contract_mirror_service import (
+    MODULE_MIRROR_RELATIONS,
     is_contract_mirror,
     pinned_mirror_folder,
 )
@@ -150,6 +151,7 @@ def _ancestors(ids, topology):
 def _documents(query):
     return Document.objects.filter(query).select_related(
         'document_type', 'project', 'contract_template', 'contract_mirror',
+        *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
     ).annotate(
         ownership_delivery_linked=Exists(DeliveryDocumentLink.objects.filter(document_id=OuterRef('pk'))),
         ownership_contract_linked=Exists(ProjectContract.objects.filter(document_id=OuterRef('pk'))),

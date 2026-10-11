@@ -1,57 +1,10 @@
 """Real seeded program content and small bilingual operation item builders."""
-import os
 from copy import deepcopy
-from hashlib import sha256
 from importlib import import_module
-from pathlib import Path
 
-import django
 import pytest
-from django.apps import apps
-from django.conf import settings
 
-from content.models import BuildingOnDemandProgram
-
-
-@pytest.fixture(scope='session')
-def django_db_modify_db_settings(request, django_db_modify_db_settings_parallel_suffix, django_db_use_migrations):
-    """Keep ordinary setup unchanged; cache a fully migrated DB on explicit reuse."""
-    if not request.config.getoption('reuse_db'):
-        return
-    database = settings.DATABASES['default']
-    assert database['ENGINE'] == 'django.db.backends.sqlite3'
-    if not django_db_use_migrations:
-        raise pytest.UsageError('Reusable program databases require migrations.')
-
-    fingerprint = sha256(str(Path(__file__).resolve().parents[3]).encode())
-    fingerprint.update(django.get_version().encode())
-    for app_config in sorted(apps.get_app_configs(), key=lambda item: item.label):
-        module_name = settings.MIGRATION_MODULES.get(app_config.label, f'{app_config.name}.migrations')
-        if module_name is None:
-            continue
-        try:
-            migration_package = import_module(module_name)
-        except ModuleNotFoundError as error:
-            if error.name != module_name:
-                raise
-            continue
-        for package_path in sorted(migration_package.__path__):
-            migration_root = Path(package_path)
-            for source in sorted(migration_root.rglob('*.py')):
-                fingerprint.update(f'{module_name}/{source.relative_to(migration_root)}\0'.encode())
-                fingerprint.update(source.read_bytes())
-                fingerprint.update(b'\0')
-
-    cache_directory = Path('/tmp/projectapp-building-on-demand-tests')
-    cache_directory.mkdir(mode=0o700, exist_ok=True)
-    assert not cache_directory.is_symlink()
-    assert cache_directory.stat().st_uid == os.getuid()
-    cache_directory.chmod(0o700)
-    worker = getattr(request.config, 'workerinput', {}).get('workerid', 'main')
-    assert worker.replace('-', '').isalnum()
-    cache_file = cache_directory / f'{fingerprint.hexdigest()}-{worker}.sqlite3'
-    database.setdefault('TEST', {})['NAME'] = str(cache_file)
-    print(f'Reusable migrated Building on Demand test database: {cache_file}')
+from content.models import BuildingOnDemandContract, BuildingOnDemandProgram, ContractTemplate, DocumentFolder
 
 
 @pytest.fixture
@@ -164,3 +117,34 @@ def make_card_item(*, item_id='monitoring', **changes):
     }
     item.update(deepcopy(changes))
     return item
+
+
+@pytest.fixture
+def building_on_demand_contract(db):
+    """Exercise the immutable contract deployed by the real data migration."""
+    return BuildingOnDemandContract.load()
+
+
+@pytest.fixture
+def unpinned_contracts_folder(db):
+    """An explicit internal folder with no configured or derived shared pin."""
+    ContractTemplate.objects.filter(is_default=True).update(mirror_folder=None, mirror_document=None)
+    root = DocumentFolder.objects.create(name='ProjectApp')
+    return DocumentFolder.objects.create(name='Contratos', parent=root)
+
+
+@pytest.fixture
+def pinned_contracts_folder(unpinned_contracts_folder):
+    """Use the same folder pin as all proposal and module contract mirrors."""
+    template = ContractTemplate.get_default()
+    if template is None:
+        template = ContractTemplate.objects.create(name='Contrato de pruebas', is_default=True)
+    template.mirror_folder = unpinned_contracts_folder
+    template.save(update_fields=['mirror_folder', 'updated_at'])
+    return unpinned_contracts_folder
+
+
+def contract_update(snapshot):
+    """Build an attributed contract edit against the current etag."""
+    return {'markdown': snapshot['markdown'] + '\n\n## ACLARACIÓN\n\nCada estimación aprobada queda registrada por escrito.\n',
+            'if_match': snapshot['etag'], 'change_note': 'Aclara el registro de la estimación aprobada.'}

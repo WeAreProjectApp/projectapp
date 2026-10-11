@@ -9,6 +9,8 @@ from rest_framework.exceptions import PermissionDenied
 
 from content.models import (
     AccountingChangeLog,
+    BuildingOnDemandContractRevision,
+    BuildingOnDemandProgramRevision,
     BuildingWithUsContractRevision,
     BuildingWithUsProgramRevision,
     BusinessProposal,
@@ -50,8 +52,11 @@ def _codes(blockers):
 @pytest.mark.parametrize('revision_model,content', [
     (BuildingWithUsProgramRevision, {'content': {}}),
     (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
-], ids=['program', 'contract'])
-def test_undo_preserves_alliance_revision_author(superuser, revision_model, content):
+    (BuildingOnDemandProgramRevision, {'content': {}}),
+    (BuildingOnDemandContractRevision, {'markdown': '# Célula compartida'}),
+], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract'])
+def test_undo_preserves_module_revision_author(superuser, revision_model, content):
+    """Fails if reversing a client merge rewrites the module's original revision author."""
     survivor, duplicate = client_pair()
     revision = revision_model.objects.create(
         version=revision_model.objects.count() + 1, author=duplicate.user,

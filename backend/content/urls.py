@@ -16,6 +16,7 @@ from content.views.building_on_demand import (
     public_building_on_demand_program, public_building_on_demand_program_pdf,
     admin_building_on_demand_overview, admin_building_on_demand_program_versions,
     admin_building_on_demand_economics,
+    admin_building_on_demand_contract, admin_building_on_demand_contract_versions, admin_building_on_demand_contract_pdf,
 )
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
@@ -442,6 +443,9 @@ urlpatterns = [
     path('building-on-demand/admin/', admin_building_on_demand_overview, name='admin-building-on-demand-overview'),
     path('building-on-demand/admin/program/versions/', admin_building_on_demand_program_versions, name='admin-building-on-demand-program-versions'),
     path('building-on-demand/admin/economics/', admin_building_on_demand_economics, name='admin-building-on-demand-economics'),
+    path('building-on-demand/admin/contract/', admin_building_on_demand_contract, name='admin-building-on-demand-contract'),
+    path('building-on-demand/admin/contract/versions/', admin_building_on_demand_contract_versions, name='admin-building-on-demand-contract-versions'),
+    path('building-on-demand/admin/contract/pdf/', admin_building_on_demand_contract_pdf, name='admin-building-on-demand-contract-pdf'),
 
     # Financing program — public informational resource
     path(

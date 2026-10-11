@@ -191,8 +191,18 @@ def list_versions(*, offset=0, limit=20, include_content=False):
 
 
 def _contract_summary():
-    """The contract wave will supply its independently versioned summary."""
-    return None
+    """Expose private contract provenance without duplicating its content."""
+    from content.services.building_on_demand_contract_service import read_contract
+
+    try:
+        contract = read_contract()
+    except BuildingOnDemandError as exc:
+        if exc.code == 'NOT_FOUND':
+            return None
+        raise
+    return {key: contract[key] for key in (
+        'version', 'version_id', 'updated_at', 'author', 'change_note', 'mirror',
+    )}
 
 
 def admin_overview():
