@@ -333,6 +333,14 @@ HUEY = RedisHuey(
 )
 
 # ==============================================================================
+# LINKTREE TEMPLATES — browser validation (docs/LINKTREE_HTML_TEMPLATES.md)
+# ==============================================================================
+
+# Emergency switch: when off, candidates fail with `validator_disabled` and
+# Chromium never starts.
+LINKTREE_BROWSER_VALIDATION = config('LINKTREE_BROWSER_VALIDATION', default=True, cast=bool)
+
+# ==============================================================================
 # BACKUPS — django-dbbackup
 # ==============================================================================
 # Storage is configured via STORAGES['dbbackup'] above (new-style API).

@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from urllib.parse import urlsplit
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from PIL import Image
 from playwright.sync_api import sync_playwright
@@ -14,6 +15,8 @@ from .render import asset_url, content_security_policy, font_url, snapshot_docum
 
 logger = logging.getLogger(__name__)
 WIDTHS = (320, 375, 430)
+DISABLED_ISSUE = {'severity': 'error', 'code': 'validator_disabled',
+                  'message': 'La validación visual está desactivada temporalmente. Consulta al administrador.'}
 
 
 def luminance(rgb):
@@ -47,6 +50,9 @@ def contrast_issues(texts, background, width):
 
 
 def validate_in_browser(version):
+    if not settings.LINKTREE_BROWSER_VALIDATION:
+        # Emergency switch: the candidate fails closed without starting Chromium.
+        return {'issues': [dict(DISABLED_ISSUE)]}, {}
     storage = get_private_storage()
     document = snapshot_document(version)
     resources = {}
