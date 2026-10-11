@@ -19,7 +19,8 @@ from decimal import Decimal
 from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import transaction
-from django.db.models import Q, Sum
+from django.db.models import Count, DecimalField, Exists, F, OuterRef, Q, Subquery, Sum, Value
+from django.db.models.functions import Coalesce
 from rest_framework.exceptions import APIException
 
 from content.services.data_integrity.catalog import register_fixer, rule
@@ -37,6 +38,8 @@ from content.services.data_integrity.types import (
 )
 
 CENT = Decimal('0.01')
+EXPENSE = 'content.expenserecord'
+POCKET = 'content.pocketmovement'
 NO_PROJECT = 'none'
 SIDE_LABEL = 'qué lado se corrige'
 PROJECT_LABEL = 'el proyecto que queda en el registro'
@@ -670,4 +673,230 @@ def detect_cuenta_without_context(scope):
                     f'corresponde.{prerequisite}',
             tool={'connector': 'projects', 'name': 'associate_collection_account_context',
                   'arguments': arguments},
+        )
+
+
+# ── Shared helpers of AC9-AC13 ───────────────────────────────────────────────
+
+def _live_accounts():
+    """Documents that still count as an income's cuenta de cobro: all but cancelled.
+
+    The same set ``collection_account_create_service`` refuses to duplicate
+    (``income.collection_documents.exclude(cancelled)``), read through the
+    base manager so retained rows count too.
+    """
+    from content.models import Document
+    return (Document._base_manager.filter(income_record__isnull=False)
+            .exclude(commercial_status=Document.CommercialStatus.CANCELLED))
+
+
+def _sum_of(queryset, group_field):
+    """Correlated SUM of ``total_amount``: one subquery, no fan-out of the outer rows."""
+    return Coalesce(
+        Subquery(queryset.order_by().values(group_field).annotate(total=Sum('total_amount')).values('total')[:1]),
+        Value(Decimal('0')),
+        output_field=DecimalField(max_digits=14, decimal_places=2),
+    )
+
+
+# ── AC9 · two live cuentas de cobro for one income ───────────────────────────
+
+@rule(id='AC9', domain='accounting', severity='high', fix_kinds=(REPORT_ONLY,), group=True,
+      title='Ingreso con más de una cuenta de cobro vigente',
+      description='Un ingreso tiene dos o más cuentas de cobro sin anular, cuando sólo puede tener una. Una cuenta '
+                  'emitida nunca se borra: la que sobra se anula por su flujo, desde el Gestor Documental.')
+def detect_income_with_two_live_accounts(scope):
+    from content.models import IncomeRecord
+    live = _live_accounts()
+    repeated = (live.order_by().values('income_record').annotate(accounts=Count('pk'))
+                .filter(accounts__gt=1).values('income_record'))
+    incomes = scope.limit(IncomeRecord._base_manager.filter(pk__in=repeated), INCOME)
+    for income in incomes.order_by('pk'):
+        accounts = list(live.filter(income_record=income).order_by('pk'))
+        names = ', '.join(f'«{_document_label(account)}»' for account in accounts)
+        yield Finding(
+            rule_id='AC9',
+            subjects=(RecordRef(INCOME, income.pk, _record_label(income)),
+                      *(RecordRef(DOCUMENT, account.pk, _document_label(account)) for account in accounts)),
+            evidence={'income': income.pk, 'accounts': [account.pk for account in accounts]},
+            message=f'El ingreso «{_record_label(income)}» tiene {len(accounts)} cuentas de cobro sin anular '
+                    f'({names}) y sólo puede tener una. Anula la que sobra desde el Gestor Documental; una cuenta '
+                    'emitida nunca se borra.',
+        )
+
+
+# ── AC10 · cuenta de cobro apart from its income ─────────────────────────────
+
+@rule(id='AC10', domain='accounting', severity='high', fix_kinds=(REPORT_ONLY,),
+      title='Cuenta de cobro de otro proyecto o cliente que su ingreso',
+      description='Una cuenta de cobro sin anular no tiene el proyecto o el cliente de su ingreso, así que la '
+                  'liquidación del ingreso no la encuentra. Una cuenta emitida no se reasigna: se anula por su flujo '
+                  'y se genera de nuevo.')
+def detect_account_apart_from_income(scope):
+    # The settlement finds the cuenta by the income's exact project (NULL
+    # included) and its client's user (income_settlement_policy.py). Nulls are
+    # split out before comparing with F(): SQL never equates two NULLs.
+    project_differs = (
+        Q(income_record__project__isnull=True, project__isnull=False)
+        | Q(income_record__project__isnull=False, project__isnull=True)
+        | (Q(income_record__project__isnull=False, project__isnull=False)
+           & ~Q(project_id=F('income_record__project_id')))
+    )
+    client_differs = Q(income_record__client__isnull=False) & (
+        Q(client_user__isnull=True) | ~Q(client_user_id=F('income_record__client__user_id'))
+    )
+    rows = scope.limit(_live_accounts().filter(project_differs | client_differs), DOCUMENT)
+    for account in rows.select_related('income_record__client').order_by('pk'):
+        income = account.income_record
+        owner = income.client.user_id if income.client_id else None
+        differs = [label for label, mismatch in (
+            ('el proyecto', account.project_id != income.project_id),
+            ('el cliente', owner is not None and account.client_user_id != owner),
+        ) if mismatch]
+        yield Finding(
+            rule_id='AC10',
+            subjects=(RecordRef(DOCUMENT, account.pk, _document_label(account)),
+                      RecordRef(INCOME, income.pk, _record_label(income))),
+            evidence={'document': account.pk, 'income': income.pk,
+                      'project': [account.project_id, income.project_id],
+                      'client_user': [account.client_user_id, owner]},
+            message=f'La cuenta de cobro «{_document_label(account)}» no tiene {" ni ".join(differs)} de su ingreso '
+                    f'«{_record_label(income)}», así que la liquidación del ingreso no la encuentra. Si ya está '
+                    'emitida, anúlala por su flujo y genera una nueva para el ingreso.',
+        )
+
+
+# ── AC11 · partner split outside its rules ───────────────────────────────────
+
+def _split_violations(model):
+    """``PartnerSplitMixin.clean()`` as a filter: what a raw write can skip."""
+    from content.models import Ledger
+    personal = (
+        (Q(ledger=Ledger.GUSTAVO) & (~Q(gustavo_amount=F('total_amount')) | ~Q(carlos_amount=0)))
+        | (Q(ledger=Ledger.CARLOS) & (~Q(carlos_amount=F('total_amount')) | ~Q(gustavo_amount=0)))
+    )
+    return model._base_manager.filter(
+        Q(total_amount__lt=0) | Q(gustavo_amount__lt=0) | Q(carlos_amount__lt=0)
+        | Q(total_amount__lt=F('gustavo_amount') + F('carlos_amount'))
+        | personal
+    )
+
+
+def _split_problems(row):
+    from content.models import Ledger
+    problems = []
+    if min(row.total_amount, row.gustavo_amount, row.carlos_amount) < 0:
+        problems.append('tiene montos negativos')
+    if row.gustavo_amount + row.carlos_amount > row.total_amount:
+        problems.append('reparte a los socios más que su total')
+    owner, other = {Ledger.GUSTAVO: (row.gustavo_amount, row.carlos_amount),
+                    Ledger.CARLOS: (row.carlos_amount, row.gustavo_amount)}.get(row.ledger, (None, None))
+    if owner is not None and (owner != row.total_amount or other):
+        problems.append('es un movimiento personal que no es 100 % de su dueño')
+    return problems
+
+
+@rule(id='AC11', domain='accounting', severity='high', fix_kinds=(REPORT_ONLY,),
+      title='Reparto entre socios fuera de sus reglas',
+      description='Un ingreso o un gasto tiene montos negativos, reparte a los socios más que su total o es un '
+                  'movimiento personal que no es 100 % de su dueño: reglas del formulario que una escritura directa '
+                  'se saltó. Se corrige editando el registro en Contabilidad, que deja historial.')
+def detect_partner_split_violations(scope):
+    from content.models import ExpenseRecord, IncomeRecord
+    sources = [(INCOME, scope.limit(_split_violations(IncomeRecord), INCOME))]
+    if scope.is_all:
+        # Expenses belong to no client or project, so only a full sweep sees them.
+        sources.append((EXPENSE, _split_violations(ExpenseRecord)))
+    for label, rows in sources:
+        for row in rows.order_by('pk'):
+            yield Finding(
+                rule_id='AC11',
+                subjects=(RecordRef(label, row.pk, row.concept),),
+                evidence={'model': label, 'id': row.pk, 'ledger': row.ledger,
+                          'amounts': [_money(row.total_amount), _money(row.gustavo_amount),
+                                      _money(row.carlos_amount)]},
+                message=f'«{row.concept}» {" y ".join(_split_problems(row))}. Corrígelo editando el registro en '
+                        'Contabilidad, que valida el reparto y deja historial.',
+            )
+
+
+# ── AC12 · expected income paid beyond its total ─────────────────────────────
+
+@rule(id='AC12', domain='accounting', severity='high', fix_kinds=(REPORT_ONLY,),
+      title='Ingreso esperado pagado por encima de su total',
+      description='Lo líquido y las deducciones de un ingreso esperado suman más que su total, algo que la '
+                  'liquidación nunca deja. Se revisa a mano: los cierres van por la liquidación o por el residuo del '
+                  'ingreso.')
+def detect_overpaid_expected(scope):
+    from content.models import ExpenseRecord, IncomeRecord
+    # The settlement's own arithmetic (``_paid_total``): liquid children plus
+    # real deductions, each in its own subquery so neither fans out the other.
+    liquid = IncomeRecord._base_manager.filter(expected_income=OuterRef('pk'), kind=IncomeRecord.Kind.LIQUID)
+    deducted = ExpenseRecord._base_manager.filter(source_income=OuterRef('pk')).exclude(deduction_type='')
+    rows = (IncomeRecord._base_manager.filter(kind=IncomeRecord.Kind.EXPECTED)
+            .annotate(liquid_total=_sum_of(liquid, 'expected_income'),
+                      deducted_total=_sum_of(deducted, 'source_income'))
+            .filter(total_amount__lt=F('liquid_total') + F('deducted_total')))
+    for income in scope.limit(rows, INCOME).order_by('pk'):
+        paid = income.liquid_total + income.deducted_total
+        yield Finding(
+            rule_id='AC12',
+            subjects=(RecordRef(INCOME, income.pk, income.concept),),
+            evidence={'income': income.pk, 'total': _money(income.total_amount),
+                      'liquid': _money(income.liquid_total), 'deducted': _money(income.deducted_total)},
+            message=f'El ingreso esperado «{income.concept}» suma {_money(paid)} entre lo líquido y las deducciones, '
+                    f'por encima de su total de {_money(income.total_amount)}. Revisa sus pagos: la liquidación '
+                    'nunca deja un esperado pagado de más.',
+        )
+
+
+# ── AC13 · pocket movement out of step with its records ──────────────────────
+
+def _pocket_problems(movement):
+    from content.models import PocketMovement
+    problems = []
+    if movement.has_incomes and movement.has_expense:
+        problems.append('refleja a la vez ingresos y un gasto')
+    if movement.has_incomes:
+        if movement.direction != PocketMovement.Direction.IN:
+            problems.append('refleja ingresos pero es una salida')
+        if movement.amount != movement.incomes_total:
+            problems.append(f'vale {_money(movement.amount)} y sus ingresos suman {_money(movement.incomes_total)}')
+    if movement.has_expense:
+        if movement.direction != PocketMovement.Direction.OUT:
+            problems.append('refleja un gasto pero es una entrada')
+        if movement.amount != movement.expense_total:
+            problems.append(f'vale {_money(movement.amount)} y su gasto {_money(movement.expense_total)}')
+    return problems
+
+
+@rule(id='AC13', domain='accounting', severity='medium', fix_kinds=(REPORT_ONLY,), full_sweep_only=True,
+      title='Movimiento del bolsillo que no cuadra con su registro',
+      description='Un movimiento del bolsillo no vale lo mismo que los ingresos o el gasto que refleja, o va en la '
+                  'dirección contraria. Contabilidad los mantiene iguales al guardar; una escritura directa los '
+                  'separó. Se revisa a mano.')
+def detect_pocket_mirror_drift(scope):
+    from content.models import ExpenseRecord, IncomeRecord, PocketMovement
+    # accounting_service._sync_movement: an income mirror is IN, an expense
+    # mirror is OUT, and the amount is the record's total (an abono's, the sum
+    # of its incomes).
+    incomes = IncomeRecord._base_manager.filter(pocket_movement=OuterRef('pk'))
+    expense = ExpenseRecord._base_manager.filter(pocket_movement=OuterRef('pk'))
+    rows = (PocketMovement._base_manager
+            .annotate(has_incomes=Exists(incomes), has_expense=Exists(expense),
+                      incomes_total=_sum_of(incomes, 'pocket_movement'),
+                      expense_total=Subquery(expense.values('total_amount')[:1]))
+            .filter(Q(has_incomes=True) | Q(has_expense=True)))
+    for movement in rows.order_by('pk'):
+        problems = _pocket_problems(movement)
+        if not problems:
+            continue
+        yield Finding(
+            rule_id='AC13',
+            subjects=(RecordRef(POCKET, movement.pk, movement.concept),),
+            evidence={'movement': movement.pk, 'direction': movement.direction, 'amount': _money(movement.amount),
+                      'incomes': _money(movement.incomes_total) if movement.has_incomes else None,
+                      'expense': _money(movement.expense_total) if movement.has_expense else None},
+            message=f'El movimiento del bolsillo «{movement.concept}» {"; ".join(problems)}. Contabilidad los '
+                    'mantiene iguales al guardar: revísalo a mano.',
         )

@@ -725,3 +725,97 @@ register_fixer('PJ7', PhaseOrderFixer())
 
 def project_ref(project):
     return ref(project, project.name)
+
+
+# ── PJ8 · client records on another client's project ────────────────────────
+# The cross-client relations no other rule reads: financing agreements
+# (financing_agreement_service checks proposal and project at write), delivery
+# notices, closure evidence and authoring contexts (frozen at creation) and
+# communication folders (CommunicationFolder.clean). All report only: the
+# delivery records are immutable evidence, and moving an agreement or a folder
+# is a decision with its own module.
+
+def _pj8_sources():
+    from accounts.models import DeliveryPromptContext
+    from accounts.models_delivery_email import DeliveryEvidenceEmail
+    from accounts.models_delivery_notifications import DeliveryNotificationEvent
+    from content.models import CommunicationFolder, FinancingAgreement
+    # (model, its project field, path to the record's client user, kind)
+    return (
+        (FinancingAgreement, 'source_project', 'client__user', 'Alianza'),
+        (CommunicationFolder, 'project', 'client__user', 'Carpeta de comunicaciones'),
+        (DeliveryNotificationEvent, 'project', 'client', 'Aviso de entrega'),
+        (DeliveryEvidenceEmail, 'project', 'client', 'Correo de cierre de entrega'),
+        (DeliveryPromptContext, 'project', 'client', 'Contexto de autoría de entrega'),
+    )
+
+
+def _pj8_label(record, kind):
+    name = getattr(record, 'name', '') or getattr(record, 'number', '') or getattr(record, 'project_name', '')
+    return f'{kind} «{name}»' if name else f'{kind} #{record.pk}'
+
+
+@rule(id='PJ8', domain='projects', severity='high', fix_kinds=(REPORT_ONLY,),
+      title='Alianza, aviso de entrega o carpeta en el proyecto de otro cliente',
+      description='Una alianza, una carpeta de comunicaciones o un registro de entrega (aviso, correo de cierre o '
+                  'contexto de autoría) de un cliente apunta a un proyecto de otro cliente. Las entregas son evidencia '
+                  'y no se reescriben; la alianza y la carpeta se corrigen desde su módulo. Se revisa a mano.')
+def detect_records_on_foreign_project(scope):
+    for model, project_field, client, kind in _pj8_sources():
+        # Nulls first, then F(): a record without a client or project is not a cross.
+        rows = (model._base_manager
+                .filter(**{f'{project_field}__isnull': False, f'{client}__isnull': False})
+                .exclude(**{f'{project_field}__client_id': F(f'{client}_id')})
+                .select_related(project_field)
+                .order_by('pk'))
+        label = model._meta.label_lower
+        # A client scope reaches the record through its own client as well.
+        client_kind = PROFILE if client == 'client__user' else USER
+        for record in rows:
+            project = getattr(record, project_field)
+            if not (scope.is_all or scope.touches(PROJECT, [project.pk]) or scope.touches(label, [record.pk])
+                    or scope.touches(client_kind, [record.client_id])):
+                continue
+            yield Finding(
+                rule_id='PJ8',
+                subjects=(RecordRef(label, record.pk, _pj8_label(record, kind)),
+                          RecordRef(PROJECT, project.pk, project.name)),
+                evidence={'model': label, 'id': record.pk, 'project': project.pk},
+                message=f'{_pj8_label(record, kind)} es de otro cliente que el proyecto «{project.name}» al que apunta. '
+                        'Revísalo a mano: las entregas son evidencia y no se reescriben, y una alianza o una carpeta '
+                        'se corrigen desde su propio módulo.',
+            )
+
+
+# ── PJ9 · retained rows the deletion index never listed ──────────────────────
+
+@rule(id='PJ9', domain='projects', severity='medium', fix_kinds=(REPORT_ONLY,),
+      title='Registro conservado que el índice de su borrado no lista',
+      description='Un registro quedó marcado como conservado de un proyecto eliminado, pero el índice que se guardó '
+                  'al borrar ese proyecto no lo menciona. Se marcó por fuera del borrado auditado; se revisa a mano en '
+                  'la auditoría de retención.')
+def detect_unlisted_retained_rows(scope):
+    from content.models import ProjectRetentionContext
+    from content.services.retention_audit import retained_models
+    # retention_audit._category's ``unlisted``: marked rows whose id is not in
+    # the context's ``retained_records`` index (ids stored as strings).
+    contexts = {context.pk: context for context in
+                ProjectRetentionContext._base_manager.only('pk', 'project_name', 'retained_records')}
+    for model in retained_models():
+        label = model._meta.label_lower
+        rows = (model._base_manager.filter(retention_context__isnull=False)
+                .order_by('pk').values_list('pk', 'retention_context_id'))
+        for pk, context_id in rows:
+            context = contexts.get(context_id)
+            listed = {str(value) for value in (context.retained_records.get(label, []) if context else [])}
+            if str(pk) in listed or not (scope.is_all or scope.touches(label, [pk])):
+                continue
+            name = context.project_name if context else context_id
+            yield Finding(
+                rule_id='PJ9',
+                subjects=(RecordRef(label, pk, f'{_category_label(label)} #{pk}'),),
+                evidence={'model': label, 'id': pk, 'context': context_id},
+                message=f'Un registro de «{_category_label(label)}» (#{pk}) está marcado como conservado de '
+                        f'«{name}», pero el índice que se guardó al borrar ese proyecto no lo lista. Se marcó por '
+                        'fuera del borrado auditado: revísalo en la auditoría de retención.',
+            )

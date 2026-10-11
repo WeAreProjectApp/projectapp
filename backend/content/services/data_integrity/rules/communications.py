@@ -17,7 +17,7 @@ from content.services.data_integrity.fixes.base import Fixer, change, required_c
 from content.services.data_integrity.rules.documents import (
     NAME_TAKEN, NO_PROJECT, chosen_project, folder_key, new_name, project_input, projects_by_client, user_label,
 )
-from content.services.data_integrity.scope import COMM_FOLDER, PROJECT, SECURE_LINK, THREAD, client_label
+from content.services.data_integrity.scope import COMM_FOLDER, DOCUMENT, PROJECT, SECURE_LINK, THREAD, client_label
 from content.services.data_integrity.types import ARCHIVE, RELINK, RENAME, REPORT_ONLY, Finding, RecordRef, blocker
 
 STALE_THREAD_DAYS = 30
@@ -357,4 +357,33 @@ def detect_secure_link_foreign_project(scope):
             evidence={'link': link.pk, 'project': project.pk, 'client': link.client_id},
             message=f'El enlace seguro «{link.title}» es de {client_label(link.client)}, pero está vinculado al '
                     f'proyecto «{project.name}», que es de {user_label(project.client)}.',
+        )
+
+
+# ── CM6 · attachment holding another client's document ──────────────────────
+
+@rule(id='CM6', domain='communications', severity='high', fix_kinds=(REPORT_ONLY,),
+      title='Adjunto con un documento de otro cliente',
+      description='Un mensaje lleva adjunto un documento de otro cliente, algo que Comunicaciones rechaza al '
+                  'adjuntar. El mensaje no se reescribe: se revisa a mano qué se compartió.')
+def detect_foreign_document_attachment(scope):
+    from content.models import CommunicationAttachment
+    # communication_service._validate_documents: a document with a client must
+    # be the thread client's. Unowned documents pass, as they do there.
+    attachments = scope.limit(
+        CommunicationAttachment._base_manager
+        .filter(document__client_user__isnull=False, message__thread__client__isnull=False)
+        .exclude(document__client_user_id=F('message__thread__client__user_id'))
+        .select_related('document__client_user__profile', 'message__thread__client')
+        .order_by('pk'), THREAD, 'message__thread_id')
+    for attachment in attachments:
+        document, thread = attachment.document, attachment.message.thread
+        yield Finding(
+            rule_id='CM6',
+            subjects=(RecordRef(THREAD, thread.pk, thread.title), RecordRef(DOCUMENT, document.pk, document.title)),
+            evidence={'attachment': attachment.pk, 'message': attachment.message_id, 'document': document.pk,
+                      'thread': thread.pk},
+            message=f'Un mensaje de la conversación «{thread.title}», de {client_label(thread.client)}, lleva adjunto '
+                    f'«{document.title}», que es de {user_label(document.client_user)}. El mensaje no se reescribe: '
+                    'revisa a mano qué se compartió.',
         )

@@ -365,3 +365,37 @@ def detect_repeated_proposals(scope):
             message=f'{len(members)} propuestas de {client_label(clients[client_id])} se llaman '
                     f'«{members[0][1]}» y tienen la misma inversión ({investment} {currency}).',
         )
+
+
+# ── PR9 · historical pricing snapshot missing its keys ───────────────────────
+
+PRICING_SNAPSHOT_KEYS = ('original_investment', 'total_investment', 'discount_percent', 'currency')
+
+
+@rule(id='PR9', domain='proposals', severity='medium', fix_kinds=(REPORT_ONLY,),
+      title='Propuesta con precio histórico incompleto',
+      description='Una propuesta conserva un precio histórico (el que dejó la migración de precios) al que le falta '
+                  'un valor, así que leer su descuento o guardar sus condiciones financieras falla. Sólo la migración '
+                  'escribe ese dato; se revisa a mano.')
+def detect_incomplete_pricing_snapshot(scope):
+    from content.models import BusinessProposal
+    # proposal_totals_service.discount_original_for_proposal and
+    # BusinessProposal.save index these keys whenever the snapshot is not
+    # empty. Migration 0275 always writes all of them; MCP and the admin
+    # never write the field, so only a raw write can leave one out.
+    rows = scope.limit(
+        BusinessProposal._base_manager
+        .exclude(legacy_pricing_snapshot={})
+        .exclude(legacy_pricing_snapshot__has_keys=list(PRICING_SNAPSHOT_KEYS))
+        .order_by('pk'), PROPOSAL)
+    for proposal in rows:
+        snapshot = proposal.legacy_pricing_snapshot
+        missing = [key for key in PRICING_SNAPSHOT_KEYS if not isinstance(snapshot, dict) or key not in snapshot]
+        yield Finding(
+            rule_id='PR9',
+            subjects=(RecordRef(PROPOSAL, proposal.pk, proposal.title),),
+            evidence={'proposal': proposal.pk, 'missing': missing},
+            message=f'La propuesta «{proposal.title}» conserva un precio histórico sin {", ".join(missing)}, así que '
+                    'leer su descuento o guardar sus condiciones financieras falla. Sólo la migración de precios '
+                    'escribe ese dato: revísalo a mano.',
+        )

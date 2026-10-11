@@ -584,3 +584,112 @@ def detect_inconsistent_document_threads(scope):
                       'clients': clients},
             message=message,
         )
+
+
+# ── DC9/DC10 · document owned apart from its folder ──────────────────────────
+# The folder organizes and does not own (``_inherit_from_folder`` in
+# content/serializers/document.py): moving a document into another client's
+# or project's folder without adopting it is allowed, so these two only report.
+
+def _documents_apart_from_folder(scope, own_field, folder_field):
+    from content.models import Document
+    return scope.limit(
+        Document._base_manager
+        .filter(retention_context__isnull=True, is_archived=False, folder__isnull=False,
+                **{f'{own_field}__isnull': False, f'folder__{folder_field}__isnull': False})
+        .exclude(**{f'{own_field}_id': F(f'folder__{folder_field}_id')})
+        .select_related('folder', 'client_user__profile', 'project', 'folder__client_user__profile',
+                        'folder__project')
+        .order_by('pk'), DOCUMENT)
+
+
+@rule(id='DC9', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+      title='Documento de un cliente en la carpeta de otro',
+      description='El documento es de un cliente y está en una carpeta de otro. La carpeta organiza y no es dueña, '
+                  'así que puede ser intencional; si no lo es, se mueve o se reasigna desde el Gestor Documental.')
+def detect_document_in_other_client_folder(scope):
+    for document in _documents_apart_from_folder(scope, 'client_user', 'client_user'):
+        folder = document.folder
+        yield Finding(
+            rule_id='DC9',
+            subjects=(RecordRef(DOCUMENT, document.pk, document.title), RecordRef(FOLDER, folder.pk, folder.name)),
+            evidence={'document': document.pk, 'folder': folder.pk,
+                      'client_user': [document.client_user_id, folder.client_user_id]},
+            message=f'«{document.title}» es de {user_label(document.client_user)}, pero está en la carpeta '
+                    f'«{folder.name}», que es de {user_label(folder.client_user)}. La carpeta organiza y no es dueña: '
+                    'si no es intencional, muévelo o reasígnalo desde el Gestor Documental.',
+        )
+
+
+@rule(id='DC10', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+      title='Documento de un proyecto en la carpeta de otro',
+      description='El documento es de un proyecto y está en una carpeta de otro proyecto. La carpeta organiza y no '
+                  'es dueña, así que puede ser intencional; si no lo es, se mueve o se reasigna desde el Gestor '
+                  'Documental.')
+def detect_document_in_other_project_folder(scope):
+    for document in _documents_apart_from_folder(scope, 'project', 'project'):
+        folder = document.folder
+        yield Finding(
+            rule_id='DC10',
+            subjects=(RecordRef(DOCUMENT, document.pk, document.title), RecordRef(FOLDER, folder.pk, folder.name),
+                      RecordRef(PROJECT, document.project_id, document.project.name)),
+            evidence={'document': document.pk, 'folder': folder.pk,
+                      'project': [document.project_id, folder.project_id]},
+            message=f'«{document.title}» es del proyecto «{document.project.name}», pero está en la carpeta '
+                    f'«{folder.name}», del proyecto «{folder.project.name}». La carpeta organiza y no es dueña: si no '
+                    'es intencional, muévelo o reasígnalo desde el Gestor Documental.',
+        )
+
+
+# ── DC11 · active document without a folder ─────────────────────────────────
+
+@rule(id='DC11', domain='documents', severity='low', fix_kinds=(REPORT_ONLY,),
+      title='Documento activo sin carpeta',
+      description='Un documento activo no está en ninguna carpeta, así que sólo aparece en «Sin carpeta» del Gestor '
+                  'Documental. Se archiva en la carpeta que corresponda desde el Gestor.')
+def detect_unfiled_document(scope):
+    from content.models import Document
+    documents = scope.limit(
+        Document._base_manager
+        .filter(retention_context__isnull=True, is_archived=False, folder__isnull=True)
+        .select_related('client_user__profile', 'project')
+        .order_by('pk'), DOCUMENT)
+    for document in documents:
+        owner = ''
+        if document.client_user_id or document.project_id:
+            owner = f' ({_association_text(document.client_user, document.project)})'
+        yield Finding(
+            rule_id='DC11',
+            subjects=(RecordRef(DOCUMENT, document.pk, document.title),),
+            evidence={'document': document.pk},
+            message=f'«{document.title}»{owner} no está en ninguna carpeta: sólo aparece en «Sin carpeta» del Gestor '
+                    'Documental. Muévelo a la carpeta que corresponda.',
+        )
+
+
+# ── DC12 · repeated public number on cuentas de cobro ────────────────────────
+
+@rule(id='DC12', domain='documents', severity='high', fix_kinds=(REPORT_ONLY,), group=True,
+      title='Número público repetido en cuentas de cobro',
+      description='Dos o más cuentas de cobro llevan el mismo número público, que tiene que ser único: la numeración '
+                  'rechaza un número manual repetido. La numeración emitida no se reescribe; se revisa a mano.')
+def detect_repeated_public_number(scope):
+    from django.db.models import Count
+    from content.models import Document
+    from content.services.document_type_codes import COLLECTION_ACCOUNT
+    # Same population as the manual-number collision check of
+    # collection_account_numbering.allocate_client_number.
+    accounts = Document._base_manager.filter(document_type__code=COLLECTION_ACCOUNT).exclude(public_number='')
+    repeated = (accounts.order_by().values('public_number').annotate(rows=Count('pk'))
+                .filter(rows__gt=1).values_list('public_number', flat=True))
+    for number in sorted(repeated):
+        group = list(accounts.filter(public_number=number).order_by('pk'))
+        if not scope.touches(DOCUMENT, [document.pk for document in group]):
+            continue
+        yield Finding(
+            rule_id='DC12',
+            subjects=tuple(RecordRef(DOCUMENT, document.pk, document.title) for document in group),
+            evidence={'public_number': number, 'documents': [document.pk for document in group]},
+            message=f'{len(group)} cuentas de cobro llevan el número {number}, que tiene que ser único. La '
+                    'numeración emitida no se reescribe: revisa cuál conserva el número.',
+        )
