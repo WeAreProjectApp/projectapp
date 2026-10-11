@@ -1,3 +1,8 @@
+> **Integridad de datos 1.1 — 2026-10-10:** arreglo del borrado de clientes huérfanos (H1),
+> 14 reglas de sólo reporte, inventario de relaciones y comando `audit_data_integrity`.
+> Huecos que quedan del inventario U7 (ENT-01..04, DOC-07..11, PRO-02/05/06 y otros):
+> ver `relation_inventory.py` y `.claude/skills/data-integrity/references/catalogo-chequeos.md`.
+
 > **Integridad de datos — 2026-10-09:** entrega de sesión del motor, la API, las
 > herramientas MCP y la skill `data-integrity`. Siguiente: corregir en origen la
 > creación de clientes provisionales repetidos (propuestas sin correo).

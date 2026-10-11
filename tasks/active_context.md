@@ -1,3 +1,39 @@
+# Integridad de datos 1.1: borrado de clientes y huecos del catálogo (2026-10-10)
+
+**H1:** el «cliente huérfano» se calculaba con 6 de las más de 30 relaciones que
+impiden borrarlo.
+- **Qué pasaba:**
+  - un cliente con una carpeta de comunicaciones, una alianza o un proyecto conservado
+    figuraba como huérfano;
+  - el borrado daba 500 y, además, borraba su avatar y su portada antes de fallar.
+- **El arreglo:** `accounts/services/client_deletion.py` es la única fuente, con las
+  relaciones que recorre el `Collector` de Django, ocultas y en cascada incluidas. La
+  usan:
+  - la guarda (400 `client_has_protected_references` con las relaciones);
+  - el filtro y los conteos de huérfanos del panel y del MCP;
+  - `is_orphan`;
+  - CL4 v2.
+
+  El borrado es un solo `user.delete()`, y la vista y el MCP capturan `ProtectedError`.
+- **Lo que no cambió:** los SET_NULL (documentos, carpetas, correos) siguen dejando el
+  rastro sin cliente, por decisión del operador; CL6 lo informa.
+
+**Catálogo 1.1.0** con 14 reglas nuevas de sólo reporte, inventario de relaciones con
+prueba anti-deriva y el comando `audit_data_integrity`.
+
+**H2:** cuatro comentarios decían SET_NULL donde el código es PROTECT desde #482; ya
+están corregidos.
+
+**H3:** sin arreglo (no se reproduce por código), medido por PR9.
+
+**La skill `data-integrity`** ahora:
+- sólo se invoca a pedido;
+- avisa de la línea de auditoría del MCP;
+- exige respaldo de base y media antes de corregir;
+- verifica con un revisor fresco.
+
+**Pendiente tras el deploy:** que el operador corra `audit_data_integrity` en producción.
+
 # Liquidar ingresos sin cuenta y CRUD de abonos en MCP (2026-10-10)
 
 Complemento de PA-69: el menú de selección muestra valor total y saldo pendiente,

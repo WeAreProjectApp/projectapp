@@ -46,9 +46,9 @@ class DocumentCollectionAccount(HistoryTrackedModel):
     customer_address = models.CharField(max_length=512, blank=True, default='')
     # The brand/project the cobro is for, printed on its own line so it never
     # again has to masquerade as the client's name. Snapshot rather than a
-    # live read of `Document.project`: that FK is SET_NULL, so deleting a
-    # project would silently erase the line from a reprint of an already
-    # issued document.
+    # live read of `Document.project`: an issued document must reprint what it
+    # said when it was issued, even after its project is renamed, detached or
+    # retained by a forced deletion (the FK itself is PROTECT since #482).
     customer_project_name = models.CharField(
         max_length=200, blank=True, default='',
     )
