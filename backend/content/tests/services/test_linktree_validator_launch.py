@@ -1,10 +1,13 @@
 """Hardened Chromium launch for Linktree template validation."""
+import json
 from types import SimpleNamespace
 from uuid import uuid4
 
 import pytest
 
 from content.services.linktree_templates import validation
+from content.services.linktree_templates.contract import ValidatorError
+from linktree_sandbox import worker
 
 SENTINEL = 'sentinel-secret-not-for-chromium'
 
@@ -29,37 +32,38 @@ def capturing_playwright(calls):
     return Manager
 
 
-def candidate():
-    """Build the smallest candidate the validator can prepare without a database."""
-    template = SimpleNamespace(warnings=[], manifest={'fonts': [], 'motion': False})
-    return SimpleNamespace(id=uuid4(), template=template, profile={}, assets={}, document='<main>Hola</main>')
+def minimal_request():
+    """The smallest request the worker accepts."""
+    return worker.parse_request(json.dumps({
+        'v': 1, 'document': '<main>Hola</main>', 'csp': "default-src 'none'", 'widths': [320],
+        'resources': {}, 'fonts': {}, 'google_css': '', 'motion_declared': False, 'pwa_enabled': False,
+    }).encode())
 
 
-def captured_launch(monkeypatch):
-    """Run the validator until Chromium would start and return the launch options."""
-    calls = []
-    monkeypatch.setattr(validation, 'sync_playwright', capturing_playwright(calls))
-    with pytest.raises(LaunchCaptured):
-        validation.validate_in_browser(candidate())
-    return calls[0]
-
-
-def test_launch_hides_process_secrets_and_disables_jit(monkeypatch, settings):
+def test_launch_hides_process_secrets_and_disables_jit(monkeypatch):
     """Fails if Chromium inherits the worker's secrets again or V8 regains its JIT."""
     monkeypatch.setenv('DJANGO_SECRET_KEY', SENTINEL)
+    calls = []
+    monkeypatch.setattr(worker, 'sync_playwright', capturing_playwright(calls))
 
-    options = captured_launch(monkeypatch)
+    with pytest.raises(LaunchCaptured):
+        worker.run(minimal_request())
 
-    assert set(options['env']) == {'HOME', 'PATH', 'LANG'}
-    assert SENTINEL not in options['env'].values()
-    assert '--js-flags=--jitless' in options['args']
-    assert 'executable_path' not in options
+    assert set(calls[0]['env']) == {'HOME', 'PATH', 'LANG'}
+    assert SENTINEL not in calls[0]['env'].values()
+    assert '--js-flags=--jitless' in calls[0]['args']
+    assert 'executable_path' not in calls[0]
 
 
-def test_configured_chromium_executable_is_launched(monkeypatch, settings):
+def test_configured_chromium_executable_reaches_the_launch(monkeypatch, settings):
     """Fails if a relocated browser binary is ignored, blocking the move out of ~/.cache."""
     settings.LINKTREE_CHROMIUM_EXECUTABLE = '/opt/linktree/chrome-headless-shell'
+    calls = []
+    monkeypatch.setattr(worker, 'sync_playwright', capturing_playwright(calls))
+    template = SimpleNamespace(warnings=[], manifest={'fonts': [], 'motion': False})
+    candidate = SimpleNamespace(id=uuid4(), template=template, profile={}, assets={}, document='<main>Hola</main>')
 
-    options = captured_launch(monkeypatch)
+    with pytest.raises(ValidatorError):
+        validation.validate_in_browser(candidate)
 
-    assert options['executable_path'] == '/opt/linktree/chrome-headless-shell'
+    assert calls[0]['executable_path'] == '/opt/linktree/chrome-headless-shell'
