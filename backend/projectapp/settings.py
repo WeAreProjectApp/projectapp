@@ -339,6 +339,8 @@ HUEY = RedisHuey(
 # Emergency switch: when off, candidates fail with `validator_disabled` and
 # Chromium never starts.
 LINKTREE_BROWSER_VALIDATION = config('LINKTREE_BROWSER_VALIDATION', default=True, cast=bool)
+# Optional absolute path to the browser binary; empty keeps Playwright's own.
+LINKTREE_CHROMIUM_EXECUTABLE = config('LINKTREE_CHROMIUM_EXECUTABLE', default='')
 
 # ==============================================================================
 # BACKUPS — django-dbbackup

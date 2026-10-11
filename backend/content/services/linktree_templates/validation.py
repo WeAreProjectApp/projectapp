@@ -1,6 +1,8 @@
 """Browser checks on a synthetic origin; only known assets and Google Fonts load."""
 import io
 import logging
+import os
+import tempfile
 from pathlib import Path
 from urllib.parse import urlsplit
 
@@ -17,6 +19,19 @@ logger = logging.getLogger(__name__)
 WIDTHS = (320, 375, 430)
 DISABLED_ISSUE = {'severity': 'error', 'code': 'validator_disabled',
                   'message': 'La validación visual está desactivada temporalmente. Consulta al administrador.'}
+DEFAULT_PATH = '/usr/local/bin:/usr/bin:/bin'
+
+
+def launch_options(home):
+    """Chromium sees a throwaway HOME and nothing else from this process; V8 runs without JIT."""
+    options = {
+        'headless': True, 'timeout': 15000, 'args': ['--js-flags=--jitless'],
+        'env': {'HOME': home, 'PATH': os.environ.get('PATH', DEFAULT_PATH),
+                'LANG': os.environ.get('LANG', 'C.UTF-8')},
+    }
+    if settings.LINKTREE_CHROMIUM_EXECUTABLE:
+        options['executable_path'] = settings.LINKTREE_CHROMIUM_EXECUTABLE
+    return options
 
 
 def luminance(rgb):
@@ -67,8 +82,8 @@ def validate_in_browser(version):
     screenshots = {}
     font_cache = {}
     source = (Path(__file__).parent / 'audit.js').read_text()
-    with sync_playwright() as playwright:
-        browser = playwright.chromium.launch(headless=True, timeout=15000)
+    with tempfile.TemporaryDirectory(prefix='linktree-chromium-') as home, sync_playwright() as playwright:
+        browser = playwright.chromium.launch(**launch_options(home))
         try:
             context = browser.new_context(service_workers='block', device_scale_factor=1, reduced_motion='no-preference')
             context.set_default_timeout(8000)
