@@ -2,6 +2,7 @@
 name: data-integrity
 description: "Rastrea datos huérfanos, duplicados e inconsistentes de ProjectApp (clientes, proyectos, documentos, comunicaciones, contabilidad, propuestas y nombres) con el motor de integridad del Gestor de Proyectos, y los corrige por lotes que el operador aprueba, con registro y deshacer. Usar cuando el operador pide revisar, limpiar, ordenar o fusionar datos de un cliente, proyecto o propuesta, o un barrido completo. Por defecto sólo informa."
 argument-hint: "[--client=<id|nombre>|--project=<id|nombre>|--proposal=<id>|--document=<id>|--thread=<id>|--all] [--domain=<lista>] [--rule=<ids>] [--apply] [--undo=<operación>] [--history]"
+disable-model-invocation: true
 ---
 
 # Data integrity — rastreo y corrección de datos de ProjectApp
@@ -20,6 +21,38 @@ aprobado.
   con `--undo=<operación>` mientras nadie haya tocado esos datos después.
 - **Nunca borra.** Un duplicado se fusiona y el perdedor queda archivado; lo que no
   tiene corrección segura se informa para resolverlo a mano.
+- **Sólo se invoca a pedido** (puede llevar a corregir datos de producción).
+
+Referencias de esta skill:
+
+- `references/frontera-seguridad.md`: qué escribe una lectura, qué nunca se toca y el
+  respaldo previo.
+- `references/catalogo-chequeos.md`: cada chequeo del inventario, con su regla,
+  invariante, riesgo y vía.
+- `references/verificacion.md`: la verificación independiente.
+
+## Fase 0 · Guardas
+
+1. **Aviso antes de la primera consulta**, con estas palabras: «cada consulta deja una
+   línea de auditoría del MCP; no cambia ningún dato».
+   - Cada llamada MCP graba una fila `McpRequestLog` en producción.
+   - Una herramienta sensible crea además una intención de confirmación que vence a los
+     10 minutos.
+2. **Conector caído ≠ sin hallazgos.** Si el Gestor de Proyectos no conecta, lo que no se
+   pudo medir queda **requiere validación**, con el conector como dato faltante.
+3. **Antes del primer lote de correcciones en producción,** dos condiciones:
+   - **La referencia de un respaldo verificado de la base y de la media**, que dispara el
+     operador. La media entra porque las señales `post_delete` borran el archivo físico de
+     una fila borrada. Esa referencia va en el `reason` de cada lote.
+   - **La aprobación del lote en la conversación.**
+
+   Sin las dos, sólo se informa.
+4. **Canal alternativo de detección, sin MCP:** `manage.py audit_data_integrity` (sólo
+   lectura; imprime ids de regla, conteos y `modelo:id`, nunca datos de clientes).
+   - Lo corre **el operador** en el VPS, después del deploy.
+   - Una sesión nunca corre comandos en un VPS.
+   - Con `--coverage` resume el inventario de relaciones: qué regla mira cada relación,
+     cuáles están exentas y los huecos conocidos.
 
 ## Requisitos (preflight)
 
@@ -105,7 +138,9 @@ en esta skill y, si se repiten, se sugiere convertirlas en regla del catálogo.
 ### 4. Corregir (`--apply`)
 
 Sólo si el operador lo pidió con sus palabras o tipeó `--apply`. Producción: cada
-escritura pasa por vista previa y confirmación del servidor.
+escritura pasa por vista previa y confirmación del servidor. Antes del primer lote, la
+Fase 0: la referencia del respaldo verificado de base y media y la aprobación del lote
+en la conversación.
 
 **Orden de los lotes** (un lote = una regla; máximo 20 hallazgos por lote):
 
@@ -128,7 +163,8 @@ escritura pasa por vista previa y confirmación del servidor.
    `fix_kind` si hay más de uno, `params`). Si `blocked`: mostrar los bloqueos en
    lenguaje llano, sacar del lote lo bloqueado y volver a previsualizar, o saltar.
 5. `apply_integrity_fixes` con el mismo `scope` y `fixes`, `expected_impact_hash` de la
-   vista previa, `reason` = "Aprobado por el operador: <regla> — <resumen corto>" y un
+   vista previa, `reason` = "Aprobado por el operador: <regla> — <resumen corto> —
+   respaldo <referencia>" y un
    `request_id` único por lote (por ejemplo `di-<AAAAMMDD>T<HHMM>-<regla>-<n>`) que se
    **reutiliza** si hay que reintentar ese mismo lote.
 6. Responde `confirmation_required`: confirmar con `confirm_action` sólo si
@@ -158,6 +194,25 @@ Volver a correr `list_integrity_findings` con el mismo alcance y las reglas toca
 informar resueltos y pendientes, los `operation_id` aplicados y el comando exacto para
 deshacer cada uno.
 
+### 6. Verificación independiente (Fase 5)
+
+Lo informado y lo corregido lo revisa un verificador fresco, según
+`references/verificacion.md`.
+
+- **Quién es:** un subagente de sólo lectura que no detectó ni corrigió nada.
+- **Qué recibe:** sólo las afirmaciones con su fuente: regla, invariante con
+  `archivo:línea`, canal, alcance e ids. Nunca datos de clientes.
+- **Qué hace:** re-mide por el mismo canal e intenta refutar cada afirmación.
+- **Veredictos:**
+  - **confirmado**;
+  - **requiere validación**, con el dato exacto que falta;
+  - **rechazado**, con la razón.
+- **Después de una corrección, comprueba tres cosas:**
+  - la baja exacta de los ids esperados;
+  - cero hallazgos nuevos en los chequeos vecinos;
+  - huellas sin cambios en lo no tocado.
+- **Sello:** su salida queda fuera del repo, sellada con `sha256sum`.
+
 ### `--undo=<operación>`
 
 `preview_integrity_operation_undo` → mostrar qué vuelve a su valor anterior y los
@@ -182,7 +237,11 @@ tipo (corrección / deshacer), reglas, cantidad de cambios, motivo y si ya se de
   haberse aplicado.
 - Nunca copiar datos de clientes al repositorio, a commits ni a archivos locales: el
   registro durable vive en el servidor.
-- Nunca correr comandos de base de datos ni `manage.py`: el único camino es el Gestor.
+- Nunca correr comandos de base de datos ni `manage.py` desde una sesión, ni en un VPS
+  ni desde un worktree contra el `.env` enlazado. El único camino de la sesión es el
+  Gestor. `audit_data_integrity` lo tipea el operador.
+- Nunca corregir inmutables, filas conservadas (salvo por su adopción), documentos
+  emitidos ni lo firmado o aprobado: se informan (`references/frontera-seguridad.md`).
 - El actor que queda registrado es el usuario técnico del conector; el `reason` deja
   constancia de que lo aprobó el operador.
 

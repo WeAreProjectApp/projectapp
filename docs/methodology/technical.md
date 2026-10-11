@@ -62,6 +62,20 @@ pruebas viven en `content/tests/services/test_data_integrity_*.py`,
 `test_client_merge_*.py`, `test_document_folder_merge.py` y
 `content/tests/views/test_{data_integrity_views,mcp_data_integrity}.py`.
 
+Catálogo 1.1.0 (2026-10-10):
+- **Reglas nuevas:** catorce de sólo reporte (CL6, PJ8, PJ9, DC9-DC12, CM6, AC9-AC13 y
+  PR9), con pruebas que fabrican cada inconsistencia con un `QuerySet.update` crudo.
+- **Qué impide borrar un cliente sale de `accounts/services/client_deletion.py`.**
+  - Recorre las relaciones del `Collector` de Django desde `User`
+    (`get_fields(include_hidden=True)` y cadenas CASCADE).
+  - De ahí salen la guarda de borrado, `_ORPHAN_PREDICATE` (anotación
+    `deletion_blocked`), `is_orphan` y CL4 v2.
+  - La prueba lo contrasta con `get_candidate_relations_to_delete`.
+- **Inventario de relaciones:** `relation_inventory.py`. La prueba sin base de datos falla
+  ante una relación hacia un ancla sin decisión.
+- **Comando:** `audit_data_integrity`, de sólo lectura, con ids y conteos, sin datos de
+  clientes.
+
 ## Traslado auditado de datos conservados (2026-10-07)
 
 Lo conservado por una eliminación forzada deja de ser un callejón sin salida.
@@ -594,7 +608,7 @@ the localized Documents root.
   - `AGENTS.md`
   - `backend/AGENTS.md`
   - `frontend/AGENTS.md`
-- Native repo skills: 41 directories under `.agents/skills/`; the parallel `.claude/skills/` tree has 40. `proposal-create` exists in both ecosystems and keeps its shared body/references/scripts aligned, with ecosystem-specific invocation metadata.
+- Native repo skills: 56 directories under `.agents/skills/`; the parallel `.claude/skills/` tree has 55. `proposal-create` and `data-integrity` exist in both ecosystems and keep their shared body/references aligned, with ecosystem-specific invocation metadata (`data-integrity` is explicit-only: `disable-model-invocation: true` / `allow_implicit_invocation: false`).
 - Project config: `.codex/config.toml`
 - Methodology guide: `docs/CODEX_METHODOLOGY_GUIDE.md`
 - Setup & activation: `docs/CODEX_SETUP.md`

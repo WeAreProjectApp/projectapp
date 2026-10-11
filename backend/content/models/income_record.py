@@ -58,11 +58,10 @@ class IncomeRecord(RetainedProjectModel, VatBreakdownMixin, PartnerSplitMixin, A
     )
     # The project the income belongs to. Optional by nature, not by
     # tolerance: a cobro por diagnóstico happens before any project exists,
-    # and a refund or a financial yield never has one. SET_NULL — unlike
-    # `client`, which is PROTECT — because the money is permanent and the
-    # project is a label on it: losing the label must never block deleting a
-    # project, and `delete_fake_data` deletes projects BEFORE the accounting
-    # sweep, so PROTECT here would break the fake-data cycle outright.
+    # and a refund or a financial yield never has one. PROTECT, like `client`,
+    # since the forced project deletion (#482): deleting a project never drops
+    # the label silently — that deletion removes or retains each income on
+    # purpose, and `delete_fake_data` detaches the non-fake ones first.
     project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='income_records')
     # Business line. Blank means "sin clasificar" (records predating the
     # field); hosting incomes rely on it because hosting clients are stored

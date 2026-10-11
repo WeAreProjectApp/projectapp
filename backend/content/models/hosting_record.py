@@ -52,9 +52,9 @@ class HostingRecord(RetainedProjectModel, VatBreakdownMixin, AccountingRecordBas
     )
     # The project this hosting serves. The house convention crammed it into
     # `client_name` as `Persona - Marca` ("German - Kore"); this is the half
-    # that was never a client. SET_NULL for the same reason as on incomes:
-    # the project is a label, and `delete_fake_data` deletes projects before
-    # the accounting sweep.
+    # that was never a client. PROTECT for the same reason as on incomes
+    # (#482): deleting a project removes or retains each hosting on purpose,
+    # and `delete_fake_data` detaches the non-fake ones first.
     project = models.ForeignKey('accounts.Project', null=True, blank=True, on_delete=models.PROTECT, related_name='hosting_records')
     # Billing snapshot: what the cuenta de cobro prints and mails. Filled
     # from the linked client and editable afterwards, because the billing

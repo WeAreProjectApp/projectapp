@@ -4,4 +4,4 @@ interface:
   default_prompt: "Usa $data-integrity para revisar los datos de este cliente y proponerme correcciones antes de aplicarlas."
 
 policy:
-  allow_implicit_invocation: true
+  allow_implicit_invocation: false

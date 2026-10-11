@@ -233,6 +233,24 @@ class TestClientsMcpWrites:
         response = _call(api_client, token, 'delete_client', {'client_id': profile.pk})
         assert response.data['result']['isError'] is False
 
+    def test_delete_client_held_by_a_communication_folder_is_refused(self, api_client, clients_connector):
+        """Fails if the MCP delete of a client held by a communication folder escapes as an
+        internal error instead of a tool error naming the relation."""
+        from accounts.models import UserProfile
+        from content.models import CommunicationFolder
+
+        profile = _make_client(name='Con Carpeta', email='carpeta@x.com')
+        CommunicationFolder.objects.create(client=profile, name='Temporal')
+        _, token = clients_connector
+
+        response = _call(api_client, token, 'delete_client', {'client_id': profile.pk})
+
+        text = response.data['result']['content'][0]['text']
+        assert response.data['result']['isError'] is True
+        assert 'client_has_protected_references:1' in text
+        assert 'content.communicationfolder.client=1' in text
+        assert UserProfile.objects.filter(pk=profile.pk).exists()
+
 
 @pytest.fixture
 def superuser_client(api_client, django_user_model):

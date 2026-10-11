@@ -1,33 +1,71 @@
 # Building on Demand — 2026-10-10
 
-Implementado en la rama de sesión: programa público ES/EN en
-`/building-on-demand`, entrada desde el footer y panel Comercial › Células en
-`/panel/cells`. La presentación compara Starter, Business (recomendado) y
-Enterprise, permite elegir plazo y estimar el pedido frente a la bolsa y los
-roles de cada nivel, y ofrece guía, tema persistente, PDF, compartir y WhatsApp.
-La siembra inicial define bolsas mensuales de 96, 192 y 288 horas. Precios por
-plazo, descuentos, totales y economía se calculan en el backend; costos internos
-y datos del proveedor quedan fuera de la web y el PDF públicos.
+Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
+público ES/EN en `/building-on-demand`, con entrada desde el footer, y panel
+Comercial › Células en `/panel/cells`. La presentación compara Starter, Business
+(recomendado) y Enterprise, permite elegir plazo y estimar el pedido frente a la
+bolsa y los roles de cada nivel, y ofrece guía, tema persistente, PDF, compartir
+y WhatsApp. La siembra inicial define bolsas mensuales de 96, 192 y 288 horas.
+Precios por plazo, descuentos, totales y economía se calculan en el backend;
+costos internos y datos del proveedor quedan fuera de la web y el PDF públicos.
 
-Células es de solo lectura: Programa muestra distribución, versión, historial
-y vista previa ES/EN; Economía muestra los números internos; Contrato admite
-la consulta y el estado todavía no disponible. Programa, economía y contrato
-se administrarán únicamente desde el MCP `building-on-demand`, con vista
-previa y confirmación; el conector dedicado se construye en una ola posterior.
-El backend del contrato se integra en paralelo en esta segunda ola. Su Markdown
-versionado es la fuente autoritativa; ProjectApp › Contratos conserva sólo un
-espejo de lectura. No se importan ediciones del Gestor Documental. Los estados
-del espejo son `synchronized`, `out_of_sync` y `not_initialized`.
+Células es de solo lectura (Programa, Economía y Contrato). Todo se administra
+únicamente desde el MCP `building-on-demand` (35 herramientas, sembrado
+inactivo): crear, actualizar y quitar niveles, plazos, tareas del estimador,
+preguntas y tarjetas, además de precios, horas de referencia, economía,
+versiones, PDF y contrato, siempre con vista previa y `confirm_action`. El
+contrato v1 (Markdown versionado, sólo panel) mantiene una copia de lectura en
+ProjectApp › Contratos que se sincroniza en la misma transacción de cada
+cambio; sin carpeta fijada falla cerrado e indica el comando. La tarea
+periódica de 15 minutos y `sync_building_on_demand_contract_mirror` crean o
+resincronizan la copia; al crearla queda la nota privada con las preguntas
+abiertas y sus respuestas v1. Migraciones `content.0291` y `0292`.
 
-Pendientes: cerrar las decisiones comerciales de la oferta antes de publicarla;
-calibrar los rangos del estimador con la calculadora de requerimientos (PA-178);
-y revisar el solapamiento de precios con Paquetes de horas para distinguir ambas
-ofertas. Las horas del estimador representan el pedido completo, que se compara
-con la bolsa mensual; cada tarea conserva su estimación formal y aprobación
-previas. Los tiempos de respuesta son objetivos, no un SLA. La integración de
-catálogos, contrato responsivo y flujos E2E pertenece a esta ola; su ejecución
-en navegador queda a cargo del conductor. Esta entrada no acredita despliegue
-ni pruebas E2E aprobadas.
+Pendientes: cerrar las decisiones comerciales de la oferta (inventario en la
+nota privada del contrato); calibrar los rangos del estimador con la
+calculadora de requerimientos (PA-178); y revisar el solapamiento de precios con
+Paquetes de horas (la hora de bolsa de Starter queda por debajo de esos
+paquetes). Tras el deploy: activar el conector y crear sus credenciales cuando
+se vaya a usar, y revisar el estado de la copia con
+`sync_building_on_demand_contract_mirror` sin `--apply`. Pruebas de navegador
+validadas contra un servidor local (41 públicas, 20 del panel y 19 compartidas
+o responsivas). Esta entrada no acredita despliegue.
+
+# Integridad de datos 1.1: borrado de clientes y huecos del catálogo (2026-10-10)
+
+**H1:** el «cliente huérfano» se calculaba con 6 de las más de 30 relaciones que
+impiden borrarlo.
+- **Qué pasaba:**
+  - un cliente con una carpeta de comunicaciones, una alianza o un proyecto conservado
+    figuraba como huérfano;
+  - el borrado daba 500 y, además, borraba su avatar y su portada antes de fallar.
+- **El arreglo:** `accounts/services/client_deletion.py` es la única fuente, con las
+  relaciones que recorre el `Collector` de Django, ocultas y en cascada incluidas. La
+  usan:
+  - la guarda (400 `client_has_protected_references` con las relaciones);
+  - el filtro y los conteos de huérfanos del panel y del MCP;
+  - `is_orphan`;
+  - CL4 v2.
+
+  El borrado es un solo `user.delete()`, y la vista y el MCP capturan `ProtectedError`.
+- **Lo que no cambió:** los SET_NULL (documentos, carpetas, correos) siguen dejando el
+  rastro sin cliente, por decisión del operador; CL6 lo informa.
+
+**Catálogo 1.1.0** con 14 reglas nuevas de sólo reporte, inventario de relaciones con
+prueba anti-deriva y el comando `audit_data_integrity`.
+
+**H2:** cuatro comentarios decían SET_NULL donde el código es PROTECT desde #482; ya
+están corregidos.
+
+**H3:** sin arreglo (no se reproduce por código), medido por PR9.
+
+**La skill `data-integrity`** ahora:
+- sólo se invoca a pedido;
+- avisa de la línea de auditoría del MCP;
+- exige respaldo de base y media antes de corregir;
+- verifica con un revisor fresco.
+
+**Pendiente tras el deploy:** que el operador corra `audit_data_integrity` en producción.
 
 # Liquidar ingresos sin cuenta y CRUD de abonos en MCP (2026-10-10)
 

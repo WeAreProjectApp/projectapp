@@ -96,6 +96,17 @@ panel en `/api/projects/data-integrity/`, siete herramientas en el conector MCP
 `projects` y la skill de repo `data-integrity`. Migración nueva: `content.0286`.
 Detalle en `docs/DATA_INTEGRITY.md`.
 
+**Catálogo 1.1.0 (2026-10-10).**
+- **Catorce reglas de sólo reporte** cierran huecos P1 del inventario U7: cruces de
+  cliente en alianzas, entregas, carpetas y adjuntos; cuentas de cobro por ingreso;
+  reparto, sobrepago y bolsillo; conservados sin índice; precios históricos.
+- **Una sola fuente decide qué impide borrar un cliente:** `client_deletion`, con las
+  mismas relaciones que hace cumplir Django. El borrado ya no da 500 ni pierde el avatar.
+- **Inventario de relaciones:** cada relación hacia un ancla declara qué regla la mira o
+  por qué ninguna. Lo desconocido rompe el CI.
+- **El comando `audit_data_integrity`** permite al operador detectar en producción sin
+  MCP. No hay migraciones.
+
 ## Traslado auditado de datos conservados (2026-10-07)
 
 Lo conservado por una eliminación forzada deja de ser un callejón sin salida.
