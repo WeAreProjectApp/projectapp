@@ -12,6 +12,11 @@ from content.views.building_with_us import (
     admin_building_with_us_overview, admin_building_with_us_program_versions,
     admin_building_with_us_contract, admin_building_with_us_contract_versions, admin_building_with_us_contract_pdf,
 )
+from content.views.building_on_demand import (
+    public_building_on_demand_program, public_building_on_demand_program_pdf,
+    admin_building_on_demand_overview, admin_building_on_demand_program_versions,
+    admin_building_on_demand_economics,
+)
 
 from content.views.video_resources import admin_module_video, admin_proposal_video, public_video_file
 from content.views.proposal_document_exports import contract_markdown, formalization_markdown, attachment_markdown, attachment_download
@@ -430,6 +435,13 @@ urlpatterns = [
     path('building-with-us/admin/contract/', admin_building_with_us_contract, name='admin-building-with-us-contract'),
     path('building-with-us/admin/contract/versions/', admin_building_with_us_contract_versions, name='admin-building-with-us-contract-versions'),
     path('building-with-us/admin/contract/pdf/', admin_building_with_us_contract_pdf, name='admin-building-with-us-contract-pdf'),
+
+    # Building on Demand — public presentation and read-only Panel metadata
+    path('building-on-demand/public/', public_building_on_demand_program, name='public-building-on-demand-program'),
+    path('building-on-demand/public/pdf/', public_building_on_demand_program_pdf, name='public-building-on-demand-program-pdf'),
+    path('building-on-demand/admin/', admin_building_on_demand_overview, name='admin-building-on-demand-overview'),
+    path('building-on-demand/admin/program/versions/', admin_building_on_demand_program_versions, name='admin-building-on-demand-program-versions'),
+    path('building-on-demand/admin/economics/', admin_building_on_demand_economics, name='admin-building-on-demand-economics'),
 
     # Financing program — public informational resource
     path(

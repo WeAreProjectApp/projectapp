@@ -3,8 +3,8 @@ Frontend prerender regeneration.
 
 The public site is a static `nuxi generate` build served by Django from
 backend/static/frontend/ (see projectapp.views.serve_nuxt). Blog posts, the
-canonical additional-modules catalog, the Partnership Program and Building with Us are
-prerendered into that build, so their static HTML goes stale after a publish or
+canonical additional-modules catalog, the Partnership Program, Building with Us
+and Building on Demand are prerendered into that build, so their static HTML goes stale after a publish or
 a catalog/policy/presentation change. What happens next depends on
 ``settings.FRONTEND_REBUILD_MODE``:
 
@@ -100,11 +100,14 @@ def rebuild_mode():
 
 
 def latest_published_change():
-    """Latest blog, catalog, policy, video or Building with Us revision change."""
+    """Latest public content change, including Building with Us and
+    Building on Demand presentation revisions.
+    """
     from content.models import (
         AdditionalModule,
         AdditionalModuleCategory,
         BlogPost,
+        BuildingOnDemandProgramRevision,
         BuildingWithUsProgramRevision,
         ExplainerVideoSettings,
         FinancingPolicyRevision,
@@ -129,6 +132,8 @@ def latest_published_change():
         (FinancingPolicyRevision.objects.all(), 'created_at'),
         # Building with Us publishes append-only presentation revisions.
         (BuildingWithUsProgramRevision.objects.all(), 'created_at'),
+        # Building on Demand publishes append-only presentation revisions.
+        (BuildingOnDemandProgramRevision.objects.all(), 'created_at'),
         (
             HourPackage.objects.filter(
                 nationality=INCLUDED_PACKAGE_NATIONALITY,
@@ -360,7 +365,8 @@ def schedule_rebuild_after_publish(delay_seconds=120, reason='content'):
 
     ``reason`` is a short label of the surface that changed ('blog',
     'additional-modules', 'explainer-video', 'video-resource',
-    'partnership-program', ...). Never raises — a failed request must not break
+    'partnership-program', 'building-with-us', 'building-on-demand', ...).
+    Never raises — a failed request must not break
     the publish flow it hooks into.
     """
     if not settings.FRONTEND_REBUILD_ENABLED:
