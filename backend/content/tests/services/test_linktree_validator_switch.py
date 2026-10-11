@@ -3,6 +3,7 @@ import pytest
 
 from content.models import Linktree, LinktreeTemplate, LinktreeTemplateVersion
 from content.services.linktree_templates import fonts as google_fonts
+from content.services.linktree_templates import transport
 from content.services.linktree_templates.service import run_validation
 from linktree_sandbox import worker
 
@@ -21,11 +22,14 @@ def pending_version():
     )
 
 
-def test_disabled_switch_rejects_candidate_without_starting_chromium(monkeypatch, settings):
-    """Fails if turning the switch off still launches Chromium, downloads fonts or lets the version pass."""
+@pytest.mark.parametrize('transport_name', ['inprocess', 'unix-socket'])
+def test_disabled_switch_rejects_candidate_without_starting_chromium(monkeypatch, settings, transport_name):
+    """Fails if turning the switch off still starts Chromium, opens the socket, downloads fonts or lets the version pass."""
     settings.LINKTREE_BROWSER_VALIDATION = False
+    settings.LINKTREE_VALIDATOR_TRANSPORT = transport_name
     started = []
     monkeypatch.setattr(worker, 'sync_playwright', lambda: started.append('chromium'))
+    monkeypatch.setattr(transport.socket, 'socket', lambda *args: started.append('socket'))
     monkeypatch.setattr(google_fonts, 'prefetch', lambda *args: started.append('fonts'))
     version = pending_version()
 
