@@ -689,6 +689,11 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 | `DJANGO_CSRF_TRUSTED_ORIGINS` | `http://127.0.0.1:5173,...` | CSRF trusted |
 | `PROJECT_ACCESS_CIPHER_KEY` | *(optional when a private key file exists)* | Fernet key for project passwords, notes and secure links. Takes precedence over file configuration; never generate/rotate automatically. |
 | `PROJECT_ACCESS_CIPHER_KEY_FILE` | `PRIVATE_MEDIA_ROOT/runtime-secrets/project-access.key` | Private regular file, owner-only permissions; keep outside Git/public media and back up separately. |
+| `LINKTREE_BROWSER_VALIDATION` | `true` | Emergency switch for the Linktree template browser checks; `false` rejects candidates with `validator_disabled` without starting Chromium. |
+| `LINKTREE_VALIDATOR_TRANSPORT` | `inprocess` | `inprocess` or `unix-socket` (needs the validator socket unit). Contract in `docs/LINKTREE_HTML_TEMPLATES.md`. |
+| `LINKTREE_VALIDATOR_SOCKET` | `/run/projectapp-linktree-validator.sock` | Socket of the validator unit. |
+| `LINKTREE_VALIDATOR_TIMEOUT` | `180` | Seconds per socket exchange; stays under the 10-minute expiry of pending versions. |
+| `LINKTREE_CHROMIUM_EXECUTABLE` | *(empty)* | Optional Chromium binary; empty uses Playwright's own. |
 
 ---
 

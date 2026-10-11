@@ -333,6 +333,23 @@ HUEY = RedisHuey(
 )
 
 # ==============================================================================
+# LINKTREE TEMPLATES — browser validation (docs/LINKTREE_HTML_TEMPLATES.md)
+# ==============================================================================
+
+# Emergency switch: when off, candidates fail with `validator_disabled` and
+# Chromium never starts.
+LINKTREE_BROWSER_VALIDATION = config('LINKTREE_BROWSER_VALIDATION', default=True, cast=bool)
+# Optional absolute path to the browser binary; empty keeps Playwright's own.
+LINKTREE_CHROMIUM_EXECUTABLE = config('LINKTREE_CHROMIUM_EXECUTABLE', default='')
+# How Django reaches the browser worker: 'inprocess' or 'unix-socket' (the
+# systemd socket unit that runs it as another user without network).
+LINKTREE_VALIDATOR_TRANSPORT = config('LINKTREE_VALIDATOR_TRANSPORT', default='inprocess')
+LINKTREE_VALIDATOR_SOCKET = config('LINKTREE_VALIDATOR_SOCKET', default='/run/projectapp-linktree-validator.sock')
+# Seconds per socket exchange; two passes plus font downloads stay under the
+# 10-minute expiry of pending versions.
+LINKTREE_VALIDATOR_TIMEOUT = config('LINKTREE_VALIDATOR_TIMEOUT', default=180, cast=int)
+
+# ==============================================================================
 # BACKUPS — django-dbbackup
 # ==============================================================================
 # Storage is configured via STORAGES['dbbackup'] above (new-style API).
