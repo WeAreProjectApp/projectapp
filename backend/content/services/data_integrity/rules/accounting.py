@@ -710,9 +710,10 @@ def detect_income_with_two_live_accounts(scope):
     live = _live_accounts()
     repeated = (live.order_by().values('income_record').annotate(accounts=Count('pk'))
                 .filter(accounts__gt=1).values('income_record'))
-    incomes = scope.limit(IncomeRecord._base_manager.filter(pk__in=repeated), INCOME)
-    for income in incomes.order_by('pk'):
+    for income in IncomeRecord._base_manager.filter(pk__in=repeated).order_by('pk'):
         accounts = list(live.filter(income_record=income).order_by('pk'))
+        if not (scope.touches(INCOME, [income.pk]) or scope.touches(DOCUMENT, [a.pk for a in accounts])):
+            continue
         names = ', '.join(f'«{_document_label(account)}»' for account in accounts)
         yield Finding(
             rule_id='AC9',
@@ -736,9 +737,10 @@ def detect_account_apart_from_income(scope):
     # The settlement finds the cuenta by the income's exact project (NULL
     # included) and its client's user (income_settlement_policy.py). Nulls are
     # split out before comparing with F(): SQL never equates two NULLs.
+    # A cuenta that only lacks its income's project is PJ1's: the assign-unlinked
+    # tool completes and refiles it without annulling anything.
     project_differs = (
         Q(income_record__project__isnull=True, project__isnull=False)
-        | Q(income_record__project__isnull=False, project__isnull=True)
         | (Q(income_record__project__isnull=False, project__isnull=False)
            & ~Q(project_id=F('income_record__project_id')))
     )
@@ -761,8 +763,9 @@ def detect_account_apart_from_income(scope):
                       'project': [account.project_id, income.project_id],
                       'client_user': [account.client_user_id, owner]},
             message=f'La cuenta de cobro «{_document_label(account)}» no tiene {" ni ".join(differs)} de su ingreso '
-                    f'«{_record_label(income)}», así que la liquidación del ingreso no la encuentra. Si ya está '
-                    'emitida, anúlala por su flujo y genera una nueva para el ingreso.',
+                    f'«{_record_label(income)}», así que la liquidación del ingreso no la encuentra. Si es un '
+                    'borrador, corrígelo desde Contabilidad; si ya está emitida, anúlala por su flujo y genera una '
+                    'nueva para el ingreso.',
         )
 
 

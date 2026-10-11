@@ -82,6 +82,14 @@ def test_only_active_unfiled_documents_are_reported():
     assert [finding.evidence for finding in _found('DC11')] == [{'document': unfiled.pk}]
 
 
+def test_draft_cuenta_waiting_to_be_filed_is_quiet(make_client_profile):
+    """Fails if a draft cuenta de cobro, created unfiled on purpose and filed once issued, is reported."""
+    client = make_client_profile()
+    make_cuenta(client, make_project(client), status=Document.CommercialStatus.DRAFT)
+
+    assert _found('DC11') == []
+
+
 # ── DC12 · repeated public number ────────────────────────────────────────────
 
 def test_cuentas_sharing_a_public_number_are_reported(make_client_profile):

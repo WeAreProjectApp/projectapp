@@ -52,12 +52,22 @@ def test_json_report_lands_in_a_new_private_file(orphan, tmp_path):
         _run('--rule', 'CL4', '--output', str(target))
 
 
-@pytest.mark.parametrize('root', ['BASE_DIR', 'MEDIA_ROOT'])
+@pytest.mark.parametrize('root', ['BASE_DIR', 'STATIC_ROOT', 'MEDIA_ROOT', 'PRIVATE_MEDIA_ROOT'])
 def test_output_inside_the_repository_or_media_is_refused(root):
     """Fails if a report could be written where the site serves files or where git would commit it."""
     target = Path(getattr(settings, root)) / 'scan.json'
 
     with pytest.raises(CommandError, match='must live outside'):
+        _run('--output', str(target))
+
+    assert not target.exists()
+
+
+def test_output_in_a_missing_folder_fails_cleanly(tmp_path):
+    """Fails if a bad --output path ends in a raw traceback instead of a clear command error."""
+    target = tmp_path / 'missing' / 'scan.json'
+
+    with pytest.raises(CommandError, match='Cannot create'):
         _run('--output', str(target))
 
     assert not target.exists()

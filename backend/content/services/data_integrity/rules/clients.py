@@ -213,6 +213,8 @@ def _counted_text(counts):
                   'registros de entrega…) y otros quedarían sin cliente si se borra (documentos, carpetas del gestor, '
                   'correos, enlaces). Es informativa: dice qué hay antes de decidir.')
 def detect_client_with_residual_records(scope):
+    # A client whose only residue is a SET_NULL trace is also a CL4 orphan: it
+    # can be deleted, by design. CL6 tells what that delete would leave behind.
     from django.db.models import Exists, OuterRef, Q
     from accounts.models import Project, UserProfile
     from accounts.services.client_deletion import blocker_counts, deletion_blocked_annotation
@@ -233,7 +235,7 @@ def detect_client_with_residual_records(scope):
         blocking = blocker_counts(profile.user_id) if profile.deletion_blocked else {}
         leftovers = _trace_counts(profile, traces)
         if not blocking and not leftovers:
-            continue  # nothing at all: CL4 reports it
+            continue  # nothing that blocks or would be detached: CL4 alone covers it
         label = client_label(profile)
         parts = []
         if blocking:

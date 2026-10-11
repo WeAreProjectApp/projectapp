@@ -61,9 +61,9 @@ la mira (exenta o hueco conocido). Vive en
 | DOC-01 activos bajo archivados | DC6 | Archivar es en cascada | BAJO · herramienta |
 | DOC-02 documento y carpeta de distinto cliente | **DC9** | La carpeta organiza y no es dueña (`content/serializers/document.py`, `_inherit_from_folder`) | BAJO · a mano: puede ser intencional |
 | DOC-12 documento y carpeta de distinto proyecto | **DC10** | Ídem | BAJO · a mano |
-| DOC-03 sin carpeta | **DC11** | Aparece en «Sin carpeta» | BAJO · a mano |
+| DOC-03 sin carpeta | **DC11** | Aparece en «Sin carpeta». Los borradores de cuenta de cobro se excluyen: se archivan solos al emitirse o anularse (`generated_document_filing_service.file_collection_account`) | BAJO · a mano |
 | DOC-04 dos cuentas vigentes por ingreso | **AC9** | A lo sumo una cuenta no anulada por ingreso (`content/services/collection_account_create_service.py`) | ALTO · anular por su flujo |
-| DOC-05 cuenta de otro proyecto o cliente que su ingreso | **AC10** | La liquidación busca la cuenta por el proyecto y el cliente exactos (`content/services/income_settlement_policy.py`) | ALTO · anular y regenerar |
+| DOC-05 cuenta de otro proyecto o cliente que su ingreso | **AC10** | La liquidación busca la cuenta por el proyecto y el cliente exactos (`content/services/income_settlement_policy.py`). Una cuenta a la que sólo le falta el proyecto del ingreso es de PJ1 | ALTO · borrador: editar; emitida: anular y regenerar |
 | DOC-06 número público repetido | **DC12** | Único entre cuentas de cobro (`content/services/collection_account_numbering.py`) | SÓLO REPORTE |
 | DOC-07 a DOC-11 | — | Totales, estados, archivos, episodios, plantillas | Huecos |
 
@@ -96,7 +96,7 @@ la mira (exenta o hueco conocido). Vive en
 | Chequeo | Regla | Invariante | Riesgo · vía |
 |---|---|---|---|
 | PRO-01 aceptada sin proyecto | PR4 | Fase o entregable | MEDIO · a mano o herramienta |
-| PRO-03 precio histórico incompleto | **PR9** | `discount_original_for_proposal` y `BusinessProposal.save` indexan sus claves; sólo la migración 0275 las escribe | SÓLO REPORTE |
+| PRO-03 precio histórico incompleto | **PR9** | `BusinessProposal.save` indexa `total_investment`, `discount_percent` y `currency`; `discount_original_for_proposal` indexa `original_investment` sólo con descuento. Sólo la migración 0275 las escribe | SÓLO REPORTE |
 | PRO-04 sin cliente | PR2 | — | MEDIO · a mano |
 | PRO-07 orden de secciones | PR7 (parcial) | — | BAJO · motor |
 | PRO-02, PRO-05, PRO-06 | — | Inversión, estados y aprobación | Huecos |

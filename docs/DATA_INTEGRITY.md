@@ -88,15 +88,15 @@ Suma 14 reglas de sólo reporte a las 37 de la 1.0.0, y CL4 pasa a su versión 2
 | PJ8 | Alianza, carpeta de comunicaciones, aviso o evidencia de entrega, o contexto de autoría apuntando al proyecto de otro cliente |
 | PJ9 | Fila conservada que el índice de su borrado no lista |
 | DC9, DC10 | Documento en una carpeta de otro cliente o de otro proyecto (la carpeta organiza y no es dueña: puede ser intencional) |
-| DC11 | Documento activo sin carpeta |
+| DC11 | Documento activo sin carpeta (los borradores de cuenta de cobro se excluyen: se archivan al emitirse o anularse) |
 | DC12 | Número público repetido entre cuentas de cobro |
 | CM6 | Adjunto con un documento de otro cliente |
 | AC9 | Ingreso con más de una cuenta de cobro sin anular |
-| AC10 | Cuenta de cobro con otro proyecto o cliente que su ingreso |
+| AC10 | Cuenta de cobro con otro proyecto o cliente que su ingreso (la que sólo no tiene el proyecto del ingreso es de PJ1) |
 | AC11 | Reparto entre socios que viola `PartnerSplitMixin.clean()` |
 | AC12 | Ingreso esperado pagado por encima de su total |
 | AC13 | Movimiento del bolsillo que no cuadra con su ingreso o gasto |
-| PR9 | Precio histórico de una propuesta sin sus claves |
+| PR9 | Precio histórico de una propuesta sin las claves que leen `save()` y, con descuento, el cálculo del descuento |
 
 **CL4 v2 y la guarda de borrado comparten una sola fuente.**
 - `client_deletion.deletion_blockers()` recorre las relaciones que recorre el `Collector`

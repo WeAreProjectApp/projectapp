@@ -370,14 +370,16 @@ def detect_foreign_document_attachment(scope):
     from content.models import CommunicationAttachment
     # communication_service._validate_documents: a document with a client must
     # be the thread client's. Unowned documents pass, as they do there.
-    attachments = scope.limit(
+    attachments = (
         CommunicationAttachment._base_manager
         .filter(document__client_user__isnull=False, message__thread__client__isnull=False)
         .exclude(document__client_user_id=F('message__thread__client__user_id'))
-        .select_related('document__client_user__profile', 'message__thread__client')
-        .order_by('pk'), THREAD, 'message__thread_id')
+        .select_related('document__client_user__profile', 'message__thread__client__user')
+        .order_by('pk'))
     for attachment in attachments:
         document, thread = attachment.document, attachment.message.thread
+        if not (scope.touches(THREAD, [thread.pk]) or scope.touches(DOCUMENT, [document.pk])):
+            continue
         yield Finding(
             rule_id='CM6',
             subjects=(RecordRef(THREAD, thread.pk, thread.title), RecordRef(DOCUMENT, document.pk, document.title)),

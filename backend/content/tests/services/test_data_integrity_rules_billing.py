@@ -47,6 +47,18 @@ def test_income_with_two_live_cuentas_is_reported(make_client_profile):
     assert finding.fix_kinds == (REPORT_ONLY,)
 
 
+def test_two_live_cuentas_are_seen_from_either_cuentas_scope(make_client_profile):
+    """Fails if a document-scoped scan of one of the two cuentas misses the duplicate it belongs to."""
+    client = make_client_profile()
+    project = make_project(client)
+    income = make_income(client, project)
+    make_cuenta(client, project, income_record=income)
+    second = make_cuenta(client, project, public_number='PA-KORE-002')
+    Document.objects.filter(pk=second.pk).update(income_record=income)
+
+    assert [finding.evidence['income'] for finding in scan('document', second.pk, rule_ids=['AC9'])] == [income.pk]
+
+
 def test_cancelled_cuenta_beside_its_reissue_is_not_a_second_one(make_client_profile):
     """Fails if a cancelled cuenta next to the one that replaced it is counted as a duplicate."""
     client = make_client_profile()
@@ -74,6 +86,18 @@ def test_cuenta_moved_to_another_project_than_its_income_is_reported(make_client
     assert finding.evidence == {'document': account.pk, 'income': income.pk,
                                 'project': [other.pk, project.pk], 'client_user': [client.user_id, client.user_id]}
     assert 'el proyecto' in finding.message
+
+
+def test_cuenta_only_missing_its_incomes_project_is_left_to_pj1(make_client_profile):
+    """Fails if AC10 reports a cuenta that only lacks its income's project: PJ1 completes it without annulling."""
+    client = make_client_profile()
+    project = make_project(client)
+    account = make_cuenta(client, project, income_record=make_income(client, project))
+    Document.objects.filter(pk=account.pk).update(project=None)
+
+    pj1 = [subject.key() for finding in _found('PJ1') for subject in finding.subjects]
+    assert _found('AC10') == []
+    assert ('content.document', account.pk) in pj1
 
 
 def test_matching_cuentas_are_quiet_even_without_project(make_client_profile):

@@ -369,7 +369,10 @@ def detect_repeated_proposals(scope):
 
 # ── PR9 · historical pricing snapshot missing its keys ───────────────────────
 
-PRICING_SNAPSHOT_KEYS = ('original_investment', 'total_investment', 'discount_percent', 'currency')
+# BusinessProposal.save reads these whenever the snapshot is not empty;
+# discount_original_for_proposal reads DISCOUNT_SNAPSHOT_KEY only with a discount.
+SAVE_SNAPSHOT_KEYS = ('total_investment', 'discount_percent', 'currency')
+DISCOUNT_SNAPSHOT_KEY = 'original_investment'
 
 
 @rule(id='PR9', domain='proposals', severity='medium', fix_kinds=(REPORT_ONLY,),
@@ -383,14 +386,16 @@ def detect_incomplete_pricing_snapshot(scope):
     # BusinessProposal.save index these keys whenever the snapshot is not
     # empty. Migration 0275 always writes all of them; MCP and the admin
     # never write the field, so only a raw write can leave one out.
+    from django.db.models import Q
+    incomplete = (~Q(legacy_pricing_snapshot__has_keys=list(SAVE_SNAPSHOT_KEYS))
+                  | (Q(discount_percent__gt=0) & ~Q(legacy_pricing_snapshot__has_key=DISCOUNT_SNAPSHOT_KEY)))
     rows = scope.limit(
-        BusinessProposal._base_manager
-        .exclude(legacy_pricing_snapshot={})
-        .exclude(legacy_pricing_snapshot__has_keys=list(PRICING_SNAPSHOT_KEYS))
-        .order_by('pk'), PROPOSAL)
+        BusinessProposal._base_manager.exclude(legacy_pricing_snapshot={}).filter(incomplete).order_by('pk'),
+        PROPOSAL)
     for proposal in rows:
         snapshot = proposal.legacy_pricing_snapshot
-        missing = [key for key in PRICING_SNAPSHOT_KEYS if not isinstance(snapshot, dict) or key not in snapshot]
+        needed = ((DISCOUNT_SNAPSHOT_KEY,) if proposal.discount_percent else ()) + SAVE_SNAPSHOT_KEYS
+        missing = [key for key in needed if not isinstance(snapshot, dict) or key not in snapshot]
         yield Finding(
             rule_id='PR9',
             subjects=(RecordRef(PROPOSAL, proposal.pk, proposal.title),),

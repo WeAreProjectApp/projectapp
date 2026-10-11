@@ -649,9 +649,13 @@ def detect_document_in_other_project_folder(scope):
                   'Documental. Se archiva en la carpeta que corresponda desde el Gestor.')
 def detect_unfiled_document(scope):
     from content.models import Document
+    from content.services.document_type_codes import COLLECTION_ACCOUNT
     documents = scope.limit(
         Document._base_manager
         .filter(retention_context__isnull=True, is_archived=False, folder__isnull=True)
+        # A draft cuenta de cobro is created unfiled on purpose and filed when it
+        # is issued or cancelled (generated_document_filing_service.file_collection_account).
+        .exclude(Q(document_type__code=COLLECTION_ACCOUNT, commercial_status=Document.CommercialStatus.DRAFT))
         .select_related('client_user__profile', 'project')
         .order_by('pk'), DOCUMENT)
     for document in documents:

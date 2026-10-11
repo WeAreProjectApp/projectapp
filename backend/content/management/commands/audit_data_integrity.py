@@ -65,12 +65,12 @@ def build_report(*, domains=None, rule_ids=None):
 
 def coverage_report():
     """The relation inventory: per anchor, how many relations are covered, exempt or a known gap."""
-    return {
-        'anchors': relation_inventory.summary(),
-        'gaps': {key: relation_inventory.decision_for(key).reason
-                 for key in sorted(relation_inventory.discover())
-                 if relation_inventory.decision_for(key).status == relation_inventory.GAP},
-    }
+    gaps = {}
+    for key in sorted(relation_inventory.discover()):
+        decision = relation_inventory.decision_for(key)
+        if decision is not None and decision.status == relation_inventory.GAP:
+            gaps[key] = decision.reason
+    return {'anchors': relation_inventory.summary(), 'gaps': gaps, 'undecided': relation_inventory.undecided()}
 
 
 class Command(BaseCommand):
@@ -106,9 +106,15 @@ class Command(BaseCommand):
             descriptor = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
         except FileExistsError:
             raise CommandError(f'{target} already exists: choose a new file.')
-        os.fchmod(descriptor, 0o600)
-        with os.fdopen(descriptor, 'w', encoding='utf-8') as handle:
-            json.dump(report, handle, ensure_ascii=False, indent=2, sort_keys=True)
+        except OSError as error:
+            raise CommandError(f'Cannot create {target}: {error.strerror}.')
+        try:
+            os.fchmod(descriptor, 0o600)
+            with os.fdopen(descriptor, 'w', encoding='utf-8') as handle:
+                json.dump(report, handle, ensure_ascii=False, indent=2, sort_keys=True)
+        except BaseException:
+            target.unlink(missing_ok=True)  # never leave a partial report behind
+            raise
         self.stderr.write(f'Report written to {target} (0600).')
 
     def _write_text(self, report):
@@ -125,3 +131,5 @@ class Command(BaseCommand):
                                   f'{counts.get("gap", 0):>4}')
             for key, reason in coverage['gaps'].items():
                 self.stdout.write(f'  gap {key}: {reason}')
+            for key in coverage['undecided']:
+                self.stdout.write(f'  undecided {key}: decide it in relation_inventory.py')

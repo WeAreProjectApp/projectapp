@@ -109,6 +109,16 @@ def test_pricing_snapshot_without_original_investment_is_reported(make_client_pr
     assert finding.fix_kinds == (REPORT_ONLY,)
 
 
+def test_snapshot_without_original_investment_but_no_discount_is_quiet(make_client_profile):
+    """Fails if PR9 reports a key nothing reads: original_investment only matters with a discount."""
+    proposal = make_proposal(make_client_profile())
+    no_original = {key: value for key, value in COMPLETE_SNAPSHOT.items() if key != 'original_investment'}
+    BusinessProposal.objects.filter(pk=proposal.pk).update(legacy_pricing_snapshot={**no_original,
+                                                                                    'discount_percent': 0})
+
+    assert _found('PR9') == []
+
+
 def test_complete_or_empty_pricing_snapshots_are_quiet(make_client_profile):
     """Fails if the migration's complete snapshot, or the empty default, is reported."""
     client = make_client_profile()
