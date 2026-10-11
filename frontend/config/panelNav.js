@@ -54,6 +54,7 @@ export function getPanelNavSections(localePath, { includeSuperuserOnly = true } 
         { label: 'Módulos adicionales', href: lp('/panel/additional-modules'), icon: 'puzzle' },
         { label: 'Programa de Alianza', href: lp('/panel/partnership-program'), icon: 'credit-card' },
         { label: 'Building with Us', href: lp('/panel/building-with-us'), icon: 'handshake' },
+        { label: 'Células', href: lp('/panel/cells'), icon: 'team' },
         { divider: true },
         { label: 'Diagnósticos', href: lp('/panel/diagnostics'), icon: 'file' },
         { label: 'Nuevo diagnóstico', href: lp('/panel/diagnostics/create'), icon: 'plus' },
