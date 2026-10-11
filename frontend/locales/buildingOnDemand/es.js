@@ -53,7 +53,7 @@ export default {
   taskSize: '{size} · {min}–{max} h',
   descriptionCounter: '{count}/{max}',
   estimatorEmpty: 'Elige las tareas que tienes en mente para saber cómo encajan en tu bolsa.',
-  estimateRange: 'Entre {min} y {max} horas al mes',
+  estimateRange: 'Tu pedido: entre {min} y {max} horas',
   estimateFits: 'Cabe',
   estimateMayFit: 'Puede caber',
   estimateExceeds: 'No cabe en un mes',

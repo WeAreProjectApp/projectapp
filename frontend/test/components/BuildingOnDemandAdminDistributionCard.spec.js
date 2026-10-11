@@ -13,8 +13,6 @@ jest.mock('#imports', () => ({
   }),
 }));
 
-jest.setTimeout(15_000);
-
 const mounted = [];
 const originalClipboard = Object.getOwnPropertyDescriptor(navigator, 'clipboard');
 function mountCard(overrides = {}) {

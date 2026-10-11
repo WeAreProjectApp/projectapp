@@ -13,7 +13,7 @@ const copy = {
     },
     cell: {
       title: 'La célula que acompaña tu producto',
-      summary: 'Siete personas aportan criterio y experiencia a las tareas de tu producto.',
+      summary: 'La célula reúne siete personas que trabajan juntas sobre tu producto. Cada rol aporta una mirada distinta para que los cambios lleguen bien pensados, construidos y probados.',
       note: 'La célula siempre es la misma. Cada nivel define cuántas horas compras y qué roles puedes usar.',
       roles: [
         { id: 'developers', title: 'Dos desarrolladores', summary: 'Construyen las mejoras que necesita tu producto.' },
@@ -47,7 +47,7 @@ const copy = {
           pace_summary: 'Avanza a un ritmo constante con tareas claras.',
           ideal_for: 'Ya sabes qué necesitas y quieres que se ejecute bien.',
           roles: ['Desarrollo', 'Líder de proyecto', 'QA en cada entrega'],
-          highlights: ['Cadencia asíncrona con una ceremonia cada dos semanas', 'Una persona solicitante', 'Una tarea en curso', 'Respuesta objetivo en 48 horas hábiles'],
+          highlights: ['Cadencia asíncrona con una ceremonia cada dos semanas', 'Una persona solicitante', 'Una tarea en curso', 'Tiempo de respuesta objetivo: 48 horas hábiles.'],
           cta_label: 'Quiero Starter',
         },
         {
@@ -55,7 +55,7 @@ const copy = {
           pace_summary: 'Avanza con criterio para ordenar y mejorar tu producto.',
           ideal_for: 'Tus herramientas crecieron rápido y necesitas arquitecto y diseñador para poner orden.',
           roles: ['Todo lo de Starter', 'Diseñador', 'Arquitecto', 'Levantamiento de requerimientos', 'Deploy a producción'],
-          highlights: ['Sprint semanal con demo', 'Hasta tres personas solicitantes', 'Dos tareas en curso', 'Respuesta objetivo en 24 horas hábiles'],
+          highlights: ['Sprint semanal con demo', 'Hasta tres personas solicitantes', 'Dos tareas en curso', 'Tiempo de respuesta objetivo: 24 horas hábiles.'],
           cta_label: 'Quiero Business',
         },
         {
@@ -63,7 +63,7 @@ const copy = {
           pace_summary: 'Sostén el ritmo de evolución de tu producto.',
           ideal_for: 'Tu equipo necesita operar y mejorar con acompañamiento continuo.',
           roles: ['Todo lo de Business', 'Scrum Master dedicado', 'DevOps continuo', 'Prioridad de atención'],
-          highlights: ['Sprint de dos semanas con canal dedicado', 'Todo tu equipo puede solicitar', 'Tres tareas en curso', 'Respuesta objetivo en 4 horas con prioridad'],
+          highlights: ['Sprint de dos semanas con canal dedicado', 'Todo tu equipo puede solicitar', 'Tres tareas en curso', 'Tiempo de respuesta objetivo: 4 horas, con prioridad.'],
           cta_label: 'Quiero Enterprise',
         },
       ],
@@ -146,7 +146,7 @@ const copy = {
       note: 'A monthly bag of available hours, supported by a shared cell.',
     },
     cell: {
-      title: 'The cell supporting your product', summary: 'Seven people bring judgment and experience to your product tasks.',
+      title: 'The cell supporting your product', summary: 'The cell brings together seven people who work together on your product. Each role adds a different perspective so changes arrive thoughtfully designed, built and tested.',
       note: 'The cell stays the same. Each tier defines how many hours you buy and which roles you can use.',
       roles: [
         { id: 'developers', title: 'Two developers', summary: 'Build the improvements your product needs.' },
@@ -177,20 +177,20 @@ const copy = {
           id: 'starter', name: 'Starter', badge: 'Get started', pace_label: 'Part time',
           pace_summary: 'Move at a steady pace with clear tasks.', ideal_for: 'You know what you need and want it executed well.',
           roles: ['Development', 'Project lead', 'QA for each delivery'],
-          highlights: ['Asynchronous cadence with a ceremony every two weeks', 'One requester', 'One task in progress', 'Target response within 48 business hours'], cta_label: 'I want Starter',
+          highlights: ['Asynchronous cadence with a ceremony every two weeks', 'One requester', 'One task in progress', 'Target response time: 48 business hours.'], cta_label: 'I want Starter',
         },
         {
           id: 'business', name: 'Business', badge: 'Recommended', pace_label: 'Full time',
           pace_summary: 'Move with judgment to organize and improve your product.',
           ideal_for: 'Your tools grew quickly and need an architect and designer to bring order.',
           roles: ['Everything in Starter', 'Designer', 'Architect', 'Requirements sessions', 'Production deployment'],
-          highlights: ['Weekly sprint with a demo', 'Up to three requesters', 'Two tasks in progress', 'Target response within 24 business hours'], cta_label: 'I want Business',
+          highlights: ['Weekly sprint with a demo', 'Up to three requesters', 'Two tasks in progress', 'Target response time: 24 business hours.'], cta_label: 'I want Business',
         },
         {
           id: 'enterprise', name: 'Enterprise', badge: 'Sustained pace', pace_label: 'Nonstop',
           pace_summary: 'Sustain the pace of your product evolution.', ideal_for: 'Your team needs ongoing support to operate and improve.',
           roles: ['Everything in Business', 'Dedicated Scrum Master', 'Continuous DevOps', 'Priority support'],
-          highlights: ['Two-week sprint with a dedicated channel', 'Your whole team can request', 'Three tasks in progress', 'Priority target response within 4 hours'], cta_label: 'I want Enterprise',
+          highlights: ['Two-week sprint with a dedicated channel', 'Your whole team can request', 'Three tasks in progress', 'Target response time: 4 hours, with priority.'], cta_label: 'I want Enterprise',
         },
       ],
     },

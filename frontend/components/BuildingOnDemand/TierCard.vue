@@ -48,7 +48,7 @@ const whatsappUrl = computed(() => tierWhatsappUrl(props.whatsappBaseUrl, label(
     </div>
 
     <div class="space-y-3 rounded-xl bg-surface-raised p-4">
-      <p class="text-3xl font-semibold text-text-brand">{{ label('bagHours', { hours: tier.bag_hours }) }}</p>
+      <p class="whitespace-nowrap text-base font-semibold text-text-brand"><span class="text-3xl">{{ tier.bag_hours }}</span>{{ label('bagHours', { hours: '' }) }}</p>
       <BaseBadge variant="neutral" v-bind="{ textPolicy: 'wrap' }">{{ label('bagCondition') }}</BaseBadge>
     </div>
 

@@ -53,7 +53,7 @@ export default {
   taskSize: '{size} · {min}–{max} h',
   descriptionCounter: '{count}/{max}',
   estimatorEmpty: 'Choose the tasks you have in mind to see how they fit your bag of hours.',
-  estimateRange: 'Between {min} and {max} hours per month',
+  estimateRange: 'Your request: between {min} and {max} hours',
   estimateFits: 'Fits',
   estimateMayFit: 'May fit',
   estimateExceeds: 'Does not fit in one month',

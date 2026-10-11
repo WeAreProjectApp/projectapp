@@ -238,7 +238,7 @@ describe('Building on Demand WhatsApp messages', () => {
 
     const message = estimateWhatsappMessage({ program, selection: { 'requirements-session': 2 }, description: '  Ordenar mi herramienta  ', language: 'es' })
 
-    expect(message).toBe('Pedir la estimación formal — Building on Demand\nOrdenar mi herramienta\n2 × Sesión de requerimientos\nEntre 14 y 40 horas al mes\nNivel sugerido: Business')
+    expect(message).toBe('Pedir la estimación formal — Building on Demand\nOrdenar mi herramienta\n2 × Sesión de requerimientos\nTu pedido: entre 14 y 40 horas\nNivel sugerido: Business')
   })
 
   it('describes the selected request in English', () => {
@@ -246,7 +246,7 @@ describe('Building on Demand WhatsApp messages', () => {
 
     const message = estimateWhatsappMessage({ program, selection: { 'small-change': 1 }, description: 'Improve my tool', language: 'en' })
 
-    expect(message).toBe('Request a formal estimate — Building on Demand\nImprove my tool\n1 × Small change\nBetween 2 and 7 hours per month\nSuggested tier: Starter')
+    expect(message).toBe('Request a formal estimate — Building on Demand\nImprove my tool\n1 × Small change\nYour request: between 2 and 7 hours\nSuggested tier: Starter')
   })
 
   it('uses the program language when no language is passed', () => {

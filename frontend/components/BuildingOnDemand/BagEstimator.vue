@@ -59,9 +59,9 @@ function changeQuantity(taskId, amount) {
 
 <template>
   <section id="estimator" data-document-enter class="building-on-demand-estimator min-w-0 scroll-mt-6 space-y-6 [overflow-wrap:anywhere]" data-testid="building-on-demand-estimator">
-    <div class="space-y-3">
-      <h2 class="text-2xl font-semibold text-text-default sm:text-3xl">{{ program.estimator?.title }}</h2>
-      <p class="max-w-prose text-base text-text-muted">{{ program.estimator?.summary }}</p>
+    <div>
+      <h2 class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.estimator?.title }}</h2>
+      <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.estimator?.summary }}</p>
     </div>
 
     <div class="grid min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-2">
@@ -137,7 +137,7 @@ function changeQuantity(taskId, amount) {
         </ul>
       </div>
 
-      <div class="min-w-0 space-y-5 rounded-2xl border border-border-default bg-surface-raised p-5 sm:p-6">
+      <div class="min-w-0 space-y-5 rounded-2xl border border-border-default bg-surface-raised p-5 sm:p-6 lg:sticky lg:top-6 lg:self-start">
         <template v-if="estimate.hasSelection">
           <p class="text-xl font-semibold text-text-default" aria-live="polite" data-testid="building-on-demand-estimate-range">
             {{ label('estimateRange', { min: estimate.hoursMin, max: estimate.hoursMax }) }}

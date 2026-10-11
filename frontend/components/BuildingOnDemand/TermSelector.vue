@@ -32,8 +32,15 @@ const selectedTerm = computed(() => listOf(props.terms.items).find((term) => ter
 
 <style scoped>
 .building-on-demand-terms :deep([role='tab']) {
-  min-height: 2.75rem;
+  min-height: theme('spacing.11');
   white-space: normal;
   overflow-wrap: anywhere;
+}
+
+@media (min-width: theme('screens.sm')) {
+  .building-on-demand-terms :deep([role='tab']) {
+    white-space: nowrap;
+    overflow-wrap: normal;
+  }
 }
 </style>

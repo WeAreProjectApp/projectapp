@@ -48,7 +48,7 @@ describe('BuildingOnDemandBagEstimator', () => {
 
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-quantity"]').text()).toBe('1')
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-quantity"]').attributes('aria-live')).toBe('polite')
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Entre 2 y 7 horas al mes')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Tu pedido: entre 2 y 7 horas')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-tier-starter"]').text()).toContain('Cabe')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('Starter')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('Por el tiempo estimado de tu solicitud.')
@@ -74,7 +74,7 @@ describe('BuildingOnDemandBagEstimator', () => {
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-quantity"]').text()).toBe('10')
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-increase"]').attributes('disabled')).toBe('')
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-increase"]').attributes('title')).toBe('La cantidad máxima es diez.')
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Entre 20 y 70 horas al mes')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Tu pedido: entre 20 y 70 horas')
   })
 
   it('limits the request description to one thousand characters', async () => {
@@ -93,7 +93,7 @@ describe('BuildingOnDemandBagEstimator', () => {
 
     await addTask(wrapper, 'requirements-session')
 
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Entre 7 y 20 horas al mes')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Tu pedido: entre 7 y 20 horas')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-tier-starter"]').text()).toContain('Requiere los roles de Business o un nivel superior.')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('Business')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('Por los roles que necesita tu solicitud.')
@@ -118,7 +118,7 @@ describe('BuildingOnDemandBagEstimator', () => {
 
     await addTask(wrapper, 'large-feature', 6)
 
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Entre 330 y 540 horas al mes')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Tu pedido: entre 330 y 540 horas')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-tier-enterprise"]').text()).toContain('No cabe en un mes')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-tier-enterprise"]').text()).toContain('≈ 2 meses')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('El alcance supera una bolsa mensual; requiere aproximadamente 2 meses.')
@@ -131,7 +131,7 @@ describe('BuildingOnDemandBagEstimator', () => {
     await addTask(wrapper, 'feature')
 
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-quantity"]').text()).toBe('2')
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Entre 24 y 64 horas al mes')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Tu pedido: entre 24 y 64 horas')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-suggested"]').text()).toContain('Starter')
   })
 
@@ -143,7 +143,7 @@ describe('BuildingOnDemandBagEstimator', () => {
     const destination = new URL(wrapper.get('[data-testid="building-on-demand-estimate-whatsapp"]').attributes('href'))
 
     expect(destination.origin).toBe('https://wa.me')
-    expect(destination.searchParams.get('text')).toBe('Pedir la estimación formal — Building on Demand\nMejorar el formulario de contacto\n2 × Cambio pequeño\nEntre 4 y 14 horas al mes\nNivel sugerido: Starter')
+    expect(destination.searchParams.get('text')).toBe('Pedir la estimación formal — Building on Demand\nMejorar el formulario de contacto\n2 × Cambio pequeño\nTu pedido: entre 4 y 14 horas\nNivel sugerido: Starter')
   })
 
   it('replaces an unsafe contact URL in the formal estimate link', async () => {
@@ -156,7 +156,7 @@ describe('BuildingOnDemandBagEstimator', () => {
 
     expect(destination.origin).toBe('https://wa.me')
     expect(destination.pathname).toBe('/573238122373')
-    expect(destination.searchParams.get('text')).toContain('Entre 2 y 7 horas al mes')
+    expect(destination.searchParams.get('text')).toContain('Tu pedido: entre 2 y 7 horas')
   })
 
   it('uses English estimator chrome in an English preview', async () => {
@@ -164,7 +164,7 @@ describe('BuildingOnDemandBagEstimator', () => {
 
     await addTask(wrapper, 'small-change')
 
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Between 2 and 7 hours per month')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Your request: between 2 and 7 hours')
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-increase"]').attributes('aria-label')).toBe('Add one unit of Small change')
     expect(wrapper.get('[data-testid="building-on-demand-estimate-whatsapp"]').text()).toBe('Request a formal estimate')
   })
@@ -176,7 +176,7 @@ describe('BuildingOnDemandBagEstimator', () => {
     await wrapper.setProps({ program: createBuildingOnDemandProgram('en'), language: 'en' })
 
     expect(wrapper.get('[data-testid="building-on-demand-task-small-change-quantity"]').text()).toBe('2')
-    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Between 4 and 14 hours per month')
+    expect(wrapper.get('[data-testid="building-on-demand-estimate-range"]').text()).toBe('Your request: between 4 and 14 hours')
     expect(new URL(wrapper.get('[data-testid="building-on-demand-estimate-whatsapp"]').attributes('href')).searchParams.get('text')).toContain('2 × Small change')
   })
 

@@ -9,9 +9,6 @@ import BaseBadge from '../../components/base/BaseBadge.vue';
 import BaseExploratoryList from '../../components/base/BaseExploratoryList.vue';
 import { get_request } from '../../stores/services/request_http';
 
-// The integrated panel mounts real shared components on constrained workers.
-jest.setTimeout(30_000);
-
 const mockRoute = reactive({ query: {} });
 const mockLocale = ref('es-co');
 const mockRouter = { replace: jest.fn() };

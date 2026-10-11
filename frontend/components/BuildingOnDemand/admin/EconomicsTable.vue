@@ -30,7 +30,7 @@ const consultedOn = computed(() => formatDate(props.economics?.consulted_on, {
   fallback: unavailable.value,
 }));
 const columns = computed(() => [
-  { key: 'tier_name', label: t('buildingOnDemandAdmin.economics.tier'), mobile: 'primary' },
+  { key: 'tier_name', label: t('buildingOnDemandAdmin.economics.tier'), mobile: 'primary', textPolicy: 'atomic' },
   { key: 'monthly_price', label: t('buildingOnDemandAdmin.economics.monthlyPrice'), mobile: 'secondary', textPolicy: 'atomic' },
   { key: 'hosting_cost_monthly', label: t('buildingOnDemandAdmin.economics.hostingCost'), mobile: 'secondary', textPolicy: 'atomic' },
   { key: 'net_monthly', label: t('buildingOnDemandAdmin.economics.net'), mobile: 'secondary', textPolicy: 'atomic' },
