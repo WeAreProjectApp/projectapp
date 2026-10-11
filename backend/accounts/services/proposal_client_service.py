@@ -18,9 +18,10 @@ Key invariants
   generated via a 2-step save so the id is part of the address. The
   ``UserProfile.is_email_placeholder`` property is the runtime check used by
   email automations to skip sending.
-- Deleting a client requires it to be a true orphan: zero proposals AND
-  zero platform projects. The ``BusinessProposal.client`` FK uses
-  ``on_delete=PROTECT`` as a database-level safety net.
+- Deleting a client requires it to be a true orphan: nothing that would stop
+  deleting its user — proposals, projects, diagnostics, incomes, hostings,
+  conversations and every other protected relation, as listed by
+  ``client_deletion.deletion_blockers``.
 """
 
 import logging
@@ -32,6 +33,7 @@ from django.db import transaction
 from django.db.models import Q
 
 from accounts.models import UserProfile
+from accounts.services import client_deletion
 
 logger = logging.getLogger(__name__)
 
@@ -444,12 +446,13 @@ def sync_diagnostic_snapshot(diagnostic):
 @transaction.atomic
 def delete_orphan_client(profile):
     """
-    Delete a client profile (and its underlying ``User``) **only** if it has
-    no proposals, no platform projects, no diagnostics, no accounting
-    incomes, no hostings and no communication threads. Raises ``ValueError``
-    with a machine-readable code otherwise.
+    Delete a client profile (and its underlying ``User``) **only** if nothing
+    would stop deleting its user: no proposals, no platform projects, no
+    diagnostics, no accounting incomes, no hostings, no communication threads
+    and no other protected relation. Raises ``ValueError`` with a
+    machine-readable code otherwise.
 
-    Error codes:
+    Error codes, checked in this order:
         - ``client_has_proposals``: linked to one or more BusinessProposals.
         - ``client_has_projects``: linked to one or more platform Projects
           (which transitively cover deliverables, requirements, etc.).
@@ -462,6 +465,15 @@ def delete_orphan_client(profile):
         - ``client_has_communications``: linked to one or more client
           conversation threads. The registry is an audit trail and is never
           removed as a side effect of deleting a client.
+        - ``client_has_protected_references``: any other row whose relation
+          would make Django refuse the delete (communication folders,
+          financing agreements, retained project contexts, delivery records…).
+          Raised as ``ClientDeletionBlocked``, whose ``relations`` maps each
+          relation to its row count.
+
+    Relations that are ``SET_NULL`` (documents, folders, email logs, secure
+    links) never block: the delete leaves those rows without a client, by
+    design.
     """
     proposals_count = profile.proposals.count()
     if proposals_count > 0:
@@ -487,6 +499,12 @@ def delete_orphan_client(profile):
     if communications_count > 0:
         raise ValueError(f'client_has_communications:{communications_count}')
 
-    user = profile.user
-    profile.delete()
-    user.delete()
+    relations = client_deletion.blocker_counts(profile.user_id)
+    if relations:
+        raise client_deletion.ClientDeletionBlocked(relations)
+
+    # One delete: the profile goes with its user in cascade, and the Collector
+    # checks every protected relation before removing anything. Deleting the
+    # profile first let its post_delete signal erase the avatar and cover even
+    # when the user's delete then failed and the rows were rolled back.
+    profile.user.delete()

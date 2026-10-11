@@ -9,8 +9,6 @@ CL4 (orphan clients) and CL5 (projects owned by a non-client) only report.
 """
 from collections import defaultdict
 
-from django.db.models import Exists, OuterRef
-
 from content.services.data_integrity.catalog import rule
 from content.services.data_integrity.hashing import digits, normalized
 from content.services.data_integrity.scope import PROFILE, PROJECT, USER, client_label
@@ -121,23 +119,19 @@ def detect_duplicate_cedula(scope):
                                  f'{len(profiles)} clientes comparten la cédula {number}.', _suggest(profiles))
 
 
-@rule(id='CL4', domain='clients', severity='low', fix_kinds=(REPORT_ONLY,),
+@rule(id='CL4', domain='clients', severity='low', fix_kinds=(REPORT_ONLY,), version=2,
       title='Cliente sin ningún registro',
-      description='Un cliente activo sin propuestas, proyectos, diagnósticos, ingresos, hostings ni conversaciones. '
-                  'Si ya no se necesita, se borra a mano desde la pestaña «Huérfanos» de Clientes.')
+      description='Un cliente activo sin propuestas, proyectos, diagnósticos, ingresos, hostings, conversaciones ni '
+                  'ningún otro registro que impida borrarlo. Si ya no se necesita, se borra a mano desde la pestaña '
+                  '«Huérfanos» de Clientes.')
 def detect_orphan_client(scope):
-    from accounts.models import Project, UserProfile
-    from content.models import BusinessProposal, CommunicationThread, HostingRecord, IncomeRecord, WebAppDiagnostic
-    # Match the orphan tab's six relations, including retained history. Base
-    # managers keep an archived or retained relation from looking like no data.
-    related = (
-        (BusinessProposal, 'client_id', 'pk'), (Project, 'client_id', 'user_id'),
-        (WebAppDiagnostic, 'client_id', 'pk'), (IncomeRecord, 'client_id', 'pk'),
-        (HostingRecord, 'client_id', 'pk'), (CommunicationThread, 'client_id', 'pk'),
-    )
-    rows = UserProfile._base_manager.filter(role=UserProfile.ROLE_CLIENT, archived_at__isnull=True)
-    for model, field, owner in related:
-        rows = rows.filter(~Exists(model._base_manager.filter(**{field: OuterRef(owner)})))
+    from accounts.models import UserProfile
+    from accounts.services.client_deletion import blocked_condition
+    # The orphan tab's cut and the delete guard's: nothing that would stop
+    # deleting the client's user. The six business relations are part of it;
+    # base managers keep archived or retained rows from looking like no data.
+    rows = (UserProfile._base_manager.filter(role=UserProfile.ROLE_CLIENT, archived_at__isnull=True)
+            .exclude(blocked_condition('user_id')))
     rows = scope.limit(rows.select_related('user'), PROFILE)
     for profile in rows.order_by('pk'):
         label = client_label(profile)
@@ -145,9 +139,9 @@ def detect_orphan_client(scope):
             rule_id='CL4',
             subjects=(RecordRef(PROFILE, profile.pk, label),),
             evidence={'profile': profile.pk},
-            message=f'«{label}» no tiene propuestas, proyectos, diagnósticos, ingresos, hostings ni '
-                    'conversaciones. Si ya no lo necesitas, bórralo a mano desde la pestaña «Huérfanos» '
-                    'de Clientes.',
+            message=f'«{label}» no tiene propuestas, proyectos, diagnósticos, ingresos, hostings, '
+                    'conversaciones ni otros registros que impidan borrarlo. Si ya no lo necesitas, bórralo a '
+                    'mano desde la pestaña «Huérfanos» de Clientes.',
         )
 
 

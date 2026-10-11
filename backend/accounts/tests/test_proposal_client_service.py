@@ -319,6 +319,43 @@ class TestDeleteOrphanClient:
             proposal_client_service.delete_orphan_client(profile)
         assert UserProfile.objects.filter(pk=profile.pk).exists()
 
+    def test_blocks_deletion_when_client_has_a_communication_folder(self):
+        """Fails if a client whose only row is a communication folder passes the guard
+        and the delete ends in an unhandled ProtectedError."""
+        from accounts.services.client_deletion import ClientDeletionBlocked
+        from content.models import CommunicationFolder
+
+        profile = proposal_client_service.get_or_create_client_for_proposal(
+            name='Carpeta Sola', email='carpeta@gmail.com',
+        )
+        CommunicationFolder.objects.create(client=profile, name='Temporal')
+
+        with pytest.raises(ClientDeletionBlocked) as blocked:
+            proposal_client_service.delete_orphan_client(profile)
+
+        assert str(blocked.value) == 'client_has_protected_references:1'
+        assert blocked.value.relations == {'content.communicationfolder.client': 1}
+        assert UserProfile.objects.filter(pk=profile.pk).exists()
+
+    def test_deleting_a_client_leaves_its_documents_and_folders_without_client(self):
+        """Fails if documents or folders start blocking the delete, or are deleted with it:
+        their client link is SET_NULL on purpose (content/models/document_folder.py)."""
+        from content.models import Document, DocumentFolder
+
+        profile = proposal_client_service.get_or_create_client_for_proposal(
+            name='Solo Documentos', email='documentos@gmail.com',
+        )
+        document = Document.objects.create(title='Acta', client_user=profile.user)
+        folder = DocumentFolder.objects.create(name='Carpeta del cliente', client_user=profile.user)
+
+        proposal_client_service.delete_orphan_client(profile)
+
+        document.refresh_from_db()
+        folder.refresh_from_db()
+        assert not UserProfile.objects.filter(pk=profile.pk).exists()
+        assert document.client_user_id is None
+        assert folder.client_user_id is None
+
 
 # ---------------------------------------------------------------------------
 # generate_placeholder_email

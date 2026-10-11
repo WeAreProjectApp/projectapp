@@ -8,6 +8,7 @@ shape expected by ``/panel/clients`` and the proposal create/edit autocomplete.
 from rest_framework import serializers
 
 from accounts.models import Project, UserProfile
+from accounts.services import client_deletion
 from accounts.services.proposal_client_service import build_client_display_name
 
 
@@ -368,7 +369,15 @@ class ProposalClientSerializer(ClientBillingSnapshotMixin, serializers.ModelSeri
             return False
         if self.get_hostings_count(obj) > 0:
             return False
-        return self.get_communications_count(obj) == 0
+        if self.get_communications_count(obj) > 0:
+            return False
+        # Any other protected row (communication folder, financing agreement,
+        # retained project, delivery records…) would make the delete fail, so
+        # the row must not offer it.
+        blocked = getattr(obj, 'deletion_blocked', None)
+        if blocked is None:
+            blocked = client_deletion.has_blockers(obj.user_id)
+        return not blocked
 
     def get_is_archived(self, obj):
         return obj.archived_at is not None

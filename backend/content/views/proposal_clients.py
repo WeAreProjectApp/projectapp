@@ -26,6 +26,7 @@ from django.db.models import (
     CharField, Count, DateTimeField, Exists, IntegerField, Max, OuterRef, Q,
     Subquery, Sum, Value,
 )
+from django.db.models.deletion import ProtectedError, RestrictedError
 from django.db.models.functions import Coalesce, Concat, Lower, NullIf, Trim
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
@@ -34,7 +35,7 @@ from rest_framework.response import Response
 
 from accounts.models import Project, UserProfile
 from accounts.serializers import ProjectListSerializer
-from accounts.services import client_archive_service, proposal_client_service
+from accounts.services import client_archive_service, client_deletion, proposal_client_service
 from accounts.services.billing_code import (
     billing_code_error,
     normalize_billing_code,
@@ -356,6 +357,10 @@ def _base_queryset():
                 .values('last_activity_at')[:1],
                 output_field=DateTimeField(),
             ),
+            # Whether any protected row would stop deleting the client: one
+            # EXISTS per relation the delete guard checks, in this same query.
+            # The six counts above are the visible part of the same cut.
+            deletion_blocked=client_deletion.deletion_blocked_annotation(),
         )
     )
 
@@ -410,10 +415,13 @@ def _validated_billing_fields(request_data):
 # ---------------------------------------------------------------------------
 
 # The orphan predicate: no proposals, projects, diagnostics, incomes,
-# hostings or communication threads. Matches ``is_orphan`` and the delete guard.
+# hostings or communication threads, and no other protected row that would
+# stop the delete. Matches ``is_orphan`` and the delete guard, which read the
+# same ``client_deletion`` blockers.
 _ORPHAN_PREDICATE = {
     'proposals_count': 0, 'projects_count': 0, 'diagnostics_count': 0,
     'incomes_count': 0, 'hostings_count': 0, 'communications_count': 0,
+    'deletion_blocked': False,
 }
 
 
@@ -469,7 +477,7 @@ def list_proposal_clients(request):
         - ``search``: case-insensitive match on email, first/last name, company.
         - ``orphans``: ``true`` returns only profiles with 0 proposals AND
           0 projects AND 0 diagnostics AND 0 incomes AND 0 hostings AND
-          0 communication threads
+          0 communication threads AND no other protected row
           (matches ``is_orphan`` and the delete guard). ``false`` returns
           the inverse. Omit to include all.
         - ``without_projects``: ``true`` returns only clients with zero
@@ -787,9 +795,11 @@ def update_proposal_client(request, client_id):
 @permission_classes([IsAdminUser])
 def delete_proposal_client(request, client_id):
     """
-    Delete a client (and the underlying ``User``) only if it has zero
-    proposals and zero platform projects. Returns 400 with a machine-readable
-    error code otherwise.
+    Delete a client (and the underlying ``User``) only if nothing would stop
+    it: no proposals, projects, diagnostics, incomes, hostings, conversations
+    or any other protected row. Returns 400 with a machine-readable error code
+    otherwise; ``relations`` lists the blocking relations with their row
+    counts when the code is ``client_has_protected_references``.
     """
     profile = _get_profile_or_404(client_id)
     if profile is None:
@@ -802,8 +812,23 @@ def delete_proposal_client(request, client_id):
     except ValueError as exc:
         # Service raises ``ValueError('client_has_proposals:N')`` etc.
         code, _, count = str(exc).partition(':')
+        payload = {'error': code, 'count': int(count) if count.isdigit() else None}
+        relations = getattr(exc, 'relations', None)
+        if relations:
+            payload['relations'] = relations
+        return Response(payload, status=status.HTTP_400_BAD_REQUEST)
+    except (ProtectedError, RestrictedError) as exc:
+        # Safety net: the guard reads the same relations Django enforces, so
+        # this only fires if they drift apart. Still a 400 with model labels
+        # and counts, never a 500 and never row content.
+        relations = client_deletion.protected_summary(exc)
+        logger.warning('Client %s delete refused by Django: %s', profile.pk, relations)
         return Response(
-            {'error': code, 'count': int(count) if count.isdigit() else None},
+            {
+                'error': client_deletion.ClientDeletionBlocked.code,
+                'count': sum(relations.values()),
+                'relations': relations,
+            },
             status=status.HTTP_400_BAD_REQUEST,
         )
 

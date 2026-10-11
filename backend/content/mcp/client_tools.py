@@ -11,16 +11,20 @@ service):
 - Writes always go through ``proposal_client_service`` (never a bare
   ``serializer.save()``) so proposal snapshots stay in sync and email-in-use
   conflicts are enforced.
-- Delete only succeeds for true orphans across every protected module;
-  otherwise the exact ``client_has_*:N`` reason is surfaced.
+- Delete only succeeds for true orphans across every protected relation;
+  otherwise the exact ``client_has_*:N`` reason is surfaced, with the
+  blocking relations and their counts when the reason is
+  ``client_has_protected_references``.
 
 Each entry: {'name', 'description', 'input_schema', 'handler'}. Handlers take
 the raw ``arguments`` dict, return a JSON-serializable dict, and raise
 ToolError for business errors.
 """
+from django.db.models.deletion import ProtectedError, RestrictedError
+
 from accounts.models import UserProfile
 from accounts.serializers import ProjectListSerializer
-from accounts.services import proposal_client_service
+from accounts.services import client_deletion, proposal_client_service
 from content.mcp.protocol import ToolError
 from content.mcp.schema_policy import close_root_schemas
 from content.serializers.diagnostic import DiagnosticListSerializer
@@ -171,14 +175,26 @@ def delete_client(arguments):
     except ValueError as exc:
         # Service raises 'client_has_proposals:N' / 'client_has_projects:N' /
         # 'client_has_diagnostics:N' / 'client_has_incomes:N' /
-        # 'client_has_hostings:N' / 'client_has_communications:N'. Preserve
+        # 'client_has_hostings:N' / 'client_has_communications:N' /
+        # 'client_has_protected_references:N' (with ``relations``). Preserve
         # the exact reason for the calling model.
-        raise ToolError(
-            f'No se puede eliminar: el cliente aún tiene referencias ({exc}). '
-            'Elimina o reasigna esas propuestas/proyectos/diagnósticos/'
-            'ingresos/hostings/comunicaciones primero.'
-        )
+        raise ToolError(_blocked_message(str(exc), getattr(exc, 'relations', None)))
+    except (ProtectedError, RestrictedError) as exc:
+        # Safety net, as in the panel view: labels and counts, never content.
+        relations = client_deletion.protected_summary(exc)
+        reason = f'{client_deletion.ClientDeletionBlocked.code}:{sum(relations.values())}'
+        raise ToolError(_blocked_message(reason, relations))
     return {'deleted': True, 'id': profile_id}
+
+
+def _blocked_message(reason, relations):
+    detail = reason
+    if relations:
+        detail += ' · ' + ', '.join(f'{name}={count}' for name, count in relations.items())
+    return (
+        f'No se puede eliminar: el cliente aún tiene registros que lo protegen ({detail}). '
+        'Reasigna o resuelve esos registros primero.'
+    )
 
 
 # ── Registry ─────────────────────────────────────────────────────────────────
