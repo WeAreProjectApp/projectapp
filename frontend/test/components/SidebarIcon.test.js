@@ -32,6 +32,15 @@ describe('SidebarIcon', () => {
     expect(wrapper.find('circle[r="10"]').exists()).toBe(false);
   });
 
+  it('renders the three-person Scrum cell symbol for Células', () => {
+    const wrapper = mountIcon('team');
+
+    expect(wrapper.findAll('circle').map((head) => head.attributes('r'))).toEqual(['3', '2.5', '2.5']);
+    expect(wrapper.findAll('path')).toHaveLength(1);
+    expect(wrapper.find('circle[r="10"]').exists()).toBe(false);
+    expect(wrapper.attributes('stroke-width')).toBe('1.5');
+  });
+
   it('renders the fallback circle for an unrecognized icon name', () => {
     const wrapper = mountIcon('not-a-real-icon');
 

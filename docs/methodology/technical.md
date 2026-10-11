@@ -1,3 +1,14 @@
+> **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
+> y su PDF comparten los valores derivados por el servidor; la siembra del
+> programa está en `content.0291_building_on_demand_program`. Los GET
+> administrativos usan sesión/CSRF e `IsAdminUser`; `stores/building_on_demand.js`
+> consulta resumen, historial con `limit=20&offset=`, vista previa ES/EN y
+> economía por nivel/plazo. Células acepta `?tab=economics` y `?tab=contract`,
+> y muestra contrato no disponible cuando el resumen es `null` y su GET da 404.
+> La segunda ola integra el backend contractual; Markdown y versiones propios
+> gobiernan su PDF y espejo, sin importar ediciones del Gestor Documental.
+> El conector MCP dedicado sigue pendiente; el panel no ofrece escrituras.
+
 > **Confirmación antes de enviar — 2026-10-09:** `POST accounting/incomes/<id>/settle/`
 > acepta `send_payment_confirmation` (falso por defecto; MCP y
 > `resolve_income_residual` comparten el serializer) y responde
@@ -735,7 +746,7 @@ All configuration via `python-decouple` reading from `backend/.env`. Key variabl
 ### View inventory and operational taxonomy are separate contracts
 
 - `frontend/config/viewCatalog.js` is the exhaustive technical inventory. `npm run check:view-catalog` derives Nuxt routes from `frontend/pages/` and rejects orphan pages, stale entries, duplicate URLs/files, route mismatches and invalid metadata in CI.
-- `frontend/config/viewCapabilityCatalog.js` is a curated commercial projection over that inventory. It owns three spaces (Panel interno, Plataforma de clientes and Experiencias públicas), their 22 main modules and representative submodules. Its validator guarantees complete metadata, unique nodes, valid relationship endpoints, exact ownership for every catalog route and exact ownership for every technical section without turning source-code dependencies into product relationships.
+- `frontend/config/viewCapabilityCatalog.js` is a curated commercial projection over that inventory. It owns three spaces (Panel interno, Plataforma de clientes and Experiencias públicas), their main modules and representative submodules. Its validator guarantees complete metadata, unique nodes, valid relationship endpoints, exact ownership for every catalog route and exact ownership for every technical section without turning source-code dependencies into product relationships.
 - `ViewExplorerContextPanel` derives purpose, value, actors, stage, child modules and technical references from the selected or previewed node. Hover/focus preview is ephemeral; selection remains the only interaction that changes the shareable URL. Context is curated and deterministic, with no live-metrics API.
 - The Explorer uses compact cards below the landscape breakpoint and positioned semantic buttons plus SVG connectors from landscape upward. `useOrbitalExplorer` owns rotation, pointer drag, keyboard adjustments, zoom and reduced-motion behavior, and accepts an external pause while a tour is active.
 - `useViewMapMode` owns shareable `viewMode`, `node`, `tour` and `relations` query state. A valid `tour=<space-id>` normalizes to one of that space's main modules; stopping it preserves `node`, while navigation outside its ordered steps returns to free mode.

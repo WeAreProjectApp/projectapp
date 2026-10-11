@@ -1,0 +1,14 @@
+{
+  "id": "public-building-on-demand-pdf",
+  "name": "Public Building on Demand PDF",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Descargar desde el control flotante el PDF público en el idioma seleccionado; si la solicitud falla, leer el aviso conservando la presentación abierta.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

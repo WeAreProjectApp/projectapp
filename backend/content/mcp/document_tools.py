@@ -50,6 +50,7 @@ from content.serializers.document_folder import (
 )
 from content.services.contract_mirror_service import (
     CONTRACT_MIRROR_BLOCKER,
+    MODULE_MIRROR_RELATIONS,
     mirror_read_only_message,
     is_contract_mirror,
     mirror_markdown,
@@ -106,7 +107,11 @@ def _markdown_qs():
     return (
         Document.objects
         .filter(document_type__code=MARKDOWN, is_archived=False)
-        .select_related('folder', 'project', 'client_user__profile', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision', 'building_with_us_mirror__revision')
+        .select_related(
+            'folder', 'project', 'client_user__profile', 'contract_template',
+            'contract_mirror__template', 'contract_mirror__revision',
+            *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
+        )
         .prefetch_related('tags')
     )
 

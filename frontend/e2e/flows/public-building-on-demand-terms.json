@@ -1,0 +1,13 @@
+{
+  "id": "public-building-on-demand-terms",
+  "name": "Public Building on Demand Terms",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Cambiar el plazo mensual por uno anticipado para comparar precios mensuales, descuentos, total y ahorro; leer que la bolsa se renueva cada mes sin acumularse.",
+  "outcomes": [
+    "success"
+  ]
+}

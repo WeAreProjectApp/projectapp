@@ -1,3 +1,12 @@
+> **Building on Demand — 2026-10-10 (PA-177/PA-179):** programa público ES/EN
+> en `/building-on-demand`, panel Células de solo lectura (Programa, Economía y
+> Contrato), contrato v1 con copia en Gestor › Contratos sincronizada en cada
+> cambio y conector MCP `building-on-demand` (35 herramientas, inactivo) como
+> única vía de administración. Migraciones `content.0291`–`0292`. Pendientes:
+> decisiones comerciales abiertas (inventario en la nota privada del contrato),
+> calibración del estimador (PA-178) y revisión del solapamiento con Paquetes de
+> horas. No acredita despliegue.
+
 > **Integridad de datos 1.1 — 2026-10-10:** arreglo del borrado de clientes huérfanos (H1),
 > 14 reglas de sólo reporte, inventario de relaciones y comando `audit_data_integrity`.
 > Huecos que quedan del inventario U7 (ENT-01..04, DOC-07..11, PRO-02/05/06 y otros):

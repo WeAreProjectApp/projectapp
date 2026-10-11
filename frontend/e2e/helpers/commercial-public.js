@@ -2,6 +2,7 @@ import { expect } from './test.js'
 import { mockApi } from './api.js'
 import { financingProgramFixture } from './financing-fixture.js'
 import { buildingWithUsApiFixture, buildingWithUsProgramFixture } from './building-with-us-fixture.js'
+import { buildingOnDemandApiFixture, buildingOnDemandProgramFixture, BUILDING_ON_DEMAND_GUIDE_SEEN_KEY } from './building-on-demand-fixture.js'
 import { waitForNuxtApp } from './navigation.js'
 
 export const commercialModule = {
@@ -16,16 +17,20 @@ export const commercialPages = [
   { name: 'selection', path: '/es-co/additional-modules/share/11111111-1111-4111-8111-111111111111', prefix: 'additional-modules', root: 'additional-modules-catalog', share: 'additional-modules-share-floating', flow: 'public-additional-modules-theme', shareFlow: 'public-additional-modules-share', cardId: 'additional-module-card-landing-page', cardSummary: commercialModule.summary },
   { name: 'partnership', path: '/es-co/partnership-program', prefix: 'financing', root: 'financing-program', share: 'financing-share', flow: 'public-financing-theme', shareFlow: 'public-financing-share', guideFlow: 'public-financing-guide', guideTitle: 'Empieza por el video', cardId: 'financing-option-five-year', cardSummary: financingProgramFixture().options[0].summary },
   { name: 'building-with-us', path: '/es-co/building-with-us', prefix: 'building-with-us', root: 'building-with-us-program', share: 'building-with-us-share', flow: 'public-building-with-us-theme', shareFlow: 'public-building-with-us-share', guideFlow: 'public-building-with-us-guide', guideTitle: 'Una alianza para construir', cardId: 'building-with-us-model-monthly-investment', cardSummary: buildingWithUsProgramFixture().participation_models.items[0].summary },
+  { name: 'building-on-demand', path: '/es-co/building-on-demand', prefix: 'building-on-demand', root: 'building-on-demand-program', share: 'building-on-demand-share', flow: 'public-building-on-demand-theme', shareFlow: 'public-building-on-demand-share', guideFlow: 'public-building-on-demand-guide', guideTitle: 'Tu producto, con una célula detrás', cardId: 'building-on-demand-tier-starter', cardSummary: buildingOnDemandProgramFixture().tiers.items[0].pace_summary },
 ]
 
 export async function setupCommercialPublic(page, { fail = false, video = false, categories } = {}) {
-  await page.addInitScript(() => {
+  await page.addInitScript((guideSeenKey) => {
     localStorage.setItem('projectapp-additional-modules-guide-seen', 'true')
     localStorage.setItem('projectapp-financing-guide-seen', 'true')
     localStorage.setItem('projectapp-building-with-us-guide-seen', 'true')
-  })
-  await mockApi(page, ({ apiPath, method, route }) => {
+    localStorage.setItem(guideSeenKey, 'true')
+  }, BUILDING_ON_DEMAND_GUIDE_SEEN_KEY)
+  await mockApi(page, async ({ apiPath, method, route }) => {
     if (fail) return { status: 503, contentType: 'application/json', body: '{}' }
+    const buildingOnDemand = await buildingOnDemandApiFixture({ apiPath, method, route })
+    if (buildingOnDemand) return buildingOnDemand
     const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route })
     if (buildingWithUs) return buildingWithUs
     const catalogCategories = categories || [{ slug: 'marketing', name: 'Marketing', modules: [commercialModule] }]

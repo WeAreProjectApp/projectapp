@@ -53,6 +53,8 @@ STATIC_SITEMAP_PAGES = [
     ('/es-co/partnership-program', '/en-us/partnership-program', 'monthly', '0.8'),
     ('/en-us/building-with-us', '/es-co/building-with-us', 'monthly', '0.8'),
     ('/es-co/building-with-us', '/en-us/building-with-us', 'monthly', '0.8'),
+    ('/en-us/building-on-demand', '/es-co/building-on-demand', 'monthly', '0.8'),
+    ('/es-co/building-on-demand', '/en-us/building-on-demand', 'monthly', '0.8'),
 ]
 
 

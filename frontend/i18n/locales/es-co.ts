@@ -38,6 +38,8 @@ export default defineI18nLocale(async () => {
     waiter,
     buildingWithUs,
     buildingWithUsAdmin,
+    buildingOnDemand,
+    buildingOnDemandAdmin,
   ] = await Promise.all([
     import('~/locales/global/es.js'),
     import('~/locales/home/es.js'),
@@ -77,6 +79,8 @@ export default defineI18nLocale(async () => {
     import('~/locales/waiter/es.js'),
     import('~/locales/buildingWithUs/es.js'),
     import('~/locales/buildingWithUsAdmin/es.js'),
+    import('~/locales/buildingOnDemand/es.js'),
+    import('~/locales/buildingOnDemandAdmin/es.js'),
   ])
 
   return {
@@ -118,5 +122,7 @@ export default defineI18nLocale(async () => {
     waiter: waiter.default,
     buildingWithUs: buildingWithUs.default,
     buildingWithUsAdmin: buildingWithUsAdmin.default,
+    buildingOnDemand: buildingOnDemand.default,
+    buildingOnDemandAdmin: buildingOnDemandAdmin.default,
   }
 })

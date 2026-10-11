@@ -301,13 +301,17 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
     def validate(self, attrs):
         """Apply the document association rule without a client-name snapshot."""
         if self.instance is not None:
-            from content.models import BuildingWithUsContractMirror
-            from content.services.contract_mirror_service import is_pinned_mirror_folder
+            from content.models import Document
+            from content.services.contract_mirror_service import (
+                MODULE_MIRROR_RELATIONS,
+                is_pinned_mirror_folder,
+            )
 
-            # Before a shared pin exists, keep the alliance's named location stable.
-            alliance_folder = BuildingWithUsContractMirror.objects.filter(
-                document__folder=self.instance,
-            ).exists()
+            # Before a shared pin exists, keep each module's named location stable.
+            module_variant = next((
+                variant for relation, variant, _message in MODULE_MIRROR_RELATIONS
+                if Document.objects.filter(folder=self.instance, **{f'{relation}__isnull': False}).exists()
+            ), None)
             changed = any(
                 field in attrs and attrs[field] != getattr(self.instance, attribute)
                 for field, attribute in (
@@ -315,9 +319,12 @@ class DocumentFolderSerializer(StrictInputMixin, ClientProjectReadMixin, seriali
                     ('client', 'client_user'), ('project', 'project'),
                 )
             )
-            if alliance_folder and changed and not is_pinned_mirror_folder(self.instance):
+            if module_variant and changed and not is_pinned_mirror_folder(self.instance):
+                detail = 'La carpeta de los espejos contractuales debe conservar su ubicación contractual.'
+                if module_variant == 'building_with_us':
+                    detail = 'La carpeta del espejo de Building with Us debe conservar su ubicación contractual.'
                 raise serializers.ValidationError({
-                    'detail': 'La carpeta del espejo de Building with Us debe conservar su ubicación contractual.',
+                    'detail': detail,
                     'code': 'contract_mirror_folder_pinned',
                 })
         if self._policy_parent_change(attrs):

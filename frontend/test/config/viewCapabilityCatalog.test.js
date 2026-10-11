@@ -71,6 +71,7 @@ describe('viewCapabilityCatalog', () => {
       'Módulos adicionales',
       'Programa de Alianza',
       'Building with Us',
+      'Building on Demand',
       'Propuesta comercial',
       'Diagnóstico',
       'Enlaces seguros',

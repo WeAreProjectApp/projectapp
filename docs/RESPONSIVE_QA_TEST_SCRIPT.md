@@ -2,7 +2,7 @@
 
 **Estado:** obligatorio
 
-**Cobertura automatizada:** 130 vistas × 5 perfiles = 650 celdas
+**Cobertura automatizada:** 132 vistas × 5 perfiles = 660 celdas
 
 **Fuente de verdad:** `frontend/config/viewCatalog.js`, `frontend/config/responsive.js` y `frontend/e2e/responsive/catalog-scenarios.js`
 
@@ -21,8 +21,8 @@ pasa el gate de calidad de `$qa`.
 | `desktop` | 1440 × 900 | regresión del portátil habitual |
 | `wide` | 2560 × 1440 | contenido centrado con máximo de 1400 px |
 
-El catálogo vigente contiene 114 vistas renderizables y 16 redirects. Las
-primeras producen 570 resultados visuales; los redirects producen 80 resultados
+El catálogo vigente contiene 116 vistas renderizables y 16 redirects. Las
+primeras producen 580 resultados visuales; los redirects producen 80 resultados
 de compatibilidad y nunca acreditan layout, tablas o modales.
 
 ## Preparación determinista
@@ -61,14 +61,14 @@ de compatibilidad y nunca acreditan layout, tablas o modales.
 | Documents | 2 | carpetas, activo/archivado, listado y acciones de fila |
 | Clients | 36 | filtros de dos niveles, tarjetas, administración, guías de validación y plataforma autenticada |
 | Projects | 4 | listado, crear/editar, cambio guiado de cliente y seguimiento de monitoreo |
-| Commercial | 20 | propuestas, diagnósticos, paquetes, módulos adicionales, financiación y Building with Us (Programa y Contrato) |
+| Commercial | 21 | propuestas, diagnósticos, paquetes, módulos adicionales, financiación, Building with Us y Células de Building on Demand (Programa, Economía y Contrato) |
 | Emails | 3 | compositor, adjuntos, preview, historial y entregabilidad |
 | Communications | 3 | ordenar, abrir hilo, leer estados/adjuntos y registrar mensaje; abrir un enlace seguro y ver su contenido |
 | Canvas | 2 | metadata, editor/preview y guard de salida |
 | Dashboard | 4 | pulso, radar, tareas, admins, estadísticas y mapa de vistas |
 | Content | 11 | blog, LinkedIn, portafolio, QR y linktrees |
 | MCP | 1 | expandir conector, actividad/tools, token y activación |
-| Public | 28 | marketing, contacto, legales, blog, portafolio, experiencias compartidas, enlaces seguros y Building with Us |
+| Public | 29 | marketing, contacto, legales, blog, portafolio, experiencias compartidas, enlaces seguros, Building with Us y Building on Demand |
 
 ## Contabilidad: decisiones de los doce tabs
 
@@ -106,14 +106,18 @@ mecanismo de acceso.
   confirmar un cambio de cliente.
 - **Comercial:** buscar/filtrar, usar acción de fila y selección múltiple, abrir
   formulario, preview y confirmación. En Building with Us, abrir Contrato y leer
-  «Sincronizado», el Markdown y el acceso al espejo en ProjectApp/Contratos.
+  «Sincronizado», el Markdown y el acceso al espejo en ProjectApp/Contratos. En
+  Células de Building on Demand, recorrer Programa, Economía y Contrato;
+  los valores, historial y estado del espejo permanecen legibles.
 - **Emails:** completar destinatario/asunto, adjuntar, abrir preview y volver.
 - **Comunicaciones:** cambiar orden, abrir hilo, volver conservando el criterio y
   comprobar asunto, estado y adjuntos.
 - **Dashboard/Contenido/MCP:** abrir una acción real de cada capacidad sin hover.
 - **Públicas:** usar el CTA principal de landing, linktree, propuesta,
   diagnóstico y catálogo; ningún control flotante puede cubrirlo. En Building
-  with Us, expandir la primera FAQ y leer su respuesta en los cinco perfiles.
+  with Us y Building on Demand, expandir la primera FAQ y leer su respuesta en
+  los cinco perfiles. En Building on Demand, conservar el nivel recomendado,
+  selector de plazo y estimador por tareas accesibles sin scroll lateral.
 
 ## Redirects
 
@@ -143,7 +147,7 @@ Cada batch de matriz contiene como máximo cuatro vistas y, por tanto, veinte
 pruebas (cuatro escenarios × cinco perfiles). Los batches especiales también
 se parten al llegar a veinte casos. Todos corren con cero reintentos; CI ejecuta
 sólo los batches de los módulos afectados en PR, mientras que el comando
-completo y la programación mensual recorren las 650 celdas más los especiales.
+completo y la programación mensual recorren las 660 celdas más los especiales.
 
 ## Reporte y criterio de cierre
 
@@ -153,7 +157,7 @@ El reporter responsive emite una fila por `catalogKey × profile` con:
 | --- | --- | --- | --- | --- | --- |
 | módulo dueño | archivo/ruta | alias y viewport | visual/redirect | `cumple`, `no cumple` o `cumple distinto` | test, error y artefacto |
 
-Una ejecución completa exige 650 filas únicas, cero omitidas, cero duplicadas,
+Una ejecución completa exige 660 filas únicas, cero omitidas, cero duplicadas,
 cero reintentos flaky, cero `draft-unvalidated`, cero junk-only y gate `$qa` limpio. Una variante
 funcional se reporta como `cumple distinto` y no se convierte silenciosamente
 en el estándar.

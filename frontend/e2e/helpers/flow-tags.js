@@ -12,7 +12,7 @@
  *   test('...', { tag: [...ADMIN_LOGIN, '@role:admin'] }, async ({ page }) => { ... });
  */
 
-// Registry version: 2.101.0
+// Registry version: 2.102.0
 
 // ── admin ──
 export const ADMIN_ACCOUNTING_ADS = ['@flow:admin-accounting-ads', '@module:admin', '@priority:P3'];
@@ -73,6 +73,10 @@ export const ADMIN_BLOG_LINKEDIN_PUBLISH = ['@flow:admin-blog-linkedin-publish',
 export const ADMIN_BLOG_LIST = ['@flow:admin-blog-list', '@module:admin', '@priority:P2'];
 export const ADMIN_BLOG_OVERDUE_DETECTION = ['@flow:admin-blog-overdue-detection', '@module:admin', '@priority:P2'];
 export const ADMIN_BLOG_PUBLISH_MODE = ['@flow:admin-blog-publish-mode', '@module:admin', '@priority:P2'];
+export const ADMIN_BUILDING_ON_DEMAND_CONTRACT = ['@flow:admin-building-on-demand-contract', '@module:admin', '@priority:P1'];
+export const ADMIN_BUILDING_ON_DEMAND_ECONOMICS = ['@flow:admin-building-on-demand-economics', '@module:admin', '@priority:P1'];
+export const ADMIN_BUILDING_ON_DEMAND_HISTORY = ['@flow:admin-building-on-demand-history', '@module:admin', '@priority:P2'];
+export const ADMIN_BUILDING_ON_DEMAND_PROGRAM = ['@flow:admin-building-on-demand-program', '@module:admin', '@priority:P1'];
 export const ADMIN_BUILDING_WITH_US_CONTRACT = ['@flow:admin-building-with-us-contract', '@module:admin', '@priority:P1'];
 export const ADMIN_BUILDING_WITH_US_DISTRIBUTION = ['@flow:admin-building-with-us-distribution', '@module:admin', '@priority:P1'];
 export const ADMIN_BUILDING_WITH_US_HISTORY = ['@flow:admin-building-with-us-history', '@module:admin', '@priority:P2'];
@@ -441,6 +445,16 @@ export const PUBLIC_ADDITIONAL_MODULES_GUIDE = ['@flow:public-additional-modules
 export const PUBLIC_ADDITIONAL_MODULES_PDF = ['@flow:public-additional-modules-pdf', '@module:public', '@priority:P2'];
 export const PUBLIC_ADDITIONAL_MODULES_SHARE = ['@flow:public-additional-modules-share', '@module:public', '@priority:P1'];
 export const PUBLIC_ADDITIONAL_MODULES_THEME = ['@flow:public-additional-modules-theme', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_ESTIMATOR = ['@flow:public-building-on-demand-estimator', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_ON_DEMAND_FAQ = ['@flow:public-building-on-demand-faq', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_GUIDE = ['@flow:public-building-on-demand-guide', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_LANGUAGE = ['@flow:public-building-on-demand-language', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_LOAD = ['@flow:public-building-on-demand-load', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_ON_DEMAND_OVERVIEW = ['@flow:public-building-on-demand-overview', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_ON_DEMAND_PDF = ['@flow:public-building-on-demand-pdf', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_SHARE = ['@flow:public-building-on-demand-share', '@module:public', '@priority:P2'];
+export const PUBLIC_BUILDING_ON_DEMAND_TERMS = ['@flow:public-building-on-demand-terms', '@module:public', '@priority:P1'];
+export const PUBLIC_BUILDING_ON_DEMAND_THEME = ['@flow:public-building-on-demand-theme', '@module:public', '@priority:P2'];
 export const PUBLIC_BUILDING_WITH_US_FAQ = ['@flow:public-building-with-us-faq', '@module:public', '@priority:P2'];
 export const PUBLIC_BUILDING_WITH_US_GUIDE = ['@flow:public-building-with-us-guide', '@module:public', '@priority:P2'];
 export const PUBLIC_BUILDING_WITH_US_LANGUAGE = ['@flow:public-building-with-us-language', '@module:public', '@priority:P2'];

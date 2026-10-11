@@ -9,6 +9,8 @@ from django.db.models.signals import post_save
 
 from content.models import (
     AccountingChangeLog,
+    BuildingOnDemandContractRevision,
+    BuildingOnDemandProgramRevision,
     BuildingWithUsContractRevision,
     BuildingWithUsProgramRevision,
     BusinessProposal,
@@ -45,8 +47,11 @@ pytestmark = pytest.mark.django_db
 @pytest.mark.parametrize('revision_model,content', [
     (BuildingWithUsProgramRevision, {'content': {}}),
     (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
-], ids=['program', 'contract'])
-def test_merge_preserves_alliance_revision_author(superuser, revision_model, content):
+    (BuildingOnDemandProgramRevision, {'content': {}}),
+    (BuildingOnDemandContractRevision, {'markdown': '# Célula compartida'}),
+], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract'])
+def test_merge_preserves_module_revision_author(superuser, revision_model, content):
+    """Fails if merging a duplicate client rewrites immutable module authorship."""
     survivor, duplicate = client_pair()
     revision = revision_model.objects.create(
         version=revision_model.objects.count() + 1, author=duplicate.user,

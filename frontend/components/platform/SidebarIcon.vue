@@ -61,6 +61,14 @@
       <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" />
     </template>
 
+    <!-- Team / Scrum cells -->
+    <template v-else-if="name === 'team'">
+      <circle cx="12" cy="6" r="3" />
+      <circle cx="4.5" cy="8.5" r="2.5" />
+      <circle cx="19.5" cy="8.5" r="2.5" />
+      <path d="M7 21v-3a5 5 0 0 1 10 0v3M1 20v-3a4 4 0 0 1 5-3.87M23 20v-3a4 4 0 0 0-5-3.87" />
+    </template>
+
     <!-- Credit card / Payments -->
     <template v-else-if="name === 'credit-card'">
       <rect x="1" y="4" width="22" height="16" rx="2" ry="2" />

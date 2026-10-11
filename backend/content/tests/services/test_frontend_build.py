@@ -17,6 +17,8 @@ from content.models import (
     AdditionalModule,
     AdditionalModuleCategory,
     BlogPost,
+    BuildingOnDemandProgram,
+    BuildingOnDemandProgramRevision,
     BuildingWithUsProgram,
     BuildingWithUsProgramRevision,
     ExplainerVideoSettings,
@@ -87,6 +89,8 @@ def write_marker_now(marker_path):
 
 class TestRebuildNeeded:
     def test_false_without_prerendered_content(self, db, marker_path):
+        BuildingOnDemandProgram.objects.all().delete()
+        BuildingOnDemandProgramRevision.objects.all().delete()
         BuildingWithUsProgram.objects.all().delete()
         BuildingWithUsProgramRevision.objects.all().delete()
         AdditionalModule.objects.all().delete()
@@ -94,6 +98,18 @@ class TestRebuildNeeded:
         FinancingPolicyRevision.objects.all().delete()
         HourPackage.objects.all().delete()
         assert frontend_build.rebuild_needed() is False
+
+    def test_true_again_after_on_demand_revision(self, building_on_demand_program, admin_user, marker_path):
+        """Fails if publishing cell program copy leaves the old prerendered page fresh."""
+        from content.services.building_on_demand_program_service import apply_operation, read_program
+        from content.tests.building_on_demand_fixtures import hero_update
+
+        with freeze_time('2030-01-01T12:00:00Z'):
+            write_marker_now(marker_path)
+        with freeze_time('2030-01-01T12:01:00Z'):
+            apply_operation('update_program', hero_update(read_program()), actor=admin_user)
+
+        assert frontend_build.rebuild_needed() is True
 
     def test_true_when_never_built(self, published_post, marker_path):
         assert frontend_build.rebuild_needed() is True

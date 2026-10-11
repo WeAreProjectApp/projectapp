@@ -80,12 +80,13 @@ def list_versions(variant, *, offset=0, limit=20):
 
 
 def mirror_metadata(document):
-    from content.services.contract_mirror_service import building_with_us_mirror, mirror_binding
+    from content.services.contract_mirror_service import mirror_binding, module_contract_mirror
     binding = mirror_binding(document)
     if not binding:
-        mirror = building_with_us_mirror(document)
-        if mirror:
-            return {'contract_variant': 'building_with_us', 'contract_version': mirror.revision.version,
+        module_binding = module_contract_mirror(document)
+        if module_binding:
+            mirror, variant, _message = module_binding
+            return {'contract_variant': variant, 'contract_version': mirror.revision.version,
                     'contract_synced_at': mirror.synced_at.isoformat()}
         return {}
     template, variant, mirror = binding

@@ -1,3 +1,36 @@
+# Building on Demand — 2026-10-10
+
+Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
+público ES/EN en `/building-on-demand`, con entrada desde el footer, y panel
+Comercial › Células en `/panel/cells`. La presentación compara Starter, Business
+(recomendado) y Enterprise, permite elegir plazo y estimar el pedido frente a la
+bolsa y los roles de cada nivel, y ofrece guía, tema persistente, PDF, compartir
+y WhatsApp. La siembra inicial define bolsas mensuales de 96, 192 y 288 horas.
+Precios por plazo, descuentos, totales y economía se calculan en el backend;
+costos internos y datos del proveedor quedan fuera de la web y el PDF públicos.
+
+Células es de solo lectura (Programa, Economía y Contrato). Todo se administra
+únicamente desde el MCP `building-on-demand` (35 herramientas, sembrado
+inactivo): crear, actualizar y quitar niveles, plazos, tareas del estimador,
+preguntas y tarjetas, además de precios, horas de referencia, economía,
+versiones, PDF y contrato, siempre con vista previa y `confirm_action`. El
+contrato v1 (Markdown versionado, sólo panel) mantiene una copia de lectura en
+ProjectApp › Contratos que se sincroniza en la misma transacción de cada
+cambio; sin carpeta fijada falla cerrado e indica el comando. La tarea
+periódica de 15 minutos y `sync_building_on_demand_contract_mirror` crean o
+resincronizan la copia; al crearla queda la nota privada con las preguntas
+abiertas y sus respuestas v1. Migraciones `content.0291` y `0292`.
+
+Pendientes: cerrar las decisiones comerciales de la oferta (inventario en la
+nota privada del contrato); calibrar los rangos del estimador con la
+calculadora de requerimientos (PA-178); y revisar el solapamiento de precios con
+Paquetes de horas (la hora de bolsa de Starter queda por debajo de esos
+paquetes). Tras el deploy: activar el conector y crear sus credenciales cuando
+se vaya a usar, y revisar el estado de la copia con
+`sync_building_on_demand_contract_mirror` sin `--apply`. Pruebas de navegador
+validadas contra un servidor local (41 públicas, 20 del panel y 19 compartidas
+o responsivas). Esta entrada no acredita despliegue.
+
 # Integridad de datos 1.1: borrado de clientes y huecos del catálogo (2026-10-10)
 
 **H1:** el «cliente huérfano» se calculaba con 6 de las más de 30 relaciones que

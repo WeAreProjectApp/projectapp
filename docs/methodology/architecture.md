@@ -1,3 +1,14 @@
+> **Building on Demand — 2026-10-10:** `/building-on-demand` presenta una célula
+> Scrum compartida por bolsa mensual de horas; `/panel/cells` (Células) reúne
+> Programa, Economía y Contrato de solo lectura. El programa conserva revisiones
+> inmutables con textos ES/EN, oferta numérica y economía privada; el backend
+> calcula bolsas, precios por plazo y equilibrio, sin exponer costos internos
+> en la web ni en el PDF público. La administración queda reservada al conector
+> MCP `building-on-demand`, que se construye en una ola posterior. Regla del
+> contrato de esta segunda ola: su Markdown versionado es la fuente; el documento
+> en ProjectApp › Contratos es un espejo de lectura, nunca se importa de vuelta.
+> La API admite `synchronized`, `out_of_sync` y `not_initialized` para el espejo.
+
 > **Migración de carpetas por MCP — parte 2, 2026-10-10:**
 > `document_ownership_planner` previsualiza propiedad y audiencia con políticas
 > explícitas; `folder_migration_service` reutiliza ese plan para `adopt_source`
@@ -1427,7 +1438,7 @@ flowchart LR
     Explorer --> Spaces["3 product spaces"]
     Spaces --> Panel["Panel: 8 main modules"]
     Spaces --> Platform["Platform: 8 main modules"]
-    Spaces --> Public["Public experiences: 6 modules"]
+    Spaces --> Public["Public experiences: 9 modules"]
     Panel --> Benefits["Purpose, actors, stage and relations"]
     Platform --> Benefits
     Public --> Benefits

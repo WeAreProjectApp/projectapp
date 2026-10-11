@@ -668,3 +668,8 @@ from content.tests.building_with_us_fixtures import (
     building_with_us_contract, building_with_us_contract_folder, initialized_building_with_us_mirror,
     building_with_us_documents_mcp,
 )
+from content.tests.building_on_demand_fixtures import (
+    building_on_demand_program, building_on_demand_content, building_on_demand_seed_content,
+    building_on_demand_contract, pinned_contracts_folder, unpinned_contracts_folder,
+    building_on_demand_mcp,
+)

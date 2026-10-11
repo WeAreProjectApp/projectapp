@@ -1,0 +1,14 @@
+{
+  "id": "public-building-on-demand-share",
+  "name": "Public Building on Demand Share",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Abrir el diálogo Compartir Building on Demand, copiar el enlace actual y leer la confirmación; si se rechaza el portapapeles, conservar el enlace seleccionable y leer el aviso.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

@@ -40,6 +40,15 @@ describe('responsive acceptance registry', () => {
     'frontend/components/BuildingWithUs/ProgramSkeleton.vue',
     'frontend/composables/useBuildingWithUsTheme.js',
     'frontend/utils/buildingWithUs.js',
+    'frontend/pages/building-on-demand/index.vue',
+    'frontend/components/BuildingOnDemand/ProgramView.vue',
+    'frontend/components/BuildingOnDemand/TierCard.vue',
+    'frontend/components/BuildingOnDemand/TermSelector.vue',
+    'frontend/components/BuildingOnDemand/BagEstimator.vue',
+    'frontend/components/BuildingOnDemand/Onboarding.vue',
+    'frontend/components/BuildingOnDemand/ProgramSkeleton.vue',
+    'frontend/composables/useBuildingOnDemandTheme.js',
+    'frontend/utils/buildingOnDemand.js',
   ])('selects public acceptance for %s', (file) => {
     expect(modulesForChangedFiles([file])).toEqual(['public']);
   });
@@ -47,6 +56,9 @@ describe('responsive acceptance registry', () => {
   it.each([
     'frontend/pages/panel/building-with-us/index.vue',
     'frontend/components/BuildingWithUs/admin/ContractPanel.vue',
+    'frontend/pages/panel/cells/index.vue',
+    'frontend/components/BuildingOnDemand/admin/ContractPanel.vue',
+    'frontend/components/BuildingOnDemand/admin/EconomicsTable.vue',
   ])('selects commercial acceptance for %s', (file) => {
     expect(modulesForChangedFiles([file])).toEqual(['commercial']);
   });
@@ -55,6 +67,14 @@ describe('responsive acceptance registry', () => {
     expect(responsiveOwnerForView('admin-panel', {
       file: 'frontend/pages/panel/building-with-us/index.vue',
       url: '/panel/building-with-us',
+      audience: 'admin',
+    })).toBe('commercial');
+  });
+
+  it('assigns the Células panel to commercial acceptance', () => {
+    expect(responsiveOwnerForView('admin-panel', {
+      file: 'frontend/pages/panel/cells/index.vue',
+      url: '/panel/cells',
       audience: 'admin',
     })).toBe('commercial');
   });

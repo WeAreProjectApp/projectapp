@@ -1,0 +1,14 @@
+{
+  "id": "admin-building-on-demand-history",
+  "name": "Admin Building on Demand History",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Pulsar Ver más en el historial del programa para añadir la siguiente página de versiones; ante un fallo, reintentar la carga conservando las revisiones ya consultadas.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

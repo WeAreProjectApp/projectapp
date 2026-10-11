@@ -1,0 +1,14 @@
+{
+  "id": "public-building-on-demand-load",
+  "name": "Public Building on Demand Load",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Abrir el programa con la API indisponible, leer el aviso y pulsar Reintentar hasta recuperar la presentación pública.",
+  "outcomes": [
+    "failure",
+    "success"
+  ]
+}

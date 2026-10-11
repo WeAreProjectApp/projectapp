@@ -127,6 +127,7 @@ const solutions = computed(() => [
   { name: t('additionalModules.title'), href: '/additional-modules' },
   { name: t('financing.title'), href: '/partnership-program' },
   { name: t('buildingWithUs.title'), href: '/building-with-us' },
+  { name: t('buildingOnDemand.title'), href: '/building-on-demand' },
 ]);
 
 const mainVideo = ref(null);

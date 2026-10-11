@@ -1605,6 +1605,14 @@ def recover_income_completion_notices():
     return recover_pending_notices()
 
 
+@periodic_task(crontab(minute='*/15'))
+@lock_task('building-on-demand-contract-mirror')
+def reconcile_building_on_demand_contract_mirror():
+    """Keep the private cell contract's document synchronized."""
+    from content.services.building_on_demand_contract_service import reconcile_mirror
+    return reconcile_mirror()
+
+
 # 14:00 UTC = 09:00 Bogotá. America/Bogota does not observe DST, so the
 # offset (UTC-5) is stable year-round.
 @periodic_task(crontab(hour='14', minute='0'))

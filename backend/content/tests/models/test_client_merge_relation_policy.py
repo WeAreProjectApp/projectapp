@@ -24,6 +24,15 @@ def test_hidden_client_relations_are_discovered():
     } <= set(discover_relations())
 
 
+def test_cell_contract_authorship_is_classified_as_history():
+    """Fails if merging commercial clients can rewrite the original cell-contract author."""
+    relation = discover_relations()['content.BuildingOnDemandContractRevision.author']
+
+    assert relation.field.name == 'author'
+    assert relation.key in AUTHORSHIP_RELATIONS
+    assert RELATION_POLICIES[relation.key] == NEVER
+
+
 def test_authorship_classification_never_matches_a_commercial_owner():
     """Fails if actor classification accidentally consumes a client/recipient/owner pointer."""
     assert set(key.rsplit('.', 1)[1] for key in AUTHORSHIP_RELATIONS).isdisjoint({'client', 'recipient', 'owner'})

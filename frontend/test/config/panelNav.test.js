@@ -90,7 +90,21 @@ describe('getPanelNavSections', () => {
     expect(commercial.items[partnershipIndex + 1]).toEqual({
       label: 'Building with Us', href: '/panel/building-with-us', icon: 'handshake',
     });
-    expect(commercial.items[partnershipIndex + 2]).toEqual({ divider: true });
+    expect(commercial.items[partnershipIndex + 2]).toEqual({
+      label: 'Células', href: '/panel/cells', icon: 'team',
+    });
+    expect(commercial.items[partnershipIndex + 3]).toEqual({ divider: true });
+  });
+
+  it('links Células after Building with Us using the panel locale', () => {
+    const commercial = getPanelNavSections((path) => `/en-us${path}`, { includeSuperuserOnly: false })
+      .find((section) => section.id === 'commercial');
+    const buildingIndex = commercial.items.findIndex((item) => item.label === 'Building with Us');
+
+    expect(commercial.items[buildingIndex + 1]).toEqual({
+      label: 'Células', href: '/en-us/panel/cells', icon: 'team',
+    });
+    expect(commercial.items[buildingIndex + 2]).toEqual({ divider: true });
   });
 
   describe('Plataforma section', () => {

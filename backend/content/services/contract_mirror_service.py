@@ -1,4 +1,4 @@
-"""Read-only Document-manager windows onto the three current templates."""
+"""Read-only Document-manager windows onto current templates and module contracts."""
 from content.models import Document, DocumentFolder
 from content.services.diagnostic_privacy import register_mcp_domain_codes
 from django.core.exceptions import ObjectDoesNotExist
@@ -21,6 +21,14 @@ BUILDING_WITH_US_MIRROR_MESSAGE = (
     'Este contrato es de sólo lectura y permanece en Contratos. '
     'Su contenido se actualiza mediante el MCP de Building with Us.'
 )
+BUILDING_ON_DEMAND_MIRROR_MESSAGE = (
+    'Este contrato es de sólo lectura y permanece en Contratos. '
+    'Su contenido se actualiza mediante el MCP de Building on Demand.'
+)
+MODULE_MIRROR_RELATIONS = (
+    ('building_with_us_mirror', 'building_with_us', BUILDING_WITH_US_MIRROR_MESSAGE),
+    ('building_on_demand_mirror', 'building_on_demand', BUILDING_ON_DEMAND_MIRROR_MESSAGE),
+)
 MIRROR_TITLE = 'Contrato unificado de producto y servicio'
 
 
@@ -38,25 +46,37 @@ def mirror_binding(document):
         return None
 
 
-def building_with_us_mirror(document):
+def module_contract_mirror(document):
+    """Return a module mirror with its variant and read-only message."""
     if document is None or getattr(document, 'pk', None) is None:
         return None
-    try:
-        return document.building_with_us_mirror
-    except ObjectDoesNotExist:
-        return None
+    for relation, variant, message in MODULE_MIRROR_RELATIONS:
+        try:
+            return getattr(document, relation), variant, message
+        except ObjectDoesNotExist:
+            continue
+    return None
+
+
+def building_with_us_mirror(document):
+    binding = module_contract_mirror(document)
+    return binding[0] if binding and binding[1] == 'building_with_us' else None
 
 
 def mirror_read_only_message(document):
-    return BUILDING_WITH_US_MIRROR_MESSAGE if building_with_us_mirror(document) else CONTRACT_MIRROR_MESSAGE
+    binding = module_contract_mirror(document)
+    return binding[2] if binding else CONTRACT_MIRROR_MESSAGE
 
 
 def is_contract_mirror(document):
-    return mirror_binding(document) is not None or building_with_us_mirror(document) is not None
+    return mirror_binding(document) is not None or module_contract_mirror(document) is not None
 
 
 def mirror_documents(queryset):
-    return queryset.filter(Q(contract_template__isnull=False) | Q(contract_mirror__isnull=False) | Q(building_with_us_mirror__isnull=False))
+    bindings = Q(contract_template__isnull=False) | Q(contract_mirror__isnull=False)
+    for relation, _variant, _message in MODULE_MIRROR_RELATIONS:
+        bindings |= Q(**{f'{relation}__isnull': False})
+    return queryset.filter(bindings)
 
 
 def folder_contains_mirror(folder):
@@ -153,8 +173,9 @@ def draft_content(template, variant):
 
 def mirror_markdown(document=None):
     from content.models import ContractTemplate
-    mirror = building_with_us_mirror(document)
-    if mirror:
+    binding = module_contract_mirror(document)
+    if binding:
+        mirror = binding[0]
         return mirror.contract.current_revision.markdown
     binding = mirror_binding(document) if document else None
     template, variant = binding[:2] if binding else (ContractTemplate.get_default(), 'combined')
@@ -173,8 +194,9 @@ def render_mirror_pdf(template, variant):
 def mirror_pdf(document=None):
     from content.models import ContractTemplate
     from content.services.contract_template_validation import TEXT_FIELDS
-    mirror = building_with_us_mirror(document)
-    if mirror:
+    binding = module_contract_mirror(document)
+    if binding:
+        mirror = binding[0]
         if mirror.revision_id != mirror.contract.current_revision_id:
             return None
         return bytes(mirror.pdf_content) if mirror.pdf_content else None

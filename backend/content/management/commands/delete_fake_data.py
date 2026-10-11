@@ -165,8 +165,13 @@ class Command(BaseCommand):
 
         # The contract template is catalog data and survives, but it protects
         # its Document-manager window: release the link before the wipe.
-        from content.models import BuildingWithUsContractMirror, ContractTemplate
-        ContractTemplate.objects.exclude(mirror_document=None).update(mirror_document=None)
+        from content.models import (
+            BuildingOnDemandContractMirror, BuildingWithUsContractMirror,
+            ContractTemplate, ContractTemplateMirror,
+        )
+        ContractTemplate.objects.update(mirror_document=None, mirror_folder=None)
+        ContractTemplateMirror.objects.all().delete()
+        BuildingOnDemandContractMirror.objects.all().delete()
         BuildingWithUsContractMirror.objects.all().delete()
 
         # Documents cascade to items, collection account, payment methods.
