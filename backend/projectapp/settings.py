@@ -348,6 +348,14 @@ ENABLE_SLOW_QUERIES_REPORT = config('ENABLE_SLOW_QUERIES_REPORT', default=True, 
 DBBACKUP_CLEANUP_KEEP_MEDIA = 4
 
 # ==============================================================================
+# MONITORING — receipt retention (docs/monitoring.md)
+# ==============================================================================
+# Hourly heartbeat receipts expire after this many days; repeated detections stay
+# deduplicated at least this long, beyond any realistic outage of the endpoint.
+MONITORING_HEARTBEAT_RETENTION_DAYS = config('MONITORING_HEARTBEAT_RETENTION_DAYS', default=90, cast=int)
+MONITORING_DETECTION_RETRY_HORIZON_DAYS = config('MONITORING_DETECTION_RETRY_HORIZON_DAYS', default=30, cast=int)
+
+# ==============================================================================
 # SILK — query profiling (enabled via ENABLE_SILK env flag)
 # ==============================================================================
 

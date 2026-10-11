@@ -110,9 +110,16 @@ class Delivery(models.Model):
     case = models.ForeignKey(Case, null=True, on_delete=models.PROTECT, related_name='deliveries')
     report = models.ForeignKey(Report, null=True, on_delete=models.SET_NULL, related_name='deliveries')
     evidence = models.JSONField(default=dict)
+    # A heartbeat receipt stands for its source and hour: it carries the newest heartbeat observed in it.
+    heartbeat_hour = models.DateTimeField(null=True, blank=True)
+    # It opened or reopened its case, or the condition came back with it: retention never prunes it.
+    milestone = models.BooleanField(default=False)
 
     class Meta:
-        constraints = [models.UniqueConstraint(fields=['source', 'external_id'], name='monitor_delivery_identity')]
+        constraints = [
+            models.UniqueConstraint(fields=['source', 'external_id'], name='monitor_delivery_identity'),
+            models.UniqueConstraint(fields=['source', 'heartbeat_hour'], name='monitor_heartbeat_hour'),
+        ]
         indexes = [models.Index(fields=['case', '-observed_at']), models.Index(fields=['kind', 'received_at'])]
         ordering = ['-observed_at', '-pk']
 
