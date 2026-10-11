@@ -1,5 +1,6 @@
 import hashlib
 import json
+from datetime import timezone as dt_timezone
 
 from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
@@ -34,8 +35,11 @@ def ingest(credential, data):
         if previous.digest != digest:
             raise Conflict('El identificador ya fue usado con otro contenido.')
         return previous, False
-    receipt = Delivery.objects.create(source=source, external_id=data['external_id'], digest=digest, kind=data['kind'], observed_at=data['observed_at'], evidence=data.get('evidence', {}))
     observed = data['observed_at']
+    if data['kind'] == 'heartbeat':
+        receipt = _record_heartbeat(source, data, digest)
+    else:
+        receipt = Delivery.objects.create(source=source, external_id=data['external_id'], digest=digest, kind=data['kind'], observed_at=observed, evidence=data.get('evidence', {}))
     source.last_received_at = timezone.now()
     if not source.last_seen_at or observed >= source.last_seen_at:
         source.last_seen_at = observed
@@ -47,8 +51,24 @@ def ingest(credential, data):
         receipt.report = Report.objects.create(source=source, title=data['title'], text=data['text'], observed_at=observed, resource_snapshot=snapshot(resource))
     elif data['kind'] in ('detection', 'recovery'):
         _observe_case(source, data, receipt)
-    receipt.save(update_fields=['case', 'report'])
+    if data['kind'] != 'heartbeat':
+        receipt.save(update_fields=['case', 'report', 'milestone'])
     return receipt, True
+
+
+def _record_heartbeat(source, data, digest):
+    """Keep one receipt per source and hour, carrying the newest heartbeat observed in it."""
+    observed = data['observed_at']
+    hour = observed.astimezone(dt_timezone.utc).replace(minute=0, second=0, microsecond=0)
+    receipt = Delivery.objects.filter(source=source, heartbeat_hour=hour).first()
+    if receipt is None:
+        return Delivery.objects.create(source=source, external_id=data['external_id'], digest=digest, kind='heartbeat', observed_at=observed, heartbeat_hour=hour, evidence=data.get('evidence', {}))
+    if observed >= receipt.observed_at:
+        # Carrying the newest identity keeps the collector's retry of it a duplicate.
+        receipt.external_id, receipt.digest, receipt.observed_at = data['external_id'], digest, observed
+        receipt.evidence = data.get('evidence', {})
+        receipt.save(update_fields=['external_id', 'digest', 'observed_at', 'evidence'])
+    return receipt
 
 
 def _observe_case(source, data, receipt):
@@ -58,6 +78,7 @@ def _observe_case(source, data, receipt):
         return  # An orphan recovery is auditable, but is not an open problem.
     if case is None:
         case = Case.objects.create(source=source, fingerprint=data['fingerprint'], fingerprint_hash=fingerprint_hash, title=data['title'], severity=data['severity'], first_seen_at=data['observed_at'], last_seen_at=data['observed_at'], resource_snapshot=snapshot(source.resource))
+        receipt.milestone = True  # It opened the case.
     receipt.case = case
     if data.get('report_id'):
         receipt.report_id = get_object_or_404(
@@ -72,7 +93,10 @@ def _observe_case(source, data, receipt):
             CaseActivity.objects.create(case=case, kind='reopened', from_state='resolved', to_state='pending')
             case.state = 'pending'
             case.closed_at = None
+            receipt.milestone = True  # The reopening depends on it.
     if observed >= case.last_seen_at:
+        if data['kind'] == 'detection' and case.condition == 'recovered':
+            receipt.milestone = True  # The condition came back after a recovery.
         case.last_seen_at = observed
         case.condition = 'recovered' if data['kind'] == 'recovery' else 'active'
         case.evidence = data.get('evidence', {})

@@ -59,8 +59,15 @@ huella identifica un caso dentro de su fuente y recurso; no se fusionan casos
 entre proyectos ni entre fuentes. No hay asignaciones ni notificaciones nuevas.
 
 Los reportes son informativos y se conservan 90 días. Los hallazgos se atienden
-en casos separados, con enlace al reporte cuando la fuente lo ofrece. Se conserva
-el historial de casos/notas y los recibos de idempotencia aunque expire el reporte.
+en casos separados, con enlace al reporte cuando la fuente lo ofrece. Los casos,
+sus notas y su contador de detecciones se conservan siempre, aunque expire el
+reporte. El historial de entregas de un caso conserva la primera y la última
+observación, toda recuperación, todo recibo con reporte, los recibos que abrieron
+o reabrieron el caso o con los que la condición volvió después de una
+recuperación, y todo recibo llegado dentro del horizonte de reintentos (30 días
+por defecto). Las detecciones repetidas intermedias más viejas se podan: el
+contador `detections` las sigue contando. Los latidos guardan un recibo por fuente
+y hora durante 90 días por defecto.
 Los resúmenes exportados pueden estar limitados y saneados; el original queda en
 el VPS. El panel renderiza todo como texto, nunca como HTML recibido.
 
@@ -96,6 +103,20 @@ Los endpoints administrativos usan sesión Django + CSRF e `IsAdminUser`, no JWT
 - Misma fuente + `external_id` + contenido: respuesta 200 con `duplicate=true`.
   Contenido distinto con el mismo identificador: 409, sin sobrescribir el recibo.
   Nueva entrega: 201. La cola sólo elimina tras confirmar un `id` en 200/201.
+- Latidos: un recibo por fuente y por hora de observación (UTC) guarda el latido
+  más nuevo de esa hora. Todo latido responde con el `id` entero de ese recibo,
+  aunque no cree una fila: 201 si es nuevo y 200 con `duplicate=true` si repite
+  el último de su hora. El reintento de un latido que ya fue reemplazado por otro
+  más nuevo de la misma hora no se puede reconocer: responde 201 y registra la
+  recepción, pero no cambia la observación de la fuente, porque es más vieja que
+  `last_seen_at`.
+- La deduplicación de detecciones está garantizada dentro del horizonte de
+  reintentos (`MONITORING_DETECTION_RETRY_HORIZON_DAYS`, 30 días por defecto),
+  contado desde la recepción. El colector reintenta con una espera de hasta una
+  hora y su cola de 64 MiB cubre unas cuatro semanas de entregas (estimación), así
+  que el horizonte supera cualquier caída realista. Un reintento que llegue
+  después puede volver a sumar a `detections`, pero no reabre un caso con una
+  observación anterior a su cierre.
 - `report_id` opcional identifica el `external_id` de un reporte entregado antes,
   en la misma fuente; nunca un ID de otro proyecto.
 - Las fechas de observación deciden la condición actual; la recepción queda
@@ -140,8 +161,14 @@ El deploy normal aplica las migraciones de `monitoring`. Después, el operador
 sigue `vps-ops-toolkit/docs/projectapp-monitoring.md` para crear inventario y
 credencial, instalar la cola/colector y realizar las pruebas de entrega.
 
-La tarea Huey de retención elimina como máximo cuatro lotes de 500 por tabla y
-corrida, sin una transacción que abarque todo el historial. Los listados omiten
+La tarea Huey de retención corre cada hora, en el minuto 45. En cada corrida
+elimina como máximo cuatro lotes de 500 por categoría: reportes vencidos, recibos
+de latidos vencidos y detecciones repetidas podables. Cada lote va en su propia
+transacción, sin ninguna que abarque todo el historial, y eso da hasta 48.000
+filas por categoría y día. Los horizontes se configuran con
+`MONITORING_HEARTBEAT_RETENTION_DAYS` (90 por defecto) y
+`MONITORING_DETECTION_RETRY_HORIZON_DAYS` (30 por defecto); un valor menor a un
+día detiene la limpieza sin borrar nada. Los listados omiten
 textos/evidencia grandes en SQL y cargan sus relaciones sin consultas por fila.
 
 Silk se mantiene apagado hasta el rollout autorizado: muestra inicial del 5 %,

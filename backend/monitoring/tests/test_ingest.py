@@ -263,3 +263,56 @@ def test_ingest_rejects_unapproved_or_unknown_payload_data(machine_client, monit
     assert response.status_code == 400
     assert error_field in response.json()
     assert Delivery.objects.filter(source=monitored_source).count() == 0
+
+
+@pytest.mark.django_db
+def test_heartbeats_share_one_receipt_per_source_and_hour(machine_client, monitored_source, detection_payload):
+    """Falla si cada latido guarda su fila o si un latido sin fila propia responde sin el id entero que espera el colector."""
+    def heartbeat(number, observed_at):
+        return detection_payload(
+            external_id=f'silk:heartbeat:{number}', kind='heartbeat', enabled=True,
+            observed_at=observed_at, omit=('fingerprint', 'title'),
+        )
+
+    first = machine_client.post(INGEST_URL, heartbeat(1, '2024-01-01T09:05:00Z'), format='json')
+    same_hour = machine_client.post(INGEST_URL, heartbeat(2, '2024-01-01T09:35:00Z'), format='json')
+    next_hour = machine_client.post(INGEST_URL, heartbeat(3, '2024-01-01T10:05:00Z'), format='json')
+
+    assert [first.status_code, same_hour.status_code, next_hour.status_code] == [201, 201, 201]
+    assert type(same_hour.json()['id']) is int
+    assert same_hour.json()['id'] == first.json()['id']
+    assert next_hour.json()['id'] != first.json()['id']
+    assert Delivery.objects.filter(source=monitored_source, kind='heartbeat').count() == 2
+
+
+@pytest.mark.django_db
+def test_heartbeat_retry_and_late_heartbeat_keep_the_latest_source_state(machine_client, monitored_source, detection_payload):
+    """Falla si un reintento o un latido atrasado cambia el estado que dejó el latido más nuevo de la hora."""
+    def heartbeat(name, observed_at, **fields):
+        return detection_payload(
+            external_id=f'silk:heartbeat:{name}', kind='heartbeat', observed_at=observed_at,
+            omit=('fingerprint', 'title'), **fields,
+        )
+
+    latest = heartbeat('latest', '2024-01-01T09:40:00Z', enabled=True, error='')
+    machine_client.post(INGEST_URL, heartbeat('earlier', '2024-01-01T09:05:00Z', enabled=True, error=''), format='json')
+    machine_client.post(INGEST_URL, latest, format='json')
+    monitored_source.refresh_from_db()
+    delivered = (monitored_source.last_seen_at, monitored_source.last_received_at, monitored_source.enabled, monitored_source.last_error)
+    retry = machine_client.post(INGEST_URL, latest, format='json')
+    monitored_source.refresh_from_db()
+    after_retry = (monitored_source.last_seen_at, monitored_source.last_received_at, monitored_source.enabled, monitored_source.last_error)
+    delayed = machine_client.post(
+        INGEST_URL, heartbeat('late', '2024-01-01T09:10:00Z', enabled=False, error='colector atrasado'), format='json',
+    )
+    retry_after_delay = machine_client.post(INGEST_URL, latest, format='json')
+    monitored_source.refresh_from_db()
+
+    assert (retry.status_code, retry.json()['duplicate']) == (200, True)
+    assert after_retry == delivered
+    assert delayed.status_code == 201
+    assert delayed.json()['id'] == retry.json()['id']
+    assert (retry_after_delay.status_code, retry_after_delay.json()['duplicate']) == (200, True)
+    assert (monitored_source.last_seen_at, monitored_source.enabled, monitored_source.last_error) == (
+        parse_datetime('2024-01-01T09:40:00Z'), True, '',
+    )
