@@ -3,6 +3,8 @@ from dataclasses import dataclass
 
 from content.mcp import registry
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
+from content.mcp.building_on_demand_contract_tools import BUILDING_ON_DEMAND_CONTRACT_TOOLS
+from content.mcp.building_on_demand_tools import BUILDING_ON_DEMAND_TOOLS
 from content.mcp.building_with_us_tools import BUILDING_WITH_US_TOOLS
 from content.mcp.client_tools import CLIENT_TOOLS
 from content.mcp.commercial_module_tools import (
@@ -165,6 +167,9 @@ CONNECTORS: dict[str, ConnectorSpec] = {
     'operations': ConnectorSpec('operations', '2.1.0', (OPERATIONS_TOOLS,)),
     'building-with-us': ConnectorSpec(
         'building-with-us', '1.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
+    ),
+    'building-on-demand': ConnectorSpec(
+        'building-on-demand', '1.0.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS), confirm_sensitive=True,
     ),
     'partnership-program': ConnectorSpec(
         'partnership-program', '2.1.1', (PARTNERSHIP_PROGRAM_TOOLS,),

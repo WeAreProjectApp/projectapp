@@ -118,6 +118,14 @@ MCP_MODEL_CONTRACTS = {
     'documents': (
         _CONTRACT_MIRROR_MODEL,
         _contract(
+            'content.BuildingOnDemandContractMirror',
+            read_only='id document revision synced_at',
+            excluded=_excluded(
+                'Estado transaccional interno del contrato de célula y su PDF; sólo se edita mediante el MCP Building on Demand.',
+                'contract pdf_content',
+            ),
+        ),
+        _contract(
             'content.BuildingWithUsContractMirror',
             read_only='id document revision synced_at',
             excluded=_excluded(
@@ -1446,6 +1454,33 @@ MCP_MODEL_CONTRACTS['building-with-us'] = (
     ),
     _contract(
         'content.BuildingWithUsContractMirror',
+        read_only='id contract document revision synced_at',
+        excluded=_excluded('PDF derivado almacenado en la transacción de sincronización; se entrega sólo como descarga.', 'pdf_content'),
+    ),
+)
+MCP_MODEL_CONTRACTS['building-on-demand'] = (
+    _contract('content.BuildingOnDemandProgram', read_only='id current_revision updated_at'),
+    _contract(
+        'content.BuildingOnDemandProgramRevision',
+        read_only='id version author_label restored_from created_at',
+        read_write='content change_note',
+        excluded=_excluded(
+            'Autor y credencial fijados por la confirmación MCP; nunca se reciben como campos editables.',
+            'author credential',
+        ),
+    ),
+    _contract('content.BuildingOnDemandContract', read_only='id current_revision updated_at'),
+    _contract(
+        'content.BuildingOnDemandContractRevision',
+        read_only='id version author_label restored_from created_at',
+        read_write='markdown change_note',
+        excluded=_excluded(
+            'Autor y credencial fijados por la confirmación MCP; nunca se reciben como campos editables.',
+            'author credential',
+        ),
+    ),
+    _contract(
+        'content.BuildingOnDemandContractMirror',
         read_only='id contract document revision synced_at',
         excluded=_excluded('PDF derivado almacenado en la transacción de sincronización; se entrega sólo como descarga.', 'pdf_content'),
     ),

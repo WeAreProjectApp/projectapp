@@ -4,7 +4,7 @@ from importlib import import_module
 
 import pytest
 
-from content.models import BuildingOnDemandContract, BuildingOnDemandProgram, ContractTemplate, DocumentFolder
+from content.models import BuildingOnDemandContract, BuildingOnDemandProgram, ContractTemplate, DocumentFolder, McpConnector
 
 
 @pytest.fixture
@@ -24,6 +24,36 @@ def building_on_demand_program(db):
 def building_on_demand_content(building_on_demand_program):
     """Return isolated content without mutating the seeded revision."""
     return deepcopy(building_on_demand_program.current_revision.content)
+
+
+@pytest.fixture
+def building_on_demand_mcp(superuser):
+    """Activate the deployment-seeded connector with an attributed credential."""
+    connector = McpConnector.objects.get(slug='building-on-demand')
+    connector.is_active = True
+    connector.save(update_fields=['is_active'])
+    token = connector.generate_token()
+    credential = connector.credential_for_token(token)
+    credential.actor = superuser
+    credential.save(update_fields=['actor', 'updated_at'])
+    return token, credential
+
+
+def rpc_call(api_client, token, name, arguments, *, msg_id=1):
+    """Call the dedicated connector through the real credential-bound endpoint."""
+    response = api_client.post(
+        f'/api/mcp/building-on-demand/{token}/',
+        {'jsonrpc': '2.0', 'id': msg_id, 'method': 'tools/call',
+         'params': {'name': name, 'arguments': arguments}},
+        format='json',
+    )
+    return response.data['result']
+
+
+def confirm(api_client, token, preview):
+    """Confirm the frozen intent with the same credential that previewed it."""
+    return rpc_call(api_client, token, 'confirm_action',
+                    {'confirmation_id': preview['confirmation_id']}, msg_id=2)
 
 
 def hero_update(snapshot):

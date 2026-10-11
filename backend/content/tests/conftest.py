@@ -671,4 +671,5 @@ from content.tests.building_with_us_fixtures import (
 from content.tests.building_on_demand_fixtures import (
     building_on_demand_program, building_on_demand_content, building_on_demand_seed_content,
     building_on_demand_contract, pinned_contracts_folder, unpinned_contracts_folder,
+    building_on_demand_mcp,
 )

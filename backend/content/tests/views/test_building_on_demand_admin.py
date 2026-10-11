@@ -13,15 +13,25 @@ PANEL_PATHS = [
 ]
 
 
-def test_overview_returns_seed_metadata(building_on_demand_program, admin_client):
-    """Fails if staff cannot inspect program provenance without an initialized contract."""
+def test_overview_returns_seed_metadata(building_on_demand_program, building_on_demand_contract, admin_client):
+    """Fails if staff cannot inspect the seeded contract before mirror initialization."""
     response = admin_client.get(PANEL_PATHS[0])
 
     assert response.status_code == 200
     assert response.data['program']['version'] == 1
     assert response.data['program']['version_id'] == building_on_demand_program.current_revision_id
     assert response.data['program']['author'] == 'Sistema'
-    assert response.data['contract'] is None
+    contract = building_on_demand_contract
+    assert response.data['contract'] == {
+        'version': 1, 'version_id': contract.current_revision_id,
+        'updated_at': contract.updated_at.isoformat(), 'author': 'Sistema',
+        'change_note': contract.current_revision.change_note,
+        'mirror': {
+            'status': 'not_initialized', 'document_id': None,
+            'title': 'Contrato de alquiler de célula — Building on Demand',
+            'folder_id': None, 'folder_path': None, 'version': None, 'last_synced_at': None,
+        },
+    }
     assert response.data['connector'] == {'slug': 'building-on-demand', 'is_active': False}
     assert response.data['pdf_paths'] == {
         'es': '/api/building-on-demand/public/pdf/?lang=es',

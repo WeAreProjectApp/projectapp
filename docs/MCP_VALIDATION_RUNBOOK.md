@@ -793,6 +793,7 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `operations` | 2.1.0 | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
 | `partnership-program` | 2.1.1 | 26 | Condiciones, formalización y recursos del Programa de Alianza |
 | `building-with-us` | 1.0.0 | 16 | Presentación pública bilingüe y contrato privado versionados, preview, confirmación, restauración, PDF e inicialización del espejo; creado inactivo, sin uploads ni videos |
+| `building-on-demand` | 1.0.0 | 35 | Programa ES/EN, oferta, economía privada y contrato versionados; CRUD de planes, plazos, tareas, preguntas y tarjetas, orden, rangos, preview, confirmación, restauración, espejo y PDFs; creado inactivo, sin uploads ni videos |
 | `additional-modules` | 2.1.1 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
 | `commercial` | 2.1.1 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
 | `proposals` | 2.2.1 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
@@ -810,9 +811,9 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
-Los 19 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
-`mcp_schema_report` local con `projectapp.settings_test` el 2026-10-10, sin
-consultar datos reales: 1028 herramientas sumadas entre catálogos, incluidas las
+Los 20 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
+`mcp_schema_report` local con `projectapp.settings_test` el 2026-10-11, sin
+consultar datos reales: 1063 herramientas sumadas entre catálogos, incluidas las
 compartidas. Los cinco conectores de compatibilidad sumaron tres controles cada
 uno; `accounting` y `accounting-ledger` sumaron cinco herramientas de ingresos
 esperados, y `accounting-cards` incorporó `get_statement`. Los dos conectores
@@ -1002,6 +1003,104 @@ arriba. Desde la raíz, ejecutar `scripts/test_quality_gate.py` con
 `--junk-severity=error` y `--include-file` por cada uno de los cuatro tests B2
 y los tres tests B1 editados. Fixtures y `conftest.py` se verifican mediante los
 tests que los consumen; no son filtros admitidos por el scanner.
+
+### Building on Demand — programa y contrato (PA-177, PA-178, PA-179)
+
+La migración `0291_building_on_demand_program` crea el conector
+`building-on-demand` inactivo, sin credenciales; la ola contractual agrega su
+contrato privado inicial. MCP publica **1.0.0 / 35 herramientas**: cinco lecturas
+del programa, veinte escrituras del programa, siete herramientas contractuales
+y los tres controles comunes. Las veintitrés escrituras son sensibles y exigen
+preview seguido de `confirm_action`; no hay herramientas de uploads ni videos.
+El Panel Células sólo consulta programa, economía, historial, contrato y PDFs.
+
+Validar con una credencial temporal de superusuario en el entorno de pruebas:
+
+1. Consultar `tools/list` y `describe_capabilities`: mismos nombres, esquemas
+   cerrados y versión `1.0.0`. Leer `get_building_on_demand_program` y
+   `get_building_on_demand_economics`; verificar oferta bilingüe, datos internos,
+   cifras calculadas por el backend, metadatos y `etag`. El payload y PDF públicos
+   no contienen economía privada ni contrato.
+2. Previsualizar `preview_building_on_demand_program_update` con secciones
+   completas ES/EN o `settings` de bolsa e IVA. Revisar el diff sin publicar;
+   conserva las secciones omitidas. Enviar `update_building_on_demand_program`
+   con el `if_match` leído y `change_note`, y confirmar. Debe crear una revisión
+   inmutable, atribuida al actor y credencial, y solicitar la reconstrucción
+   pública tras el commit cuando cambian textos u oferta.
+3. Probar, cada una con preview y confirmación, las familias
+   `create/update/remove_building_on_demand_tier`,
+   `create/update/remove_building_on_demand_term`,
+   `create/update/remove_building_on_demand_estimator_task`,
+   `create/update/remove_building_on_demand_faq` y
+   `create/update/remove_building_on_demand_card`. Las tarjetas admiten `roles`,
+   `bag_rules`, `hosting_features`, `good_for` y `not_for`. Antes de confirmar,
+   comprobar que siguen intactas las listas; después, nueva versión y textos
+   ES/EN alineados. Las bajas eliminan también los textos y datos asociados;
+   un plan usado por tareas devuelve `REFERENCED_ITEM` con las referencias,
+   sin intención pendiente. El plan recomendado, el último plan, el plazo
+   mensual y las listas mínimas están protegidos. Eliminar un plazo no mensual
+   elimina sus descuentos de cada plan.
+4. Preparar y confirmar `reorder_building_on_demand_items` con una permutación
+   exacta de ids; el orden debe coincidir entre idiomas y oferta. Los planes y
+   plazos conservan sus reglas numéricas crecientes. Probar
+   `update_building_on_demand_estimator_sizes`: sólo xs, s, m y l en ese orden,
+   con horas válidas. Probar `update_building_on_demand_economics`: nueva revisión
+   y nuevo cálculo privado, sin revelar los costos en la web pública ni solicitar
+   reconstrucción cuando sólo cambia economía interna. Las tres exigen
+   `if_match`, `change_note` y `confirm_action`.
+5. Listar `list_building_on_demand_program_versions`, con `include_content`
+   opcional, y confirmar `restore_building_on_demand_program_version` usando
+   `version_id`, etag actual y motivo. Debe crear otra revisión con referencia
+   al origen, conservando la historia. Interponer un cambio entre cualquier
+   preview y confirmación: exigir `STALE_VERSION` sin sobrescribirlo. Invocar
+   un handler de escritura sin contexto confirmado devuelve
+   `CONFIRMATION_REQUIRED`; sin etags congelados, `STALE_VERSION`.
+6. Leer `get_building_on_demand_contract`: Markdown, versión y
+   `mirror.status`, inicialmente `not_initialized`. Preparar
+   `sync_building_on_demand_contract_mirror` sin argumentos para usar la carpeta
+   contractual fijada por ID y confirmar: debe crear el espejo interno con PDF
+   y dos notas privadas. Repetir devuelve `noop`, sin duplicar notas. Reparar un
+   espejo desactualizado devuelve `resync`. `folder_id` es opcional: con pin sólo
+   acepta esa carpeta; sin pin sólo admite una carpeta explícita, activa,
+   interna y manual llamada Contratos. Sin pin válido y sin destino explícito
+   falla cerrado con `MIRROR_SYNC_FAILED`, `applied: false` e indicación de
+   configuración; no elige carpetas por nombre.
+7. Previsualizar `preview_building_on_demand_contract_update` con exactamente
+   `markdown` o `patches` literales, nunca ambos. Revisar diff sin guardar;
+   los placeholders no están admitidos. Confirmar
+   `update_building_on_demand_contract` con etag y motivo: crea revisión, PDF
+   y notas del espejo en una transacción. Requiere pin válido incluso si el
+   espejo todavía no existe; sin él no se crea una intención pendiente. Listar
+   `list_building_on_demand_contract_versions` y confirmar
+   `restore_building_on_demand_contract_version`: nueva revisión con su origen
+   y espejo sincronizado. Cambiar contrato, documento, PDF, carpeta o pin tras
+   el preview debe devolver `STALE_VERSION`. Documentos sólo clasifica y lee
+   el espejo; su catálogo, esquemas y descripciones no cambian en esta ola.
+8. Llamar `render_building_on_demand_program_pdf` con `lang: es` o `en` (por
+   defecto es) y `render_building_on_demand_contract_pdf` con `{}`. Abrir las
+   URLs temporales firmadas: `building-on-demand-<lang>.pdf` y
+   `contrato-building-on-demand-v<version>.pdf`, ambos `application/pdf`.
+   No deben crear una intención de escritura. Un idioma inválido devuelve
+   `INVALID_LANGUAGE` sin guardar artefacto.
+
+Pruebas locales: los cuatro archivos `test_building_on_demand_mcp*.py`, las
+expectativas actualizadas de overview en `test_building_on_demand_admin.py` y
+`test_building_on_demand_program_service.py`, y las suites compartidas de registro,
+campos, política, paridad, explicitness y `mcp_schema_report`. Ejecutar con
+migraciones, en lotes de hasta veinte casos mediante `-k` y ciclos de hasta
+tres comandos. Aplicar `scripts/test_quality_gate.py --junk-severity=error`
+por cada archivo de tests modificado. Regenerar únicamente el pin del nuevo
+slug con `mcp_schema_report --slug building-on-demand --write-fingerprints`
+bajo `projectapp.settings_test`; los contratos existentes conservan sus pins.
+
+**Después del deploy:** activar explícitamente el conector y crear sus
+credenciales con actor y alcance adecuados; no se activan por la migración.
+Desde el checkout autorizado del servicio, con settings de producción,
+ejecutar el comando de gestión `sync_building_on_demand_contract_mirror`
+**sin `--apply`** para consultar en JSON el estado del espejo. Si falta la
+carpeta fijada, revisar la indicación devuelta antes de aplicar una sincronización
+autorizada. Repetir luego el circuito MCP de lectura y PDFs. No aplicar
+migraciones ni comandos de escritura sobre la base real desde un worktree.
 
 ### Preparación general
 

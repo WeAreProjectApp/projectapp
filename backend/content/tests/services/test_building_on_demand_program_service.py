@@ -441,12 +441,22 @@ def test_restore_rebuilds_only_public_changes(building_on_demand_program, operat
     assert len(callbacks) == expected_callbacks
 
 
-def test_admin_overview_exposes_the_uninitialized_contract(building_on_demand_program):
+def test_admin_overview_exposes_the_uninitialized_contract(building_on_demand_program, building_on_demand_contract):
     """Fails if the read-only panel cannot show an inactive connector before contract setup."""
     overview = service.admin_overview()
 
     assert set(overview) == {'program', 'contract', 'connector', 'public_paths', 'pdf_paths'}
-    assert overview['contract'] is None
+    contract = building_on_demand_contract
+    assert overview['contract'] == {
+        'version': 1, 'version_id': contract.current_revision_id,
+        'updated_at': contract.updated_at.isoformat(), 'author': 'Sistema',
+        'change_note': contract.current_revision.change_note,
+        'mirror': {
+            'status': 'not_initialized', 'document_id': None,
+            'title': 'Contrato de alquiler de célula — Building on Demand',
+            'folder_id': None, 'folder_path': None, 'version': None, 'last_synced_at': None,
+        },
+    }
     assert overview['connector'] == {'slug': 'building-on-demand', 'is_active': False}
     assert overview['program']['version'] == 1
     assert overview['public_paths'] == {'es': '/es-co/building-on-demand', 'en': '/en-us/building-on-demand'}
