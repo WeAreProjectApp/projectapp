@@ -35,13 +35,60 @@ El HTML/CSS prohibido **bloquea la carga** e informa archivo/línea. Resuelve la
 
 `html5lib` normaliza el árbol HTML; el dialecto Mustache escapa todos los valores y no evalúa código; `tinycss2` inspecciona tokens CSS, incluyendo escapes. Las reglas de CSS no permiten importaciones, fuentes externas, URLs externas, propiedades ejecutables ni animaciones de propiedades distintas de transform/opacity. Los paquetes originales y las capturas nunca se sirven desde MEDIA_URL.
 
-Huey procesa una validación a la vez. Chromium usa un origen sintético sin sesión, intercepta todas las peticiones y sólo recibe los archivos ya normalizados desde almacenamiento privado y fuentes de los hosts exactos de Google. No puede consultar APIs internas ni URLs elegidas por la plantilla. Un fallo del motor deja la versión inválida; una candidata que lleva diez minutos pendiente puede reintentarse.
+Huey procesa una validación a la vez. La parte de navegador corre en un worker aislado (`backend/linktree_sandbox/worker.py`) que no importa Django, no lee el `.env` y no tiene red: recibe en un solo pedido el documento, la CSP, las imágenes ya normalizadas del almacenamiento privado y las fuentes de Google que el lado Django descargó con la lista blanca de siempre. Chromium usa un origen sintético sin sesión, sirve sólo lo que trae el pedido y aborta todo lo demás, así que no puede consultar APIs internas ni URLs elegidas por la plantilla. La respuesta del worker se valida estrictamente antes de guardar nada. Un fallo del motor, del transporte o del contrato deja la versión inválida (`validator_unavailable`); una candidata que lleva diez minutos pendiente puede reintentarse. Detalle en [Validador aislado](#validador-aislado-transporte-y-contrato).
 
 El navegador mide objetivos táctiles, overflow a 320 px, overlays fijos (incluidos `body`, `::before` y `::after`, con cajas de layout reales y muestreo de fotogramas), cantidad y propiedades de animaciones, cambios por segundo, texto/botones animados continuamente y preferencia de movimiento reducido. Para contraste se muestrean fondos reales (incluidas texturas y degradados) detrás de las cajas de texto, con umbral 4.5:1 o 3:1 en encabezados ≥24 px. Texto con mezcla/filtros o colores no RGB que no pueda certificarse produce error, nunca un aprobado inventado. Se limitan el DOM y el alto de página a 2000 elementos y 12000 px. El render de Mustache también limita iteraciones y tamaño antes de construir el DOM para rechazar bucles anidados expansivos.
 
 La página publicada tiene CSP por respuesta con nonce exclusivo para el runtime de la plataforma, sin eventos inline, bases, formularios ni objetos. Las vistas previas tienen CSP `sandbox`, `script-src 'none'` y un iframe sin permisos. Las imágenes privadas de esas vistas llevan una firma de una hora limitada a su versión. Las capturas requieren sesión de administrador.
 
 Los clics se agregan por versión/enlace/día sin IPs ni identificadores de visitante. Sólo se aceptan claves de enlaces publicados y se limita la tasa por origen. El envío comienza antes de navegar y usa `keepalive`; un fallo analítico no impide abrir el destino.
+
+## Validador aislado: transporte y contrato
+
+**Settings** (`backend/projectapp/settings.py`; también en `backend/.env.example`). Sin definirlos, el comportamiento es el de siempre:
+
+| Setting | Default | Efecto |
+|---|---|---|
+| `LINKTREE_BROWSER_VALIDATION` | `True` | Interruptor de emergencia. `False` deja cada candidata `invalid` con `validator_disabled`, sin lanzar Chromium, sin conectarse al socket y sin bajar fuentes. |
+| `LINKTREE_VALIDATOR_TRANSPORT` | `inprocess` | `inprocess` llama al worker dentro del proceso de Huey (DEV, tests y producción mientras no existan las units). `unix-socket` habla con la unit del toolkit. Cualquier otro valor deja la validación en `validator_unavailable`. |
+| `LINKTREE_VALIDATOR_SOCKET` | `/run/projectapp-linktree-validator.sock` | Socket de la unit. |
+| `LINKTREE_VALIDATOR_TIMEOUT` | `180` | Segundos de plazo total por intercambio con el socket. Dos pasadas más la descarga de fuentes quedan debajo de los 10 minutos de `expire_pending`. |
+| `LINKTREE_CHROMIUM_EXECUTABLE` | vacío | Binario de Chromium; vacío usa el de Playwright. En la unit es la variable de entorno homónima, opcional. |
+
+**Lanzamiento.** Chromium arranca con `HOME` temporal, `PATH` y `LANG` (nada más del entorno del proceso) y `--js-flags=--jitless`; `chromium_sandbox` sigue en `False`. Esto ayuda poco mientras el navegador comparta uid con el worker: un renderer comprometido puede leer `/proc/<pid>/environ` del proceso padre, y con `inprocess` el driver Node de Playwright sigue heredando el entorno de Huey. Se hace porque cuesta poco; la barrera real es `unix-socket` con la unit de otro uid, sin `/home`, sin `/run/user` y sin red.
+
+**Comando del worker:** `<venv>/bin/python -E -s <repo>/backend/linktree_sandbox/worker.py`. Lee un JSON por stdin hasta EOF y escribe uno por stdout (`Accept=yes`, `StandardInput=socket`, `StandardOutput=socket`: un proceso nuevo por validación). No necesita variables de entorno: Playwright ubica el navegador con `PLAYWRIGHT_BROWSERS_PATH` si la unit la define, y `LINKTREE_CHROMIUM_EXECUTABLE` es opcional. La unit monta en sólo lectura el venv, `backend/linktree_sandbox/` y el directorio de navegadores de Playwright.
+
+**Pedido** (un objeto JSON en UTF-8, sin claves extra; los binarios en base64):
+
+```json
+{"v": 1, "document": "<!doctype html>…", "csp": "default-src 'none'; …", "widths": [320, 375, 430],
+ "resources": {"/api/linktrees/templates/<id>/assets/<clave>/<densidad>/": {"mime": "image/webp", "b64": "…"}},
+ "fonts": {"<url del CSS o de https://fonts.gstatic.com/s/…>": {"mime": "font/woff2", "b64": "…"}},
+ "google_css": "<url exacta de https://fonts.googleapis.com/css2?… o vacío>",
+ "motion_declared": false, "pwa_enabled": false}
+```
+
+**Respuesta:** `{"v": 1, "issues": [...], "page_bytes": 0, "fonts_requested": ["…"], "screenshots": {"320": "<png en base64>"}}`, o `{"v": 1, "error": "<código>"}` con `invalid_json`, `invalid_request`, `request_too_large`, `browser_failed` o `response_too_large`.
+
+- `page_bytes` del worker es el documento más cada fuente servida una vez; Django le suma el tamaño 3x de cada imagen y agrega `page_weight`, la misma cuenta de siempre.
+- **Fuentes.** Django baja el CSS exacto del manifest con un User-Agent de Chrome y elige los archivos cuyo `unicode-range` cubre los caracteres del documento (tinycss2). Misma lista blanca que tenía el navegador: sin redirecciones, 5 s, status 200, 2 MiB por archivo, 40 archivos contando el CSS, 16 MiB en total. `fonts_requested` informa qué pidió Chromium: si pidió alguna que no se envió, la validación se repite **una sola vez** con exactamente lo pedido. Así el resultado es el mismo que cuando el navegador bajaba las fuentes, sin pagar una segunda pasada en el caso normal.
+- **Capturas.** La que se guarda se recorta al ancho de la pantalla y a 12 000 px de alto; el contraste se sigue midiendo sobre la página completa. Una página que se desborda a lo ancho, que ya falla `overflow` a 320 px, queda recortada en la imagen.
+
+**Validación de la respuesta** (`content/services/linktree_templates/contract.py`): esquema cerrado; `severity` en {`error`, `warning`}; `code` en `KNOWN_CODES`; hasta 150 issues con mensajes de hasta 300 caracteres; `page_bytes` exacto; claves de captura dentro de {"320", "375", "430"}, firma PNG, ancho del IHDR igual a la clave, alto hasta 12 000 px y hasta 20 MiB, leídas sólo por cabecera con Pillow y su límite de bomba de descompresión. Cualquier desvío deja la versión en `validator_unavailable`, nunca `valid`.
+
+**Límites** (constantes de `worker.py`, fijadas por `test_linktree_validator_request.py`):
+
+| Límite | Valor | De dónde sale |
+|---|---|---|
+| Documento | 8 MiB | HTML renderizado de hasta 2 Mi caracteres × hasta 3 bytes, más marcadores |
+| Recursos | 384, 6 MiB cada uno, 48 MiB en total | 12 decorativas + 2 slots + biblioteca, a 3 densidades; un slot SVG de 5 MiB se repite por densidad. La biblioteca no tiene tope de cantidad: 384 es un tope nuevo |
+| Fuentes | 40 contando el CSS, 2 MiB cada una, 16 MiB en total | los topes de siempre; lo real ronda 40 × 150 KB |
+| Pedido | 96 MiB | 8 + ⌈4/3 × (48 + 16)⌉ + margen |
+| Captura | 20 MiB | 430 × 12 000 px RGBA incomprimible ≈ 19,7 MiB |
+| Respuesta | 81 MiB | ⌈4/3 × 3 × 20⌉ + 1 |
+
+**Etapa 2 (pendiente, toolkit):** el navegador dentro del venv publicado, un perfil AppArmor con `userns` sólo para esa ruta y `chromium_sandbox=True` en la unit del validador.
 
 ## Despliegue y operación
 
@@ -50,7 +97,7 @@ Los clics se agregan por versión/enlace/día sin IPs ni identificadores de visi
 3. Aplicar las migraciones aditivas `0253_linktree_html_templates` y `0254_linktree_assets` mediante el procedimiento de deploy. Nunca se ejecuta `migrate` desde un worktree conectado a producción.
 4. Reiniciar Huey y el servidor mediante el despliegue normal. Mantener `PRIVATE_MEDIA_ROOT` en backups junto con la base de datos.
 5. Ejecutar `python scripts/check-template-deploy.py --url https://projectapp.co`. La ruta administrativa de plantillas debe devolver 401 JSON sin sesión; una portada HTML con 200 indica que la ruta no está operativa. El script de deploy incluye esta comprobación y termina con error si falla.
-6. El worker de validación necesita memoria para Chromium; comprobar el presupuesto real del servicio antes de habilitar cargas en producción (el límite histórico de 350 MB debe contrastarse con una validación representativa). Las consultas públicas no arrancan Chromium.
+6. El worker de validación necesita memoria para Chromium. Medido en DEV el 2026-10-11 (Chromium 1243, una plantilla sintética con tres imágenes a tres densidades, pedido de 12,5 MB, tres corridas): pico de ~410 MiB PSS sumando todo el árbol de procesos (Python, driver Node y Chromium, 9 procesos), ~660 MiB sumando RSS (cuenta varias veces la memoria compartida) y ~170 MiB el proceso más grande; 13-16 s por validación con la máquina cargada. El límite histórico de 350 MB queda corto; en producción es una inferencia hasta medirlo allí. Con `inprocess` ese pico cae dentro del worker Huey; con `unix-socket` lo acota el `MemoryMax` de la unit del validador. Las consultas públicas no arrancan Chromium.
 
 No se cambian recursos del servidor ni se despliega desde esta sesión. Los datos de demostración generan candidatas que exigen validación real antes de publicar, sin aprobaciones simuladas.
 
