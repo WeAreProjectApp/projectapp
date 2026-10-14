@@ -113,7 +113,8 @@ class Delivery(models.Model):
     # A heartbeat receipt stands for its source and hour: it carries the newest heartbeat observed in it.
     heartbeat_hour = models.DateTimeField(null=True, blank=True)
     # It opened or reopened its case, or the condition came back with it: retention never prunes it.
-    milestone = models.BooleanField(default=False)
+    # The database default keeps inserts that omit the column (code from before 0004) valid.
+    milestone = models.BooleanField(default=False, db_default=False)
 
     class Meta:
         constraints = [
