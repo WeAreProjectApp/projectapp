@@ -4,20 +4,19 @@ import BaseButton from '~/components/base/BaseButton.vue'
 import PocketMovementRowActionsButton from './PocketMovementRowActionsButton.vue'
 import { formatDate } from '~/utils/formatDate'
 import { formatMoney } from '~/utils/formatMoney'
+import { pocketAttributionLabel, signedPocketAmount } from '~/utils/pocketPresentation'
 
 defineProps({
   rows: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
   hasActiveFilters: { type: Boolean, default: false },
   highlightId: { type: [String, Number], default: null },
+  detailToFor: { type: Function, default: null },
 })
 
 const emit = defineEmits(['open-actions', 'open-allocations'])
+const { t } = useI18n()
 
-function signedAmount(row) {
-  const prefix = row.direction === 'out' ? '-' : ''
-  return `${prefix}${formatMoney(Number(row.amount ?? 0))}`
-}
 </script>
 
 <template>
@@ -64,7 +63,7 @@ function signedAmount(row) {
 
         <div class="min-w-0 flex-1">
           <h2 class="break-words text-sm font-semibold leading-5 text-text-default">
-            {{ row.concept }}
+            <BaseRowLink :to="detailToFor?.(row.id)" :data-testid="`pocket-open-${row.id}`">{{ row.concept }}</BaseRowLink>
           </h2>
 
           <div class="mt-2 flex min-w-0 flex-wrap items-center gap-2">
@@ -94,10 +93,12 @@ function signedAmount(row) {
             :class="row.direction === 'out' ? 'text-danger-strong' : 'text-success-strong'"
             :data-testid="`pocket-amount-${row.id}`"
           >
-            {{ signedAmount(row) }}
+            {{ signedPocketAmount(row) }}
           </p>
 
           <dl class="mt-4 grid min-w-0 grid-cols-[max-content_minmax(0,1fr)] gap-x-3 gap-y-3 border-t border-border-muted pt-4 text-sm">
+            <dt class="text-text-muted">{{ t('accountingPocket.belongsTo') }}</dt>
+            <dd class="min-w-0 text-right text-text-default" :data-testid="`pocket-attribution-${row.id}`">{{ pocketAttributionLabel(row.linked_ledger, t) }}</dd>
             <dt class="text-text-muted">Fecha</dt>
             <dd class="min-w-0 text-right text-text-default" :data-testid="`pocket-date-${row.id}`">
               {{ formatDate(row.movement_date) }}

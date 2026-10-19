@@ -1,6 +1,17 @@
 import { mount } from '@vue/test-utils'
+import BaseRowLink from '~/components/base/BaseRowLink.vue'
 import PocketMovementActionsModal from '~/components/accounting/PocketMovementActionsModal.vue'
 import PocketMovementCards from '~/components/accounting/PocketMovementCards.vue'
+
+const originalUseI18n = global.useI18n
+const translations = {
+  'accountingPocket.belongsTo': 'Pertenece a',
+  'accountingPocket.company': 'Empresa',
+  'accountingPocket.gustavo': 'Gustavo',
+  'accountingPocket.carlos': 'Carlos',
+  'accountingPocket.unlinked': 'Sin vincular',
+  'accountingPocket.openNewTab': 'Abrir en pestaña nueva',
+}
 
 const MOVEMENT = {
   id: 7,
@@ -11,7 +22,16 @@ const MOVEMENT = {
   amount: '2272000.00',
   running_balance: '-149000.00',
   is_auto_managed: true,
+  linked_ledger: 'company',
 }
+
+beforeAll(() => {
+  global.useI18n = () => ({ t: (key) => translations[key] || key })
+})
+
+afterAll(() => {
+  global.useI18n = originalUseI18n
+})
 
 const RowActionsStub = {
   props: ['row'],
@@ -23,8 +43,9 @@ function mountCards(props = {}) {
   return mount(PocketMovementCards, {
     props: { rows: [MOVEMENT], ...props },
     global: {
+      components: { BaseRowLink },
       stubs: {
-        NuxtLink: { template: '<a><slot /></a>' },
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
         PocketMovementRowActionsButton: RowActionsStub,
       },
     },
@@ -62,6 +83,18 @@ describe('PocketMovementCards', () => {
     const badge = mountCards().get('[data-testid="pocket-linked-7"]')
 
     expect(badge.text()).toBe('Vinculado')
+  })
+
+  // Bug caught: compact cards hid who the movement belongs to, unlike the ledger table.
+  it.each([
+    ['company', 'Empresa'],
+    ['gustavo', 'Gustavo'],
+    ['carlos', 'Carlos'],
+    ['legacy-owner', 'Sin vincular'],
+  ])('renders %s attribution as %s', (linkedLedger, expectedLabel) => {
+    const wrapper = mountCards({ rows: [{ ...MOVEMENT, linked_ledger: linkedLedger }] })
+
+    expect(wrapper.get('[data-testid="pocket-attribution-7"]').text()).toBe(expectedLabel)
   })
 
   it('labels the unfiltered running figure as the resulting balance', () => {

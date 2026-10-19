@@ -825,3 +825,5 @@ When to regenerate:
 The first CI run on a fresh checkout has no baseline and will write the
 PNGs on the spot. Commit the generated PNGs together with the change that
 produced them so reviewers can eyeball the new look.
+
+`BaseModal kind="detail-compact"` limita detalles de consulta a 48 rem desde 640 px; mantiene pantalla completa en celular. `kind` prevalece sobre `size`.

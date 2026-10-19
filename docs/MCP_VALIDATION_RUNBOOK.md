@@ -2686,3 +2686,9 @@ con su saldo y sus documentos. `IncomeCompletionNotice` conserva el evento
 interno de envío y queda excluido del CRUD MCP: lo crea la operación financiera
 y su reintento se controla desde el Historial, para evitar avisos manuales
 duplicados o cambios independientes del pago.
+
+## Detalle del bolsillo — 2026-10-19
+
+`accounting-ledger.get_pocket` comparte la lectura individual del Panel. Además de los campos del listado, devuelve `running_balance` (saldo real después del movimiento, sin filtros), `linked_record_detail` (tipo, identificador, concepto y categoría del gasto cuando aplica) y `allocation_details` (importe imputado, ingreso esperado, pendiente actual y marca de saldo a favor). Los importes siguen siendo decimales como texto. El saldo se ordena por fecha, creación e identificador; el pendiente incluye los demás pagos y deducciones y no es un snapshot histórico. `list_pocket` mantiene su respuesta liviana. No hay campos nuevos de modelo ni cambios de escritura o permisos.
+
+Validación focal: `content/tests/views/test_pocket_movement_detail.py` comprueba atribución, saldo, reparto, acceso y paridad REST/MCP.

@@ -1,5 +1,9 @@
 # Building on Demand — 2026-10-10
 
+## Bolsillo — pertenencia y detalle informativo (2026-10-19)
+
+El listado y las tarjetas incorporan Pertenece a derivado de la atribución existente. El detalle específico se abre por `?movement=`, carga saldo real posterior sin filtros, vínculo y reparto con pendientes actuales y saldo a favor. Gastos admite `?expense=` para consulta directa. No se cambia la escritura contable ni el modelo. Se reutilizan historial y reglas de cobro; el listado conserva su payload liviano.
+
 Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
 público ES/EN en `/building-on-demand`, con entrada desde el footer, y panel
 Comercial › Células en `/panel/cells`. La presentación compara Starter, Business

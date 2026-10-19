@@ -32,6 +32,7 @@ from content.models import (
     AccountingSettings,
     ExpenseRecord,
     IncomeRecord,
+    PocketMovement,
 )
 from content.serializers.accounting import (
     AccountingChangeLogSerializer,
@@ -121,6 +122,17 @@ def _make_list(key):
 
 def _make_get(key):
     def handler(arguments):
+        if key == 'pocket':
+            from content.services.accounting_pocket_detail_service import (
+                build_pocket_detail_payload, pocket_detail_queryset,
+            )
+
+            record_id = arguments.get('record_id')
+            try:
+                movement = pocket_detail_queryset().get(pk=int(record_id))
+            except (PocketMovement.DoesNotExist, TypeError, ValueError):
+                raise ToolError(f'No existe un registro pocket con id={record_id}.')
+            return build_pocket_detail_payload(movement)
         instance = _get_instance_or_error(key, arguments.get('record_id'))
         return _ENTITIES[key]['read'](instance).data
     return handler
@@ -1003,6 +1015,8 @@ def _build_ledger_tools():
             'description': (
                 f'Abre un registro de {label} por ID con todos los campos '
                 'vigentes de lectura del módulo contable.'
+                + (' Incluye saldo real posterior sin filtros, vínculo y reparto '
+                   'con pendientes actuales y saldo a favor.' if key == 'pocket' else '')
             ),
             'input_schema': closed_object(_RECORD_ID_PROP, ['record_id']),
             'handler': _make_get(key),

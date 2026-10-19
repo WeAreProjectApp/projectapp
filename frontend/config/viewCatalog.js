@@ -870,7 +870,7 @@ export const viewCatalogSections = [
         reference: 'vista de gastos del modulo contable',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Nuevos gastos proponen IVA del 19 %; editar conserva la tasa registrada. Desglose opcional de IVA sin clasificación automática de IVA descontable. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Nuevos gastos proponen IVA del 19 %; editar conserva la tasa registrada. Desglose opcional de IVA sin clasificación automática de IVA descontable. Detalle accesible por enlace desde el bolsillo, independiente de los filtros del listado. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
       },
       {
         label: 'Contabilidad — Hostings',
@@ -890,7 +890,7 @@ export const viewCatalogSections = [
         reference: 'vista del bolsillo ProjectApp con movimientos y saldo',
         audience: 'admin',
         viewType: 'list',
-        notes: 'Saldo del bolsillo permite copiar el importe total con el mismo formato mostrado, incluidos símbolo y separadores, aunque haya filtros; informa éxito o error junto al botón y lo deshabilita mientras carga o falla la lectura. Historial por registro con fecha, autor, valores anteriores y consulta de versiones; acceso interno.',
+        notes: 'Cada movimiento muestra a quién pertenece: Empresa, Gustavo, Carlos o Sin vincular, tanto en tabla como en tarjetas. El detalle de consulta tiene dirección compartible, importe y fecha legibles, saldo real posterior independiente de filtros, vínculo directo a Ingresos o Gastos y reparto de abonos con pendientes actuales y saldo a favor. Notas completas e historial en un modal compacto. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Acceso interno.',
       },
       {
         label: 'Contabilidad — Recurrentes',

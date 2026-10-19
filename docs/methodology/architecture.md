@@ -1,4 +1,8 @@
 > **Building on Demand — 2026-10-10:** `/building-on-demand` presenta una célula
+
+## Detalle del bolsillo (2026-10-19)
+
+`accounting_pocket_detail_service` concentra la lectura individual compartida por REST y MCP: una consulta de movimiento con gasto, una de hijos, otra de padres con cobros agregados y otra de saldo cronológico. `PocketMovementDetailModal` consulta al abrir, rechaza respuestas superadas y reutiliza `EntityHistoryTabs`. El saldo real del detalle es independiente del acumulado filtrado de la tabla; ambos desempatan por fecha, creación e identificador.
 > Scrum compartida por bolsa mensual de horas; `/panel/cells` (Células) reúne
 > Programa, Economía y Contrato de solo lectura. El programa conserva revisiones
 > inmutables con textos ES/EN, oferta numérica y economía privada; el backend
