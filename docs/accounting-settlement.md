@@ -58,6 +58,9 @@ revierte el conjunto. Escribir exige la revisión actual. Se conserva el
 historial de versiones y los efectos de una operación revertida. El mismo
 contrato existe en MCP, además de la compatibilidad de los abonos por ID del
 movimiento. Los registros anteriores no se migran a grupos inferidos.
+Los datos de demostración conservan sus pagos legados sin agrupar. Los recibos
+de operación se crean mediante el escritor real y se validan en las pruebas
+del flujo, sin fabricar historial de liquidaciones durante la siembra.
 
 Migraciones aditivas: `content.0293` y `content.0294`. Las aplica el deploy,
 nunca esta sesión contra la base desplegada. Las pruebas utilizan

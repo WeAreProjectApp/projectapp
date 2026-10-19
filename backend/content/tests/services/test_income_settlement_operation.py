@@ -213,3 +213,20 @@ def test_correction_replaces_deductions_with_the_payment(superuser):
     assert result['movement'].amount == Decimal('90.00')
     assert ExpenseRecord.objects.get().total_amount == Decimal('10.00')
     assert result['settlement'].revision == 2
+
+
+@pytest.mark.parametrize(('ledger', 'source_gustavo', 'source_carlos', 'gustavo', 'carlos'), [
+    ('gustavo', '100.00', '0.00', '80.00', '0.00'),
+    ('carlos', '0.00', '100.00', '0.00', '80.00'),
+])
+def test_personal_payment_stays_with_its_ledger_owner(superuser, ledger, source_gustavo, source_carlos, gustavo, carlos):
+    """Falla si la liquidación personal reparte el pago como ingreso de empresa."""
+    income = expected(ledger=ledger, destination='partners',
+                      gustavo_amount=Decimal(source_gustavo), carlos_amount=Decimal(source_carlos))
+
+    result = settle_incomes(payment(income, total_amount=Decimal('80.00'), destination='partners'), superuser)
+
+    liquid = result['liquids'][0]
+    assert (liquid.ledger, liquid.gustavo_amount, liquid.carlos_amount) == (ledger, Decimal(gustavo), Decimal(carlos))
+    assert result['movement'] is None
+    assert PocketMovement.objects.count() == 0

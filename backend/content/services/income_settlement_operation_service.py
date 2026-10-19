@@ -56,6 +56,8 @@ def _parents(data):
             raise ValueError(f'Solo se pueden liquidar ingresos esperados ("{income.concept}" no lo es).')
     if len({parent.ledger for parent in parents}) != 1 or (len(parents) > 1 and parents[0].ledger != 'company'):
         raise ValueError('La liquidación múltiple solo admite ingresos de empresa; liquida los personales individualmente.')
+    if parents[0].ledger != 'company' and data.get('destination', 'pocket') == 'pocket':
+        raise ValueError('Un ingreso de contabilidad personal debe liquidarse con destino Socios.')
     return parents
 
 
@@ -247,6 +249,10 @@ def _result(operation):
     effects = operation.effects
     parents = list(IncomeRecord.objects.filter(pk__in=effects['parent_ids']).order_by('period_date', 'pk'))
     liquids = list(operation.incomes.filter(kind='liquid').order_by('pk'))
+    manual_order = {entry['income_id']: index for index, entry in enumerate(operation.input_snapshot.get('allocations', []))}
+    if manual_order:
+        parents.sort(key=lambda row: manual_order.get(row.pk, len(manual_order)))
+        liquids.sort(key=lambda row: (manual_order.get(row.expected_income_id, len(manual_order)), row.pk))
     credit = next((row for row in liquids if row.pk == effects.get('credit_id')), None)
     return {
         'settlement': operation, 'settlement_id': str(operation.pk),

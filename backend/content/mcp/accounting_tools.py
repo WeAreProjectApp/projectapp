@@ -932,10 +932,21 @@ _SETTLEMENT_PROPS = {
     'request_id': {'type': 'string', 'format': 'uuid', 'description': 'Identidad de reintento de la misma liquidación; no reutilizar con otros datos.'},
     'concept': {'type': 'string', 'description': 'Concepto del pago recibido.'},
     'period_date': {'type': 'string', 'description': 'Fecha o período del pago (YYYY-MM-DD o YYYY-MM).'},
-    'destination': {'type': 'string', 'enum': ['partners', 'pocket'], 'default': 'partners'},
+    'destination': {
+        'type': 'string',
+        'enum': ['partners', 'pocket'],
+        'default': 'partners',
+        'description': 'Destino contable del dinero recibido: reparto entre socios o un único movimiento de bolsillo.',
+    },
     'total_amount': {'type': ['number', 'string'], 'description': 'Monto efectivamente recibido; puede ser cero si todo se resuelve con deducciones o saldos futuros.'},
-    'gustavo_amount': {'type': ['number', 'string']},
-    'carlos_amount': {'type': ['number', 'string']},
+    'gustavo_amount': {
+        'type': ['number', 'string'],
+        'description': 'Participación global de Gustavo dentro del valor recibido; si se omite, usa el reparto automático vigente.',
+    },
+    'carlos_amount': {
+        'type': ['number', 'string'],
+        'description': 'Participación global de Carlos dentro del valor recibido; si se omite, usa el reparto automático vigente.',
+    },
     'notes': {'type': 'string'},
     'deductions': {
         'type': 'array',
@@ -1094,7 +1105,11 @@ _ABONO_PROPS['income_ids'] = {'type': 'array', 'items': {'type': 'integer', 'min
 _ABONO_PROPS['expected_incomes'] = deepcopy(_SETTLEMENT_PROPS['expected_incomes'])
 _ABONO_PROPS['expected_incomes']['items']['properties']['income_id'] = {'type': 'integer', 'minimum': 1}
 _ABONO_PROPS['expected_incomes']['items']['required'].append('income_id')
-_ABONO_PROPS['periods'] = {'type': 'array', 'items': deepcopy(_SETTLEMENT_PROPS['period'])}
+_ABONO_PROPS['periods'] = {
+    'type': 'array',
+    'description': 'Períodos de hosting que se completarán junto con sus ingresos de origen.',
+    'items': deepcopy(_SETTLEMENT_PROPS['period']),
+}
 _ABONO_PROPS['periods']['items']['type'] = 'object'
 _ABONO_PROPS['periods']['items']['properties']['income_id'] = {'type': 'integer', 'minimum': 1}
 _ABONO_PROPS['periods']['items']['required'].append('income_id')
@@ -1151,8 +1166,16 @@ def _grouped_settlement_impact(arguments):
 
 
 _SETTLEMENT_ID_PROPS = {
-    'settlement_id': {'type': 'string', 'format': 'uuid'},
-    'revision': {'type': 'integer', 'minimum': 1},
+    'settlement_id': {
+        'type': 'string',
+        'format': 'uuid',
+        'description': 'UUID de la liquidación que se consulta, corrige o revierte.',
+    },
+    'revision': {
+        'type': 'integer',
+        'minimum': 1,
+        'description': 'Revisión actual de la liquidación; evita modificar una versión desactualizada.',
+    },
 }
 
 

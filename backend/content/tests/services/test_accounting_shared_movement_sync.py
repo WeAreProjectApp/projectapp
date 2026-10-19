@@ -1,10 +1,12 @@
-"""A shared (abono) movement and its children obey stricter mirror rules.
+"""A legacy shared movement and its children obey stricter mirror rules.
 
 movement.amount == Σ children has no DB constraint: these tests pin the
-guards that keep it — the abono reverses only as a unit (delete the
+guards that keep historical abonos consistent even though they predate the
+unified settlement operation: the abono reverses only as a unit (delete the
 movement), one child can never fall alone, money fields are frozen on both
 sides, and non-money edits stay local instead of mirroring.
 """
+from datetime import date
 from decimal import Decimal
 from unittest.mock import patch
 
@@ -17,10 +19,7 @@ from content.serializers.accounting import (
     PocketMovementCreateUpdateSerializer,
 )
 from content.services import accounting_service
-from content.services.accounting_settlement_service import (
-    bulk_settle_expected_incomes,
-    income_payment_status,
-)
+from content.services.accounting_settlement_service import income_payment_status
 
 pytestmark = pytest.mark.django_db
 
@@ -39,32 +38,59 @@ def make_expected(concept='Kore - Fase 2', total='500000.00'):
     return IncomeRecord.objects.create(
         concept=concept,
         kind=IncomeRecord.Kind.EXPECTED,
-        period_date='2026-06-01',
+        period_date=date(2026, 6, 1),
         total_amount=Decimal(total),
         gustavo_amount=half,
         carlos_amount=Decimal(total) - half,
     )
 
 
-def make_abono(superuser, allocations, total):
-    return bulk_settle_expected_incomes(
-        {
-            'allocations': [
-                {'income_id': income.pk, 'amount': Decimal(amount)}
-                for income, amount in allocations
-            ],
-            'total_amount': Decimal(total),
-            'period_date': '2026-08-15',
-            'notes': '',
-        },
-        superuser,
+def make_legacy_abono(superuser, allocations, total):
+    """Build the pre-operation graph still present in accounting history."""
+    movement = PocketMovement.objects.create(
+        concept=f'Abono {len(allocations)} ingresos',
+        movement_date=date(2026, 8, 15),
+        direction=PocketMovement.Direction.IN,
+        amount=Decimal(total),
+        created_by=superuser,
     )
+    source_ref = f'abono:{movement.pk}'
+    movement.source_ref = source_ref
+    movement.save(update_fields=['source_ref'])
+    children = []
+    for income, raw_amount in allocations:
+        amount = Decimal(raw_amount)
+        half = (amount / 2).quantize(Decimal('0.01'))
+        children.append(IncomeRecord.objects.create(
+            concept=income.concept,
+            kind=IncomeRecord.Kind.LIQUID,
+            period_date=date(2026, 8, 15),
+            destination=IncomeRecord.Destination.POCKET,
+            ledger=income.ledger,
+            vat_rate=income.vat_rate,
+            total_amount=amount,
+            gustavo_amount=half,
+            carlos_amount=amount - half,
+            expected_income=income,
+            pocket_movement=movement,
+            client=income.client,
+            project=income.project,
+            origin=income.origin,
+            source_ref=source_ref,
+            created_by=superuser,
+        ))
+    return {
+        'movement': movement,
+        'incomes': [income for income, _ in allocations],
+        'liquids': children,
+        'credit': None,
+    }
 
 
-def shared_abono(superuser):
+def shared_legacy_abono(superuser):
     first = make_expected()
     second = make_expected(concept='Kore - Fase 3')
-    result = make_abono(
+    result = make_legacy_abono(
         superuser, [(first, '500000.00'), (second, '300000.00')], '800000.00',
     )
     return first, second, result
@@ -72,7 +98,7 @@ def shared_abono(superuser):
 
 class TestAbonoReversal:
     def test_deleting_the_movement_reverses_the_whole_abono(self, superuser):
-        first, second, result = shared_abono(superuser)
+        first, second, result = shared_legacy_abono(superuser)
 
         accounting_service.delete_record(
             EntityType.POCKET, result['movement'], superuser,
@@ -89,7 +115,7 @@ class TestAbonoReversal:
         ).count() == 2
 
     def test_deleting_one_shared_child_is_rejected(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         child = result['liquids'][0]
 
         with pytest.raises(ValueError, match='hace parte de un abono'):
@@ -101,7 +127,9 @@ class TestAbonoReversal:
 
     def test_a_single_child_movement_still_cascades_both_ways(self, superuser):
         parent = make_expected()
-        result = make_abono(superuser, [(parent, '400000.00')], '400000.00')
+        result = make_legacy_abono(
+            superuser, [(parent, '400000.00')], '400000.00',
+        )
         child = result['liquids'][0]
 
         accounting_service.delete_record(EntityType.INCOME, child, superuser)
@@ -112,7 +140,7 @@ class TestAbonoReversal:
 
 class TestSharedChildEdits:
     def test_resizing_a_shared_child_is_rejected(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         child = result['liquids'][0]
         serializer = IncomeRecordCreateUpdateSerializer(
             instance=child, data={'total_amount': '999000.00'}, partial=True,
@@ -126,7 +154,7 @@ class TestSharedChildEdits:
         assert exc_info.value.code == 'abono_child_locked'
 
     def test_a_concept_edit_stays_on_the_child(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         child = result['liquids'][0]
         movement = result['movement']
         serializer = IncomeRecordCreateUpdateSerializer(
@@ -146,7 +174,7 @@ class TestSharedChildEdits:
         assert movement.amount == Decimal('800000.00')
 
     def test_repointing_expected_income_stays_allowed(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         child = result['liquids'][0]
         new_parent = make_expected(concept='Kore - Fase 4', total='900000.00')
         serializer = IncomeRecordCreateUpdateSerializer(
@@ -166,7 +194,7 @@ class TestSharedChildEdits:
 
 class TestSharedMovementEdits:
     def test_resizing_the_movement_is_rejected(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         movement = result['movement']
         serializer = PocketMovementCreateUpdateSerializer(
             instance=movement, data={'amount': '999000.00'}, partial=True,
@@ -180,7 +208,7 @@ class TestSharedMovementEdits:
         assert exc_info.value.code == 'abono_amount_locked'
 
     def test_a_movement_concept_edit_touches_no_child(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         movement = result['movement']
         original_concepts = sorted(
             movement.income_records.values_list('concept', flat=True),
@@ -202,7 +230,7 @@ class TestSharedMovementEdits:
         ) == original_concepts
 
     def test_the_direction_lock_still_covers_shared_movements(self, superuser):
-        _, _, result = shared_abono(superuser)
+        _, _, result = shared_legacy_abono(superuser)
         movement = result['movement']
         serializer = PocketMovementCreateUpdateSerializer(
             instance=movement, data={'direction': 'out'}, partial=True,

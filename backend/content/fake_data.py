@@ -246,6 +246,7 @@ EXEMPT_MODELS = {
     # credentials must never be fabricated as reusable demo secrets.
     # Runtime replay receipts are produced by real administrative actions.
     'accounts.DeliveryOperation',
+    'content.IncomeSettlement',
     'accounts.VerificationCode', 'content.LinkedInToken',
     'content.ProposalFormalization', 'content.ProposalFormalizationFile',
     'content.ProposalContractChangeIntent',
