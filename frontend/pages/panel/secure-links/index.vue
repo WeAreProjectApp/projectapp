@@ -7,7 +7,7 @@
           Enlaces de un solo uso para compartir contraseñas, llaves y datos confidenciales. El contenido queda guardado y cifrado; el enlace se puede reactivar.
         </p>
       </div>
-      <div class="flex flex-wrap gap-2">
+      <div class="flex shrink-0 flex-wrap gap-2">
         <BaseTooltip
           :text="publicFeedback.label"
           :disabled="!publicFeedback.label"
@@ -26,10 +26,11 @@
               variant="secondary"
               size="sm"
               :aria-describedby="publicFeedback.label ? tooltipId : undefined"
+              :data-displayed-action="publicCopyAction"
               data-testid="secure-links-copy-public"
               @click="copyPublicUrl"
             >
-              <BaseActionIcon :action="publicFeedback.tone === 'success' ? 'complete' : 'copy'" />
+              <BaseActionIcon :action="publicCopyAction" />
               {{ t('secureLinks.panel.publicLink') }}
             </BaseButton>
           </template>
@@ -234,6 +235,7 @@ const tabOptions = computed(() => [
 ]);
 const totalPages = computed(() => Math.max(1, Math.ceil(store.count / store.pageSize)));
 const publicFeedback = computed(() => clipboard.feedbackFor('secure-links-public'));
+const publicCopyAction = computed(() => publicFeedback.value.tone === 'success' ? 'complete' : 'copy');
 
 function currentFilters() {
   const tab = filters.tab;

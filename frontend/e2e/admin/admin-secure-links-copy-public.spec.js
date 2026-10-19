@@ -1,6 +1,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
 import { json, secureLinkRow, secureLinkTypes } from '../helpers/secure-links.js';
 import { PANEL_VIEWPORTS, viewportUse } from '../helpers/viewports.js';
 
@@ -11,6 +12,7 @@ const row = secureLinkRow();
 const tags = ['@flow:admin-secure-link-manage', '@role:admin'];
 
 async function openWorkspace(page, locale = 'es-co') {
+  await page.clock.install({ time: '2026-10-19T12:00:00Z' });
   await setAuthLocalStorage(page, {
     token: 'secure-links-copy-token',
     userAuth: { id: 8901, role: 'admin', is_staff: true },
@@ -28,14 +30,15 @@ async function openWorkspace(page, locale = 'es-co') {
   });
   // quality: allow-deep-link (this focused regression exercises the header's copy action on its owning list)
   await page.goto(`/${locale}/panel/secure-links`, { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
   await expect(page.getByTestId(`secure-link-row-${row.id}`).filter({ visible: true })).toBeVisible();
   await page.evaluate(() => document.fonts.ready);
+  // Keep the two-second result available while measuring on a busy runner.
+  await page.clock.pauseAt('2026-10-19T12:05:00Z');
 }
 
 const copyButton = (page) => page.getByTestId('secure-links-copy-public');
 const status = (page) => page.getByTestId('secure-links-copy-status');
-const copyIcon = (page) => copyButton(page).locator('[data-panel-action="copy"]');
-const completedIcon = (page) => copyButton(page).locator('[data-panel-action="complete"]');
 
 function layoutTargets(page) {
   return [
@@ -84,12 +87,14 @@ for (const profile of Object.keys(PANEL_VIEWPORTS)) {
       await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(publicCreateUrl);
       await expect(copyButton(page)).toHaveText('Enlace para clientes');
       await expect(copyButton(page)).toHaveAccessibleName('Enlace para clientes');
-      await expect(completedIcon(page)).toBeVisible();
+      await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'complete');
       await expect(page.getByRole('tooltip')).toHaveText('Copiado');
       await expect(status(page)).toHaveText('Copiado');
       await expectUnmoved(page, before);
-      await expect(status(page)).toBeEmpty({ timeout: 5_000 });
-      await expect(copyIcon(page)).toBeVisible();
+      await page.clock.fastForward(2_001);
+      await expect(status(page)).toBeEmpty();
+      await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'copy');
+      await page.clock.resume();
       await expect(page.getByRole('tooltip')).toBeHidden();
       await expectUnmoved(page, before);
     });
@@ -113,12 +118,12 @@ test.describe('public link clipboard states', () => {
 
     await copyButton(page).click();
 
-    await expect(copyIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'copy');
     await expect(status(page)).toBeEmpty();
     await expect(page.getByRole('tooltip')).toBeHidden();
     await expectUnmoved(page, before);
     await page.evaluate(() => window.finishClipboardWrite());
-    await expect(completedIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'complete');
     await expect(status(page)).toHaveText('Copiado');
   });
 
@@ -138,11 +143,11 @@ test.describe('public link clipboard states', () => {
 
     await expect(page.getByRole('tooltip')).toHaveText('No se pudo copiar');
     await expect(status(page)).toHaveText('No se pudo copiar');
-    await expect(copyIcon(page)).toBeVisible();
-    await expect(completedIcon(page)).toHaveCount(0);
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'copy');
     await expect(copyButton(page)).toHaveText('Enlace para clientes');
     await expectUnmoved(page, before);
-    await expect(status(page)).toBeEmpty({ timeout: 6_000 });
+    await page.clock.fastForward(3_001);
+    await expect(status(page)).toBeEmpty();
     await expectUnmoved(page, before);
   });
 
@@ -163,7 +168,7 @@ test.describe('public link clipboard states', () => {
     await copyButton(page).click();
 
     await expect(status(page)).toHaveText('Copiado');
-    await expect(completedIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'complete');
     await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(publicCreateUrl);
   });
 
@@ -172,19 +177,31 @@ test.describe('public link clipboard states', () => {
   }, async ({ page, context }) => {
     await context.grantPermissions(['clipboard-read', 'clipboard-write']);
     await openWorkspace(page);
-    await page.clock.install();
+    await page.evaluate(() => {
+      const writeText = navigator.clipboard.writeText.bind(navigator.clipboard);
+      window.clipboardWrites = 0;
+      Object.defineProperty(navigator.clipboard, 'writeText', {
+        configurable: true,
+        value: async (text) => {
+          await writeText(text);
+          window.clipboardWrites += 1;
+        },
+      });
+    });
     await copyButton(page).click();
+    await expect.poll(() => page.evaluate(() => window.clipboardWrites)).toBe(1);
     await expect(status(page)).toHaveText('Copiado');
     await page.clock.fastForward(1_500);
 
     await copyButton(page).click();
 
+    await expect.poll(() => page.evaluate(() => window.clipboardWrites)).toBe(2);
     await expect(status(page)).toHaveText('Copiado');
     await page.clock.fastForward(1_000);
-    await expect(completedIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'complete');
     await page.clock.fastForward(1_001);
     await expect(status(page)).toBeEmpty();
-    await expect(copyIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'copy');
   });
 
   test('confirms a keyboard copy without moving focus', {
@@ -227,7 +244,7 @@ test.describe('public link clipboard states', () => {
 
     await copyButton(page).click();
 
-    await expect(completedIcon(page)).toBeVisible();
+    await expect(copyButton(page)).toHaveAttribute('data-displayed-action', 'complete');
     await expect(page.getByRole('tooltip')).toHaveText('Copiado');
     await expectUnmoved(page, before);
   });

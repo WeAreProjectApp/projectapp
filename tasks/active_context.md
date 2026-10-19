@@ -5,11 +5,14 @@ el portapapeles muestra el check canónico y «Copiado» flotante durante 2 s.
 Una región viva anuncia el resultado sin cambiar el nombre accesible del botón.
 El error dura 3 s, conserva el icono de copiar y permite reintentar. Se reutilizan
 los primitives existentes y se traducen los mensajes afectados a ES/EN.
+El grupo de acciones conserva su ancho natural también en tableta vertical.
 La regresión focal mide encabezado, botones, descripción, pestañas y fila en los
 cinco perfiles del panel y cubre copia pendiente, fallo, reintento, clics
 consecutivos, teclado y movimiento reducido. La revisión del resto del panel
 queda en `docs/audits/secure-link-copy-feedback-2026-10-19.md`; esos candidatos
 no se modifican en esta tarea. Sin cambios de API ni nuevas capacidades del mapa.
+Verificación local: 12 escenarios Playwright en lotes focales y 5 pruebas de
+portapapeles en verde; quality gate 100/100 y registros de vistas/flujos al día.
 
 # Building on Demand — 2026-10-10
 

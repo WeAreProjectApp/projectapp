@@ -8,6 +8,17 @@ en un tooltip flotante durante 2 segundos. Una región viva anuncia el resultado
 sin cambiar el nombre del botón. El fallo conserva el icono de copiar, muestra
 el error durante 3 segundos y permite reintentar. Los mensajes afectados están
 traducidos a ES/EN. Se reutilizan los primitives existentes; no cambia su API.
+El grupo de acciones reserva su ancho natural para mantener ambos botones en
+la misma fila también en tableta vertical, sin asignar un ancho fijo al botón.
+
+Validación local: 12 escenarios Playwright aprobados en lotes focales y 5
+pruebas existentes del portapapeles en verde. Las mediciones comparan posición
+y dimensiones de los dos botones, descripción, encabezado, pestañas y primera
+fila antes de copiar, durante la confirmación y al terminar, con tolerancia de
+1 px y sin desbordamiento horizontal. Incluyen fallo, reintento, copia pendiente,
+activaciones consecutivas, teclado, inglés y movimiento reducido. El quality
+gate focal obtiene 100/100, sin errores ni advertencias; los registros de vistas
+y flujos conservan su estructura y están sincronizados.
 
 ## Otros controles con texto variable
 
