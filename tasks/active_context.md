@@ -1,3 +1,11 @@
+# Unificación MCP por módulo — 2026-10-19
+
+En curso: ocho conectores canónicos por sección del panel, catálogo anterior
+por credencial sin ampliación de permisos, confirmaciones locales, inventario
+reproducible y retiro condicionado a 30 días y 14 días sin uso observado.
+Base revisada: `17e19f8f`; inventario previo en
+`docs/audits/2026-10-19-mcp-before.json`. No acredita despliegue.
+
 # Building on Demand — 2026-10-10
 
 Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa

@@ -4,6 +4,7 @@ import json
 import pytest
 
 from content.models import McpConnector, Task, TaskAlert, TaskComment
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 
 @pytest.fixture
@@ -43,14 +44,7 @@ def _call(api_client, token, name, arguments):
 
 
 def _call_confirmed(api_client, token, name, arguments):
-    preview = _call(api_client, token, name, arguments)
-    confirmation_id = preview.data['result']['structuredContent']['confirmation_id']
-    return _call(
-        api_client,
-        token,
-        'confirm_action',
-        {'confirmation_id': confirmation_id},
-    )
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
 
 
 @pytest.mark.django_db
@@ -152,8 +146,7 @@ class TestTasksMcpComments:
 
 
 def _payload(response):
-    payload = json.loads(response.data['result']['content'][0]['text'])
-    return payload.get('result', payload) if payload.get('confirmed') else payload
+    return confirmed_payload(response)
 
 
 @pytest.mark.django_db

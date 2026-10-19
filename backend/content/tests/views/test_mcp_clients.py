@@ -15,6 +15,7 @@ from accounts.models import (
 )
 from accounts.services import proposal_client_service
 from content.models import BusinessProposal, McpConnector
+from content.tests.mcp_confirmation_helpers import call_confirmed
 
 
 @pytest.fixture
@@ -45,6 +46,10 @@ def _call(api_client, token, name, arguments):
         _rpc('tools/call', {'name': name, 'arguments': arguments}),
         format='json',
     )
+
+
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
 
 
 def _make_client(name='ACME SAS', email='', phone='', company=''):
@@ -230,7 +235,7 @@ class TestClientsMcpWrites:
     def test_delete_orphan_client(self, api_client, clients_connector):
         profile = _make_client(name='Huérfano', email='orphan@x.com')
         _, token = clients_connector
-        response = _call(api_client, token, 'delete_client', {'client_id': profile.pk})
+        response = _call_confirmed(api_client, token, 'delete_client', {'client_id': profile.pk})
         assert response.data['result']['isError'] is False
 
     def test_delete_client_held_by_a_communication_folder_is_refused(self, api_client, clients_connector):
@@ -243,7 +248,7 @@ class TestClientsMcpWrites:
         CommunicationFolder.objects.create(client=profile, name='Temporal')
         _, token = clients_connector
 
-        response = _call(api_client, token, 'delete_client', {'client_id': profile.pk})
+        response = _call_confirmed(api_client, token, 'delete_client', {'client_id': profile.pk})
 
         text = response.data['result']['content'][0]['text']
         assert response.data['result']['isError'] is True

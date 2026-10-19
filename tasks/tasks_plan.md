@@ -1,3 +1,5 @@
+> **En validación — unificación MCP 2026-10-19:** catálogo de ocho módulos, adaptación por credencial, familia única de ingresos, contabilidad como dueño de hosting/facturación, inventario reproducible y chequeo de CI. El retiro real necesita despliegue, migración de consumidores y las ventanas de 30/14 días; no se da por realizado desde la rama.
+
 > **Building on Demand — 2026-10-10 (PA-177/PA-179):** programa público ES/EN
 > en `/building-on-demand`, panel Células de solo lectura (Programa, Economía y
 > Contrato), contrato v1 con copia en Gestor › Contratos sincronizada en cada

@@ -1,3 +1,5 @@
+> **Unificación por módulo (2026-10-19):** el catálogo canónico, la compatibilidad por credencial, el inventario y el guion de consumidores/retiro se documentan en [MCP_MODULE_UNIFICATION.md](MCP_MODULE_UNIFICATION.md). Los slugs anteriores se validan como adaptadores en retirada, no como módulos adicionales.
+
 # Guion de validación y mantenimiento de MCP
 
 Las plantillas contractuales independientes se administran desde Propuestas

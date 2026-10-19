@@ -1,3 +1,5 @@
+> **Unificación MCP por módulo — 2026-10-19:** ocho catálogos canónicos se derivan del registro común. Las credenciales anteriores conservan un catálogo legacy y sus permisos efectivos; Contable concentra hosting y facturación. Un registro diario previo a la ejecución y un heartbeat de observación sostienen el retiro con 30 días de compatibilidad y 14 días sin uso antiguo; un hueco reinicia la observación. El retiro conserva credenciales y auditoría como evidencia y responde con un código explícito. No acredita despliegue.
+
 > **Building on Demand — 2026-10-10:** `/building-on-demand` presenta una célula
 > Scrum compartida por bolsa mensual de horas; `/panel/cells` (Células) reúne
 > Programa, Economía y Contrato de solo lectura. El programa conserva revisiones

@@ -17,6 +17,7 @@ from content.models import (
 )
 from content.serializers.accounting import AccountingSettingsSerializer
 from content.services import accounting_service
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 
 @pytest.fixture
@@ -53,6 +54,10 @@ def _call(api_client, token, name, arguments):
         _url(token), _rpc('tools/call', {'name': name, 'arguments': arguments}),
         format='json',
     )
+
+
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
 
 
 @pytest.mark.django_db
@@ -92,7 +97,7 @@ class TestAccountingMcpToolList:
 class TestAccountingMcpCrud:
     def test_create_income_attributed_to_actor(self, api_client, accounting_connector, mcp_superuser):
         connector, token = accounting_connector
-        response = _call(api_client, token, 'create_income', {
+        response = _call_confirmed(api_client, token, 'create_income', {
             'concept': 'Kore v2 anticipo',
             'kind': 'liquid',
             'period_date': '2026-04',
@@ -119,7 +124,7 @@ class TestAccountingMcpCrud:
         while this creates a record with nothing to copy from.
         """
         _, token = accounting_connector
-        response = _call(api_client, token, 'create_income', {
+        response = _call_confirmed(api_client, token, 'create_income', {
             'concept': 'Sin línea', 'kind': 'liquid',
             'period_date': '2026-04', 'total_amount': '1000',
         })
@@ -132,7 +137,7 @@ class TestAccountingMcpCrud:
         self, api_client, accounting_connector,
     ):
         connector, token = accounting_connector
-        response = _call(api_client, token, 'create_income', {
+        response = _call_confirmed(api_client, token, 'create_income', {
             'concept': 'Sin actor', 'kind': 'liquid',
             'period_date': '2026-04', 'total_amount': '1000',
             'origin': 'development',
@@ -156,7 +161,7 @@ class TestAccountingMcpCrud:
     def test_update_income(self, api_client, accounting_connector, make_income, mcp_superuser):
         record = make_income(concept='Original')
         _, token = accounting_connector
-        response = _call(api_client, token, 'update_income', {
+        response = _call_confirmed(api_client, token, 'update_income', {
             'record_id': record.id, 'concept': 'Editado',
         })
         assert response.data['result']['isError'] is False
@@ -198,7 +203,7 @@ class TestAccountingMcpNonCrud:
     ):
         income = make_income()
 
-        response = _call(api_client, accounting_connector[1], 'update_income', {
+        response = _call_confirmed(api_client, accounting_connector[1], 'update_income', {
             'record_id': income.pk,
             'collection_confidence': 'medium',
         })
@@ -216,7 +221,7 @@ class TestAccountingMcpNonCrud:
 
 
 def _payload(response):
-    return json.loads(response.data['result']['content'][0]['text'])
+    return confirmed_payload(response)
 
 
 def _make_recurring(**overrides):
@@ -370,7 +375,7 @@ class TestAccountingMcpHandlerBranches:
     ):
         record = make_income(concept='Borrable')
         _, token = accounting_connector
-        response = _call(api_client, token, 'delete_income', {'record_id': record.id})
+        response = _call_confirmed(api_client, token, 'delete_income', {'record_id': record.id})
         assert _payload(response)['deleted'] is True
         assert not IncomeRecord.objects.filter(pk=record.pk).exists()
 
@@ -408,7 +413,7 @@ class TestAccountingMcpHandlerBranches:
     def test_change_logs_list_and_filter_by_entity(
         self, api_client, accounting_connector, mcp_superuser,
     ):
-        _call(api_client, token := accounting_connector[1], 'create_income', {
+        _call_confirmed(api_client, token := accounting_connector[1], 'create_income', {
             'concept': 'Log gen', 'kind': 'liquid',
             'period_date': '2026-04', 'total_amount': '5000',
             'origin': 'development',
@@ -509,7 +514,7 @@ class TestAccountingMcpPocketGuardrails:
     """
 
     def _create_liquid_pocket_income(self, api_client, token):
-        response = _call(api_client, token, 'create_income', {
+        response = _call_confirmed(api_client, token, 'create_income', {
             'concept': 'Pago bolsillo directo',
             'kind': 'liquid',
             'destination': 'pocket',
@@ -555,7 +560,7 @@ class TestAccountingMcpPocketGuardrails:
         record = self._create_liquid_pocket_income(api_client, token)
         movement_id = record.pocket_movement_id
 
-        response = _call(api_client, token, 'delete_pocket', {'record_id': movement_id})
+        response = _call_confirmed(api_client, token, 'delete_pocket', {'record_id': movement_id})
 
         assert response.data['result']['isError'] is False
         assert not IncomeRecord.objects.filter(pk=record.id).exists()

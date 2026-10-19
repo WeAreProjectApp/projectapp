@@ -1,3 +1,5 @@
+> **Integraciones MCP por módulo — 2026-10-19:** un único conector canónico por sección funcional: General, Comercial, Plataforma, Documentos, Comunicaciones, Contenido, Contable y Tareas. Incluye la revalidación de PA-91. Los conectores y nombres anteriores sólo viven como adaptadores temporales con aviso; no amplían permisos ni evitan confirmaciones. La ausencia de llamadas no basta para declarar una función obsoleta.
+
 > **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
 > (recomendado) y Enterprise para evolucionar un producto con una célula Scrum
 > compartida de siete personas. La presentación ES/EN muestra bolsa mensual,

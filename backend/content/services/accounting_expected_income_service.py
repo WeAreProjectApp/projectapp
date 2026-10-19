@@ -29,7 +29,7 @@ INCOME_FIELDS = (
     'concept', 'total_amount', 'base_amount', 'vat_rate', 'vat_amount',
     'gustavo_amount', 'carlos_amount', 'company_amount', 'destination', 'ledger',
     'period', 'period_date', 'period_start', 'period_end', 'period_cadence',
-    'origin', 'client', 'project', 'collection_confidence', 'notes',
+    'origin', 'client', 'project', 'collection_confidence', 'notes', 'is_receivable_candidate',
 )
 STATE_FIELDS = (
     'concept', 'kind', 'ledger', 'client', 'project', 'origin',

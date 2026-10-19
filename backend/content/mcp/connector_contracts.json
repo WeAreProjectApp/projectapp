@@ -1,82 +1,82 @@
 {
   "accounting": {
-    "sha256": "09d406e561fca6adf1d94d7f6b219ec66f443c0a15d35c512237cebc738a80a3",
-    "version": "1.3.0"
+    "sha256": "c1b4b7f93aca7ba4130820e0219ca8b4e4a39b9c01e3e371e90756453ace992e",
+    "version": "2.0.0"
   },
   "accounting-billing": {
-    "sha256": "aa5a9217e0c8646996fcc4bf78eef605b7969375fbb74da6d6769f9cba5f50f5",
-    "version": "2.1.1"
+    "sha256": "9ede997afb70d0725778632b17f8d38c81d6d8bc0e6df7386e93ae97cc886d9e",
+    "version": "3.0.0"
   },
   "accounting-cards": {
-    "sha256": "b97cc87b978c4ea005d2e2125e3083eea806dfb62af27915b603f9e1b34d06f2",
-    "version": "2.1.1"
+    "sha256": "854bbbc6afd805bdd7d91e128877d5c6ca4e4515425f879056cd2874dafe634e",
+    "version": "3.0.0"
   },
   "accounting-ledger": {
-    "sha256": "f636d55b7dd0d624bb7c5a3b478d368130b9fce28ee583bf5b51df05b833b431",
-    "version": "2.3.0"
+    "sha256": "0a46a096ced331d7f5d00d6c269c61ae740d250ab0d319e5cecc0c25143ff168",
+    "version": "3.0.0"
   },
   "additional-modules": {
-    "sha256": "d7284690da22ea9d848c55ec24d4089bd1b7db47dd66bb6db3cd82294d0fd872",
-    "version": "2.1.1"
+    "sha256": "699265848ff64f0a3c87914297b5c593e14f88a1d37756df4ac3231051e19e3d",
+    "version": "3.0.0"
   },
   "blog": {
-    "sha256": "d5e8cf0df0220bc1b1e9ab4c41cba8d7937dd0d90427bf189461a2941f095e7a",
-    "version": "1.1.0"
+    "sha256": "e8c16561a0b806542df4d9921b0ad49b1bb9b00e4692447be248c0fdd15dfaa4",
+    "version": "2.0.0"
   },
   "building-on-demand": {
-    "sha256": "e2adb073cc4887581ced909befb9b79b0d00d0871ea64255c97bd58190c61f6f",
-    "version": "1.0.0"
+    "sha256": "49949e099bbd268191664e3db29cdbd5143aefa88d8a9fc699fa32f45d20f155",
+    "version": "2.0.0"
   },
   "building-with-us": {
-    "sha256": "8da3204cee4f6253fd6e23c63df90d92d15eef1cdd1be8b4e1b35c492936cd21",
-    "version": "1.0.0"
+    "sha256": "cbb16c0f25e2c224cb7e1d91f6b5b811d84c5d0c827ab351865a1b86cf1584fc",
+    "version": "2.0.0"
   },
   "clients": {
-    "sha256": "9348847c35396031714b1e87da7478cf351daf17cd14d4f2bc096edb216d977e",
-    "version": "1.1.0"
+    "sha256": "5b7a8bccfe1cb285d405536bfa5947a691fa7ec512d98ce040eb8957a31e5992",
+    "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "499e81b152879f2331ccd388371665e33a152e8c6d0c268f4e61854af83c25d1",
-    "version": "2.1.1"
+    "sha256": "775781aa93ef665b3506f8ab1d440e02528d333ec23f791aaedee64a0021b38e",
+    "version": "3.0.0"
   },
   "communications": {
-    "sha256": "a849e8054f3f603b03e7b7e1093df3af335f3a1fa9ff76ef18bcc17e97ac977b",
-    "version": "2.1.1"
+    "sha256": "51dac8a98ba1520e087652a291e9978ad448b60066c82072704e206ba73d6c24",
+    "version": "3.0.0"
   },
   "content": {
-    "sha256": "8f32eed981f6af10af63792a5286323bae3a4aeee6edd6b417807920bde2b37a",
-    "version": "2.1.1"
+    "sha256": "1cca467eb440ee1cdcaf94ac0d074c72b92aba16588b817a9667125cf33eed7c",
+    "version": "3.0.0"
   },
   "diagnostics": {
-    "sha256": "20e35450e6b786ac8c20908d0a009753bc8ffa9730679b147781794c6a6aa8e8",
-    "version": "1.1.0"
+    "sha256": "e03f0d4dde872c42e9f19ecb787c305f8e907a7b0b7d2965909e185ea5e0a584",
+    "version": "2.0.0"
   },
   "documents": {
-    "sha256": "f8faea260ee19e0ed3f6fa77125d8501df69f39962966eccd0a90bf847d0a1d2",
-    "version": "4.0.0"
+    "sha256": "3e545b4de6c4ac973d4d1d879ea42f603fd0f38191fe6050c607f27fdceb387f",
+    "version": "5.0.0"
   },
   "linkedin-personal": {
-    "sha256": "ee941a9ec6f3e89568e093df14311c6cbd0bca595198a2a5950528af429c6d6a",
-    "version": "1.1.0"
+    "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",
+    "version": "2.0.0"
   },
   "operations": {
     "sha256": "68d4589f26eee8e6ec7943ad17502ccc4f60d6d29d802b21c067ba4528cb0b46",
-    "version": "2.1.0"
-  },
-  "partnership-program": {
-    "sha256": "70d419cca2df1be12ad93efeac1e2be754cb4f2affa37b006c38cbdc7ef90428",
-    "version": "2.1.1"
-  },
-  "projects": {
-    "sha256": "f5d3f92abbbc09d3a7a2d63e401c27d80f95b6bf1bc1f5c250983e822d8868b9",
     "version": "3.0.0"
   },
+  "partnership-program": {
+    "sha256": "ee92e00557462fc702ea9b14d77007e60a9268cdc23fcb30d1a825009ccc2940",
+    "version": "3.0.0"
+  },
+  "projects": {
+    "sha256": "aa76fa38422e0ea4f64b011f5f00d679d3aa301bdd18fbd4c3549c6613184ff1",
+    "version": "4.0.0"
+  },
   "proposals": {
-    "sha256": "a38e3153f7ba7737d1655bc20a3a8b810b7ee1954bb6d40679ea9489ce029044",
-    "version": "2.2.1"
+    "sha256": "349d8e3e990293e88e6271fdfee878b736376fbd272ef8c9a57524f6d0849bcf",
+    "version": "3.0.0"
   },
   "tasks": {
     "sha256": "fed0f09607abc3c68adae1e6a9c3c963a57315a03e08a28941e0ef7e61419db1",
-    "version": "2.1.0"
+    "version": "3.0.0"
   }
 }
