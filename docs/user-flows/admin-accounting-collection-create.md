@@ -50,3 +50,11 @@ editar» y un segundo envío quedan bloqueados, y Esc no cierra el asistente.
 ## Liquidación y cuenta pendiente (2026-10-10)
 
 Un esperado completamente pagado que aún no tiene cuenta permanece elegible: el selector y el formulario usan el total íntegro del ingreso, no saldo cero. Al emitir esa cuenta, queda pagada sin crear otro movimiento ni pedir otro pago; el envío al cliente sigue siendo explícito.
+
+## Liquidación compartida (2026-10-19)
+
+Marcar pagada una cuenta vinculada a un ingreso esperado abre el mismo modal
+que Ingresos, con Participaciones, Diferencia e IVA heredado. Consulta la vista
+previa y registra por el contrato compartido, también para un solo ingreso.
+La confirmación al cliente se revisa dentro del diálogo y se envía después
+del registro; el período opcional de hosting se conserva.

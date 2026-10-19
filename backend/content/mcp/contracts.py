@@ -312,7 +312,7 @@ MCP_MODEL_CONTRACTS = {
     'accounting': (
         _contract(
             'content.IncomeSettlement',
-            read_only='id status revision pocket_movement input_snapshot effects created_at updated_at',
+            read_only='id status revision pocket_movement parents input_snapshot effects created_at updated_at',
             excluded=_excluded(_AUDIT_INTERNAL, 'created_by revisions'),
         ),
         _contract(

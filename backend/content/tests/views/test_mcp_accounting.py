@@ -62,8 +62,8 @@ class TestAccountingMcpToolList:
         _, token = accounting_connector
         response = api_client.post(_url(token), _rpc('tools/list'), format='json')
         names = [t['name'] for t in response.data['result']['tools']]
-        # 8 entities × 5 CRUD + 17 non-CRUD + 15 statement tools + 5 expected-income tools + 3 controls.
-        assert len(names) == 80
+        # 8 entities × 5 CRUD + 21 non-CRUD + 15 statement tools + 5 expected-income tools + 3 controls.
+        assert len(names) == 84
         for expected in (
             'list_income', 'create_expense', 'delete_pocket', 'get_hosting',
             'update_recurring', 'get_dashboard', 'list_change_logs',
@@ -71,6 +71,8 @@ class TestAccountingMcpToolList:
             'get_settings', 'update_settings', 'mute_income',
             'get_income_detail', 'settle_income', 'bulk_settle_incomes',
             'update_income_abono', 'delete_income_abono',
+            'preview_income_settlement', 'get_income_settlement',
+            'update_income_settlement', 'reverse_income_settlement',
             'get_statement_instructions',
             'create_statement', 'resolve_merchants', 'finalize_statement',
             'list_notification_recipient', 'create_notification_recipient',
@@ -85,7 +87,7 @@ class TestAccountingMcpToolList:
             assert expected in names
 
     def test_source_registry_keeps_accounting_actions(self):
-        assert len(ACCOUNTING_TOOLS) == 72
+        assert len(ACCOUNTING_TOOLS) == 76
 
 
 @pytest.mark.django_db

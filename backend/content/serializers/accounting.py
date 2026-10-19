@@ -206,6 +206,7 @@ def payment_status_for(paid, total):
 
 
 class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSerializer):
+    settlement = serializers.UUIDField(source='settlement_id', read_only=True, allow_null=True)
     kind_label = serializers.CharField(source='get_kind_display', read_only=True)
     destination_label = serializers.CharField(
         source='get_destination_display', read_only=True,
@@ -836,13 +837,11 @@ class SettlementLinkedPeriodSerializer(SettlementPeriodSerializer):
 
 
 class IncomeBulkSettlementSerializer(serializers.Serializer):
-    """One client payment distributed across several expected incomes.
+    """Shared inputs for one or several expected incomes.
 
-    The panel computes the distribution (oldest first, hand-adjustable) and
-    the backend only validates it — hidden re-computation here would betray
-    the reparto the operator just confirmed on screen. Anything that needs
-    the records themselves (pendings, ledgers, the excess owner) lives in
-    ``accounting_settlement_service.bulk_settle_expected_incomes``.
+    Income IDs request oldest-first coverage; explicit allocations retain
+    the operator's cash distribution. Current balances, proportional fees
+    and global partner amounts are resolved by the settlement service.
     """
 
     allocations = SettlementAllocationSerializer(many=True, allow_empty=False, required=False)
@@ -883,6 +882,9 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
         for field in ('expected_incomes', 'periods'):
             if any(entry['income_id'] not in ids for entry in data.get(field, [])):
                 raise serializers.ValidationError({field: 'El ingreso de origen no está seleccionado.'})
+        period_ids = [entry['income_id'] for entry in data.get('periods', [])]
+        if len(period_ids) != len(set(period_ids)):
+            raise serializers.ValidationError({'periods': 'Indica un solo período por ingreso.'})
         if set(data.get('confirmation_income_ids', [])) - set(ids):
             raise serializers.ValidationError({'confirmation_income_ids': 'El correo contiene ingresos fuera de la selección.'})
         allocated = sum((entry['amount'] for entry in allocations or []), Decimal('0'))
@@ -895,6 +897,8 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
                     'recibido.'
                 ),
             })
+        if allocations is not None and allocated <= 0 and data['total_amount'] > 0 and not (data.get('deductions') or data.get('expected_incomes')):
+            raise serializers.ValidationError({'allocations': 'Imputa al menos una fila o reduce el valor recibido.'})
         if data['total_amount'] <= 0 and not (data.get('deductions') or data.get('expected_incomes')):
             raise serializers.ValidationError({'total_amount': 'El monto recibido debe ser mayor a cero.'})
         raw = self.initial_data.get('period_date')
@@ -980,6 +984,7 @@ class HostingProjectBulkAssignSerializer(serializers.Serializer):
 # ── Expense ──
 
 class ExpenseRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSerializer):
+    settlement = serializers.UUIDField(source='settlement_id', read_only=True, allow_null=True)
     category_label = serializers.CharField(
         source='get_category_display', read_only=True,
     )

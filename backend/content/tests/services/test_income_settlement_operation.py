@@ -99,6 +99,24 @@ def test_reversal_refuses_a_reprogrammed_balance_with_a_later_payment(superuser)
     assert PocketMovement.objects.count() == 2
 
 
+def test_reversal_preserves_a_follow_up_selected_by_another_active_settlement(superuser):
+    """Falla si borrar un saldo sin abono rompe otra liquidación que lo seleccionó."""
+    income = expected()
+    original = settle_incomes(payment(income, total_amount=Decimal('60.00'), expected_incomes=[{
+        'income_id': income.pk, 'concept': 'Saldo', 'amount': Decimal('40.00'),
+        'period_date': date(2026, 11, 1),
+    }]), superuser)
+    follow_up = original['expected_incomes'][0]
+    other = expected('Otro cobro')
+    settle_incomes(payment(other, follow_up, total_amount=Decimal('100.00')), superuser)
+
+    with pytest.raises(ValueError, match='otra liquidación activa'):
+        reverse_settlement(original['settlement_id'], superuser)
+
+    assert IncomeRecord.objects.filter(pk=follow_up.pk).exists()
+    assert PocketMovement.objects.count() == 2
+
+
 def test_request_retry_does_not_duplicate_the_payment(superuser):
     """Falla si repetir una solicitud tras un timeout registra dinero dos veces."""
     income = expected()

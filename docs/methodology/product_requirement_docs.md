@@ -1,9 +1,9 @@
-> **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
-
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,
-> IVA heredado y corrección/reversa del conjunto. Migración aditiva `content.0293`;
+> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`;
 > decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
+
+> **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
 > (recomendado) y Enterprise para evolucionar un producto con una célula Scrum
 > compartida de siete personas. La presentación ES/EN muestra bolsa mensual,
 > roles, plazos y hosting, con estimador, guía, tema persistente, PDF, compartir

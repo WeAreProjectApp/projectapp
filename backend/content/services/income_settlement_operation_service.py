@@ -8,7 +8,7 @@ from django.core.serializers.json import DjangoJSONEncoder
 from django.db import IntegrityError, transaction
 
 from accounts.services.billing_locks import lock_billing_rows
-from content.models import AccountingChangeLog, Document, ExpenseRecord, IncomeRecord, IncomeSettlement, PocketMovement
+from content.models import AccountingChangeLog, ExpenseRecord, IncomeRecord, IncomeSettlement, PocketMovement
 from content.serializers.accounting import (
     IncomeRecordCreateUpdateSerializer, validate_project_client_match,
 )
@@ -42,9 +42,17 @@ def _parents(data):
         raise ValueError('Selecciona ingresos distintos para liquidar.')
     locked = lock_billing_rows(income_ids=ids, include_income_children=True, include_origin_documents=True)
     parents = sorted((locked.incomes[pk] for pk in ids), key=lambda row: (row.period_date, row.pk))
+    # Hydrate clients once after locking; accessing income.client during the
+    # ownership check must not issue one query for every selected project.
+    from accounts.models import UserProfile
+    clients = UserProfile.objects.in_bulk({row.client_id for row in parents if row.client_id})
+    for income in parents:
+        income.client = clients.get(income.client_id)
     for income in parents:
         validate_project_client_match(income.project, income.client)
         if income.kind != 'expected':
+            if data.get('_single'):
+                raise ValueError('Solo se puede liquidar un ingreso esperado.')
             raise ValueError(f'Solo se pueden liquidar ingresos esperados ("{income.concept}" no lo es).')
     if len({parent.ledger for parent in parents}) != 1 or (len(parents) > 1 and parents[0].ledger != 'company'):
         raise ValueError('La liquidación múltiple solo admite ingresos de empresa; liquida los personales individualmente.')
@@ -72,8 +80,10 @@ def _prepare(parents, data):
     pendings = {parent.pk: parent.total_amount - paid[parent.pk] for parent in parents}
     if any(value <= 0 for value in pendings.values()):
         raise ValueError('Alguno de los ingresos ya está completamente pagado. Actualiza la selección.')
-    if data.get('_single') and money(data['total_amount']) > pendings[parents[0].pk]:
-        raise ValueError('La suma del monto recibido, los gastos y los nuevos ingresos esperados no puede superar el saldo pendiente.')
+    if data.get('_single'):
+        resolution = money(data['total_amount']) + sum((money(row['amount']) for row in data.get('deductions', [])), Decimal('0')) + sum((money(row['amount']) for row in data.get('expected_incomes', [])), Decimal('0'))
+        if resolution > pendings[parents[0].pk]:
+            raise ValueError('La suma del monto recibido, los gastos y los nuevos ingresos esperados no puede superar el saldo pendiente.')
     plan = allocation_plan(parents, pendings, data)
     if not (plan['total_amount'] or plan['deducted'] or data.get('expected_incomes')):
         raise ValueError('El monto recibido debe ser mayor a cero.')
@@ -193,6 +203,10 @@ def _record_effects(operation, parents, plan, data, user, existing_movement=None
         'expense_snapshots': {str(row.pk): _financial_snapshot(row) for row in expenses},
     }
     operation.save()
+    # Preserve every selected source, including a row that receives zero in
+    # an oldest-first partial payment. Deleting it would break this operation's
+    # replay/correction history even though it has no derived liquid child.
+    operation.parents.set(parents)
     _finish(parents, user)
     if movement:
         _log_movement(movement, user, old_movement_values)
@@ -280,7 +294,7 @@ def settlement_payload(operation):
     """Public operation detail also works without a pocket movement."""
     from content.serializers.accounting import ExpenseRecordSerializer, IncomeRecordSerializer
     result = _result(operation)
-    return {
+    return json_safe({
         'id': str(operation.pk), 'status': operation.status, 'revision': operation.revision,
         'movement_id': operation.pocket_movement_id,
         'created_at': operation.created_at, 'updated_at': operation.updated_at,
@@ -290,7 +304,7 @@ def settlement_payload(operation):
         'liquids': IncomeRecordSerializer(result['liquids'], many=True).data,
         'expenses': ExpenseRecordSerializer(result['expenses'], many=True).data,
         'expected_incomes': IncomeRecordSerializer(result['expected_incomes'], many=True).data,
-    }
+    })
 
 
 def _lock_operation(settlement_id, extra_ids=()):
@@ -328,6 +342,8 @@ def _assert_reversible(operation, revision=None):
             or income.collection_documents.exclude(commercial_status='cancelled').exists()
         ):
             raise ValueError(f'El saldo reprogramado "{income.concept}" tiene pagos, deducciones o documentos vigentes; impide revertir la liquidación.')
+        if income.kind == 'expected' and income.settlement_operations.filter(status='active').exclude(pk=operation.pk).exists():
+            raise ValueError(f'El saldo reprogramado "{income.concept}" participa en otra liquidación activa; impide revertir la original.')
     for parent in IncomeRecord.objects.filter(pk__in=operation.effects['parent_ids']):
         before = operation.effects['parents_before'][str(parent.pk)]
         after = operation.effects['parents_after'][str(parent.pk)]

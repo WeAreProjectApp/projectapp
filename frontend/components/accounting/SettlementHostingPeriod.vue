@@ -12,7 +12,7 @@ const { anchorStart, cycleOptions, isCycleActive, applyCycle, onPeriodEndEdited,
 });
 anchorStart.value = props.record.period_date ?? '';
 watch([form, periodEndError], () => {
-  const touched = form.value.period_end || form.value.period_cadence || form.value.period_start !== (props.record.period_date ?? '');
+  const touched = form.value.period_end || form.value.period_cadence || (form.value.period_start && form.value.period_start !== (props.record.period_date ?? ''));
   const complete = form.value.period_start && form.value.period_end && form.value.period_cadence && !periodEndError.value;
   emit('change', { period: touched && complete ? { ...form.value } : null, invalid: Boolean(touched && !complete) });
 }, { deep: true, immediate: true });
@@ -20,7 +20,7 @@ const cycleLabel = (months) => ({ 1: '1 mes', 3: '3 meses', 6: '6 meses', 12: '1
 </script>
 
 <template>
-  <section class="rounded-lg border border-border-muted p-4 space-y-3" data-testid="income-liquidate-period-block">
+  <section class="min-w-0 rounded-lg border border-border-muted p-4 space-y-3 [overflow-wrap:anywhere]" data-testid="income-liquidate-period-block">
     <h4 class="text-sm font-medium text-text-default">Período que cubre {{ record.concept }}</h4>
     <p class="text-xs text-text-subtle">Opcional: si lo dejas vacío, la liquidación se registra igual.</p>
     <BaseFormRow :cols="3" :gap="3" help="Al elegir la periodicidad se calcula la fecha de fin del período.">

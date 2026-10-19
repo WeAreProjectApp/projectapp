@@ -7,11 +7,12 @@ export function distributeCents(amount, weights) {
   const total = weights.reduce((sum, value) => sum + value, 0);
   if (!amount) return weights.map(() => 0);
   if (!total) return null;
-  const quotas = weights.map((weight) => amount * weight / total);
-  const result = quotas.map(Math.floor);
+  const divisor = BigInt(total);
+  const products = weights.map((weight) => BigInt(amount) * BigInt(weight));
+  const result = products.map((value) => Number(value / divisor));
   let remaining = amount - result.reduce((sum, value) => sum + value, 0);
   const order = weights.map((_, index) => index).sort((a, b) => (
-    (quotas[b] - result[b]) - (quotas[a] - result[a]) || a - b
+    Number(products[b] % divisor) - Number(products[a] % divisor) || a - b
   ));
   for (const index of order) {
     if (remaining > 0 && weights[index] > 0) {

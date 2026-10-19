@@ -36,6 +36,7 @@ content.BuildingWithUsProgramRevision.author content.BuildingWithUsContractRevis
 content.BuildingOnDemandProgramRevision.author content.BuildingOnDemandContractRevision.author
 content.TaskComment.author content.WebAppDiagnostic.created_by content.DiagnosticAttachment.uploaded_by
 content.PocketMovement.created_by content.RecurringPayment.created_by content.IncomeRecord.created_by
+content.IncomeSettlement.created_by
 content.ExpenseRecord.created_by content.HostingRecord.created_by content.HostingCycle.created_by
 content.AdsSpendRecord.created_by content.CardBalanceSnapshot.created_by content.CreditCard.created_by
 content.CreditCardStatement.created_by content.CreditCardTransaction.created_by content.MerchantAlias.created_by

@@ -29,6 +29,8 @@ export function useIncomeSettlementForm(props, emit) {
   const sendConfirmations = ref({});
   const contextLoading = ref(false);
   const preparing = ref(false);
+  const dispatched = ref(false);
+  watch(() => props.saving, (value, old) => { if (old && !value) dispatched.value = false; });
   const error = ref('');
   const review = ref(null);
   const pendingPayload = ref(null);
@@ -38,6 +40,7 @@ export function useIncomeSettlementForm(props, emit) {
   const activeDeductions = computed(() => deductions.value.filter((row) => row.type || row.detail.trim() || Number(row.amount)));
   const activeFollowUps = computed(() => followUps.value.filter((row) => row.period_date || Number(row.amount) || row.concept.trim()));
   const proposal = computed(() => settlementProposal(records.value, form.value.total_amount, activeDeductions.value, manual.value));
+  const receivedById = computed(() => Object.fromEntries(proposal.value.rows.map((row) => [row.income_id, row.amount])));
   const shortfall = computed(() => Math.max(proposal.value.pending - (Number(form.value.total_amount) || 0), 0));
   const followUpTotal = computed(() => activeFollowUps.value.reduce((sum, row) => sum + (Number(row.amount) || 0), 0));
   const remaining = computed(() => Math.round((proposal.value.pending - proposal.value.allocated - proposal.value.deducted - followUpTotal.value) * 100) / 100);
@@ -87,6 +90,7 @@ export function useIncomeSettlementForm(props, emit) {
       return row.amount < 0 || row.amount + row.deducted + scheduled > row.pending + 0.001;
     })) return 'La distribución supera un saldo pendiente. Recalcula el reparto o revisa los ajustes.';
     if (manual.value && Object.values(manual.value).some((value) => Number(value) < 0)) return 'El reparto contiene montos negativos.';
+    if (manual.value && proposal.value.allocated <= 0 && Number(form.value.total_amount) > 0 && !activeDeductions.value.length && !activeFollowUps.value.length) return 'Imputa al menos una fila o reduce el valor recibido.';
     if (proposal.value.allocated > (Number(form.value.total_amount) || 0) + 0.001) return 'El reparto supera el valor recibido.';
     if (!personal.value && Number(form.value.gustavo_amount) + Number(form.value.carlos_amount) > Number(form.value.total_amount)) return 'La suma de socios supera el valor recibido.';
     if (credit.value > 0 && new Set(records.value.map((row) => row.client ?? null)).size > 1) return 'Con clientes mezclados el excedente no se puede asignar como saldo a favor.';
@@ -113,12 +117,12 @@ export function useIncomeSettlementForm(props, emit) {
     requestId.value = requestUuid(); exactDate.value = true;
     deductions.value = []; followUps.value = []; periods.value = {}; manual.value = null;
     participantsOpen.value = false; differenceOpen.value = false; vatOpen.value = false;
-    showVat.value = true; autoExpanded = false; error.value = ''; review.value = null; pendingPayload.value = null;
+    showVat.value = true; autoExpanded = false; error.value = ''; review.value = null; pendingPayload.value = null; dispatched.value = false;
     contexts.value = {};
     sendConfirmations.value = Object.fromEntries(records.value.map((row) => [row.id, true]));
     const initialTotal = records.value.reduce((sum, row) => sum + Number(row.pending_amount ?? row.total_amount ?? 0), 0);
     const half = Math.floor(initialTotal / 2);
-    form.value = { total_amount: initialTotal, period_date: todayISO(), destination: 'pocket', notes: '', gustavo_amount: half, carlos_amount: half };
+    form.value = { total_amount: initialTotal, period_date: todayISO(), destination: personal.value ? 'partners' : 'pocket', notes: '', gustavo_amount: half, carlos_amount: half };
     loadContexts();
   }, { immediate: true });
 
@@ -133,26 +137,34 @@ export function useIncomeSettlementForm(props, emit) {
   }
   function recalculate() { manual.value = null; }
   async function submit() {
-    if (props.saving || preparing.value || blockReason.value) return;
+    if (props.saving || preparing.value || dispatched.value || blockReason.value) return;
     preparing.value = true; error.value = '';
     const payload = buildPayload();
     const currentRequestId = requestId.value;
     const result = await store.previewIncomeSettlement(payload);
     preparing.value = false;
     if (!props.open || currentRequestId !== requestId.value) return;
+    if (JSON.stringify(payload) !== JSON.stringify(buildPayload())) {
+      error.value = 'La liquidación cambió durante la revisión. Vuelve a pulsar Liquidar.';
+      return;
+    }
     if (!result.success) { error.value = result.message || result.error || 'No se pudo revisar la liquidación. Inténtalo de nuevo.'; return; }
     pendingPayload.value = { ...payload, preview_hash: result.data.preview_hash };
     if (payload.send_payment_confirmation) review.value = result.data;
-    else emit('submit', pendingPayload.value);
+    else { dispatched.value = true; emit('submit', pendingPayload.value); }
   }
-  function confirm() { if (!props.saving && pendingPayload.value) emit('submit', pendingPayload.value); }
-  function back() { review.value = null; pendingPayload.value = null; }
+  function confirm() {
+    if (!props.saving && !dispatched.value && pendingPayload.value) {
+      dispatched.value = true; emit('submit', pendingPayload.value);
+    }
+  }
+  function back() { review.value = null; pendingPayload.value = null; dispatched.value = false; }
 
   return {
     records, personal, form, exactDate, requestId, deductions, followUps, periods,
     participantsOpen, differenceOpen, vatOpen, showVat, manual, contexts,
     sendConfirmations, contextLoading, preparing, error, review, proposal,
-    shortfall, remaining, credit, hostingRecords, blockReason,
+    shortfall, remaining, credit, hostingRecords, blockReason, receivedById,
     addDeduction, addFollowUp, editAllocation, recalculate, submit, confirm, back,
   };
 }

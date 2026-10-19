@@ -71,6 +71,7 @@ const responsiveDashboardSummary = {
 };
 
 async function setup(page) {
+  await page.clock.install({ time: new Date('2026-10-19T12:00:00Z') });
   await setAuthLocalStorage(page, { token: 'accounting-special-responsive-token', userAuth: { id: 9001, role: 'admin', is_staff: true, is_superuser: true } });
   const accountingSettings = {
     collection_accounts_view_mode: 'classic',
@@ -111,7 +112,33 @@ async function setup(page) {
       return { status: 200, contentType: 'application/pdf', body: '%PDF-1.4\n%%EOF\n' };
     }
     if (apiPath === 'accounting/incomes/create/' && method === 'POST') return json({ ...income, id: 2 });
-    if (apiPath === 'accounting/incomes/1/liquidate/' && method === 'POST') return json({ ...income, payment_status: 'paid', pending_amount: '0.00' });
+    if (apiPath === 'accounting/incomes/settlement-preview/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      const selected = body.income_ids.map((id) => id === income.id ? income : unbilledIncome);
+      return json({
+        preview_hash: 'responsive-settlement-preview',
+        total_amount: body.total_amount,
+        pending_after: '0.00',
+        rows: selected.map((row) => ({
+          income_id: row.id,
+          concept: row.concept,
+          amount: body.allocations?.find((allocation) => allocation.income_id === row.id)?.amount
+            ?? Number(row.pending_amount),
+          deducted: 0,
+          reexpected: 0,
+          pending_after: 0,
+          confirmation: {
+            can_send: false,
+            recipient: '',
+            collection_account_number: '',
+            blocked_reason: 'No hay cuenta de cobro emitida.',
+          },
+        })),
+      });
+    }
+    if (apiPath === 'accounting/incomes/bulk-settle/' && method === 'POST') {
+      return json({ updated: 1, results: [income], payment_confirmations: [] });
+    }
     if (apiPath === 'accounting/collections/create/' && method === 'POST') return json({ ...collection, id: 2 });
     if (apiPath === 'accounting/collections/1/register-payment/' && method === 'POST') return json({ ...collection, status: 'paid', pending_amount: '0.00' });
     if (apiPath.startsWith('proposals/client-profiles/search/')) return json([{ id: 1, name: income.client_name, email: 'client@fixture.test' }]);
@@ -244,22 +271,24 @@ const longModalFlows = Object.freeze([
     name: 'liquidate exposes its final CTA',
     flow: 'admin-accounting-income-crud',
     outcome: 'display',
-    dialog: (page) => page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true }),
+    dialog: (page) => page.getByRole('dialog', { name: 'Liquidar ingresos', exact: true }),
     open: async (page) => {
       await openIncomesFromPanel(page);
       await page.getByTestId('income-actions-1').click();
       await page.getByTestId('income-action-liquidate-1').click();
-      await page.getByTestId('income-bulk-settle-advanced').click();
-      await expect(page.getByRole('heading', { name: 'Liquidación con ajustes', exact: true }))
-        .toBeVisible();
-      await page.getByTestId('confirm-modal-confirm').click();
     },
-    assert: (dialog) => expect(dialog.getByTestId('income-liquidate-submit')).toHaveText('Liquidar'),
+    assert: async (dialog) => {
+      await expect(dialog.getByTestId('income-liquidate-selection')).toContainText(longConcept);
+      await expect(dialog.getByTestId('income-liquidate-summary')).toContainText('Cubierto:');
+      await expect(dialog.getByTestId('income-liquidate-paid')).toHaveValue('123.456.789');
+      await expect(dialog.getByTestId('income-liquidate-period')).toHaveValue('2026-10-19');
+      await expect(dialog.getByTestId('income-liquidate-submit')).toHaveText('Liquidar');
+    },
     // The fixture is a hosting charge with no recorded window, so the period
     // block renders below the payment row.
     layout: (dialog) => ({
       lines: [
-        { fields: [dialog.getByTestId('income-liquidate-period'), dialog.getByTestId('income-liquidate-destination')] },
+        { fields: [dialog.getByTestId('income-liquidate-paid'), dialog.getByTestId('income-liquidate-period')] },
         {
           fields: [
             dialog.getByTestId('income-liquidate-period-cadence'),
@@ -275,17 +304,21 @@ const longModalFlows = Object.freeze([
     name: 'bulk payment shows its allocation breakdown',
     flow: 'admin-accounting-income-bulk-settle',
     outcome: 'display',
-    dialog: (page) => page.getByRole('dialog', { name: 'Liquidar', exact: true }),
+    dialog: (page) => page.getByRole('dialog', { name: 'Liquidar ingresos', exact: true }),
     open: async (page) => {
       await page.goto('/en-us/panel/accounting/incomes?accounting_incomeTab=all', { waitUntil: 'domcontentloaded' });
       await page.getByTestId('accounting-row-1').getByRole('checkbox').click();
       await page.getByTestId('incomes-bulk-actions').click();
       await page.getByRole('menuitem', { name: 'Liquidar', exact: true }).click();
     },
-    assert: (dialog) => expect(dialog.getByTestId('income-bulk-settle-coverage'))
-      .toHaveText('Quedan pagados: 1 · parciales: 0 · sin abono: 0'),
+    assert: async (dialog) => {
+      await expect(dialog.getByTestId('income-liquidate-selection')).toContainText(longConcept);
+      await expect(dialog.getByTestId('income-liquidate-summary')).toContainText('Falta:');
+      await expect(dialog.getByTestId('income-liquidate-paid')).toHaveValue('123.456.789');
+      await expect(dialog.getByTestId('income-liquidate-period')).toHaveValue('2026-10-19');
+    },
     layout: (dialog) => ({
-      lines: [{ fields: [dialog.getByTestId('income-bulk-settle-total'), dialog.getByTestId('income-bulk-settle-period')] }],
+      lines: [{ fields: [dialog.getByTestId('income-liquidate-paid'), dialog.getByTestId('income-liquidate-period')] }],
     }),
   },
   {

@@ -59,6 +59,7 @@ historial de versiones y los efectos de una operación revertida. El mismo
 contrato existe en MCP, además de la compatibilidad de los abonos por ID del
 movimiento. Los registros anteriores no se migran a grupos inferidos.
 
-Migración aditiva: `content.0293`. La aplica el deploy, nunca esta sesión contra
-la base desplegada. Las pruebas utilizan `projectapp.settings_test`, SQLite y
+Migraciones aditivas: `content.0293` y `content.0294`. Las aplica el deploy,
+nunca esta sesión contra la base desplegada. Las pruebas utilizan
+`projectapp.settings_test`, SQLite y
 almacenamiento temporal. No se envían correos reales desde estas pruebas.

@@ -1167,6 +1167,9 @@ def delete_record(entity_type, instance, user):
             return
     if getattr(instance, 'settlement_id', None):
         raise ValueError('Este registro pertenece a una liquidación. Corrige o revierte la liquidación completa.')
+    if entity_type == EntityType.INCOME and instance.kind == IncomeRecord.Kind.EXPECTED:
+        if instance.settlement_operations.filter(status='active').exists():
+            raise ValueError('Este ingreso participa en una liquidación activa. Reviértela antes de eliminar su ingreso de origen.')
     if entity_type == EntityType.RECURRING and not instance.is_archived:
         raise ProposalActionError(
             'Un pago recurrente vigente no se puede eliminar definitivamente.',

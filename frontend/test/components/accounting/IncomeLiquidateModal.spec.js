@@ -1,1030 +1,379 @@
 import { flushPromises, mount } from '@vue/test-utils';
 import { createPinia, setActivePinia } from 'pinia';
+import BaseCollapse from '../../../components/base/BaseCollapse.vue';
 import IncomeLiquidateModal from '../../../components/accounting/IncomeLiquidateModal.vue';
-import BaseCheckbox from '../../../components/base/BaseCheckbox.vue';
 import { useAccountingStore } from '../../../stores/accounting';
 
-// The covered-period block leans on `useHostingPeriod`, which resolves the
-// accounting store at setup — even when the block itself stays hidden.
+const income = (id, overrides = {}) => ({
+  id,
+  concept: `Ingreso ${id}`,
+  kind: 'expected',
+  ledger: 'company',
+  client: 8,
+  period_date: `2026-0${id}-01`,
+  period_label: `Mes ${id}`,
+  total_amount: '100.00',
+  pending_amount: '100.00',
+  ...overrides,
+});
+
+const preview = (rows, previewHash = 'preview-verified') => ({
+  success: true,
+  data: {
+    preview_hash: previewHash,
+    total_amount: 150,
+    pending_after: 50,
+    rows,
+  },
+});
+
+const stubs = {
+  Teleport: { template: '<div><slot /></div>' },
+  Transition: { template: '<div><slot /></div>' },
+  BaseModal: {
+    props: ['modelValue'],
+    template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
+  },
+  BaseFormField: { template: '<div><slot /></div>' },
+  BaseButton: {
+    props: ['type', 'disabled'],
+    emits: ['click'],
+    template: '<button v-bind="$attrs" :type="type || \'button\'" :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
+  },
+  BaseCurrencyInput: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value === \'\' ? null : Number($event.target.value))" />',
+  },
+  BaseInput: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<input v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
+  BaseSelect: {
+    props: ['modelValue', 'options', 'placeholder'],
+    emits: ['update:modelValue'],
+    template: '<select v-bind="$attrs" :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><option value=""></option><option v-for="option in options" :key="option.value" :value="option.value">{{ option.label }}</option></select>',
+  },
+  BaseTextarea: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<textarea v-bind="$attrs" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
+  BaseSegmented: {
+    props: ['modelValue', 'options'],
+    emits: ['update:modelValue'],
+    template: '<div v-bind="$attrs"><button v-for="option in options" :key="option.value" type="button" @click="$emit(\'update:modelValue\', option.value)">{{ option.label }}</button></div>',
+  },
+  BaseToggle: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<button v-bind="$attrs" type="button" @click="$emit(\'update:modelValue\', !modelValue)">{{ modelValue ? \'on\' : \'off\' }}</button>',
+  },
+  BaseCheckbox: {
+    props: ['modelValue', 'disabled'],
+    emits: ['update:modelValue'],
+    template: '<label><input v-bind="$attrs" type="checkbox" :checked="modelValue" :disabled="disabled" @change="$emit(\'update:modelValue\', $event.target.checked)" /><slot /></label>',
+  },
+  BaseCollapse,
+  PeriodDateField: {
+    props: ['modelValue', 'exact'],
+    emits: ['update:modelValue', 'update:exact'],
+    template: '<input v-bind="$attrs" type="date" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
+  },
+  SettlementHostingPeriod: { template: '<div />' },
+  VatBreakdown: {
+    props: ['total', 'rate'],
+    template: '<p data-testid="vat-breakdown-stub">{{ rate === null ? \'sin tasa\' : `tasa ${rate}` }} · {{ total }}</p>',
+  },
+};
+
+function mountModal(props = {}, componentStubs = {}) {
+  return mount(IncomeLiquidateModal, {
+    props: { open: true, record: income(1), records: [], saving: false, ...props },
+    global: { stubs: { ...stubs, ...componentStubs } },
+  });
+}
+
+function mockPreview(result) {
+  const store = useAccountingStore();
+  jest.spyOn(store, 'previewIncomeSettlement').mockResolvedValue(result);
+  return store;
+}
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+
 beforeEach(() => {
   setActivePinia(createPinia());
 });
 
-const PartnerSplitInputStub = {
-  name: 'PartnerSplitInput',
-  props: {
-    total: [String, Number],
-    gustavoAmount: [String, Number],
-    carlosAmount: [String, Number],
-    compact: Boolean,
-  },
-  emits: ['update:total', 'update:gustavoAmount', 'update:carlosAmount'],
-  template: `
-    <div data-testid="partner-split-stub" :data-compact="compact ? 'yes' : 'no'">
-      <input data-testid="split-total" :value="total" @input="$emit('update:total', $event.target.value)" />
-      <input data-testid="split-gustavo" :value="gustavoAmount" @input="$emit('update:gustavoAmount', $event.target.value)" />
-      <input data-testid="split-carlos" :value="carlosAmount" @input="$emit('update:carlosAmount', $event.target.value)" />
-    </div>
-  `,
-};
-
-const expectedRecord = {
-  id: 42,
-  concept: 'Kore v2 (Fase 1) - Inicio 40%',
-  kind: 'expected',
-  ledger: 'company',
-  period_label: 'Agosto 2026',
-  period: '2026-08',
-  total_amount: '1000000.00',
-  paid_amount: '400000.00',
-  pending_amount: '600000.00',
-  payment_status: 'partial',
-};
-
-function mountModal(props = {}, { components = {}, ...stubs } = {}) {
-  return mount(IncomeLiquidateModal, {
-    props: {
-      open: true,
-      record: expectedRecord,
-      saving: false,
-      ...props,
-    },
-    global: {
-      components,
-      stubs: {
-        Teleport: { template: '<div><slot /></div>' },
-        Transition: { template: '<div><slot /></div>' },
-        BaseModal: {
-          name: 'BaseModal',
-          props: ['modelValue', 'size', 'kind'],
-          emits: ['update:modelValue', 'close'],
-          template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>',
-        },
-        BaseFormField: {
-          props: ['label', 'hint', 'error', 'required', 'for', 'size'],
-          template: '<div><label v-if="label">{{ label }}</label><slot /></div>',
-        },
-        BaseInput: {
-          props: ['modelValue', 'type', 'size', 'error', 'placeholder', 'disabled'],
-          emits: ['update:modelValue'],
-          template:
-            '<input :type="type || \'text\'" :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
-        },
-        BaseCurrencyInput: {
-          props: ['modelValue', 'decimals', 'size', 'error', 'placeholder', 'disabled', 'suggestion'],
-          emits: ['update:modelValue'],
-          // The real component emits a NUMBER (or null when empty), not the
-          // typed string — the payload assertions depend on that contract.
-          template:
-            '<input type="text" inputmode="numeric" :value="modelValue" :data-suggestion="suggestion" :data-error="error ? \'true\' : undefined" @input="$emit(\'update:modelValue\', $event.target.value === \'\' ? null : Number($event.target.value))" />',
-        },
-        BaseTextarea: {
-          props: ['modelValue', 'rows', 'size', 'error', 'placeholder', 'disabled'],
-          emits: ['update:modelValue'],
-          template:
-            '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
-        },
-        BaseSegmented: {
-          props: ['modelValue', 'options', 'size', 'fullWidth'],
-          emits: ['update:modelValue'],
-          template:
-            '<div><button v-for="o in options" :key="o.value" type="button" @click="$emit(\'update:modelValue\', o.value)">{{ o.label }}</button></div>',
-        },
-        BaseButton: {
-          props: ['variant', 'size', 'type', 'loading', 'disabled'],
-          emits: ['click'],
-          template:
-            '<button :type="type || \'button\'" :disabled="disabled" @click="$emit(\'click\', $event)"><slot /></button>',
-        },
-        BaseToggle: {
-          props: ['modelValue'],
-          emits: ['update:modelValue'],
-          template:
-            '<input type="checkbox" :checked="modelValue" @change="$emit(\'update:modelValue\', $event.target.checked)" />',
-        },
-        BaseSelect: {
-          props: ['modelValue', 'options', 'size', 'error', 'disabled', 'placeholder'],
-          emits: ['update:modelValue'],
-          template:
-            '<select :value="modelValue" :data-error="error ? \'true\' : undefined" @change="$emit(\'update:modelValue\', $event.target.value)"><option v-if="placeholder" value="" disabled>{{ placeholder }}</option><option v-for="o in options" :key="o.value" :value="o.value">{{ o.label }}</option></select>',
-        },
-        BaseCollapse: {
-          props: ['open', 'id'],
-          template: '<div v-if="open"><slot /></div>',
-        },
-        BaseBadge: {
-          props: ['variant', 'size'],
-          template: '<span :data-variant="variant"><slot /></span>',
-        },
-        PartnerSplitInput: PartnerSplitInputStub,
-        ...stubs,
-      },
-    },
-  });
-}
-
-// The BaseFormRow that holds the payment date.
-function paymentRow(wrapper) {
-  return wrapper
-    .findAllComponents({ name: 'BaseFormRow' })
-    .find((row) => row.find('[data-testid="income-liquidate-period"]').exists());
-}
+afterEach(() => {
+  jest.restoreAllMocks();
+});
 
 describe('IncomeLiquidateModal', () => {
-  it('names the expected income being settled', () => {
-    const wrapper = mountModal();
-
-    expect(wrapper.text()).toContain('Liquidar ingreso esperado');
-    expect(wrapper.text()).toContain('Kore v2 (Fase 1) - Inicio 40%');
-    expect(wrapper.text()).toContain('Agosto 2026');
-  });
-
-  it('prefills the amount with what is still owed, not the full projection', () => {
-    // They often pay late AND short, so the remainder is the useful default.
-    const wrapper = mountModal();
-
-    expect(wrapper.find('[data-testid="split-total"]').element.value)
-      .toBe('600000.00');
-    expect(wrapper.find('[data-testid="income-liquidate-pending"]').text())
-      .toContain('600.000');
-  });
-
-  it('defaults to the exact payment date prefilled with today', () => {
-    // 20:00 local: toISOString() would already be tomorrow in Bogotá
-    // (UTC-5) — this pins the local-date formatting.
-    jest.useFakeTimers().setSystemTime(new Date('2026-07-27T20:00:00'));
-    try {
-      const wrapper = mountModal();
-
-      const dateInput = wrapper.find('input[type="date"]');
-      expect(dateInput.exists()).toBe(true);
-      expect(dateInput.element.value).toBe('2026-07-27');
-    } finally {
-      jest.useRealTimers();
-    }
-  });
-
-  it('downgrades to month-only via the toggle and back', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper
-      .find('[data-testid="income-liquidate-exact-date"]')
-      .setValue(false);
-
-    // The typed date is kept, reduced to the month the user can fix.
-    expect(wrapper.find('input[type="month"]').element.value).toBe('2026-11');
-
-    await wrapper
-      .find('[data-testid="income-liquidate-exact-date"]')
-      .setValue(true);
-    expect(wrapper.find('input[type="date"]').element.value).toBe('2026-11-01');
-  });
-
-  it('submits the exact payment date', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
-  });
-
-  it('submits a month-only settlement with no allocations', async () => {
-    // `kind`, `ledger` and the parent link are derived server-side from the
-    // record the settle endpoint is called on.
-    const wrapper = mountModal();
-
-    await wrapper
-      .find('[data-testid="income-liquidate-exact-date"]')
-      .setValue(false);
-    await wrapper.find('input[type="month"]').setValue('2026-11');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.period_date).toBe('2026-11');
-    expect(payload.total_amount).toBe('600000.00');
-    expect(payload.deductions).toEqual([]);
-    expect(payload.expected_incomes).toEqual([]);
-  });
-
-  it('defaults the destination to pocket and omits a split left blank', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    // Money defaults into the pocket; distributing to the partners is the
-    // explicit choice.
-    expect(payload.destination).toBe('pocket');
-    // PartnerSplitInput fills the automatic split as soon as it mounts (this
-    // stub never does): a split still blank is left out, and the server's
-    // split_half applies the same whole-peso halves.
-    expect(payload.gustavo_amount).toBeUndefined();
-    expect(payload.carlos_amount).toBeUndefined();
-  });
-
-  // Bug caught: the modal opened on the pending amount with the 50/50 toggle
-  // on and both partner fields empty, so nobody saw what each partner got.
-  it('shows and submits the automatic split of the prefilled amount', async () => {
-    const wrapper = mountModal({}, { PartnerSplitInput: false });
+  // Falla si el período se completa visualmente pero el abono no identifica
+  // a qué ingreso debe aplicarse su ventana de hosting.
+  it('includes the completed hosting window under its source income', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({
+      record: income(1, { origin: 'hosting', period_start: null }),
+    }, { SettlementHostingPeriod: false });
     await flushPromises();
 
-    expect(wrapper.get('[data-testid="partner-split-gustavo"]').element.value).toBe('300000');
-    expect(wrapper.get('[data-testid="partner-split-carlos"]').element.value).toBe('300000');
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.gustavo_amount).toBe(300000);
-    expect(payload.carlos_amount).toBe(300000);
-  });
-
-  it('sends the split when the user fills it', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('[data-testid="split-gustavo"]').setValue('400000');
-    await wrapper.find('[data-testid="split-carlos"]').setValue('200000');
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.gustavo_amount).toBe('400000');
-    expect(payload.carlos_amount).toBe('200000');
-  });
-
-  it('allows overriding the amount for a partial payment', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('[data-testid="split-total"]').setValue('250000');
-    await wrapper.find('input[type="date"]').setValue('2026-09-15');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.total_amount).toBe('250000');
-  });
-
-  it('falls back to the total when the record has no pending amount', () => {
-    const wrapper = mountModal({
-      record: { ...expectedRecord, pending_amount: null },
-    });
-
-    expect(wrapper.find('[data-testid="split-total"]').element.value)
-      .toBe('1000000.00');
-  });
-
-  it('omits the split and hides destination for a personal ledger', async () => {
-    const wrapper = mountModal({
-      record: { ...expectedRecord, ledger: 'gustavo' },
-    });
-
-    expect(wrapper.find('[data-testid="partner-split-stub"]').exists()).toBe(false);
-    expect(wrapper.text()).not.toContain('Destino');
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.gustavo_amount).toBeUndefined();
-    expect(payload.carlos_amount).toBeUndefined();
-  });
-
-  // Falla si la compactación visual desconecta el total o uno de los socios.
-  it('keeps every company split control in compact mode', () => {
-    const wrapper = mountModal();
-    const split = wrapper.get('[data-testid="partner-split-stub"]');
-
-    expect(split.attributes('data-compact')).toBe('yes');
-    expect(wrapper.get('[data-testid="split-total"]').element.value).toBe('600000.00');
-    expect(wrapper.get('[data-testid="split-gustavo"]').element.value).toBe('');
-    expect(wrapper.get('[data-testid="split-carlos"]').element.value).toBe('');
-  });
-
-  // Falla si la redistribución elimina la fecha al no mostrar el reparto personal.
-  it('keeps the payment date for a personal settlement', async () => {
-    const wrapper = mountModal({ record: { ...expectedRecord, ledger: 'gustavo' } });
-
-    await wrapper.find('input[type="date"]').setValue('2026-11-17');
-    await wrapper.find('form').trigger('submit');
-
-    expect(wrapper.emitted('submit')[0][0].period_date).toBe('2026-11-17');
-  });
-
-  // Falla si el modal vuelve al ancho amplio (64 rem) o si la fecha y el
-  // destino vuelven a ocupar filas separadas.
-  it('pairs the payment date with the destination at the form width', () => {
-    const wrapper = mountModal();
-    const row = paymentRow(wrapper);
-
-    expect(wrapper.findComponent({ name: 'BaseModal' }).props('kind')).toBe('form');
-    expect(row.props('cols')).toBe(2);
-    expect(row.find('[data-testid="income-liquidate-destination"]').exists()).toBe(true);
-  });
-
-  // Falla si el valor pagado personal vuelve a una fila propia a todo el ancho.
-  it('pairs the payment date with the amount paid on a personal ledger', () => {
-    const row = paymentRow(mountModal({ record: { ...expectedRecord, ledger: 'gustavo' } }));
-
-    expect(row.props('cols')).toBe(2);
-    expect(row.find('[data-testid="income-liquidate-paid"]').exists()).toBe(true);
-  });
-
-  // Falla si la ruta de ajustes vuelve a exigir una cuenta emitida antes del abono.
-  it('emits settlement when a client account is still a draft', async () => {
-    const wrapper = mountModal({
-      record: {
-        ...expectedRecord,
-        client: 12,
-        collection_account_status: 'draft',
-      },
-    }, { components: { BaseCheckbox } });
+    await wrapper.get('[data-testid="income-liquidate-cycle-3"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
     await flushPromises();
 
-    await wrapper.find('[data-testid="income-liquidate-send-confirmation"] input')
-      .setValue(false);
-
-    expect(wrapper.get('[data-testid="income-liquidate-submit"]').element.disabled).toBe(false);
-    expect(wrapper.get('[data-testid="income-liquidate-submit-reason"]').text()).toBe('');
-
-    await wrapper.find('form').trigger('submit');
-
-    expect(wrapper.emitted('submit')[0][0].total_amount).toBe('600000.00');
+    expect(wrapper.emitted('submit')[0][0].periods).toEqual([{
+      income_id: 1, period_start: '2026-01-01', period_end: '2026-03-31', period_cadence: 'quarterly',
+    }]);
   });
 
-  it('emits close when Cancelar is clicked', async () => {
-    const wrapper = mountModal();
+  // Falla si varias filas vuelven a ir a un segundo modal, si el faltante no
+  // descubre sus ajustes o si esos ajustes se pierden al construir el abono.
+  it('keeps multi-income adjustments in the form and emits their exact payload', async () => {
+    const records = [income(1), income(2)];
+    const rows = records.map((record) => ({
+      income_id: record.id,
+      concept: record.concept,
+      amount: 75,
+      deducted: 0,
+      reexpected: 0,
+      pending_after: 25,
+      confirmation: { can_send: false, blocked_reason: 'Sin cuenta' },
+    }));
+    mockPreview(preview(rows));
+    const wrapper = mountModal({ record: null, records });
+    await flushPromises();
 
-    const cancel = wrapper.findAll('button').find((b) => b.text() === 'Cancelar');
-    await cancel.trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('150');
+    expect(wrapper.get('[data-testid="income-liquidate-difference-toggle"]').attributes('aria-expanded')).toBe('true');
 
-    expect(wrapper.emitted('close')).toEqual([[]]);
+    await wrapper.get('[data-testid="income-liquidate-add-deduction"]').trigger('click');
+    await wrapper.get('[data-testid="deduction-type-0"]').setValue('bank_fee');
+    await wrapper.get('[data-testid="deduction-amount-0"]').setValue('20');
+    await wrapper.get('[data-testid="income-liquidate-add-followup"]').trigger('click');
+    await wrapper.get('[data-testid="followup-concept-0"]').setValue('Saldo fase 2');
+    await wrapper.get('[data-testid="followup-period-0"]').setValue('2026-10');
+    await wrapper.get('[data-testid="followup-amount-0"]').setValue('30');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0]).toMatchObject({
+      income_ids: [1, 2],
+      total_amount: 150,
+      deductions: [{ type: 'bank_fee', amount: 20, detail: '' }],
+      expected_incomes: [{ income_id: 2, concept: 'Saldo fase 2', period_date: '2026-10', amount: 30 }],
+      gustavo_amount: 75,
+      carlos_amount: 75,
+      preview_hash: 'preview-verified',
+    });
   });
 
-  // ── Shortfall (the money that did not arrive) ──
+  // Falla si el reparto automático vuelve a ocultar o dejar vacíos los
+  // importes de Carlos y Gustavo cuando el modal se abre sobre un pendiente.
+  it('shows the automatic partner split before its section is expanded', async () => {
+    const record = income(1, { pending_amount: '151.00' });
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record });
+    await flushPromises();
 
-  const shortfall = (wrapper) =>
-    wrapper.find('[data-testid="income-liquidate-shortfall"]');
-
-  /** Receive less than pending so the shortfall section appears. */
-  async function receiveShort(wrapper, amount = '550000') {
-    await wrapper.find('[data-testid="split-total"]').setValue(amount);
-  }
-
-  const submitButton = (wrapper) =>
-    wrapper.find('[data-testid="income-liquidate-submit"]');
-
-  it('hides the shortfall section when the full pending amount is received', () => {
-    const wrapper = mountModal();
-
-    expect(shortfall(wrapper).exists()).toBe(false);
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Carlos $75');
+    expect(wrapper.get('[data-testid="income-liquidate-participations-toggle"]').text()).toContain('Gustavo $75');
   });
 
-  it('shows the shortfall as soon as the payment falls short', async () => {
+  // Falla si cada cambio corto vuelve a abrir Diferencia después de que el
+  // usuario la cerró para seguir diligenciando las demás secciones.
+  it('automatically opens the difference section only on the first shortfall', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
     const wrapper = mountModal();
+    await flushPromises();
 
-    await receiveShort(wrapper);
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('80');
+    expect(wrapper.get('[data-testid="income-liquidate-difference-toggle"]').attributes('aria-expanded')).toBe('true');
+    await wrapper.get('[data-testid="income-liquidate-difference-toggle"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('70');
 
-    expect(shortfall(wrapper).exists()).toBe(true);
-    expect(shortfall(wrapper).text()).toContain('50.000');
+    expect(wrapper.get('[data-testid="income-liquidate-difference-toggle"]').attributes('aria-expanded')).toBe('false');
   });
 
-  it('warns that an unallocated balance stays pending', async () => {
-    const wrapper = mountModal();
+  // Falla si una liquidación personal conserva el destino invisible de
+  // bolsillo, que el servidor rechaza para su contabilidad individual.
+  it('emits the partners destination for a personal ledger', async () => {
+    const record = income(1, { ledger: 'gustavo' });
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record });
+    await flushPromises();
 
-    await receiveShort(wrapper);
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
 
-    expect(wrapper.find('[data-testid="income-liquidate-remaining"]').text())
-      .toContain('quedará pendiente');
-    // Not allocating is allowed — that is today's behaviour.
-    expect(submitButton(wrapper).element.disabled).toBe(false);
+    expect(wrapper.emitted('submit')[0][0].destination).toBe('partners');
   });
 
-  it('submits the shortfall as a deduction', async () => {
+  // Falla si un pago sin dinero recibido no puede cerrar un saldo cuando una
+  // deducción válida explica íntegramente por qué no entró al bolsillo.
+  it('submits a deduction-only settlement with a null received amount', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
     const wrapper = mountModal();
-    await receiveShort(wrapper);
+    await flushPromises();
 
-    // The concept is an explicit choice now — rows start unselected.
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-    await wrapper.find('form').trigger('submit');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('');
+    await wrapper.get('[data-testid="income-liquidate-add-deduction"]').trigger('click');
+    await wrapper.get('[data-testid="deduction-type-0"]').setValue('withholding');
+    await wrapper.get('[data-testid="deduction-amount-0"]').setValue('100');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
 
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.deductions).toEqual([
-      { type: 'gateway_fee', detail: '', amount: 50000 },
+    expect(wrapper.emitted('submit')[0][0]).toMatchObject({
+      total_amount: 0,
+      deductions: [{ type: 'withholding', amount: 100, detail: '' }],
+    });
+  });
+
+  // Falla si el IVA se convierte en una modificación fiscal silenciosa al
+  // abrir su acordeón: sólo debe mostrar las tasas ya registradas.
+  it('shows stored VAT rates without adding a VAT override to the payload', async () => {
+    const records = [
+      income(1, { vat_rate: null }), income(2, { vat_rate: 0 }), income(3, { vat_rate: 19 }),
+    ];
+    mockPreview(preview(records.map((record) => ({ income_id: record.id, confirmation: { can_send: false } }))));
+    const wrapper = mountModal({ record: null, records });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-vat-toggle"]').trigger('click');
+    expect(wrapper.findAll('[data-testid="vat-breakdown-stub"]').map((node) => node.text())).toEqual([
+      'sin tasa · 100', 'tasa 0 · 100', 'tasa 19 · 100',
     ]);
-  });
 
-  it('submits a residual-only resolution with zero received', async () => {
-    // Nothing new arrived — the whole pending was a fee. The server closes
-    // the expected without creating a liquid child.
-    const wrapper = mountModal();
-
-    await wrapper.find('[data-testid="split-total"]').setValue('0');
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('600000');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.total_amount).toBe('0');
-    expect(payload.deductions).toEqual([
-      { type: 'gateway_fee', detail: '', amount: 600000 },
-    ]);
-  });
-
-  it('coerces an emptied amount to zero', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('[data-testid="split-total"]').setValue('');
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('600000');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.total_amount).toBe(0);
-  });
-
-  it('reports the balance as fully resolved once it is allocated', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-
-    expect(wrapper.find('[data-testid="income-liquidate-remaining"]').text())
-      .toContain('queda cerrado');
-  });
-
-  it('requires the free text when the concept is "Otro"', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('other');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-
-    expect(submitButton(wrapper).element.disabled).toBe(true);
-
-    await wrapper
-      .find('[data-testid="deduction-detail-0"]').setValue('Descuento pactado');
-
-    expect(submitButton(wrapper).element.disabled).toBe(false);
-  });
-
-  it('submits follow-up expected incomes for a balance that will be collected', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper
-      .find('[data-testid="income-liquidate-followups-toggle"]').trigger('click');
-    await wrapper.find('[data-testid="followup-concept-0"]').setValue('Saldo septiembre');
-    await wrapper.find('[data-testid="followup-period-0"]').setValue('2026-09');
-    await wrapper.find('[data-testid="followup-amount-0"]').setValue('50000');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.expected_incomes).toEqual([
-      { concept: 'Saldo septiembre', period_date: '2026-09', amount: 50000 },
-    ]);
-  });
-
-  it('splits the shortfall between a deduction and a follow-up income', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('8000');
-    await wrapper
-      .find('[data-testid="income-liquidate-followups-toggle"]').trigger('click');
-    await wrapper.find('[data-testid="followup-concept-0"]').setValue('Saldo');
-    await wrapper.find('[data-testid="followup-period-0"]').setValue('2026-09');
-    await wrapper.find('[data-testid="followup-amount-0"]').setValue('42000');
-    await wrapper.find('form').trigger('submit');
-
-    const payload = wrapper.emitted('submit')[0][0];
-    expect(payload.deductions).toHaveLength(1);
-    expect(payload.expected_incomes).toHaveLength(1);
-  });
-
-  it('blocks the submit when the allocation exceeds the shortfall', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('80000');
-
-    expect(wrapper.find('[data-testid="income-liquidate-remaining"]').text())
-      .toContain('Te pasaste');
-    expect(submitButton(wrapper).element.disabled).toBe(true);
-
-    await wrapper.find('form').trigger('submit');
-    expect(wrapper.emitted('submit')).toBeFalsy();
-  });
-
-  it('supports more than one follow-up expected income', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper
-      .find('[data-testid="income-liquidate-followups-toggle"]').trigger('click');
-    await wrapper
-      .find('[data-testid="income-liquidate-add-followup"]').trigger('click');
-
-    expect(wrapper.findAll('[data-testid^="income-liquidate-followup-"]'))
-      .toHaveLength(2);
-  });
-
-  // ── Assisted distribution: badge, suggestion, per-line validation ──
-
-  it('starts a new deduction row with no concept selected', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    const select = wrapper.find('[data-testid="deduction-type-0"]');
-    expect(select.element.value).toBe('');
-    expect(select.text()).toContain('Seleccionar concepto');
-  });
-
-  it('reflects the allocation state in the badge tone', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    const badge = () =>
-      wrapper.find('[data-testid="income-liquidate-remaining"] [data-variant]');
-    expect(badge().attributes('data-variant')).toBe('info');
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-    expect(badge().attributes('data-variant')).toBe('success');
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('99000');
-    expect(badge().attributes('data-variant')).toBe('danger');
-  });
-
-  it('suggests the unassigned remainder on the line amounts', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    expect(
-      wrapper.find('[data-testid="deduction-amount-0"]').attributes('data-suggestion'),
-    ).toBe('50000');
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('30000');
-    await wrapper
-      .find('[data-testid="income-liquidate-add-deduction"]').trigger('click');
-
-    expect(
-      wrapper.find('[data-testid="deduction-amount-1"]').attributes('data-suggestion'),
-    ).toBe('20000');
-  });
-
-  it('flags the deduction row that still needs a concept', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-
-    expect(wrapper.find('[data-testid="deduction-error-0"]').text())
-      .toBe('Selecciona el concepto.');
-    expect(
-      wrapper.find('[data-testid="deduction-type-0"]').attributes('data-error'),
-    ).toBe('true');
-    expect(submitButton(wrapper).element.disabled).toBe(true);
-  });
-
-  it('flags an empty or non-positive amount on an active row', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    expect(wrapper.find('[data-testid="deduction-error-0"]').text())
-      .toBe('Ingresa el monto.');
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('0');
-    expect(wrapper.find('[data-testid="deduction-error-0"]').text())
-      .toBe('El monto debe ser mayor a cero.');
-  });
-
-  it('marks the row that pushed the allocation over the balance', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('80000');
-
-    const error = wrapper.find('[data-testid="deduction-error-0"]');
-    expect(error.text()).toContain('supera el saldo');
-    expect(error.text()).toContain('30.000');
-    // The typed value is kept — the user must see what they wrote.
-    expect(wrapper.find('[data-testid="deduction-amount-0"]').element.value)
-      .toBe('80000');
-
-    // Fixing the amount clears the flag on its own.
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-    expect(wrapper.find('[data-testid="deduction-error-0"]').exists()).toBe(false);
-  });
-
-  it('no longer blocks the submit on an untouched follow-up row', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    // Opening adds a prefilled row; collapsing leaves it behind — it used
-    // to jam the submit invisibly from inside the closed group.
-    await wrapper
-      .find('[data-testid="income-liquidate-followups-toggle"]').trigger('click');
-    await wrapper
-      .find('[data-testid="income-liquidate-followups-toggle"]').trigger('click');
-
-    expect(submitButton(wrapper).element.disabled).toBe(false);
-
-    await wrapper.find('form').trigger('submit');
-    expect(wrapper.emitted('submit')[0][0].expected_incomes).toEqual([]);
-  });
-
-  it('explains why the submit is disabled', async () => {
-    const wrapper = mountModal();
-    await receiveShort(wrapper);
-
-    const reason = () =>
-      wrapper.find('[data-testid="income-liquidate-submit-reason"]');
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('50000');
-    expect(reason().text())
-      .toBe('Hay líneas de gasto incompletas: revisa concepto y monto.');
-
-    await wrapper.find('[data-testid="deduction-type-0"]').setValue('gateway_fee');
-    expect(reason().text()).toBe('');
-
-    await wrapper.find('[data-testid="deduction-amount-0"]').setValue('80000');
-    expect(reason().text()).toContain('La distribución supera el saldo por resolver');
-  });
-});
-
-describe('shortfall discoverability', () => {
-  it('shows the hint until a shortfall appears', async () => {
-    const wrapper = mountModal();
-
-    expect(
-      wrapper.find('[data-testid="income-liquidate-shortfall-hint"]').exists(),
-    ).toBe(true);
-
-    await wrapper.find('[data-testid="split-total"]').setValue('550000');
-
-    expect(
-      wrapper.find('[data-testid="income-liquidate-shortfall-hint"]').exists(),
-    ).toBe(false);
-  });
-
-  it('auto-expands the deductions group when the shortfall appears', async () => {
-    const wrapper = mountModal();
-
-    await wrapper.find('[data-testid="split-total"]').setValue('550000');
-
-    // No toggle click: the group opens itself with a row ready to fill.
-    expect(
-      wrapper.find('[data-testid="income-liquidate-deduction-0"]').exists(),
-    ).toBe(true);
-  });
-
-  it('does not re-expand after the user collapses the group', async () => {
-    const wrapper = mountModal();
-    await wrapper.find('[data-testid="split-total"]').setValue('550000');
-
-    await wrapper
-      .find('[data-testid="income-liquidate-deductions-toggle"]').trigger('click');
-    expect(
-      wrapper.find('[data-testid="income-liquidate-deduction-0"]').exists(),
-    ).toBe(false);
-
-    await wrapper.find('[data-testid="split-total"]').setValue('400000');
-
-    expect(
-      wrapper.find('[data-testid="income-liquidate-deduction-0"]').exists(),
-    ).toBe(false);
-  });
-});
-
-describe('covered period of a hosting charge', () => {
-  // A hosting charge from before the period fields existed: the block exists
-  // for exactly this record.
-  const legacyHosting = {
-    ...expectedRecord,
-    id: 230,
-    concept: 'Vastago (Hosting) - Semestre 1',
-    origin: 'hosting',
-    period_date: '2026-10-01',
-    period_start: null,
-    period_end: null,
-    period_cadence: '',
-  };
-
-  const block = (wrapper) =>
-    wrapper.find('[data-testid="income-liquidate-period-block"]');
-
-  async function submit(wrapper) {
-    await wrapper.find('form').trigger('submit');
-    return wrapper.emitted('submit')?.[0]?.[0];
-  }
-
-  it('stays out of the way of an income that is not hosting', () => {
-    const wrapper = mountModal();
-
-    expect(block(wrapper).exists()).toBe(false);
-  });
-
-  it('stays out of the way of a hosting that already recorded its window', () => {
-    const wrapper = mountModal({
-      record: {
-        ...legacyHosting,
-        period_start: '2026-08-01',
-        period_end: '2026-10-31',
-        period_cadence: 'quarterly',
-      },
-    });
-
-    expect(block(wrapper).exists()).toBe(false);
-  });
-
-  it('opens the window on the charge date when there is none recorded', () => {
-    const wrapper = mountModal({ record: legacyHosting });
-
-    expect(block(wrapper).exists()).toBe(true);
-    expect(
-      wrapper.find('[data-testid="income-liquidate-period-start"]').element.value,
-    ).toBe('2026-10-01');
-  });
-
-  // Falla si la ayuda vuelve al campo, donde la fila alineada la oculta.
-  it('explains the periodicity below the period row', () => {
-    const wrapper = mountModal({ record: legacyHosting });
-
-    expect(
-      wrapper.get('[data-testid="income-liquidate-period-cadence-hint"]').text(),
-    ).toContain('periodicidad');
-  });
-
-  it('computes the end of the period from the periodicity', async () => {
-    const wrapper = mountModal({ record: legacyHosting });
-
-    await wrapper
-      .find('[data-testid="income-liquidate-period-cadence"]')
-      .setValue('semiannual');
-
-    expect(
-      wrapper.find('[data-testid="income-liquidate-period-end"]').element.value,
-    ).toBe('2027-03-31');
-  });
-
-  it('sends the completed window alongside the settlement', async () => {
-    const wrapper = mountModal({ record: legacyHosting });
-    await wrapper
-      .find('[data-testid="income-liquidate-period"]')
-      .setValue('2026-11-17');
-    await wrapper
-      .find('[data-testid="income-liquidate-period-cadence"]')
-      .setValue('semiannual');
-
-    const payload = await submit(wrapper);
-
-    expect(payload.period).toEqual({
-      period_start: '2026-10-01',
-      period_end: '2027-03-31',
-      period_cadence: 'semiannual',
-    });
-    // The payment keeps its own date: the window describes the charge.
-    expect(payload.period_date).toBe('2026-11-17');
-  });
-
-  it('settles with no window at all when the block is left untouched', async () => {
-    const wrapper = mountModal({ record: legacyHosting });
-
-    const payload = await submit(wrapper);
-
-    // It went through — with no window attached to it.
-    expect(payload.concept).toBe('Vastago (Hosting) - Semestre 1');
-    expect(payload.period).toBeUndefined();
-  });
-
-  it('refuses to send a window that was started and left half written', async () => {
-    const wrapper = mountModal({ record: legacyHosting });
-    await wrapper
-      .find('[data-testid="income-liquidate-period-cadence"]')
-      .setValue('semiannual');
-
-    await wrapper.find('[data-testid="income-liquidate-period-end"]').setValue('');
-
-    expect(wrapper.find('[data-testid="income-liquidate-submit-reason"]').text())
-      .toContain('Completa el período que cubre el cobro, o déjalo vacío.');
-    expect(await submit(wrapper)).toBeUndefined();
-  });
-
-  it('flags an end that does not come after the start', async () => {
-    const wrapper = mountModal({ record: legacyHosting });
-
-    await wrapper
-      .find('[data-testid="income-liquidate-period-end"]')
-      .setValue('2026-09-30');
-
-    expect(wrapper.find('[data-testid="income-liquidate-submit-reason"]').text())
-      .toContain('La fecha de fin debe ser posterior a la de inicio.');
-    expect(await submit(wrapper)).toBeUndefined();
-  });
-});
-
-describe('payment confirmation to the client', () => {
-  afterEach(() => {
-    jest.restoreAllMocks();
-  });
-
-  const billedRecord = {
-    ...expectedRecord,
-    client: 7,
-    client_name: 'Acme Soluciones',
-    collection_account_status: 'issued',
-  };
-  const sendable = {
-    can_send: true,
-    blocked_reason: '',
-    recipient: 'pagos@acme.co',
-    client_name: 'Ana Ruiz',
-    project_name: 'Portal Acme',
-    collection_account_number: 'PA-ACME-001',
-    rescheduled_pending: '0.00',
-  };
-
-  async function mountBilled(context = sendable, props = {}) {
-    const store = useAccountingStore();
-    const fetchContext = jest
-      .spyOn(store, 'fetchIncomePaymentConfirmation')
-      .mockResolvedValue({ success: true, data: context });
-    const wrapper = mountModal(
-      { record: billedRecord, ...props },
-      { components: { BaseCheckbox } },
-    );
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
     await flushPromises();
-    return { wrapper, fetchContext };
-  }
-
-  const checkbox = (wrapper) =>
-    wrapper.find('[data-testid="income-liquidate-send-confirmation"] input');
-  const noticeValue = (wrapper, key) =>
-    wrapper.find(`[data-testid="income-liquidate-notice-${key}"]`).text();
-
-  it('is checked by default and names the address it goes to', async () => {
-    const { wrapper, fetchContext } = await mountBilled();
-
-    expect(fetchContext).toHaveBeenCalledWith(42);
-    expect(checkbox(wrapper).element.checked).toBe(true);
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-hint"]').text())
-      .toContain('pagos@acme.co');
+    expect(wrapper.emitted('submit')[0][0].vat_rate).toBeUndefined();
   });
 
-  it('explains why it cannot go for an income with no client', async () => {
-    const wrapper = mountModal({}, { components: { BaseCheckbox } });
+  // Falla si una confirmación vuelve a registrar el pago antes de que el
+  // usuario acepte la revisión, o si se pierde la huella anti-stale.
+  it('reviews eligible confirmations before emitting the preview hash once', async () => {
+    const result = preview([{
+      income_id: 1,
+      concept: 'Ingreso 1',
+      amount: 100,
+      deducted: 0,
+      reexpected: 0,
+      pending_after: 0,
+      confirmation: { can_send: true, recipient: 'cliente@example.com', collection_account_number: 'CC-7' },
+    }], 'preview-with-email');
+    mockPreview(result);
+    const wrapper = mountModal();
     await flushPromises();
 
-    expect(checkbox(wrapper).element.disabled).toBe(true);
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
-      .toContain('no tiene cliente');
-  });
-
-  it('relays the server reason when the address is unusable', async () => {
-    const { wrapper } = await mountBilled({
-      ...sendable,
-      can_send: false,
-      blocked_reason: 'El correo del cliente (x@temp.example.com) es provisional.',
-    });
-
-    expect(checkbox(wrapper).element.checked).toBe(false);
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
-      .toContain('provisional');
-  });
-
-  it('cannot confirm a payment of zero', async () => {
-    const { wrapper } = await mountBilled();
-
-    await wrapper.find('[data-testid="split-total"]').setValue('0');
-
-    expect(checkbox(wrapper).element.disabled).toBe(true);
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
-      .toContain('Sin valor recibido');
-  });
-
-  it('shows the last notice before settling and emits nothing yet', async () => {
-    const { wrapper } = await mountBilled();
-
-    await wrapper.find('form').trigger('submit');
-
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+    expect(wrapper.get('[data-testid="income-liquidate-review"]').text()).toContain('cliente@example.com');
     expect(wrapper.emitted('submit')).toBeUndefined();
-    expect(noticeValue(wrapper, 'client')).toBe('Ana Ruiz');
-    expect(noticeValue(wrapper, 'project')).toBe('Portal Acme');
-    expect(noticeValue(wrapper, 'account')).toBe('PA-ACME-001');
-    expect(noticeValue(wrapper, 'destination')).toBe('Bolsillo ProjectApp');
-    expect(noticeValue(wrapper, 'recipient')).toBe('pagos@acme.co');
+
+    await wrapper.get('[data-testid="income-liquidate-confirm"]').trigger('click');
+    expect(wrapper.emitted('submit')).toHaveLength(1);
+    expect(wrapper.emitted('submit')[0][0].preview_hash).toBe('preview-with-email');
   });
 
-  it('states the balance the client still owes after the payment', async () => {
-    const { wrapper } = await mountBilled({ ...sendable, rescheduled_pending: '50000.00' });
-
-    await wrapper.find('[data-testid="split-total"]').setValue('400000');
-    await wrapper.find('form').trigger('submit');
-
-    // 600.000 pending - 400.000 received + 50.000 rescheduled earlier.
-    expect(noticeValue(wrapper, 'pending')).toContain('250.000');
-    expect(noticeValue(wrapper, 'amount')).toContain('400.000');
-  });
-
-  it('settles with the confirmation flag once the notice is confirmed', async () => {
-    const { wrapper } = await mountBilled();
-
-    await wrapper.find('form').trigger('submit');
-    await wrapper.find('[data-testid="confirm-modal-confirm"]').trigger('click');
-
-    const submitted = wrapper.emitted('submit');
-    expect(submitted).toHaveLength(1);
-    expect(submitted[0][0].send_payment_confirmation).toBe(true);
-  });
-
-  it('settles straight away, without the flag, when unchecked', async () => {
-    const { wrapper } = await mountBilled();
-
-    await checkbox(wrapper).setValue(false);
-    await wrapper.find('form').trigger('submit');
-
-    const submitted = wrapper.emitted('submit');
-    expect(submitted).toHaveLength(1);
-    expect(submitted[0][0]).not.toHaveProperty('send_payment_confirmation');
-    expect(wrapper.find('[data-testid="income-liquidate-notice-recipient"]').exists())
-      .toBe(false);
-  });
-
-  it('reads a month-only payment date as its month', async () => {
-    const { wrapper } = await mountBilled();
-
-    await wrapper.find('[data-testid="income-liquidate-exact-date"]')
-      .setValue(false);
-    await wrapper.find('form').trigger('submit');
-
-    expect(noticeValue(wrapper, 'date')).toMatch(/^[a-z]+ de \d{4}$/);
-  });
-
-  it('says so when the address could not be verified', async () => {
-    const store = useAccountingStore();
-    jest.spyOn(store, 'fetchIncomePaymentConfirmation')
-      .mockResolvedValue({ success: false, message: 'Error de red' });
-    const wrapper = mountModal(
-      { record: billedRecord }, { components: { BaseCheckbox } },
-    );
+  // Falla si un abono global habilita confirmaciones para un ingreso que no
+  // recibió dinero dentro de la imputación automática por antigüedad.
+  it('only includes confirmations for rows that received part of a multi-income payment', async () => {
+    const records = [income(1), income(2)];
+    const result = preview([
+      { income_id: 1, concept: 'Ingreso 1', amount: 100, deducted: 0, reexpected: 0, pending_after: 0, confirmation: { can_send: true, recipient: 'ana@example.com' } },
+      { income_id: 2, concept: 'Ingreso 2', amount: 0, deducted: 0, reexpected: 0, pending_after: 100, confirmation: { can_send: true, recipient: 'bea@example.com' } },
+    ], 'preview-first-row-only');
+    mockPreview(result);
+    const wrapper = mountModal({ record: null, records });
     await flushPromises();
 
-    expect(checkbox(wrapper).element.disabled).toBe(true);
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-gate-reasons"]').text())
-      .toContain('No se pudo verificar el correo del cliente');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('100');
+    expect(wrapper.get('[data-testid="income-liquidate-confirmation-2"]').find('input').element.disabled).toBe(true);
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+    await wrapper.get('[data-testid="income-liquidate-confirm"]').trigger('click');
+
+    expect(wrapper.emitted('submit')[0][0].confirmation_income_ids).toEqual([1]);
   });
 
-  it('tells that no email goes once unchecked', async () => {
-    const { wrapper } = await mountBilled();
+  // Falla si dos clics rápidos envían dos previsualizaciones y permiten dos
+  // liquidaciones mientras la primera comprobación sigue en curso.
+  it('ignores a second submit while the settlement preview is pending', async () => {
+    const delayed = deferred();
+    const store = mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal();
+    await flushPromises();
+    store.previewIncomeSettlement.mockImplementationOnce(() => delayed.promise);
 
-    await checkbox(wrapper).setValue(false);
-
-    expect(wrapper.find('[data-testid="income-liquidate-confirmation-hint"]').text())
-      .toBe('No se le enviará ningún correo al cliente.');
-  });
-
-  it('names the ledger as the destination of a personal income', async () => {
-    const { wrapper } = await mountBilled(sendable, {
-      record: { ...billedRecord, ledger: 'gustavo', ledger_label: 'Personal Gustavo' },
-    });
-
-    await wrapper.find('form').trigger('submit');
-
-    expect(noticeValue(wrapper, 'destination')).toBe('Personal Gustavo');
-  });
-
-  it('falls back to the income when the server names nothing', async () => {
-    const { wrapper } = await mountBilled({
-      can_send: true, blocked_reason: '', recipient: 'pagos@acme.co',
-    });
-
-    await wrapper.find('form').trigger('submit');
-
-    expect(noticeValue(wrapper, 'client')).toBe('Acme Soluciones');
-    expect(noticeValue(wrapper, 'project')).toBe('Sin proyecto');
-    expect(noticeValue(wrapper, 'account')).toBe('—');
-  });
-
-  it('waits for the address before letting the settlement go', async () => {
-    const store = useAccountingStore();
-    jest.spyOn(store, 'fetchIncomePaymentConfirmation')
-      .mockReturnValue(new Promise(() => {}));
-    const wrapper = mountModal(
-      { record: billedRecord }, { components: { BaseCheckbox } },
-    );
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    delayed.resolve(preview([{ income_id: 1, confirmation: { can_send: false } }], 'single-submit'));
     await flushPromises();
 
-    await wrapper.find('form').trigger('submit');
+    expect(store.previewIncomeSettlement).toHaveBeenCalledTimes(2);
+    expect(wrapper.emitted('submit')[0][0].preview_hash).toBe('single-submit');
+  });
 
+  // Falla si una respuesta lenta de una apertura anterior reemplaza el
+  // destinatario que se obtuvo al reabrir el mismo formulario.
+  it('discards an obsolete context preview after the modal reopens', async () => {
+    const older = deferred();
+    const store = useAccountingStore();
+    jest.spyOn(store, 'previewIncomeSettlement')
+      .mockImplementationOnce(() => older.promise)
+      .mockResolvedValueOnce(preview([{ income_id: 1, confirmation: { can_send: true, recipient: 'nuevo@example.com' } }]));
+    const wrapper = mountModal();
+
+    await wrapper.setProps({ open: false });
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    older.resolve(preview([{ income_id: 1, confirmation: { can_send: true, recipient: 'viejo@example.com' } }]));
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="income-liquidate-confirmation-1"]').element.parentElement.textContent).toContain('nuevo@example.com');
+  });
+
+  // Falla si un error al revisar borra el formulario o permite emitir una
+  // liquidación sin la comprobación que protege contra cambios concurrentes.
+  it('keeps the entered amount and does not emit when settlement preview fails', async () => {
+    const store = mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal();
+    await flushPromises();
+    store.previewIncomeSettlement.mockResolvedValueOnce({ success: false, message: 'El ingreso cambió mientras revisabas.' });
+
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('80');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('El ingreso cambió mientras revisabas.');
+    expect(wrapper.get('[data-testid="income-liquidate-paid"]').element.value).toBe('80');
     expect(wrapper.emitted('submit')).toBeUndefined();
-    expect(wrapper.find('[data-testid="income-liquidate-submit-reason"]').text())
-      .toContain('Verificando el correo');
+  });
+
+  // Falla si una previsualización responde para un monto anterior y registra
+  // ese abono aunque el operador ya lo corrigió mientras esperaba.
+  it('rejects a late final preview after the received amount changes', async () => {
+    const delayed = deferred();
+    const store = mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal();
+    await flushPromises();
+    store.previewIncomeSettlement.mockImplementationOnce(() => delayed.promise);
+
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('80');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('70');
+    delayed.resolve(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    await flushPromises();
+
+    expect(wrapper.get('[role="alert"]').text()).toBe('La liquidación cambió durante la revisión. Vuelve a pulsar Liquidar.');
+    expect(wrapper.get('[data-testid="income-liquidate-paid"]').element.value).toBe('70');
+    expect(wrapper.emitted('submit')).toBeUndefined();
   });
 });

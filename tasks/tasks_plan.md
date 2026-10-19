@@ -760,7 +760,7 @@ adicional. No generar ni emitir cuentas, alterar importes ni borrar propuestas.
 
 ## Liquidación unificada (2026-10-19)
 
-En implementación: un modal y escritor común para uno o varios ingresos,
+Implementado en el PR #517: un modal y escritor común para uno o varios ingresos,
 participaciones globales, diferencia con deducciones proporcionales y saldos
 reprogramados, IVA heredado y revisión de correos dentro del modal. Incluye
 corrección y reversa integrales. Ver `docs/accounting-settlement.md`.
