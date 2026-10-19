@@ -1,17 +1,40 @@
 <template>
   <div data-testid="secure-links-page">
-    <div class="mb-6 flex flex-col items-start gap-3 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-between">
+    <div class="mb-6 flex flex-col items-start gap-3 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-between" data-testid="secure-links-header">
       <div class="min-w-0">
         <h1 class="text-2xl font-light text-text-default">Enlaces seguros</h1>
-        <p class="mt-1 text-sm text-text-subtle">
+        <p class="mt-1 text-sm text-text-subtle" data-testid="secure-links-description">
           Enlaces de un solo uso para compartir contraseñas, llaves y datos confidenciales. El contenido queda guardado y cifrado; el enlace se puede reactivar.
         </p>
       </div>
       <div class="flex flex-wrap gap-2">
-        <BaseButton variant="secondary" size="sm" data-testid="secure-links-copy-public" @click="copyPublicUrl">
-          <BaseActionIcon action="copy" />
-          {{ publicFeedback.label || 'Enlace para clientes' }}
-        </BaseButton>
+        <BaseTooltip
+          :text="publicFeedback.label"
+          :disabled="!publicFeedback.label"
+          :force-open="Boolean(publicFeedback.label)"
+          :toggle-on-click="false"
+          :background-color="publicFeedback.tone === 'success' ? 'bg-success-soft' : 'bg-danger-soft'"
+          :textColor="publicFeedback.tone === 'success' ? 'text-success-strong' : 'text-danger-strong'"
+          root-class="inline-flex min-w-0"
+          trigger-class=""
+          width="w-max max-w-xs"
+          min-width="min-w-0"
+          floating
+        >
+          <template #trigger="{ tooltipId }">
+            <BaseButton
+              variant="secondary"
+              size="sm"
+              :aria-describedby="publicFeedback.label ? tooltipId : undefined"
+              data-testid="secure-links-copy-public"
+              @click="copyPublicUrl"
+            >
+              <BaseActionIcon :action="publicFeedback.tone === 'success' ? 'complete' : 'copy'" />
+              {{ t('secureLinks.panel.publicLink') }}
+            </BaseButton>
+          </template>
+        </BaseTooltip>
+        <span class="sr-only" role="status" aria-live="polite" aria-atomic="true" data-testid="secure-links-copy-status">{{ publicFeedback.label }}</span>
         <BaseButton variant="primary" size="sm" data-testid="secure-links-new" @click="openCreate">
           Nuevo enlace
         </BaseButton>
@@ -164,6 +187,7 @@ import BaseInput from '~/components/base/BaseInput.vue';
 import BaseModal from '~/components/base/BaseModal.vue';
 import BaseRowActionsModal from '~/components/base/BaseRowActionsModal.vue';
 import BaseSegmented from '~/components/base/BaseSegmented.vue';
+import BaseTooltip from '~/components/base/BaseTooltip.vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import SecureLinkDetailModal from '~/components/secureLinks/SecureLinkDetailModal.vue';
 import SecureLinkFormModal from '~/components/secureLinks/SecureLinkFormModal.vue';
@@ -339,7 +363,16 @@ async function copyTo(key, text, successLabel) {
 }
 
 function copyPublicUrl() {
-  return copyTo('secure-links-public', store.publicCreateUrl, 'Copiado: página para clientes');
+  return clipboard.copyText({
+    key: 'secure-links-public',
+    text: store.publicCreateUrl,
+    successLabel: t('secureLinks.panel.publicLinkCopied'),
+    errorLabel: t('secureLinks.panel.publicLinkCopyFailed'),
+    onError: () => notify.error({
+      title: t('secureLinks.panel.publicLinkCopyFailed'),
+      detail: t('secureLinks.panel.publicLinkCopyRetry'),
+    }),
+  });
 }
 
 async function copyRowUrl(row) {

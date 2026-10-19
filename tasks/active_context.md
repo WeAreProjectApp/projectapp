@@ -1,3 +1,16 @@
+# Enlaces seguros — confirmación de copia sin redistribuir el encabezado (2026-10-19)
+
+«Enlace para clientes» conserva su texto; sólo tras confirmar la escritura en
+el portapapeles muestra el check canónico y «Copiado» flotante durante 2 s.
+Una región viva anuncia el resultado sin cambiar el nombre accesible del botón.
+El error dura 3 s, conserva el icono de copiar y permite reintentar. Se reutilizan
+los primitives existentes y se traducen los mensajes afectados a ES/EN.
+La regresión focal mide encabezado, botones, descripción, pestañas y fila en los
+cinco perfiles del panel y cubre copia pendiente, fallo, reintento, clics
+consecutivos, teclado y movimiento reducido. La revisión del resto del panel
+queda en `docs/audits/secure-link-copy-feedback-2026-10-19.md`; esos candidatos
+no se modifican en esta tarea. Sin cambios de API ni nuevas capacidades del mapa.
+
 # Building on Demand — 2026-10-10
 
 Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
