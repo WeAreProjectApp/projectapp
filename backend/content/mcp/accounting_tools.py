@@ -22,6 +22,9 @@ Guardrails (mirror the panel):
 
 Each entry: {'name', 'description', 'input_schema', 'handler'}.
 """
+from copy import deepcopy
+from django.core.exceptions import ValidationError as DjangoValidationError
+
 from accounts.models import Project
 from content.mcp.actor import mcp_actor
 from content.mcp.context import current_mcp_context
@@ -32,6 +35,7 @@ from content.models import (
     AccountingSettings,
     ExpenseRecord,
     IncomeRecord,
+    IncomeSettlement,
 )
 from content.serializers.accounting import (
     AccountingChangeLogSerializer,
@@ -52,7 +56,9 @@ from content.services import (
     accounting_service,
     accounting_settlement_service,
     income_payment_confirmation_service,
+    income_settlement_operation_service,
 )
+from content.services.income_settlement_confirmation_service import confirm_operation
 from content.utils import today_bogota
 from content.views.accounting import (
     EntityType,
@@ -415,6 +421,7 @@ def settle_income(arguments):
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
     return {
+        'settlement_id': result['settlement_id'],
         'income': IncomeRecordSerializer(result['income']).data,
         'liquid': (
             IncomeRecordSerializer(result['liquid']).data
@@ -427,7 +434,8 @@ def settle_income(arguments):
         # The tool runs inside the MCP transaction: the email waits for its
         # commit, so the result can only say it was scheduled.
         'payment_confirmation': (
-            income_payment_confirmation_service.schedule_confirmation(result, data)
+            {'status': 'already_registered', 'requested': False} if result.get('replayed')
+            else income_payment_confirmation_service.schedule_confirmation(result, data)
         ),
     }
 
@@ -464,6 +472,8 @@ def bulk_settle_incomes(arguments):
     serializer = IncomeBulkSettlementSerializer(data=arguments)
     if not serializer.is_valid():
         raise ToolError(_serializer_errors_to_message(serializer.errors))
+    if serializer.validated_data.get('send_payment_confirmation'):
+        _require_confirmed_client_email()
     try:
         result = accounting_settlement_service.bulk_settle_expected_incomes(
             serializer.validated_data, mcp_actor(),
@@ -480,7 +490,9 @@ def bulk_settle_incomes(arguments):
     return {
         'updated': len(result['incomes']),
         'results': IncomeRecordSerializer(records, many=True).data,
-        'movement': PocketMovementSerializer(result['movement']).data,
+        'movement': PocketMovementSerializer(result['movement']).data if result['movement'] else None,
+        'settlement_id': result['settlement_id'],
+        'payment_confirmations': confirm_operation(result, serializer.validated_data, schedule=True),
     }
 
 
@@ -916,6 +928,8 @@ _RECORD_ID_PROP = {'record_id': {'type': 'integer', 'description': 'ID del regis
 
 _SETTLEMENT_PROPS = {
     **_RECORD_ID_PROP,
+    'preview_hash': {'type': 'string', 'description': 'Huella de preview_income_settlement; rechaza saldos o destinatarios cambiados.'},
+    'request_id': {'type': 'string', 'format': 'uuid', 'description': 'Identidad de reintento de la misma liquidación; no reutilizar con otros datos.'},
     'concept': {'type': 'string', 'description': 'Concepto del pago recibido.'},
     'period_date': {'type': 'string', 'description': 'Fecha o período del pago (YYYY-MM-DD o YYYY-MM).'},
     'destination': {'type': 'string', 'enum': ['partners', 'pocket'], 'default': 'partners'},
@@ -1057,7 +1071,7 @@ _ABONO_PROPS = {
             'additionalProperties': False,
             'properties': {
                 'income_id': {'type': 'integer', 'minimum': 1, 'description': 'ID del ingreso esperado de empresa.'},
-                'amount': {'type': ['number', 'string'], 'description': 'Importe positivo en COP, con máximo dos decimales.'},
+                'amount': {'type': ['number', 'string'], 'description': 'Importe recibido en COP, con máximo dos decimales; puede ser cero al resolver diferencias.'},
             },
             'required': ['income_id', 'amount'],
         },
@@ -1066,6 +1080,79 @@ _ABONO_PROPS = {
     'total_amount': {'type': ['number', 'string'], 'description': 'Valor recibido en COP. Debe cubrir la suma imputada; el excedente es saldo a favor del mismo cliente.'},
     'period_date': {'type': 'string', 'description': 'Fecha o período del abono.'},
     'notes': {'type': 'string', 'description': 'Nota opcional del abono; al corregir, omitirla deja la nota vacía.'},
+}
+
+
+# Both adapters publish the same adjustment vocabulary. Tax remains inherited:
+# there is deliberately no independent VAT override on a payment.
+_ABONO_PROPS.update({key: deepcopy(_SETTLEMENT_PROPS[key]) for key in (
+    'destination', 'gustavo_amount', 'carlos_amount', 'deductions',
+    'send_payment_confirmation', 'preview_hash', 'request_id',
+)})
+_ABONO_PROPS['destination']['default'] = 'pocket'
+_ABONO_PROPS['income_ids'] = {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 500, 'description': 'Ingresos seleccionados. Si omites allocations, propone cobertura más antigua primero y deducciones proporcionales.'}
+_ABONO_PROPS['expected_incomes'] = deepcopy(_SETTLEMENT_PROPS['expected_incomes'])
+_ABONO_PROPS['expected_incomes']['items']['properties']['income_id'] = {'type': 'integer', 'minimum': 1}
+_ABONO_PROPS['expected_incomes']['items']['required'].append('income_id')
+_ABONO_PROPS['periods'] = {'type': 'array', 'items': deepcopy(_SETTLEMENT_PROPS['period'])}
+_ABONO_PROPS['periods']['items']['type'] = 'object'
+_ABONO_PROPS['periods']['items']['properties']['income_id'] = {'type': 'integer', 'minimum': 1}
+_ABONO_PROPS['periods']['items']['required'].append('income_id')
+_ABONO_PROPS['confirmation_income_ids'] = {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'description': 'Subconjunto de ingresos cuyo correo se solicita; sin esta lista, todos los elegibles.'}
+
+
+def _settlement_data(arguments):
+    serializer = IncomeBulkSettlementSerializer(data=arguments)
+    if not serializer.is_valid():
+        raise ToolError(_serializer_errors_to_message(serializer.errors))
+    return serializer.validated_data
+
+
+def preview_income_settlement(arguments):
+    try:
+        return income_settlement_operation_service.preview_settlement(_settlement_data(arguments))
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+def _settlement_instance(arguments):
+    try:
+        return IncomeSettlement.objects.get(pk=arguments.get('settlement_id'))
+    except (IncomeSettlement.DoesNotExist, DjangoValidationError, ValueError, TypeError) as exc:
+        raise ToolError('No existe la liquidación indicada.') from exc
+
+
+def get_income_settlement(arguments):
+    return income_settlement_operation_service.settlement_payload(_settlement_instance(arguments))
+
+
+def update_income_settlement(arguments):
+    if arguments.get('send_payment_confirmation'):
+        raise ToolError('Corregir la liquidación no envía confirmaciones de pago al cliente.')
+    operation = _settlement_instance(arguments)
+    try:
+        result = income_settlement_operation_service.update_settlement(operation.pk, _settlement_data(arguments), mcp_actor(), arguments['revision'])
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return income_settlement_operation_service.settlement_payload(result['settlement'])
+
+
+def reverse_income_settlement(arguments):
+    operation = _settlement_instance(arguments)
+    try:
+        result = income_settlement_operation_service.reverse_settlement(operation.pk, mcp_actor(), arguments['revision'])
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+    return income_settlement_operation_service.settlement_payload(result)
+
+
+def _grouped_settlement_impact(arguments):
+    return {'summary': 'Liquidar uno o varios ingresos con sus ajustes.', 'settlement': preview_income_settlement(arguments)}
+
+
+_SETTLEMENT_ID_PROPS = {
+    'settlement_id': {'type': 'string', 'format': 'uuid'},
+    'revision': {'type': 'integer', 'minimum': 1},
 }
 
 
@@ -1124,15 +1211,16 @@ _NON_CRUD_TOOLS = close_root_schemas([
         'area': 'ledger',
         'description': (
             'Distribuye un único abono real entre uno o varios ingresos esperados, sin cuenta emitida. '
-            'Crea un solo movimiento de bolsillo; cualquier excedente queda como '
+            'Admite deducciones proporcionales, reparto global, saldos reprogramados y destino socios o bolsillo. Crea un solo movimiento al elegir bolsillo; cualquier excedente queda como '
             'saldo a favor cuando todos los ingresos pertenecen al mismo cliente.'
         ),
         'input_schema': {
             'type': 'object',
             'properties': _ABONO_PROPS,
-            'required': ['allocations', 'total_amount', 'period_date'],
+            'required': ['total_amount', 'period_date'],
         },
         'handler': bulk_settle_incomes,
+        'impact_builder': _grouped_settlement_impact,
     },
     {
         'name': 'update_income_abono',
@@ -1161,6 +1249,30 @@ _NON_CRUD_TOOLS = close_root_schemas([
         ),
         'input_schema': {'type': 'object', 'properties': _RECORD_ID_PROP, 'required': ['record_id']},
         'handler': delete_income_abono,
+    },
+    {
+        'name': 'preview_income_settlement', 'area': 'ledger',
+        'description': 'Calcula sin escribir el reparto, deducciones, IVA heredado, saldos y destinatarios de la liquidación.',
+        'input_schema': closed_object(_ABONO_PROPS, required=['total_amount', 'period_date']),
+        'handler': preview_income_settlement,
+    },
+    {
+        'name': 'get_income_settlement', 'area': 'ledger',
+        'description': 'Consulta una liquidación completa por su UUID, incluso sin movimiento de bolsillo.',
+        'input_schema': closed_object({'settlement_id': _SETTLEMENT_ID_PROPS['settlement_id']}, required=['settlement_id']),
+        'handler': get_income_settlement,
+    },
+    {
+        'name': 'update_income_settlement', 'area': 'ledger', 'risk': 'sensitive',
+        'description': 'Corrige juntos el dinero, deducciones y saldos reprogramados. Exige revisión actual; bloquea derivados con pagos o documentos vigentes. No reenvía correos al cliente.',
+        'input_schema': closed_object({**_ABONO_PROPS, **_SETTLEMENT_ID_PROPS}, required=['settlement_id', 'revision', 'total_amount', 'period_date']),
+        'handler': update_income_settlement,
+    },
+    {
+        'name': 'reverse_income_settlement', 'area': 'ledger', 'risk': 'sensitive',
+        'description': 'Revierte todos los efectos de una liquidación, conservando su historial. Bloquea pagos o documentos posteriores en saldos reprogramados.',
+        'input_schema': closed_object(_SETTLEMENT_ID_PROPS, required=['settlement_id', 'revision']),
+        'handler': reverse_income_settlement,
     },
     {
         'name': 'list_change_logs',

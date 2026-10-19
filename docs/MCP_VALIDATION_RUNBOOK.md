@@ -2686,3 +2686,14 @@ con su saldo y sus documentos. `IncomeCompletionNotice` conserva el evento
 interno de envío y queda excluido del CRUD MCP: lo crea la operación financiera
 y su reintento se controla desde el Historial, para evitar avisos manuales
 duplicados o cambios independientes del pago.
+
+## Liquidación unificada (2026-10-19)
+
+Validar `preview_income_settlement` sin escrituras; `bulk_settle_incomes` con
+`income_ids`, deducciones proporcionales, participaciones globales y destino;
+consultar `get_income_settlement`; corregir con la revisión actual mediante
+`update_income_settlement` y revertir con `reverse_income_settlement`. Conservar
+los contratos de `settle_income`, `update_income_abono` y `delete_income_abono`.
+Los correos requieren la confirmación sensible del conector y se programan tras
+el commit. Una reversa con pagos o documentos en el saldo derivado debe fallar
+sin alterar dinero ni gastos. Los campos `settlement` son de lectura, no CRUD.

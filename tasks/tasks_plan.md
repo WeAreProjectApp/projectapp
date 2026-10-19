@@ -757,3 +757,10 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 Estado al planificar: implementación y QA en el worktree propio; la reparación
 de producción aún no aplicada. El acceso SSH requiere autenticación Tailscale
 adicional. No generar ni emitir cuentas, alterar importes ni borrar propuestas.
+
+## Liquidación unificada (2026-10-19)
+
+En implementación: un modal y escritor común para uno o varios ingresos,
+participaciones globales, diferencia con deducciones proporcionales y saldos
+reprogramados, IVA heredado y revisión de correos dentro del modal. Incluye
+corrección y reversa integrales. Ver `docs/accounting-settlement.md`.

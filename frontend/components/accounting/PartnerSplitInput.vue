@@ -10,10 +10,10 @@
       <span class="text-sm text-text-default">Reparto automático 50/50</span>
     </div>
 
-    <div :class="compact && !showVat ? 'grid grid-cols-1 panel-portrait:grid-cols-3 gap-3' : 'space-y-4'">
-      <VatAmountInput v-if="showVat" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
+    <div :class="compact && !showVat ? (hideTotal ? 'grid grid-cols-1 panel-portrait:grid-cols-2 gap-3' : 'grid grid-cols-1 panel-portrait:grid-cols-3 gap-3') : 'space-y-4'">
+      <VatAmountInput v-if="showVat && !hideTotal" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
         @update:model-value="onTotalInput" @update:rate="emit('update:vatRate', $event)" @capture="emit('vatCapture', $event)" />
-      <div v-else>
+      <div v-else-if="!hideTotal">
         <label class="block text-xs font-medium text-text-muted mb-1">Valor total</label>
         <BaseCurrencyInput
           :model-value="total"
@@ -80,6 +80,7 @@ import { formatMoney } from '~/utils/formatMoney';
 
 const props = defineProps({
   compact: { type: Boolean, default: false },
+  hideTotal: { type: Boolean, default: false },
   showVat: { type: Boolean, default: false },
   vatRate: { type: [Number, String], default: null },
   vatResetKey: { type: [Boolean, Number, String], default: null },
@@ -141,7 +142,7 @@ function onToggleAuto(value) {
 watch(
   () => props.total,
   (value) => {
-    if (!autoSplit.value || isBlank(value)) return;
+    if (!autoSplit.value) return;
     if (!isAutoSplit(value, props.gustavoAmount, props.carlosAmount)) emitSplit(value);
   },
   { immediate: true },

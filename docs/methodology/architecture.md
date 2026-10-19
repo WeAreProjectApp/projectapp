@@ -1,4 +1,9 @@
 > **Building on Demand — 2026-10-10:** `/building-on-demand` presenta una célula
+
+> **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
+> para uno o varios ingresos, con deducciones proporcionales, reparto global,
+> IVA heredado y corrección/reversa del conjunto. Migración aditiva `content.0293`;
+> decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
 > Scrum compartida por bolsa mensual de horas; `/panel/cells` (Células) reúne
 > Programa, Economía y Contrato de solo lectura. El programa conserva revisiones
 > inmutables con textos ES/EN, oferta numérica y economía privada; el backend

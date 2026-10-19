@@ -311,10 +311,15 @@ MCP_MODEL_CONTRACTS = {
     ),
     'accounting': (
         _contract(
+            'content.IncomeSettlement',
+            read_only='id status revision pocket_movement input_snapshot effects created_at updated_at',
+            excluded=_excluded(_AUDIT_INTERNAL, 'created_by revisions'),
+        ),
+        _contract(
             'content.IncomeRecord',
             read_only=(
                 'id created_at updated_at pocket_movement reminder_target_date '
-                'reminder_last_sent_at reminder_count'
+                'reminder_last_sent_at reminder_count settlement'
             ),
             read_write=(
                 'vat_rate '
@@ -329,7 +334,7 @@ MCP_MODEL_CONTRACTS = {
         _contract(
             'content.ExpenseRecord',
             read_only=(
-                'id created_at updated_at deduction_type source_income pocket_movement'
+                'id created_at updated_at deduction_type source_income pocket_movement settlement'
             ),
             read_write=(
                 'vat_rate '

@@ -584,24 +584,14 @@
       @duplicate="duplicateIncome"
     />
 
-    <!-- Liquidate modal: settles an expected income into a linked liquid one -->
+    <!-- A single form owns individual and grouped settlements. -->
     <IncomeLiquidateModal
-      :open="isLiquidateModalOpen"
-      :record="liquidatingRecord"
-      :saving="store.isUpdating"
-      @close="closeLiquidateModal"
-      @submit="handleLiquidateSubmit"
-    />
-
-    <!-- Abono: one payment distributed across the selected expected incomes -->
-    <IncomeBulkSettleModal
       :open="bulkSettleOpen"
       :records="bulkSettleRecords"
       :excluded-count="bulkSettleExcluded"
       :saving="store.isUpdating"
       @close="closeBulkSettle"
       @submit="handleBulkSettleSubmit"
-      @advanced="confirmAdvancedSettlement"
     />
 
     <IncomeMuteModal
@@ -668,7 +658,6 @@ import IncomeFormModal from '~/components/accounting/IncomeFormModal.vue';
 import IncomeClientTotalsModal from '~/components/accounting/IncomeClientTotalsModal.vue';
 import IncomeGroupedTable from '~/components/accounting/IncomeGroupedTable.vue';
 import BulkAssignBar from '~/components/accounting/BulkAssignBar.vue';
-import IncomeBulkSettleModal from '~/components/accounting/IncomeBulkSettleModal.vue';
 import IncomeLiquidateModal from '~/components/accounting/IncomeLiquidateModal.vue';
 import ProjectAssignUnlinkedModal from '~/components/panel/projects/ProjectAssignUnlinkedModal.vue';
 import ProjectSpaceLink from '~/components/panel/projects/ProjectSpaceLink.vue';
@@ -702,7 +691,6 @@ import { formatDate } from '~/utils/formatDate';
 import { formatMoney } from '~/utils/formatMoney';
 import { historySendsLink } from '~/utils/historyDeepLink';
 import {
-  paymentConfirmationDetail,
   paymentConfirmationWarning,
 } from '~/utils/paymentConfirmation';
 import { PANEL_BREAKPOINTS } from '~/config/responsive';
@@ -1315,63 +1303,15 @@ const incomeRowTone = (row) => {
 // Row actions: liquidate an expected income / write it off
 // -------------------------------------------------------------------
 
-const isLiquidateModalOpen = ref(false);
-const liquidatingRecord = ref(null);
-
 function openLiquidateModal(record) {
   const reason = settlementBlockedReason(record);
   if (reason) {
     notify.error({ title: 'No se puede liquidar el ingreso', detail: reason });
     return;
   }
-  if (record.ledger === 'company') {
-    openBulkSettle({ ids: [record.id], excludedCount: 0 });
-  } else {
-    openAdvancedSettlement(record);
-  }
-}
-
-function openAdvancedSettlement(record) {
-  liquidatingRecord.value = record;
-  isLiquidateModalOpen.value = true;
-}
-
-function confirmAdvancedSettlement(record) {
-  requestConfirm({
-    title: 'Liquidación con ajustes',
-    message: 'Se abrirá un formulario nuevo para deducciones y reprogramación. El valor, la fecha y las notas se reiniciarán; todavía no se registrará el abono.',
-    confirmText: 'Abrir ajustes',
-    cancelText: 'Volver al abono',
-    onConfirm: () => {
-      closeBulkSettle();
-      openAdvancedSettlement(record);
-    },
-  });
-}
-
-function closeLiquidateModal() {
-  isLiquidateModalOpen.value = false;
-  liquidatingRecord.value = null;
-}
-
-async function handleLiquidateSubmit(payload) {
-  const incomeId = liquidatingRecord.value?.id;
-  const result = await runMutation(
-    () => store.settleIncome(incomeId, payload),
-    {
-      successTitle: 'Ingreso liquidado',
-      successDetail: (r) => paymentConfirmationDetail(r.data?.payment_confirmation),
-      errorTitle: 'No se pudo liquidar',
-      // Flash the expected row: it is the one whose state just changed.
-      flashId: incomeId,
-    },
-  );
-  if (!result.success) return;
-  closeLiquidateModal();
-  // The settlement stands; a confirmation that did not go out is a warning
-  // of its own, pointing at the history when it can be retried there.
-  const warning = paymentConfirmationWarning(result.data?.payment_confirmation, incomeId);
-  if (warning) notify.warning(warning);
+  bulkSettleRecords.value = [record];
+  bulkSettleExcluded.value = 0;
+  bulkSettleOpen.value = true;
 }
 
 function confirmWriteOff(record) {
@@ -1625,7 +1565,7 @@ async function handleBulkSettleSubmit(payload) {
   // from the payload. Full covers flash nothing — flashing one of N
   // equally-changed rows would mislead.
   const byId = new Map(bulkSettleRecords.value.map((row) => [row.id, row]));
-  const partial = payload.allocations.find((entry) => {
+  const partial = payload.allocations?.find((entry) => {
     const row = byId.get(entry.income_id);
     return row && entry.amount < Number(row.pending_amount);
   });
@@ -1639,6 +1579,10 @@ async function handleBulkSettleSubmit(payload) {
     },
   );
   if (result.success) {
+    for (const confirmation of result.data?.payment_confirmations ?? []) {
+      const warning = paymentConfirmationWarning(confirmation, confirmation.income_id);
+      if (warning) notify.warning(warning);
+    }
     closeBulkSettle();
     clearSelection();
     return;

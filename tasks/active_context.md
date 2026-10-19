@@ -1,5 +1,15 @@
 # Building on Demand — 2026-10-10
 
+# Liquidación unificada de ingresos (2026-10-19, en implementación)
+
+Una misma operación cubrirá uno o varios ingresos con participaciones globales,
+deducciones proporcionales, saldos pendientes o reprogramados y desglose de IVA
+heredado. La revisión del correo se hará dentro del modal. Se conserva la
+liquidación sin cuenta emitida y el aviso interno al completarse el ingreso.
+La operación tendrá identidad y efectos trazables para corregir o revertir el
+conjunto sin dejar deducciones ni saldos huérfanos. Antecedentes y decisiones:
+`docs/accounting-settlement.md`.
+
 Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
 público ES/EN en `/building-on-demand`, con entrada desde el footer, y panel
 Comercial › Células en `/panel/cells`. La presentación compara Starter, Business

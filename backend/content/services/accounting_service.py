@@ -600,6 +600,15 @@ def update_record(entity_type, instance, serializer, user, notify=True):
 
     See ``create_record`` for why ``notify=False`` exists.
     """
+    if getattr(instance, 'settlement_id', None) and not serializer.context.get('settlement'):
+        financial = set(serializer.validated_data) - {'notes', 'concept'}
+        if financial:
+            raise ValueError('Este registro pertenece a una liquidación. Corrige la liquidación completa para cambiar sus condiciones financieras.')
+    if entity_type == EntityType.POCKET:
+        from content.models import IncomeSettlement
+        if IncomeSettlement.objects.filter(pocket_movement=instance, status='active').exists():
+            if any(name in serializer.validated_data and serializer.validated_data[name] != getattr(instance, name) for name in ('amount', 'direction', 'movement_date')):
+                raise ValueError('Corrige el abono completo para cambiar el valor o la fecha de este movimiento.')
     expected = None
     was_paid = False
     previous_expected = None
@@ -1149,6 +1158,15 @@ def delete_record(entity_type, instance, user):
     rejected instead of cascading, because the movement's amount is the sum
     of its children and must not shrink over a partial delete.
     """
+    if entity_type == EntityType.POCKET:
+        from content.models import IncomeSettlement
+        from content.services.income_settlement_operation_service import reverse_settlement
+        operation = IncomeSettlement.objects.filter(pocket_movement=instance, status='active').first()
+        if operation:
+            reverse_settlement(operation.pk, user)
+            return
+    if getattr(instance, 'settlement_id', None):
+        raise ValueError('Este registro pertenece a una liquidación. Corrige o revierte la liquidación completa.')
     if entity_type == EntityType.RECURRING and not instance.is_archived:
         raise ProposalActionError(
             'Un pago recurrente vigente no se puede eliminar definitivamente.',

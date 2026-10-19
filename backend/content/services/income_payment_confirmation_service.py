@@ -113,7 +113,10 @@ def _recipient_problem(recipient):
     return ''
 
 
-def confirmation_context(income):
+_CONTEXT_UNSET = object()
+
+
+def confirmation_context(income, *, account=_CONTEXT_UNSET, pending=_CONTEXT_UNSET):
     """Who would receive the confirmation, or why it cannot go. Read-only.
 
     The single source for the panel's checkbox and last notice, the send
@@ -139,12 +142,16 @@ def confirmation_context(income):
         context['blocked_reason'] = NO_CLIENT_REASON
         return context
     context['client_name'] = build_client_display_name(income.client)
-    context['rescheduled_pending'] = money_str(rescheduled_pending(income))
-    account = issued_collection_account(income)
+    context['rescheduled_pending'] = money_str(rescheduled_pending(income) if pending is _CONTEXT_UNSET else pending)
+    if account is _CONTEXT_UNSET:
+        account = issued_collection_account(income)
     if account is None:
         context['blocked_reason'] = MISSING_ACCOUNT_REASON
         return context
-    extension = account.collection_account
+    extension = getattr(account, 'collection_account', None)
+    if extension is None:
+        context['blocked_reason'] = 'La cuenta emitida no tiene los datos de destinatario. La liquidación puede registrarse sin correo.'
+        return context
     recipient = (extension.customer_email or '').strip()
     context.update({
         'recipient': recipient,
@@ -159,6 +166,49 @@ def confirmation_context(income):
     context['blocked_reason'] = problem
     context['can_send'] = not problem
     return context
+
+
+def confirmation_contexts(incomes):
+    """Resolve related rows once per group, keeping the individual resolver.
+
+    A grouped preview must not issue one account/profile query per income.
+    Follow-up ancestry is traversed by depth, rather than by selected root.
+    """
+    from content.models import Document
+    from content.services.accounting_service import paid_amount_subquery
+
+    records = list(IncomeRecord.objects.filter(pk__in=[row.pk for row in incomes])
+                   .select_related('client__user', 'project'))
+    by_id = {row.pk: row for row in records}
+    accounts = {}
+    documents = (Document.objects.filter(income_record_id__in=by_id,
+                 document_type__code='collection_account', commercial_status__in=('issued', 'paid'))
+                 .select_related('collection_account').order_by('-created_at', '-pk'))
+    for document in documents:
+        income = by_id[document.income_record_id]
+        if income.client_id and document.project_id == income.project_id and document.client_user_id == income.client.user_id:
+            accounts.setdefault(income.pk, document)
+    totals = {row.pk: Decimal('0') for row in records}
+    owners = {row.pk: {row.pk} for row in records if row.client_id}
+    seen = {(pk, pk) for pk in owners}
+    frontier = set(owners)
+    for _ in range(MAX_FOLLOW_UP_DEPTH):
+        if not frontier:
+            break
+        references = {f'income:{pk}:settlement': pk for pk in frontier}
+        descendants = (IncomeRecord.objects.filter(source_ref__in=references, kind='expected')
+                       .annotate(paid_amount=paid_amount_subquery())
+                       .values_list('pk', 'source_ref', 'total_amount', 'paid_amount'))
+        following = set()
+        for pk, reference, total, paid in descendants:
+            for root in tuple(owners[references[reference]]):
+                if (root, pk) not in seen:
+                    seen.add((root, pk))
+                    totals[root] += max(total - paid, Decimal('0'))
+                    owners.setdefault(pk, set()).add(root)
+                    following.add(pk)
+        frontier = following
+    return {row.pk: confirmation_context(row, account=accounts.get(row.pk), pending=totals[row.pk]) for row in records}
 
 
 # Every fact the email states; the log's metadata stores exactly these, next

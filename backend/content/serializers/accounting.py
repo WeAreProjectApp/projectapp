@@ -262,7 +262,7 @@ class IncomeRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSer
             'is_receivable_candidate', 'collection_confidence',
             'collection_confidence_label',
             'total_amount', 'gustavo_amount', 'carlos_amount', 'company_amount',
-            'expected_income', 'pocket_movement',
+            'expected_income', 'pocket_movement', 'settlement',
             'paid_amount', 'pending_amount',
             'payment_status', 'payment_status_label',
             'has_collection_account', 'collection_account_id',
@@ -805,6 +805,8 @@ class IncomeSettlementSerializer(serializers.Serializer):
     send_payment_confirmation = serializers.BooleanField(
         required=False, default=False,
     )
+    preview_hash = serializers.CharField(required=False, max_length=64)
+    request_id = serializers.UUIDField(required=False)
 
     def validate(self, data):
         # FlexiblePeriodField stores a month-only period as day 1, which an
@@ -821,8 +823,16 @@ class SettlementAllocationSerializer(serializers.Serializer):
 
     income_id = serializers.IntegerField(min_value=1)
     amount = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal('0.01'),
+        max_digits=14, decimal_places=2, min_value=Decimal('0'),
     )
+
+
+class SettlementLinkedFollowUpSerializer(SettlementFollowUpSerializer):
+    income_id = serializers.IntegerField(min_value=1)
+
+
+class SettlementLinkedPeriodSerializer(SettlementPeriodSerializer):
+    income_id = serializers.IntegerField(min_value=1)
 
 
 class IncomeBulkSettlementSerializer(serializers.Serializer):
@@ -835,22 +845,47 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
     ``accounting_settlement_service.bulk_settle_expected_incomes``.
     """
 
-    allocations = SettlementAllocationSerializer(many=True, allow_empty=False)
+    allocations = SettlementAllocationSerializer(many=True, allow_empty=False, required=False)
+    income_ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1), allow_empty=False,
+        max_length=500, required=False,
+    )
     total_amount = serializers.DecimalField(
-        max_digits=14, decimal_places=2, min_value=Decimal('0.01'),
+        max_digits=14, decimal_places=2, min_value=Decimal('0'),
     )
     period_date = FlexiblePeriodField()
     notes = serializers.CharField(required=False, allow_blank=True)
+    destination = serializers.ChoiceField(
+        choices=IncomeRecord.Destination.choices, default=IncomeRecord.Destination.POCKET,
+    )
+    gustavo_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0'), required=False)
+    carlos_amount = serializers.DecimalField(max_digits=14, decimal_places=2, min_value=Decimal('0'), required=False)
+    deductions = SettlementDeductionSerializer(many=True, required=False)
+    expected_incomes = SettlementLinkedFollowUpSerializer(many=True, required=False)
+    periods = SettlementLinkedPeriodSerializer(many=True, required=False)
+    send_payment_confirmation = serializers.BooleanField(required=False, default=False)
+    confirmation_income_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
+    preview_hash = serializers.CharField(required=False, max_length=64)
+    request_id = serializers.UUIDField(required=False)
 
     def validate(self, data):
-        ids = [entry['income_id'] for entry in data['allocations']]
+        allocations = data.get('allocations')
+        ids = data.get('income_ids') or [entry['income_id'] for entry in allocations or []]
+        if not ids:
+            raise serializers.ValidationError({'income_ids': 'Selecciona al menos un ingreso.'})
         if len(ids) != len(set(ids)):
             raise serializers.ValidationError({
                 'allocations': 'Hay ingresos repetidos en la distribución.',
             })
-        allocated = sum(
-            (entry['amount'] for entry in data['allocations']), Decimal('0'),
-        )
+        allocation_ids = [entry['income_id'] for entry in allocations or []]
+        if len(allocation_ids) != len(set(allocation_ids)) or set(allocation_ids) - set(ids):
+            raise serializers.ValidationError({'allocations': 'El reparto contiene ingresos repetidos o fuera de la selección.'})
+        for field in ('expected_incomes', 'periods'):
+            if any(entry['income_id'] not in ids for entry in data.get(field, [])):
+                raise serializers.ValidationError({field: 'El ingreso de origen no está seleccionado.'})
+        if set(data.get('confirmation_income_ids', [])) - set(ids):
+            raise serializers.ValidationError({'confirmation_income_ids': 'El correo contiene ingresos fuera de la selección.'})
+        allocated = sum((entry['amount'] for entry in allocations or []), Decimal('0'))
         # Less than the total is legal: the difference becomes the client's
         # saldo a favor (a parentless liquid child on the same movement).
         if allocated > data['total_amount']:
@@ -860,6 +895,11 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
                     'recibido.'
                 ),
             })
+        if data['total_amount'] <= 0 and not (data.get('deductions') or data.get('expected_incomes')):
+            raise serializers.ValidationError({'total_amount': 'El monto recibido debe ser mayor a cero.'})
+        raw = self.initial_data.get('period_date')
+        data['period_date_precision'] = 'month' if isinstance(raw, str) and MONTH_PERIOD_RE.match(raw.strip()) else 'day'
+        data['income_ids'] = ids
         return data
 
 
@@ -965,7 +1005,7 @@ class ExpenseRecordSerializer(VatReadMixin, PeriodReadMixin, serializers.ModelSe
             'deduction_type', 'deduction_type_label',
             'source_income', 'source_income_concept',
             'total_amount', 'gustavo_amount', 'carlos_amount', 'company_amount',
-            'pocket_movement',
+            'pocket_movement', 'settlement',
             'notes', 'created_at', 'updated_at',
         )
 

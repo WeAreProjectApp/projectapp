@@ -117,6 +117,10 @@ class IncomeRecord(RetainedProjectModel, VatBreakdownMixin, PartnerSplitMixin, A
         related_name='liquid_records',
         limit_choices_to={'kind': 'expected'},
     )
+    settlement = models.ForeignKey(
+        'content.IncomeSettlement', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='incomes',
+    )
     # Auto-managed by accounting_service when kind=liquid and destination=pocket.
     # A ForeignKey (not OneToOne) since the abono flow: one pocket movement may
     # cover several expected incomes, materialized as N liquid children sharing

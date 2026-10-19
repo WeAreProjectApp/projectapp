@@ -1,4 +1,9 @@
 > **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
+
+> **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
+> para uno o varios ingresos, con deducciones proporcionales, reparto global,
+> IVA heredado y corrección/reversa del conjunto. Migración aditiva `content.0293`;
+> decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
 > y su PDF comparten los valores derivados por el servidor; la siembra del
 > programa está en `content.0291_building_on_demand_program`. Los GET
 > administrativos usan sesión/CSRF e `IsAdminUser`; `stores/building_on_demand.js`
