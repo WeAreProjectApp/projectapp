@@ -21,13 +21,19 @@ def _credential(connector, label='Legacy consumer', *, catalog='legacy', migrate
 
 
 def _ready_connector(now):
-    connector = McpConnector.objects.create(
-        slug='blog', name='Blog compatibility', is_active=True,
-        migration_started_at=now - timedelta(days=31), consumers_verified_at=now,
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='blog',
+        defaults={
+            'name': 'Blog compatibility', 'is_active': True,
+            'migration_started_at': now - timedelta(days=31), 'consumers_verified_at': now,
+            'retired_at': None, 'aliases_retired_at': None,
+        },
     )
+    connector.credentials.all().delete()
     credential = _credential(connector, migrated_at=now)
-    McpObservation.objects.create(
-        key='migration', continuous_since=now - timedelta(days=15), heartbeat_at=now,
+    McpObservation.objects.update_or_create(
+        key='migration',
+        defaults={'continuous_since': now - timedelta(days=15), 'heartbeat_at': now},
     )
     return connector, credential
 
@@ -83,9 +89,12 @@ def test_retirement_blocks_an_unmigrated_legacy_consumer():
 
 def test_observation_heartbeat_restarts_quiet_window_after_a_gap():
     """Fails if a monitoring outage still counts toward the required 14 quiet retirement days."""
-    McpObservation.objects.create(
-        key='migration', continuous_since=NOW - timedelta(days=15),
-        heartbeat_at=NOW - timedelta(minutes=11),
+    McpObservation.objects.update_or_create(
+        key='migration',
+        defaults={
+            'continuous_since': NOW - timedelta(days=15),
+            'heartbeat_at': NOW - timedelta(minutes=11),
+        },
     )
 
     with patch('content.mcp.migration.timezone.now', return_value=NOW):
@@ -97,8 +106,7 @@ def test_observation_heartbeat_restarts_quiet_window_after_a_gap():
 
 def test_usage_evidence_survives_pruning_the_panel_request_log():
     """Fails if retirement evidence is lost when the panel discards old request-log rows."""
-    connector = McpConnector.objects.create(slug='blog', name='Blog compatibility')
-    credential = _credential(connector)
+    connector, credential = _ready_connector(NOW)
 
     record_usage(
         connector, credential,

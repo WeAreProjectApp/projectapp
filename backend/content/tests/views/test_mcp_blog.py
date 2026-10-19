@@ -95,7 +95,9 @@ class TestMcpEndpointThrottle:
             f'/api/mcp/documents/{documents_token}/', _rpc('ping'), format='json',
         )
         assert sibling_response.status_code == 200
-        assert sibling_response.data['result'] == {}
+        assert sibling_response.data['result']['_meta']['deprecation'][
+            'replacement'
+        ] == 'documents'
 
     def test_unknown_slugs_share_one_quota_bucket(self, api_client, monkeypatch):
         """Inventing endpoint slugs must not bypass the anonymous throttle."""
@@ -208,14 +210,12 @@ class TestMcpActivityLog:
 
     def test_failed_tool_call_records_error_detail(self, api_client, blog_connector):
         _, token = blog_connector
-        api_client.post(
-            _url(token),
-            _rpc('tools/call', {'name': 'create_blog_post', 'arguments': {'title_es': 'x'}}),
-            format='json',
+        _call_confirmed(
+            api_client, token, 'create_blog_post', {'title_es': 'x'},
         )
         events = self._events()
         failed = [e for e in events if e[0] == 'tool_call' and e[1] is False]
-        assert failed and 'create_blog_post' in failed[0][2]
+        assert failed == [('tool_call', False, 'confirm_action: VALIDATION_ERROR')]
 
     def test_bad_token_records_auth_error(self, api_client, blog_connector):
         api_client.post(_url('bad-token'), _rpc('ping'), format='json')
@@ -309,10 +309,8 @@ class TestMcpEndpointFlow:
 
     def test_validation_error_is_readable_tool_error(self, api_client, blog_connector):
         _, token = blog_connector
-        response = api_client.post(
-            _url(token),
-            _rpc('tools/call', {'name': 'create_blog_post', 'arguments': {'title_es': 'x'}}),
-            format='json',
+        response = _call_confirmed(
+            api_client, token, 'create_blog_post', {'title_es': 'x'},
         )
         assert response.status_code == 200
         assert response.data['result']['isError'] is True

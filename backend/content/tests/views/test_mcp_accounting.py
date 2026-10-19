@@ -313,7 +313,7 @@ class TestAccountingMcpRecurringLifecycle:
         first = _make_recurring(name='Figma')
         second = _make_recurring(name='Notion')
 
-        response = _call(
+        response = _call_confirmed(
             api_client, accounting_connector[1], 'bulk_action_recurring',
             {'recurring_ids': [first.pk, second.pk], 'action': 'deactivate'},
         )
@@ -350,7 +350,11 @@ class TestAccountingMcpHandlerBranches:
         })
         result = response.data['result']
         assert result['isError'] is True
-        assert 'Datos inválidos' in result['content'][0]['text']
+        error = _payload(response)['error']
+        assert error['code'] == 'VALIDATION_ERROR'
+        assert [
+            (row['field'], row['code']) for row in error['details']['errors']
+        ] == [('total_amount', 'invalid')]
 
     def test_update_income_without_fields_errors(
         self, api_client, accounting_connector, make_income, mcp_superuser,

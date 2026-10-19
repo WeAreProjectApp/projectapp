@@ -107,10 +107,6 @@ local registry; deployment and cloud clients unverified
 | accounting / describe_capabilities | infrastructure | accounting / describe_capabilities | not_observed |
 | accounting / confirm_action | infrastructure | accounting / confirm_action | not_observed |
 | accounting / cancel_action | infrastructure | accounting / cancel_action | not_observed |
-| accounting / begin_upload | infrastructure | accounting / begin_upload | not_observed |
-| accounting / upload_asset_chunk | infrastructure | accounting / upload_asset_chunk | not_observed |
-| accounting / complete_upload | infrastructure | accounting / complete_upload | not_observed |
-| accounting / abort_upload | infrastructure | accounting / abort_upload | not_observed |
 | accounting-billing / list_hosting | adapt | accounting / list_hostings | not_observed |
 | accounting-billing / get_hosting | adapt | accounting / get_hosting | not_observed |
 | accounting-billing / create_hosting | adapt | accounting / create_hosting | not_observed |

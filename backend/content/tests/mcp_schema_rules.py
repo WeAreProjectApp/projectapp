@@ -189,7 +189,7 @@ PARITY_PAIRS = {
     ),
     ('documents', 'preview_move'): (
         'content/tests/views/test_ownership_parity.py', 'test_mcp_move_matches_preview',
-        ('move_documents', 'update_folder', 'update_document'),
+        ('move_documents', 'update_document_folder', 'update_document'),
     ),
     ('documents', 'preview_folder_migration'): (
         'content/tests/views/test_mcp_folder_migration.py', 'test_real_projectapp_migration_preserves_contracts',
@@ -202,10 +202,6 @@ PARITY_PAIRS = {
     ('projects', 'preview_project_client_change'): (
         'content/tests/views/test_mcp_project_client_change.py', 'test_confirmed_transfer_matches_the_selected_plan',
         ('change_project_client', 'confirm_action'),
-    ),
-    ('projects', 'preview_hosting_subscription_change'): (
-        'content/tests/views/test_mcp_hosting_subscription.py', 'test_confirmed_cancel_preserves_paid_history',
-        ('change_hosting_subscription', 'confirm_action'),
     ),
     ('projects', 'preview_delivery_notification_retry'): (
         'content/tests/views/test_mcp_delivery_notifications.py', 'test_notice_confirmation_records_the_credential_owner',
@@ -238,10 +234,6 @@ UNPAIRED_PREVIEWS = {
         'Read-only preview and confirmed import are separate tests; no single preview/apply scenario.',
     ('projects', 'preview_project_client_access'):
         'Read-only redacted projection of current access; it has no corresponding apply tool.',
-    ('projects', 'preview_project_hosting_reconciliation'):
-        'Accounting-billing tests exercise preview and reconciliation separately; projects has no paired scenario.',
-    ('projects', 'preview_hosting_evidence'):
-        'Registry coverage does not exercise preview_hosting_evidence paired with reconcile_hosting_evidence.',
     ('projects', 'preview_project_data_model'):
         'Model preview and confirmed replacement are separate tests; no single preview/import scenario.',
 }

@@ -51,9 +51,11 @@ def _credential(
 
 @pytest.fixture
 def accounting_connector():
-    connector = McpConnector.objects.create(
-        slug='accounting', name='Contabilidad', is_active=True,
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='accounting',
+        defaults={'name': 'Contabilidad', 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
     )
+    connector.credentials.all().delete()
     return connector
 
 

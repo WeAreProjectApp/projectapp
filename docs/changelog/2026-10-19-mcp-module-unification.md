@@ -32,6 +32,7 @@ Cambio incompatible de catálogo, con adaptación temporal por credencial y slug
 - Una familia de ingresos conserva IVA, reparto, períodos, restricciones de pagos/cuentas, concurrencia y confirmación; las listas se paginan y los alcances específicos de esperados conservan su límite.
 - Se califican los nombres de carpetas documentales y de comunicaciones y se pluralizan los listados contables. Los nombres anteriores no se anuncian en catálogos canónicos.
 - Configuración e historial contable tienen un solo nombre canónico; el tablero anual y las estadísticas descriptivas se conservan porque sus resultados son distintos.
+- Los nombres canónicos nuevos publican esquemas explícitos con descripciones completas sin agregar excepciones. Los ajustes contables derivan sus campos editables del serializer del panel y requieren vista previa y confirmación.
 - Crear/editar contenido de blog o LinkedIn requiere confirmación porque puede publicar o programar; las vías anteriores conservan esa protección. La confirmación se consume antes de llamar al proveedor y conserva el estado de fallo para evitar publicaciones repetidas.
 - Credenciales existentes conservan el catálogo anterior y permisos efectivos. Las nuevas pueden derivar un alcance equivalente, actor y vencimiento desde una credencial de origen; cada secreto se muestra una sola vez.
 - El panel separa conectores canónicos de los que están en retirada. Muestra reemplazo, uso antiguo y verificación de consumidores; permite revocar accesos retirados, pero no emitir tokens inservibles.

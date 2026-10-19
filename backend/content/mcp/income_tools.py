@@ -85,6 +85,8 @@ def _get(arguments):
 def _prepare(arguments, action):
     arguments = dict(arguments)
     instance = _income(arguments) if action != 'create' else None
+    if action == 'update' and not (set(arguments) - {'income_id', 'if_match'}):
+        raise ToolError('Incluye al menos un campo para actualizar el ingreso.')
     kind = arguments.pop('kind', instance.kind if instance else 'expected')
     _check_kind(kind)
     if action == 'duplicate':

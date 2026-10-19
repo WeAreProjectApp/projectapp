@@ -237,7 +237,7 @@ class TestDiagnosticsMcpHandlers:
     ):
         section = seeded_diagnostic.sections.first()
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'bulk_update_diagnostic_sections', {
+        response = _call_confirmed(api_client, token, 'bulk_update_diagnostic_sections', {
             'diagnostic_id': seeded_diagnostic.id,
             'sections': [
                 {'id': section.id, 'title': 'Bulk actualizada'},
@@ -252,7 +252,7 @@ class TestDiagnosticsMcpHandlers:
         self, api_client, diagnostics_connector, seeded_diagnostic,
     ):
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'bulk_update_diagnostic_sections', {
+        response = _call_confirmed(api_client, token, 'bulk_update_diagnostic_sections', {
             'diagnostic_id': seeded_diagnostic.id, 'sections': 'nope',
         })
         assert response.data['result']['isError'] is True

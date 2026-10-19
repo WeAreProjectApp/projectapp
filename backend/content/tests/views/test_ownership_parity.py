@@ -90,7 +90,7 @@ def _apply_move(case, tool, arguments, plan, *, mixed=False):
     if tool == 'move_documents':
         return _call(case, tool, {'document_ids': arguments['document_ids'], 'folder_id': arguments['destination_folder_id'],
                                  'expected_plan_hash': plan['plan_hash'], **policies})
-    if tool == 'update_folder':
+    if tool == 'update_document_folder':
         policies.pop('document_decisions', None)
         return _call(case, tool, {'folder_id': arguments['folder_ids'][0], 'parent_id': arguments['destination_folder_id'],
                                  'expected_plan_hash': plan['plan_hash'], **policies})
@@ -98,13 +98,13 @@ def _apply_move(case, tool, arguments, plan, *, mixed=False):
                              **({'title': 'Updated during move'} if mixed else {}), **policies})
 
 
-@pytest.mark.parametrize('tool', ['move_documents', 'update_folder', 'update_document'])
+@pytest.mark.parametrize('tool', ['move_documents', 'update_document_folder', 'update_document'])
 @pytest.mark.parametrize('blocked', [False, True], ids=['applied', 'blocked'])
 def test_mcp_move_matches_preview(move_case, tool, blocked):
     case = move_case
     original_client = {False: None, True: case.foreign.user}[blocked]
     Document.objects.filter(pk=case.doc.pk).update(client_user=original_client)
-    scope = {'update_folder': {'folder_ids': [case.source.pk]}}.get(tool, {'document_ids': [case.doc.pk]})
+    scope = {'update_document_folder': {'folder_ids': [case.source.pk]}}.get(tool, {'document_ids': [case.doc.pk]})
     arguments = {**scope, 'destination_folder_id': case.target.pk}
     pair = PreviewApplyPair(tool, lambda args: _call(case, 'preview_move', args),
                             lambda args, plan: _apply_move(case, tool, args, plan, mixed=True), predicted=_prediction)
@@ -137,7 +137,7 @@ def test_mcp_refuses_latent_portal_exposure(move_case):
     arguments = {'folder_ids': [case.source.pk], 'destination_folder_id': case.target.pk}
     pair = PreviewApplyPair(
         'latent portal exposure', lambda args: _call(case, 'preview_move', args),
-        lambda args, plan: _apply_move(case, 'update_folder', args, plan), predicted=_prediction,
+        lambda args, plan: _apply_move(case, 'update_document_folder', args, plan), predicted=_prediction,
     )
 
     plan, result = check_pair(pair, arguments)
@@ -227,7 +227,7 @@ def test_folder_move_reuses_serializer_guards(invalid_folder_move):
     case = invalid_folder_move
     arguments = {'folder_ids': [case.source.pk], 'destination_folder_id': case.target.pk}
     pair = PreviewApplyPair('folder guard', lambda args: _call(case, 'preview_move', args),
-                            lambda args, plan: _apply_move(case, 'update_folder', args, plan), predicted=_prediction)
+                            lambda args, plan: _apply_move(case, 'update_document_folder', args, plan), predicted=_prediction)
 
     plan, result = check_pair(pair, arguments)
 
@@ -256,9 +256,9 @@ def test_writer_rolls_back_a_partially_saved_plan(move_case):
     assert AccountingChangeLog.objects.count() == log_count
 
 
-@pytest.mark.parametrize('tool', ['move_documents', 'update_folder'])
+@pytest.mark.parametrize('tool', ['move_documents', 'update_document_folder'])
 def test_mcp_stale_move_requires_a_new_preview(move_case, tool):
-    scope = {'update_folder': {'folder_ids': [move_case.source.pk]}}.get(tool, {'document_ids': [move_case.doc.pk]})
+    scope = {'update_document_folder': {'folder_ids': [move_case.source.pk]}}.get(tool, {'document_ids': [move_case.doc.pk]})
     arguments = {**scope, 'destination_folder_id': move_case.target.pk}
     plan = assert_no_writes(_call, move_case, 'preview_move', arguments)
     DocumentFolder.objects.filter(pk=move_case.target.pk).update(client_user=move_case.foreign.user, project=None)

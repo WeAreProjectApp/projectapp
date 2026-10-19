@@ -1,6 +1,6 @@
 {
   "accounting": {
-    "sha256": "c1b4b7f93aca7ba4130820e0219ca8b4e4a39b9c01e3e371e90756453ace992e",
+    "sha256": "07db40b97a1ad72802ea9333f7075134f3208f3ae2b2205a36be098ee907ec06",
     "version": "2.0.0"
   },
   "accounting-billing": {
@@ -40,7 +40,7 @@
     "version": "3.0.0"
   },
   "communications": {
-    "sha256": "51dac8a98ba1520e087652a291e9978ad448b60066c82072704e206ba73d6c24",
+    "sha256": "3aa598dcd1930132226521e35bb078718847c0d94d36e7d8c7c5bacbcbb575c7",
     "version": "3.0.0"
   },
   "content": {

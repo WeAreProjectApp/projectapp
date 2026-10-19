@@ -1264,98 +1264,6 @@
           "requires_confirmation": false,
           "usage": "not_observed",
           "obsolescence": "not_proven"
-        },
-        {
-          "name": "begin_upload",
-          "operation_id": "handler:content.mcp.upload_tools:begin_upload",
-          "owner": "accounting",
-          "replacement": "begin_upload",
-          "decision": "infrastructure",
-          "replacement_registered": true,
-          "also_registered_in": [
-            "documents",
-            "communications",
-            "proposals",
-            "partnership-program",
-            "additional-modules",
-            "commercial",
-            "projects",
-            "content",
-            "accounting-cards"
-          ],
-          "risk": "write",
-          "requires_confirmation": false,
-          "usage": "not_observed",
-          "obsolescence": "not_proven"
-        },
-        {
-          "name": "upload_asset_chunk",
-          "operation_id": "handler:content.mcp.upload_tools:upload_asset_chunk",
-          "owner": "accounting",
-          "replacement": "upload_asset_chunk",
-          "decision": "infrastructure",
-          "replacement_registered": true,
-          "also_registered_in": [
-            "documents",
-            "communications",
-            "proposals",
-            "partnership-program",
-            "additional-modules",
-            "commercial",
-            "projects",
-            "content",
-            "accounting-cards"
-          ],
-          "risk": "write",
-          "requires_confirmation": false,
-          "usage": "not_observed",
-          "obsolescence": "not_proven"
-        },
-        {
-          "name": "complete_upload",
-          "operation_id": "handler:content.mcp.upload_tools:complete_upload",
-          "owner": "accounting",
-          "replacement": "complete_upload",
-          "decision": "infrastructure",
-          "replacement_registered": true,
-          "also_registered_in": [
-            "documents",
-            "communications",
-            "proposals",
-            "partnership-program",
-            "additional-modules",
-            "commercial",
-            "projects",
-            "content",
-            "accounting-cards"
-          ],
-          "risk": "write",
-          "requires_confirmation": false,
-          "usage": "not_observed",
-          "obsolescence": "not_proven"
-        },
-        {
-          "name": "abort_upload",
-          "operation_id": "handler:content.mcp.upload_tools:abort_upload",
-          "owner": "accounting",
-          "replacement": "abort_upload",
-          "decision": "infrastructure",
-          "replacement_registered": true,
-          "also_registered_in": [
-            "documents",
-            "communications",
-            "proposals",
-            "partnership-program",
-            "additional-modules",
-            "commercial",
-            "projects",
-            "content",
-            "accounting-cards"
-          ],
-          "risk": "write",
-          "requires_confirmation": false,
-          "usage": "not_observed",
-          "obsolescence": "not_proven"
         }
       ],
       "published_tools": [
@@ -2833,7 +2741,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -2856,7 +2763,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -2879,7 +2785,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -2902,7 +2807,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -4405,7 +4309,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "commercial",
@@ -4428,7 +4331,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "commercial",
@@ -4451,7 +4353,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "commercial",
@@ -4474,7 +4375,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "commercial",
@@ -8768,7 +8668,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -8791,7 +8690,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -8814,7 +8712,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -8837,7 +8734,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -9783,7 +9679,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "documents",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -9806,7 +9701,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "documents",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -9829,7 +9723,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "documents",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -9852,7 +9745,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "documents",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -10755,7 +10647,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -10778,7 +10669,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -10801,7 +10691,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -10824,7 +10713,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -12207,7 +12095,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -12230,7 +12117,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -12253,7 +12139,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -12276,7 +12161,6 @@
           "replacement_registered": true,
           "also_registered_in": [
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -13126,7 +13010,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "additional-modules",
             "commercial",
@@ -13149,7 +13032,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "additional-modules",
             "commercial",
@@ -13172,7 +13054,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "additional-modules",
             "commercial",
@@ -13195,7 +13076,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "additional-modules",
             "commercial",
@@ -15508,7 +15388,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -15531,7 +15410,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -15554,7 +15432,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -15577,7 +15454,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "proposals",
             "partnership-program",
             "additional-modules",
@@ -17386,7 +17262,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "partnership-program",
             "additional-modules",
             "commercial",
@@ -17409,7 +17284,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "partnership-program",
             "additional-modules",
             "commercial",
@@ -17432,7 +17306,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "partnership-program",
             "additional-modules",
             "commercial",
@@ -17455,7 +17328,6 @@
           "also_registered_in": [
             "documents",
             "communications",
-            "accounting",
             "partnership-program",
             "additional-modules",
             "commercial",

@@ -52,9 +52,12 @@ def _credential(connector, token, tool_name):
 
 @pytest.fixture
 def content_connector():
-    return McpConnector.objects.create(
-        slug='content', name='Contenido', is_active=True,
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='content',
+        defaults={'name': 'Contenido', 'is_active': True, 'retired_at': None, 'aliases_retired_at': None},
     )
+    connector.credentials.all().delete()
+    return connector
 
 
 def test_public_blog_create_has_no_domain_write_before_confirmation(

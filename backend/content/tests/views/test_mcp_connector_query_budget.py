@@ -6,6 +6,7 @@ from django.db.models.signals import post_init
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
+from content.mcp.connectors import CONNECTORS
 from content.models import McpConnector, McpCredential, McpRequestLog
 from content.views.mcp_blog import _connector_payload
 
@@ -28,9 +29,9 @@ def _panel_client(user):
 
 def _create_connectors(total, *, identity_prefix='fixture', logs_per_connector=0):
     connectors = []
-    for index in range(total):
+    for index, slug in enumerate(sorted(CONNECTORS)[:total]):
         actor = get_user_model().objects.create(username=f'{identity_prefix}-connector-actor-{index:03d}', email=f'{identity_prefix}-connector-actor-{index:03d}@example.com')
-        connector = McpConnector.objects.create(slug=f'query-connector-{index:03d}', name=f'Query connector {index:03d}', is_active=True)
+        connector = McpConnector.objects.create(slug=slug, name=f'Query connector {index:03d}', is_active=True)
         primary = McpCredential.objects.create(connector=connector, label='Primary', token_hash='a' * 64, token_prefix=f'p{index:03d}', actor=actor)
         McpCredential.objects.create(connector=connector, label='Backup', token_hash='b' * 64, token_prefix=f'b{index:03d}', actor=actor)
         McpRequestLog.objects.bulk_create([
@@ -47,21 +48,21 @@ def _count_panel_queries(client):
     return response, len(queries)
 
 
-def test_connector_list_query_budget_does_not_grow_with_fifty_connectors(record_property):
+def test_connector_list_query_budget_does_not_grow_with_twenty_connectors(record_property):
     """Falla si el panel consulta logs, credenciales o actores por cada conector."""
     superuser = get_user_model().objects.create_superuser(username='connector-budget-admin', email='connector-budget@example.com', password='testpass123')
     _create_connectors(1, identity_prefix='single', logs_per_connector=11)
     single_response, single_queries = _count_panel_queries(_panel_client(superuser))
     McpConnector.objects.all().delete()
-    _create_connectors(50, identity_prefix='many', logs_per_connector=11)
+    _create_connectors(20, identity_prefix='many', logs_per_connector=11)
     many_response, many_queries = _count_panel_queries(_panel_client(superuser))
 
     record_property('mcp_connector_queries_one', single_queries)
-    record_property('mcp_connector_queries_fifty', many_queries)
+    record_property('mcp_connector_queries_twenty', many_queries)
     assert single_response.status_code == 200
     assert many_response.status_code == 200
     assert len(single_response.data) == 1
-    assert len(many_response.data) == 50
+    assert len(many_response.data) == 20
     assert single_queries == many_queries
     assert many_queries <= MAX_MCP_CONNECTOR_LIST_QUERIES
 

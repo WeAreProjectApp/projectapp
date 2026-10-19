@@ -13,7 +13,7 @@ from content.mcp.proposal_approval_tools import PROPOSAL_APPROVAL_TOOLS
 from content.mcp.proposal_project_tools import REASSIGN
 from content.mcp.registry import normalize_tools
 from content.models import (
-    Document, EntityHistory, EntityRevision, McpActionIntent,
+    Document, EntityHistory, EntityRevision, McpActionIntent, McpCredential,
     ProposalContractSnapshot, ProposalFormalization,
 )
 from content.services.contract_template_service import read_template
@@ -74,7 +74,9 @@ def history_case(request, proposal, admin_user, monkeypatch):
         monkeypatch.setitem(TOOLS_BY_SLUG, slug, [
             *[tool for tool in TOOLS_BY_SLUG[slug] if tool['name'] not in names], *tools,
         ])
-    return SimpleNamespace(entity=entity, slug=slug, token=activate_connector(slug),
+    token = activate_connector(slug)
+    McpCredential.objects.filter(token_hash=McpCredential.hash_token(token)).update(catalog='canonical')
+    return SimpleNamespace(entity=entity, slug=slug, token=token,
                            object_id=record.pk, left=revisions[0], right=revisions[1],
                            expected_page=expected_page)
 

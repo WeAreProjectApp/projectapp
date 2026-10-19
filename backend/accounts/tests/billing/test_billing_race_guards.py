@@ -58,15 +58,19 @@ def open_payment(billable_subscription):
 
 
 @pytest.fixture
-def projects_credential():
+def accounting_credential():
     connector, _ = McpConnector.objects.get_or_create(
-        slug='projects', defaults={'name': 'Projects'},
+        slug='accounting', defaults={'name': 'Accounting'},
     )
     connector.is_active = True
     connector.save(update_fields=['is_active'])
     return McpCredential.objects.create(
         connector=connector, label='Billing race guards',
         actor=service_actor_for_connector(connector),
+        allowed_tools=[
+            'preview_hosting_subscription_change',
+            'change_hosting_subscription',
+        ],
     )
 
 
@@ -371,7 +375,7 @@ def test_owner_charge_refuses_project_review_after_access_read(
 
 
 def test_mcp_resume_refuses_project_requiring_state_review(
-    admin_user, billable_subscription, open_payment, projects_credential,
+    admin_user, billable_subscription, open_payment, accounting_credential,
 ):
     change_lifecycle(billable_subscription, admin_user, 'pause')
     Project.objects.filter(pk=billable_subscription.project_id).update(
@@ -379,15 +383,15 @@ def test_mcp_resume_refuses_project_requiring_state_review(
     )
     arguments = {'subscription_id': billable_subscription.pk, 'action': 'resume'}
     preview = call_tool_inprocess(
-        'projects', 'preview_hosting_subscription_change', arguments,
-        credential=projects_credential,
+        'accounting', 'preview_hosting_subscription_change', arguments,
+        credential=accounting_credential,
     )
 
     rejected = call_tool_inprocess(
-        'projects', 'change_hosting_subscription',
+        'accounting', 'change_hosting_subscription',
         {**arguments, 'reason': 'Review pending project state',
          'expected_impact_hash': preview['impact_hash']},
-        credential=projects_credential,
+        credential=accounting_credential,
     )
 
     billable_subscription.refresh_from_db()

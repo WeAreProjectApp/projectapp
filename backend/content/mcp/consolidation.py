@@ -2,6 +2,7 @@
 from copy import deepcopy
 
 from content.mcp import registry
+from content.mcp.canonical_schemas import complete_canonical_schema
 from content.mcp.income_tools import build_income_tools
 from content.mcp.module_catalog import (
     ACCOUNTING_SUPERSEDED, CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, MODULE_CONNECTORS,
@@ -70,12 +71,14 @@ def build_catalogs(sources, replace, common):
         for tool in tools:
             tool['operation_id'] = operation_id(tool)
             tool['name'] = canonical_name(tool['name'], slug)
+            complete_canonical_schema(tool, slug)
         canonical_raw[slug] = tools
         if slug == 'accounting':
             connectors[slug] = replace(connectors[slug], uploads=True)
 
     def finish(spec, tools, target):
         tools = deepcopy(tools)
+        common_spec = replace(spec, uploads=sources[spec.slug].uploads) if target is legacy else spec
         if target is legacy or spec.compatibility:
             # Generic legacy income writes must not bypass the richer expected
             # service just because the caller still uses the old vocabulary.
@@ -103,7 +106,7 @@ def build_catalogs(sources, replace, common):
         normalized = registry.normalize_tools(registry.with_sensitive_confirmation(tools), spec.slug)
         target[spec.slug] = normalized
         target[spec.slug] = registry.normalize_tools([
-            *normalized, *common(spec, lambda slug=spec.slug: target[slug]),
+            *normalized, *common(common_spec, lambda slug=spec.slug: target[slug]),
         ], spec.slug)
 
     public = {}

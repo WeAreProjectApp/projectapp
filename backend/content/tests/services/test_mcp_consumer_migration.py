@@ -14,7 +14,12 @@ pytestmark = pytest.mark.django_db
 
 
 def _connector(slug, *, active=True):
-    return McpConnector.objects.create(slug=slug, name=slug, is_active=active)
+    connector, _ = McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': active, 'retired_at': None, 'aliases_retired_at': None},
+    )
+    connector.credentials.all().delete()
+    return connector
 
 
 def _credential(connector, label, *, actor=None, catalog='legacy', allowed_tools=None):

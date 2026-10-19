@@ -251,6 +251,9 @@ EXEMPT_MODELS = {
     'content.ProposalContractChangeIntent',
     'content.ProposalProjectReassignment',
     'content.McpActionIntent', 'content.McpCredential', 'content.McpUpload',
+    # Retirement needs real usage and uninterrupted observation evidence;
+    # demo seeds must never fabricate either source of retirement authority.
+    'content.McpUsageDaily', 'content.McpObservation',
 }
 
 

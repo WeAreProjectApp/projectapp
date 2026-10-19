@@ -7,7 +7,7 @@ from rest_framework import serializers
 from rest_framework.exceptions import PermissionDenied, Throttled
 
 from content.mcp.common_tools import build_common_tools
-from content.mcp.connectors import CONNECTORS
+from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.errors import normalize_error, transport_exception_handler
 from content.mcp.panel_bridge import _error_message
@@ -164,7 +164,7 @@ def test_cancel_action_rejects_a_malformed_id(confirmation_contract, confirmatio
     assert not McpActionIntent.objects.filter(credential=confirmation_contract.credential).exists()
 
 
-def test_confirm_action_preserves_domain_blockers(confirmation_contract):
+def test_confirm_action_preserves_domain_blockers(confirmation_contract, monkeypatch):
     blockers = [{'code': 'new_dependency', 'message': 'Apareció una dependencia.'}]
 
     def blocked(_arguments):
@@ -177,6 +177,7 @@ def test_confirm_action_preserves_domain_blockers(confirmation_contract):
         'handler': blocked,
     }]
     tools.extend(build_common_tools(CONNECTORS['tasks'], lambda: tools))
+    monkeypatch.setitem(TOOLS_BY_SLUG, 'tasks', tools)
     with use_mcp_context(confirmation_contract):
         _, preview = handle_message({
             'jsonrpc': '2.0', 'id': 1, 'method': 'tools/call',

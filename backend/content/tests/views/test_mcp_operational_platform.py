@@ -12,7 +12,7 @@ from django.utils import timezone as tz
 from rest_framework.test import APIRequestFactory
 
 from content.mcp.common_tools import build_common_tools
-from content.mcp.connectors import CONNECTORS
+from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG
 from content.mcp.confirmation import cancel_action, confirm_action, preview_sensitive_action
 from content.mcp.context import McpExecutionContext, use_mcp_context
 from content.mcp.operation_catalogs import CARD_PARITY_TOOLS, LEDGER_PARITY_TOOLS
@@ -170,9 +170,12 @@ def accounting_context(settings, tmp_path):
 
 
 @pytest.fixture
-def confirmation_runtime(tasks_connector):
+def confirmation_runtime(tasks_connector, monkeypatch):
     connector, _ = tasks_connector
-    credential = connector.credentials.get(label='Default')
+    credential = McpCredential.objects.create(
+        connector=connector,
+        label='Confirmation runtime',
+    )
     calls = []
 
     def destroy(arguments):
@@ -196,6 +199,7 @@ def confirmation_runtime(tasks_connector):
         sensitive,
         *build_common_tools(CONNECTORS['tasks'], lambda: tools),
     ], 'tasks'))
+    monkeypatch.setitem(TOOLS_BY_SLUG, 'tasks', tools)
     context = McpExecutionContext(
         connector=connector,
         credential=credential,
