@@ -802,12 +802,12 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `communications` | 2.1.1 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.1 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 2.3.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-ledger` | 2.4.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo con detalle y reparto, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
 | `accounting-billing` | 2.1.1 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 2.1.1 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
 | `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 1.3.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos y controles comunes |
+| `accounting` | 1.4.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos, detalle del bolsillo y controles comunes |
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
@@ -2655,8 +2655,8 @@ manifest. El guion y la condición de cierre tras deploy están en
 
 ### Abonos sin cuenta emitida: crear, corregir y deshacer (2026-10-10)
 
-Validar con una credencial autorizada de `accounting-ledger` (2.3.0) y el
-conector compatible `accounting` (1.3.0), usando sólo datos de prueba:
+Validar con una credencial autorizada de `accounting-ledger` (2.4.0) y el
+conector compatible `accounting` (1.4.0), usando sólo datos de prueba:
 
 1. Consultar `list_income` para elegir uno o varios esperados de empresa con
    saldo pendiente, sin cuenta o con borrador. Registrar `bulk_settle_incomes`
