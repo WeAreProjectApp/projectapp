@@ -35,6 +35,21 @@ CONTENT_TYPES = {
     'image/jpeg', 'image/png',
 }
 
+REVISION_SCHEMA = deepcopy(APPROVAL_SCHEMA)
+REVISION_SCHEMA['properties'] = {
+    key: value for key, value in REVISION_SCHEMA['properties'].items()
+    if key in {'source_hash', 'request_id', 'accept_proposal', 'use_proposal_contracts', 'custom_documents'}
+}
+REVISION_SCHEMA['required'] = ['source_hash', 'request_id']
+REVISION_SCHEMA['properties']['accept_proposal'].update(
+    default=False,
+    description='true vuelve a aprobar una propuesta cuyo estado fue corregido; false conserva el estado actual.',
+)
+REVISION_SCHEMA['properties']['use_proposal_contracts'].pop('default', None)
+REVISION_SCHEMA['properties']['use_proposal_contracts']['description'] = (
+    'true usa los contratos vigentes de la propuesta; false conserva o sustituye los propios. Omitir conserva la selección del último paquete.'
+)
+
 
 def _safe_payload(payload):
     """Private download links require their own authorized artifact operation."""
@@ -177,9 +192,10 @@ PREVIEW_TOOL['handler'] = lambda arguments: _safe_payload(_preview_bridge(argume
 PROPOSAL_APPROVAL_TOOLS = [
     PREVIEW_TOOL,
     _op('confirm_proposal_document_revision',
-        'Confirma una nueva revisión compartida; conserva los archivos aprobados anteriores. source_hash y request_id obligatorios.',
+        'Confirma una nueva revisión con el cliente y proyecto vinculados; conserva los archivos aprobados anteriores. source_hash y request_id obligatorios. Cambiar el proyecto requiere el flujo de reasignación.',
         'proposal-approval-revision', 'POST', ('proposal_id',), 'sensitive', True,
-        payload_schema=deepcopy(APPROVAL_SCHEMA), assets={'custom_asset_ids': {'field': 'custom_files[]', 'many': True, 'content_types': sorted(CONTENT_TYPES)}}),
+        payload_schema=REVISION_SCHEMA, envelope_aliases=False,
+        assets={'custom_asset_ids': {'field': 'custom_files[]', 'many': True, 'content_types': sorted(CONTENT_TYPES)}}),
     _mutation('review_proposal_approval',
               'Revisa y confirma cliente, proyecto y documentos usando source_hash de get_proposal_approval y request_id estable. '
               'action=defer nunca aprueba; retry conserva el paquete. confirm_action aplica la selección exacta.'),

@@ -84,7 +84,10 @@ class Command(BaseCommand):
         from accounts.management.commands._billing_seed_helpers import clear_fake_billing
         clear_fake_billing(projects, retention_context_ids=retention_context_ids)
         from accounts.management.commands._seed_helpers import clear_fake_delivery
-        clear_fake_delivery(projects, retention_context_ids=retention_context_ids)
+        clear_fake_delivery(
+            projects, retention_context_ids=retention_context_ids,
+            all_proposal_approvals=True,
+        )
         from accounts.management.commands._project_collaboration_seed import clear_fake_project_collaboration
         clear_fake_project_collaboration(projects, retention_context_ids=retention_context_ids)
 

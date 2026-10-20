@@ -62,7 +62,11 @@ def source_hash(proposal):
     profile = proposal.client
     canonical_client = None if profile is None else {'id': profile.pk, 'user_id': profile.user_id, 'name': build_client_display_name(profile), 'email': profile.user.email, 'company': profile.company_name, 'phone': profile.phone, 'nit': profile.nit, 'billing_code': profile.billing_code, 'archived_at': profile.archived_at}
     from content.services.hour_package_service import seed_commercial_conditions_from_catalog
-    sections = list(proposal.sections.values('id', 'section_type', 'title', 'content_json', 'is_enabled', 'order'))
+    section_fields = ('id', 'section_type', 'title', 'content_json', 'is_enabled', 'order')
+    sections = [
+        {key: getattr(section, key) for key in section_fields}
+        for section in proposal.sections.all()
+    ]
     resolved_commercial_conditions = [
         seed_commercial_conditions_from_catalog(section['content_json'] or {}, nationality=proposal.nationality, language='en' if proposal.language == 'en' else 'es')
         for section in sections

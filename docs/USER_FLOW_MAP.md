@@ -8627,9 +8627,9 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 | failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
 | display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
 
-Los documentos estructurados abren el mismo editor de origen desde el gestor. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
+Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
 
-Las garantías de bytes e identidad se verifican además con pruebas de servicios reales; los mocks del navegador cubren interacción y presentación.
+Las garantías de bytes e identidad se verifican además con pruebas de servicios reales y operaciones MCP autenticadas: consulta del recurso, sustitución de borrador, validación del archivo subido y confirmación de otra revisión. Los mocks del navegador cubren interacción y presentación.
 
 # admin-pwa-install — Instalación del panel interno
 

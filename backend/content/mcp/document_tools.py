@@ -1465,10 +1465,13 @@ from content.mcp.folder_migration_tools import FOLDER_MIGRATION_TOOLS
 DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS
 
 from content.mcp.operation_builder import _op as _shared_op
-DOCUMENT_TOOLS.append(_shared_op('get_document_proposal_source', 'Consulta la identidad, revisiones y fuente estructurada compartida; editar la propuesta actualiza el mismo borrador.', 'document-proposal-source', path=('document_id',), query_schema={'type': 'object', 'properties': {}, 'additionalProperties': False}))
+DOCUMENT_TOOLS.append(_shared_op('get_document_proposal_source', 'Consulta la identidad, revisiones y fuente estructurada compartida; editar la propuesta actualiza el mismo borrador.', 'document-proposal-source', path=('document_id',), query_schema={'type': 'object', 'properties': {}, 'additionalProperties': False}, envelope_aliases=False))
 
-DOCUMENT_TOOLS.append(_shared_op('replace_document_proposal_binary',
+PROPOSAL_BINARY_TOOL = _shared_op('replace_document_proposal_binary',
     'Sustituye el borrador binario compartido sin cambiar la identidad ni la versión aprobada. Requiere source_hash vigente y confirmar después el nuevo paquete.',
     'document-proposal-source', 'POST', ('document_id',), 'sensitive', True,
-    payload_schema={'type': 'object', 'properties': {'source_hash': {'type': 'string'}}, 'required': ['source_hash'], 'additionalProperties': False},
-    assets={'source_asset_id': {'field': 'file', 'content_types': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']}}))
+    payload_schema={'type': 'object', 'properties': {'source_hash': {'type': 'string', 'description': 'Huella vigente devuelta por get_document_proposal_source; un cambio concurrente rechaza el guardado.'}}, 'required': ['source_hash'], 'additionalProperties': False},
+    envelope_aliases=False,
+    assets={'source_asset_id': {'field': 'file', 'content_types': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']}})
+PROPOSAL_BINARY_TOOL['input_schema']['required'].append('source_asset_id')
+DOCUMENT_TOOLS.append(PROPOSAL_BINARY_TOOL)

@@ -145,8 +145,13 @@ _decide(exempt('Registro de envío, vista o cambio: rastro histórico.'), '''
     content.EmailLog.proposal content.ProposalChangeLog.proposal content.ProposalViewEvent.proposal
 ''')
 _decide(exempt('Evidencia inmutable o auditoría: se informa, nunca se corrige.'), '''
-    content.ProposalApprovalFile.proposal content.ProposalContractSnapshot.proposal
+    content.ProposalApprovalFile.proposal content.ProposalApprovalPackage.proposal content.ProposalContractSnapshot.proposal
     content.ProposalProjectReassignment.proposal
+''')
+_decide(gap('La fuente compartida conserva el mismo proyecto y cliente en propuesta y documento; '
+            'requiere revisión manual, sin reasignación automática '
+            '(proposal_shared_documents, proposal_project_reassignment).'), '''
+    content.ProposalDocumentBinding.proposal content.ProposalDocumentBinding.document
 ''')
 _decide(exempt('Preparación de corta vida.'), '''
     content.ProposalContractChangeIntent.proposal content.ProposalFormalization.proposal

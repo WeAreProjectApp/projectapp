@@ -3455,6 +3455,12 @@ def list_proposal_documents(request, proposal_id):
     """List all documents attached to a proposal."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
     docs = list(proposal.proposal_documents.all().order_by('-created_at'))
+    bindings = {
+        item.source_document_id: item
+        for item in proposal.document_bindings.filter(source_document_id__in=[doc.pk for doc in docs])
+    }
+    for document in docs:
+        document._shared_binding = bindings.get(document.pk)
     from content.services.service_contract_freshness import current_service_snapshot
     snapshot = current_service_snapshot(proposal) if any(d.document_type == 'contract_service' for d in docs) else None
     return Response([serialize_proposal_document(d, proposal=proposal, service_snapshot=snapshot) for d in docs], status=status.HTTP_200_OK)

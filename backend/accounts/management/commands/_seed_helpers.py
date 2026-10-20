@@ -258,13 +258,14 @@ def _seed_stage_document(stage, *, context, actor=None):
     )
 
 
-def clear_fake_delivery(projects, *, retention_context_ids=()):
+def clear_fake_delivery(projects, *, retention_context_ids=(), all_proposal_approvals=False):
     """Dissolve protected review evidence only during an authorized fake reset."""
     from accounts.models import DeliveryPromptContext, DeliveryPromptSource, ProjectContract
     from content.fake_data import ensure_fake_data_allowed
     from django.core.management.base import CommandError
     from django.db import transaction
     from django.db.models.deletion import ProtectedError
+    from content.services.project_file_cleanup import schedule_project_files
 
     ensure_fake_data_allowed('delivery_seed_helpers')
     project_ids = list(projects.values_list('pk', flat=True))
@@ -292,14 +293,58 @@ def clear_fake_delivery(projects, *, retention_context_ids=()):
             files = _clear_fake_delivery_rows(
                 project_ids, retention_context_ids, contract_ids,
             )
-            transaction.on_commit(lambda: _delete_delivery_files(files))
+            files.extend(_clear_fake_proposal_approval_rows(
+                project_ids, retention_context_ids, all_proposals=all_proposal_approvals,
+            ))
+            schedule_project_files(files)
     except ProtectedError as error:
         raise CommandError('La evidencia sigue referenciada fuera del reinicio autorizado. No se borraron datos ni archivos.') from error
 
 
-def _delete_delivery_files(files):
-    for storage, name in files:
-        storage.delete(name)
+def _clear_fake_proposal_approval_rows(project_ids, retention_context_ids, *, all_proposals):
+    from django.core.management.base import CommandError
+    from content.models import (
+        BusinessProposal, ProposalApprovalFile, ProposalApprovalPackage,
+        ProposalDocumentBinding,
+    )
+    from content.services.project_file_cleanup import project_row_files
+
+    proposals = BusinessProposal.objects.all()
+    if not all_proposals:
+        proposals = proposals.filter(
+            models.Q(deliverable__project_id__in=project_ids)
+            | models.Q(deliverable__retention_context_id__in=retention_context_ids)
+            | models.Q(approval_files__project_id__in=project_ids)
+            | models.Q(document_bindings__document__project_id__in=project_ids)
+            | models.Q(document_bindings__document__retention_context_id__in=retention_context_ids)
+        ).distinct()
+    proposal_ids = list(proposals.values_list('pk', flat=True))
+    bindings = ProposalDocumentBinding.objects.filter(proposal_id__in=proposal_ids)
+    approvals = ProposalApprovalFile.objects.filter(proposal_id__in=proposal_ids)
+    if not all_proposals:
+        allowed_documents = (
+            models.Q(document__project_id__in=project_ids)
+            | models.Q(document__retention_context_id__in=retention_context_ids)
+        )
+        allowed_deliverables = (
+            models.Q(deliverable__isnull=True)
+            | models.Q(deliverable__project_id__in=project_ids)
+            | models.Q(deliverable__retention_context_id__in=retention_context_ids)
+        )
+        if (bindings.exclude(allowed_documents).exists()
+                or approvals.exclude(project_id__in=project_ids).exists()
+                or proposals.exclude(allowed_deliverables).exists()):
+            raise CommandError('El cierre conserva vínculos fuera del reinicio autorizado. No se borraron datos ni archivos.')
+    files = []
+    for row in approvals.iterator():
+        files.extend(project_row_files(row))
+    for row in bindings.iterator():
+        files.extend(project_row_files(row))
+    bindings.update(current_file=None)
+    approvals.delete()
+    bindings.delete()
+    ProposalApprovalPackage.objects.filter(proposal_id__in=proposal_ids).delete()
+    return files
 
 
 def _clear_fake_delivery_rows(project_ids, retention_context_ids, contract_ids):

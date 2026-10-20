@@ -4,8 +4,8 @@
 
 ## Aprobación y documentos compartidos — 2026-10-20
 
-Contrato de esta entrega: Comercial **4.0.0**, adaptador Propuestas **4.0.0** y
-Documentos **6.0.0**. Confirmar la versión desplegada mediante `initialize`,
+Contrato de esta entrega: Comercial **5.0.0**, adaptador Propuestas **5.0.0** y
+Documentos **7.0.0**. Confirmar la versión desplegada mediante `initialize`,
 `tools/list` y `describe_capabilities`; el código del PR no acredita despliegue.
 El cierre interno confirma cliente, proyecto y contrato real. Los cambios
 genéricos de estado no pueden aprobar y la respuesta pública conserva rechazo

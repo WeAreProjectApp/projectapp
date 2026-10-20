@@ -239,6 +239,7 @@ EXEMPT_MODELS = {
     # Immutable private packet copies require explicit real proposal review;
     # seeds must never fabricate approval, signatures or these retained files.
     'content.ProposalApprovalFile',
+    'content.ProposalApprovalPackage', 'content.ProposalDocumentBinding',
     # Contract snapshots preserve reviewed originals; demo seeds must not
     # fabricate contract changes, signed content or restoration evidence.
     'content.ProposalContractSnapshot', 'content.ProposalContractSnapshotFile',

@@ -89,7 +89,7 @@ def test_review_retry_conflicts_instead_of_crashing(retained_proposal, admin_use
 
 def test_review_defer_still_answers_with_the_retained_link(retained_proposal, admin_user):
     """Fails if postponing the review is blocked or crashes for a retained deliverable."""
-    result = review_proposal(retained_proposal['proposal'].pk, {'action': 'defer'}, actor=admin_user)
+    result = review_proposal(retained_proposal['proposal'].pk, {'action': 'defer', 'accept_proposal': False}, actor=admin_user)
 
     assert result['action'] == 'defer'
     assert result['project_reassignment_required'] is True
