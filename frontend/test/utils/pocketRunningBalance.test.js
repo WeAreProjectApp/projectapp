@@ -34,6 +34,23 @@ describe('withRunningBalance', () => {
     expect(rows[1].running_balance).toBe(70000)
   })
 
+  // Bug caught: equal date and creation time left the resulting balance dependent on API order.
+  it('breaks identical timestamps by movement id', () => {
+    const rows = withRunningBalance([
+      {
+        id: 9, movement_date: '2026-03-10', created_at: '2026-03-10T08:00:00Z',
+        direction: 'out', amount: '30000.00',
+      },
+      {
+        id: 4, movement_date: '2026-03-10', created_at: '2026-03-10T08:00:00Z',
+        direction: 'in', amount: '100000.00',
+      },
+    ])
+
+    expect(rows.map((row) => row.id)).toEqual([4, 9])
+    expect(rows[1].running_balance).toBe(70000)
+  })
+
   it('accumulates only over the rows it is given', () => {
     // The load-bearing case: this is why the page filters BEFORE accumulating.
     // Handed a subset, the first row must start from its own amount instead of

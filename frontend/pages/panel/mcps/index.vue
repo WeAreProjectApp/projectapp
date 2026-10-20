@@ -75,8 +75,10 @@
     </div>
 
     <div v-else class="space-y-3">
+      <section v-for="group in connectorGroups" :key="group.id" class="space-y-3" :data-testid="`mcps-${group.id}`">
+      <h2 class="text-base font-semibold text-text-default">{{ group.title }}</h2>
       <div
-        v-for="connector in store.connectors"
+        v-for="connector in group.connectors"
         :key="connector.slug"
         :data-testid="`mcp-card-${connector.slug}`"
         class="bg-surface border border-border-muted rounded-xl shadow-sm overflow-hidden"
@@ -102,7 +104,7 @@
           >{{ connector.name }}</h2>
 
           <BaseBadge v-if="connector.is_legacy" variant="neutral" size="sm">
-            Compatibilidad
+            En retirada
           </BaseBadge>
 
           <div class="ml-7 flex w-full items-center justify-between gap-2 panel-portrait:ml-auto panel-portrait:w-auto panel-portrait:justify-end panel-portrait:gap-3 panel-portrait:flex-shrink-0">
@@ -128,6 +130,7 @@
               </span>
               <BaseToggle
                 :model-value="connector.is_active"
+                v-if="connector.lifecycle !== 'retired'"
                 :aria-label="`Activar ${connector.name}`"
                 :data-testid="`mcp-toggle-${connector.slug}`"
                 @update:model-value="(value) => onToggle(connector, value)"
@@ -143,6 +146,13 @@
           class="border-t border-border-muted px-4 sm:px-5 py-4 space-y-4"
         >
           <p class="min-w-0 max-w-full text-sm text-text-muted [overflow-wrap:anywhere]">{{ connector.description }}</p>
+          <div v-if="connector.is_legacy || connector.aliases_retired_at" class="rounded-lg border border-border-muted p-3 text-sm text-text-muted" :data-testid="`mcp-migration-${connector.slug}`">
+            <p v-if="connector.lifecycle === 'retired'">Conector retirado. Configura una credencial nueva de {{ connector.replacement }}.</p>
+            <p v-else-if="connector.is_legacy">Migra a {{ connector.replacement }}. Este acceso se conserva al menos 30 días y hasta verificar los consumidores y 14 días sin llamadas antiguas.</p>
+            <p v-else>Los accesos al catálogo anterior ya están retirados.</p>
+            <p v-if="connector.last_legacy_use_at">Último uso antiguo: {{ formatDate(connector.last_legacy_use_at) }}.</p>
+            <p v-if="connector.is_legacy">Inventario de consumidores: {{ connector.consumers_verified_at ? 'verificado' : 'pendiente de verificar' }}.</p>
+          </div>
 
           <!-- Connection status derived from the latest MCP request -->
           <div
@@ -238,6 +248,7 @@
                   </div>
                   <div v-if="credential.is_usable" class="flex flex-wrap gap-1.5">
                     <BaseButton
+                      v-if="!credential.is_retired"
                       variant="ghost"
                       size="sm"
                       :data-testid="`mcp-credential-edit-${credential.id}`"
@@ -246,6 +257,7 @@
                       Editar alcance
                     </BaseButton>
                     <BaseButton
+                      v-if="!credential.is_retired"
                       variant="secondary"
                       size="sm"
                       :data-testid="`mcp-credential-rotate-${credential.id}`"
@@ -333,11 +345,14 @@
             </ul>
           </details>
 
+          <p v-if="!connector.is_legacy" class="text-xs text-text-subtle">Las credenciales nuevas usan el catálogo unificado. El acceso anterior conserva sus funciones y permisos originales.</p>
+
           <!-- Credential actions -->
           <div class="flex flex-wrap items-center justify-end gap-2 pt-4 border-t border-border-muted">
             <BaseButton
               variant="secondary"
               size="sm"
+              v-if="!connector.is_legacy && connector.lifecycle !== 'retired'"
               :data-testid="`mcp-create-credential-${connector.slug}`"
               @click="openCredentialModal(connector)"
             >
@@ -346,15 +361,17 @@
             <BaseButton
               variant="primary"
               size="sm"
+              v-if="connector.lifecycle !== 'retired' && !connector.aliases_retired_at"
               :data-testid="`mcp-generate-token-${connector.slug}`"
               @click="onGenerateToken(connector)"
             >
               <BaseActionIcon :action="connector.has_token ? 'regenerate' : 'generate'" />
-              {{ connector.has_token ? 'Rotar principal' : 'Generar principal' }}
+              {{ connector.has_token ? 'Rotar acceso anterior' : 'Generar acceso anterior' }}
             </BaseButton>
           </div>
         </div>
       </div>
+      </section>
     </div>
 
     <BaseModal
@@ -511,6 +528,10 @@ import { formatDateTime as formatDate } from '~/utils/formatDate';
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useMcpsStore();
+const connectorGroups = computed(() => [
+  { id: 'canonical', title: 'Conectores por módulo', connectors: store.connectors.filter((item) => !item.is_legacy) },
+  { id: 'retiring', title: 'Conectores en retirada', connectors: store.connectors.filter((item) => item.is_legacy) },
+].filter((group) => group.connectors.length));
 const { t } = useI18n();
 const notify = usePanelNotify();
 const { confirmState, requestConfirm, handleConfirmed, handleCancelled } = useConfirmModal();
@@ -631,6 +652,9 @@ function localDateTime(value) {
 }
 
 function openCredentialModal(connector, credential = null) {
+  if (credential?.catalog === 'legacy' && connector.legacy_tools?.length) {
+    connector = { ...connector, tools: connector.legacy_tools };
+  }
   const allowedTools = credential?.allowed_tools || [];
   const readTools = readToolNames(connector);
   credentialModal.connector = connector;

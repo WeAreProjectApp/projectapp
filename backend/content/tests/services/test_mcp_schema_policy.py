@@ -3,7 +3,7 @@ from copy import deepcopy
 
 import pytest
 
-from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG
+from content.mcp.connectors import CONNECTORS, LEGACY_TOOLS_BY_SLUG, TOOLS_BY_SLUG
 from content.mcp.registry import public_tool
 from content.mcp.schema_backlog import (
     DEFERRED_SCHEMA_BACKLOG,
@@ -251,7 +251,7 @@ def test_blog_update_accepts_legacy_html_arguments():
     'create_recurring', 'create_ads', 'create_card_snapshot', 'create_notification_recipient',
 ])
 def test_ledger_creation_accepts_ignored_legacy_record_id(name):
-    tool = next(tool for tool in TOOLS_BY_SLUG['accounting'] if tool['name'] == name)
+    tool = next(tool for tool in LEGACY_TOOLS_BY_SLUG['accounting'] if tool['name'] == name)
     properties = tool['accepted_arguments_schema']['properties']
     assert set(properties) - set(tool['input_schema']['properties']) == {'record_id'}
     assert tool['accepted_arguments_schema']['required'] == tool['input_schema']['required']

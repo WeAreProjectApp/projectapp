@@ -11,3 +11,5 @@
 - **Display:** Un único diálogo con lista, valor recibido, fecha, destino, resumen y tres secciones colapsables; Diferencia se abre al faltar dinero. Los importes de ambos socios se muestran desde la apertura. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
 - **Coverage:** Covered — las cuatro clases de resultado. Los siete recorridos de comportamiento y los cinco perfiles de pantalla se ejecutaron contra el frontend local; la ruta individual comparte el mismo modal.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
+
+El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.

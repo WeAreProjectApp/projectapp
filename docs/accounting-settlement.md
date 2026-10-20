@@ -62,7 +62,8 @@ Los datos de demostración conservan sus pagos legados sin agrupar. Los recibos
 de operación se crean mediante el escritor real y se validan en las pruebas
 del flujo, sin fabricar historial de liquidaciones durante la siembra.
 
-Migraciones aditivas: `content.0293` y `content.0294`. Las aplica el deploy,
+Migraciones aditivas: `content.0293` y `content.0294`; `content.0295_merge_accounting_mcp`
+une sus dependencias con la unificación MCP. Las aplica el deploy,
 nunca esta sesión contra la base desplegada. Las pruebas utilizan
 `projectapp.settings_test`, SQLite y
 almacenamiento temporal. No se envían correos reales desde estas pruebas.

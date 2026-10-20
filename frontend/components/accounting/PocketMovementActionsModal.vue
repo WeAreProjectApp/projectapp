@@ -8,9 +8,11 @@ import { formatMoney } from '~/utils/formatMoney'
 const props = defineProps({
   open: { type: Boolean, default: false },
   record: { type: Object, default: null },
+  detailTo: { type: String, default: '' },
 })
 
 const emit = defineEmits(['close', 'history', 'notes', 'edit', 'delete'])
+const { t } = useI18n()
 
 function signedAmount(row) {
   if (!row) return formatMoney(0)
@@ -47,6 +49,12 @@ function run(event) {
       </header>
 
       <ul class="py-2">
+        <li v-if="detailTo" class="px-6 py-2">
+          <BaseButton as="a" :to="detailTo" target="_blank" rel="noopener noreferrer" variant="ghost" size="sm">
+            <BaseActionIcon action="view" class="h-5 w-5" />
+            <span>{{ t('accountingPocket.openNewTab') }}</span>
+          </BaseButton>
+        </li>
         <li>
           <!-- design-tokens: allow-raw-button -- menu row, not a standalone CTA -->
           <button

@@ -53,6 +53,10 @@ export default {
     email: 'Enter a valid email address.',
   },
   panel: {
+    publicLink: 'Client link',
+    publicLinkCopied: 'Copied',
+    publicLinkCopyFailed: 'Could not copy',
+    publicLinkCopyRetry: 'Select it and copy it manually.',
     formHint: 'Enter the information you want to share. The secure link is generated automatically when you save.',
     markSent: 'Mark as sent', markedSent: 'Link marked as sent',
     sentAt: 'Marked as sent', notSent: 'Not yet',

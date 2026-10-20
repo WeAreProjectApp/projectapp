@@ -9,9 +9,37 @@ conjunto sin dejar deducciones ni saldos huérfanos. Antecedentes y decisiones:
 `docs/accounting-settlement.md`.
 
 Entrega de código en el PR #517. Las migraciones aditivas `content.0293` y
-`content.0294` quedan para el deploy; esta entrada no acredita despliegue.
+`content.0294`, junto con la unión `content.0295_merge_accounting_mcp`, quedan para el deploy; esta entrada no acredita despliegue.
+
+# Enlaces seguros — confirmación de copia sin redistribuir el encabezado (2026-10-19)
+
+«Enlace para clientes» conserva su texto; sólo tras confirmar la escritura en
+el portapapeles muestra el check canónico y «Copiado» flotante durante 2 s.
+Una región viva anuncia el resultado sin cambiar el nombre accesible del botón.
+El error dura 3 s, conserva el icono de copiar y permite reintentar. Se reutilizan
+los primitives existentes y se traducen los mensajes afectados a ES/EN.
+El grupo de acciones conserva su ancho natural también en tableta vertical.
+La regresión focal mide encabezado, botones, descripción, pestañas y fila en los
+cinco perfiles del panel y cubre copia pendiente, fallo, reintento, clics
+consecutivos, teclado y movimiento reducido. La revisión del resto del panel
+queda en `docs/audits/secure-link-copy-feedback-2026-10-19.md`; esos candidatos
+no se modifican en esta tarea. Sin cambios de API ni nuevas capacidades del mapa.
+Verificación local: 12 escenarios Playwright en lotes focales y 5 pruebas de
+portapapeles en verde; quality gate 100/100 y registros de vistas/flujos al día.
+
+# Unificación MCP por módulo — 2026-10-19
+
+En curso: ocho conectores canónicos por sección del panel, catálogo anterior
+por credencial sin ampliación de permisos, confirmaciones locales, inventario
+reproducible y retiro condicionado a 30 días y 14 días sin uso observado.
+Base revisada: `17e19f8f`; inventario previo en
+`docs/audits/2026-10-19-mcp-before.json`. No acredita despliegue.
 
 # Building on Demand — 2026-10-10
+
+## Bolsillo — pertenencia y detalle informativo (2026-10-19)
+
+El listado y las tarjetas incorporan Pertenece a derivado de la atribución existente. El detalle específico se abre por `?movement=`, carga saldo real posterior sin filtros, vínculo y reparto con pendientes actuales y saldo a favor. Gastos admite `?expense=` para consulta directa. No se cambia la escritura contable ni el modelo. Se reutilizan historial y reglas de cobro; el listado conserva su payload liviano.
 
 Rama `feat/10102026-building-on-demand` (PA-177 y contrato PA-179): programa
 público ES/EN en `/building-on-demand`, con entrada desde el footer, y panel

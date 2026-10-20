@@ -5966,12 +5966,12 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
-| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 12 |
+| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 14 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
 | `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 42 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
 | `admin-accounting-list-error-retry` | admin | P3 | failure,display | 1 |
-| `admin-accounting-pocket` | admin | P2 | display,success,error | 7 |
+| `admin-accounting-pocket` | admin | P2 | display,success,error,failure | 7 |
 | `admin-accounting-project-bulk-assign` | admin | P1 | success,failure | 3 |
 | `admin-accounting-project-coherence` | admin | P1 | success | 1 |
 | `admin-accounting-project-hosting-reconciliation` | admin | P1 | display,success,error,failure | — |
@@ -6118,7 +6118,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktree-templates` | admin | P1 | success,error,failure,display | — |
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 10 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 12 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
@@ -6569,6 +6569,8 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 - **Coverage:** Covered — las cuatro clases de resultado. Los siete recorridos de comportamiento y los cinco perfiles de pantalla se ejecutaron contra el frontend local; la ruta individual comparte el mismo modal.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
+El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
+
 ### FLOW: `admin-accounting-filters`
 
 - **Module:** admin
@@ -6592,6 +6594,8 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 #### IVA opcional
 
 Los gastos nuevos empiezan con IVA del 19%, tanto en contabilidad de empresa como personal. Se puede elegir «Sin IVA» (0%) o dejar la tasa sin registrar. Al editar se conserva la tasa del registro, incluido cero o null. La captura acepta total incluido o base antes del impuesto y muestra base/IVA/total. No calcula IVA descontable ni cambia utilidad o reparto.
+
+- **Consulta desde el bolsillo (2026-10-19):** `?expense=<id>` abre el detalle del gasto enlazado mediante su consulta individual, aunque no aparezca en los filtros o la página del listado. El enlace sobrevive a una recarga y conserva la consulta del historial. Carga, errores recuperables y registro inexistente se comunican en el modal.
 
 ### FLOW: `admin-accounting-hostings`
 
@@ -6621,6 +6625,8 @@ IVA editable del pago por ciclo, 19% al crear y null histórico. Total incluido 
   La acción inicial de cada movimiento (tres puntos, 44×44, en tabla y en tarjetas móviles) abre un menú con **Detalle e historial**, **Editar** y **Eliminar**; la columna de acciones mide 56 px y sólo aloja ese botón, así que el detalle con su historial de cambios vive dentro del menú.
 - **Coverage:** ⚠️ Partial — modal ledger selector, locked-direction edit, the three-dot menu owning Detalle e historial (with a no-spill check on the action track), both filter cuts (attribution + link, with the Acumulado relabel), responsive navigation and running-balance representation across the five reference widths are covered; the create-POST payload (ledger included) and the cascade delete confirm are asserted at unit level only.
 - **E2E Spec:** `e2e/admin/admin-accounting-pocket-recurring.spec.js`
+- **Detalle del movimiento:** la tabla presenta **Pertenece a** (Empresa, Gustavo, Carlos o Sin vincular). El detalle tiene dirección propia mediante `?movement=<id>` y conserva moneda, fecha y tipo con el mismo lenguaje del libro; muestra saldo posterior, dueño, vínculo navegable, reparto de abonos, pendiente actual y notas. Un error recuperable permite reintentar; un registro inexistente se explica sin ofrecer una acción inútil. La pestaña Historial sigue disponible dentro del modal compacto.
+- **E2E Spec (detalle):** `e2e/admin/admin-accounting-pocket-detail.spec.js`.
 
 ### FLOW: `admin-accounting-recurring`
 
@@ -8683,7 +8689,8 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 - **Error:** un título o campos inválidos al editar conservan el borrador y muestran el error junto al campo; Esc cancela el renombrado sin cerrar el detalle; un registro inexistente muestra error visible.
 - **Failure:** errores de consulta ofrecen reintento; un fallo al guardar/eliminar/marcar enviado conserva los datos o la fila y muestra el error. Respuestas atrasadas no sustituyen el enlace abierto ni reponen secretos tras cerrar.
 - **API:** `GET /api/secure-links/` (filtro `lifecycle_status` y conteos), `GET|PATCH|DELETE /api/secure-links/<id>/`, `POST .../content/`, `POST .../revoke/`, `POST .../reactivate/`, `POST .../mark-sent/`.
-- **Cobertura:** `e2e/admin/admin-secure-links.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
+- **Copiar página para clientes:** copia exactamente la URL pública informada por el servidor y conserva el texto «Enlace para clientes». Sólo tras éxito muestra check y «Copiado» flotante durante 2 segundos, con anuncio accesible; el encabezado, descripción, botones, pestañas y listado permanecen en su sitio en los cinco perfiles responsive. Un fallo mantiene el icono de copiar, muestra el error durante 3 segundos y permite reintentar; el teclado conserva el foco y el movimiento reducido conserva la confirmación.
+- **Cobertura:** `e2e/admin/admin-secure-links.spec.js` y `e2e/admin/admin-secure-links-copy-public.spec.js`; la persistencia y los permisos MCP se verifican en backend. Los tests unitarios cubren concurrencia de respuestas y limpieza al cerrar.
 
 ### FLOW: `admin-service-contract-settings`
 

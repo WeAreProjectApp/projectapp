@@ -16,6 +16,17 @@ jest.mock('~/composables/useIsMobile', () => {
   return { useIsMobile: () => ({ isMobile: ref(false) }) };
 });
 jest.mock('~/composables/usePanelRefresh', () => ({ usePanelRefresh: jest.fn() }));
+jest.mock('~/composables/useDetailQueryParam', () => {
+  const { computed, ref } = jest.requireActual('vue');
+  return {
+    useDetailQueryParam: () => ({
+      openId: ref(null), isOpen: ref(false), open: jest.fn(), close: jest.fn(),
+      toFor: (id) => ({ path: '/panel/accounting/pocket', query: { movement: String(id) } }),
+      openRow: computed(() => null),
+    }),
+  };
+});
+jest.mock('~/composables/useRowNavigation', () => ({ useRowNavigation: () => ({ openRow: jest.fn() }) }));
 jest.mock('~/composables/useAccountingFilters', () => {
   const { ref } = jest.requireActual('vue');
   return {
@@ -55,6 +66,7 @@ function mountPage() {
         BasePageShell: { template: '<div><slot /></div>' },
         BaseInput: true,
         UiFilterToggleButton: true,
+        BaseRowLink: { props: ['to'], template: '<a :href="to?.path"><slot /></a>' },
         BaseActionButton: {
           props: ['disabled', 'statusLabel', 'statusTone'], emits: ['click'],
           template: '<button v-bind="$attrs" :disabled="disabled" type="button" @click="$emit(\'click\')"><span role="status">{{ statusLabel }}</span></button>',
@@ -70,6 +82,9 @@ describe('pocket balance copy', () => {
     mockStore.isLoading = false;
     mockStore.error = null;
     global.definePageMeta = jest.fn();
+    global.useI18n = () => ({ t: (key) => key === 'accountingPocket.belongsTo' ? 'Pertenece a' : key });
+    global.useRoute = () => ({ path: '/panel/accounting/pocket', query: {} });
+    global.useRouter = () => ({ resolve: (location) => ({ href: `${location.path}?movement=${location.query.movement}` }) });
     mockClipboardWrite.mockResolvedValue(undefined);
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -80,6 +95,9 @@ describe('pocket balance copy', () => {
   afterEach(() => {
     if (originalClipboard) Object.defineProperty(navigator, 'clipboard', originalClipboard);
     else delete navigator.clipboard;
+    delete global.useI18n;
+    delete global.useRoute;
+    delete global.useRouter;
   });
 
   // Falla si el botón copia el neto filtrado en lugar del saldo total del servidor.

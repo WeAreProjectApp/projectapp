@@ -1,0 +1,15 @@
+export default {
+  belongsTo: 'Pertenece a', company: 'Empresa', gustavo: 'Gustavo', carlos: 'Carlos',
+  unlinked: 'Sin vincular', title: 'Detalle del movimiento', close: 'Cerrar',
+  loading: 'Cargando el movimiento…', missing: 'Este movimiento ya no existe.',
+  failed: 'No se pudo cargar el movimiento.', retry: 'Reintentar',
+  movement: 'Datos del movimiento', type: 'Tipo', balance: 'Saldo del bolsillo después del movimiento',
+  links: 'Pertenencia y vínculo', linked: 'Registro vinculado', income: 'Ingreso', expense: 'Gasto',
+  category: 'Categoría del gasto', notes: 'Notas', noNotes: 'Sin notas.',
+  allocations: 'Reparto del abono', allocation: 'Importe imputado', pending: 'Pendiente actual',
+  total: 'Total del reparto', credit: 'Saldo a favor',
+  discrepancy: 'El total del reparto no coincide con el valor del movimiento.',
+  openNewTab: 'Abrir en pestaña nueva',
+  recordLoading: 'Cargando el registro…', recordMissing: 'Este registro ya no existe.',
+  recordFailed: 'No se pudo cargar el registro.',
+};

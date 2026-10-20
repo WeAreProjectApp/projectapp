@@ -1,7 +1,13 @@
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,
-> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`;
+> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`, con unión `0295`;
 > decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
+
+> **Integraciones MCP por módulo — 2026-10-19:** un único conector canónico por sección funcional: General, Comercial, Plataforma, Documentos, Comunicaciones, Contenido, Contable y Tareas. Incluye la revalidación de PA-91. Los conectores y nombres anteriores sólo viven como adaptadores temporales con aviso; no amplían permisos ni evitan confirmaciones. La ausencia de llamadas no basta para declarar una función obsoleta.
+
+## Bolsillo: pertenencia y lectura de movimientos (2026-10-19)
+
+Ingresos y egresos muestran Empresa, Gustavo, Carlos o Sin vincular según su atribución existente. El detalle de consulta presenta moneda y fecha con el mismo lenguaje de la tabla, saldo real posterior, acceso al ingreso o gasto, reparto de abonos con su pendiente actual y excedente, y notas completas. Incluye la parte informativa de PA-69 y adapta el historial al ancho compacto; editar y registrar abonos mantienen sus flujos separados.
 
 > **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
 > (recomendado) y Enterprise para evolucionar un producto con una célula Scrum

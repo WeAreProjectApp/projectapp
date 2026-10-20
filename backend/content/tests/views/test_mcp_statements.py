@@ -11,6 +11,7 @@ from content.models import (
     MerchantAlias,
 )
 from content.services import accounting_service
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 pytestmark = pytest.mark.django_db
 
@@ -44,20 +45,26 @@ def _url(token):
 
 
 def _payload(response):
-    import json
+    return confirmed_payload(response)
 
-    return json.loads(response.data['result']['content'][0]['text'])
+
+def _rpc(method, params, msg_id=1):
+    return {
+        'jsonrpc': '2.0', 'id': msg_id, 'method': method,
+        'params': params,
+    }
 
 
 def _call(api_client, token, name, arguments, msg_id=1):
     return api_client.post(
         _url(token),
-        {
-            'jsonrpc': '2.0', 'id': msg_id, 'method': 'tools/call',
-            'params': {'name': name, 'arguments': arguments},
-        },
+        _rpc('tools/call', {'name': name, 'arguments': arguments}, msg_id),
         format='json',
     )
+
+
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
 
 
 CREATE_ARGS = {
@@ -158,7 +165,7 @@ class TestResolveAndLearnFlow:
         assert save_payload['updated_transactions'] == 2
         assert MerchantAlias.objects.count() == 2
 
-        finalize = _call(api_client, token, 'finalize_statement', {
+        finalize = _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk,
         })
         finalize_payload = _payload(finalize)
@@ -186,7 +193,7 @@ class TestResolveAndLearnFlow:
         _, token = accounting_connector
         _call(api_client, token, 'create_statement', CREATE_ARGS)
         statement = CreditCardStatement.objects.get()
-        _call(api_client, token, 'finalize_statement', {
+        _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk,
         })
         response = _call(api_client, token, 'save_merchant_aliases', {
@@ -231,7 +238,7 @@ class TestLifecycleGuards:
         args = {**CREATE_ARGS, 'purchases_total': 999999}
         _call(api_client, token, 'create_statement', args)
         statement = CreditCardStatement.objects.get()
-        response = _call(api_client, token, 'finalize_statement', {
+        response = _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk,
         })
         result = response.data['result']
@@ -244,10 +251,10 @@ class TestLifecycleGuards:
         _, token = accounting_connector
         _call(api_client, token, 'create_statement', CREATE_ARGS)
         statement = CreditCardStatement.objects.get()
-        _call(api_client, token, 'finalize_statement', {
+        _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk, 'force': True,
         })
-        response = _call(api_client, token, 'delete_statement', {
+        response = _call_confirmed(api_client, token, 'delete_statement', {
             'statement_id': statement.pk,
         })
         result = response.data['result']
@@ -260,7 +267,7 @@ class TestLifecycleGuards:
         _, token = accounting_connector
         _call(api_client, token, 'create_statement', CREATE_ARGS)
         statement = CreditCardStatement.objects.get()
-        _call(api_client, token, 'finalize_statement', {
+        _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk, 'force': True,
         })
         response = _call(api_client, token, 'get_statement_status', {
@@ -403,7 +410,7 @@ class TestStatementCrudTools:
         _, token = accounting_connector
         _call(api_client, token, 'create_statement', CREATE_ARGS)
         statement = CreditCardStatement.objects.get()
-        _call(api_client, token, 'finalize_statement', {
+        _call_confirmed(api_client, token, 'finalize_statement', {
             'statement_id': statement.pk, 'force': True,
         })
         response = _call(api_client, token, 'reopen_statement', {
@@ -462,7 +469,7 @@ class TestStatementCrudTools:
         _, token = accounting_connector
         _call(api_client, token, 'create_statement', CREATE_ARGS)
         statement = CreditCardStatement.objects.get()
-        response = _call(api_client, token, 'delete_statement', {
+        response = _call_confirmed(api_client, token, 'delete_statement', {
             'statement_id': statement.pk,
         })
         assert _payload(response)['deleted'] is True
@@ -493,7 +500,7 @@ class TestStatementCrudTools:
             default_category='software',
         )
         _, token = accounting_connector
-        response = _call(api_client, token, 'delete_merchant_alias', {
+        response = _call_confirmed(api_client, token, 'delete_merchant_alias', {
             'alias_id': alias.pk,
         })
         assert _payload(response)['deleted'] is True

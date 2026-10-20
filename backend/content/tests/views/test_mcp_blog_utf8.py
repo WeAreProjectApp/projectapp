@@ -35,6 +35,15 @@ def _call(name, arguments):
     }
 
 
+def _confirm(api_client, token, preview):
+    confirmation_id = preview.json()['result']['structuredContent']['confirmation_id']
+    return api_client.post(
+        _url(token),
+        _call('confirm_action', {'confirmation_id': confirmation_id}),
+        format='json',
+    )
+
+
 VALID_POST = {
     'title_es': 'Post por MCP',
     'title_en': 'Post via MCP',
@@ -57,6 +66,7 @@ class TestMcpBlogUtf8:
             'linkedin_summary_es': 'Así se ve construir software — ¿sí?',
         }
         response = api_client.post(_url(token), _call('create_blog_post', args), format='json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         assert not response.json()['result'].get('isError'), response.json()
         post = BlogPost.objects.latest('id')
@@ -70,6 +80,7 @@ class TestMcpBlogUtf8:
         raw = json.dumps(_call('create_blog_post', args), ensure_ascii=True)
         assert '\\u00e9' in raw
         response = api_client.post(_url(token), data=raw, content_type='application/json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         post = BlogPost.objects.latest('id')
         assert post.linkedin_summary_en == 'Café → Result'
@@ -84,6 +95,7 @@ class TestMcpBlogUtf8:
             'linkedin_summary_es': 'As\\u00ed se ve \\u2014 \\u00bfs\\u00ed?',
         }
         response = api_client.post(_url(token), _call('create_blog_post', args), format='json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         assert not response.json()['result'].get('isError'), response.json()
         post = BlogPost.objects.latest('id')
@@ -98,6 +110,7 @@ class TestMcpBlogUtf8:
         )
         args = {'post_id': post.id, 'linkedin_summary_en': 'Caf\\u00e9 \\u2192 Result'}
         response = api_client.post(_url(token), _call('update_blog_post', args), format='json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         assert not response.json()['result'].get('isError'), response.json()
         post.refresh_from_db()
@@ -113,6 +126,7 @@ class TestMcpBlogUtf8:
             },
         }
         response = api_client.post(_url(token), _call('create_blog_post', args), format='json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         assert not response.json()['result'].get('isError'), response.json()
         post = BlogPost.objects.latest('id')
@@ -125,6 +139,7 @@ class TestMcpBlogUtf8:
         _, token = blog_connector
         args = {**VALID_POST, 'linkedin_summary_en': 'broken \\ud83d escape'}
         response = api_client.post(_url(token), _call('create_blog_post', args), format='json')
+        response = _confirm(api_client, token, response)
         assert response.status_code == 200
         post = BlogPost.objects.latest('id')
         assert post.linkedin_summary_en == 'broken \\ud83d escape'

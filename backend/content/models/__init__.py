@@ -124,6 +124,7 @@ from .mcp_credential import McpCredential
 from .mcp_action_intent import McpActionIntent
 from .mcp_upload import McpUpload
 from .mcp_request_log import McpRequestLog
+from .mcp_usage import McpUsageDaily, McpObservation
 from .additional_module import (
     AdditionalModule,
     AdditionalModuleCategory,

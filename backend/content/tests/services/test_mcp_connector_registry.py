@@ -15,6 +15,7 @@ from content.mcp.expected_income_tools import EXPECTED_INCOME_TOOLS
 from content.mcp.operation_catalogs import BILLING_PARITY_TOOLS, CARD_PARITY_TOOLS, LEDGER_PARITY_TOOLS
 from content.mcp.platform_billing_tools import PLATFORM_BILLING_TOOLS
 from content.mcp.registry import normalize_tools, public_tool, with_sensitive_confirmation
+from content.mcp.module_catalog import INFRASTRUCTURE_TOOLS
 from content.mcp.schema_backlog import DEFERRED_SCHEMA_BACKLOG, GENERIC_ADAPTER_BACKLOG, UNDESCRIBED_ARGUMENT_BACKLOG
 
 
@@ -40,6 +41,13 @@ def _accounting_contract(area):
     slug = f'accounting-{area}'
     area_tools = [tool for tool in ACCOUNTING_TOOLS if tool['area'] == area]
     domain = with_sensitive_confirmation([*area_tools, *PARITY_TOOLS[area], *EXTRA_TOOLS[area]])
+    if area == 'ledger':
+        for tool in domain:
+            if tool['name'] in {'create_income', 'update_income'}:
+                tool.update(risk='sensitive', requires_confirmation=True)
+                if tool['name'] == 'create_income':
+                    tool['input_schema']['if'] = {'properties': {'kind': {'const': 'expected'}}}
+                    tool['input_schema']['then'] = {'required': ['vat_rate']}
     common = build_common_tools(CONNECTORS[slug], lambda: TOOLS_BY_SLUG[slug])
     return _contract_tools(normalize_tools([*domain, *common], slug))
 
@@ -69,13 +77,16 @@ def test_accounting_connector_has_exact_area_contract(area):
 
 
 @pytest.mark.parametrize('slug', sorted(slug for slug, spec in CONNECTORS.items() if spec.compatibility))
-def test_compatibility_confirmation_is_declared_by_source(slug):
+def test_compatibility_connector_protects_each_sensitive_tool(slug):
+    """Fails if a retiring connector lets a sensitive source action skip confirmation."""
     spec = CONNECTORS[slug]
-    sources = [tool for source in spec.sources for tool in source]
-    declared = sources + build_common_tools(spec, lambda: TOOLS_BY_SLUG[slug])
+    sensitive = [
+        tool for tool in TOOLS_BY_SLUG[slug]
+        if tool.get('risk') == 'sensitive' and tool['name'] not in INFRASTRUCTURE_TOOLS
+    ]
 
-    assert spec.confirm_sensitive is False
-    assert {tool['name']: bool(tool.get('requires_confirmation')) for tool in TOOLS_BY_SLUG[slug]} == {tool['name']: bool(tool.get('requires_confirmation')) for tool in declared}
+    assert spec.confirm_sensitive is True
+    assert all(tool.get('requires_confirmation') for tool in sensitive)
 
 
 def test_contract_lock_contains_every_connector(contract_lock):

@@ -11,7 +11,8 @@ from django.test.utils import CaptureQueriesContext
 
 from content.models import (
     Document, DocumentCollectionAccount, DocumentType, EmailLog, ExpenseRecord,
-    IncomeRecord, IncomeSettlement, McpActionIntent, McpConnector, PocketMovement,
+    IncomeRecord, IncomeSettlement, McpActionIntent, McpConnector, McpCredential,
+    PocketMovement,
 )
 from content.services import accounting_service
 from content.services.income_settlement_operation_service import preview_settlement
@@ -33,7 +34,14 @@ def accounting_token():
     )
     connector.is_active = True
     connector.save(update_fields=['is_active'])
-    return connector.generate_token()
+    credential, _ = McpCredential.objects.get_or_create(
+        connector=connector,
+        label='Settlement API canonical accounting',
+        defaults={'catalog': 'canonical'},
+    )
+    credential.catalog = 'canonical'
+    credential.save(update_fields=['catalog', 'updated_at'])
+    return credential.generate_token()
 
 
 @pytest.fixture
@@ -43,7 +51,14 @@ def accounting_ledger_token():
     )
     connector.is_active = True
     connector.save(update_fields=['is_active'])
-    return connector.generate_token()
+    credential, _ = McpCredential.objects.get_or_create(
+        connector=connector,
+        label='Settlement API canonical ledger',
+        defaults={'catalog': 'canonical'},
+    )
+    credential.catalog = 'canonical'
+    credential.save(update_fields=['catalog', 'updated_at'])
+    return credential.generate_token()
 
 
 def _settlement_payload(*income_ids, **overrides):
@@ -77,6 +92,21 @@ def _tool_payload(response):
     assert response.status_code == 200, response.data
     assert response.data['result']['isError'] is False, response.data
     return json.loads(response.data['result']['content'][0]['text'])
+
+
+def _tool_error(response):
+    assert response.status_code == 200, response.data
+    assert response.data['result']['isError'] is True, response.data
+    return response.data['result']['structuredContent']['error']
+
+
+def _confirm_accounting_tool(api_client, token, name, arguments):
+    preview = _tool_payload(_call_accounting_tool(api_client, token, name, arguments))
+    confirmed = _tool_payload(_call_accounting_tool(
+        api_client, token, 'confirm_action',
+        {'confirmation_id': preview['confirmation_id']},
+    ))
+    return preview, confirmed
 
 
 def _preview_query_count(incomes):
@@ -194,11 +224,13 @@ def test_rest_and_mcp_retry_share_one_idempotent_settlement(
     rest_retry = super_client.post(
         '/api/accounting/incomes/bulk-settle/', request_data, format='json',
     )
-    mcp_retry = _tool_payload(_call_accounting_tool(
+    mcp_preview, mcp_confirmation = _confirm_accounting_tool(
         api_client, accounting_token, 'bulk_settle_incomes', request_data,
-    ))
+    )
+    mcp_retry = mcp_confirmation['result']
 
     assert (initial.status_code, rest_retry.status_code) == (201, 201), (initial.data, rest_retry.data)
+    assert (mcp_preview['confirmation_required'], mcp_confirmation['confirmed']) == (True, True)
     assert (
         initial.data['settlement_id'], rest_retry.data['settlement_id'],
         mcp_retry['settlement_id'],
@@ -248,15 +280,20 @@ def test_stale_rest_correction_and_mcp_reversal_leave_effects_active(
     stale = super_client.patch(
         f'/api/accounting/income-settlements/{settlement_id}/', corrected_data, format='json',
     )
-    mcp_stale = _call_accounting_tool(api_client, accounting_token, 'reverse_income_settlement', {
+    mcp_preview = _tool_payload(_call_accounting_tool(api_client, accounting_token, 'reverse_income_settlement', {
         'settlement_id': settlement_id, 'revision': 1,
-    })
+    }))
+    mcp_stale = _tool_error(_call_accounting_tool(
+        api_client, accounting_token, 'confirm_action',
+        {'confirmation_id': mcp_preview['confirmation_id']},
+    ))
 
     operation = IncomeSettlement.objects.get(pk=settlement_id)
     assert (
         created.status_code, updated.status_code, updated.data['revision'],
-        stale.status_code, mcp_stale.data['result']['isError'],
-    ) == (201, 200, 2, 409, True), (created.data, updated.data, stale.data, mcp_stale.data)
+        stale.status_code, mcp_preview['confirmation_required'], mcp_stale['code'],
+    ) == (201, 200, 2, 409, True, 'VALIDATION_ERROR'), (created.data, updated.data, stale.data, mcp_stale)
+    assert 'cambió' in mcp_stale['message']
     assert (
         operation.status, operation.revision, PocketMovement.objects.get().amount,
         list(ExpenseRecord.objects.values_list('total_amount', flat=True)),
@@ -291,14 +328,19 @@ def test_paid_follow_up_blocks_rest_and_mcp_reversal_without_partial_delete(
     rest_reverse = super_client.delete(
         f'/api/accounting/income-settlements/{settlement_id}/', {'revision': 1}, format='json',
     )
-    mcp_reverse = _call_accounting_tool(api_client, accounting_token, 'reverse_income_settlement', {
+    mcp_preview = _tool_payload(_call_accounting_tool(api_client, accounting_token, 'reverse_income_settlement', {
         'settlement_id': settlement_id, 'revision': 1,
-    })
+    }))
+    mcp_reverse = _tool_error(_call_accounting_tool(
+        api_client, accounting_token, 'confirm_action',
+        {'confirmation_id': mcp_preview['confirmation_id']},
+    ))
 
     assert (
         created.status_code, later_payment.status_code, rest_reverse.status_code,
-        mcp_reverse.data['result']['isError'],
-    ) == (201, 201, 400, True), (created.data, later_payment.data, rest_reverse.data, mcp_reverse.data)
+        mcp_preview['confirmation_required'], mcp_reverse['code'],
+    ) == (201, 201, 400, True, 'VALIDATION_ERROR'), (created.data, later_payment.data, rest_reverse.data, mcp_reverse)
+    assert 'impide revertir' in mcp_reverse['message']
     assert (
         IncomeSettlement.objects.filter(status=IncomeSettlement.Status.ACTIVE).count(),
         PocketMovement.objects.count(),

@@ -250,6 +250,160 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     expect(settle).toMatchObject({ total_amount: 0, confirmation_income_ids: [], send_payment_confirmation: false });
     expect(settle.expected_incomes).toEqual([{ income_id: 11, concept: 'Kore - saldo junio', period_date: '2026-06', amount: 60000 }]);
   });
+  test('opens the abono allocations from its pocket movement', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the pocket ledger is reached from the accounting subnav, covered by admin-accounting-pocket)
+    await mockApi(page, async ({ apiPath, method }) => {
+      if (apiPath === 'auth/check/') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            user: { username: 'admin', is_staff: true, is_superuser: true },
+          }),
+        };
+      }
+      if (apiPath === 'accounting/pocket/70/' && method === 'GET') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 70, concept: 'Abono Kore SAS', movement_date: '2026-08-15',
+            direction: 'in', direction_label: 'Ingreso', amount: '900000.00',
+            linked_ledger: 'company', linked_record_detail: null,
+            running_balance: '900000.00', notes: '',
+            allocation_details: [
+              { income_id: 101, expected_income_id: 11, concept: 'Kore - Fase 2 Entrega', amount: '500000.00', pending_amount: '0.00', is_credit: false },
+              { income_id: 102, expected_income_id: 12, concept: 'Kore - Fase 3 Inicio', amount: '300000.00', pending_amount: '0.00', is_credit: false },
+              { income_id: 103, expected_income_id: 13, concept: 'Kore - Fase 3 Diseño', amount: '100000.00', pending_amount: '200000.00', is_credit: false },
+            ],
+          }),
+        };
+      }
+      if (apiPath === 'accounting/pocket/' && method === 'GET') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            results: [{
+              id: 70,
+              concept: 'Abono Kore SAS',
+              movement_date: '2026-08-15',
+              direction: 'in',
+              direction_label: 'Ingreso',
+              amount: '900000.00',
+              is_auto_managed: true,
+              linked_income_id: null,
+              linked_expense_id: null,
+              linked_ledger: 'company',
+              allocations: [
+                { income_id: 101, expected_income_id: 11, concept: 'Kore - Fase 2 Entrega', amount: '500000.00' },
+                { income_id: 102, expected_income_id: 12, concept: 'Kore - Fase 3 Inicio', amount: '300000.00' },
+                { income_id: 103, expected_income_id: 13, concept: 'Kore - Fase 3 Diseño', amount: '100000.00' },
+              ],
+              notes: '',
+              created_at: '2026-08-15T10:00:00Z',
+              updated_at: '2026-08-15T10:00:00Z',
+            }],
+            meta: { balance: '900000.00' },
+          }),
+        };
+      }
+      if (apiPath.startsWith('accounts/saved-filter-tabs')) {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify([]),
+        };
+      }
+      return null;
+    });
+
+    await page.goto('/es-co/panel/accounting/recurring', { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
+    await page.getByTestId('accounting-subnav-pocket').click();
+    await expect(
+      page.getByRole('heading', { name: 'Bolsillo ProjectApp', exact: true }),
+    ).toBeVisible({ timeout: 25_000 });
+
+    await page.getByTestId('pocket-allocations-70').click();
+
+    const modal = page.getByTestId('pocket-detail-modal');
+    await expect(modal).toContainText('Abono Kore SAS');
+    await expect(modal.getByTestId('pocket-allocation-detail-row')).toHaveCount(3);
+    await expect(modal).toContainText('Kore - Fase 3 Diseño');
+    await expect(modal.getByTestId('pocket-allocation-detail-total')).toContainText('900.000');
+  });
+
+  test('opens sibling allocations from an income payment', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the incomes list is reached from the accounting subnav, covered by admin-accounting-income-crud; the flow under test starts at the row link below)
+    const parent = incomeRow({
+      id: 11,
+      concept: 'Kore - Fase 2 Entrega',
+      total_amount: '1000000.00',
+      gustavo_amount: '500000.00',
+      carlos_amount: '500000.00',
+      paid_amount: '500000.00',
+      pending_amount: '500000.00',
+      payment_status: 'partial',
+      payment_status_label: 'Parcial',
+    });
+    await mockApi(page, async (ctx) => {
+      if (ctx.apiPath === 'accounting/incomes/11/detail/' && ctx.method === 'GET') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            income: parent,
+            liquid: [{
+              id: 101,
+              concept: 'Abono Kore SAS',
+              kind: 'liquid',
+              total_amount: '500000.00',
+              period_date: '2026-08-15',
+              movement: {
+                id: 70,
+                concept: 'Abono Kore SAS',
+                movement_date: '2026-08-15',
+                amount: '900000.00',
+                is_shared: true,
+                allocation_count: 3,
+                allocations: [
+                  { income_id: 101, concept: 'Kore - Fase 2 Entrega', amount: '500000.00' },
+                  { income_id: 102, concept: 'Kore - Fase 3 Inicio', amount: '300000.00' },
+                  { income_id: 103, concept: 'Kore - Fase 3 Diseño', amount: '100000.00' },
+                ],
+              },
+            }],
+            expenses: [],
+            collection_account: null,
+          }),
+        };
+      }
+      return buildHandler({ rows: [parent], calls: [] })(ctx);
+    });
+    await gotoIncomes(page);
+
+    await page.getByTestId('income-open-11').click();
+
+    // The settlement stops reading as an ordinary liquidación...
+    const detail = page.getByTestId('income-detail-modal');
+    await expect(detail).toContainText('Abono');
+    await expect(page.getByTestId('income-detail-movement-101'))
+      .toContainText('Abono · 3 ingresos');
+
+    await page.getByTestId('income-detail-movement-101').click();
+
+    // ...and the reparto names the siblings this income pays nothing to and
+    // could not see from here before, plus the whole transfer it came from.
+    const reparto = page.getByTestId('pocket-allocations-modal');
+    await expect(reparto.getByTestId('pocket-allocation-row')).toHaveCount(3);
+    await expect(reparto).toContainText('Kore - Fase 3 Diseño');
+    await expect(reparto.getByTestId('pocket-allocations-total')).toContainText('900.000');
+  });
 });
 
 const MODAL_PROFILES = ['compact', 'portrait', 'landscape', 'desktop', 'wide'];

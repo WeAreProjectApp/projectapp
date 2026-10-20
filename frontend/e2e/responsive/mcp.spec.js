@@ -12,15 +12,16 @@ import { batchForScenario, getResponsiveScenario } from './catalog-scenarios.js'
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 const LONG_LABEL = 'credencial-auditoria-externa-con-etiqueta-deliberadamente-extensa-para-medicion';
-const LONG_ACTOR = 'mcp_blog_actor_with_an_intentionally_long_service_identity';
+const LONG_ACTOR = 'mcp_content_actor_with_an_intentionally_long_service_identity';
 const LONG_REQUEST_ID = 'request-123e4567-e89b-12d3-a456-426614174000-with-a-long-trace-suffix';
 const connector = {
-  slug: 'blog',
-  name: 'Blog Publisher',
+  slug: 'content',
+  name: 'Contenido',
   description: 'Publica contenido fixture.',
   is_active: false,
   has_token: false,
   token_prefix: '',
+  is_legacy: false,
   connection_status: 'error',
   credentials: [{
     id: 7,
@@ -42,7 +43,7 @@ const connector = {
     created_at: '2026-09-30T10:00:00Z',
   }],
   tools: [
-    { name: 'get_blog_template', description: 'Consulta el template del blog.', risk: 'read' },
+    { name: 'get_blog_template', description: 'Consulta el template de contenido.', risk: 'read' },
     { name: 'create_blog_post', description: 'Crea un post.', risk: 'write' },
   ],
 };
@@ -56,13 +57,13 @@ async function setup(page, { onCredentialMutation } = {}) {
   await mockApi(page, async ({ apiPath, method }) => {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true, is_superuser: true } });
     if (apiPath === 'mcp-connectors/' && method === 'GET') return json([connector]);
-    if (apiPath === 'mcp-connectors/blog/generate-token/' && method === 'POST') return json({ connector_url: 'https://projectapp.test/api/mcp/blog/token/', token_prefix: 'token' });
-    if (apiPath === 'mcp-connectors/blog/' && method === 'PATCH') return json({ ...connector, is_active: true });
-    if (apiPath === 'mcp-connectors/blog/credentials/7/' && ['PATCH', 'DELETE'].includes(method)) {
+    if (apiPath === 'mcp-connectors/content/generate-token/' && method === 'POST') return json({ connector_url: 'https://projectapp.test/api/mcp/content/token/', token_prefix: 'token' });
+    if (apiPath === 'mcp-connectors/content/' && method === 'PATCH') return json({ ...connector, is_active: true });
+    if (apiPath === 'mcp-connectors/content/credentials/7/' && ['PATCH', 'DELETE'].includes(method)) {
       onCredentialMutation?.(method);
       return json(connector);
     }
-    if (apiPath === 'mcp-connectors/blog/credentials/' && method === 'POST') {
+    if (apiPath === 'mcp-connectors/content/credentials/' && method === 'POST') {
       onCredentialMutation?.(method);
       return json(connector);
     }
@@ -73,8 +74,8 @@ async function setup(page, { onCredentialMutation } = {}) {
 async function navigateToMcps(page) {
   await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
   await waitForNuxtApp(page);
-  await expect(page.getByTestId('mcp-card-blog')).toBeVisible();
-  await expect(page.getByTestId('mcp-card-blog')).toContainText('Blog Publisher');
+  await expect(page.getByTestId('mcp-card-content')).toBeVisible();
+  await expect(page.getByTestId('mcp-card-content')).toContainText('Contenido');
 }
 
 async function expectInsideViewport(page, locator, expectedText) {
@@ -109,10 +110,10 @@ async function expectSummaryHeight(summary, name) {
 }
 
 async function openLongMcpDetails(page) {
-  await page.getByTestId('mcp-card-header-blog').click();
-  await page.getByTestId('mcp-credentials-toggle-blog').click();
-  await page.getByTestId('mcp-activity-toggle-blog').click();
-  await page.getByTestId('mcp-tools-toggle-blog').click();
+  await page.getByTestId('mcp-card-header-content').click();
+  await page.getByTestId('mcp-credentials-toggle-content').click();
+  await page.getByTestId('mcp-activity-toggle-content').click();
+  await page.getByTestId('mcp-tools-toggle-content').click();
 }
 
 for (const profile of MCP_DISPLAY_PROFILES) {
@@ -129,7 +130,7 @@ for (const profile of MCP_DISPLAY_PROFILES) {
       const credential = page.getByTestId('mcp-credential-7');
       const label = credential.getByText(LONG_LABEL, { exact: true });
       const actor = credential.getByText(`Actor: ${LONG_ACTOR}`);
-      const requestId = page.getByTestId('mcp-activity-list-blog').getByText(`Request ${LONG_REQUEST_ID}`, { exact: true });
+      const requestId = page.getByTestId('mcp-activity-list-content').getByText(`Request ${LONG_REQUEST_ID}`, { exact: true });
       const priorityLocator = page.getByText('create_blog_post', { exact: true });
       await expectInsideViewport(page, label, LONG_LABEL);
       await expectInsideViewport(page, actor, `Actor: ${LONG_ACTOR}`);
@@ -150,11 +151,11 @@ for (const profile of ['portrait', 'compact']) {
       await setup(page);
       // quality: allow-deep-link (the authenticated MCP fixture enters the owned page, then operates its real accordions and controls)
       await navigateToMcps(page);
-      await page.getByTestId('mcp-card-header-blog').click();
-      await expect(page.getByTestId('mcp-credentials-toggle-blog')).toHaveText('Credenciales (1)');
-      await expectSummaryHeight(page.getByTestId('mcp-credentials-toggle-blog'), 'Credenciales');
-      await expectSummaryHeight(page.getByTestId('mcp-activity-toggle-blog'), 'Actividad reciente');
-      await expectSummaryHeight(page.getByTestId('mcp-tools-toggle-blog'), 'Funciones disponibles');
+      await page.getByTestId('mcp-card-header-content').click();
+      await expect(page.getByTestId('mcp-credentials-toggle-content')).toHaveText('Credenciales (1)');
+      await expectSummaryHeight(page.getByTestId('mcp-credentials-toggle-content'), 'Credenciales');
+      await expectSummaryHeight(page.getByTestId('mcp-activity-toggle-content'), 'Actividad reciente');
+      await expectSummaryHeight(page.getByTestId('mcp-tools-toggle-content'), 'Funciones disponibles');
     });
   });
 }
@@ -167,8 +168,8 @@ test.describe('mcp responsive special', () => {
     const credentialMutations = [];
     await setup(page, { onCredentialMutation: (method) => credentialMutations.push(method) });
     await navigateToMcps(page);
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-credentials-toggle-blog').click();
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-credentials-toggle-content').click();
     await page.getByTestId('mcp-credential-edit-7').click();
 
     const form = page.getByTestId('mcp-credential-modal');
@@ -192,9 +193,9 @@ test.describe('mcp responsive special', () => {
   test('connector dismisses its generated token dialog', { tag: ['@flow:admin-mcps', '@outcome:success', '@responsive-special:mcp', '@viewport:portrait', '@responsive-batch:mcp-special-1'] }, async ({ page }) => {
     await setup(page);
     await navigateToMcps(page);
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-generate-token-blog').click();
-    await expect(page.getByTestId('mcp-token-url')).toContainText('/api/mcp/blog/token/');
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-generate-token-content').click();
+    await expect(page.getByTestId('mcp-token-url')).toContainText('/api/mcp/content/token/');
     await page.getByTestId('mcp-token-close').click();
     await expect(page.getByTestId('mcp-token-modal')).toHaveCount(0);
   });
@@ -202,9 +203,9 @@ test.describe('mcp responsive special', () => {
   test('connector exposes its active state after the touch toggle', { tag: ['@flow:admin-mcps', '@outcome:success', '@responsive-special:mcp', '@viewport:portrait', '@responsive-batch:mcp-special-1'] }, async ({ page }) => {
     await setup(page);
     await navigateToMcps(page);
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-toggle-blog').click();
-    await expect(page.getByTestId('mcp-status-blog')).toHaveText('Activo');
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-toggle-content').click();
+    await expect(page.getByTestId('mcp-status-content')).toHaveText('Activo');
   });
 });
 
@@ -220,8 +221,8 @@ test.describe('mcp compact short viewport', () => {
     await setup(page);
     // quality: allow-deep-link (the authenticated MCP fixture enters the owned page, then operates its real accordions and controls)
     await navigateToMcps(page);
-    await page.getByTestId('mcp-card-header-blog').click();
-    const credentialsSummary = page.getByTestId('mcp-credentials-toggle-blog');
+    await page.getByTestId('mcp-card-header-content').click();
+    const credentialsSummary = page.getByTestId('mcp-credentials-toggle-content');
     await credentialsSummary.scrollIntoViewIfNeeded();
     await credentialsSummary.click();
     const credential = page.getByTestId('mcp-credential-7');

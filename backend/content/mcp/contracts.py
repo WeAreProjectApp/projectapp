@@ -1541,3 +1541,26 @@ MCP_MODEL_CONTRACTS['projects'] += tuple(
     if contract.model_label == 'accounts.HostingSubscription' else contract
     for contract in PROJECT_BILLING_CONTRACTS
 )
+
+
+# Canonical catalogs combine every field contract of their source connectors.
+# Shared model references are merged; a writable field takes precedence over
+# a source connector's narrower read-only/excluded projection.
+from content.mcp.module_catalog import MODULE_CONNECTORS  # noqa: E402
+
+for canonical, (_, sources) in MODULE_CONNECTORS.items():
+    grouped = {}
+    for source in sources:
+        for contract in MCP_MODEL_CONTRACTS[source]:
+            grouped.setdefault(contract.model_label, []).append(contract)
+    if canonical == 'accounting':
+        for contract in (*PROJECT_BILLING_CONTRACTS, PROJECT_HOSTING_SUBSCRIPTION_CONTRACT):
+            grouped.setdefault(contract.model_label, []).append(contract)
+    merged = []
+    for label, contracts in grouped.items():
+        writable = frozenset().union(*(item.read_write for item in contracts))
+        readonly = frozenset().union(*(item.read_only for item in contracts)) - writable
+        excluded = {key: reason for item in contracts for key, reason in item.excluded.items()
+                    if key not in writable | readonly}
+        merged.append(McpModelContract(label, readonly, writable, excluded))
+    MCP_MODEL_CONTRACTS[canonical] = tuple(merged)

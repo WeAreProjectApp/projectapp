@@ -3,6 +3,7 @@
 LinkedIn API calls and Huey scheduling are mocked at the service layer —
 no real LinkedIn requests are made and no tasks are enqueued.
 """
+import json
 from datetime import timedelta
 from unittest.mock import patch
 
@@ -11,6 +12,7 @@ from django.utils import timezone
 from freezegun import freeze_time
 
 from content.models import LinkedInPost, McpConnector
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 PUBLISH_SVC = 'content.services.linkedin_post_service.publish_post_to_linkedin'
 ETA_SVC = 'content.services.linkedin_post_service.schedule_linkedin_post_eta'
@@ -45,10 +47,13 @@ def _call(api_client, token, name, arguments):
     )
 
 
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
+
+
 def _content(response):
     """First structured content block of a tools/call result."""
-    import json
-    return json.loads(response.data['result']['content'][0]['text'])
+    return confirmed_payload(response)
 
 
 @pytest.mark.django_db
@@ -65,7 +70,7 @@ class TestLinkedInMcpTools:
 
     def test_create_draft_and_list(self, api_client, linkedin_connector):
         _, token = linkedin_connector
-        created = _call(api_client, token, 'create_post', {'commentary': 'Hola LinkedIn'})
+        created = _call_confirmed(api_client, token, 'create_post', {'commentary': 'Hola LinkedIn'})
         assert created.data['result']['isError'] is False
         assert _content(created)['status'] == 'draft'
 
@@ -79,7 +84,7 @@ class TestLinkedInMcpTools:
     def test_create_scheduled_enqueues_eta(self, mock_eta, api_client, linkedin_connector):
         _, token = linkedin_connector
         eta = (timezone.now() + timedelta(hours=2)).isoformat()
-        created = _call(
+        created = _call_confirmed(
             api_client, token, 'create_post',
             {'commentary': 'Programado', 'scheduled_at': eta},
         )
@@ -91,7 +96,7 @@ class TestLinkedInMcpTools:
     def test_create_with_past_schedule_is_error(self, api_client, linkedin_connector):
         _, token = linkedin_connector
         eta = (timezone.now() - timedelta(hours=1)).isoformat()
-        created = _call(
+        created = _call_confirmed(
             api_client, token, 'create_post',
             {'commentary': 'Tarde', 'scheduled_at': eta},
         )
@@ -102,7 +107,7 @@ class TestLinkedInMcpTools:
         post = LinkedInPost.objects.create(
             commentary='ya salió', status=LinkedInPost.STATUS_PUBLISHED,
         )
-        updated = _call(
+        updated = _call_confirmed(
             api_client, token, 'update_post',
             {'post_id': post.id, 'commentary': 'edit'},
         )
@@ -112,7 +117,7 @@ class TestLinkedInMcpTools:
     def test_publish_post_success(self, mock_pub, api_client, linkedin_connector):
         _, token = linkedin_connector
         post = LinkedInPost.objects.create(commentary='Publícame')
-        published = _call(api_client, token, 'publish_post', {'post_id': post.id})
+        published = _call_confirmed(api_client, token, 'publish_post', {'post_id': post.id})
         assert published.data['result']['isError'] is False
         payload = _content(published)
         assert payload['status'] == 'published'
@@ -122,16 +127,45 @@ class TestLinkedInMcpTools:
     def test_publish_post_failure_is_error_and_persists(self, mock_pub, api_client, linkedin_connector):
         _, token = linkedin_connector
         post = LinkedInPost.objects.create(commentary='Falla')
-        published = _call(api_client, token, 'publish_post', {'post_id': post.id})
+        published = _call_confirmed(api_client, token, 'publish_post', {'post_id': post.id})
         assert published.data['result']['isError'] is True
         post.refresh_from_db()
         assert post.status == LinkedInPost.STATUS_FAILED
         assert 'boom' in post.error_message
 
+    @patch(PUBLISH_SVC, return_value={
+        'success': False, 'post_id': '', 'message': 'LinkedIn API error (500): boom',
+    })
+    def test_publish_failure_replay_keeps_failed_post_without_second_provider_call(
+        self, mock_pub, api_client, linkedin_connector,
+    ):
+        """Fails if replaying a failed confirmed publication contacts LinkedIn again."""
+        _, token = linkedin_connector
+        post = LinkedInPost.objects.create(commentary='No duplicar')
+
+        preview = _call(api_client, token, 'publish_post', {'post_id': post.id})
+        confirmation_id = preview.data['result']['structuredContent']['confirmation_id']
+        failed = _call(api_client, token, 'confirm_action', {
+            'confirmation_id': confirmation_id,
+        })
+        replay = _call(api_client, token, 'confirm_action', {
+            'confirmation_id': confirmation_id,
+        })
+
+        post.refresh_from_db()
+        assert failed.data['result']['isError'] is True
+        assert replay.data['result']['isError'] is False
+        replay_envelope = json.loads(replay.data['result']['content'][0]['text'])
+        assert replay_envelope['replayed'] is True
+        assert replay_envelope['result']['status'] == 'rejected'
+        assert post.status == LinkedInPost.STATUS_FAILED
+        assert post.error_message == 'LinkedIn API error (500): boom'
+        assert mock_pub.call_count == 1
+
     def test_delete_post(self, api_client, linkedin_connector):
         _, token = linkedin_connector
         post = LinkedInPost.objects.create(commentary='bye')
-        deleted = _call(api_client, token, 'delete_post', {'post_id': post.id})
+        deleted = _call_confirmed(api_client, token, 'delete_post', {'post_id': post.id})
         assert deleted.data['result']['isError'] is False
         assert _content(deleted)['deleted'] is True
         assert not LinkedInPost.objects.filter(pk=post.id).exists()
@@ -198,7 +232,7 @@ class TestLinkedInMcpHandlerBranches:
     def test_update_without_fields_errors(self, api_client, linkedin_connector):
         post = LinkedInPost.objects.create(commentary='Quieto')
         _, token = linkedin_connector
-        response = _call(api_client, token, 'update_post', {'post_id': post.id})
+        response = _call_confirmed(api_client, token, 'update_post', {'post_id': post.id})
         result = response.data['result']
         assert result['isError'] is True
         assert 'Nada que actualizar' in result['content'][0]['text']
@@ -206,7 +240,7 @@ class TestLinkedInMcpHandlerBranches:
     def test_update_draft_commentary(self, api_client, linkedin_connector):
         post = LinkedInPost.objects.create(commentary='Antes')
         _, token = linkedin_connector
-        response = _call(api_client, token, 'update_post', {
+        response = _call_confirmed(api_client, token, 'update_post', {
             'post_id': post.id, 'commentary': 'Después',
         })
         assert response.data['result']['isError'] is False
@@ -216,7 +250,7 @@ class TestLinkedInMcpHandlerBranches:
     def test_delete_post_removes_local_record(self, api_client, linkedin_connector):
         post = LinkedInPost.objects.create(commentary='Borrable')
         _, token = linkedin_connector
-        response = _call(api_client, token, 'delete_post', {'post_id': post.id})
+        response = _call_confirmed(api_client, token, 'delete_post', {'post_id': post.id})
         payload = _content(response)
         assert payload['deleted'] is True
         assert 'nada cambió en LinkedIn' in payload['note']

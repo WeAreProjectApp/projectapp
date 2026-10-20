@@ -165,6 +165,7 @@
         :loading="store.isLoading"
         :highlight-id="lastMutatedId"
         :has-active-filters="hasActiveFilters"
+        :detail-to-for="movementDetailTo"
         @open-actions="openActions"
         @open-allocations="openAllocations"
       />
@@ -182,6 +183,9 @@
         row-actions-layout="menu-start"
         @edit="handleEdit"
         @delete="handleDelete"
+        :interactive-rows="true"
+        @row-click="(row, event) => openRow(router.resolve(movementDetailTo(row.id)).href, event)"
+        @row-auxclick="(row, event) => openRow(router.resolve(movementDetailTo(row.id)).href, event)"
         @sort="toggleSort"
       >
         <template #row-actions="{ row }">
@@ -189,7 +193,7 @@
         </template>
         <template #cell-concept="{ row }">
           <span class="inline-flex min-w-0 flex-wrap items-center gap-2">
-            <span class="min-w-0 break-words">{{ row.concept }}</span>
+            <BaseRowLink :to="movementDetailTo(row.id)" class="min-w-0 break-words text-text-brand" :data-testid="`pocket-open-${row.id}`">{{ row.concept }}</BaseRowLink>
             <!-- Un abono cubre varios ingresos: el badge genérico se vuelve
                  la puerta al reparto. El guard de Array degrada al badge de
                  siempre si el serializer aún no manda allocations. -->
@@ -212,6 +216,9 @@
             </BaseBadge>
           </span>
         </template>
+        <template #cell-linked_ledger="{ row }">
+          <span :data-testid="`pocket-attribution-${row.id}`">{{ pocketAttributionLabel(row.linked_ledger, t) }}</span>
+        </template>
         <template #cell-direction_label="{ row }">
           <BaseBadge
             :variant="row.direction === 'in' ? 'success' : 'danger'"
@@ -223,9 +230,9 @@
         <template #cell-amount="{ row }">
           <span
             class="tabular-nums"
-            :class="row.direction === 'out' ? 'text-danger-strong' : 'text-text-muted'"
+            :class="row.direction === 'out' ? 'text-danger-strong' : 'text-success-strong'"
           >
-            {{ (row.direction === 'out' ? '-' : '') + formatMoney(row.amount) }}
+            {{ signedPocketAmount(row) }}
           </span>
           <span
             v-if="isNarrowTable"
@@ -263,6 +270,7 @@
     <PocketMovementActionsModal
       :open="actionsRow !== null"
       :record="actionsRow"
+      :detail-to="actionsRow ? router.resolve(movementDetailTo(actionsRow.id)).href : ''"
       @close="closeActions"
       @history="openHistory"
       @notes="openNote"
@@ -279,18 +287,10 @@
       @submit="handleSubmit"
     />
 
-    <!-- Reparto de un abono: qué ingresos cubrió este movimiento -->
-    <PocketMovementAllocationsModal
-      :open="allocationsOpen"
-      :movement="allocationsMovement"
-      @close="closeAllocations"
-    />
-
-    <EntityHistoryRecordModal
-      :open="historyRow !== null"
-      entity-type="pocket"
-      :record="historyRow"
-      @close="closeHistory"
+    <PocketMovementDetailModal
+      :open="detailOpen"
+      :movement-id="detailMovementId"
+      @close="closeMovementDetail"
     />
 
     <AccountingNoteModal
@@ -318,7 +318,6 @@
 </template>
 
 <script setup>
-import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
 import { computed, onMounted, ref } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import AccountingSubnav from '~/components/accounting/AccountingSubnav.vue';
@@ -328,7 +327,10 @@ import PocketMovementCards from '~/components/accounting/PocketMovementCards.vue
 import PocketMovementRowActionsButton from '~/components/accounting/PocketMovementRowActionsButton.vue';
 import BaseButton from '~/components/base/BaseButton.vue';
 import BaseBadge from '~/components/base/BaseBadge.vue';
-import PocketMovementAllocationsModal from '~/components/accounting/PocketMovementAllocationsModal.vue';
+import PocketMovementDetailModal from '~/components/accounting/PocketMovementDetailModal.vue';
+import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
+import { useRowNavigation } from '~/composables/useRowNavigation';
+import { pocketAttributionLabel, signedPocketAmount } from '~/utils/pocketPresentation';
 import AccountingErrorState from '~/components/accounting/AccountingErrorState.vue';
 import BaseEmptyState from '~/components/base/BaseEmptyState.vue';
 import AccountingFilterPanel from '~/components/accounting/AccountingFilterPanel.vue';
@@ -358,6 +360,13 @@ import { withRunningBalance } from '~/utils/pocketRunningBalance';
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useAccountingStore();
+const { t } = useI18n();
+const router = useRouter();
+const { openRow } = useRowNavigation();
+const {
+  openId: detailMovementId, isOpen: detailOpen, toFor: movementDetailTo,
+  open: openMovementDetail, close: closeMovementDetail,
+} = useDetailQueryParam('movement');
 const balanceClipboard = useClipboardFeedback();
 async function copyPocketBalance() {
   if (store.isLoading || store.error === 'fetch_failed') return;
@@ -573,7 +582,11 @@ const columns = computed(() => [
   },
   {
     key: 'concept', label: 'Concepto', size: 'name', sortable: true,
-    responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
+  },
+  {
+    key: 'linked_ledger', label: t('accountingPocket.belongsTo'),
+    responsive: { compact: 'group', portrait: 'group', landscape: 'keep' },
   },
   {
     key: 'direction_label', label: 'Tipo', size: 'badge', hideBelow: 'md',
@@ -581,7 +594,7 @@ const columns = computed(() => [
   },
   {
     key: 'amount', label: 'Valor', format: 'money', group: 'money', sortable: true,
-    responsive: { primary: true, compact: 'keep', portrait: 'keep', landscape: 'keep' },
+    responsive: { compact: 'keep', portrait: 'keep', landscape: 'keep' },
   },
   {
     key: 'running_balance',
@@ -597,8 +610,6 @@ const columns = computed(() => [
 
 // ── Reparto de un abono ──
 
-const allocationsOpen = ref(false);
-const allocationsMovement = ref(null);
 const actionsRow = ref(null);
 
 function openActions(row) {
@@ -609,16 +620,8 @@ function closeActions() {
   actionsRow.value = null;
 }
 
-// Detalle e historial is a menu entry, never a sibling of the kebab: the
-// leading track is 56 px wide and anything else overflows onto the ledger.
-const historyRow = ref(null);
-
 function openHistory(row) {
-  historyRow.value = row;
-}
-
-function closeHistory() {
-  historyRow.value = null;
+  openMovementDetail(row.id);
 }
 
 // «Ver nota» is offered by the menu only when the movement has one; the ledger
@@ -634,13 +637,7 @@ const noteSubtitle = computed(() => (noteRow.value
   : ''));
 
 function openAllocations(row) {
-  allocationsMovement.value = row;
-  allocationsOpen.value = true;
-}
-
-function closeAllocations() {
-  allocationsOpen.value = false;
-  allocationsMovement.value = null;
+  openMovementDetail(row.id);
 }
 
 async function loadRecords() {

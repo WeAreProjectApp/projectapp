@@ -335,14 +335,10 @@ UNDESCRIBED_ARGUMENT_BACKLOG = frozenset({
     'update_proposal_status',
     'upload_proposal_document',
     # communications
-    'create_folder',
     'create_platform_secure_link',
-    'delete_folder',
     'get_secure_link_url',
-    'list_folders',
     'list_secure_link_events',
     'list_secure_links',
-    'update_folder',
     'update_secure_link',
     # content
     'create_blog_post',

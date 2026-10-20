@@ -187,7 +187,7 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
 
 def test_projects_hosting_contract_uses_lifecycle_actions(superuser, make_client_profile):
     connector, _ = McpConnector.objects.get_or_create(
-        slug='projects', defaults={'name': 'Projects'},
+        slug='accounting', defaults={'name': 'Projects'},
     )
     credential = McpCredential.objects.create(
         connector=connector, label='Hosting field contract', actor=superuser,
@@ -209,11 +209,11 @@ def test_projects_hosting_contract_uses_lifecycle_actions(superuser, make_client
     payment.full_clean()
 
     hosting = call_tool_inprocess(
-        'projects', 'get_project_hosting', {'project_id': project.pk},
+        'accounting', 'get_project_hosting', {'project_id': project.pk},
         credential=credential,
     )
     rejected = call_tool_inprocess(
-        'projects', 'change_hosting_subscription', {
+        'accounting', 'change_hosting_subscription', {
             'subscription_id': subscription.pk, 'action': 'resume',
             'reason': 'Revisar campos del ciclo', 'expected_impact_hash': 'unused',
             'status': 'active', 'next_billing_date': '2026-04-01',
@@ -250,8 +250,9 @@ def test_projects_hosting_contract_uses_lifecycle_actions(superuser, make_client
     assert {'status', 'is_archived', 'archived_at'} <= contracts['projects']['accounts.Payment'].read_only
     assert contracts['projects']['accounts.Payment'] == contracts['accounting-billing']['accounts.Payment']
 
-    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['projects']}
-    assert len(tools) == len(TOOLS_BY_SLUG['projects']) == 171
+    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['accounting']}
+    assert 'change_hosting_subscription' not in {tool['name'] for tool in TOOLS_BY_SLUG['projects']}
+    assert len(tools) == len(TOOLS_BY_SLUG['accounting'])
     assert tools['preview_hosting_subscription_change']['annotations']['readOnlyHint'] is True
     assert tools['change_hosting_subscription']['requires_confirmation'] is True
     assert 'change_hosting_subscription' not in {

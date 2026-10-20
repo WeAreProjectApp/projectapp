@@ -1687,3 +1687,10 @@ def validate_linktree_template(version_id):
     from content.services.linktree_templates.service import run_validation
 
     run_validation(version_id)
+
+
+@periodic_task(crontab(minute='*/5'))
+def mcp_migration_observation_heartbeat():
+    """Keep a continuous retirement evidence window; never retire automatically."""
+    from content.mcp.migration import observation_heartbeat
+    observation_heartbeat()

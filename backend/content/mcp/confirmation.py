@@ -156,7 +156,7 @@ def confirm_action(arguments, tools):
                     # write fails. A repeated confirmation must not send again.
                     result = {
                         'status': 'unknown',
-                        'message': 'Confirmación consumida. Consulta el estado del paquete antes de cualquier nuevo envío.',
+                        'message': 'Confirmación consumida. Consulta el resultado de la operación antes de volver a ejecutarla.',
                         'proposal_id': intent.arguments.get('proposal_id'),
                         'preparation_id': intent.arguments.get('preparation_id'),
                     }

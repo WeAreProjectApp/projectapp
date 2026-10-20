@@ -1,7 +1,13 @@
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,
-> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`;
+> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`, con unión `0295`;
 > decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
+
+> **Unificación MCP por módulo — 2026-10-19:** ocho catálogos canónicos se derivan del registro común. Las credenciales anteriores conservan un catálogo legacy y sus permisos efectivos; Contable concentra hosting y facturación. Un registro diario previo a la ejecución y un heartbeat de observación sostienen el retiro con 30 días de compatibilidad y 14 días sin uso antiguo; un hueco reinicia la observación. El retiro conserva credenciales y auditoría como evidencia y responde con un código explícito. No acredita despliegue.
+
+## Detalle del bolsillo (2026-10-19)
+
+`accounting_pocket_detail_service` concentra la lectura individual compartida por REST y MCP: una consulta de movimiento con gasto, una de hijos, otra de padres con cobros agregados y otra de saldo cronológico. `PocketMovementDetailModal` consulta al abrir, rechaza respuestas superadas y reutiliza `EntityHistoryTabs`. El saldo real del detalle es independiente del acumulado filtrado de la tabla; ambos desempatan por fecha, creación e identificador.
 
 > **Building on Demand — 2026-10-10:** `/building-on-demand` presenta una célula
 > Scrum compartida por bolsa mensual de horas; `/panel/cells` (Células) reúne

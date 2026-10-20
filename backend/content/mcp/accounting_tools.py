@@ -36,6 +36,7 @@ from content.models import (
     ExpenseRecord,
     IncomeRecord,
     IncomeSettlement,
+    PocketMovement,
 )
 from content.serializers.accounting import (
     AccountingChangeLogSerializer,
@@ -127,6 +128,17 @@ def _make_list(key):
 
 def _make_get(key):
     def handler(arguments):
+        if key == 'pocket':
+            from content.services.accounting_pocket_detail_service import (
+                build_pocket_detail_payload, pocket_detail_queryset,
+            )
+
+            record_id = arguments.get('record_id')
+            try:
+                movement = pocket_detail_queryset().get(pk=int(record_id))
+            except (PocketMovement.DoesNotExist, TypeError, ValueError):
+                raise ToolError(f'No existe un registro pocket con id={record_id}.')
+            return build_pocket_detail_payload(movement)
         instance = _get_instance_or_error(key, arguments.get('record_id'))
         return _ENTITIES[key]['read'](instance).data
     return handler
@@ -1028,6 +1040,8 @@ def _build_ledger_tools():
             'description': (
                 f'Abre un registro de {label} por ID con todos los campos '
                 'vigentes de lectura del módulo contable.'
+                + (' Incluye saldo real posterior sin filtros, vínculo y reparto '
+                   'con pendientes actuales y saldo a favor.' if key == 'pocket' else '')
             ),
             'input_schema': closed_object(_RECORD_ID_PROP, ['record_id']),
             'handler': _make_get(key),
@@ -1162,7 +1176,47 @@ def reverse_income_settlement(arguments):
 
 
 def _grouped_settlement_impact(arguments):
-    return {'summary': 'Liquidar uno o varios ingresos con sus ajustes.', 'settlement': preview_income_settlement(arguments)}
+    preview = _grouped_settlement_preview(arguments)
+    summary = ('Recuperar la liquidación existente sin registrar otro pago.'
+               if preview.get('replayed') else 'Liquidar uno o varios ingresos con sus ajustes.')
+    return {'summary': summary, 'settlement': preview}
+
+
+def _grouped_settlement_preview(arguments):
+    from content.mcp.confirmation import canonical_arguments_hash
+
+    data = _settlement_data(arguments)
+    existing = IncomeSettlement.objects.filter(pk=data['request_id']).first() if data.get('request_id') else None
+    if existing is None:
+        return preview_income_settlement(arguments)
+    try:
+        income_settlement_operation_service._replay(existing, data)
+    except ValueError as exc:
+        raise ToolError(str(exc), code='CONFLICT') from exc
+    return {
+        'replayed': True,
+        'settlement': income_settlement_operation_service.settlement_payload(existing),
+        'preview_hash': canonical_arguments_hash({
+            'id': str(existing.pk), 'revision': existing.revision,
+            'status': existing.status, 'input': existing.input_snapshot,
+        }),
+    }
+
+
+def _prepare_grouped_settlement(arguments):
+    arguments = dict(arguments)
+    preview = _grouped_settlement_preview(arguments)
+    if not preview.get('replayed') and arguments.get('preview_hash') and arguments['preview_hash'] != preview['preview_hash']:
+        raise ToolError('La liquidación cambió desde la revisión; genera una vista previa nueva.', code='STALE_VERSION')
+    arguments['preview_hash'] = preview['preview_hash']
+    return arguments
+
+
+def _grouped_settlement_etags(arguments):
+    try:
+        return {'preview_hash': _grouped_settlement_preview(arguments)['preview_hash']}
+    except ToolError as exc:
+        raise ToolError('Los recursos cambiaron desde la vista previa.', code='STALE_VERSION') from exc
 
 
 _SETTLEMENT_ID_PROPS = {
@@ -1232,6 +1286,7 @@ _NON_CRUD_TOOLS = close_root_schemas([
     {
         'name': 'bulk_settle_incomes',
         'area': 'ledger',
+        'strict_arguments': True,
         'description': (
             'Distribuye un único abono real entre uno o varios ingresos esperados, sin cuenta emitida. '
             'Admite deducciones proporcionales, reparto global, saldos reprogramados y destino socios o bolsillo. Crea un solo movimiento al elegir bolsillo; cualquier excedente queda como '
@@ -1243,7 +1298,9 @@ _NON_CRUD_TOOLS = close_root_schemas([
             'required': ['total_amount', 'period_date'],
         },
         'handler': bulk_settle_incomes,
+        'prepare_arguments': _prepare_grouped_settlement,
         'impact_builder': _grouped_settlement_impact,
+        'etag_resolver': _grouped_settlement_etags,
     },
     {
         'name': 'update_income_abono',
@@ -1275,24 +1332,28 @@ _NON_CRUD_TOOLS = close_root_schemas([
     },
     {
         'name': 'preview_income_settlement', 'area': 'ledger',
+        'strict_arguments': True,
         'description': 'Calcula sin escribir el reparto, deducciones, IVA heredado, saldos y destinatarios de la liquidación.',
         'input_schema': closed_object(_ABONO_PROPS, required=['total_amount', 'period_date']),
         'handler': preview_income_settlement,
     },
     {
         'name': 'get_income_settlement', 'area': 'ledger',
+        'strict_arguments': True,
         'description': 'Consulta una liquidación completa por su UUID, incluso sin movimiento de bolsillo.',
         'input_schema': closed_object({'settlement_id': _SETTLEMENT_ID_PROPS['settlement_id']}, required=['settlement_id']),
         'handler': get_income_settlement,
     },
     {
         'name': 'update_income_settlement', 'area': 'ledger', 'risk': 'sensitive',
+        'strict_arguments': True,
         'description': 'Corrige juntos el dinero, deducciones y saldos reprogramados. Exige revisión actual; bloquea derivados con pagos o documentos vigentes. No reenvía correos al cliente.',
         'input_schema': closed_object({**_ABONO_PROPS, **_SETTLEMENT_ID_PROPS}, required=['settlement_id', 'revision', 'total_amount', 'period_date']),
         'handler': update_income_settlement,
     },
     {
         'name': 'reverse_income_settlement', 'area': 'ledger', 'risk': 'sensitive',
+        'strict_arguments': True,
         'description': 'Revierte todos los efectos de una liquidación, conservando su historial. Bloquea pagos o documentos posteriores en saldos reprogramados.',
         'input_schema': closed_object(_SETTLEMENT_ID_PROPS, required=['settlement_id', 'revision']),
         'handler': reverse_income_settlement,

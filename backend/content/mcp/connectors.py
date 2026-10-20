@@ -1,5 +1,5 @@
 """Single registry of MCP connector identities and ordered tool sources."""
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from content.mcp import registry
 from content.mcp.accounting_tools import ACCOUNTING_TOOLS
@@ -52,10 +52,9 @@ CONFIRMATION_NOTICE = (
     'con cancel_action.'
 )
 DIRECT_EXECUTION_NOTICE = (
-    'Las demás acciones de este conector de compatibilidad se ejecutan '
-    'directamente, sin vista previa: confirma con el usuario antes de eliminar, '
-    'publicar, enviar o liquidar. Para confirmaciones en dos pasos usa el '
-    'conector {canonical_area}.'
+    'Este conector está en retirada. Migra al conector {canonical_area}. '
+    'Las acciones sensibles conservan la vista previa y se confirman aquí '
+    'con confirm_action o se descartan con cancel_action.'
 )
 UPLOAD_NOTICE = (
     'Para adjuntar un archivo, inicia begin_upload, transfiere sus bytes '
@@ -84,6 +83,7 @@ class ConnectorSpec:
     confirm_sensitive: bool = False
     canonical_area: str = ''
     notes: tuple[str, ...] = ()
+    module_id: str = ''
 
     @property
     def server_name(self):
@@ -116,7 +116,7 @@ def accounting_area(area):
     return [tool for tool in ACCOUNTING_TOOLS if tool['area'] == area]
 
 
-CONNECTORS: dict[str, ConnectorSpec] = {
+SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
     'blog': ConnectorSpec(
         'blog', '1.1.0', (BLOG_TOOLS,),
         compatibility=True, canonical_area='content',
@@ -211,13 +211,27 @@ CONNECTORS: dict[str, ConnectorSpec] = {
 }
 
 
-TOOLS_BY_SLUG: dict[str, list[dict]] = {}
-for spec in CONNECTORS.values():
-    tools = [tool for source in spec.sources for tool in source]
-    if spec.confirm_sensitive:
-        tools = registry.with_sensitive_confirmation(tools)
-    tools = registry.normalize_tools(tools, spec.slug)
-    TOOLS_BY_SLUG[spec.slug] = registry.normalize_tools([
-        *tools,
-        *build_common_tools(spec, lambda slug=spec.slug: TOOLS_BY_SLUG[slug]),
-    ], spec.slug)
+# Preserve pre-consolidation catalogs for existing scoped credentials.
+from content.mcp.consolidation import build_catalogs  # noqa: E402
+
+CONNECTORS, TOOLS_BY_SLUG, LEGACY_TOOLS_BY_SLUG = build_catalogs(
+    SOURCE_CONNECTORS, replace, build_common_tools,
+)
+
+
+def tools_for_credential(slug, credential):
+    if credential is not None and getattr(credential, 'catalog', '') == 'legacy':
+        return LEGACY_TOOLS_BY_SLUG[slug]
+    from content.mcp.module_catalog import FINANCIAL_PROJECT_TOOLS
+
+    public = TOOLS_BY_SLUG[slug]
+    if credential is not None and credential.connector.aliases_retired_at:
+        return public
+    names = {tool['name'] for tool in public}
+    aliases = [
+        {**tool, '_hidden': True}
+        for tool in LEGACY_TOOLS_BY_SLUG[slug]
+        if tool['name'] not in names
+        and not (slug == 'projects' and tool['name'] in FINANCIAL_PROJECT_TOOLS)
+    ]
+    return [*public, *aliases]

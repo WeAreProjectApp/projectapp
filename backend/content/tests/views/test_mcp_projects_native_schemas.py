@@ -30,15 +30,15 @@ from content.tests.mcp_schema_rules import schema_problems
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
 
-@pytest.mark.parametrize(('family', 'native_tools', 'count'), [
-    ('resources', PLATFORM_RESOURCE_TOOLS, 20),
-    ('issues', ISSUE_TOOLS, 16),
-    ('billing', PLATFORM_BILLING_TOOLS, 10),
-    ('hosting', HOSTING_SUBSCRIPTION_TOOLS, 2),
-    ('create', [CREATE_PROJECT], 1),
+@pytest.mark.parametrize(('family', 'slug', 'native_tools', 'count'), [
+    ('resources', 'projects', PLATFORM_RESOURCE_TOOLS, 20),
+    ('issues', 'projects', ISSUE_TOOLS, 16),
+    ('billing', 'accounting', PLATFORM_BILLING_TOOLS, 10),
+    ('hosting', 'accounting', HOSTING_SUBSCRIPTION_TOOLS, 2),
+    ('create', 'projects', [CREATE_PROJECT], 1),
 ], ids=['resources', 'issues', 'billing', 'hosting', 'create'])
-def test_native_policy_covers_the_registered_family(family, native_tools, count):
-    registered = {tool['name']: tool for tool in TOOLS_BY_SLUG['projects']}
+def test_native_policy_covers_the_registered_family(family, slug, native_tools, count):
+    registered = {tool['name']: tool for tool in TOOLS_BY_SLUG[slug]}
     native_names = {tool['name'] for tool in native_tools}
 
     violations = {name: problems for name in native_names

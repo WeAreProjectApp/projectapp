@@ -1,3 +1,5 @@
+> **Unificación por módulo (2026-10-19):** el catálogo canónico, la compatibilidad por credencial, el inventario y el guion de consumidores/retiro se documentan en [MCP_MODULE_UNIFICATION.md](MCP_MODULE_UNIFICATION.md). Los slugs anteriores se validan como adaptadores en retirada, no como módulos adicionales.
+
 # Guion de validación y mantenimiento de MCP
 
 Las plantillas contractuales independientes se administran desde Propuestas
@@ -802,12 +804,12 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 | `communications` | 2.1.1 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
 | `content` | 2.1.1 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
 | `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 2.3.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-ledger` | 2.4.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo con detalle y reparto, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
 | `accounting-billing` | 2.1.1 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
 | `accounting-cards` | 2.1.1 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
 | `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
 | `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 1.3.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos y controles comunes |
+| `accounting` | 1.4.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos, detalle del bolsillo y controles comunes |
 | `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
 | `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
@@ -2655,8 +2657,8 @@ manifest. El guion y la condición de cierre tras deploy están en
 
 ### Abonos sin cuenta emitida: crear, corregir y deshacer (2026-10-10)
 
-Validar con una credencial autorizada de `accounting-ledger` (2.3.0) y el
-conector compatible `accounting` (1.3.0), usando sólo datos de prueba:
+Validar con una credencial autorizada de `accounting-ledger` (2.4.0) y el
+conector compatible `accounting` (1.4.0), usando sólo datos de prueba:
 
 1. Consultar `list_income` para elegir uno o varios esperados de empresa con
    saldo pendiente, sin cuenta o con borrador. Registrar `bulk_settle_incomes`
@@ -2697,3 +2699,16 @@ los contratos de `settle_income`, `update_income_abono` y `delete_income_abono`.
 Los correos requieren la confirmación sensible del conector y se programan tras
 el commit. Una reversa con pagos o documentos en el saldo derivado debe fallar
 sin alterar dinero ni gastos. Los campos `settlement` son de lectura, no CRUD.
+
+El abono congela automáticamente la huella de reparto y destinatarios en la
+confirmación, aunque el cliente no envíe `preview_hash`. Si cambian antes de
+confirmar, rechaza sin registrar dinero ni enviar correo. Un `request_id` ya
+completado revisa el recibo existente, sin recalcular pagos sobre saldos cerrados.
+Los argumentos desconocidos o requeridos ausentes de las cinco herramientas de
+liquidación se rechazan antes de crear una confirmación.
+
+## Detalle del bolsillo — 2026-10-19
+
+`accounting-ledger.get_pocket` comparte la lectura individual del Panel. Además de los campos del listado, devuelve `running_balance` (saldo real después del movimiento, sin filtros), `linked_record_detail` (tipo, identificador, concepto y categoría del gasto cuando aplica) y `allocation_details` (importe imputado, ingreso esperado, pendiente actual y marca de saldo a favor). Los importes siguen siendo decimales como texto. El saldo se ordena por fecha, creación e identificador; el pendiente incluye los demás pagos y deducciones y no es un snapshot histórico. `list_pocket` mantiene su respuesta liviana. No hay campos nuevos de modelo ni cambios de escritura o permisos.
+
+Validación focal: `content/tests/views/test_pocket_movement_detail.py` comprueba atribución, saldo, reparto, acceso y paridad REST/MCP.

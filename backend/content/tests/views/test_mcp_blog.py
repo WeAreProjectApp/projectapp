@@ -4,6 +4,7 @@ import logging
 import pytest
 
 from content.models import BlogPost, McpConnector, McpRequestLog
+from content.tests.mcp_confirmation_helpers import call_confirmed
 from content.views.mcp_blog import McpEndpointThrottle
 
 
@@ -36,6 +37,10 @@ def _active_connector(slug):
     connector.is_active = True
     connector.save(update_fields=['is_active'])
     return connector.generate_token()
+
+
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
 
 
 VALID_POST = {
@@ -90,7 +95,9 @@ class TestMcpEndpointThrottle:
             f'/api/mcp/documents/{documents_token}/', _rpc('ping'), format='json',
         )
         assert sibling_response.status_code == 200
-        assert sibling_response.data['result'] == {}
+        assert sibling_response.data['result']['_meta']['deprecation'][
+            'replacement'
+        ] == 'documents'
 
     def test_unknown_slugs_share_one_quota_bucket(self, api_client, monkeypatch):
         """Inventing endpoint slugs must not bypass the anonymous throttle."""
@@ -203,14 +210,12 @@ class TestMcpActivityLog:
 
     def test_failed_tool_call_records_error_detail(self, api_client, blog_connector):
         _, token = blog_connector
-        api_client.post(
-            _url(token),
-            _rpc('tools/call', {'name': 'create_blog_post', 'arguments': {'title_es': 'x'}}),
-            format='json',
+        _call_confirmed(
+            api_client, token, 'create_blog_post', {'title_es': 'x'},
         )
         events = self._events()
         failed = [e for e in events if e[0] == 'tool_call' and e[1] is False]
-        assert failed and 'create_blog_post' in failed[0][2]
+        assert failed == [('tool_call', False, 'confirm_action: VALIDATION_ERROR')]
 
     def test_bad_token_records_auth_error(self, api_client, blog_connector):
         api_client.post(_url('bad-token'), _rpc('ping'), format='json')
@@ -295,11 +300,7 @@ class TestMcpEndpointFlow:
     def test_tools_call_creates_post_and_touches_last_used(self, api_client, blog_connector):
         connector, token = blog_connector
         assert connector.last_used_at is None
-        response = api_client.post(
-            _url(token),
-            _rpc('tools/call', {'name': 'create_blog_post', 'arguments': VALID_POST}),
-            format='json',
-        )
+        response = _call_confirmed(api_client, token, 'create_blog_post', VALID_POST)
         assert response.status_code == 200
         assert response.data['result']['isError'] is False
         assert BlogPost.objects.filter(title_es='Post por MCP').exists()
@@ -308,10 +309,8 @@ class TestMcpEndpointFlow:
 
     def test_validation_error_is_readable_tool_error(self, api_client, blog_connector):
         _, token = blog_connector
-        response = api_client.post(
-            _url(token),
-            _rpc('tools/call', {'name': 'create_blog_post', 'arguments': {'title_es': 'x'}}),
-            format='json',
+        response = _call_confirmed(
+            api_client, token, 'create_blog_post', {'title_es': 'x'},
         )
         assert response.status_code == 200
         assert response.data['result']['isError'] is True
@@ -324,18 +323,14 @@ class TestMcpEndpointFlow:
         _, token = blog_connector
         marker = 'SYNTHETIC_PRIVATE_P5_20261001'
         with caplog.at_level(logging.INFO, logger='content.mcp.protocol'):
-            response = api_client.post(
-                _url(token),
-                _rpc('tools/call', {
-                    'name': 'delete_blog_post',
-                    'arguments': {'post_id': blog_post.pk, 'private_id': marker},
-                }),
-                format='json',
+            response = _call_confirmed(
+                api_client, token, 'delete_blog_post',
+                {'post_id': blog_post.pk, 'private_id': marker},
             )
 
         result = response.data['result']
         error = result['structuredContent']['error']
-        audit = McpRequestLog.objects.get(event='tool_call')
+        audit = McpRequestLog.objects.get(event='tool_call', ok=False)
         serialized_response = json.dumps(response.data, ensure_ascii=False)
         assert response.status_code == 200
         assert error == {
@@ -351,8 +346,11 @@ class TestMcpEndpointFlow:
             'request_id': audit.request_id,
             'has_duration': audit.duration_ms >= 0,
         } == {
-            'object_refs': [{'field': 'post_id', 'value': blog_post.pk}],
-            'detail': 'delete_blog_post: VALIDATION_ERROR',
+            'object_refs': [
+                {'field': 'confirmed_tool', 'value': 'delete_blog_post'},
+                {'field': 'post_id', 'value': blog_post.pk},
+            ],
+            'detail': 'confirm_action: VALIDATION_ERROR',
             'error_code': 'VALIDATION_ERROR',
             'request_id': result['_meta']['requestId'],
             'has_duration': True,
