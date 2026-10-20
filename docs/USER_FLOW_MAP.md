@@ -8439,6 +8439,7 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
 | success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
+| success | Volver a aprobar después de una corrección administrativa de estado | Revisar condiciones del borrador y confirmar otro paquete sin alterar los archivos previos |
 | success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
 | error | Confirmar personalizados sin archivo o con datos inválidos | Error correspondiente; modal y valores conservados |
 | failure | Fallo del servidor durante confirmación | Mensaje visible; formulario conservado para reintentar |
@@ -8622,7 +8623,8 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 | success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
 | success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
-| failure | El servidor falla al confirmar | Mensaje visible; se puede reintentar |
+| error | Guardar un adjunto con una huella antigua y consultar la versión actual | El archivo elegido se conserva; la versión solo cambia tras una revisión explícita |
+| failure | El servidor falla al confirmar o guardar un adjunto | Mensaje visible; archivo y formulario conservados para reintentar |
 | display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
 
 Los documentos estructurados abren el mismo editor de origen desde el gestor. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.

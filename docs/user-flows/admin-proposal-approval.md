@@ -11,6 +11,7 @@
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
 | success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
+| success | Volver a aprobar después de una corrección administrativa de estado | Revisar condiciones del borrador y confirmar otro paquete sin alterar los archivos previos |
 | success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
 | error | Confirmar personalizados sin archivo o con datos inválidos | Error correspondiente; modal y valores conservados |
 | failure | Fallo del servidor durante confirmación | Mensaje visible; formulario conservado para reintentar |

@@ -72,6 +72,11 @@ function buildMockHandler() {
   };
 }
 
+async function openProposal(page) {
+  await page.goto(`/es-co/proposal/${MOCK_UUID}?mode=detailed`, { waitUntil: 'domcontentloaded' });
+  await expect(page.getByTestId('index-toggle')).toBeVisible({ timeout: 45_000 });
+}
+
 test.describe('Proposal View Navigation', () => {
   test.beforeEach(async ({ page }) => {
     await page.addInitScript((_uuid) => {
@@ -83,7 +88,7 @@ test.describe('Proposal View Navigation', () => {
     tag: [...PROPOSAL_VIEW_NAVIGATION, '@role:guest'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
+    await openProposal(page);
 
     // Index panel is hidden initially (translate-x-[-120%])
     const indexPanel = page.getByTestId('index-panel');
@@ -101,7 +106,7 @@ test.describe('Proposal View Navigation', () => {
   }, async ({ page }) => {
     // quality: allow-deep-link (el enlace compartido es la entrada pública; el índice se abre y se navega por UI).
     await mockApi(page, buildMockHandler());
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`, { waitUntil: 'domcontentloaded' });
+    await openProposal(page);
 
     // Open the index
     await page.getByTestId('index-toggle').click();
@@ -124,7 +129,7 @@ test.describe('Proposal View Navigation', () => {
     tag: [...PROPOSAL_VIEW_NAVIGATION, '@role:guest'],
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
+    await openProposal(page);
 
     // First navigate to section 2 so prev button would normally show
     const nextBtn = page.getByTestId('nav-next');
@@ -147,7 +152,7 @@ test.describe('Proposal View Navigation', () => {
   }, async ({ page }) => {
     await mockApi(page, buildMockHandler());
     const proposalReq = page.waitForResponse((r) => r.url().includes(`proposals/${MOCK_UUID}/`));
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
+    await openProposal(page);
     await proposalReq;
 
     // Mock has 3 sections (greeting, executive_summary, context_diagnostic);
