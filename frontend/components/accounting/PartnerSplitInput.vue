@@ -10,12 +10,13 @@
       <span class="text-sm text-text-default">Reparto automático 50/50</span>
     </div>
 
-    <div :class="compact && !showVat ? 'grid grid-cols-1 panel-portrait:grid-cols-3 gap-3' : 'space-y-4'">
-      <VatAmountInput v-if="showVat" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
+    <div :class="compact && !showVat ? (hideTotal ? 'grid grid-cols-1 panel-portrait:grid-cols-2 gap-3' : 'grid grid-cols-1 panel-portrait:grid-cols-3 gap-3') : 'space-y-4'">
+      <VatAmountInput v-if="showVat && !hideTotal" :model-value="total" :rate="vatRate" :reset-key="vatResetKey" input-test-id="partner-split-total"
         @update:model-value="onTotalInput" @update:rate="emit('update:vatRate', $event)" @capture="emit('vatCapture', $event)" />
-      <div v-else>
+      <div v-else-if="!hideTotal">
         <label class="block text-xs font-medium text-text-muted mb-1">Valor total</label>
         <BaseCurrencyInput
+          :decimals="decimals"
           :model-value="total"
           placeholder="0"
           data-testid="partner-split-total"
@@ -25,8 +26,10 @@
 
       <div :class="compact && !showVat ? 'contents' : 'grid grid-cols-1 panel-portrait:grid-cols-2 gap-3'">
         <div>
-          <label class="block text-xs font-medium text-text-muted mb-1">Gustavo</label>
+          <label :for="`${inputId}-gustavo`" class="block text-xs font-medium text-text-muted mb-1">Gustavo</label>
           <BaseCurrencyInput
+            :decimals="decimals"
+            :id="`${inputId}-gustavo`"
             :model-value="gustavoAmount"
             placeholder="0"
             :disabled="autoSplit"
@@ -36,8 +39,10 @@
           />
         </div>
         <div>
-          <label class="block text-xs font-medium text-text-muted mb-1">Carlos</label>
+          <label :for="`${inputId}-carlos`" class="block text-xs font-medium text-text-muted mb-1">Carlos</label>
           <BaseCurrencyInput
+            :decimals="decimals"
+            :id="`${inputId}-carlos`"
             :model-value="carlosAmount"
             placeholder="0"
             :disabled="autoSplit"
@@ -72,7 +77,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, useId } from 'vue';
 import VatAmountInput from './VatAmountInput.vue';
 import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
 import BaseToggle from '~/components/base/BaseToggle.vue';
@@ -80,6 +85,8 @@ import { formatMoney } from '~/utils/formatMoney';
 
 const props = defineProps({
   compact: { type: Boolean, default: false },
+  hideTotal: { type: Boolean, default: false },
+  decimals: { type: Number, default: 0 },
   showVat: { type: Boolean, default: false },
   vatRate: { type: [Number, String], default: null },
   vatResetKey: { type: [Boolean, Number, String], default: null },
@@ -87,6 +94,8 @@ const props = defineProps({
   gustavoAmount: { type: [String, Number], default: '' },
   carlosAmount: { type: [String, Number], default: '' },
 });
+
+const inputId = useId();
 
 const emit = defineEmits(['update:total', 'update:gustavoAmount', 'update:carlosAmount', 'update:vatRate', 'vatCapture']);
 
@@ -141,7 +150,7 @@ function onToggleAuto(value) {
 watch(
   () => props.total,
   (value) => {
-    if (!autoSplit.value || isBlank(value)) return;
+    if (!autoSplit.value) return;
     if (!isAutoSplit(value, props.gustavoAmount, props.carlosAmount)) emitSplit(value);
   },
   { immediate: true },

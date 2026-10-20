@@ -1,19 +1,15 @@
 ### FLOW: `admin-accounting-income-bulk-settle`
+
 - **Module:** admin
-- **Role:** admin
+- **Role:** superuser admin
 - **Priority:** P1
-- **Routes:** `/panel/accounting/incomes`, `/panel/accounting/pocket`
-- **API:** `POST /api/accounting/incomes/bulk-settle/`, `GET /api/accounting/incomes/:id/detail/`, `GET /api/accounting/incomes/`, `GET /api/accounting/pocket/`
-- **Description:** La selección muestra valor total y saldo pendiente. Liquidar aplica a uno o varios esperados de empresa con saldo, sin exigir cuenta emitida. El modal propone el reparto del más antiguo al más reciente y permite ajustes manuales; un único movimiento conserva los pagos completos, parciales y el saldo a favor. Sólo al elegir un ingreso ofrece Liquidación con ajustes, que confirma la apertura de un formulario nuevo. Al completar sin cuenta emitida aparece Cuenta pendiente de emitir. El reparto puede consultarse desde ingreso y bolsillo; borrar el movimiento deshace el abono completo.
-- **Steps:** seleccionar esperados → Liquidar → revisar/ajustar el reparto → confirmar → filas Pagado/Parcial en la lista, un movimiento en el bolsillo.
-- **Branches:** el reparto se consulta también desde el ingreso; valor menor deja el último parcial; valor exacto cubre todo sin tipear; excedente anuncia el saldo a favor; excedente con mezcla de clientes bloquea; 400 del backend deja el modal abierto; el reparto se consulta desde el movimiento del bolsillo.
-- **Coverage:** ✅ Covered
+- **Route:** `/panel/accounting/incomes`
+- **Description:** La selección muestra total original y pendiente. Liquidar abre el mismo modal que la acción individual, con participaciones globales, diferencia e IVA heredado colapsables.
+- **Success:** Cobertura por antigüedad, reparto manual o automático, deducciones proporcionales, saldo pendiente o reprogramado con origen, cero recibido con ajustes y excedente como saldo a favor del mismo cliente. Una vista previa precede el registro; los correos elegibles se revisan dentro del modal.
+- **Error:** Bloquea distribuciones excesivas, valores negativos, líneas incompletas, períodos incompletos, participación excesiva y excedente con clientes mezclados. Explica por qué no puede enviar una confirmación.
+- **Failure:** Un rechazo de vista previa conserva el formulario. Un conflicto al registrar conserva los datos para volver a revisar. El fallo de correo no deshace el abono.
+- **Display:** Un único diálogo con lista, valor recibido, fecha, destino, resumen y tres secciones colapsables; Diferencia se abre al faltar dinero. Los importes de ambos socios se muestran desde la apertura. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
+- **Coverage:** Covered — las cuatro clases de resultado. Los siete recorridos de comportamiento y los cinco perfiles de pantalla se ejecutaron contra el frontend local; la ruta individual comparte el mismo modal.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
-## Formulario compacto (2026-10-09)
-
-El modal de abono usa el ancho de formulario (42 rem). Valor recibido y fecha comparten fila, y el destino (Bolsillo ProjectApp) se lee debajo de ella en lugar de ocupar una fila propia.
-
-## Liquidación y cuenta pendiente (2026-10-10)
-
-La selección muestra valor total y saldo pendiente. Liquidar aplica a uno o varios esperados de empresa con saldo, sin exigir cuenta emitida. El modal propone el reparto del más antiguo al más reciente y admite ajustes manuales. Un único movimiento cubre pagos completos y parciales, con saldo a favor cuando corresponde. Sólo para uno ofrece Liquidación con ajustes: el aviso confirma que se abrirá un formulario nuevo sin trasladar valores. Al completar sin cuenta, la fila muestra Cuenta pendiente de emitir. Las validaciones, fallos de servidor, consulta del reparto y reversa completa conservan su comportamiento.
+El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.

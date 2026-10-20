@@ -4,10 +4,10 @@ local registry; deployment and cloud clients unverified
 
 | Conector | Módulo | Versión | Estado | Dirección | Destino | Herramientas |
 |---|---|---|---|---|---|---|
-| accounting | accounting | 2.0.0 | canonical | /api/mcp/accounting/ | accounting | 137 |
+| accounting | accounting | 2.0.0 | canonical | /api/mcp/accounting/ | accounting | 141 |
 | accounting-billing | accounting | 3.0.0 | deprecated | /api/mcp/accounting-billing/ | accounting | 46 |
 | accounting-cards | accounting | 3.0.0 | deprecated | /api/mcp/accounting-cards/ | accounting | 39 |
-| accounting-ledger | accounting | 3.0.0 | deprecated | /api/mcp/accounting-ledger/ | accounting | 64 |
+| accounting-ledger | accounting | 3.0.0 | deprecated | /api/mcp/accounting-ledger/ | accounting | 68 |
 | additional-modules | commercial | 3.0.0 | deprecated | /api/mcp/additional-modules/ | commercial | 25 |
 | blog | site | 2.0.0 | deprecated | /api/mcp/blog/ | content | 10 |
 | building-on-demand | commercial | 2.0.0 | deprecated | /api/mcp/building-on-demand/ | commercial | 35 |
@@ -74,6 +74,10 @@ local registry; deployment and cloud clients unverified
 | accounting / bulk_settle_incomes | keep | accounting / bulk_settle_incomes | not_observed |
 | accounting / update_income_abono | keep | accounting / update_income_abono | not_observed |
 | accounting / delete_income_abono | keep | accounting / delete_income_abono | not_observed |
+| accounting / preview_income_settlement | keep | accounting / preview_income_settlement | not_observed |
+| accounting / get_income_settlement | keep | accounting / get_income_settlement | not_observed |
+| accounting / update_income_settlement | keep | accounting / update_income_settlement | not_observed |
+| accounting / reverse_income_settlement | keep | accounting / reverse_income_settlement | not_observed |
 | accounting / list_change_logs | rename | accounting / list_accounting_change_logs | not_observed |
 | accounting / get_settings | rename | accounting / get_accounting_settings | not_observed |
 | accounting / mute_income | keep | accounting / mute_income | not_observed |
@@ -224,6 +228,10 @@ local registry; deployment and cloud clients unverified
 | accounting-ledger / bulk_settle_incomes | adapt | accounting / bulk_settle_incomes | not_observed |
 | accounting-ledger / update_income_abono | adapt | accounting / update_income_abono | not_observed |
 | accounting-ledger / delete_income_abono | adapt | accounting / delete_income_abono | not_observed |
+| accounting-ledger / preview_income_settlement | adapt | accounting / preview_income_settlement | not_observed |
+| accounting-ledger / get_income_settlement | adapt | accounting / get_income_settlement | not_observed |
+| accounting-ledger / update_income_settlement | adapt | accounting / update_income_settlement | not_observed |
+| accounting-ledger / reverse_income_settlement | adapt | accounting / reverse_income_settlement | not_observed |
 | accounting-ledger / list_change_logs | adapt | accounting / list_accounting_change_logs | not_observed |
 | accounting-ledger / mute_income | adapt | accounting / mute_income | not_observed |
 | accounting-ledger / get_recurring_duplicate_draft | adapt | accounting / get_recurring_duplicate_draft | not_observed |

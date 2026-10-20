@@ -1,3 +1,4 @@
+from content.views.accounting_settlements import preview_income_settlement, income_settlement_detail
 from content.views.proposal_project_reassignment import proposal_project_reassignment
 from content.views.project_administration import (
     project_detail, project_commercial_phases, project_commercial_phase_detail,
@@ -1274,6 +1275,8 @@ urlpatterns = [
     path('accounting/incomes/period-suggestion/', suggest_income_period, name='suggest-income-period'),
     path('accounting/incomes/bulk-assign-client/', bulk_assign_income_client, name='bulk-assign-income-client'),
     path('accounting/incomes/bulk-assign-project/', bulk_assign_income_project, name='bulk-assign-income-project'),
+    path('accounting/incomes/settlement-preview/', preview_income_settlement, name='preview-income-settlement'),
+    path('accounting/income-settlements/<uuid:settlement_id>/', income_settlement_detail, name='income-settlement-detail'),
     path('accounting/incomes/bulk-settle/', bulk_settle_income_records, name='bulk-settle-income-records'),
     path('accounting/incomes/<int:record_id>/', retrieve_income_record, name='retrieve-income-record'),
     path('accounting/incomes/<int:record_id>/update/', update_income_record, name='update-income-record'),

@@ -225,6 +225,32 @@ const ELIGIBLE_INCOME = {
   collection_account_number: null,
 };
 
+function settlementPreview(body, income, confirmation = {}) {
+  const allocation = body.allocations?.find((row) => row.income_id === income.id);
+  return {
+    preview_hash: 'collections-settlement-preview',
+    total_amount: body.total_amount,
+    pending_after: '0.00',
+    rows: [{
+      income_id: income.id,
+      concept: income.concept,
+      amount: allocation?.amount ?? Number(income.pending_amount),
+      deducted: 0,
+      reexpected: 0,
+      pending_after: 0,
+      confirmation: {
+        can_send: false,
+        recipient: '',
+        collection_account_number: '',
+        blocked_reason: 'No hay cuenta de cobro emitida.',
+        client_name: income.client_name ?? '',
+        project_name: income.project_name ?? '',
+        ...confirmation,
+      },
+    }],
+  };
+}
+
 /** Rows where #2 carries an income link, so the detail modal has a history.
  *  Overridden locally rather than in makeRows(): the plain mark-paid test
  *  depends on the base rows NOT routing through Liquidar. */
@@ -439,6 +465,28 @@ function buildHandler({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(incomeDetail || ELIGIBLE_INCOME),
+      };
+    }
+    if (apiPath === 'accounting/incomes/settlement-preview/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(settlementPreview(body, incomeDetail || ELIGIBLE_INCOME)),
+      };
+    }
+    if (apiPath === 'accounting/incomes/bulk-settle/' && method === 'POST') {
+      const body = route.request().postDataJSON();
+      calls.push({ apiPath, method, body });
+      return {
+        status: 201,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          updated: body.income_ids.length,
+          results: [incomeDetail || ELIGIBLE_INCOME],
+          payment_confirmations: [],
+        }),
       };
     }
     if (apiPath.startsWith('accounting/incomes/') && method === 'GET') {
@@ -1551,8 +1599,10 @@ test.describe('Admin Accounting Collections', () => {
 
     // Never a silent mark-paid: the Liquidar modal takes over.
     await expect(
-      page.getByRole('heading', { name: 'Liquidar ingreso esperado' }),
-    ).toBeVisible();
+      page.getByRole('heading', { name: 'Liquidar ingresos' }),
+    ).toHaveText('Liquidar ingresos');
+    await expect(page.getByTestId('income-liquidate-selection'))
+      .toContainText('Desarrollo módulo de reportes');
     await expect(page.getByTestId('confirm-modal-confirm')).toBeHidden();
     expect(calls.some(
       (call) => call.apiPath.endsWith('/mark-paid/'),
@@ -1573,27 +1623,28 @@ test.describe('Admin Accounting Collections', () => {
     });
     let settled = null;
     await mockApi(page, async (ctx) => {
-      if (ctx.apiPath === 'accounting/incomes/8/payment-confirmation/') {
+      if (ctx.apiPath === 'accounting/incomes/settlement-preview/' && ctx.method === 'POST') {
+        const body = ctx.route.request().postDataJSON();
         return {
           status: 200,
           contentType: 'application/json',
-          body: JSON.stringify({
+          body: JSON.stringify(settlementPreview(body, ELIGIBLE_INCOME, {
             can_send: true, blocked_reason: '', recipient: 'ana@acme.co',
             client_name: 'Ana Pérez', project_name: '',
-            collection_account_number: 'PA-ACME-002', rescheduled_pending: '0.00',
-          }),
+            collection_account_number: 'PA-ACME-002',
+          })),
         };
       }
-      if (ctx.apiPath === 'accounting/incomes/8/settle/' && ctx.method === 'POST') {
+      if (ctx.apiPath === 'accounting/incomes/bulk-settle/' && ctx.method === 'POST') {
         settled = ctx.route.request().postDataJSON();
         return {
           status: 201,
           contentType: 'application/json',
           body: JSON.stringify({
-            income: ELIGIBLE_INCOME, liquid: null, expenses: [], expected_incomes: [],
-            payment_confirmation: {
-              requested: true, status: 'sent', recipient: 'ana@acme.co', error: '',
-            },
+            updated: 1, results: [ELIGIBLE_INCOME],
+            payment_confirmations: [{
+              income_id: 8, requested: true, status: 'sent', recipient: 'ana@acme.co', error: '',
+            }],
           }),
         };
       }
@@ -1612,14 +1663,19 @@ test.describe('Admin Accounting Collections', () => {
     await gotoCollections(page);
 
     await chooseCollectionAction(page, 2, 'mark-paid');
-    await expect(page.getByTestId('income-liquidate-confirmation-hint'))
+    await expect(page.getByTestId('income-liquidate-confirmation-8'))
       .toContainText('ana@acme.co');
     await page.getByTestId('income-liquidate-submit').click();
-    await expect(page.getByTestId('income-liquidate-notice-account')).toHaveText('PA-ACME-002');
-    await page.getByTestId('confirm-modal-confirm').click();
+    await expect(page.getByTestId('income-liquidate-review-recipient')).toContainText('PA-ACME-002');
+    await page.getByTestId('income-liquidate-confirm').click();
 
     await expect(page.getByText('Confirmación de pago enviada a ana@acme.co.')).toBeVisible();
-    expect(settled.send_payment_confirmation).toBe(true);
+    expect(settled).toMatchObject({
+      income_ids: [8],
+      send_payment_confirmation: true,
+      confirmation_income_ids: [8],
+      preview_hash: 'collections-settlement-preview',
+    });
   });
 
   test('a hosting cuenta with no period completes it from the Liquidar modal', {
@@ -1644,17 +1700,25 @@ test.describe('Admin Accounting Collections', () => {
     });
     let settled = null;
     await mockApi(page, async (ctx) => {
-      if (ctx.apiPath === 'accounting/incomes/8/settle/' && ctx.method === 'POST') {
+      if (ctx.apiPath === 'accounting/incomes/settlement-preview/' && ctx.method === 'POST') {
+        const body = ctx.route.request().postDataJSON();
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify(settlementPreview(body, {
+            ...ELIGIBLE_INCOME,
+            concept: 'Vastago (Hosting) - Semestre 1',
+            origin: 'hosting',
+            period_date: '2026-10-01',
+          })),
+        };
+      }
+      if (ctx.apiPath === 'accounting/incomes/bulk-settle/' && ctx.method === 'POST') {
         settled = ctx.route.request().postDataJSON();
         return {
           status: 201,
           contentType: 'application/json',
-          body: JSON.stringify({
-            income: ELIGIBLE_INCOME,
-            liquid: null,
-            expenses: [],
-            expected_incomes: [],
-          }),
+          body: JSON.stringify({ updated: 1, results: [ELIGIBLE_INCOME], payment_confirmations: [] }),
         };
       }
       if (ctx.apiPath === 'accounting/collection-accounts/' && ctx.method === 'GET') {
@@ -1674,9 +1738,7 @@ test.describe('Admin Accounting Collections', () => {
     await chooseCollectionAction(page, 2, 'mark-paid');
     await expect(page.getByTestId('income-liquidate-period-start'))
       .toHaveValue('2026-10-01');
-    await expect(page.getByTestId('income-liquidate-period-cadence-hint'))
-      .toHaveText('Al elegir la periodicidad se calcula la fecha de fin del período.');
-    const dialog = page.getByRole('dialog', { name: 'Liquidar ingreso esperado', exact: true });
+    const dialog = page.getByRole('dialog', { name: 'Liquidar ingresos', exact: true });
     await expectCompactModal(dialog, page.viewportSize(), {
       lines: [{
         fields: [
@@ -1696,14 +1758,13 @@ test.describe('Admin Accounting Collections', () => {
 
     await page.getByTestId('income-liquidate-submit').click();
 
-    await expect(
-      page.getByRole('heading', { name: 'Liquidar ingreso esperado' }),
-    ).toBeHidden();
-    expect(settled.period).toEqual({
+    await expect(page.getByRole('heading', { name: 'Liquidar ingresos' })).toBeHidden();
+    expect(settled.periods).toEqual([{
+      income_id: 8,
       period_start: '2026-10-01',
       period_end: '2027-03-31',
       period_cadence: 'semiannual',
-    });
+    }]);
   });
 
   test('Cliente and Proyecto are separate columns, each sortable on its own', {

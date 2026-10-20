@@ -155,7 +155,7 @@ def record_values(instance, fields):
         value = getattr(instance, name)
         if isinstance(field, models.ForeignKey):
             values[name] = None if value is None else {
-                'id': value.pk,
+                'id': scalar(value.pk),
                 'label': str(getattr(value, 'name', None) or getattr(value, 'title', None) or value),
             }
         else:

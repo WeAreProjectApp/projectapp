@@ -30,10 +30,8 @@ when writing off a partially collected record in
 ``IncomeRecordCreateUpdateSerializer.validate``: *"Reduce su monto y registra la
 diferencia como un ingreso perdido aparte"*.
 """
-from content.services.entity_history import historical_write
 from decimal import ROUND_DOWN, Decimal
 
-from django.db import transaction
 from django.db.models import Sum
 
 from content.models import (
@@ -160,78 +158,10 @@ def _stamp_source_ref(records, income_id):
         record.source_ref = source_ref
 
 
-@historical_write
-@transaction.atomic
 def settle_expected_income(income, data, user):
-    """Register a payment and resolve its shortfall in one operation.
-
-    `data` comes from a validated ``IncomeSettlementSerializer``. Raises
-    ``ValueError`` with a Spanish message on any business-rule breach; the
-    view turns it into a 400.
-    """
-    from accounts.services.billing_locks import current_income_paid_total, lock_billing_rows
-    from content.serializers.accounting import validate_project_client_match
-    locked = lock_billing_rows(income_ids=[income.pk], include_income_children=True,
-                               include_origin_documents=True)
-    income = locked.incomes.get(income.pk)
-    if income is None:
-        raise ValueError('El ingreso seleccionado ya no existe. Actualiza la lista.')
-    validate_project_client_match(income.project, income.client)
-    if income.kind != IncomeRecord.Kind.EXPECTED:
-        raise ValueError('Solo se puede liquidar un ingreso esperado.')
-
-    deductions = data.get('deductions') or []
-    follow_ups = data.get('expected_incomes') or []
-    received = data['total_amount']
-    deducted = sum((d['amount'] for d in deductions), Decimal('0'))
-    reexpected = sum((e['amount'] for e in follow_ups), Decimal('0'))
-
-    pending = income.total_amount - current_income_paid_total(income)
-    if pending <= 0:
-        raise ValueError('Este ingreso esperado ya está completamente pagado.')
-    if received <= 0 and not (deducted or reexpected):
-        raise ValueError('El monto recibido debe ser mayor a cero.')
-    if received + deducted + reexpected > pending:
-        raise ValueError(
-            'La suma del monto recibido, los gastos y los nuevos ingresos '
-            'esperados no puede superar el saldo pendiente '
-            f'(${pending:,.2f}).'
-        )
-
-    # After every refusal and before anything is created: a settlement that
-    # will not happen must not leave the parent altered.
-    if data.get('period'):
-        _complete_parent_period(income, data['period'], user)
-
-    liquid = _create_liquid_child(income, data, user) if received > 0 else None
-    expenses = [
-        _create_deduction(income, data, deduction, user)
-        for deduction in deductions
-    ]
-    new_expected = [
-        _create_follow_up(income, follow_up, user) for follow_up in follow_ups
-    ]
-
-    # Only follow-ups shrink the parent: their amount now lives in its own
-    # expected record. Deductions keep the income gross — they count as
-    # payment credit via the source_income link instead.
-    if reexpected:
-        _reduce_parent(income, income.total_amount - reexpected, user)
-
-    _stamp_source_ref(expenses, income.pk)
-    _stamp_source_ref(new_expected, income.pk)
-
-    income.refresh_from_db()
-    _sync_linked_collection_accounts(income, user)
-    accounting_service.deselect_receivable_if_closed(income, user)
-    from content.services.income_completion_notice_service import schedule_completion_notice
-    schedule_completion_notice(income, was_paid=False)
-    return {
-        'income': income,
-        'liquid': liquid,
-        'expenses': expenses,
-        'expected_incomes': new_expected,
-    }
+    """Compatibility adapter to the same engine used for grouped payments."""
+    from content.services.income_settlement_operation_service import settle_incomes, single_input
+    return settle_incomes(single_input(income, data), user)
 
 
 def _complete_parent_period(income, period, user):
@@ -264,7 +194,7 @@ def _complete_parent_period(income, period, user):
             'period_end': period['period_end'],
             'period_cadence': period['period_cadence'],
         },
-        partial=True,
+        partial=True, context={'settlement': True},
     )
     serializer.is_valid(raise_exception=True)
     return accounting_service.update_record(
@@ -360,6 +290,7 @@ def _create_follow_up(income, follow_up, user):
             'gustavo_amount': gustavo,
             'carlos_amount': carlos,
             'client': income.client_id,
+            'project': income.project_id,
             'origin': income.origin,
         },
         # Same as the liquid child: the rescheduled balance inherits the
@@ -498,124 +429,7 @@ def _stamp_abono_ref(movement, children):
         child.source_ref = source_ref
 
 
-@historical_write
-@transaction.atomic
 def bulk_settle_expected_incomes(data, user):
-    """Register one payment that covers several expected incomes.
-
-    ONE pocket movement for the money that entered (that is the whole point:
-    the pocket reflects reality, not the bookkeeping of the split) plus one
-    liquid child per allocation sharing it — the child IS the per-income
-    imputed amount, so every payment derivation keeps working untouched.
-    Whatever the allocations leave of ``total_amount`` becomes the client's
-    saldo a favor as a parentless child on the same movement.
-
-    ``data`` comes from a validated ``IncomeBulkSettlementSerializer``.
-    Raises ``ValueError`` with a Spanish message on any business-rule
-    breach; the view turns it into a 400.
-    """
-    allocations = data['allocations']
-    ids = [entry['income_id'] for entry in allocations]
-    amounts = {entry['income_id']: entry['amount'] for entry in allocations}
-    from accounts.services.billing_locks import current_income_paid_total, lock_billing_rows
-    from content.serializers.accounting import validate_project_client_match
-    locked = lock_billing_rows(income_ids=ids, include_income_children=True,
-                               include_origin_documents=True)
-    incomes = {pk: locked.incomes[pk] for pk in ids if pk in locked.incomes}
-    # Defensive re-check behind the view's 409: an abono is all-or-nothing,
-    # silently skipping a vanished id would misdistribute the money.
-    if len(incomes) != len(ids):
-        raise ValueError(
-            'Alguno de los ingresos seleccionados ya no existe. '
-            'Actualiza la lista e inténtalo de nuevo.'
-        )
-    parents = [incomes[pk] for pk in ids]
-
-    for income in parents:
-        validate_project_client_match(income.project, income.client)
-        if income.kind != IncomeRecord.Kind.EXPECTED:
-            raise ValueError(
-                f'Solo se pueden abonar ingresos esperados '
-                f'("{income.concept}" no lo es).'
-            )
-        if income.ledger != Ledger.COMPANY:
-            raise ValueError(
-                'Los ingresos de contabilidad personal no pueden recibir '
-                'abonos: el Bolsillo ProjectApp solo maneja dinero de la '
-                'empresa.'
-            )
-        pending = income.total_amount - current_income_paid_total(income)
-        if pending <= 0:
-            raise ValueError(
-                f'El ingreso "{income.concept}" ya está completamente pagado.'
-            )
-        if amounts[income.pk] > pending:
-            raise ValueError(
-                f'La imputación a "{income.concept}" supera su saldo '
-                f'pendiente (${pending:,.2f}).'
-            )
-
-    allocated = sum(amounts.values(), Decimal('0'))
-    excess = data['total_amount'] - allocated
-    credit_client = None
-    if excess > 0:
-        client_ids = {income.client_id for income in parents}
-        if len(client_ids) > 1:
-            raise ValueError(
-                'Con clientes mezclados el excedente no se puede asignar '
-                'como saldo a favor: ajusta el valor o registra el '
-                'excedente aparte.'
-            )
-        owner_id = client_ids.pop()
-        if owner_id is not None:
-            credit_client = parents[0].client
-
-    movement = PocketMovement.objects.create(
-        concept=_abono_concept(parents),
-        movement_date=data['period_date'],
-        direction=PocketMovement.Direction.IN,
-        amount=data['total_amount'],
-        notes=data.get('notes', ''),
-        created_by=user if getattr(user, 'is_authenticated', False) else None,
-    )
-    movement_log = accounting_service.log_accounting_change(
-        entity_type=EntityType.POCKET,
-        object_id=movement.pk,
-        object_repr=movement.concept,
-        action=AccountingChangeLog.Action.CREATED,
-        changes=accounting_service.compute_changes(
-            EntityType.POCKET, {},
-            accounting_service.snapshot_values(movement, EntityType.POCKET),
-        ),
-        actor=user,
-        movement_direction=movement.direction,
-    )
-
-    children = [
-        _create_abono_child(income, amounts[income.pk], data, movement, user)
-        for income in parents
-    ]
-    credit = None
-    if excess > 0:
-        credit = _create_credit_child(excess, credit_client, data, movement, user)
-        children.append(credit)
-
-    _stamp_abono_ref(movement, children)
-
-    for income in parents:
-        income.refresh_from_db()
-        _sync_linked_collection_accounts(income, user)
-        accounting_service.deselect_receivable_if_closed(income, user)
-        from content.services.income_completion_notice_service import schedule_completion_notice
-        schedule_completion_notice(income, was_paid=False)
-
-    # Exactly ONE email for the whole abono — the movement is the money
-    # event; N child emails would read as N payments in the inbox.
-    accounting_service._notify(movement_log)
-
-    return {
-        'movement': movement,
-        'incomes': parents,
-        'liquids': children,
-        'credit': credit,
-    }
+    """One or several expected incomes, with the same financial rules."""
+    from content.services.income_settlement_operation_service import settle_incomes
+    return settle_incomes(data, user)

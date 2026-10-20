@@ -1,916 +1,172 @@
 <script setup>
-import { useId, computed, ref, watch } from 'vue'
-import ConfirmModal from '~/components/ConfirmModal.vue'
-import ConfirmationSummaryList from './ConfirmationSummaryList.vue'
-import PartnerSplitInput from './PartnerSplitInput.vue'
-import PeriodDateField from './PeriodDateField.vue'
-import { useHostingPeriod } from '~/composables/useHostingPeriod'
-import { useAccountingStore } from '~/stores/accounting'
-import { DEDUCTION_TYPE_OPTIONS as deductionOptions } from '~/utils/accountingDeductions'
-import { formatMoney } from '~/utils/formatMoney'
-import { todayISO } from '~/utils/periodDates'
-import { clientPendingAfter, formatPaymentDate } from '~/utils/paymentConfirmation'
-import { FREQUENCY_OPTIONS as cadenceOptions } from '~/utils/recurring'
-import { settlementBlockedReason } from '~/utils/incomeSettlement'
+import { useId } from 'vue';
+import PartnerSplitInput from './PartnerSplitInput.vue';
+import PeriodDateField from './PeriodDateField.vue';
+import SettlementHostingPeriod from './SettlementHostingPeriod.vue';
+import VatBreakdown from './VatBreakdown.vue';
+import { useIncomeSettlementForm } from '~/composables/useIncomeSettlementForm';
+import { DEDUCTION_TYPE_OPTIONS } from '~/utils/accountingDeductions';
+import { formatMoney } from '~/utils/formatMoney';
+import { formatPaymentDate } from '~/utils/paymentConfirmation';
 
 const props = defineProps({
   open: { type: Boolean, default: false },
-  /** The expected income being settled. */
   record: { type: Object, default: null },
+  records: { type: Array, default: () => [] },
+  excludedCount: { type: Number, default: 0 },
   saving: { type: Boolean, default: false },
-})
-
-const emit = defineEmits(['close', 'submit'])
-
-const destinationOptions = [
-  { value: 'pocket', label: 'Bolsillo ProjectApp' },
-  { value: 'partners', label: 'Socios' },
-]
-
-const form = ref(defaultForm())
-const deductions = ref([])
-const followUps = ref([])
-const deductionsOpen = ref(false)
-const followUpsOpen = ref(false)
-// The exact payment day is the default; the toggle downgrades to
-// month-only when only the month is known.
-const exactDate = ref(true)
-
-function defaultForm() {
-  return {
-    concept: '',
-    period_date: '',
-    destination: 'pocket',
-    total_amount: '',
-    gustavo_amount: '',
-    carlos_amount: '',
-    notes: '',
-    // Only ever filled for a hosting charge that never recorded its window;
-    // they travel as `period` and describe the EXPECTED income, not this
-    // payment (see the covered-period block in the write serializer).
-    period_start: '',
-    period_end: '',
-    period_cadence: '',
-  }
-}
-
-const isPersonal = computed(() => props.record?.ledger !== 'company')
-
-/**
- * The window a hosting charge covers, asked for here when the charge never
- * recorded one — the gap shows up while liquidating, so it gets resolved
- * while liquidating instead of sending the operator to another screen.
- *
- * It is a courtesy and never a condition: leaving the block empty settles
- * exactly the same. Liquidar registers that the money came in; the period
- * describes what the charge covers, and holding the money for a descriptive
- * field is what broke this flow in the first place.
- */
-const needsPeriod = computed(
-  () => props.record?.origin === 'hosting' && !props.record?.period_start,
-)
-
+});
+const emit = defineEmits(['close', 'submit']);
 const {
-  anchorStart,
-  cycleOptions,
-  isCycleActive,
-  applyCycle,
-  onPeriodEndEdited,
-  periodEndError,
-} = useHostingPeriod(form, {
-  isHosting: needsPeriod,
-  // `isEdit: false` is what keeps the duration shortcuts on screen, and no
-  // settlement is ever a duplicate. `resolveAnchor` is deliberately never
-  // called: it looks up where a client's NEXT window opens, and this block
-  // completes one that already happened.
-  isEdit: computed(() => false),
-  isDuplicate: computed(() => false),
-  seed: computed(() => null),
-})
-
-// Duration, not increment: the same four cadences the income form offers as
-// "+3 meses" for the period that FOLLOWS read as the length of this one.
-const CYCLE_LABELS = { 1: '1 mes', 3: '3 meses', 6: '6 meses', 12: '1 año' }
-
-const cycleLabel = (months) => CYCLE_LABELS[months] ?? `${months} meses`
-
-/** The start we proposed. Sitting there untouched, it is not an answer. */
-const proposedPeriodStart = computed(() => props.record?.period_date ?? '')
-
-// Same pristine idea the deduction and follow-up rows use: a value the modal
-// filled in by itself must not turn an optional block into a required one.
-const periodTouched = computed(() => Boolean(
-  form.value.period_end
-  || form.value.period_cadence
-  || (
-    form.value.period_start
-    && form.value.period_start !== proposedPeriodStart.value
-  ),
-))
-
-const periodComplete = computed(() => Boolean(
-  form.value.period_start
-  && form.value.period_end
-  && form.value.period_cadence
-  && !periodEndError.value,
-))
-
-/** Started and left half-written — the one state the block does block on. */
-const periodIncomplete = computed(
-  () => needsPeriod.value && periodTouched.value && !periodComplete.value,
-)
-
-const pending = computed(() => Number(props.record?.pending_amount ?? 0))
-
-const money = (value) => formatMoney(Number(value ?? 0), 'COP')
-
-const sumAmounts = (rows) =>
-  rows.reduce((total, row) => total + Number(row.amount || 0), 0)
-
-/** What was invoiced but did not arrive with this payment. */
-const shortfall = computed(() =>
-  Math.max(pending.value - Number(form.value.total_amount || 0), 0),
-)
-// An auto-added row the user never touched must not block the submit nor
-// reach the payload — otherwise "leave the rest pending" (no allocation)
-// would require deleting the row the auto-expand just created.
-const isPristineDeduction = (row) =>
-  !(Number(row.amount) > 0) && !row.detail.trim() && row.type === ''
-
-const activeDeductions = computed(() =>
-  deductions.value.filter((row) => !isPristineDeduction(row)),
-)
-
-const defaultFollowUpConcept = computed(
-  () => `${props.record?.concept ?? ''} - saldo`,
-)
-// Same pristine idea for follow-ups: the row auto-added on expand keeps its
-// prefilled concept, so it must not block a submit from inside a collapsed
-// group the user never filled.
-const isPristineFollowUp = (row) =>
-  row.amount == null
-  && !row.period_date
-  && row.concept === defaultFollowUpConcept.value
-
-const activeFollowUps = computed(() =>
-  followUps.value.filter((row) => !isPristineFollowUp(row)),
-)
-
-const allocated = computed(
-  () => sumAmounts(activeDeductions.value) + sumAmounts(activeFollowUps.value),
-)
-/** Left over after allocating; stays pending on the expected income. */
-const unassigned = computed(() => shortfall.value - allocated.value)
-const overAllocated = computed(() => unassigned.value < 0)
-
-// The row whose amount was edited last: when the sum overflows, that input
-// is the one flagged. Object identity survives row removal (splice).
-const overSource = ref(null)
-
-function onLineAmountInput(row, value) {
-  row.amount = value
-  overSource.value = row
-}
-
-const amountError = (row) => {
-  if (row.amount == null || row.amount === '') return 'Ingresa el monto.'
-  if (!(Number(row.amount) > 0)) return 'El monto debe ser mayor a cero.'
-  if (overAllocated.value && row === overSource.value) {
-    return `Con este monto la suma supera el saldo por ${money(-unassigned.value)}.`
-  }
-  return null
-}
-
-const deductionErrors = computed(() => deductions.value.map((row) => {
-  if (isPristineDeduction(row)) return null
-  if (!row.type) return { field: 'type', message: 'Selecciona el concepto.' }
-  const amount = amountError(row)
-  if (amount) return { field: 'amount', message: amount }
-  if (row.type === 'other' && !row.detail.trim()) {
-    return { field: 'detail', message: 'Describe el concepto.' }
-  }
-  return null
-}))
-
-const followUpErrors = computed(() => followUps.value.map((row) => {
-  if (isPristineFollowUp(row)) return null
-  if (!row.concept.trim()) return { field: 'concept', message: 'Escribe el concepto.' }
-  if (!row.period_date) return { field: 'period', message: 'Indica el mes.' }
-  const amount = amountError(row)
-  if (amount) return { field: 'amount', message: amount }
-  return null
-}))
-
-const hasIncompleteRow = computed(
-  () => deductionErrors.value.some(Boolean) || followUpErrors.value.some(Boolean),
-)
-
-// ── Payment confirmation to the client ──
-// Opt-in email, checked by default whenever it can go. The address comes from
-// the server (the issued cuenta's), so the checkbox, the last notice and the
-// send all name the same one.
-const store = useAccountingStore()
-const sendConfirmation = ref(true)
-const confirmationContext = ref(null)
-const contextLoading = ref(false)
-const contextFailed = ref(false)
-const lastNoticeOpen = ref(false)
-const pendingPayload = ref(null)
-// A response for a record that is no longer open must not land.
-let contextRequest = 0
-
-const NO_CLIENT_REASON = 'Este ingreso no tiene cliente: no hay a quién enviar la confirmación.'
-const NO_AMOUNT_REASON = 'Sin valor recibido no hay pago que confirmar.'
-const CONTEXT_FAILED_REASON = 'No se pudo verificar el correo del cliente; la liquidación se registrará sin confirmación.'
-
-async function loadConfirmationContext(record) {
-  const request = ++contextRequest
-  confirmationContext.value = null
-  contextFailed.value = false
-  contextLoading.value = false
-  if (!record?.client || settlementBlockedReason(record)) return
-  contextLoading.value = true
-  const result = await store.fetchIncomePaymentConfirmation(record.id)
-  if (request !== contextRequest) return
-  contextLoading.value = false
-  if (result.success) confirmationContext.value = result.data
-  else contextFailed.value = true
-}
-
-/** Why the confirmation cannot go, or '' — shown beside the checkbox. */
-const confirmationUnavailableReason = computed(() => {
-  if (!props.record?.client) return NO_CLIENT_REASON
-  if (contextFailed.value) return CONTEXT_FAILED_REASON
-  const context = confirmationContext.value
-  if (context && !context.can_send) {
-    return context.blocked_reason || 'No se puede enviar la confirmación de pago.'
-  }
-  if (!(Number(form.value.total_amount) > 0)) return NO_AMOUNT_REASON
-  return ''
-})
-
-const confirmationChecked = computed(
-  () => sendConfirmation.value && !confirmationUnavailableReason.value,
-)
-const willSendConfirmation = computed(
-  () => confirmationChecked.value && Boolean(confirmationContext.value?.can_send),
-)
-// Checked while the address is still being read: Liquidar waits for it
-// rather than settling without the email the operator left on.
-const confirmationPending = computed(
-  () => confirmationChecked.value && contextLoading.value,
-)
-
-const confirmationHint = computed(() => {
-  if (confirmationUnavailableReason.value) return ''
-  if (contextLoading.value) return 'Verificando el correo del cliente…'
-  if (!sendConfirmation.value) return 'No se le enviará ningún correo al cliente.'
-  const recipient = confirmationContext.value?.recipient
-  if (!recipient) return ''
-  return `Le llegará a ${recipient}. Antes de liquidar verás un último aviso con los datos.`
-})
-
-const destinationLabel = computed(() => {
-  if (isPersonal.value) return props.record?.ledger_label || 'Contabilidad personal'
-  return destinationOptions.find((option) => option.value === form.value.destination)?.label ?? ''
-})
-
-/** The last notice: what the client will be told, plus where the money went. */
-const lastNoticeRows = computed(() => {
-  const context = confirmationContext.value ?? {}
-  const received = Number(form.value.total_amount || 0)
-  const pendingAfter = clientPendingAfter({
-    pending: pending.value,
-    received,
-    deductions: sumAmounts(activeDeductions.value),
-    rescheduled: context.rescheduled_pending,
-  })
-  return [
-    { key: 'concept', label: 'Concepto', value: form.value.concept },
-    { key: 'client', label: 'Cliente', value: context.client_name || props.record?.client_name || '—' },
-    { key: 'project', label: 'Proyecto', value: context.project_name || 'Sin proyecto' },
-    { key: 'account', label: 'Cuenta de cobro', value: context.collection_account_number || '—' },
-    { key: 'amount', label: 'Valor recibido', value: money(received) },
-    { key: 'date', label: 'Fecha de pago', value: formatPaymentDate(form.value.period_date, exactDate.value) },
-    { key: 'destination', label: 'Destino del dinero', value: destinationLabel.value },
-    { key: 'pending', label: 'Saldo pendiente tras el pago', value: pendingAfter > 0 ? money(pendingAfter) : 'Queda al día' },
-    { key: 'recipient', label: 'Se enviará a', value: context.recipient ?? '' },
-  ]
-})
-
-const canSubmit = computed(
-  () => !settlementBlockedReason(props.record) && !overAllocated.value && !hasIncompleteRow.value && !periodIncomplete.value && !confirmationPending.value,
-)
-
-/** Why the submit is blocked — shown next to the disabled button. */
-const submitBlockReason = computed(() => {
-  const billingReason = settlementBlockedReason(props.record)
-  if (billingReason) return billingReason
-  if (canSubmit.value) return ''
-  if (confirmationPending.value) return 'Verificando el correo de la confirmación de pago…'
-  if (overAllocated.value) {
-    return `La distribución supera el saldo por resolver por ${money(-unassigned.value)}.`
-  }
-  if (periodIncomplete.value) {
-    return periodEndError.value
-      || 'Completa el período que cubre el cobro, o déjalo vacío.'
-  }
-  if (deductionErrors.value.some(Boolean)) {
-    return 'Hay líneas de gasto incompletas: revisa concepto y monto.'
-  }
-  return 'Hay líneas de ingreso esperado incompletas.'
-})
-
-// Status badge next to the section total. Each asserted phrase lives whole
-// inside one element (badge or clause) — split text breaks substring checks.
-const remainingState = computed(() => {
-  if (overAllocated.value) {
-    return {
-      variant: 'danger',
-      badge: `Te pasaste por ${money(-unassigned.value)}`,
-      clause: 'del saldo disponible.',
-    }
-  }
-  if (unassigned.value > 0) {
-    return {
-      variant: 'info',
-      badge: `Sin asignar: ${money(unassigned.value)}`,
-      clause: 'quedará pendiente en este ingreso.',
-    }
-  }
-  return {
-    variant: 'success',
-    badge: 'Saldo resuelto por completo',
-    clause: 'el ingreso esperado queda cerrado.',
-  }
-})
-
-function addDeduction() {
-  // No preselected concept: the choice must be explicit and readable.
-  deductions.value.push({ type: '', detail: '', amount: null })
-}
-
-function addFollowUp() {
-  followUps.value.push({
-    concept: defaultFollowUpConcept.value,
-    period_date: '',
-    amount: null,
-  })
-}
-
-// Opening an empty section with no row to fill reads as broken.
-watch(deductionsOpen, (open) => {
-  if (open && !deductions.value.length) addDeduction()
-})
-watch(followUpsOpen, (open) => {
-  if (open && !followUps.value.length) addFollowUp()
-})
-
-// Reveal the resolution path the moment a shortfall appears — the section
-// used to materialize with both groups collapsed, which read as "the
-// option is not there". One-shot per modal open, so a user who collapses
-// the group and keeps editing the amount stays in control.
-const autoExpanded = ref(false)
-watch(shortfall, (value) => {
-  if (value > 0 && !autoExpanded.value) {
-    autoExpanded.value = true
-    deductionsOpen.value = true
-  }
-})
-
-watch(
-  () => [props.open, props.record],
-  () => {
-    if (!props.open || !props.record) return
-    exactDate.value = true
-    deductions.value = []
-    followUps.value = []
-    deductionsOpen.value = false
-    followUpsOpen.value = false
-    autoExpanded.value = false
-    overSource.value = null
-    // Every open starts with the email on: whether to skip it is decided per
-    // payment, never remembered from the previous one.
-    sendConfirmation.value = true
-    lastNoticeOpen.value = false
-    pendingPayload.value = null
-    loadConfirmationContext(props.record)
-    // The window opens on the charge's own date — the same reading the backend
-    // calls `original_date` when it duplicates an income with no window
-    // recorded. Set before the form is replaced, so the composable's watchers
-    // already have their anchor when the fields land.
-    anchorStart.value = props.record.period_date ?? ''
-    form.value = {
-      ...defaultForm(),
-      concept: props.record.concept ?? '',
-      // Proposed, not imposed: the operator can move it, and the end follows
-      // from whatever periodicity they pick.
-      period_start: needsPeriod.value ? (props.record.period_date ?? '') : '',
-      // Liquidating records a payment that just happened, so today beats
-      // the expected period (which is exactly the stale value).
-      period_date: todayISO(),
-      // Default to what is still owed, not the full projection: the whole
-      // point of liquidating is that they often pay late and short. The
-      // partner split starts empty and PartnerSplitInput's auto mode splits
-      // this amount as it mounts, so the settlement sends the split on screen.
-      total_amount: props.record.pending_amount ?? props.record.total_amount,
-    }
-  },
-  { immediate: true },
-)
-
-function onSubmit() {
-  if (!canSubmit.value || props.saving) return
-  const payload = buildPayload()
-  if (!willSendConfirmation.value) {
-    emit('submit', payload)
-    return
-  }
-  // The last notice before the client's email: nothing is sent until the
-  // operator confirms the facts it lists.
-  pendingPayload.value = { ...payload, send_payment_confirmation: true }
-  lastNoticeOpen.value = true
-}
-
-function submitWithConfirmation() {
-  const payload = pendingPayload.value
-  pendingPayload.value = null
-  if (!payload || props.saving) return
-  emit('submit', payload)
-}
-
-function buildPayload() {
-  // A cleared BaseCurrencyInput emits null; the server expects 0 for a
-  // residual-only settlement (nothing received, shortfall fully allocated).
-  const amount = form.value.total_amount
-  const payload = {
-    concept: form.value.concept,
-    period_date: form.value.period_date,
-    destination: form.value.destination,
-    total_amount: amount === '' || amount == null ? 0 : amount,
-    // Empty arrays make the backend behave exactly like a plain liquidation.
-    deductions: activeDeductions.value.map((row) => ({
-      type: row.type,
-      detail: row.type === 'other' ? row.detail.trim() : '',
-      amount: row.amount,
-    })),
-    expected_incomes: activeFollowUps.value.map((row) => ({
-      concept: row.concept.trim(),
-      period_date: row.period_date,
-      amount: row.amount,
-    })),
-  }
-  const { gustavo_amount, carlos_amount } = form.value
-  if (!isPersonal.value && gustavo_amount !== '' && carlos_amount !== '') {
-    payload.gustavo_amount = gustavo_amount
-    payload.carlos_amount = carlos_amount
-  }
-  // Absent unless the block was completed: the backend applies it to the
-  // expected income, and its absence is an ordinary liquidation.
-  if (needsPeriod.value && periodComplete.value) {
-    payload.period = {
-      period_start: form.value.period_start,
-      period_end: form.value.period_end,
-      period_cadence: form.value.period_cadence,
-    }
-  }
-  payload.notes = form.value.notes
-  return payload
-}
-
-const modalFormId = useId();
+  records: selected, personal, form, exactDate, requestId, deductions, followUps, periods,
+  participantsOpen, differenceOpen, vatOpen, showVat, manual, contexts, sendConfirmations,
+  contextLoading, preparing, error, review, proposal, shortfall, remaining, credit,
+  hostingRecords, blockReason, receivedById, addDeduction, addFollowUp, editAllocation, recalculate,
+  submit, confirm, back,
+} = useIncomeSettlementForm(props, emit);
+const formId = useId();
+const sectionId = (name) => `${formId}-${name}`;
+const money = (value) => {
+  const amount = Number(value ?? 0);
+  return formatMoney(amount, 'COP', { decimals: Number.isInteger(amount) ? 0 : 2 });
+};
+const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value: 'partners', label: 'Socios' }];
 </script>
 
 <template>
-  <!-- Esc and the backdrop stay with the last notice while it is open: every
-       BaseModal listens on window, so this one would close too and lose the
-       form underneath. -->
-  <BaseModal
-    :model-value="open"
-    kind="form"
-    title-id="income-liquidate-title"
-    :close-on-esc="!lastNoticeOpen && !saving"
-    :close-on-backdrop="!lastNoticeOpen && !saving"
-    @close="emit('close')"
-  >
+  <BaseModal :model-value="open" kind="form" :title-id="sectionId('title')" :close-on-esc="!saving && !preparing" :close-on-backdrop="!saving && !preparing" @close="emit('close')">
     <div class="px-6 pt-6 pb-2">
-      <h3 id="income-liquidate-title" class="text-lg font-bold text-text-default">
-        Liquidar ingreso esperado
-      </h3>
-      <p v-if="record" class="text-sm text-text-subtle mt-1 break-words">
-        Se registrará un ingreso líquido nuevo enlazado a
-        <span class="font-medium text-text-default">{{ record.concept }}</span>
-        ({{ record.period_label }}, {{ money(record.total_amount) }}). El ingreso
-        esperado se conserva.
-      </p>
+      <h3 :id="sectionId('title')" class="text-lg font-bold text-text-default">{{ review ? 'Revisar y liquidar' : 'Liquidar ingresos' }}</h3>
+      <p class="mt-1 text-sm text-text-muted">{{ selected.length }} {{ selected.length === 1 ? 'ingreso seleccionado' : 'ingresos seleccionados' }} · Pendiente {{ money(proposal.pending) }}</p>
+      <p v-if="excludedCount" class="mt-1 text-xs text-text-subtle" data-testid="income-bulk-settle-excluded">Se excluyeron {{ excludedCount }} seleccionados que no aplican: solo entran esperados con saldo pendiente de empresa.</p>
     </div>
 
-    <form :id="modalFormId" class="px-6 py-4 space-y-4" @submit.prevent="onSubmit">
-      <div
-        v-if="record"
-        class="rounded-lg bg-surface-raised px-4 py-3 text-sm text-text-muted"
-        data-testid="income-liquidate-pending"
-      >
-        Pendiente por cobrar:
-        <span class="font-medium text-text-default tabular-nums">
-          {{ money(pending) }}
-        </span>
+    <div v-if="review" class="px-6 py-4 space-y-4" data-testid="income-liquidate-review">
+      <p class="text-sm text-text-muted">Revisa el pago y los destinatarios. Todavía no se ha registrado la liquidación ni enviado ningún correo.</p>
+      <dl class="grid grid-cols-1 gap-3 text-sm panel-portrait:grid-cols-2">
+        <div><dt class="text-text-muted">Valor recibido</dt><dd class="font-semibold text-text-default">{{ money(review.total_amount) }}</dd></div>
+        <div><dt class="text-text-muted">Fecha de pago</dt><dd class="text-text-default">{{ formatPaymentDate(form.period_date, exactDate) }}</dd></div>
+        <div><dt class="text-text-muted">Destino del dinero</dt><dd class="text-text-default">{{ personal ? 'Contabilidad personal' : destinations.find(option => option.value === form.destination)?.label }}</dd></div>
+        <div><dt class="text-text-muted">Saldo pendiente en los originales</dt><dd class="text-text-default">{{ money(review.pending_after) }}</dd></div>
+      </dl>
+      <div v-for="row in review.rows" :key="row.income_id" class="min-w-0 rounded-lg bg-surface-raised p-3 space-y-1 text-sm [overflow-wrap:anywhere]">
+        <p class="font-medium text-text-default">{{ row.concept }}</p>
+        <p class="text-xs text-text-muted">Cliente: {{ row.confirmation.client_name || 'Sin cliente' }} · Proyecto: {{ row.confirmation.project_name || 'Sin proyecto' }}</p>
+        <p class="text-text-muted">Recibido {{ money(row.amount) }} · Deducciones {{ money(row.deducted) }} · Reprogramado {{ money(row.reexpected) }} · Pendiente {{ money(row.pending_after) }}</p>
+        <p v-if="sendConfirmations[row.income_id] && row.confirmation.can_send && Number(row.amount) > 0" class="text-text-default" data-testid="income-liquidate-review-recipient">Confirmación a {{ row.confirmation.recipient }} · {{ row.confirmation.collection_account_number || 'Sin número de cuenta' }}</p>
+        <p v-else class="text-xs text-text-subtle">Sin correo: {{ row.confirmation.blocked_reason || 'no solicitado o sin dinero recibido para este ingreso' }}.</p>
+      </div>
+    </div>
+
+    <form v-else :id="formId" class="px-6 py-4 space-y-4" data-testid="income-liquidate-form" @submit.prevent="submit">
+      <div class="space-y-2" data-testid="income-liquidate-selection">
+        <div v-for="row in proposal.rows" :key="row.income_id" class="rounded-lg bg-surface-raised p-3 space-y-2">
+          <p class="text-sm font-medium text-text-default break-words">{{ row.record.concept }}</p>
+          <p class="text-xs text-text-muted">{{ row.record.period_label || row.record.period_date }} · Esperado {{ money(row.record.total_amount) }} · Pendiente {{ money(row.pending) }}</p>
+          <div v-if="selected.length > 1 || manual" class="grid grid-cols-1 items-center gap-2 panel-portrait:grid-cols-2">
+            <label class="text-xs text-text-muted" :for="`${formId}-allocation-${row.income_id}`">Dinero imputado</label>
+            <BaseCurrencyInput :decimals="2" :id="`${formId}-allocation-${row.income_id}`" :model-value="row.amount" :aria-label="`Imputado a ${row.record.concept}`" :data-testid="`income-bulk-settle-amount-${row.income_id}`" @update:model-value="editAllocation(row.income_id, $event)" />
+          </div>
+          <p v-if="row.deducted > 0" class="text-xs text-text-muted">Deducción proporcional: {{ money(row.deducted) }}</p>
+        </div>
+        <BaseButton v-if="manual" type="button" size="sm" variant="ghost" data-testid="income-bulk-settle-recalculate" @click="recalculate">Recalcular reparto</BaseButton>
+        <p v-if="manual" class="text-xs text-text-subtle">Reparto manual: no se recalcula al cambiar el valor recibido.</p>
       </div>
 
-      <p
-        v-if="record && shortfall <= 0"
-        class="text-xs text-text-subtle"
-        data-testid="income-liquidate-shortfall-hint"
-      >
-        ¿Recibiste menos? Escribe el monto real: la diferencia podrás
-        registrarla como deducción (comisión o retención) o como un nuevo
-        ingreso esperado.
-      </p>
-
-      <BaseFormField label="Concepto" required>
-        <BaseInput v-model="form.concept" required />
-      </BaseFormField>
-
-      <BaseFormRow :cols="2" :gap="4">
-        <PeriodDateField
-          v-model="form.period_date"
-          v-model:exact="exactDate"
-          label-exact="Fecha en que se pagó"
-          label-month="Mes en que se pagó"
-          toggle-label="Registrar el día exacto de pago"
-          required
-          input-testid="income-liquidate-period"
-          toggle-testid="income-liquidate-exact-date"
-        />
-
-        <BaseFormField v-if="!isPersonal" label="Destino">
-          <BaseSegmented
-            v-model="form.destination"
-            :options="destinationOptions"
-            full-width
-            data-testid="income-liquidate-destination"
-          />
+      <BaseFormRow :cols="2" :gap="3">
+        <BaseFormField label="Valor recibido" required>
+          <BaseCurrencyInput :decimals="2" v-model="form.total_amount" required data-testid="income-liquidate-paid" aria-label="Valor recibido" />
         </BaseFormField>
-        <BaseFormField v-else label="Valor pagado" required>
-          <BaseCurrencyInput
-            v-model="form.total_amount"
-            required
-            data-testid="income-liquidate-paid"
-          />
-        </BaseFormField>
+        <PeriodDateField v-model="form.period_date" v-model:exact="exactDate" label-exact="Fecha en que se pagó" label-month="Mes en que se pagó" toggle-label="Registrar el día exacto de pago" required input-testid="income-liquidate-period" toggle-testid="income-liquidate-exact-date" />
       </BaseFormRow>
-
-      <PartnerSplitInput
-        v-if="!isPersonal"
-        compact
-        v-model:total="form.total_amount"
-        v-model:gustavoAmount="form.gustavo_amount"
-        v-model:carlosAmount="form.carlos_amount"
-      />
-
-      <!-- The window this hosting charge covers, when it never recorded one.
-           Optional by design: an untouched block settles exactly the same. -->
-      <section
-        v-if="needsPeriod"
-        class="rounded-lg border border-border-muted p-4 space-y-3"
-        data-testid="income-liquidate-period-block"
-      >
-        <div>
-          <h4 class="text-sm font-medium text-text-default">
-            Período que cubre este cobro
-          </h4>
-          <p class="mt-0.5 text-xs text-text-subtle">
-            Este hosting no tiene período registrado. Complétalo si lo sabes:
-            si lo dejas vacío, la liquidación se registra igual.
-          </p>
-        </div>
-
-        <BaseFormRow
-          :cols="3"
-          :gap="3"
-          help="Al elegir la periodicidad se calcula la fecha de fin del período."
-          help-testid="income-liquidate-period-cadence-hint"
-        >
-          <BaseFormField label="Periodicidad">
-            <BaseSelect
-              v-model="form.period_cadence"
-              :options="cadenceOptions"
-              placeholder="Elegir periodicidad"
-              data-testid="income-liquidate-period-cadence"
-            />
-          </BaseFormField>
-
-          <BaseFormField label="Inicio del período">
-            <BaseInput
-              v-model="form.period_start"
-              type="date"
-              data-testid="income-liquidate-period-start"
-            />
-          </BaseFormField>
-          <BaseFormField label="Fin del período" :error="periodEndError">
-            <BaseInput
-              v-model="form.period_end"
-              type="date"
-              :error="!!periodEndError"
-              data-testid="income-liquidate-period-end"
-              @update:model-value="onPeriodEndEdited"
-            />
-          </BaseFormField>
-        </BaseFormRow>
-
-        <div v-if="cycleOptions.length">
-          <p class="mb-1.5 text-xs text-text-subtle">Duración del período:</p>
-          <div class="flex flex-wrap gap-1.5" data-testid="income-liquidate-cycles">
-            <BaseButton
-              v-for="option in cycleOptions"
-              :key="option.months"
-              type="button"
-              size="sm"
-              :variant="isCycleActive(option) ? 'primary' : 'secondary'"
-              :aria-pressed="isCycleActive(option)"
-              :data-testid="`income-liquidate-cycle-${option.months}`"
-              @click="applyCycle(option)"
-            >
-              {{ cycleLabel(option.months) }}
-            </BaseButton>
-          </div>
-        </div>
-      </section>
-
-      <!-- Shortfall: the money that was invoiced but did not arrive. -->
-      <section
-        v-if="shortfall > 0"
-        class="rounded-lg border border-border-muted p-4 space-y-3"
-        data-testid="income-liquidate-shortfall"
-      >
-        <div class="flex items-baseline justify-between gap-3">
-          <h4 class="text-sm font-medium text-text-default">Saldo por resolver</h4>
-          <span class="text-sm font-medium text-text-default tabular-nums">
-            {{ money(shortfall) }}
-          </span>
-        </div>
-        <div
-          class="flex flex-wrap items-center gap-x-2 gap-y-1"
-          data-testid="income-liquidate-remaining"
-        >
-          <BaseBadge :variant="remainingState.variant" class="tabular-nums">
-            {{ remainingState.badge }}
-          </BaseBadge>
-          <span class="text-xs text-text-subtle">{{ remainingState.clause }}</span>
-        </div>
-        <p class="text-xs text-text-subtle">
-          Si el faltante fue una comisión o una retención, regístralo como gasto.
-          Si sí lo vas a cobrar después, crea un ingreso esperado nuevo.
-        </p>
-
-        <!-- Deduction rows -->
-        <button
-          type="button"
-          class="flex w-full items-center gap-2 text-sm font-medium text-text-default hover:text-text-brand transition-colors"
-          :aria-expanded="deductionsOpen"
-          aria-controls="liquidate-deductions"
-          data-testid="income-liquidate-deductions-toggle"
-          @click="deductionsOpen = !deductionsOpen"
-        >
-          <BaseActionIcon :action="deductionsOpen ? 'collapse' : 'expand'" class="text-text-subtle" />
-          No es un cobro pendiente, es un gasto
-        </button>
-        <BaseCollapse id="liquidate-deductions" :open="deductionsOpen">
-          <div class="space-y-2 pt-1">
-            <div
-              v-for="(row, index) in deductions"
-              :key="`deduction-${index}`"
-              class="space-y-2 rounded-lg bg-surface-raised p-3"
-              :data-testid="`income-liquidate-deduction-${index}`"
-            >
-              <!-- Grid, not flex: the base inputs are w-full and would fight
-                   fallthrough width classes; the tracks own the split instead.
-                   Single column below sm so nothing gets crushed. -->
-              <div class="grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_9rem_auto] gap-2 items-start">
-                <BaseSelect
-                  v-model="row.type"
-                  :options="deductionOptions"
-                  placeholder="Seleccionar concepto"
-                  :error="deductionErrors[index]?.field === 'type'"
-                  aria-label="Concepto del gasto"
-                  :data-testid="`deduction-type-${index}`"
-                />
-                <BaseCurrencyInput
-                  :model-value="row.amount"
-                  :suggestion="Math.max(unassigned, 0)"
-                  :error="deductionErrors[index]?.field === 'amount'"
-                  aria-label="Monto del gasto"
-                  :data-testid="`deduction-amount-${index}`"
-                  @update:model-value="onLineAmountInput(row, $event)"
-                />
-                <BaseButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="justify-self-start sm:justify-self-auto"
-                  aria-label="Quitar gasto"
-                  @click="deductions.splice(index, 1)"
-                >
-                  Quitar
-                </BaseButton>
-              </div>
-              <BaseInput
-                v-if="row.type === 'other'"
-                v-model="row.detail"
-                placeholder="¿Cuál concepto?"
-                :error="deductionErrors[index]?.field === 'detail'"
-                aria-label="Concepto del gasto"
-                :data-testid="`deduction-detail-${index}`"
-              />
-              <p
-                v-if="deductionErrors[index]"
-                class="text-xs text-danger-strong"
-                :data-testid="`deduction-error-${index}`"
-              >
-                {{ deductionErrors[index].message }}
-              </p>
-            </div>
-            <BaseButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              data-testid="income-liquidate-add-deduction"
-              @click="addDeduction"
-            >
-              Agregar gasto
-            </BaseButton>
-          </div>
-        </BaseCollapse>
-
-        <!-- Follow-up expected incomes -->
-        <button
-          type="button"
-          class="flex w-full items-center gap-2 text-sm font-medium text-text-default hover:text-text-brand transition-colors"
-          :aria-expanded="followUpsOpen"
-          aria-controls="liquidate-follow-ups"
-          data-testid="income-liquidate-followups-toggle"
-          @click="followUpsOpen = !followUpsOpen"
-        >
-          <BaseActionIcon :action="followUpsOpen ? 'collapse' : 'expand'" class="text-text-subtle" />
-          Sí lo voy a cobrar: crear ingreso esperado
-        </button>
-        <BaseCollapse id="liquidate-follow-ups" :open="followUpsOpen">
-          <div class="space-y-2 pt-1">
-            <div
-              v-for="(row, index) in followUps"
-              :key="`follow-up-${index}`"
-              class="space-y-2 rounded-lg bg-surface-raised p-3"
-              :data-testid="`income-liquidate-followup-${index}`"
-            >
-              <BaseInput
-                v-model="row.concept"
-                placeholder="Concepto"
-                :error="followUpErrors[index]?.field === 'concept'"
-                aria-label="Concepto del ingreso esperado"
-                :data-testid="`followup-concept-${index}`"
-              />
-              <!-- Fixed tracks: a month and an amount need no more. justify-start
-                   keeps the auto track from swallowing the free space. -->
-              <div class="grid grid-cols-1 sm:grid-cols-[12rem_9rem_auto] sm:justify-start gap-2 items-start">
-                <BaseInput
-                  v-model="row.period_date"
-                  type="month"
-                  :error="followUpErrors[index]?.field === 'period'"
-                  aria-label="Mes esperado de cobro"
-                  :data-testid="`followup-period-${index}`"
-                />
-                <BaseCurrencyInput
-                  :model-value="row.amount"
-                  :suggestion="Math.max(unassigned, 0)"
-                  :error="followUpErrors[index]?.field === 'amount'"
-                  aria-label="Monto esperado"
-                  :data-testid="`followup-amount-${index}`"
-                  @update:model-value="onLineAmountInput(row, $event)"
-                />
-                <BaseButton
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  class="justify-self-start sm:justify-self-auto"
-                  aria-label="Quitar ingreso esperado"
-                  @click="followUps.splice(index, 1)"
-                >
-                  Quitar
-                </BaseButton>
-              </div>
-              <p
-                v-if="followUpErrors[index]"
-                class="text-xs text-danger-strong"
-                :data-testid="`followup-error-${index}`"
-              >
-                {{ followUpErrors[index].message }}
-              </p>
-            </div>
-            <BaseButton
-              type="button"
-              variant="secondary"
-              size="sm"
-              data-testid="income-liquidate-add-followup"
-              @click="addFollowUp"
-            >
-              Agregar ingreso esperado
-            </BaseButton>
-          </div>
-        </BaseCollapse>
-
-      </section>
-
-      <BaseFormField label="Notas">
-        <BaseTextarea v-model="form.notes" :rows="2" />
+      <BaseFormField v-if="!personal" label="Destino del dinero">
+        <BaseSegmented v-model="form.destination" :options="destinations" full-width data-testid="income-liquidate-destination" />
       </BaseFormField>
 
-      <!-- The client's confirmation. Hidden while the settlement itself is
-           blocked: the footer already says why nothing can happen. -->
-      <section
-        v-if="record && !settlementBlockedReason(record)"
-        class="rounded-lg border border-border-muted px-4 py-3 space-y-1"
-        data-testid="income-liquidate-confirmation"
-      >
-        <BaseControlGate
-          :reasons="[confirmationUnavailableReason]"
-          label="Confirmación de pago no disponible"
-          align="start"
-          testid="income-liquidate-confirmation-gate"
-        >
-          <BaseCheckbox
-            :model-value="confirmationChecked"
-            :disabled="Boolean(confirmationUnavailableReason)"
-            :disabled-reason="confirmationUnavailableReason"
-            data-testid="income-liquidate-send-confirmation"
-            @update:model-value="sendConfirmation = $event"
-          >
-            Enviar al cliente la confirmación del pago
-          </BaseCheckbox>
-        </BaseControlGate>
-        <p
-          v-if="confirmationHint"
-          class="text-xs text-text-subtle"
-          data-testid="income-liquidate-confirmation-hint"
-        >
-          {{ confirmationHint }}
-        </p>
+      <div class="rounded-lg bg-surface-raised p-3 space-y-1 text-sm" aria-live="polite" data-testid="income-liquidate-summary">
+        <p class="text-text-default">Cubierto: {{ money(proposal.allocated + proposal.deducted) }} · Falta: {{ money(Math.max(remaining, 0)) }}</p>
+        <p v-if="credit > 0" class="text-warning-strong">Excedente: {{ money(credit) }} quedará como saldo a favor.</p>
+        <p v-if="shortfall > 0" class="text-xs text-text-muted">Diferencia entre lo esperado y lo recibido: {{ money(shortfall) }}.</p>
+      </div>
+
+      <section v-if="!personal" class="rounded-lg border border-border-muted">
+        <button type="button" class="flex w-full min-w-0 flex-col items-start justify-between gap-2 p-4 text-left text-sm font-medium text-text-default panel-portrait:flex-row panel-portrait:items-center" :aria-expanded="participantsOpen" :aria-controls="sectionId('participants')" data-testid="income-liquidate-participations-toggle" @click="participantsOpen = !participantsOpen">
+          <span>Participaciones</span>
+          <span class="flex min-w-0 max-w-full flex-wrap gap-x-2 text-xs text-text-muted"><span>Carlos {{ money(form.carlos_amount) }}</span><span>Gustavo {{ money(form.gustavo_amount) }}</span></span>
+        </button>
+        <BaseCollapse :id="sectionId('participants')" :open="participantsOpen">
+          <div class="px-4 pb-4"><PartnerSplitInput compact hide-total :decimals="2" v-model:total="form.total_amount" v-model:gustavoAmount="form.gustavo_amount" v-model:carlosAmount="form.carlos_amount" /></div>
+        </BaseCollapse>
       </section>
 
+      <section class="rounded-lg border border-border-muted" data-testid="income-liquidate-shortfall">
+        <button type="button" class="flex w-full items-center justify-between gap-2 p-4 text-left text-sm font-medium text-text-default" :aria-expanded="differenceOpen" :aria-controls="sectionId('difference')" data-testid="income-liquidate-difference-toggle" @click="differenceOpen = !differenceOpen">
+          <span>Diferencia</span><span class="text-xs text-text-muted">{{ money(shortfall) }}</span>
+        </button>
+        <BaseCollapse :id="sectionId('difference')" :open="differenceOpen">
+          <div class="px-4 pb-4 space-y-3">
+            <p class="text-xs text-text-muted">El saldo sin asignar seguirá pendiente en su ingreso. Registra una deducción si no lo cobrarás, o reprograma su cobro como un nuevo ingreso esperado.</p>
+            <p class="text-sm text-text-default" data-testid="income-liquidate-remaining">Sin asignar: {{ money(Math.max(remaining, 0)) }}</p>
+            <div v-for="(row, index) in deductions" :key="`deduction-${index}`" class="rounded-lg bg-surface-raised p-3 space-y-2" :data-testid="`income-liquidate-deduction-${index}`">
+              <BaseFormRow :cols="2" :gap="3">
+                <BaseFormField label="Tipo de deducción"><BaseSelect v-model="row.type" :options="DEDUCTION_TYPE_OPTIONS" placeholder="Seleccionar concepto" :data-testid="`deduction-type-${index}`" /></BaseFormField>
+                <BaseFormField label="Monto"><BaseCurrencyInput :decimals="2" v-model="row.amount" :suggestion="Math.max(remaining, 0)" :data-testid="`deduction-amount-${index}`" /></BaseFormField>
+              </BaseFormRow>
+              <BaseFormField v-if="row.type === 'other'" label="Descripción"><BaseInput v-model="row.detail" :data-testid="`deduction-detail-${index}`" /></BaseFormField>
+              <BaseButton type="button" size="sm" variant="ghost" :aria-label="`Quitar deducción ${index + 1}`" @click="deductions.splice(index, 1)">Quitar</BaseButton>
+            </div>
+            <BaseButton type="button" size="sm" variant="secondary" data-testid="income-liquidate-add-deduction" @click="addDeduction">Agregar deducción</BaseButton>
+            <div v-for="(row, index) in followUps" :key="`followup-${index}`" class="rounded-lg bg-surface-raised p-3 space-y-2" :data-testid="`income-liquidate-followup-${index}`">
+              <BaseFormField label="Ingreso de origen"><BaseSelect v-model="row.income_id" :options="selected.map(record => ({ value: record.id, label: record.concept }))" :data-testid="`followup-origin-${index}`" /></BaseFormField>
+              <BaseFormField label="Concepto"><BaseInput v-model="row.concept" :data-testid="`followup-concept-${index}`" /></BaseFormField>
+              <BaseFormRow :cols="2" :gap="3">
+                <BaseFormField label="Mes esperado de cobro"><BaseInput v-model="row.period_date" type="month" :data-testid="`followup-period-${index}`" /></BaseFormField>
+                <BaseFormField label="Monto esperado"><BaseCurrencyInput :decimals="2" v-model="row.amount" :data-testid="`followup-amount-${index}`" /></BaseFormField>
+              </BaseFormRow>
+              <BaseButton type="button" size="sm" variant="ghost" :aria-label="`Quitar ingreso esperado ${index + 1}`" @click="followUps.splice(index, 1)">Quitar</BaseButton>
+            </div>
+            <BaseButton type="button" size="sm" variant="secondary" data-testid="income-liquidate-add-followup" @click="addFollowUp">Reprogramar saldo como ingreso esperado</BaseButton>
+          </div>
+        </BaseCollapse>
+      </section>
+
+      <section class="rounded-lg border border-border-muted">
+        <button type="button" class="flex w-full items-center justify-between gap-2 p-4 text-left text-sm font-medium text-text-default" :aria-expanded="vatOpen" :aria-controls="sectionId('vat')" data-testid="income-liquidate-vat-toggle" @click="vatOpen = !vatOpen">IVA</button>
+        <BaseCollapse :id="sectionId('vat')" :open="vatOpen">
+          <div class="px-4 pb-4 space-y-3">
+            <label class="flex items-center gap-2 text-sm text-text-default"><BaseToggle v-model="showVat" aria-label="Mostrar desglose de IVA" data-testid="income-liquidate-show-vat" />Mostrar desglose de IVA</label>
+            <p class="text-xs text-text-muted">Se conserva el IVA registrado en cada ingreso. Este desglose no cambia el valor recibido ni las participaciones.</p>
+            <div v-if="showVat" class="space-y-3">
+              <div v-for="row in proposal.rows" :key="row.income_id"><p class="mb-1 min-w-0 text-sm font-medium text-text-default [overflow-wrap:anywhere]">{{ row.record.concept }}</p><VatBreakdown :total="row.amount" :rate="row.record.vat_rate ?? null" /></div>
+            </div>
+          </div>
+        </BaseCollapse>
+      </section>
+
+      <SettlementHostingPeriod v-for="record in hostingRecords" :key="`${requestId}-${record.id}`" :record="record" @change="periods[record.id] = $event" />
+
+      <section class="space-y-2" data-testid="income-liquidate-confirmations">
+        <h4 class="text-sm font-medium text-text-default">Confirmaciones de pago</h4>
+        <p v-if="contextLoading" class="text-xs text-text-subtle">Verificando los destinatarios…</p>
+        <div v-for="record in selected" :key="record.id" class="space-y-1">
+          <BaseCheckbox v-model="sendConfirmations[record.id]" class="w-full min-w-0 [overflow-wrap:anywhere] [&>span]:min-w-0 [&>input]:shrink-0" :disabled="!contexts[record.id]?.can_send || !(receivedById[record.id] > 0)" :disabled-reason="contexts[record.id]?.blocked_reason || 'Sin valor recibido para este ingreso no hay pago que confirmar.'" :data-testid="`income-liquidate-confirmation-${record.id}`">{{ record.concept }}<span v-if="contexts[record.id]?.can_send"> · {{ contexts[record.id].recipient }}</span></BaseCheckbox>
+          <p v-if="contexts[record.id]?.blocked_reason" class="text-xs text-text-subtle">{{ contexts[record.id].blocked_reason }}</p>
+        </div>
+      </section>
+      <BaseFormField label="Notas"><BaseTextarea v-model="form.notes" :rows="2" data-testid="income-liquidate-notes" /></BaseFormField>
     </form>
+
     <template #footer>
-      <div class="space-y-2 border-t border-border-muted px-4 py-4 panel-portrait:px-6">
-        <!-- Always rendered: a live region created on demand never announces. -->
-        <p
-          id="income-liquidate-submit-reason"
-          aria-live="polite"
-          class="text-xs text-danger-strong text-right min-h-4"
-          data-testid="income-liquidate-submit-reason"
-        >
-          {{ saving ? '' : submitBlockReason }}
-        </p>
-        <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:items-center panel-portrait:justify-end">
-          <BaseButton
-            type="button"
-            variant="secondary"
-            :disabled="saving"
-            @click="emit('close')"
-          >
-            Cancelar
-          </BaseButton>
-          <BaseButton
-            type="submit" :form="modalFormId"
-            variant="primary"
-            :loading="saving"
-            :disabled="!canSubmit"
-            :disabled-reason="submitBlockReason"
-            aria-describedby="income-liquidate-submit-reason"
-            data-testid="income-liquidate-submit"
-          >
-            {{ saving ? 'Guardando...' : 'Liquidar' }}
-          </BaseButton>
+      <div class="space-y-2">
+        <p v-if="error" class="text-sm text-danger-strong" role="alert">{{ error }}</p>
+        <p :id="sectionId('submit-reason')" class="min-h-4 text-right text-xs text-danger-strong" aria-live="polite" data-testid="income-liquidate-submit-reason">{{ review || saving ? '' : blockReason }}</p>
+        <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:justify-end">
+          <BaseButton v-if="review" type="button" variant="secondary" :disabled="saving" disabled-reason="Espera a que termine el registro de la liquidación." data-testid="income-liquidate-review-back" @click="back">Volver a editar</BaseButton>
+          <BaseButton v-else type="button" variant="secondary" :disabled="saving || preparing" disabled-reason="Espera a que termine la liquidación." @click="emit('close')">Cancelar</BaseButton>
+          <BaseButton v-if="review" type="button" :loading="saving" :disabled="saving" disabled-reason="La liquidación se está registrando." data-testid="income-liquidate-confirm" @click="confirm">Confirmar y liquidar</BaseButton>
+          <BaseButton v-else type="submit" :form="formId" :loading="saving || preparing" :disabled="Boolean(blockReason) || saving || preparing" :disabled-reason="blockReason || 'Espera a que termine la liquidación.'" :aria-describedby="sectionId('submit-reason')" data-testid="income-liquidate-submit">Liquidar</BaseButton>
         </div>
       </div>
     </template>
   </BaseModal>
-
-  <!-- Last notice before the client's email. A sibling, not a child: it
-       outlives anything the form re-renders, and it leaves the body scroll to
-       the modal that stays open underneath. -->
-  <ConfirmModal
-    v-model="lastNoticeOpen"
-    title="Último aviso: liquidar y avisar al cliente"
-    message="Al confirmar se registra la liquidación y le enviamos al cliente la confirmación del pago. El correo no se puede deshacer."
-    confirm-text="Liquidar y enviar"
-    cancel-text="Volver"
-    variant="info"
-    size="lg"
-    :lock-scroll="false"
-    @confirm="submitWithConfirmation"
-    @cancel="pendingPayload = null"
-  >
-    <ConfirmationSummaryList
-      :rows="lastNoticeRows"
-      testid="income-liquidate-notice"
-    />
-  </ConfirmModal>
 </template>

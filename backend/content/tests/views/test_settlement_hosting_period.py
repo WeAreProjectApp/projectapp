@@ -221,7 +221,7 @@ class TestCompletingTheWindowWhileSettling:
     def test_completing_the_window_notifies_only_for_the_payment(
         self, super_client, legacy_hosting_income, _mute_notifications,
     ):
-        """The parent window edit is audited silently; only the liquid child notifies."""
+        """The parent edit is silent; only the payment movement notifies."""
         response = super_client.post(
             settle_url(legacy_hosting_income),
             settlement(period={
@@ -241,9 +241,10 @@ class TestCompletingTheWindowWhileSettling:
         assert {change['field'] for change in parent_log.changes} == {
             'period_start', 'period_end', 'period_cadence',
         }
+        liquid = IncomeRecord.objects.get(pk=response.data['liquid']['id'])
         payment_log = AccountingChangeLog.objects.get(
-            entity_type=AccountingChangeLog.EntityType.INCOME,
-            object_id=response.data['liquid']['id'],
+            entity_type=AccountingChangeLog.EntityType.POCKET,
+            object_id=liquid.pocket_movement_id,
             action=AccountingChangeLog.Action.CREATED,
         )
         _mute_notifications.assert_called_once_with(payment_log)

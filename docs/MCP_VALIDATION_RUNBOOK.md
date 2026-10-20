@@ -2689,6 +2689,24 @@ interno de envío y queda excluido del CRUD MCP: lo crea la operación financier
 y su reintento se controla desde el Historial, para evitar avisos manuales
 duplicados o cambios independientes del pago.
 
+## Liquidación unificada (2026-10-19)
+
+Validar `preview_income_settlement` sin escrituras; `bulk_settle_incomes` con
+`income_ids`, deducciones proporcionales, participaciones globales y destino;
+consultar `get_income_settlement`; corregir con la revisión actual mediante
+`update_income_settlement` y revertir con `reverse_income_settlement`. Conservar
+los contratos de `settle_income`, `update_income_abono` y `delete_income_abono`.
+Los correos requieren la confirmación sensible del conector y se programan tras
+el commit. Una reversa con pagos o documentos en el saldo derivado debe fallar
+sin alterar dinero ni gastos. Los campos `settlement` son de lectura, no CRUD.
+
+El abono congela automáticamente la huella de reparto y destinatarios en la
+confirmación, aunque el cliente no envíe `preview_hash`. Si cambian antes de
+confirmar, rechaza sin registrar dinero ni enviar correo. Un `request_id` ya
+completado revisa el recibo existente, sin recalcular pagos sobre saldos cerrados.
+Los argumentos desconocidos o requeridos ausentes de las cinco herramientas de
+liquidación se rechazan antes de crear una confirmación.
+
 ## Detalle del bolsillo — 2026-10-19
 
 `accounting-ledger.get_pocket` comparte la lectura individual del Panel. Además de los campos del listado, devuelve `running_balance` (saldo real después del movimiento, sin filtros), `linked_record_detail` (tipo, identificador, concepto y categoría del gasto cuando aplica) y `allocation_details` (importe imputado, ingreso esperado, pendiente actual y marca de saldo a favor). Los importes siguen siendo decimales como texto. El saldo se ordena por fecha, creación e identificador; el pendiente incluye los demás pagos y deducciones y no es un snapshot histórico. `list_pocket` mantiene su respuesta liviana. No hay campos nuevos de modelo ni cambios de escritura o permisos.

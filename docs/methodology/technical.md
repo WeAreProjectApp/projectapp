@@ -1,10 +1,15 @@
-> **Contrato MCP unificado — 2026-10-19:** `mcp_inventory --check` impide módulos u operaciones duplicados y verifica los reemplazos; CI lo ejecuta junto al reporte de esquemas. `McpCredential.catalog` conserva el contrato anterior y `income_kinds` evita ampliar accesos específicos a esperados. Las nuevas credenciales pueden derivarse de `migrate_from_credential_id` sin copiar tokens. `mcp_retirement` es preview por defecto; `--apply` exige todas las condiciones de retiro. Huey registra observación cada cinco minutos y la evidencia diaria se conserva 90 días.
+> **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
+> para uno o varios ingresos, con deducciones proporcionales, reparto global,
+> IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`, con unión `0295`;
+> decisiones, antecedentes y contratos en [liquidación](../accounting-settlement.md).
 
-> **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
+> **Contrato MCP unificado — 2026-10-19:** `mcp_inventory --check` impide módulos u operaciones duplicados y verifica los reemplazos; CI lo ejecuta junto al reporte de esquemas. `McpCredential.catalog` conserva el contrato anterior y `income_kinds` evita ampliar accesos específicos a esperados. Las nuevas credenciales pueden derivarse de `migrate_from_credential_id` sin copiar tokens. `mcp_retirement` es preview por defecto; `--apply` exige todas las condiciones de retiro. Huey registra observación cada cinco minutos y la evidencia diaria se conserva 90 días.
 
 ## Consulta individual del bolsillo (2026-10-19)
 
 `GET /api/accounting/pocket/<id>/` y MCP `get_pocket` añaden `running_balance`, `linked_record_detail` y `allocation_details`; el listado no cambia. Pendientes actuales incluyen pagos y deducciones, sin inferir saldo histórico. `?movement=<id>` y `?expense=<id>` abren capas independientes de filtros. `BaseModal kind="detail-compact"` limita el ancho a 48 rem; en celular conserva pantalla completa. No hay migraciones.
+
+> **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
 > y su PDF comparten los valores derivados por el servidor; la siembra del
 > programa está en `content.0291_building_on_demand_program`. Los GET
 > administrativos usan sesión/CSRF e `IsAdminUser`; `stores/building_on_demand.js`

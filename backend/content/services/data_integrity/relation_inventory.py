@@ -200,6 +200,8 @@ _decide(exempt('Hijo en cascada sin copia de cliente ni proyecto.'), 'content.Co
 _decide(covered('AC2', 'AC12'), 'content.IncomeRecord.expected_income')
 _decide(covered('AC9', 'AC10'), 'content.Document.income_record')
 _decide(exempt('Aviso duradero del cierre del ingreso.'), 'content.IncomeCompletionNotice.income')
+_decide(exempt('Evidencia de los ingresos seleccionados al liquidar: se conserva para revisión y reversa, nunca se limpia.'),
+        'content.IncomeSettlement.parents')
 _decide(gap('El destino es un ingreso esperado y la fila es una deducción (serializers/accounting.py).'),
         'content.ExpenseRecord.source_income')
 _decide(covered('AC5'), 'content.HostingCycle.hosting_record')

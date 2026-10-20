@@ -919,10 +919,10 @@ function closeLiquidate() {
 
 async function handleLiquidateSubmit(payload) {
   const incomeId = liquidatingIncome.value?.id;
-  const result = await store.settleIncome(incomeId, payload);
+  const result = await store.bulkSettleIncomes(payload);
   if (result.success) {
     closeLiquidate();
-    const confirmation = result.data?.payment_confirmation;
+    const confirmation = result.data?.payment_confirmations?.find((row) => row.income_id === incomeId);
     notify.success({
       title: 'Ingreso liquidado',
       detail: [

@@ -717,6 +717,66 @@
           "obsolescence": "not_proven"
         },
         {
+          "name": "preview_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:preview_income_settlement",
+          "owner": "accounting",
+          "replacement": "preview_income_settlement",
+          "decision": "keep",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting-ledger"
+          ],
+          "risk": "read",
+          "requires_confirmation": false,
+          "usage": "not_observed",
+          "obsolescence": "not_proven"
+        },
+        {
+          "name": "get_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:get_income_settlement",
+          "owner": "accounting",
+          "replacement": "get_income_settlement",
+          "decision": "keep",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting-ledger"
+          ],
+          "risk": "read",
+          "requires_confirmation": false,
+          "usage": "not_observed",
+          "obsolescence": "not_proven"
+        },
+        {
+          "name": "update_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:update_income_settlement",
+          "owner": "accounting",
+          "replacement": "update_income_settlement",
+          "decision": "keep",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting-ledger"
+          ],
+          "risk": "sensitive",
+          "requires_confirmation": true,
+          "usage": "not_observed",
+          "obsolescence": "not_proven"
+        },
+        {
+          "name": "reverse_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:reverse_income_settlement",
+          "owner": "accounting",
+          "replacement": "reverse_income_settlement",
+          "decision": "keep",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting-ledger"
+          ],
+          "risk": "sensitive",
+          "requires_confirmation": true,
+          "usage": "not_observed",
+          "obsolescence": "not_proven"
+        },
+        {
           "name": "list_change_logs",
           "operation_id": "handler:content.mcp.accounting_tools:list_change_logs",
           "owner": "accounting",
@@ -1309,6 +1369,10 @@
         "bulk_settle_incomes",
         "update_income_abono",
         "delete_income_abono",
+        "preview_income_settlement",
+        "get_income_settlement",
+        "update_income_settlement",
+        "reverse_income_settlement",
         "mute_income",
         "get_recurring_duplicate_draft",
         "set_recurring_active",
@@ -3352,6 +3416,66 @@
           "obsolescence": "replacement_candidate"
         },
         {
+          "name": "preview_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:preview_income_settlement",
+          "owner": "accounting",
+          "replacement": "preview_income_settlement",
+          "decision": "adapt",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting"
+          ],
+          "risk": "read",
+          "requires_confirmation": false,
+          "usage": "not_observed",
+          "obsolescence": "replacement_candidate"
+        },
+        {
+          "name": "get_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:get_income_settlement",
+          "owner": "accounting",
+          "replacement": "get_income_settlement",
+          "decision": "adapt",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting"
+          ],
+          "risk": "read",
+          "requires_confirmation": false,
+          "usage": "not_observed",
+          "obsolescence": "replacement_candidate"
+        },
+        {
+          "name": "update_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:update_income_settlement",
+          "owner": "accounting",
+          "replacement": "update_income_settlement",
+          "decision": "adapt",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting"
+          ],
+          "risk": "sensitive",
+          "requires_confirmation": true,
+          "usage": "not_observed",
+          "obsolescence": "replacement_candidate"
+        },
+        {
+          "name": "reverse_income_settlement",
+          "operation_id": "handler:content.mcp.accounting_tools:reverse_income_settlement",
+          "owner": "accounting",
+          "replacement": "reverse_income_settlement",
+          "decision": "adapt",
+          "replacement_registered": true,
+          "also_registered_in": [
+            "accounting"
+          ],
+          "risk": "sensitive",
+          "requires_confirmation": true,
+          "usage": "not_observed",
+          "obsolescence": "replacement_candidate"
+        },
+        {
           "name": "list_change_logs",
           "operation_id": "handler:content.mcp.accounting_tools:list_change_logs",
           "owner": "accounting",
@@ -3887,6 +4011,10 @@
         "bulk_settle_incomes",
         "update_income_abono",
         "delete_income_abono",
+        "preview_income_settlement",
+        "get_income_settlement",
+        "update_income_settlement",
+        "reverse_income_settlement",
         "list_change_logs",
         "mute_income",
         "get_recurring_duplicate_draft",

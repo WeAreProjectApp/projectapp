@@ -97,6 +97,8 @@ from content.services import (
     income_payment_confirmation_service,
 )
 from content.services.email_log_service import attach_delivery_copies
+from content.services.income_settlement_confirmation_service import confirm_operation
+from content.views.accounting_settlements import settlement_error
 from content.services.entity_history import history_operation
 from content.utils import today_bogota
 from content.views.history_pagination import (
@@ -1019,9 +1021,10 @@ def settle_income_record(request, record_id):
                 income, serializer.validated_data, request.user,
             )
     except ValueError as exc:
-        return error_response_from_exc(exc)
-    confirmation = income_payment_confirmation_service.confirm_settlement(
-        result, serializer.validated_data,
+        return settlement_error(exc)
+    confirmation = (
+        {'requested': False, 'status': 'already_registered', 'recipient': '', 'error': ''}
+        if result.get('replayed') else income_payment_confirmation_service.confirm_settlement(result, serializer.validated_data)
     )
     # Explicit None: DRF serializes a None instance as {} via get_initial().
     return Response({
@@ -1035,6 +1038,7 @@ def settle_income_record(request, record_id):
             result['expected_incomes'], many=True,
         ).data,
         'payment_confirmation': confirmation,
+        'settlement_id': result['settlement_id'],
     }, status=status.HTTP_201_CREATED)
 
 
@@ -1253,6 +1257,7 @@ def bulk_assign_income_client(request):
     })
 
 
+@transaction.non_atomic_requests
 @api_view(['POST'])
 @permission_classes([IsSuperUser])
 def bulk_settle_income_records(request):
@@ -1265,10 +1270,7 @@ def bulk_settle_income_records(request):
     serializer = IncomeBulkSettlementSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-    income_ids = [
-        entry['income_id']
-        for entry in serializer.validated_data['allocations']
-    ]
+    income_ids = serializer.validated_data['income_ids']
     vanished = _missing_records_error(
         EntityType.INCOME, income_ids, noun='ingresos',
     )
@@ -1279,7 +1281,7 @@ def bulk_settle_income_records(request):
             serializer.validated_data, request.user,
         )
     except ValueError as exc:
-        return error_response_from_exc(exc)
+        return settlement_error(exc)
     results = list(_with_liquid_children(result['incomes']))
     if result['credit'] is not None:
         # Parentless, so _with_liquid_children can't pick it up.
@@ -1287,7 +1289,9 @@ def bulk_settle_income_records(request):
     return Response({
         'updated': len(result['incomes']),
         'results': IncomeRecordSerializer(results, many=True).data,
-        'movement': PocketMovementSerializer(result['movement']).data,
+        'movement': PocketMovementSerializer(result['movement']).data if result['movement'] else None,
+        'settlement_id': result['settlement_id'],
+        'payment_confirmations': confirm_operation(result, serializer.validated_data),
     }, status=status.HTTP_201_CREATED)
 
 

@@ -752,6 +752,15 @@ export const useAccountingStore = defineStore('accounting', {
      * refetches (children and the credit row are new rows the map cannot
      * insert, and the header meta is server-computed).
      */
+    async previewIncomeSettlement(payload) {
+      try {
+        const response = await create_request('accounting/incomes/settlement-preview/', payload);
+        return { success: true, data: response.data };
+      } catch (error) {
+        return { success: false, ...normalizeApiError(error) };
+      }
+    },
+
     async bulkSettleIncomes(payload) {
       this.isUpdating = true;
       this.error = null;

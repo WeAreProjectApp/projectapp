@@ -10,6 +10,7 @@ The following models are imported:
 """
 
 from .contact import Contact
+from .income_settlement import IncomeSettlement
 from .portfolio_works import PortfolioWork
 from .hour_packages import (
     HourPackage,

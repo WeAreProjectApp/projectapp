@@ -1,3 +1,16 @@
+# Liquidación unificada de ingresos (2026-10-19, PR #517)
+
+Una misma operación cubre uno o varios ingresos con participaciones globales,
+deducciones proporcionales, saldos pendientes o reprogramados y desglose de IVA
+heredado. La revisión del correo ocurre dentro del modal. Se conserva la
+liquidación sin cuenta emitida y el aviso interno al completarse el ingreso.
+La operación tiene identidad y efectos trazables para corregir o revertir el
+conjunto sin dejar deducciones ni saldos huérfanos. Antecedentes y decisiones:
+`docs/accounting-settlement.md`.
+
+Entrega de código en el PR #517. Las migraciones aditivas `content.0293` y
+`content.0294`, junto con la unión `content.0295_merge_accounting_mcp`, quedan para el deploy; esta entrada no acredita despliegue.
+
 # Enlaces seguros — confirmación de copia sin redistribuir el encabezado (2026-10-19)
 
 «Enlace para clientes» conserva su texto; sólo tras confirmar la escritura en

@@ -82,4 +82,3 @@ def complete_canonical_schema(tool, slug):
             confirmation_message=tool.get('confirmation_message', ''), **schemas,
         ))
         tool['strict_arguments'] = True
-

@@ -72,6 +72,10 @@ class ExpenseRecord(VatBreakdownMixin, PartnerSplitMixin, AccountingRecordBase):
         related_name='deduction_records',
         limit_choices_to={'kind': 'expected'},
     )
+    settlement = models.ForeignKey(
+        'content.IncomeSettlement', null=True, blank=True, on_delete=models.PROTECT,
+        related_name='expenses',
+    )
     # Auto-managed pocket OUT movement kept in sync by accounting_service.
     pocket_movement = models.OneToOneField(
         'PocketMovement',

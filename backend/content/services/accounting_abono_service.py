@@ -74,6 +74,14 @@ def update_income_abono(movement_id, data, user):
     replacement. All refusals precede the first deletion; other payments are
     never subtracted or changed.
     """
+    from content.models import IncomeSettlement
+    from content.services.income_settlement_operation_service import update_settlement
+    operation = IncomeSettlement.objects.filter(pocket_movement_id=movement_id).first()
+    if operation:
+        try:
+            return update_settlement(operation.pk, data, user)
+        except ValueError as exc:
+            raise ValueError(str(exc).replace('supera su saldo pendiente', 'supera su saldo disponible')) from exc
     ids = [entry['income_id'] for entry in data['allocations']]
     movement, old_children, locked = _lock_abono(movement_id, ids)
     parents = [locked.incomes[pk] for pk in ids]
@@ -138,5 +146,11 @@ def update_income_abono(movement_id, data, user):
 @historical_write
 @transaction.atomic
 def delete_income_abono(movement_id, user):
+    from content.models import IncomeSettlement
+    from content.services.income_settlement_operation_service import reverse_settlement
+    operation = IncomeSettlement.objects.filter(pocket_movement_id=movement_id).first()
+    if operation:
+        reverse_settlement(operation.pk, user)
+        return
     movement, _, _ = _lock_abono(movement_id)
     accounting_service.delete_record(AccountingChangeLog.EntityType.POCKET, movement, user)
