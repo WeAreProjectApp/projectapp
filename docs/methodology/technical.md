@@ -1,3 +1,5 @@
+> **Contrato MCP unificado — 2026-10-19:** `mcp_inventory --check` impide módulos u operaciones duplicados y verifica los reemplazos; CI lo ejecuta junto al reporte de esquemas. `McpCredential.catalog` conserva el contrato anterior y `income_kinds` evita ampliar accesos específicos a esperados. Las nuevas credenciales pueden derivarse de `migrate_from_credential_id` sin copiar tokens. `mcp_retirement` es preview por defecto; `--apply` exige todas las condiciones de retiro. Huey registra observación cada cinco minutos y la evidencia diaria se conserva 90 días.
+
 > **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
 
 ## Consulta individual del bolsillo (2026-10-19)

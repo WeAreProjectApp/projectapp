@@ -11,6 +11,7 @@ from content.models import (
     WebAppDiagnostic,
 )
 from content.services import diagnostic_service
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 
 @pytest.fixture
@@ -62,8 +63,12 @@ def _call(api_client, token, name, arguments):
     )
 
 
+def _call_confirmed(api_client, token, name, arguments):
+    return call_confirmed(api_client, _url(token), _rpc, name, arguments)
+
+
 def _payload(response):
-    return json.loads(response.data['result']['content'][0]['text'])
+    return confirmed_payload(response)
 
 
 @pytest.mark.django_db
@@ -105,7 +110,9 @@ class TestDiagnosticsMcp:
     def test_delete_is_unrestricted(self, api_client, diagnostics_connector, a_client):
         diagnostic = WebAppDiagnostic.objects.create(client=a_client, status='sent')
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'delete_diagnostic', {'diagnostic_id': diagnostic.id})
+        response = _call_confirmed(
+            api_client, token, 'delete_diagnostic', {'diagnostic_id': diagnostic.id},
+        )
         assert response.data['result']['isError'] is False
         assert not WebAppDiagnostic.objects.filter(pk=diagnostic.id).exists()
 
@@ -230,7 +237,7 @@ class TestDiagnosticsMcpHandlers:
     ):
         section = seeded_diagnostic.sections.first()
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'bulk_update_diagnostic_sections', {
+        response = _call_confirmed(api_client, token, 'bulk_update_diagnostic_sections', {
             'diagnostic_id': seeded_diagnostic.id,
             'sections': [
                 {'id': section.id, 'title': 'Bulk actualizada'},
@@ -245,7 +252,7 @@ class TestDiagnosticsMcpHandlers:
         self, api_client, diagnostics_connector, seeded_diagnostic,
     ):
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'bulk_update_diagnostic_sections', {
+        response = _call_confirmed(api_client, token, 'bulk_update_diagnostic_sections', {
             'diagnostic_id': seeded_diagnostic.id, 'sections': 'nope',
         })
         assert response.data['result']['isError'] is True
@@ -269,7 +276,7 @@ class TestDiagnosticsMcpHandlers:
         self, _mock_send, api_client, diagnostics_connector, seeded_diagnostic,  # noqa: PT019
     ):
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'send_initial', {
+        response = _call_confirmed(api_client, token, 'send_initial', {
             'diagnostic_id': seeded_diagnostic.id,
         })
         assert _payload(response)['email_ok'] is True
@@ -284,7 +291,7 @@ class TestDiagnosticsMcpHandlers:
         self, _mock_send, api_client, diagnostics_connector, seeded_diagnostic,  # noqa: PT019
     ):
         _, token = diagnostics_connector
-        response = _call(api_client, token, 'send_initial', {
+        response = _call_confirmed(api_client, token, 'send_initial', {
             'diagnostic_id': seeded_diagnostic.id,
         })
         assert _payload(response)['email_ok'] is False

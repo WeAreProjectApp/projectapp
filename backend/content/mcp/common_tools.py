@@ -5,6 +5,13 @@ from content.mcp.registry import capability_entry, visible_tools
 
 
 def build_common_tools(connector, tools_provider):
+    def confirmation_tools():
+        context = current_mcp_context()
+        if context is None:
+            return tools_provider()
+        from content.mcp.connectors import tools_for_credential
+        return tools_for_credential(context.connector.slug, context.credential)
+
     def describe_capabilities(arguments):
         requested = arguments.get('tools')
         summary = arguments.get('summary', False)
@@ -74,7 +81,7 @@ def build_common_tools(connector, tools_provider):
                 'required': ['confirmation_id'],
                 'additionalProperties': False,
             },
-            'handler': lambda arguments: confirm_action(arguments, tools_provider()),
+            'handler': lambda arguments: confirm_action(arguments, confirmation_tools()),
         },
         {
             'name': 'cancel_action',

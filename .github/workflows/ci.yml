@@ -149,6 +149,14 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
+      - name: Enforce one canonical MCP per module
+        if: matrix.shard == '1/6'
+        env:
+          DJANGO_SETTINGS_MODULE: projectapp.settings_test
+        run: |
+          python manage.py mcp_inventory --check
+          python manage.py mcp_schema_report
+
       - name: Prepare isolated nginx for private media HTTP tests
         run: |
           FILES=$(python3 "$GITHUB_WORKSPACE/scripts/ci/backend-shard-files.py" --shard ${{ matrix.shard }})

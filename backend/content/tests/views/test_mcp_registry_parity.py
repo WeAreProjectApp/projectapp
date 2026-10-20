@@ -37,8 +37,9 @@ def rpc(api_client, slug):
     connector.save(update_fields=['is_active'])
     token = connector.generate_token()
     credential = connector.credentials.get(label='Default')
+    credential.catalog = 'canonical'
     credential.allowed_tools = [tool['name'] for tool in TOOLS_BY_SLUG[slug]]
-    credential.save(update_fields=['allowed_tools'])
+    credential.save(update_fields=['catalog', 'allowed_tools'])
 
     def call(method, params=None, *, modern=False, bearer=False, credential_token=None):
         request_token = credential_token or token

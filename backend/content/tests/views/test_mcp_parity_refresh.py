@@ -18,6 +18,7 @@ from content.models import (
     PocketMovement,
 )
 from content.services import accounting_service, diagnostic_service
+from content.tests.mcp_confirmation_helpers import call_confirmed, confirmed_payload
 
 
 pytestmark = pytest.mark.django_db
@@ -50,6 +51,29 @@ def call_tool(api_client, slug, token, name, arguments):
         },
         format='json',
     )
+
+
+def _rpc(method, params):
+    return {
+        'jsonrpc': '2.0',
+        'id': 1,
+        'method': method,
+        'params': params,
+    }
+
+
+def call_confirmed_tool(api_client, slug, token, name, arguments):
+    return call_confirmed(
+        api_client,
+        f'/api/mcp/{slug}/{token}/',
+        _rpc,
+        name,
+        arguments,
+    )
+
+
+def confirmed_result(response):
+    return confirmed_payload(response)
 
 
 def payload(response):
@@ -375,7 +399,7 @@ def test_create_hosting_income_returns_its_covered_period(
 ):
     token = activate_connector('accounting')
 
-    response = call_tool(api_client, 'accounting', token, 'create_income', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'create_income', {
         'concept': 'Hosting anual 2026',
         'kind': 'expected',
         'period_date': '2026-01',
@@ -384,9 +408,10 @@ def test_create_hosting_income_returns_its_covered_period(
         'period_cadence': 'annual',
         'total_amount': '1200000.00',
         'origin': 'hosting',
+        'vat_rate': 0,
     })
 
-    result = payload(response)
+    result = confirmed_result(response)
     assert response.data['result']['isError'] is False
     assert result['period_start'] == '2026-01-01'
     assert result['period_end'] == '2026-12-31'
@@ -403,14 +428,14 @@ def test_settle_income_registers_a_partial_payment(
     )
     token = activate_connector('accounting')
 
-    response = call_tool(api_client, 'accounting', token, 'settle_income', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'settle_income', {
         'record_id': income.id,
         'concept': 'Abono parcial',
         'period_date': '2026-08-26',
         'total_amount': '400.00',
     })
 
-    result = payload(response)
+    result = confirmed_result(response)
     assert response.data['result']['isError'] is False
     assert result['income']['payment_status'] == 'partial'
     assert result['income']['paid_amount'] == '400.00'
@@ -427,7 +452,7 @@ def test_get_income_detail_includes_partial_payment_history(
         carlos_amount=Decimal('500.00'),
     )
     token = activate_connector('accounting')
-    call_tool(api_client, 'accounting', token, 'settle_income', {
+    call_confirmed_tool(api_client, 'accounting', token, 'settle_income', {
         'record_id': income.id,
         'concept': 'Primer abono',
         'period_date': '2026-08-26',
@@ -451,7 +476,7 @@ def test_settle_income_rejects_a_liquid_record(
     income = make_income(kind=IncomeRecord.Kind.LIQUID)
     token = activate_connector('accounting')
 
-    response = call_tool(api_client, 'accounting', token, 'settle_income', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'settle_income', {
         'record_id': income.id,
         'concept': 'Pago imposible',
         'period_date': '2026-08-26',
@@ -503,10 +528,10 @@ def _settle_with_confirmation(income):
     }
 
 
-def test_settle_income_refuses_the_client_email_without_a_preview(
+def test_settle_income_requires_a_preview_before_client_email(
     api_client, superuser, make_income, mailoutbox,
 ):
-    """The legacy connector runs settle directly, so it cannot email a client."""
+    """The compatibility connector previews an email-bearing settlement."""
     income = _billed_income(make_income)
     token = activate_connector('accounting')
 
@@ -515,8 +540,10 @@ def test_settle_income_refuses_the_client_email_without_a_preview(
         _settle_with_confirmation(income),
     )
 
-    assert response.data['result']['isError'] is True
-    assert 'confirm_action' in response.data['result']['content'][0]['text']
+    assert response.data['result']['isError'] is False
+    preview = payload(response)
+    assert preview['confirmation_required'] is True
+    assert preview['impact']['payment_confirmation']['recipient'] == 'pagos@acme.co'
     assert income.liquid_records.count() == 0
     assert mailoutbox == []
 
@@ -583,7 +610,7 @@ def test_bulk_settle_incomes_creates_one_shared_movement(
     )
     token = activate_connector('accounting')
 
-    response = call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
         'allocations': [
             {'income_id': first.id, 'amount': '500.00'},
             {'income_id': second.id, 'amount': '100.00'},
@@ -593,7 +620,7 @@ def test_bulk_settle_incomes_creates_one_shared_movement(
         'notes': 'Transferencia conjunta',
     })
 
-    result = payload(response)
+    result = confirmed_result(response)
     assert response.data['result']['isError'] is False
     assert result['updated'] == 2
     assert result['movement']['amount'] == '600.00'
@@ -612,7 +639,7 @@ def test_bulk_settle_incomes_rejects_a_repeated_income(
     income = make_income()
     token = activate_connector('accounting')
 
-    response = call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
         'allocations': [
             {'income_id': income.id, 'amount': '100.00'},
             {'income_id': income.id, 'amount': '100.00'},
@@ -638,7 +665,7 @@ def test_update_income_abono_replaces_the_shared_distribution_by_movement_id(
         gustavo_amount=Decimal('150.00'), carlos_amount=Decimal('150.00'),
     )
     token = activate_connector('accounting')
-    created = payload(call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+    created = confirmed_result(call_confirmed_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
         'allocations': [
             {'income_id': first.id, 'amount': '500.00'},
             {'income_id': second.id, 'amount': '100.00'},
@@ -646,7 +673,7 @@ def test_update_income_abono_replaces_the_shared_distribution_by_movement_id(
         'total_amount': '600.00', 'period_date': '2026-08-26',
     }))
 
-    response = call_tool(api_client, 'accounting', token, 'update_income_abono', {
+    response = call_confirmed_tool(api_client, 'accounting', token, 'update_income_abono', {
         'record_id': created['movement']['id'],
         'allocations': [
             {'income_id': first.id, 'amount': '200.00'},
@@ -656,7 +683,7 @@ def test_update_income_abono_replaces_the_shared_distribution_by_movement_id(
         'notes': 'Reparto corregido',
     })
 
-    updated = payload(response)
+    updated = confirmed_result(response)
     assert response.data['result']['isError'] is False
     assert updated['movement']['id'] == created['movement']['id']
     assert updated['movement']['amount'] == '500.00'
@@ -675,7 +702,7 @@ def test_delete_income_abono_restores_pending_balances(
     first = make_income(total_amount=Decimal('500.00'))
     second = make_income(concept='Factura dos', total_amount=Decimal('300.00'))
     token = activate_connector('accounting')
-    created = payload(call_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
+    created = confirmed_result(call_confirmed_tool(api_client, 'accounting', token, 'bulk_settle_incomes', {
         'allocations': [
             {'income_id': first.id, 'amount': '500.00'},
             {'income_id': second.id, 'amount': '100.00'},
@@ -684,12 +711,12 @@ def test_delete_income_abono_restores_pending_balances(
     }))
     movement_id = created['movement']['id']
 
-    response = call_tool(
+    response = call_confirmed_tool(
         api_client, 'accounting', token, 'delete_income_abono', {'record_id': movement_id},
     )
 
     assert response.data['result']['isError'] is False
-    assert payload(response) == {'deleted': True, 'id': movement_id}
+    assert confirmed_result(response) == {'deleted': True, 'id': movement_id}
     assert PocketMovement.objects.filter(pk=movement_id).count() == 0
     assert first.liquid_records.count() == 0
     assert second.liquid_records.count() == 0
@@ -710,7 +737,7 @@ def test_delete_income_abono_rejects_an_ordinary_pocket_movement(
     )
     token = activate_connector('accounting')
 
-    response = call_tool(
+    response = call_confirmed_tool(
         api_client, 'accounting', token, 'delete_income_abono', {'record_id': movement.id},
     )
 

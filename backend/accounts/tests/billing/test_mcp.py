@@ -52,7 +52,10 @@ def _call(tools, context, name, arguments):
 
 @pytest.fixture
 def billing_runtime():
-    connector = McpConnector.objects.create(slug='billing-test', name='Cobros de prueba', is_active=True)
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='accounting-billing',
+        defaults={'name': 'Cobros de prueba', 'is_active': True},
+    )
     connector.generate_token()
     credential = connector.credentials.get(label='Default')
     actor = service_actor_for_connector(connector)

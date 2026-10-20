@@ -6118,7 +6118,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktree-templates` | admin | P1 | success,error,failure,display | — |
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 10 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 12 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |

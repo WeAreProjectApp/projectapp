@@ -14,6 +14,10 @@ SENSITIVE_PREFIXES = (
     'launch_', 'bulk_', 'cancel_', 'retire_', 'merge_', 'delete_', 'void_',
     'dissolve_',
 )
+CONTENT_DELIVERY_TOOLS = frozenset({
+    'publish_post', 'publish_blog_post', 'publish_blog_to_linkedin',
+    'create_blog_post', 'update_blog_post', 'create_post', 'update_post',
+})
 
 
 def infer_risk(name):
@@ -37,7 +41,7 @@ def infer_annotations(name, risk):
         'idempotentHint': idempotent,
         'openWorldHint': name.startswith((
             'send_', 'resend_', 'publish_', 'retry_', 'launch_',
-        )),
+        )) or name in CONTENT_DELIVERY_TOOLS,
     }
 
 
@@ -76,11 +80,19 @@ def with_sensitive_confirmation(tools):
     for source in tools:
         tool = deepcopy(source)
         risk = tool.get('risk', infer_risk(tool['name']))
-        if tool['name'] in {'update_proposal_status', 'create_share_link'}:
+        if tool['name'] in {
+            'update_proposal_status', 'create_share_link',
+            'create_blog_post', 'update_blog_post', 'create_post', 'update_post',
+        }:
             risk = 'sensitive'
         tool['risk'] = risk
         if risk == 'sensitive':
             tool['requires_confirmation'] = True
+        if tool['name'] in CONTENT_DELIVERY_TOOLS:
+            # Consume a durable intent before external publication/scheduling.
+            # A provider failure must keep its persisted failure state, and a
+            # repeated confirmation must not contact the provider again.
+            tool['durable_execution'] = True
         result.append(tool)
     return result
 
@@ -88,7 +100,8 @@ def with_sensitive_confirmation(tools):
 def visible_tools(tools, credential):
     return [
         tool for tool in tools
-        if credential is None or credential.allows(tool['name'])
+        if not tool.get('_hidden')
+        and (credential is None or credential.allows(tool['name']))
     ]
 
 

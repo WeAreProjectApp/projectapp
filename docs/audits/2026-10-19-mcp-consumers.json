@@ -1,0 +1,90 @@
+{
+  "read_only": true,
+  "configured_consumers": [
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_contable",
+      "source_slug": "accounting",
+      "canonical": "accounting",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_propuestas",
+      "source_slug": "proposals",
+      "canonical": "commercial",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "linkedin_personal_content",
+      "source_slug": "linkedin-personal",
+      "canonical": "content",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_documentos",
+      "source_slug": "documents",
+      "canonical": "documents",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_clientes",
+      "source_slug": "clients",
+      "canonical": "commercial",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_comunicaciones",
+      "source_slug": "communications",
+      "canonical": "communications",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    },
+    {
+      "client": "Codex local",
+      "configured_name": "gestor_blogs",
+      "source_slug": "blog",
+      "canonical": "content",
+      "endpoint_without_credentials": null,
+      "credential_catalog": "unverified",
+      "migration_verified": false
+    }
+  ],
+  "duplicate_module_configurations": [
+    {
+      "client": "Codex local",
+      "canonical": "commercial",
+      "configured_names": [
+        "gestor_propuestas",
+        "gestor_clientes"
+      ]
+    },
+    {
+      "client": "Codex local",
+      "canonical": "content",
+      "configured_names": [
+        "linkedin_personal_content",
+        "gestor_blogs"
+      ]
+    }
+  ],
+  "unverified_surfaces": [
+    "Claude web / other hosts: not inspectable from local configuration"
+  ],
+  "next_step": "Publish the canonical endpoint, issue source-scoped credentials, migrate and verify each client, then evaluate retirement."
+}
