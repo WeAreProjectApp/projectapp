@@ -16,6 +16,12 @@ class McpCredential(models.Model):
         related_name='credentials',
     )
     label = models.CharField(max_length=100, default='Default')
+    catalog = models.CharField(
+        max_length=12, default='canonical',
+        choices=[('canonical', 'Canonical'), ('legacy', 'Legacy catalog')],
+    )
+    migrated_at = models.DateTimeField(null=True, blank=True)
+    income_kinds = models.JSONField(default=list, blank=True)
     token_hash = models.CharField(max_length=64, db_index=True)
     token_prefix = models.CharField(max_length=8, blank=True, default='')
     actor = models.ForeignKey(

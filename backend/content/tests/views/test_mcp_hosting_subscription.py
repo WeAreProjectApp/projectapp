@@ -55,7 +55,7 @@ def hosting_case():
 
 @pytest.fixture
 def credential():
-    connector, _ = McpConnector.objects.get_or_create(slug='projects', defaults={'name': 'Projects', 'is_active': True})
+    connector, _ = McpConnector.objects.get_or_create(slug='accounting', defaults={'name': 'Accounting', 'is_active': True})
     connector.is_active = True
     connector.save(update_fields=['is_active'])
     return McpCredential.objects.create(
@@ -64,7 +64,7 @@ def credential():
 
 
 def invoke(credential, name, arguments):
-    payload = call_tool_inprocess('projects', name, arguments, credential=credential)
+    payload = call_tool_inprocess('accounting', name, arguments, credential=credential)
     if 'error' in payload:
         error = payload['error']
         raise ToolError(error['message'], code=error['code'], details=error['details'])
@@ -193,7 +193,7 @@ def test_explicit_allow_list_omits_new_tools(api_client, credential, hosting_cas
     token = credential.generate_token()
     credential.save(update_fields=['allowed_tools'])
 
-    response = api_client.post(f'/api/mcp/projects/{token}/', {
+    response = api_client.post(f'/api/mcp/accounting/{token}/', {
         'jsonrpc': '2.0', 'id': 1, 'method': 'tools/list',
     }, format='json')
 
@@ -202,8 +202,8 @@ def test_explicit_allow_list_omits_new_tools(api_client, credential, hosting_cas
     assert 'get_project_hosting' in tools
     assert {'preview_hosting_subscription_change', 'change_hosting_subscription'}.isdisjoint(tools)
     names = {'preview_hosting_subscription_change', 'change_hosting_subscription'}
-    assert names <= {tool['name'] for tool in TOOLS_BY_SLUG['projects']}
-    assert names.isdisjoint({tool['name'] for tool in TOOLS_BY_SLUG['documents']})
+    assert names <= {tool['name'] for tool in TOOLS_BY_SLUG['accounting']}
+    assert names.isdisjoint({tool['name'] for tool in TOOLS_BY_SLUG['projects']})
     with pytest.raises(ToolError) as caught:
         invoke(credential, 'preview_hosting_subscription_change', {'subscription_id': 3, 'action': 'cancel'})
     assert caught.value.code == 'FORBIDDEN'

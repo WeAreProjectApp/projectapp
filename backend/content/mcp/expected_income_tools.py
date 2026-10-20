@@ -72,6 +72,7 @@ INCOME_PROPERTIES = {
     'collection_confidence': {'type': 'string', 'enum': ['', *IncomeRecord.CollectionConfidence.values],
                               'description': 'Probabilidad de cobro: high, medium o low; vacío deja la clasificación sin asignar.'},
     'notes': {'type': 'string', 'description': 'Notas del ingreso esperado, incluida la referencia documental y la regla de renovación.'},
+    'is_receivable_candidate': {'type': 'boolean', 'description': 'Incluye explícitamente el esperado de empresa en la previsión manual de cobro.'},
 }
 ID_PROPERTY = {'type': 'integer', 'minimum': 1, 'description': 'Identificador positivo del ingreso esperado.'}
 IF_MATCH_PROPERTY = {'type': 'string', 'pattern': r'^[0-9a-fA-F]{64}$',

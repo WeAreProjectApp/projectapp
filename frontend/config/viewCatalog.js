@@ -987,7 +987,7 @@ export const viewCatalogSections = [
   {
     id: 'panel-mcps',
     label: 'MCPs (panel)',
-    description: 'Gestion de conectores MCP para Claude, solo superusuarios.',
+    description: 'Gestión de conectores MCP por módulo y migración de accesos anteriores, solo superusuarios.',
     views: [
       {
         label: 'MCPs — Conectores',
@@ -995,7 +995,7 @@ export const viewCatalogSections = [
         group: 'Conectores',
         file: 'frontend/pages/panel/mcps/index.vue',
         reference: 'vista de gestion de conectores MCP del panel',
-        notes: 'Propuestas permite administrar contratos personalizados en Markdown, ajustes y documentos; Formalización prepara paquetes privados por credencial y confirma su envío. La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
+        notes: 'Separa ocho conectores canónicos por módulo de los conectores en retirada; muestra reemplazo, último uso anterior e inventario de consumidores. Las credenciales antiguas conservan su catálogo; las nuevas usan el catálogo unificado. Comercial permite administrar contratos personalizados en Markdown, ajustes y documentos; Formalización prepara paquetes privados por credencial y confirma su envío. La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
         audience: 'admin',
         viewType: 'config',
       },

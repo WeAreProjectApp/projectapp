@@ -620,7 +620,8 @@ class TestDocumentsConnectorPanel:
         assert docs['name'] == 'Gestor Documental'
         tool_names = [t['name'] for t in docs['tools']]
         assert 'create_document' in tool_names
-        assert 'list_folders' in tool_names
+        assert 'get_document_folder_index' in tool_names
+        assert 'create_document_folder' in tool_names
 
 
 @pytest.mark.django_db

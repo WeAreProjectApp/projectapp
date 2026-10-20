@@ -27,6 +27,10 @@ class McpConnector(models.Model):
     )
     is_active = models.BooleanField(default=False)
     last_used_at = models.DateTimeField(null=True, blank=True)
+    migration_started_at = models.DateTimeField(null=True, blank=True)
+    consumers_verified_at = models.DateTimeField(null=True, blank=True)
+    retired_at = models.DateTimeField(null=True, blank=True)
+    aliases_retired_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -57,6 +61,7 @@ class McpConnector(models.Model):
             defaults={
                 'token_hash': self.token_hash,
                 'token_prefix': self.token_prefix,
+                'catalog': 'legacy',
             },
         )
         credential.token_hash = self.token_hash

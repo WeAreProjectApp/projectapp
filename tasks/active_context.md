@@ -14,6 +14,14 @@ no se modifican en esta tarea. Sin cambios de API ni nuevas capacidades del mapa
 Verificación local: 12 escenarios Playwright en lotes focales y 5 pruebas de
 portapapeles en verde; quality gate 100/100 y registros de vistas/flujos al día.
 
+# Unificación MCP por módulo — 2026-10-19
+
+En curso: ocho conectores canónicos por sección del panel, catálogo anterior
+por credencial sin ampliación de permisos, confirmaciones locales, inventario
+reproducible y retiro condicionado a 30 días y 14 días sin uso observado.
+Base revisada: `17e19f8f`; inventario previo en
+`docs/audits/2026-10-19-mcp-before.json`. No acredita despliegue.
+
 # Building on Demand — 2026-10-10
 
 ## Bolsillo — pertenencia y detalle informativo (2026-10-19)

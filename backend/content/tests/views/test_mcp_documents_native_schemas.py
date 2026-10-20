@@ -13,7 +13,7 @@ from content.tests.mcp_schema_rules import schema_problems
 from content.views.mcp_blog import TOOLS_BY_SLUG
 
 DOCUMENT_NATIVE_NAMES = (
-    'create_folder', 'list_documents', 'read_document', 'create_document',
+    'create_document_folder', 'list_documents', 'read_document', 'create_document',
     'update_document', 'append_document', 'delete_document',
     'list_document_states', 'set_document_state', 'close_document_state',
     'add_document_note', 'finish_document_note', 'delete_document_notes',

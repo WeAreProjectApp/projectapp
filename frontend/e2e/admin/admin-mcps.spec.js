@@ -13,23 +13,23 @@ import { ADMIN_MCPS } from '../helpers/flow-tags.js';
 test.setTimeout(60_000);
 
 const CONNECTOR = {
-  slug: 'blog',
-  name: 'Blog Publisher',
-  description: 'Permite a Claude crear, programar, editar y consultar posts del blog.',
+  slug: 'content',
+  name: 'Contenido',
+  description: 'Permite a Claude gestionar el contenido del blog y LinkedIn.',
   is_active: false,
   has_token: false,
   token_prefix: '',
   last_used_at: null,
   tool_count: 2,
   risk_counts: { read: 1, write: 1, sensitive: 0 },
-  is_legacy: true,
+  is_legacy: false,
   credentials: [
     {
       id: 7,
       label: 'Auditoría',
       token_prefix: 'scope123',
       allowed_tools: ['get_blog_template'],
-      actor: 'mcp_blog',
+      actor: 'mcp_content',
       is_usable: true,
       expires_at: null,
       revoked_at: null,
@@ -56,26 +56,57 @@ const CONNECTOR = {
     },
   ],
   tools: [
-    { name: 'get_blog_template', description: 'Template JSON del blog.', risk: 'read' },
+    { name: 'get_blog_template', description: 'Template JSON de contenido.', risk: 'read' },
     { name: 'create_blog_post', description: 'Crea un post.', risk: 'write' },
   ],
 };
 
+const RETIRING_CONNECTOR = {
+  slug: 'blog',
+  name: 'Gestor de Blogs',
+  description: 'Compatibilidad temporal para configuraciones anteriores.',
+  is_active: true,
+  has_token: true,
+  token_prefix: 'legacy12',
+  tool_count: 1,
+  risk_counts: { read: 1, write: 0, sensitive: 0 },
+  is_legacy: true,
+  lifecycle: 'retiring',
+  replacement: 'content',
+  last_legacy_use_at: '2026-10-18T14:30:00Z',
+  consumers_verified_at: '2026-10-17T10:00:00Z',
+  connection_status: 'connected',
+  credentials: [{
+    id: 17,
+    label: 'Automatización antigua',
+    token_prefix: 'legacy17',
+    allowed_tools: ['get_blog_template'],
+    actor: 'mcp_blog',
+    is_usable: true,
+    expires_at: null,
+    revoked_at: null,
+    last_used_at: '2026-10-18T14:30:00Z',
+  }],
+  recent_events: [],
+  tools: [{ name: 'get_blog_template', description: 'Consulta el template del blog.', risk: 'read' }],
+};
+
 const TOKEN_RESPONSE = {
-  connector_url: 'https://projectapp.co/api/mcp/blog/e2e-token-abc123/',
+  connector_url: 'https://projectapp.co/api/mcp/content/e2e-token-abc123/',
   token_prefix: 'e2e-toke',
 };
 
 const SCOPED_TOKEN_RESPONSE = {
   id: 7,
   label: 'Auditoría',
-  connector_url: 'https://projectapp.co/api/mcp/blog/e2e-scoped-token/',
+  connector_url: 'https://projectapp.co/api/mcp/content/e2e-scoped-token/',
   token_prefix: 'e2e-scop',
   allowed_tools: ['get_blog_template'],
 };
 
 function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}) {
   const connector = JSON.parse(JSON.stringify(CONNECTOR));
+  const retiringConnector = JSON.parse(JSON.stringify(RETIRING_CONNECTOR));
   return ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -90,17 +121,17 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([connector]),
+        body: JSON.stringify([connector, retiringConnector]),
       };
     }
-    if (apiPath === 'mcp-connectors/blog/generate-token/' && method === 'POST') {
+    if (apiPath === 'mcp-connectors/content/generate-token/' && method === 'POST') {
       return {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(TOKEN_RESPONSE),
       };
     }
-    if (apiPath === 'mcp-connectors/blog/credentials/' && method === 'POST') {
+    if (apiPath === 'mcp-connectors/content/credentials/' && method === 'POST') {
       if (credentialCreateError) {
         return {
           status: 409,
@@ -114,7 +145,7 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
         body: JSON.stringify(SCOPED_TOKEN_RESPONSE),
       };
     }
-    if (apiPath === 'mcp-connectors/blog/credentials/7/' && method === 'PATCH') {
+    if (apiPath === 'mcp-connectors/content/credentials/7/' && method === 'PATCH') {
       const payload = route.request().postDataJSON();
       connector.credentials[0] = {
         ...connector.credentials[0],
@@ -127,17 +158,17 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
         body: JSON.stringify(connector),
       };
     }
-    if (apiPath === 'mcp-connectors/blog/credentials/7/rotate/' && method === 'POST') {
+    if (apiPath === 'mcp-connectors/content/credentials/7/rotate/' && method === 'POST') {
       return {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
           ...SCOPED_TOKEN_RESPONSE,
-          connector_url: 'https://projectapp.co/api/mcp/blog/e2e-replacement-token/',
+          connector_url: 'https://projectapp.co/api/mcp/content/e2e-replacement-token/',
         }),
       };
     }
-    if (apiPath === 'mcp-connectors/blog/credentials/7/' && method === 'DELETE') {
+    if (apiPath === 'mcp-connectors/content/credentials/7/' && method === 'DELETE') {
       connector.credentials[0] = {
         ...connector.credentials[0],
         is_usable: false,
@@ -145,13 +176,30 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
       };
       return { status: 204, body: '' };
     }
-    if (apiPath === 'mcp-connectors/blog/' && method === 'PATCH') {
+    if (apiPath === 'mcp-connectors/content/' && method === 'PATCH') {
       connector.is_active = true;
       return {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify(connector),
       };
+    }
+    if (apiPath === 'mcp-connectors/blog/credentials/17/' && method === 'PATCH') {
+      const payload = route.request().postDataJSON();
+      retiringConnector.credentials[0] = {
+        ...retiringConnector.credentials[0],
+        allowed_tools: payload.allowed_tools,
+        expires_at: payload.expires_at,
+      };
+      return { status: 200, contentType: 'application/json', body: JSON.stringify(retiringConnector) };
+    }
+    if (apiPath === 'mcp-connectors/blog/credentials/17/' && method === 'DELETE') {
+      retiringConnector.credentials[0] = {
+        ...retiringConnector.credentials[0],
+        is_usable: false,
+        revoked_at: '2026-10-19T12:00:00Z',
+      };
+      return { status: 204, body: '' };
     }
     return null;
   };
@@ -165,19 +213,19 @@ test.describe('Panel MCPs', () => {
     });
   });
 
-  test('renders the blog connector card with its tools', {
+  test('renders the canonical content connector card with its tools', {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display', '@responsive:mcp'],
   }, async ({ page }) => {
     await mockApi(page, buildHandler());
-    await page.goto('/panel/blog', { waitUntil: 'domcontentloaded' });
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
     await page
       .getByRole('navigation', { name: 'Navegación del panel' })
       .getByRole('link', { name: 'MCPs', exact: true })
       .click();
 
     await expect(page).toHaveURL(/\/panel\/mcps/);
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await expect(page.getByText('Blog Publisher')).toBeVisible();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('mcp-card-header-content')).toContainText('Contenido');
 
     // Collapsed accordion row: token, status and tools live in the body and
     // are hidden until the row is expanded.
@@ -190,25 +238,68 @@ test.describe('Panel MCPs', () => {
 
     // Expanding the row reveals the detail body: token, connection status,
     // and the activity/tools sub-accordions.
-    await page.getByTestId('mcp-card-header-blog').click();
-    await expect(page.getByTestId('mcp-detail-blog')).toBeVisible();
+    await page.getByTestId('mcp-card-header-content').click();
+    await expect(page.getByTestId('mcp-detail-content')).toBeVisible();
     await expect(page.getByText('sin generar')).toBeVisible();
 
-    await expect(page.getByTestId('mcp-connection-blog')).toContainText('Error de conexión');
-    await expect(page.getByTestId('mcp-connection-blog')).toContainText('https://evil.example');
-    await expect(page.getByTestId('mcp-risk-summary-blog')).toContainText('Lectura 1');
-    await expect(page.getByTestId('mcp-risk-summary-blog')).toContainText('Edición 1');
+    await expect(page.getByTestId('mcp-connection-content')).toContainText('Error de conexión');
+    await expect(page.getByTestId('mcp-connection-content')).toContainText('https://evil.example');
+    await expect(page.getByTestId('mcp-risk-summary-content')).toContainText('Lectura 1');
+    await expect(page.getByTestId('mcp-risk-summary-content')).toContainText('Edición 1');
 
     // Recent activity sub-accordion expands with the event trail.
-    await page.getByTestId('mcp-activity-toggle-blog').click();
-    await expect(page.getByTestId('mcp-activity-list-blog')).toContainText('Origin rechazado');
-    await expect(page.getByTestId('mcp-activity-list-blog')).toContainText('Conexión (initialize)');
-    await expect(page.getByTestId('mcp-activity-list-blog')).toContainText('Credencial scope123');
-    await expect(page.getByTestId('mcp-activity-list-blog')).toContainText('post_id=8');
+    await page.getByTestId('mcp-activity-toggle-content').click();
+    await expect(page.getByTestId('mcp-activity-list-content')).toContainText('Origin rechazado');
+    await expect(page.getByTestId('mcp-activity-list-content')).toContainText('Conexión (initialize)');
+    await expect(page.getByTestId('mcp-activity-list-content')).toContainText('Credencial scope123');
+    await expect(page.getByTestId('mcp-activity-list-content')).toContainText('post_id=8');
 
     // Available tools sub-accordion expands with the tool list.
-    await page.getByTestId('mcp-tools-toggle-blog').click();
+    await page.getByTestId('mcp-tools-toggle-content').click();
     await expect(page.getByText('create_blog_post')).toBeVisible();
+  });
+
+  test('groups the retiring connector with its replacement and last legacy use', {
+    tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // Bug this catches: a compatibility connector can be shown as canonical,
+    // hiding both its migration target and the evidence needed to retire it.
+    await mockApi(page, buildHandler());
+    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    await page
+      .getByRole('navigation', { name: 'Navegación del panel' })
+      .getByRole('link', { name: 'MCPs', exact: true })
+      .click();
+
+    await expect(page.getByTestId('mcps-canonical')).toContainText('Contenido');
+    await expect(page.getByTestId('mcps-retiring')).toContainText('Gestor de Blogs');
+    await page.getByTestId('mcp-card-header-blog').click();
+    await expect(page.getByTestId('mcp-migration-blog')).toContainText('Migra a content');
+    await expect(page.getByTestId('mcp-migration-blog')).toContainText('Último uso antiguo: Dom, 18 oct 2026, 09:30.');
+    await expect(page.getByTestId('mcp-create-credential-blog')).toHaveCount(0);
+  });
+
+  test('edits and revokes an existing credential on a retiring connector', {
+    tag: [...ADMIN_MCPS, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug this catches: retiring a connector can incorrectly disable cleanup
+    // of its existing credentials or expose the old credential after revoke.
+    await mockApi(page, buildHandler());
+    await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
+
+    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-blog').click();
+    await page.getByTestId('mcp-credentials-toggle-blog').click();
+    await page.getByTestId('mcp-credential-edit-17').click();
+    await page.getByTestId('mcp-credential-scope').selectOption('all');
+    await page.getByTestId('mcp-credential-save').click();
+    await expect(page.getByTestId('mcp-credential-17')).toContainText('Todas las funciones');
+
+    await page.getByTestId('mcp-credential-revoke-17').click();
+    await expect(page.getByTestId('confirm-modal-confirm')).toHaveText('Revocar');
+    await page.getByTestId('confirm-modal-confirm').click();
+    await expect(page.getByTestId('mcp-credential-17')).toContainText('No disponible');
+    await expect(page.getByTestId('mcp-credential-revoke-17')).toHaveCount(0);
   });
 
   test('generates a token and shows the one-time connector URL modal', {
@@ -217,13 +308,13 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
     // The generate-token button lives in the expanded body, so open the row first.
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-generate-token-blog').click();
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-generate-token-content').click();
 
     await expect(page.getByTestId('mcp-token-modal')).toBeVisible();
-    await expect(page.getByTestId('mcp-token-url')).toContainText('/api/mcp/blog/');
+    await expect(page.getByTestId('mcp-token-url')).toContainText('/api/mcp/content/');
 
     await page.getByTestId('mcp-token-close').click();
     await expect(page.getByTestId('mcp-token-modal')).not.toBeVisible();
@@ -235,9 +326,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-toggle-blog').click();
-    await expect(page.getByTestId('mcp-toggle-blog')).toHaveAttribute('aria-checked', 'true');
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-toggle-content').click();
+    await expect(page.getByTestId('mcp-toggle-content')).toHaveAttribute('aria-checked', 'true');
   });
 
   test('creates a read-only credential and reveals its URL once', {
@@ -246,9 +337,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-create-credential-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-create-credential-content').click();
     await expect(page.getByTestId('mcp-credential-modal')).toBeVisible();
     await page.getByTestId('mcp-credential-label').fill('Lectura externa');
     await page.getByTestId('mcp-credential-save').click();
@@ -263,9 +354,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-credentials-toggle-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-credentials-toggle-content').click();
     await page.getByTestId('mcp-credential-edit-7').click();
     await page.getByTestId('mcp-credential-scope').selectOption('all');
     await page.getByTestId('mcp-credential-save').click();
@@ -280,9 +371,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-credentials-toggle-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-credentials-toggle-content').click();
     await page.getByTestId('mcp-credential-rotate-7').click();
 
     await expect(page.getByTestId('mcp-token-modal')).toBeVisible();
@@ -295,9 +386,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-credentials-toggle-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-credentials-toggle-content').click();
     await page.getByTestId('mcp-credential-revoke-7').click();
     await expect(page.getByTestId('confirm-modal-confirm')).toHaveText('Revocar');
     await page.getByTestId('confirm-modal-confirm').click();
@@ -312,9 +403,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler());
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-create-credential-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-create-credential-content').click();
     await page.getByTestId('mcp-credential-label').fill('Sin alcance');
     await page.getByTestId('mcp-credential-scope').selectOption('custom');
     await page.getByTestId('mcp-credential-save').click();
@@ -330,9 +421,9 @@ test.describe('Panel MCPs', () => {
     await mockApi(page, buildHandler({ credentialCreateError: true }));
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
-    await expect(page.getByTestId('mcp-card-blog')).toBeVisible({ timeout: 25_000 });
-    await page.getByTestId('mcp-card-header-blog').click();
-    await page.getByTestId('mcp-create-credential-blog').click();
+    await expect(page.getByTestId('mcp-card-content')).toBeVisible({ timeout: 25_000 });
+    await page.getByTestId('mcp-card-header-content').click();
+    await page.getByTestId('mcp-create-credential-content').click();
     await page.getByTestId('mcp-credential-label').fill('Auditoría');
     await page.getByTestId('mcp-credential-save').click();
 
@@ -345,6 +436,8 @@ test.describe('Panel MCPs', () => {
   test('staff non-superuser is redirected away from /panel/mcps', {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
+    // Bug this catches: a staff user without the superuser role can reach
+    // MCP credentials by typing the protected panel address directly.
     await mockApi(page, buildHandler({ isSuperuser: false }));
     await page.goto('/panel/mcps', { waitUntil: 'domcontentloaded' });
 
@@ -352,5 +445,10 @@ test.describe('Panel MCPs', () => {
       /\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?panel\/?(?:[?#].*)?$/,
       { timeout: 25_000 },
     );
+    await page
+      .getByRole('navigation', { name: 'Navegación del panel' })
+      .getByRole('link', { name: 'Dashboard', exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/(?:[a-z]{2}(?:-[a-z]{2})?\/)?panel\/?$/);
   });
 });
