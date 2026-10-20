@@ -1,4 +1,8 @@
 > **Building on Demand — 2026-10-10:** el cliente compara Starter, Business
+
+## Bolsillo: pertenencia y lectura de movimientos (2026-10-19)
+
+Ingresos y egresos muestran Empresa, Gustavo, Carlos o Sin vincular según su atribución existente. El detalle de consulta presenta moneda y fecha con el mismo lenguaje de la tabla, saldo real posterior, acceso al ingreso o gasto, reparto de abonos con su pendiente actual y excedente, y notas completas. Incluye la parte informativa de PA-69 y adapta el historial al ancho compacto; editar y registrar abonos mantienen sus flujos separados.
 > (recomendado) y Enterprise para evolucionar un producto con una célula Scrum
 > compartida de siete personas. La presentación ES/EN muestra bolsa mensual,
 > roles, plazos y hosting, con estimador, guía, tema persistente, PDF, compartir

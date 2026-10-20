@@ -214,7 +214,7 @@ const panelCapabilities = [
         ['/panel/accounting/collection-context/:id', '/panel/accounting/project-hosting/:id'],
         { icon: 'file', stage: 'Control' }),
       feature('panel-cash-credit', 'Controlar caja y crédito',
-        'Reúne bolsillo, tarjetas y extractos mensuales. El saldo total del bolsillo se puede copiar con su formato visible aun con filtros, con confirmación o error local. Incluye historial por registro con fecha, autor y consulta de versiones.',
+        'Reúne bolsillo, tarjetas y extractos mensuales. Cada movimiento del bolsillo muestra su pertenencia y abre un detalle compacto con saldo real posterior, vínculos a Ingresos o Gastos, reparto de abonos, pendientes actuales, saldo a favor y notas. El saldo total se puede copiar con su formato visible aun con filtros, con confirmación o error local. Incluye historial por registro con fecha, autor y consulta de versiones.',
         'Permite entender liquidez, deuda y movimientos asociados.',
         ['/panel/accounting/pocket', '/panel/accounting/cards', '/panel/accounting/statements'],
         { icon: 'credit-card', stage: 'Tesorería' }),

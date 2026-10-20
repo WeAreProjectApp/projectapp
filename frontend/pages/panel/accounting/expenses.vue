@@ -249,10 +249,16 @@
     />
 
     <EntityHistoryRecordModal
-      :open="historyRow !== null"
+      :open="historyOpen"
       entity-type="expense"
       :record="historyRow"
-      @close="historyRow = null"
+      :loading="historyLoading"
+      :error="historyError"
+      :loading-label="t('accountingPocket.recordLoading')"
+      :error-message="historyError ? t(`accountingPocket.record${historyError === 'missing' ? 'Missing' : 'Failed'}`) : ''"
+      :retry-label="t('accountingPocket.retry')"
+      @retry="reloadHistory"
+      @close="closeExpenseDetail"
     />
 
     <AccountingNoteModal
@@ -281,6 +287,8 @@
 
 <script setup>
 import EntityHistoryRecordModal from '~/components/history/EntityHistoryRecordModal.vue';
+import { useDetailQueryParam } from '~/composables/useDetailQueryParam';
+import { useAccountingRecordDetail } from '~/composables/useAccountingRecordDetail';
 import { computed, onMounted, ref } from 'vue';
 import ConfirmModal from '~/components/ConfirmModal.vue';
 import AccountingNoteModal from '~/components/accounting/AccountingNoteModal.vue';
@@ -502,8 +510,13 @@ const {
 // One kebab per row in the leading track; its menu owns Detalle e historial,
 // Ver nota (when the expense has one), Editar and Eliminar.
 
+const { t } = useI18n();
 const actionsRow = ref(null);
-const historyRow = ref(null);
+const {
+  openId: historyId, isOpen: historyOpen, open: openExpenseDetail, close: closeExpenseDetail,
+} = useDetailQueryParam('expense');
+const { record: historyRow, loading: historyLoading, error: historyError, reload: reloadHistory } =
+  useAccountingRecordDetail('accounting/expenses/', historyId, historyOpen);
 const noteRow = ref(null);
 
 function expenseLabel(row) {
@@ -523,7 +536,7 @@ const expenseActions = computed(() => (actionsRow.value
   : []));
 
 const expenseActionHandlers = {
-  history: (row) => { historyRow.value = row; },
+  history: (row) => { openExpenseDetail(row.id); },
   notes: (row) => { noteRow.value = row; },
   edit: (row) => openEditModal(row),
   delete: (row) => confirmDeleteRecord(row),

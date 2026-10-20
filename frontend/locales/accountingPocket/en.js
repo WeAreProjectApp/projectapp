@@ -1,0 +1,15 @@
+export default {
+  belongsTo: 'Belongs to', company: 'Company', gustavo: 'Gustavo', carlos: 'Carlos',
+  unlinked: 'Unlinked', title: 'Movement details', close: 'Close',
+  loading: 'Loading movement…', missing: 'This movement no longer exists.',
+  failed: 'Could not load the movement.', retry: 'Retry',
+  movement: 'Movement information', type: 'Type', balance: 'Pocket balance after this movement',
+  links: 'Attribution and link', linked: 'Linked record', income: 'Income', expense: 'Expense',
+  category: 'Expense category', notes: 'Notes', noNotes: 'No notes.',
+  allocations: 'Payment allocation', allocation: 'Allocated amount', pending: 'Current outstanding balance',
+  total: 'Allocation total', credit: 'Customer credit',
+  discrepancy: 'The allocation total does not match the movement amount.',
+  openNewTab: 'Open in a new tab',
+  recordLoading: 'Loading record…', recordMissing: 'This record no longer exists.',
+  recordFailed: 'Could not load the record.',
+};

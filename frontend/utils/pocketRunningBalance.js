@@ -11,7 +11,7 @@
 export function withRunningBalance(movements) {
   const sorted = [...movements].sort((a, b) => (
     a.movement_date === b.movement_date
-      ? String(a.created_at).localeCompare(String(b.created_at))
+      ? (String(a.created_at).localeCompare(String(b.created_at)) || Number(a.id) - Number(b.id))
       : String(a.movement_date).localeCompare(String(b.movement_date))
   ));
   let running = 0;
