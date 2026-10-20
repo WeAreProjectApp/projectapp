@@ -1,4 +1,8 @@
 > **Building on Demand — 2026-10-10:** `GET /api/building-on-demand/public/?lang=es|en`
+
+## Consulta individual del bolsillo (2026-10-19)
+
+`GET /api/accounting/pocket/<id>/` y MCP `get_pocket` añaden `running_balance`, `linked_record_detail` y `allocation_details`; el listado no cambia. Pendientes actuales incluyen pagos y deducciones, sin inferir saldo histórico. `?movement=<id>` y `?expense=<id>` abren capas independientes de filtros. `BaseModal kind="detail-compact"` limita el ancho a 48 rem; en celular conserva pantalla completa. No hay migraciones.
 > y su PDF comparten los valores derivados por el servidor; la siembra del
 > programa está en `content.0291_building_on_demand_program`. Los GET
 > administrativos usan sesión/CSRF e `IsAdminUser`; `stores/building_on_demand.js`

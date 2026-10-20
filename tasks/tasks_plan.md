@@ -1,4 +1,8 @@
 > **Building on Demand — 2026-10-10 (PA-177/PA-179):** programa público ES/EN
+
+## Bolsillo: columna y detalle (2026-10-19)
+
+Implementación de la columna Pertenece a y del detalle informativo compacto con saldo real, vínculos, reparto y consulta de historial. Validación focal por capas y matriz responsiva de cinco anchos. Entrega mediante PR abierto con CI verde; sin merge ni despliegue desde la sesión.
 > en `/building-on-demand`, panel Células de solo lectura (Programa, Economía y
 > Contrato), contrato v1 con copia en Gestor › Contratos sincronizada en cada
 > cambio y conector MCP `building-on-demand` (35 herramientas, inactivo) como

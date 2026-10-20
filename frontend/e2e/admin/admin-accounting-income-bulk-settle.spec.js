@@ -454,6 +454,23 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
           }),
         };
       }
+      if (apiPath === 'accounting/pocket/70/' && method === 'GET') {
+        return {
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            id: 70, concept: 'Abono Kore SAS', movement_date: '2026-08-15',
+            direction: 'in', direction_label: 'Ingreso', amount: '900000.00',
+            linked_ledger: 'company', linked_record_detail: null,
+            running_balance: '900000.00', notes: '',
+            allocation_details: [
+              { income_id: 101, expected_income_id: 11, concept: 'Kore - Fase 2 Entrega', amount: '500000.00', pending_amount: '0.00', is_credit: false },
+              { income_id: 102, expected_income_id: 12, concept: 'Kore - Fase 3 Inicio', amount: '300000.00', pending_amount: '0.00', is_credit: false },
+              { income_id: 103, expected_income_id: 13, concept: 'Kore - Fase 3 Diseño', amount: '100000.00', pending_amount: '200000.00', is_credit: false },
+            ],
+          }),
+        };
+      }
       if (apiPath === 'accounting/pocket/' && method === 'GET') {
         return {
           status: 200,
@@ -493,18 +510,20 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
       return null;
     });
 
-    await page.goto('/panel/accounting/pocket', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/accounting/recurring', { waitUntil: 'domcontentloaded' });
+    await waitForNuxtApp(page);
+    await page.getByTestId('accounting-subnav-pocket').click();
     await expect(
       page.getByRole('heading', { name: 'Bolsillo ProjectApp', exact: true }),
     ).toBeVisible({ timeout: 25_000 });
 
     await page.getByTestId('pocket-allocations-70').click();
 
-    const modal = page.getByTestId('pocket-allocations-modal');
+    const modal = page.getByTestId('pocket-detail-modal');
     await expect(modal).toContainText('Abono Kore SAS');
-    await expect(modal.getByTestId('pocket-allocation-row')).toHaveCount(3);
+    await expect(modal.getByTestId('pocket-allocation-detail-row')).toHaveCount(3);
     await expect(modal).toContainText('Kore - Fase 3 Diseño');
-    await expect(modal.getByTestId('pocket-allocations-total')).toContainText('900.000');
+    await expect(modal.getByTestId('pocket-allocation-detail-total')).toContainText('900.000');
   });
 
   test('the income itself names the abono that paid it and opens its reparto', {

@@ -8,8 +8,13 @@ const props = defineProps({
   open: { type: Boolean, default: false },
   entityType: { type: String, required: true },
   record: { type: Object, default: null },
+  loading: { type: Boolean, default: false },
+  error: { type: String, default: '' },
+  loadingLabel: { type: String, default: 'Cargando el registro…' },
+  errorMessage: { type: String, default: '' },
+  retryLabel: { type: String, default: 'Reintentar' },
 });
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'retry']);
 const fields = {
   expense: ['concept', 'period_date', 'category', 'total_amount', 'gustavo_amount', 'carlos_amount', 'notes'],
   hosting: ['client_name', 'client_email', 'domain_url', 'payment_modality', 'valid_from', 'valid_to', 'total_paid', 'notes'],
@@ -42,10 +47,15 @@ const recordDetails = computed(() => (props.record ? Object.fromEntries(
 ) : {}));
 </script>
 <template>
-  <BaseModal :model-value="open && Boolean(record)" kind="detail" @close="emit('close')">
-    <div v-if="open && record" class="space-y-4 p-5" data-testid="history-record-modal">
+  <BaseModal :model-value="open && Boolean(record || loading || error)" kind="detail" @close="emit('close')">
+    <div v-if="open" class="space-y-4 p-5" data-testid="history-record-modal">
       <div class="flex items-center justify-between gap-3"><h2 class="text-lg font-semibold text-text-default">Detalle del registro</h2><BaseButton variant="ghost" @click="emit('close')">Cerrar</BaseButton></div>
-      <EntityHistoryTabs :entity-type="entityType" :object-id="record.id">
+      <p v-if="loading" role="status" class="text-sm text-text-muted">{{ loadingLabel }}</p>
+      <div v-else-if="error" role="alert" class="space-y-3 text-sm text-danger-strong">
+        <p>{{ errorMessage || (error === 'missing' ? 'Este registro ya no existe.' : 'No se pudo cargar el registro.') }}</p>
+        <BaseButton v-if="error !== 'missing'" variant="secondary" @click="emit('retry')">{{ retryLabel }}</BaseButton>
+      </div>
+      <EntityHistoryTabs v-else-if="record" :entity-type="entityType" :object-id="record.id">
         <HistoryValue :value="recordDetails" :labels="labels" />
       </EntityHistoryTabs>
     </div>

@@ -11,3 +11,5 @@
 #### IVA opcional
 
 Los gastos nuevos empiezan con IVA del 19%, tanto en contabilidad de empresa como personal. Se puede elegir «Sin IVA» (0%) o dejar la tasa sin registrar. Al editar se conserva la tasa del registro, incluido cero o null. La captura acepta total incluido o base antes del impuesto y muestra base/IVA/total. No calcula IVA descontable ni cambia utilidad o reparto.
+
+- **Consulta desde el bolsillo (2026-10-19):** `?expense=<id>` abre el detalle del gasto enlazado mediante su consulta individual, aunque no aparezca en los filtros o la página del listado. El enlace sobrevive a una recarga y conserva la consulta del historial. Carga, errores recuperables y registro inexistente se comunican en el modal.
