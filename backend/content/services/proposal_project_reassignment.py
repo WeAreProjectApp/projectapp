@@ -253,8 +253,14 @@ def reassign_proposal(proposal_id, payload, *, actor):
             document.client_user_id = target.client_id
             leaving = (document.folder.retention_context_id == context.pk) if (context and document.folder) else (document.folder and source and document.folder.project_id == source.pk)
             if leaving:
-                kind = document.document_type.code if document.document_type_id else ''
-                document.folder = DocumentFolder.objects.filter(parent=root, system_key=project_category_system_key(target.pk, kind)).first() or root
+                from content.services.proposal_shared_documents import binding_for, folders_for
+                binding = binding_for(document)
+                if binding:
+                    _shared_root, shared_folders = folders_for(target)
+                    document.folder = shared_folders['contracts' if binding.current_file.document_type in {'contract', 'contract_product', 'contract_service'} else 'annexes']
+                else:
+                    kind = document.document_type.code if document.document_type_id else ''
+                    document.folder = DocumentFolder.objects.filter(parent=root, system_key=project_category_system_key(target.pk, kind)).first() or root
             document.save(update_fields=['project', 'client_user', 'folder'])
     if source and impact['clear_generated_commercial_mirrors']:
         source.payment_milestones = []

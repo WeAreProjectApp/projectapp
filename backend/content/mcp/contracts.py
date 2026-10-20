@@ -568,7 +568,7 @@ MCP_MODEL_CONTRACTS = {
         _contract(
             'content.ProposalApprovalFile',
             read_only=(
-                'id proposal project title document_type filename sha256 size'
+                'id package binding proposal project title document_type filename sha256 size'
             ),
             excluded=(
                 _excluded(_AUDIT_INTERNAL, 'deliverable source_key created_by created_at')
@@ -785,7 +785,7 @@ PROJECT_CONTRACTS = (
         read_write='name description key_fields relationship',
         excluded=_excluded('Contexto interno conservado; no editable por MCP.', 'retention_context')),
     _contract('content.ProposalApprovalFile',
-        read_only='id proposal project deliverable title document_type filename size sha256 created_at',
+        read_only='id package binding proposal project deliverable title document_type filename size sha256 created_at',
         excluded=(_excluded('Fuente inmutable privada; la herramienta descarga un artefacto autorizado.', 'file')
                   | _excluded('Identidad interna y autor del paquete; no admite escritura por MCP.', 'source_key created_by'))),
     _contract(
@@ -1541,6 +1541,18 @@ MCP_MODEL_CONTRACTS['projects'] += tuple(
     if contract.model_label == 'accounts.HostingSubscription' else contract
     for contract in PROJECT_BILLING_CONTRACTS
 )
+
+
+SHARED_PROPOSAL_DOCUMENT_CONTRACTS = (
+    _contract('content.ProposalApprovalPackage',
+        read_only='id proposal number request_id payload_hash source_hash created_by created_at',
+        excluded=_excluded('Manifiesto inmutable; se consulta por la revisión de aprobación.', 'manifest')),
+    _contract('content.ProposalDocumentBinding',
+        read_only='id document proposal source_key source_document current_file is_current draft_filename draft_sha256',
+        excluded=_excluded('Archivo privado en borrador; sólo assets y descarga autorizada.', 'draft_file')),
+)
+MCP_MODEL_CONTRACTS['proposals'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
+MCP_MODEL_CONTRACTS['documents'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 
 
 # Canonical catalogs combine every field contract of their source connectors.

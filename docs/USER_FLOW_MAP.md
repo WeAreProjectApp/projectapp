@@ -3464,25 +3464,11 @@ Two transitions that were previously bundled into other flows now have their own
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/proposal/proposal-contract-terms.spec.js`
 
-### FLOW: `proposal-respond`
+# Responder a una propuesta
 
-- **Module:** proposal
-- **Role:** guest (via shared UUID link)
-- **Priority:** P1
-- **Routes:** `/proposal/:uuid`
-- **Description:** Client responds to (accepts/rejects) a business proposal from the ProposalClosing panel. Accept button has visual dominance (larger, glow, pulse animation). Acceptance triggers a confetti celebration animation via `canvas-confetti`.
-- **Steps:**
-  1. User views the proposal and navigates to the closing panel.
-  2. Accept/reject buttons visible when `proposal.status` is `sent` or `viewed`. Accept button is visually dominant (larger, green glow, subtle pulse).
-  3. User clicks "Acepto la propuesta" → confirmation modal opens.
-  4. User confirms → API call to `POST /api/proposals/:uuid/respond/` with `decision: accepted`.
-  5. Success state: confetti animation fires (canvas-confetti), bouncing 🎉 emoji, "¡Propuesta aceptada!" message renders.
-- **Branches:**
-  - [Branch A — Accept] Client clicks accept → confirm modal → API → confetti animation + success message.
-  - [Branch B — Reject] Client clicks "Rechazar propuesta" → reject modal (select reason + comment) → API → smart recovery message.
-  - [Branch C — Already responded] Buttons hidden, status message shown.
-- **Coverage:** ✅ Covered
-- **E2E Spec:** `e2e/proposal/proposal-respond.spec.js`
+El cliente puede rechazar o solicitar negociación. La aceptación pública y su condición opcional fueron retiradas. Aprobar requiere confirmación interna del proyecto y del contrato.
+
+La prueba navega al cierre y usa las acciones conservadas; verifica que no exista aceptación pública.
 
 ### FLOW: `proposal-download-pdf`
 
@@ -6223,6 +6209,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-proposal-section-reorder` | admin | P2 | success,failure | 1 |
 | `admin-proposal-section-sync` | admin | P2 | success | 1 |
 | `admin-proposal-send` | admin | P1 | success,error,failure | 1 |
+| `admin-proposal-shared-documents` | admin | P1 | success,error,failure,display | — |
 | `admin-proposal-slug-edit` | admin | P1 | success,error | 1 |
 | `admin-proposal-update-client` | admin | P2 | success,error | 1 |
 | `admin-proposal-update-from-json` | admin | P2 | success,error | 1 |
@@ -6309,7 +6296,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `platform-verify-onboarding` | platform | P1 | success,error | 1 |
 | `proposal-closing-contact` | proposal | P2 | display | 1 |
 | `proposal-comment-from-closing` | proposal | P2 | success | 1 |
-| `proposal-conditional-acceptance` | proposal | P2 | success | 1 |
+| `proposal-conditional-acceptance` | proposal | P2 | — | 0 |
 | `proposal-contract-draft-download` | proposal | P2 | success | 1 |
 | `proposal-contract-terms` | proposal | P1 | display,success,error,failure | 1 |
 | `proposal-countdown-realtime` | proposal | P3 | display | 1 |
@@ -8452,25 +8439,16 @@ Selectores estables: `template-file-input`, `template-upload-validate`, `templat
 | success | Confirmar cliente y proyecto existentes | Propuesta vinculada al proyecto elegido, sin crear otro |
 | success | Crear cliente y proyecto al confirmar | El vínculo conserva ambos registros y el paquete documental |
 | success | Desactivar contratos de la propuesta y adjuntar varios archivos | El nuevo paquete usa los personalizados y conserva detalle comercial/técnico |
-| success | Aprobar y revisar después | Estado aceptado pendiente, sin cliente/proyecto/archivos nuevos |
+| success | Cancelar antes de confirmar | Estado previo conservado sin crear proyecto ni documentos |
 | error | Confirmar personalizados sin archivo o con datos inválidos | Error correspondiente; modal y valores conservados |
 | failure | Fallo del servidor durante confirmación | Mensaje visible; formulario conservado para reintentar |
 | display | Abrir aprobación desde el listado | Resumen real de cliente, proyecto, condiciones y documentos |
 | display | Reabrir propuesta vinculada | Cliente/proyecto y archivos confirmados del mismo vínculo |
 | success | Cancelar o pulsar Escape | Se conserva el estado previo y vuelve el foco al disparador |
 
-La aceptación pública sigue su recorrido existente y se verifica además en
-backend: aceptar no aprovisiona recursos. Este flujo comienza con la revisión
-interna. Los permisos, atomicidad, duplicados y archivos privados se verifican
-también en pruebas API/servicios/MCP; no se sustituyen por mocks del navegador.
+La aprobación pública se retiró. El cierre interno exige cliente, proyecto y contrato; incorpora todos los anexos activos. Un conflicto conserva el formulario. Los permisos, atomicidad, identidades y archivos privados también se verifican en API/servicios/MCP.
 
-Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js`.
-Ejecución focal: los ocho casos de este archivo pasaron con un worker, API
-simulada en el límite externo y sin servicios reales; incluyen 412 y 835 px.
-Las siete regresiones de estados en línea pasaron en el mismo lote.
-El delta final verifica Clientes (1/1) y las cuatro regresiones de handoff,
-incluido el siguiente paso y las transiciones actualizadas sin recargar (4/4).
-Los resultados finales de integración se registran en el PR.
+Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresión desde Clientes.
 
 ### FLOW: `admin-proposal-change-history`
 
@@ -8636,6 +8614,20 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
   - `failure`: Un error de transporte conserva la revisión y permite reintentar la misma operación; la idempotencia evita duplicar el traslado.
   - `display`: La consulta de cliente, contactos y proyecto en todos los estados forma parte de `admin-proposal-edit`.
 - **E2E Spec:** `e2e/admin/admin-proposal-navigation.spec.js`
+
+# Documentos compartidos de una propuesta
+
+| Clase | Interacción | Resultado |
+|---|---|---|
+| success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
+| success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
+| error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
+| failure | El servidor falla al confirmar | Mensaje visible; se puede reintentar |
+| display | Abrir el historial | Títulos, versión vigente y revisiones descargables del recurso |
+
+Los documentos estructurados abren el mismo editor de origen desde el gestor. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
+
+Las garantías de bytes e identidad se verifican además con pruebas de servicios reales; los mocks del navegador cubren interacción y presentación.
 
 # admin-pwa-install — Instalación del panel interno
 

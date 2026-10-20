@@ -3,6 +3,16 @@ import { get_request, create_request, put_request, patch_request, delete_request
 import { normalizeApiError } from './services/normalize_api_error';
 import { isUuid } from '~/utils/slugify';
 
+function sourcePayload(payload, snapshot) {
+  const hash = payload?.source_hash || snapshot?.proposal_source_hash;
+  if (!hash) return payload;
+  if (typeof FormData !== 'undefined' && payload instanceof FormData) {
+    if (!payload.has('source_hash')) payload.append('source_hash', hash);
+    return payload;
+  }
+  return { ...payload, source_hash: hash };
+}
+
 export const useProposalStore = defineStore('proposals', {
   /**
    * State of the Proposal store.
@@ -237,7 +247,7 @@ export const useProposalStore = defineStore('proposals', {
       this.isUpdating = true;
       this.error = null;
       try {
-        const response = await put_request(`proposals/${id}/update-from-json/`, jsonData);
+        const response = await put_request(`proposals/${id}/update-from-json/`, sourcePayload(jsonData, this.currentProposal));
         this.currentProposal = response.data;
         return { success: true, data: response.data };
       } catch (error) {
@@ -259,7 +269,7 @@ export const useProposalStore = defineStore('proposals', {
       this.isUpdating = true;
       this.error = null;
       try {
-        const response = await patch_request(`proposals/${id}/update/`, payload);
+        const response = await patch_request(`proposals/${id}/update/`, sourcePayload(payload, this.currentProposal));
         this.currentProposal = response.data;
         return { success: true, data: response.data };
       } catch (error) {
@@ -535,7 +545,7 @@ export const useProposalStore = defineStore('proposals', {
       }
     },
 
-    async submitApproval(id, payload, files = []) {
+    async submitApproval(id, payload, files = [], revision = false) {
       this.isUpdating = true;
       try {
         let body = payload;
@@ -544,7 +554,7 @@ export const useProposalStore = defineStore('proposals', {
           body.append('payload', JSON.stringify(payload));
           files.forEach((file) => body.append('custom_files[]', file));
         }
-        const response = await create_request(`proposals/${id}/approval/`, body);
+        const response = await create_request(`proposals/${id}/approval/${revision ? "revisions/" : ""}`, body);
         const proposal = response.data.proposal;
         if (proposal) {
           if (this.currentProposal?.id === id) {
@@ -649,9 +659,11 @@ export const useProposalStore = defineStore('proposals', {
       try {
         const response = await patch_request(
           `proposals/sections/${sectionId}/update/`,
-          payload,
+          sourcePayload(payload, this.currentProposal?.sections?.find(item => item.id === sectionId) || this.currentProposal),
         );
         const { section, proposal_totals, investment_section } = response.data || {};
+        if (section && response.headers?.['x-proposal-version']) section.proposal_source_hash = response.headers['x-proposal-version'];
+        if (investment_section && response.headers?.['x-proposal-version']) investment_section.proposal_source_hash = response.headers['x-proposal-version'];
         if (this.currentProposal) {
           const replaceSection = (s) => {
             const i = this.currentProposal.sections?.findIndex((x) => x.id === s.id);
@@ -700,12 +712,12 @@ export const useProposalStore = defineStore('proposals', {
      * @param {number} sectionId - Section ID.
      * @param {object} contentJson - The new content_json to save and sync.
      */
-    async applySync(sectionId, contentJson) {
+    async applySync(sectionId, contentJson, sourceHash = null) {
       this.isUpdating = true;
       try {
         const response = await create_request(
           `proposals/sections/${sectionId}/apply-sync/`,
-          { content_json: contentJson },
+          sourcePayload({ content_json: contentJson, ...(sourceHash ? { source_hash: sourceHash } : {}) }, this.currentProposal),
         );
         if (this.currentProposal?.sections && response.data.section) {
           const idx = this.currentProposal.sections.findIndex(
@@ -735,7 +747,7 @@ export const useProposalStore = defineStore('proposals', {
       try {
         await create_request(
           `proposals/${proposalId}/reorder-sections/`,
-          { sections },
+          sourcePayload({ sections }, this.currentProposal),
         );
         // Update local order
         if (this.currentProposal?.sections) {
@@ -768,7 +780,7 @@ export const useProposalStore = defineStore('proposals', {
       try {
         const response = await create_request(
           `proposals/${proposalId}/sections/create/`,
-          { section_type: sectionType },
+          sourcePayload({ section_type: sectionType }, this.currentProposal),
         );
         const { section, proposal_totals } = response.data || {};
         if (this.currentProposal && section) {
@@ -801,7 +813,7 @@ export const useProposalStore = defineStore('proposals', {
       this.isUpdating = true;
       this.error = null;
       try {
-        const response = await delete_request(`proposals/sections/${sectionId}/delete/`);
+        const response = await delete_request(`proposals/sections/${sectionId}/delete/`, sourcePayload({}, this.currentProposal));
         const proposal_totals = response.data?.proposal_totals;
         if (this.currentProposal?.sections) {
           this.currentProposal.sections = this.currentProposal.sections.filter(
@@ -1358,7 +1370,7 @@ export const useProposalStore = defineStore('proposals', {
       try {
         const response = await create_request(
           `proposals/${proposalId}/contract/save-and-negotiate/`,
-          { contract_params: contractParams },
+          sourcePayload({ contract_params: contractParams }, this.currentProposal),
         );
         if (this.currentProposal?.id === proposalId) {
           this.currentProposal = response.data;
@@ -1394,7 +1406,7 @@ export const useProposalStore = defineStore('proposals', {
         if (variant) payload.variant = variant;
         const response = await patch_request(
           `proposals/${proposalId}/contract/update/`,
-          payload,
+          sourcePayload(payload, this.currentProposal),
         );
         if (this.currentProposal?.id === proposalId) {
           this.currentProposal = response.data;
@@ -1470,7 +1482,7 @@ export const useProposalStore = defineStore('proposals', {
       try {
         const response = await create_request(
           `proposals/${proposalId}/documents/upload/`,
-          formData,
+          sourcePayload(formData, this.currentProposal),
         );
         if (this.currentProposal?.id === proposalId) {
           await this.fetchProposal(proposalId);
@@ -1520,7 +1532,7 @@ export const useProposalStore = defineStore('proposals', {
      */
     async deleteProposalDocument(proposalId, docId) {
       try {
-        await delete_request(`proposals/${proposalId}/documents/${docId}/delete/`);
+        await delete_request(`proposals/${proposalId}/documents/${docId}/delete/`, sourcePayload({}, this.currentProposal));
         if (this.currentProposal?.id === proposalId) {
           await this.fetchProposal(proposalId);
         }

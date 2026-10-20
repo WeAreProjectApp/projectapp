@@ -3,6 +3,7 @@ import hashlib
 import json
 import io
 import zipfile
+from uuid import uuid4
 from copy import copy
 from pathlib import Path
 from types import SimpleNamespace
@@ -57,7 +58,7 @@ def source_hash(proposal):
                 digest = hasher.hexdigest()
         except (OSError, ValueError):
             digest = 'unavailable'
-        documents.append([doc.pk, doc.document_type, doc.title, doc.file.name, digest])
+        documents.append([doc.pk, doc.document_type, doc.title, doc.is_archived, doc.file.name, digest])
     profile = proposal.client
     canonical_client = None if profile is None else {'id': profile.pk, 'user_id': profile.user_id, 'name': build_client_display_name(profile), 'email': profile.user.email, 'company': profile.company_name, 'phone': profile.phone, 'nit': profile.nit, 'billing_code': profile.billing_code, 'archived_at': profile.archived_at}
     from content.services.hour_package_service import seed_commercial_conditions_from_catalog
@@ -68,12 +69,12 @@ def source_hash(proposal):
         if section['is_enabled'] and section['section_type'] == 'commercial_conditions'
         and (section['content_json'] or {}).get('hourPackagesMode') != 'manual'
     ]
-    value = {'proposal': {key: getattr(proposal, key) for key in fields}, 'canonical_client': canonical_client, 'confirmed_selection': proposal.has_confirmed_module_selection, 'sections': sections, 'resolved_commercial_conditions': resolved_commercial_conditions, 'documents': documents}
+    value = {'proposal': {key: getattr(proposal, key) for key in fields}, 'canonical_client': canonical_client, 'confirmed_selection': proposal.has_confirmed_module_selection, 'sections': sections, 'resolved_commercial_conditions': resolved_commercial_conditions, 'documents': documents, 'binary_drafts': list(proposal.document_bindings.exclude(draft_sha256='').order_by('pk').values('source_key', 'draft_sha256'))}
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 
 def file_summary(row, *, platform=False):
-    return {'id': row.pk, 'title': row.title, 'document_type': row.document_type, 'filename': row.filename, 'size': row.size, 'sha256': row.sha256, 'download_url': f'/api/accounts/projects/{row.project_id}/approval-files/{row.pk}/' if platform else f'/api/proposals/{row.proposal_id}/approval/files/{row.pk}/'}
+    return {'id': row.pk, 'source_key': row.source_key, 'title': row.title, 'document_type': row.document_type, 'filename': row.filename, 'size': row.size, 'sha256': row.sha256, 'download_url': f'/api/accounts/projects/{row.project_id}/approval-files/{row.pk}/' if platform else f'/api/proposals/{row.proposal_id}/approval/files/{row.pk}/'}
 
 
 
@@ -97,7 +98,8 @@ def preview(proposal):
     for variant in contract_variants.active_variants(proposal):
         row = contract_variants.contract_document(proposal, variant)
         if row:
-            docs.append({'id': row.pk, 'title': row.title, 'document_type': row.document_type})
+            docs.append({'id': row.pk, 'title': row.title, 'document_type': row.document_type,
+                         'filename': Path(row.file.name).name, 'download_url': f'/api/proposals/{proposal.pk}/documents/{row.pk}/download/'})
     error = None
     try:
         _original_contracts(proposal)
@@ -107,7 +109,11 @@ def preview(proposal):
             error = ' '.join(str(message) for message in exc.detail['use_proposal_contracts'])
     linked = proposal.linked_project
     summary = {'id': proposal.pk, 'status': proposal.status, 'platform_onboarding_status': proposal.platform_onboarding_status, 'platform_onboarding_completed_at': proposal.platform_onboarding_completed_at.isoformat() if proposal.platform_onboarding_completed_at else None, 'available_transitions': proposal.available_transitions, 'project_review_required': proposal.project_review_required, 'linked_project': linked}
-    return {'source_hash': source_hash(proposal), 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in proposal.approval_files.all()], 'proposal': summary}
+    from content.services.proposal_shared_documents import latest_package, summary as shared_summary
+    package = latest_package(proposal)
+    current_hash = source_hash(proposal)
+    shared = [shared_summary(binding, package=package, current_hash=current_hash) for binding in proposal.document_bindings.select_related('proposal', 'current_file', 'source_document').prefetch_related('revisions__package')]
+    return {'use_proposal_contracts': (package.manifest if package else manifest).get('use_proposal_contracts', True), 'shared_documents': shared, 'package_number': package.number if package else None, 'source_hash': current_hash, 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in (package.files.all() if package else proposal.approval_files.all())], 'proposal': summary}
 
 
 def _original_contracts(proposal):
@@ -141,6 +147,27 @@ def _scope(proposal):
     return [epic.get('title') or epic.get('epicKey') for epic in content.get('epics', []) if isinstance(epic, dict) and (epic.get('title') or epic.get('epicKey'))]
 
 
+def _validate_custom_file(file):
+    filename = Path(file.name).name
+    if Path(filename).suffix.lower() not in ALLOWED_EXTENSIONS:
+        raise ValidationError({'custom_files': 'Formato no permitido. Usa PDF, Word, Excel o imágenes.'})
+    content = _read_file(file)
+    suffix = Path(filename).suffix.lower()
+    signatures = {'.pdf': b'%PDF-', '.docx': b'PK', '.xlsx': b'PK', '.xls': b'\xd0\xcf\x11\xe0', '.png': b'\x89PNG', '.jpg': b'\xff\xd8', '.jpeg': b'\xff\xd8', '.doc': b'\xd0\xcf\x11\xe0'}
+    if not content.startswith(signatures[suffix]):
+        raise ValidationError({'custom_files': 'El contenido del archivo no corresponde a su formato.'})
+    if suffix in ('.docx', '.xlsx'):
+        try:
+            with zipfile.ZipFile(io.BytesIO(content)) as archive:
+                names = set(archive.namelist())
+            required = {'[Content_Types].xml', 'word/document.xml' if suffix == '.docx' else 'xl/workbook.xml'}
+            if not required <= names:
+                raise ValueError('invalid Office file')
+        except (ValueError, zipfile.BadZipFile) as exc:
+            raise ValidationError({'custom_files': 'El documento Office no es válido.'}) from exc
+    return filename, content
+
+
 def _packet(proposal, data, files, *, profile):
     result = []
     if data['use_proposal_contracts']:
@@ -151,32 +178,29 @@ def _packet(proposal, data, files, *, profile):
     else:
         if not files or len(files) != len(data['custom_documents']):
             raise ValidationError({'custom_files': 'Adjunta al menos un documento e indica el título y tipo de cada archivo.'})
+        kinds = {item['document_type'] for item in data['custom_documents']}
+        required = {'contract_product', 'contract_service'} if proposal.contract_modality == 'split' else {'contract'}
+        if not required <= kinds or any(sum(item['document_type'] == kind for item in data['custom_documents']) != 1 for kind in required) or (kinds & ProposalDocument.CONTRACT_DOC_TYPES) != required:
+            raise ValidationError({'custom_documents': 'Identifica el contrato vigente: uno combinado o producto y servicio separados.'})
         for index, (file, meta) in enumerate(zip(files, data['custom_documents'])):
-            filename = Path(file.name).name
-            if Path(filename).suffix.lower() not in ALLOWED_EXTENSIONS:
-                raise ValidationError({'custom_files': 'Formato no permitido. Usa PDF, Word, Excel o imágenes.'})
-            content = _read_file(file)
-            suffix = Path(filename).suffix.lower()
-            signatures = {'.pdf': b'%PDF-', '.docx': b'PK', '.xlsx': b'PK', '.xls': b'\xd0\xcf\x11\xe0', '.png': b'\x89PNG', '.jpg': b'\xff\xd8', '.jpeg': b'\xff\xd8', '.doc': b'\xd0\xcf\x11\xe0'}
-            if not content.startswith(signatures[suffix]):
-                raise ValidationError({'custom_files': 'El contenido del archivo no corresponde a su formato.'})
-            if suffix in ('.docx', '.xlsx'):
-                try:
-                    with zipfile.ZipFile(io.BytesIO(content)) as archive:
-                        names = set(archive.namelist())
-                    required = {'[Content_Types].xml', 'word/document.xml' if suffix == '.docx' else 'xl/workbook.xml'}
-                    if not required <= names:
-                        raise ValueError('invalid Office file')
-                except (ValueError, zipfile.BadZipFile) as exc:
-                    raise ValidationError({'custom_files': 'El documento Office no es válido.'}) from exc
-            result.append((f'custom-{index}', meta['title'], meta['document_type'], filename, content))
-    selected = data['selected_document_ids']
+            filename, content = _validate_custom_file(file)
+            key = f"custom-{meta['document_type']}" if meta['document_type'] in ProposalDocument.CONTRACT_DOC_TYPES else f"custom-{meta.get('resource_id') or uuid4()}"
+            if any(item[0] == key for item in result):
+                raise ValidationError({'custom_documents': 'No repitas la identidad de un documento.'})
+            result.append((key, meta['title'], meta['document_type'], filename, content))
+    custom_sources = proposal.document_bindings.filter(source_key__startswith='custom-', source_document__isnull=False).values('source_document_id')
+    selected = list(proposal.proposal_documents.filter(is_archived=False).exclude(document_type__in=ProposalDocument.CONTRACT_DOC_TYPES).exclude(pk__in=custom_sources).values_list('pk', flat=True))
+    if not set(data['selected_document_ids']) <= set(selected):
+        raise ValidationError({'selected_document_ids': 'Selecciona únicamente anexos activos de esta propuesta.'})
     documents = {row.pk: row for row in proposal.proposal_documents.filter(pk__in=selected)}
     if set(selected) != set(documents) or any(row.document_type in ProposalDocument.CONTRACT_DOC_TYPES for row in documents.values()):
         raise ValidationError({'selected_document_ids': 'Selecciona únicamente anexos de esta propuesta; los contratos usan el switch principal.'})
     for pk in dict.fromkeys(selected):
         row = documents[pk]
-        result.append((f'original-{pk}', row.title, row.document_type, Path(row.file.name).name, _read_file(row.file)))
+        binding = proposal.document_bindings.filter(source_key=f'original-{pk}').first()
+        file = binding.draft_file if binding and binding.draft_file else row.file
+        filename = binding.draft_filename if binding and binding.draft_file else Path(file.name).name
+        result.append((f'original-{pk}', row.title, row.document_type, filename, _read_file(file)))
     # Preserve stored contracts; only new commercial/technical copies use the
     # client explicitly validated by the operator. No source model is saved here.
     detail_source = copy(proposal)
@@ -242,9 +266,8 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
             if action == 'defer':
                 if files:
                     raise ValidationError({'custom_files': 'Posponer no guarda adjuntos.'})
-                if data['accept_proposal'] and proposal.status != BusinessProposal.Status.ACCEPTED:
-                    from content.services.proposal_status_service import change_status
-                    change_status(proposal, BusinessProposal.Status.ACCEPTED, source='approval_review', acting_user_id=actor.pk)
+                if data['accept_proposal']:
+                    raise ValidationError({'action': 'Aprobar exige confirmar el contrato y el proyecto.'})
                 result = preview(load_proposal(proposal_id))
                 return dict(result, action=action, idempotent=False)
             manifest = proposal.platform_approval_manifest
@@ -306,20 +329,29 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
                 raise ApprovalConflict({'detail': 'El entregable vinculado está archivado.', 'code': 'archived_deliverable'})
             proposal.client = profile
             sync_snapshot(proposal)
-            if data['accept_proposal'] and proposal.status != BusinessProposal.Status.ACCEPTED:
-                from content.services.proposal_status_service import change_status
-                change_status(proposal, BusinessProposal.Status.ACCEPTED, source='approval_review', acting_user_id=actor.pk)
+            # The accepted state is committed only after the package and folders exist.
+            should_accept = data['accept_proposal'] and proposal.status != BusinessProposal.Status.ACCEPTED
             technical = proposal.sections.filter(section_type='technical_document', is_enabled=True).first()
             from accounts.services.technical_resources_sync import filtered_technical_doc_for_sync
             frozen_technical = filtered_technical_doc_for_sync(proposal, technical.content_json) if technical else {}
             proposal.platform_approval_manifest = {'request_id': data['request_id'], 'payload_hash': fingerprint, 'source_hash': data['source_hash'], 'client_profile_id': profile.pk, 'project_id': project.pk, 'use_proposal_contracts': data['use_proposal_contracts'], 'confirmed_at': timezone.now().isoformat(), 'confirmed_by': actor.pk, 'technical_content': frozen_technical, 'client': _client_summary(profile), 'commercial_summary': _commercial_summary(proposal)}
             proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING
             proposal.save(update_fields=['client', 'deliverable', 'platform_approval_manifest', 'platform_onboarding_status'])
+            package_rows = []
             for key, title, doc_type, filename, content in packet:
                 row = ProposalApprovalFile(proposal=proposal, project=project, deliverable=proposal.deliverable, source_key=key, title=title, document_type=doc_type, filename=filename[:255], sha256=hashlib.sha256(content).hexdigest(), size=len(content), created_by=actor)
                 row.file.save(filename[:255], ContentFile(content), save=False)
                 written.append((row.file.storage, row.file.name))
                 row.save()
+                package_rows.append(row)
+            from content.services.proposal_shared_documents import create_package
+            package, root = create_package(proposal, actor=actor, request_id=data['request_id'],
+                payload_hash=fingerprint, source_hash='', written_rows=package_rows, manifest=proposal.platform_approval_manifest)
+            if should_accept:
+                from content.services.proposal_status_service import change_status
+                change_status(proposal, BusinessProposal.Status.ACCEPTED, source='approval_review', acting_user_id=actor.pk)
+            package.source_hash = source_hash(load_proposal(proposal_id))
+            package.save(update_fields=['source_hash'])
             proposal.platform_approval_manifest['files'] = list(proposal.approval_files.values('id', 'source_key', 'sha256', 'size'))
             proposal.save(update_fields=['platform_approval_manifest'])
             _sync(proposal, actor)

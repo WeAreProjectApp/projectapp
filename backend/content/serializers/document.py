@@ -429,6 +429,10 @@ class DocumentDetailSerializer(
             document_capabilities,
             document_etag,
         )
+        from content.services.proposal_shared_documents import binding_for, summary
+        binding = binding_for(instance)
+        if binding:
+            data['proposal_source'] = summary(binding)
         data.update(document_capabilities(instance))
         data['etag'] = document_etag(instance)
         if data.get('is_contract_mirror'):

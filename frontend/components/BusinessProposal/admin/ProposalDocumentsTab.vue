@@ -1,12 +1,13 @@
 <template>
   <div class="space-y-8">
+    <ProposalSharedDocuments :proposal-id="proposal.id" :refresh-key="`${active}:${proposal.proposal_source_hash || ''}`" />
     <!-- ── Documentos (lista unificada) ── -->
     <section class="bg-surface border border-border-muted rounded-xl p-5">
       <div class="flex items-center gap-2 mb-4">
         <svg class="w-5 h-5 text-text-brand" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
-        <h3 class="text-sm font-semibold text-text-default dark:text-white">Documentos para formalización</h3>
+        <h3 class="text-sm font-semibold text-text-default dark:text-white">{{ proposal.approval_package_number ? 'Borradores para nueva formalización' : 'Documentos para formalización' }}</h3>
       </div>
 
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -225,6 +226,7 @@ import MarkdownPreviewModal from '~/components/panel/documents/MarkdownPreviewMo
 const notify = usePanelNotify();
 
 const props = defineProps({
+  active: { type: Boolean, default: true },
   proposal: { type: Object, required: true },
   documents: { type: Array, default: () => [] },
 });

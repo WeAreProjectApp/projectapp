@@ -38,10 +38,12 @@ CONTENT_TYPES = {
 
 def _safe_payload(payload):
     """Private download links require their own authorized artifact operation."""
-    payload = deepcopy(payload)
-    for item in payload.get('confirmed_files', []):
-        item.pop('download_url', None)
+    if isinstance(payload, dict):
+        return {key: _safe_payload(value) for key, value in payload.items() if key != 'download_url'}
+    if isinstance(payload, list):
+        return [_safe_payload(value) for value in payload]
     return payload
+
 
 
 def _preview(arguments):
@@ -174,9 +176,13 @@ PREVIEW_TOOL['handler'] = lambda arguments: _safe_payload(_preview_bridge(argume
 
 PROPOSAL_APPROVAL_TOOLS = [
     PREVIEW_TOOL,
+    _op('confirm_proposal_document_revision',
+        'Confirma una nueva revisión compartida; conserva los archivos aprobados anteriores. source_hash y request_id obligatorios.',
+        'proposal-approval-revision', 'POST', ('proposal_id',), 'sensitive', True,
+        payload_schema=deepcopy(APPROVAL_SCHEMA), assets={'custom_asset_ids': {'field': 'custom_files[]', 'many': True, 'content_types': sorted(CONTENT_TYPES)}}),
     _mutation('review_proposal_approval',
               'Revisa y confirma cliente, proyecto y documentos usando source_hash de get_proposal_approval y request_id estable. '
-              'action=defer acepta sin proyecto; retry conserva el paquete. confirm_action aplica la selección exacta.'),
+              'action=defer nunca aprueba; retry conserva el paquete. confirm_action aplica la selección exacta.'),
     _mutation('launch_proposal_to_platform',
               'Vincula explícitamente cliente y proyecto o reintenta el mismo paquete; nunca recrea ni purga un proyecto operativo.',
               launch=True),

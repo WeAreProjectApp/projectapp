@@ -371,12 +371,14 @@ class TestTechnicalFragmentHasContent:
 
 class TestRespondToProposal:
     @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    def test_accepts_proposal_returns_200(self, mock_notify, api_client, sent_proposal):
+    def test_public_acceptance_returns_400(self, mock_notify, api_client, sent_proposal):
+        """Falla si la URL pública aprueba una propuesta enviada sin revisión interna."""
         url = reverse('respond-to-proposal', kwargs={'proposal_uuid': sent_proposal.uuid})
         response = api_client.post(url, {'action': 'accepted'}, format='json')
-        assert response.status_code == 200
+        assert response.status_code == 400
+        assert response.json()['code'] == 'invalid_action'
         sent_proposal.refresh_from_db()
-        assert sent_proposal.status == 'accepted'
+        assert sent_proposal.status == 'sent'
 
     @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
     def test_rejects_proposal_returns_200(self, mock_notify, api_client, sent_proposal):
@@ -2377,27 +2379,35 @@ class TestRespondReengagement:
             mock_schedule.assert_not_called()
 
     @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation')
-    def test_acceptance_sends_confirmation_email(
-        self, mock_confirm, mock_notify, api_client, sent_proposal,
+    @patch('content.services.proposal_email_service.ProposalEmailService.send_rejection_thank_you')
+    def test_rejection_sends_thank_you_email(
+        self, mock_thank, mock_notify, api_client, sent_proposal,
     ):
+        """Falla si retirar la aceptación pública también elimina el correo de rechazo."""
         response = api_client.post(
             self._url(sent_proposal.uuid),
-            {'action': 'accepted'},
+            {'action': 'rejected'},
             format='json',
         )
         assert response.status_code == 200
-        mock_confirm.assert_called_once()
+        sent_proposal.refresh_from_db()
+        assert sent_proposal.status == 'rejected'
+        mock_thank.assert_called_once_with(sent_proposal)
 
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    def test_sets_responded_at_on_response(self, mock_notify, api_client, sent_proposal):
-        api_client.post(
+    @freeze_time('2026-10-20T12:00:00Z')
+    @patch('content.services.proposal_email_service.ProposalEmailService.send_negotiation_confirmation', return_value=True)
+    @patch('content.services.proposal_email_service.ProposalEmailService.send_negotiation_notification', return_value=True)
+    def test_negotiation_records_the_response_time(self, mock_notify, mock_confirm, api_client, sent_proposal):
+        """Falla si pedir negociación deja de registrar cuándo respondió el cliente."""
+        response = api_client.post(
             self._url(sent_proposal.uuid),
-            {'action': 'accepted'},
+            {'action': 'negotiating'},
             format='json',
         )
         sent_proposal.refresh_from_db()
-        assert sent_proposal.responded_at is not None
+        assert response.status_code == 200
+        assert sent_proposal.status == 'negotiating'
+        assert sent_proposal.responded_at.isoformat() == '2026-10-20T12:00:00+00:00'
 
 
 # ---------------------------------------------------------------------------
@@ -4249,67 +4259,6 @@ class TestCsvExportWithTrackingData:
 
 
 # ---------------------------------------------------------------------------
-# Conditional acceptance (Fix 1)
-# ---------------------------------------------------------------------------
-
-class TestConditionalAcceptance:
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation')
-    def test_acceptance_with_condition_creates_cond_accepted_log(
-        self, mock_confirm, mock_notify, api_client, sent_proposal
-    ):
-        """Accepting with a condition creates an extra cond_accepted changelog entry."""
-        url = reverse('respond-to-proposal', kwargs={'proposal_uuid': sent_proposal.uuid})
-        payload = {
-            'action': 'accepted',
-            'condition': 'Necesito soporte por 6 meses',
-        }
-        response = api_client.post(url, payload, format='json')
-        assert response.status_code == 200
-
-        logs = ProposalChangeLog.objects.filter(proposal=sent_proposal)
-        cond_logs = logs.filter(change_type='cond_accepted')
-        assert cond_logs.count() == 1
-        assert 'Necesito soporte por 6 meses' in cond_logs.first().description
-
-        # The main accepted log should also contain the condition
-        accepted_log = logs.filter(change_type='accepted').first()
-        assert 'Condition:' in accepted_log.description
-
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation')
-    def test_acceptance_without_condition_creates_no_cond_log(
-        self, mock_confirm, mock_notify, api_client, sent_proposal
-    ):
-        """Accepting without a condition does not create a cond_accepted log."""
-        url = reverse('respond-to-proposal', kwargs={'proposal_uuid': sent_proposal.uuid})
-        payload = {'action': 'accepted'}
-        response = api_client.post(url, payload, format='json')
-        assert response.status_code == 200
-
-        cond_logs = ProposalChangeLog.objects.filter(
-            proposal=sent_proposal, change_type='cond_accepted'
-        )
-        assert cond_logs.count() == 0
-
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_response_notification')
-    @patch('content.services.proposal_email_service.ProposalEmailService.send_acceptance_confirmation')
-    def test_acceptance_with_empty_condition_creates_no_cond_log(
-        self, mock_confirm, mock_notify, api_client, sent_proposal
-    ):
-        """Accepting with a blank condition string does not create a cond_accepted log."""
-        url = reverse('respond-to-proposal', kwargs={'proposal_uuid': sent_proposal.uuid})
-        payload = {'action': 'accepted', 'condition': '   '}
-        response = api_client.post(url, payload, format='json')
-        assert response.status_code == 200
-
-        cond_logs = ProposalChangeLog.objects.filter(
-            proposal=sent_proposal, change_type='cond_accepted'
-        )
-        assert cond_logs.count() == 0
-
-
-# ---------------------------------------------------------------------------
 # Scorecard reads from section content_json (Fix 2)
 # ---------------------------------------------------------------------------
 
@@ -4426,17 +4375,18 @@ class TestInlineStatusChange:
         assert response.status_code == 400
         assert 'error' in response.data
 
-    def test_forced_transition_persists_as_data_correction(self, admin_client, db):
-        """Non-natural jump (draft → accepted) is accepted and persisted (admin data correction)."""
+    def test_forced_acceptance_requires_contract_review(self, admin_client, db):
+        """Falla si una corrección forzada evita confirmar el contrato y el proyecto."""
         p = BusinessProposal.objects.create(
             title='Block', client_name='C', status='draft',
             total_investment=1000,
         )
         url = reverse('update-proposal-status', kwargs={'proposal_id': p.id})
         response = admin_client.patch(url, {'status': 'accepted'}, format='json')
-        assert response.status_code == 200
+        assert response.status_code == 400
+        assert response.json()['code'] == 'approval_required'
         p.refresh_from_db()
-        assert p.status == 'accepted'
+        assert p.status == 'draft'
 
     def test_empty_status_returns_400(self, admin_client, sent_proposal):
         """PATCH with empty status returns 400."""

@@ -1,3 +1,4 @@
+from django.db import transaction
 """
 Tool registry for the Proposals MCP connector.
 
@@ -117,10 +118,16 @@ def create_proposal(arguments):
     return payload
 
 
+@transaction.atomic
 def update_proposal(arguments):
     proposal_id = arguments.get('proposal_id')
-    proposal = _get_proposal_or_error(proposal_id)
-    data = {k: v for k, v in arguments.items() if k != 'proposal_id'}
+    proposal = BusinessProposal.objects.select_for_update().filter(pk=proposal_id).first()
+    if proposal is None:
+        raise ToolError('La propuesta no existe.')
+    from content.services.proposal_approval_service import source_hash
+    if proposal.approval_packages.exists() and arguments.get('source_hash') != source_hash(proposal):
+        raise ToolError('La propuesta cambió. Consulta la fuente vigente.', code='STALE_VERSION')
+    data = {k: v for k, v in arguments.items() if k not in ('proposal_id', 'source_hash')}
     serializer = ProposalFromJSONSerializer(data=data, context={'proposal': proposal})
     if not serializer.is_valid():
         raise ToolError(_serializer_errors_to_message(serializer.errors))
@@ -216,6 +223,7 @@ _PROPOSAL_ID_PROP = {'proposal_id': {'type': 'integer', 'description': 'ID de la
 _STATUS_ENUM = [c[0] for c in BusinessProposal.Status.choices]
 
 _FROM_JSON_PROPS = {
+    'source_hash': {'type': 'string', 'description': 'proposal_source_hash vigente; obligatorio en propuestas con cierre compartido.'},
     'title': {'type': 'string'},
     'client_name': {'type': 'string'},
     'client_id': {'type': 'integer', 'description': 'ID de cliente existente (opcional).'},
@@ -326,7 +334,7 @@ PROPOSAL_TOOLS = close_root_schemas([
             'Cambia el estado a cualquier valor (modo admin). Los efectos '
             'de correo en draft→sent y accepted→finished se disparan en sus '
             'transiciones naturales; los saltos forzados solo guardan y loggean. '
-            'accepted no crea proyectos. Usa review_proposal_approval para '
+            'accepted exige review_proposal_approval para '
             'completar los casos pendientes de cliente, proyecto y documentos.'
         ),
         'input_schema': {

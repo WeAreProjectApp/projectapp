@@ -360,6 +360,8 @@ def _extract_attachment_bytes(data, suffix, mode='markdown'):
 
 
 def extract_attachment_markdown(document):
+    from content.services.proposal_shared_documents import resolved_source_document
+    document = resolved_source_document(document)
     suffix = Path(document.file.name or '').suffix.lower()
     if suffix not in ('.pdf', '.docx', '.xlsx'):
         message = 'Este formato no admite copia de texto. Las imágenes requieren reconocimiento de texto.'

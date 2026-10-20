@@ -1,14 +1,14 @@
 {
   "id": "proposal-conditional-acceptance",
-  "name": "Proposal Conditional Acceptance",
+  "name": "Proposal Conditional Acceptance (ARCHIVED)",
   "module": "proposal",
   "roles": [
     "guest"
   ],
   "priority": "P2",
-  "description": "Accept with an optional condition note (Acepto, pero...).",
-  "expectedSpecs": 1,
-  "outcomes": [
-    "success"
+  "description": "ARCHIVED — Public acceptance and its condition form were removed; internal review is required.",
+  "expectedSpecs": 0,
+  "knownGaps": [
+    "Feature removed; no active browser journey."
   ]
 }

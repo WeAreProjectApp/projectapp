@@ -79,16 +79,6 @@ test.describe('Proposal View Navigation', () => {
     }, MOCK_UUID);
   });
 
-  test('ProposalIndex toggle button is visible on load', {
-    tag: [...PROPOSAL_VIEW_NAVIGATION, '@role:guest'],
-  }, async ({ page }) => {
-    await mockApi(page, buildMockHandler());
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
-
-    // The hamburger toggle button for ProposalIndex should always be visible
-    await expect(page.getByTestId('index-toggle')).toBeVisible();
-  });
-
   test('clicking ProposalIndex toggle opens the index panel', {
     tag: [...PROPOSAL_VIEW_NAVIGATION, '@role:guest'],
   }, async ({ page }) => {
@@ -109,8 +99,9 @@ test.describe('Proposal View Navigation', () => {
   test('clicking an index item navigates to that section', {
     tag: [...PROPOSAL_VIEW_NAVIGATION, '@role:guest', '@outcome:display'],
   }, async ({ page }) => {
+    // quality: allow-deep-link (el enlace compartido es la entrada pública; el índice se abre y se navega por UI).
     await mockApi(page, buildMockHandler());
-    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
+    await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`, { waitUntil: 'domcontentloaded' });
 
     // Open the index
     await page.getByTestId('index-toggle').click();
@@ -126,6 +117,7 @@ test.describe('Proposal View Navigation', () => {
 
     // Previous button should be visible (no longer at first panel)
     await expect(page.getByTestId('nav-prev')).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contexto', exact: true })).toHaveText('Contexto');
   });
 
   test('ProposalIndex left nav button is hidden when index is open', {
@@ -169,7 +161,8 @@ test.describe('Proposal View Navigation', () => {
     // On last panel (proposal_closing), next button is gone
     await expect(nextBtn).not.toBeVisible();
 
-    // And accept/reject buttons should be visible (closing panel)
-    await expect(page.getByRole('button', { name: /Acepto la propuesta/i })).toBeVisible();
+    // Falla si el cierre vuelve a permitir aprobar públicamente sin revisión interna.
+    await expect(page.getByRole('button', { name: 'Necesito ajustes', exact: true })).toHaveText('Necesito ajustes');
+    await expect(page.getByRole('button', { name: /Acepto la propuesta/i })).toHaveCount(0);
   });
 });

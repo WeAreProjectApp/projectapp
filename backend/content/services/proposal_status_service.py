@@ -38,6 +38,9 @@ def change_status(proposal, new_status, *, source='inline', acting_user_id=None)
             f'Estado no válido: {new_status}.', code='invalid_status',
         )
 
+    if new_status == BusinessProposal.Status.ACCEPTED and source != 'approval_review':
+        raise ProposalActionError('Confirma cliente, proyecto y contrato desde la revisión de aprobación.',
+                                  code='approval_required', hint='Usa review_proposal_approval.')
     old_status = proposal.status
     if new_status == old_status:
         raise ProposalActionError(

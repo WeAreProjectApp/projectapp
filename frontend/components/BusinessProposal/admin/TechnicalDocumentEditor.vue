@@ -993,6 +993,7 @@ function handleSave() {
   emit('save', {
     sectionId: props.section.id,
     payload: {
+      ...(props.section.proposal_source_hash ? { source_hash: props.section.proposal_source_hash } : {}),
       title: props.section.title,
       is_wide_panel: props.section.is_wide_panel,
       content_json: toJson(),

@@ -6,6 +6,6 @@
     "system"
   ],
   "priority": "P1",
-  "description": "Public acceptance and administrative status changes record the commercial decision without provisioning clients or projects. Only explicit internal approval binds the reviewed client/project and retains the selected private document package. Synchronization and retries use the same confirmed association while preserving existing resources. Backend invariants are covered by API/service tests; the browser journey is registered as admin-proposal-approval. The legacy flow id is retained for registry compatibility.",
+  "description": "ARCHIVED — La aprobación es exclusivamente interna mediante revisión confirmada de cliente, proyecto y contrato. Las invariantes de aprovisionamiento se verifican en API y servicios.",
   "expectedSpecs": 0
 }

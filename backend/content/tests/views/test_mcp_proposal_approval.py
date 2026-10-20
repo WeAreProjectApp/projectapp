@@ -17,6 +17,7 @@ from content.mcp.proposal_approval_tools import PREVIEW_TOOL
 from content.mcp.protocol import ToolError
 from content.mcp.upload_tools import store_artifact
 from content.models import McpActionIntent, McpConnector, McpCredential, McpUpload, ProposalApprovalFile
+from content.tests.views.test_proposal_approval import _ensure_approval_project_state
 
 pytestmark = pytest.mark.django_db
 
@@ -29,7 +30,8 @@ def rpc(client, token, name, arguments):
 
 
 @pytest.fixture
-def access():
+def access(db):
+    _ensure_approval_project_state()
     connector, _ = McpConnector.objects.get_or_create(slug='proposals')
     connector.is_active = True
     connector.save(update_fields=['is_active'])
@@ -94,6 +96,7 @@ def test_review_preview_keeps_project_uncreated(api_client, access, proposal, ap
 
 
 def test_custom_confirmation_preserves_exact_asset_contents(api_client, access, proposal, approval_arguments):
+    """Falla si el conector cambia los archivos elegidos al confirmar el cierre."""
     token, _ = access
     preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
 
@@ -103,9 +106,10 @@ def test_custom_confirmation_preserves_exact_asset_contents(api_client, access, 
     assert result['isError'] is False
     assert proposal.status == 'accepted'
     assert Project.objects.count() == 1
-    assert list(proposal.approval_files.values_list('source_key', flat=True)) == [
-        'custom-0', 'custom-1', 'commercial', 'technical',
+    assert list(proposal.approval_files.values_list('document_type', flat=True)) == [
+        'contract', 'amendment', 'commercial', 'technical',
     ]
+    assert proposal.approval_files.get(document_type='contract').source_key == 'custom-contract'
     assert list(proposal.approval_files.filter(source_key__startswith='custom-').values_list('sha256', flat=True)) == [
         hashlib.sha256(b'%PDF-1.4 signed contract').hexdigest(),
         hashlib.sha256(b'%PDF-1.4 signed amendment').hexdigest(),
@@ -229,7 +233,8 @@ def test_other_credential_cannot_confirm_packet(api_client, access, approval_arg
     assert Project.objects.count() == 0
 
 
-def test_defer_accepts_without_link(api_client, access, proposal):
+def test_defer_rejects_acceptance_without_link(api_client, access, proposal):
+    """Falla si el conector aprueba al posponer la revisión del proyecto."""
     token, _ = access
     preview = rpc(api_client, token, 'review_proposal_approval', {
         'proposal_id': proposal.pk, 'action': 'defer',
@@ -238,22 +243,25 @@ def test_defer_accepts_without_link(api_client, access, proposal):
     result = confirm(api_client, token, preview)
 
     proposal.refresh_from_db()
-    assert result['isError'] is False
-    assert proposal.status == 'accepted'
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
+    assert proposal.status == 'draft'
     assert proposal.deliverable_id is None
-    assert proposal.project_review_required is True
+    assert proposal.approval_files.count() == 0
     assert Project.objects.count() == 0
 
 
 def test_status_accepted_requires_review(api_client, access, proposal):
+    """Falla si el cambio de estado MCP evita confirmar contrato y proyecto."""
     token, _ = access
     preview = rpc(api_client, token, 'update_proposal_status', {'proposal_id': proposal.pk, 'status': 'accepted'})
 
     result = confirm(api_client, token, preview)
 
     proposal.refresh_from_db()
-    assert result['isError'] is False
-    assert proposal.status == 'accepted'
+    assert result['isError'] is True
+    assert result['structuredContent']['error']['code'] == 'VALIDATION_ERROR'
+    assert proposal.status == 'draft'
     assert proposal.deliverable_id is None
     assert Project.objects.count() == 0
 
@@ -284,7 +292,7 @@ def test_authorized_download_returns_exact_file(api_client, access, proposal, ap
     token, credential = access
     preview = rpc(api_client, token, 'review_proposal_approval', approval_arguments)
     confirm(api_client, token, preview)
-    packet_file = proposal.approval_files.get(source_key='custom-0')
+    packet_file = proposal.approval_files.get(document_type='contract')
 
     result = rpc(api_client, token, 'download_proposal_approval_file', {
         'proposal_id': proposal.pk, 'file_id': packet_file.pk,

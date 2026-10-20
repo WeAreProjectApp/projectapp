@@ -441,7 +441,7 @@ def retrieve_document(request, document_id):
                 'thread_item__thread__items', distinct=True,
             ),
         ).select_related(
-            'document_type', 'folder', 'project', 'client_user__profile',
+            'document_type', 'folder', 'project', 'client_user__profile', 'proposal_binding',
             'thread_item__thread', 'collection_account', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
             *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
         ).prefetch_related(
@@ -485,6 +485,10 @@ def _locked_collection_account_error(document):
 
 
 def _generated_snapshot_read_only_error(document):
+    from content.services.proposal_shared_documents import binding_for
+    if binding_for(document):
+        return error_response('Este documento comparte su fuente con la propuesta.',
+            code='proposal_shared_source', hint='Abre Editar fuente para crear una nueva revisión.', status=409)
     if not document.is_generated_snapshot:
         return None
     return error_response(
@@ -803,6 +807,11 @@ def download_document_pdf(request, document_id):
     antes de llegar acá.
     """
     document = get_object_or_404(Document, pk=document_id)
+
+    from content.views.proposal_shared_documents import shared_document_download
+    shared = shared_document_download(document)
+    if shared is not None:
+        return shared
 
     if is_contract_mirror(document):
         # Rendered live from the one contract: the same draft the client

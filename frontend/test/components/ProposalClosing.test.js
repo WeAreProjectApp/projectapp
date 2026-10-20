@@ -35,17 +35,13 @@ function mountProposalClosing(props = {}) {
 }
 
 describe('ProposalClosing', () => {
-  it('renders the section element', () => {
+  // Falla si vuelve a ofrecerse una aceptación pública que evita la revisión interna.
+  it('offers negotiation without public acceptance', () => {
     const wrapper = mountProposalClosing();
 
-    expect(wrapper.find('section').exists()).toBe(true);
-  });
-
-  it('renders the accept button when proposal status is sent', () => {
-    const wrapper = mountProposalClosing();
-
-    const acceptBtn = wrapper.findAll('button').find(b => b.text().includes('Acepto'));
-    expect(acceptBtn.text()).toBe('Acepto la propuesta');
+    expect(wrapper.findAll('button').map(button => button.text())).toContain('Necesito ajustes');
+    expect(wrapper.findAll('button').map(button => button.text())).not.toContain('Acepto la propuesta');
+    expect(wrapper.findAll('textarea').map(input => input.attributes('placeholder'))).not.toContain('Ej: Acepto, pero necesito que se incluya X...');
   });
 
   it('renders the validity notice when validityMessage is provided', () => {
@@ -77,13 +73,13 @@ describe('ProposalClosing', () => {
     expect(wrapper.text()).toContain('¡Gracias por revisar nuestra propuesta!');
   });
 
-  it('does not render accept button when proposal status is accepted', () => {
-    const wrapper = mountProposalClosing({
-      proposal: { ...sentProposal, status: 'accepted' },
-    });
+  // Falla si una propuesta ya aprobada vuelve a ofrecer acciones de respuesta pública.
+  it('shows the approved notice instead of response actions', () => {
+    const wrapper = mountProposalClosing({ proposal: { ...sentProposal, status: 'accepted' } });
 
-    const acceptBtn = wrapper.findAll('button').find(b => b.text().includes('Acepto la propuesta'));
-    expect(acceptBtn).toBeFalsy();
+    expect(wrapper.text()).toContain('¡Propuesta aceptada!');
+    expect(wrapper.findAll('button').map(button => button.text())).not.toContain('Necesito ajustes');
+    expect(wrapper.findAll('button').map(button => button.text())).not.toContain('No es el momento');
   });
 
   it('renders the ready message in the final panel', () => {
@@ -175,29 +171,6 @@ describe('ProposalClosing modal flows', () => {
     jest.useRealTimers();
   });
 
-  // ── Accept confirm modal ──────────────────────────────────────────────────
-
-  it('opens the accept confirm modal when the accept button is clicked', async () => {
-    const wrapper = mountProposalClosing();
-    const acceptBtn = wrapper.findAll('button').find(b => b.text().includes('Acepto la propuesta'));
-    await acceptBtn.trigger('click');
-
-    expect(wrapper.text()).toContain('¡Perfecto');
-  });
-
-  it('calls respondToProposal with accepted when the confirm button is clicked', async () => {
-    const wrapper = mountProposalClosing();
-    await wrapper.findAll('button').find(b => b.text().includes('Acepto la propuesta')).trigger('click');
-    await wrapper.findAll('button').find(b => b.text() === '¡Confirmar!').trigger('click');
-    await flushPromises();
-
-    expect(mockProposalActions.respondToProposal).toHaveBeenCalledWith(
-      sentProposal.uuid,
-      'accepted',
-      expect.any(Object)
-    );
-  });
-
   // ── Negotiate modal ───────────────────────────────────────────────────────
 
   it('opens the negotiate modal when the Necesito ajustes button is clicked', async () => {
@@ -219,7 +192,7 @@ describe('ProposalClosing modal flows', () => {
     expect(mockProposalActions.respondToProposal).toHaveBeenCalledWith(
       sentProposal.uuid,
       'negotiating',
-      expect.any(Object)
+      { comment: 'Quiero reducir el alcance' }
     );
   });
 
@@ -267,7 +240,7 @@ describe('ProposalClosing modal flows', () => {
     expect(mockProposalActions.respondToProposal).toHaveBeenCalledWith(
       sentProposal.uuid,
       'rejected',
-      expect.any(Object)
+      { reason: '', comment: '' }
     );
   });
 
@@ -313,6 +286,6 @@ describe('ProposalClosing modal flows', () => {
     const wrapper = mountProposalClosing({ whatsappLink: 'https://wa.me/123?text=hello' });
 
     const link = wrapper.find('a[href="https://wa.me/123?text=hello"]');
-    expect(link.exists()).toBe(true);
+    expect(link.attributes('href')).toBe('https://wa.me/123?text=hello');
   });
 });

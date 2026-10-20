@@ -1,3 +1,5 @@
+> **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../docs/PROPOSAL_SHARED_DOCUMENTS.md).
+
 > **En validación — unificación MCP 2026-10-19:** catálogo de ocho módulos, adaptación por credencial, familia única de ingresos, contabilidad como dueño de hosting/facturación, inventario reproducible y chequeo de CI. El retiro real necesita despliegue, migración de consumidores y las ventanas de 30/14 días; no se da por realizado desde la rama.
 
 > **Building on Demand — 2026-10-10 (PA-177/PA-179):** programa público ES/EN

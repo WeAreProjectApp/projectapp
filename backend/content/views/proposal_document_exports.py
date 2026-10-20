@@ -68,6 +68,8 @@ def attachment_markdown(request, proposal_id, doc_id):
 @permission_classes([IsAdminUser])
 def attachment_download(request, proposal_id, doc_id):
     document = get_object_or_404(ProposalDocument, proposal_id=proposal_id, pk=doc_id)
+    from content.services.proposal_shared_documents import resolved_source_document
+    document = resolved_source_document(document)
     try:
         source = document.file.open('rb')
     except (OSError, ValueError):

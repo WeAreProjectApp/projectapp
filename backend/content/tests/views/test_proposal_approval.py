@@ -10,14 +10,22 @@ from freezegun import freeze_time
 from rest_framework.test import APIClient
 from rest_framework_simplejwt.tokens import AccessToken
 from accounts.models import DataModelEntity, Deliverable, Project, UserProfile
-from content.models import ProposalApprovalFile, ProposalDocument, ProposalSection
+from content.models import DocumentState, DocumentStateGroup, ProposalApprovalFile, ProposalApprovalPackage, ProposalDocument, ProposalDocumentBinding, ProposalSection
 from content.services.proposal_approval_service import review_proposal, source_hash
 
 pytestmark = pytest.mark.django_db
 
 
+def _ensure_approval_project_state():
+    # Own the creation prerequisite rather than depending on migration seeds.
+    if not DocumentState.objects.filter(catalog='projects', system_key='development').exists():
+        group = DocumentStateGroup.objects.create(catalog='projects', name='Project approval lifecycle', selection_mode='exclusive')
+        DocumentState.objects.create(group=group, name='En desarrollo', system_key='development', operational_effect='development')
+
+
 @pytest.fixture
 def approval_client(db):
+    _ensure_approval_project_state()
     user = get_user_model().objects.create_user(username='review-client', email='review@example.com')
     return UserProfile.objects.create(user=user, role='client')
 
@@ -45,13 +53,17 @@ def confirm(proposal, profile, actor, **changes):
     return review_proposal(proposal.pk, values, actor=actor, files=[pdf()])
 
 
-def test_defer_accepts_without_creating_a_project(reviewed_proposal, admin_user):
-    result = review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
+def test_defer_rejects_acceptance_without_review(reviewed_proposal, admin_user):
+    """Falla si posponer vuelve a aprobar sin confirmar proyecto y contrato."""
+    from rest_framework.exceptions import ValidationError
+
+    with pytest.raises(ValidationError) as caught:
+        review_proposal(reviewed_proposal.pk, {'action': 'defer'}, actor=admin_user)
     reviewed_proposal.refresh_from_db()
-    assert result['proposal']['project_review_required'] is True
-    assert reviewed_proposal.status == 'accepted'
-    assert not Project.objects.exists()
-    assert not ProposalApprovalFile.objects.exists()
+    assert str(caught.value.detail['action']) == 'Aprobar exige confirmar el contrato y el proyecto.'
+    assert reviewed_proposal.status == 'negotiating'
+    assert Project.objects.count() == 0
+    assert ProposalApprovalFile.objects.count() == 0
 
 
 def test_custom_packet_preserves_original_contract(reviewed_proposal, approval_client, admin_user):
@@ -90,12 +102,16 @@ def test_existing_project_keeps_operational_data(reviewed_proposal, approval_cli
 
 
 def test_duplicate_confirmation_reuses_packet(reviewed_proposal, approval_client, admin_user):
+    """Falla si reintentar el mismo cierre duplica sus recursos compartidos."""
     values = payload(reviewed_proposal, approval_client)
     first = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
     second = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
     assert second['idempotent'] is True
     assert first['confirmed_files'] == second['confirmed_files']
     assert Project.objects.count() == 1
+    assert ProposalApprovalPackage.objects.filter(proposal=reviewed_proposal).count() == 1
+    assert ProposalDocumentBinding.objects.filter(proposal=reviewed_proposal).count() == 3
+    assert ProposalApprovalFile.objects.filter(proposal=reviewed_proposal).count() == 3
 
 
 @pytest.mark.parametrize('field,value', [('total_investment', 999), ('status', 'rejected')])
@@ -207,7 +223,7 @@ def test_private_file_rejects_other_client(reviewed_proposal, approval_client, a
 
 def test_private_file_download_returns_confirmed_bytes(reviewed_proposal, approval_client, admin_user):
     confirm(reviewed_proposal, approval_client, admin_user)
-    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    row = ProposalApprovalFile.objects.get(document_type='contract')
     client = APIClient()
     client.credentials(HTTP_AUTHORIZATION=f'Bearer {AccessToken.for_user(approval_client.user)}')
     detail_response = client.get(reverse('platform-deliverable-detail', kwargs={'project_id': row.project_id, 'deliverable_id': row.deliverable_id}))
@@ -247,17 +263,18 @@ def test_proposal_contract_mode_copies_only_active_contracts(reviewed_proposal, 
     assert ProposalDocument.objects.filter(proposal=reviewed_proposal).count() == 3
 
 
-def test_original_optional_documents_require_explicit_selection(reviewed_proposal, approval_client, admin_user):
+def test_active_annex_is_included_without_explicit_selection(reviewed_proposal, approval_client, admin_user):
+    """Falla si un anexo activo queda fuera del cierre por no marcarlo a mano."""
     doc = ProposalDocument.objects.create(proposal=reviewed_proposal, document_type='other', title='Private negotiation')
     doc.file.save('negotiation.pdf', ContentFile(b'%PDF-1.4 negotiation'))
     result = confirm(reviewed_proposal, approval_client, admin_user)
-    assert 'Private negotiation' not in [row['title'] for row in result['confirmed_files']]
+    assert [row['title'] for row in result['confirmed_files'] if row['source_key'] == f'original-{doc.pk}'] == ['Private negotiation']
     assert doc.file.storage.exists(doc.file.name)
 
 
 def test_private_file_corruption_is_not_served(reviewed_proposal, approval_client, admin_user):
     confirm(reviewed_proposal, approval_client, admin_user)
-    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    row = ProposalApprovalFile.objects.get(document_type='contract')
     with row.file.storage.open(row.file.name, 'wb') as stream:
         stream.write(b'%PDF-1.4 changed')
     client = APIClient()
@@ -290,7 +307,7 @@ def test_changed_request_does_not_replace_confirmed_package(reviewed_proposal, a
     first = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
     with pytest.raises(ApprovalConflict):
         review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf(content=b'%PDF-1.4 replacement')])
-    assert ProposalApprovalFile.objects.get(source_key='custom-0').sha256 == first['confirmed_files'][0]['sha256']
+    assert ProposalApprovalFile.objects.get(document_type='contract').sha256 == first['confirmed_files'][0]['sha256']
 
 
 def test_missing_technical_detail_rolls_back_inline_creation(reviewed_proposal, admin_user):
@@ -557,7 +574,7 @@ def test_optional_selection_rejects_invalid_original(admin_client, reviewed_prop
     response = _review_uploads(admin_client, reviewed_proposal, values, [pdf()])
 
     assert response.status_code == 400
-    assert response.json() == {'selected_document_ids': 'Selecciona únicamente anexos de esta propuesta; los contratos usan el switch principal.'}
+    assert response.json() == {'selected_document_ids': 'Selecciona únicamente anexos activos de esta propuesta.'}
     _assert_unconfirmed(reviewed_proposal, private_blob_baseline)
     original.refresh_from_db()
     assert original.file.read() == b'%PDF-1.4 original evidence'
@@ -592,7 +609,7 @@ def test_missing_optional_blob_rejects_confirmation(admin_client, reviewed_propo
 def test_missing_private_blob_download_preserves_receipt(reviewed_proposal, approval_client, admin_user, private_blob_baseline):
     """Fails if a missing confirmed blob returns success or destroys its retained receipt/link."""
     confirm(reviewed_proposal, approval_client, admin_user)
-    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    row = ProposalApprovalFile.objects.get(document_type='contract')
     retained = (row.pk, row.sha256, row.size, row.file.name, row.project_id, row.deliverable_id)
     row.file.storage.delete(row.file.name)
     client = APIClient()
@@ -614,7 +631,7 @@ def test_missing_private_blob_download_preserves_receipt(reviewed_proposal, appr
 def test_archived_deliverable_hides_private_packet(reviewed_proposal, approval_client, admin_user, private_blob_baseline):
     """Fails if clients can download an archived root's retained private packet."""
     confirm(reviewed_proposal, approval_client, admin_user)
-    row = ProposalApprovalFile.objects.get(source_key='custom-0')
+    row = ProposalApprovalFile.objects.get(document_type='contract')
     root = row.deliverable
     root.is_archived = True
     root.save(update_fields=['is_archived'])

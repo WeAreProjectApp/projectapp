@@ -60,6 +60,7 @@ from content.throttles import (
 )
 from content.utils import get_client_ip, is_staff_session
 
+from content.services.proposal_source_write import proposal_source_write
 from content.models import (
     BusinessProposal, ProposalAlert, ProposalSection,
     ProposalViewEvent, ProposalSectionView,
@@ -964,6 +965,7 @@ def export_proposal_json(request, proposal_id):
 
 @api_view(['PUT'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def update_proposal_from_json(request, proposal_id):
     """
     Update an existing proposal from a complete JSON payload.
@@ -1007,6 +1009,7 @@ def update_proposal_from_json(request, proposal_id):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def update_proposal(request, proposal_id):
     """
     Update proposal metadata (title, client_name, etc.).
@@ -1702,6 +1705,7 @@ def resend_proposal(request, proposal_id):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def update_proposal_section(request, section_id):
     """
     Update a section's content_json, title, order, is_enabled, etc.
@@ -1805,6 +1809,7 @@ def preview_sync_section(request, section_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def apply_sync_section(request, section_id):
     """
     Save the submitted content_json to the section and sync project resources
@@ -1851,6 +1856,7 @@ def apply_sync_section(request, section_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def bulk_reorder_sections(request, proposal_id):
     """
     Reorder sections for a proposal.
@@ -1892,6 +1898,7 @@ def _proposal_totals_payload(proposal):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def create_proposal_section(request, proposal_id):
     """Add a section of a given type to a proposal, seeded from defaults.
 
@@ -1930,6 +1937,7 @@ def create_proposal_section(request, proposal_id):
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def delete_proposal_section(request, section_id):
     """Delete a proposal section from the editor.
 
@@ -1973,11 +1981,10 @@ def delete_proposal_section(request, section_id):
 @throttle_classes([PublicProposalActionThrottle])
 def respond_to_proposal(request, proposal_uuid):
     """
-    Client accepts, rejects, or negotiates a proposal.
-    Body: { "action": "accepted" | "rejected" | "negotiating", "reason": "...", "comment": "..." }
+    Client rejects or requests negotiation; acceptance requires internal review.
+    Body: { "action": "rejected" | "negotiating", "reason": "...", "comment": "..." }
 
     Updates proposal status, stores rejection feedback, and sends emails:
-    - Acceptance: confirmation to client + notification to team
     - Rejection: thank-you to client + notification with reason to team
     - Negotiating: confirmation to client + notification to team with comment
     """
@@ -1990,14 +1997,13 @@ def respond_to_proposal(request, proposal_uuid):
         )
 
     action = request.data.get('action')
-    if action not in ('accepted', 'rejected', 'negotiating'):
+    if action not in ('rejected', 'negotiating'):
         return error_response(
-            'Acción inválida. Debe ser "accepted", "rejected" o "negotiating".',
+            'Acción inválida. Debe ser "rejected" o "negotiating".',
             code='invalid_action',
         )
 
     comment = request.data.get('comment', '')
-    condition = request.data.get('condition', '').strip()
 
     # Status mutation + audit trail commit or roll back together. Email
     # sends and onboarding enqueue stay outside so the transaction is
@@ -2025,23 +2031,12 @@ def respond_to_proposal(request, proposal_uuid):
             description += f' Reason: {proposal.rejection_reason}'
         if action == 'negotiating' and comment:
             description += f' Comment: {comment[:500]}'
-        if action == 'accepted' and condition:
-            description += f' Condition: {condition[:500]}'
         log_proposal_change(
             proposal,
             action,
             actor_type='client',
             description=description,
         )
-
-        # Log conditional acceptance separately for easy querying
-        if action == 'accepted' and condition:
-            log_proposal_change(
-                proposal,
-                'cond_accepted',
-                actor_type='client',
-                description=f'Conditional acceptance: {condition[:500]}',
-            )
 
         # Log automation pause
         log_proposal_change(
@@ -2061,9 +2056,6 @@ def respond_to_proposal(request, proposal_uuid):
     elif action == 'negotiating':
         ProposalEmailService.send_negotiation_notification(proposal, comment)
         ProposalEmailService.send_negotiation_confirmation(proposal)
-    elif action == 'accepted':
-        ProposalEmailService.send_acceptance_confirmation(proposal)
-        # Acceptance waits for explicit internal project review.
 
     return Response(
         {'status': action, 'message': f'Proposal {action} successfully.'},
@@ -3230,6 +3222,7 @@ def _service_conditions_error(proposal, params, variants):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def save_contract_and_negotiate(request, proposal_id):
     """Save contract params, generate contract PDF, and move status to negotiating."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
@@ -3305,6 +3298,7 @@ def _requested_variant(proposal, requested):
 
 @api_view(['PATCH'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def update_contract_params(request, proposal_id):
     """Update contract params and regenerate the contracts of the active modality.
 
@@ -3468,6 +3462,7 @@ def list_proposal_documents(request, proposal_id):
 
 @api_view(['POST'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def upload_proposal_document(request, proposal_id):
     """Upload an additional document to a proposal (annexes, client docs, etc.)."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
@@ -3518,6 +3513,7 @@ def upload_proposal_document(request, proposal_id):
 
 @api_view(['DELETE'])
 @permission_classes([IsAdminUser])
+@proposal_source_write
 def delete_proposal_document(request, proposal_id, doc_id):
     """Delete a user-uploaded proposal document. Generated docs cannot be deleted."""
     proposal = get_object_or_404(BusinessProposal, pk=proposal_id)
