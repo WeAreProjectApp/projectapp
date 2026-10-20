@@ -925,6 +925,7 @@ describe('useProposalStore', () => {
     it('deletes a section and removes it locally with updated totals', async () => {
       store.currentProposal = {
         id: 99,
+        proposal_source_hash: 'section-delete-version',
         sections: [
           { id: 1, section_type: 'greeting', order: 0 },
           { id: 7, section_type: 'timeline', order: 1 },
@@ -942,7 +943,7 @@ describe('useProposalStore', () => {
 
       const result = await store.deleteSection(7);
 
-      expect(delete_request).toHaveBeenCalledWith('proposals/sections/7/delete/');
+      expect(delete_request).toHaveBeenCalledWith('proposals/sections/7/delete/', { source_hash: 'section-delete-version' });
       expect(result.success).toBe(true);
       expect(store.currentProposal.sections.map((s) => s.id)).toEqual([1]);
       expect(store.currentProposal.effective_total_investment).toBe('100');
@@ -2084,12 +2085,14 @@ describe('useProposalStore', () => {
 
   describe('deleteProposalDocument', () => {
     it('returns success on resolved request', async () => {
+      store.currentProposal = { id: 1, proposal_source_hash: 'document-delete-version' };
+      get_request.mockResolvedValueOnce({ data: { id: 1, proposal_documents: [] } });
       delete_request.mockResolvedValueOnce({ data: {} });
 
       const result = await store.deleteProposalDocument(1, 10);
 
       expect(result.success).toBe(true);
-      expect(delete_request).toHaveBeenCalledWith('proposals/1/documents/10/delete/');
+      expect(delete_request).toHaveBeenCalledWith('proposals/1/documents/10/delete/', { source_hash: 'document-delete-version' });
     });
 
     it('returns failure on rejected request', async () => {
