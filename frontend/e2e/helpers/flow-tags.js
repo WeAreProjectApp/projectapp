@@ -287,6 +287,7 @@ export const ADMIN_PROPOSAL_SECTION_EDIT_PASTE = ['@flow:admin-proposal-section-
 export const ADMIN_PROPOSAL_SECTION_REORDER = ['@flow:admin-proposal-section-reorder', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_SECTION_SYNC = ['@flow:admin-proposal-section-sync', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_SEND = ['@flow:admin-proposal-send', '@module:admin', '@priority:P1'];
+export const ADMIN_PROPOSAL_SHARED_DOCUMENTS = ['@flow:admin-proposal-shared-documents', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_SLUG_EDIT = ['@flow:admin-proposal-slug-edit', '@module:admin', '@priority:P1'];
 export const ADMIN_PROPOSAL_UPDATE_CLIENT = ['@flow:admin-proposal-update-client', '@module:admin', '@priority:P2'];
 export const ADMIN_PROPOSAL_UPDATE_FROM_JSON = ['@flow:admin-proposal-update-from-json', '@module:admin', '@priority:P2'];

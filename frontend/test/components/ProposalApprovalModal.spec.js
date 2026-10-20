@@ -36,11 +36,14 @@ beforeEach(() => {
 afterEach(() => {wrapper?.unmount();document.body.innerHTML='';delete global.useI18n;});
 
 describe('ProposalApprovalModal',()=>{
-  it('defers acceptance without creating records', async()=>{
+  // Falla si cancelar aprueba la propuesta o crea un proyecto sin confirmación.
+  it('cancels the review without submitting approval', async()=>{
     await open();
-    await wrapper.get('[data-testid="approval-defer"]').trigger('click');await flushPromises();
-    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',{action:'defer',accept_proposal:true});
-    expect(wrapper.emitted('close')).toBeTruthy();
+    const cancel = wrapper.findAll('button').find(button => button.text() === 'Cancelar');
+    await cancel.trigger('click');
+    expect(create_request).not.toHaveBeenCalled();
+    expect(wrapper.emitted('close')).toEqual([[]]);
+    expect(wrapper.emitted('completed')).toBeUndefined();
   });
   it('includes the current proposal contracts by default', async()=>{
     await open();
@@ -78,7 +81,7 @@ describe('ProposalApprovalModal',()=>{
     await open();await wrapper.get('[role="switch"]').trigger('click');await addFile([new File(['contract'],'Firmado.pdf')]);
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(wrapper.get('[data-testid="approval-custom-document"]').text()).toContain('Firmado.pdf');
-    expect(wrapper.emitted('close')).toBeFalsy();
+    expect(wrapper.emitted('close')).toBeUndefined();
     expect(wrapper.get('[role="alert"]').text()).toContain('Archivo inválido.');
   });
   it('clears a selected project when the client changes',async()=>{
@@ -133,10 +136,40 @@ describe('ProposalApprovalModal',()=>{
     expect(wrapper.get('[data-testid="approval-retained-project"]').text()).toContain('fue eliminado');
     expect(wrapper.text()).toContain('Plataforma educativa fase 1 — proyecto eliminado');
     const confirm=wrapper.get('[data-testid="approval-confirm"]');
-    expect(confirm.attributes('disabled')).toBeDefined();
+    expect(confirm.element.disabled).toBe(true);
     expect(confirm.attributes('title')).toContain('fue eliminado');
     await confirm.trigger('click');await flushPromises();
     expect(create_request).not.toHaveBeenCalled();
+  });
+
+  // Falla si una revisión convierte contratos propios vigentes en contratos de plantilla.
+  it('initializes revision with the current custom contract mode', async()=>{
+    preview=createPreview({confirmed:true,use_proposal_contracts:false,linked_project:{id:41,name:'Proyecto',client_profile_id:7},confirmed_files:[{id:2,title:'Contrato firmado Atlas',document_type:'contract',filename:'Firmado.pdf',download_url:'/api/proposals/3/approval/files/2/'}]});
+    await open({acceptProposal:false,revision:true});
+    expect(wrapper.get('[data-testid="approval-contract-switch"]').attributes('aria-checked')).toBe('false');
+    expect(wrapper.text()).toContain('Contrato firmado Atlas');
+    expect(wrapper.findAll('[data-testid="approval-custom-document"]')).toHaveLength(0);
+  });
+
+  // Falla si la confirmación de una revisión usa el endpoint del cierre inicial o exige resubir el contrato vigente.
+  it('confirms a custom revision using the existing contract file', async()=>{
+    preview=createPreview({confirmed:true,use_proposal_contracts:false,linked_project:{id:41,name:'Proyecto',client_profile_id:7},confirmed_files:[{id:2,title:'Contrato firmado Atlas',document_type:'contract',filename:'Firmado.pdf',download_url:'/api/proposals/3/approval/files/2/'}]});
+    await open({acceptProposal:false,revision:true});
+    await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',accept_proposal:false,project_id:41,use_proposal_contracts:false,custom_documents:[]}));
+    expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
+  });
+
+  // Falla si aprobar una corrección de una propuesta ya formalizada sólo reintenta el cierre anterior.
+  it('reapproves a corrected proposal as a new revision', async()=>{
+    preview=createPreview({confirmed:true,linked_project:{id:41,name:'Proyecto',client_profile_id:7},commercial_summary:{title:'Alcance anterior',scope:['Módulo anterior']},draft_commercial_summary:{title:'Alcance corregido',scope:['Módulo nuevo'],total_investment:250,currency:'COP'}});
+    await open({acceptProposal:true});
+    expect(wrapper.text()).toContain('Alcance corregido');
+    expect(wrapper.text()).toContain('Módulo nuevo');
+    expect(wrapper.text()).not.toContain('Módulo anterior');
+    await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',accept_proposal:true,project_id:41,source_hash:'hash-original'}));
+    expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
   });
 
 });

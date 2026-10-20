@@ -11,7 +11,7 @@ import { get_request } from '~/stores/services/request_http';
 import es from '~/locales/proposalApproval/es';
 import en from '~/locales/proposalApproval/en';
 
-const props = defineProps({ visible: Boolean, proposal: { type: Object, default: () => ({}) }, acceptProposal: { type: Boolean, default: true } });
+const props = defineProps({ visible: Boolean, revision: Boolean, proposal: { type: Object, default: () => ({}) }, acceptProposal: { type: Boolean, default: true } });
 const localePath = useLocalePath();
 const emit = defineEmits(['close', 'completed']);
 const { locale } = useI18n();
@@ -41,10 +41,11 @@ let generation = 0;
 const linked = computed(() => !!preview.value?.linked_project);
 // The deliverable outlived a forced project deletion: the review cannot bind it.
 const retained = computed(() => preview.value?.project_reassignment_required === true);
-const confirmed = computed(() => !!preview.value?.confirmed);
+const isRevision = computed(() => props.revision || (props.acceptProposal && !!preview.value?.confirmed));
+const confirmed = computed(() => !isRevision.value && !!preview.value?.confirmed);
 const projectOptions = computed(() => !clientId.value ? [] : projects.value.filter((row) => Number(row.client?.profile_id) === Number(clientId.value)).map((row) => ({ value: row.id, label: row.name })));
 const stateOptions = computed(() => states.activeStates.map((row) => ({ value: row.id, label: row.name })));
-const typeOptions = computed(() => [ ['contract',text.value.contract],['legal_annex',text.value.annex],['amendment',text.value.amendment],['other',text.value.other] ].map(([value,label]) => ({value,label})));
+const typeOptions = computed(() => [ ['contract',text.value.contract],['contract_product',text.value.product],['contract_service',text.value.service],['legal_annex',text.value.annex],['amendment',text.value.amendment],['other',text.value.other] ].map(([value,label]) => ({value,label})));
 const clientErrors = computed(() => errors.value.new_client || {});
 function customError(index) {
   const details = errors.value.custom_documents?.[index];
@@ -52,7 +53,7 @@ function customError(index) {
   if (details && typeof details === 'object') return Object.values(details).flat().filter(item => typeof item === 'string').join(' ');
   return '';
 }
-const summary = computed(() => preview.value?.commercial_summary || {});
+const summary = computed(() => (isRevision.value ? preview.value?.draft_commercial_summary : preview.value?.commercial_summary) || preview.value?.commercial_summary || {});
 const formatAmount = (amount) => Number(amount || 0).toLocaleString(locale.value);
 const formatPayment = (item) => [item.label, item.description].filter(Boolean).join(' · ');
 const formatHosting = (item) => [item.label, `${formatAmount(item.billing_amount)} ${item.currency || summary.value.currency || ''}`, item.months ? `${item.months} ${text.value.months}` : '', item.discount_percent ? `${item.discount_percent}% ${text.value.discount}` : '', item.effective_monthly != null ? `${formatAmount(item.effective_monthly)} ${text.value.monthly}` : ''].filter(Boolean).join(' · ');
@@ -101,8 +102,8 @@ async function load(reset = false) {
     projectId.value = result.data.linked_project?.id || '';
     createProject.value = !result.data.linked_project;
     project.value = { name: props.proposal.title || result.data.commercial_summary?.title || '', description: '', state_id: states.stateByKey('development')?.id || '' };
-    useContracts.value = true;
-    optionalIds.value = [];
+    useContracts.value = result.data.use_proposal_contracts !== false;
+    optionalIds.value = (result.data.optional_documents || []).map(item => item.id);
     documents.value = [];
   }
 }
@@ -116,7 +117,7 @@ async function submit(action) {
   if (action === 'confirm') {
     if (!linked.value && (createClient.value ? !client.value.name.trim() : !clientId.value)) errors.value.client_profile_id = text.value.requiredClient;
     if (!linked.value && (createProject.value ? !project.value.name.trim() : !projectId.value)) errors.value.project_id = text.value.requiredProject;
-    if (!useContracts.value && (!documents.value.length || documents.value.some((item) => item.error))) errors.value.custom_documents = text.value.requiredFiles;
+    if (!useContracts.value && ((!documents.value.length && !(isRevision.value && preview.value?.use_proposal_contracts === false)) || documents.value.some((item) => item.error))) errors.value.custom_documents = text.value.requiredFiles;
     if (!useContracts.value && documents.value.some((item) => !item.title.trim())) errors.value.custom_documents = text.value.minTitle;
     if (useContracts.value && !preview.value?.contracts?.available) errors.value.contracts = text.value.unavailable;
     if (Object.keys(errors.value).length) { error.value = text.value.validation; await focusError(); return; }
@@ -131,7 +132,7 @@ async function submit(action) {
   }
   if (action === 'retry') payload.request_id = requestId.value;
   saving.value = true;
-  const result = await store.submitApproval(props.proposal.id, payload, action === 'confirm' && !useContracts.value ? documents.value.map((item) => item.file) : []);
+  const result = await store.submitApproval(props.proposal.id, payload, action === 'confirm' && !useContracts.value ? documents.value.map((item) => item.file) : [], isRevision.value);
   saving.value = false;
   if (result.success) { emit('completed', result.data); emit('close'); return; }
   errors.value = result.errors || {};
@@ -154,7 +155,7 @@ function close() { if (!saving.value) emit('close'); }
       <template v-if="preview && !loading">
         <div v-if="linked" class="space-y-2 rounded-lg bg-surface-raised p-4 text-sm text-text-default">
           <p v-if="retained" role="status" class="text-warning-strong" data-testid="approval-retained-project">{{ text.retainedProject }}</p>
-          <p v-else>{{ confirmed ? text.linked : text.limitedRetry }}</p><p class="break-words">{{ text.client }}: {{ preview.client?.name }}</p><p class="break-words">{{ text.project }}: {{ retained ? `${preview.linked_project.name} — ${text.deletedProject}` : preview.linked_project.name }}</p>
+          <p v-else>{{ isRevision ? text.reviewRevision : confirmed ? text.linked : text.limitedRetry }}</p><p class="break-words">{{ text.client }}: {{ isRevision ? (preview.draft_client || preview.client)?.name : preview.client?.name }}</p><p class="break-words">{{ text.project }}: {{ retained ? `${preview.linked_project.name} — ${text.deletedProject}` : preview.linked_project.name }}</p>
         </div>
         <template v-else>
           <BaseFormField :label="text.client" required :error="fieldError('client_profile_id')">
@@ -190,9 +191,11 @@ function close() { if (!saving.value) emit('close'); }
               <span class="rounded-full px-3 py-1" :class="useContracts ? 'bg-primary text-white' : 'bg-surface-raised text-text-muted'">{{ useContracts ? '✓' : '—' }}</span>{{ text.contracts }}
             </button>
             <p v-if="useContracts" class="text-sm text-text-muted">{{ preview.contracts?.modality === 'split' ? text.split : text.combined }}</p>
+            <ul v-if="useContracts" class="space-y-2"><li v-for="file in preview.contracts?.documents || []" :key="file.id"><PanelDownloadLink v-if="file.download_url" :url="file.download_url" :filename="file.filename" :label="`${text.download}: ${file.title}`" expected-type="" /></li></ul>
             <p v-if="useContracts && !preview.contracts?.available" role="status" class="text-sm text-warning-strong">{{ preview.contracts?.error || text.unavailable }}</p>
             <div v-if="!useContracts" class="space-y-3">
               <p class="text-sm text-text-muted">{{ text.customHint }}</p>
+              <ul v-if="isRevision && preview.use_proposal_contracts === false && !documents.length" class="list-disc pl-5 text-sm text-text-default"><li v-for="file in preview.confirmed_files.filter(item => ['contract','contract_product','contract_service'].includes(item.document_type))" :key="file.id">{{ file.title }}</li></ul>
               <BaseFormField :label="text.custom" :error="fieldError('custom_documents')"><input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" :aria-label="text.custom" data-testid="approval-custom-files" class="block w-full min-w-0 text-sm text-text-default" @change="addFiles" /></BaseFormField>
               <div v-for="(item,index) in documents" :key="index" class="space-y-2 rounded-lg border border-border-default p-3" data-testid="approval-custom-document">
                 <p class="break-all text-sm text-text-default">{{ item.file.name }} · {{ (item.file.size / 1024).toFixed(1) }} KB</p>
@@ -204,7 +207,7 @@ function close() { if (!saving.value) emit('close'); }
                 <BaseButton type="button" variant="secondary" size="sm" :aria-label="`${text.remove} ${item.file.name}`" @click="documents.splice(index,1)">{{ text.remove }}</BaseButton>
               </div>
             </div>
-            <fieldset v-if="preview.optional_documents?.length" class="space-y-2 text-sm text-text-default"><legend class="font-medium">{{ text.optional }}</legend><label v-for="document in preview.optional_documents" :key="document.id" class="flex items-start gap-2 break-words"><input v-model="optionalIds" type="checkbox" :value="document.id" />{{ document.title }}</label></fieldset>
+            <fieldset v-if="preview.optional_documents?.length" class="space-y-2 text-sm text-text-default"><legend class="font-medium">{{ text.optional }}</legend><label v-for="document in preview.optional_documents" :key="document.id" class="flex items-start gap-2 break-words"><span aria-hidden="true">✓</span>{{ document.title }}</label></fieldset>
           </div>
         </template>
         <section class="space-y-2 text-sm text-text-default" data-testid="approval-packet-preview">
@@ -216,9 +219,9 @@ function close() { if (!saving.value) emit('close'); }
     </div>
     <template #footer><BaseModalActions>
       <BaseButton type="button" variant="secondary" :disabled="saving" :disabled-reason="text.processing" @click="close">{{ text.cancel }}</BaseButton>
-      <BaseButton v-if="!linked" type="button" variant="secondary" :disabled="saving || loading || !preview" :disabled-reason="saving ? text.processing : loading ? text.loading : text.loadError" data-testid="approval-defer" @click="submit('defer')">{{ acceptProposal ? text.defer : text.later }}</BaseButton>
+
       <BaseButton v-if="confirmed" type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-retry" @click="submit('retry')">{{ text.retry }}</BaseButton>
-      <BaseButton v-else type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-confirm" @click="submit('confirm')">{{ acceptProposal ? text.confirm : text.link }}</BaseButton>
+      <BaseButton v-else type="button" variant="primary" :loading="saving" :disabled="loading || !preview || retained" :disabled-reason="retained ? text.retainedProject : loading ? text.loading : text.loadError" data-testid="approval-confirm" @click="submit('confirm')">{{ isRevision ? text.confirmRevision : acceptProposal ? text.confirm : text.link }}</BaseButton>
     </BaseModalActions></template>
   </BaseModal>
 </template>

@@ -241,6 +241,13 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        if self.context.get('is_admin', False):
+            from content.services.proposal_approval_service import source_hash
+            data['proposal_source_hash'] = source_hash(instance)
+            package = instance.approval_packages.order_by('-number').first()
+            data['approval_package_number'] = package.number if package else None
+            for section in data.get('sections', []):
+                section['proposal_source_hash'] = data['proposal_source_hash']
         from content.services.video_resource_service import public_resource
         data['explainer_video'] = public_resource('proposal', instance.language)
         data['personalized_video'] = public_resource('proposal', instance.language, instance)['video']
@@ -344,6 +351,9 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             return []
         # Meta ordering is ['-created_at']; plain .all() keeps prefetch warm.
         docs = list(obj.proposal_documents.all())
+        bindings = {item.source_document_id: item for item in obj.document_bindings.all() if item.source_document_id}
+        for document in docs:
+            document._shared_binding = bindings.get(document.pk)
         from content.services.service_contract_freshness import current_service_snapshot
         snapshot = current_service_snapshot(obj) if any(d.document_type == 'contract_service' for d in docs) else None
         return [serialize_proposal_document(d, proposal=obj, service_snapshot=snapshot) for d in docs]
@@ -471,13 +481,19 @@ def serialize_proposal_document(d, *, proposal=None, service_snapshot=None):
         service_contract_needs_regeneration(proposal or d.proposal, d, expected_snapshot=service_snapshot)
         if d.document_type == 'contract_service' and d.is_generated else False
     )
+    from content.services.proposal_shared_documents import resolved_source_document
+    resolved = resolved_source_document(d)
+    file_url = d.file.url if d.file else None
+    if resolved is not d:
+        from urllib.parse import quote
+        file_url = f'/api/proposals/{d.proposal_id}/documents/{d.pk}/download/?filename={quote(resolved.file.name.rsplit("/", 1)[-1])}'
     return {
         'id': d.id,
         'document_type': d.document_type,
         'document_type_display': display,
         'custom_type_label': d.custom_type_label,
         'title': d.title,
-        'file': d.file.url if d.file else None,
+        'file': file_url,
         'is_generated': d.is_generated,
         'is_archived': d.is_archived,
         'created_at': d.created_at.isoformat(),
@@ -572,7 +588,9 @@ class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
     def validate(self, attrs):
-        """Ensure client_email is set when status is SENT."""
+        """Validate metadata without bypassing the confirmed approval workflow."""
+        if attrs.get("status") == "accepted":
+            raise serializers.ValidationError({"status": "Usa la revisión de aprobación para confirmar contrato y proyecto."})
         if self.instance is not None and self.instance.deliverable_id:
             target_client = attrs.get('client', self.instance.client)
             if attrs.get('create_new_client') or (target_client and target_client.pk != self.instance.client_id):

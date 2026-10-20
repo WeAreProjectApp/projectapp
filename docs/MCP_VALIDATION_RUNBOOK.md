@@ -2,6 +2,44 @@
 
 # Guion de validación y mantenimiento de MCP
 
+## Aprobación y documentos compartidos — 2026-10-20
+
+Contrato de esta entrega: Comercial **5.0.0**, adaptador Propuestas **5.0.0** y
+Documentos **7.0.0**. Confirmar la versión desplegada mediante `initialize`,
+`tools/list` y `describe_capabilities`; el código del PR no acredita despliegue.
+El cierre interno confirma cliente, proyecto y contrato real. Los cambios
+genéricos de estado no pueden aprobar y la respuesta pública conserva rechazo
+y negociación. [Modelo y operación](PROPOSAL_SHARED_DOCUMENTS.md).
+
+Validación focal con una propuesta de prueba y credenciales restringidas:
+
+1. Consultar `get_proposal_approval` sin producir escrituras. Confirmar mediante
+   `review_proposal_approval` con proyecto existente o creado al vuelo y
+   contratos originales o propios; comprobar Contratos y Anexos bajo la raíz
+   gestionada del proyecto.
+2. Consultar `get_document_proposal_source`: identidad del documento, paquete,
+   archivo vigente, historial, capacidades y `source_hash`. Propuesta y gestor
+   deben devolver los mismos identificadores de archivo aprobado.
+3. Modificar la fuente estructurada con la huella capturada al editar, o usar
+   `replace_document_proposal_binary` con upload temporal y confirmación
+   sensible. Debe aparecer un borrador pendiente en ambas entradas sin cambiar
+   los bytes aprobados. Contratos generados remiten al editor de origen.
+4. Repetir una escritura con la huella antigua: conflicto y ningún cambio
+   persistido. Revisar explícitamente la fuente antes de volver a guardar.
+5. Usar `confirm_proposal_document_revision` con `request_id`, huella vigente
+   y confirmación sensible. El paquete siguiente conserva las identidades
+   documentales y el historial; repetir el mismo recibo no crea otra revisión.
+   Una entrega o firma anterior sigue apuntando a sus archivos exactos.
+6. Verificar denegación con credenciales sin alcance de escritura y rechazo
+   de la edición Markdown genérica del recurso compartido. Los campos de
+   paquete, vínculos, identidad, huellas y archivos aprobados son de lectura;
+   las fuentes editables utilizan exclusivamente los servicios compartidos.
+
+Controles locales: `mcp_schema_report` y las pruebas focales de aprobación,
+fuente documental y contratos MCP. Los históricos se inventarían con
+`reconcile_proposal_documents`; su aplicación requiere administrador y huella
+de la revisión. No se ejecuta una adopción retroactiva como parte del smoke.
+
 Las plantillas contractuales independientes se administran desde Propuestas
 (2.2.0) y se consultan en Documentos (4.0.0) como espejos de solo lectura.
 Ver [contrato de herramientas y primer uso](CONTRACT_TEMPLATE_MCP.md): validar

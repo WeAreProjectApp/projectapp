@@ -36,8 +36,8 @@
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "775781aa93ef665b3506f8ab1d440e02528d333ec23f791aaedee64a0021b38e",
-    "version": "3.0.0"
+    "sha256": "4ecbc3f4d1e50db521e76327e825ff19fe036d3be1bdaca51a4803dafb0e463e",
+    "version": "5.0.0"
   },
   "communications": {
     "sha256": "3aa598dcd1930132226521e35bb078718847c0d94d36e7d8c7c5bacbcbb575c7",
@@ -52,8 +52,8 @@
     "version": "2.0.0"
   },
   "documents": {
-    "sha256": "3e545b4de6c4ac973d4d1d879ea42f603fd0f38191fe6050c607f27fdceb387f",
-    "version": "5.0.0"
+    "sha256": "32d25e047ab9af7219f1ab5198c099c1a4ddb4928c2e126037f8e856c1d09112",
+    "version": "7.0.0"
   },
   "linkedin-personal": {
     "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",
@@ -72,8 +72,8 @@
     "version": "4.0.0"
   },
   "proposals": {
-    "sha256": "349d8e3e990293e88e6271fdfee878b736376fbd272ef8c9a57524f6d0849bcf",
-    "version": "3.0.0"
+    "sha256": "6bb329799e107f3246bd83cff9cb37116fad35b9d5455faed4736b0771dc2881",
+    "version": "5.0.0"
   },
   "tasks": {
     "sha256": "fed0f09607abc3c68adae1e6a9c3c963a57315a03e08a28941e0ef7e61419db1",

@@ -6,7 +6,7 @@
     "guest"
   ],
   "priority": "P1",
-  "description": "Client responds to (accepts/rejects) a business proposal. Acceptance auto-provisions the client's platform project (scope items + Kanban cards) via async onboarding; see platform-proposal-auto-onboarding.",
+  "description": "El cliente puede rechazar la propuesta o solicitar negociación. La aprobación requiere revisión interna de cliente, proyecto y contrato desde el panel.",
   "expectedSpecs": 1,
   "outcomes": [
     "success"

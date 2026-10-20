@@ -73,6 +73,8 @@ def defaults(proposal):
 
 
 def read_document(doc):
+    from content.services.proposal_shared_documents import resolved_source_document
+    doc = resolved_source_document(doc)
     try:
         with doc.file.open('rb') as source:
             data = source.read(MAX_ATTACHMENT_BYTES + 1)
@@ -120,7 +122,8 @@ def related_documents(proposal, payload):
     found = {doc.pk: doc for doc in proposal.proposal_documents.filter(pk__in=requested)}
     if set(requested) != set(found):
         raise FormalizationError('Uno de los adjuntos no pertenece a esta propuesta o fue eliminado.', 'invalid_attachment')
-    extras = [(f'additional-{pk}', found[pk]) for pk in requested]
+    from content.services.proposal_shared_documents import resolved_source_document
+    extras = [(f'additional-{pk}', resolved_source_document(found[pk])) for pk in requested]
     contracts = contract_attachments(proposal, payload.get('documents', []))
     if any(doc.document_type in contract_variants.CONTRACT_DOC_TYPES for _key, doc in extras):
         raise FormalizationError('Selecciona el contrato mediante su casilla principal.', 'duplicate_contract')

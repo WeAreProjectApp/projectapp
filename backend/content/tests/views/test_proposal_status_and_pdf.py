@@ -22,17 +22,16 @@ class TestUpdateProposalStatusAccepted:
         assert resp.status_code == 400
         assert resp.json()['code'] == 'invalid_status'
 
-    def test_forced_transition_succeeds_and_logs_forced_marker(self, admin_client, proposal):
-        # proposal fixture is 'draft' — jumping straight to 'accepted' is a
-        # forced admin change: allowed, logged, and side-effect free.
+    def test_forced_finished_transition_logs_forced_marker(self, admin_client, proposal):
+        """Falla si la corrección forzada de un estado permitido pierde su auditoría."""
         with patch('content.tasks.run_platform_onboarding') as mock_task:
-            resp = admin_client.patch(self._url(proposal), {'status': 'accepted'}, format='json')
+            resp = admin_client.patch(self._url(proposal), {'status': 'finished'}, format='json')
 
         assert resp.status_code == 200
         proposal.refresh_from_db()
-        assert proposal.status == 'accepted'
+        assert proposal.status == 'finished'
         log = ProposalChangeLog.objects.get(
-            proposal=proposal, change_type='status_change', new_value='accepted',
+            proposal=proposal, change_type='status_change', new_value='finished',
         )
         assert 'admin forced' in log.description
         mock_task.assert_not_called()
@@ -57,10 +56,14 @@ class TestUpdateProposalStatusAccepted:
         mock_send.assert_not_called()
 
     def test_forced_accepted_does_not_enqueue_onboarding(self, admin_client, sent_proposal):
+        """Falla si una aprobación rechazada encola recursos antes de la revisión."""
         with patch('content.tasks.run_platform_onboarding') as mock_task:
             resp = admin_client.patch(self._url(sent_proposal), {'status': 'accepted'}, format='json')
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
+        assert resp.json()['code'] == 'approval_required'
+        sent_proposal.refresh_from_db()
+        assert sent_proposal.status == 'sent'
         mock_task.assert_not_called()
 
     def test_draft_to_sent_without_email_returns_missing_email_code(self, admin_client, proposal):
@@ -90,25 +93,26 @@ class TestUpdateProposalStatusAccepted:
             new_value='negotiating',
         ).exists()
 
-    def test_accepted_transition_waits_for_internal_review(self, admin_client, negotiating_proposal):
-        # Commercial acceptance waits for explicit internal binding.
+    def test_accepted_transition_requires_internal_review(self, admin_client, negotiating_proposal):
+        """Falla si pasar a aceptada conserva el atajo sin confirmar el contrato."""
         with patch('content.tasks.run_platform_onboarding') as mock_task:
             resp = admin_client.patch(
                 self._url(negotiating_proposal), {'status': 'accepted'}, format='json'
             )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
+        assert resp.json()['code'] == 'approval_required'
         negotiating_proposal.refresh_from_db()
-        assert negotiating_proposal.status == 'accepted'
+        assert negotiating_proposal.status == 'negotiating'
         mock_task.assert_not_called()
         assert negotiating_proposal.deliverable_id is None
-        assert negotiating_proposal.project_review_required is True
+        assert negotiating_proposal.platform_approval_manifest == {}
 
     @freeze_time('2026-01-15 12:00:00')
-    def test_accepted_transition_skips_onboarding_when_already_completed(
+    def test_accepted_transition_requires_review_after_onboarding(
         self, admin_client, negotiating_proposal,
     ):
-        from django.utils import timezone
+        """Falla si un onboarding anterior permite omitir la confirmación contractual."""
 
         negotiating_proposal.platform_onboarding_completed_at = timezone.now()
         negotiating_proposal.save(update_fields=['platform_onboarding_completed_at'])
@@ -118,7 +122,11 @@ class TestUpdateProposalStatusAccepted:
                 self._url(negotiating_proposal), {'status': 'accepted'}, format='json'
             )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
+        assert resp.json()['code'] == 'approval_required'
+        negotiating_proposal.refresh_from_db()
+        assert negotiating_proposal.status == 'negotiating'
+        assert negotiating_proposal.platform_onboarding_completed_at.isoformat() == '2026-01-15T12:00:00+00:00'
         mock_task.assert_not_called()
 
     def test_non_accepted_transition_does_not_call_platform_onboarding(
@@ -141,14 +149,15 @@ class TestUpdateProposalStatusAccepted:
 
 
 class TestRespondToProposalPendingReview:
-    """Public acceptance records the deal without platform provisioning."""
+    """Public responses preserve the required internal approval boundary."""
 
     def _url(self, proposal):
         return reverse('respond-to-proposal', kwargs={'proposal_uuid': proposal.uuid})
 
-    def test_client_accept_leaves_project_review_pending(
+    def test_client_acceptance_sends_no_confirmation(
         self, api_client, viewed_proposal,
     ):
+        """Falla si una aceptación pública rechazada manda una confirmación al cliente."""
         with patch('content.tasks.run_platform_onboarding') as mock_task, patch(
             'content.services.proposal_email_service.ProposalEmailService'
         ) as mock_email_svc:
@@ -156,14 +165,13 @@ class TestRespondToProposalPendingReview:
                 self._url(viewed_proposal), {'action': 'accepted'}, format='json',
             )
 
-        assert resp.status_code == 200
+        assert resp.status_code == 400
         viewed_proposal.refresh_from_db()
-        assert viewed_proposal.status == 'accepted'
-        # The view owns the acceptance email (sent exactly once)...
-        mock_email_svc.send_acceptance_confirmation.assert_called_once_with(viewed_proposal)
+        assert viewed_proposal.status == 'viewed'
+        mock_email_svc.send_acceptance_confirmation.assert_not_called()
         mock_task.assert_not_called()
         assert viewed_proposal.deliverable_id is None
-        assert viewed_proposal.project_review_required is True
+        assert viewed_proposal.responded_at is None
 
     def test_client_reject_does_not_enqueue_onboarding(self, api_client, viewed_proposal):
         with patch('content.tasks.run_platform_onboarding') as mock_task, patch(

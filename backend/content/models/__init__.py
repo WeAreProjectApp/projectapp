@@ -162,3 +162,5 @@ from .proposal_project_reassignment import ProposalProjectReassignment
 
 from .data_integrity import DataIntegrityOperation
 from .income_completion_notice import IncomeCompletionNotice
+
+from .proposal_shared_document import ProposalApprovalPackage, ProposalDocumentBinding

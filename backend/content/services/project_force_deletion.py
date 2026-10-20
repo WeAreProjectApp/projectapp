@@ -30,7 +30,8 @@ RETAINED_MODELS = {
     'content.businessproposal', 'content.emailattachmentsnapshot',
     'content.linktreetemplate', 'content.contracttemplate',
     'content.entityhistory', 'content.entityrevision', 'content.accountingchangelog',
-    'content.proposalapprovalfile', 'accounts.billingcontextevent',
+    'content.proposalapprovalfile', 'content.proposalapprovalpackage',
+    'content.proposaldocumentbinding', 'accounts.billingcontextevent',
     'accounts.deliverypromptcontext', 'accounts.deliverypromptsource',
     'accounts.deliveryevidenceemail', 'accounts.deliveryevidenceemailfile',
     'accounts.deliveryevidenceemailattempt',
@@ -38,6 +39,8 @@ RETAINED_MODELS = {
 
 RETENTION_BLOCK_MESSAGES = {
     'content.proposalapprovalfile': 'El paquete aprobado de una propuesta protege estos datos y debe conservarse.',
+    'content.proposalapprovalpackage': 'El historial de aprobación de la propuesta debe conservarse.',
+    'content.proposaldocumentbinding': 'Este documento comparte el contrato o los anexos de una propuesta y debe conservarse con sus versiones aprobadas.',
     'accounts.billingcontextevent': 'El historial de decisiones de facturación protege estos datos y debe conservarse.',
     'accounts.deliverypromptcontext': 'El contexto de fuentes capturado protege estos datos y debe conservarse.',
     'accounts.deliverypromptsource': 'Una fuente capturada protege estos datos y debe conservarse.',

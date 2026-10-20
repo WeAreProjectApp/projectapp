@@ -14,6 +14,9 @@ def document_etag(document):
 
 
 def movement_blockers(document):
+    from content.services.proposal_shared_documents import binding_for
+    if binding_for(document):
+        return ["proposal_shared_source"]
     if is_contract_mirror(document):
         return ["contract_mirror"]
     if document.is_archived:

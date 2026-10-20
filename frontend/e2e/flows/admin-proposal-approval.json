@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "El equipo revisa cliente, proyecto y documentos al aprobar o retomar una propuesta aceptada desde Propuestas o su ficha en Clientes. Puede posponer la vinculación, seleccionar existentes o crear cliente y proyecto al confirmar, e incluir contratos de la modalidad vigente o varios adjuntos personalizados manteniendo el detalle comercial y técnico. Los errores conservan el formulario y los reintentos mantienen el mismo vínculo.",
+  "description": "El equipo confirma cliente, proyecto y contratos antes de aprobar desde Propuestas o Clientes. Selecciona existentes o crea cliente y proyecto al confirmar. El paquete incluye contratos de la modalidad o personalizados, detalles curados comercial y técnico y todos los anexos activos. Cancelar conserva el estado; validaciones, conflictos y fallos conservan el formulario. Si ya existe un cierre y se vuelve a aprobar, se revisan las condiciones del borrador y se confirma un nuevo paquete.",
   "outcomes": [
     "success",
     "error",

@@ -1,152 +1,89 @@
 /**
- * E2E tests for client responding to a proposal (accept/reject).
- *
- * Covers: navigating to the closing panel, clicking accept/reject buttons,
- * confirming in the modal, verifying API call and success state.
+ * Falla si reaparece la aceptación pública o se rompe la negociación/rechazo.
+ * La API es el límite simulado; cada respuesta se dispara desde el cierre real.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { PROPOSAL_RESPOND } from '../helpers/flow-tags.js';
 
-const MOCK_UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
-
-const mockSentProposal = {
-  id: 1,
-  uuid: MOCK_UUID,
-  title: 'Test Proposal',
-  client_name: 'Test Client',
-  status: 'sent',
-  language: 'es',
-  total_investment: '5000000',
-  currency: 'COP',
-  sections: [
-    {
-      id: 1,
-      section_type: 'greeting',
-      title: '👋 Bienvenido',
-      order: 0,
-      is_enabled: true,
-      content_json: { clientName: 'Test Client', inspirationalQuote: '' },
-    },
-  ],
-  requirement_groups: [],
+test.setTimeout(60_000);
+const UUID = 'aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee';
+const json = body => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+const proposal = {
+  id: 1, uuid: UUID, title: 'Portal Atlas', client_name: 'Atlas', status: 'sent', language: 'es',
+  total_investment: '5000000', currency: 'COP', requirement_groups: [],
+  sections: [{ id: 1, section_type: 'greeting', title: 'Bienvenido', order: 0, is_enabled: true, content_json: { clientName: 'Atlas' } }],
 };
 
-/**
- * Helper: navigate to the last panel (proposal_closing) which contains
- * the accept/reject buttons. Waits for the preloader animation to finish
- * (showContent becomes true), then clicks nav-next until closing panel.
- */
 async function openClosingPanel(page) {
-  await page.goto(`/proposal/${MOCK_UUID}?mode=detailed`);
-
-  // Wait for proposal to finish loading
-  const nextBtn = page.getByTestId('nav-next');
-  await expect(nextBtn).toBeVisible({ timeout: 15000 });
-
-  // Click through sections until nav-next disappears (closing panel)
-  let safetyLimit = 10;
-  while (safetyLimit-- > 0) {
-    await nextBtn.click();
-    await page.waitForTimeout(500);
-    const stillVisible = await nextBtn.isVisible().catch(() => false);
-    if (!stillVisible) break;
-  }
+  await page.goto(`/proposal/${UUID}?mode=detailed`, { waitUntil: 'domcontentloaded' });
+  await page.getByTestId('nav-next').click();
+  await expect(page.getByTestId('nav-next')).toHaveCount(0);
 }
 
-test.describe('Proposal Respond', () => {
-  test.beforeEach(async ({ page }) => {
-    // Skip onboarding overlay so buttons are clickable
-    await page.addInitScript((_uuid) => {
-      localStorage.setItem('proposal_onboarding_seen', 'true');
-    }, MOCK_UUID);
+async function mockProposal(page, status = 'sent') {
+  const submissions = [];
+  await mockApi(page, async ({ apiPath, route }) => {
+    if (apiPath === `proposals/${UUID}/`) return json({ ...proposal, status });
+    if (apiPath === `proposals/${UUID}/respond/`) {
+      const payload = route.request().postDataJSON();
+      submissions.push(payload);
+      return json({ status: payload.action });
+    }
+    return null;
   });
+  return submissions;
+}
 
-  test('accept button opens confirmation modal', {
-    tag: [...PROPOSAL_RESPOND, '@role:guest'],
-  }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === `proposals/${MOCK_UUID}/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(mockSentProposal) };
-      }
-      return null;
-    });
+test.beforeEach(async ({ page }) => {
+  await page.addInitScript(() => localStorage.setItem('proposal_onboarding_seen', 'true'));
+});
 
-    await openClosingPanel(page);
+test('public closing offers adjustments without acceptance', {
+  tag: [...PROPOSAL_RESPOND, '@role:guest', '@outcome:success'],
+}, async ({ page }) => {
+  const submissions = await mockProposal(page);
+  await openClosingPanel(page);
+  await expect(page.getByRole('button', { name: /Acepto la propuesta/i })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Necesito ajustes', exact: true }).click();
 
-    // Accept button should be visible on the closing panel
-    const acceptBtn = page.getByRole('button', { name: /Acepto la propuesta/i });
-    await expect(acceptBtn).toBeVisible();
+  await expect(page.getByText('Me interesa, pero negociemos alcance', { exact: true })).toHaveText('Me interesa, pero negociemos alcance');
+  await expect(page.getByPlaceholder(/Acepto, pero necesito/i)).toHaveCount(0);
+  expect(submissions).toEqual([]);
+});
 
-    // Click accept opens confirmation modal (force due to CSS pulse animation)
-    await acceptBtn.click({ force: true });
-    await expect(page.getByText(/Perfecto/i)).toBeVisible();
-    await expect(page.getByRole('button', { name: /Confirmar/i })).toBeVisible();
-  });
+test('requesting adjustments submits the negotiation comment', {
+  tag: [...PROPOSAL_RESPOND, '@role:guest', '@outcome:success'],
+}, async ({ page }) => {
+  const submissions = await mockProposal(page);
+  await openClosingPanel(page);
+  await page.getByRole('button', { name: 'Necesito ajustes', exact: true }).click();
+  await page.getByPlaceholder(/Me gustaría reducir el número de módulos/).fill('Necesitamos dos módulos menos.');
+  await page.getByRole('button', { name: /Enviar solicitud de ajuste/ }).click();
 
-  test('confirming accept calls respond API and shows success state', {
-    tag: [...PROPOSAL_RESPOND, '@role:guest'],
-  }, async ({ page }) => {
-    let respondPayload = null;
+  await expect(page.getByText('¡Solicitud recibida!', { exact: true })).toHaveText('¡Solicitud recibida!');
+  expect(submissions).toEqual([{ action: 'negotiating', comment: 'Necesitamos dos módulos menos.' }]);
+});
 
-    await mockApi(page, async ({ apiPath, route }) => {
-      if (apiPath === `proposals/${MOCK_UUID}/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(mockSentProposal) };
-      }
-      if (apiPath === `proposals/${MOCK_UUID}/respond/`) {
-        respondPayload = JSON.parse(route.request().postData() || '{}');
-        return { status: 200, contentType: 'application/json', body: JSON.stringify({ status: 'accepted' }) };
-      }
-      return null;
-    });
+test('rejecting a proposal displays the rejection receipt', {
+  tag: [...PROPOSAL_RESPOND, '@role:guest', '@outcome:success'],
+}, async ({ page }) => {
+  const submissions = await mockProposal(page, 'viewed');
+  await openClosingPanel(page);
+  await page.getByRole('button', { name: 'No es el momento', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar rechazo', exact: true }).click();
 
-    await openClosingPanel(page);
+  await expect(page.getByText('Propuesta rechazada. Gracias por tu tiempo.', { exact: true })).toHaveText('Propuesta rechazada. Gracias por tu tiempo.');
+  expect(submissions).toEqual([{ action: 'rejected', reason: '', comment: '' }]);
+});
 
-    // Click accept → open modal → confirm (force due to CSS pulse animation)
-    await page.getByRole('button', { name: /Acepto la propuesta/i }).click({ force: true });
-    await page.getByRole('button', { name: /Confirmar/i }).click();
+test('approved proposal preserves its public receipt', {
+  tag: [...PROPOSAL_RESPOND, '@role:guest', '@outcome:success'],
+}, async ({ page }) => {
+  const submissions = await mockProposal(page, 'accepted');
+  await openClosingPanel(page);
 
-    // Verify success state appears and the POST body carries the action.
-    await expect(page.getByText('¡Propuesta aceptada!')).toBeVisible({ timeout: 5000 });
-    expect(respondPayload).not.toBeNull();
-    expect(respondPayload.action).toBe('accepted');
-  });
-
-  test('reject button opens reject modal', {
-    tag: [...PROPOSAL_RESPOND, '@role:guest'],
-  }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === `proposals/${MOCK_UUID}/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...mockSentProposal, status: 'viewed' }) };
-      }
-      return null;
-    });
-
-    await openClosingPanel(page);
-
-    // Reject button should be visible
-    const rejectBtn = page.getByRole('button', { name: /No es el momento/i });
-    await expect(rejectBtn).toBeVisible();
-
-    // Click reject opens modal
-    await rejectBtn.click();
-    await expect(page.getByText(/Lamentamos que no sea el momento/i)).toBeVisible();
-  });
-
-  test('accept and reject buttons are hidden after proposal is accepted', {
-    tag: [...PROPOSAL_RESPOND, '@role:guest'],
-  }, async ({ page }) => {
-    await mockApi(page, async ({ apiPath }) => {
-      if (apiPath === `proposals/${MOCK_UUID}/`) {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify({ ...mockSentProposal, status: 'accepted' }) };
-      }
-      return null;
-    });
-
-    await openClosingPanel(page);
-
-    // Accepted proposal should not show respond buttons
-    await expect(page.getByRole('button', { name: /Acepto la propuesta/i })).not.toBeVisible();
-    await expect(page.getByText('¡Propuesta aceptada!')).toBeVisible();
-  });
+  await expect(page.getByText('¡Propuesta aceptada!', { exact: true })).toHaveText('¡Propuesta aceptada!');
+  await expect(page.getByRole('button', { name: /Acepto la propuesta|Necesito ajustes|No es el momento/i })).toHaveCount(0);
+  expect(submissions).toEqual([]);
 });

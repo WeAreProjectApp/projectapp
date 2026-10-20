@@ -925,6 +925,7 @@ describe('useProposalStore', () => {
     it('deletes a section and removes it locally with updated totals', async () => {
       store.currentProposal = {
         id: 99,
+        proposal_source_hash: 'section-delete-version',
         sections: [
           { id: 1, section_type: 'greeting', order: 0 },
           { id: 7, section_type: 'timeline', order: 1 },
@@ -942,7 +943,7 @@ describe('useProposalStore', () => {
 
       const result = await store.deleteSection(7);
 
-      expect(delete_request).toHaveBeenCalledWith('proposals/sections/7/delete/');
+      expect(delete_request).toHaveBeenCalledWith('proposals/sections/7/delete/', { source_hash: 'section-delete-version' });
       expect(result.success).toBe(true);
       expect(store.currentProposal.sections.map((s) => s.id)).toEqual([1]);
       expect(store.currentProposal.effective_total_investment).toBe('100');
@@ -965,15 +966,15 @@ describe('useProposalStore', () => {
   });
 
   describe('respondToProposal', () => {
-    it('accepts proposal and updates currentProposal status', async () => {
+    it('records the negotiated proposal status', async () => {
       store.currentProposal = { uuid: 'abc', status: 'sent' };
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
-      expect(create_request).toHaveBeenCalledWith('proposals/abc/respond/', { action: 'accepted' });
+      expect(create_request).toHaveBeenCalledWith('proposals/abc/respond/', { action: 'negotiating' });
       expect(result.success).toBe(true);
-      expect(store.currentProposal.status).toBe('accepted');
+      expect(store.currentProposal.status).toBe('negotiating');
     });
 
     it('rejects proposal', async () => {
@@ -988,16 +989,16 @@ describe('useProposalStore', () => {
     it('handles error', async () => {
       create_request.mockRejectedValue(new Error('fail'));
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(false);
     });
 
     it('does not update status when currentProposal is null', async () => {
       store.currentProposal = null;
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(true);
       expect(store.currentProposal).toBeNull();
@@ -1005,9 +1006,9 @@ describe('useProposalStore', () => {
 
     it('does not update status when uuid does not match', async () => {
       store.currentProposal = { uuid: 'xyz', status: 'sent' };
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(true);
       expect(store.currentProposal.status).toBe('sent');
@@ -2084,12 +2085,14 @@ describe('useProposalStore', () => {
 
   describe('deleteProposalDocument', () => {
     it('returns success on resolved request', async () => {
+      store.currentProposal = { id: 1, proposal_source_hash: 'document-delete-version' };
+      get_request.mockResolvedValueOnce({ data: { id: 1, proposal_documents: [] } });
       delete_request.mockResolvedValueOnce({ data: {} });
 
       const result = await store.deleteProposalDocument(1, 10);
 
       expect(result.success).toBe(true);
-      expect(delete_request).toHaveBeenCalledWith('proposals/1/documents/10/delete/');
+      expect(delete_request).toHaveBeenCalledWith('proposals/1/documents/10/delete/', { source_hash: 'document-delete-version' });
     });
 
     it('returns failure on rejected request', async () => {

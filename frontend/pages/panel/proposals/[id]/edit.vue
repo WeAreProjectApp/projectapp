@@ -182,6 +182,7 @@
         <ProposalDocumentsTab
           v-if="hasProposalDocuments"
           :proposal="proposal"
+          :active="activeTab === 'documents'"
           :documents="proposal.proposal_documents || []"
           @refresh="refreshData"
           @edit-contract="(variant) => openContractModal(true, variant)"
@@ -1062,6 +1063,7 @@ async function syncInvestmentPercentagesFromGeneral() {
 function hydrateFormFromProposal() {
   if (!proposal.value) return;
   Object.assign(form, {
+    source_hash: proposal.value.proposal_source_hash,
     title: proposal.value.title,
     client_id: proposal.value.client?.id ?? null,
     client_name: proposal.value.client_name,
@@ -1243,7 +1245,7 @@ async function saveFormFields(fields, extra = {}) {
   const submitted = JSON.parse(JSON.stringify(Object.fromEntries(fields.map(key => [key, form[key]]))));
   const payload = JSON.parse(JSON.stringify(submitted));
   if (fields === EMAIL_FIELDS) sanitizeEmailMetadata(payload);
-  const result = await proposalStore.updateProposal(proposal.value.id, { ...payload, ...extra });
+  const result = await proposalStore.updateProposal(proposal.value.id, { ...payload, ...extra, source_hash: savedForm.value.source_hash });
   if (result.success) {
     fields.forEach(key => {
       savedForm.value[key] = JSON.parse(JSON.stringify(payload[key]));
@@ -1266,7 +1268,7 @@ async function handleUpdate() {
   const submitted = JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(form).filter(([key]) =>
     !CLIENT_FIELDS.includes(key) && !EMAIL_FIELDS.includes(key) && JSON.stringify(form[key]) !== JSON.stringify(savedForm.value[key])
   ))));
-  const payload = { ...submitted };
+  const payload = { ...submitted, source_hash: savedForm.value.source_hash };
   if (Object.hasOwn(payload, 'expires_at') && payload.expires_at) {
     const d = new Date(payload.expires_at);
     payload.expires_at = isNaN(d.getTime()) ? null : d.toISOString();
@@ -1276,6 +1278,8 @@ async function handleUpdate() {
   const result = await proposalStore.updateProposal(proposal.value.id, payload);
   if (result.success) {
     Object.keys(submitted).forEach(key => { savedForm.value[key] = submitted[key]; });
+    form.source_hash = result.data?.proposal_source_hash;
+    savedForm.value.source_hash = form.source_hash;
     const syncResult = await syncInvestmentPercentagesFromGeneral();
     if (syncResult.success) {
       notify.success({ title: 'Propuesta actualizada.' });
@@ -1441,8 +1445,12 @@ async function handleSaveSection({ sectionId, payload }) {
 async function handleSyncConfirm() {
   syncApplying.value = true;
   const { sectionId, payload } = pendingSyncPayload.value;
-  const result = await proposalStore.applySync(sectionId, payload.content_json);
+  const result = await proposalStore.applySync(sectionId, payload.content_json, payload.source_hash);
   syncApplying.value = false;
+  if (!result.success) {
+    notifyProposalFailure(result, 'No se pudo guardar la sincronización; el borrador se conserva.');
+    return;
+  }
   syncPreviewVisible.value = false;
   syncPreviewData.value = null;
   pendingSyncPayload.value = null;

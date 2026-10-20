@@ -1,3 +1,5 @@
+> **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../docs/PROPOSAL_SHARED_DOCUMENTS.md).
+
 > **En validación — unificación MCP 2026-10-19:** catálogo de ocho módulos, adaptación por credencial, familia única de ingresos, contabilidad como dueño de hosting/facturación, inventario reproducible y chequeo de CI. El retiro real necesita despliegue, migración de consumidores y las ventanas de 30/14 días; no se da por realizado desde la rama.
 
 > **Building on Demand — 2026-10-10 (PA-177/PA-179):** programa público ES/EN
@@ -550,7 +552,7 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 | Business Proposal — Share Links | ✅ Done | UUID share links with independent tracking |
 | Business Proposal — Investment Calculator | ✅ Done | Interactive modal for payment options |
 | Hosting — 9/6/3-month commercial periodicities | ✅ Done | 2026-08-20: annual offering replaced by `nine_month` across proposal admin/defaults, public view, PDF, platform subscriptions, accounting hostings/cycles, MCP, seeds and flow registry. Current records migrate safely; closed proposals, inactive hostings and paid history retain legacy labels/values. |
-| Business Proposal — Client Responses | ✅ Done | Accept, reject (with reason), negotiate |
+| Business Proposal — Client Responses | ✅ Done | Rechazo con motivo y negociación públicos; la aprobación requiere revisión interna de cliente, proyecto y contrato. |
 | Business Proposal — Expiration | ✅ Done | Auto-expire via daily Huey cron task |
 | Business Proposal — Change Log | ✅ Done | Full audit trail (20+ change types) |
 | Business Proposal — Email Deliverability | ✅ Done | Dashboard with send/delivery/bounce rates |

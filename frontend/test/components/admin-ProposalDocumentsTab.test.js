@@ -55,6 +55,7 @@ function mountProposalDocumentsTab(props = {}) {
     global: {
       components: { BaseSegmented },
       stubs: {
+        ProposalSharedDocuments: true,
         ProposalContractChangeModal: {
           template: '<div data-testid="proposal-contract-change-modal">Cambiar modalidad de contrato</div>',
         },

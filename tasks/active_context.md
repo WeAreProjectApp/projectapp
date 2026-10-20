@@ -1,3 +1,11 @@
+# Aprobación y documentos compartidos — 2026-10-20
+
+Implementado en PR #521: revisión obligatoria con proyecto y contrato, sin aceptación pública.
+Validación focal de servicios, componentes y navegador; despliegue separado.
+Documentos comparte la fuente estructurada de la propuesta y revisiones privadas
+inmutables; cambios posteriores requieren confirmar un nuevo paquete.
+Históricos: inventario y aplicación explícita, sin emparejamientos por nombre.
+
 # Liquidación unificada de ingresos (2026-10-19, PR #517)
 
 Una misma operación cubre uno o varios ingresos con participaciones globales,

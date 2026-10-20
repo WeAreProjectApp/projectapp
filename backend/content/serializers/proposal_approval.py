@@ -23,8 +23,9 @@ class NewApprovalClientSerializer(serializers.Serializer):
 
 
 class ApprovalCustomDocumentSerializer(serializers.Serializer):
+    resource_id = serializers.UUIDField(required=False)
     title = serializers.CharField(max_length=300)
-    document_type = serializers.ChoiceField(choices=['contract', 'legal_annex', 'amendment', 'other'])
+    document_type = serializers.ChoiceField(choices=['contract', 'contract_product', 'contract_service', 'legal_annex', 'amendment', 'other'])
 
 
 class ProposalApprovalSerializer(serializers.Serializer):

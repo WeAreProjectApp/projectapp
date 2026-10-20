@@ -296,7 +296,7 @@ def build_document_list_queryset(
             to_attr='prefetched_active_state_episodes',
         ),
     ).select_related(
-        'document_type', 'folder', 'project', 'client_user__profile',
+        'document_type', 'folder', 'project', 'client_user__profile', 'proposal_binding',
         'thread_item__thread', 'contract_template', 'contract_mirror__template', 'contract_mirror__revision',
         *(f'{relation}__revision' for relation, _variant, _message in MODULE_MIRROR_RELATIONS),
     )

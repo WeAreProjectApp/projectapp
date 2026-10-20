@@ -122,7 +122,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='content',
     ),
     'documents': ConnectorSpec(
-        'documents', '4.0.0',
+        'documents', '6.0.0',
         (DOCUMENT_TOOLS, DOCUMENT_THREAD_TOOLS, DOCUMENT_PARITY_TOOLS),
         uploads=True, confirm_sensitive=True,
         notes=(
@@ -155,7 +155,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         compatibility=True, canonical_area='commercial',
     ),
     'proposals': ConnectorSpec(
-        'proposals', '2.2.1',
+        'proposals', '4.0.0',
         (PROPOSAL_TOOLS, PROPOSAL_PARITY_TOOLS, PROPOSAL_VIDEO_TOOLS,
          PROPOSAL_FORMALIZATION_TOOLS),
         uploads=True, confirm_sensitive=True,
@@ -180,7 +180,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'commercial': ConnectorSpec(
-        'commercial', '2.1.1',
+        'commercial', '4.0.0',
         (CLIENT_TOOLS, PROPOSAL_TOOLS, DIAGNOSTIC_TOOLS, COMMERCIAL_PARITY_TOOLS,
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS

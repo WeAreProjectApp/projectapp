@@ -1,6 +1,6 @@
 /**
  * Explicit approval review from the Panel, with the API as the mocked boundary.
- * Catches approval provisioning before confirmation, lost deferred reviews,
+ * Catches approval provisioning before confirmation, unconfirmed approvals,
  * custom contracts being replaced by originals, dropped form values on errors,
  * duplicated confirmation on retry, inaccessible Escape, and modal overflow.
  */
@@ -96,17 +96,13 @@ async function mockApproval(page, state, { rejectFirst = null } = {}) {
       const submission = readSubmission(route.request());
       state.submissions.push(submission);
       if (rejectFirst && state.submissions.length === 1) return json(rejectFirst.body, rejectFirst.status);
-      if (submission.payload.action === 'defer') {
-        Object.assign(state.proposal, { status: 'accepted', project_review_required: true, linked_project: null, available_transitions: ['finished'] });
-      } else {
-        state.confirmed = true;
-        if (submission.payload.new_client) state.client = { ...submission.payload.new_client, id: 102 };
-        if (submission.payload.new_project) state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.client.id };
-        Object.assign(state.proposal, {
-          status: 'accepted', project_review_required: false, linked_project: state.project,
-          platform_onboarding_status: 'completed', available_transitions: ['finished'],
-        });
-      }
+      state.confirmed = true;
+      if (submission.payload.new_client) state.client = { ...submission.payload.new_client, id: 102 };
+      if (submission.payload.new_project) state.project = { id: 42, name: submission.payload.new_project.name, client_profile_id: state.client.id };
+      Object.assign(state.proposal, {
+        status: 'accepted', project_review_required: false, linked_project: state.project,
+        platform_onboarding_status: 'completed', available_transitions: ['finished'],
+      });
       return json({ ...preview(state), action: submission.payload.action, idempotent: false });
     }
     if (method !== 'GET') state.otherMutations.push({ apiPath, method });
@@ -188,28 +184,24 @@ test('inline approval links the selected project only after confirmation', {
   await expect(page.getByTestId('approval-review-71')).toHaveCount(0);
 });
 
-test('deferred approval can resume from the accepted pending row', {
+test('cancelled approval preserves the proposal status', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
-  // Catches accepted proposals losing the review action after leaving the modal.
+  // Falla si cancelar aprueba el negocio o aprovisiona un proyecto sin confirmación.
   const state = buildFixture();
   await mockApproval(page, state);
   await openList(page);
   await openInlineApproval(page);
-  await page.getByTestId('approval-defer').click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
+
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
-  await expectAccepted(page);
-  expect(state.submissions).toEqual([{ payload: { action: 'defer', accept_proposal: true }, files: [] }]);
-  expect(state.proposal.linked_project).toBeNull();
+  const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });
+  await expect(row.getByRole('combobox')).toHaveValue('negotiating');
+  expect(state.submissions).toEqual([]);
   expect(state.otherMutations).toEqual([]);
-  await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByTestId('approval-review-71').click();
+  expect(state.proposal.linked_project).toBeNull();
+  await row.getByRole('combobox').selectOption('accepted');
   await expect(page.getByTestId('approval-confirm')).toBeEnabled();
-  await selectExistingProject(page);
-  await page.getByTestId('approval-confirm').click();
-  await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
-  await expect(page.getByTestId('approval-review-71')).toHaveCount(0);
-  expect(state.submissions[1].payload).toMatchObject({ action: 'confirm', accept_proposal: false, client_profile_id: 101, project_id: 41 });
 });
 
 test('custom closure creates the staged client with both uploaded documents', {

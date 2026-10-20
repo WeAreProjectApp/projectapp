@@ -20,6 +20,9 @@ from content.models import (
     Document,
     DocumentCollectionAccount,
     DocumentOwnershipOperation,
+    DocumentState,
+    DocumentStateGroup,
+    ProposalApprovalPackage,
 )
 from content.services import client_merge
 from content.services.data_integrity import catalog, engine
@@ -41,12 +44,64 @@ from content.tests.data_integrity_merge_factories import (
 pytestmark = pytest.mark.django_db
 
 
+@pytest.fixture(autouse=True)
+def project_lifecycle_catalog(db):
+    group, _ = DocumentStateGroup.objects.get_or_create(
+        catalog='projects', name='Client merge lifecycle',
+        defaults={'selection_mode': 'exclusive'},
+    )
+    for key, name in [('development', 'En desarrollo'), ('suspended', 'Suspendido')]:
+        DocumentState.objects.get_or_create(
+            catalog='projects', system_key=key,
+            defaults={'group': group, 'name': name, 'operational_effect': key},
+        )
+
+
+@pytest.fixture
+def approval_package_by_duplicate():
+    survivor, duplicate = client_pair()
+    proposal = BusinessProposal.objects.create(
+        title='Confirmed legal packet', client=duplicate, status='accepted',
+    )
+    package = ProposalApprovalPackage.objects.create(
+        proposal=proposal, number=1, request_id='original-approval',
+        payload_hash='a' * 64, source_hash='b' * 64,
+        manifest={'client_profile_id': duplicate.pk}, created_by=duplicate.user,
+    )
+    return survivor, duplicate, package
+
+
 def _step(result):
     return DataIntegrityOperation.objects.get(pk=result['operation_id']).steps[0]
 
 
 def _codes(blockers):
     return {row['code'] for row in blockers}
+
+
+def test_client_merge_preserves_approval_package_author(superuser, approval_package_by_duplicate):
+    """Falla si fusionar el cliente convierte al superviviente en autor del cierre aprobado."""
+    survivor, duplicate, package = approval_package_by_duplicate
+
+    run_client_merge(superuser, survivor, duplicate)
+
+    package.refresh_from_db()
+    assert package.created_by_id == duplicate.user_id
+    assert package.proposal.client_id == survivor.pk
+    assert package.manifest == {'client_profile_id': duplicate.pk}
+
+
+def test_undo_preserves_approval_package_author(superuser, approval_package_by_duplicate):
+    """Falla si deshacer una fusión modifica la identidad histórica que confirmó el contrato."""
+    survivor, duplicate, package = approval_package_by_duplicate
+    _, result = run_client_merge(superuser, survivor, duplicate)
+
+    undo(superuser, result['operation_id'])
+
+    package.refresh_from_db()
+    assert package.created_by_id == duplicate.user_id
+    assert package.proposal.client_id == duplicate.pk
+    assert package.manifest == {'client_profile_id': duplicate.pk}
 
 
 @pytest.mark.parametrize('revision_model,content', [

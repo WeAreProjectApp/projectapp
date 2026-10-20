@@ -117,6 +117,10 @@ def _markdown_qs():
 
 
 def _refuse_contract_mirror(doc):
+    from content.services.proposal_shared_documents import binding_for
+    if binding_for(doc):
+        raise ToolError('Edita la fuente estructurada compartida con la propuesta.', code='NOT_EDITABLE',
+                        details={'edit_blockers': ['proposal_shared_source'], 'proposal_id': doc.proposal_binding.proposal_id})
     """The window onto the one contract is read-only for every caller."""
     if is_contract_mirror(doc):
         raise ToolError(
@@ -338,6 +342,12 @@ def _doc_summary(doc):
     }
 
 
+def _shared_summary(doc):
+    from content.services.proposal_shared_documents import binding_for, summary
+    binding = binding_for(doc)
+    return summary(binding) if binding else None
+
+
 def _doc_detail(doc):
     normalized_notes = list(
         doc.document_notes.filter(deleted_at__isnull=True)
@@ -348,6 +358,7 @@ def _doc_detail(doc):
     markdown = (mirror_markdown(doc) or '') if is_contract_mirror(doc) else doc.content_markdown
     return {
         **_doc_summary(doc),
+        'proposal_source': _shared_summary(doc),
         **mirror_metadata(doc),
         'markdown': markdown,
         'client_email_subject': doc.client_email_subject,
@@ -1452,3 +1463,15 @@ DOCUMENT_TOOLS += DOCUMENT_OWNERSHIP_TOOLS
 from content.mcp.folder_migration_tools import FOLDER_MIGRATION_TOOLS
 
 DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS
+
+from content.mcp.operation_builder import _op as _shared_op
+DOCUMENT_TOOLS.append(_shared_op('get_document_proposal_source', 'Consulta la identidad, revisiones y fuente estructurada compartida; editar la propuesta actualiza el mismo borrador.', 'document-proposal-source', path=('document_id',), query_schema={'type': 'object', 'properties': {}, 'additionalProperties': False}, envelope_aliases=False))
+
+PROPOSAL_BINARY_TOOL = _shared_op('replace_document_proposal_binary',
+    'Sustituye el borrador binario compartido sin cambiar la identidad ni la versión aprobada. Requiere source_hash vigente y confirmar después el nuevo paquete.',
+    'document-proposal-source', 'POST', ('document_id',), 'sensitive', True,
+    payload_schema={'type': 'object', 'properties': {'source_hash': {'type': 'string', 'description': 'Huella vigente devuelta por get_document_proposal_source; un cambio concurrente rechaza el guardado.'}}, 'required': ['source_hash'], 'additionalProperties': False},
+    envelope_aliases=False,
+    assets={'source_asset_id': {'field': 'file', 'content_types': ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'image/png', 'image/jpeg', 'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']}})
+PROPOSAL_BINARY_TOOL['input_schema']['required'].append('source_asset_id')
+DOCUMENT_TOOLS.append(PROPOSAL_BINARY_TOOL)

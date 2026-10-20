@@ -180,18 +180,21 @@ class TestProposalsMcp:
     def test_forced_status_transition_succeeds_without_side_effects(
         self, api_client, proposals_connector,
     ):
+        """Falla si la aprobación revisada también bloquea corregir otros estados por MCP."""
         proposal = BusinessProposal.objects.create(
             title='T', client_name='C', status=BusinessProposal.Status.DRAFT,
         )
         _, token = proposals_connector
-        # draft → accepted is a forced admin jump: allowed, no onboarding.
-        with mock.patch('content.tasks.run_platform_onboarding') as mock_task:
+        # draft → finished remains an allowed correction, with no onboarding.
+        with mock.patch('content.tasks.run_platform_onboarding', return_value=None) as mock_task:
             response = _call(api_client, token, 'update_proposal_status', {
-                'proposal_id': proposal.id, 'status': 'accepted',
+                'proposal_id': proposal.id, 'status': 'finished',
             })
         assert response.data['result']['isError'] is False
         proposal.refresh_from_db()
-        assert proposal.status == BusinessProposal.Status.ACCEPTED
+        assert proposal.status == BusinessProposal.Status.FINISHED
+        log = ProposalChangeLog.objects.get(proposal=proposal, new_value='finished', change_type='status_change')
+        assert 'admin forced' in log.description
         mock_task.assert_not_called()
 
     def test_unknown_status_errors(self, api_client, proposals_connector):

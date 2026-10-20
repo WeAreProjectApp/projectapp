@@ -343,7 +343,7 @@ def move_proposal_snapshots_to_project(proposal, project, *, acting_user=None):
     documents = list(
         Document.objects.select_for_update()
         .select_related('document_type', 'folder', 'client_user')
-        .filter(source_proposal=proposal)
+        .filter(source_proposal=proposal, source_version__isnull=False)
         .order_by('source_version'),
     )
     moved = []

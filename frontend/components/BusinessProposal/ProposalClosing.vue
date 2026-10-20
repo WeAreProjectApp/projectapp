@@ -115,21 +115,6 @@
 
       <!-- Action buttons — professional B2B hierarchy -->
       <div v-if="canRespond && !submitted" data-animate="fade-up" class="w-full max-w-md pt-4 border-t border-border-default/10">
-        <!-- Primary CTA -->
-        <button
-          class="w-full py-4 bg-gradient-to-br from-primary to-primary-strong text-accent rounded-2xl font-bold text-lg
-                 hover:opacity-95 transition-all
-                 shadow-[0_4px_20px_rgba(16,185,129,0.25)] hover:shadow-[0_6px_28px_rgba(16,185,129,0.38)]
-                 flex items-center justify-center gap-2.5 accept-pulse disabled:opacity-60 disabled:cursor-not-allowed"
-          :disabled="isSubmitting"
-          @click="showAcceptConfirm = true"
-        >
-          <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-          </svg>
-          {{ t.acceptBtn }}
-        </button>
-
         <!-- Secondary actions — side by side -->
         <div class="grid grid-cols-2 gap-3 mt-3">
           <button
@@ -310,35 +295,6 @@
     </div>
   </section>
 
-  <!-- F16: Accept confirmation modal with optional condition note -->
-  <teleport to="body">
-    <div v-if="showAcceptConfirm" class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showAcceptConfirm = false">
-      <div class="bg-surface rounded-2xl shadow-2xl max-w-md w-full mx-4 p-5 sm:p-8 text-center">
-        <div class="text-5xl mb-4">🎉</div>
-        <h3 class="text-xl font-bold text-text-brand mb-2">{{ confirmTitleText }}</h3>
-        <p class="text-text-brand/70 text-sm mb-4">{{ t.confirmText }}</p>
-        <p v-if="scopeDisplay.length" class="text-xs text-text-muted mb-4">
-          {{ scopeDisplay.map(i => `${i.label}: ${i.value}`).join(' · ') }}
-        </p>
-        <div class="text-left mb-4">
-          <label class="block text-xs text-text-brand/50 mb-1">{{ t.conditionLabel }}</label>
-          <textarea
-            v-model="conditionNote"
-            rows="2"
-            :placeholder="t.conditionPlaceholder"
-            class="w-full px-3 py-2 border border-primary/15 rounded-xl text-sm focus:ring-2 focus:ring-focus-ring outline-none resize-none bg-input-bg text-input-text"
-          />
-        </div>
-        <div class="flex gap-3 justify-center">
-          <button class="px-6 py-2.5 bg-primary text-accent rounded-xl font-medium text-sm hover:bg-primary-strong transition-colors" :disabled="isSubmitting" @click="confirmAccept">
-            {{ isSubmitting ? t.sending : t.confirmYes }}
-          </button>
-          <button class="px-6 py-2.5 bg-primary/5 text-text-brand rounded-xl text-sm font-medium hover:bg-primary/10 transition-colors" @click="showAcceptConfirm = false">{{ t.cancel }}</button>
-        </div>
-      </div>
-    </div>
-  </teleport>
-
   <!-- Negotiate modal — adjustments only -->
   <teleport to="body">
     <div v-if="showNegotiateModal" class="fixed inset-0 z-[9990] flex items-center justify-center bg-black/50 backdrop-blur-sm" @click.self="showNegotiateModal = false">
@@ -446,7 +402,6 @@ import { useProposalPdfDownload } from '~/composables/useProposalPdfDownload';
 import { useSectionAnimations } from '~/composables/useSectionAnimations';
 import { linkify } from '~/composables/useLinkify';
 import { ensureProposalTaxLabel, proposalTaxLabel } from '~/utils/proposalTax';
-import confetti from 'canvas-confetti';
 
 const sectionRef = ref(null);
 const validityRef = ref(null);
@@ -509,7 +464,7 @@ const i18nStrings = {
     cancel: 'Cancelar',
     sending: 'Enviando...',
     accepted: '¡Propuesta aceptada!',
-    acceptedSub: 'Te enviaremos un email de confirmación. Nuestro equipo revisará los datos y documentos antes de vincular el proyecto.',
+    acceptedSub: 'Nuestro equipo confirmó el proyecto y la documentación del cierre.',
     rejected: 'Propuesta rechazada. Gracias por tu tiempo.',
     rejectTitle: 'Lamentamos que no sea el momento',
     rejectText: 'Tu opinión es muy importante para nosotros. ¿Podrías indicarnos el motivo?',
@@ -589,7 +544,7 @@ const i18nStrings = {
     cancel: 'Cancel',
     sending: 'Sending...',
     accepted: 'Proposal accepted!',
-    acceptedSub: 'We will send you a confirmation email. Our team will review the details and documents before linking the project.',
+    acceptedSub: 'Our team has confirmed the project and its closing documents.',
     rejected: 'Proposal declined. Thank you for your time.',
     rejectTitle: 'We\'re sorry it\'s not the right time',
     rejectText: 'Your feedback is very important to us. Could you let us know why?',
@@ -698,12 +653,6 @@ const canRespond = computed(() => {
   return s === 'sent' || s === 'viewed';
 });
 
-const confirmTitleText = computed(() => {
-  const name = props.proposal?.client_name;
-  const suffix = name ? `, ${name}` : '';
-  return t.value.confirmTitle.replace('{clientName}', suffix);
-});
-
 const hasActiveDiscount = computed(() => {
   return props.proposal?.discount_percent > 0 && props.proposal?.discounted_investment;
 });
@@ -719,7 +668,6 @@ const isSubmitting = ref(false);
 const submitted = ref(false);
 const rejectionSubmitted = ref(false);
 const submittedReason = ref('');
-const showAcceptConfirm = ref(false);
 const showRejectModal = ref(false);
 const showNegotiateModal = ref(false);
 const negotiateComment = ref('');
@@ -733,7 +681,6 @@ const rejectComment = ref('');
 const isOtherReason = computed(() => rejectReason.value === t.value.otherReason);
 const followupScheduled = ref(false);
 const isScheduling = ref(false);
-const conditionNote = ref('');
 const selectedAdjustments = ref([]);
 
 const negotiateCtaText = computed(() => {
@@ -841,32 +788,6 @@ const whatsappRecoveryLink = computed(() => {
     : encodeURIComponent(`Hola, estoy revisando la propuesta "${title}" y me gustaría conversar sobre opciones.`);
   return `https://wa.me/573238122373?text=${msg}`;
 });
-
-function fireConfetti() {
-  const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 10000 };
-  confetti({ ...defaults, particleCount: 80, origin: { x: 0.5, y: 0.5 } });
-  setTimeout(() => confetti({ ...defaults, particleCount: 50, origin: { x: 0.3, y: 0.6 } }), 250);
-  setTimeout(() => confetti({ ...defaults, particleCount: 50, origin: { x: 0.7, y: 0.6 } }), 400);
-}
-
-async function confirmAccept() {
-  if (!props.proposal?.uuid) return;
-  isSubmitting.value = true;
-  try {
-    const extra = {};
-    if (conditionNote.value.trim()) {
-      extra.condition = conditionNote.value.trim();
-    }
-    const result = await proposalStore.respondToProposal(props.proposal.uuid, 'accepted', extra);
-    if (result.success) {
-      submitted.value = true;
-      showAcceptConfirm.value = false;
-      setTimeout(() => fireConfetti(), 500);
-    }
-  } finally {
-    isSubmitting.value = false;
-  }
-}
 
 async function confirmNegotiate() {
   if (!props.proposal?.uuid) return;

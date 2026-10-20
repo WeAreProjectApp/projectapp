@@ -1,3 +1,5 @@
+> **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
+
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,
 > IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`, con unión `0295`;

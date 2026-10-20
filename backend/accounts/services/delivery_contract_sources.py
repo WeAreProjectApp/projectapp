@@ -19,7 +19,7 @@ MAX_SIGNED_BYTES = 10 * 1024 * 1024
 
 def _confirmed_for_project(source, project):
     proposal = source.proposal
-    manifest = proposal.platform_approval_manifest
+    manifest = source.package.manifest if source.package_id else proposal.platform_approval_manifest
     if (source.project_id != project.pk or source.deliverable.project_id != project.pk
             or proposal.deliverable_id != source.deliverable_id or not proposal.client_id
             or proposal.client.user_id != project.client_id or not isinstance(manifest, dict)

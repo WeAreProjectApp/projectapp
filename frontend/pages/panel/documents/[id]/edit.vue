@@ -94,6 +94,7 @@
         </BaseButton>
         <div class="flex justify-end whitespace-nowrap" data-testid="doc-document-actions">
           <BaseActionMenu
+            v-if="!documentStore.currentDocument?.proposal_source"
             :items="downloadItems"
             :label="isDownloading ? 'Descargando…' : 'Acciones'"
             :disabled="isDownloading"
@@ -118,7 +119,7 @@
             {{ contractMirror ? 'Volver' : 'Cancelar' }}
           </BaseButton>
           <BaseButton
-            v-if="!contractMirror"
+            v-if="!contractMirror && !documentStore.currentDocument?.proposal_source"
             variant="primary"
             size="md"
             type="submit"
@@ -251,6 +252,12 @@
       </div>
     </BaseAlert>
 
+    <section v-else-if="documentStore.currentDocument?.proposal_source" class="space-y-4" data-testid="document-shared-source">
+      <p class="text-sm text-text-muted">{{ $i18n.locale.startsWith('en') ? 'This resource is shared with the proposal. Edit its source to prepare a draft; approved revisions remain unchanged.' : 'Este recurso se comparte con la propuesta. Editar su fuente prepara un borrador y conserva las revisiones aprobadas.' }}</p>
+      <BaseButton as="NuxtLink" :to="localePath(documentStore.currentDocument.proposal_source.source_editor_url)" variant="secondary" data-testid="document-edit-source">{{ $i18n.locale.startsWith('en') ? 'Edit shared source' : 'Editar fuente compartida' }}</BaseButton>
+      <ProposalSharedBinary :source="documentStore.currentDocument.proposal_source" @updated="reloadDocument" />
+      <ProposalSharedDocuments :proposal-id="documentStore.currentDocument.proposal_source.proposal_id" :refresh-key="documentStore.currentDocument.proposal_source.source_hash" />
+    </section>
     <EntityHistoryTabs v-else-if="documentStore.currentDocument" entity-type="document" :object-id="route.params.id">
     <form
       id="doc-edit-form"
@@ -803,6 +810,8 @@
 </template>
 
 <script setup>
+import ProposalSharedDocuments from '~/components/BusinessProposal/admin/ProposalSharedDocuments.vue';
+import ProposalSharedBinary from '~/components/BusinessProposal/admin/ProposalSharedBinary.vue';
 import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { reactive, ref, computed, onMounted } from 'vue';
@@ -862,12 +871,15 @@ const generatedSnapshot = ref(false);
 // The window onto the one contract: rendered live, never edited here.
 const contractMirror = ref(false);
 const readOnlyDocument = computed(
-  () => lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
+  () => Boolean(documentStore.currentDocument?.proposal_source) || lockedCuenta.value || generatedSnapshot.value || contractMirror.value,
 );
 const pdfPreviewDocument = computed(
   () => generatedSnapshot.value || lockedCuenta.value || contractMirror.value,
 );
 const readOnlyReason = computed(() => {
+  if (documentStore.currentDocument?.proposal_source) {
+    return 'Este documento comparte su fuente con la propuesta. Edita la fuente o prepara un adjunto en borrador para confirmar otra versión.';
+  }
   if (contractMirror.value) {
     return 'Este es el contrato vigente: se consulta y se descarga aquí; su contenido se mantiene sincronizado con la plantilla de esta variante.';
   }

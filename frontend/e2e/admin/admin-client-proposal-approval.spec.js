@@ -1,6 +1,6 @@
 /**
  * Catches the Clients inline approval bypassing the shared review modal or
- * leaving its cached proposal row stale after an approval deferred for review.
+ * approving a proposal when the operator cancels the review.
  */
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
@@ -54,8 +54,8 @@ async function mockClientReview(page, state) {
     }
     if (apiPath === 'proposals/71/approval/' && method === 'GET') return json(approvalPreview(state));
     if (apiPath === 'proposals/71/approval/' && method === 'POST') {
-      Object.assign(state.proposal, { status: 'accepted', available_transitions: ['finished'], project_review_required: true });
-      return json({ ...approvalPreview(state), action: 'defer', idempotent: false });
+      Object.assign(state.proposal, { status: 'accepted', available_transitions: ['finished'], project_review_required: false });
+      return json({ ...approvalPreview(state), action: 'confirm', idempotent: false });
     }
     if (apiPath === 'projects/') return json({ results: [], meta: { total: 0 } });
     if (apiPath === 'project-states/' || apiPath === 'project-state-groups/') return json([]);
@@ -63,7 +63,7 @@ async function mockClientReview(page, state) {
   });
 }
 
-test('Clients inline approval defers through the shared review modal', {
+test('Clients inline approval cancels without accepting the proposal', {
   tag: ['@flow:admin-proposal-approval', '@module:admin', '@role:admin', '@outcome:success'],
 }, async ({ page }) => {
   const state = buildClientReviewFixture();
@@ -79,17 +79,16 @@ test('Clients inline approval defers through the shared review modal', {
   await expect(proposalRow.getByRole('combobox')).toHaveValue('negotiating');
   const listReadsBeforeApproval = state.listReads;
   await proposalRow.getByRole('combobox').selectOption('accepted');
-  await expect(page.getByTestId('approval-defer')).toBeEnabled();
+  await expect(page.getByTestId('approval-confirm')).toBeEnabled();
   await expect(page.getByTestId('proposal-approval-modal').getByTestId('approval-client')).toHaveValue(state.client.name);
   await expect(proposalRow.getByRole('combobox')).toHaveValue('negotiating');
   expect(state.writes).toEqual([]);
-  await page.getByTestId('approval-defer').click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
-  await expect(proposalRow.getByRole('combobox')).toHaveValue('accepted');
-  await expect(proposalRow.getByTestId('client-approval-review-71')).toHaveText('Pending internal review');
-  expect(state.writes).toEqual([{ apiPath: 'proposals/71/approval/', method: 'POST', payload: { action: 'defer', accept_proposal: true } }]);
-  expect(state.detailReads).toEqual([101, 101]);
-  // The existing refresh reloads the read-only list to update client counters.
-  expect(state.listReads).toBe(listReadsBeforeApproval + 1);
+  await expect(proposalRow.getByRole('combobox')).toHaveValue('negotiating');
+  await expect(proposalRow.getByTestId('client-approval-review-71')).toHaveCount(0);
+  expect(state.writes).toEqual([]);
+  expect(state.detailReads).toEqual([101]);
+  expect(state.listReads).toBe(listReadsBeforeApproval);
   expect(state.proposal.linked_project).toBeNull();
 });
