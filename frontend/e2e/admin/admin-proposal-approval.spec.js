@@ -192,7 +192,7 @@ test('cancelled approval preserves the proposal status', {
   await mockApproval(page, state);
   await openList(page);
   await openInlineApproval(page);
-  await page.getByTestId('proposal-approval-modal').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
 
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
   const row = page.getByRole('row').filter({ has: page.getByTestId('proposal-open-71') });

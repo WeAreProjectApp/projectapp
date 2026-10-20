@@ -23,14 +23,24 @@ def folders_for(project):
         root = require_project_folder(project)
     except ProjectFolderReconciliationRequired as exc:
         raise ValidationError({'project_id': str(exc)}) from exc
+    from content.models.document_folder import lock_document_folder_mutations
+    lock_document_folder_mutations()
     result = {}
     for key, name in [('contracts', 'Contratos'), ('annexes', 'Anexos')]:
+        system_key = f'approval:project:{project.pk}:{key}'
+        if not DocumentFolder.objects.filter(system_key=system_key).exists():
+            matches = list(root.children.select_for_update().filter(name__iexact=name))
+            if matches:
+                if len(matches) != 1 or matches[0].is_archived or matches[0].system_key or matches[0].project_id != project.pk or matches[0].client_user_id != project.client_id:
+                    raise ValidationError({'folder': f'Revisa la carpeta existente «{name}» antes de confirmar; no se creará un duplicado.'})
+                matches[0].system_key = system_key
+                matches[0].save(update_fields=['system_key'])
         folder, _ = DocumentFolder.objects.get_or_create(
-            system_key=f'approval:project:{project.pk}:{key}',
+            system_key=system_key,
             defaults={'name': name, 'parent': root, 'project': project, 'client_user_id': project.client_id,
                       'creation_source': 'system', 'creation_operation': 'proposal_approval'},
         )
-        if folder.parent_id != root.pk or folder.is_archived or folder.project_id != project.pk:
+        if folder.parent_id != root.pk or folder.is_archived or folder.project_id != project.pk or folder.client_user_id != project.client_id:
             raise ValidationError({'folder': 'La carpeta del cierre cambió. Revisa su organización antes de confirmar.'})
         result[key] = folder
     return root, result
@@ -86,9 +96,9 @@ def create_package(proposal, *, actor, request_id, payload_hash, source_hash, wr
 
 
 def can_replace_binary(binding):
-    return binding.source_key.startswith('custom-') or bool(
+    return binding.is_current and (binding.source_key.startswith('custom-') or bool(
         binding.source_document_id and not binding.source_document.is_generated
-        and binding.source_document.document_type not in ProposalDocument.CONTRACT_DOC_TYPES)
+        and binding.source_document.document_type not in ProposalDocument.CONTRACT_DOC_TYPES))
 
 
 def summary(binding, *, package=None, current_hash=None):
@@ -198,6 +208,11 @@ def reconfirm(proposal_id, payload, *, actor, files=()):
             technical_content=filtered_technical_doc_for_sync(proposal, section.content_json) if section else {})
         package, _root = create_package(proposal, actor=actor, request_id=data['request_id'],
             payload_hash=digest, source_hash=current_hash, written_rows=rows, manifest=manifest)
+        if payload.get('accept_proposal') is True and proposal.status != BusinessProposal.Status.ACCEPTED:
+            from content.services.proposal_status_service import change_status
+            change_status(proposal, BusinessProposal.Status.ACCEPTED, source='approval_review', acting_user_id=actor.pk)
+            package.source_hash = source_hash(proposal)
+            package.save(update_fields=['source_hash'])
         return package
     except Exception:
         for storage, name in written:

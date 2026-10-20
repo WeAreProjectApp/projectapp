@@ -83,7 +83,7 @@ test('Clients inline approval cancels without accepting the proposal', {
   await expect(page.getByTestId('proposal-approval-modal').getByTestId('approval-client')).toHaveValue(state.client.name);
   await expect(proposalRow.getByRole('combobox')).toHaveValue('negotiating');
   expect(state.writes).toEqual([]);
-  await page.getByTestId('proposal-approval-modal').getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
   await expect(proposalRow.getByRole('combobox')).toHaveValue('negotiating');
   await expect(proposalRow.getByTestId('client-approval-review-71')).toHaveCount(0);

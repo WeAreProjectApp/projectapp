@@ -1,9 +1,9 @@
 import { mount, flushPromises } from '@vue/test-utils';
 import { ref } from 'vue';
 import ProposalSharedBinary from '../../components/BusinessProposal/admin/ProposalSharedBinary.vue';
-import { create_request } from '../../stores/services/request_http';
+import { create_request, get_request } from '../../stores/services/request_http';
 
-jest.mock('../../stores/services/request_http', () => ({ create_request: jest.fn() }));
+jest.mock('../../stores/services/request_http', () => ({ create_request: jest.fn(), get_request: jest.fn() }));
 
 let wrapper;
 async function selectFile() {
@@ -67,4 +67,24 @@ describe('ProposalSharedBinary', () => {
     expect(wrapper.get('[data-testid="shared-binary-save"]').element.disabled).toBe(false);
     expect(wrapper.emitted('updated')).toBeUndefined();
   });
+  // Falla si consultar explícitamente el conflicto pierde el archivo o reintenta con una versión obsoleta.
+  it('saves the retained file after reviewing the current revision', async () => {
+    create_request.mockRejectedValueOnce({ response: { status: 409 } }).mockResolvedValueOnce({ data: { document: { source_hash: 'version-saved' } } });
+    get_request.mockResolvedValue({ data: { document: { source_hash: 'version-reviewed' } } });
+    open();
+    await selectFile();
+    await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');await flushPromises();
+    await wrapper.get('[data-testid="shared-binary-review"]').trigger('click');await flushPromises();
+
+    expect(wrapper.get('[role="status"]').text()).toBe('Versión actual consultada. Revisa el documento antes de guardar tu archivo seleccionado.');
+    expect(get_request).toHaveBeenCalledWith('documents/91/proposal-source/');
+    await wrapper.get('[data-testid="shared-binary-save"]').trigger('click');await flushPromises();
+
+    const firstBody = create_request.mock.calls[0][1];
+    const nextBody = create_request.mock.calls[1][1];
+    expect([firstBody.get('source_hash'), nextBody.get('source_hash')]).toEqual(['version-opened', 'version-reviewed']);
+    expect(nextBody.get('file')).toBe(firstBody.get('file'));
+    expect(wrapper.get('[role="status"]').text()).toBe('Borrador guardado. Revisa el nuevo paquete para hacerlo vigente.');
+  });
+
 });

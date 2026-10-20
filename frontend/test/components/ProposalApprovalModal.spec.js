@@ -160,4 +160,16 @@ describe('ProposalApprovalModal',()=>{
     expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
   });
 
+  // Falla si aprobar una corrección de una propuesta ya formalizada sólo reintenta el cierre anterior.
+  it('reapproves a corrected proposal as a new revision', async()=>{
+    preview=createPreview({confirmed:true,linked_project:{id:41,name:'Proyecto',client_profile_id:7},commercial_summary:{title:'Alcance anterior',scope:['Módulo anterior']},draft_commercial_summary:{title:'Alcance corregido',scope:['Módulo nuevo'],total_investment:250,currency:'COP'}});
+    await open({acceptProposal:true});
+    expect(wrapper.text()).toContain('Alcance corregido');
+    expect(wrapper.text()).toContain('Módulo nuevo');
+    expect(wrapper.text()).not.toContain('Módulo anterior');
+    await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
+    expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',accept_proposal:true,project_id:41,source_hash:'hash-original'}));
+    expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
+  });
+
 });

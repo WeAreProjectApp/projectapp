@@ -19,6 +19,8 @@ class Command(BaseCommand):
         parser.add_argument('--apply', action='store_true')
 
     def handle(self, *args, **options):
+        if options['apply'] and not get_user_model().objects.filter(pk=options['actor'], is_staff=True, is_active=True).exists():
+            raise CommandError('Se requiere un administrador activo para aplicar la revisión.')
         if options['apply'] and options['proposal'] and options['expected_hash']:
             existing = BusinessProposal.objects.filter(pk=options['proposal']).first()
             if existing and existing.approval_packages.filter(request_id=f"historical-{existing.pk}", payload_hash=options['expected_hash']).exists():
@@ -30,7 +32,7 @@ class Command(BaseCommand):
         inventory = []
         for proposal in query:
             row = load_proposal(proposal.pk)
-            files = list(row.approval_files.order_by('pk').values('id', 'source_key', 'sha256', 'size'))
+            files = list(row.approval_files.order_by('pk').values('id', 'source_key', 'sha256', 'size', 'title', 'filename', 'document_type', 'file', 'project_id', 'deliverable_id'))
             root = DocumentFolder.objects.filter(managed_project_id=(row.deliverable.project_id if row.deliverable_id else None)).values('id', 'name', 'project_id', 'client_user_id', 'is_archived').first() if row.deliverable_id and row.deliverable.project_id else None
             existing_documents = list(Document.objects.filter(source_proposal=row).values('id', 'title', 'source_version', 'folder_id'))
             inventory.append({'root_folder': root, 'existing_documents': existing_documents, 'proposal_id': row.pk, 'project': row.linked_project, 'source_hash': source_hash(row),
@@ -53,6 +55,16 @@ class Command(BaseCommand):
             manifest = proposal.platform_approval_manifest
             if not manifest or not proposal.deliverable_id or not proposal.deliverable.project_id or not rows:
                 raise CommandError('Completa primero la revisión: faltan proyecto, contrato o archivos confirmados.')
+            current_files = list(proposal.approval_files.order_by('pk').values('id', 'source_key', 'sha256', 'size', 'title', 'filename', 'document_type', 'file', 'project_id', 'deliverable_id'))
+            current_root = DocumentFolder.objects.filter(managed_project_id=proposal.deliverable.project_id).values('id', 'name', 'project_id', 'client_user_id', 'is_archived').first()
+            if current_files != inventory[0]['files'] or current_root != inventory[0]['root_folder']:
+                raise CommandError('El paquete o su carpeta cambiaron durante la revisión.')
+            kinds = {row.document_type for row in rows}
+            if not ('contract' in kinds or {'contract_product', 'contract_service'} <= kinds):
+                raise CommandError('Identifica primero los contratos reales de este cierre.')
+            from accounts.services.delivery_contract_sources import _confirmed_for_project
+            if not all(_confirmed_for_project(row, proposal.deliverable.project) for row in rows):
+                raise CommandError('El cierre no coincide con el cliente y proyecto confirmados.')
             if source_hash(load_proposal(proposal.pk)) != inventory[0]['source_hash']:
                 raise CommandError('La propuesta cambió durante la revisión.')
             expected = {item['id']: (item['sha256'], item['size']) for item in manifest.get('files', [])}

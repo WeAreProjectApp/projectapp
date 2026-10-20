@@ -96,7 +96,7 @@ test('a stale revision keeps the selected custom contract', {
   const modal = page.getByTestId('proposal-approval-modal');
   await modal.getByTestId('approval-contract-switch').click();
   await modal.getByTestId('approval-custom-files').setInputFiles({ name: 'contrato-firmado.pdf', mimeType: 'application/pdf', buffer: Buffer.from('%PDF-1.4\nAtlas\n%%EOF') });
-  await modal.getByTestId('approval-confirm').click();
+  await page.getByTestId('approval-confirm').click();
 
   await expect(modal.getByTestId('approval-review-error')).toContainText('La fuente cambió. Revisa la versión vigente.');
   await expect(modal.getByTestId('approval-custom-document')).toContainText('contrato-firmado.pdf');
@@ -173,10 +173,11 @@ for (const profile of ['compact', 'portrait', 'landscape', 'desktop', 'wide']) {
       await shared.getByTestId('proposal-revision-open').click();
       const confirmation = page.getByTestId('approval-confirm');
       await expect(confirmation).toHaveText('Confirmar nueva versión');
+      await expect(confirmation).toBeEnabled();
       await expectCompactModal(page.getByRole('dialog'), page.viewportSize());
       const buttonBox = await confirmation.boundingBox();
       expect(buttonBox.y + buttonBox.height).toBeLessThanOrEqual(page.viewportSize().height + 1);
-      await page.getByTestId('proposal-approval-modal').getByRole('button', { name: 'Cancelar', exact: true }).click();
+      await page.getByRole('dialog').getByRole('button', { name: 'Cancelar', exact: true }).click();
       await expect(page.getByTestId('proposal-approval-modal')).toHaveCount(0);
       expect(state.submissions).toEqual([]);
     });

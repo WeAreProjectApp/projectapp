@@ -1,4 +1,5 @@
 export default {
+  reviewRevision: 'Client and project stay linked. Review the documents before confirming a new revision.',
   confirmRevision: 'Confirm new revision',
   product: 'Product contract', service: 'Service contract',
   confirmedPacket: 'Confirmed document packet', packetPreserved: 'Preserved copies of the packet confirmed when linking the proposal. Retrying synchronization does not replace these files.', downloadError: 'Could not download the document. Check your access and try again.',

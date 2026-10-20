@@ -94,6 +94,7 @@
         </BaseButton>
         <div class="flex justify-end whitespace-nowrap" data-testid="doc-document-actions">
           <BaseActionMenu
+            v-if="!documentStore.currentDocument?.proposal_source"
             :items="downloadItems"
             :label="isDownloading ? 'Descargando…' : 'Acciones'"
             :disabled="isDownloading"
@@ -118,7 +119,7 @@
             {{ contractMirror ? 'Volver' : 'Cancelar' }}
           </BaseButton>
           <BaseButton
-            v-if="!contractMirror"
+            v-if="!contractMirror && !documentStore.currentDocument?.proposal_source"
             variant="primary"
             size="md"
             type="submit"
@@ -809,6 +810,8 @@
 </template>
 
 <script setup>
+import ProposalSharedDocuments from '~/components/BusinessProposal/admin/ProposalSharedDocuments.vue';
+import ProposalSharedBinary from '~/components/BusinessProposal/admin/ProposalSharedBinary.vue';
 import VatBreakdown from '~/components/accounting/VatBreakdown.vue';
 import EntityHistoryTabs from '~/components/history/EntityHistoryTabs.vue';
 import { reactive, ref, computed, onMounted } from 'vue';

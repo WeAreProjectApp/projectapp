@@ -201,6 +201,7 @@
 </template>
 
 <script setup>
+import ProposalSharedDocuments from '~/components/BusinessProposal/admin/ProposalSharedDocuments.vue';
 import PanelDownloadLink from '~/components/panel/PanelDownloadLink.vue';
 import { ref, computed, watch, onBeforeUnmount } from 'vue';
 import ProposalDocumentCopyButton from './ProposalDocumentCopyButton.vue';

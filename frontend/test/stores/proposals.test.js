@@ -965,15 +965,15 @@ describe('useProposalStore', () => {
   });
 
   describe('respondToProposal', () => {
-    it('accepts proposal and updates currentProposal status', async () => {
+    it('records the negotiated proposal status', async () => {
       store.currentProposal = { uuid: 'abc', status: 'sent' };
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
-      expect(create_request).toHaveBeenCalledWith('proposals/abc/respond/', { action: 'accepted' });
+      expect(create_request).toHaveBeenCalledWith('proposals/abc/respond/', { action: 'negotiating' });
       expect(result.success).toBe(true);
-      expect(store.currentProposal.status).toBe('accepted');
+      expect(store.currentProposal.status).toBe('negotiating');
     });
 
     it('rejects proposal', async () => {
@@ -988,16 +988,16 @@ describe('useProposalStore', () => {
     it('handles error', async () => {
       create_request.mockRejectedValue(new Error('fail'));
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(false);
     });
 
     it('does not update status when currentProposal is null', async () => {
       store.currentProposal = null;
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(true);
       expect(store.currentProposal).toBeNull();
@@ -1005,9 +1005,9 @@ describe('useProposalStore', () => {
 
     it('does not update status when uuid does not match', async () => {
       store.currentProposal = { uuid: 'xyz', status: 'sent' };
-      create_request.mockResolvedValue({ data: { status: 'accepted' } });
+      create_request.mockResolvedValue({ data: { status: 'negotiating' } });
 
-      const result = await store.respondToProposal('abc', 'accepted');
+      const result = await store.respondToProposal('abc', 'negotiating');
 
       expect(result.success).toBe(true);
       expect(store.currentProposal.status).toBe('sent');

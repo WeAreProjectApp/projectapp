@@ -1,6 +1,7 @@
 # Aprobación y documentos compartidos — 2026-10-20
 
-En implementación: revisión obligatoria con proyecto y contrato, sin aceptación pública.
+Implementado en PR #521: revisión obligatoria con proyecto y contrato, sin aceptación pública.
+Validación focal por capas y cierre de CI en curso; despliegue separado.
 Documentos comparte la fuente estructurada de la propuesta y revisiones privadas
 inmutables; cambios posteriores requieren confirmar un nuevo paquete.
 Históricos: inventario y aplicación explícita, sin emparejamientos por nombre.

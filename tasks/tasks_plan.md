@@ -552,7 +552,7 @@ PROTECT para impedir cascadas de Project fuera del servicio autorizado.
 | Business Proposal — Share Links | ✅ Done | UUID share links with independent tracking |
 | Business Proposal — Investment Calculator | ✅ Done | Interactive modal for payment options |
 | Hosting — 9/6/3-month commercial periodicities | ✅ Done | 2026-08-20: annual offering replaced by `nine_month` across proposal admin/defaults, public view, PDF, platform subscriptions, accounting hostings/cycles, MCP, seeds and flow registry. Current records migrate safely; closed proposals, inactive hostings and paid history retain legacy labels/values. |
-| Business Proposal — Client Responses | ✅ Done | Accept, reject (with reason), negotiate |
+| Business Proposal — Client Responses | ✅ Done | Rechazo con motivo y negociación públicos; la aprobación requiere revisión interna de cliente, proyecto y contrato. |
 | Business Proposal — Expiration | ✅ Done | Auto-expire via daily Huey cron task |
 | Business Proposal — Change Log | ✅ Done | Full audit trail (20+ change types) |
 | Business Proposal — Email Deliverability | ✅ Done | Dashboard with send/delivery/bounce rates |

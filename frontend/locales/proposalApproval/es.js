@@ -1,4 +1,5 @@
 export default {
+  reviewRevision: 'El cliente y proyecto se conservan. Revisa los documentos antes de confirmar una nueva versión.',
   confirmRevision: 'Confirmar nueva versión',
   product: 'Contrato de producto', service: 'Contrato de servicio',
   confirmedPacket: 'Paquete documental confirmado', packetPreserved: 'Copias conservadas del paquete confirmado al vincular la propuesta. Estos archivos no se reemplazan al reintentar la sincronización.', downloadError: 'No se pudo descargar el documento. Comprueba tu acceso y vuelve a intentarlo.',

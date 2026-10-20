@@ -62,7 +62,7 @@ beforeEach(() => {
     return {data:[]};
   });
   create_request.mockImplementation(async(url,payload) => {
-    proposal = {...proposal,status:'accepted',project_review_required:payload.action === 'defer',available_transitions:['finished']};
+    proposal = {...proposal,status:'accepted',project_review_required:false,available_transitions:['finished']};
     return {data:{action:payload.action,client:{profile_id:7},proposal:{...proposal}}};
   });
 });
@@ -90,13 +90,6 @@ describe('Client proposal approval entry', () => {
     expect(get_request.mock.calls.filter(([url])=>url === 'proposals/client-profiles/8/')).toHaveLength(1);
     expect(patch_request).not.toHaveBeenCalled();
   });
-  it('shows a resumable review after deferring acceptance',async()=>{
-    await openPage();await requestAcceptance();
-    await wrapper.get('[data-testid="approval-defer"]').trigger('click');await flushPromises();
-    expect(create_request).toHaveBeenCalledWith('proposals/91/approval/',{action:'defer',accept_proposal:true});
-    expect(wrapper.get('[data-testid="client-approval-review-91"]').text()).toContain('Pendiente de revisión interna');
-    expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('accepted');
-  });
   it('keeps the commercial state unchanged when review is cancelled',async()=>{
     await openPage();await requestAcceptance();
     const approval = wrapper.findComponent(ProposalApprovalModal);
@@ -105,13 +98,18 @@ describe('Client proposal approval entry', () => {
     expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('negotiating');
     expect(create_request).not.toHaveBeenCalled();expect(patch_request).not.toHaveBeenCalled();
   });
-  it('resumes an accepted proposal without accepting it again',async()=>{
+  // Falla si cancelar la revisión de un cierre histórico envía otra aprobación.
+  it('cancels the pending review of a historical approved proposal',async()=>{
     proposal = createProposal({status:'accepted',project_review_required:true,available_transitions:['finished']});
     await openPage();
     await wrapper.get('[data-testid="client-approval-review-91"]').trigger('click');await flushPromises();
     expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).toContain('Revisar aprobación');
-    await wrapper.get('[data-testid="approval-defer"]').trigger('click');await flushPromises();
-    expect(create_request).toHaveBeenCalledWith('proposals/91/approval/',{action:'defer',accept_proposal:false});
+    const approval = wrapper.findComponent(ProposalApprovalModal);
+    await approval.findAll('button').find(button=>button.text() === 'Cancelar').trigger('click');
+    await flushPromises();
+    expect(create_request).not.toHaveBeenCalled();
+    expect(patch_request).not.toHaveBeenCalled();
+    expect(wrapper.findAll('[data-testid="proposal-approval-modal"]')).toHaveLength(0);
     expect(wrapper.get('[data-testid="client-proposal-row-91"] select').element.value).toBe('accepted');
   });
 });
