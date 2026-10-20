@@ -14,6 +14,7 @@ from content.models import (
     McpActionIntent,
     McpConnector,
     McpCredential,
+    NotificationRecipient,
     PocketMovement,
 )
 
@@ -136,6 +137,7 @@ def test_bulk_confirmation_applies_the_unchanged_reviewed_recipient(
     django_capture_on_commit_callbacks, slug,
 ):
     """Fails if the stale-preview protection rejects the exact recipient that was reviewed."""
+    NotificationRecipient.objects.update(is_active=False)
     token = _credential(slug)
     income = make_income(
         client=make_client_profile(email='client@example.test'),
