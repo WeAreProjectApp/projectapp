@@ -250,6 +250,20 @@ function buildHandler({
         }),
       };
     }
+    if (apiPath === 'accounting/pocket/1/' && method === 'GET') {
+      return {
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          ...POCKET_ROWS[0],
+          running_balance: '2123000.00',
+          linked_record_detail: {
+            type: 'income', id: 11, concept: POCKET_ROWS[0].concept,
+          },
+          allocation_details: [],
+        }),
+      };
+    }
     if (apiPath === 'accounting/recurring/' && method === 'GET') {
       const scope = new URL(route.request().url()).searchParams.get('archive_scope') || 'current';
       const scopedRows = currentRows.filter((row) => (
@@ -606,9 +620,9 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
     await expect(page.getByTestId('pocket-actions-modal')).toContainText('Detalle e historial');
     await page.getByTestId('pocket-action-history-1').click();
 
-    await expect(page.getByRole('heading', { name: 'Detalle del registro' })).toBeVisible();
-    await expect(page.getByTestId('history-record-modal'))
+    await expect(page.getByTestId('pocket-detail-modal'))
       .toContainText('Vastago (Fase 1) - Inicio 40%');
+    await expect(page.getByTestId('pocket-detail-amount')).toHaveText('$2.123.000');
     await expect(page.getByTestId('pocket-actions-modal')).toHaveCount(0);
   });
 

@@ -145,7 +145,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         'tasks', '2.1.0', (TASK_TOOLS,), confirm_sensitive=True,
     ),
     'accounting': ConnectorSpec(
-        'accounting', '1.3.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting', '1.4.0', (ACCOUNTING_TOOLS, EXPECTED_INCOME_TOOLS),
         compatibility=True,
         canonical_area='accounting-ledger, accounting-billing o accounting-cards',
         notes=(ACCOUNTING_NOTE,),
@@ -196,7 +196,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True,
     ),
     'accounting-ledger': ConnectorSpec(
-        'accounting-ledger', '2.3.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
+        'accounting-ledger', '2.4.0', (accounting_area('ledger'), LEDGER_PARITY_TOOLS, EXPECTED_INCOME_TOOLS),
         confirm_sensitive=True, notes=(ACCOUNTING_NOTE,),
     ),
     'accounting-billing': ConnectorSpec(

@@ -1,6 +1,7 @@
 export default defineI18nLocale(async () => {
   const [
     global,
+    accountingPocket,
     home,
     softwareHome,
     router,
@@ -42,6 +43,7 @@ export default defineI18nLocale(async () => {
     buildingOnDemandAdmin,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
+    import('~/locales/accountingPocket/en.js'),
     import('~/locales/home/en.js'),
     import('~/locales/softwareHome/en.js'),
     import('~/locales/router/en.js'),
@@ -85,6 +87,7 @@ export default defineI18nLocale(async () => {
 
   return {
     global: global.default,
+    accountingPocket: accountingPocket.default,
     home: home.default,
     softwareHome: softwareHome.default,
     meta: router.default,

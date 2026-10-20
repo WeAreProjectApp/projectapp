@@ -57,4 +57,29 @@ describe('EntityHistoryRecordModal', () => {
 
     expect(wrapper.emitted('close')).toHaveLength(1);
   });
+
+  // Bug caught: a row action opened a blank detail while its linked record was loading.
+  it('shows a concrete loading state before the linked record arrives', () => {
+    const wrapper = mountModal({ record: null, loading: true });
+
+    expect(wrapper.get('[role="status"]').text()).toBe('Cargando el registro…');
+  });
+
+  // Bug caught: a transient linked-record failure had no recovery action.
+  it('emits retry for a recoverable record error', async () => {
+    const wrapper = mountModal({ record: null, error: 'failed' });
+
+    expect(wrapper.get('[role="alert"]').get('p').text()).toBe('No se pudo cargar el registro.')
+    await wrapper.get('[role="alert"]').get('button').trigger('click');
+
+    expect(wrapper.emitted('retry')).toEqual([[]]);
+  });
+
+  // Bug caught: a deleted linked record exposed a retry that could not produce a detail.
+  it('does not offer retry for a missing record', () => {
+    const wrapper = mountModal({ record: null, error: 'missing' });
+
+    expect(wrapper.get('[role="alert"]').get('p').text()).toBe('Este registro ya no existe.')
+    expect(wrapper.findAll('button')).toHaveLength(1)
+  });
 });

@@ -90,6 +90,7 @@ from content.services import (
     accounting_income_duplicate_service,
     accounting_income_detail_service,
     accounting_income_mute_service,
+    accounting_pocket_detail_service,
     accounting_recurring_service,
     accounting_service,
     accounting_settlement_service,
@@ -1562,7 +1563,10 @@ def create_pocket_movement(request):
 @api_view(['GET'])
 @permission_classes([IsSuperUser])
 def retrieve_pocket_movement(request, record_id):
-    return _retrieve_record(request, 'pocket', record_id)
+    movement = get_object_or_404(
+        accounting_pocket_detail_service.pocket_detail_queryset(), pk=record_id,
+    )
+    return Response(accounting_pocket_detail_service.build_pocket_detail_payload(movement))
 
 
 @api_view(['PATCH'])

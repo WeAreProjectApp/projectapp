@@ -53,6 +53,10 @@ export default {
     email: 'Escribe un correo válido.',
   },
   panel: {
+    publicLink: 'Enlace para clientes',
+    publicLinkCopied: 'Copiado',
+    publicLinkCopyFailed: 'No se pudo copiar',
+    publicLinkCopyRetry: 'Selecciónalo y cópialo manualmente.',
     formHint: 'Completa la información que quieres compartir. El enlace seguro se genera automáticamente al guardar.',
     markSent: 'Marcar como enviado', markedSent: 'Enlace marcado como enviado',
     sentAt: 'Marcado como enviado', notSent: 'Todavía no',
