@@ -79,7 +79,7 @@ def get_proposal_template(arguments):
                 'email_intro',
                 'total_investment', 'currency', 'nationality',
                 'project_type', 'project_type_custom', 'market_type',
-                'market_type_custom', 'show_contract_terms', 'show_explainer_video',
+                'market_type_custom', 'show_contract_terms', 'show_explainer_video', 'service_contract_approved',
             ],
         },
         'notes': (
@@ -255,6 +255,10 @@ _FROM_JSON_PROPS = {
         'type': 'boolean',
         'default': True,
         'description': 'Permite el video de bienvenida si el control global y las cuatro opciones públicas están disponibles.',
+    },
+    'service_contract_approved': {
+        'type': 'boolean',
+        'description': 'Aprobación explícita del contrato de servicio separado. Omitir conserva el valor existente; nuevas propuestas empiezan en false. Se aplica al confirmar una nueva revisión.',
     },
     'show_contract_terms': {
         'type': 'boolean',

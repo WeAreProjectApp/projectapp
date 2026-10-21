@@ -958,6 +958,7 @@ def export_proposal_json(request, proposal_id):
         'reminder_days': proposal.reminder_days,
         'urgency_reminder_days': proposal.urgency_reminder_days,
         'discount_percent': proposal.discount_percent,
+        'service_contract_approved': proposal.service_contract_approved,
     }
 
     return Response(result, status=status.HTTP_200_OK)
@@ -1022,7 +1023,7 @@ def update_proposal(request, proposal_id):
         'client_email', 'client_phone', 'discount_percent', 'status',
         'language', 'project_type', 'market_type', 'slug',
         'expires_at', 'reminder_days', 'urgency_reminder_days',
-        'show_contract_terms', 'email_intro',
+        'show_contract_terms', 'email_intro', 'service_contract_approved',
     ]
     old_values = {f: str(getattr(proposal, f, '')) for f in tracked_fields}
 

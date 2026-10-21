@@ -1467,6 +1467,9 @@ DOCUMENT_TOOLS += FOLDER_MIGRATION_TOOLS
 from content.mcp.operation_builder import _op as _shared_op
 DOCUMENT_TOOLS.append(_shared_op('get_document_proposal_source', 'Consulta la identidad, revisiones y fuente estructurada compartida; editar la propuesta actualiza el mismo borrador.', 'document-proposal-source', path=('document_id',), query_schema={'type': 'object', 'properties': {}, 'additionalProperties': False}, envelope_aliases=False))
 
+from content.mcp.proposal_document_reconciliation_tools import RECONCILIATION_TOOLS
+DOCUMENT_TOOLS += RECONCILIATION_TOOLS
+
 PROPOSAL_BINARY_TOOL = _shared_op('replace_document_proposal_binary',
     'Sustituye el borrador binario compartido sin cambiar la identidad ni la versión aprobada. Requiere source_hash vigente y confirmar después el nuevo paquete.',
     'document-proposal-source', 'POST', ('document_id',), 'sensitive', True,
