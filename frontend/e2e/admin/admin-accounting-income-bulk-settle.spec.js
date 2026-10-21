@@ -201,7 +201,7 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     await page.getByTestId('income-liquidate-apply-vat-11').click();
     const section = page.getByTestId('income-liquidate-vat-11');
     await section.getByTestId('vat-rate').fill('19');
-    await section.getByRole('button', { name: 'Antes de IVA', exact: true }).click();
+    await section.getByRole('tab', { name: 'Antes de IVA', exact: true }).click();
     await page.getByTestId('income-liquidate-vat-amount-11').fill('100000');
     await expect(section.getByTestId('vat-base')).toHaveText('$100.000 COP');
     await expect(section.getByTestId('vat-tax')).toHaveText('$19.000 COP');

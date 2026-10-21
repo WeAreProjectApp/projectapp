@@ -13,6 +13,7 @@ const props = defineProps({
   resetKey: { type: [Boolean, Number, String], default: null },
   rateDisabled: { type: Boolean, default: false },
   rateDisabledReason: { type: String, default: '' },
+  compact: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'update:rate', 'capture'])
 const mode = ref('vat_included')
@@ -64,7 +65,7 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
 </script>
 <template>
   <div class="space-y-3" data-testid="vat-input">
-    <BaseFormRow :cols="4">
+    <BaseFormRow :cols="compact ? 2 : 4">
       <BaseFormField label="Cómo introduces el valor" class="panel-portrait:col-span-2">
         <BaseSegmented :model-value="mode" @update:model-value="changeMode($event)" :options="modeOptions" full-width size="sm" :disabled="disabled" :disabled-reason="disabledReason" />
       </BaseFormField>
