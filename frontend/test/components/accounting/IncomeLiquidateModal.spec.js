@@ -236,8 +236,7 @@ describe('IncomeLiquidateModal', () => {
     });
   });
 
-  // Falla si el IVA se convierte en una modificación fiscal silenciosa al
-  // abrir su acordeón: sólo debe mostrar las tasas ya registradas.
+  // Abrir los acordeones no debe convertir un IVA desconocido en cero.
   it('shows stored VAT rates without adding a VAT override to the payload', async () => {
     const records = [
       income(1, { vat_rate: null }), income(2, { vat_rate: 0 }), income(3, { vat_rate: 19 }),
@@ -246,14 +245,114 @@ describe('IncomeLiquidateModal', () => {
     const wrapper = mountModal({ record: null, records });
     await flushPromises();
 
-    await wrapper.get('[data-testid="income-liquidate-vat-toggle"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-vat-toggle-1"]').trigger('click');
     expect(wrapper.findAll('[data-testid="vat-breakdown-stub"]').map((node) => node.text())).toEqual([
       'sin tasa · 100', 'tasa 0 · 100', 'tasa 19 · 100',
     ]);
 
     await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
     await flushPromises();
-    expect(wrapper.emitted('submit')[0][0].vat_rate).toBeUndefined();
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toBeUndefined();
+  });
+
+  it('requires a percentage after enabling unregistered VAT', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { vat_rate: null }) });
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="income-liquidate-vat-toggle-1"]').attributes('aria-expanded')).toBe('false');
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+
+    expect(wrapper.get('[data-testid="income-liquidate-submit-reason"]').text()).toContain('Define el porcentaje');
+    expect(wrapper.get('[data-testid="income-liquidate-submit"]').attributes('disabled')).toBeDefined();
+  });
+
+  it('submits an explicit zero rate from the collapsed VAT switch', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { vat_rate: 19 }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toEqual([{ income_id: 1, vat_rate: 0 }]);
+    expect(wrapper.get('[data-testid="income-liquidate-paid"]').element.value).toBe('100');
+  });
+
+  it('captures a payment before VAT with its normalized allocation', async () => {
+    // Falla si el importe antes de IVA se registra como dinero recibido o
+    // si su captura pierde el vínculo con el ingreso esperado.
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: '119000', pending_amount: '119000', vat_rate: 19 }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-vat-toggle-1"]').trigger('click');
+    await wrapper.findAll('button').find((button) => button.text() === 'Antes de IVA').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-vat-amount-1"]').setValue('50000');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0]).toMatchObject({
+      total_amount: 59500, allocations: [{ income_id: 1, amount: 59500 }],
+      vat_updates: [{ income_id: 1, vat_rate: 19, amount: 50000, amount_mode: 'before_vat' }],
+    });
+  });
+
+  it('restores the last positive rate after reactivating VAT', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { vat_rate: '5.50' }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toEqual([{ income_id: 1, vat_rate: '5.50' }]);
+  });
+
+  it('changes only the chosen income in a selection with mixed rates', async () => {
+    mockPreview(preview([1, 2].map((income_id) => ({ income_id, confirmation: { can_send: false } }))));
+    const wrapper = mountModal({ record: null, records: [income(1, { vat_rate: 19 }), income(2, { vat_rate: 5 })] });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toEqual([{ income_id: 1, vat_rate: 0 }]);
+    expect(wrapper.get('[data-testid="income-liquidate-vat-status-2"]').text()).toBe('5 %');
+  });
+
+  it('explains a fiscal lock without blocking the payment', async () => {
+    mockPreview(preview([{ income_id: 1, vat_editable: false, vat_blocked_reason: 'Anula la cuenta emitida antes de cambiar el IVA.', confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { vat_rate: 19 }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-vat-toggle-1"]').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').attributes('disabled')).toBeDefined();
+    expect(wrapper.get('[data-testid="income-liquidate-vat-lock-1"]').text()).toContain('Anula la cuenta');
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toBeUndefined();
+  });
+
+  it('discards VAT drafts when the modal reopens', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { vat_rate: 19 }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.setProps({ open: false });
+    await wrapper.setProps({ open: true });
+    await flushPromises();
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toBeUndefined();
+    expect(wrapper.get('[data-testid="income-liquidate-vat-status-1"]').text()).toBe('19 %');
   });
 
   // Falla si una confirmación vuelve a registrar el pago antes de que el

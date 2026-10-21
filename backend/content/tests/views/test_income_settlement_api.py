@@ -143,6 +143,93 @@ def _issued_collection_account(income, email):
     DocumentCollectionAccount.objects.create(document=document, customer_email=email)
 
 
+def _vat_payment(income):
+    return _settlement_payload(income.pk, total_amount='119.00', deductions=[],
+        gustavo_amount='59.50', carlos_amount='59.50', vat_updates=[{
+            'income_id': income.pk, 'vat_rate': '19.00', 'amount': '100.00',
+            'amount_mode': 'before_vat',
+        }])
+
+
+def test_rest_vat_configuration_is_atomic_with_the_payment(super_client, make_income):
+    """Falla si el panel guarda la tasa sin el pago normalizado que se revisó."""
+    income = make_income(vat_rate=None)
+    data = _vat_payment(income)
+    preview = super_client.post('/api/accounting/incomes/settlement-preview/', data, format='json')
+    income.refresh_from_db()
+    assert income.vat_rate is None
+
+    result = super_client.post('/api/accounting/incomes/bulk-settle/',
+        {**data, 'preview_hash': preview.data['preview_hash']}, format='json')
+
+    income.refresh_from_db()
+    assert result.status_code == 201, result.data
+    assert income.vat_rate == Decimal('19')
+    assert income.liquid_records.get().base_amount == Decimal('100')
+
+
+def test_mcp_vat_preview_matches_the_panel(super_client, api_client, accounting_token, make_income):
+    """Falla si un conector interpreta otra tasa o importe que el panel."""
+    income = make_income(vat_rate=None)
+    data = _vat_payment(income)
+    rest = super_client.post('/api/accounting/incomes/settlement-preview/', data, format='json')
+    mcp = _tool_payload(_call_accounting_tool(api_client, accounting_token, 'preview_income_settlement', data))
+
+    assert mcp['rows'] == rest.data['rows']
+    assert mcp['rows'][0]['vat_amount'] == '19.00'
+    assert IncomeSettlement.objects.count() == 0
+
+
+def test_mcp_confirmed_vat_configuration_updates_the_source(api_client, accounting_token, make_income):
+    """Falla si el esquema MCP admite IVA pero el escritor descarta su configuración."""
+    income = make_income(vat_rate=None)
+    preview, confirmed = _confirm_accounting_tool(api_client, accounting_token, 'bulk_settle_incomes', _vat_payment(income))
+
+    income.refresh_from_db()
+    assert preview['confirmation_required'] is True
+    assert income.vat_rate == Decimal('19')
+    assert income.liquid_records.get().total_amount == Decimal('119')
+    assert confirmed['result']['settlement_id']
+
+
+def test_mcp_single_vat_configuration_uses_the_shared_writer(api_client, accounting_token, make_income):
+    """Falla si el adaptador individual pierde el IVA aceptado por el colectivo."""
+    income = make_income(vat_rate=None)
+    data = _vat_payment(income)
+    data.pop('income_ids')
+    data.update(record_id=income.pk, concept=income.concept)
+    preview, confirmed = _confirm_accounting_tool(api_client, accounting_token, 'settle_income', data)
+
+    income.refresh_from_db()
+    assert income.vat_rate == Decimal('19')
+    assert confirmed['result']['liquid']['vat_amount'] == '19.00'
+    assert preview['confirmation_required'] is True
+
+
+def test_mcp_vat_correction_replaces_its_own_rate(super_client, api_client, accounting_token, make_income):
+    """Falla si el MCP no puede corregir su cambio fiscal después de confirmar."""
+    income = make_income(vat_rate=None)
+    created = super_client.post('/api/accounting/incomes/bulk-settle/', _vat_payment(income), format='json')
+    data = _vat_payment(income)
+    data.update(settlement_id=created.data['settlement_id'], revision=1,
+        vat_updates=[{'income_id': income.pk, 'vat_rate': '0'}])
+    _, confirmed = _confirm_accounting_tool(api_client, accounting_token, 'update_income_settlement', data)
+
+    income.refresh_from_db()
+    assert income.vat_rate == Decimal('0')
+    assert confirmed['result']['revision'] == 2
+
+
+def test_mcp_vat_change_after_emission_is_rejected(api_client, accounting_token, make_income, make_client_profile):
+    """Falla si el MCP omite la protección documental que sí aplica el panel."""
+    income = make_income(vat_rate=None, client=make_client_profile())
+    _issued_collection_account(income, 'cliente@example.com')
+    error = _tool_error(_call_accounting_tool(api_client, accounting_token, 'bulk_settle_incomes', _vat_payment(income)))
+
+    assert 'Anula la cuenta' in error['message']
+    assert PocketMovement.objects.count() == 0
+
+
 def test_settlement_preview_requires_a_superuser(api_client, admin_client, make_income):
     """Falla si una sesión anónima o un miembro del staff puede ver un reparto financiero."""
     income = make_income(

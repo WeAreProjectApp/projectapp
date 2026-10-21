@@ -4,6 +4,7 @@ import PartnerSplitInput from './PartnerSplitInput.vue';
 import PeriodDateField from './PeriodDateField.vue';
 import SettlementHostingPeriod from './SettlementHostingPeriod.vue';
 import VatBreakdown from './VatBreakdown.vue';
+import SettlementVatInput from './SettlementVatInput.vue';
 import { useIncomeSettlementForm } from '~/composables/useIncomeSettlementForm';
 import { DEDUCTION_TYPE_OPTIONS } from '~/utils/accountingDeductions';
 import { formatMoney } from '~/utils/formatMoney';
@@ -19,7 +20,7 @@ const props = defineProps({
 const emit = defineEmits(['close', 'submit']);
 const {
   records: selected, personal, form, exactDate, requestId, deductions, followUps, periods,
-  participantsOpen, differenceOpen, vatOpen, showVat, manual, contexts, sendConfirmations,
+  participantsOpen, differenceOpen, vatDrafts, vatLocks, setVatRate, toggleVat, captureVat, manual, contexts, sendConfirmations,
   contextLoading, preparing, error, review, proposal, shortfall, remaining, credit,
   hostingRecords, blockReason, receivedById, addDeduction, addFollowUp, editAllocation, recalculate,
   submit, confirm, back,
@@ -53,6 +54,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
         <p class="font-medium text-text-default">{{ row.concept }}</p>
         <p class="text-xs text-text-muted">Cliente: {{ row.confirmation.client_name || 'Sin cliente' }} · Proyecto: {{ row.confirmation.project_name || 'Sin proyecto' }}</p>
         <p class="text-text-muted">Recibido {{ money(row.amount) }} · Deducciones {{ money(row.deducted) }} · Reprogramado {{ money(row.reexpected) }} · Pendiente {{ money(row.pending_after) }}</p>
+        <VatBreakdown :total="row.amount" :rate="row.vat_rate ?? null" />
         <p v-if="sendConfirmations[row.income_id] && row.confirmation.can_send && Number(row.amount) > 0" class="text-text-default" data-testid="income-liquidate-review-recipient">Confirmación a {{ row.confirmation.recipient }} · {{ row.confirmation.collection_account_number || 'Sin número de cuenta' }}</p>
         <p v-else class="text-xs text-text-subtle">Sin correo: {{ row.confirmation.blocked_reason || 'no solicitado o sin dinero recibido para este ingreso' }}.</p>
       </div>
@@ -130,18 +132,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
         </BaseCollapse>
       </section>
 
-      <section class="rounded-lg border border-border-muted">
-        <button type="button" class="flex w-full items-center justify-between gap-2 p-4 text-left text-sm font-medium text-text-default" :aria-expanded="vatOpen" :aria-controls="sectionId('vat')" data-testid="income-liquidate-vat-toggle" @click="vatOpen = !vatOpen">IVA</button>
-        <BaseCollapse :id="sectionId('vat')" :open="vatOpen">
-          <div class="px-4 pb-4 space-y-3">
-            <label class="flex items-center gap-2 text-sm text-text-default"><BaseToggle v-model="showVat" aria-label="Mostrar desglose de IVA" data-testid="income-liquidate-show-vat" />Mostrar desglose de IVA</label>
-            <p class="text-xs text-text-muted">Se conserva el IVA registrado en cada ingreso. Este desglose no cambia el valor recibido ni las participaciones.</p>
-            <div v-if="showVat" class="space-y-3">
-              <div v-for="row in proposal.rows" :key="row.income_id"><p class="mb-1 min-w-0 text-sm font-medium text-text-default [overflow-wrap:anywhere]">{{ row.record.concept }}</p><VatBreakdown :total="row.amount" :rate="row.record.vat_rate ?? null" /></div>
-            </div>
-          </div>
-        </BaseCollapse>
-      </section>
+      <SettlementVatInput v-for="row in proposal.rows" :key="`${requestId}-vat-${row.income_id}`" :record="row.record" :amount="row.amount" :draft="vatDrafts[row.income_id]" :blocked-reason="vatLocks[row.income_id] || ''" :multiple="selected.length > 1" @rate="setVatRate(row.income_id, $event)" @toggle="toggleVat(row.income_id, $event)" @capture="captureVat(row.income_id, $event)" />
 
       <SettlementHostingPeriod v-for="record in hostingRecords" :key="`${requestId}-${record.id}`" :record="record" @change="periods[record.id] = $event" />
 
@@ -157,7 +148,7 @@ const destinations = [{ value: 'pocket', label: 'Bolsillo ProjectApp' }, { value
     </form>
 
     <template #footer>
-      <div class="space-y-2">
+      <div class="space-y-2 border-t border-border-muted px-6 py-4">
         <p v-if="error" class="text-sm text-danger-strong" role="alert">{{ error }}</p>
         <p :id="sectionId('submit-reason')" class="min-h-4 text-right text-xs text-danger-strong" aria-live="polite" data-testid="income-liquidate-submit-reason">{{ review || saving ? '' : blockReason }}</p>
         <div class="flex flex-col-reverse items-stretch gap-2 panel-portrait:flex-row panel-portrait:justify-end">
