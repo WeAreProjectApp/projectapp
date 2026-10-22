@@ -255,7 +255,6 @@ async function assertSegmentedConnectorDescriptions(page) {
 
   await page.getByTestId('mcp-card-header-programs').click();
   await expect(page.getByTestId('mcp-detail-programs').filter({ hasText: 'Administra nuestros programas y sus condiciones' })).toBeVisible();
-  await expect(page.getByTestId('mcp-scope-programs').filter({ hasText: 'clientes, propuestas y diagnósticos en Comercial' })).toBeVisible();
 
   const horizontalOverflow = await page.evaluate(() => (
     Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)
@@ -276,6 +275,7 @@ test.describe('Panel MCPs', () => {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display', '@responsive:mcp'],
   }, async ({ page }) => {
     await mockApi(page, buildHandler());
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
     await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await page
       .getByRole('navigation', { name: 'Navegación del panel' })
@@ -325,6 +325,7 @@ test.describe('Panel MCPs', () => {
         tag: [...ADMIN_MCPS, '@role:admin', '@outcome:success', '@responsive:mcp', '@viewport:desktop'],
       }, async ({ page }) => {
         await assertSegmentedConnectorDescriptions(page);
+        await expect(page.getByTestId('mcp-scope-programs').filter({ hasText: 'clientes, propuestas y diagnósticos en Comercial' })).toBeVisible();
       });
     });
 
@@ -334,6 +335,7 @@ test.describe('Panel MCPs', () => {
         tag: [...ADMIN_MCPS, '@role:admin', '@outcome:success', '@responsive:mcp', '@viewport:compact'],
       }, async ({ page }) => {
         await assertSegmentedConnectorDescriptions(page);
+        await expect(page.getByTestId('mcp-scope-programs').filter({ hasText: 'clientes, propuestas y diagnósticos en Comercial' })).toBeVisible();
       });
     });
   });
@@ -344,6 +346,7 @@ test.describe('Panel MCPs', () => {
     // Bug this catches: a compatibility connector can be shown as canonical,
     // hiding both its migration target and the evidence needed to retire it.
     await mockApi(page, buildHandler());
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
     await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await page
       .getByRole('navigation', { name: 'Navegación del panel' })
