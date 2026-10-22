@@ -6,7 +6,7 @@ from django.core.management.base import BaseCommand, CommandError
 
 from content.mcp.connectors import CONNECTORS, LEGACY_TOOLS_BY_SLUG, TOOLS_BY_SLUG
 from content.mcp.consolidation import operation_id
-from content.mcp.module_catalog import CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, INFRASTRUCTURE_TOOLS, canonical_name, catalog_problems
+from content.mcp.module_catalog import CANONICAL_FOR, INFRASTRUCTURE_TOOLS, catalog_problems, replacement_targets
 
 
 def inventory(*, include_usage=False):
@@ -20,22 +20,27 @@ def inventory(*, include_usage=False):
         rows = []
         for tool in LEGACY_TOOLS_BY_SLUG[slug]:
             name = tool['name']
-            owner = 'accounting' if name in FINANCIAL_PROJECT_TOOLS else canonical
-            replacement = canonical_name(name, owner)
+            targets = replacement_targets(name, slug)
+            owner, replacement = targets[0]
             replacement = {
                 'list_expected_incomes': 'list_incomes', 'get_expected_income': 'get_income',
                 'get_income_detail': 'get_income', 'create_expected_income': 'create_income',
                 'update_expected_income': 'update_income', 'duplicate_expected_income': 'duplicate_income',
                 'launch_proposal_to_platform': 'review_proposal_approval',
             }.get(name, replacement)
-            destination_names = {item['name'] for item in TOOLS_BY_SLUG[owner]}
+            registered = all(
+                (replacement if len(targets) == 1 else target_name) in
+                {item['name'] for item in TOOLS_BY_SLUG[target_owner]}
+                for target_owner, target_name in targets
+            )
             rows.append({
                 'name': name, 'operation_id': operation_id(tool),
                 'owner': owner, 'replacement': replacement,
                 'decision': 'infrastructure' if name in INFRASTRUCTURE_TOOLS else
                     'adapt' if spec.compatibility else 'move' if owner != slug else
                     'rename' if replacement != name else 'keep',
-                'replacement_registered': replacement in destination_names,
+                'replacement_registered': registered,
+                'replacement_targets': [{'connector': destination, 'tool': tool_name} for destination, tool_name in targets],
                 'also_registered_in': [other for other in by_name[name] if other != slug],
                 'risk': tool['risk'], 'requires_confirmation': bool(tool.get('requires_confirmation')),
                 'usage': 'not_observed',

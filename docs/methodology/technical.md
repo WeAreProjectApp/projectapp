@@ -2,6 +2,14 @@
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
 
+> **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,
+> propuestas y diagnósticos; Nuestra oferta reúne paquetes de horas y módulos
+> adicionales; Programas reúne alianzas y células. Separadores por subconjunto y
+> descripciones ampliadas en todos los acordeones MCP. Migración 0298 conserva
+> credenciales comerciales mediante `pre_split`, sin reabrir catálogos `legacy`
+> retirados. Nuevos conectores inactivos; despliegue y consumidores externos se
+> verifican por separado. [Contrato](../MCP_MODULE_UNIFICATION.md).
+
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
 > **2026-10-21:** `service_contract_approved` es un booleano administrativo con default false; migra con content.0298. Se expone por serializers de panel/JSON/MCP y participa en la huella del cierre. El endpoint approval/reconciliation/ comparte servicio con CLI y MCP de Documentos; exige expected_hash antes de escribir.

@@ -26,6 +26,7 @@ def build_common_tools(connector, tools_provider):
         return {
             'connector': connector.slug,
             'version': connector.version,
+            **({'section_note': ' '.join(connector.notes)} if connector.notes else {}),
             'tools': [
                 capability_entry(tool, summary=summary)
                 for tool in tools

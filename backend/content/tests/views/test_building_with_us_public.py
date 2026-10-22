@@ -96,7 +96,7 @@ def test_overview_returns_program_metadata(building_with_us_program, admin_clien
     assert response.data['program']['author'] == 'Sistema'
     assert response.data['contract']['version'] == 1
     assert response.data['contract']['mirror']['status'] == 'not_initialized'
-    assert response.data['connector'] == {'slug': 'building-with-us', 'is_active': False}
+    assert response.data['connector'] == {'slug': 'programs', 'is_active': False}
     assert response.data['public_paths'] == {'es': '/es-co/building-with-us', 'en': '/en-us/building-with-us'}
 
 

@@ -32,7 +32,7 @@ def test_overview_returns_seed_metadata(building_on_demand_program, building_on_
             'folder_id': None, 'folder_path': None, 'version': None, 'last_synced_at': None,
         },
     }
-    assert response.data['connector'] == {'slug': 'building-on-demand', 'is_active': False}
+    assert response.data['connector'] == {'slug': 'programs', 'is_active': False}
     assert response.data['pdf_paths'] == {
         'es': '/api/building-on-demand/public/pdf/?lang=es',
         'en': '/api/building-on-demand/public/pdf/?lang=en',

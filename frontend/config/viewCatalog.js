@@ -346,7 +346,7 @@ export const viewCatalogSections = [
   {
     id: 'admin-panel',
     label: 'Panel administrativo',
-    description: 'Vistas internas del panel para gestionar propuestas, contenido, documentos y usuarios admin.',
+    description: 'Vistas internas del panel para gestionar clientes, propuestas y diagnósticos, Nuestra oferta, Programas, contenido, documentos y usuarios admin.',
     views: [
       {
         label: 'Login del panel',
@@ -403,7 +403,7 @@ export const viewCatalogSections = [
         group: 'Building with Us',
         file: 'frontend/pages/panel/building-with-us/index.vue',
         reference: 'consulta y distribución del programa y del contrato de alianza versionados',
-        notes: 'Dos pestañas: Programa y Contrato, de solo lectura. Copia URLs, descarga PDFs, previsualiza ES/EN, consulta historial paginado y estado del espejo en el Gestor Documental. Las ediciones se realizan sólo mediante el conector MCP building-with-us.',
+        notes: 'Dos pestañas: Programa y Contrato, de solo lectura. Copia URLs, descarga PDFs, previsualiza ES/EN, consulta historial paginado y estado del espejo en el Gestor Documental. Las ediciones se realizan sólo mediante el conector MCP Programas (programs); building-with-us se conserva en retirada.',
         audience: 'admin',
         viewType: 'readonly',
       },
@@ -413,7 +413,7 @@ export const viewCatalogSections = [
         group: 'Building on Demand',
         file: 'frontend/pages/panel/cells/index.vue',
         reference: 'consulta y distribución del programa, economía interna y contrato versionado de Building on Demand',
-        notes: 'Tres pestañas de solo lectura: Programa, Economía y Contrato; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. Toda edición se realiza sólo mediante el conector MCP building-on-demand.',
+        notes: 'Tres pestañas de solo lectura: Programa, Economía y Contrato; ?tab=economics y ?tab=contract abren las dos últimas. Copia URLs, descarga PDFs, previsualiza ES/EN y consulta historial paginado. Economía reúne los números internos. Contrato muestra el Markdown y su espejo en ProjectApp/Contratos, con estados sincronizado, desactualizado, sin inicializar o contrato no disponible. Toda edición se realiza sólo mediante el conector MCP Programas (programs); building-on-demand se conserva en retirada.',
         audience: 'admin',
         viewType: 'readonly',
       },
@@ -995,7 +995,7 @@ export const viewCatalogSections = [
         group: 'Conectores',
         file: 'frontend/pages/panel/mcps/index.vue',
         reference: 'vista de gestion de conectores MCP del panel',
-        notes: 'Separa ocho conectores canónicos por módulo de los conectores en retirada; muestra reemplazo, último uso anterior e inventario de consumidores. Las credenciales antiguas conservan su catálogo; las nuevas usan el catálogo unificado. Comercial permite administrar contratos personalizados en Markdown, ajustes y documentos; Formalización prepara paquetes privados por credencial y confirma su envío. La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
+        notes: 'Separa diez conectores canónicos por módulo de los conectores en retirada; muestra reemplazo, último uso anterior e inventario de consumidores. Las credenciales antiguas conservan su catálogo; Comercial, Nuestra oferta y Programas reflejan las secciones del menú. Cada acordeón explica qué controla su conector y orienta hacia los demás. Comercial permite administrar contratos personalizados en Markdown, ajustes y documentos; Formalización prepara paquetes privados por credencial y confirma su envío. La consulta de secretos exige habilitarla en el alcance personalizado de la credencial de Comunicaciones; cada lectura requiere confirmación.',
         audience: 'admin',
         viewType: 'config',
       },

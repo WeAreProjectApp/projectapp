@@ -262,7 +262,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-status')).toHaveText('Sin inicializar');
-    await expect(page.getByTestId('building-on-demand-admin-mirror-alert')).toContainText('se inicializa desde el conector MCP building-on-demand.');
+    await expect(page.getByTestId('building-on-demand-admin-mirror-alert')).toContainText('se inicializa desde el conector MCP Programas (programs).');
     await expect(page.getByTestId('building-on-demand-admin-contract-body')).toContainText('Acceso a una célula Scrum compartida');
     await expect(page.getByTestId('building-on-demand-admin-mirror-link')).toHaveCount(0);
   });

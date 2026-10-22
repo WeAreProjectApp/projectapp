@@ -39,6 +39,10 @@ from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
 from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
+from content.mcp.module_catalog import SECTION_NOTES
+from content.mcp.section_tools import (
+    OFFERING_SECTION_TOOLS, PROGRAM_SECTION_TOOLS,
+)
 
 
 BASE = (
@@ -166,17 +170,17 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
     ),
     'operations': ConnectorSpec('operations', '2.1.0', (OPERATIONS_TOOLS,)),
     'building-with-us': ConnectorSpec(
-        'building-with-us', '1.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
+        'building-with-us', '2.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
     'building-on-demand': ConnectorSpec(
-        'building-on-demand', '1.0.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS), confirm_sensitive=True,
+        'building-on-demand', '2.0.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS), confirm_sensitive=True,
     ),
     'partnership-program': ConnectorSpec(
-        'partnership-program', '2.1.1', (PARTNERSHIP_PROGRAM_TOOLS,),
+        'partnership-program', '3.0.0', (PARTNERSHIP_PROGRAM_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'additional-modules': ConnectorSpec(
-        'additional-modules', '2.1.1', (ADDITIONAL_MODULE_TOOLS,),
+        'additional-modules', '3.0.0', (ADDITIONAL_MODULE_TOOLS,),
         uploads=True, confirm_sensitive=True,
     ),
     'commercial': ConnectorSpec(
@@ -185,7 +189,17 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
           if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]),
-        uploads=True, confirm_sensitive=True,
+        uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['commercial'],),
+    ),
+    'offerings': ConnectorSpec(
+        'offerings', '0.0.0',
+        (ADDITIONAL_MODULE_TOOLS, [tool for tool in COMMERCIAL_PARITY_TOOLS
+                                 if 'hour_package' in tool['name']], OFFERING_SECTION_TOOLS),
+        uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['offerings'],),
+    ),
+    'programs': ConnectorSpec(
+        'programs', '0.0.0', (PROGRAM_SECTION_TOOLS,),
+        uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(
         'projects', '3.0.0', (PROJECT_TOOLS,), uploads=True,
@@ -214,17 +228,24 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
 # Preserve pre-consolidation catalogs for existing scoped credentials.
 from content.mcp.consolidation import build_catalogs  # noqa: E402
 
+PRE_SPLIT_TOOLS_BY_SLUG = {}
 CONNECTORS, TOOLS_BY_SLUG, LEGACY_TOOLS_BY_SLUG = build_catalogs(
-    SOURCE_CONNECTORS, replace, build_common_tools,
+    SOURCE_CONNECTORS, replace, build_common_tools, pre_split=PRE_SPLIT_TOOLS_BY_SLUG,
 )
 
 
 def tools_for_credential(slug, credential):
+    if credential is not None and getattr(credential, 'catalog', '') == 'pre_split':
+        return PRE_SPLIT_TOOLS_BY_SLUG[slug]
     if credential is not None and getattr(credential, 'catalog', '') == 'legacy':
         return LEGACY_TOOLS_BY_SLUG[slug]
     from content.mcp.module_catalog import FINANCIAL_PROJECT_TOOLS
 
     public = TOOLS_BY_SLUG[slug]
+    # New section credentials cannot execute tools that moved elsewhere through
+    # the hidden-alias compatibility path. Old credentials have their own catalog.
+    if slug == 'commercial':
+        return public
     if credential is not None and credential.connector.aliases_retired_at:
         return public
     names = {tool['name'] for tool in public}

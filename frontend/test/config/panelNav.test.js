@@ -66,45 +66,66 @@ describe('getPanelNavSections', () => {
     expect(links.map((item) => item.label)).not.toContain('Ads');
   });
 
-  it('gives additional modules a dedicated puzzle icon', () => {
-    const commercial = getPanelNavSections(identityLocalePath)
-      .find((section) => section.id === 'commercial');
-    const modules = commercial.items.find((item) => item.label === 'Módulos adicionales');
+  it('splits commercial work, offerings, and programs into ordered menu sections', () => {
+    // Fails if a new commercial item is put back into the wrong menu section or a visual grouping is lost.
+    const sections = getPanelNavSections(identityLocalePath);
+    const [commercial, offerings, programs] = ['commercial', 'offerings', 'programs']
+      .map((id) => sections.find((section) => section.id === id));
 
-    expect(modules.icon).toBe('puzzle');
+    expect(sections.slice(
+      sections.indexOf(commercial),
+      sections.indexOf(programs) + 1,
+    ).map((section) => section.id)).toEqual(['commercial', 'offerings', 'programs']);
+    expect(commercial.items).toEqual([
+      { label: 'Clientes', href: '/panel/clients', icon: 'users' },
+      { divider: true },
+      { label: 'Propuestas', href: '/panel/proposals', icon: 'writing' },
+      { label: 'Nueva propuesta', href: '/panel/proposals/create', icon: 'plus' },
+      { label: 'Diagnósticos', href: '/panel/diagnostics', icon: 'file' },
+      { label: 'Nuevo diagnóstico', href: '/panel/diagnostics/create', icon: 'plus' },
+      { divider: true },
+      { label: 'Defaults', href: '/panel/defaults', icon: 'settings' },
+      { label: 'Entregabilidad email', href: '/panel/proposals/email-deliverability', icon: 'mail' },
+    ]);
+    expect(offerings.items).toEqual([
+      { label: 'Paquetes de horas', href: '/panel/hour-packages', icon: 'package' },
+      { label: 'Módulos adicionales', href: '/panel/additional-modules', icon: 'puzzle' },
+    ]);
+    expect(programs.items).toEqual([
+      { label: 'Programa de Alianza', href: '/panel/partnership-program', icon: 'credit-card' },
+      { label: 'Building with Us', href: '/panel/building-with-us', icon: 'handshake' },
+      { divider: true },
+      { label: 'Células', href: '/panel/cells', icon: 'team' },
+    ]);
   });
 
-  it('places the partnership program immediately after additional modules', () => {
-    const commercial = getPanelNavSections(identityLocalePath)
-      .find((section) => section.id === 'commercial');
-    const labels = commercial.items.filter((item) => !item.divider).map((item) => item.label);
+  it('preserves locale-prefixed links in every segmented commercial section', () => {
+    // Fails if moving an item into its new section bypasses the localized panel URL.
+    const sections = getPanelNavSections(
+      (path) => `/en-us${path}`,
+      { includeSuperuserOnly: false },
+    );
 
-    expect(labels.indexOf('Programa de Alianza')).toBe(labels.indexOf('Módulos adicionales') + 1);
-  });
-
-  it('places Building with Us immediately after the partnership program', () => {
-    const commercial = getPanelNavSections(identityLocalePath)
-      .find((section) => section.id === 'commercial');
-    const partnershipIndex = commercial.items.findIndex((item) => item.label === 'Programa de Alianza');
-
-    expect(commercial.items[partnershipIndex + 1]).toEqual({
-      label: 'Building with Us', href: '/panel/building-with-us', icon: 'handshake',
-    });
-    expect(commercial.items[partnershipIndex + 2]).toEqual({
-      label: 'Células', href: '/panel/cells', icon: 'team',
-    });
-    expect(commercial.items[partnershipIndex + 3]).toEqual({ divider: true });
-  });
-
-  it('links Células after Building with Us using the panel locale', () => {
-    const commercial = getPanelNavSections((path) => `/en-us${path}`, { includeSuperuserOnly: false })
-      .find((section) => section.id === 'commercial');
-    const buildingIndex = commercial.items.findIndex((item) => item.label === 'Building with Us');
-
-    expect(commercial.items[buildingIndex + 1]).toEqual({
-      label: 'Células', href: '/en-us/panel/cells', icon: 'team',
-    });
-    expect(commercial.items[buildingIndex + 2]).toEqual({ divider: true });
+    expect(['commercial', 'offerings', 'programs'].map((id) => {
+      const section = sections.find((candidate) => candidate.id === id);
+      return section.items.filter((item) => !item.divider).map((item) => item.href);
+    })).toEqual([
+      [
+        '/en-us/panel/clients',
+        '/en-us/panel/proposals',
+        '/en-us/panel/proposals/create',
+        '/en-us/panel/diagnostics',
+        '/en-us/panel/diagnostics/create',
+        '/en-us/panel/defaults',
+        '/en-us/panel/proposals/email-deliverability',
+      ],
+      ['/en-us/panel/hour-packages', '/en-us/panel/additional-modules'],
+      [
+        '/en-us/panel/partnership-program',
+        '/en-us/panel/building-with-us',
+        '/en-us/panel/cells',
+      ],
+    ]);
   });
 
   describe('Plataforma section', () => {

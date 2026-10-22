@@ -146,7 +146,7 @@ def apply_update(arguments, *, actor, credential=None, restore=False, expected_e
 def admin_overview():
     from content.services.building_with_us_contract_service import read_contract
     contract = read_contract()
-    active = McpConnector.objects.filter(slug='building-with-us', is_active=True).exists()
+    active = McpConnector.objects.filter(slug='programs', is_active=True).exists()
     return {'program': _metadata(_load()),
             'contract': {key: contract[key] for key in ('version', 'version_id', 'updated_at', 'author', 'change_note', 'mirror')},
-            'connector': {'slug': 'building-with-us', 'is_active': active}, 'public_paths': dict(PUBLIC_PATHS)}
+            'connector': {'slug': 'programs', 'is_active': active}, 'public_paths': dict(PUBLIC_PATHS)}

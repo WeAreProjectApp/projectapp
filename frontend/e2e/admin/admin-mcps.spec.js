@@ -9,6 +9,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_MCPS } from '../helpers/flow-tags.js';
+import { viewportUse } from '../helpers/viewports.js';
 
 test.setTimeout(60_000);
 
@@ -91,6 +92,40 @@ const RETIRING_CONNECTOR = {
   tools: [{ name: 'get_blog_template', description: 'Consulta el template del blog.', risk: 'read' }],
 };
 
+const SECTION_CONNECTORS = [
+  {
+    slug: 'commercial',
+    name: 'Comercial',
+    description: 'Gestiona la relación con clientes y el proceso de venta: fichas, propuestas, diagnósticos, documentos contractuales, seguimiento, correos y valores predeterminados. Organiza sus funciones en Clientes, Propuestas y Diagnósticos, y Configuración. Para paquetes de horas y módulos adicionales usa Nuestra oferta; para alianzas y células usa Programas.',
+    section_note: 'Comercial reúne Clientes; Propuestas y Diagnósticos; y Configuración (Defaults y entregabilidad email). Paquetes de horas y módulos adicionales se administran en Nuestra oferta (offerings). Los programas y sus contratos se administran en Programas (programs).',
+  },
+  {
+    slug: 'offerings',
+    name: 'Nuestra oferta',
+    description: 'Administra lo que ofrecemos al cliente: paquetes de horas, precios y configuración; y módulos adicionales, categorías, orden, enlaces compartidos, PDFs y videos. Las propuestas y los diagnósticos se gestionan en Comercial. Las condiciones, contratos y versiones de las alianzas y células se gestionan en Programas.',
+    section_note: 'Nuestra oferta reúne Paquetes de horas y Módulos adicionales. Clientes, propuestas, diagnósticos y Defaults están en Comercial (commercial). Programa de Alianza, Building with Us y Células están en Programas (programs).',
+  },
+  {
+    slug: 'programs',
+    name: 'Programas',
+    description: 'Administra nuestros programas y sus condiciones. Reúne las alianzas —Programa de Alianza y Building with Us— y las Células de Building on Demand, con sus acuerdos, contratos, economía interna, documentos y versiones. Para preparar una propuesta usa Comercial; para paquetes de horas y módulos adicionales usa Nuestra oferta.',
+    section_note: 'Programas reúne las alianzas (Programa de Alianza y Building with Us) y las Células de Building on Demand, incluidos contratos, economía y versiones. Paquetes de horas y módulos adicionales están en Nuestra oferta (offerings); clientes, propuestas y diagnósticos en Comercial (commercial).',
+  },
+].map((connector) => ({
+  ...connector,
+  is_active: true,
+  has_token: false,
+  token_prefix: '',
+  last_used_at: null,
+  tool_count: 1,
+  risk_counts: { read: 1, write: 0, sensitive: 0 },
+  is_legacy: false,
+  credentials: [],
+  connection_status: 'connected',
+  recent_events: [],
+  tools: [{ name: `get_${connector.slug}_summary`, description: 'Consulta el resumen del módulo.', risk: 'read' }],
+}));
+
 const TOKEN_RESPONSE = {
   connector_url: 'https://projectapp.co/api/mcp/content/e2e-token-abc123/',
   token_prefix: 'e2e-toke',
@@ -107,6 +142,7 @@ const SCOPED_TOKEN_RESPONSE = {
 function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}) {
   const connector = JSON.parse(JSON.stringify(CONNECTOR));
   const retiringConnector = JSON.parse(JSON.stringify(RETIRING_CONNECTOR));
+  const sectionConnectors = JSON.parse(JSON.stringify(SECTION_CONNECTORS));
   return ({ route, apiPath, method }) => {
     if (apiPath === 'auth/check/') {
       return {
@@ -121,7 +157,7 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
       return {
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify([connector, retiringConnector]),
+        body: JSON.stringify([connector, ...sectionConnectors, retiringConnector]),
       };
     }
     if (apiPath === 'mcp-connectors/content/generate-token/' && method === 'POST') {
@@ -205,6 +241,28 @@ function buildHandler({ isSuperuser = true, credentialCreateError = false } = {}
   };
 }
 
+async function assertSegmentedConnectorDescriptions(page) {
+  await mockApi(page, buildHandler());
+  await page.goto('/en-us/panel/mcps', { waitUntil: 'domcontentloaded' });
+
+  await page.getByTestId('mcp-card-header-commercial').click();
+  await expect(page.getByTestId('mcp-detail-commercial').filter({ hasText: 'Gestiona la relación con clientes y el proceso de venta' })).toBeVisible();
+  await expect(page.getByTestId('mcp-scope-commercial').filter({ hasText: 'Paquetes de horas y módulos adicionales se administran en Nuestra oferta' })).toBeVisible();
+
+  await page.getByTestId('mcp-card-header-offerings').click();
+  await expect(page.getByTestId('mcp-detail-offerings').filter({ hasText: 'Administra lo que ofrecemos al cliente' })).toBeVisible();
+  await expect(page.getByTestId('mcp-scope-offerings').filter({ hasText: 'Programa de Alianza, Building with Us y Células están en Programas' })).toBeVisible();
+
+  await page.getByTestId('mcp-card-header-programs').click();
+  await expect(page.getByTestId('mcp-detail-programs').filter({ hasText: 'Administra nuestros programas y sus condiciones' })).toBeVisible();
+
+  const horizontalOverflow = await page.evaluate(() => (
+    Math.max(document.documentElement.scrollWidth, document.body.scrollWidth)
+      - document.documentElement.clientWidth
+  ));
+  expect(horizontalOverflow).toBeLessThanOrEqual(1);
+}
+
 test.describe('Panel MCPs', () => {
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
@@ -217,7 +275,8 @@ test.describe('Panel MCPs', () => {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display', '@responsive:mcp'],
   }, async ({ page }) => {
     await mockApi(page, buildHandler());
-    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await page
       .getByRole('navigation', { name: 'Navegación del panel' })
       .getByRole('link', { name: 'MCPs', exact: true })
@@ -259,13 +318,36 @@ test.describe('Panel MCPs', () => {
     await expect(page.getByText('create_blog_post')).toBeVisible();
   });
 
+  test.describe('Segmented connector descriptions', () => {
+    test.describe('desktop viewport', () => {
+      test.use(viewportUse('desktop'));
+      test('describes each segmented connector inside its expanded card', {
+        tag: [...ADMIN_MCPS, '@role:admin', '@outcome:success', '@responsive:mcp', '@viewport:desktop'],
+      }, async ({ page }) => {
+        await assertSegmentedConnectorDescriptions(page);
+        await expect(page.getByTestId('mcp-scope-programs').filter({ hasText: 'clientes, propuestas y diagnósticos en Comercial' })).toBeVisible();
+      });
+    });
+
+    test.describe('compact viewport', () => {
+      test.use(viewportUse('compact'));
+      test('keeps each segmented connector description visible at phone width', {
+        tag: [...ADMIN_MCPS, '@role:admin', '@outcome:success', '@responsive:mcp', '@viewport:compact'],
+      }, async ({ page }) => {
+        await assertSegmentedConnectorDescriptions(page);
+        await expect(page.getByTestId('mcp-scope-programs').filter({ hasText: 'clientes, propuestas y diagnósticos en Comercial' })).toBeVisible();
+      });
+    });
+  });
+
   test('groups the retiring connector with its replacement and last legacy use', {
     tag: [...ADMIN_MCPS, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
     // Bug this catches: a compatibility connector can be shown as canonical,
     // hiding both its migration target and the evidence needed to retire it.
     await mockApi(page, buildHandler());
-    await page.goto('/panel', { waitUntil: 'domcontentloaded' });
+    // quality: allow-deep-link (authenticated panel landing; MCPs is reached through the sidebar below)
+    await page.goto('/en-us/panel', { waitUntil: 'domcontentloaded' });
     await page
       .getByRole('navigation', { name: 'Navegación del panel' })
       .getByRole('link', { name: 'MCPs', exact: true })
