@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, useId, watch } from 'vue'
+import { useI18n } from '#imports'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseFormField from '~/components/base/BaseFormField.vue'
@@ -16,6 +17,8 @@ const props = defineProps({
   language: { type: String, default: 'es' },
 })
 const emit = defineEmits(['updated'])
+const { t } = useI18n()
+const label = (key, params) => t(`videoResources.${key}`, params)
 const store = useVideoResourcesStore()
 const explainers = useExplainerVideosStore()
 const selectedLanguage = ref(props.language)
@@ -41,7 +44,7 @@ function messageFor(exception) {
   const data = exception.response?.data
   if (data?.file) return [].concat(data.file).join(' ')
   if (data?.detail) return String(data.detail)
-  return 'No se pudo guardar el recurso. Revisa la conexión y vuelve a intentarlo.'
+  return label('saveError')
 }
 
 async function load() {
@@ -57,11 +60,12 @@ async function load() {
     const data = await store.fetchResource(path.value, { signal: controller.signal })
     if (current === generation) resource.value = data
   } catch (exception) {
-    if (current === generation && exception.code !== 'ERR_CANCELED') error.value = 'No se pudo consultar el video. Vuelve a cargar el recurso.'
+    if (current === generation && exception.code !== 'ERR_CANCELED') error.value = label('loadError')
   } finally {
     if (current === generation) busy.value = false
   }
 }
+watch(() => props.language, (value) => { selectedLanguage.value = value })
 watch(path, load, { immediate: true })
 onBeforeUnmount(() => { generation++; controller?.abort() })
 
@@ -77,12 +81,12 @@ async function save(action) {
   if (action === 'upload') {
     const file = selectedFile.value
     if (!file || !file.name.toLowerCase().endsWith('.mp4') || (file.type && file.type !== 'video/mp4')) {
-      error.value = 'Selecciona un archivo MP4.'
+      error.value = label('invalidFile')
       fileInput.value?.focus()
       return
     }
     if (!file.size || file.size > 250 * 1024 * 1024) {
-      error.value = 'El video debe tener contenido y pesar como máximo 250 MB.'
+      error.value = label('invalidSize')
       fileInput.value?.focus()
       return
     }
@@ -105,12 +109,12 @@ async function save(action) {
     resource.value = updated
     selectedFile.value = null
     if (fileInput.value) fileInput.value.value = ''
-    notice.value = 'Recurso actualizado.'
+    notice.value = label('saved')
     emit('updated', updated)
     if (!props.proposalId) await explainers.fetchSettings()
   } catch (exception) {
     if (current !== generation) return
-    if (exception.code === 'ERR_CANCELED') notice.value = 'Carga cancelada. Consulta el recurso para comprobar su estado.'
+    if (exception.code === 'ERR_CANCELED') notice.value = label('cancelled')
     else error.value = messageFor(exception)
     // The server may have completed a cancelled transfer; also resolve stale revisions.
     if (exception.code === 'ERR_CANCELED' || exception.response?.status === 409) {
@@ -123,41 +127,41 @@ async function save(action) {
 </script>
 
 <template>
-  <section class="my-6 space-y-4 rounded-2xl border border-border-default bg-surface p-5" data-testid="video-resource-manager" aria-label="Recursos de video">
-    <h2 class="text-lg font-medium text-text-default">{{ proposalId ? 'Video personalizado de esta propuesta' : 'Recursos · Video general' }}</h2>
-    <p class="text-sm text-text-subtle">{{ proposalId ? 'Aparece después de la bienvenida en Vista Ejecutiva y Propuesta Completa. Si lo quitas, también desaparece su sección.' : 'Este video se utiliza en las vistas públicas del módulo.' }}</p>
-    <BaseFormField v-if="!proposalId" label="Idioma del video">
-      <BaseSelect v-model="selectedLanguage" aria-label="Idioma del video">
-        <option value="es">Español</option><option value="en">English</option>
+  <section class="my-6 space-y-4 rounded-2xl border border-border-default bg-surface p-5" data-testid="video-resource-manager" :aria-label="label('title')">
+    <h2 class="text-lg font-medium text-text-default">{{ label(proposalId ? 'personalizedTitle' : 'title') }}</h2>
+    <p class="text-sm text-text-subtle">{{ label(proposalId ? 'personalizedDescription' : 'description') }}</p>
+    <BaseFormField v-if="!proposalId" :label="label('language')">
+      <BaseSelect v-model="selectedLanguage" :aria-label="label('language')">
+        <option value="es">{{ label('spanish') }}</option><option value="en">{{ label('english') }}</option>
       </BaseSelect>
     </BaseFormField>
-    <video v-if="video" :key="video.src" :src="video.src" :poster="video.poster" controls playsinline preload="metadata" class="aspect-video w-full max-w-3xl rounded-xl bg-surface-muted" aria-label="Vista previa del video" />
-    <p v-else-if="resource" class="text-sm text-text-muted">No hay video para este recurso.</p>
+    <video v-if="video" :key="video.src" :src="video.src" :poster="video.poster" controls playsinline preload="metadata" class="aspect-video w-full max-w-3xl rounded-xl bg-surface-muted" :aria-label="label('preview')" />
+    <p v-else-if="resource" class="text-sm text-text-muted">{{ label('empty') }}</p>
     <p v-if="resource?.filename" class="break-words text-sm text-text-subtle">{{ resource.filename }} · {{ (resource.size / 1024 / 1024).toFixed(1) }} MB</p>
-    <BaseFormField :for="inputId" label="Archivo de video" hint="MP4 · H.264 · audio AAC opcional · hasta 250 MB y 4K" :error="error">
+    <BaseFormField :for="inputId" :label="label('file')" :hint="label('hint')" :error="error">
       <input :id="inputId" ref="fileInput" type="file" accept="video/mp4,.mp4" class="block w-full text-sm text-text-default" @change="selectFile" />
     </BaseFormField>
     <div v-if="busy" role="status" class="text-sm text-text-muted">
-      {{ progress === 100 ? 'Validando el video…' : `Procesando… ${progress}%` }}
-      <progress :value="progress" max="100" class="w-full" aria-label="Progreso de carga" />
+      {{ label(progress === 100 ? 'validating' : 'processing', { progress }) }}
+      <progress :value="progress" max="100" class="w-full" :aria-label="label('progress')" />
     </div>
     <BaseAlert v-if="notice" variant="info" role="status">{{ notice }}</BaseAlert>
     <div class="flex flex-wrap gap-3">
-      <BaseButton v-if="busy" variant="secondary" @click="controller?.abort()">Cancelar</BaseButton>
+      <BaseButton v-if="busy" variant="secondary" @click="controller?.abort()">{{ label('cancel') }}</BaseButton>
       <template v-else>
-        <BaseButton v-if="resource" @click="save('upload')">{{ video ? 'Sustituir video' : 'Cargar video' }}</BaseButton>
-        <BaseButton v-if="video" variant="secondary" @click="confirmRemove = true">Quitar video</BaseButton>
-        <BaseButton v-if="resource && !proposalId && resource.mode !== 'default'" variant="secondary" @click="save('restore-default')">Restaurar predeterminado</BaseButton>
-        <BaseButton variant="ghost" @click="load">Consultar recurso</BaseButton>
+        <BaseButton v-if="resource" @click="save('upload')">{{ label(video ? 'replace' : 'upload') }}</BaseButton>
+        <BaseButton v-if="video" variant="secondary" @click="confirmRemove = true">{{ label('remove') }}</BaseButton>
+        <BaseButton v-if="resource && !proposalId && resource.mode !== 'default'" variant="secondary" @click="save('restore-default')">{{ label('restore') }}</BaseButton>
+        <BaseButton variant="ghost" @click="load">{{ label('reload') }}</BaseButton>
       </template>
     </div>
     <BaseModal :model-value="confirmRemove" kind="confirm" padding="md" @update:model-value="confirmRemove = $event">
-      <h2 class="mb-3 text-lg font-medium text-text-default">Quitar video</h2>
-      <p class="text-sm text-text-default">El video dejará de aparecer. Puedes cargar otro cuando lo necesites.</p>
+      <h2 class="mb-3 text-lg font-medium text-text-default">{{ label('remove') }}</h2>
+      <p class="text-sm text-text-default">{{ label('removeHelp') }}</p>
       <template #footer>
         <BaseModalActions>
-          <BaseButton variant="secondary" @click="confirmRemove = false">Cancelar</BaseButton>
-          <BaseButton @click="confirmRemove = false; save('remove')">Quitar video</BaseButton>
+          <BaseButton variant="secondary" @click="confirmRemove = false">{{ label('cancel') }}</BaseButton>
+          <BaseButton @click="confirmRemove = false; save('remove')">{{ label('remove') }}</BaseButton>
         </BaseModalActions>
       </template>
     </BaseModal>

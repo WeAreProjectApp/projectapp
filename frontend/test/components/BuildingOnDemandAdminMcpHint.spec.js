@@ -31,14 +31,14 @@ describe('BuildingOnDemandAdminMcpHint', () => {
     [false, 'Conector inactivo'],
     ['true', 'Estado del conector no disponible'],
   ])('explains the connector state for is_active=%s', (active, label) => {
-    // Fails if the hint stops showing the explicit connector state for a read-only program.
-    const wrapper = mountHint({ slug: 'building-on-demand', is_active: active });
+    const wrapper = mountHint({ slug: 'programs', is_active: active });
 
     const hint = wrapper.get('[data-testid="building-on-demand-admin-mcp-hint"]');
 
     expect(hint.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe(label);
-    expect(hint.text()).toContain('conector MCP Programas (programs)');
-    expect(hint.text()).toContain('Este panel es de solo lectura.');
+    expect(hint.text()).toContain('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación.');
+    expect(hint.text()).toContain('El video se puede gestionar aquí o desde el mismo conector.');
+    expect(hint.find('button').exists()).toBe(false);
   });
 
   it('identifies the MCP connector when overview data is unavailable', () => {
@@ -48,15 +48,15 @@ describe('BuildingOnDemandAdminMcpHint', () => {
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-slug"]').text()).toBe('programs');
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Estado del conector no disponible');
     expect(wrapper.text()).toContain('únicamente desde el conector MCP Programas (programs)');
+    expect(wrapper.text()).toContain('El video se puede gestionar aquí o desde el mismo conector.');
   });
 
-  it('explains read-only administration in the English locale', () => {
-    // Fails if the English guidance omits the canonical Programas connector.
+  it('explains administration capabilities in the English locale', () => {
     mockLocale.value = 'en-us';
-    const wrapper = mountHint({ slug: 'building-on-demand', is_active: false });
+    const wrapper = mountHint({ slug: 'programs', is_active: false });
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Connector inactive');
-    expect(wrapper.text()).toContain('Programas (programs) MCP connector');
-    expect(wrapper.text()).toContain('This panel is read-only.');
+    expect(wrapper.text()).toContain('The program, economics inputs and contract are managed exclusively through the Programas (programs) MCP connector, with preview and confirmation.');
+    expect(wrapper.text()).toContain('Manage the video here or through the same connector.');
   });
 });

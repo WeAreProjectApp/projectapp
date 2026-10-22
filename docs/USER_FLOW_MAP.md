@@ -5991,6 +5991,8 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-blog-publish-mode` | admin | P2 | display,success | 1 |
 | `admin-building-on-demand-contract` | admin | P1 | display,success,failure | — |
 | `admin-building-on-demand-economics` | admin | P1 | display,failure | — |
+| `admin-building-on-demand-explainer` | admin | P3 | display,success,failure | — |
+| `admin-building-on-demand-explainer-visibility` | admin | P2 | success,failure | — |
 | `admin-building-on-demand-history` | admin | P2 | success,failure | — |
 | `admin-building-on-demand-program` | admin | P1 | display,success,failure | — |
 | `admin-building-with-us-contract` | admin | P1 | display,success,failure | — |
@@ -6346,6 +6348,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `public-additional-modules-share` | public | P1 | success,display,failure | 4 |
 | `public-additional-modules-theme` | public | P2 | success,display,failure | 2 |
 | `public-building-on-demand-estimator` | public | P1 | display,success | — |
+| `public-building-on-demand-explainer` | public | P2 | display,success,failure | — |
 | `public-building-on-demand-faq` | public | P2 | success | — |
 | `public-building-on-demand-guide` | public | P2 | display,success | — |
 | `public-building-on-demand-language` | public | P2 | success | — |
@@ -7571,6 +7574,8 @@ The coherence ticket's rule made executable: cliente y proyecto se registran una
 - **Evidencia:** `components/resources/VideoResourceManager.vue` y sus cuatro páginas huésped; `views/video_resources.py` y `services/video_resource_service.py`.
 - **E2E Spec:** `e2e/admin/admin-video-resources.spec.js`.
 
+- **Células Scrum:** En Programa se reutiliza el gestor compartido, con recursos separados por idioma, validación MP4 y revisión. Casos de error: archivo inválido, consulta/carga fallida y conflicto 409. Evidencia: `frontend/pages/panel/cells/index.vue`, `frontend/components/resources/VideoResourceManager.vue`.
+
 
 ## Section 33 — Platform Delivery Workflow (Oct 1, 2026)
 
@@ -8015,6 +8020,28 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Interaction:** Select modules and recipient, generate a fixed-selection link, then inspect openings or revoke it in Seguimiento.
 - **Outcomes:** `success`, `error`, `failure`, `display`
 - **Evidence:** `CatalogSelectionModal.vue`, `ShareHistoryModal.vue`, admin share endpoints.
+
+### FLOW: `admin-building-on-demand-explainer`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P3
+- **Route:** `/:locale/panel/cells`
+- **Interaction:** Entrar a Células desde el panel, consultar la tarjeta compacta y reproducir el video; pausar al perder foco y ofrecer un enlace al archivo si falla.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/pages/panel/cells/index.vue; frontend/components/ExplainerVideoCard.vue.
+- **Scope:** Sin formulario de datos; los permisos y parámetros HTTP se validan en backend.
+
+### FLOW: `admin-building-on-demand-explainer-visibility`
+
+- **Module:** admin
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/cells`
+- **Interaction:** Mostrar u ocultar el video público de Scrum; confirmar el guardado o restaurar el estado previo si falla.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** frontend/components/ExplainerVisibilityToggle.vue; frontend/stores/explainer_videos.js.
+- **Scope:** Sin formulario de datos; los permisos y parámetros HTTP se validan en backend.
 
 ### FLOW: `admin-client-change-history`
 
@@ -9152,6 +9179,17 @@ consulta de la conversación pública que originó el prompt.
 - **Evidencia:** `useAdditionalModulesTheme.js`, `CatalogView.vue` y
   `e2e/public/additional-modules.spec.js`, `commercial-public-theme.spec.js`,
   `commercial-public-overlays.spec.js` y `commercial-public-motion.spec.js`.
+
+### FLOW: `public-building-on-demand-explainer`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/building-on-demand`
+- **Interaction:** Llegar por la navegación pública, consultar y reproducir el video español bajo el encabezado; ofrecer enlace si falla y omitir la tarjeta sin recurso del idioma o con visibilidad apagada.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** frontend/components/BuildingOnDemand/ProgramView.vue; frontend/components/ExplainerVideoCard.vue.
+- **Scope:** Sin formulario de datos; los permisos y parámetros HTTP se validan en backend.
 
 ### FLOW: `public-financing-guide`
 

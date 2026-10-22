@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Admin opens resources from Partnership Program settings, Additional Modules, proposal settings or proposal editing; uploads, replaces, removes or restores a video. Validation, failed requests and revision conflicts preserve the current resource.",
+  "description": "Administrar recursos de video desde Células Scrum, Alianza, Módulos adicionales y Propuestas: cargar, sustituir, quitar y restaurar; validar archivos y recuperarse de errores o conflictos de revisión.",
   "expectedSpecs": 4,
   "outcomes": [
     "display",

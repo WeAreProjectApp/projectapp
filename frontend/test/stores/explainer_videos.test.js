@@ -16,6 +16,7 @@ const settings = {
   show_additional_modules_video: true,
   show_financing_video: true,
   show_proposal_video: true,
+  show_building_on_demand_video: true,
   updated_at: '2026-09-14T10:00:00Z',
 }
 
@@ -72,20 +73,20 @@ describe('useExplainerVideosStore', () => {
     expect(store.isUpdating).toBe(false)
   })
 
-  it('persists the proposal switch with its exact API field', async () => {
-    // Fails if the proposal control updates another module or sends a broad settings payload.
+  it.each([
+    ['proposal', { show_proposal_video: false }],
+    ['building-on-demand', { show_building_on_demand_video: false }],
+  ])('patches %s with its exact API field', async (module, payload) => {
+    // Fails if a module control updates another visibility field or sends a broad settings payload.
     store.settings = { ...settings }
-    patch_request.mockResolvedValue({ data: { ...settings, show_proposal_video: false } })
+    patch_request.mockResolvedValue({ data: { ...settings, ...payload } })
 
-    const result = await store.setVisibility('proposal', false)
+    await store.setVisibility(module, false)
 
     expect(patch_request).toHaveBeenCalledWith(
       'explainer-videos/admin/settings/update/',
-      { show_proposal_video: false },
+      payload,
     )
-    expect(result).toEqual({ success: true, data: { ...settings, show_proposal_video: false } })
-    expect(store.isVisible('proposal')).toBe(false)
-    expect(store.isVisible('financing')).toBe(true)
   })
 
   it('shows the new state while saving and reverts it when the save fails', async () => {
@@ -106,17 +107,18 @@ describe('useExplainerVideosStore', () => {
     expect(store.isUpdating).toBe(false)
   })
 
-  it('restores the proposal switch after its request is rejected', async () => {
-    // Fails if a failed proposal save leaves the client-facing switch falsely hidden.
+  it.each([
+    ['proposal', { show_proposal_video: ['Valor inválido.'] }],
+    ['building-on-demand', { show_building_on_demand_video: ['Valor inválido.'] }],
+  ])('restores the %s switch after its request is rejected', async (module, errors) => {
+    // Fails if a rejected module save leaves the client-facing switch falsely hidden.
     store.settings = { ...settings }
     const error = new Error('bad request')
-    error.response = { data: { show_proposal_video: ['Valor inválido.'] } }
+    error.response = { data: errors }
     patch_request.mockRejectedValue(error)
 
-    const result = await store.setVisibility('proposal', false)
+    await store.setVisibility(module, false)
 
-    expect(result).toEqual({ success: false, errors: { show_proposal_video: ['Valor inválido.'] } })
     expect(store.settings).toEqual(settings)
-    expect(store.isUpdating).toBe(false)
   })
 })

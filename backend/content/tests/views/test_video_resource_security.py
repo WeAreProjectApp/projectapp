@@ -56,6 +56,7 @@ def _uploaded_financing_resource(revision=3):
     [
         ('partnership-program', 'set_partnership_program_video', 'language'),
         ('additional-modules', 'set_additional_modules_video', 'language'),
+        ('building-on-demand', 'set_building_on_demand_video', 'language'),
         ('proposals', 'set_proposal_generic_video', 'language'),
         ('proposals', 'set_proposal_personalized_video', 'proposal_id'),
     ],
@@ -185,7 +186,7 @@ def test_non_staff_cannot_read_or_write_module_videos(django_user_model, method,
     client.force_authenticate(user)
 
     response = getattr(client, method)(
-        '/api/video-resources/admin/modules/financing/es/', payload, format='json',
+        '/api/video-resources/admin/modules/building-on-demand/es/', payload, format='json',
     )
 
     assert response.status_code == 403

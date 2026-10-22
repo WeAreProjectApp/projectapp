@@ -18,6 +18,8 @@ import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { expectCompactModal } from '../helpers/modal-layout.js';
+import { expectContentSizedColumns } from '../helpers/table-geometry.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import {
   ADMIN_ACCOUNTING_COLLECTION_CREATE,
   ADMIN_ACCOUNTING_INCOME_CLIENT,
@@ -638,12 +640,17 @@ async function openIncomeMute(page, incomeId = 1) {
 
 async function navigateToIncomesFromPanel(page) {
   await page.goto('/panel', { waitUntil: 'domcontentloaded' });
-  if (page.viewportSize().width < 1024) {
-    await page.getByRole('button', { name: 'Abrir menú' }).click();
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    const menuButton = page.getByRole('button', { name: 'Abrir menú' });
+    await expect(menuButton).toBeVisible({ timeout: 25_000 });
+    await menuButton.click();
   }
   // The desktop sidebar names its navigation landmark; the compact drawer
   // exposes the same semantic link inside an unnamed dialog navigation.
-  await page.getByRole('link', { name: 'Ingresos', exact: true }).click();
+  const link = page.getByRole('link', { name: 'Ingresos', exact: true });
+  await expect(link).toBeVisible({ timeout: 25_000 });
+  await link.click();
   await expect(
     page.getByRole('heading', { name: 'Ingresos', exact: true }),
   ).toBeVisible({ timeout: 25_000 });
@@ -768,6 +775,56 @@ test.describe('Income indicator actions', () => {
     await expect(page.getByTestId('accounting-row-2')).toHaveCount(0);
   });
 });
+
+for (const alias of ['compact', 'portrait']) {
+  test.describe(`Income content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('keeps money readable across income views', {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-income-crud @ compact and portrait)
+      // Bug caught: a view change on a narrow panel clipped the income total or introduced horizontal scrolling.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ rows: [incomeRow()], calls: [], incomeViewMode: 'grouped' }));
+      await navigateToIncomesFromPanel(page);
+      const groupedRow = page.getByTestId('accounting-row-1');
+
+      await expect(groupedRow).toContainText('1.160.000');
+      expect(await groupedRow.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await page.getByTestId('incomes-view-mode').getByRole('tab', { name: 'Clásico', exact: true }).click();
+
+      const classicRow = page.getByTestId('accounting-row-1');
+      await expect(classicRow).toContainText('1.160.000');
+      expect(await classicRow.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    });
+  });
+}
+
+for (const alias of ['landscape', 'desktop', 'wide']) {
+  test.describe(`Income content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('fits type and amount to their content across income views', {
+      tag: [...ADMIN_ACCOUNTING_INCOME_CRUD, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }) => {
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-income-crud @ landscape, desktop and wide)
+      // Bug caught: classic or grouped income columns stretched Tipo or Total and left Concepto without the available room.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ rows: [incomeRow()], calls: [], incomeViewMode: 'grouped' }));
+      await navigateToIncomesFromPanel(page);
+      const groupedRow = page.getByTestId('accounting-row-1');
+
+      await expect(groupedRow).toContainText('Kore - Inicio 40%');
+      await expectContentSizedColumns(groupedRow, { typeLabel: 'Tipo', valueLabel: 'Total' });
+      await page.getByTestId('incomes-view-mode').getByRole('tab', { name: 'Clásico', exact: true }).click();
+
+      const classicRow = page.getByTestId('accounting-row-1');
+      await expect(classicRow).toContainText('Kore - Inicio 40%');
+      await expectContentSizedColumns(classicRow, { typeLabel: 'Tipo', valueLabel: 'Total' });
+    });
+  });
+}
 
 test.describe('Admin Accounting Incomes CRUD', () => {
   test.beforeEach(async ({ page }) => {

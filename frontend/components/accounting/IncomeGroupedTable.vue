@@ -359,6 +359,11 @@ const props = defineProps({
   /** Same column contract as AccountingTable, including the explicit
    * responsive priority for compact, portrait and landscape profiles. */
   columns: { type: Array, required: true },
+  columnLayout: {
+    type: String,
+    default: 'proportional',
+    validator: (value) => ['proportional', 'content'].includes(value),
+  },
   /** withClientWeights(groupByClient(rows)) — ordered, subtotaled, "Sin cliente" last. */
   groups: { type: Array, default: () => [] },
   loading: { type: Boolean, default: false },
@@ -429,6 +434,7 @@ const hasMenuStart = computed(() => (
 const resolved = computed(() => resolveColumns(props.columns, {
   hasActions: props.showActions,
   rowActionsLayout: props.rowActionsLayout,
+  columnLayout: props.columnLayout,
 }));
 
 function ariaSort(column) {

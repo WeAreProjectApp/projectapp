@@ -10,7 +10,7 @@ from django.db import connection
 from django.test.utils import CaptureQueriesContext
 from rest_framework.test import APIClient
 
-from content.models import BuildingOnDemandProgramRevision
+from content.models import BuildingOnDemandProgramRevision, ExplainerVideoSettings
 
 pytestmark = pytest.mark.django_db
 PUBLIC_PATHS = ['/api/building-on-demand/public/', '/api/building-on-demand/public/pdf/']
@@ -33,6 +33,43 @@ def test_public_payload_is_localized(building_on_demand_program, lang, canonical
     assert unquote(payload['cta']['whatsapp_url']).endswith(text['cta']['whatsapp_message'])
     assert response['Cache-Control'] == 'no-store'
     assert re.search(r'"internal"|55000|Hostinger|KVM', json.dumps(payload)) is None
+
+
+def test_public_payload_exposes_the_default_explainer(building_on_demand_program):
+    """Fails if the visible Scrum explainer lacks its default resource descriptor."""
+    response = APIClient().get(PUBLIC_PATHS[0], {'lang': 'es'})
+
+    assert response.status_code == 200
+    assert response.data['show_explainer_video'] is True
+    assert response.data['explainer_video'] == {'mode': 'default', 'video': None}
+
+
+def test_public_payload_hides_the_explainer_when_its_switch_is_off(building_on_demand_program):
+    """Fails if the public Scrum page exposes an explainer that staff hid."""
+    settings = ExplainerVideoSettings.load()
+    settings.show_building_on_demand_video = False
+    settings.save(update_fields=['show_building_on_demand_video', 'updated_at'])
+
+    response = APIClient().get(PUBLIC_PATHS[0], {'lang': 'es'})
+
+    assert response.status_code == 200
+    assert response.data['show_explainer_video'] is False
+
+
+def test_public_payload_reports_a_removed_spanish_explainer(admin_client, building_on_demand_program):
+    """Fails if removing the Scrum explainer silently restores its default video."""
+    removed = admin_client.post(
+        '/api/video-resources/admin/modules/building-on-demand/es/',
+        {'action': 'remove', 'revision': 0},
+        format='json',
+    )
+
+    response = APIClient().get(PUBLIC_PATHS[0], {'lang': 'es'})
+
+    assert removed.status_code == 200
+    assert removed.data['mode'] == 'none'
+    assert response.status_code == 200
+    assert response.data['explainer_video'] == {'mode': 'none', 'video': None}
 
 
 def test_public_payload_defaults_to_spanish(building_on_demand_program):
@@ -107,4 +144,5 @@ def test_public_query_count_stays_constant(building_on_demand_program, building_
 
     assert (first.status_code, later.status_code) == (200, 200)
     assert (first.data['version'], later.data['version']) == (1, 2)
-    assert len(first_reads) == len(later_reads) == 1
+    # Program/revision, live visibility, and the localized video resource stay fixed per read.
+    assert len(first_reads) == len(later_reads) == 3

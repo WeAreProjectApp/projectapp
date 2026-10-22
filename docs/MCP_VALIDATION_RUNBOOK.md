@@ -840,26 +840,26 @@ La retención y recuperación de tokens se comprueban en las pruebas del servici
 
 | Slug | Versión | Herramientas | Alcance |
 |---|---|---:|---|
-| `operations` | 2.1.0 | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
-| `partnership-program` | 2.1.1 | 26 | Condiciones, formalización y recursos del Programa de Alianza |
-| `building-with-us` | 1.0.0 | 16 | Presentación pública bilingüe y contrato privado versionados, preview, confirmación, restauración, PDF e inicialización del espejo; creado inactivo, sin uploads ni videos |
-| `building-on-demand` | 1.0.0 | 35 | Programa ES/EN, oferta, economía privada y contrato versionados; CRUD de planes, plazos, tareas, preguntas y tarjetas, orden, rangos, preview, confirmación, restauración, espejo y PDFs; creado inactivo, sin uploads ni videos |
-| `additional-modules` | 2.1.1 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
-| `commercial` | 2.1.1 | 201 | Clientes, propuestas, diagnósticos, módulos adicionales, horas, Programa de Alianza (financiación), visibilidad de videos explicativos, archivos, instantáneas de contratos y correos comerciales |
-| `proposals` | 2.2.1 | 108 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
-| `projects` | 3.0.0 | 171 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
-| `documents` | 4.0.0 | 73 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
-| `communications` | 2.1.1 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
-| `content` | 2.1.1 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
-| `tasks` | 2.1.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
-| `accounting-ledger` | 2.4.0 | 64 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo con detalle y reparto, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
-| `accounting-billing` | 2.1.1 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
-| `accounting-cards` | 2.1.1 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
-| `blog` | 1.1.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
-| `clients` | 1.1.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
-| `accounting` | 1.4.0 | 80 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos, detalle del bolsillo y controles comunes |
-| `diagnostics` | 1.1.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
-| `linkedin-personal` | 1.1.0 | 10 | Conector de compatibilidad: LinkedIn personal |
+| `operations` | 3.0.0 | 4 | Dashboard, indicadores, alertas y conteos globales de sólo lectura |
+| `partnership-program` | 4.0.0 | 26 | Condiciones, formalización y recursos del Programa de Alianza |
+| `building-with-us` | 3.0.0 | 16 | Presentación pública bilingüe y contrato privado versionados, preview, confirmación, restauración, PDF e inicialización del espejo; creado inactivo, sin uploads ni videos |
+| `building-on-demand` | 4.0.0 | 44 | Programa ES/EN, oferta, economía privada y contrato versionados; CRUD de planes, plazos, tareas, preguntas y tarjetas, orden, rangos, preview, confirmación, restauración, espejo y PDFs; video con carga MP4, sustitución, retirada, restauración y visibilidad; creado inactivo |
+| `additional-modules` | 4.0.0 | 25 | Catálogo bilingüe, configuración y recursos de módulos adicionales |
+| `commercial` | 6.0.0 | 156 | Clientes, propuestas, diagnósticos y configuración; los programas y sus videos pertenecen a Programas |
+| `proposals` | 6.0.0 | 109 | Propuestas, secciones, contratos, instantáneas, formalización, archivos y enlaces |
+| `projects` | 4.0.0 | 159 | Proyectos, asignaciones, estados, transiciones, documentos asociados, historial, integridad de datos y ciclo de vida de hosting |
+| `documents` | 8.0.0 | 77 | Documentos Markdown editables, carpetas, migración/adopción con deshacer, movimientos con políticas, estados, tags, observaciones, hilos, correo, imports y exports |
+| `communications` | 3.0.0 | 50 | Hilos, carpetas, mensajes, compositor, previews, envío/reenvío, adjuntos, historial, templates, entregabilidad y enlaces seguros de un solo uso |
+| `content` | 3.0.0 | 60 | Blog, portafolio, QR, Linktrees, LinkedIn y activos relacionados |
+| `tasks` | 3.0.0 | 20 | Tareas, archivo, comentarios, alertas, orden y controles comunes |
+| `accounting-ledger` | 3.1.0 | 68 | Ingresos esperados con ETag, abonos individuales y colectivos sin cuenta previa, corrección y reversa del abono, liquidación con ajustes, gastos, bolsillo con detalle y reparto, recurrentes, Ads, categorías, previsión de cobro, liquidaciones y exports |
+| `accounting-billing` | 3.0.0 | 46 | Cuentas de cobro, hosting, ciclos, ajustes, destinatarios y correo contable |
+| `accounting-cards` | 3.0.0 | 39 | Tarjetas, snapshots, detalle completo con get_statement, extractos, transacciones, alias, imports y recordatorios |
+| `blog` | 2.0.0 | 10 | Conector de compatibilidad: plantilla, CRUD y calendario editorial |
+| `clients` | 2.0.0 | 9 | Conector de compatibilidad: búsqueda, detalle y CRUD de clientes |
+| `accounting` | 2.1.0 | 141 | Conector de compatibilidad (Gestor Contable): catálogo monolítico, ingresos esperados, creación, corrección y reversa de abonos, detalle del bolsillo y controles comunes |
+| `diagnostics` | 2.0.0 | 16 | Conector de compatibilidad: diagnósticos y secciones |
+| `linkedin-personal` | 2.0.0 | 10 | Conector de compatibilidad: LinkedIn personal |
 
 Los 20 conteos proceden de `CONNECTORS` / `TOOLS_BY_SLUG` y de
 `mcp_schema_report` local con `projectapp.settings_test` el 2026-10-11, sin
@@ -876,6 +876,8 @@ esas versiones además de la paridad de esquemas; ver el
 Los conectores canónicos nuevos nacen inactivos. Los cinco slugs marcados como
 compatibilidad no se eliminan ni cambian de URL; permiten una transición gradual
 hacia los conectores agrupados por área.
+| `offerings` | 1.0.0 | 35 | Nuestra oferta: paquetes de horas, módulos adicionales y sus recursos de video. |
+| `programs` | 2.0.0 | 78 | Programas: Alianza, Building with Us y Células; programa, economía, contratos y videos por idioma, con carga y revisión compartidas. |
 
 ## Preparación segura
 
@@ -1058,16 +1060,18 @@ tests que los consumen; no son filtros admitidos por el scanner.
 
 La migración `0291_building_on_demand_program` crea el conector
 `building-on-demand` inactivo, sin credenciales; la ola contractual agrega su
-contrato privado inicial. MCP publica **1.0.0 / 35 herramientas**: cinco lecturas
+contrato privado inicial. MCP publica **4.0.0 / 44 herramientas**: cinco lecturas
 del programa, veinte escrituras del programa, siete herramientas contractuales
-y los tres controles comunes. Las veintitrés escrituras son sensibles y exigen
-preview seguido de `confirm_action`; no hay herramientas de uploads ni videos.
-El Panel Células sólo consulta programa, economía, historial, contrato y PDFs.
+y los tres controles comunes, más cinco operaciones de video y cuatro controles
+de carga binaria. Las veintitrés escrituras del programa y del contrato son
+sensibles y exigen preview seguido de `confirm_action`. El Panel Células consulta
+programa, economía, historial, contrato y PDFs, y permite administrar el video.
+Para sus operaciones específicas, ver «Video de Células Scrum (2026-10-22)».
 
 Validar con una credencial temporal de superusuario en el entorno de pruebas:
 
 1. Consultar `tools/list` y `describe_capabilities`: mismos nombres, esquemas
-   cerrados y versión `1.0.0`. Leer `get_building_on_demand_program` y
+   cerrados y versión `4.0.0`. Leer `get_building_on_demand_program` y
    `get_building_on_demand_economics`; verificar oferta bilingüe, datos internos,
    cifras calculadas por el backend, metadatos y `etag`. El payload y PDF públicos
    no contienen economía privada ni contrato.
@@ -1139,9 +1143,10 @@ expectativas actualizadas de overview en `test_building_on_demand_admin.py` y
 campos, política, paridad, explicitness y `mcp_schema_report`. Ejecutar con
 migraciones, en lotes de hasta veinte casos mediante `-k` y ciclos de hasta
 tres comandos. Aplicar `scripts/test_quality_gate.py --junk-severity=error`
-por cada archivo de tests modificado. Regenerar únicamente el pin del nuevo
-slug con `mcp_schema_report --slug building-on-demand --write-fingerprints`
-bajo `projectapp.settings_test`; los contratos existentes conservan sus pins.
+por cada archivo de tests modificado. Al cambiar el contrato del video, revisar
+y versionar las huellas de `building-on-demand` y su módulo canónico `programs` con
+`mcp_schema_report --slug building-on-demand --slug programs --write-fingerprints`
+bajo `projectapp.settings_test`; los demás contratos conservan sus pins.
 
 **Después del deploy:** activar explícitamente el conector y crear sus
 credenciales con actor y alcance adecuados; no se activan por la migración.
@@ -2761,6 +2766,12 @@ liquidación se rechazan antes de crear una confirmación.
 
 Validación focal: `content/tests/views/test_pocket_movement_detail.py` comprueba atribución, saldo, reparto, acceso y paridad REST/MCP.
 
+## Video de Células Scrum (2026-10-22)
+
+Programas incorpora las cinco operaciones `*_building_on_demand_video*`, con carga binaria compartida y revisión del recurso. Los catálogos son `building-on-demand` 4.0.0 con 44 herramientas y `programs` 2.0.0 con 78. Comercial 6.0.0 conserva 156 herramientas de su sección; el catálogo `pre_split` mantiene exactamente sus 247 nombres históricos. Sus argumentos de idioma, activo y visibilidad llevan descripciones explícitas en esquemas cerrados.
+
+Validar consulta, upload MP4, rechazo de archivo inválido, revisión 409, retirada, restauración y visibilidad; comparar lo consultado con la API pública. El contrato de campos clasifica el interruptor nuevo y conserva excluidos los de otros módulos en los adaptadores. Las revisiones del video son independientes de las del programa y del contrato; se aplican los permisos existentes.
+
 ### Servicio aprobado y recuperación de anexos (2026-10-21)
 
 Comercial/Propuestas: `get_proposal`, `create_proposal`, `update_proposal`,
@@ -2777,3 +2788,7 @@ se rechace, que archivos corruptos y propietarios distintos bloqueen la operaci�
 y que repetir la reparación no cree identidades ni paquetes adicionales. Un anexo
 sin evidencia aprobada se incorpora con confirm_proposal_document_revision desde
 Comercial; la reparación nunca lo incorpora retroactivamente.
+
+### Integración de Programas, video y migraciones (2026-10-22)
+
+La migración vacía `0299_merge_programs_video_approvals` une las tres `0298` de video, segmentación y aprobación del servicio, sin modificar sus operaciones. El catálogo canónico de video de Células es Programas; el alias Building on Demand admite carga compartida. Las proyecciones de visibilidad de propuestas, módulos adicionales y Alianza siguen limitadas a su propio interruptor y recursos. La lista congelada `pre_split` conserva sus 247 nombres y no reabre `launch_proposal_to_platform` tras su retirada. Las revisiones fiscales y la evidencia de contratos de las otras sesiones se conservan.

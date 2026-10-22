@@ -10,13 +10,13 @@ const props = defineProps({
   module: {
     type: String,
     required: true,
-    validator: (value) => ['additional-modules', 'financing', 'proposal'].includes(value),
+    validator: (value) => ['additional-modules', 'financing', 'proposal', 'building-on-demand'].includes(value),
   },
   /** Locale namespace that holds the explainerVisibility* keys. */
   i18nNamespace: {
     type: String,
     required: true,
-    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer'].includes(value),
+    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer', 'buildingOnDemand'].includes(value),
   },
   testId: { type: String, default: 'explainer' },
 })

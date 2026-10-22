@@ -77,6 +77,13 @@
     timeline.set(node, { autoAlpha: 1 }, cue.start)
     timeline.set(node, { autoAlpha: 0 }, cue.end)
   }
-  timeline.fromTo('.progress-fill', { scaleX: 0 }, { scaleX: 1, duration: Number(document.getElementById('root').dataset.duration), ease: 'none' }, 0)
+  const root = document.getElementById('root')
+  if (root.dataset.progress === 'steps') {
+    // Settled scenes can reuse captured frames; a continuously animated meter
+    // would keep an otherwise static composition active for the whole minute.
+    scenes.forEach((scene, index) => timeline.set('.progress-fill', { scaleX: (index + 1) / scenes.length }, Number(scene.dataset.start)))
+  } else {
+    timeline.fromTo('.progress-fill', { scaleX: 0 }, { scaleX: 1, duration: Number(root.dataset.duration), ease: 'none' }, 0)
+  }
   window.BRAG_TIMELINE = timeline
 })()

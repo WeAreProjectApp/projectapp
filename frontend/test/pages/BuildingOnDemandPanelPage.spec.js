@@ -61,8 +61,12 @@ const makePayloads = () => ({
 });
 const requestError = (status = 503) => ({ response: { status, data: { message: 'No disponible', code: 'NOT_FOUND', details: {} } } });
 const ProgramViewStub = {
-  props: ['program', 'language', 'floatingActions'],
-  template: '<article data-testid="program-view" :data-floating-actions="String(floatingActions)" :data-language="language"><h3>{{ program.hero.title }}</h3></article>',
+  props: ['program', 'language', 'floatingActions', 'showExplainer'],
+  template: '<article data-testid="program-view" :data-floating-actions="String(floatingActions)" :data-show-explainer="String(showExplainer)" :data-language="language"><h3>{{ program.hero.title }}</h3></article>',
+};
+const ExplainerVideoCardStub = {
+  props: ['video', 'variant'],
+  template: '<section data-testid="building-on-demand-explainer-card" :data-src="video.src" :data-variant="variant" />',
 };
 const mounted = [];
 async function mountPage({ settle = true } = {}) {
@@ -72,6 +76,9 @@ async function mountPage({ settle = true } = {}) {
       components: { BasePageShell, BaseSegmented, BaseAlert, BaseBadge, BaseExploratoryList },
       stubs: {
         BuildingOnDemandProgramView: ProgramViewStub,
+        ExplainerVideoCard: ExplainerVideoCardStub,
+        ExplainerVisibilityToggle: true,
+        VideoResourceManager: true,
         DocumentMarkdownBody: { props: ['markdown'], template: '<article>{{ markdown }}</article>' },
         PanelDownloadLink: { props: ['url', 'label'], template: '<a :href="url">{{ label }}</a>' },
         NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
@@ -148,6 +155,15 @@ describe('BuildingOnDemandPanelPage', () => {
     expect(wrapper.get('[data-testid="program-view"]').attributes('data-floating-actions')).toBe('false');
     expect(wrapper.get('[data-testid="program-view"]').attributes('data-language')).toBe('es');
     expect(wrapper.get('[data-testid="building-on-demand-admin-program-version"]').text()).toContain('Versión 3');
+  });
+
+  it('keeps the compact Scrum video outside the preview that disables it', async () => {
+    // Fails if the panel duplicates the public video inside its document preview.
+    const wrapper = await mountPage();
+
+    expect(wrapper.findAll('[data-testid="building-on-demand-explainer-card"]')).toHaveLength(1);
+    expect(wrapper.get('[data-testid="building-on-demand-explainer-card"]').attributes('data-variant')).toBe('compact');
+    expect(wrapper.get('[data-testid="program-view"]').attributes('data-show-explainer')).toBe('false');
   });
 
   it('switches preview language independently of the panel locale', async () => {
