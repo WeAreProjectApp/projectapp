@@ -11,6 +11,9 @@ const props = defineProps({
   required: { type: Boolean, default: true },
   error: { type: String, default: '' },
   resetKey: { type: [Boolean, Number, String], default: null },
+  rateDisabled: { type: Boolean, default: false },
+  rateDisabledReason: { type: String, default: '' },
+  compact: { type: Boolean, default: false },
 })
 const emit = defineEmits(['update:modelValue', 'update:rate', 'capture'])
 const mode = ref('vat_included')
@@ -45,7 +48,6 @@ function capture(value, rate = props.rate) {
 function changeMode(value) {
   mode.value = value
   refreshAmount()
-  emitCapture(inputAmount.value, value)
 }
 function changeRate(value) {
   const rate = value === '' || value === null ? null : value
@@ -62,7 +64,7 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
 </script>
 <template>
   <div class="space-y-3" data-testid="vat-input">
-    <BaseFormRow :cols="4">
+    <BaseFormRow :cols="compact ? 2 : 4">
       <BaseFormField label="Cómo introduces el valor" class="panel-portrait:col-span-2">
         <BaseSegmented :model-value="mode" @update:model-value="changeMode($event)" :options="modeOptions" full-width size="sm" :disabled="disabled" :disabled-reason="disabledReason" />
       </BaseFormField>
@@ -70,11 +72,11 @@ const modeOptions = computed(() => modes.map(item => ({ ...item, disabled: item.
         <BaseCurrencyInput :model-value="inputAmount" :decimals="2" :required="required" :data-testid="inputTestId" :disabled="disabled" :disabled-reason="disabledReason" :error="invalid" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="errorId" @update:model-value="capture($event)" />
       </BaseFormField>
       <BaseFormField label="IVA (%)">
-        <BaseInput :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled" :disabled-reason="disabledReason" @update:model-value="changeRate($event)" />
+        <BaseInput :model-value="rate" type="number" min="0" max="100" step="0.01" placeholder="Sin registrar" data-testid="vat-rate" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @update:model-value="changeRate($event)" />
       </BaseFormField>
       <template #help>
         Usa 0 para Sin IVA; vacío significa sin registrar.
-        <BaseButton type="button" variant="link" size="sm" :disabled="disabled" :disabled-reason="disabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
+        <BaseButton type="button" variant="link" size="sm" :disabled="disabled || rateDisabled" :disabled-reason="disabledReason || rateDisabledReason" @click="changeRate(0)">Sin IVA</BaseButton>
       </template>
     </BaseFormRow>
     <p v-if="invalid" class="text-sm text-danger-strong" role="alert">Revisa el importe y el porcentaje de IVA.</p>

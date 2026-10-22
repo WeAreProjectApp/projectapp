@@ -82,6 +82,8 @@ def update_income_abono(movement_id, data, user):
             return update_settlement(operation.pk, data, user)
         except ValueError as exc:
             raise ValueError(str(exc).replace('supera su saldo pendiente', 'supera su saldo disponible')) from exc
+    if data.get('vat_updates'):
+        raise ValueError('Los abonos históricos conservan su IVA y no admiten vat_updates. Omite la configuración de IVA para corregir su importe.')
     ids = [entry['income_id'] for entry in data['allocations']]
     movement, old_children, locked = _lock_abono(movement_id, ids)
     parents = [locked.incomes[pk] for pk in ids]

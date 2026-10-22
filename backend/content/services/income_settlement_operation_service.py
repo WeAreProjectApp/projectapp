@@ -16,6 +16,7 @@ from content.services import accounting_service
 from content.services.entity_history import historical_write
 from content.services.income_settlement_allocation import allocation_plan, money
 from content.services.accounting_vat import vat_breakdown
+from content.services.income_settlement_vat import settlement_vat
 
 EntityType = AccountingChangeLog.EntityType
 
@@ -87,14 +88,17 @@ def _prepare(parents, data):
         if resolution > pendings[parents[0].pk]:
             raise ValueError('La suma del monto recibido, los gastos y los nuevos ingresos esperados no puede superar el saldo pendiente.')
     plan = allocation_plan(parents, pendings, data)
+    rates, vat_reasons = settlement_vat(parents, data, plan['rows'])
     if not (plan['total_amount'] or plan['deducted'] or data.get('expected_incomes')):
         raise ValueError('El monto recibido debe ser mayor a cero.')
     contexts = confirmation_contexts(parents)
     for parent, row in zip(parents, plan['rows']):
-        base, vat, total = vat_breakdown(row['amount'], parent.vat_rate)
+        base, vat, total = vat_breakdown(row['amount'], rates[parent.pk])
         row.update(
             concept=parent.concept, client_id=parent.client_id, project_id=parent.project_id,
-            vat_rate=parent.vat_rate, base_amount=base, vat_amount=vat,
+            vat_rate=rates[parent.pk], base_amount=base, vat_amount=vat,
+            vat_editable=not bool(vat_reasons[parent.pk]),
+            vat_blocked_reason=vat_reasons[parent.pk],
             total_amount=total, confirmation=contexts[parent.pk],
         )
     facts = {
@@ -162,6 +166,15 @@ def _record_effects(operation, parents, plan, data, user, existing_movement=None
     movement = _create_movement(parents, data, user, existing_movement)
     liquids, expenses, follow_ups = [], [], []
     for parent, row in zip(parents, plan['rows']):
+        if row['vat_rate'] != parent.vat_rate:
+            # Use the ordinary financial guards, before the first payment or
+            # deduction is created. Never bypass them with settlement=True.
+            serializer = IncomeRecordCreateUpdateSerializer(
+                instance=parent, data={'vat_rate': row['vat_rate']}, partial=True,
+            )
+            serializer.is_valid(raise_exception=True)
+            accounting_service.update_record(EntityType.INCOME, parent, serializer, user, notify=False)
+            parent.refresh_from_db()
         if parent.pk in periods:
             helpers._complete_parent_period(parent, periods[parent.pk], user)
         if row['amount'] > 0:
@@ -354,6 +367,12 @@ def _assert_reversible(operation, revision=None):
         before = operation.effects['parents_before'][str(parent.pk)]
         after = operation.effects['parents_after'][str(parent.pk)]
         current = _financial_snapshot(parent)
+        if before['vat_rate'] != after['vat_rate'] and (
+            parent.liquid_records.exclude(settlement=operation).exists()
+            or parent.deduction_records.exclude(settlement=operation).exists()
+            or parent.collection_documents.exclude(commercial_status__in=('draft', 'cancelled')).exists()
+        ):
+            raise SettlementConflict(f'El IVA de "{parent.concept}" tiene pagos, deducciones o documentos posteriores; impide revertirlo.')
         if any(current[name] != value for name, value in after.items() if before[name] != value):
             raise SettlementConflict(f'Las condiciones de "{parent.concept}" cambiaron después de reprogramarlo; impiden revertirlo.')
 

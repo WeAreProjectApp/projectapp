@@ -30,8 +30,16 @@ retención ni un tratamiento del IVA como dinero faltante.
 - El saldo sin asignar sigue pendiente en su ingreso. Crear otro esperado es
   explícito, con origen, concepto, fecha y monto; conserva cliente, proyecto,
   línea de negocio e IVA y reduce el original por el monto trasladado.
-- IVA muestra el desglose heredado por ingreso. Tasa nula es desconocida;
-  cero es Sin IVA. El interruptor no cambia las condiciones fiscales.
+- IVA configurable por ingreso desde un interruptor junto al encabezado, antes
+  de expandir: apagarlo propone 0 (Sin IVA), encenderlo recupera la última tasa
+  positiva del borrador o exige definirla. Tasa nula sigue siendo desconocida.
+  Captura antes de IVA o total incluido con desglose de base, impuesto y total.
+  La tasa se guarda en el original y se hereda al pago y a saldos reprogramados.
+  El total esperado se conserva; pagos, deducciones o cuentas emitidas bloquean
+  cambios de tasa, sin impedir liquidar con la tasa actual.
+- Cambiar únicamente el modo de captura conserva el importe recibido, incluidos
+  sus centavos. La base redondeada se muestra sin volver a convertirla en un
+  pago nuevo; solo editar el importe o la tasa recalcula el valor capturado.
 - Los destinos Socios y Bolsillo conservan sus reglas. Solo al bolsillo entra
   el dinero recibido, como un movimiento común; ninguna deducción genera salida.
 - Correo por ingreso elegible, al destinatario de su cuenta emitida. Revisar y
@@ -52,6 +60,20 @@ clientes anteriores pueden seguir enviando los contratos existentes.
 posibles destinatarios sin crear registros. `preview_hash` protege lo revisado
 contra cambios posteriores; `request_id` identifica reintentos del mismo pago.
 La respuesta de liquidación añade `settlement_id`.
+
+`vat_updates` es opcional en ambos adaptadores, vista previa y corrección, en
+REST y MCP. Cada entrada tiene `income_id`, `vat_rate` (0–100, hasta dos
+decimales; `null` sin registrar), y opcionalmente `amount` + `amount_mode`
+(`before_vat` o `vat_included`, este último por defecto). El total normalizado
+de la captura debe coincidir con el dinero imputado al ingreso; no sustituye
+`total_amount` ni cambia el total esperado. No admite ingresos ajenos a la
+selección ni configuraciones repetidas. Omitirlo conserva el contrato anterior.
+La vista previa informa `vat_editable` y `vat_blocked_reason` por fila. El IVA
+propuesto participa en `preview_hash` y se registra en los snapshots de la
+operación. Una reversión restaura la tasa anterior salvo pagos, deducciones o
+documentos posteriores que dependan de ella. Las mismas opciones se publican en
+`settle_income`, `bulk_settle_incomes`, `preview_income_settlement` y
+`update_income_settlement`, con confirmación MCP antes de escribir.
 
 `GET/PATCH/DELETE accounting/income-settlements/<uuid>/` consulta, corrige y
 revierte el conjunto. Escribir exige la revisión actual. Se conserva el
