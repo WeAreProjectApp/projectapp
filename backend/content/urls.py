@@ -1,4 +1,4 @@
-from content.views.proposal_shared_documents import document_proposal_source, confirm_proposal_revision
+from content.views.proposal_shared_documents import document_proposal_source, confirm_proposal_revision, reconcile_proposal_documents
 from content.views.accounting_settlements import preview_income_settlement, income_settlement_detail
 from content.views.proposal_project_reassignment import proposal_project_reassignment
 from content.views.project_administration import (
@@ -739,6 +739,7 @@ urlpatterns = [
     path('proposals/<int:proposal_id>/project-reassignment/', proposal_project_reassignment, name='proposal-project-reassignment'),
     path('documents/<int:document_id>/proposal-source/', document_proposal_source, name='document-proposal-source'),
     path('proposals/<int:proposal_id>/approval/revisions/', confirm_proposal_revision, name='proposal-approval-revision'),
+    path('proposals/<int:proposal_id>/approval/reconciliation/', reconcile_proposal_documents, name='proposal-document-reconciliation'),
     path('proposals/<int:proposal_id>/approval/', approval_review, name='proposal-approval'),
     path('proposals/<int:proposal_id>/approval/files/<int:file_id>/', approval_file_download, name='proposal-approval-file-download'),
     path('proposals/<int:proposal_id>/launch-to-platform/', launch_to_platform, name='launch-to-platform'),

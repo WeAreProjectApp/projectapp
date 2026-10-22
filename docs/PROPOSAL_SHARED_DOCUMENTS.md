@@ -28,3 +28,36 @@ Migraciones aditivas `content.0296` y `0297`, aplicadas por el deploy. Ninguna m
 `reconcile_proposal_documents` sin `--apply` produce un inventario JSON y una huella. Para aplicar una propuesta revisada se requieren `--proposal`, `--actor`, `--expected-hash` y `--apply`. Reutiliza los archivos exactos del cierre confirmado, verificando sus huellas; si faltan proyecto, contrato o archivos, exige completar la revisión. No reconstruye contratos históricos desde una propuesta modificada ni envía correos.
 
 Las pruebas nuevas usan SQLite y almacenamiento temporal con `settings_test`; las pruebas del navegador simulan la frontera HTTP y no acreditan por sí solas la consistencia de base de datos.
+
+## Aprobación explícita del servicio
+
+Elegir contratos separados no acredita que el cliente haya aprobado el servicio.
+`BusinessProposal.service_contract_approved` empieza en `false`, también para
+propuestas existentes. En Documentos, el switch «Servicio aprobado» sólo aparece
+con contratos separados: apagado exige producto; encendido exige producto y
+servicio. El contrato único conserva su comportamiento. La generación y edición
+de ambos borradores sigue disponible durante la negociación.
+
+Guardar el switch cambia la fuente y marca el borrador pendiente; sólo confirmar
+una nueva revisión modifica los documentos vigentes. Los contratos retirados
+conservan su identidad, revisiones, descargas y referencias de firma. El valor
+queda guardado en cada manifiesto nuevo; las evidencias previas no se modifican.
+Las herramientas de creación/edición JSON y `update_proposal_settings` admiten el
+booleano; omitirlo en una actualización conserva el valor guardado. El detalle
+público no expone esta decisión administrativa.
+
+## Reparar vínculos faltantes
+
+`GET/POST proposals/:id/approval/reconciliation/` consulta y recupera vínculos de
+archivos ya confirmados. POST exige `expected_hash` de la consulta vigente y staff.
+El MCP de Documentos ofrece `preview_proposal_document_reconciliation` y
+`reconcile_proposal_documents`; la escritura usa la confirmación MCP existente.
+La CLI `reconcile_proposal_documents` comparte ese mismo servicio.
+
+La consulta no escribe. Se comprueban bytes, huellas, cliente, proyecto y carpeta
+raíz; se bloquean identidades ambiguas o archivos corruptos. Si falta un vínculo,
+se reutiliza el archivo exacto del paquete actual, conservando los documentos ya
+vinculados. Los cierres anteriores al sistema de paquetes se incorporan con sus
+archivos conservados. No se reconstruyen anexos que nunca fueron confirmados:
+`requires_new_revision` indica cuáles requieren revisar y confirmar otro paquete.
+No se envían correos ni se cambia el estado de la propuesta al reparar.

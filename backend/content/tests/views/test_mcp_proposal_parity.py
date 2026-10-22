@@ -243,6 +243,21 @@ class TestProposalMcpSettings:
         assert proposal.title == 'Scope revised by MCP'
         assert proposal.client_email == original_email
 
+    def test_settings_update_persists_service_approval_without_erasing_email(
+        self, api_client, proposals_token, proposal,
+    ):
+        """Fails if the MCP service switch is dropped or clears metadata omitted from its update."""
+        original_email = proposal.client_email
+
+        result = _call(api_client, proposals_token, 'update_proposal_settings', {
+            'proposal_id': proposal.pk, 'service_contract_approved': True,
+        })
+
+        proposal.refresh_from_db()
+        assert result['isError'] is False
+        assert proposal.service_contract_approved is True
+        assert proposal.client_email == original_email
+
     def test_settings_update_records_the_mcp_actor_in_entity_history(
         self, api_client, proposals_token, proposal,
     ):

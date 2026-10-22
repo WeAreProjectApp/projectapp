@@ -6,6 +6,7 @@ import pytest
 from django.core.management import call_command, CommandError
 
 from content.models import Document, ProposalApprovalFile, ProposalDocumentBinding
+from content.services.proposal_approval_service import load_proposal, preview
 from content.tests.views.test_proposal_shared_documents import confirmed_proposal, approval_client, reviewed_proposal
 
 pytestmark = pytest.mark.django_db
@@ -60,3 +61,22 @@ def test_changed_historical_source_requires_another_review(historical_proposal, 
                      expected_hash=review['expected_hash'], apply=True, stdout=StringIO())
 
     assert historical_proposal.approval_packages.count() == 0
+
+
+@pytest.mark.parametrize('manifest_override', [{}, {'source_hash': ''}])
+def test_historical_adoption_keeps_the_pending_source_warning(
+    historical_proposal, admin_user, manifest_override,
+):
+    """Fails if adopting historic files hides proposal edits made before the inventory."""
+    historical_proposal.title = 'Edited before historical inventory'
+    historical_proposal.platform_approval_manifest.update(manifest_override)
+    historical_proposal.save(update_fields=['title', 'platform_approval_manifest'])
+    review = inventory(historical_proposal)
+
+    call_command(
+        'reconcile_proposal_documents', proposal=historical_proposal.pk, actor=admin_user.pk,
+        expected_hash=review['expected_hash'], apply=True, stdout=StringIO(),
+    )
+
+    approval = preview(load_proposal(historical_proposal.pk))
+    assert {row['has_pending_changes'] for row in approval['shared_documents']} == {True}

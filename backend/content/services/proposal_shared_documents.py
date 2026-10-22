@@ -61,6 +61,13 @@ def create_package(proposal, *, actor, request_id, payload_hash, source_hash, wr
         request_id=request_id, payload_hash=payload_hash, source_hash=source_hash,
         manifest=deepcopy(manifest), created_by=actor,
     )
+    root = bind_package_files(proposal, package, written_rows, actor=actor)
+    package.manifest['files'] = [{'id': row.pk, 'source_key': row.source_key, 'sha256': row.sha256, 'size': row.size} for row in written_rows]
+    package.save(update_fields=['manifest'])
+    return package, root
+
+
+def bind_package_files(proposal, package, written_rows, *, actor):
     project = proposal.deliverable.project
     root, folders = folders_for(project)
     proposal.document_bindings.update(is_current=False)
@@ -90,9 +97,7 @@ def create_package(proposal, *, actor, request_id, payload_hash, source_hash, wr
         binding.current_file = row
         binding.is_current = True
         binding.save(update_fields=['current_file', 'is_current'])
-    package.manifest['files'] = [{'id': row.pk, 'source_key': row.source_key, 'sha256': row.sha256, 'size': row.size} for row in written_rows]
-    package.save(update_fields=['manifest'])
-    return package, root
+    return root
 
 
 def can_replace_binary(binding):
@@ -168,7 +173,10 @@ def reconfirm(proposal_id, payload, *, actor, files=()):
     retained = []
     if not files and not data['use_proposal_contracts'] and not previous.manifest.get('use_proposal_contracts', True):
         data['use_proposal_contracts'] = False
-        retained = list(previous.files.filter(source_key__startswith='custom-'))
+        from content.services.contract_variants import approved_doc_types
+        required = approved_doc_types(proposal)
+        retained = [row for row in previous.files.filter(source_key__startswith='custom-')
+                    if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES or row.document_type in required]
         data['custom_documents'] = [{'title': row.title, 'document_type': row.document_type,
             **({'resource_id': row.source_key.removeprefix('custom-')} if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES else {})} for row in retained]
         from django.core.files.uploadedfile import SimpleUploadedFile
@@ -204,6 +212,7 @@ def reconfirm(proposal_id, payload, *, actor, files=()):
         from accounts.services.technical_resources_sync import filtered_technical_doc_for_sync
         section = proposal.sections.filter(section_type='technical_document', is_enabled=True).first()
         manifest = dict(previous.manifest, use_proposal_contracts=data['use_proposal_contracts'],
+            service_contract_approved=proposal.service_contract_approved,
             commercial_summary=_commercial_summary(proposal), client=_client_summary(proposal.client),
             technical_content=filtered_technical_doc_for_sync(proposal, section.content_json) if section else {})
         package, _root = create_package(proposal, actor=actor, request_id=data['request_id'],

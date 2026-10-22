@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "Desde la propuesta y el gestor, consultar la misma identidad documental, su paquete vigente y su historial. Editar fuentes estructuradas o sustituir adjuntos habilitados en borrador. Confirmar otro paquete conserva las versiones anteriores y el cliente y proyecto vinculados. Un conflicto conserva el archivo; revisar explícitamente la versión vigente permite reintentar sin perder la selección.",
+  "description": "From the proposal and document manager, the administrator consults the same document identity, current package and history. A new reviewed package preserves its prior versions and linked client/project: with split contracts, service approval off confirms the product contract plus active annexes; on confirms product and service contracts plus active annexes. The approval preview and custom-document requirements expose only the required contract types. Editing structured sources or replacing enabled draft attachments remains possible. A stale source or failed confirmation preserves the selected switch, draft and current approved package until an explicit retry succeeds.",
   "outcomes": [
     "success",
     "error",
