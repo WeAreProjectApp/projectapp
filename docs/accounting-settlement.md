@@ -37,6 +37,9 @@ retención ni un tratamiento del IVA como dinero faltante.
   La tasa se guarda en el original y se hereda al pago y a saldos reprogramados.
   El total esperado se conserva; pagos, deducciones o cuentas emitidas bloquean
   cambios de tasa, sin impedir liquidar con la tasa actual.
+- Cambiar únicamente el modo de captura conserva el importe recibido, incluidos
+  sus centavos. La base redondeada se muestra sin volver a convertirla en un
+  pago nuevo; solo editar el importe o la tasa recalcula el valor capturado.
 - Los destinos Socios y Bolsillo conservan sus reglas. Solo al bolsillo entra
   el dinero recibido, como un movimiento común; ninguna deducción genera salida.
 - Correo por ingreso elegible, al destinatario de su cuenta emitida. Revisar y

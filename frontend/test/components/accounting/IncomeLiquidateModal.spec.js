@@ -299,6 +299,36 @@ describe('IncomeLiquidateModal', () => {
     });
   });
 
+  it('preserves the received cents when only the capture mode changes', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: '119000.03', pending_amount: '119000.03', vat_rate: 19 }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-vat-toggle-1"]').trigger('click');
+    await wrapper.findAll('button').find((button) => button.text() === 'Antes de IVA').trigger('click');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0].total_amount).toBe(119000.03);
+    expect(wrapper.emitted('submit')[0][0].vat_updates).toBeUndefined();
+    expect(wrapper.emitted('submit')[0][0].allocations).toBeUndefined();
+  });
+
+  it('keeps automatic allocation after changing the included VAT rate', async () => {
+    mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
+    const wrapper = mountModal({ record: income(1, { total_amount: '200', pending_amount: '200', vat_rate: null }) });
+    await flushPromises();
+
+    await wrapper.get('[data-testid="income-liquidate-apply-vat-1"]').trigger('click');
+    await wrapper.get('[data-testid="vat-rate"]').setValue('19');
+    await wrapper.get('[data-testid="income-liquidate-paid"]').setValue('100');
+    await wrapper.get('[data-testid="income-liquidate-form"]').trigger('submit');
+    await flushPromises();
+
+    expect(wrapper.emitted('submit')[0][0]).toMatchObject({ total_amount: 100, vat_updates: [{ income_id: 1, vat_rate: '19' }] });
+    expect(wrapper.emitted('submit')[0][0].allocations).toBeUndefined();
+  });
+
   it('restores the last positive rate after reactivating VAT', async () => {
     mockPreview(preview([{ income_id: 1, confirmation: { can_send: false } }]));
     const wrapper = mountModal({ record: income(1, { vat_rate: '5.50' }) });

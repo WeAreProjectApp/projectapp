@@ -48,7 +48,6 @@ function capture(value, rate = props.rate) {
 function changeMode(value) {
   mode.value = value
   refreshAmount()
-  emitCapture(inputAmount.value, value)
 }
 function changeRate(value) {
   const rate = value === '' || value === null ? null : value

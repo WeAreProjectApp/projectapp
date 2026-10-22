@@ -1,4 +1,4 @@
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { vatBreakdown } from '~/utils/accountingVat';
 
 /** Per-source drafts. Only an explicit edit adds fiscal fields to the request. */
@@ -29,7 +29,8 @@ export function useSettlementVat(records, { form, proposal, manual, credit }) {
     draft.capture = value;
     const values = value && vatBreakdown(value.amount, draft.rate, value.amount_mode);
     draft.invalid = !values;
-    if (values) updateAmount(id, values.total);
+    const current = proposal.value.rows.find((row) => row.income_id === id);
+    if (values && Number(values.total) !== current?.amount) updateAmount(id, values.total);
   }
   function setRate(id, value) {
     if (locks.value[id]) return;
@@ -51,6 +52,13 @@ export function useSettlementVat(records, { form, proposal, manual, credit }) {
       draft.invalid = false;
     }
   }
+  watch(() => proposal.value.rows, (rows) => {
+    for (const row of rows) {
+      const draft = drafts.value[row.income_id];
+      const values = draft?.capture && vatBreakdown(draft.capture.amount, draft.rate, draft.capture.amount_mode);
+      if (values && Number(values.total) !== row.amount) draft.capture = null;
+    }
+  });
   const updates = computed(() => records.value.flatMap((row) => {
     const draft = drafts.value[row.id];
     return draft && (draft.touched || draft.capture) ? [{

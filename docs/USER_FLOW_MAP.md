@@ -5952,7 +5952,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
-| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 17 |
+| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 18 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
 | `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 42 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
@@ -6557,6 +6557,8 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
+
+Cambiar únicamente entre base y total incluido conserva los centavos recibidos y el reparto automático. Editar el porcentaje en modo total incluido permite seguir ajustando el valor recibido sin conservar una captura desactualizada.
 
 ### FLOW: `admin-accounting-filters`
 

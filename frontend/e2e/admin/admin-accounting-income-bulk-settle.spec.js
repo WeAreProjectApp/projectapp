@@ -214,6 +214,21 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     });
   });
 
+  test('keeps the received cents when switching to the rounded pre-VAT view', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [incomeRow({ id: 11, total_amount: '119000.03', pending_amount: '119000.03' })], calls }));
+    await gotoIncomes(page);
+    await openBulkSettlement(page, [11]);
+    await page.getByTestId('income-liquidate-vat-toggle-11').click();
+    await page.getByTestId('income-liquidate-vat-11').getByRole('tab', { name: 'Antes de IVA', exact: true }).click();
+    await expect(page.getByTestId('income-liquidate-paid')).toHaveValue('119.000,03');
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect.poll(() => calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/').length).toBe(1);
+    expect(calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body.total_amount).toBe(119000.03);
+  });
+
   // Bug caught: one header switch could silently overwrite another income's fiscal terms.
   test('preserves the other income rate when disabling VAT in a mixed selection', {
     tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
