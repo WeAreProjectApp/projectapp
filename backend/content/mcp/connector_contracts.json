@@ -24,7 +24,7 @@
     "version": "2.0.0"
   },
   "building-on-demand": {
-    "sha256": "7986a6b95521d59eced5cd073fdaf3e322733985cea8041c5522430d06b6a5ff",
+    "sha256": "f9a6633a731b91c4079551152d441f3b035ba266fac70b4c26ad2a7898b9133c",
     "version": "2.1.0"
   },
   "building-with-us": {
@@ -36,7 +36,7 @@
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "2ad57d97f8b39cb3e9f7fef93907448b3b5fe8b7c18fdae6cd5486397a5a5304",
+    "sha256": "7a28fef5521e982d7e031fefde0b491d75677501497ce803b84b03bee7d2ba28",
     "version": "5.1.0"
   },
   "communications": {

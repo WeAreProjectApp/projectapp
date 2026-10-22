@@ -85,7 +85,7 @@ def test_discovery_publishes_closed_described_schemas(api_client, building_on_de
     short_descriptions = [tool['name'] for tool in catalog['tools'] if len(tool['description'].strip()) < 40]
     open_roots = [tool['name'] for tool in catalog['tools'] if tool['input_schema'].get('additionalProperties') is not False]
 
-    assert len(catalog['tools']) == 35
+    assert len(catalog['tools']) == 44
     assert violations == []
     assert short_descriptions == []
     assert open_roots == []

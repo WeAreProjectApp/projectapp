@@ -11,6 +11,18 @@ from content.models import BusinessProposal, McpUpload
 from content.services.video_resource_service import resource_payload, update_resource
 
 
+_BUILDING_ON_DEMAND_ARGUMENT_DESCRIPTIONS = {
+    'language': 'Idioma del video: es o en; si se omite, usa es.',
+    'asset_id': 'UUID de una carga MP4 completada que sustituirá el video vigente.',
+    'visible': 'Indica si el video general se muestra en las vistas públicas del módulo.',
+}
+
+
+def _described(schema, name, descriptions):
+    description = descriptions.get(name)
+    return {**schema, 'description': description} if description else schema
+
+
 def _target(arguments, module, personalized):
     language = arguments.get('language', 'es')
     proposal = None
@@ -71,14 +83,22 @@ def _set_visibility(arguments, module):
     return {'visible': arguments['visible']}
 
 
-def video_tools(module, *, personalized=False):
+def video_tools(module, *, personalized=False, argument_descriptions=None):
+    argument_descriptions = argument_descriptions or {}
     prefix = 'proposal_personalized' if personalized else {
         'proposal': 'proposal_generic', 'financing': 'partnership_program',
         'additional-modules': 'additional_modules',
         'building-on-demand': 'building_on_demand',
     }[module]
-    target = {'proposal_id': {'type': 'integer', 'minimum': 1}} if personalized else {
-        'language': {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
+    target = {
+        'proposal_id': _described(
+            {'type': 'integer', 'minimum': 1}, 'proposal_id', argument_descriptions,
+        ),
+    } if personalized else {
+        'language': _described(
+            {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
+            'language', argument_descriptions,
+        ),
     }
     tools = []
     actions = [('get', 'get'), ('upload', 'set'), ('remove', 'remove')]
@@ -91,7 +111,9 @@ def video_tools(module, *, personalized=False):
             properties['revision'] = {'type': 'integer', 'minimum': 0, 'description': 'Revisión obtenida al consultar el recurso.'}
             required.append('revision')
         if action == 'upload':
-            properties['asset_id'] = {'type': 'string', 'format': 'uuid'}
+            properties['asset_id'] = _described(
+                {'type': 'string', 'format': 'uuid'}, 'asset_id', argument_descriptions,
+            )
             required.append('asset_id')
         descriptions = {
             'get': 'Consulta el video vigente, su revisión y el límite de carga.',
@@ -112,11 +134,22 @@ def video_tools(module, *, personalized=False):
             'name': f'set_{prefix}_video_visibility',
             'description': 'Muestra u oculta el video general en las vistas públicas de este módulo.',
             'risk': 'write',
-            'input_schema': {'type': 'object', 'properties': {'visible': {'type': 'boolean'}}, 'required': ['visible'], 'additionalProperties': False},
+            'input_schema': {
+                'type': 'object',
+                'properties': {
+                    'visible': _described(
+                        {'type': 'boolean'}, 'visible', argument_descriptions,
+                    ),
+                },
+                'required': ['visible'],
+                'additionalProperties': False,
+            },
             'handler': lambda arguments: _set_visibility(arguments, module),
         })
     return tools
 
 
 PROPOSAL_VIDEO_TOOLS = video_tools('proposal') + video_tools('proposal', personalized=True)
-BUILDING_ON_DEMAND_VIDEO_TOOLS = video_tools('building-on-demand')
+BUILDING_ON_DEMAND_VIDEO_TOOLS = video_tools(
+    'building-on-demand', argument_descriptions=_BUILDING_ON_DEMAND_ARGUMENT_DESCRIPTIONS,
+)
