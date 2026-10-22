@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P1",
-  "description": "The administrator changes single/split in every proposal state. Outside negotiation a required note and owned preview precede confirm/cancel. Three explicit service terms are required for split. Custom text and PDF are preserved literally; conflicting custom destinations require explicit resolution. Previous contracts and linked sent/signed documents remain intact without automatic delivery or signatures. Permanent snapshots can be consulted, downloaded and restored from proposal history with a new reviewed change. Existing service-generation dialogs retain their own presets, validation, stale-contract warnings and compact responsive layout.",
+  "description": "The administrator changes single/split in every proposal state. In split mode, an explicit service-approval switch determines whether the next approved package requires product only or product and service; it is hidden for a single contract, saved with the current source hash, and does not alter an already approved package before a new revision is confirmed. Outside negotiation a required note and owned preview precede confirm/cancel. Three explicit service terms are required for split. Custom text and PDF are preserved literally; conflicting custom destinations require explicit resolution. Previous contracts and linked sent/signed documents remain intact without automatic delivery or signatures. Permanent snapshots can be consulted, downloaded and restored from proposal history with a new reviewed change. Existing service-generation dialogs retain their own presets, validation, stale-contract warnings and compact responsive layout.",
   "outcomes": [
     "success",
     "error",

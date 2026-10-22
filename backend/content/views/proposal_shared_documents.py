@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes, authenticati
 from rest_framework.authentication import SessionAuthentication
 from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
+from rest_framework import serializers
 from content.models import Document, BusinessProposal
 from content.services.proposal_shared_documents import binding_for, reconfirm, summary
 from content.views.proposal_approval import decode_payload, _download
@@ -33,6 +34,24 @@ def confirm_proposal_revision(request, proposal_id):
     package = reconfirm(proposal_id, decode_payload(request), actor=request.user, files=files)
     from content.services.proposal_approval_service import preview, load_proposal
     return Response(dict(preview(load_proposal(proposal_id)), confirmed_package=package.number))
+
+
+class ProposalReconciliationSerializer(serializers.Serializer):
+    expected_hash = serializers.CharField(min_length=64, max_length=64)
+
+
+@api_view(['GET', 'POST'])
+@authentication_classes([SessionAuthentication])
+@permission_classes([IsAdminUser])
+def reconcile_proposal_documents(request, proposal_id):
+    get_object_or_404(BusinessProposal, pk=proposal_id)
+    from content.services import proposal_document_reconciliation as service
+    from content.services.proposal_approval_service import load_proposal
+    if request.method == 'GET':
+        return Response(service.preview(load_proposal(proposal_id)))
+    payload = ProposalReconciliationSerializer(data=request.data)
+    payload.is_valid(raise_exception=True)
+    return Response(service.reconcile(proposal_id, actor=request.user, **payload.validated_data))
 
 
 def shared_document_download(document):

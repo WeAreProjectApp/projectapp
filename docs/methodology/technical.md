@@ -4,6 +4,8 @@
 
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
+> **2026-10-21:** `service_contract_approved` es un booleano administrativo con default false; migra con content.0298. Se expone por serializers de panel/JSON/MCP y participa en la huella del cierre. El endpoint approval/reconciliation/ comparte servicio con CLI y MCP de Documentos; exige expected_hash antes de escribir.
+
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,
 > IVA heredado y corrección/reversa del conjunto. Migraciones aditivas `content.0293` y `0294`, con unión `0295`;

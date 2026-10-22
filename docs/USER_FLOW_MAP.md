@@ -8479,6 +8479,25 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 - **Failure:** un fallo no aplica cambios parciales. Una vista previa vencida, cancelada o cuyos documentos cambiaron no puede confirmarse; una confirmación repetida no duplica el cambio.
 - **Límites:** conservar documentos, paquetes aprobados, firmas y envíos históricos. No enviar ni solicitar firma automáticamente, modificar plantillas o regenerar contratos de otras propuestas.
 
+#### Aprobación explícita del servicio
+
+En modalidad **Producto y servicio**, Documentos muestra el switch
+**Servicio aprobado**. No aparece con contrato único. Su valor sólo define el
+siguiente paquete confirmado: apagado requiere el contrato de producto; encendido
+requiere producto y servicio. En ambos casos se conservan los anexos activos.
+Cambiarlo no modifica el paquete ya aprobado, sus archivos, firmas ni historial.
+
+- **Success:** guardar el switch con la huella vigente deja visible la selección
+  elegida y, al confirmar una nueva revisión, actualiza el paquete con sólo
+  producto o con producto y servicio según corresponda.
+- **Error:** una fuente desactualizada rechaza el guardado y mantiene la
+  selección visible y el paquete vigente. La confirmación posterior exige la
+  huella actual.
+- **Failure:** una falla al guardar o confirmar no invierte el switch ni altera
+  parcialmente el paquete confirmado; el administrador puede reintentar.
+- **Display:** con contrato único no se muestra el control. Con modalidad
+  separada, el texto explica qué contratos y anexos incluirá la próxima confirmación.
+
 #### Datos del servicio configurables
 
 Los formularios de creación y edición de contratos conservan sus opciones
@@ -8622,6 +8641,7 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 
 | Clase | Interacción | Resultado |
 |---|---|---|
+| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos activos |
 | success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
 | success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
@@ -8632,6 +8652,13 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
 
 Las garantías de bytes e identidad se verifican además con pruebas de servicios reales y operaciones MCP autenticadas: consulta del recurso, sustitución de borrador, validación del archivo subido y confirmación de otra revisión. Los mocks del navegador cubren interacción y presentación.
+
+El switch de servicio sólo aparece con contratos separados y se guarda con la
+huella de origen. No cambia el paquete aprobado hasta confirmar otra revisión.
+La vista previa exige sólo los contratos aprobados; un conflicto o fallo conserva
+el switch, formulario, adjuntos y evidencia vigente. Las operaciones MCP/CLI de
+recuperación no son flujos de navegador: sus pruebas de integración verifican los
+archivos y vínculos reales sin regeneración.
 
 # admin-pwa-install — Instalación del panel interno
 

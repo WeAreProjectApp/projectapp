@@ -190,12 +190,12 @@ function close() { if (!saving.value) emit('close'); }
             <button type="button" role="switch" :aria-checked="useContracts" class="flex items-center gap-3 text-left text-sm font-medium text-text-default" data-testid="approval-contract-switch" @click="useContracts = !useContracts">
               <span class="rounded-full px-3 py-1" :class="useContracts ? 'bg-primary text-white' : 'bg-surface-raised text-text-muted'">{{ useContracts ? '✓' : '—' }}</span>{{ text.contracts }}
             </button>
-            <p v-if="useContracts" class="text-sm text-text-muted">{{ preview.contracts?.modality === 'split' ? text.split : text.combined }}</p>
+            <p v-if="useContracts" class="text-sm text-text-muted">{{ preview.contracts?.modality === 'split' ? (preview.contracts?.service_contract_approved === false ? text.productOnly : text.split) : text.combined }}</p>
             <ul v-if="useContracts" class="space-y-2"><li v-for="file in preview.contracts?.documents || []" :key="file.id"><PanelDownloadLink v-if="file.download_url" :url="file.download_url" :filename="file.filename" :label="`${text.download}: ${file.title}`" expected-type="" /></li></ul>
             <p v-if="useContracts && !preview.contracts?.available" role="status" class="text-sm text-warning-strong">{{ preview.contracts?.error || text.unavailable }}</p>
             <div v-if="!useContracts" class="space-y-3">
               <p class="text-sm text-text-muted">{{ text.customHint }}</p>
-              <ul v-if="isRevision && preview.use_proposal_contracts === false && !documents.length" class="list-disc pl-5 text-sm text-text-default"><li v-for="file in preview.confirmed_files.filter(item => ['contract','contract_product','contract_service'].includes(item.document_type))" :key="file.id">{{ file.title }}</li></ul>
+              <ul v-if="isRevision && preview.use_proposal_contracts === false && !documents.length" class="list-disc pl-5 text-sm text-text-default"><li v-for="file in preview.confirmed_files.filter(item => (preview.contracts?.required_document_types || ['contract','contract_product','contract_service']).includes(item.document_type))" :key="file.id">{{ file.title }}</li></ul>
               <BaseFormField :label="text.custom" :error="fieldError('custom_documents')"><input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg" :aria-label="text.custom" data-testid="approval-custom-files" class="block w-full min-w-0 text-sm text-text-default" @change="addFiles" /></BaseFormField>
               <div v-for="(item,index) in documents" :key="index" class="space-y-2 rounded-lg border border-border-default p-3" data-testid="approval-custom-document">
                 <p class="break-all text-sm text-text-default">{{ item.file.name }} · {{ (item.file.size / 1024).toFixed(1) }} KB</p>

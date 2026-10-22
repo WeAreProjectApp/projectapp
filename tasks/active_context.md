@@ -4,6 +4,14 @@
 
 # Aprobación y documentos compartidos — 2026-10-20
 
+> **2026-10-21 — aprobación explícita del servicio y anexos:** en contratos
+> separados, Documentos registra si se aprobó el servicio; apagado confirma sólo
+> producto. Una nueva revisión aplica los cambios y conserva la evidencia previa.
+> Panel/MCP comparten la selección. La reparación revisada recupera vínculos de
+> archivos ya aprobados sin regenerarlos ni duplicar contratos; anexos nuevos
+> requieren otra confirmación. Implementado en la rama de sesión; la entrega
+> se verifica con pruebas focales, mapa de flujos y CI del PR.
+
 Implementado en PR #521: revisión obligatoria con proyecto y contrato, sin aceptación pública.
 Validación focal de servicios, componentes y navegador; despliegue separado.
 Documentos comparte la fuente estructurada de la propuesta y revisiones privadas

@@ -117,6 +117,23 @@ def test_active_variants_follow_the_closing_modality(modality, expected):
     assert variants.active_variants(proposal) == expected
 
 
+@pytest.mark.parametrize(('modality', 'service_contract_approved', 'expected'), [
+    ('single', False, ('combined',)),
+    ('split', False, ('product',)),
+    ('split', True, ('product', 'service')),
+])
+def test_approved_variants_follow_the_explicit_service_decision(
+    modality, service_contract_approved, expected,
+):
+    """Fails if a split closure treats the service contract as approved by default."""
+    proposal = SimpleNamespace(
+        contract_modality=modality,
+        service_contract_approved=service_contract_approved,
+    )
+
+    assert variants.approved_variants(proposal) == expected
+
+
 COMPLETE_PARAMS = {
     'contractor_full_name': 'Contratista', 'contractor_email': 'c@example.com',
     'contractor_nit': '900', 'contract_city': 'Medellín', 'bank_name': 'Banco',

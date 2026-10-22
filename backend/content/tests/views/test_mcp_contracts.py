@@ -176,9 +176,11 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
         'preview_folder_migration_undo',
         'undo_folder_migration',
         'adopt_folder_as_project_root',
+        'preview_proposal_document_reconciliation',
+        'reconcile_proposal_documents',
     } <= tool_names
     assert {'get_document_proposal_source', 'replace_document_proposal_binary'} <= tool_names
-    assert len(TOOLS_BY_SLUG['documents']) == 75
+    assert len(TOOLS_BY_SLUG['documents']) == 77
     mirror_listing = next(
         tool for tool in TOOLS_BY_SLUG['documents']
         if tool['name'] == 'list_contract_mirrors'

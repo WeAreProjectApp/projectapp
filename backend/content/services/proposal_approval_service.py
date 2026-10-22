@@ -47,6 +47,9 @@ def retained_link_conflict(proposal):
 
 def source_hash(proposal):
     fields = ('status', 'language', 'nationality', 'title', 'client_id', 'client_name', 'client_email', 'currency', 'total_investment', 'selected_modules', 'contract_modality', 'contract_params', 'hosting_percent', 'hosting_discount_nine_month', 'hosting_discount_semiannual', 'hosting_discount_quarterly')
+    # Single-contract packages keep their existing fingerprint: the switch has no effect there.
+    if contract_variants.modality(proposal) == 'split':
+        fields += ('service_contract_approved',)
     documents = []
     for doc in proposal.proposal_documents.all():
         digest = ''
@@ -99,7 +102,7 @@ def preview(proposal):
     client = manifest['client'] if 'client' in manifest else _client_summary(proposal.client)
     commercial_summary = manifest['commercial_summary'] if 'commercial_summary' in manifest else _commercial_summary(proposal)
     docs = []
-    for variant in contract_variants.active_variants(proposal):
+    for variant in contract_variants.approved_variants(proposal):
         row = contract_variants.contract_document(proposal, variant)
         if row:
             docs.append({'id': row.pk, 'title': row.title, 'document_type': row.document_type,
@@ -117,14 +120,14 @@ def preview(proposal):
     package = latest_package(proposal)
     current_hash = source_hash(proposal)
     shared = [shared_summary(binding, package=package, current_hash=current_hash) for binding in proposal.document_bindings.select_related('proposal', 'current_file', 'source_document').prefetch_related('revisions__package')]
-    return {'draft_client': _client_summary(proposal.client), 'draft_commercial_summary': _commercial_summary(proposal), 'use_proposal_contracts': (package.manifest if package else manifest).get('use_proposal_contracts', True), 'shared_documents': shared, 'package_number': package.number if package else None, 'source_hash': current_hash, 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in (package.files.all() if package else proposal.approval_files.all())], 'proposal': summary}
+    return {'draft_client': _client_summary(proposal.client), 'draft_commercial_summary': _commercial_summary(proposal), 'use_proposal_contracts': (package.manifest if package else manifest).get('use_proposal_contracts', True), 'shared_documents': shared, 'package_number': package.number if package else None, 'source_hash': current_hash, 'client': client, 'linked_project': linked, 'project_reassignment_required': bool(linked) and linked['id'] is None, 'commercial_summary': commercial_summary, 'contracts': {'modality': contract_variants.modality(proposal), 'service_contract_approved': proposal.service_contract_approved, 'required_document_types': sorted(contract_variants.approved_doc_types(proposal)), 'available': error is None, 'documents': docs, 'error': error}, 'optional_documents': [{'id': row.pk, 'title': row.title, 'document_type': row.document_type} for row in proposal.proposal_documents.all() if row.document_type not in ProposalDocument.CONTRACT_DOC_TYPES], 'confirmed': bool(proposal.platform_approval_manifest), 'confirmed_files': [file_summary(row) for row in (package.files.all() if package else proposal.approval_files.all())], 'proposal': summary}
 
 
 def _original_contracts(proposal):
     from content.services.proposal_formalization_service import contract_attachments
     from content.services.formalization_content import FormalizationError
     try:
-        return contract_attachments(proposal, [contract_variants.VARIANTS[v].doc_type for v in contract_variants.active_variants(proposal)])
+        return contract_attachments(proposal, [contract_variants.VARIANTS[v].doc_type for v in contract_variants.approved_variants(proposal)])
     except FormalizationError as exc:
         raise ValidationError({'use_proposal_contracts': str(exc)}) from exc
 
@@ -183,9 +186,9 @@ def _packet(proposal, data, files, *, profile):
         if not files or len(files) != len(data['custom_documents']):
             raise ValidationError({'custom_files': 'Adjunta al menos un documento e indica el título y tipo de cada archivo.'})
         kinds = {item['document_type'] for item in data['custom_documents']}
-        required = {'contract_product', 'contract_service'} if proposal.contract_modality == 'split' else {'contract'}
+        required = contract_variants.approved_doc_types(proposal)
         if not required <= kinds or any(sum(item['document_type'] == kind for item in data['custom_documents']) != 1 for kind in required) or (kinds & ProposalDocument.CONTRACT_DOC_TYPES) != required:
-            raise ValidationError({'custom_documents': 'Identifica el contrato vigente: uno combinado o producto y servicio separados.'})
+            raise ValidationError({'custom_documents': 'Identifica los contratos aprobados: contrato único, sólo producto o producto y servicio.'})
         for index, (file, meta) in enumerate(zip(files, data['custom_documents'])):
             filename, content = _validate_custom_file(file)
             key = f"custom-{meta['document_type']}" if meta['document_type'] in ProposalDocument.CONTRACT_DOC_TYPES else f"custom-{meta.get('resource_id') or uuid4()}"
@@ -338,7 +341,7 @@ def review_proposal(proposal_id, payload, *, actor, files=()):
             technical = proposal.sections.filter(section_type='technical_document', is_enabled=True).first()
             from accounts.services.technical_resources_sync import filtered_technical_doc_for_sync
             frozen_technical = filtered_technical_doc_for_sync(proposal, technical.content_json) if technical else {}
-            proposal.platform_approval_manifest = {'request_id': data['request_id'], 'payload_hash': fingerprint, 'source_hash': data['source_hash'], 'client_profile_id': profile.pk, 'project_id': project.pk, 'use_proposal_contracts': data['use_proposal_contracts'], 'confirmed_at': timezone.now().isoformat(), 'confirmed_by': actor.pk, 'technical_content': frozen_technical, 'client': _client_summary(profile), 'commercial_summary': _commercial_summary(proposal)}
+            proposal.platform_approval_manifest = {'request_id': data['request_id'], 'payload_hash': fingerprint, 'source_hash': data['source_hash'], 'client_profile_id': profile.pk, 'project_id': project.pk, 'use_proposal_contracts': data['use_proposal_contracts'], 'service_contract_approved': proposal.service_contract_approved, 'confirmed_at': timezone.now().isoformat(), 'confirmed_by': actor.pk, 'technical_content': frozen_technical, 'client': _client_summary(profile), 'commercial_summary': _commercial_summary(proposal)}
             proposal.platform_onboarding_status = BusinessProposal.ONBOARDING_PENDING
             proposal.save(update_fields=['client', 'deliverable', 'platform_approval_manifest', 'platform_onboarding_status'])
             package_rows = []

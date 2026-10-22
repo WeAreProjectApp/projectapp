@@ -170,6 +170,10 @@ class BusinessProposal(HistoryTrackedModel):
             'negotiation from the Documents tab.'
         ),
     )
+    service_contract_approved = models.BooleanField(
+        default=False,
+        help_text='Explicit approval of the separate service contract; applied on package confirmation.',
+    )
     automations_paused = models.BooleanField(
         default=False,
         help_text='When true, no automatic emails (reminder, urgency, inactivity) are sent for this proposal. '

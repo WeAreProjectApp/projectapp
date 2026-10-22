@@ -199,6 +199,11 @@ PARITY_PAIRS = {
         'content/tests/views/test_mcp_folder_migration.py', 'test_real_projectapp_migration_preserves_contracts',
         ('undo_folder_migration', 'confirm_action'),
     ),
+    ('documents', 'preview_proposal_document_reconciliation'): (
+        'content/tests/views/test_mcp_shared_documents.py',
+        'test_document_mcp_confirmation_restores_the_exact_approved_annex',
+        ('reconcile_proposal_documents', 'confirm_action'),
+    ),
     ('projects', 'preview_project_client_change'): (
         'content/tests/views/test_mcp_project_client_change.py', 'test_confirmed_transfer_matches_the_selected_plan',
         ('change_project_client', 'confirm_action'),
