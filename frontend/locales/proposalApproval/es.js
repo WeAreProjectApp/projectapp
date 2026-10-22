@@ -1,4 +1,5 @@
 export default {
+  productOnly: 'Sólo contrato de producto; el servicio no está aprobado.',
   reviewRevision: 'El cliente y proyecto se conservan. Revisa los documentos antes de confirmar una nueva versión.',
   confirmRevision: 'Confirmar nueva versión',
   product: 'Contrato de producto', service: 'Contrato de servicio',

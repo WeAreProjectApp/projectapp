@@ -18,6 +18,7 @@ REPLACED_INCOME_NAMES = frozenset({
     'list_expected_incomes', 'get_expected_income', 'create_expected_income',
     'update_expected_income', 'duplicate_expected_income',
 })
+CATALOG_VERSIONS = {'accounting': '2.1.0', 'accounting-ledger': '3.1.0'}
 
 
 def operation_id(tool):
@@ -58,7 +59,7 @@ def build_catalogs(sources, replace, common, *, pre_split=None):
             source, compatibility=slug != canonical, canonical_area=canonical,
             confirm_sensitive=True,
             module_id=MODULE_CONNECTORS[canonical][0],
-            version=f'{int(source.version.split(".")[0]) + 1}.0.0',
+            version=CATALOG_VERSIONS.get(slug, f'{int(source.version.split(".")[0]) + 1}.0.0'),
         )
         raw[slug] = _unique(tool for group in source.sources for tool in group)
 

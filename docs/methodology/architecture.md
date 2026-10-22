@@ -1,3 +1,5 @@
+> **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
+
 > **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,
 > propuestas y diagnósticos; Nuestra oferta reúne paquetes de horas y módulos
 > adicionales; Programas reúne alianzas y células. Separadores por subconjunto y
@@ -7,6 +9,8 @@
 > verifican por separado. [Contrato](../MCP_MODULE_UNIFICATION.md).
 
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
+
+> **2026-10-21:** La selección contractual del cierre usa `approved_variants`, independiente de `active_variants` para preparar borradores. La conciliación de identidades del gestor reutiliza exclusivamente los archivos privados del cierre confirmado.
 
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
 > para uno o varios ingresos, con deducciones proporcionales, reparto global,

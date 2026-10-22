@@ -21,12 +21,14 @@ const mockNotify = { success: jest.fn(), error: jest.fn() };
 jest.mock('~/composables/usePanelNotify', () => ({ usePanelNotify: () => mockNotify }));
 
 const mockUpdateContractModality = jest.fn();
+const mockUpdateProposal = jest.fn();
 const mockPreviewContractChange = jest.fn();
 const mockConfirmContractChange = jest.fn();
 const mockCancelContractChange = jest.fn();
 global.useProposalStore = jest.fn(() => ({
   uploadProposalDocument: jest.fn().mockResolvedValue({ success: true }),
   deleteProposalDocument: jest.fn().mockResolvedValue({ success: true }),
+  updateProposal: mockUpdateProposal,
   updateContractModality: mockUpdateContractModality,
   previewContractChange: mockPreviewContractChange,
   confirmContractChange: mockConfirmContractChange,
@@ -35,6 +37,7 @@ global.useProposalStore = jest.fn(() => ({
 
 import ProposalDocumentsTab from '../../components/BusinessProposal/admin/ProposalDocumentsTab.vue';
 import BaseSegmented from '../../components/base/BaseSegmented.vue';
+import BaseToggle from '../../components/base/BaseToggle.vue';
 import { get_request } from '~/stores/services/request_http';
 import { downloadBlob } from '~/utils/downloadFile';
 
@@ -53,7 +56,7 @@ function mountProposalDocumentsTab(props = {}) {
       ...props,
     },
     global: {
-      components: { BaseSegmented },
+      components: { BaseSegmented, BaseToggle },
       stubs: {
         ProposalSharedDocuments: true,
         ProposalContractChangeModal: {
@@ -216,6 +219,7 @@ describe('ProposalDocumentsTab closing modality', () => {
   };
 
   beforeEach(() => {
+    mockUpdateProposal.mockReset();
     mockUpdateContractModality.mockReset();
     mockPreviewContractChange.mockReset();
     mockConfirmContractChange.mockReset();
@@ -357,5 +361,67 @@ describe('ProposalDocumentsTab closing modality', () => {
 
     expect(wrapper.find('[data-testid="proposal-contract-modality-custom-notice"]').exists()).toBe(shown);
     expect(wrapper.text().includes('personalizado')).toBe(shown);
+  });
+
+  it('limits service approval to split closings', () => {
+    // Falla si un contrato único permite aprobar un servicio que no forma parte de su paquete.
+    const wrapper = mountProposalDocumentsTab({ proposal: negotiating });
+
+    expect(wrapper.find('[data-testid="proposal-service-approval"]').exists()).toBe(false);
+  });
+
+  it('saves service approval as a pending package change', async () => {
+    // Falla si aprobar el servicio no llega con la versión de la propuesta o promete cambiar el paquete ya aprobado.
+    mockUpdateProposal.mockResolvedValue({ success: true, data: { ...split, service_contract_approved: true } });
+    const wrapper = mountProposalDocumentsTab({
+      proposal: {
+        ...split,
+        service_contract_approved: false,
+        proposal_source_hash: 'source-hash-v1',
+      },
+    });
+
+    expect(wrapper.get('[data-testid="proposal-service-approval"]').text())
+      .toContain('La próxima confirmación incluirá sólo el contrato de producto y todos los anexos activos.');
+    await wrapper.get('[data-testid="proposal-service-approved-toggle"]').trigger('click');
+    await flushPromises();
+
+    expect(mockUpdateProposal).toHaveBeenCalledWith(1, {
+      service_contract_approved: true,
+      source_hash: 'source-hash-v1',
+    });
+    expect(wrapper.emitted('refresh')).toEqual([[]]);
+    expect(mockNotify.success).toHaveBeenCalledWith('Aprobación del servicio guardada. Confirma una nueva revisión para actualizar los documentos.');
+
+    await wrapper.setProps({
+      proposal: {
+        ...split,
+        service_contract_approved: true,
+        proposal_source_hash: 'source-hash-v1',
+      },
+    });
+
+    expect(wrapper.get('[data-testid="proposal-service-approved-toggle"]').attributes('aria-checked')).toBe('true');
+    expect(wrapper.get('[data-testid="proposal-service-approval"]').text())
+      .toContain('La próxima confirmación incluirá los contratos de producto y servicio, y todos los anexos activos.');
+  });
+
+  it('preserves unapproved service after a rejected save', async () => {
+    // Falla si un rechazo marca el servicio como aprobado o aparenta haber actualizado los documentos.
+    mockUpdateProposal.mockResolvedValue({ success: false, message: 'La propuesta cambió antes de guardar.' });
+    const wrapper = mountProposalDocumentsTab({
+      proposal: {
+        ...split,
+        service_contract_approved: false,
+        proposal_source_hash: 'source-hash-v1',
+      },
+    });
+
+    await wrapper.get('[data-testid="proposal-service-approved-toggle"]').trigger('click');
+    await flushPromises();
+
+    expect(wrapper.get('[data-testid="proposal-service-approved-toggle"]').attributes('aria-checked')).toBe('false');
+    expect(wrapper.emitted('refresh')).toBeUndefined();
+    expect(mockNotify.error).toHaveBeenCalledWith('La propuesta cambió antes de guardar.');
   });
 });

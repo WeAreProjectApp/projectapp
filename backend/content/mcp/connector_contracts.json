@@ -1,7 +1,7 @@
 {
   "accounting": {
-    "sha256": "8c4e06db01eda9f2f3e9485c56791c5373db9571267b7932ecee27fcfec91043",
-    "version": "2.0.0"
+    "sha256": "49ab0f47cb1b697a5f05fc204e51aed0eb324d33c5da8799db00e957885485a2",
+    "version": "2.1.0"
   },
   "accounting-billing": {
     "sha256": "9ede997afb70d0725778632b17f8d38c81d6d8bc0e6df7386e93ae97cc886d9e",
@@ -12,8 +12,8 @@
     "version": "3.0.0"
   },
   "accounting-ledger": {
-    "sha256": "9c2d55782fb40e1d83b0b92ed1345a4d867d777608c253e473dc1e331c5dfeb0",
-    "version": "3.0.0"
+    "sha256": "7361234942c278fd2bbc87815a5690725d56d4dc27aac747fda466faa94ff752",
+    "version": "3.1.0"
   },
   "additional-modules": {
     "sha256": "f2ba9f55b84ddb4fc69de882ab894863ace3bc587f2d3dea46b1a15883ae4ee7",
@@ -36,7 +36,7 @@
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "8d3d9818c934642f815dce4364c0ccc3bc8dc8819a18095bb07f3d8842ef3674",
+    "sha256": "56d6a37a885aa7c69d8cfd7cfbd433d3563ecc38cb74d15e7884c640ecfcb81e",
     "version": "6.0.0"
   },
   "communications": {
@@ -52,8 +52,8 @@
     "version": "2.0.0"
   },
   "documents": {
-    "sha256": "32d25e047ab9af7219f1ab5198c099c1a4ddb4928c2e126037f8e856c1d09112",
-    "version": "7.0.0"
+    "sha256": "0c81feac47911f9025f39d1d0e610044764b4e2c64c8e4a559558e848b8db501",
+    "version": "8.0.0"
   },
   "linkedin-personal": {
     "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",
@@ -80,8 +80,8 @@
     "version": "4.0.0"
   },
   "proposals": {
-    "sha256": "6bb329799e107f3246bd83cff9cb37116fad35b9d5455faed4736b0771dc2881",
-    "version": "5.0.0"
+    "sha256": "bc69b0cdac884f491f2ea93433ecc95e33887fe48da9d475712ebe1b8e599edb",
+    "version": "6.0.0"
   },
   "tasks": {
     "sha256": "fed0f09607abc3c68adae1e6a9c3c963a57315a03e08a28941e0ef7e61419db1",

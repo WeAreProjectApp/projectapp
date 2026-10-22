@@ -531,7 +531,7 @@ MCP_MODEL_CONTRACTS = {
                 'is_active automations_paused show_contract_terms show_explainer_video project_type market_type '
                 'project_type_custom market_type_custom client_phone email_intro '
                 'email_features email_method_phases email_signed_by selected_modules '
-                'contract_params contract_modality'
+                'contract_params contract_modality service_contract_approved'
             ),
             excluded=(
                 _excluded(

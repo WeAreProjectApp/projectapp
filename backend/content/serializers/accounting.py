@@ -769,6 +769,27 @@ class SettlementPeriodSerializer(serializers.Serializer):
     )
 
 
+class SettlementVatSerializer(serializers.Serializer):
+    """Explicit source-income VAT, optionally including the cash capture."""
+
+    income_id = serializers.IntegerField(min_value=1)
+    vat_rate = serializers.DecimalField(
+        max_digits=5, decimal_places=2, min_value=Decimal('0'),
+        max_value=Decimal('100'), allow_null=True,
+    )
+    amount = serializers.DecimalField(
+        max_digits=14, decimal_places=2, min_value=Decimal('0'), required=False,
+    )
+    amount_mode = serializers.ChoiceField(choices=('before_vat', 'vat_included'), required=False)
+
+    def validate(self, data):
+        if 'amount_mode' in data and 'amount' not in data:
+            raise serializers.ValidationError({'amount': 'Escribe el importe para el modo seleccionado.'})
+        if data.get('amount_mode') == 'before_vat' and data['vat_rate'] is None:
+            raise serializers.ValidationError({'vat_rate': 'Define el IVA antes de introducir la base.'})
+        return data
+
+
 class IncomeSettlementSerializer(serializers.Serializer):
     """Liquidating an expected income plus how its shortfall is resolved.
 
@@ -808,6 +829,7 @@ class IncomeSettlementSerializer(serializers.Serializer):
     )
     preview_hash = serializers.CharField(required=False, max_length=64)
     request_id = serializers.UUIDField(required=False)
+    vat_updates = SettlementVatSerializer(many=True, required=False)
 
     def validate(self, data):
         # FlexiblePeriodField stores a month-only period as day 1, which an
@@ -866,6 +888,7 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
     confirmation_income_ids = serializers.ListField(child=serializers.IntegerField(min_value=1), required=False)
     preview_hash = serializers.CharField(required=False, max_length=64)
     request_id = serializers.UUIDField(required=False)
+    vat_updates = SettlementVatSerializer(many=True, required=False)
 
     def validate(self, data):
         allocations = data.get('allocations')
@@ -879,12 +902,15 @@ class IncomeBulkSettlementSerializer(serializers.Serializer):
         allocation_ids = [entry['income_id'] for entry in allocations or []]
         if len(allocation_ids) != len(set(allocation_ids)) or set(allocation_ids) - set(ids):
             raise serializers.ValidationError({'allocations': 'El reparto contiene ingresos repetidos o fuera de la selección.'})
-        for field in ('expected_incomes', 'periods'):
+        for field in ('expected_incomes', 'periods', 'vat_updates'):
             if any(entry['income_id'] not in ids for entry in data.get(field, [])):
                 raise serializers.ValidationError({field: 'El ingreso de origen no está seleccionado.'})
         period_ids = [entry['income_id'] for entry in data.get('periods', [])]
         if len(period_ids) != len(set(period_ids)):
             raise serializers.ValidationError({'periods': 'Indica un solo período por ingreso.'})
+        vat_ids = [entry['income_id'] for entry in data.get('vat_updates', [])]
+        if len(vat_ids) != len(set(vat_ids)):
+            raise serializers.ValidationError({'vat_updates': 'Indica un solo IVA por ingreso.'})
         if set(data.get('confirmation_income_ids', [])) - set(ids):
             raise serializers.ValidationError({'confirmation_income_ids': 'El correo contiene ingresos fuera de la selección.'})
         allocated = sum((entry['amount'] for entry in allocations or []), Decimal('0'))

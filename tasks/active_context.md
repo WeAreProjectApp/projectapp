@@ -1,3 +1,7 @@
+> **Captura de IVA con centavos — 2026-10-22:** cambiar únicamente entre base y total incluido conserva el pago y su reparto automático. La captura monetaria se emite al editar importe o tasa; no se reconstruye el total desde una base redondeada.
+
+> **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
+
 > **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,
 > propuestas y diagnósticos; Nuestra oferta reúne paquetes de horas y módulos
 > adicionales; Programas reúne alianzas y células. Separadores por subconjunto y
@@ -7,6 +11,14 @@
 > verifican por separado. [Contrato](../docs/MCP_MODULE_UNIFICATION.md).
 
 # Aprobación y documentos compartidos — 2026-10-20
+
+> **2026-10-21 — aprobación explícita del servicio y anexos:** en contratos
+> separados, Documentos registra si se aprobó el servicio; apagado confirma sólo
+> producto. Una nueva revisión aplica los cambios y conserva la evidencia previa.
+> Panel/MCP comparten la selección. La reparación revisada recupera vínculos de
+> archivos ya aprobados sin regenerarlos ni duplicar contratos; anexos nuevos
+> requieren otra confirmación. Implementado en la rama de sesión; la entrega
+> se verifica con pruebas focales, mapa de flujos y CI del PR.
 
 Implementado en PR #521: revisión obligatoria con proyecto y contrato, sin aceptación pública.
 Validación focal de servicios, componentes y navegador; despliegue separado.

@@ -11,6 +11,25 @@
 - **Failure:** un fallo no aplica cambios parciales. Una vista previa vencida, cancelada o cuyos documentos cambiaron no puede confirmarse; una confirmación repetida no duplica el cambio.
 - **Límites:** conservar documentos, paquetes aprobados, firmas y envíos históricos. No enviar ni solicitar firma automáticamente, modificar plantillas o regenerar contratos de otras propuestas.
 
+#### Aprobación explícita del servicio
+
+En modalidad **Producto y servicio**, Documentos muestra el switch
+**Servicio aprobado**. No aparece con contrato único. Su valor sólo define el
+siguiente paquete confirmado: apagado requiere el contrato de producto; encendido
+requiere producto y servicio. En ambos casos se conservan los anexos activos.
+Cambiarlo no modifica el paquete ya aprobado, sus archivos, firmas ni historial.
+
+- **Success:** guardar el switch con la huella vigente deja visible la selección
+  elegida y, al confirmar una nueva revisión, actualiza el paquete con sólo
+  producto o con producto y servicio según corresponda.
+- **Error:** una fuente desactualizada rechaza el guardado y mantiene la
+  selección visible y el paquete vigente. La confirmación posterior exige la
+  huella actual.
+- **Failure:** una falla al guardar o confirmar no invierte el switch ni altera
+  parcialmente el paquete confirmado; el administrador puede reintentar.
+- **Display:** con contrato único no se muestra el control. Con modalidad
+  separada, el texto explica qué contratos y anexos incluirá la próxima confirmación.
+
 #### Datos del servicio configurables
 
 Los formularios de creación y edición de contratos conservan sus opciones

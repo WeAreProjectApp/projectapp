@@ -71,9 +71,11 @@ export function buildHandler(state, {
   onPreview = () => {},
   onConfirm = () => {},
   onCancel = () => {},
+  onProposalUpdate = () => {},
   onUpdate = () => {},
   companySettings = SERVICE_SETTINGS,
   companySettingsStatuses = [],
+  proposalUpdateResponses = [],
   updateResponses = [],
   previewResponses = [],
   contractSnapshots = [],
@@ -81,6 +83,7 @@ export function buildHandler(state, {
   beforeUpdate = async () => {},
 } = {}) {
   let companySettingsRequests = 0;
+  let proposalUpdateRequests = 0;
   let updateRequests = 0;
   let previewRequests = 0;
   const confirmations = new Map();
@@ -227,6 +230,14 @@ export function buildHandler(state, {
     }
     if (apiPath === `proposals/${PROPOSAL_ID}/contract/snapshots/` && method === 'GET') {
       return json(200, { total: contractSnapshots.length, snapshots: contractSnapshots });
+    }
+    if (apiPath === `proposals/${PROPOSAL_ID}/update/` && method === 'PATCH') {
+      const payload = route.request().postDataJSON();
+      onProposalUpdate(payload);
+      const response = proposalUpdateResponses[proposalUpdateRequests++];
+      if (response) return response;
+      state.proposal = { ...state.proposal, ...payload };
+      return json(200, state.proposal);
     }
     const snapshotMatch = apiPath.match(new RegExp(`^proposals/${PROPOSAL_ID}/contract/snapshots/(\\d+)/$`));
     if (snapshotMatch && method === 'GET') {

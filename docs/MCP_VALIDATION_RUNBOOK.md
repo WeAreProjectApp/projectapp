@@ -2760,3 +2760,20 @@ liquidación se rechazan antes de crear una confirmación.
 `accounting-ledger.get_pocket` comparte la lectura individual del Panel. Además de los campos del listado, devuelve `running_balance` (saldo real después del movimiento, sin filtros), `linked_record_detail` (tipo, identificador, concepto y categoría del gasto cuando aplica) y `allocation_details` (importe imputado, ingreso esperado, pendiente actual y marca de saldo a favor). Los importes siguen siendo decimales como texto. El saldo se ordena por fecha, creación e identificador; el pendiente incluye los demás pagos y deducciones y no es un snapshot histórico. `list_pocket` mantiene su respuesta liviana. No hay campos nuevos de modelo ni cambios de escritura o permisos.
 
 Validación focal: `content/tests/views/test_pocket_movement_detail.py` comprueba atribución, saldo, reparto, acceso y paridad REST/MCP.
+
+### Servicio aprobado y recuperación de anexos (2026-10-21)
+
+Comercial/Propuestas: `get_proposal`, `create_proposal`, `update_proposal`,
+`update_proposal_settings` y el import/export JSON conservan
+`service_contract_approved`. En split false exige producto, true producto y
+servicio; single conserva el contrato único. La previsualización de aprobación
+expone `contracts.service_contract_approved` y `required_document_types`.
+Guardar la decisión no reemplaza los archivos aprobados: requiere reconfirmar.
+
+Documentos: consultar `preview_proposal_document_reconciliation` con proposal_id;
+usar su expected_hash en `reconcile_proposal_documents` y confirmar mediante
+confirm_action. Verificar que la lectura no cree registros, que una huella antigua
+se rechace, que archivos corruptos y propietarios distintos bloqueen la operación,
+y que repetir la reparación no cree identidades ni paquetes adicionales. Un anexo
+sin evidencia aprobada se incorpora con confirm_proposal_document_revision desde
+Comercial; la reparación nunca lo incorpora retroactivamente.

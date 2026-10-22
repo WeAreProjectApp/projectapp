@@ -52,6 +52,17 @@ describe('ProposalApprovalModal',()=>{
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/3/approval/',expect.objectContaining({action:'confirm',client_profile_id:7,new_project:{name:'Sitio',description:''},use_proposal_contracts:true,source_hash:'hash-original'}));
   });
+  test.each([
+    [false, 'Sólo contrato de producto; el servicio no está aprobado.'],
+    [true, 'Contratos separados de producto y servicio'],
+  ])('labels a split packet with service approval %s', async(serviceApproved, expectedLabel)=>{
+    // Falla si la revisión describe un paquete sólo-producto como si también incluyera el servicio.
+    preview=createPreview({contracts:{available:true,modality:'split',service_contract_approved:serviceApproved,documents:[]}});
+
+    await open();
+
+    expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).toContain(expectedLabel);
+  });
   it('requires custom documents when proposal contracts are disabled', async()=>{
     await open();await wrapper.get('[role="switch"]').trigger('click');
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');
@@ -158,6 +169,27 @@ describe('ProposalApprovalModal',()=>{
     await wrapper.get('[data-testid="approval-confirm"]').trigger('click');await flushPromises();
     expect(create_request).toHaveBeenCalledWith('proposals/3/approval/revisions/',expect.objectContaining({action:'confirm',accept_proposal:false,project_id:41,use_proposal_contracts:false,custom_documents:[]}));
     expect(wrapper.emitted('completed')).toEqual([[{action:'confirm',proposal:{id:3,status:'accepted',project_review_required:false}}]]);
+  });
+
+  it('filters retained custom files to required document types', async()=>{
+    // Falla si una revisión de contrato de producto presenta anexos o contratos de servicio fuera del paquete reutilizado.
+    preview=createPreview({
+      confirmed:true,
+      use_proposal_contracts:false,
+      linked_project:{id:41,name:'Proyecto',client_profile_id:7},
+      contracts:{available:true,modality:'split',required_document_types:['contract_product'],documents:[]},
+      confirmed_files:[
+        {id:2,title:'Contrato de producto Atlas',document_type:'contract_product',filename:'Producto.pdf',download_url:'/api/proposals/3/approval/files/2/'},
+        {id:3,title:'Contrato de servicio Atlas',document_type:'contract_service',filename:'Servicio.pdf',download_url:'/api/proposals/3/approval/files/3/'},
+        {id:4,title:'Anexo histórico Atlas',document_type:'legal_annex',filename:'Anexo.pdf',download_url:'/api/proposals/3/approval/files/4/'},
+      ],
+    });
+
+    await open({acceptProposal:false,revision:true});
+
+    expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).toContain('Contrato de producto Atlas');
+    expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).not.toContain('Contrato de servicio Atlas');
+    expect(wrapper.get('[data-testid="proposal-approval-modal"]').text()).not.toContain('Anexo histórico Atlas');
   });
 
   // Falla si aprobar una corrección de una propuesta ya formalizada sólo reintenta el cierre anterior.
