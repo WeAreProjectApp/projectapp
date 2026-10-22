@@ -51,11 +51,12 @@ def test_connector_discovery_has_exact_tool_names(api_client, building_on_demand
     assert names == READ_NAMES | WRITE_NAMES | UPLOAD_NAMES | CONTROL_NAMES
     assert len(response.data['result']['tools']) == 44
     assert catalog['connector'] == 'building-on-demand'
-    assert catalog['version'] == '2.1.0'
+    assert catalog['version'] == '4.0.0'
     schemas = {tool['name']: tool['input_schema'] for tool in catalog['tools']}
     assert schemas['set_building_on_demand_video']['required'] == ['revision', 'asset_id']
     assert schemas['remove_building_on_demand_video']['required'] == ['revision']
     assert schemas['restore_default_building_on_demand_video']['required'] == ['revision']
+    assert schemas['set_building_on_demand_video_visibility']['required'] == ['visible']
 
 
 def test_catalog_writes_advertise_durable_confirmation(api_client, building_on_demand_mcp):

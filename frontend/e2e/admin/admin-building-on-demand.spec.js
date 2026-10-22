@@ -87,7 +87,7 @@ test.describe('Admin Building on Demand', () => {
     await setupApi(page, scenario);
   });
 
-  test('opens the program through the Comercial sidebar', {
+  test('opens Programas through the Comercial sidebar', {
     tag: ['@flow:admin-building-on-demand-program', '@role:admin', '@outcome:display', '@responsive:commercial'],
   }, async ({ page }) => {
     // quality: allow-deep-link (the proposals list starts authenticated sidebar navigation to Células)
@@ -98,7 +98,7 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-public-url-es')).toHaveText('https://projectapp.co/es-co/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-open-public-en')).toHaveAttribute('href', 'https://projectapp.co/en-us/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-download-pdf-es')).toBeVisible();
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran desde MCP, con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toContainText(program.hero.title);
   });
 
@@ -273,7 +273,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-status')).toHaveText('Sin inicializar');
-    await expect(page.getByTestId('building-on-demand-admin-mirror-alert')).toContainText('se inicializa desde el conector MCP building-on-demand.');
+    await expect(page.getByTestId('building-on-demand-admin-mirror-alert')).toContainText('se inicializa desde el conector MCP Programas (programs).');
     await expect(page.getByTestId('building-on-demand-admin-contract-body')).toContainText('Acceso a una célula Scrum compartida');
     await expect(page.getByTestId('building-on-demand-admin-mirror-link')).toHaveCount(0);
   });
@@ -299,7 +299,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-unavailable')).toHaveText('El contrato todavía no está disponible');
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran desde MCP, con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-admin-contract-history')).toHaveCount(0);
     await expect(page.getByTestId('building-on-demand-admin-contract-error')).toHaveCount(0);
   });

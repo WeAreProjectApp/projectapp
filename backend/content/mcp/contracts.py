@@ -531,7 +531,7 @@ MCP_MODEL_CONTRACTS = {
                 'is_active automations_paused show_contract_terms show_explainer_video project_type market_type '
                 'project_type_custom market_type_custom client_phone email_intro '
                 'email_features email_method_phases email_signed_by selected_modules '
-                'contract_params contract_modality'
+                'contract_params contract_modality service_contract_approved'
             ),
             excluded=(
                 _excluded(
@@ -1560,6 +1560,16 @@ MCP_MODEL_CONTRACTS['documents'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 # Shared model references are merged; a writable field takes precedence over
 # a source connector's narrower read-only/excluded projection.
 from content.mcp.module_catalog import MODULE_CONNECTORS  # noqa: E402
+
+MCP_MODEL_CONTRACTS['commercial'] = (
+    MCP_MODEL_CONTRACTS['clients'] + MCP_MODEL_CONTRACTS['proposals']
+    + MCP_MODEL_CONTRACTS['diagnostics']
+)
+MCP_MODEL_CONTRACTS['offerings'] = tuple(
+    contract for contract in COMMERCIAL_CATALOG_CONTRACTS
+    if contract.model_label.startswith('content.HourPackage')
+)
+MCP_MODEL_CONTRACTS['programs'] = ()
 
 for canonical, (_, sources) in MODULE_CONNECTORS.items():
     grouped = {}

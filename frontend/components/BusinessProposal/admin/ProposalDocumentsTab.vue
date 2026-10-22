@@ -43,6 +43,21 @@
         </p>
       </div>
 
+      <div v-if="modality === CONTRACT_MODALITY.SPLIT" class="mb-4 rounded-lg border border-border-muted p-4" data-testid="proposal-service-approval">
+        <div class="flex items-center justify-between gap-4">
+          <div class="min-w-0">
+            <p class="text-sm font-medium text-text-default">Servicio aprobado</p>
+            <p class="mt-1 text-xs text-text-muted">{{ proposal.service_contract_approved
+              ? 'La próxima confirmación incluirá los contratos de producto y servicio, y todos los anexos activos.'
+              : 'La próxima confirmación incluirá sólo el contrato de producto y todos los anexos activos.' }}</p>
+          </div>
+          <BaseToggle :model-value="!!proposal.service_contract_approved" aria-label="Servicio aprobado"
+            :disabled="savingServiceApproval" disabled-reason="Guardando la aprobación del servicio…"
+            data-testid="proposal-service-approved-toggle" @update:model-value="changeServiceApproval" />
+        </div>
+        <p class="mt-2 text-xs text-text-muted">Los documentos ya aprobados se conservan hasta confirmar una nueva revisión.</p>
+      </div>
+
       <ul class="divide-y divide-border-muted">
         <!-- Contrato(s) de la modalidad de cierre -->
         <ProposalContractRow
@@ -266,6 +281,25 @@ const contractActionsDisabled = computed(() =>
 // ── Modalidad de cierre ──
 const modality = computed(() => props.proposal?.contract_modality || CONTRACT_MODALITY.SINGLE);
 const showModality = computed(() => CONTRACT_MODALITY_VISIBLE_STATUSES.includes(props.proposal?.status));
+const savingServiceApproval = ref(false);
+async function changeServiceApproval(value) {
+  if (savingServiceApproval.value || value === !!props.proposal.service_contract_approved) return;
+  savingServiceApproval.value = true;
+  try {
+    const result = await proposalStore.updateProposal(props.proposal.id, {
+      service_contract_approved: value,
+      source_hash: props.proposal.proposal_source_hash,
+    });
+    if (result.success) {
+      emit('refresh');
+      notify.success('Aprobación del servicio guardada. Confirma una nueva revisión para actualizar los documentos.');
+    } else {
+      notify.error(result.message || 'No se pudo guardar la aprobación del servicio.');
+    }
+  } finally {
+    savingServiceApproval.value = false;
+  }
+}
 const savingModality = ref(false);
 const pendingModality = ref(null);
 function modalityChanged() {

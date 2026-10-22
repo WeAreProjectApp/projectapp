@@ -3,6 +3,7 @@ import { useAccountingStore } from '~/stores/accounting';
 import { settlementBlockedReason } from '~/utils/incomeSettlement';
 import { settlementProposal } from '~/utils/incomeSettlementAllocation';
 import { todayISO } from '~/utils/periodDates';
+import { useSettlementVat } from './useSettlementVat';
 
 const requestUuid = () => globalThis.crypto?.randomUUID?.()
   ?? 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
@@ -22,8 +23,6 @@ export function useIncomeSettlementForm(props, emit) {
   const periods = ref({});
   const participantsOpen = ref(false);
   const differenceOpen = ref(false);
-  const vatOpen = ref(false);
-  const showVat = ref(true);
   const manual = ref(null);
   const contexts = ref({});
   const sendConfirmations = ref({});
@@ -46,6 +45,7 @@ export function useIncomeSettlementForm(props, emit) {
   const remaining = computed(() => Math.round((proposal.value.pending - proposal.value.allocated - proposal.value.deducted - followUpTotal.value) * 100) / 100);
   const credit = computed(() => Math.max(Math.round(((Number(form.value.total_amount) || 0) - proposal.value.allocated) * 100) / 100, 0));
   const hostingRecords = computed(() => records.value.filter((row) => row.origin === 'hosting' && !row.period_start));
+  const vat = useSettlementVat(records, { form, proposal, manual, credit });
 
   watch(shortfall, (value) => {
     if (value > 0 && !autoExpanded) {
@@ -68,6 +68,7 @@ export function useIncomeSettlementForm(props, emit) {
       confirmation_income_ids: confirmationIds,
     };
     if (manual.value) payload.allocations = proposal.value.rows.map((row) => ({ income_id: row.income_id, amount: row.amount }));
+    if (vat.updates.value.length) payload.vat_updates = vat.updates.value;
     if (!personal.value && form.value.gustavo_amount !== '' && form.value.carlos_amount !== '') {
       payload.gustavo_amount = form.value.gustavo_amount;
       payload.carlos_amount = form.value.carlos_amount;
@@ -80,6 +81,7 @@ export function useIncomeSettlementForm(props, emit) {
     if (contextLoading.value && records.value.some((row) => row.client)) return 'Verificando los destinatarios de la confirmación…';
     const blocked = records.value.find((row) => settlementBlockedReason(row));
     if (blocked) return settlementBlockedReason(blocked);
+    if (vat.blockReason.value) return vat.blockReason.value;
     if (Number(form.value.total_amount) < 0) return 'El valor recibido no puede ser negativo.';
     if (!(Number(form.value.total_amount) > 0) && !activeDeductions.value.length && !activeFollowUps.value.length) return 'Ingresa un valor recibido o resuelve la diferencia.';
     if (!form.value.period_date) return 'Indica cuándo se recibió el pago.';
@@ -106,9 +108,11 @@ export function useIncomeSettlementForm(props, emit) {
     contextLoading.value = false;
     if (!result.success) {
       contexts.value = Object.fromEntries(records.value.map((row) => [row.id, { can_send: false, blocked_reason: 'No se pudo verificar el correo. Puedes volver a intentar al liquidar.' }]));
+      vat.setLocks(records.value.map((row) => ({ income_id: row.id, vat_blocked_reason: 'No se pudo verificar si el IVA admite cambios. Cierra y vuelve a abrir el modal para reintentar.' })));
       return;
     }
     contexts.value = Object.fromEntries(result.data.rows.map((row) => [row.income_id, row.confirmation]));
+    vat.setLocks(result.data.rows);
   }
 
   watch(() => [props.open, props.records, props.record], () => {
@@ -116,13 +120,14 @@ export function useIncomeSettlementForm(props, emit) {
     if (!records.value.length) return;
     requestId.value = requestUuid(); exactDate.value = true;
     deductions.value = []; followUps.value = []; periods.value = {}; manual.value = null;
-    participantsOpen.value = false; differenceOpen.value = false; vatOpen.value = false;
-    showVat.value = true; autoExpanded = false; error.value = ''; review.value = null; pendingPayload.value = null; dispatched.value = false;
+    participantsOpen.value = false; differenceOpen.value = false;
+    autoExpanded = false; error.value = ''; review.value = null; pendingPayload.value = null; dispatched.value = false;
     contexts.value = {};
     sendConfirmations.value = Object.fromEntries(records.value.map((row) => [row.id, true]));
     const initialTotal = records.value.reduce((sum, row) => sum + Number(row.pending_amount ?? row.total_amount ?? 0), 0);
     const half = Math.floor(initialTotal / 2);
     form.value = { total_amount: initialTotal, period_date: todayISO(), destination: personal.value ? 'partners' : 'pocket', notes: '', gustavo_amount: half, carlos_amount: half };
+    vat.reset();
     loadContexts();
   }, { immediate: true });
 
@@ -132,10 +137,11 @@ export function useIncomeSettlementForm(props, emit) {
     followUps.value.push({ income_id: origin?.income_id, concept: `${origin?.record.concept ?? ''} - saldo`, period_date: '', amount: Math.max(0, remaining.value) || null });
   }
   function editAllocation(id, value) {
+    vat.clearCaptures();
     if (!manual.value) manual.value = Object.fromEntries(proposal.value.rows.map((row) => [row.income_id, row.amount]));
     manual.value = { ...manual.value, [id]: value };
   }
-  function recalculate() { manual.value = null; }
+  function recalculate() { vat.clearCaptures(); manual.value = null; }
   async function submit() {
     if (props.saving || preparing.value || dispatched.value || blockReason.value) return;
     preparing.value = true; error.value = '';
@@ -162,7 +168,8 @@ export function useIncomeSettlementForm(props, emit) {
 
   return {
     records, personal, form, exactDate, requestId, deductions, followUps, periods,
-    participantsOpen, differenceOpen, vatOpen, showVat, manual, contexts,
+    participantsOpen, differenceOpen, vatDrafts: vat.drafts, vatLocks: vat.locks,
+    setVatRate: vat.setRate, toggleVat: vat.toggle, captureVat: vat.capture, manual, contexts,
     sendConfirmations, contextLoading, preparing, error, review, proposal,
     shortfall, remaining, credit, hostingRecords, blockReason, receivedById,
     addDeduction, addFollowUp, editAllocation, recalculate, submit, confirm, back,

@@ -5952,7 +5952,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-accounting-hosting-cycles` | admin | P2 | display,success,error,failure | 3 |
 | `admin-accounting-hosting-inline-edit` | admin | P3 | — | 0 |
 | `admin-accounting-hostings` | admin | P2 | display,success,error | 4 |
-| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 14 |
+| `admin-accounting-income-bulk-settle` | admin | P1 | success,error,failure,display | 18 |
 | `admin-accounting-income-client` | admin | P1 | display,success,failure,error | 10 |
 | `admin-accounting-income-crud` | admin | P1 | display,success,error,failure | 42 |
 | `admin-accounting-income-reminder-mute` | admin | P1 | display,success,error,failure | 6 |
@@ -6106,7 +6106,7 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-linktree-templates` | admin | P1 | success,error,failure,display | — |
 | `admin-linktrees` | admin | P2 | success,error | 1 |
 | `admin-login` | auth | P1 | success,error,failure,display | 1 |
-| `admin-mcps` | admin | P2 | display,success,error,failure | 12 |
+| `admin-mcps` | admin | P2 | display,success,error,failure | 14 |
 | `admin-mini-crm-clients` | admin | P2 | display | 3 |
 | `admin-monitoring-case-follow-up` | monitoring | P1 | display,success,error,failure | — |
 | `admin-monitoring-case-list` | monitoring | P1 | display,success,failure | — |
@@ -6551,15 +6551,17 @@ y sus acciones para generar o completar la cuenta; el aviso interno se conserva.
 - **Role:** superuser admin
 - **Priority:** P1
 - **Route:** `/panel/accounting/incomes`
-- **Description:** La selección muestra total original y pendiente. Liquidar abre el mismo modal que la acción individual, con participaciones globales, diferencia e IVA heredado colapsables.
+- **Description:** La selección muestra total original y pendiente. Liquidar abre el mismo modal que la acción individual, con participaciones globales, diferencia e IVA configurable por ingreso.
 - **Success:** Cobertura por antigüedad, reparto manual o automático, deducciones proporcionales, saldo pendiente o reprogramado con origen, cero recibido con ajustes y excedente como saldo a favor del mismo cliente. Una vista previa precede el registro; los correos elegibles se revisan dentro del modal.
-- **Error:** Bloquea distribuciones excesivas, valores negativos, líneas incompletas, períodos incompletos, participación excesiva y excedente con clientes mezclados. Explica por qué no puede enviar una confirmación.
+- **Error:** Bloquea distribuciones excesivas, valores negativos, líneas incompletas, períodos incompletos, participación excesiva y excedente con clientes mezclados. El IVA activado requiere porcentaje válido. Pagos, deducciones o cuentas emitidas bloquean su cambio de tasa, sin impedir registrar el pago. Explica por qué no puede enviar una confirmación.
 - **Failure:** Un rechazo de vista previa conserva el formulario. Un conflicto al registrar conserva los datos para volver a revisar. El fallo de correo no deshace el abono.
-- **Display:** Un único diálogo con lista, valor recibido, fecha, destino, resumen y tres secciones colapsables; Diferencia se abre al faltar dinero. Los importes de ambos socios se muestran desde la apertura. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
-- **Coverage:** Covered — las cuatro clases de resultado. Los siete recorridos de comportamiento y los cinco perfiles de pantalla se ejecutaron contra el frontend local; la ruta individual comparte el mismo modal.
+- **Display:** Un único diálogo con lista, valor recibido, fecha, destino y resumen. Cada ingreso muestra un switch junto a IVA antes de expandir: apagar significa Sin IVA (0 %). La configuración permite capturar base o total incluido y ver base, IVA y total; distingue Sin registrar. Diferencia se abre al faltar dinero. El pie de acciones tiene padding propio. Móvil, tableta vertical y escritorio conservan acciones y contenido alcanzables.
+- **Coverage:** Las cuatro clases de resultado tienen recorridos focales; los cinco perfiles de pantalla verifican el modal con IVA expandido. La ruta individual comparte el mismo modal.
 - **E2E Spec:** `e2e/admin/admin-accounting-income-bulk-settle.spec.js`
 
 El detalle del bolsillo conserva los importes imputados y los saldos actuales; desde el pago de un ingreso se puede consultar el reparto del abono entre sus ingresos de origen.
+
+Cambiar únicamente entre base y total incluido conserva los centavos recibidos y el reparto automático. Editar el porcentaje en modo total incluido permite seguir ajustando el valor recibido sin conservar una captura desactualizada.
 
 ### FLOW: `admin-accounting-filters`
 
@@ -8504,6 +8506,25 @@ Especificación: `frontend/e2e/admin/admin-proposal-approval.spec.js` y regresi�
 - **Failure:** un fallo no aplica cambios parciales. Una vista previa vencida, cancelada o cuyos documentos cambiaron no puede confirmarse; una confirmación repetida no duplica el cambio.
 - **Límites:** conservar documentos, paquetes aprobados, firmas y envíos históricos. No enviar ni solicitar firma automáticamente, modificar plantillas o regenerar contratos de otras propuestas.
 
+#### Aprobación explícita del servicio
+
+En modalidad **Producto y servicio**, Documentos muestra el switch
+**Servicio aprobado**. No aparece con contrato único. Su valor sólo define el
+siguiente paquete confirmado: apagado requiere el contrato de producto; encendido
+requiere producto y servicio. En ambos casos se conservan los anexos activos.
+Cambiarlo no modifica el paquete ya aprobado, sus archivos, firmas ni historial.
+
+- **Success:** guardar el switch con la huella vigente deja visible la selección
+  elegida y, al confirmar una nueva revisión, actualiza el paquete con sólo
+  producto o con producto y servicio según corresponda.
+- **Error:** una fuente desactualizada rechaza el guardado y mantiene la
+  selección visible y el paquete vigente. La confirmación posterior exige la
+  huella actual.
+- **Failure:** una falla al guardar o confirmar no invierte el switch ni altera
+  parcialmente el paquete confirmado; el administrador puede reintentar.
+- **Display:** con contrato único no se muestra el control. Con modalidad
+  separada, el texto explica qué contratos y anexos incluirá la próxima confirmación.
+
 #### Datos del servicio configurables
 
 Los formularios de creación y edición de contratos conservan sus opciones
@@ -8647,6 +8668,7 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 
 | Clase | Interacción | Resultado |
 |---|---|---|
+| success | Confirmar otra revisión con servicio apagado o aprobado | El paquete incluye sólo producto o producto y servicio respectivamente, junto a los anexos activos |
 | success | Revisar y confirmar un nuevo paquete | Ambos módulos muestran la nueva versión y conservan el historial |
 | success | Guardar un adjunto habilitado en borrador | Misma identidad; archivo aprobado conservado hasta reconfirmar |
 | error | Confirmar con una versión desactualizada | Conflicto visible; formulario y archivo conservados |
@@ -8657,6 +8679,13 @@ el anexo comercial separado, rechazo de datos incompletos y de adjuntos obsoleto
 Los documentos estructurados abren el mismo editor de origen desde el gestor. Confirmar una revisión conserva el cliente y proyecto vinculados; cambiar de proyecto usa el flujo de reasignación. La aprobación inicial y los históricos usan la revisión interna, sin aceptación pública ni posposición del proyecto al aprobar.
 
 Las garantías de bytes e identidad se verifican además con pruebas de servicios reales y operaciones MCP autenticadas: consulta del recurso, sustitución de borrador, validación del archivo subido y confirmación de otra revisión. Los mocks del navegador cubren interacción y presentación.
+
+El switch de servicio sólo aparece con contratos separados y se guarda con la
+huella de origen. No cambia el paquete aprobado hasta confirmar otra revisión.
+La vista previa exige sólo los contratos aprobados; un conflicto o fallo conserva
+el switch, formulario, adjuntos y evidencia vigente. Las operaciones MCP/CLI de
+recuperación no son flujos de navegador: sus pruebas de integración verifican los
+archivos y vínculos reales sin regeneración.
 
 # admin-pwa-install — Instalación del panel interno
 

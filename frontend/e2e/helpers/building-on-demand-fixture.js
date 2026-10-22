@@ -447,7 +447,7 @@ export function buildingOnDemandOverviewFixture({ withContract = true, mirrorSta
   return {
     program: versionSummary('program'),
     contract: withContract ? { ...contractSummary, mirror: buildingOnDemandMirrorFixture(mirrorStatus) } : null,
-    connector: { slug: 'building-on-demand', is_active: false },
+    connector: { slug: 'programs', is_active: false },
     public_paths: { es: '/es-co/building-on-demand', en: '/en-us/building-on-demand' },
     pdf_paths: { es: '/api/building-on-demand/public/pdf/?lang=es', en: '/api/building-on-demand/public/pdf/?lang=en' },
   };

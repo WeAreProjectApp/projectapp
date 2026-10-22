@@ -75,6 +75,67 @@ test.describe('Admin proposal contract modality', () => {
     await expect(page.getByTestId('proposal-contract-row-service')).toContainText('PDF · Generado el');
   });
 
+  test('an administrator saves service approval for the next reviewed package', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Falla si el switch de servicio sólo cambia localmente y no guarda la próxima revisión de producto y servicio.
+    const state = {
+      proposal: buildProposal({
+        status: 'accepted',
+        contract_modality: 'split',
+        proposal_source_hash: 'source-v1',
+        service_contract_approved: false,
+        proposal_documents: [PRODUCT],
+      }),
+    };
+    let savedPayload = null;
+    await mockApi(page, buildHandler(state, {
+      onProposalUpdate: payload => { savedPayload = payload; },
+    }));
+    await openDocuments(page);
+
+    const approval = page.getByTestId('proposal-service-approval');
+    await expect(approval).toContainText('La próxima confirmación incluirá sólo el contrato de producto y todos los anexos activos.');
+    await expect(approval).toContainText('Los documentos ya aprobados se conservan hasta confirmar una nueva revisión.');
+
+    await page.getByTestId('proposal-service-approved-toggle').click();
+
+    await expect.poll(() => savedPayload).toEqual({
+      service_contract_approved: true,
+      source_hash: 'source-v1',
+    });
+    await expect(approval).toContainText('La próxima confirmación incluirá los contratos de producto y servicio, y todos los anexos activos.');
+    await expect(approval).toContainText('Los documentos ya aprobados se conservan hasta confirmar una nueva revisión.');
+    await expect(page.getByRole('alert')).toHaveText('Aprobación del servicio guardada. Confirma una nueva revisión para actualizar los documentos.');
+  });
+
+  test('a stale service approval preserves the product-only decision', {
+    tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    // Falla si un 409 muestra una aprobación de servicio que el servidor rechazó para la próxima revisión.
+    const state = {
+      proposal: buildProposal({
+        status: 'accepted',
+        contract_modality: 'split',
+        service_contract_approved: false,
+        proposal_documents: [PRODUCT],
+      }),
+    };
+    await mockApi(page, buildHandler(state, {
+      proposalUpdateResponses: [json(409, { detail: 'La propuesta cambió; prepara una nueva revisión.' })],
+    }));
+    await openDocuments(page);
+
+    const approval = page.getByTestId('proposal-service-approval');
+    const toggle = page.getByTestId('proposal-service-approved-toggle');
+    await toggle.click();
+
+    await expect(page.getByRole('alert')).toHaveText('La propuesta cambió; prepara una nueva revisión.');
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(approval).toContainText('La próxima confirmación incluirá sólo el contrato de producto y todos los anexos activos.');
+    await expect(approval).toContainText('Los documentos ya aprobados se conservan hasta confirmar una nueva revisión.');
+  });
+
   test('configured defaults generate numeric service terms', {
     tag: [...ADMIN_PROPOSAL_CONTRACT_MODALITY, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {

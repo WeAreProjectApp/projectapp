@@ -1,5 +1,7 @@
 """Assemble one public catalog per module and isolated compatibility catalogs."""
 from copy import deepcopy
+import json
+from pathlib import Path
 
 from content.mcp import registry
 from content.mcp.canonical_schemas import complete_canonical_schema
@@ -7,13 +9,16 @@ from content.mcp.income_tools import build_income_tools
 from content.mcp.module_catalog import (
     ACCOUNTING_SUPERSEDED, CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, MODULE_CONNECTORS,
     canonical_name, catalog_problems,
+    COMMERCIAL_MEMBERS, SHARED_VIDEO_REPLACEMENTS, INFRASTRUCTURE_TOOLS, tool_owner,
 )
+from content.mcp.section_tools import COMMERCIAL_SECTION_TOOLS
 
 REPLACED_INCOME_NAMES = frozenset({
     'list_income', 'get_income', 'get_income_detail', 'create_income', 'update_income',
     'list_expected_incomes', 'get_expected_income', 'create_expected_income',
     'update_expected_income', 'duplicate_expected_income',
 })
+CATALOG_VERSIONS = {'accounting': '2.1.0', 'accounting-ledger': '3.1.0'}
 
 
 def operation_id(tool):
@@ -43,7 +48,7 @@ def _unique(tools):
     return list(found.values())
 
 
-def build_catalogs(sources, replace, common):
+def build_catalogs(sources, replace, common, *, pre_split=None):
     from content.mcp.hosting_subscription_tools import HOSTING_SUBSCRIPTION_TOOLS
     from content.mcp import income_tools
 
@@ -54,7 +59,7 @@ def build_catalogs(sources, replace, common):
             source, compatibility=slug != canonical, canonical_area=canonical,
             confirm_sensitive=True,
             module_id=MODULE_CONNECTORS[canonical][0],
-            version=source.catalog_version or f'{int(source.version.split(".")[0]) + 1}.0.0',
+            version=CATALOG_VERSIONS.get(slug, f'{int(source.version.split(".")[0]) + 1}.0.0'),
         )
         raw[slug] = _unique(tool for group in source.sources for tool in group)
 
@@ -63,6 +68,11 @@ def build_catalogs(sources, replace, common):
         tools = _unique(tool for member in members for tool in raw[member])
         if slug == 'commercial':
             tools = [tool for tool in tools if tool['name'] != 'launch_proposal_to_platform']
+        if slug in {'commercial', 'offerings', 'programs'}:
+            tools = [tool for tool in tools if tool['name'] not in SHARED_VIDEO_REPLACEMENTS
+                     and tool_owner(tool['name'], slug) == slug]
+            if slug == 'commercial':
+                tools.extend(deepcopy(COMMERCIAL_SECTION_TOOLS))
         if slug == 'projects':
             tools = [tool for tool in tools if tool['name'] not in FINANCIAL_PROJECT_TOOLS]
         if slug == 'accounting':
@@ -110,6 +120,20 @@ def build_catalogs(sources, replace, common):
         ], spec.slug)
 
     public = {}
+    if pre_split is not None:
+        frozen_names = set(json.loads(Path(__file__).with_name('pre_split_commercial_names.json').read_text()))
+        tools = _unique(tool for member in COMMERCIAL_MEMBERS for tool in raw[member])
+        tools = [tool for tool in tools if tool['name'] in frozen_names]
+        missing = frozen_names - INFRASTRUCTURE_TOOLS - {tool['name'] for tool in tools}
+        if missing:
+            raise RuntimeError(f'Missing pre-split commercial tools: {sorted(missing)}')
+        for tool in tools:
+            if tool['name'] == 'launch_proposal_to_platform':
+                tool['_hidden'] = True
+            tool['operation_id'] = operation_id(tool)
+            tool['name'] = canonical_name(tool['name'], 'commercial')
+            complete_canonical_schema(tool, 'commercial')
+        finish(connectors['commercial'], tools, pre_split)
     for slug, spec in connectors.items():
         finish(spec, canonical_raw.get(slug, raw[slug]), public)
         finish(spec, raw[slug], legacy)

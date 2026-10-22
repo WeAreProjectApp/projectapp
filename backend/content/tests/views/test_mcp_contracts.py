@@ -176,9 +176,11 @@ def test_documents_connector_keeps_native_tools_and_adds_panel_parity():
         'preview_folder_migration_undo',
         'undo_folder_migration',
         'adopt_folder_as_project_root',
+        'preview_proposal_document_reconciliation',
+        'reconcile_proposal_documents',
     } <= tool_names
     assert {'get_document_proposal_source', 'replace_document_proposal_binary'} <= tool_names
-    assert len(TOOLS_BY_SLUG['documents']) == 75
+    assert len(TOOLS_BY_SLUG['documents']) == 77
     mirror_listing = next(
         tool for tool in TOOLS_BY_SLUG['documents']
         if tool['name'] == 'list_contract_mirrors'
@@ -279,17 +281,20 @@ def test_accounting_ledger_exposes_receivables_forecast():
     assert 'get_receivables' in tool_names
 
 
-def test_commercial_catalog_exposes_building_on_demand_video_controls():
-    """Fails if the canonical commercial catalog drops the Scrum video controls."""
-    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['commercial']}
-
-    assert {
+def test_programs_catalog_exposes_building_on_demand_video_controls():
+    """Fails if Scrum video controls are not owned exclusively by Programas."""
+    video_controls = {
         'get_building_on_demand_video',
         'set_building_on_demand_video',
         'remove_building_on_demand_video',
         'restore_default_building_on_demand_video',
         'set_building_on_demand_video_visibility',
-    } <= set(tools)
+    }
+    programs = {tool['name'] for tool in TOOLS_BY_SLUG['programs']}
+    commercial = {tool['name'] for tool in TOOLS_BY_SLUG['commercial']}
+
+    assert video_controls <= programs
+    assert not video_controls & commercial
 
 
 @pytest.mark.parametrize('slug', CONNECTOR_SLUGS)

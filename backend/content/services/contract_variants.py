@@ -178,6 +178,17 @@ def active_variants(proposal):
     return MODALITY_VARIANTS[modality(proposal)]
 
 
+def approved_variants(proposal):
+    """Contracts required by the next approval, independent of draft availability."""
+    if modality(proposal) == BusinessProposal.ContractModality.SPLIT:
+        return (PRODUCT, SERVICE) if proposal.service_contract_approved else (PRODUCT,)
+    return (COMBINED,)
+
+
+def approved_doc_types(proposal):
+    return {VARIANTS[key].doc_type for key in approved_variants(proposal)}
+
+
 def active_doc_types(proposal):
     return {VARIANTS[key].doc_type for key in active_variants(proposal)}
 

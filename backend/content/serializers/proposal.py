@@ -170,7 +170,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
         'view_count', 'first_viewed_at', 'last_activity_at', 'responded_at',
         'available_transitions', 'proposal_documents',
         'platform_onboarding_completed_at', 'platform_onboarding_status', 'project_review_required', 'linked_project',
-        'first_view_notification', 'contract_modality',
+        'first_view_notification', 'contract_modality', 'service_contract_approved',
         'module_interests', 'module_interests_updated_at',
     )
 
@@ -222,7 +222,7 @@ class ProposalDetailSerializer(serializers.ModelSerializer):
             'discounted_investment', 'discount_original_investment', 'effective_total_investment',
             'selected_modules', 'has_confirmed_module_selection',
             'module_interests', 'module_interests_updated_at',
-            'contract_params', 'contract_modality',
+            'contract_params', 'contract_modality', 'service_contract_approved',
             'available_transitions', 'proposal_documents',
             'platform_onboarding_completed_at',
             'platform_onboarding_status',
@@ -558,7 +558,7 @@ class ProposalCreateUpdateSerializer(serializers.ModelSerializer):
             'project_type_custom', 'market_type_custom',
             'email_intro', 'email_features', 'email_method_phases', 'email_signed_by',
             'client_id', 'client_company', 'propagate_client_updates',
-            'create_new_client', 'client',
+            'create_new_client', 'client', 'service_contract_approved',
         )
 
     def validate_client_email(self, value):
@@ -802,6 +802,7 @@ class ProposalFromJSONSerializer(serializers.Serializer):
     show_contract_terms = serializers.BooleanField(required=False, default=True)
     # Creation supplies the model default; omission during JSON updates preserves the preference.
     show_explainer_video = serializers.BooleanField(required=False)
+    service_contract_approved = serializers.BooleanField(required=False)
     email_intro = serializers.CharField(required=False, default='', allow_blank=True)
     sections = serializers.DictField(child=serializers.DictField(), required=True)
 

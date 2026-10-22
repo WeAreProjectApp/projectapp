@@ -39,6 +39,15 @@ function button(wrapper, label) {
 }
 
 describe('VatAmountInput', () => {
+  it.each(['119000.03', '0.03'])('preserves the included %s total when showing the rounded base', async (total) => {
+    const wrapper = mountInput({ modelValue: total })
+
+    await tab(wrapper, 'Antes de IVA').trigger('click')
+
+    expect(wrapper.emitted('capture')).toBeUndefined()
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+  })
+
   it('shows the pre-VAT amount when the user changes input mode', async () => {
     // Fails if switching modes changes the money being edited instead of converting its presentation.
     const wrapper = mountInput()

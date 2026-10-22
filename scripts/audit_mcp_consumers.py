@@ -14,11 +14,13 @@ ALIASES = {
     'linkedin_personal_content': 'linkedin-personal',
     'gestor_comercial': 'commercial', 'gestor_contenido': 'content',
     'gestor_proyectos': 'projects', 'gestor_tareas': 'tasks',
-    'gestor_operaciones': 'operations',
+    'gestor_operaciones': 'operations', 'nuestra_oferta': 'offerings', 'programas': 'programs',
 }
 CANONICAL = {
+    'offerings': 'offerings', 'additional-modules': 'offerings',
+    **{slug: 'programs' for slug in ('programs', 'partnership-program', 'building-with-us', 'building-on-demand')},
     **{slug: 'accounting' for slug in ('accounting', 'accounting-ledger', 'accounting-billing', 'accounting-cards')},
-    **{slug: 'commercial' for slug in ('commercial', 'clients', 'proposals', 'diagnostics', 'additional-modules', 'partnership-program', 'building-with-us', 'building-on-demand')},
+    **{slug: 'commercial' for slug in ('commercial', 'clients', 'proposals', 'diagnostics')},
     **{slug: 'content' for slug in ('content', 'blog', 'linkedin-personal')},
     **{slug: slug for slug in ('projects', 'documents', 'communications', 'tasks', 'operations')},
 }

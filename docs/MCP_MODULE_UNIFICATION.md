@@ -1,10 +1,47 @@
 # MCP por módulo: contrato y migración
 
-Esta entrega consolida el registro en ocho conectores: `operations`,
-`commercial`, `projects`, `documents`, `communications`, `content`, `accounting`
+Esta entrega consolida el registro en diez conectores: `operations`,
+`commercial`, `offerings`, `programs`, `projects`, `documents`, `communications`, `content`, `accounting`
 y `tasks`. Los otros doce slugs son adaptadores en retirada, no módulos nuevos.
 La revalidación de PA-91 queda incorporada en los contratos de modelos y en los
 recorridos de regresión existentes; no se construye otro módulo de Comunicaciones.
+
+## Segmentación comercial — 2026-10-22
+
+El menú usa Comercial → Nuestra oferta → Programas. Las líneas separan
+subconjuntos: Clientes / Propuestas y Diagnósticos / Configuración, y Alianzas /
+Células. Los MCPs tienen esos mismos dueños y sus acordeones describen qué
+controlan, sus acciones y los límites con otras secciones. Todos los conectores,
+incluidos los adaptadores en retirada, tienen una descripción ampliada.
+
+`content.0298_segment_commercial_mcps` crea `offerings` y `programs` inactivos y sin
+credenciales. Convierte sólo las credenciales canónicas existentes de Comercial
+a `pre_split`, congela sus permisos efectivos y mantiene tokens, actor y
+vencimiento. El catálogo de nombres anterior está fijado en el código. Las
+credenciales `legacy` y sus condiciones de retiro permanecen intactas.
+Las credenciales nuevas de Comercial no ejecutan herramientas trasladadas a
+través de alias ocultos. Los ajustes de videos tienen operaciones específicas
+por sección; las anteriores siguen disponibles en los catálogos compatibles.
+
+Un origen comercial puede necesitar tres destinos. Crear credenciales mediante
+`migrate_from_credential_id` en cada destino requerido, configurar y verificar al
+consumidor y registrar todas con `mcp_retirement --slug commercial
+--migrated-credential <origen> --replacement-credential <destino> ... --apply`.
+El comando rechaza destinos incompletos, permisos extra y cambios de actor o
+ampliaciones de vencimiento. Conserva también los permisos de carga de archivos.
+
+Para verificar consumidores o retirar específicamente el catálogo anterior a
+esta separación, usar `mcp_retirement --slug commercial --catalog pre_split` con
+`--verify-consumers --apply` o `--retire --apply`, respectivamente; sin `--apply`
+sólo previsualiza. Su ventana de 30 días comienza al desplegar 0298. Requiere
+14 días observados sin llamadas y ninguna confirmación pendiente de ese catálogo.
+Sus marcas `pre_split_*` son independientes de las de `legacy`; un retiro previo
+no se deshace ni se reutiliza como evidencia de esta transición.
+
+Comercial conserva `/api/mcp/commercial/`; los nuevos destinos son
+`/api/mcp/offerings/` y `/api/mcp/programs/`. Actualizar los clientes externos
+requiere despliegue y configuración explícita. Esta entrega no los activa ni
+acredita migración de consumidores reales.
 
 ## Inventario y evidencia
 
@@ -29,7 +66,9 @@ contexto de cuentas y contratos de facturación. Proyectos conserva su ciclo y
 sus procesos transversales, incluidos efectos financieros de sus transiciones;
 no publica otra copia de las herramientas financieras detalladas.
 Contenido reúne blog, LinkedIn, portafolio, QR y Linktrees. Comercial reúne
-clientes, propuestas, diagnósticos, programas y sus contratos.
+clientes, propuestas y diagnósticos, con Defaults y entregabilidad. Nuestra oferta
+reúne paquetes de horas y módulos adicionales. Programas reúne Programa de Alianza,
+Building with Us y Células, incluidos contratos, economía y versiones.
 
 `list_incomes`, `get_income`, `create_income`, `update_income` y `duplicate_income`
 reemplazan las dos familias de ingresos. La lectura y escritura de esperados

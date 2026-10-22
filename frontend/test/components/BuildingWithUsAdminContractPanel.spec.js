@@ -63,7 +63,7 @@ describe('BuildingWithUsAdminContractPanel', () => {
     const alert = wrapper.get('[data-testid="building-with-us-mirror-alert"]');
 
     expect(alert.text()).toContain(message);
-    expect(alert.text()).toContain('MCP «Building with Us»');
+    expect(alert.text()).toContain('MCP «Programas»');
   });
 
   it.each([

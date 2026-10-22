@@ -116,12 +116,31 @@ def test_duplicate_confirmation_reuses_packet(reviewed_proposal, approval_client
 
 @pytest.mark.parametrize('field,value', [('total_investment', 999), ('status', 'rejected')])
 def test_stale_sources_leave_no_new_project(reviewed_proposal, approval_client, admin_user, field, value):
+    """Fails if a source captured before a material approval change creates a package."""
     from content.services.proposal_approval_service import ApprovalConflict
     values = payload(reviewed_proposal, approval_client)
     setattr(reviewed_proposal, field, value)
     reviewed_proposal.save(update_fields=[field])
     with pytest.raises(ApprovalConflict):
         review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
+    assert not Project.objects.exists()
+    assert not ProposalApprovalFile.objects.exists()
+
+
+def test_split_service_approval_invalidates_a_captured_confirmation(
+    reviewed_proposal, approval_client, admin_user,
+):
+    """Fails if changing service approval confirms the contract composition reviewed earlier."""
+    from content.services.proposal_approval_service import ApprovalConflict
+    reviewed_proposal.contract_modality = 'split'
+    reviewed_proposal.save(update_fields=['contract_modality'])
+    values = payload(reviewed_proposal, approval_client)
+    reviewed_proposal.service_contract_approved = True
+    reviewed_proposal.save(update_fields=['service_contract_approved'])
+
+    with pytest.raises(ApprovalConflict):
+        review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf()])
+
     assert not Project.objects.exists()
     assert not ProposalApprovalFile.objects.exists()
 
@@ -241,11 +260,20 @@ def test_panel_multipart_confirm_uses_packet_metadata(admin_client, reviewed_pro
     assert response.json()['confirmed'] is True
 
 
-@pytest.mark.parametrize('modality,expected', [('single', ['contract']), ('split', ['contract_product', 'contract_service'])])
-def test_proposal_contract_mode_copies_only_active_contracts(reviewed_proposal, approval_client, admin_user, modality, expected):
+@pytest.mark.parametrize(('modality', 'service_contract_approved', 'expected'), [
+    ('single', False, ['contract']),
+    ('split', False, ['contract_product']),
+    ('split', True, ['contract_product', 'contract_service']),
+])
+def test_proposal_contract_mode_copies_only_approved_contracts(
+    reviewed_proposal, approval_client, admin_user, modality,
+    service_contract_approved, expected,
+):
+    """Fails if approval copies a service contract that the split proposal did not approve."""
     from content.services.contract_variants import FINAL_REQUIRED_PARAMS, SERVICE_PARAM_KEYS
     reviewed_proposal.status = 'accepted'
     reviewed_proposal.contract_modality = modality
+    reviewed_proposal.service_contract_approved = service_contract_approved
     reviewed_proposal.contract_params = {key: 'Reviewed' for key in FINAL_REQUIRED_PARAMS + SERVICE_PARAM_KEYS}
     reviewed_proposal.contract_params['contractor_nit'] = '123456789'
     reviewed_proposal.save()
@@ -260,7 +288,50 @@ def test_proposal_contract_mode_copies_only_active_contracts(reviewed_proposal, 
     values['custom_documents'] = []
     result = review_proposal(reviewed_proposal.pk, values, actor=admin_user)
     assert sorted(row['document_type'] for row in result['confirmed_files'] if row['document_type'] in ProposalDocument.CONTRACT_DOC_TYPES) == expected
+    assert sorted(row['document_type'] for row in result['confirmed_files'] if row['document_type'] in ('commercial', 'technical')) == ['commercial', 'technical']
     assert ProposalDocument.objects.filter(proposal=reviewed_proposal).count() == 3
+
+
+def test_split_product_only_custom_packet_is_confirmed(reviewed_proposal, approval_client, admin_user):
+    """Fails if a product-only split closure still requires a service contract upload."""
+    reviewed_proposal.contract_modality = 'split'
+    reviewed_proposal.service_contract_approved = False
+    reviewed_proposal.save(update_fields=['contract_modality', 'service_contract_approved'])
+    values = payload(reviewed_proposal, approval_client)
+    values.update(
+        use_proposal_contracts=False,
+        custom_documents=[{'title': 'Signed product contract', 'document_type': 'contract_product'}],
+    )
+
+    result = review_proposal(reviewed_proposal.pk, values, actor=admin_user, files=[pdf('product.pdf')])
+
+    assert sorted(row['document_type'] for row in result['confirmed_files']) == [
+        'commercial', 'contract_product', 'technical',
+    ]
+
+
+def test_split_product_only_custom_packet_rejects_a_service_contract(reviewed_proposal, approval_client, admin_user):
+    """Fails if an unapproved service contract can enter a product-only closure."""
+    from rest_framework.exceptions import ValidationError
+    reviewed_proposal.contract_modality = 'split'
+    reviewed_proposal.service_contract_approved = False
+    reviewed_proposal.save(update_fields=['contract_modality', 'service_contract_approved'])
+    values = payload(reviewed_proposal, approval_client)
+    values.update(
+        use_proposal_contracts=False,
+        custom_documents=[
+            {'title': 'Signed product contract', 'document_type': 'contract_product'},
+            {'title': 'Unapproved service contract', 'document_type': 'contract_service'},
+        ],
+    )
+
+    with pytest.raises(ValidationError, match='contratos aprobados'):
+        review_proposal(
+            reviewed_proposal.pk, values, actor=admin_user,
+            files=[pdf('product.pdf'), pdf('service.pdf')],
+        )
+
+    assert ProposalApprovalFile.objects.count() == 0
 
 
 def test_active_annex_is_included_without_explicit_selection(reviewed_proposal, approval_client, admin_user):

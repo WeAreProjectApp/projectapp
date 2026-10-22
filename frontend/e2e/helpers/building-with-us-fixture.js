@@ -172,7 +172,7 @@ export function buildingWithUsOverviewFixture() {
   return {
     program: versionSummary('program'),
     contract: { ...versionSummary('contract'), mirror: buildingWithUsMirrorFixture() },
-    connector: { slug: 'building-with-us', is_active: true },
+    connector: { slug: 'programs', is_active: true },
     public_paths: { es: '/es-co/building-with-us', en: '/en-us/building-with-us' },
   };
 }
