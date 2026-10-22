@@ -11,6 +11,8 @@ de IVA o con IVA incluido. Las respuestas de vista previa incluyen el desglose
 efectivo y los bloqueos de edición por ingreso. Los contratos anteriores que
 omiten la lista conservan su comportamiento y los pagos heredan el IVA del
 original. Se mantienen permisos, confirmaciones, concurrencia y reversión.
+El adaptador de abonos anteriores al registro de operaciones rechaza
+`vat_updates` explícitamente; no descarta una configuración fiscal solicitada.
 
 Las versiones públicas posteriores a la consolidación se declaran sin alterar
 las versiones históricas de sus catálogos fuente. Las huellas se regeneran con

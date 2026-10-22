@@ -235,3 +235,39 @@ def test_retry_preserves_the_single_fiscal_operation(superuser):
 
     assert retry['settlement_id'] == first['settlement_id']
     assert PocketMovement.objects.count() == 1
+
+
+def test_historical_abono_rejects_unsupported_vat_configuration(superuser):
+    """Falla si el adaptador histórico acepta IVA pero descarta la configuración."""
+    from content.services.accounting_abono_service import update_income_abono
+
+    parent = source()
+    movement = PocketMovement.objects.create(concept='Abono histórico', amount=Decimal('100'),
+        direction='in', movement_date=date(2026, 10, 1))
+    IncomeRecord.objects.create(concept='Pago histórico', kind='liquid', ledger='company',
+        destination='pocket', expected_income=parent, pocket_movement=movement,
+        period_date=date(2026, 10, 1), total_amount=Decimal('100'), vat_rate=None)
+
+    with pytest.raises(ValueError, match='históricos conservan su IVA'):
+        update_income_abono(movement.pk, payment(parent, total_amount=Decimal('100'),
+            allocations=[{'income_id': parent.pk, 'amount': Decimal('100')}], vat_updates=[tax(parent)]), superuser)
+
+    parent.refresh_from_db()
+    movement.refresh_from_db()
+    assert parent.vat_rate is None
+    assert movement.amount == Decimal('100')
+
+
+def test_abono_alias_configures_vat_for_a_registered_operation(superuser):
+    """Falla si proteger los históricos bloquea también el adaptador de operaciones nuevas."""
+    from content.services.accounting_abono_service import update_income_abono
+
+    parent = source()
+    original = settle_incomes(payment(parent, vat_updates=[tax(parent)]), superuser)
+    result = update_income_abono(original['movement'].pk, payment(parent,
+        allocations=[{'income_id': parent.pk, 'amount': Decimal('119000')}],
+        vat_updates=[tax(parent, '0')]), superuser)
+
+    parent.refresh_from_db()
+    assert parent.vat_rate == Decimal('0')
+    assert result['liquid'].vat_amount == Decimal('0')
