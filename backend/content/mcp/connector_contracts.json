@@ -1,7 +1,7 @@
 {
   "accounting": {
-    "sha256": "8c4e06db01eda9f2f3e9485c56791c5373db9571267b7932ecee27fcfec91043",
-    "version": "2.0.0"
+    "sha256": "49ab0f47cb1b697a5f05fc204e51aed0eb324d33c5da8799db00e957885485a2",
+    "version": "2.1.0"
   },
   "accounting-billing": {
     "sha256": "9ede997afb70d0725778632b17f8d38c81d6d8bc0e6df7386e93ae97cc886d9e",
@@ -12,8 +12,8 @@
     "version": "3.0.0"
   },
   "accounting-ledger": {
-    "sha256": "9c2d55782fb40e1d83b0b92ed1345a4d867d777608c253e473dc1e331c5dfeb0",
-    "version": "3.0.0"
+    "sha256": "7361234942c278fd2bbc87815a5690725d56d4dc27aac747fda466faa94ff752",
+    "version": "3.1.0"
   },
   "additional-modules": {
     "sha256": "699265848ff64f0a3c87914297b5c593e14f88a1d37756df4ac3231051e19e3d",
