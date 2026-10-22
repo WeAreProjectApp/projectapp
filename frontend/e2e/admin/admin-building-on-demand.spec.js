@@ -98,7 +98,7 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-public-url-es')).toHaveText('https://projectapp.co/es-co/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-open-public-en')).toHaveAttribute('href', 'https://projectapp.co/en-us/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-download-pdf-es')).toBeVisible();
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('Este panel es de solo lectura.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran desde MCP, con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toContainText(program.hero.title);
   });
 
@@ -299,7 +299,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-unavailable')).toHaveText('El contrato todavía no está disponible');
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('Este panel es de solo lectura.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran desde MCP, con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-admin-contract-history')).toHaveCount(0);
     await expect(page.getByTestId('building-on-demand-admin-contract-error')).toHaveCount(0);
   });
