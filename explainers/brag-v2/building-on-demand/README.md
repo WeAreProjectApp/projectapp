@@ -41,3 +41,12 @@ El video y la portada se empaquetan como recurso predeterminado ES. No hay
 fallback español para EN. Desde Células › Programa se puede cargar otro MP4,
 quitarlo, restaurar esta pieza y cambiar la visibilidad pública sin modificar
 las revisiones del programa ni del contrato.
+
+## Entregable verificado
+
+MP4 de 60,000 s, H.264 1920×1080 a 30 fps, audio AAC estéreo a 48 kHz,
+1.980.059 bytes. Portada WebP de la apertura. La comprobación de composición,
+distribución y contraste no reportó incidencias; se revisaron las seis escenas
+del archivo exportado y su decodificación completa terminó sin errores.
+Los 16 controles del pipeline de narración pasan. Logs y hoja de contacto
+quedan en los directorios ignorados de producción, fuera de los assets públicos.

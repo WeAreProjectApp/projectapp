@@ -14,6 +14,20 @@ jest.mock('../../stores/video_resources', () => ({
 jest.mock('../../stores/explainer_videos', () => ({
   useExplainerVideosStore: jest.fn(() => mockExplainersStore),
 }))
+jest.mock('#imports', () => {
+  const messages = jest.requireActual('../../locales/videoResources/es').default
+  return {
+    useI18n: () => ({
+      t: (key, params = {}) => {
+        const message = messages[key.split('.').pop()] || key
+        return Object.entries(params).reduce(
+          (text, [name, value]) => text.replace(`{${name}}`, value),
+          message,
+        )
+      },
+    }),
+  }
+})
 
 import VideoResourceManager from '../../components/resources/VideoResourceManager.vue'
 
@@ -42,7 +56,11 @@ const baseStubs = {
   },
   BaseModal: { props: ['modelValue'], template: '<div v-if="modelValue"><slot /><slot name="footer" /></div>' },
   BaseModalActions: { template: '<div><slot /></div>' },
-  BaseSelect: { template: '<select><slot /></select>' },
+  BaseSelect: {
+    props: ['modelValue'],
+    emits: ['update:modelValue'],
+    template: '<select :value="modelValue" @change="$emit(\'update:modelValue\', $event.target.value)"><slot /></select>',
+  },
 }
 
 function actionButton(wrapper, label) {
@@ -61,8 +79,8 @@ async function selectFile(wrapper, file) {
   await input.trigger('change')
 }
 
-function mountManager() {
-  return mount(VideoResourceManager, { global: { stubs: baseStubs } })
+function mountManager(props = {}) {
+  return mount(VideoResourceManager, { props, global: { stubs: baseStubs } })
 }
 
 describe('VideoResourceManager', () => {
@@ -87,9 +105,9 @@ describe('VideoResourceManager', () => {
     expect(mockVideoStore.updateResource).toHaveBeenCalledTimes(0)
   })
 
-  it('uploads a valid MP4 as multipart with the current revision', async () => {
-    // Fails if replacement drops the file or revision while sending the upload request.
-    const wrapper = mountManager()
+  it('submits a Scrum MP4 multipart request', async () => {
+    // Fails if the Scrum manager sends media to another module or drops multipart metadata.
+    const wrapper = mountManager({ module: 'building-on-demand' })
     await flushPromises()
     const file = makeVideoFile({ name: 'presentation.mp4', size: 4096 })
 
@@ -98,7 +116,7 @@ describe('VideoResourceManager', () => {
     await flushPromises()
 
     const [path, payload, options] = mockVideoStore.updateResource.mock.calls[0]
-    expect(path).toBe('video-resources/admin/modules/proposal/es/')
+    expect(path).toBe('video-resources/admin/modules/building-on-demand/es/')
     expect(payload).toBeInstanceOf(FormData)
     expect(payload.get('action')).toBe('upload')
     expect(payload.get('revision')).toBe('3')
@@ -107,8 +125,54 @@ describe('VideoResourceManager', () => {
       signal: expect.any(AbortSignal),
       onUploadProgress: expect.any(Function),
     }))
+  })
+
+  it('updates the Scrum preview after an upload', async () => {
+    // Fails if a successful Scrum upload leaves the manager preview on the replaced resource.
+    const wrapper = mountManager({ module: 'building-on-demand' })
+    await flushPromises()
+    await selectFile(wrapper, makeVideoFile({ name: 'presentation.mp4', size: 4096 }))
+    await actionButton(wrapper, 'Sustituir video').trigger('click')
+    await flushPromises()
+
     expect(wrapper.get('[aria-label="Vista previa del video"]').attributes('src'))
       .toBe('/api/video-resources/id/next/video/')
+  })
+
+  it('emits the updated Scrum resource after an upload', async () => {
+    // Fails if the parent cannot receive the uploaded Scrum resource.
+    const wrapper = mountManager({ module: 'building-on-demand' })
+    await flushPromises()
+    await selectFile(wrapper, makeVideoFile({ name: 'presentation.mp4', size: 4096 }))
+    await actionButton(wrapper, 'Sustituir video').trigger('click')
+    await flushPromises()
+
+    expect(wrapper.emitted('updated')).toEqual([[freshResource]])
+  })
+
+  it('refreshes public visibility settings after a Scrum upload', async () => {
+    // Fails if an uploaded Scrum resource does not refresh the setting used by the public card.
+    const wrapper = mountManager({ module: 'building-on-demand' })
+    await flushPromises()
+    await selectFile(wrapper, makeVideoFile({ name: 'presentation.mp4', size: 4096 }))
+    await actionButton(wrapper, 'Sustituir video').trigger('click')
+    await flushPromises()
+
+    expect(mockExplainersStore.fetchSettings).toHaveBeenCalledTimes(1)
+  })
+
+  it('loads the matching Scrum resource after changing the language', async () => {
+    // Fails if the language picker keeps administering the Spanish Scrum video while English is selected.
+    const wrapper = mountManager({ module: 'building-on-demand' })
+    await flushPromises()
+
+    await wrapper.setProps({ language: 'en' })
+    await flushPromises()
+
+    expect(mockVideoStore.fetchResource).toHaveBeenLastCalledWith(
+      'video-resources/admin/modules/building-on-demand/en/',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    )
   })
 
   it('refreshes the preview after a stale revision response', async () => {

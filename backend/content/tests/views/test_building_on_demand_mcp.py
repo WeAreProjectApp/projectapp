@@ -11,6 +11,7 @@ READ_NAMES = {
     'render_building_on_demand_program_pdf', 'get_building_on_demand_contract',
     'preview_building_on_demand_contract_update', 'list_building_on_demand_contract_versions',
     'render_building_on_demand_contract_pdf',
+    'get_building_on_demand_video',
 }
 WRITE_NAMES = {
     'update_building_on_demand_program', 'restore_building_on_demand_program_version',
@@ -23,6 +24,16 @@ WRITE_NAMES = {
     'reorder_building_on_demand_items', 'update_building_on_demand_estimator_sizes',
     'update_building_on_demand_economics', 'update_building_on_demand_contract',
     'restore_building_on_demand_contract_version', 'sync_building_on_demand_contract_mirror',
+    'set_building_on_demand_video', 'remove_building_on_demand_video',
+    'restore_default_building_on_demand_video',
+    'set_building_on_demand_video_visibility',
+}
+UPLOAD_NAMES = {
+    'begin_upload', 'upload_asset_chunk', 'complete_upload', 'abort_upload',
+}
+DIRECT_WRITE_NAMES = {
+    'set_building_on_demand_video', 'restore_default_building_on_demand_video',
+    'set_building_on_demand_video_visibility',
 }
 CONTROL_NAMES = {'describe_capabilities', 'confirm_action', 'cancel_action'}
 
@@ -37,11 +48,14 @@ def test_connector_discovery_has_exact_tool_names(api_client, building_on_demand
     names = {tool['name'] for tool in response.data['result']['tools']}
     catalog = rpc_call(api_client, token, 'describe_capabilities', {})['structuredContent']
 
-    assert names == READ_NAMES | WRITE_NAMES | CONTROL_NAMES
-    assert len(response.data['result']['tools']) == 35
+    assert names == READ_NAMES | WRITE_NAMES | UPLOAD_NAMES | CONTROL_NAMES
+    assert len(response.data['result']['tools']) == 44
     assert catalog['connector'] == 'building-on-demand'
-    assert catalog['version'] == '2.0.0'
-    assert not any('video' in name or 'upload' in name for name in names)
+    assert catalog['version'] == '2.1.0'
+    schemas = {tool['name']: tool['input_schema'] for tool in catalog['tools']}
+    assert schemas['set_building_on_demand_video']['required'] == ['revision', 'asset_id']
+    assert schemas['remove_building_on_demand_video']['required'] == ['revision']
+    assert schemas['restore_default_building_on_demand_video']['required'] == ['revision']
 
 
 def test_catalog_writes_advertise_durable_confirmation(api_client, building_on_demand_mcp):
@@ -51,12 +65,16 @@ def test_catalog_writes_advertise_durable_confirmation(api_client, building_on_d
     catalog = rpc_call(api_client, token, 'describe_capabilities', {})['structuredContent']
     writes = {tool['name'] for tool in catalog['tools']
               if tool['risk'] == 'sensitive' and tool['requires_confirmation']}
+    direct_writes = {tool['name'] for tool in catalog['tools']
+                     if tool['risk'] == 'write' and not tool['requires_confirmation']
+                     and tool['name'] in DIRECT_WRITE_NAMES}
     write_hints = {tool['name'] for tool in catalog['tools']
                    if not tool['annotations']['readOnlyHint'] and tool['name'] in WRITE_NAMES}
     reads = {tool['name'] for tool in catalog['tools']
              if tool['risk'] == 'read' and tool['annotations']['readOnlyHint']}
 
-    assert writes == WRITE_NAMES
+    assert writes == WRITE_NAMES - DIRECT_WRITE_NAMES
+    assert direct_writes == DIRECT_WRITE_NAMES
     assert write_hints == WRITE_NAMES
     assert reads == READ_NAMES | {'describe_capabilities'}
 

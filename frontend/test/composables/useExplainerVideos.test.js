@@ -10,6 +10,7 @@ describe('useExplainerVideos', () => {
   it.each([
     ['additional-modules', 60],
     ['financing', 60],
+    ['building-on-demand', 60],
   ])('describes the published %s video', (id, durationSeconds) => {
     const descriptor = explainerVideoFor(id, 'es')
     expect(descriptor).toMatchObject({ id, language: 'es', width: 1920, height: 1080 })
@@ -33,12 +34,20 @@ describe('useExplainerVideos', () => {
     expect(descriptor.poster).not.toBe('')
   })
 
-  it('resolves only the known Spanish proposal video', () => {
-    // Fails if the Spanish-only proposal video is offered in English or an unregistered surface.
+  it('resolves the known Spanish proposal video', () => {
+    // Fails if the proposal surface loses its registered Spanish resource.
     expect(explainerVideoFor('proposal', 'es')).toMatchObject({ id: 'proposal', language: 'es' })
-    expect(explainerVideoFor('proposal', 'en')).toBeNull()
+  })
+
+  it('returns no descriptor for an unknown video id', () => {
+    // Fails if an unregistered module can render an arbitrary explainer resource.
+    // quality: allow-negation-only (unknown ids must return null; the adjacent Spanish descriptor test pins the positive case)
     expect(explainerVideoFor('unknown', 'es')).toBeNull()
-    expect(explainerVideoFor('financing', 'en')).toBeNull()
+  })
+
+  it.each(['proposal', 'financing', 'building-on-demand'])('does not offer the %s video in English', (id) => {
+    // Fails if a Spanish-only video is offered on an English surface without a published render.
+    expect(explainerVideoFor(id, 'en')).toBeNull()
   })
 
   it('reacts to language changes through the composable', () => {
@@ -62,10 +71,10 @@ describe('useExplainerVideos', () => {
     expect(explainer.value?.src).toBe('/api/video-resources/id/1/video/')
   })
 
-  it('hides a resource explicitly marked as removed', () => {
+  it.each(['proposal', 'building-on-demand'])('hides a removed %s resource', (id) => {
     // Fails if removing an uploaded resource accidentally brings back the bundled video.
     // quality: allow-negation-only (the public contract for an explicitly removed resource is null)
-    const explainer = useExplainerVideo('proposal', ref('es'), ref({ mode: 'none' }))
+    const explainer = useExplainerVideo(id, ref('es'), ref({ mode: 'none' }))
 
     expect(explainer.value).toBeNull()
   })
@@ -81,6 +90,16 @@ describe('useExplainerVideos', () => {
       width: 1920,
       height: 1080,
     })
+  })
+
+  it.each([
+    ['default', undefined, { id: 'building-on-demand', language: 'es', durationSeconds: 60, width: 1920, height: 1080 }],
+    ['uploaded', { mode: 'uploaded', video: { src: '/api/video-resources/id/42/video/' } }, { src: '/api/video-resources/id/42/video/' }],
+  ])('resolves the Scrum %s resource mode', (_mode, resource, expected) => {
+    // Fails if the Scrum card loses its bundled video or ignores an uploaded replacement.
+    const explainer = useExplainerVideo('building-on-demand', ref('es'), ref(resource))
+
+    expect(explainer.value).toEqual(expect.objectContaining(expected))
   })
 
   it('formats durations as minutes and seconds', () => {

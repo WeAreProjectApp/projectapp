@@ -31,22 +31,23 @@ class TestExplainerVideoSettingsEndpoints:
         assert response.status_code in (401, 403)
 
     def test_patch_rejects_non_staff_user(self, non_staff_client):
-        """Fails if a non-admin can hide the proposal welcome video for clients."""
+        """Fails if a non-admin can hide the public Scrum video."""
         response = non_staff_client.patch(
             reverse('update-explainer-video-settings'),
-            {'show_proposal_video': False},
+            {'show_building_on_demand_video': False},
             format='json',
         )
 
         assert response.status_code == 403
-        assert ExplainerVideoSettings.load().show_proposal_video is True
+        assert ExplainerVideoSettings.load().show_building_on_demand_video is True
 
-    def test_get_returns_all_videos_visible_by_default(self, admin_client):
-        """Fails if the proposal welcome-video switch is absent or defaults to hidden."""
+    def test_get_returns_all_module_videos_visible_by_default(self, admin_client):
+        """Fails if a module video switch is absent or defaults to hidden."""
         response = admin_client.get(reverse('explainer-video-settings'))
 
         assert response.status_code == 200
         assert response.data['show_additional_modules_video'] is True
+        assert response.data['show_building_on_demand_video'] is True
         assert response.data['show_financing_video'] is True
         assert response.data['show_proposal_video'] is True
 
@@ -66,20 +67,28 @@ class TestExplainerVideoSettingsEndpoints:
         assert ExplainerVideoSettings.load().show_proposal_video is False
         mock_rebuild.assert_not_called()
 
+    @pytest.mark.parametrize(('field', 'unchanged_field'), [
+        ('show_financing_video', 'show_building_on_demand_video'),
+        ('show_building_on_demand_video', 'show_financing_video'),
+    ])
     @patch(REBUILD_TARGET)
-    def test_patch_hides_one_video_and_schedules_rebuild(self, mock_rebuild, admin_client):
-        """Fails if hiding a video does not persist or leaves the prerendered page stale."""
+    def test_patch_hides_static_explainer_video(
+        self, mock_rebuild, admin_client, field, unchanged_field,
+    ):
+        """Fails if hiding a static explainer does not persist or rebuild its public page."""
         response = admin_client.patch(
             reverse('update-explainer-video-settings'),
-            {'show_financing_video': False},
+            {field: False},
             format='json',
         )
 
         stored = ExplainerVideoSettings.load()
         assert response.status_code == 200
-        assert response.data['show_financing_video'] is False
-        assert stored.show_financing_video is False
+        assert response.data[field] is False
+        assert getattr(stored, field) is False
         assert stored.show_additional_modules_video is True
+        assert stored.show_proposal_video is True
+        assert getattr(stored, unchanged_field) is True
         mock_rebuild.assert_called_once_with(reason='explainer-video')
 
     @patch(REBUILD_TARGET)

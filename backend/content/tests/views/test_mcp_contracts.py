@@ -279,6 +279,19 @@ def test_accounting_ledger_exposes_receivables_forecast():
     assert 'get_receivables' in tool_names
 
 
+def test_commercial_catalog_exposes_building_on_demand_video_controls():
+    """Fails if the canonical commercial catalog drops the Scrum video controls."""
+    tools = {tool['name']: tool for tool in TOOLS_BY_SLUG['commercial']}
+
+    assert {
+        'get_building_on_demand_video',
+        'set_building_on_demand_video',
+        'remove_building_on_demand_video',
+        'restore_default_building_on_demand_video',
+        'set_building_on_demand_video_visibility',
+    } <= set(tools)
+
+
 @pytest.mark.parametrize('slug', CONNECTOR_SLUGS)
 def test_model_fields_are_classified_for_connector(slug):
     assert _field_contract_problems(slug) == []

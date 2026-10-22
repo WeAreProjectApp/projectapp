@@ -38,17 +38,23 @@ def upload(client, path, content, revision=0):
     }, format='multipart')
 
 
-def test_panel_upload_produces_playable_resource(staff_client, mp4_bytes):
-    response = upload(staff_client, '/api/video-resources/admin/modules/financing/es/', mp4_bytes)
+@pytest.mark.parametrize(('module', 'resource_key'), [
+    ('financing', 'financing:es'),
+    ('building-on-demand', 'building-on-demand:es'),
+])
+def test_panel_upload_produces_playable_resource(staff_client, mp4_bytes, module, resource_key):
+    """Fails if an accepted module video does not persist under its public key."""
+    response = upload(staff_client, f'/api/video-resources/admin/modules/{module}/es/', mp4_bytes)
     assert response.status_code == 200, response.data
     assert response.data['sha256'] == hashlib.sha256(mp4_bytes).hexdigest()
     assert response.data['video']['width'] == 32
-    resource = VideoResource.objects.get(key='financing:es')
+    resource = VideoResource.objects.get(key=resource_key)
     assert Path(resource.file.path).read_bytes() == mp4_bytes
 
 
 def test_failed_replacement_preserves_previous_video(staff_client, mp4_bytes):
-    path = '/api/video-resources/admin/modules/proposal/es/'
+    """Fails if an invalid Scrum upload erases the video staff had already published."""
+    path = '/api/video-resources/admin/modules/building-on-demand/es/'
     original = upload(staff_client, path, mp4_bytes).data
     response = upload(staff_client, path, b'not a video', revision=1)
     assert response.status_code == 400
@@ -56,7 +62,8 @@ def test_failed_replacement_preserves_previous_video(staff_client, mp4_bytes):
 
 
 def test_stale_revision_cannot_replace_video(staff_client, mp4_bytes):
-    path = '/api/video-resources/admin/modules/additional-modules/es/'
+    """Fails if a stale Scrum editor can overwrite the current published video."""
+    path = '/api/video-resources/admin/modules/building-on-demand/es/'
     original = upload(staff_client, path, mp4_bytes).data
     response = upload(staff_client, path, mp4_bytes)
     assert response.status_code == 409
@@ -64,7 +71,8 @@ def test_stale_revision_cannot_replace_video(staff_client, mp4_bytes):
 
 
 def test_remove_keeps_generic_empty_until_restored(staff_client):
-    path = '/api/video-resources/admin/modules/proposal/es/'
+    """Fails if removing Scrum video restores its default before staff requests it."""
+    path = '/api/video-resources/admin/modules/building-on-demand/es/'
     removed = staff_client.post(path, {'action': 'remove', 'revision': 0}, format='json')
     assert removed.data['mode'] == 'none'
     assert removed.data['video'] is None
@@ -142,6 +150,7 @@ def test_mcp_chunks_publish_a_playable_personalized_video(api_client, client, mp
 @pytest.mark.parametrize('slug,tool,target', [
     ('partnership-program', 'set_partnership_program_video', 'language'),
     ('additional-modules', 'set_additional_modules_video', 'language'),
+    ('building-on-demand', 'set_building_on_demand_video', 'language'),
     ('proposals', 'set_proposal_generic_video', 'language'),
     ('proposals', 'set_proposal_personalized_video', 'proposal_id'),
 ])

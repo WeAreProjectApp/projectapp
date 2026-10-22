@@ -11,6 +11,10 @@ import { setAuthLocalStorage } from '../helpers/auth.js';
 import { bulkAction, bulkMenuItem, openBulkMenu } from '../helpers/bulk-actions.js';
 import { chooseRowAction, openRowMenu } from '../helpers/row-actions.js';
 import { expectNoBlankBand } from '../helpers/table-geometry.js';
+import { expectContentSizedColumns } from '../helpers/table-geometry.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
+import { viewportUse } from '../helpers/viewports.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import {
   ADMIN_ACCOUNTING_EXPENSES_CRUD,
   ADMIN_ACCOUNTING_HOSTINGS,
@@ -230,6 +234,21 @@ function buildHandler({
     }
     return null;
   };
+}
+
+async function openExpensesFromSubnav(page) {
+  await page.goto('/panel/accounting/hostings', { waitUntil: 'domcontentloaded' });
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    const select = page.getByTestId('accounting-subnav-select');
+    await expect(select).toBeVisible({ timeout: 25_000 });
+    await select.selectOption('expenses');
+  } else {
+    const link = page.getByTestId('accounting-subnav-expenses');
+    await expect(link).toBeVisible({ timeout: 25_000 });
+    await link.click();
+  }
+  await expect(page.getByRole('heading', { name: 'Gastos', exact: true })).toHaveText('Gastos');
 }
 
 test.describe('Admin Accounting Expenses & Hostings', () => {
@@ -499,6 +518,51 @@ test.describe('Admin Accounting Expenses & Hostings', () => {
     expect(calls[0].body.payment_modality).toBe('nine_month');
   });
 });
+
+for (const alias of ['compact', 'portrait']) {
+  test.describe(`Expenses content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('keeps the expense total readable in the compact table', {
+      tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the hostings entry supplies the accounting subnav; the visible selector navigates to Gastos)
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-expenses-crud @ compact and portrait)
+      // Bug caught: the compact expense row clipped its monetary total or made the table scroll sideways.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ calls: [] }));
+      await openExpensesFromSubnav(page);
+      const row = page.getByTestId('accounting-row-1');
+      const table = row.locator('xpath=ancestor::table');
+
+      await expect(row).toContainText('Claude Code 20x');
+      await expect(row).toContainText('400.000');
+      expect(await table.locator('..').evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+    });
+  });
+}
+
+for (const alias of ['landscape', 'desktop', 'wide']) {
+  test.describe(`Expenses content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('gives the remaining table width to the expense concept', {
+      tag: [...ADMIN_ACCOUNTING_EXPENSES_CRUD, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }) => {
+      // quality: allow-deep-link (the hostings entry supplies the accounting subnav; the visible selector navigates to Gastos)
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-expenses-crud @ landscape, desktop and wide)
+      // Bug caught: the Total column expanded with the viewport instead of preserving room for Concepto.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ calls: [] }));
+      await openExpensesFromSubnav(page);
+      const row = page.getByTestId('accounting-row-1');
+
+      await expect(row).toContainText('Claude Code 20x');
+      await expect(row).toContainText('400.000');
+      await expectContentSizedColumns(row, { valueLabel: 'Total' });
+    });
+  });
+}
 
 
 test.describe('Admin Accounting Hostings — errores de creación', () => {
