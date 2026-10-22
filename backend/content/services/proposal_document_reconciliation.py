@@ -126,8 +126,10 @@ def reconcile(proposal_id, *, expected_hash, actor):
     if package:
         bind_package_files(proposal, package, rows, actor=actor)
     else:
+        # Keep unreviewed draft edits pending when adopting historical evidence.
+        historical_hash = proposal.platform_approval_manifest.get('source_hash') or ''
         create_package(proposal, actor=actor, request_id=f'historical-{proposal.pk}',
-                       payload_hash=expected_hash, source_hash=source_hash(load_proposal(proposal_id)),
+                       payload_hash=expected_hash, source_hash=historical_hash,
                        written_rows=rows, manifest=proposal.platform_approval_manifest)
     from content.models import ProposalChangeLog
     ProposalChangeLog.objects.create(proposal=proposal, change_type='updated', field_name='document_bindings',
