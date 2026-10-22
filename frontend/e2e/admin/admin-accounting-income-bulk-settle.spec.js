@@ -10,6 +10,7 @@ import { bulkAction } from '../helpers/bulk-actions.js';
 import { waitForNuxtApp } from '../helpers/navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
 import { ADMIN_ACCOUNTING_INCOME_BULK_SETTLE } from '../helpers/flow-tags.js';
+import { vatBreakdown } from '../../utils/accountingVat.js';
 
 test.setTimeout(60_000);
 
@@ -33,9 +34,12 @@ function previewFor(body, rows, { sendable = false } = {}) {
     preview_hash: 'preview-e2e-hash', total_amount: body.total_amount, pending_after: '0.00',
     rows: allocations.map((allocation) => {
       const row = rows.find((candidate) => candidate.id === allocation.income_id);
+      const rate = body.vat_updates?.find((entry) => entry.income_id === allocation.income_id)?.vat_rate ?? row?.vat_rate ?? null;
       return {
         income_id: allocation.income_id, concept: row?.concept ?? 'Ingreso', amount: allocation.amount,
         deducted: 0, reexpected: 0, pending_after: 0,
+        vat_rate: rate, ...vatBreakdown(allocation.amount, rate),
+        vat_editable: !row?.vat_blocked_reason, vat_blocked_reason: row?.vat_blocked_reason || '',
         confirmation: sendable
           ? { can_send: true, recipient: 'pagos@kore.co', collection_account_number: 'PA-KORE-001', blocked_reason: '' }
           : { can_send: false, recipient: '', collection_account_number: '', blocked_reason: 'No hay cuenta de cobro emitida.' },
@@ -156,8 +160,8 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     expect(calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/')).toHaveLength(1);
   });
 
-  // Bug caught: IVA could be hidden only by replacing the payment amount, changing the settlement total.
-  test('shows the IVA breakdown without changing the received total', {
+  // Bug caught: switching IVA off hid its values without setting the source rate to zero.
+  test('sets Sin IVA from the header switch without changing the received total', {
     tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
     const calls = [];
@@ -171,19 +175,91 @@ test.describe('Admin Accounting Income Bulk Settle', () => {
     await gotoIncomes(page);
     await openBulkSettlement(page, [11]);
     await page.getByTestId('income-liquidate-paid').fill('119000');
-    await page.getByTestId('income-liquidate-vat-toggle').click();
-    await expect(page.getByTestId('vat-total')).toHaveText('$119.000 COP');
-    await page.getByTestId('income-liquidate-show-vat').click();
-    await expect(page.getByTestId('vat-total')).toHaveCount(0);
-    await page.getByTestId('income-liquidate-show-vat').click();
+    await expect(page.getByTestId('income-liquidate-apply-vat-11')).toBeVisible();
+    await page.getByTestId('income-liquidate-vat-toggle-11').click();
     await expect(page.getByTestId('vat-total')).toHaveText('$119.000 COP');
     await expect(page.getByTestId('vat-tax')).toHaveText('$19.000 COP');
+    await page.getByTestId('income-liquidate-apply-vat-11').click();
+    await expect(page.getByTestId('vat-tax')).toHaveText('$0 COP');
+    await expect(page.getByTestId('vat-base')).toHaveText('$119.000 COP');
     await expect(page.getByTestId('income-liquidate-paid')).toHaveValue('119.000');
     await page.getByTestId('income-liquidate-submit').click();
     await expect.poll(() => calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/').length).toBe(1);
     const settle = calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body;
     expect(settle).toMatchObject({ total_amount: 119000, preview_hash: 'preview-e2e-hash' });
-    expect(settle).not.toHaveProperty('vat_rate');
+    expect(settle.vat_updates).toEqual([{ income_id: 11, vat_rate: 0 }]);
+  });
+
+  // Bug caught: a historical income could neither record its VAT nor capture the payment before tax.
+  test('configures an unknown rate before capturing the payment base', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [incomeRow({ id: 11, vat_rate: null, total_amount: '238000.00', pending_amount: '238000.00' })], calls }));
+    await gotoIncomes(page);
+    await openBulkSettlement(page, [11]);
+    await page.getByTestId('income-liquidate-apply-vat-11').click();
+    const section = page.getByTestId('income-liquidate-vat-11');
+    await section.getByTestId('vat-rate').fill('19');
+    await section.getByRole('tab', { name: 'Antes de IVA', exact: true }).click();
+    await page.getByTestId('income-liquidate-vat-amount-11').fill('100000');
+    await expect(section.getByTestId('vat-base')).toHaveText('$100.000 COP');
+    await expect(section.getByTestId('vat-tax')).toHaveText('$19.000 COP');
+    await expect(page.getByTestId('income-liquidate-paid')).toHaveValue('119.000');
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect.poll(() => calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/').length).toBe(1);
+    expect(calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body).toMatchObject({
+      total_amount: 119000, allocations: [{ income_id: 11, amount: 119000 }],
+      vat_updates: [{ income_id: 11, vat_rate: '19', amount: 100000, amount_mode: 'before_vat' }],
+    });
+  });
+
+  test('keeps the received cents when switching to the rounded pre-VAT view', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [incomeRow({ id: 11, total_amount: '119000.03', pending_amount: '119000.03' })], calls }));
+    await gotoIncomes(page);
+    await openBulkSettlement(page, [11]);
+    await page.getByTestId('income-liquidate-vat-toggle-11').click();
+    await page.getByTestId('income-liquidate-vat-11').getByRole('tab', { name: 'Antes de IVA', exact: true }).click();
+    await expect(page.getByTestId('income-liquidate-paid')).toHaveValue('119.000,03');
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect.poll(() => calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/').length).toBe(1);
+    expect(calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body.total_amount).toBe(119000.03);
+  });
+
+  // Bug caught: one header switch could silently overwrite another income's fiscal terms.
+  test('preserves the other income rate when disabling VAT in a mixed selection', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const calls = [];
+    const rows = [incomeRow({ id: 11 }), incomeRow({ id: 12, concept: 'Otro servicio', vat_rate: '5.00' })];
+    await mockApi(page, buildHandler({ rows, calls }));
+    await gotoIncomes(page);
+    await openBulkSettlement(page, [11, 12]);
+    await page.getByTestId('income-liquidate-apply-vat-11').click();
+    await expect(page.getByTestId('income-liquidate-vat-status-12')).toHaveText('5.00 %');
+    await page.getByTestId('income-liquidate-submit').click();
+    await expect.poll(() => calls.filter((call) => call.apiPath === 'accounting/incomes/bulk-settle/').length).toBe(1);
+    expect(calls.find((call) => call.apiPath === 'accounting/incomes/bulk-settle/').body.vat_updates)
+      .toEqual([{ income_id: 11, vat_rate: 0 }]);
+  });
+
+  // Bug caught: fiscal protections were either missing or also disabled the received amount.
+  test('explains the issued-account lock while keeping the payment editable', {
+    tag: [...ADMIN_ACCOUNTING_INCOME_BULK_SETTLE, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    const calls = [];
+    await mockApi(page, buildHandler({ rows: [incomeRow({ id: 11, vat_blocked_reason: 'Anula la cuenta emitida antes de cambiar el importe o el IVA del ingreso.' })], calls }));
+    await gotoIncomes(page);
+    await openBulkSettlement(page, [11]);
+    await page.getByTestId('income-liquidate-vat-toggle-11').click();
+    await expect(page.getByTestId('income-liquidate-apply-vat-11')).toBeDisabled();
+    await expect(page.getByTestId('income-liquidate-vat-lock-11')).toContainText('Anula la cuenta emitida');
+    await expect(page.getByTestId('income-liquidate-vat-11').getByTestId('vat-rate')).toBeDisabled();
+    await page.getByTestId('income-liquidate-vat-amount-11').fill('50000');
+    await expect(page.getByTestId('income-liquidate-paid')).toHaveValue('50.000');
   });
 
   // Bug caught: a mixed-client excess used to reach the final request and create a credit for the wrong client.
@@ -423,11 +499,14 @@ for (const profile of MODAL_PROFILES) {
       await page.getByTestId('income-liquidate-paid').fill('90000');
       await page.getByTestId('income-liquidate-participations-toggle').click();
       await openDifference(page);
+      await expect(page.getByTestId('income-liquidate-apply-vat-11')).toBeVisible();
+      await page.getByTestId('income-liquidate-vat-toggle-11').click();
       const dialog = page.getByRole('dialog');
       await expect(dialog.getByTestId('income-liquidate-summary')).toContainText('Falta: $10.000 COP');
       await expect(dialog.getByTestId('partner-split-gustavo')).toHaveValue('45.000');
       await expect(dialog.getByTestId('income-liquidate-submit')).toHaveText('Liquidar');
       expect(await dialog.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      expect(await dialog.getByTestId('income-liquidate-submit').evaluate((element) => element.getBoundingClientRect().bottom <= window.innerHeight)).toBe(true);
     });
   });
 }

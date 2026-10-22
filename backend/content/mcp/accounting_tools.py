@@ -456,6 +456,8 @@ _SETTLE_INCOME_DESCRIPTION = (
     'Registra un abono a un ingreso esperado y resuelve el saldo entre '
     'deducciones y nuevos ingresos esperados, sin exigir cuenta de cobro emitida. Puede completar el período '
     'de hosting. Crea los mismos registros, auditoría y efectos que el panel. '
+    'vat_updates configura el IVA del ingreso original; 0 significa Sin IVA. '
+    'No permite cambiarlo si ya tiene pagos, deducciones o una cuenta emitida. '
     'Con send_payment_confirmation=true le envía al cliente la confirmación '
     'del pago después de registrarlo; la vista previa muestra el correo.'
 )
@@ -468,6 +470,8 @@ def _settle_income_impact(arguments):
         'tool': 'settle_income',
         'arguments': arguments,
     }
+    if arguments.get('vat_updates'):
+        impact['settlement'] = _single_settlement_preview(arguments)
     if not arguments.get('send_payment_confirmation'):
         return impact
     income = _get_instance_or_error('income', arguments.get('record_id'))
@@ -477,6 +481,30 @@ def _settle_income_impact(arguments):
         )
     )
     return impact
+
+
+def _single_settlement_preview(arguments):
+    income = _get_instance_or_error('income', arguments.get('record_id'))
+    data = income_settlement_operation_service.single_input(income, _validated_settlement(arguments))
+    existing = IncomeSettlement.objects.filter(pk=data['request_id']).first() if data.get('request_id') else None
+    try:
+        if existing is not None:
+            income_settlement_operation_service._replay(existing, data)
+            return {'replayed': True, 'settlement_id': str(existing.pk)}
+        return income_settlement_operation_service.preview_settlement(data)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+
+
+def _prepare_single_settlement(arguments):
+    if not arguments.get('vat_updates'):
+        return arguments
+    preview = _single_settlement_preview(arguments)
+    if preview.get('replayed'):
+        return arguments
+    if arguments.get('preview_hash') and arguments['preview_hash'] != preview['preview_hash']:
+        raise ToolError('La liquidación cambió desde la revisión; genera una vista previa nueva.', code='STALE_VERSION')
+    return {**arguments, 'preview_hash': preview['preview_hash']}
 
 
 def bulk_settle_incomes(arguments):
@@ -960,6 +988,21 @@ _SETTLEMENT_PROPS = {
         'description': 'Participación global de Carlos dentro del valor recibido; si se omite, usa el reparto automático vigente.',
     },
     'notes': {'type': 'string'},
+    'vat_updates': {
+        'type': 'array',
+        'description': (
+            'IVA por ingreso original seleccionado. 0=Sin IVA, null=sin registrar; '
+            'omitir conserva el actual. Solo cambia antes de pagos, deducciones o '
+            'cuentas emitidas. amount y amount_mode capturan su pago; el total '
+            'normalizado debe coincidir con su asignación, sin cambiar el total esperado.'
+        ),
+        'items': closed_object({
+            'income_id': {'type': 'integer', 'minimum': 1},
+            'vat_rate': {'type': ['number', 'string', 'null'], 'minimum': 0, 'maximum': 100},
+            'amount': {'type': ['number', 'string'], 'description': 'Importe de este pago con hasta dos decimales.'},
+            'amount_mode': {'type': 'string', 'enum': ['before_vat', 'vat_included'], 'default': 'vat_included'},
+        }, required=['income_id', 'vat_rate']),
+    },
     'deductions': {
         'type': 'array',
         'description': 'Comisiones, retenciones u otros descuentos que no se cobrarán después.',
@@ -1108,11 +1151,10 @@ _ABONO_PROPS = {
 }
 
 
-# Both adapters publish the same adjustment vocabulary. Tax remains inherited:
-# there is deliberately no independent VAT override on a payment.
+# Both adapters configure the source income; payments still inherit its VAT.
 _ABONO_PROPS.update({key: deepcopy(_SETTLEMENT_PROPS[key]) for key in (
     'destination', 'gustavo_amount', 'carlos_amount', 'deductions',
-    'send_payment_confirmation', 'preview_hash', 'request_id',
+    'send_payment_confirmation', 'preview_hash', 'request_id', 'vat_updates',
 )})
 _ABONO_PROPS['destination']['default'] = 'pocket'
 _ABONO_PROPS['income_ids'] = {'type': 'array', 'items': {'type': 'integer', 'minimum': 1}, 'minItems': 1, 'maxItems': 500, 'description': 'Ingresos seleccionados. Si omites allocations, propone cobertura más antigua primero y deducciones proporcionales.'}
@@ -1281,6 +1323,7 @@ _NON_CRUD_TOOLS = close_root_schemas([
             'required': ['record_id', 'concept', 'period_date', 'total_amount'],
         },
         'handler': settle_income,
+        'prepare_arguments': _prepare_single_settlement,
         'impact_builder': _settle_income_impact,
     },
     {
@@ -1291,6 +1334,7 @@ _NON_CRUD_TOOLS = close_root_schemas([
             'Distribuye un único abono real entre uno o varios ingresos esperados, sin cuenta emitida. '
             'Admite deducciones proporcionales, reparto global, saldos reprogramados y destino socios o bolsillo. Crea un solo movimiento al elegir bolsillo; cualquier excedente queda como '
             'saldo a favor cuando todos los ingresos pertenecen al mismo cliente.'
+            ' vat_updates permite configurar por ingreso el IVA original con las mismas protecciones del panel.'
         ),
         'input_schema': {
             'type': 'object',
@@ -1333,7 +1377,7 @@ _NON_CRUD_TOOLS = close_root_schemas([
     {
         'name': 'preview_income_settlement', 'area': 'ledger',
         'strict_arguments': True,
-        'description': 'Calcula sin escribir el reparto, deducciones, IVA heredado, saldos y destinatarios de la liquidación.',
+        'description': 'Calcula sin escribir el reparto, deducciones, IVA configurable por ingreso, bloqueos fiscales, saldos y destinatarios de la liquidación.',
         'input_schema': closed_object(_ABONO_PROPS, required=['total_amount', 'period_date']),
         'handler': preview_income_settlement,
     },
@@ -1347,7 +1391,7 @@ _NON_CRUD_TOOLS = close_root_schemas([
     {
         'name': 'update_income_settlement', 'area': 'ledger', 'risk': 'sensitive',
         'strict_arguments': True,
-        'description': 'Corrige juntos el dinero, deducciones y saldos reprogramados. Exige revisión actual; bloquea derivados con pagos o documentos vigentes. No reenvía correos al cliente.',
+        'description': 'Corrige juntos el dinero, IVA del original, deducciones y saldos reprogramados. Exige revisión actual; bloquea pagos o documentos posteriores. No reenvía correos al cliente.',
         'input_schema': closed_object({**_ABONO_PROPS, **_SETTLEMENT_ID_PROPS}, required=['settlement_id', 'revision', 'total_amount', 'period_date']),
         'handler': update_income_settlement,
     },
