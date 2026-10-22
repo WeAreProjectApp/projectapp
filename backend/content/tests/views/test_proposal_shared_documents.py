@@ -492,7 +492,7 @@ def test_a_legal_annex_cannot_replace_the_contract(admin_client, reviewed_propos
 
     reviewed_proposal.refresh_from_db()
     assert response.status_code == 400
-    assert response.json()['custom_documents'] == 'Identifica el contrato vigente: uno combinado o producto y servicio separados.'
+    assert response.json()['custom_documents'] == 'Identifica los contratos aprobados: contrato único, sólo producto o producto y servicio.'
     assert reviewed_proposal.status == 'negotiating'
     assert Project.objects.count() == 0
     assert ProposalApprovalFile.objects.count() == 0
