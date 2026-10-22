@@ -33,6 +33,10 @@ npm run render -- --video building-on-demand --edition brag-v2 --with-narration 
 npm run export -- --video building-on-demand --edition brag-v2
 ```
 
+Para refrescar exclusivamente la fuente de este video, usar
+`npm run content -- --video building-on-demand --edition brag-v2` y revisar
+las afirmaciones del guion antes de regenerar narración y render.
+
 El video y la portada se empaquetan como recurso predeterminado ES. No hay
 fallback español para EN. Desde Células › Programa se puede cargar otro MP4,
 quitarlo, restaurar esta pieza y cambiar la visibilidad pública sin modificar

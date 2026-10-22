@@ -39,6 +39,22 @@ function serialize(payload) {
   return `window.EXPLAINER_CONTENT = ${JSON.stringify(payload, null, 2)};\n`
 }
 
+// Refresh this source independently; producing a Scrum explainer must not
+// rewrite the already-published catalog or partnership reference snapshots.
+if (options.video === 'building-on-demand') {
+  if (EDITION !== 'brag-v2') throw new Error('building-on-demand requires --edition brag-v2')
+  const program = await fetchJson(`/api/building-on-demand/public/?lang=${language}`)
+  const snapshot = pick(program, ['language', 'version', 'hero', 'cell', 'bag', 'hosting'])
+  snapshot.tiers = {
+    title: program.tiers.title,
+    items: program.tiers.items.map(item => pick(item, ['id', 'name', 'bag_hours', 'recommended', 'roles'])),
+  }
+  mkdirSync(CONTENT_DIR, { recursive: true })
+  writeFileSync(resolve(CONTENT_DIR, `building-on-demand.${language}.js`), serialize(snapshot))
+  console.log('building-on-demand: public source refreshed; review the script before rendering.')
+  process.exit(0)
+}
+
 const [catalog, program, catalogLocale, financingLocale] = await Promise.all([
   fetchJson(`/api/additional-modules/public/?lang=${language}`),
   fetchJson(`/api/financing/public/?lang=${language}`),
