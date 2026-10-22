@@ -152,6 +152,183 @@ def test_valid_source_write_marks_the_shared_document_pending(admin_client, conf
     assert confirmed_proposal.approval_packages.count() == 1
 
 
+def test_service_approval_write_preserves_the_confirmed_package(admin_client, confirmed_proposal):
+    """Fails if saving the service switch changes files from an already confirmed package."""
+    confirmed_proposal.contract_modality = 'split'
+    confirmed_proposal.save(update_fields=['contract_modality'])
+    package = confirmed_proposal.approval_packages.get()
+    original_file_ids = list(package.files.order_by('pk').values_list('pk', flat=True))
+
+    response = admin_client.patch(
+        reverse('update-proposal', args=[confirmed_proposal.pk]),
+        {'service_contract_approved': True}, format='json',
+        HTTP_X_PROPOSAL_VERSION=source_hash(confirmed_proposal),
+    )
+
+    confirmed_proposal.refresh_from_db()
+    assert response.status_code == 200
+    assert response.json()['service_contract_approved'] is True
+    assert confirmed_proposal.service_contract_approved is True
+    assert list(package.files.order_by('pk').values_list('pk', flat=True)) == original_file_ids
+
+
+def test_reconciliation_restores_a_missing_annex_identity(admin_client, reviewed_proposal, approval_client, admin_user):
+    """Fails if reconciling an annex regenerates its approved file or creates another package."""
+    annex = ProposalDocument.objects.create(
+        proposal=reviewed_proposal, document_type='legal_annex', title='Signed annex',
+    )
+    annex.file.save('annex.pdf', ContentFile(b'%PDF-1.4 annex'))
+    confirm(reviewed_proposal, approval_client, admin_user)
+    proposal = load_proposal(reviewed_proposal.pk)
+    binding = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    contract_document_id = proposal.document_bindings.get(source_key='custom-contract').document_id
+    approved = binding.current_file
+    approved_id, approved_hash, approved_bytes = approved.pk, approved.sha256, approved.file.read()
+    document = binding.document
+    ProposalApprovalFile.objects.filter(pk=approved.pk).update(binding=None)
+    binding.delete()
+    document.delete()
+
+    preview = admin_client.get(reverse('proposal-document-reconciliation', args=[proposal.pk]))
+    response = admin_client.post(
+        reverse('proposal-document-reconciliation', args=[proposal.pk]),
+        {'expected_hash': preview.json()['expected_hash']}, format='json',
+    )
+
+    restored = proposal.document_bindings.get(source_key=f'original-{annex.pk}')
+    assert preview.status_code == 200
+    assert preview.json()['missing_documents'] == [{
+        'source_key': f'original-{annex.pk}', 'title': 'Signed annex',
+        'file_id': approved_id, 'folder': 'Anexos',
+    }]
+    assert response.status_code == 200
+    assert (restored.current_file_id, restored.current_file.sha256, restored.current_file.file.read()) == (
+        approved_id, approved_hash, approved_bytes,
+    )
+    assert restored.document.folder.name == 'Anexos'
+    assert proposal.document_bindings.get(source_key='custom-contract').document_id == contract_document_id
+    assert proposal.approval_packages.count() == 1
+
+
+def test_reconciliation_rejects_a_malformed_expected_hash(admin_client, confirmed_proposal):
+    """Fails if a malformed reconciliation version can alter approved document identities."""
+    counts = (
+        ProposalApprovalFile.objects.count(), Document.objects.count(),
+        confirmed_proposal.document_bindings.count(),
+    )
+
+    response = admin_client.post(
+        reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]),
+        {'expected_hash': 'a' * 63}, format='json',
+    )
+
+    assert response.status_code == 400
+    assert 'expected_hash' in response.json()
+    assert (
+        ProposalApprovalFile.objects.count(), Document.objects.count(),
+        confirmed_proposal.document_bindings.count(),
+    ) == counts
+
+
+def test_reconciliation_rejects_a_stale_expected_hash(admin_client, confirmed_proposal):
+    """Fails if a stale reconciliation preview can write a new document identity."""
+    counts = (
+        ProposalApprovalFile.objects.count(), Document.objects.count(),
+        confirmed_proposal.document_bindings.count(),
+    )
+
+    response = admin_client.post(
+        reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]),
+        {'expected_hash': 'b' * 64}, format='json',
+    )
+
+    assert response.status_code == 409
+    assert response.json()['code'] == 'stale_source'
+    assert (
+        ProposalApprovalFile.objects.count(), Document.objects.count(),
+        confirmed_proposal.document_bindings.count(),
+    ) == counts
+
+
+def test_reconciliation_blocks_an_ambiguous_historical_document(admin_client, confirmed_proposal):
+    """Fails if reconciliation duplicates a missing approved identity beside an unbound historical document."""
+    binding = confirmed_proposal.document_bindings.get(source_key='custom-contract')
+    approved = binding.current_file
+    document = binding.document
+    ProposalApprovalFile.objects.filter(pk=approved.pk).update(binding=None)
+    binding.delete()
+    document.delete()
+    from content.models import DocumentType
+    kind, _ = DocumentType.objects.get_or_create(code='markdown', defaults={'name': 'Documento'})
+    Document.objects.create(
+        document_type=kind, title='Old contract', project=confirmed_proposal.deliverable.project,
+        client_user_id=confirmed_proposal.client.user_id, deliverable=confirmed_proposal.deliverable,
+        created_by=confirmed_proposal.client.user, updated_by=confirmed_proposal.client.user,
+        source_proposal=confirmed_proposal,
+    )
+    counts = (ProposalApprovalFile.objects.count(), Document.objects.count())
+
+    response = admin_client.get(reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]))
+
+    assert response.status_code == 200
+    assert response.json()['can_reconcile'] is False
+    assert 'documentos anteriores sin vínculo' in ' '.join(response.json()['blockers'])
+    assert (ProposalApprovalFile.objects.count(), Document.objects.count()) == counts
+
+
+def test_reconciliation_reports_a_corrupted_approved_file(admin_client, confirmed_proposal):
+    """Fails if reconciliation treats altered approved bytes as safe to restore."""
+    row = confirmed_proposal.approval_files.get(source_key='custom-contract')
+    with row.file.storage.open(row.file.name, 'wb') as stream:
+        stream.write(b'%PDF-1.4 altered')
+    counts = (ProposalApprovalFile.objects.count(), Document.objects.count())
+
+    preview = admin_client.get(reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]))
+    response = admin_client.post(
+        reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]),
+        {'expected_hash': preview.json()['expected_hash']}, format='json',
+    )
+
+    assert preview.status_code == 200
+    assert preview.json()['can_reconcile'] is False
+    assert 'no está disponible o no coincide' in ' '.join(preview.json()['blockers'])
+    assert response.status_code == 400
+    assert (ProposalApprovalFile.objects.count(), Document.objects.count()) == counts
+
+
+def test_reconciliation_rejects_a_non_administrator(api_client, approval_client, confirmed_proposal):
+    """Fails if a client can inspect a proposal document-repair plan."""
+    api_client.force_authenticate(user=approval_client.user)
+
+    response = api_client.post(
+        reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]),
+        {'expected_hash': 'a' * 64}, format='json',
+    )
+
+    assert response.status_code == 403
+
+
+def test_reconciliation_blocks_a_cross_project_document_identity(admin_client, confirmed_proposal):
+    """Fails if reconciliation accepts a binding whose document belongs to another project."""
+    other_project = Project.objects.create(client=confirmed_proposal.client.user, name='Other project')
+    binding = confirmed_proposal.document_bindings.get(source_key='custom-contract')
+    binding.document.project = other_project
+    binding.document.save(update_fields=['project'])
+    counts = (ProposalApprovalFile.objects.count(), Document.objects.count())
+
+    preview = admin_client.get(reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]))
+    response = admin_client.post(
+        reverse('proposal-document-reconciliation', args=[confirmed_proposal.pk]),
+        {'expected_hash': preview.json()['expected_hash']}, format='json',
+    )
+
+    assert preview.status_code == 200
+    assert preview.json()['can_reconcile'] is False
+    assert 'Revisa el vínculo existente' in ' '.join(preview.json()['blockers'])
+    assert response.status_code == 400
+    assert (ProposalApprovalFile.objects.count(), Document.objects.count()) == counts
+
+
 def test_reconfirmation_retry_reuses_the_same_package(admin_user, confirmed_proposal):
     """Falla si repetir una confirmación vuelve a crear documentos o versiones."""
     payload = revision_payload(confirmed_proposal)

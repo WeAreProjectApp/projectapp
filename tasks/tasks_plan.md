@@ -5,7 +5,8 @@
 > producto. Una nueva revisión aplica los cambios y conserva la evidencia previa.
 > Panel/MCP comparten la selección. La reparación revisada recupera vínculos de
 > archivos ya aprobados sin regenerarlos ni duplicar contratos; anexos nuevos
-> requieren otra confirmación. Validación focal y PR de esta sesión en curso.
+> requieren otra confirmación. Implementado en la rama de sesión; la entrega
+> se verifica con pruebas focales, mapa de flujos y CI del PR.
 
 > **En validación — unificación MCP 2026-10-19:** catálogo de ocho módulos, adaptación por credencial, familia única de ingresos, contabilidad como dueño de hosting/facturación, inventario reproducible y chequeo de CI. El retiro real necesita despliegue, migración de consumidores y las ventanas de 30/14 días; no se da por realizado desde la rama.
 

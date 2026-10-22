@@ -7,7 +7,7 @@ from django.db.models import Q
 from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from content.models import BusinessProposal, Document, DocumentFolder, ProposalDocument
-from content.services.proposal_approval_service import ApprovalConflict, load_proposal, source_hash
+from content.services.proposal_approval_service import ApprovalConflict, MAX_FILE_BYTES, load_proposal, source_hash
 from content.services.proposal_shared_documents import latest_package
 
 
@@ -44,7 +44,9 @@ def preview(proposal):
                 for chunk in iter(lambda: stream.read(65536), b''):
                     digest.update(chunk)
                     size += len(chunk)
-            exact = exact and size == row.size and digest.hexdigest() == row.sha256
+                    if size > MAX_FILE_BYTES:
+                        break
+            exact = exact and 0 < size <= MAX_FILE_BYTES and size == row.size and digest.hexdigest() == row.sha256
         except (OSError, ValueError):
             exact = False
         if not exact:
@@ -85,6 +87,10 @@ def preview(proposal):
     }
     return {'proposal_id': proposal.pk, 'package_number': package.number if package else None,
             'expected_hash': expected_hash, 'missing_documents': missing, 'blockers': blockers,
+            'confirmed_files': [{'id': row.pk, 'source_key': row.source_key, 'title': row.title,
+                                 'document_type': row.document_type, 'sha256': row.sha256, 'size': row.size,
+                                 'document_id': bindings[row.source_key].document_id if row.source_key in bindings else None}
+                                for row in rows],
             'requires_new_revision': sorted(draft_keys - approved_annexes),
             'can_reconcile': not blockers, 'already_complete': bool(package and not missing and not blockers)}
 

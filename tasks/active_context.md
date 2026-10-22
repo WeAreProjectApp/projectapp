@@ -5,7 +5,8 @@
 > producto. Una nueva revisión aplica los cambios y conserva la evidencia previa.
 > Panel/MCP comparten la selección. La reparación revisada recupera vínculos de
 > archivos ya aprobados sin regenerarlos ni duplicar contratos; anexos nuevos
-> requieren otra confirmación. Validación focal y PR de esta sesión en curso.
+> requieren otra confirmación. Implementado en la rama de sesión; la entrega
+> se verifica con pruebas focales, mapa de flujos y CI del PR.
 
 Implementado en PR #521: revisión obligatoria con proyecto y contrato, sin aceptación pública.
 Validación focal de servicios, componentes y navegador; despliegue separado.
