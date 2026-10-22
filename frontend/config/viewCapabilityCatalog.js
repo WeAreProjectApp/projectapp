@@ -130,7 +130,7 @@ const panelCapabilities = [
         ['/panel/building-with-us'],
         { icon: 'handshake', stage: 'Venta' }),
       feature('panel-building-on-demand', 'Consultar Células de Building on Demand',
-        'Distribuye el programa bilingüe, descarga PDFs y consulta Programa, Economía y Contrato de solo lectura, con vista previa ES/EN e historial paginado. Economía reúne los números internos. El contrato muestra su espejo en ProjectApp/Contratos o explica si aún no está disponible. Toda edición se confirma mediante el conector MCP Programas (building-on-demand se conserva temporalmente como compatibilidad).',
+        'Distribuye el programa bilingüe, descarga PDFs y consulta Programa, Economía y Contrato, con vista previa ES/EN e historial paginado. Economía reúne los números internos. El contrato muestra su espejo en ProjectApp/Contratos o explica si aún no está disponible. Programa también reproduce el video explicativo y permite gestionar su archivo por idioma, visibilidad y restauración. Las ediciones del contenido comercial se confirman mediante el conector MCP Programas (programs); building-on-demand se conserva temporalmente como compatibilidad.',
         'Permite explicar la bolsa mensual de una célula compartida y revisar su economía y evidencia contractual vigente.',
         ['/panel/cells'],
         { icon: 'team', stage: 'Venta' }),
@@ -529,7 +529,7 @@ const publicCapabilities = [
     'Ayuda al prospecto a elegir nivel y plazo según las tareas y roles que necesita antes de conversar con el equipo.',
     [
       feature('public-building-on-demand', 'Comprender Building on Demand',
-        'Compara Starter, Business recomendado y Enterprise, sus roles, precios por plazo y bolsas que se renuevan cada mes. El estimador orientativo muestra rangos de horas del pedido, compatibilidad por nivel y resumen para WhatsApp. Incluye hosting, FAQ, ES/EN, tema local, guía de nueve pasos, PDF y compartir; no expone precios por hora ni economía interna.',
+        'Compara Starter, Business recomendado y Enterprise, sus roles, precios por plazo y bolsas que se renuevan cada mes. El estimador orientativo muestra rangos de horas del pedido, compatibilidad por nivel y resumen para WhatsApp. Incluye hosting, FAQ, ES/EN, tema local, guía de nueve pasos, video explicativo ES de 60 segundos con reproducción manual y pausa al salir, PDF y compartir; no expone precios por hora ni economía interna.',
         'Convierte la capacidad mensual de una célula en una referencia clara y compartible para planear la evolución de un producto.',
         ['/building-on-demand'],
         { icon: 'team', actors: ['prospect'], stage: 'Evaluación' }),

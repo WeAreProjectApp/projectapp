@@ -12,10 +12,12 @@ import { setAuthLocalStorage } from '../helpers/auth.js'
 import { ADMIN_COMMERCIAL_VIDEO_RESOURCES } from '../helpers/flow-tags.js'
 import { financingProgramFixture } from '../helpers/financing-fixture.js'
 import { financingSettingsFixture } from '../helpers/financing-agreement-fixture.js'
+import { buildingOnDemandApiFixture } from '../helpers/building-on-demand-fixture.js'
 
 const PROPOSAL_ID = 740
 const RESOURCE_UUID = '74000000-1111-4111-8111-111111111111'
 const UPLOADED_SRC = `/api/video-resources/${RESOURCE_UUID}/1/video/`
+const CONCURRENT_SRC = `/api/video-resources/${RESOURCE_UUID}/concurrent/video/`
 const CLIP_FILE = { name: 'clip.mp4', mimeType: 'video/mp4', buffer: Buffer.from('e2e-mp4') }
 
 const proposal = {
@@ -64,6 +66,7 @@ async function setupApi(page, scenario = {}) {
   scenario.resources ??= {
     financing: resource({ mode: 'default' }),
     'additional-modules': resource({ module: 'additional-modules', mode: 'default' }),
+    'building-on-demand': resource({ module: 'building-on-demand', mode: 'default' }),
     proposal: resource({ module: 'proposal', mode: 'default' }),
     personalized: resource({ module: 'proposal:740', mode: 'uploaded', video: { src: UPLOADED_SRC, poster: null } }),
   }
@@ -76,7 +79,12 @@ async function setupApi(page, scenario = {}) {
     if (apiPath === 'proposals/alerts/') return json(200, [])
     if (apiPath === 'proposals/client-profiles/') return json(200, [])
     if (apiPath === 'explainer-videos/admin/settings/' && method === 'GET') {
-      return json(200, { show_financing_video: true, show_additional_modules_video: true, show_proposal_video: true })
+      return json(200, {
+        show_financing_video: true,
+        show_additional_modules_video: true,
+        show_proposal_video: true,
+        show_building_on_demand_video: true,
+      })
     }
     if (apiPath === 'financing/public/' && method === 'GET') return json(200, financingProgramFixture('es'))
     if (apiPath === 'financing/settings/' && method === 'GET') return json(200, financingSettingsFixture())
@@ -92,6 +100,16 @@ async function setupApi(page, scenario = {}) {
       scenario.lastUpload = route.request().postData() || ''
       scenario.lastContentType = await route.request().headerValue('content-type') || ''
       if (scenario.uploadFails) return json(500, { detail: 'El validador de video no está disponible.' })
+      if (scenario.uploadConflicts) {
+        const previous = scenario.resources[key]
+        scenario.resources[key] = resource({
+          module: previous.module,
+          mode: 'uploaded',
+          revision: previous.revision + 1,
+          video: { src: CONCURRENT_SRC, poster: null },
+        })
+        return json(409, { detail: 'El recurso fue actualizado por otra persona.' })
+      }
       const action = scenario.lastUpload.includes('name="action"\r\n\r\nremove') ? 'remove'
         : scenario.lastUpload.includes('name="action"\r\n\r\nrestore-default') ? 'restore-default' : 'upload'
       const previous = scenario.resources[key]
@@ -103,7 +121,7 @@ async function setupApi(page, scenario = {}) {
       scenario.resources[key] = updated
       return json(200, updated)
     }
-    return null
+    return buildingOnDemandApiFixture({ apiPath, method, route })
   })
 }
 
@@ -128,6 +146,13 @@ async function openAdditionalModuleResources(page) {
   await openProposals(page)
   await page.getByRole('link', { name: 'Módulos adicionales', exact: true }).click()
   await page.getByRole('tab', { name: 'Recursos', exact: true }).click()
+  await expect(page.getByTestId('video-resource-manager')).toBeVisible()
+}
+
+async function openCellsResources(page) {
+  await openProposals(page)
+  await page.getByRole('link', { name: 'Células', exact: true }).click()
+  await page.getByRole('tab', { name: 'Programa', exact: true }).click()
   await expect(page.getByTestId('video-resource-manager')).toBeVisible()
 }
 
@@ -171,6 +196,18 @@ test.describe('Admin commercial video resources', () => {
     await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', /additional-modules-brag-v2-es\.mp4/)
   })
 
+  test('Células displays its Scrum video resource', {
+    tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:display'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the panel home is the authenticated entry; the visible Células link reaches the resource manager)
+    // Bug caught: Células stopped mounting the Scrum resource manager after the program tab opened.
+    await setupApi(page)
+    await openCellsResources(page)
+
+    await expect(page.getByTestId('video-resource-manager')).toContainText('Recursos · Video general')
+    await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', /building-on-demand-brag-v2-es\.mp4/)
+  })
+
   test('Propuestas Configuraciones displays the global video resource', {
     tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
@@ -210,6 +247,23 @@ test.describe('Admin commercial video resources', () => {
     await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', /\/api\/video-resources\/74000000-1111-4111-8111-111111111111\/2\/video\/$/)
   })
 
+  test('uploads a MP4 to Células and replaces the Scrum preview', {
+    tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: Células used another module endpoint, leaving its displayed video unchanged.
+    const scenario = { resources: { 'building-on-demand': resource({ module: 'building-on-demand' }) } }
+    await setupApi(page, scenario)
+    await openCellsResources(page)
+
+    await page.getByLabel('Archivo de video').setInputFiles(CLIP_FILE)
+    await page.getByRole('button', { name: 'Cargar video', exact: true }).click()
+
+    await expect(page.getByTestId('video-resource-manager').getByRole('status'))
+      .toContainText('Recurso actualizado.')
+    expect(scenario.lastUpload).toContain('name="file"; filename="clip.mp4"')
+    await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', /\/api\/video-resources\/74000000-1111-4111-8111-111111111111\/2\/video\/$/)
+  })
+
   test('removes an uploaded video after confirmation and restores the default resource', {
     tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:success'],
   }, async ({ page }) => {
@@ -242,6 +296,21 @@ test.describe('Admin commercial video resources', () => {
     expect(scenario.lastUpload).toBeUndefined()
   })
 
+  test('rejects an invalid Scrum upload before Células sends it', {
+    tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:error'],
+  }, async ({ page }) => {
+    // Bug caught: Células accepted a non-MP4 file and sent an invalid resource mutation.
+    const scenario = { resources: { 'building-on-demand': resource({ module: 'building-on-demand' }) } }
+    await setupApi(page, scenario)
+    await openCellsResources(page)
+
+    await page.getByLabel('Archivo de video').setInputFiles({ name: 'notes.txt', mimeType: 'text/plain', buffer: Buffer.from('not a video') })
+    await page.getByRole('button', { name: 'Cargar video', exact: true }).click()
+
+    await expect(page.getByText('Selecciona un archivo MP4.')).toHaveText('Selecciona un archivo MP4.')
+    expect(scenario.lastUpload).toBeUndefined()
+  })
+
   test('keeps the current preview when the video service rejects a replacement', {
     tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:failure'],
   }, async ({ page }) => {
@@ -254,5 +323,28 @@ test.describe('Admin commercial video resources', () => {
 
     await expect(page.getByText('El validador de video no está disponible.')).toBeVisible()
     await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', UPLOADED_SRC)
+  })
+
+  test('reloads the concurrent Scrum resource after a revision conflict', {
+    tag: [...ADMIN_COMMERCIAL_VIDEO_RESOURCES, '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: a 409 left Células showing the obsolete video instead of the server's latest resource.
+    const scenario = {
+      uploadConflicts: true,
+      resources: {
+        'building-on-demand': resource({
+          module: 'building-on-demand',
+          mode: 'uploaded',
+          video: { src: UPLOADED_SRC, poster: null },
+        }),
+      },
+    }
+    await setupApi(page, scenario)
+    await openCellsResources(page)
+
+    await page.getByLabel('Archivo de video').setInputFiles(CLIP_FILE)
+    await page.getByRole('button', { name: 'Sustituir video', exact: true }).click()
+
+    await expect(page.getByLabel('Vista previa del video')).toHaveAttribute('src', CONCURRENT_SRC)
   })
 })

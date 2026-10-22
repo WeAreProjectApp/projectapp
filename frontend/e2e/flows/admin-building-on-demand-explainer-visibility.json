@@ -1,0 +1,14 @@
+{
+  "id": "admin-building-on-demand-explainer-visibility",
+  "name": "Admin Building on Demand Explainer Visibility",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Mostrar u ocultar el video público de Scrum; confirmar el guardado o restaurar el estado previo si falla.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

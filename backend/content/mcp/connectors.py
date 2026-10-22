@@ -38,7 +38,7 @@ from content.mcp.proposal_tools import PROPOSAL_TOOLS
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
-from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
+from content.mcp.video_tools import BUILDING_ON_DEMAND_VIDEO_TOOLS, PROPOSAL_VIDEO_TOOLS
 from content.mcp.module_catalog import SECTION_NOTES
 from content.mcp.section_tools import (
     OFFERING_SECTION_TOOLS, PROGRAM_SECTION_TOOLS,
@@ -173,7 +173,10 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         'building-with-us', '2.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
     'building-on-demand': ConnectorSpec(
-        'building-on-demand', '2.0.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS), confirm_sensitive=True,
+        'building-on-demand', '3.0.0',
+        (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS, BUILDING_ON_DEMAND_VIDEO_TOOLS),
+        uploads=True, confirm_sensitive=True,
+        notes=('Células de Building on Demand reúne programa, economía, contrato y video por idioma; el conector canónico es Programas (programs).',),
     ),
     'partnership-program': ConnectorSpec(
         'partnership-program', '3.0.0', (PARTNERSHIP_PROGRAM_TOOLS,),
@@ -198,7 +201,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['offerings'],),
     ),
     'programs': ConnectorSpec(
-        'programs', '0.0.0', (PROGRAM_SECTION_TOOLS,),
+        'programs', '1.0.0', (PROGRAM_SECTION_TOOLS,),
         uploads=True, confirm_sensitive=True, notes=(SECTION_NOTES['programs'],),
     ),
     'projects': ConnectorSpec(

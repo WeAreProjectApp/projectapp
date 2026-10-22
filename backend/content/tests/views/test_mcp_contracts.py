@@ -281,6 +281,22 @@ def test_accounting_ledger_exposes_receivables_forecast():
     assert 'get_receivables' in tool_names
 
 
+def test_programs_catalog_exposes_building_on_demand_video_controls():
+    """Fails if Scrum video controls are not owned exclusively by Programas."""
+    video_controls = {
+        'get_building_on_demand_video',
+        'set_building_on_demand_video',
+        'remove_building_on_demand_video',
+        'restore_default_building_on_demand_video',
+        'set_building_on_demand_video_visibility',
+    }
+    programs = {tool['name'] for tool in TOOLS_BY_SLUG['programs']}
+    commercial = {tool['name'] for tool in TOOLS_BY_SLUG['commercial']}
+
+    assert video_controls <= programs
+    assert not video_controls & commercial
+
+
 @pytest.mark.parametrize('slug', CONNECTOR_SLUGS)
 def test_model_fields_are_classified_for_connector(slug):
     assert _field_contract_problems(slug) == []

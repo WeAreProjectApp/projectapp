@@ -27,7 +27,7 @@
       <colgroup v-if="hasMenuStart">
         <col v-if="selectable" :style="{ width: SELECT_TRACK }">
         <col :style="{ width: ROW_ACTION_MENU_TRACK }">
-        <template v-if="!hasFluidMenuStart">
+        <template v-if="!hasFluidMenuStart && !hasContentLayout">
           <col v-for="col in resolved" :key="col.key">
         </template>
       </colgroup>
@@ -381,6 +381,12 @@ const props = defineProps({
    * portrait: 'keep'|'group'|'hide', landscape?: 'keep'|'group'|'hide' } }.
    */
   columns: { type: Array, required: true },
+  /** Content sizing reserves the available slack for the primary text column. */
+  columnLayout: {
+    type: String,
+    default: 'proportional',
+    validator: (value) => ['proportional', 'content'].includes(value),
+  },
   rows: { type: Array, default: () => [] },
   rowKey: { type: String, default: 'id' },
   caption: { type: String, default: '' },
@@ -441,7 +447,10 @@ const hasMenuStart = computed(() => (
 const resolved = computed(() => resolveColumns(props.columns, {
   hasActions: props.showActions,
   rowActionsLayout: props.rowActionsLayout,
+  columnLayout: props.columnLayout,
 }));
+
+const hasContentLayout = computed(() => props.columnLayout === 'content');
 
 const tableContainerRef = ref(null);
 const { profile: viewportProfile } = usePanelViewportProfile();
@@ -524,7 +533,7 @@ const hasResponsivePolicy = computed(() =>
  * column keeps a share. Resizable tables already own their widths.
  */
 const hasFluidMenuStart = computed(() => (
-  hasMenuStart.value && hasResponsivePolicy.value && !hasColumnResize.value
+  hasMenuStart.value && hasResponsivePolicy.value && !hasColumnResize.value && !hasContentLayout.value
 ));
 
 const headerWidthVars = computed(() => (
@@ -553,6 +562,7 @@ const tableStyle = computed(() => {
     : { minWidth: tableMinWidth.value };
   // A fluid menu-start table sets its layout from CSS: an inline value would
   // beat the media query that keeps small screens on auto layout.
+  if (hasContentLayout.value) return { ...widthStyle, tableLayout: 'auto' };
   return hasMenuStart.value && !hasFluidMenuStart.value
     ? { ...widthStyle, tableLayout: 'fixed' }
     : widthStyle;

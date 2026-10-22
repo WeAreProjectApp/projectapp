@@ -41,6 +41,7 @@ export default defineI18nLocale(async () => {
     buildingWithUsAdmin,
     buildingOnDemand,
     buildingOnDemandAdmin,
+    videoResources,
   ] = await Promise.all([
     import('~/locales/global/en.js'),
     import('~/locales/accountingPocket/en.js'),
@@ -83,6 +84,7 @@ export default defineI18nLocale(async () => {
     import('~/locales/buildingWithUsAdmin/en.js'),
     import('~/locales/buildingOnDemand/en.js'),
     import('~/locales/buildingOnDemandAdmin/en.js'),
+    import('~/locales/videoResources/en.js'),
   ])
 
   return {
@@ -127,5 +129,6 @@ export default defineI18nLocale(async () => {
     buildingWithUsAdmin: buildingWithUsAdmin.default,
     buildingOnDemand: buildingOnDemand.default,
     buildingOnDemandAdmin: buildingOnDemandAdmin.default,
+    videoResources: videoResources.default,
   }
 })

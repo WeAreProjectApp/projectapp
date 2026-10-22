@@ -267,6 +267,7 @@
     <!-- Table: grouped by client (landing mode set in Configuración) or classic -->
     <template v-else>
       <IncomeGroupedTable
+        column-layout="content"
         v-if="isGrouped"
         v-model:selected="selectedIds"
         selectable
@@ -341,6 +342,7 @@
            checkboxes feed the same selection (and the same bulk bar). -->
       <template v-else>
         <AccountingTable
+        column-layout="content"
           v-model:selected="selectedIds"
           selectable
           :loading="store.isLoading"

@@ -161,6 +161,7 @@
     <!-- Table -->
     <template v-else>
       <AccountingTable
+        column-layout="content"
         :loading="store.isLoading"
         :highlight-id="lastMutatedId"
         :columns="columns"

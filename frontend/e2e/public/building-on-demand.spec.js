@@ -19,6 +19,7 @@ const largeFeature = program.estimator.tasks.find((task) => task.id === 'large-f
 const requirementsSession = program.estimator.tasks.find((task) => task.id === 'requirements-session');
 const unusedHours = program.faq.items.find((item) => item.id === 'unused-hours');
 const jsonError = { status: 503, contentType: 'application/json', body: JSON.stringify({ message: 'Unavailable' }) };
+const json = (body, status = 200) => ({ status, contentType: 'application/json', body: JSON.stringify(body) });
 const prepaidTerms = [
   { id: 'quarterly', label: '3 meses', starter: '1.710.000', business: '3.780.000', enterprise: '8.160.000', businessTotal: '11.340.000' },
   { id: 'semiannual', label: '6 meses', starter: '1.620.000', business: '3.570.000', enterprise: '7.680.000', businessTotal: '21.420.000' },
@@ -32,6 +33,13 @@ async function setupApi(page, scenario = {}) {
   }, { showGuide: Boolean(scenario.showGuide), guideSeenKey: BUILDING_ON_DEMAND_GUIDE_SEEN_KEY });
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'building-on-demand/public/' && scenario.programUnavailable) return jsonError;
+    if (apiPath === 'building-on-demand/public/' && method === 'GET') {
+      const lang = new URL(route.request().url()).searchParams.get('lang') === 'en' ? 'en' : 'es';
+      const payload = buildingOnDemandProgramFixture(lang);
+      payload.show_explainer_video = !scenario.videoHidden;
+      if (scenario.explainerVideo) payload.explainer_video = scenario.explainerVideo;
+      return json(payload);
+    }
     if (apiPath === 'building-on-demand/public/pdf/' && scenario.pdfUnavailable) return jsonError;
     return buildingOnDemandApiFixture({ apiPath, method, route });
   });
@@ -333,6 +341,61 @@ test.describe('Public Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-cell')).toContainText(englishProgram.cell.summary);
     await expect(page.getByTestId('building-on-demand-tier-business')).toContainText('192 hours per month');
     await expect(page.getByRole('button', { name: 'Download PDF', exact: true })).toBeVisible();
+  });
+
+  test('plays the Spanish Scrum explainer after public navigation', {
+    tag: ['@flow:public-building-on-demand-explainer', '@role:guest', '@outcome:display', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: the public Células video disappeared or its play control did not replace the poster with a player.
+    await setupApi(page);
+    await openFromFooter(page);
+    const card = page.getByTestId('building-on-demand-explainer-card');
+
+    await expect(card).toHaveCount(1);
+    await expect(card).toContainText('Tu célula Scrum, en un minuto');
+    await page.getByTestId('building-on-demand-explainer-play').click();
+
+    await expect(page.getByTestId('building-on-demand-explainer-player')).toHaveAttribute('controls', '');
+    await expect(page.getByTestId('building-on-demand-explainer-player')).toHaveAttribute('src', /building-on-demand-brag-v2-es\.mp4/);
+  });
+
+  test('offers the Scrum video file after a playback error', {
+    tag: ['@flow:public-building-on-demand-explainer', '@role:guest', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: a browser media failure gave visitors no usable way to open the Scrum video.
+    await setupApi(page);
+    await page.route(/building-on-demand-brag-v2-es[^/?]*\.mp4$/, (route) => route.abort());
+    await openFromFooter(page);
+
+    await page.getByTestId('building-on-demand-explainer-play').click();
+
+    await expect(page.getByTestId('building-on-demand-explainer-error')).toContainText('No pudimos reproducir el video en este navegador.');
+    await expect(page.getByTestId('building-on-demand-explainer-open')).toHaveAttribute('href', /building-on-demand-brag-v2-es\.mp4/);
+  });
+
+  test('omits the public Scrum explainer when visibility is off', {
+    tag: ['@flow:public-building-on-demand-explainer', '@role:guest', '@outcome:display'],
+  }, async ({ page }) => {
+    // Bug caught: a hidden Scrum resource still appeared below the public program header.
+    await setupApi(page, { videoHidden: true });
+    await openFromFooter(page);
+
+    await expect(page.getByRole('heading', { name: program.hero.title, exact: true })).toHaveText(program.hero.title);
+    await expect(page.getByTestId('building-on-demand-explainer-card')).toHaveCount(0);
+  });
+
+  test('omits the Scrum explainer on English without an English resource', {
+    tag: ['@flow:public-building-on-demand-explainer', '@role:guest', '@outcome:display'],
+  }, async ({ page }) => {
+    // Bug caught: the Spanish Scrum file was incorrectly exposed on the English public program.
+    await setupApi(page);
+    await openFromFooter(page);
+
+    await page.getByTestId('building-on-demand-language').getByRole('tab', { name: 'English', exact: true }).click();
+
+    await expect(page).toHaveURL(/\/en-us\/building-on-demand$/);
+    await expect(page.getByRole('heading', { name: englishProgram.hero.title, exact: true })).toHaveText(englishProgram.hero.title);
+    await expect(page.getByTestId('building-on-demand-explainer-card')).toHaveCount(0);
   });
 
   test('expands the answer about unused monthly hours', {

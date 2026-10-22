@@ -13,7 +13,7 @@ const props = defineProps({
   i18nNamespace: {
     type: String,
     required: true,
-    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer'].includes(value),
+    validator: (value) => ['additionalModules', 'financing', 'proposalExplainer', 'buildingOnDemand'].includes(value),
   },
   /** hero = protagonist card on a public view; compact = panel media object. */
   variant: { type: String, default: 'hero', validator: (value) => ['hero', 'compact'].includes(value) },

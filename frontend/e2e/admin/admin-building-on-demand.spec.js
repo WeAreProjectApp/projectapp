@@ -21,6 +21,17 @@ async function setupApi(page, scenario) {
     if (apiPath === 'auth/check/') return json({ user: { username: 'admin', is_staff: true, is_superuser: true } });
     if (apiPath === 'proposals/' || apiPath === 'proposals/alerts/') return json([]);
     if (apiPath === 'proposals/dashboard/') return json({ total: 0, by_status: {} });
+    scenario.videoSettings ??= {
+      show_building_on_demand_video: true,
+      resources: { 'building-on-demand:es': { mode: 'default' } },
+    };
+    if (apiPath === 'explainer-videos/admin/settings/' && method === 'GET') return json(scenario.videoSettings);
+    if (apiPath === 'explainer-videos/admin/settings/update/' && method === 'PATCH') {
+      scenario.videoPatch = route.request().postDataJSON();
+      if (scenario.videoSaveFails) return json({ detail: 'No se pudo guardar.' }, 500);
+      scenario.videoSettings = { ...scenario.videoSettings, ...scenario.videoPatch };
+      return json(scenario.videoSettings);
+    }
     if (apiPath === 'building-on-demand/admin/') {
       if (scenario.overviewUnavailable) return unavailable();
       return json(buildingOnDemandOverviewFixture({ withContract: !scenario.contractAbsent, mirrorStatus: scenario.mirrorStatus }));
@@ -76,7 +87,7 @@ test.describe('Admin Building on Demand', () => {
     await setupApi(page, scenario);
   });
 
-  test('opens the program through the Comercial sidebar', {
+  test('opens Programas through the Comercial sidebar', {
     tag: ['@flow:admin-building-on-demand-program', '@role:admin', '@outcome:display', '@responsive:commercial'],
   }, async ({ page }) => {
     // quality: allow-deep-link (the proposals list starts authenticated sidebar navigation to Células)
@@ -87,7 +98,7 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByTestId('building-on-demand-admin-public-url-es')).toHaveText('https://projectapp.co/es-co/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-open-public-en')).toHaveAttribute('href', 'https://projectapp.co/en-us/building-on-demand');
     await expect(page.getByTestId('building-on-demand-admin-download-pdf-es')).toBeVisible();
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('Este panel es de solo lectura.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toContainText(program.hero.title);
   });
 
@@ -288,7 +299,7 @@ test.describe('Admin Building on Demand', () => {
     await openContractFromSidebar(page);
 
     await expect(page.getByTestId('building-on-demand-admin-contract-unavailable')).toHaveText('El contrato todavía no está disponible');
-    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('Este panel es de solo lectura.');
+    await expect(page.getByTestId('building-on-demand-admin-mcp-hint')).toContainText('El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.');
     await expect(page.getByTestId('building-on-demand-admin-contract-history')).toHaveCount(0);
     await expect(page.getByTestId('building-on-demand-admin-contract-error')).toHaveCount(0);
   });
@@ -357,5 +368,67 @@ test.describe('Admin Building on Demand', () => {
     await expect(page.getByRole('tab', { name: 'Contrato', exact: true })).toHaveAttribute('aria-selected', 'true');
     await expect(page.getByTestId('building-on-demand-admin-contract-status')).toHaveText('Sincronizado');
     await expect(page.getByTestId('building-on-demand-panel-preview')).toHaveCount(0);
+  });
+
+  test('plays the Scrum explainer once from the Programa tab', {
+    tag: ['@flow:admin-building-on-demand-explainer', '@role:admin', '@outcome:display', '@outcome:success'],
+  }, async ({ page }) => {
+    // quality: allow-deep-link (the authenticated proposals entry is followed by the visible Células sidebar link)
+    // Bug caught: Células duplicated the explainer inside the preview or could not start playback from its panel card.
+    await openFromSidebar(page);
+    const card = page.getByTestId('building-on-demand-explainer-card');
+
+    await expect(card).toHaveCount(1);
+    await expect(card).toContainText('Video explicativo de Células Scrum');
+    await expect(page.getByTestId('building-on-demand-panel-preview').getByTestId('building-on-demand-explainer-card')).toHaveCount(0);
+
+    await page.getByTestId('building-on-demand-explainer-play').click();
+
+    await expect(page.getByTestId('building-on-demand-explainer-player')).toHaveAttribute('controls', '');
+    await expect(page.getByTestId('building-on-demand-explainer-player')).toHaveAttribute('src', /building-on-demand-brag-v2-es\.mp4/);
+  });
+
+  test('hides the public Scrum explainer from its panel switch', {
+    tag: ['@flow:admin-building-on-demand-explainer-visibility', '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    // Bug caught: the Scrum toggle updated a different setting, so visitors still received the video.
+    await openPanel(page);
+    const scenario = scenarios.get(page);
+    const toggle = page.getByTestId('building-on-demand-explainer-visibility-toggle');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    await toggle.click();
+
+    await expect(toggle).toHaveAttribute('aria-checked', 'false');
+    await expect(page.getByRole('alert')).toContainText('El video quedó oculto en la presentación pública.');
+    expect(scenario.videoPatch).toEqual({ show_building_on_demand_video: false });
+  });
+
+  test('offers the Scrum file after panel playback fails', {
+    tag: ['@flow:admin-building-on-demand-explainer', '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: a media failure in Células left administrators without a way to open the Scrum file.
+    await page.route(/building-on-demand-brag-v2-es[^/?]*\.mp4$/, (route) => route.abort());
+    await openFromSidebar(page);
+
+    await page.getByTestId('building-on-demand-explainer-play').click();
+
+    await expect(page.getByTestId('building-on-demand-explainer-error')).toContainText('No pudimos reproducir el video en este navegador.');
+    await expect(page.getByTestId('building-on-demand-explainer-open')).toHaveAttribute('href', /building-on-demand-brag-v2-es\.mp4/);
+  });
+
+  test('restores the Scrum visibility switch after a save failure', {
+    tag: ['@flow:admin-building-on-demand-explainer-visibility', '@role:admin', '@outcome:failure'],
+  }, async ({ page }) => {
+    // Bug caught: a rejected visibility save left Células claiming the public video was hidden.
+    scenarios.get(page).videoSaveFails = true;
+    await openPanel(page);
+    const toggle = page.getByTestId('building-on-demand-explainer-visibility-toggle');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
+
+    await toggle.click();
+
+    await expect(page.getByRole('alert')).toContainText('No pudimos guardar la visibilidad del video. Intenta de nuevo.');
+    await expect(toggle).toHaveAttribute('aria-checked', 'true');
   });
 });

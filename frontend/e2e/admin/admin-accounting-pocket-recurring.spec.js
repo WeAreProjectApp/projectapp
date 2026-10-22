@@ -10,6 +10,10 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { expectCompactModal } from '../helpers/modal-layout.js';
+import { expectContentSizedColumns } from '../helpers/table-geometry.js';
+import { waitForNuxtApp } from '../helpers/navigation.js';
+import { viewportUse } from '../helpers/viewports.js';
+import { PANEL_BREAKPOINTS } from '../../config/responsive.js';
 import {
   ADMIN_ACCOUNTING_POCKET,
   ADMIN_ACCOUNTING_RECURRING,
@@ -451,7 +455,16 @@ async function dragAbove(page, sourceHandle, targetRow) {
 async function openSubview(page, key) {
   const entry = key === 'recurring' ? 'pocket' : 'recurring';
   await page.goto(`/panel/accounting/${entry}`, { waitUntil: 'domcontentloaded' });
-  await page.getByTestId(`accounting-subnav-${key}`).click();
+  await waitForNuxtApp(page);
+  if (page.viewportSize().width < PANEL_BREAKPOINTS.landscape) {
+    const select = page.getByTestId('accounting-subnav-select');
+    await expect(select).toBeVisible({ timeout: 25_000 });
+    await select.selectOption(key);
+  } else {
+    const link = page.getByTestId(`accounting-subnav-${key}`);
+    await expect(link).toBeVisible({ timeout: 25_000 });
+    await link.click();
+  }
 }
 
 async function chooseRecurringAction(page, id, action) {
@@ -1644,3 +1657,52 @@ test.describe('Admin Accounting Pocket & Recurring', () => {
     });
   });
 });
+
+for (const [alias, rowTestId] of [
+  ['compact', 'pocket-card-2'],
+  ['portrait', 'accounting-row-2'],
+]) {
+  test.describe(`Pocket content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('keeps the Egreso amount readable without horizontal overflow', {
+      tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }, testInfo) => {
+      // quality: allow-deep-link (the first accounting subview is setup; the visible subnav selects Bolsillo)
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-pocket @ compact and portrait)
+      // Bug caught: narrowing the ledger hid the outgoing amount or made its card scroll horizontally.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ calls: [] }));
+      await openSubview(page, 'pocket');
+      const row = page.getByTestId(rowTestId);
+
+      await expect(row).toContainText('Egreso');
+      await expect(row).toContainText('2.272.000');
+      expect(await row.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      await page.screenshot({ path: testInfo.outputPath('pocket-layout.png'), fullPage: true });
+    });
+  });
+}
+
+for (const alias of ['landscape', 'desktop', 'wide']) {
+  test.describe(`Pocket content layout — ${alias}`, () => {
+    test.use(viewportUse(alias));
+
+    test('keeps Tipo next to Valor without widening either column', {
+      tag: [...ADMIN_ACCOUNTING_POCKET, '@role:admin', '@outcome:display', '@responsive:accounting'],
+    }, async ({ page }, testInfo) => {
+      // quality: allow-deep-link (the first accounting subview is setup; the visible subnav selects Bolsillo)
+      // quality: allow-duplicate (per-viewport contract: admin-accounting-pocket @ landscape, desktop and wide)
+      // Bug caught: Tipo or Valor absorbed spare desktop width, separating Egreso from its amount.
+      await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9001, role: 'admin', is_staff: true } });
+      await mockApi(page, buildHandler({ calls: [] }));
+      await openSubview(page, 'pocket');
+      const row = page.getByTestId('accounting-row-2');
+
+      await expect(row).toContainText('Pago T.C Rappi');
+      await expect(row).toContainText('Egreso');
+      await expectContentSizedColumns(row, { typeLabel: 'Tipo', valueLabel: 'Valor' });
+      await page.screenshot({ path: testInfo.outputPath('pocket-layout.png'), fullPage: true });
+    });
+  });
+}

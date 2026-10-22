@@ -1,9 +1,13 @@
 <script setup>
-import { computed, nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, toRef, watch } from 'vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
 import BaseButton from '~/components/base/BaseButton.vue'
 import BaseSegmented from '~/components/base/BaseSegmented.vue'
+import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue'
+import { useExplainerVideo } from '~/composables/useExplainerVideos'
+import esMessages from '~/locales/buildingOnDemand/es'
+import enMessages from '~/locales/buildingOnDemand/en'
 import PublicDocumentAction from '~/components/PublicDocumentAction.vue'
 import PublicDocumentShareButton from '~/components/PublicDocumentShareButton.vue'
 import Onboarding from '~/components/BuildingOnDemand/Onboarding.vue'
@@ -20,9 +24,13 @@ const props = defineProps({
   downloadUrl: { type: String, default: '' },
   language: { type: String, default: 'es' },
   floatingActions: { type: Boolean, default: true },
+  showExplainer: { type: Boolean, default: true },
 })
 const emit = defineEmits(['change-language'])
 const { t } = useI18n()
+const explainer = useExplainerVideo('building-on-demand', toRef(props, 'language'), computed(() => props.program.explainer_video))
+const explainerVisible = computed(() => props.showExplainer && props.program.show_explainer_video !== false && Boolean(explainer.value))
+const explainerMessages = { 'es-co': { buildingOnDemand: esMessages }, 'en-us': { buildingOnDemand: enMessages } }
 const { isDark, toggle: toggleTheme } = useBuildingOnDemandTheme()
 const documentRef = ref(null)
 usePublicDocumentEntrance(documentRef)
@@ -150,6 +158,17 @@ async function downloadPdf() {
         <BaseAlert v-if="downloadError" class="mt-4 max-w-xl" variant="danger" data-testid="building-on-demand-pdf-error">{{ label('pdfError') }}</BaseAlert>
       </div>
     </header>
+
+    <div v-if="explainerVisible" class="mx-auto w-full max-w-[1200px] px-4 sm:px-6">
+      <ExplainerVideoCard
+        :video="explainer"
+        i18n-namespace="buildingOnDemand"
+        :content-locale="language === 'en' ? 'en-us' : 'es-co'"
+        :content-messages="explainerMessages"
+        test-id="building-on-demand-explainer"
+        class="max-w-3xl"
+      />
+    </div>
 
     <main class="mx-auto w-full max-w-[1200px] space-y-20 px-4 py-14 sm:px-6 sm:py-20">
       <section v-if="program.cell" data-document-enter aria-labelledby="building-on-demand-cell-title" data-testid="building-on-demand-cell">

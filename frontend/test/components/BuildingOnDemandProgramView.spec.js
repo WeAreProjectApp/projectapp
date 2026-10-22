@@ -193,6 +193,19 @@ describe('BuildingOnDemandProgramView', () => {
       expect(wrapper.get('[data-testid="building-on-demand-hero-aside"]').text()).toContain('A complete cell to help your product evolve')
       expect(wrapper.get('[data-testid="building-on-demand-theme-toggle"]').attributes('aria-label')).toBe('Toggle theme')
     })
+
+    it.each([
+      ['the visible Spanish presentation', { language: 'es' }, 1, 'hero'],
+      ['an explicitly hidden presentation', { program: { ...createBuildingOnDemandProgram(), show_explainer_video: false } }, 0, undefined],
+      ['the English presentation without a published resource', { language: 'en', program: createBuildingOnDemandProgram('en') }, 0, undefined],
+    ])('renders the Scrum video card only for %s', (_scenario, props, expectedCount, expectedVariant) => {
+      // Fails if the public presentation shows an unavailable or disabled Scrum video.
+      const wrapper = mountProgram(props)
+      const cards = wrapper.findAll('[data-testid="building-on-demand-explainer-card"]')
+
+      expect(cards).toHaveLength(expectedCount)
+      expect(cards[0]?.attributes('data-variant')).toBe(expectedVariant)
+    })
   })
 
   describe('document actions', () => {

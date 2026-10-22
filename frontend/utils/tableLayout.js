@@ -221,7 +221,7 @@ function padClassFor(col, prevCol, nextCol, base) {
  */
 export function resolveColumns(
   columns = [],
-  { hasActions = true, rowActionsLayout = ROW_ACTION_LAYOUTS.INLINE_END } = {},
+  { hasActions = true, rowActionsLayout = ROW_ACTION_LAYOUTS.INLINE_END, columnLayout = 'proportional' } = {},
 ) {
   const sizes = columns.map(inferSize);
   const totalWeight = sizes.reduce((total, size) => total + SIZES[size].weight, 0)
@@ -237,8 +237,14 @@ export function resolveColumns(
       ...col,
       size,
       textPolicy,
-      track: spec.track,
-      width: totalWeight ? `${((spec.weight / totalWeight) * 100).toFixed(2)}%` : 'auto',
+      // Content layout is opt-in: the primary text column receives the slack;
+      // bounded labels and amounts keep their intrinsic width in both engines.
+      track: columnLayout === 'content'
+        ? (col.responsive?.primary ? 'minmax(0, 1fr)' : 'max-content')
+        : spec.track,
+      width: columnLayout === 'content'
+        ? (col.responsive?.primary ? 'auto' : '1%')
+        : totalWeight ? `${((spec.weight / totalWeight) * 100).toFixed(2)}%` : 'auto',
       minRem: spec.rem,
       contentClass: TEXT_POLICY_CLASSES[textPolicy],
       alignClass: alignClass(col),

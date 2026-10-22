@@ -18,6 +18,7 @@ class ExplainerVideoSettings(models.Model):
     show_additional_modules_video = models.BooleanField(default=True)
     show_financing_video = models.BooleanField(default=True)
     show_proposal_video = models.BooleanField(default=True)
+    show_building_on_demand_video = models.BooleanField(default=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

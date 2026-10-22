@@ -42,7 +42,8 @@ SECTION_NOTES = {
     'programs': (
         'Programas reúne las alianzas (Programa de Alianza y Building with Us) '
         'y las Células de Building on Demand, incluidos contratos, economía y '
-        'versiones. Paquetes de horas y módulos adicionales están en Nuestra '
+        'versiones y videos por idioma (consultar, cargar, sustituir, quitar, restaurar y mostrar). '
+        'Paquetes de horas y módulos adicionales están en Nuestra '
         'oferta (offerings); clientes, propuestas y diagnósticos en Comercial '
         '(commercial).'
     ),

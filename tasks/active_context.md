@@ -1,3 +1,20 @@
+# Tablas contables y video de Células Scrum — 2026-10-22
+
+Implementado en la rama de sesión: Bolsillo, Ingresos (clásico y agrupado) y Gastos usan una
+distribución opcional que reserva el ancho sobrante para Concepto. Tipo conserva
+su alineación izquierda y los importes su alineación derecha.
+
+Building on Demand incorpora un video explicativo ES de 60 s y controles en
+Células › Programa para visibilidad, sustitución, retirada y restauración. Usa
+el almacenamiento privado y el circuito MCP compartidos. La migración aditiva
+`0298` sólo se aplica mediante deploy; la pieza y los controles no crean nuevas
+revisiones comerciales. Video final exportado y revisado: 60 s, Full HD,
+1,89 MB, voz en español, música y subtítulos. Validación local: 27 escenarios
+de navegador, cinco perfiles de pantalla, pruebas focales de componentes y
+servidor, contratos MCP y compilación Nuxt. La lectura pública mantiene tres
+consultas fijas al crecer el historial: programa, visibilidad y recurso.
+Quality gate sin errores nuevos; esta entrada no acredita despliegue.
+
 > **Captura de IVA con centavos — 2026-10-22:** cambiar únicamente entre base y total incluido conserva el pago y su reparto automático. La captura monetaria se emite al editar importe o tasa; no se reconstruye el total desde una base redondeada.
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.

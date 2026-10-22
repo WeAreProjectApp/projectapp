@@ -1,0 +1,10 @@
+/* The Scrum explainer keeps the existing brand; these fit its longer role names. */
+.headline { font-size: 86px; }
+.headline.wide { font-size: 104px; }
+.lead { font-size: 34px; }
+.flow-step { font-size: 34px; }
+.browser-body { padding: 28px; }
+.browser h3 { font-size: 42px; }
+.detail-row { font-size: 29px; }
+.tiles { grid-auto-rows: 1fr; }
+.tile { min-height: 190px; }

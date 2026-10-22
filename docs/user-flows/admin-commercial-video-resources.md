@@ -8,3 +8,5 @@
 - **Outcomes:** display (recurso o ausencia al entrar por UI), success (carga/sustitución/baja/restauración), error (archivo ausente, inválido o mayor de 250 MiB), failure (consulta/carga fallida, cancelación o revisión desactualizada con consulta posterior).
 - **Evidencia:** `components/resources/VideoResourceManager.vue` y sus cuatro páginas huésped; `views/video_resources.py` y `services/video_resource_service.py`.
 - **E2E Spec:** `e2e/admin/admin-video-resources.spec.js`.
+
+- **Células Scrum:** En Programa se reutiliza el gestor compartido, con recursos separados por idioma, validación MP4 y revisión. Casos de error: archivo inválido, consulta/carga fallida y conflicto 409. Evidencia: `frontend/pages/panel/cells/index.vue`, `frontend/components/resources/VideoResourceManager.vue`.

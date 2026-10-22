@@ -7,6 +7,7 @@ MODULE_SWITCHES = {
     'additional-modules': 'show_additional_modules_video',
     'financing': 'show_financing_video',
     'proposal': 'show_proposal_video',
+    'building-on-demand': 'show_building_on_demand_video',
 }
 
 

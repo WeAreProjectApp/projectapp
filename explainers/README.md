@@ -96,3 +96,7 @@ de GSAP para uso en render offline). HyperFrames es Apache 2.0.
 La tercera pieza, **Tu propuesta, paso a paso**, dura 58,2 segundos y explica
 las cuatro opciones del acceso público. Fuentes, narración colombiana,
 reproducción y reglas de visibilidad: [brag-v2/proposal/README.md](brag-v2/proposal/README.md).
+
+## Células Scrum / Building on Demand
+
+Cuarta pieza de brag v2: 60 segundos, voz colombiana y subtítulos. Fuentes y comandos: [building-on-demand](brag-v2/building-on-demand/README.md). La producción usa `edge-tts==7.3.1`; los renders anteriores no se regeneran.
