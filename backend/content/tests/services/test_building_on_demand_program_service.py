@@ -19,6 +19,7 @@ SECTION_ORDER = [
 ]
 PUBLIC_KEYS = set(SECTION_ORDER) | {
     'language', 'version', 'updated_at', 'canonical_path', 'alternate_path', 'pdf_path', 'offer', 'contact',
+    'show_explainer_video', 'explainer_video',
 }
 PUBLIC_TIER_KEYS = {
     'id', 'name', 'badge', 'pace_label', 'pace_summary', 'ideal_for', 'roles', 'highlights', 'cta_label',
@@ -85,6 +86,8 @@ def test_public_payload_matches_the_consumer_contract(building_on_demand_program
     assert payload['canonical_path'] == canonical
     assert payload['alternate_path'] == alternate
     assert payload['pdf_path'] == f'/api/building-on-demand/public/pdf/?lang={language}'
+    assert payload['show_explainer_video'] is True
+    assert payload['explainer_video'] == {'mode': 'default', 'video': None}
 
 
 @pytest.mark.parametrize('language', ['es', 'en'])
