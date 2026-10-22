@@ -50,7 +50,13 @@ def record_usage(connector, credential, message, *, legacy):
     name = params.get('name', '') if isinstance(params, dict) else ''
     # Never persist arbitrary argument strings or client-supplied unknown names.
     from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG, PRE_SPLIT_TOOLS_BY_SLUG, TOOLS_BY_SLUG
-    known = {tool['name'] for tool in TOOLS_BY_SLUG[connector.slug] + LEGACY_TOOLS_BY_SLUG[connector.slug] + PRE_SPLIT_TOOLS_BY_SLUG.get(connector.slug, [])}
+    pre_split_tools = PRE_SPLIT_TOOLS_BY_SLUG.get(connector.slug, [])
+    # Preserve the legacy-alias boundary independently of the new catalog epoch.
+    if locked.aliases_retired_at and any(
+        tool['name'] == name and tool.get('_hidden') for tool in pre_split_tools
+    ):
+        raise ToolError('Este acceso MCP está retirado.', code='CONNECTOR_RETIRED')
+    known = {tool['name'] for tool in TOOLS_BY_SLUG[connector.slug] + LEGACY_TOOLS_BY_SLUG[connector.slug] + pre_split_tools}
     name = name if isinstance(name, str) and name in known else ''
     now = timezone.now()
     row, _ = McpUsageDaily.objects.get_or_create(

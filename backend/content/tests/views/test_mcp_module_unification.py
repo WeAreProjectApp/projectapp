@@ -220,6 +220,26 @@ def test_pre_split_access_survives_legacy_alias_retirement(api_client):
     assert 'list_clients' in {tool['name'] for tool in _result(response)['tools']}
 
 
+def test_pre_split_access_does_not_reopen_a_retired_hidden_alias(api_client):
+    """Fails if preserving Commercial access revives an already retired legacy operation."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='commercial', defaults={
+            'name': 'Comercial', 'is_active': True, 'retired_at': None,
+            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=datetime_timezone.utc),
+            'pre_split_retired_at': None,
+        },
+    )
+    token = 'retired-hidden-pre-split-token'
+    _credential(connector, 'Preserved full scope', token, catalog='pre_split')
+
+    response = _endpoint(api_client, token, 'tools/call', {
+        'name': 'launch_proposal_to_platform', 'arguments': {},
+    }, slug='commercial')
+
+    assert response.status_code == 410
+    assert response.data['error']['code'] == 'CONNECTOR_RETIRED'
+
+
 def test_catalog_rejects_a_second_canonical_accounting_connector():
     """Fails if a future registry entry can silently claim Contable a second time."""
     mirror = replace(
