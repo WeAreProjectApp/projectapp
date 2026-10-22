@@ -206,10 +206,10 @@ def _contract_summary():
 
 
 def admin_overview():
-    active = McpConnector.objects.filter(slug='building-on-demand', is_active=True).exists()
+    active = McpConnector.objects.filter(slug='programs', is_active=True).exists()
     return {
         'program': _metadata(_load()), 'contract': _contract_summary(),
-        'connector': {'slug': 'building-on-demand', 'is_active': active},
+        'connector': {'slug': 'programs', 'is_active': active},
         'public_paths': dict(PUBLIC_PATHS),
         'pdf_paths': {lang: f'/api/building-on-demand/public/pdf/?lang={lang}' for lang in PUBLIC_PATHS},
     }

@@ -1,3 +1,13 @@
+> **Segmentación comercial — 2026-10-22:** Comercial 6.0.0 conserva clientes,
+> propuestas y diagnósticos; Nuestra oferta 1.0.0 (`offerings`) concentra paquetes
+> y módulos; Programas 1.0.0 (`programs`) reúne alianzas y células. Las descripciones
+> de todos los acordeones explican su alcance. Validar `initialize`, `tools/list`
+> y `describe_capabilities` para las tres secciones, cargas y confirmaciones.
+> Probar una credencial antigua `pre_split`, una `legacy` y una nueva restringida;
+> rechazar la migración incompleta y escrituras de ajustes de otra sección.
+> Verificar que las marcas de retiro de ambos catálogos son independientes.
+> Migración 0298 y guion: [MCP_MODULE_UNIFICATION.md](MCP_MODULE_UNIFICATION.md#segmentación-comercial--2026-10-22).
+
 > **Unificación por módulo (2026-10-19):** el catálogo canónico, la compatibilidad por credencial, el inventario y el guion de consumidores/retiro se documentan en [MCP_MODULE_UNIFICATION.md](MCP_MODULE_UNIFICATION.md). Los slugs anteriores se validan como adaptadores en retirada, no como módulos adicionales.
 
 # Guion de validación y mantenimiento de MCP

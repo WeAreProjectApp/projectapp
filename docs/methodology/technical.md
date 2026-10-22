@@ -1,3 +1,11 @@
+> **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,
+> propuestas y diagnósticos; Nuestra oferta reúne paquetes de horas y módulos
+> adicionales; Programas reúne alianzas y células. Separadores por subconjunto y
+> descripciones ampliadas en todos los acordeones MCP. Migración 0298 conserva
+> credenciales comerciales mediante `pre_split`, sin reabrir catálogos `legacy`
+> retirados. Nuevos conectores inactivos; despliegue y consumidores externos se
+> verifican por separado. [Contrato](../MCP_MODULE_UNIFICATION.md).
+
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común

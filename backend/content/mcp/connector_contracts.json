@@ -16,28 +16,28 @@
     "version": "3.0.0"
   },
   "additional-modules": {
-    "sha256": "699265848ff64f0a3c87914297b5c593e14f88a1d37756df4ac3231051e19e3d",
-    "version": "3.0.0"
+    "sha256": "f2ba9f55b84ddb4fc69de882ab894863ace3bc587f2d3dea46b1a15883ae4ee7",
+    "version": "4.0.0"
   },
   "blog": {
     "sha256": "e8c16561a0b806542df4d9921b0ad49b1bb9b00e4692447be248c0fdd15dfaa4",
     "version": "2.0.0"
   },
   "building-on-demand": {
-    "sha256": "49949e099bbd268191664e3db29cdbd5143aefa88d8a9fc699fa32f45d20f155",
-    "version": "2.0.0"
+    "sha256": "b1d046aab20509bbc679501aa1b9adfa4cd43259d840ab26a7466953f2af4ae7",
+    "version": "3.0.0"
   },
   "building-with-us": {
-    "sha256": "cbb16c0f25e2c224cb7e1d91f6b5b811d84c5d0c827ab351865a1b86cf1584fc",
-    "version": "2.0.0"
+    "sha256": "e1f4c4bf236dafd42cc9cf6ea53cbf0e2581156825efc17f47d9c7efd657bd9c",
+    "version": "3.0.0"
   },
   "clients": {
     "sha256": "5b7a8bccfe1cb285d405536bfa5947a691fa7ec512d98ce040eb8957a31e5992",
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "4ecbc3f4d1e50db521e76327e825ff19fe036d3be1bdaca51a4803dafb0e463e",
-    "version": "5.0.0"
+    "sha256": "8d3d9818c934642f815dce4364c0ccc3bc8dc8819a18095bb07f3d8842ef3674",
+    "version": "6.0.0"
   },
   "communications": {
     "sha256": "3aa598dcd1930132226521e35bb078718847c0d94d36e7d8c7c5bacbcbb575c7",
@@ -59,13 +59,21 @@
     "sha256": "08d20a093b81d71375b38f5c483b7dce5a2d0c8a79b306d0fd05c3b5928923ff",
     "version": "2.0.0"
   },
+  "offerings": {
+    "sha256": "93c942398f1d02e34c2f1552facb0a26e1aac6d016f53470bbd47914a257e275",
+    "version": "1.0.0"
+  },
   "operations": {
     "sha256": "68d4589f26eee8e6ec7943ad17502ccc4f60d6d29d802b21c067ba4528cb0b46",
     "version": "3.0.0"
   },
   "partnership-program": {
-    "sha256": "ee92e00557462fc702ea9b14d77007e60a9268cdc23fcb30d1a825009ccc2940",
-    "version": "3.0.0"
+    "sha256": "d9d8e788ca84efe6ca0a2d4402cfc398a60568394dcb14cb31f3ae55febdd209",
+    "version": "4.0.0"
+  },
+  "programs": {
+    "sha256": "e8487d98f8299cbc48023593eb8e050c9a19cc42712ed771f633ef4aeb995b0d",
+    "version": "1.0.0"
   },
   "projects": {
     "sha256": "aa76fa38422e0ea4f64b011f5f00d679d3aa301bdd18fbd4c3549c6613184ff1",

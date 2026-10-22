@@ -10,7 +10,7 @@ export default {
   previewLanguages: { label: 'Idioma de la vista previa', es: 'Español', en: 'English' },
   mcpHint: {
     title: 'Administración desde MCP',
-    description: 'El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP building-on-demand, con vista previa y confirmación. Este panel es de solo lectura.',
+    description: 'El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP Programas (programs), con vista previa y confirmación. Este panel es de solo lectura.',
     active: 'Conector activo',
     inactive: 'Conector inactivo',
     unavailable: 'Estado del conector no disponible',
@@ -72,7 +72,7 @@ export default {
   },
   contract: {
     title: 'Contrato de Building on Demand',
-    description: 'Documento de solo lectura. Sus versiones se publican desde el conector MCP building-on-demand.',
+    description: 'Documento de solo lectura. Sus versiones se publican desde el conector MCP Programas (programs).',
     error: 'No se pudo cargar el contrato.',
     empty: 'El contrato todavía no está disponible',
     mirrorTitle: 'Copia en el Gestor Documental',
@@ -81,8 +81,8 @@ export default {
     mirrorUpdated: 'Última sincronización',
     mirrorVersion: 'Versión de la copia: {version}',
     status: { synchronized: 'Sincronizado', out_of_sync: 'Desactualizado', not_initialized: 'Sin inicializar', unknown: 'Desconocido' },
-    outOfSync: 'La copia del Gestor Documental está desactualizada. Se sincroniza desde el conector MCP building-on-demand.',
-    notInitialized: 'La copia del Gestor Documental se inicializa desde el conector MCP building-on-demand.',
+    outOfSync: 'La copia del Gestor Documental está desactualizada. Se sincroniza desde el conector MCP Programas (programs).',
+    notInitialized: 'La copia del Gestor Documental se inicializa desde el conector MCP Programas (programs).',
     viewPdf: 'Ver PDF del contrato',
     downloadPdf: 'Descargar PDF del contrato',
     bodyTitle: 'Contenido del contrato',

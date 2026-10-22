@@ -87,6 +87,38 @@ def test_retirement_blocks_an_unmigrated_legacy_consumer():
     assert status['blockers'] == ['consumers_pending']
 
 
+def test_pre_split_retirement_ignores_legacy_alias_state_and_legacy_usage():
+    """Fails if retiring segmented Commercial access is blocked by unrelated legacy aliases or calls."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='commercial',
+        defaults={
+            'name': 'Commercial', 'is_active': True, 'retired_at': None,
+            'aliases_retired_at': NOW, 'pre_split_started_at': NOW - timedelta(days=31),
+            'pre_split_consumers_verified_at': NOW, 'pre_split_retired_at': None,
+        },
+    )
+    connector.credentials.all().delete()
+    pre_split = _credential(
+        connector, 'Pre-split consumer', catalog='pre_split', migrated_at=NOW,
+    )
+    legacy = _credential(connector, 'Legacy consumer', catalog='legacy')
+    McpObservation.objects.update_or_create(
+        key='migration',
+        defaults={'continuous_since': NOW - timedelta(days=15), 'heartbeat_at': NOW},
+    )
+    McpUsageDaily.objects.create(
+        connector=connector, credential=legacy, day=NOW.date(), tool_name='list_clients',
+        legacy=True, count=1, last_used_at=NOW - timedelta(days=1),
+    )
+
+    with patch('content.mcp.migration.timezone.now', return_value=NOW):
+        status = retirement_status(connector, catalog='pre_split')
+
+    assert status['eligible'] is True
+    assert status['blockers'] == []
+    assert pre_split.catalog == 'pre_split'
+
+
 def test_observation_heartbeat_restarts_quiet_window_after_a_gap():
     """Fails if a monitoring outage still counts toward the required 14 quiet retirement days."""
     McpObservation.objects.update_or_create(

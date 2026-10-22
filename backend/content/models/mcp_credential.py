@@ -18,7 +18,8 @@ class McpCredential(models.Model):
     label = models.CharField(max_length=100, default='Default')
     catalog = models.CharField(
         max_length=12, default='canonical',
-        choices=[('canonical', 'Canonical'), ('legacy', 'Legacy catalog')],
+        choices=[('canonical', 'Canonical'), ('legacy', 'Legacy catalog'),
+                 ('pre_split', 'Commercial before segmentation')],
     )
     migrated_at = models.DateTimeField(null=True, blank=True)
     income_kinds = models.JSONField(default=list, blank=True)

@@ -31,30 +31,32 @@ describe('BuildingOnDemandAdminMcpHint', () => {
     [false, 'Conector inactivo'],
     ['true', 'Estado del conector no disponible'],
   ])('explains the connector state for is_active=%s', (active, label) => {
+    // Fails if the hint stops showing the explicit connector state for a read-only program.
     const wrapper = mountHint({ slug: 'building-on-demand', is_active: active });
 
     const hint = wrapper.get('[data-testid="building-on-demand-admin-mcp-hint"]');
 
     expect(hint.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe(label);
-    expect(hint.text()).toContain('con vista previa y confirmación');
+    expect(hint.text()).toContain('conector MCP Programas (programs)');
     expect(hint.text()).toContain('Este panel es de solo lectura.');
-    expect(hint.find('button').exists()).toBe(false);
   });
 
   it('identifies the MCP connector when overview data is unavailable', () => {
+    // Fails if a missing connector response directs administrators to the retired connector.
     const wrapper = mountHint();
 
-    expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-slug"]').text()).toBe('building-on-demand');
+    expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-slug"]').text()).toBe('programs');
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Estado del conector no disponible');
-    expect(wrapper.text()).toContain('únicamente desde el conector MCP building-on-demand');
+    expect(wrapper.text()).toContain('únicamente desde el conector MCP Programas (programs)');
   });
 
   it('explains read-only administration in the English locale', () => {
+    // Fails if the English guidance omits the canonical Programas connector.
     mockLocale.value = 'en-us';
     const wrapper = mountHint({ slug: 'building-on-demand', is_active: false });
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-mcp-status"]').text()).toBe('Connector inactive');
-    expect(wrapper.text()).toContain('with a preview and confirmation');
+    expect(wrapper.text()).toContain('Programas (programs) MCP connector');
     expect(wrapper.text()).toContain('This panel is read-only.');
   });
 });

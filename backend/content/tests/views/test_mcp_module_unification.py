@@ -28,9 +28,9 @@ def _payload(response):
     return json.loads(_result(response)['content'][0]['text'])
 
 
-def _endpoint(api_client, token, method, params=None):
+def _endpoint(api_client, token, method, params=None, *, slug='accounting'):
     return api_client.post(
-        f'/api/mcp/accounting/{token}/', _rpc(method, params), format='json',
+        f'/api/mcp/{slug}/{token}/', _rpc(method, params), format='json',
     )
 
 
@@ -65,18 +65,159 @@ def test_canonical_catalog_enforces_unique_module_ownership():
         spec.module_id: slug for slug, spec in CONNECTORS.items()
         if not spec.compatibility
     }
-    domain_tools = [
-        tool for slug, spec in CONNECTORS.items() if not spec.compatibility
-        for tool in TOOLS_BY_SLUG[slug]
-        if tool['name'] not in INFRASTRUCTURE_TOOLS
-    ]
-
     assert canonical == {
         'overview': 'operations', 'commercial': 'commercial', 'platform': 'projects',
         'documents': 'documents', 'communications': 'communications', 'site': 'content',
-        'accounting': 'accounting', 'tasks': 'tasks',
+        'accounting': 'accounting', 'tasks': 'tasks', 'offerings': 'offerings',
+        'programs': 'programs',
+    }
+    ownership = {
+        name: slug
+        for slug, spec in CONNECTORS.items() if not spec.compatibility
+        for name in (tool['name'] for tool in TOOLS_BY_SLUG[slug])
+        if name not in INFRASTRUCTURE_TOOLS
+    }
+    assert {
+        'list_clients': ownership['list_clients'],
+        'list_hour_packages': ownership['list_hour_packages'],
+        'create_additional_module': ownership['create_additional_module'],
+        'get_partnership_agreement': ownership['get_partnership_agreement'],
+        'get_building_with_us_program': ownership['get_building_with_us_program'],
+        'get_building_on_demand_program': ownership['get_building_on_demand_program'],
+    } == {
+        'list_clients': 'commercial', 'list_hour_packages': 'offerings',
+        'create_additional_module': 'offerings', 'get_partnership_agreement': 'programs',
+        'get_building_with_us_program': 'programs',
+        'get_building_on_demand_program': 'programs',
     }
     assert catalog_problems(CONNECTORS, TOOLS_BY_SLUG) == []
+
+
+def _panel_segmentation_connectors():
+    for slug in ('commercial', 'offerings', 'programs', 'additional-modules',
+                 'partnership-program', 'building-on-demand'):
+        McpConnector.objects.update_or_create(
+            slug=slug,
+            defaults={'name': slug, 'is_active': False, 'retired_at': None,
+                      'aliases_retired_at': None},
+        )
+
+
+@pytest.mark.parametrize(
+    ('slug', 'field', 'phrase'),
+    [
+        ('commercial', 'description', 'relación con clientes'),
+        ('commercial', 'section_note', 'Defaults'),
+        ('offerings', 'description', 'paquetes de horas'),
+        ('offerings', 'section_note', 'Módulos adicionales'),
+        ('programs', 'description', 'Building on Demand'),
+        ('programs', 'section_note', 'contratos'),
+    ],
+)
+def test_panel_explains_canonical_connector_scope(
+    super_client, slug, field, phrase,
+):
+    """Fails if the MCP detail accordion loses the explanation of a canonical section."""
+    _panel_segmentation_connectors()
+    response = super_client.get('/api/mcp-connectors/')
+    connectors = {item['slug']: item for item in response.data}
+
+    assert response.status_code == 200
+    assert phrase.lower() in connectors[slug][field].lower()
+
+
+@pytest.mark.parametrize(
+    ('slug', 'phrase'),
+    [
+        ('additional-modules', 'Nuestra oferta'),
+        ('partnership-program', 'Programas'),
+        ('building-on-demand', 'Programas'),
+    ],
+)
+def test_panel_describes_retiring_connector_replacement(
+    super_client, slug, phrase,
+):
+    """Fails if a retiring MCP detail omits the section that replaces it."""
+    _panel_segmentation_connectors()
+    response = super_client.get('/api/mcp-connectors/')
+    connectors = {item['slug']: item for item in response.data}
+
+    assert response.status_code == 200
+    assert phrase.lower() in connectors[slug]['description'].lower()
+
+
+@pytest.mark.parametrize(
+    ('slug', 'field', 'other_field', 'resource_prefix'),
+    [
+        ('commercial', 'show_proposal_video', 'show_financing_video', 'proposal:'),
+        ('offerings', 'show_additional_modules_video', 'show_proposal_video', 'additional-modules:'),
+        ('programs', 'show_financing_video', 'show_additional_modules_video', 'financing:'),
+    ],
+)
+def test_section_video_tools_expose_only_their_own_switch(
+    api_client, slug, field, other_field, resource_prefix,
+):
+    """Fails if a segmented MCP can read or submit another section's video switch."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug=slug,
+        defaults={'name': slug, 'is_active': True, 'retired_at': None,
+                  'aliases_retired_at': None},
+    )
+    connector.credentials.all().delete()
+    token = f'{slug}-video-scope'
+    _credential(connector, 'Video scope', token)
+    resource = {'commercial': 'proposal', 'offerings': 'additional_modules', 'programs': 'partnership'}[slug]
+
+    read = _payload(_endpoint(
+        api_client, token, 'tools/call',
+        {'name': f'get_{resource}_video_settings', 'arguments': {}}, slug=slug,
+    ))
+    rejected = _payload(_endpoint(
+        api_client, token, 'tools/call',
+        {'name': f'update_{resource}_video_settings', 'arguments': {other_field: False}}, slug=slug,
+    ))
+
+    assert set(read) == {field, 'resources', 'updated_at'}
+    assert all(key.startswith(resource_prefix) for key in read['resources'])
+    assert rejected['error']['code'] == 'VALIDATION_ERROR'
+
+
+@pytest.mark.parametrize(
+    ('slug', 'expected_tool'),
+    [('offerings', 'list_hour_packages'), ('programs', 'get_building_with_us_program')],
+)
+def test_new_section_primary_token_exposes_its_canonical_catalog(api_client, slug, expected_tool):
+    """Fails if generating a new section's primary token exposes only a compatibility fragment."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug=slug, defaults={'name': slug, 'is_active': True, 'retired_at': None},
+    )
+    connector.credentials.all().delete()
+
+    token = connector.generate_token()
+    response = _endpoint(api_client, token, 'tools/list', slug=slug)
+
+    assert connector.credentials.get(label='Default').catalog == 'canonical'
+    assert response.status_code == 200
+    assert expected_tool in {tool['name'] for tool in _result(response)['tools']}
+
+
+def test_pre_split_access_survives_legacy_alias_retirement(api_client):
+    """Fails if previously retired legacy aliases disable a preserved commercial consumer."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='commercial', defaults={
+            'name': 'Comercial', 'is_active': True, 'retired_at': None,
+            'aliases_retired_at': datetime(2026, 10, 1, tzinfo=datetime_timezone.utc),
+            'pre_split_retired_at': None,
+        },
+    )
+    token = 'preserved-pre-split-token'
+    _credential(connector, 'Preserved split scope', token,
+                catalog='pre_split', allowed_tools=['list_clients'])
+
+    response = _endpoint(api_client, token, 'tools/list', slug='commercial')
+
+    assert response.status_code == 200
+    assert 'list_clients' in {tool['name'] for tool in _result(response)['tools']}
 
 
 def test_catalog_rejects_a_second_canonical_accounting_connector():
@@ -164,6 +305,50 @@ def test_retired_accounting_alias_rejects_list_income_for_a_full_canonical_crede
 
     assert response.status_code == 410
     assert response.data['error']['code'] == 'CONNECTOR_RETIRED'
+
+
+def test_retiring_pre_split_commercial_access_leaves_the_new_canonical_catalog_usable(api_client):
+    """Fails if the pre-segmentation retirement flag disables the new Comercial credential too."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='commercial',
+        defaults={'name': 'Comercial', 'is_active': True, 'retired_at': None,
+                  'aliases_retired_at': None, 'pre_split_retired_at': datetime(2026, 10, 20, tzinfo=datetime_timezone.utc)},
+    )
+    connector.credentials.all().delete()
+    old_token, new_token = 'pre-split-retired-token', 'canonical-commercial-token'
+    _credential(connector, 'Pre-split retired', old_token, catalog='pre_split', allowed_tools=['list_clients'])
+    _credential(connector, 'Canonical commercial', new_token, allowed_tools=['list_clients'])
+
+    retired = _endpoint(api_client, old_token, 'tools/list', slug='commercial')
+    usable = _endpoint(api_client, new_token, 'tools/list', slug='commercial')
+
+    assert (retired.status_code, retired.data['error']['code']) == (410, 'CONNECTOR_RETIRED')
+    assert usable.status_code == 200
+    assert 'list_clients' in {tool['name'] for tool in _result(usable)['tools']}
+
+
+def test_canonical_commercial_scope_cannot_grant_a_hidden_pre_split_alias(super_client):
+    """Fails if a current credential can be expanded with the retired proposal-launch alias."""
+    connector, _ = McpConnector.objects.update_or_create(
+        slug='commercial',
+        defaults={'name': 'Comercial', 'is_active': True, 'retired_at': None,
+                  'aliases_retired_at': None, 'pre_split_retired_at': None},
+    )
+    connector.credentials.all().delete()
+    credential = _credential(
+        connector, 'Current commercial scope', 'current-commercial-scope',
+        allowed_tools=['list_clients'],
+    )
+
+    response = super_client.patch(
+        f'/api/mcp-connectors/commercial/credentials/{credential.pk}/',
+        {'allowed_tools': ['launch_proposal_to_platform']}, format='json',
+    )
+
+    credential.refresh_from_db()
+    assert response.status_code == 400
+    assert 'launch_proposal_to_platform' in str(response.data['detail'])
+    assert credential.allowed_tools == ['list_clients']
 
 
 def test_malformed_modern_request_records_legacy_usage_before_rejection(
