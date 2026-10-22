@@ -457,7 +457,7 @@ def test_admin_overview_exposes_the_uninitialized_contract(building_on_demand_pr
             'folder_id': None, 'folder_path': None, 'version': None, 'last_synced_at': None,
         },
     }
-    assert overview['connector'] == {'slug': 'building-on-demand', 'is_active': False}
+    assert overview['connector'] == {'slug': 'programs', 'is_active': False}
     assert overview['program']['version'] == 1
     assert overview['public_paths'] == {'es': '/es-co/building-on-demand', 'en': '/en-us/building-on-demand'}
     assert overview['pdf_paths'] == {'es': '/api/building-on-demand/public/pdf/?lang=es', 'en': '/api/building-on-demand/public/pdf/?lang=en'}
@@ -465,8 +465,8 @@ def test_admin_overview_exposes_the_uninitialized_contract(building_on_demand_pr
 
 def test_admin_overview_reads_the_connector_activation(building_on_demand_program):
     """Fails if the panel hardcodes an inactive connector after activation."""
-    McpConnector.objects.filter(slug='building-on-demand').update(is_active=True)
+    McpConnector.objects.filter(slug='programs').update(is_active=True)
 
     overview = service.admin_overview()
 
-    assert overview['connector'] == {'slug': 'building-on-demand', 'is_active': True}
+    assert overview['connector'] == {'slug': 'programs', 'is_active': True}

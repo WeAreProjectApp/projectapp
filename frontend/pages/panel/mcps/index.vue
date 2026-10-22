@@ -146,9 +146,12 @@
           class="border-t border-border-muted px-4 sm:px-5 py-4 space-y-4"
         >
           <p class="min-w-0 max-w-full text-sm text-text-muted [overflow-wrap:anywhere]">{{ connector.description }}</p>
-          <div v-if="connector.is_legacy || connector.aliases_retired_at" class="rounded-lg border border-border-muted p-3 text-sm text-text-muted" :data-testid="`mcp-migration-${connector.slug}`">
+          <p v-if="connector.section_note" class="text-sm text-text-subtle" :data-testid="`mcp-scope-${connector.slug}`">{{ connector.section_note }}</p>
+          <div v-if="connector.is_legacy || connector.aliases_retired_at || connector.pre_split_started_at" class="rounded-lg border border-border-muted p-3 text-sm text-text-muted" :data-testid="`mcp-migration-${connector.slug}`">
             <p v-if="connector.lifecycle === 'retired'">Conector retirado. Configura una credencial nueva de {{ connector.replacement }}.</p>
             <p v-else-if="connector.is_legacy">Migra a {{ connector.replacement }}. Este acceso se conserva al menos 30 días y hasta verificar los consumidores y 14 días sin llamadas antiguas.</p>
+            <p v-else-if="connector.pre_split_retired_at">El catálogo comercial anterior está retirado. Usa las credenciales nuevas de Comercial, Nuestra oferta y Programas.</p>
+            <p v-else-if="connector.pre_split_started_at">Las credenciales comerciales anteriores conservan su alcance durante la transición. Migra sus funciones a Comercial, Nuestra oferta y Programas según corresponda.</p>
             <p v-else>Los accesos al catálogo anterior ya están retirados.</p>
             <p v-if="connector.last_legacy_use_at">Último uso antiguo: {{ formatDate(connector.last_legacy_use_at) }}.</p>
             <p v-if="connector.is_legacy">Inventario de consumidores: {{ connector.consumers_verified_at ? 'verificado' : 'pendiente de verificar' }}.</p>
@@ -523,13 +526,16 @@ import { useConfirmModal } from '~/composables/useConfirmModal';
 import { usePanelNotify } from '~/composables/usePanelNotify';
 import { usePanelRefresh } from '~/composables/usePanelRefresh';
 import { useMcpsStore } from '~/stores/mcps';
+import { getPanelNavSections } from '~/config/panelNav';
 import { formatDateTime as formatDate } from '~/utils/formatDate';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth', 'superuser-only'] });
 
 const store = useMcpsStore();
+const sectionOrder = new Map(getPanelNavSections((path) => path).map((section, index) => [section.id, index]));
+const canonicalOrder = (connector) => sectionOrder.get(connector.module_id || connector.slug) ?? sectionOrder.size;
 const connectorGroups = computed(() => [
-  { id: 'canonical', title: 'Conectores por módulo', connectors: store.connectors.filter((item) => !item.is_legacy) },
+  { id: 'canonical', title: 'Conectores por módulo', connectors: store.connectors.filter((item) => !item.is_legacy).sort((a, b) => canonicalOrder(a) - canonicalOrder(b)) },
   { id: 'retiring', title: 'Conectores en retirada', connectors: store.connectors.filter((item) => item.is_legacy) },
 ].filter((group) => group.connectors.length));
 const { t } = useI18n();
@@ -652,8 +658,11 @@ function localDateTime(value) {
 }
 
 function openCredentialModal(connector, credential = null) {
-  if (credential?.catalog === 'legacy' && connector.legacy_tools?.length) {
-    connector = { ...connector, tools: connector.legacy_tools };
+  const previousTools = credential?.catalog === 'pre_split'
+    ? connector.pre_split_tools
+    : credential?.catalog === 'legacy' ? connector.legacy_tools : null;
+  if (previousTools?.length) {
+    connector = { ...connector, tools: previousTools };
   }
   const allowedTools = credential?.allowed_tools || [];
   const readTools = readToolNames(connector);

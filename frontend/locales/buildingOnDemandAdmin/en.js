@@ -10,7 +10,7 @@ export default {
   previewLanguages: { label: 'Preview language', es: 'Español', en: 'English' },
   mcpHint: {
     title: 'Managed through MCP',
-    description: 'The program, economics inputs and contract are managed exclusively through the building-on-demand MCP connector, with a preview and confirmation. This panel is read-only.',
+    description: 'The program, economics inputs and contract are managed exclusively through the Programas (programs) MCP connector, with a preview and confirmation. This panel is read-only.',
     active: 'Connector active',
     inactive: 'Connector inactive',
     unavailable: 'Connector status unavailable',
@@ -72,7 +72,7 @@ export default {
   },
   contract: {
     title: 'Building on Demand contract',
-    description: 'Read-only document. Its versions are published through the building-on-demand MCP connector.',
+    description: 'Read-only document. Its versions are published through the Programas (programs) MCP connector.',
     error: 'The contract could not be loaded.',
     empty: 'The contract is not available yet',
     mirrorTitle: 'Copy in the Document manager',
@@ -81,8 +81,8 @@ export default {
     mirrorUpdated: 'Last synchronization',
     mirrorVersion: 'Copy version: {version}',
     status: { synchronized: 'Synchronized', out_of_sync: 'Out of sync', not_initialized: 'Not initialized', unknown: 'Unknown' },
-    outOfSync: 'The Document manager copy is out of sync. It is synchronized through the building-on-demand MCP connector.',
-    notInitialized: 'The Document manager copy is initialized through the building-on-demand MCP connector.',
+    outOfSync: 'The Document manager copy is out of sync. It is synchronized through the Programas (programs) MCP connector.',
+    notInitialized: 'The Document manager copy is initialized through the Programas (programs) MCP connector.',
     viewPdf: 'View contract PDF',
     downloadPdf: 'Download contract PDF',
     bodyTitle: 'Contract content',

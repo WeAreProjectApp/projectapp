@@ -2,6 +2,14 @@
 
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
 
+> **Segmentación del menú y MCPs — 2026-10-22:** Comercial conserva clientes,
+> propuestas y diagnósticos; Nuestra oferta reúne paquetes de horas y módulos
+> adicionales; Programas reúne alianzas y células. Separadores por subconjunto y
+> descripciones ampliadas en todos los acordeones MCP. Migración 0298 conserva
+> credenciales comerciales mediante `pre_split`, sin reabrir catálogos `legacy`
+> retirados. Nuevos conectores inactivos; despliegue y consumidores externos se
+> verifican por separado. [Contrato](../docs/MCP_MODULE_UNIFICATION.md).
+
 # Aprobación y documentos compartidos — 2026-10-20
 
 > **2026-10-21 — aprobación explícita del servicio y anexos:** en contratos

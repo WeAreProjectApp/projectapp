@@ -19,6 +19,6 @@ const connectorState = computed(() => {
       <BaseBadge :variant="connectorState.variant" :textPolicy="'wrap'" data-testid="building-on-demand-admin-mcp-status">{{ t(`buildingOnDemandAdmin.mcpHint.${connectorState.key}`) }}</BaseBadge>
     </div>
     <p class="mt-3 max-w-3xl text-sm leading-6 text-text-muted">{{ t('buildingOnDemandAdmin.mcpHint.description') }}</p>
-    <code class="mt-3 block max-w-full text-sm text-text-default [overflow-wrap:anywhere]" data-testid="building-on-demand-admin-mcp-slug">{{ connector?.slug || 'building-on-demand' }}</code>
+    <code class="mt-3 block max-w-full text-sm text-text-default [overflow-wrap:anywhere]" data-testid="building-on-demand-admin-mcp-slug">{{ connector?.slug || 'programs' }}</code>
   </section>
 </template>

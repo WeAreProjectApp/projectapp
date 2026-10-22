@@ -31,6 +31,9 @@ class McpConnector(models.Model):
     consumers_verified_at = models.DateTimeField(null=True, blank=True)
     retired_at = models.DateTimeField(null=True, blank=True)
     aliases_retired_at = models.DateTimeField(null=True, blank=True)
+    pre_split_started_at = models.DateTimeField(null=True, blank=True)
+    pre_split_consumers_verified_at = models.DateTimeField(null=True, blank=True)
+    pre_split_retired_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -61,7 +64,7 @@ class McpConnector(models.Model):
             defaults={
                 'token_hash': self.token_hash,
                 'token_prefix': self.token_prefix,
-                'catalog': 'legacy',
+                'catalog': 'canonical' if self.slug in {'offerings', 'programs'} else 'legacy',
             },
         )
         credential.token_hash = self.token_hash

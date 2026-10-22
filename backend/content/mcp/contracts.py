@@ -1560,6 +1560,16 @@ MCP_MODEL_CONTRACTS['documents'] += SHARED_PROPOSAL_DOCUMENT_CONTRACTS
 # a source connector's narrower read-only/excluded projection.
 from content.mcp.module_catalog import MODULE_CONNECTORS  # noqa: E402
 
+MCP_MODEL_CONTRACTS['commercial'] = (
+    MCP_MODEL_CONTRACTS['clients'] + MCP_MODEL_CONTRACTS['proposals']
+    + MCP_MODEL_CONTRACTS['diagnostics']
+)
+MCP_MODEL_CONTRACTS['offerings'] = tuple(
+    contract for contract in COMMERCIAL_CATALOG_CONTRACTS
+    if contract.model_label.startswith('content.HourPackage')
+)
+MCP_MODEL_CONTRACTS['programs'] = ()
+
 for canonical, (_, sources) in MODULE_CONNECTORS.items():
     grouped = {}
     for source in sources:

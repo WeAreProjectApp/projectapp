@@ -80,7 +80,7 @@ describe('BuildingOnDemandAdminContractPanel', () => {
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-contract-status"]').text()).toBe(label);
     expect(warning.text()).toContain(explanation);
-    expect(warning.text()).toContain('conector MCP building-on-demand');
+    expect(warning.text()).toContain('conector MCP Programas (programs)');
     expect(warning.find('button').exists()).toBe(false);
   });
 
@@ -97,7 +97,7 @@ describe('BuildingOnDemandAdminContractPanel', () => {
 
     expect(wrapper.get('[data-testid="building-on-demand-admin-contract-status"]').text()).toBe('Sin inicializar');
     expect(wrapper.get('[data-testid="building-on-demand-admin-contract-mirror"]').text()).toContain('ProjectApp › Contratos');
-    expect(wrapper.get('[data-testid="building-on-demand-admin-mirror-alert"]').text()).toContain('se inicializa desde el conector MCP building-on-demand');
+    expect(wrapper.get('[data-testid="building-on-demand-admin-mirror-alert"]').text()).toContain('se inicializa desde el conector MCP Programas (programs)');
     expect(wrapper.find('[data-testid="building-on-demand-admin-mirror-link"]').exists()).toBe(false);
   });
 

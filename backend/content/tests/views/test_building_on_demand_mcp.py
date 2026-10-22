@@ -40,7 +40,7 @@ def test_connector_discovery_has_exact_tool_names(api_client, building_on_demand
     assert names == READ_NAMES | WRITE_NAMES | CONTROL_NAMES
     assert len(response.data['result']['tools']) == 35
     assert catalog['connector'] == 'building-on-demand'
-    assert catalog['version'] == '2.0.0'
+    assert catalog['version'] == '3.0.0'
     assert not any('video' in name or 'upload' in name for name in names)
 
 

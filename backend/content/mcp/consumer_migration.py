@@ -1,6 +1,6 @@
 """Translate an existing consumer's grants without widening its authority."""
-from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG, TOOLS_BY_SLUG
-from content.mcp.module_catalog import CANONICAL_FOR, FINANCIAL_PROJECT_TOOLS, INFRASTRUCTURE_TOOLS, MODULE_CONNECTORS, canonical_name
+from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG, PRE_SPLIT_TOOLS_BY_SLUG, TOOLS_BY_SLUG
+from content.mcp.module_catalog import INFRASTRUCTURE_TOOLS, MODULE_CONNECTORS, replacement_targets
 from content.mcp.protocol import ToolError
 
 INCOME_REPLACEMENTS = {
@@ -12,18 +12,30 @@ INCOME_REPLACEMENTS = {
 }
 
 
+def source_tools(source):
+    catalogs = {'legacy': LEGACY_TOOLS_BY_SLUG, 'pre_split': PRE_SPLIT_TOOLS_BY_SLUG,
+                'canonical': TOOLS_BY_SLUG}
+    return catalogs[source.catalog][source.connector.slug]
+
+
+def required_owners(source):
+    return {owner for tool in source_tools(source)
+            if tool['name'] not in INFRASTRUCTURE_TOOLS and source.allows(tool['name'])
+            for owner, _ in replacement_targets(tool['name'], source.connector.slug)}
+
+
 def translated_grants(source, target_slug):
     if target_slug not in MODULE_CONNECTORS:
         raise ToolError('El destino debe ser un conector canónico.', code='CONFLICT')
-    legacy = LEGACY_TOOLS_BY_SLUG[source.connector.slug]
+    legacy = source_tools(source)
     names = {tool['name'] for tool in legacy if source.allows(tool['name'])}
     translated = set()
     for name in names:
         if name in INFRASTRUCTURE_TOOLS:
             continue
-        owner = 'accounting' if name in FINANCIAL_PROJECT_TOOLS else CANONICAL_FOR[source.connector.slug]
-        if owner == target_slug:
-            translated.add(INCOME_REPLACEMENTS.get(name, canonical_name(name, owner)))
+        for owner, replacement in replacement_targets(name, source.connector.slug):
+            if owner == target_slug:
+                translated.add(INCOME_REPLACEMENTS.get(name, replacement))
     available = {tool['name'] for tool in TOOLS_BY_SLUG[target_slug]}
     missing = translated - available
     if missing:
@@ -34,7 +46,10 @@ def translated_grants(source, target_slug):
     kinds = ['expected'] if income_specific and not (names & general) else list(source.income_kinds)
     if not translated:
         raise ToolError('La credencial no tiene funciones de negocio en ese destino.', code='FORBIDDEN')
-    return sorted(translated), kinds
+    uploads = names & INFRASTRUCTURE_TOOLS & available - {
+        'describe_capabilities', 'confirm_action', 'cancel_action',
+    }
+    return sorted(translated | uploads), kinds
 
 
 def equivalent_replacement(source, replacement):
@@ -43,6 +58,7 @@ def equivalent_replacement(source, replacement):
     if source.expires_at and (replacement.expires_at is None or replacement.expires_at > source.expires_at):
         return False
     grants, kinds = translated_grants(source, replacement.connector.slug)
+    controls = {'describe_capabilities', 'confirm_action', 'cancel_action'}
     actual = {tool['name'] for tool in TOOLS_BY_SLUG[replacement.connector.slug]
-              if tool['name'] not in INFRASTRUCTURE_TOOLS and replacement.allows(tool['name'])}
+              if tool['name'] not in controls and replacement.allows(tool['name'])}
     return actual == set(grants) and set(replacement.income_kinds) == set(kinds)

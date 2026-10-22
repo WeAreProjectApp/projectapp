@@ -27,6 +27,7 @@ from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.throttling import AnonRateThrottle
 
+from content.mcp.migration import catalog_retired_at
 from content.mcp.confirmation import requires_durable_confirmation
 from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG, tools_for_credential  # noqa: F401
 from content.mcp.context import McpExecutionContext, use_mcp_context
@@ -528,10 +529,12 @@ def mcp_endpoint(request, slug, token=None):
         raise Http404
 
     tools = tools_for_credential(slug, credential)
-    legacy_catalog = spec.compatibility or credential.catalog == 'legacy'
-    if connector.retired_at or (credential.catalog == 'legacy' and connector.aliases_retired_at):
+    legacy_catalog = spec.compatibility or credential.catalog != 'canonical'
+    if connector.retired_at or (credential.catalog != 'canonical' and catalog_retired_at(connector, credential)):
         return Response(_jsonrpc_error(None, 'CONNECTOR_RETIRED',
-                        f'Este acceso está retirado. Usa {spec.canonical_area} con una credencial nueva.'), status=410)
+                        ('Este acceso está retirado. Usa commercial, offerings o programs según la función.'
+                         if slug == 'commercial' else
+                         f'Este acceso está retirado. Usa {spec.canonical_area} con una credencial nueva.')), status=410)
     if not connector.is_active:
         raise Http404
 
@@ -565,7 +568,7 @@ def mcp_endpoint(request, slug, token=None):
     call_params = message.get('params') if isinstance(message, dict) else None
     call_name = call_params.get('name') if isinstance(call_params, dict) else None
     hidden_call = any(tool['name'] == call_name and tool.get('_hidden') for tool in tools)
-    if connector.aliases_retired_at:
+    if connector.aliases_retired_at and credential.catalog != 'pre_split':
         from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG
         retired_names = {tool['name'] for tool in LEGACY_TOOLS_BY_SLUG[slug]} - {tool['name'] for tool in TOOLS_BY_SLUG[slug]}
         hidden_call = hidden_call or (isinstance(call_name, str) and call_name in retired_names)
@@ -619,6 +622,7 @@ def mcp_endpoint(request, slug, token=None):
     if isinstance(payload, dict) and isinstance(payload.get('result'), dict) and (legacy_catalog or hidden_call):
         payload['result'].setdefault('_meta', {})['deprecation'] = {
             'replacement': spec.canonical_area,
+            **({'replacements': ['commercial', 'offerings', 'programs']} if slug == 'commercial' else {}),
             'message': 'Este acceso está en retirada; migra al catálogo canónico con una credencial nueva.',
             'minimum_compatibility_days': 30,
         }
@@ -671,6 +675,8 @@ mcp_endpoint.cls.get_exception_handler = lambda self: transport_exception_handle
 # ---------------------------------------------------------------------------
 
 def _connector_payload(connector):
+    from content.mcp.presentation import connector_description, section_note
+
     spec = CONNECTORS.get(connector.slug)
     tools = TOOLS_BY_SLUG.get(connector.slug, [])
     if hasattr(connector, '_panel_recent_events'):
@@ -714,7 +720,7 @@ def _connector_payload(connector):
             'label': credential.label,
             'catalog': credential.catalog,
             'income_kinds': credential.income_kinds,
-            'is_retired': bool(connector.retired_at or (credential.catalog == 'legacy' and connector.aliases_retired_at)),
+            'is_retired': bool(connector.retired_at or (credential.catalog != 'canonical' and catalog_retired_at(connector, credential))),
             'migrated_at': credential.migrated_at,
             'token_prefix': credential.token_prefix,
             'allowed_tools': credential.allowed_tools,
@@ -734,8 +740,14 @@ def _connector_payload(connector):
         for credential in connector_credentials
     ]
     from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG
+    from content.mcp.connectors import PRE_SPLIT_TOOLS_BY_SLUG
     legacy_tools = LEGACY_TOOLS_BY_SLUG.get(connector.slug, [])
     return {
+        'pre_split_tools': [
+            {'name': tool['name'], 'description': tool['description'], 'risk': tool['risk'],
+             'requires_confirmation': bool(tool.get('requires_confirmation'))}
+            for tool in PRE_SPLIT_TOOLS_BY_SLUG.get(connector.slug, [])
+        ] if any(item['catalog'] == 'pre_split' for item in credentials) else [],
         'legacy_tools': [
             {'name': tool['name'], 'description': tool['description'], 'risk': tool['risk'],
              'requires_confirmation': bool(tool.get('requires_confirmation'))}
@@ -748,10 +760,13 @@ def _connector_payload(connector):
         'migration_started_at': connector.migration_started_at,
         'consumers_verified_at': connector.consumers_verified_at,
         'aliases_retired_at': connector.aliases_retired_at,
+        'pre_split_started_at': connector.pre_split_started_at,
+        'pre_split_retired_at': connector.pre_split_retired_at,
         'last_legacy_use_at': getattr(connector, '_panel_last_legacy_use', None),
         'version': spec.version if spec is not None else None,
         'name': connector.name,
-        'description': connector.description,
+        'description': connector_description(connector.slug, connector.description),
+        'section_note': section_note(connector.slug),
         'is_active': connector.is_active and connector.retired_at is None,
         'has_token': bool(connector.token_hash),
         'token_prefix': connector.token_prefix,
@@ -843,9 +858,12 @@ def _allowed_tools(connector, raw_tools, credential=None):
         return []
     if not isinstance(raw_tools, list) or not all(isinstance(item, str) for item in raw_tools):
         raise serializers.ValidationError('allowed_tools debe ser una lista de nombres.')
-    from content.mcp.connectors import LEGACY_TOOLS_BY_SLUG
-    catalog = LEGACY_TOOLS_BY_SLUG if credential is not None and credential.catalog == 'legacy' else TOOLS_BY_SLUG
-    available = {tool['name'] for tool in catalog.get(connector.slug, [])}
+    if credential is not None and credential.catalog != 'canonical':
+        from content.mcp.consumer_migration import source_tools
+        catalog = source_tools(credential)
+    else:
+        catalog = TOOLS_BY_SLUG.get(connector.slug, [])
+    available = {tool['name'] for tool in catalog}
     unknown = sorted(set(raw_tools) - available)
     if unknown:
         raise serializers.ValidationError(
@@ -939,7 +957,7 @@ def mcp_credential_detail(request, slug, credential_id):
             connector.token_prefix = ''
             connector.save(update_fields=['token_hash', 'token_prefix', 'updated_at'])
         return Response(status=status.HTTP_204_NO_CONTENT)
-    if connector.retired_at or (credential.catalog == 'legacy' and connector.aliases_retired_at):
+    if connector.retired_at or (credential.catalog != 'canonical' and catalog_retired_at(connector, credential)):
         return Response({'code': 'CONNECTOR_RETIRED', 'detail': 'Este acceso está retirado; puedes revocarlo.'}, status=409)
     try:
         if 'allowed_tools' in request.data:
@@ -962,7 +980,7 @@ def rotate_mcp_credential(request, slug, credential_id):
     credential = get_object_or_404(
         McpCredential, pk=credential_id, connector=connector,
     )
-    if connector.retired_at or (credential.catalog == 'legacy' and connector.aliases_retired_at):
+    if connector.retired_at or (credential.catalog != 'canonical' and catalog_retired_at(connector, credential)):
         return Response({'code': 'CONNECTOR_RETIRED', 'detail': 'Crea una credencial del catálogo canónico.'}, status=409)
     token = credential.generate_token()
     if credential.label == 'Default':
