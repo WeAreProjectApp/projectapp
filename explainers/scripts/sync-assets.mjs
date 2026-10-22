@@ -18,7 +18,7 @@ const LOGO_SOURCE = resolve(FRONTEND_ROOT, 'assets', 'images', 'preloadingAnimat
 const GSAP_SOURCE = resolve(EXPLAINERS_ROOT, 'node_modules', 'gsap', 'dist', 'gsap.min.js')
 
 const options = parseArgs(process.argv.slice(2))
-const targets = options.video ? [options.video] : VIDEOS.filter(video => EDITION === 'brag-v2' || video !== 'proposal')
+const targets = options.video ? [options.video] : VIDEOS.filter(video => EDITION === 'brag-v2' || ['additional-modules', 'financing'].includes(video))
 
 for (const video of targets) {
   const assetsDir = resolve(videoDir(video), 'assets')

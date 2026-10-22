@@ -10,7 +10,7 @@ export default {
   previewLanguages: { label: 'Preview language', es: 'Español', en: 'English' },
   mcpHint: {
     title: 'Managed through MCP',
-    description: 'The program, economics inputs and contract are managed exclusively through the building-on-demand MCP connector, with a preview and confirmation. This panel is read-only.',
+    description: 'The program, economics inputs and contract are managed through MCP, with preview and confirmation. Manage the video here or through the same connector.',
     active: 'Connector active',
     inactive: 'Connector inactive',
     unavailable: 'Connector status unavailable',

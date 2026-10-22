@@ -1,0 +1,15 @@
+{
+  "id": "public-building-on-demand-explainer",
+  "name": "Public Building on Demand Explainer",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Llegar por la navegación pública, consultar y reproducir el video español bajo el encabezado; ofrecer enlace si falla y omitir la tarjeta sin recurso del idioma o con visibilidad apagada.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

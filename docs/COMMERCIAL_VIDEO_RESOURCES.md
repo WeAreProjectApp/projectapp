@@ -2,6 +2,7 @@
 
 ## Uso desde el panel
 
+- Células Scrum → Programa → Recursos de video.
 - Programa de Alianza → Configuración → Recursos.
 - Módulos adicionales → Recursos.
 - Propuestas → Configuraciones: video general.
@@ -38,7 +39,7 @@ También hay `remove_*_video` (requiere la confirmación MCP habitual), `restore
 
 ## Contrato y compatibilidad
 
-`GET/POST /api/video-resources/admin/modules/<module>/<language>/` y `/api/video-resources/admin/proposals/<id>/` usan sesión staff y CSRF. POST multipart lleva `action`, `revision` y `file` para upload; remove/restore-default admiten JSON. Los módulos internos son `financing`, `additional-modules`, `proposal`.
+`GET/POST /api/video-resources/admin/modules/<module>/<language>/` y `/api/video-resources/admin/proposals/<id>/` usan sesión staff y CSRF. POST multipart lleva `action`, `revision` y `file` para upload; remove/restore-default admiten JSON. Los módulos internos son `financing`, `additional-modules`, `proposal` y `building-on-demand`. Células agrega `show_building_on_demand_video` mediante content.0298. Su video predeterminado sólo existe en español; los recursos EN cargados se muestran únicamente en EN.
 
 Las APIs públicas añaden `explainer_video: {mode, video}` y, para propuestas, `personalized_video`. El descriptor de archivo cargado incluye `source: "uploaded"` y usa `src`, `poster`, `durationSeconds`, `width`, `height` y `language`. `default` conserva el video empaquetado del idioma; `none` impide que reaparezca; `uploaded` usa el recurso del servidor. Cada cambio incrementa la revisión y la URL; una revisión vieja devuelve conflicto, sin reemplazar datos.
 
@@ -53,3 +54,7 @@ El deploy aplica la migración `0270_commercial_video_resources`, instala FFmpeg
 Las sustituciones se reflejan en las APIs inmediatamente y se incorporan al rebuild de prerender existente. El servidor ofrece rangos HTTP para avanzar en el reproductor; sin Nginx interno, Django usa lectura acotada desde disco.
 
 Pruebas focales: `test_video_resources.py` carga/reemplaza mediante los tres MCPs y el panel; `test_video_large_transport.py` transfiere por HTTP real un MP4 de 250 MiB con un átomo ISO BMFF de relleno válido. Pruebas de seguridad, contratos, componentes y navegador completan permisos, errores, estados vacíos y recuperación.
+
+## Células Scrum
+
+El MCP Comercial publica `get_building_on_demand_video`, `set_building_on_demand_video`, `remove_building_on_demand_video`, `restore_default_building_on_demand_video` y `set_building_on_demand_video_visibility`, con los mismos uploads y revisiones. El adaptador building-on-demand conserva la identidad anterior durante la compatibilidad. Video y visibilidad no publican revisiones del programa ni alteran el contrato; quitar no reactiva el predeterminado y restaurar no cambia el interruptor.

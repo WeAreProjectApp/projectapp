@@ -1,3 +1,5 @@
+> **Video explicativo de Building on Demand — 2026-10-22:** Pipeline brag v2: 60 s, 1080p/30 fps, voz es-CO-SalomeNeural, MP4 H.264 y portada WebP. edge-tts 7.3.1 permite producir con el endpoint vigente del proveedor. Células administra el recurso por idioma usando sesión/CSRF; el MCP Comercial comparte operaciones. El documento y su PDF conservan su contenido comercial.
+
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común

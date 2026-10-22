@@ -1144,7 +1144,7 @@ COMMERCIAL_CATALOG_CONTRACTS = (
     _contract(
         'content.ExplainerVideoSettings',
         read_only='id created_at updated_at',
-        read_write='show_additional_modules_video show_financing_video show_proposal_video',
+        read_write='show_additional_modules_video show_financing_video show_proposal_video show_building_on_demand_video',
     ),
     _contract(
         'content.HourPackage',
@@ -1496,15 +1496,16 @@ MCP_MODEL_CONTRACTS['additional-modules'] = tuple(
 ) + (VIDEO_RESOURCE_CONTRACT,)
 MCP_MODEL_CONTRACTS['proposals'] += (VIDEO_RESOURCE_CONTRACT,)
 MCP_MODEL_CONTRACTS['commercial'] += PARTNERSHIP_CONTRACTS + (VIDEO_RESOURCE_CONTRACT,)
+MCP_MODEL_CONTRACTS['building-on-demand'] += (VIDEO_RESOURCE_CONTRACT,)
 
-for connector, field in [('partnership-program', 'show_financing_video'), ('additional-modules', 'show_additional_modules_video')]:
+for connector, field in [('partnership-program', 'show_financing_video'), ('additional-modules', 'show_additional_modules_video'), ('building-on-demand', 'show_building_on_demand_video')]:
     MCP_MODEL_CONTRACTS[connector] += (_contract(
         'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write=field,
-        excluded={name: 'Interruptor de otro módulo; no es editable desde este conector.' for name in ('show_financing_video', 'show_additional_modules_video', 'show_proposal_video') if name != field},
+        excluded={name: 'Interruptor de otro módulo; no es editable desde este conector.' for name in ('show_financing_video', 'show_additional_modules_video', 'show_proposal_video', 'show_building_on_demand_video') if name != field},
     ),)
 MCP_MODEL_CONTRACTS['proposals'] += (_contract(
     'content.ExplainerVideoSettings', read_only='id created_at updated_at', read_write='show_proposal_video',
-    excluded=_excluded('Interruptor de otro módulo.', 'show_financing_video show_additional_modules_video'),
+    excluded=_excluded('Interruptor de otro módulo.', 'show_financing_video show_additional_modules_video show_building_on_demand_video'),
 ),)
 
 

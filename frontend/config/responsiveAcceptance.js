@@ -97,7 +97,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Administrar, reordenar, seleccionar y compartir módulos adicionales.',
     'Copiar, abrir, descargar y previsualizar el Programa de Alianza, y mostrar u ocultar su video.',
     'Consultar Programa y Contrato de Building with Us, cambiar el idioma de la vista previa y leer historial y estado del espejo sin desbordar el panel.',
-    'Consultar Programa, Economía y Contrato de Células, cambiar el idioma de la vista previa y leer historial, tablas y estado del espejo sin desbordar el panel.',
+    'Consultar Programa, Economía y Contrato de Células; reproducir y administrar su video, cambiar idioma y visibilidad, y leer historial, tablas y estado del espejo sin desbordar el panel.',
     'Crear, editar y gestionar el ciclo de vida de un otrosí de financiación.',
   ]),
   emails: module('emails', [

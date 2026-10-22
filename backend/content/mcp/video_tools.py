@@ -75,6 +75,7 @@ def video_tools(module, *, personalized=False):
     prefix = 'proposal_personalized' if personalized else {
         'proposal': 'proposal_generic', 'financing': 'partnership_program',
         'additional-modules': 'additional_modules',
+        'building-on-demand': 'building_on_demand',
     }[module]
     target = {'proposal_id': {'type': 'integer', 'minimum': 1}} if personalized else {
         'language': {'type': 'string', 'enum': ['es', 'en'], 'default': 'es'},
@@ -118,3 +119,4 @@ def video_tools(module, *, personalized=False):
 
 
 PROPOSAL_VIDEO_TOOLS = video_tools('proposal') + video_tools('proposal', personalized=True)
+BUILDING_ON_DEMAND_VIDEO_TOOLS = video_tools('building-on-demand')

@@ -1,3 +1,5 @@
+> **Video de Scrum y distribución contable — 2026-10-22:** Building on Demand reutiliza los recursos de video privados, los controles compartidos y las operaciones MCP de Comercial. Su visibilidad y archivo se resuelven en lectura pública, separados de las revisiones del programa. La migración aditiva content.0298 agrega el interruptor. Las tablas contables optan por distribución por contenido; las demás conservan el reparto proporcional.
+
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común

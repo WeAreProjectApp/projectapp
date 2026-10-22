@@ -114,6 +114,8 @@ def serialize_public_program(lang):
     message = payload['cta'].pop('whatsapp_message')
     base_url = f'https://wa.me/{WHATSAPP_NUMBER}'
     payload['cta']['whatsapp_url'] = base_url + '?text=' + quote(message)
+    from content.services.explainer_video_service import explainer_video_visible
+    from content.services.video_resource_service import public_resource
     return {
         'language': lang, 'version': program.current_revision.version, 'updated_at': program.updated_at.isoformat(),
         'canonical_path': PUBLIC_PATHS[lang], 'alternate_path': PUBLIC_PATHS['en' if lang == 'es' else 'es'],
@@ -124,6 +126,8 @@ def serialize_public_program(lang):
             'recommended_tier': next(tier['id'] for tier in offer['tiers'] if tier['recommended']),
         },
         'contact': {'whatsapp_base_url': base_url},
+        'show_explainer_video': explainer_video_visible('building-on-demand'),
+        'explainer_video': public_resource('building-on-demand', lang),
     }
 
 

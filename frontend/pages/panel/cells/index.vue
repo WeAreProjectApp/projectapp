@@ -8,6 +8,11 @@ import BuildingOnDemandAdminMcpHint from '~/components/BuildingOnDemand/admin/Mc
 import BuildingOnDemandAdminVersionHistory from '~/components/BuildingOnDemand/admin/VersionHistory.vue';
 import BuildingOnDemandAdminVersionSummary from '~/components/BuildingOnDemand/admin/VersionSummary.vue';
 import { useBuildingOnDemandStore } from '~/stores/building_on_demand';
+import ExplainerVideoCard from '~/components/ExplainerVideoCard.vue';
+import ExplainerVisibilityToggle from '~/components/ExplainerVisibilityToggle.vue';
+import VideoResourceManager from '~/components/resources/VideoResourceManager.vue';
+import { useExplainerVideo } from '~/composables/useExplainerVideos';
+import { useExplainerVideosStore } from '~/stores/explainer_videos';
 
 definePageMeta({ layout: 'admin', middleware: ['admin-auth'] });
 
@@ -15,6 +20,8 @@ const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const store = useBuildingOnDemandStore();
+const videoSettings = useExplainerVideosStore();
+const explainer = useExplainerVideo('building-on-demand', computed(() => store.previewLanguage), computed(() => videoSettings.settings?.resources?.[`building-on-demand:${store.previewLanguage}`]));
 const tabFromQuery = (value) => ['economics', 'contract'].includes(value) ? value : 'program';
 const activeSection = ref(tabFromQuery(route.query.tab));
 const loadedTabs = { program: false, economics: false, contract: false };
@@ -85,6 +92,9 @@ onMounted(async () => {
       <BuildingOnDemandAdminMcpHint :connector="store.connector" />
 
       <template v-if="activeSection === 'program'">
+        <ExplainerVisibilityToggle module="building-on-demand" i18n-namespace="buildingOnDemand" test-id="building-on-demand-explainer" />
+        <ExplainerVideoCard v-if="explainer" :video="explainer" i18n-namespace="buildingOnDemand" variant="compact" test-id="building-on-demand-explainer" />
+        <VideoResourceManager module="building-on-demand" :language="store.previewLanguage" />
         <div v-if="store.isLoadingOverview && !store.programSummary" class="h-32 animate-pulse rounded-xl bg-surface-raised" role="status" :aria-label="t('buildingOnDemandAdmin.loading')" />
         <BuildingOnDemandAdminVersionSummary v-else-if="!store.overviewError" :summary="store.programSummary" test-id="building-on-demand-admin-program-version" />
         <BuildingOnDemandAdminVersionHistory
@@ -114,6 +124,7 @@ onMounted(async () => {
             :program="store.preview"
             :language="store.previewLanguage"
             :floating-actions="false"
+            :show-explainer="false"
           />
         </section>
       </template>

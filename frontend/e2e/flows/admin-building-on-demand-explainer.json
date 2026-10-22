@@ -1,0 +1,15 @@
+{
+  "id": "admin-building-on-demand-explainer",
+  "name": "Admin Building on Demand Explainer",
+  "module": "admin",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P3",
+  "description": "Entrar a Células desde el panel, consultar la tarjeta compacta y reproducir el video; pausar al perder foco y ofrecer un enlace al archivo si falla.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

@@ -2750,3 +2750,7 @@ liquidación se rechazan antes de crear una confirmación.
 `accounting-ledger.get_pocket` comparte la lectura individual del Panel. Además de los campos del listado, devuelve `running_balance` (saldo real después del movimiento, sin filtros), `linked_record_detail` (tipo, identificador, concepto y categoría del gasto cuando aplica) y `allocation_details` (importe imputado, ingreso esperado, pendiente actual y marca de saldo a favor). Los importes siguen siendo decimales como texto. El saldo se ordena por fecha, creación e identificador; el pendiente incluye los demás pagos y deducciones y no es un snapshot histórico. `list_pocket` mantiene su respuesta liviana. No hay campos nuevos de modelo ni cambios de escritura o permisos.
 
 Validación focal: `content/tests/views/test_pocket_movement_detail.py` comprueba atribución, saldo, reparto, acceso y paridad REST/MCP.
+
+## Video de Células Scrum (2026-10-22)
+
+Comercial incorpora las cinco operaciones `*_building_on_demand_video*`, con carga binaria compartida y revisión del recurso. Validar consulta, upload MP4, rechazo de archivo inválido, revisión 409, retirada, restauración y visibilidad; comparar lo consultado con la API pública. El contrato de campos clasifica el interruptor nuevo y conserva excluidos los de otros módulos en los adaptadores. Sin nuevos permisos ni conectores; los cambios no alteran versiones comerciales.

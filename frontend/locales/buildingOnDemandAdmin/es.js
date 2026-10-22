@@ -10,7 +10,7 @@ export default {
   previewLanguages: { label: 'Idioma de la vista previa', es: 'Español', en: 'English' },
   mcpHint: {
     title: 'Administración desde MCP',
-    description: 'El programa, los datos de economía y el contrato se administran únicamente desde el conector MCP building-on-demand, con vista previa y confirmación. Este panel es de solo lectura.',
+    description: 'El programa, los datos de economía y el contrato se administran desde MCP, con vista previa y confirmación. El video se puede gestionar aquí o desde el mismo conector.',
     active: 'Conector activo',
     inactive: 'Conector inactivo',
     unavailable: 'Estado del conector no disponible',

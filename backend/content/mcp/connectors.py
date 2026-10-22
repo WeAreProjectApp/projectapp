@@ -38,7 +38,7 @@ from content.mcp.proposal_tools import PROPOSAL_TOOLS
 from content.mcp.secure_link_tools import SECURE_LINK_TOOLS
 from content.mcp.task_tools import TASK_TOOLS
 from content.mcp.tools import BLOG_TOOLS
-from content.mcp.video_tools import PROPOSAL_VIDEO_TOOLS
+from content.mcp.video_tools import BUILDING_ON_DEMAND_VIDEO_TOOLS, PROPOSAL_VIDEO_TOOLS
 
 
 BASE = (
@@ -84,6 +84,7 @@ class ConnectorSpec:
     canonical_area: str = ''
     notes: tuple[str, ...] = ()
     module_id: str = ''
+    catalog_version: str = ''
 
     @property
     def server_name(self):
@@ -169,7 +170,8 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
         'building-with-us', '1.0.0', (BUILDING_WITH_US_TOOLS,), confirm_sensitive=True,
     ),
     'building-on-demand': ConnectorSpec(
-        'building-on-demand', '1.0.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS), confirm_sensitive=True,
+        'building-on-demand', '1.1.0', (BUILDING_ON_DEMAND_TOOLS, BUILDING_ON_DEMAND_CONTRACT_TOOLS, BUILDING_ON_DEMAND_VIDEO_TOOLS), confirm_sensitive=True,
+        uploads=True, catalog_version='2.1.0',
     ),
     'partnership-program': ConnectorSpec(
         'partnership-program', '2.1.1', (PARTNERSHIP_PROGRAM_TOOLS,),
@@ -185,7 +187,7 @@ SOURCE_CONNECTORS: dict[str, ConnectorSpec] = {
          PROPOSAL_VIDEO_TOOLS, PROPOSAL_FORMALIZATION_TOOLS,
          [tool for tool in ADDITIONAL_MODULE_TOOLS + PARTNERSHIP_PROGRAM_TOOLS
           if tool['name'] not in {existing['name'] for existing in COMMERCIAL_PARITY_TOOLS}]),
-        uploads=True, confirm_sensitive=True,
+        uploads=True, confirm_sensitive=True, catalog_version='5.1.0',
     ),
     'projects': ConnectorSpec(
         'projects', '3.0.0', (PROJECT_TOOLS,), uploads=True,
@@ -217,7 +219,6 @@ from content.mcp.consolidation import build_catalogs  # noqa: E402
 CONNECTORS, TOOLS_BY_SLUG, LEGACY_TOOLS_BY_SLUG = build_catalogs(
     SOURCE_CONNECTORS, replace, build_common_tools,
 )
-
 
 def tools_for_credential(slug, credential):
     if credential is not None and getattr(credential, 'catalog', '') == 'legacy':

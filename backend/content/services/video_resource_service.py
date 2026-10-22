@@ -17,7 +17,7 @@ from content.models import ExplainerVideoSettings, VideoResource
 
 logger = logging.getLogger(__name__)
 VIDEO_MAX_BYTES = 250 * 1024 * 1024
-VIDEO_MODULES = ('financing', 'additional-modules', 'proposal')
+VIDEO_MODULES = ('financing', 'additional-modules', 'proposal', 'building-on-demand')
 
 
 class VideoConflict(APIException):

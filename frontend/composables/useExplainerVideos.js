@@ -6,15 +6,20 @@ import proposalEs from '~/assets/videos/explainers/proposal-brag-v2-es.mp4'
 import proposalEsPoster from '~/assets/images/explainers/proposal-brag-v2-es.webp'
 import financingEs from '~/assets/videos/explainers/financing-brag-v2-es.mp4'
 import financingEsPoster from '~/assets/images/explainers/financing-brag-v2-es.webp'
+import buildingOnDemandEs from '~/assets/videos/explainers/building-on-demand-brag-v2-es.mp4'
+import buildingOnDemandEsPoster from '~/assets/images/explainers/building-on-demand-brag-v2-es.webp'
 
 /**
  * Explainer videos produced with brag and rendered offline with HyperFrames (see explainers/README.md).
  * Each entry is keyed by module id and language; a missing language means the
  * surface hides the card until that render exists.
  */
-export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing', 'proposal'])
+export const EXPLAINER_IDS = Object.freeze(['additional-modules', 'financing', 'proposal', 'building-on-demand'])
 
 const EXPLAINERS = Object.freeze({
+  'building-on-demand': {
+    es: { src: buildingOnDemandEs, poster: buildingOnDemandEsPoster, durationSeconds: 60, width: 1920, height: 1080 },
+  },
   proposal: {
     es: { src: proposalEs, poster: proposalEsPoster, durationSeconds: 58.2, width: 1920, height: 1080 },
   },

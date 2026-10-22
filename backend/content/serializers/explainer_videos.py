@@ -24,6 +24,7 @@ class ExplainerVideoSettingsSerializer(serializers.ModelSerializer):
             'show_additional_modules_video',
             'show_financing_video',
             'show_proposal_video',
+            'show_building_on_demand_video',
             'updated_at', 'resources',
         )
         read_only_fields = ('updated_at',)

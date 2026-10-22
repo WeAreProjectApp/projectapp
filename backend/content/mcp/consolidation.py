@@ -54,7 +54,7 @@ def build_catalogs(sources, replace, common):
             source, compatibility=slug != canonical, canonical_area=canonical,
             confirm_sensitive=True,
             module_id=MODULE_CONNECTORS[canonical][0],
-            version=f'{int(source.version.split(".")[0]) + 1}.0.0',
+            version=source.catalog_version or f'{int(source.version.split(".")[0]) + 1}.0.0',
         )
         raw[slug] = _unique(tool for group in source.sources for tool in group)
 

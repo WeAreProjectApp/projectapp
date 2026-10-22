@@ -1,3 +1,5 @@
+> **Células Scrum y legibilidad contable — 2026-10-22:** Células ofrece video explicativo español en el panel y la página pública, con visibilidad, sustitución, retirada y restauración. Sin recurso en inglés se omite la tarjeta. Bolsillo, Ingresos y Gastos aprovechan el ancho sobrante para Concepto y mantienen importes completos a la derecha.
+
 > **Aprobación y documentos compartidos — 2026-10-20:** cierre interno obligatorio, identidad única en propuesta/gestor, paquetes privados versionados y conflictos de edición sin sobrescritura. Históricos mediante inventario y confirmación explícita. Esquema content.0296–0297; despliegue separado. [Contrato y operación](../PROPOSAL_SHARED_DOCUMENTS.md).
 
 > **Liquidación unificada — 2026-10-19:** panel y MCP usan una operación común
