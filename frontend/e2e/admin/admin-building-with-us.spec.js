@@ -199,7 +199,7 @@ test.describe('Admin Building with Us', () => {
     await page.goto('/es-co/panel/building-with-us?tab=contract', { waitUntil: 'domcontentloaded' });
 
     await expect(page.getByTestId('building-with-us-mirror-status')).toHaveText('Desactualizado');
-    await expect(page.getByTestId('building-with-us-mirror-alert')).toHaveText('La copia del Gestor Documental está desactualizada. Se sincroniza desde el MCP «Building with Us».');
+    await expect(page.getByTestId('building-with-us-mirror-alert')).toHaveText('La copia del Gestor Documental está desactualizada. Se sincroniza desde el MCP «Programas».');
   });
 
   test('hides the mirror link before document initialization', {
@@ -213,7 +213,7 @@ test.describe('Admin Building with Us', () => {
 
     await expect(page.getByTestId('building-with-us-mirror-status')).toHaveText('Sin inicializar');
     await expect(page.getByTestId('building-with-us-mirror-link')).toHaveCount(0);
-    await expect(page.getByTestId('building-with-us-mirror-alert')).toHaveText('La copia del Gestor Documental se inicializa desde el MCP «Building with Us».');
+    await expect(page.getByTestId('building-with-us-mirror-alert')).toHaveText('La copia del Gestor Documental se inicializa desde el MCP «Programas».');
   });
 
   test('downloads the read-only contract PDF', {
