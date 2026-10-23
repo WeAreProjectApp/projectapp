@@ -141,15 +141,19 @@ versiones. Los adaptadores reutilizan los serializers y servicios del panel.
 `text_formats` tiene un esquema acotado explícito; los campos Markdown nativos
 publican directamente la gramática `markdown_html_v1`. Las acciones sensibles
 mantienen la confirmación transaccional existente.
+El mapa es opcional y cerrado mediante un patrón de claves JSON Pointer, con
+valores tipados y hasta 1000 entradas. Los demás campos requeridos de cada
+operación conservan su obligatoriedad; añadir formato no obliga a los clientes
+históricos a enviar metadatos.
 
 Se verifica la paridad entre `initialize`, `server/discover`, `tools/list` y
 `describe_capabilities`; sus huellas quedan fijadas en
 `backend/content/mcp/connector_contracts.json`.
 
-Versiones de esta entrega: Documentos 8.1.0, Comunicaciones 3.1.1, Comercial
-6.2.0, Propuestas 6.1.0, Diagnósticos 2.1.0, Blog 2.1.0, Contenido 3.1.0,
-Building with Us 3.1.0, Building on Demand 4.1.0, Módulos adicionales 4.1.1,
-Oferta 1.1.1 y Programas 2.1.0. Los esquemas explícitos de módulos y paquetes
+Versiones de esta entrega: Documentos 8.1.1, Comunicaciones 3.1.2, Comercial
+6.2.1, Propuestas 6.1.1, Diagnósticos 2.1.1, Blog 2.1.1, Contenido 3.1.1,
+Building with Us 3.1.1, Building on Demand 4.1.1, Módulos adicionales 4.1.2,
+Oferta 1.1.2 y Programas 2.1.1. Los esquemas explícitos de módulos y paquetes
 describen también sus argumentos y dejan de usar la excepción de esquema genérico.
 
 ## Pruebas y operación

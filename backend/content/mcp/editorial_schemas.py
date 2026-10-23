@@ -7,7 +7,15 @@ TEXT_FORMATS_SCHEMA = {
         'listas y tablas; HTML limitado conserva color, resaltado y alineación. '
         'WhatsApp usa whatsapp_v1 y su sintaxis propia. Omitir conserva el formato existente.'
     ),
-    'propertyNames': {'type': 'string', 'pattern': '^/'},
-    'additionalProperties': {'type': 'string', 'enum': ['plain', 'markdown', 'markdown_html_v1', 'whatsapp_v1']},
-    'x-mcp-open-reason': 'Mapa acotado de rutas editoriales; el servicio valida cada ruta contra el recurso real.',
+    'propertyNames': {
+        'type': 'string', 'pattern': '^/',
+        'description': 'Ruta JSON Pointer del texto; el servicio comprueba que existe y admite formato.',
+    },
+    'patternProperties': {
+        '^/': {
+            'type': 'string', 'enum': ['plain', 'markdown', 'markdown_html_v1', 'whatsapp_v1'],
+            'description': 'Formato que interpreta el contenido del texto señalado por la ruta.',
+        },
+    },
+    'additionalProperties': False,
 }

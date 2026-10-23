@@ -160,6 +160,70 @@ def test_schema_policy_accepts_typed_nested_values(value):
     assert schema_problems({'name': 'example', 'input_schema': schema}) == []
 
 
+def test_schema_policy_accepts_a_closed_typed_pattern_map():
+    """Falla si un mapa cerrado por patrón tipado se confunde con un objeto sin propiedades permitidas."""
+    pointer_value = {
+        'type': 'string',
+        'enum': ['markdown'],
+        'description': 'Formato permitido para cada ruta.',
+    }
+    pointer_map = {
+        'type': 'object',
+        'additionalProperties': False,
+        'description': 'Mapa editorial cerrado por rutas JSON Pointer.',
+        'propertyNames': {
+            'type': 'string',
+            'pattern': '^/',
+            'description': 'Cada clave empieza con /.',
+        },
+        'patternProperties': {'^/': pointer_value},
+    }
+
+    problems = schema_problems({
+        'name': 'example', 'input_schema': closed_object({'payload': pointer_map}),
+    })
+
+    assert problems == []
+
+
+def test_schema_policy_rejects_an_untyped_pattern_value():
+    """Falla si una clave de patrón admite valores sin tipo, enum, const o combinador tipado."""
+    pointer_map = {
+        'type': 'object',
+        'additionalProperties': False,
+        'description': 'Mapa cerrado.',
+        'patternProperties': {'^/': {'description': 'Formato sin tipo.'}},
+    }
+
+    problems = schema_problems({
+        'name': 'example', 'input_schema': closed_object({'payload': pointer_map}),
+    })
+
+    assert any(
+        '/properties/payload/patternProperties/^~1' in problem
+        and 'declare a type' in problem
+        for problem in problems
+    )
+
+
+def test_schema_policy_rejects_an_open_map_without_a_reason():
+    """Falla si un mapa de claves libres queda abierto sin explicar por qué el contrato no puede cerrarse."""
+    unbounded_map = {
+        'type': 'object',
+        'additionalProperties': True,
+        'description': 'Mapa de valores libres.',
+    }
+
+    problems = schema_problems({
+        'name': 'example', 'input_schema': closed_object({'payload': unbounded_map}),
+    })
+
+    assert any(
+        '/properties/payload' in problem and 'open reason' in problem
+        for problem in problems
+    )
+
+
 @pytest.mark.parametrize('node,fragment', [
     ({'type': 'array', 'properties': {}, 'additionalProperties': False}, '/type:'),
     ({'type': 'object', 'properties': [], 'additionalProperties': False}, '/properties:'),

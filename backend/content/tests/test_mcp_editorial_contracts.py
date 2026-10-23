@@ -78,13 +78,27 @@ def _format_maps(value):
 
 @pytest.mark.parametrize('slug,name,envelope', SCHEMA_CASES, ids=[f'{slug}/{name}' for slug, name, _ in SCHEMA_CASES])
 def test_mcp_published_schema_exposes_bounded_metadata(slug, name, envelope):
-    """Falla si tools/list oculta la metadata o publica un mapa editorial sin límites y formatos explícitos."""
+    """Falla si tools/list publica un mapa editorial abierto o sin límites."""
     schema = _write_schema(_published(slug, name), envelope)
+    metadata = schema['properties']['text_formats']
 
-    assert schema['properties']['text_formats']['type'] == 'object'
-    assert schema['properties']['text_formats']['maxProperties'] == 1000
-    assert schema['properties']['text_formats']['propertyNames']['pattern'] == '^/'
-    assert schema['properties']['text_formats']['additionalProperties']['enum'] == ['plain', 'markdown', 'markdown_html_v1', 'whatsapp_v1']
+    assert metadata['type'] == 'object'
+    assert metadata['maxProperties'] == 1000
+    assert metadata['additionalProperties'] is False
+    assert metadata['propertyNames']['pattern'] == '^/'
+    assert metadata['propertyNames']['description']
+
+
+@pytest.mark.parametrize('slug,name,envelope', SCHEMA_CASES, ids=[f'{slug}/{name}' for slug, name, _ in SCHEMA_CASES])
+def test_mcp_published_schema_types_each_editorial_pointer(slug, name, envelope):
+    """Falla si tools/list deja un valor de ruta sin formato declarado o vuelve obligatoria la metadata."""
+    schema = _write_schema(_published(slug, name), envelope)
+    metadata = schema['properties']['text_formats']
+    format_value = metadata['patternProperties']['^/']
+
+    assert format_value['type'] == 'string'
+    assert format_value['enum'] == ['plain', 'markdown', 'markdown_html_v1', 'whatsapp_v1']
+    assert format_value['description']
     assert 'text_formats' not in schema.get('required', [])
 
 

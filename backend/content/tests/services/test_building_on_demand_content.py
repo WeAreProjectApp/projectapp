@@ -751,11 +751,23 @@ class TestPublishedSchemas:
 
     @pytest.mark.parametrize('builder', FULL_ITEM_BUILDERS)
     def test_full_item_schema_requires_every_property(self, builder):
-        """Fails if a create schema publishes any top-level field as optional."""
+        """Fails if a create schema weakens required business fields or makes editorial metadata mandatory."""
         schema = builder()
+        required_business_fields = [
+            field for field in schema['properties']
+            if field != 'text_formats'
+        ]
 
-        assert schema['required'] == list(schema['properties'])
-        assert schema['properties']['es']['required'] == list(schema['properties']['es']['properties'])
+        assert schema['required'] == required_business_fields
+        assert 'text_formats' not in schema['required']
+        language_schema = schema['properties']['es']
+        required_language_fields = [
+            field for field in language_schema['properties']
+            if field != 'text_formats'
+        ]
+
+        assert language_schema['required'] == required_language_fields
+        assert 'text_formats' not in language_schema['required']
 
     def test_schema_builders_return_independent_documents(self):
         """Fails if a caller can mutate future schemas by editing a returned document."""
