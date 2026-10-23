@@ -21,11 +21,14 @@ from content.models import (
     BuildingOnDemandProgramRevision,
     BuildingWithUsProgram,
     BuildingWithUsProgramRevision,
+    ConsultingProgram,
+    ConsultingProgramRevision,
     ExplainerVideoSettings,
     FinancingPolicyRevision,
     HourPackage,
 )
 from content.services import frontend_build
+from content.tests.consulting_fixtures import consulting_program
 
 TWENTY_REASONS = [f'reason-{index:02d}' for index in range(20)]
 
@@ -93,11 +96,25 @@ class TestRebuildNeeded:
         BuildingOnDemandProgramRevision.objects.all().delete()
         BuildingWithUsProgram.objects.all().delete()
         BuildingWithUsProgramRevision.objects.all().delete()
+        ConsultingProgram.objects.all().delete()
+        ConsultingProgramRevision.objects.all().delete()
         AdditionalModule.objects.all().delete()
         AdditionalModuleCategory.objects.all().delete()
         FinancingPolicyRevision.objects.all().delete()
         HourPackage.objects.all().delete()
         assert frontend_build.rebuild_needed() is False
+
+    def test_true_again_after_consulting_revision(self, consulting_program, admin_user, marker_path):
+        """Fails if publishing consulting copy leaves the previous public page fresh."""
+        from content.services.consulting_program_service import apply_update, read_program
+        from content.tests.consulting_fixtures import hero_update
+
+        with freeze_time('2030-01-01T12:00:00Z'):
+            write_marker_now(marker_path)
+        with freeze_time('2030-01-01T12:01:00Z'):
+            apply_update(hero_update(read_program()), actor=admin_user)
+
+        assert frontend_build.rebuild_needed() is True
 
     def test_true_again_after_on_demand_revision(self, building_on_demand_program, admin_user, marker_path):
         """Fails if publishing cell program copy leaves the old prerendered page fresh."""
