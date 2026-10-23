@@ -80,7 +80,7 @@ def test_anonymous_visitors_cannot_read_private_panel_metadata(path, api_client)
     """Fails if anonymous visitors can read Consulting provenance through a Panel route."""
     response = api_client.get(path)
 
-    assert response.status_code == 403
+    assert response.status_code == 401
 
 
 def test_admin_overview_returns_seed_provenance_and_commercial_connector(consulting_program, admin_client):
