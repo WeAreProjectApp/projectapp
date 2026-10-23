@@ -15,7 +15,7 @@ const content = {
       ['five-year', 'Alianza a 5 años', 'Recomendada', true, 5],
       ['three-year', 'Alianza a 3 años', 'Alternativa', false, 3],
     ],
-    conditionTitles: ['12 meses de financiación', 'Exclusividad y custodia responsable', 'Calculadora de requerimientos', '60 horas disponibles cada mes', 'Pagos claros y cobertura del riesgo de impago', 'Un rango claro para aplicar', 'Análisis de riesgo y aporte desde el 20%', 'Exclusividad conceptual — sólo a 5 años'],
+    conditionTitles: ['12 meses de financiación', 'Exclusividad y custodia responsable', 'Calculadora de requerimientos', '4 XS, 2 S y 1 M disponibles cada mes', 'Pagos claros y cobertura del riesgo de impago', 'Un rango claro para aplicar', 'Análisis de riesgo y aporte desde el 20%', 'Exclusividad conceptual — sólo a 5 años'],
     conceptualExclusivity: {
       summary: 'Project App. renuncia durante los cinco años a reproducir conceptos, ideas o enfoques específicos del producto para proyectos competidores del mismo sector y nicho.',
       included: 'Exclusividad conceptual a cargo de Project App. durante los cinco años.',
@@ -35,7 +35,7 @@ const content = {
     package: {
       title: 'Capacidad mensual para la evolución del producto',
       summary: 'Pensado principalmente para requerimientos pequeños y acotados.',
-      renewal_label: 'Se renueva cada mes', rollover_label: 'No acumula horas',
+      renewal_label: 'Se renueva cada mes', rollover_label: 'No acumula cupos',
       availability_label: 'Desde producción', included_label: 'Incluido sin costo adicional',
     },
     term: {
@@ -67,7 +67,7 @@ const content = {
       ['five-year', '5-year partnership', 'Recommended', true, 5],
       ['three-year', '3-year partnership', 'Alternative', false, 3],
     ],
-    conditionTitles: ['12 months of financing', 'Exclusivity and responsible custody', 'Requirement calculator', '60 hours available every month', 'Clear payments and default-risk coverage', 'A clear eligibility range', 'Risk review and contribution from 20%', 'Conceptual exclusivity — five-year option only'],
+    conditionTitles: ['12 months of financing', 'Exclusivity and responsible custody', 'Requirement calculator', '4 XS, 2 S and 1 M available every month', 'Clear payments and default-risk coverage', 'A clear eligibility range', 'Risk review and contribution from 20%', 'Conceptual exclusivity — five-year option only'],
     conceptualExclusivity: {
       summary: 'During the five-year term, Project App. agrees not to reproduce specific product concepts, ideas, or approaches for competing projects in the same sector and niche.',
       included: 'Conceptual exclusivity by Project App. throughout the five-year term.',
@@ -87,7 +87,7 @@ const content = {
     package: {
       title: 'Monthly capacity for product evolution',
       summary: 'Intended mainly for small, bounded requirements.',
-      renewal_label: 'Renews every month', rollover_label: 'Hours do not roll over',
+      renewal_label: 'Renews every month', rollover_label: 'Requirements do not roll over',
       availability_label: 'Available from production', included_label: 'Included at no additional cost',
     },
     term: {
@@ -159,7 +159,9 @@ export function financingProgramFixture(language = 'es', overrides = {}) {
     package: {
       ...copy.package,
       name: language === 'en' ? 'Pro Pack' : 'Paquete Pro',
-      hours: 60,
+      xs_count: 4,
+      s_count: 2,
+      m_count: 1,
       renews_monthly: true,
       rollover: false,
       catalog_synced: overrides.catalogSynced ?? true,

@@ -6,7 +6,7 @@ export const proposalNavigationGroups = [
     id: 'proposal', label: 'Propuesta', sections: [
       { id: 'sections', label: 'Secciones' },
       { id: 'technical', label: 'Detalle técnico' },
-      { id: 'hour-rate', label: 'Tarifa por hora' },
+      { id: 'hour-rate', label: 'Paquetes de requerimientos' },
       { id: 'prompt', label: 'Prompt' },
       { id: 'json', label: 'JSON' },
       { id: 'resources', label: 'Recursos' },

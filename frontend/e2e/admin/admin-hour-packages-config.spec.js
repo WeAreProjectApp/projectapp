@@ -1,140 +1,71 @@
-/**
- * E2E tests for the hour-packages Configuración section — base rates.
- *
- * Covers: base-rate inputs prefilled from settings, saving propagates the
- * rate (PATCH + success notification + refreshed catalog), invalid rate is
- * rejected client-side.
- */
+/** Configuration specs catch stale price inputs and saves that report success after rejection. */
 import { test, expect } from '../helpers/test.js';
-import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { mockRequirementPackages, pricingSettings, colombiaPackages } from '../helpers/requirement-packages.js';
 import { ADMIN_HOUR_PACKAGES_CONFIG } from '../helpers/flow-tags.js';
 
-const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
-
-const settings = {
-  default_view_mode: 'table',
-  base_rate_col: '30000.00',
-  base_rate_ext: '18.00',
-  base_rate_usa: '30.00',
-  updated_at: '2026-07-01T10:00:00Z',
-};
-
-function colPackages(rate) {
-  return [
-    { id: 1, nationality: 'COL', currency: 'COP', name_es: 'Hora Puntual', name_en: 'Single Hour', hours: 1, hourly_rate: rate, discount_percent: 0, is_active: true, order: 1, updated_at: '2026-07-01T10:00:00Z' },
-    { id: 2, nationality: 'COL', currency: 'COP', name_es: 'Paquete Ágil', name_en: 'Agile Pack', hours: 20, hourly_rate: rate, discount_percent: 10, is_active: true, order: 2, updated_at: '2026-07-01T10:00:00Z' },
-  ];
-}
-
-function setupMock(page) {
-  let lastPatchBody = null;
-  let ratePropagated = false;
-  mockApi(page, async ({ apiPath, route }) => {
-    if (apiPath === 'auth/check/') return authCheck;
-    if (apiPath === 'hour-packages/admin/settings/') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(settings) };
-    }
-    if (apiPath === 'hour-packages/admin/settings/update/' && route.request().method() === 'PATCH') {
-      lastPatchBody = route.request().postDataJSON();
-      ratePropagated = true;
-      return {
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          ...settings,
-          base_rate_col: '35000.00',
-          updated_packages: { COL: 2 },
-        }),
-      };
-    }
-    if (apiPath === 'hour-packages/admin/' && route.request().method() === 'GET') {
-      const body = colPackages(ratePropagated ? '35000.00' : '30000.00');
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(body) };
-    }
-    return null;
-  });
-  return { getLastPatchBody: () => lastPatchBody };
-}
-
-test.describe('Admin Hour Packages Config — base rates', () => {
+test.describe('Admin requirement package configuration', () => {
   test.setTimeout(60_000);
+  test.beforeEach(async ({ page }) => setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9700, role: 'admin', is_staff: true } }));
 
-  test.beforeEach(async ({ page }) => {
-    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9700, role: 'admin', is_staff: true } });
+  test('configuration renders internal prices and alliance cups', { tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:display'] }, async ({ page }) => {
+    // Bug caught: configuration still renders per-hour prices.
+    // quality: allow-deep-link (panel navigation is covered centrally; this flow clicks the configuration section)
+    await mockRequirementPackages(page);
+    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('hour-packages-section-config').click();
+    await expect(page.getByTestId('packages-setting-xs_price_cop')).toHaveValue('50000');
+    await expect(page.getByTestId('packages-setting-s_price_cop')).toHaveValue('125000');
+    await expect(page.getByTestId('packages-alliance-m')).toHaveValue('1');
   });
 
-  test('prefills the base-rate inputs from settings', {
-    tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:display'],
-  }, async ({ page }) => {
-    // quality: allow-deep-link (reaching /panel/hour-packages through the
-    // panel nav is exercised by the shared navigation specs; this test pins
-    // the settings-driven prefill values of the config section)
-    setupMock(page);
+  test('saving XS price refreshes the catalog total', { tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:success'] }, async ({ page }) => {
+    // Bug caught: price configuration saves but new catalog totals remain stale.
+    const nextAgile = { ...colombiaPackages[0], reference_price: '1800000', savings: '180000', total_price: '1620000' };
+    const capture = await mockRequirementPackages(page, { afterSettingsCol: [nextAgile, ...colombiaPackages.slice(1)], updateBody: { ...pricingSettings, xs_price_cop: 60000 } });
     await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
-
+    await expect(page.getByRole('table')).toContainText('$1.350.000 COP');
     await page.getByTestId('hour-packages-section-config').click();
-
-    await expect(page.getByTestId('hour-packages-base-rate-col')).toHaveValue('30000');
-    await expect(page.getByTestId('hour-packages-base-rate-ext')).toHaveValue('18');
-    await expect(page.getByTestId('hour-packages-base-rate-usa')).toHaveValue('30');
-  });
-
-  test('saving a new COL rate propagates and the catalog reflects it', {
-    tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    const { getLastPatchBody } = setupMock(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
-
-    await page.getByTestId('hour-packages-section-config').click();
-    await page.getByTestId('hour-packages-base-rate-col').fill('35000');
+    await page.getByTestId('packages-setting-xs_price_cop').fill('60000');
     await page.getByTestId('hour-packages-save-base-rates').click();
-
-    await expect(page.getByText('Tarifas base guardadas. 2 paquetes actualizados.')).toBeVisible();
-    expect(getLastPatchBody()).toMatchObject({
-      base_rate_col: 35000, base_rate_ext: 18, base_rate_usa: 30,
-    });
-
+    await expect(page.getByText('Configuración guardada. Las ofertas emitidas conservan sus condiciones.')).toBeVisible();
+    expect(capture.settings.xs_price_cop).toBe(60000);
     await page.getByTestId('hour-packages-section-catalog').click();
-    await expect(page.locator('table').getByText('$35.000 COP').first()).toBeVisible();
+    await expect(page.getByRole('table')).toContainText('$1.620.000 COP');
   });
 
-  test('shows an error notification when the settings PATCH fails server-side', {
-    tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:failure'],
-  }, async ({ page }) => {
-    mockApi(page, async ({ apiPath, route }) => {
-      if (apiPath === 'auth/check/') return authCheck;
-      if (apiPath === 'hour-packages/admin/settings/') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(settings) };
-      }
-      if (apiPath === 'hour-packages/admin/settings/update/' && route.request().method() === 'PATCH') {
-        return { status: 500, contentType: 'application/json', body: JSON.stringify({ detail: 'boom' }) };
-      }
-      if (apiPath === 'hour-packages/admin/' && route.request().method() === 'GET') {
-        return { status: 200, contentType: 'application/json', body: JSON.stringify(colPackages('30000.00')) };
-      }
-      return null;
-    });
+  test('server validation keeps configuration visible', { tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:error'] }, async ({ page }) => {
+    // Bug caught: a 400 clears fields or shows a success notification.
+    await mockRequirementPackages(page, { updateStatus: 400 });
     await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
-
     await page.getByTestId('hour-packages-section-config').click();
-    await page.getByTestId('hour-packages-base-rate-col').fill('40000');
+    await page.getByTestId('packages-setting-xs_price_cop').fill('0');
     await page.getByTestId('hour-packages-save-base-rates').click();
-
-    await expect(page.getByText('No se pudieron guardar las tarifas base.')).toBeVisible();
+    await expect(page.getByText('No se pudo guardar. Revisa valores positivos, cupos enteros y al menos un cupo para Alianza.')).toBeVisible();
+    await expect(page.getByTestId('packages-setting-xs_price_cop')).toHaveValue('0');
   });
 
-  test('rejects a zero rate client-side without calling the API', {
-    tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:error'],
-  }, async ({ page }) => {
-    const { getLastPatchBody } = setupMock(page);
+  test('server failure does not report configuration success', { tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:failure'] }, async ({ page }) => {
+    // Bug caught: a 500 confirmation is mistaken for a saved price configuration.
+    await mockRequirementPackages(page, { updateStatus: 500 });
     await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
-
     await page.getByTestId('hour-packages-section-config').click();
-    await page.getByTestId('hour-packages-base-rate-col').fill('0');
+    await page.getByTestId('packages-setting-xs_price_cop').fill('60000');
     await page.getByTestId('hour-packages-save-base-rates').click();
+    await expect(page.getByText('No se pudo guardar. Revisa valores positivos, cupos enteros y al menos un cupo para Alianza.')).toBeVisible();
+  });
 
-    await expect(page.getByText('Las tarifas base deben ser números mayores a 0.')).toBeVisible();
-    expect(getLastPatchBody()).toBeNull();
+  test('restore confirmation reloads the three default tiers', { tag: [...ADMIN_HOUR_PACKAGES_CONFIG, '@role:admin', '@outcome:success'] }, async ({ page }) => {
+    // Bug caught: restore discards configuration or produces the old hour ladder.
+    const capture = await mockRequirementPackages(page, { col: [{ ...colombiaPackages[0], name_es: 'Custom' }] });
+    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('hour-packages-section-config').click();
+    await page.getByTestId('hour-packages-restore-defaults').click();
+    await page.getByTestId('confirm-modal-confirm').click();
+    expect(capture.restore).toMatchObject({ nationality: 'COL' });
+    await page.getByTestId('hour-packages-section-catalog').click();
+    await expect(page.getByRole('table')).toContainText('Premium');
+    await page.getByTestId('hour-packages-section-config').click();
+    await expect(page.getByTestId('packages-setting-m_price_cop')).toHaveValue('360000');
   });
 });

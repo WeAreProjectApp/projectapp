@@ -96,7 +96,7 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'Usar selección múltiple y acciones por fila.',
     'Crear, editar y previsualizar una pieza comercial.',
     'Previsualizar el video de propuestas y controlar su visibilidad global e individual sin desbordar el panel.',
-    'Crear o editar un paquete de horas.',
+    'Crear o editar un paquete de requerimientos.',
     'Administrar, reordenar, seleccionar y compartir módulos adicionales.',
     'Copiar, abrir, descargar y previsualizar el Programa de Alianza, y mostrar u ocultar su video.',
     'Consultar Programa y Contrato de Building with Us, cambiar el idioma de la vista previa y leer historial y estado del espejo sin desbordar el panel.',

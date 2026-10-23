@@ -1145,7 +1145,7 @@ const {
   labels: {
     general: 'datos de la propuesta',
     sections: 'secciones',
-    hourRate: 'tarifa por hora',
+    hourRate: 'paquetes de requerimientos',
     emailIntro: 'mensaje del correo',
   },
   reload: refreshData,

@@ -25,7 +25,7 @@ from content.models import (
     ConsultingProgramRevision,
     ExplainerVideoSettings,
     FinancingPolicyRevision,
-    HourPackage,
+    HourPackageSettings,
 )
 from content.services import frontend_build
 from content.tests.consulting_fixtures import consulting_program
@@ -185,23 +185,18 @@ class TestRebuildNeeded:
 
         assert frontend_build.rebuild_needed() is True
 
-    def test_true_again_after_included_package_rename(self, db, marker_path):
-        """Fails if renaming the program's monthly package keeps the old name public."""
-        package = HourPackage.objects.get(nationality='COL', hours=60)
+    def test_true_again_after_requirement_allowance_change(self, db, marker_path):
+        """Fails if changing the public monthly allowance leaves the prerender stale."""
+        settings = HourPackageSettings.load()
         write_marker_now(marker_path)
-        package.name_es = 'Paquete Pro Plus'
-        package.save()
+        settings.alliance_xs_count = 8
+        settings.save()
 
         assert frontend_build.rebuild_needed() is True
 
-    def test_false_after_unlisted_package_edit(self, db, marker_path):
-        """Fails if a package the public program never shows forces a regeneration."""
-        package = HourPackage.objects.create(
-            nationality='EXT', name_es='Ágil', name_en='Agile', hours=20, hourly_rate=18,
-        )
+    def test_false_after_unrelated_requirement_catalog_edit(self, db, marker_path):
+        """Fails if an internal catalog edit is treated as a public program change."""
         write_marker_now(marker_path)
-        package.hourly_rate = 25
-        package.save()
 
         assert frontend_build.rebuild_needed() is False
 

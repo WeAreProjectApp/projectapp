@@ -106,6 +106,8 @@ def prepare_proposal_snapshots(proposals, *, acting_user=None):
             for proposal_id in proposal_ids:
                 proposal = locked[proposal_id]
                 try:
+                    from content.services.requirement_package_service import freeze_proposal_packages
+                    freeze_proposal_packages(proposal)
                     pdf_bytes = ProposalPdfService.generate(proposal)
                 except Exception as exc:
                     logger.exception(

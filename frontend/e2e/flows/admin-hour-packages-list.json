@@ -1,12 +1,12 @@
 {
   "id": "admin-hour-packages-list",
-  "name": "Admin Hour Packages List",
+  "name": "Listar paquetes de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P2",
-  "description": "View the hour-package catalog filtered by nationality tabs (COL/EXT/USA) with derived currency and computed totals.",
+  "description": "Admin navega al catálogo por mercado y consulta cupos XS/S/M, vigencia, referencia, descuento, ahorro y total; maneja vacíos y errores de carga.",
   "expectedSpecs": 1,
   "knownGaps": "Spec does not assert view-mode toggle (tracked in admin-hour-packages-view-modes), pagination, or the mobile card variant (2026-07-16 audit).",
   "outcomes": [

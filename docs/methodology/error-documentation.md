@@ -1,5 +1,7 @@
 ## Propuesta con entregable conservado de un proyecto eliminado (2026-10-07)
 
+> **Paquetes por talla — 2026-10-23:** Paquetes USD: con tasa 3.900, Ágil y factor1.4, referencia538.46 y total484.62. Reaplicar10% a538.46 produce484.61; PDF y panel deben usar totalPrice servido. Las pruebas de regresión cubren esta frontera.
+
 La eliminación forzada (#482) conserva el entregable de una propuesta con
 `project=NULL` y `retention_context`. `BusinessProposal.linked_project` leía
 `deliverable.project.pk` sin comprobar `None`: la vista previa de aprobación

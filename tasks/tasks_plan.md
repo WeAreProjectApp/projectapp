@@ -1,5 +1,7 @@
 > **IVA configurable al liquidar — 2026-10-21:** panel y MCP configuran la tasa por ingreso original en la misma operación atómica del pago. El interruptor visible marca Sin IVA (0 %) al apagar; la captura admite base o total incluido. Se conserva el total esperado y los bloqueos por pagos, deducciones o cuentas emitidas. Vista previa sin escrituras, historial y reversión del cambio fiscal. Contrato en `docs/accounting-settlement.md`.
 
+> **Paquetes de requerimientos — implementación en validación, 2026-10-23:** Ágil30XS/10%, Pro30XS+20S/15%, Premium30XS+20S+10M/25% ($5.700.000 COP + IVA). Vigencia12meses; precios por mercado con tasa contable, snapshots y transición explícita de borradores. Alianza4XS+2S+1M mensual independiente. Condiciones: `docs/REQUIREMENT_PACKAGES.md`. La entrega queda pendiente de pruebas y CI; no se ha desplegado.
+
 > **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría: implementar y validar las vistas pública/panel, contenido ES/EN, PDF y publicación versionada por MCP Comercial; cierre con PR verde y merge-queue solicitado por el operador. Precio y duración por alcance, equipo propio, sin descuentos automáticos ni garantía de impacto.
 
 > **Segmentación comercial — 2026-10-22:** implementación en la rama de sesión

@@ -338,6 +338,7 @@ class BusinessProposal(HistoryTrackedModel):
     )
 
     # Contract parameters for PDF generation (populated when status → negotiating)
+    package_pricing_context = models.JSONField(default=dict, blank=True, help_text='Private rate and market factor frozen with the requirement offer.')
     contract_params = models.JSONField(
         default=dict, blank=True,
         help_text='Parameters for contract PDF generation (party names, cédulas, bank details, etc.).',

@@ -1,12 +1,12 @@
 {
   "id": "admin-hour-packages-edit",
-  "name": "Admin Hour Packages Edit",
+  "name": "Editar paquete de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P2",
-  "description": "Edit an existing hour package and verify the computed effective rate/total preview.",
+  "description": "Admin edita cupos XS/S/M, vigencia, nombres, descuento y estado de un paquete; conserva el borrador ante errores del servidor.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

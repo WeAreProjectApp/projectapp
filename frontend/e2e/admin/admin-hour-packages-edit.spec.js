@@ -1,93 +1,32 @@
-/**
- * E2E tests for admin hour-package editing.
- *
- * Covers: form prefilled from detail endpoint, editing rate/discount updates
- * the computed preview, PATCH submit navigates back to the list.
- */
+/** Edit specs catch a fetched tier being rewritten with retired hourly fields. */
 import { test, expect } from '../helpers/test.js';
-import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { mockRequirementPackages, colombiaPackages } from '../helpers/requirement-packages.js';
 import { ADMIN_HOUR_PACKAGES_EDIT } from '../helpers/flow-tags.js';
 
-const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
-
-const packageDetail = {
-  id: 3,
-  nationality: 'EXT',
-  currency: 'USD',
-  name_es: 'Paquete Ágil EXT',
-  name_en: 'Agile Pack EXT',
-  note_es: 'Nota ES',
-  note_en: 'Note EN',
-  hours: 20,
-  hourly_rate: '45.00',
-  discount_percent: 0,
-  is_active: true,
-  order: 1,
-  created_at: '2026-07-01T10:00:00Z',
-  updated_at: '2026-07-01T10:00:00Z',
-};
-
-function setupMock(page, { patched = {} } = {}) {
-  let lastPatchBody = null;
-  const mocked = mockApi(page, async ({ apiPath, route }) => {
-    if (apiPath === 'auth/check/') return authCheck;
-    if (apiPath === 'hour-packages/admin/3/detail/') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify(packageDetail) };
-    }
-    if (apiPath === 'hour-packages/admin/3/update/' && route.request().method() === 'PATCH') {
-      lastPatchBody = route.request().postDataJSON();
-      return {
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({ ...packageDetail, ...lastPatchBody, ...patched }),
-      };
-    }
-    if (apiPath === 'hour-packages/admin/' && route.request().method() === 'GET') {
-      return { status: 200, contentType: 'application/json', body: JSON.stringify([]) };
-    }
-    return null;
-  });
-  return { mocked, getLastPatchBody: () => lastPatchBody };
-}
-
-test.describe('Admin Hour Packages Edit', () => {
+test.describe('Admin requirement package edit', () => {
   test.setTimeout(60_000);
+  test.beforeEach(async ({ page }) => setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9600, role: 'admin', is_staff: true } }));
 
-  test.beforeEach(async ({ page }) => {
-    await setAuthLocalStorage(page, { token: 'e2e-token', userAuth: { id: 9600, role: 'admin', is_staff: true } });
+  test('loaded Pro renders its requirement quantities', { tag: [...ADMIN_HOUR_PACKAGES_EDIT, '@role:admin', '@outcome:display'] }, async ({ page }) => {
+    // Bug caught: edit uses missing hourly fields for a requirement package.
+    // quality: allow-deep-link (the catalog owns navigation to a package detail; this flow verifies its loaded allowance fields)
+    await mockRequirementPackages(page, { detail: colombiaPackages[1] });
+    await page.goto('/panel/hour-packages/2/edit', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('package-xs-count').click();
+    await expect(page.getByTestId('package-xs-count')).toHaveValue('30');
+    await expect(page.getByTestId('package-s-count')).toHaveValue('20');
+    await expect(page.getByTestId('package-validity')).toHaveValue('12');
   });
 
-  test('prefills the form from the detail endpoint', {
-    tag: [...ADMIN_HOUR_PACKAGES_EDIT, '@role:admin', '@outcome:display'],
-  }, async ({ page }) => {
-    // quality: allow-no-interaction (query-param preselect is a load-time computation; no interactable step produces it)
-    setupMock(page);
-    await page.goto('/panel/hour-packages/3/edit');
-
-    await expect(page.getByLabel('Nombre (ES)')).toHaveValue('Paquete Ágil EXT');
-    await expect(page.getByLabel('Nacionalidad')).toHaveValue('EXT');
-    await expect(page.getByLabel('Horas', { exact: true })).toHaveValue('20');
-    await expect(page.getByLabel(/Tarifa por hora/)).toHaveValue('45');
-    await expect(page.getByText('USD (derivada de la nacionalidad)')).toBeVisible();
-  });
-
-  test('edits rate and discount, preview recalculates, and PATCH is sent', {
-    tag: [...ADMIN_HOUR_PACKAGES_EDIT, '@role:admin', '@outcome:success'],
-  }, async ({ page }) => {
-    const { getLastPatchBody } = setupMock(page);
-    await page.goto('/panel/hour-packages/3/edit');
-
-    await expect(page.getByLabel(/Tarifa por hora/)).toHaveValue('45');
-    await page.getByLabel(/Tarifa por hora/).fill('50');
-    await page.getByLabel('Descuento (%)').fill('10');
-
-    await expect(page.getByText('Tarifa efectiva:')).toContainText('$45 USD');
-    await expect(page.getByText('Total del paquete:')).toContainText('$900 USD');
-
+  test('editing M quota PATCHes the requirement field', { tag: [...ADMIN_HOUR_PACKAGES_EDIT, '@role:admin', '@outcome:success'] }, async ({ page }) => {
+    // Bug caught: editing composition does not reach the backend payload.
+    const detail = { ...colombiaPackages[1], id: 3 };
+    const capture = await mockRequirementPackages(page, { detail });
+    await page.goto('/panel/hour-packages/3/edit', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('package-m-count').fill('10');
     await page.getByRole('button', { name: 'Guardar cambios' }).click();
-
+    expect(capture.update).toMatchObject({ xs_count: 30, s_count: 20, m_count: 10, validity_months: 12 });
     await expect(page).toHaveURL(/\/panel\/hour-packages$/);
-    expect(getLastPatchBody()).toMatchObject({ hourly_rate: 50, discount_percent: 10 });
   });
 });

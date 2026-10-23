@@ -260,13 +260,15 @@ def merge_value_added_legal_terms(new_content, previous_content):
     return new_content
 
 
-# Per-proposal hour-rate settings, owned by the «Tarifa por hora» panel tab.
+# Per-proposal package settings, including historical manual-rate compatibility.
 MANUAL_HOUR_RATE_FIELDS = (
     'hourPackagesMode',
     'hourPackagesEnabled',
     'manualHourlyRate',
     'manualCurrency',
     'manualPackageRates',
+    'pricingModel',
+    'packagesFrozen',
 )
 
 
@@ -2033,7 +2035,7 @@ DEFAULT_SECTIONS = [
         'content_json': deepcopy(EMPTY_TECHNICAL_DOCUMENT_JSON),
     },
     {
-        # PDF-only appendix: hour packages + scope-exclusion clause.
+        # PDF-only appendix: requirement packages + scope-exclusion clause.
         # No web component; excluded from the public carousel.
         'section_type': 'commercial_conditions',
         'title': '📑 Condiciones comerciales',
@@ -2042,23 +2044,17 @@ DEFAULT_SECTIONS = [
         'content_json': {
             'index': '17',
             'title': 'Condiciones comerciales',
-            'packagesTitle': 'Paquetes de horas para requerimientos posteriores',
+            'packagesTitle': 'Paquetes de requerimientos por talla',
             'packagesIntro': (
-                'Para requerimientos de esfuerzo bajo o medio-bajo posteriores a la entrega, '
-                'ofrecemos bolsas de horas con tarifa preferencial. A mayor paquete, menor '
-                'es el costo por hora.'
+                'Implementa cambios XS, S y M describiendo el resultado esperado y confirmando '
+                'su talla antes de programarlos. Elige un paquete con cupos y precio definidos.'
             ),
-            'hourlyRate': 30000,
+            'pricingModel': 'requirements',
             'currency': 'COP',
-            'packages': [
-                {'name': 'Hora Puntual', 'hours': 1, 'discountPercent': 0, 'note': 'Para un ajuste express.'},
-                {'name': 'Paquete Ágil', 'hours': 20, 'discountPercent': 10, 'note': 'Para iteraciones cortas.'},
-                {'name': 'Paquete Pro', 'hours': 60, 'discountPercent': 20, 'note': 'Para mejoras continuas.'},
-                {'name': 'Paquete Premium', 'hours': 180, 'discountPercent': 30, 'note': 'Para la evolución sostenida del producto.'},
-            ],
+            'packages': [],
             'effortBadge': (
-                'Todo requerimiento de esfuerzo medio o superior se cotiza como un requerimiento '
-                'independiente, fuera de estos paquetes.'
+                'Cada talla se usa por separado. Los alcances L y XL requieren levantamiento y '
+                'cotización independientes. Las correcciones cubiertas por garantía no consumen cupos.'
             ),
             'scopeTitle': 'Alcance del trabajo aprobado',
             'scopeParagraphs': [
@@ -2077,8 +2073,8 @@ DEFAULT_SECTIONS = [
                 'se planifique y se remunere de forma justa.',
                 'En consecuencia, los tiempos, costos y garantías de esta propuesta aplican solamente '
                 'sobre el alcance descrito. Todo lo que lo exceda se gestionará mediante los paquetes '
-                'de horas anteriores (para esfuerzos bajos o medio-bajos) o como una cotización '
-                'independiente (para esfuerzos medios o superiores).',
+                'de requerimientos anteriores (tallas XS, S y M) o como una cotización '
+                'independiente con levantamiento específico (tallas L y XL).',
                 'La ejecución de cualquier actividad no comprendida en el alcance no lo modifica, no '
                 'genera derecho a exigir prestaciones similares en el futuro ni implica renuncia a lo '
                 'aquí establecido.',
@@ -3372,7 +3368,7 @@ DEFAULT_SECTIONS_EN = [
         'content_json': deepcopy(EMPTY_TECHNICAL_DOCUMENT_JSON),
     },
     {
-        # PDF-only appendix: hour packages + scope-exclusion clause.
+        # PDF-only appendix: requirement packages + scope-exclusion clause.
         'section_type': 'commercial_conditions',
         'title': '📑 Commercial conditions',
         'order': 17,
@@ -3380,22 +3376,17 @@ DEFAULT_SECTIONS_EN = [
         'content_json': {
             'index': '17',
             'title': 'Commercial conditions',
-            'packagesTitle': 'Hour packages for follow-up requirements',
+            'packagesTitle': 'Requirement packages by size',
             'packagesIntro': (
-                'For low or medium-low effort requirements after delivery, we offer hour '
-                'banks at a preferential rate. The larger the package, the lower the cost per hour.'
+                'Implement XS, S and M changes by agreeing on the expected result and confirming '
+                'their size before scheduling. Choose a package with defined allowances and pricing.'
             ),
-            'hourlyRate': 30000,
+            'pricingModel': 'requirements',
             'currency': 'COP',
-            'packages': [
-                {'name': 'Single Hour', 'hours': 1, 'discountPercent': 0, 'note': 'For a quick one-off tweak.'},
-                {'name': 'Agile Pack', 'hours': 20, 'discountPercent': 10, 'note': 'For short iterations.'},
-                {'name': 'Pro Pack', 'hours': 60, 'discountPercent': 20, 'note': 'For continuous improvements.'},
-                {'name': 'Premium Pack', 'hours': 180, 'discountPercent': 30, 'note': 'For sustained product evolution.'},
-            ],
+            'packages': [],
             'effortBadge': (
-                'Any requirement of medium or higher effort is quoted as an independent requirement, '
-                'outside these packages.'
+                'Allowances cannot be exchanged between sizes. L and XL require separate discovery '
+                'and a quote. Warranty corrections do not use allowances.'
             ),
             'scopeTitle': 'Scope of the approved work',
             'scopeParagraphs': [
@@ -3411,8 +3402,8 @@ DEFAULT_SECTIONS_EN = [
                 'misunderstandings about what is included, keeps the '
                 'project focused, and ensures every additional effort is planned and fairly paid.',
                 'Consequently, the timelines, costs and warranties of this proposal apply only to the '
-                'described scope. Anything beyond it will be handled via the hour packages above (for '
-                'low or medium-low efforts) or as an independent quote (for medium or higher efforts).',
+                'described scope. Anything beyond it will use the requirement packages above (XS, S, M), '
+                'or separate discovery and a quote (L and XL).',
                 'Carrying out any activity outside the scope does not modify it, does not create a right '
                 'to demand similar work in the future, and does not waive anything stated here.',
             ],
@@ -4446,6 +4437,8 @@ def build_proposal_from_json(validated_data):
             content_json = enforce_scope_clause(
                 content_json, section_cfg['content_json'],
             )
+            from content.services.requirement_package_service import normalize_section
+            content_json = normalize_section(content_json, proposal)
 
         if section_type == 'functional_requirements' and json_key in sections_data:
             default_cj = copy.deepcopy(section_cfg['content_json'])
@@ -4686,6 +4679,9 @@ def apply_proposal_json_update(proposal, validated_data):
                 new_content = preserve_manual_hour_rate_keys(
                     new_content, section.content_json,
                 )
+                from content.services.requirement_package_service import normalize_section
+                new_content = normalize_section(new_content, proposal, section.content_json)
+
 
             if section.section_type == 'functional_requirements':
                 final_groups = []

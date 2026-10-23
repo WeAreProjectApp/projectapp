@@ -1,5 +1,7 @@
 # Tablas contables y video de Células Scrum — 2026-10-22
 
+> **Paquetes de requerimientos — implementación en validación, 2026-10-23:** Ágil30XS/10%, Pro30XS+20S/15%, Premium30XS+20S+10M/25% ($5.700.000 COP + IVA). Vigencia12meses; precios por mercado con tasa contable, snapshots y transición explícita de borradores. Alianza4XS+2S+1M mensual independiente. Condiciones: `docs/REQUIREMENT_PACKAGES.md`. La entrega queda pendiente de pruebas y CI; no se ha desplegado.
+
 > **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría incorpora presentación pública bilingüe, PDF y panel informativo junto a Diagnósticos en Comercial. Cinco áreas elegibles y seis caminos medibles, sin gestión de casos ni datos privados de clientes. Publicación y restauración por MCP Comercial con historial inmutable. Migración content.0300 para el despliegue; no ejecutar migrate desde el worktree.
 
 Implementado en la rama de sesión: Bolsillo, Ingresos (clásico y agrupado) y Gastos usan una

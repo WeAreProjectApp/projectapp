@@ -1,512 +1,164 @@
 <template>
   <div class="space-y-4">
-    <!-- No commercial_conditions section yet (proposals older than the section) -->
-    <div
-      v-if="!section"
-      data-testid="hour-rate-no-section"
-      class="border border-border-default dark:border-white/[0.08] rounded-xl p-6 bg-surface-raised text-center"
-    >
-      <p class="text-sm text-text-muted">
-        Esta propuesta todavía no tiene la sección «Condiciones comerciales», que es
-        donde viven los paquetes por horas del PDF.
-      </p>
-      <BaseButton variant="primary" size="md" class="mt-3" data-testid="hour-rate-create-section" :disabled="isCreating" @click="createSection">
-        {{ isCreating ? 'Creando…' : 'Crear la sección' }}
-      </BaseButton>
+    <div v-if="!section" class="rounded-xl border border-border-default bg-surface-raised p-6" data-testid="hour-rate-no-section">
+      <p class="text-sm text-text-muted">Crea las condiciones comerciales para incluir los paquetes de requerimientos en el PDF.</p>
+      <BaseButton variant="primary" size="sm" data-testid="hour-rate-create-section" :disabled="busy" @click="createSection">Crear la sección</BaseButton>
     </div>
-
     <template v-else>
-      <!-- The tab can happily edit a section that never reaches the PDF -->
-      <div
-        v-if="section.is_enabled === false"
-        data-testid="hour-rate-disabled-warning"
-        class="rounded-lg border border-warning-strong/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong"
-      >
-        La sección «Condiciones comerciales» está deshabilitada, así que estos paquetes
-        no se imprimen en el PDF. Habilitala desde la pestaña Secciones.
-      </div>
-
-      <!-- The manual rate was typed in a currency this proposal no longer bills in -->
-      <div
-        v-if="currencyMismatch"
-        data-testid="hour-rate-currency-mismatch"
-        class="rounded-lg border border-danger-strong/40 bg-danger-soft px-3 py-2 text-xs text-danger-strong"
-      >
-        La tarifa manual se guardó en {{ storedManualCurrency }} y esta propuesta ahora
-        factura en {{ currency }}. Se volvió a modo automático para no imprimir un monto
-        equivocado: revisá la tarifa antes de reactivar el modo manual.
-      </div>
-
-      <!-- Mode switch: both labels visible so neither position has to be guessed -->
-      <div>
-        <span class="block text-xs text-text-muted mb-1">Fuente de la tarifa por hora</span>
-        <div class="flex items-center gap-2">
-          <button
-            type="button"
-            data-testid="hour-rate-mode-auto"
-            class="text-xs transition-colors"
-            :class="isAuto ? 'font-semibold text-text-default' : 'text-text-subtle hover:text-text-muted'"
-            @click="mode = 'auto'"
-          >
-            Automático
-          </button>
-          <BaseToggle
-            :model-value="!isAuto"
-            size="sm"
-            aria-label="Alternar entre tarifa automática y manual"
-            @update:model-value="mode = $event ? 'manual' : 'auto'"
-          />
-          <button
-            type="button"
-            data-testid="hour-rate-mode-manual"
-            class="text-xs transition-colors"
-            :class="!isAuto ? 'font-semibold text-text-default' : 'text-text-subtle hover:text-text-muted'"
-            @click="mode = 'manual'"
-          >
-            Manual
-          </button>
-        </div>
-        <p data-testid="hour-rate-mode-hint" class="text-[11px] text-text-subtle mt-1">
-          <template v-if="isAuto">
-            Los paquetes y la tarifa salen del catálogo de Paquetes por horas y se
-            sincronizan solos: si el catálogo cambia, el PDF de esta propuesta cambia con él.
-          </template>
-          <template v-else>
-            Esta propuesta usa sus propios paquetes. Podés editarlos, agregar y quitar
-            filas; el catálogo ya no la toca hasta que uses «Restablecer».
-          </template>
-        </p>
-      </div>
-
-      <!-- Print toggle -->
-      <div class="flex items-start gap-2">
-        <BaseToggle
-          :model-value="packagesEnabled"
-          size="sm"
-          aria-label="Incluir los paquetes por horas en el PDF"
-          @update:model-value="packagesEnabled = $event"
-        />
-        <div>
-          <span data-testid="hour-rate-print-label" class="block text-xs text-text-default">
-            {{ packagesEnabled
-              ? 'Los paquetes por horas se imprimen en el PDF'
-              : 'Los paquetes por horas NO se imprimen en el PDF' }}
-          </span>
-          <span class="block text-[11px] text-text-subtle">
-            La cláusula de alcance se sigue imprimiendo en ambos casos.
-          </span>
-        </div>
-      </div>
-
-      <!-- Manual controls -->
-      <div
-        v-if="!isAuto"
-        class="border border-border-default dark:border-white/[0.08] rounded-xl p-3 bg-surface-raised space-y-2"
-      >
-        <div class="flex items-end gap-2">
-          <label class="block max-w-xs flex-1">
-            <span class="block text-xs text-text-muted mb-0.5">Tarifa base por hora</span>
-            <BaseCurrencyInput
-              v-model="baseRate"
-              data-testid="hour-rate-manual-input"
-              :decimals="rateDecimals"
-              placeholder="30000"
-            />
+      <p v-if="section.is_enabled === false" class="rounded-lg bg-warning-soft p-3 text-sm text-warning-strong" data-testid="hour-rate-disabled-warning">La sección está deshabilitada y no se imprime en el PDF.</p>
+      <template v-if="legacy && !adopting">
+        <p class="rounded-lg bg-surface-raised p-3 text-sm text-text-muted" data-testid="packages-legacy-notice">Esta propuesta conserva sus condiciones históricas de horas. No se convierten automáticamente en requerimientos.</p>
+        <ProposalHourPackagesTable :packages="content.packages || []" :currency="content.currency || 'COP'" :base-rate="Number(content.hourlyRate) || 0" :editable="false" :language="proposal.language" />
+        <BaseButton v-if="proposal.status === 'draft'" variant="secondary" size="sm" data-testid="packages-adopt" @click="adoptCatalog">Revisar nuevos paquetes</BaseButton>
+      </template>
+      <template v-else>
+        <p v-if="adopting" class="rounded-lg bg-warning-soft p-3 text-sm text-warning-strong">Revisa composición y precios. Guardar reemplaza las condiciones de horas de este borrador.</p>
+        <p v-if="content.packagesFrozen && !adopting" class="text-sm text-text-muted">Oferta emitida: conserva sus precios. Actualizar desde el catálogo prepara condiciones nuevas; los archivos enviados permanecen en el historial.</p>
+        <label class="flex items-center gap-3 text-sm text-text-default">
+          <input v-model="enabled" type="checkbox" aria-label="Incluir paquetes de requerimientos en el PDF" />
+          Incluir paquetes de requerimientos en el PDF
+        </label>
+        <p class="text-xs text-text-subtle">La cláusula de alcance se conserva aunque ocultes los paquetes.</p>
+        <div class="flex flex-wrap items-center gap-3">
+          <label class="text-sm text-text-default">Fuente de los paquetes
+            <select :value="mode" data-testid="packages-mode" @change="changeMode($event.target.value)" class="ml-2 rounded-lg border border-border-default bg-input-bg p-2 text-input-text">
+              <option value="auto">Catálogo automático</option>
+              <option value="manual">Manual para esta propuesta</option>
+            </select>
           </label>
-          <BaseControlGate
-            :reasons="applyBaseRateBlockReasons"
-            label="Aplicar tarifa no disponible"
-            align="end"
-          >
-            <template #default="{ describedBy }">
-              <BaseButton
-                variant="secondary"
-                size="sm"
-                class="shrink-0"
-                data-testid="hour-rate-apply-base-all"
-                :disabled="Boolean(applyBaseRateBlockReasons.length)"
-                :disabled-reason="applyBaseRateBlockReasons.join(' ')"
-                :aria-describedby="describedBy"
-                @click="applyBaseRateToAll"
-              >
-                Aplicar a todos
-              </BaseButton>
-            </template>
-          </BaseControlGate>
+          <BaseButton variant="secondary" size="sm" data-testid="packages-reset" :disabled="!catalog.length" disabled-reason="No hay paquetes activos en el catálogo de este mercado." @click="resetCatalog">Actualizar desde el catálogo</BaseButton>
         </div>
-        <p class="text-[11px] text-text-subtle">
-          Escribir acá no mueve la tabla: la tarifa se copia a todos los paquetes cuando
-          apretás «Aplicar a todos», y después podés ajustar los que quieras en su celda.
-          Moneda: {{ currency }} (la define el catálogo).
-        </p>
-        <BaseButton variant="secondary" size="sm" v-if="catalogDefaults" data-testid="hour-rate-reset-catalog" :disabled="isAtCatalogDefaults" disabled-reason="Los paquetes ya coinciden con los valores actuales del catálogo." @click="resetToCatalogDefaults">
-          Restablecer a los valores del catálogo
-        </BaseButton>
-        <p v-if="catalogDefaults" class="text-[11px] text-text-subtle">
-          Repone los paquetes tal como están hoy en el catálogo. La propuesta
-          <span class="font-medium">sigue en manual</span>: no vuelve a seguirlo hasta
-          que pases a automático.
-        </p>
-      </div>
-
-      <div
-        v-if="isAuto && !catalogPackages.length"
-        data-testid="hour-rate-empty-catalog"
-        class="rounded-lg border border-warning-strong/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong"
-      >
-        El catálogo no tiene paquetes activos para esta nacionalidad. La previsualización
-        usa la última foto guardada en la propuesta.
-      </div>
-
-      <!-- Live preview / editor -->
-      <div :class="packagesEnabled ? '' : 'opacity-50'">
-        <span class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">
-          {{ isAuto ? 'Previsualización' : 'Paquetes de esta propuesta' }}
-        </span>
-        <ProposalHourPackagesTable
-          :packages="displayPackages"
-          :editable="!isAuto"
-          :currency="currency"
-          :base-rate="baseRate"
-          :language="proposal?.language || 'es'"
-          @update="updatePackage"
-          @remove="removePackage"
-          @add="addPackage"
-        />
-      </div>
-
-      <div class="flex items-center gap-3">
-        <BaseButton variant="primary" size="md" data-testid="hour-rate-save" :loading="isSaving" :disabled="!isDirty" disabled-reason="Haz un cambio en los paquetes antes de guardar." @click="save">
-          {{ isSaving ? 'Guardando…' : 'Guardar' }}
-        </BaseButton>
-        <span v-if="isDirty" class="text-xs text-warning-strong">Cambios sin guardar</span>
-      </div>
+        <p v-if="loadError" role="alert" class="text-sm text-danger-strong">No se pudo cargar el catálogo. Revisa la configuración y la tasa de cambio.</p>
+        <div class="grid grid-cols-1 gap-4 lg:grid-cols-3">
+          <article v-for="(row, idx) in displayed" :key="row.id || idx" class="min-w-0 space-y-3 rounded-xl border border-border-default bg-surface p-4" :data-testid="`requirement-package-${idx}`">
+            <template v-if="mode === 'manual'">
+              <label class="block text-xs text-text-muted">Nombre
+                <input v-model="row.name" required class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" :aria-label="`Nombre del paquete ${idx + 1}`" />
+              </label>
+              <div class="grid grid-cols-3 gap-2">
+                <label v-for="size in ['xs', 's', 'm']" :key="size" class="text-xs text-text-muted">{{ size.toUpperCase() }}
+                  <input v-model.number="row[`${size}Count`]" type="number" min="0" step="1" :aria-label="`Cupos ${size.toUpperCase()} del paquete ${idx + 1}`" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
+                </label>
+              </div>
+              <label class="block text-xs text-text-muted">Referencia ({{ currency }})
+                <BaseCurrencyInput v-model="row.referencePrice" :decimals="currency === 'COP' ? 0 : 2" :aria-label="`Referencia del paquete ${idx + 1}`" />
+              </label>
+              <label class="block text-xs text-text-muted">Descuento (%)
+                <input v-model.number="row.discountPercent" type="number" min="0" max="99" step="1" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
+              </label>
+              <label class="block text-xs text-text-muted">Vigencia (meses desde el pago)
+                <input v-model.number="row.validityMonths" type="number" min="1" step="1" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
+              </label>
+              <label class="block text-xs text-text-muted">Nota
+                <textarea v-model="row.note" rows="2" class="mt-1 w-full rounded-lg border border-border-default bg-input-bg p-2 text-input-text" />
+              </label>
+              <BaseButton variant="danger-ghost" size="sm" :disabled="rows.length <= 1" :disabled-reason="rows.length <= 1 ? 'Conserva al menos un paquete.' : ''" @click="rows.splice(idx, 1)">Quitar paquete</BaseButton>
+            </template>
+            <template v-else>
+              <h3 class="font-medium text-text-default">{{ row.name }}</h3>
+              <p class="text-sm text-text-default">{{ row.xsCount }} XS · {{ row.sCount }} S · {{ row.mCount }} M</p>
+              <p class="text-xs text-text-muted">{{ row.validityMonths }} meses desde el pago</p>
+              <p class="text-xs text-text-muted">{{ row.note }}</p>
+            </template>
+            <p class="text-sm text-text-muted"><span class="line-through">{{ money(row.referencePrice, currency) }}</span> · −{{ row.discountPercent }} %</p>
+            <p class="font-medium text-text-brand">{{ money(net(row), currency) }} {{ currency === 'COP' ? '+ IVA' : '+ Tax' }}</p>
+            <p class="text-xs text-text-brand">Ahorro: {{ money(Number(row.referencePrice) - net(row), currency) }}</p>
+          </article>
+        </div>
+        <p v-if="!displayed.length" class="text-sm text-text-muted">No hay paquetes activos en este mercado.</p>
+        <BaseButton v-if="mode === 'manual'" variant="secondary" size="sm" data-testid="packages-add" @click="addPackage">Agregar paquete</BaseButton>
+        <p class="text-xs text-text-subtle">Cupos por talla sin intercambio. Acuerda resultado y talla antes de programar. L/XL se cotizan por separado; la garantía no consume cupos.</p>
+        <BaseButton variant="primary" size="sm" data-testid="hour-rate-save" :disabled="busy || !dirty || (mode === 'auto' && loadError)" :disabled-reason="!dirty ? 'No hay cambios pendientes.' : ''" @click="save">{{ busy ? 'Guardando…' : 'Guardar paquetes' }}</BaseButton>
+      </template>
     </template>
   </div>
 </template>
 
 <script setup>
 import { computed, ref, watch } from 'vue';
-import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
-import BaseToggle from '~/components/base/BaseToggle.vue';
-import ProposalHourPackagesTable from '~/components/panel/proposal/ProposalHourPackagesTable.vue';
 import { useProposalStore } from '~/stores/proposals';
 import { useHourPackagesStore } from '~/stores/hour_packages';
 import { usePanelNotify } from '~/composables/usePanelNotify';
-
-const props = defineProps({
-  proposal: { type: Object, required: true },
-});
+import { formatPackageMoney as money } from '~/utils/hourPackagePricing';
+import BaseCurrencyInput from '~/components/base/BaseCurrencyInput.vue';
+import ProposalHourPackagesTable from './ProposalHourPackagesTable.vue';
+const props = defineProps({ proposal: { type: Object, required: true } });
 const emit = defineEmits(['dirty-state-change']);
-
-const proposalsStore = useProposalStore();
-const hourPackagesStore = useHourPackagesStore();
+const proposals = useProposalStore();
+const packages = useHourPackagesStore();
 const notify = usePanelNotify();
-
-const mode = ref('auto');
-const packagesEnabled = ref(true);
-const baseRate = ref(null);
-/** Manual mode only: the proposal's own package list, edited in place. */
-const packages = ref([]);
-const isSaving = ref(false);
-const isCreating = ref(false);
-const currencyMismatch = ref(false);
-const storedManualCurrency = ref('');
-
-const isAuto = computed(() => mode.value !== 'manual');
-
-// Always resolved from the store rather than cached on mount, so a concurrent
-// save from the Secciones tab is not silently overwritten by a stale copy.
-const section = computed(() => (proposalsStore.currentProposal?.sections || [])
-  .find((s) => s.section_type === 'commercial_conditions') || null);
-
+const section = computed(() => proposals.currentProposal?.sections?.find((s) => s.section_type === 'commercial_conditions'));
 const content = computed(() => section.value?.content_json || {});
-
-// Mirror the backend query exactly (active only, ordered by order then hours) —
-// that ordering is where a preview most easily drifts from the PDF.
-const catalogPackages = computed(() => (hourPackagesStore.packages || [])
-  .filter((p) => p.is_active)
-  .slice()
-  .sort((a, b) => (a.order - b.order) || (a.hours - b.hours)));
-
-const currency = computed(() => catalogPackages.value[0]?.currency
-  || content.value.currency
-  || props.proposal?.currency
-  || 'COP');
-
-// COP shows whole pesos; USD keeps cents (mirrors BaseCurrencyInput usage).
-const rateDecimals = computed(() => (currency.value === 'COP' ? 0 : 2));
-
-function fromCatalog(pkg) {
-  return {
-    id: pkg.id,
-    name: props.proposal?.language === 'en' ? pkg.name_en : pkg.name_es,
-    note: (props.proposal?.language === 'en' ? pkg.note_en : pkg.note_es) || '',
-    hours: Number(pkg.hours) || 0,
-    discountPercent: Number(pkg.discount_percent) || 0,
-    hourlyRate: Number(pkg.hourly_rate) || 0,
-  };
-}
-
-// Auto previews the live catalog, so it shows what the PDF will actually print
-// rather than the stored snapshot, which may be stale. Manual shows the
-// proposal's own list. With an empty catalog, auto falls back to the snapshot —
-// exactly what the PDF does.
-const displayPackages = computed(() => {
-  if (!isAuto.value) return packages.value;
-  if (catalogPackages.value.length) return catalogPackages.value.map(fromCatalog);
-  return content.value.packages || [];
-});
-
-// --- catalog defaults (the reset action) ----------------------------------
-
-const catalogDefaults = computed(() => {
-  if (!catalogPackages.value.length) return null;
-  const base = Number(catalogPackages.value[0].hourly_rate) || 0;
-  if (base <= 0) return null;
-  return { base, packages: catalogPackages.value.map(fromCatalog) };
-});
-
-const isAtCatalogDefaults = computed(() => {
-  const defaults = catalogDefaults.value;
-  if (!defaults) return false;
-  return snapshotOf(defaults.base, defaults.packages) === snapshot();
-});
-
-function resetToCatalogDefaults() {
-  const defaults = catalogDefaults.value;
-  if (!defaults) return;
-  baseRate.value = defaults.base;
-  packages.value = defaults.packages.map((p) => ({ ...p }));
-}
-
-// --- base rate ------------------------------------------------------------
-
-/**
- * The base rate is a bulk action, not a live binding.
- *
- * Every package carries its own editable rate, so a base rate that only filled
- * in the blanks would never apply — that is exactly the bug this replaced: the
- * field looked live and moved nothing. It now does one explicit thing, on click.
- */
-const canApplyBaseRate = computed(() => {
-  const rate = Number(baseRate.value);
-  if (!(rate > 0) || !packages.value.length) return false;
-  // Nothing to do once every row already charges it.
-  return packages.value.some((pkg) => Number(pkg.hourlyRate) !== rate);
-});
-
-const applyBaseRateBlockReasons = computed(() => [
-  !(Number(baseRate.value) > 0) ? 'Ingresa una tarifa base mayor a cero.' : '',
-  !packages.value.length ? 'Agrega al menos un paquete de horas.' : '',
-  Number(baseRate.value) > 0 && packages.value.length && canApplyBaseRate.value === false
-    ? 'Todos los paquetes ya usan esta tarifa.'
-    : '',
-].filter(Boolean));
-
-function applyBaseRateToAll() {
-  const rate = Number(baseRate.value);
-  if (!(rate > 0)) return;
-  packages.value = packages.value.map((pkg) => ({ ...pkg, hourlyRate: rate }));
-}
-
-// --- manual editing -------------------------------------------------------
-
-function updatePackage(index, field, value) {
-  const row = packages.value[index];
-  if (!row) return;
-  packages.value = packages.value.map((pkg, idx) => (
-    idx === index ? { ...pkg, [field]: value } : pkg
-  ));
-}
-
-function removePackage(index) {
-  // The PDF section makes no sense with an empty table, so the last row stays.
-  if (packages.value.length <= 1) return;
-  packages.value = packages.value.filter((_, idx) => idx !== index);
-}
-
-function addPackage() {
-  packages.value = [...packages.value, {
-    name: 'Paquete nuevo',
-    note: '',
-    hours: 10,
-    discountPercent: 0,
-    hourlyRate: Number(baseRate.value) || 0,
-  }];
-}
-
-// --- load / dirty tracking ------------------------------------------------
-
-/**
- * The proposal's own package list, resolving the legacy storage shape.
- *
- * Proposals saved before manual owned its packages carry `manualHourlyRate`
- * and `manualPackageRates` (keyed by catalog id) instead of per-package rates.
- * Folding them in here means those proposals open showing the prices they are
- * actually being quoted at, and drop the legacy keys on the next save.
- */
-function packagesFromContent(json) {
-  const legacyRates = {};
-  for (const entry of json.manualPackageRates || []) {
-    if (entry?.packageId == null) continue;
-    const rate = Number(entry.hourlyRate);
-    if (rate > 0) legacyRates[String(entry.packageId)] = rate;
-  }
-  const legacyBase = Number(json.manualHourlyRate) || 0;
-  return (json.packages || []).map((pkg) => {
-    const own = Number(pkg.hourlyRate) || 0;
-    const legacy = legacyRates[String(pkg.id)] || legacyBase;
-    return {
-      ...(pkg.id == null ? {} : { id: pkg.id }),
-      name: pkg.name || '',
-      note: pkg.note || '',
-      hours: Number(pkg.hours) || 0,
-      discountPercent: Number(pkg.discountPercent) || 0,
-      hourlyRate: own > 0 ? own : legacy,
-    };
-  });
-}
-
-function loadFromSection() {
-  const json = content.value;
-  packagesEnabled.value = json.hourPackagesEnabled !== false;
-  baseRate.value = Number(json.manualHourlyRate) || Number(json.hourlyRate) || null;
-  packages.value = packagesFromContent(json);
-  storedManualCurrency.value = json.manualCurrency || '';
-
-  // A nationality change after a manual rate was set would silently reprint a
-  // COP amount as USD. Fall back to auto and say so instead.
-  const stored = json.manualCurrency;
-  currencyMismatch.value = Boolean(
-    json.hourPackagesMode === 'manual' && stored && currency.value
-    && stored !== currency.value,
-  );
-  mode.value = currencyMismatch.value
-    ? 'auto'
-    : (json.hourPackagesMode === 'manual' ? 'manual' : 'auto');
-}
-
+const legacy = computed(() => content.value.pricingModel !== 'requirements');
+const currency = computed(() => props.proposal.nationality === 'COL' ? 'COP' : 'USD');
+const mode = ref('auto');
+const enabled = ref(true);
+const rows = ref([]);
+const adopting = ref(false);
+const refreshing = ref(false);
+const manualDraftAvailable = ref(false);
+const busy = ref(false);
+const loadError = ref(false);
 const baseline = ref('');
-
-/**
- * Canonical serialization of the editable state. The package list is included
- * field by field: without it the dirty tracker — and the "already at the
- * catalog values" check — would be blind to every inline edit.
- */
-function snapshotOf(rate, packageList) {
-  const numeric = Number(rate);
-  return JSON.stringify({
-    mode: mode.value,
-    enabled: packagesEnabled.value,
-    rate: Number.isFinite(numeric) && rate !== null && rate !== '' ? numeric : null,
-    packages: (packageList || []).map((p) => [
-      p.name || '', p.note || '', Number(p.hours) || 0,
-      Number(p.discountPercent) || 0, Number(p.hourlyRate) || 0,
-    ]),
-  });
-}
-
-function snapshot() {
-  return snapshotOf(baseRate.value, packages.value);
-}
-
-const isDirty = computed(() => baseline.value !== '' && baseline.value !== snapshot());
-
-watch(isDirty, (value) => emit('dirty-state-change', value));
-
-// Entering manual with nothing stored would leave an empty table, and the
-// minimum is one package — seed from the catalog.
-watch(mode, (value, previous) => {
-  if (value === 'manual' && previous === 'auto') {
-    currencyMismatch.value = false;
-    if (!packages.value.length && catalogDefaults.value) resetToCatalogDefaults();
-    if (!baseRate.value && catalogDefaults.value) baseRate.value = catalogDefaults.value.base;
+const snapshot = () => JSON.stringify([mode.value, enabled.value, rows.value, adopting.value, refreshing.value]);
+const dirty = computed(() => baseline.value !== snapshot());
+watch(dirty, (value) => emit('dirty-state-change', value));
+const catalog = computed(() => (packages.packages || []).filter((p) => p.is_active).map((p) => ({
+  id: p.id, name: props.proposal.language === 'en' ? p.name_en : p.name_es,
+  note: props.proposal.language === 'en' ? p.note_en : p.note_es,
+  xsCount: p.xs_count, sCount: p.s_count, mCount: p.m_count,
+  validityMonths: p.validity_months, referencePrice: p.reference_price,
+  discountPercent: p.discount_percent, totalPrice: p.total_price,
+})));
+const displayed = computed(() => mode.value === 'manual' || (content.value.packagesFrozen && !refreshing.value && !adopting.value) ? rows.value : catalog.value);
+const net = (row) => {
+  const source = [...catalog.value, ...(content.value.packages || [])].find((p) => p.id === row.id
+    && Number(p.referencePrice) === Number(row.referencePrice)
+    && Number(p.discountPercent) === Number(row.discountPercent));
+  return source?.totalPrice != null ? Number(source.totalPrice)
+    : Number(row.referencePrice) * (1 - Number(row.discountPercent) / 100);
+};
+function resetCatalog() { rows.value = structuredClone(catalog.value); refreshing.value = true; }
+function adoptCatalog() { adopting.value = true; mode.value = 'auto'; resetCatalog(); }
+function addPackage() { rows.value.push({ name: 'Paquete nuevo', note: '', xsCount: 1, sCount: 0, mCount: 0, validityMonths: 12, referencePrice: 0, discountPercent: 0 }); }
+function changeMode(value) {
+  if (value === 'manual' && !manualDraftAvailable.value) {
+    rows.value = JSON.parse(JSON.stringify(displayed.value));
+    manualDraftAvailable.value = true;
   }
-});
-
-watch(section, (value, previous) => {
-  if (value && value.id !== previous?.id) {
-    loadFromSection();
-    baseline.value = snapshot();
+  mode.value = value;
+}
+function load() {
+  rows.value = JSON.parse(JSON.stringify(content.value.packages || []));
+  enabled.value = content.value.hourPackagesEnabled !== false;
+  mode.value = content.value.hourPackagesMode || 'auto';
+  manualDraftAvailable.value = mode.value === 'manual';
+  adopting.value = false; refreshing.value = false; baseline.value = snapshot();
+}
+watch(() => section.value?.id, load, { immediate: true });
+watch(() => props.proposal.nationality, async (nationality, previous) => {
+  const result = await packages.fetchAdminPackages(nationality);
+  loadError.value = result?.success === false;
+  if (previous && previous !== nationality && !legacy.value) {
+    resetCatalog(); mode.value = 'auto';
+    notify.warning?.('Revisa la composición y los precios del nuevo mercado antes de guardar.');
   }
 }, { immediate: true });
-
-watch(() => props.proposal?.nationality, async (nationality) => {
-  if (!nationality) return;
-  await hourPackagesStore.fetchAdminPackages(nationality);
-  loadFromSection();
-  baseline.value = snapshot();
-}, { immediate: true });
-
-// --- actions --------------------------------------------------------------
-
 async function createSection() {
-  isCreating.value = true;
-  try {
-    const result = await proposalsStore.createSection(props.proposal.id, 'commercial_conditions');
-    if (result?.success === false) {
-      notify.error('No se pudo crear la sección de condiciones comerciales.');
-      return;
-    }
-    loadFromSection();
-    baseline.value = snapshot();
-    notify.success('Sección creada.');
-  } finally {
-    isCreating.value = false;
-  }
+  busy.value = true;
+  try { await proposals.createSection(props.proposal.id, 'commercial_conditions'); load(); }
+  finally { busy.value = false; }
 }
-
 async function save() {
-  const current = section.value;
-  if (!current) return;
-  isSaving.value = true;
+  busy.value = true;
   try {
-    // Spread the section as it stands in the store right now, so fields this
-    // tab does not own (titles, scope clause) survive untouched.
-    const next = { ...(current.content_json || {}) };
-    next.hourPackagesMode = mode.value;
-    next.hourPackagesEnabled = packagesEnabled.value;
-
-    if (mode.value === 'manual') {
-      // Manual owns the list outright, so it is written verbatim and the legacy
-      // override keys are consolidated away.
-      next.packages = packages.value.map((p) => ({
-        ...(p.id == null ? {} : { id: p.id }),
-        name: p.name || '',
-        note: p.note || '',
-        hours: Number(p.hours) || 0,
-        discountPercent: Number(p.discountPercent) || 0,
-        hourlyRate: Number(p.hourlyRate) || 0,
-      }));
-      const rate = Number(baseRate.value);
-      if (rate > 0) next.hourlyRate = rate;
-      next.manualCurrency = currency.value;
-      delete next.manualHourlyRate;
-      delete next.manualPackageRates;
-    }
-    // In auto the catalog re-seeds at generation time, so packages/hourlyRate
-    // are left exactly as stored: that snapshot is what keeps the manual work
-    // recoverable when the switch goes back to manual.
-
-    const result = await proposalsStore.updateSection(current.id, {
-      title: current.title,
-      is_wide_panel: current.is_wide_panel,
-      content_json: next,
-    });
-    if (result?.success === false) {
-      notify.error('No se pudo guardar la tarifa.');
-      return;
-    }
-    baseline.value = snapshot();
-    storedManualCurrency.value = next.manualCurrency || '';
-    notify.success(
-      mode.value === 'manual'
-        ? 'Paquetes guardados. El PDF ya los usa.'
-        : 'Tarifa sincronizada con el catálogo.',
-    );
-  } finally {
-    isSaving.value = false;
-  }
+    const next = { ...content.value, pricingModel: 'requirements', hourPackagesMode: mode.value,
+      hourPackagesEnabled: enabled.value, currency: currency.value, manualCurrency: currency.value,
+      packagesFrozen: Boolean(content.value.packagesFrozen && !refreshing.value && !adopting.value),
+      packages: JSON.parse(JSON.stringify(displayed.value)) };
+    const result = await proposals.updateSection(section.value.id, { content_json: next });
+    if (result?.success === false) { notify.error('No se pudieron guardar los paquetes. Revisa cupos, vigencia, referencia y descuento.'); return; }
+    load(); notify.success('Paquetes guardados.');
+  } finally { busy.value = false; }
 }
 </script>

@@ -4,11 +4,11 @@
 - **Role:** admin
 - **Priority:** P3
 - **Routes:** `/panel/hour-packages`
-- **Description:** Switch the catalog between Tabla, Tarjetas and Comparativa (pricing tiers with a "Mejor tarifa" highlight); the initial mode comes from the settings singleton.
+- **Description:** Admin alterna tabla, tarjetas y comparativa; consulta cupos y precios por mercado y reconoce el mayor descuento entre paquetes activos.
 - **Steps:**
-  1. Admin opens `/panel/hour-packages` — `GET /api/hour-packages/admin/settings/` decides the initial view mode.
-  2. Admin switches the view-mode segmented control (Tabla / Tarjetas / Comparativa).
-  3. Tarjetas renders a card grid with effective rate, discount badge and totals; Comparativa renders side-by-side tiers highlighting the best effective rate.
-  4. Edit/Eliminar remain available from every mode.
-- **Coverage:** ⚠️ Missing
-- **E2E Spec:** _pending_
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
+- **E2E Spec:** `e2e/admin/admin-hour-packages-list.spec.js`

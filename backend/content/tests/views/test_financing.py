@@ -7,7 +7,7 @@ import pytest
 from pypdf import PdfReader
 from rest_framework.test import APIClient
 
-from content.models import ExplainerVideoSettings, HourPackage, Nationality
+from content.models import ExplainerVideoSettings, FinancingPolicyRevision, HourPackageSettings
 from content.services.financing_program_service import serialize_financing_program
 
 
@@ -15,53 +15,52 @@ pytestmark = pytest.mark.django_db
 
 
 @pytest.fixture
-def pro_package():
-    HourPackage.objects.filter(
-        nationality=Nationality.COL,
-        hours=60,
-    ).delete()
-    return HourPackage.objects.create(
-        nationality=Nationality.COL,
-        name_es='Paquete Pro vigente',
-        name_en='Current Pro Pack',
-        note_es='Mejoras continuas.',
-        note_en='Continuous improvements.',
-        hours=60,
-        hourly_rate=Decimal('32000'),
-        discount_percent=20,
-        is_active=True,
-        order=3,
-    )
+def requirement_allowance():
+    FinancingPolicyRevision.objects.get_or_create(version=1)
+    settings = HourPackageSettings.load()
+    settings.alliance_xs_count = 4
+    settings.alliance_s_count = 2
+    settings.alliance_m_count = 1
+    settings.save()
+    return settings
 
 
-def test_program_localizes_live_package_name(pro_package):
-    """Fails if the public program stops exposing the active localized package name."""
+def test_program_exposes_a_bilingual_monthly_size_allowance(requirement_allowance):
+    """Fails if the public program returns to a catalog-priced hourly package."""
     payload = serialize_financing_program(language='en')
 
-    assert payload['package']['name'] == 'Current Pro Pack'
+    assert payload['package']['name'] == 'Monthly requirement allowance'
+    assert payload['package']['xs_count'] == 4
+    assert payload['package']['s_count'] == 2
+    assert payload['package']['m_count'] == 1
+    assert payload['package']['renews_monthly'] is True
+    assert payload['package']['rollover'] is False
     assert payload['package']['catalog_synced'] is True
 
 
-def test_program_package_excludes_catalog_pricing(pro_package):
-    """Fails if public financing data leaks the internal package price catalog."""
+def test_program_allowance_excludes_catalog_pricing(requirement_allowance):
+    """Fails if public financing data leaks internal prices or market factors."""
     payload = serialize_financing_program(language='es')
 
-    assert set(payload['package']).isdisjoint({'hourly_rate', 'discount_percent', 'price'})
-    assert '32000' not in str(payload)
+    assert payload['package']['name'] == 'Cupo mensual de requerimientos'
+    assert set(payload['package']).isdisjoint({
+        'hourly_rate', 'discount_percent', 'price', 'foreign_multiplier', 'usa_multiplier',
+    })
 
 
-def test_program_uses_fallback_when_package_is_inactive(pro_package):
-    """Fails if an inactive package is presented as an available financing benefit."""
-    pro_package.is_active = False
-    pro_package.save(update_fields=['is_active', 'updated_at'])
+def test_program_allowance_changes_only_with_its_dedicated_settings(requirement_allowance):
+    """Fails if a package catalog edit can alter the separately configured alliance benefit."""
+    requirement_allowance.alliance_xs_count = 8
+    requirement_allowance.alliance_s_count = 3
+    requirement_allowance.alliance_m_count = 2
+    requirement_allowance.save()
 
     payload = serialize_financing_program(language='es')
 
-    assert payload['package']['name'] == 'Paquete Pro'
-    assert payload['package']['catalog_synced'] is False
+    assert (payload['package']['xs_count'], payload['package']['s_count'], payload['package']['m_count']) == (8, 3, 2)
 
 
-def test_public_program_rejects_unknown_language(pro_package):
+def test_public_program_rejects_unknown_language(requirement_allowance):
     """Fails if the public endpoint accepts a language it cannot localize."""
     response = APIClient().get('/api/financing/public/?lang=fr')
 
@@ -69,7 +68,7 @@ def test_public_program_rejects_unknown_language(pro_package):
     assert response.data['lang'] == ['Usa es o en.']
 
 
-def test_public_program_exposes_commercial_input_output(pro_package):
+def test_public_program_exposes_commercial_input_output(requirement_allowance):
     """Fails if the calculator no longer explains its commercial input and output."""
     response = APIClient().get('/api/financing/public/?lang=es')
 
@@ -78,7 +77,7 @@ def test_public_program_exposes_commercial_input_output(pro_package):
     assert response.data['calculator']['output']['title'] == 'Qué se obtiene'
 
 
-def test_public_program_exposes_two_percent_late_hosting_increase(pro_package):
+def test_public_program_exposes_two_percent_late_hosting_increase(requirement_allowance):
     """Fails if overdue installments lose the configured Hosting consequence."""
     response = APIClient().get('/api/financing/public/?lang=es')
     payment_condition = response.data['conditions'][4]
@@ -91,7 +90,7 @@ def test_public_program_exposes_two_percent_late_hosting_increase(pro_package):
     )
 
 
-def test_public_program_exposes_inclusive_project_range(pro_package):
+def test_public_program_exposes_inclusive_project_range(requirement_allowance):
     response = APIClient().get('/api/financing/public/?lang=es')
 
     assert response.data['minimum_project_value_cop'] == Decimal('20000000.00')
@@ -99,7 +98,7 @@ def test_public_program_exposes_inclusive_project_range(pro_package):
     assert response.data['conditions'][5]['id'] == 'project-value-range'
 
 
-def test_public_program_exposes_risk_based_initial_contribution(pro_package):
+def test_public_program_exposes_risk_based_initial_contribution(requirement_allowance):
     response = APIClient().get('/api/financing/public/?lang=es')
 
     assert response.data['minimum_initial_payment_percent'] == '20%'
@@ -107,7 +106,7 @@ def test_public_program_exposes_risk_based_initial_contribution(pro_package):
     assert response.data['conditions'][6]['id'] == 'risk-and-initial-payment'
 
 
-def test_public_program_exposes_two_financing_cycles_for_five_year_option(pro_package):
+def test_public_program_exposes_two_financing_cycles_for_five_year_option(requirement_allowance):
     """Fails if the five-year option loses its second financed twelve-month cycle."""
     response = APIClient().get('/api/financing/public/?lang=es')
     five_year_option = response.data['options'][0]
@@ -118,7 +117,7 @@ def test_public_program_exposes_two_financing_cycles_for_five_year_option(pro_pa
     )
 
 
-def test_public_pdf_sets_private_download_headers(pro_package):
+def test_public_pdf_sets_private_download_headers(requirement_allowance):
     """Fails if the public PDF becomes cacheable or loses its named attachment."""
     response = APIClient().get('/api/financing/public/pdf/?lang=en')
 
@@ -128,14 +127,14 @@ def test_public_pdf_sets_private_download_headers(pro_package):
     assert 'partnership-program.pdf' in response['Content-Disposition']
 
 
-def test_public_pdf_names_spanish_download_after_partnership_program(pro_package):
+def test_public_pdf_names_spanish_download_after_partnership_program(requirement_allowance):
     response = APIClient().get('/api/financing/public/pdf/?lang=es')
 
     assert response.status_code == 200
     assert 'filename="programa-de-alianza.pdf"' in response['Content-Disposition']
 
 
-def test_public_pdf_titles_the_partnership_program(pro_package):
+def test_public_pdf_titles_the_partnership_program(requirement_allowance):
     """Fails if the booklet keeps presenting itself as a financing-only program."""
     response = APIClient().get('/api/financing/public/pdf/?lang=es')
     reader = PdfReader(BytesIO(response.content))
@@ -144,7 +143,7 @@ def test_public_pdf_titles_the_partnership_program(pro_package):
     assert 'Programa de Alianza' in (reader.pages[0].extract_text() or '')
 
 
-def test_public_pdf_expands_financing_terms(pro_package):
+def test_public_pdf_expands_financing_terms(requirement_allowance):
     """Fails if the public PDF omits the commercial financing terms it promises."""
     response = APIClient().get('/api/financing/public/pdf/?lang=es')
     text = '\n'.join(
@@ -154,10 +153,10 @@ def test_public_pdf_expands_financing_terms(pro_package):
 
     assert 'Las 8 condiciones comerciales' in text
     assert 'Custodia de código no es cesión de propiedad' in text
-    assert 'Paquete Pro vigente' in text
+    assert '4 XS + 2 S + 1 M' in text
 
 
-def test_sitemap_lists_partnership_program_instead_of_financing(pro_package):
+def test_sitemap_lists_partnership_program_instead_of_financing(requirement_allowance):
     """Fails if the sitemap drops the renamed page or keeps the redirected route."""
     response = APIClient().get('/sitemap.xml')
     body = response.content.decode()
@@ -168,7 +167,7 @@ def test_sitemap_lists_partnership_program_instead_of_financing(pro_package):
     assert not re.search(r'/(?:es-co|en-us)/financing\b', body)
 
 
-def test_public_program_names_the_partnership_program(pro_package):
+def test_public_program_names_the_partnership_program(requirement_allowance):
     """Fails if the hero, CTA or WhatsApp message stop naming the Partnership Program."""
     spanish = APIClient().get('/api/financing/public/?lang=es').data
     english = APIClient().get('/api/financing/public/?lang=en').data
@@ -180,7 +179,7 @@ def test_public_program_names_the_partnership_program(pro_package):
     assert english['cta']['title'] == 'Request your Partnership Program evaluation'
 
 
-def test_public_program_points_canonical_path_to_partnership_program(pro_package):
+def test_public_program_points_canonical_path_to_partnership_program(requirement_allowance):
     spanish = APIClient().get('/api/financing/public/?lang=es').data
     english = APIClient().get('/api/financing/public/?lang=en').data
 
@@ -188,7 +187,7 @@ def test_public_program_points_canonical_path_to_partnership_program(pro_package
     assert english['canonical_path'] == '/en-us/partnership-program'
 
 
-def test_public_program_follows_financing_video_switch(pro_package):
+def test_public_program_follows_financing_video_switch(requirement_allowance):
     """Fails if hiding the Partnership Program video in the panel still shows it."""
     visible = APIClient().get('/api/financing/public/?lang=es')
     stored = ExplainerVideoSettings.load()

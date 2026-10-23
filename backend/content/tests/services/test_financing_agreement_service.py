@@ -58,6 +58,11 @@ def _agreement_data(client, template, **overrides):
     return data
 
 
+def _current_policy(actor):
+    from content.models import FinancingPolicyRevision
+    return FinancingPolicyRevision.objects.create(version=1, created_by=actor)
+
+
 def test_schedule_rounding_preserves_exact_financed_balance():
     schedule = build_installment_schedule(Decimal('100.00'), date(2026, 3, 5))
 
@@ -203,6 +208,77 @@ def test_second_cycle_update_preserves_original_partnership_end(
 
     assert updated.partnership_end_date == first.partnership_end_date
     assert 'Un segundo ciclo no reinicia ni amplía esta restricción' in resolve_agreement_markdown(updated, draft=True)
+
+
+def test_five_year_agreement_freezes_the_current_monthly_requirement_allowance(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if changing the allowance settings rewrites a signed commercial commitment."""
+    from content.models import HourPackageSettings
+
+    settings = HourPackageSettings.load()
+    settings.alliance_xs_count = 4
+    settings.alliance_s_count = 2
+    settings.alliance_m_count = 1
+    settings.save()
+    _current_policy(admin_user)
+    template = _template()
+    first = create_agreement(
+        _agreement_data(make_client_profile(nit='9011'), template), actor=admin_user,
+    )
+    settings.alliance_xs_count = 8
+    settings.alliance_s_count = 3
+    settings.alliance_m_count = 2
+    settings.save()
+    second = create_agreement(
+        _agreement_data(make_client_profile(nit='9012'), template), actor=admin_user,
+    )
+
+    assert first.requirement_allowance == {'xs': 4, 's': 2, 'm': 1}
+    assert second.requirement_allowance == {'xs': 8, 's': 3, 'm': 2}
+    assert '4 XS, 2 S y 1 M cada mes' in resolve_agreement_markdown(first, draft=True)
+
+
+def test_legacy_empty_allowance_keeps_its_historical_hours_clause(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if an old financing agreement is retroactively rewritten as a size package."""
+    _current_policy(admin_user)
+    agreement = create_agreement(
+        _agreement_data(make_client_profile(nit='9013'), _template()), actor=admin_user,
+    )
+    FinancingAgreement.objects.filter(pk=agreement.pk).update(requirement_allowance={})
+    agreement.refresh_from_db()
+
+    assert 'sesenta (60) horas' in resolve_agreement_markdown(agreement, draft=True)
+
+
+def test_three_year_agreement_does_not_offer_monthly_requirement_allowances(
+    make_client_profile, admin_user, company_settings,
+):
+    """Fails if the shorter agreement starts promising the five-year allowance."""
+    _current_policy(admin_user)
+    agreement = create_agreement(
+        _agreement_data(
+            make_client_profile(nit='9014'), _template(), modality=FinancingAgreement.Modality.THREE_YEAR,
+        ), actor=admin_user,
+    )
+
+    text = resolve_agreement_markdown(agreement, draft=True)
+
+    assert agreement.requirement_allowance == {}
+    assert 'no incluye cupos mensuales de requerimientos' in text
+    assert 'cada mes desde la salida a producción' not in text
+
+    from content.models import HourPackageSettings
+    settings = HourPackageSettings.load()
+    settings.alliance_xs_count = 8
+    settings.alliance_s_count = 3
+    settings.alliance_m_count = 2
+    settings.save()
+    revised = update_draft(agreement, {'modality': FinancingAgreement.Modality.FIVE_YEAR}, actor=admin_user)
+
+    assert revised.requirement_allowance == {'xs': 8, 's': 3, 'm': 2}
 
 
 @pytest.mark.parametrize(

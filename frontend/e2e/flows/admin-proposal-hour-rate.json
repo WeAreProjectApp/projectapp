@@ -1,12 +1,12 @@
 {
   "id": "admin-proposal-hour-rate",
-  "name": "Admin Proposal Hourly Rate (Auto/Manual)",
+  "name": "Paquetes de requerimientos de una propuesta",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P1",
-  "description": "Set a proposal's hour-package rate from the «Tarifa por hora» tab: automatic keeps syncing from the HourPackage catalog, manual overrides the base rate (and optionally a per-package rate) for that proposal only, with a live preview of the table the PDF prints.",
+  "description": "Admin revisa composición y precios del catálogo o edita paquetes manuales para una propuesta. Puede ocultarlos del PDF y adoptar explícitamente la oferta nueva en un borrador histórico; los precios emitidos quedan congelados hasta preparar una revisión.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

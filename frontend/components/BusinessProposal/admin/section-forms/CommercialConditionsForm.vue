@@ -4,15 +4,15 @@
     <FieldInput v-model="form.title" label="Título" />
   </div>
 
-  <!-- Paquetes de horas -->
+  <!-- Paquetes de requerimientos -->
   <div class="mt-2">
     <FieldInput v-model="form.packagesTitle" label="Título de los paquetes" />
     <FieldTextarea v-model="form.packagesIntro" label="Intro de los paquetes" :rows="2" :isSingle="true" class="mt-2" />
 
     <p data-testid="hour-rate-tab-hint" class="text-[11px] text-text-subtle mt-3">
-      Los paquetes, las horas y los descuentos vienen del catálogo de Paquetes por horas.
+      Los paquetes, los cupos y los descuentos vienen del catálogo de Paquetes de requerimientos.
       La tarifa de esta propuesta se configura en la pestaña
-      <span class="font-medium text-text-muted">«Tarifa por hora»</span>, que además
+      <span class="font-medium text-text-muted">«Paquetes de requerimientos»</span>, que además
       muestra la tabla tal como se imprime en el PDF.
     </p>
 
@@ -42,7 +42,7 @@
 
 <script setup>
 // Rates, currency and the package list are deliberately absent from this form:
-// the catalog owns the package structure and the «Tarifa por hora» tab owns the
+// the catalog owns the package structure and the «Paquetes de requerimientos» tab owns the
 // per-proposal rate. They still round-trip through buildFormFromJson/formToJson
 // as untouched carry-through fields, so saving here never disturbs them.
 import { FieldInput, FieldTextarea } from './fields.js';

@@ -3969,27 +3969,15 @@ La prueba navega al cierre y usa las acciones conservadas; verifica que no exist
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P1
-- **Routes:** `/panel/proposals/:id/edit?tab=hour-rate` (Tarifa por hora tab)
-- **Description:** Admin sets the hourly rate of the hour packages for one proposal. In **automático** (the default) the rate keeps syncing from the `HourPackage` catalog, so a catalog edit reaches every PDF. In **manual** the proposal carries its own base rate — and optionally a rate for an individual package — while names, hours and discounts still come from the catalog. The manual value is stored on the proposal and never touches the catalog or any other proposal.
+- **Routes:** `/panel/hour-packages` y `/panel/proposals/:id/edit?tab=hour-rate`
+- **Description:** Admin revisa composición y precios del catálogo o edita paquetes manuales para una propuesta. Puede ocultarlos del PDF y adoptar explícitamente la oferta nueva en un borrador histórico; los precios emitidos quedan congelados hasta preparar una revisión.
 - **Steps:**
-  1. Admin opens a proposal in edit mode and selects the "Tarifa por hora" tab.
-  2. The tab loads the catalog for the proposal's nationality and renders a preview of the table the PDF prints (Paquete / Horas / Dcto. / Tarifa/hora / Total).
-  3. Admin switches the control to "Manual"; the rate input appears, pre-filled from the catalog.
-  4. Admin types a rate; every row of the preview recalculates live (rate × (1 − discount), × hours).
-  5. Optionally, admin sets a rate for a single package, which overrides the base rate for that row only.
-  6. Admin clicks "Guardar" → `PATCH /api/proposals/sections/:id/update/` writes `hourPackagesMode`, `manualHourlyRate`, `manualCurrency` and `manualPackageRates` into the commercial_conditions `content_json`.
-  7. The generated PDF seeds the packages from the catalog and overlays the manual rates.
-- **Branches:**
-  - [Branch A — Back to automatic] The manual rate is kept, not discarded; the catalog value rules while automatic is on, and re-enabling manual restores the saved rate.
-  - [Branch B — No section] A proposal without the commercial_conditions section shows an empty state with a "Crear la sección" button.
-  - [Branch C — Empty catalog] With no active packages for the nationality, a warning shows and the preview falls back to the snapshot stored on the proposal.
-  - [Branch D — Currency changed] If the proposal's nationality changed after the manual rate was set, the tab reverts to automatic and warns, so a COP amount is never reprinted as USD.
-  - [Branch E — Disabled section] If commercial_conditions is disabled, a banner warns that these packages will not reach the PDF.
-- **Coverage:** ✅ Covered
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-proposal-hour-rate.spec.js`
-- **Unit Tests:** `test/components/SectionEditor.test.js`
-- **Backend Tests:** `content/tests/views/test_section_update_views.py`
-- **Known gaps:** The `commercial_conditions` and `value_added_modules` editors are not exercised by the spec; their money fields (`hourlyRate` base and per-package, `min_price_usd/cop`) now use `BaseCurrencyInput` (2026-07).
 
 ### FLOW: `admin-proposal-section-edit-paste`
 
@@ -5318,15 +5306,13 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Role:** admin
 - **Priority:** P2
 - **Routes:** `/panel/hour-packages`
-- **Description:** View the hour-package catalog filtered by nationality tabs (COL/EXT/USA); prices show in the currency derived from the nationality (COL→COP, EXT/USA→USD) with computed effective rate and total.
+- **Description:** Admin navega al catálogo por mercado y consulta cupos XS/S/M, vigencia, referencia, descuento, ahorro y total; maneja vacíos y errores de carga.
 - **Steps:**
-  1. Admin navigates to `/panel/hour-packages`.
-  2. Packages load from API (`GET /api/hour-packages/admin/?nationality=COL`) — Colombia tab is active by default.
-  3. Table renders name, hours, rate/h, discount, effective rate, total and active badge.
-  4. Admin switches nationality tab → list refetches with that nationality and prices change currency.
-  5. Empty tabs show a hint that proposal creation falls back to default packages.
-  6. "Nuevo paquete" button links to the create page carrying the active nationality.
-- **Coverage:** ✅ Covered (list, nationality tabs, empty state, pagination across pages and the mobile card variant; asserted 2026-07-23. View modes tracked in `admin-hour-packages-view-modes`.)
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-list.spec.js`
 
 ### FLOW: `admin-hour-packages-view-modes`
@@ -5335,14 +5321,14 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Role:** admin
 - **Priority:** P3
 - **Routes:** `/panel/hour-packages`
-- **Description:** Switch the catalog between Tabla, Tarjetas and Comparativa (pricing tiers with a "Mejor tarifa" highlight); the initial mode comes from the settings singleton.
+- **Description:** Admin alterna tabla, tarjetas y comparativa; consulta cupos y precios por mercado y reconoce el mayor descuento entre paquetes activos.
 - **Steps:**
-  1. Admin opens `/panel/hour-packages` — `GET /api/hour-packages/admin/settings/` decides the initial view mode.
-  2. Admin switches the view-mode segmented control (Tabla / Tarjetas / Comparativa).
-  3. Tarjetas renders a card grid with effective rate, discount badge and totals; Comparativa renders side-by-side tiers highlighting the best effective rate.
-  4. Edit/Eliminar remain available from every mode.
-- **Coverage:** ⚠️ Missing
-- **E2E Spec:** _pending_
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
+- **E2E Spec:** `e2e/admin/admin-hour-packages-list.spec.js`
 
 ### FLOW: `admin-hour-packages-config`
 
@@ -5350,13 +5336,13 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Role:** admin
 - **Priority:** P3
 - **Routes:** `/panel/hour-packages`
-- **Description:** Configuración section: per-nationality base hourly rates (propagate to the whole catalog on save), default view mode, and restore a nationality's catalog to the canonical defaults ladder.
+- **Description:** Admin configura valores internos XS/S/M en COP, factores extranjeros/EE. UU. y cupos mensuales de Alianza; guarda cambios, valida errores, elige vista y restaura los tres paquetes sin reiniciar los valores internos.
 - **Steps:**
-  1. Admin switches the page section segmented to "Configuración" — the three base-rate inputs (Colombia COP, Extranjero USD, USA USD) come prefilled from `GET /api/hour-packages/admin/settings/`.
-  2. "Guardar tarifas" PATCHes `/api/hour-packages/admin/settings/update/`; the backend propagates each changed rate to every package of that nationality (active and inactive) and responds with `updated_packages` counts, surfaced in the success toast. The Catálogo table reflects the new rates. Rates `<= 0` are rejected client-side; a server failure surfaces an error toast. Existing proposals keep their snapshot — only new proposals seed the updated rates.
-  3. Saving a default view mode PATCHes the same settings endpoint and toasts.
-  4. "Restablecer" per nationality opens a ConfirmModal and POSTs `/api/hour-packages/admin/restore-defaults/`; the catalog of that country is replaced with the default ladder (1h/20h/60h/180h) and the base rate in settings resets to the default.
-- **Coverage:** ✅ Covered (base rates: display prefill, success save + propagation reflected in catalog, client-side error, server failure toast; asserted 2026-07-28. Default view mode and restore-defaults remain unasserted in E2E — backend covered in `test_hour_package_views.py`.)
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-config.spec.js`
 
 ### FLOW: `admin-accounting-statements`
@@ -5412,15 +5398,14 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P2
-- **Routes:** `/panel/hour-packages/create`
-- **Description:** Create an hour package with nationality, bilingual name/note, hours, hourly rate, discount, order and active flag; the currency is derived from the nationality and a live preview shows effective rate and total.
+- **Routes:** `/panel/hour-packages`
+- **Description:** Admin crea un paquete por mercado con nombres y notas bilingües, cupos enteros XS/S/M, vigencia, descuento, orden y activación; revisa la vista previa y errores de validación o guardado.
 - **Steps:**
-  1. Admin navigates to `/panel/hour-packages/create` (nationality preselected from query param).
-  2. Admin fills the form; the preview recalculates effective rate/total.
-  3. Admin submits.
-  4. API call to `POST /api/hour-packages/admin/create/`.
-  5. On success, admin is redirected to the list; validation errors render per field.
-- **Coverage:** ✅ Covered
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-create.spec.js`
 
 ### FLOW: `admin-hour-packages-edit`
@@ -5428,15 +5413,14 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Module:** admin
 - **Role:** admin
 - **Priority:** P2
-- **Routes:** `/panel/hour-packages/:id/edit`
-- **Description:** Edit an existing hour package; form prefilled from the detail endpoint, preview recalculates and a partial PATCH persists the changes.
+- **Routes:** `/panel/hour-packages`
+- **Description:** Admin edita cupos XS/S/M, vigencia, nombres, descuento y estado de un paquete; conserva el borrador ante errores del servidor.
 - **Steps:**
-  1. Admin navigates to `/panel/hour-packages/:id/edit`.
-  2. Package data loads from API (`GET /api/hour-packages/admin/:id/detail/`).
-  3. Admin edits rate/discount/fields; preview recalculates.
-  4. Admin saves → `PATCH /api/hour-packages/admin/:id/update/`.
-  5. On success, admin returns to the list.
-- **Coverage:** ✅ Covered
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-edit.spec.js`
 
 ### FLOW: `admin-hour-packages-delete`
@@ -5445,14 +5429,13 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 - **Role:** admin
 - **Priority:** P2
 - **Routes:** `/panel/hour-packages`
-- **Description:** Delete an hour package from the list with a confirmation modal; already-created proposals are not affected.
+- **Description:** Admin confirma o cancela la eliminación de un paquete del catálogo vigente. Los documentos históricos conservan sus condiciones.
 - **Steps:**
-  1. Admin views the hour-packages list.
-  2. Admin clicks delete on a package.
-  3. ConfirmModal appears.
-  4. Admin confirms → `DELETE /api/hour-packages/admin/:id/delete/`.
-  5. The row disappears from the list.
-- **Coverage:** ✅ Covered
+  1. Navegar desde el panel al catálogo o a la pestaña Paquetes de requerimientos de una propuesta.
+  2. Revisar cupos por talla y mercado, vigencia, descuento, ahorro y precio más impuestos.
+  3. Realizar la acción del flujo; verificar el resultado guardado o el mensaje de error.
+- **Branches:** La compra tiene vigencia inicial de 12 meses desde el pago, sin intercambio de tallas. L/XL requieren levantamiento independiente. Configuración permite ajustar cantidades y valores. Alianza tiene cupo mensual separado, no acumulable. Los documentos emitidos y las condiciones históricas no se convierten automáticamente.
+- **Coverage:** Ver auditoría y resultados de ejecución de esta rama; la existencia del spec no certifica ejecución.
 - **E2E Spec:** `e2e/admin/admin-hour-packages-delete.spec.js`
 
 ### FLOW: `admin-financing-distribution`

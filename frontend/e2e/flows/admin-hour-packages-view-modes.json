@@ -1,11 +1,11 @@
 {
   "id": "admin-hour-packages-view-modes",
-  "name": "Admin Hour Packages — View Modes",
+  "name": "Comparar paquetes de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P3",
-  "description": "Admin switches the hour-package catalog between Tabla, Tarjetas (card grid) and Comparativa (pricing tiers highlighting 'Mejor tarifa') via a BaseSegmented control; the initial mode comes from GET /api/hour-packages/admin/settings/ (default_view_mode).",
+  "description": "Admin alterna tabla, tarjetas y comparativa; consulta cupos y precios por mercado y reconoce el mayor descuento entre paquetes activos.",
   "expectedSpecs": 0
 }

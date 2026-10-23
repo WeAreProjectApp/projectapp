@@ -1,12 +1,12 @@
 {
   "id": "admin-hour-packages-create",
-  "name": "Admin Hour Packages Create",
+  "name": "Crear paquete de requerimientos",
   "module": "admin",
   "roles": [
     "admin"
   ],
   "priority": "P2",
-  "description": "Create an hour package with nationality, bilingual names, hours, rate and discount; currency derives from nationality.",
+  "description": "Admin crea un paquete por mercado con nombres y notas bilingües, cupos enteros XS/S/M, vigencia, descuento, orden y activación; revisa la vista previa y errores de validación o guardado.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",
