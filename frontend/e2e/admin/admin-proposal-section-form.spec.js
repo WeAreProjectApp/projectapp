@@ -126,7 +126,7 @@ function buildMockHandler(capturedUpdates) {
  */
 async function openSectionEditor(page, capturedUpdates, sectionType) {
   await mockApi(page, buildMockHandler(capturedUpdates));
-  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`);
+  await page.goto(`/es-co/panel/proposals/${PROPOSAL_ID}/edit`, { waitUntil: 'domcontentloaded' });
 
   // Switch to Secciones tab
   await selectProposalDestination(page, 'proposal', 'sections');
@@ -137,7 +137,14 @@ async function openSectionEditor(page, capturedUpdates, sectionType) {
   await page.getByTestId('section-editor').waitFor({ state: 'visible' });
 }
 
+async function fillEditorialList(editor, label, values, listIndex) {
+  await editor.getByRole('textbox', { name: `${label} 1`, exact: true }).fill(values[0]);
+  await editor.getByRole('button', { name: 'Añadir elemento', exact: true }).nth(listIndex).click();
+  await editor.getByRole('textbox', { name: `${label} 2`, exact: true }).fill(values[1]);
+}
+
 test.describe('Proposal Section Edit — Form Mode', () => {
+  test.setTimeout(60_000);
   test.beforeEach(async ({ page }) => {
     await setAuthLocalStorage(page, {
       token: 'e2e-admin-token',
@@ -170,7 +177,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     const editor = page.getByTestId('section-editor');
 
     await editor.getByLabel('Nombre del cliente').fill('María García');
-    await editor.getByLabel('Frase inspiracional').fill('Design is how it works.');
+    await editor.getByRole('textbox', { name: 'Frase inspiracional', exact: true }).fill('Design is how it works.');
 
     // Click save
     await editor.getByRole('button', { name: 'Guardar Sección' }).click();
@@ -182,7 +189,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     const last = captured[captured.length - 1];
     expect(last.sectionId).toBe(101);
     expect(last.body.content_json.clientName).toBe('María García');
-    expect(last.body.content_json.inspirationalQuote).toBe('Design is how it works.');
+    expect(last.body.content_json.inspirationalQuote).toBe('Design is how it works\\.');
+    expect(last.body.content_json.text_formats['/inspirationalQuote']).toBe('markdown_html_v1');
     expect(last.body.content_json._editMode).toBe('form');
   });
 
@@ -194,8 +202,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Párrafos').fill('Primer párrafo.\nSegundo párrafo.');
-    await editor.getByLabel('Highlights / Incluye').fill('Diseño personalizado\nDesarrollo responsivo');
+    await fillEditorialList(editor, 'Párrafos', ['Primer párrafo.', 'Segundo párrafo.'], 0);
+    await fillEditorialList(editor, 'Highlights / Incluye', ['Diseño personalizado', 'Desarrollo responsivo'], 1);
 
     await editor.getByRole('button', { name: 'Guardar Sección' }).click();
     // After successful save, the parent auto-collapses the section editor
@@ -204,8 +212,12 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
     expect(last.body.content_json._editMode).toBe('form');
-    expect(last.body.content_json.paragraphs).toEqual(['Primer párrafo.', 'Segundo párrafo.']);
-    expect(last.body.content_json.highlights).toEqual(['Diseño personalizado', 'Desarrollo responsivo']);
+    expect(last.body.content_json.paragraphs).toEqual(['<p>Primer párrafo.</p>&#10;', '<p>Segundo párrafo.</p>&#10;']);
+    expect(last.body.content_json.highlights).toEqual(['<p>Diseño personalizado</p>&#10;', '<p>Desarrollo responsivo</p>&#10;']);
+    expect(last.body.content_json.text_formats).toEqual({
+      '/paragraphs/0': 'markdown_html_v1', '/paragraphs/1': 'markdown_html_v1',
+      '/highlights/0': 'markdown_html_v1', '/highlights/1': 'markdown_html_v1',
+    });
   });
 
   test('context_diagnostic: fills issues and opportunity, saves correctly', {
@@ -216,8 +228,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Párrafos').fill('Contexto del proyecto.');
-    await editor.getByRole('textbox', { name: /^Problemas/ }).fill('Falta de web\nSin presencia digital');
+    await editor.getByRole('textbox', { name: 'Párrafos 1', exact: true }).fill('Contexto del proyecto.');
+    await fillEditorialList(editor, 'Problemas', ['Falta de web', 'Sin presencia digital'], 1);
     await editor.getByRole('textbox', { name: 'Oportunidad', exact: true }).fill('Crear plataforma de confianza.');
 
     await editor.getByRole('button', { name: 'Guardar Sección' }).click();
@@ -226,9 +238,9 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
-    expect(last.body.content_json.paragraphs).toEqual(['Contexto del proyecto.']);
-    expect(last.body.content_json.issues).toEqual(['Falta de web', 'Sin presencia digital']);
-    expect(last.body.content_json.opportunity).toBe('Crear plataforma de confianza.');
+    expect(last.body.content_json.paragraphs).toEqual(['<p>Contexto del proyecto.</p>&#10;']);
+    expect(last.body.content_json.issues).toEqual(['<p>Falta de web</p>&#10;', '<p>Sin presencia digital</p>&#10;']);
+    expect(last.body.content_json.opportunity).toBe('Crear plataforma de confianza\\.');
   });
 
   test('save button auto-collapses the section editor on success', {
@@ -456,8 +468,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Introducción').fill('Nuestra estrategia digital.', { timeout: 5000 });
-    await editor.getByLabel('Resultado esperado').fill('Incremento del 30% en conversiones.', { timeout: 5000 });
+    await editor.getByRole('textbox', { name: 'Introducción', exact: true }).fill('Nuestra estrategia digital.', { timeout: 5000 });
+    await editor.getByRole('textbox', { name: 'Resultado esperado', exact: true }).fill('Incremento del 30% en conversiones.', { timeout: 5000 });
 
     await editor.getByRole('button', { name: 'Guardar Sección' }).click({ timeout: 5000 });
     // After successful save, the parent auto-collapses the section editor
@@ -466,8 +478,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
     expect(last.sectionId).toBe(104);
-    expect(last.body.content_json.intro).toBe('Nuestra estrategia digital.');
-    expect(last.body.content_json.result).toBe('Incremento del 30% en conversiones.');
+    expect(last.body.content_json.intro).toBe('Nuestra estrategia digital\\.');
+    expect(last.body.content_json.result).toBe('Incremento del 30\\% en conversiones\\.');
     expect(last.body.content_json._editMode).toBe('form');
   });
 
@@ -479,7 +491,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Texto introductorio').fill('Fases del proyecto.');
+    await editor.getByRole('textbox', { name: 'Texto introductorio', exact: true }).fill('Fases del proyecto.');
     await editor.getByLabel('Duración total').fill('3 meses');
 
     await editor.getByRole('button', { name: 'Guardar Sección' }).click();
@@ -489,7 +501,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
     expect(last.sectionId).toBe(109);
-    expect(last.body.content_json.introText).toBe('Fases del proyecto.');
+    expect(last.body.content_json.introText).toBe('Fases del proyecto\\.');
     expect(last.body.content_json.totalDuration).toBe('3 meses');
     expect(last.body.content_json._editMode).toBe('form');
   });
@@ -502,7 +514,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Texto introductorio').fill('Tu inversión incluye todo el desarrollo.', { timeout: 5000 });
+    await editor.getByRole('textbox', { name: 'Texto introductorio', exact: true }).fill('Tu inversión incluye todo el desarrollo.', { timeout: 5000 });
     // Note: totalInvestment is displayed as read-only info box in the investment section editor
     // (editable only from the General tab), so we only fill introText here.
 
@@ -513,7 +525,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
     expect(last.sectionId).toBe(110);
-    expect(last.body.content_json.introText).toBe('Tu inversión incluye todo el desarrollo.');
+    expect(last.body.content_json.introText).toBe('Tu inversión incluye todo el desarrollo\\.');
     expect(last.body.content_json._editMode).toBe('form');
   });
 
@@ -525,8 +537,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
 
     const editor = page.getByTestId('section-editor');
 
-    await editor.getByLabel('Párrafos').fill('Diseño centrado en el usuario.', { timeout: 5000 });
-    await editor.getByLabel('Items de enfoque').fill('Usabilidad\nAccesibilidad', { timeout: 5000 });
+    await editor.getByRole('textbox', { name: 'Párrafos 1', exact: true }).fill('Diseño centrado en el usuario.', { timeout: 5000 });
+    await fillEditorialList(editor, 'Items de enfoque', ['Usabilidad', 'Accesibilidad'], 1);
 
     await editor.getByRole('button', { name: 'Guardar Sección' }).click({ timeout: 5000 });
     // After successful save, the parent auto-collapses the section editor
@@ -535,8 +547,8 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     expect(captured.length).toBeGreaterThanOrEqual(1);
     const last = captured[captured.length - 1];
     expect(last.sectionId).toBe(105);
-    expect(last.body.content_json.paragraphs).toEqual(['Diseño centrado en el usuario.']);
-    expect(last.body.content_json.focusItems).toEqual(['Usabilidad', 'Accesibilidad']);
+    expect(last.body.content_json.paragraphs).toEqual(['<p>Diseño centrado en el usuario.</p>&#10;']);
+    expect(last.body.content_json.focusItems).toEqual(['<p>Usabilidad</p>&#10;', '<p>Accesibilidad</p>&#10;']);
     expect(last.body.content_json._editMode).toBe('form');
   });
 });

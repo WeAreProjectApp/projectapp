@@ -16,8 +16,8 @@
     "version": "3.1.0"
   },
   "additional-modules": {
-    "sha256": "54512d374303ab4a14314c2ddf5d874192d6ec1fe3e0452bf40a7a71be0c2d10",
-    "version": "4.1.0"
+    "sha256": "4db1936d613d68e82cfc7644f2a622bdcfd4094646f47a1897509eec31bcc230",
+    "version": "4.1.1"
   },
   "blog": {
     "sha256": "4e4854a7600530db88af9099511410f32dc682e34522b051c3e04c885ad4d149",
@@ -40,8 +40,8 @@
     "version": "6.2.0"
   },
   "communications": {
-    "sha256": "364175d0e24809b050f58ac97a51abf108672751df3add634cf0c443976f444b",
-    "version": "3.1.0"
+    "sha256": "c3c250f78fc14c9f692cc0d8936575bd091e5bcc52514e0c464680cb4f9c1aaf",
+    "version": "3.1.1"
   },
   "content": {
     "sha256": "f059a5a7737e4fff0513815f57c1b332bbdd91ce7956f57167b4fff40e3e132a",
@@ -60,8 +60,8 @@
     "version": "2.0.0"
   },
   "offerings": {
-    "sha256": "2c8857e27caabaf3f6605db539f1420bb53df9c4b90f37464330520f2a05fd91",
-    "version": "1.1.0"
+    "sha256": "a9b5e5f3efaf4ba36d63d73626a72fc2cc1b45f7370b6f027a3a0dacf4ddb3d2",
+    "version": "1.1.1"
   },
   "operations": {
     "sha256": "68d4589f26eee8e6ec7943ad17502ccc4f60d6d29d802b21c067ba4528cb0b46",

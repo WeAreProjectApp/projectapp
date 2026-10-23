@@ -1,5 +1,17 @@
 import { mount } from '@vue/test-utils'
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue'
+import BaseRichTextListEditor from '../../components/base/BaseRichTextListEditor.vue'
+import BaseSegmented from '../../components/base/BaseSegmented.vue'
 import ExecutiveSummaryForm from '../../components/WebAppDiagnostic/admin/sections/ExecutiveSummaryForm.vue'
+
+const originalUseI18n = global.useI18n
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }) })
+afterAll(() => { global.useI18n = originalUseI18n })
+
+async function editSource(wrapper, index, value) {
+  await wrapper.findAll('[role="tab"]').filter((tab) => tab.text() === 'richText.source')[index].trigger('click')
+  await wrapper.findAll('[data-testid="rich-text-source-input"]')[index].setValue(value)
+}
 
 function defaultValue(overrides = {}) {
   return {
@@ -16,6 +28,7 @@ function defaultValue(overrides = {}) {
 function mountForm(propsOverrides = {}) {
   return mount(ExecutiveSummaryForm, {
     props: { modelValue: defaultValue(), ...propsOverrides },
+    global: { components: { BaseRichTextEditor, BaseRichTextListEditor, BaseSegmented } },
   })
 }
 
@@ -34,17 +47,17 @@ describe('ExecutiveSummaryForm', () => {
 
   it('renders intro textarea with value from modelValue', () => {
     const wrapper = mountForm({ modelValue: defaultValue({ intro: 'Texto de intro' }) })
-    expect(wrapper.findAll('textarea')[0].element.value).toBe('Texto de intro')
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]')[0].element.value).toBe('Texto de intro')
   })
 
   it('renders narrative textarea with value from modelValue', () => {
     const wrapper = mountForm({ modelValue: defaultValue({ narrative: 'Texto narrativo' }) })
-    expect(wrapper.findAll('textarea')[1].element.value).toBe('Texto narrativo')
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]')[1].element.value).toBe('Texto narrativo')
   })
 
   it('renders highlights textarea with value from modelValue', () => {
     const wrapper = mountForm({ modelValue: defaultValue({ highlightsText: 'Punto 1\nPunto 2' }) })
-    expect(wrapper.findAll('textarea')[2].element.value).toBe('Punto 1\nPunto 2')
+    expect(wrapper.findAll('[data-testid="rich-text-source-input"]').slice(2).map((editor) => editor.element.value)).toEqual(['Punto 1', 'Punto 2'])
   })
 
   it('emits update:modelValue when index input changes', async () => {
@@ -62,8 +75,8 @@ describe('ExecutiveSummaryForm', () => {
 
   it('emits update:modelValue when intro textarea changes', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('textarea')[0].setValue('Intro actualizada')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toMatchObject({ intro: 'Intro actualizada' })
+    await editSource(wrapper, 0, 'Intro actualizada')
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toMatchObject({ intro: 'Intro actualizada' })
   })
 
   it('emits update:modelValue when severityCounts.critico changes', async () => {
@@ -92,14 +105,14 @@ describe('ExecutiveSummaryForm', () => {
 
   it('emits update:modelValue when narrative textarea changes', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('textarea')[1].setValue('Nueva narrativa')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toMatchObject({ narrative: 'Nueva narrativa' })
+    await editSource(wrapper, 1, 'Nueva narrativa')
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toMatchObject({ narrative: 'Nueva narrativa' })
   })
 
   it('emits update:modelValue when highlights textarea changes', async () => {
     const wrapper = mountForm()
-    await wrapper.findAll('textarea')[2].setValue('Highlight A\nHighlight B')
-    expect(wrapper.emitted('update:modelValue')[0][0]).toMatchObject({ highlightsText: 'Highlight A\nHighlight B' })
+    await editSource(wrapper, 2, 'Highlight A\nHighlight B')
+    expect(wrapper.emitted('update:modelValue').at(-1)[0]).toMatchObject({ highlightsText: '<p>Highlight A&#10;Highlight B</p>&#10;' })
   })
 
   it('syncs form state when modelValue prop is updated externally', async () => {

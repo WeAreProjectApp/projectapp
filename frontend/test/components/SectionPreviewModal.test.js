@@ -11,7 +11,7 @@ import { mount } from '@vue/test-utils';
 jest.mock('marked', () => {
   const render = (src) => src || '';
   render.parse = render;
-  return { marked: render };
+  return { ...jest.requireActual('marked'), marked: render };
 });
 
 import SectionPreviewModal from '../../components/BusinessProposal/admin/SectionPreviewModal.vue';

@@ -7,6 +7,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { fillRichTextSource } from '../helpers/editorial.js';
 import { ADMIN_PROPOSAL_CREATE, ADMIN_PROPOSAL_CREATE_FROM_JSON, ADMIN_PROPOSAL_CREATE_AND_SEND, ADMIN_PROPOSAL_CREATE_PREVIEW } from '../helpers/flow-tags.js';
 
 const NEW_PROPOSAL_ID = 99;
@@ -76,7 +77,7 @@ test.describe('Admin Proposal Create', () => {
     await page.getByLabel('Título').fill('Nueva Propuesta Web');
     await page.getByLabel('Nombre').fill('Carlos López');
     await page.getByLabel('Email').fill('carlos@test.com');
-    await page.getByTestId('create-email-intro').fill(
+    await fillRichTextSource(page.getByTestId('create-email-intro'),
       'Esta propuesta mejora la captación digital para generar nuevas ventas.',
     );
 
@@ -95,6 +96,7 @@ test.describe('Admin Proposal Create', () => {
     expect(capturedPayload.email_intro).toBe(
       'Esta propuesta mejora la captación digital para generar nuevas ventas.',
     );
+    expect(capturedPayload.text_formats).toEqual({ '/email_intro': 'markdown_html_v1' });
   });
 
   test('a rejected submit shows the field error and keeps the admin on the create page', {
@@ -400,7 +402,7 @@ test.describe('Admin Proposal Create & Send', () => {
 
     // Client and investment are insufficient until the send message exists.
     await expect(page.getByRole('button', { name: /Crear y Enviar/i })).not.toBeVisible();
-    await page.getByTestId('create-email-intro').fill(
+    await fillRichTextSource(page.getByTestId('create-email-intro'),
       'Esta propuesta automatiza la operación para reducir reprocesos.',
     );
 
@@ -435,7 +437,7 @@ test.describe('Admin Proposal Create & Send', () => {
     await page.getByLabel('Nombre').fill('Carlos López');
     await page.getByLabel('Email').fill('carlos@test.com');
     await page.getByPlaceholder('3.500.000').fill('15000000');
-    await page.getByTestId('create-email-intro').fill(
+    await fillRichTextSource(page.getByTestId('create-email-intro'),
       'Esta propuesta centraliza los pedidos para acelerar las entregas.',
     );
 
@@ -473,7 +475,7 @@ test.describe('Admin Proposal Create & Send', () => {
     await page.getByLabel('Nombre').fill('Laura Díaz');
     await page.getByLabel('Email').fill('laura@test.com');
     await page.getByPlaceholder('3.500.000').fill('8000000');
-    await page.getByTestId('create-email-intro').fill(
+    await fillRichTextSource(page.getByTestId('create-email-intro'),
       'Esta propuesta elimina tareas manuales para responder más rápido.',
     );
 
@@ -549,7 +551,7 @@ test.describe('Admin Proposal Create Preview', () => {
     await page.getByLabel('Nombre').fill('Carlos López');
     await page.getByLabel('Email').fill('carlos@test.com');
     await page.getByPlaceholder('3.500.000').fill('15000000');
-    await page.getByTestId('create-email-intro').fill(
+    await fillRichTextSource(page.getByTestId('create-email-intro'),
       'Esta propuesta centraliza el proceso para reducir tiempos de atención.',
     );
 

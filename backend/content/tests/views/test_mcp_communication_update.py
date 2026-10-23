@@ -108,12 +108,15 @@ def test_tool_catalog_exposes_update_message_schema(
     schema = tool['inputSchema']
     assert schema['required'] == ['message_id']
     assert set(schema['properties']) == {
-        'message_id', 'subject', 'content', 'document_ids',
-        'reply_to_id', 'occurred_at',
+        'message_id', 'subject', 'content', 'text_formats',
+        'document_ids', 'reply_to_id', 'occurred_at',
     }
     assert schema['additionalProperties'] is False
     assert not {'anyOf', 'oneOf', 'allOf'} & schema.keys()
-    assert 'al menos uno de subject, content, document_ids, reply_to_id u occurred_at' in tool['description']
+    assert (
+        'al menos uno de subject, content, text_formats, document_ids, '
+        'reply_to_id u occurred_at'
+    ) in tool['description']
     assert 'No crea otro mensaje ni envía' in tool['description']
 
 

@@ -78,6 +78,10 @@ def duplicate_proposal(source, *, via_mcp=False):
         discount_percent=source.discount_percent,
         show_contract_terms=source.show_contract_terms,
         show_explainer_video=source.show_explainer_video,
+        email_intro=source.email_intro,
+        email_features=deepcopy(source.email_features),
+        email_method_phases=deepcopy(source.email_method_phases),
+        text_formats=deepcopy(source.text_formats),
         is_active=True,
         view_count=0,
         first_viewed_at=None,
@@ -100,6 +104,7 @@ def duplicate_proposal(source, *, via_mcp=False):
             is_enabled=section.is_enabled,
             is_wide_panel=section.is_wide_panel,
             content_json=section_content,
+            text_formats=deepcopy(section.text_formats),
         )
 
     suffix = ' via MCP' if via_mcp else ''
@@ -4307,7 +4312,17 @@ class ProposalService:
 
         config = ProposalDefaultConfig.objects.filter(language=language).first()
         if config and config.sections_json:
-            return ProposalService._with_item_ids(copy.deepcopy(config.sections_json))
+            sections = copy.deepcopy(config.sections_json)
+            for index, section in enumerate(sections):
+                prefix = f'/sections_json/{index}/'
+                inherited = {
+                    pointer[len(prefix) - 1:]: format_name
+                    for pointer, format_name in (config.text_formats or {}).items()
+                    if pointer.startswith(prefix)
+                }
+                if inherited:
+                    section['text_formats'] = {**section.get('text_formats', {}), **inherited}
+            return ProposalService._with_item_ids(sections)
 
         return ProposalService._hardcoded_with_item_ids(language)
 
@@ -4413,8 +4428,10 @@ def build_proposal_from_json(validated_data):
 
         if json_key and json_key in sections_data:
             content_json = copy.deepcopy(sections_data[json_key])
+            section_formats = {}
         else:
             content_json = copy.deepcopy(section_cfg['content_json'])
+            section_formats = copy.deepcopy(section_cfg.get('text_formats') or {})
             if section_type == 'commercial_conditions':
                 # No explicit payload for this section: seed it from the
                 # hour-package catalog (falls back to defaults when empty).
@@ -4510,6 +4527,7 @@ def build_proposal_from_json(validated_data):
             'order': section_cfg['order'],
             'is_wide_panel': section_cfg.get('is_wide_panel', False),
             'content_json': content_json,
+            'text_formats': section_formats,
         })
 
     technical_section = next(
@@ -4558,6 +4576,33 @@ def _default_commercial_conditions(language):
     return {}
 
 
+def _retained_section_formats(formats, content_json):
+    """Retain existing leaf formats unless the replacement declares its own."""
+    from content.services.editorial_format import resolve_pointer
+
+    result = {}
+    for pointer, format_name in (formats or {}).items():
+        if not pointer.startswith('/content_json/'):
+            continue
+        try:
+            source = resolve_pointer({'content_json': content_json}, pointer)
+            current = content_json
+            tokens = pointer[len('/content_json/'):].split('/')
+            locally_declared = False
+            for index, token in enumerate(tokens):
+                remaining = '/' + '/'.join(tokens[index:])
+                if isinstance(current, dict) and remaining in (current.get('text_formats') or {}):
+                    locally_declared = True
+                    break
+                key = token.replace('~1', '/').replace('~0', '~')
+                current = current[int(key)] if isinstance(current, list) else current[key]
+            if isinstance(source, str) and not locally_declared:
+                result[pointer] = format_name
+        except (KeyError, IndexError, TypeError, ValueError):
+            continue
+    return result
+
+
 @transaction.atomic
 def apply_proposal_json_update(proposal, validated_data):
     """Update an existing proposal + its sections from validated from-JSON data.
@@ -4580,6 +4625,7 @@ def apply_proposal_json_update(proposal, validated_data):
         ensure_functional_requirements_item_ids,
         normalize_technical_document_module_links,
     )
+    from content.services.editorial_format import validate_formats
 
     data = dict(validated_data)
     sections_data = data.pop('sections')
@@ -4702,7 +4748,11 @@ def apply_proposal_json_update(proposal, validated_data):
                 new_content = ensure_functional_requirements_item_ids(new_content)
 
             section.content_json = new_content
-            section.save(update_fields=['content_json'])
+            section.text_formats = validate_formats(
+                'proposalsection', {'content_json': new_content},
+                _retained_section_formats(section.text_formats, new_content),
+            )
+            section.save(update_fields=['content_json', 'text_formats'])
             updated_sections.append(json_key)
 
     if {'technicalDocument', 'functionalRequirements'} & set(updated_sections):

@@ -51,7 +51,7 @@ class EditorialBlock(Flowable):
         html = render_source(self.source, format=self.source.format, strict=False)
         self.parts = _flowables(parse_html(html, strict=False), width, self.style.fontName,
                                 self.style.fontSize, self.style.textColor)
-        self.sizes = [part.wrap(width, height)[1] + getattr(part, 'spaceAfter', 0) for part in self.parts]
+        self.sizes = [part.wrap(width, height)[1] + part.getSpaceAfter() for part in self.parts]
         self.width, self.height = width, sum(self.sizes)
         return self.width, self.height
 
@@ -62,8 +62,10 @@ class EditorialBlock(Flowable):
     def draw(self):
         y = self.height
         for part, height in zip(self.parts, self.sizes):
-            y -= height
+            gap = part.getSpaceAfter()
+            y -= height - gap
             part.drawOn(self.canv, 0, y)
+            y -= gap
 
 
 def editorial_paragraph(source, style):

@@ -1,4 +1,6 @@
 import { flushPromises, mount } from '@vue/test-utils';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 
 import ProposalResendModal from '../../components/BusinessProposal/admin/ProposalResendModal.vue';
 
@@ -33,6 +35,19 @@ const BaseButtonStub = {
   template: '<button :disabled="disabled" @click="$emit(\'click\')"><slot /></button>',
 };
 
+const originalUseI18n = global.useI18n;
+beforeEach(() => { global.useI18n = () => ({ t: (key) => key }); });
+afterAll(() => { global.useI18n = originalUseI18n; });
+
+async function editMessageSource(wrapper, value) {
+  await wrapper.findAll('[role="tab"]').find((tab) => tab.text() === 'richText.source').trigger('click');
+  await wrapper.get('[data-testid="proposal-resend-email-intro"] [data-testid="rich-text-source-input"]').setValue(value);
+}
+
+function messageSource(wrapper) {
+  return wrapper.get('[data-testid="proposal-resend-email-intro"] [data-testid="rich-text-source-input"]');
+}
+
 function mountModal(props = {}) {
   return mount(ProposalResendModal, {
     props: { visible: true, proposal, ...props },
@@ -44,6 +59,7 @@ function mountModal(props = {}) {
         BaseActionButton: { template: '<button type="button"><slot /></button>' },
         BaseModalActions: { template: '<div><slot /></div>' },
       },
+      components: { BaseRichTextEditor, BaseSegmented },
     },
   });
 }
@@ -59,14 +75,14 @@ describe('ProposalResendModal', () => {
   it('preloads the message retained by the proposal', () => {
     const wrapper = mountModal();
 
-    expect(wrapper.get('textarea').element.value).toBe(proposal.email_intro);
+    expect(messageSource(wrapper).element.value).toBe(proposal.email_intro);
     expect(wrapper.text()).toContain('Puedes ajustar el mensaje antes de enviarlo.');
   });
 
   it('requires a nonblank message before resending', async () => {
     const wrapper = mountModal();
 
-    await wrapper.get('textarea').setValue('   ');
+    await editMessageSource(wrapper, '   ');
 
     expect(wrapper.get('[data-testid="proposal-resend-confirm"]').attributes('disabled')).toBe('');
     expect(mockProposalStore.resendProposal).not.toHaveBeenCalled();
@@ -74,7 +90,7 @@ describe('ProposalResendModal', () => {
 
   it('saves the trimmed edit through the resend request', async () => {
     const wrapper = mountModal();
-    await wrapper.get('textarea').setValue('  Mensaje nuevo para resolver el cuello de botella.  ');
+    await editMessageSource(wrapper, '  Mensaje nuevo para resolver el cuello de botella.  ');
 
     await wrapper.get('[data-testid="proposal-resend-confirm"]').trigger('click');
     await flushPromises();
@@ -95,12 +111,12 @@ describe('ProposalResendModal', () => {
     });
     const wrapper = mountModal();
     const edited = 'Mensaje que debe seguir editable.';
-    await wrapper.get('textarea').setValue(edited);
+    await editMessageSource(wrapper, edited);
 
     await wrapper.get('[data-testid="proposal-resend-confirm"]').trigger('click');
     await flushPromises();
 
-    expect(wrapper.get('textarea').element.value).toBe(edited);
+    expect(messageSource(wrapper).element.value).toBe(edited);
     expect(wrapper.text()).toContain('No se pudo re-enviar.');
     expect(wrapper.text()).toContain('Revisa el correo del cliente.');
     expect(wrapper.emitted('close')).toBeUndefined();

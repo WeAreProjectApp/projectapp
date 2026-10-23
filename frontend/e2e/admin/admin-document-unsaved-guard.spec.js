@@ -14,6 +14,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_UNSAVED_GUARD } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
 
@@ -256,7 +257,7 @@ test.describe('Admin Document — Unsaved Changes Guard', () => {
       await page.goto('/panel/documents/create');
 
       await titleField(page).fill('Nuevo');
-      await page.getByPlaceholder(/Escribe o pega tu contenido/i).fill('# Hola');
+      await fillRichTextSource(richTextEditorByPlaceholder(page, /Escribe o pega tu contenido/i), '# Hola');
       await expect(page.getByTestId('doc-create-unsaved-notice')).toBeVisible();
 
       await page.getByRole('button', { name: /Crear Documento/i }).first().click();

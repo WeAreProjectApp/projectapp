@@ -129,4 +129,68 @@ describe('BaseRichTextEditor', () => {
     expect(wrapper.get('[aria-label="richText.bold"]').element.disabled).toBe(true);
     expect(wrapper.emitted('update:modelValue')).toBeUndefined();
   });
+
+  it.each([
+    ['email', '**Correo guardado**', 'Correo guardado', 'markdown_html_v1'],
+    ['whatsapp', '**Mensaje guardado**', '**Mensaje guardado**', 'whatsapp_v1'],
+  ])('retains a source draft across save-state toggles for %s', async (profile, source, visibleText, format) => {
+    // Catches Tiptap setEditable emitting the stale visual document while a save disables the source editor.
+    const wrapper = mountEditor({ modelValue: 'Borrador anterior', format: 'plain', profile });
+    await nextTick();
+
+    await modeTabs(wrapper)[1].trigger('click');
+    await wrapper.get('[data-testid="rich-text-source-input"]').setValue(source);
+    await wrapper.setProps({ disabled: true });
+    await wrapper.setProps({ disabled: false });
+
+    const sourceInput = wrapper.get('[data-testid="rich-text-source-input"]');
+    expect(sourceInput.attributes('data-editorial-active')).toBe('true');
+    expect(sourceInput.element.value).toBe(source);
+    expect(lastPayload(wrapper, 'update:format')).toBe(format);
+
+    await modeTabs(wrapper)[0].trigger('click');
+    const visualInput = wrapper.get('[data-testid="rich-text-visual-input"]');
+    expect(visualInput.attributes('data-editorial-active')).toBe('true');
+    expect(visualInput.text()).toBe(visibleText);
+  });
+
+  // Catches an empty plain WhatsApp draft falling back to hidden source mode, which also breaks parent focus APIs.
+  it('keeps an empty plain WhatsApp editor visual, valid, focusable, and editable through its public API', async () => {
+    const Host = {
+      components: { BaseRichTextEditor },
+      data: () => ({ saved: '' }),
+      template: `
+        <div>
+          <BaseRichTextEditor ref="editor" model-value="" format="plain" profile="whatsapp" @update:model-value="saved = $event" />
+          <button data-testid="focus-editor" @click="$refs.editor.focus()">Focus</button>
+          <output data-testid="saved-value">{{ saved }}</output>
+        </div>
+      `,
+    };
+    const wrapper = mount(Host, { attachTo: document.body, global: { components: { BaseSegmented } } });
+    wrappers.push(wrapper);
+    await nextTick();
+
+    expect(modeTabs(wrapper)[0].attributes('aria-selected')).toBe('true');
+    expect(wrapper.get('[data-testid="rich-text-source-input"]').attributes('data-editorial-active')).toBeUndefined();
+    expect(wrapper.find('[role="alert"]').exists()).toBe(false);
+    const originalRequestAnimationFrame = window.requestAnimationFrame;
+    window.requestAnimationFrame = (callback) => { callback(); return 1; };
+    try {
+      await wrapper.get('[data-testid="focus-editor"]').trigger('click');
+      await nextTick();
+    } finally {
+      window.requestAnimationFrame = originalRequestAnimationFrame;
+    }
+
+    const visual = wrapper.get('[data-testid="rich-text-visual-input"]');
+    expect(visual.attributes('data-editorial-active')).toBe('true');
+    expect(visual.attributes('aria-invalid')).toBe('false');
+
+    visual.element.textContent = 'Mensaje de WhatsApp';
+    await visual.trigger('input');
+    await nextTick();
+
+    expect(wrapper.get('[data-testid="saved-value"]').text()).toBe('Mensaje de WhatsApp');
+  });
 });

@@ -40,7 +40,10 @@ class TestGetStandaloneEmailDefaults:
         url = reverse('standalone-email-defaults')
         response = admin_client.get(url)
         assert response.status_code == 200
-        assert set(response.data['config']) == {'greeting', 'footer', 'signer'}
+        assert set(response.data['config']) == {
+            'greeting', 'footer', 'signer', 'text_formats',
+        }
+        assert response.data['config']['text_formats'] == {}
         assert set(response.data['defaults']) == {'greeting', 'footer', 'signer'}
         assert response.data['is_customized'] is False
         signer_keys = {s['key'] for s in response.data['available_signers']}

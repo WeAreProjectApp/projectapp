@@ -182,6 +182,7 @@
 import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed, ref, onMounted } from 'vue';
 import DOMPurify from 'dompurify';
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 
 const props = defineProps({
   contentFormat: { type: String, default: 'plain' },
@@ -198,12 +199,13 @@ const props = defineProps({
 const mounted = ref(false);
 onMounted(() => { mounted.value = true; });
 const safeLegacyHtml = computed(() => mounted.value ? DOMPurify.sanitize(props.htmlContent) : '');
+const contentJson = computed(() => resolveEditorialContent(props.contentJson, props.contentJson?.text_formats));
 
 const hasJsonContent = computed(() => {
-  return props.contentJson
-    && typeof props.contentJson === 'object'
-    && props.contentJson.intro
-    && Array.isArray(props.contentJson.sections);
+  return contentJson.value
+    && typeof contentJson.value === 'object'
+    && contentJson.value.intro
+    && Array.isArray(contentJson.value.sections);
 });
 
 function calloutClasses(type) {

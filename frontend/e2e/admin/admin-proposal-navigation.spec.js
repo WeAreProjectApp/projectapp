@@ -6,6 +6,7 @@
 import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 import { ADMIN_PROPOSAL_EDIT, ADMIN_PROPOSAL_ACTIVITY_LOG } from '../helpers/flow-tags.js';
 import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { viewportUse } from '../helpers/viewports.js';
@@ -386,10 +387,13 @@ test.describe('Admin proposal grouped navigation', () => {
     await page.getByTestId('general-finance-general-discount').fill('8');
     await selectProposalDestination(page, 'communication', 'emails');
     await page.getByTestId('edit-add-feature').click();
-    await page.getByPlaceholder(/Dashboard en tiempo real/i).fill('Acceso al tablero');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, /Dashboard en tiempo real/i), 'Acceso al tablero');
     await page.getByRole('button', { name: 'Guardar configuración del correo', exact: true }).click();
     await expect.poll(() => patches.length).toBe(1);
-    expect(Object.keys(patches[0]).sort()).toEqual(['email_features', 'email_method_phases', 'email_signed_by']);
+    expect(Object.keys(patches[0]).sort()).toEqual(['email_features', 'email_method_phases', 'email_signed_by', 'text_formats']);
+    expect(patches[0].text_formats).toMatchObject({
+      '/email_features/0': 'markdown_html_v1',
+    });
     expect(patches[0].discount_percent).toBeUndefined();
     await expect(page.getByTestId('proposal-unsaved-notice')).toContainText('Datos de la propuesta sin guardar');
   });

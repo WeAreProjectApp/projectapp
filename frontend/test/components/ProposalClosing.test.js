@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils';
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue';
 
 jest.mock('../../composables/useSectionAnimations', () => ({
   useSectionAnimations: jest.fn(),
@@ -26,6 +27,7 @@ function mountProposalClosing(props = {}) {
   return mount(ProposalClosing, {
     props: { proposal: sentProposal, ...props },
     global: {
+      components: { BaseRichTextContent },
       stubs: {
         Teleport: { template: '<div><slot /></div>' },
         Transition: true,

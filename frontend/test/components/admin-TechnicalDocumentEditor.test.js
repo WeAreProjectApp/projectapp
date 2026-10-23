@@ -11,6 +11,8 @@ jest.mock('../../utils/technicalModuleStub', () => ({
 }));
 
 import { createGenericTechnicalEpicStub } from '../../utils/technicalModuleStub';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import TechnicalDocumentEditor from '../../components/BusinessProposal/admin/TechnicalDocumentEditor.vue';
 
 const baseSection = {
@@ -34,8 +36,28 @@ function mountTechnicalDocumentEditor(props = {}) {
       expandAll: true,
       ...props,
     },
+    global: {
+      components: { BaseRichTextEditor, BaseSegmented },
+      stubs: {
+        NuxtLink: { props: ['to'], template: '<a :href="to"><slot /></a>' },
+      },
+    },
   });
 }
+
+function purposeSource(wrapper) {
+  return wrapper.get('[data-testid="technical-purpose-textarea"] [data-testid="rich-text-source-input"]');
+}
+
+const originalUseI18n = global.useI18n;
+
+beforeEach(() => {
+  global.useI18n = () => ({ t: (key) => key });
+});
+
+afterAll(() => {
+  global.useI18n = originalUseI18n;
+});
 
 describe('TechnicalDocumentEditor', () => {
   it('renders the editor wrapper', () => {
@@ -47,9 +69,7 @@ describe('TechnicalDocumentEditor', () => {
   it('renders the purpose textarea with prefilled value', () => {
     const wrapper = mountTechnicalDocumentEditor();
 
-    const textarea = wrapper.find('textarea');
-    expect(textarea.exists()).toBe(true);
-    expect(textarea.element.value).toBe('Sistema de gestión de propuestas');
+    expect(purposeSource(wrapper).element.value).toBe('Sistema de gestión de propuestas');
   });
 
   it('renders section headings for key sections', () => {
@@ -701,15 +721,14 @@ describe('TechnicalDocumentEditor dynamic rows', () => {
     const wrapper = mountTechnicalDocumentEditor({
       section: { ...baseSection, content_json: null },
     });
-    // Purpose textarea is the first textarea; should be empty (empty doc default)
-    expect(wrapper.find('textarea').element.value).toBe('');
+    expect(purposeSource(wrapper).element.value).toBe('');
   });
 
   it('mergeContent returns empty purpose when content_json.purpose is not a string', () => {
     const wrapper = mountTechnicalDocumentEditor({
       section: { ...baseSection, content_json: { purpose: 42, epics: [] } },
     });
-    expect(wrapper.find('textarea').element.value).toBe('');
+    expect(purposeSource(wrapper).element.value).toBe('');
   });
 
   it('mergeContent uses empty stack when content_json.stack is not an array', () => {

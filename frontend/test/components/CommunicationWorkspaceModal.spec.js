@@ -24,6 +24,8 @@ jest.mock('~/composables/usePanelNotify', () => ({ usePanelNotify: () => mockNot
 
 import { flushPromises, mount } from '@vue/test-utils';
 import { nextTick } from 'vue';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import CommunicationWorkspaceModal from '~/components/communications/CommunicationWorkspaceModal.vue';
 
 global.useI18n = () => ({
@@ -72,6 +74,15 @@ const BaseActionMenuStub = {
   props: ['items', 'testid'],
   template: '<div :data-testid="testid"><button v-for="item in items" :key="item.label" @click="item.onClick">{{ item.label }}</button></div>',
 };
+
+async function editComposerSource(wrapper, value) {
+  await wrapper.findAll('[role="tab"]').find((tab) => tab.text() === 'communicationFiling.source' || tab.text() === 'richText.source').trigger('click');
+  await wrapper.get('[data-testid="communication-message-content"] [data-testid="rich-text-source-input"]').setValue(value);
+}
+
+function composerSource(wrapper) {
+  return wrapper.get('[data-testid="communication-message-content"] [data-testid="rich-text-source-input"]');
+}
 
 function message(overrides = {}) {
   return {
@@ -135,6 +146,7 @@ function mountModal(messages = [message()], attachToDocument = false) {
         CommunicationFolderPicker: true,
         NuxtLink: { template: '<a><slot /></a>' },
       },
+      components: { BaseRichTextEditor, BaseSegmented },
     },
   });
 }
@@ -187,7 +199,7 @@ describe('CommunicationWorkspaceModal', () => {
     await nextTick();
 
     expect(wrapper.get('[data-testid="communication-composer"]').text()).toContain('Respuesta al mensaje #82');
-    expect(document.activeElement).toBe(wrapper.get('[data-testid="communication-message-content"]').element);
+    expect(document.activeElement).toBe(wrapper.get('[data-testid="communication-message-content"] [data-testid="rich-text-visual-input"]').element);
     wrapper.unmount();
   });
 
@@ -197,14 +209,14 @@ describe('CommunicationWorkspaceModal', () => {
     await flushPromises();
     await wrapper.get('[data-testid="communication-composer-toggle"]').trigger('click');
     await wrapper.get('[data-testid="communication-details-toggle"]').trigger('click');
-    await wrapper.get('[data-testid="communication-message-content"]').setValue('Respuesta preparada para el cliente.');
+    await editComposerSource(wrapper, 'Respuesta preparada para el cliente.');
     await wrapper.get('[data-testid="communication-message-date"]').setValue('2026-01-12T09:45');
     await wrapper.get('[data-testid="communication-details-toggle"]').trigger('click');
     await wrapper.get('[data-testid="communication-composer-toggle"]').trigger('click');
     await wrapper.get('[data-testid="communication-composer-toggle"]').trigger('click');
     await wrapper.get('[data-testid="communication-details-toggle"]').trigger('click');
 
-    expect(wrapper.get('[data-testid="communication-message-content"]').element.value).toBe('Respuesta preparada para el cliente.');
+    expect(composerSource(wrapper).element.value).toBe('Respuesta preparada para el cliente.');
     expect(wrapper.get('[data-testid="communication-message-date"]').element.value).toBe('2026-01-12T09:45');
     expect(wrapper.get('[data-testid="communication-details-summary"]').text()).toContain('Saliente · WhatsApp ·');
   });
@@ -214,7 +226,7 @@ describe('CommunicationWorkspaceModal', () => {
     const wrapper = mountModal();
     await flushPromises();
     await wrapper.get('[data-testid="communication-composer-toggle"]').trigger('click');
-    await wrapper.get('[data-testid="communication-message-content"]').setValue('Respuesta preparada.');
+    await editComposerSource(wrapper, 'Respuesta preparada.');
     await wrapper.get('[data-testid="communication-details-toggle"]').trigger('click');
     await wrapper.get('[data-testid="communication-message-date"]').setValue('fecha inválida');
     await wrapper.get('[data-testid="communication-details-toggle"]').trigger('click');

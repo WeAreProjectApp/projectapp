@@ -593,7 +593,7 @@ COMMUNICATION_TOOLS = [
             'previamente con get_thread. Permite corregir asunto, contenido, fecha, '
             'respuesta y documentos del cliente; conserva ID, hilo, canal y dirección. '
             'No crea otro mensaje ni envía correo o WhatsApp. Envía message_id '
-            'y al menos uno de subject, content, document_ids, reply_to_id u occurred_at.'
+            'y al menos uno de subject, content, text_formats, document_ids, reply_to_id u occurred_at.'
         ),
         'input_schema': {
             'type': 'object',

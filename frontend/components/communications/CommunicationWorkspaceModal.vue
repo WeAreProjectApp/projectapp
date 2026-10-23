@@ -217,7 +217,6 @@
           </div>
           <BaseCollapse id="communication-composer-body" :open="composerOpen">
           <form
-            ref="composerRef"
             class="mx-auto max-h-[50vh] max-w-4xl overflow-y-auto p-4 panel-portrait:p-5"
             data-testid="communication-composer"
             @submit.prevent="submitMessage()"
@@ -262,6 +261,7 @@
             </BaseFormField>
             <BaseFormField label="Contenido" class="mt-3">
               <BaseRichTextEditor
+                ref="composerRef"
                 v-model="messageForm.content"
                 :key="messageForm.channel"
                 :profile="messageForm.channel === 'whatsapp' ? 'whatsapp' : 'email'"
@@ -735,7 +735,7 @@ function scrollToMessage(id) {
 }
 function openComposer() {
   composerOpen.value = true;
-  nextTick(() => composerRef.value?.querySelector('textarea')?.focus({ preventScroll: true }));
+  nextTick(() => composerRef.value?.focus());
 }
 function openMoveFolder() {
   targetFolder.value = currentThread.value.folder_id ? String(currentThread.value.folder_id) : '';

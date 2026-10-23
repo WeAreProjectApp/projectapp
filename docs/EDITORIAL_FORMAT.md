@@ -32,6 +32,9 @@ Visual y Fuente operan sobre **una sola cadena**. El documento Tiptap es una
 representación temporal en memoria; no se persisten dos cuerpos editables.
 Alternar sin editar no reescribe la fuente. Editar puede normalizar delimitadores,
 atributos o espacios estructurales, conservando texto, estructura y estilos.
+Bloquear el control durante un guardado no publica una edición. Si el servidor
+rechaza el guardado, el borrador Fuente conserva su contenido y su formato;
+el documento visual anterior no puede reemplazarlo mediante un evento de estado.
 
 Cada agregado editorial añade un `text_formats` opcional, con hasta 1000 rutas
 JSON Pointer. La ausencia de una anotación conserva la interpretación histórica.
@@ -68,6 +71,12 @@ estructura, aunque un elemento contenga a su vez una tabla o una lista.
 
 Las rutas externas a contenido JSON se resuelven también en sus lectores y
 PDF. El formulario conserva los mapas en ambas proyecciones JSON ↔ formulario.
+Al abrir contenido anotado desde MCP, el formulario mueve las declaraciones a
+su objeto local en una copia: guardar una edición reemplaza la declaración
+anterior, sin dejar dos formatos que compitan por el mismo texto. Las plantillas,
+duplicaciones y restauraciones conservan estas declaraciones; una plantilla sin
+formato limpia las anotaciones de la versión anterior. Las actualizaciones
+agrupadas de diagnósticos validan todas las secciones antes de guardar alguna.
 Eliminar o filtrar elementos remapea sus anotaciones. El historial incluye el
 formato junto con la fuente; las preparaciones formales nuevas usan el hash v5.
 Las revisiones confirmadas conservan los archivos y la fuente que se congelaron.
@@ -137,6 +146,12 @@ Se verifica la paridad entre `initialize`, `server/discover`, `tools/list` y
 `describe_capabilities`; sus huellas quedan fijadas en
 `backend/content/mcp/connector_contracts.json`.
 
+Versiones de esta entrega: Documentos 8.1.0, Comunicaciones 3.1.1, Comercial
+6.2.0, Propuestas 6.1.0, Diagnósticos 2.1.0, Blog 2.1.0, Contenido 3.1.0,
+Building with Us 3.1.0, Building on Demand 4.1.0, Módulos adicionales 4.1.1,
+Oferta 1.1.1 y Programas 2.1.0. Los esquemas explícitos de módulos y paquetes
+describen también sus argumentos y dejan de usar la excepción de esquema genérico.
+
 ## Pruebas y operación
 
 El corpus compartido está en `docs/fixtures/editorial-format.json`.
@@ -150,3 +165,32 @@ Las migraciones nuevas añaden metadatos vacíos a los registros existentes y
 amplían la fuente de los resúmenes para que el marcado no consuma su límite
 visible de 360 caracteres. Se incluyen en el PR; las aplica el despliegue. No
 se reescriben masivamente contenidos ni se migran bases desde el worktree.
+
+## Auditoría de flujos de esta entrega
+
+El inventario estático quedó fresco y se regeneró el registro desde sus fuentes
+por flujo. El audit concede crédito sólo a interacciones con resultados
+observables; este crédito estático no sustituye la ejecución de navegador.
+
+| Flujo modificado | Crédito del mapa | Resultados con evidencia existente |
+| --- | --- | --- |
+| admin-document-create | covered | display, success, error, failure |
+| admin-document-edit | covered | display, success, error, failure |
+| admin-client-communications | covered | display, success, error, failure |
+| admin-send-proposal-email | covered | display, success, failure |
+| admin-diagnostic-edit | partial | success |
+| admin-blog-create | partial | display, success |
+| admin-blog-edit | partial | display, success |
+
+Las tres brechas de validación de formulario de diagnóstico/blog ya existían
+en el mapa: no se las declara cerradas por incorporar el editor. El editor
+compartido tiene cobertura propia de fuente inválida y conservación del borrador;
+los seis E2E nuevos añaden guardado/reapertura, ambos canales, rechazo del
+servidor y desplazamiento dentro de documentos largos. Los modos, estilos y
+combinaciones se prueban también a nivel de
+componente y del motor real Tiptap. El mapa completo registra 415 flujos
+cubiertos, 28 parciales, cero junk-only y cero faltantes; 29 están exentos y
+24 tests ajenos a esta entrega no conceden crédito por carecer de tags.
+
+La revisión de rendimiento y sus límites de medición se conservan en
+[el reporte editorial](performance/editorial-rich-text.md).

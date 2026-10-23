@@ -9,7 +9,7 @@
  */
 
 // ESM/UMD packages in the deep component chain that Jest can't parse directly
-jest.mock('marked', () => ({ marked: jest.fn((t) => t) }));
+jest.mock('marked', () => ({ ...jest.requireActual('marked'), marked: jest.fn((t) => t) }));
 jest.mock('dompurify', () => ({ default: { sanitize: jest.fn((t) => t) } }));
 jest.mock('vue3-emoji-picker', () => ({ default: { name: 'EmojiPicker', template: '<div />' } }));
 

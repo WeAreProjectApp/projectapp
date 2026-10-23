@@ -1,6 +1,7 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
 import AdditionalModulesCatalogView from '../../components/AdditionalModules/CatalogView.vue'
+import BaseRichTextContent from '../../components/base/BaseRichTextContent.vue'
 
 global.useI18n = jest.fn(() => ({
   t: (key, params = {}) => `${key}${params.name ? `:${params.name}` : ''}`,
@@ -47,6 +48,7 @@ function mountCatalog(props = {}, { renderExplainer = false } = {}) {
       ...props,
     },
     global: {
+      components: { BaseRichTextContent },
       stubs: {
         BaseAlert: { template: '<div role="alert"><slot /></div>' },
         BaseModal: ModalStub,

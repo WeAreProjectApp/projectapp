@@ -73,7 +73,9 @@ test.describe('Admin Blog Edit', () => {
     await expect(page.getByLabel('Título (ES)', { exact: true })).toHaveValue('Post Existente');
     await expect(page.getByLabel('Title (EN)', { exact: true })).toHaveValue('Existing Post');
     await expect(page.getByLabel('Slug')).toHaveValue('post-existente');
-    await expect(page.getByLabel('Resumen (ES)', { exact: true })).toHaveValue('Extracto ES.');
+    const excerpt = page.locator('#excerpt_es-source');
+    await excerpt.locator('..').getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(excerpt).toHaveValue('Extracto ES.');
     await expect(page.getByLabel('Categoría')).toHaveValue('technology');
   });
 

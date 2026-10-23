@@ -8,6 +8,8 @@ edits each section through the section editor.
 
 from __future__ import annotations
 
+from copy import deepcopy
+
 from django.db import transaction
 from django.db.models import F
 from django.utils import timezone
@@ -184,7 +186,8 @@ def seed_sections(
             order=spec.get('order', 0),
             is_enabled=spec.get('is_enabled', True),
             visibility=spec.get('visibility', DiagnosticSection.Visibility.BOTH),
-            content_json=spec.get('content_json') or {},
+            content_json=deepcopy(spec.get('content_json') or {}),
+            text_formats=deepcopy(spec.get('text_formats') or {}),
         ))
     return DiagnosticSection.objects.bulk_create(rows)
 
@@ -194,12 +197,13 @@ def reset_section(section: DiagnosticSection) -> DiagnosticSection:
     language = section.diagnostic.language
     for spec in get_default_section_specs(language):
         if spec.get('section_type') == section.section_type:
-            section.content_json = spec.get('content_json') or {}
+            section.content_json = deepcopy(spec.get('content_json') or {})
+            section.text_formats = deepcopy(spec.get('text_formats') or {})
             section.title = spec.get('title', section.title)
             section.visibility = spec.get('visibility', section.visibility)
             section.is_enabled = spec.get('is_enabled', section.is_enabled)
             section.save(update_fields=[
-                'content_json', 'title', 'visibility', 'is_enabled',
+                'content_json', 'text_formats', 'title', 'visibility', 'is_enabled',
             ])
             return section
     return section

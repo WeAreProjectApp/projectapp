@@ -13,6 +13,11 @@ export function setFieldFormat(owner, path, format) {
   owner.text_formats = { ...owner.text_formats, [path]: format };
 }
 
+/** Remove one JSON root's annotations after its clone has local owners. */
+export function withoutEditorialPrefix(formats, prefix) {
+  return Object.fromEntries(Object.entries(formats || {}).filter(([path]) => path !== prefix && !path.startsWith(prefix + '/')));
+}
+
 
 export function remapEditorialArrayFormats(formats, prefix, retainedIndices) {
   const result = {};
@@ -33,21 +38,36 @@ export function normalizeEditorialFeatures(payload) {
   return payload;
 }
 
-/** Resolve root JSON Pointers for rendering without changing persisted sources. */
+/** Move resolved annotations to their closest object owner in an isolated clone. */
 export function resolveEditorialContent(source, formats = {}, prefix = '') {
   const annotate = (result, annotations, base = '') => {
     for (const [path, format] of Object.entries(annotations || {})) {
       if (!path.startsWith(base + '/')) continue;
       const tokens = path.slice(base.length + 1).split('/').map(key => key.replace(/~1/g, '/').replace(/~0/g, '~'));
+      const localPath = '/' + tokens.map(key => key.replace(/~/g, '~0').replace(/\//g, '~1')).join('/');
       let node = result;
       let owner = result;
       let relative = [];
-      for (const token of tokens) {
+      for (const [index, token] of tokens.entries()) {
         if (!node || typeof node !== 'object' || !Object.hasOwn(node, token)) break;
         relative.push(token.replace(/~/g, '~0').replace(/\//g, '~1'));
         const child = node[token];
         if (typeof child === 'string') {
-          owner.text_formats = { ...owner.text_formats, ['/' + relative.join('/')]: format };
+          if (index !== tokens.length - 1) break;
+          const ownerPath = '/' + relative.join('/');
+          const existing = owner.text_formats?.[ownerPath];
+          if (existing && existing !== format) {
+            // Keep genuinely conflicting declarations available to server validation.
+            if (owner !== result && !Object.hasOwn(result.text_formats || {}, localPath)) {
+              result.text_formats = { ...result.text_formats, [localPath]: format };
+            }
+            break;
+          }
+          owner.text_formats = { ...owner.text_formats, [ownerPath]: format };
+          if (owner !== result && Object.hasOwn(result.text_formats || {}, localPath)) {
+            delete result.text_formats[localPath];
+            if (!Object.keys(result.text_formats).length) delete result.text_formats;
+          }
           break;
         }
         node = child;

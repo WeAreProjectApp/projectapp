@@ -75,7 +75,7 @@ function report(error) {
 }
 
 function importSource(value) {
-  const html = effectiveFormat.value === 'plain' ? `<p>${escapeHtml(value).replace(/\n/g, '<br>')}</p>` : sourceToHtml(value, props.profile);
+  const html = effectiveFormat.value === 'plain' && value !== '' ? `<p>${escapeHtml(value).replace(/\n/g, '<br>')}</p>` : sourceToHtml(value, props.profile);
   const el = document.createElement('div'); el.innerHTML = html;
   const parsed = SchemaParser.fromSchema(editor.value.schema).parse(el);
   // The serializer must represent every node the schema accepted before we
@@ -164,7 +164,7 @@ onMounted(() => {
     },
     onSelectionUpdate: () => { revision.value++; },
     onUpdate: ({ editor: instance }) => {
-      if (syncing) return;
+      if (syncing || mode.value !== 'visual') return;
       try {
         const source = htmlToSource(instance.getHTML(), props.profile);
         const el = document.createElement('div'); el.innerHTML = sourceToHtml(source, props.profile);
@@ -192,7 +192,7 @@ watch(() => props.modelValue, (value) => {
   }
 });
 watch(visualAttributes, (attributes) => editor.value?.setOptions({ editorProps: { attributes } }));
-watch(() => props.disabled, (value) => editor.value?.setEditable(!value));
+watch(() => props.disabled, (value) => editor.value?.setEditable(!value, false));
 watch(() => props.format, (value) => { effectiveFormat.value = value; });
 onBeforeUnmount(() => editor.value?.destroy());
 defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.value?.commands.focus() : sourceInput.value?.focus() });
@@ -230,7 +230,7 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
       <button type="button" class="editor-tool text-xs" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" @click="saveLink">{{ t('richText.apply') }}</button>
       <button type="button" class="editor-tool text-xs" :disabled="disabled" :title="disabled ? t('richText.readOnly') : undefined" @click="run('unsetLink'); linkOpen = false">{{ t('richText.removeLink') }}</button>
     </div>
-    <EditorContent v-show="mode === 'visual'" :editor="editor" class="editorial-body" :class="{ 'opacity-60': disabled }" />
+    <EditorContent v-show="mode === 'visual'" :editor="editor" data-testid="rich-text-scroll-area" class="editorial-body" :class="{ 'opacity-60': disabled }" />
     <textarea v-show="mode === 'source'" ref="sourceInput" :id="attrs.id ? `${attrs.id}-source` : undefined" data-testid="rich-text-source-input" :value="draft" :rows="rows" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" :placeholder="placeholder" :aria-label="contentLabel" :aria-invalid="invalid ? 'true' : undefined" :aria-describedby="describedBy" :data-editorial-active="mode === 'source' ? 'true' : undefined" class="block min-h-32 w-full resize-y rounded-b-xl bg-transparent p-3 font-mono text-sm outline-none focus:ring-2 focus:ring-focus-ring/30" @input="sourceChanged" />
     <p v-if="problem" role="alert" class="p-3 text-sm text-danger-strong">{{ problem }}</p>
     <p v-if="mode === 'source' && profile !== 'whatsapp'" class="px-3 pb-2 text-xs text-text-subtle">{{ t('richText.sourceHelp') }}</p>
@@ -238,6 +238,10 @@ defineExpose({ insertAtCursor, focus: () => mode.value === 'visual' ? editor.val
 </template>
 
 <style scoped>
+.editorial-editor { display: flex; flex-direction: column; }
+.editorial-editor > :not(.editorial-body):not(textarea) { flex-shrink: 0; }
+.editorial-body { min-height: 0; overflow-y: auto; flex: 1 1 auto; }
+.editorial-editor > textarea { flex: 1 1 auto; }
 .editor-tool { display: inline-flex; min-height: 2rem; min-width: 2rem; align-items: center; justify-content: center; gap: .25rem; border-radius: .5rem; padding: .25rem .5rem; }
 .editor-tool:hover:not(:disabled), .editor-tool[aria-pressed='true'] { background: var(--color-surface-muted, #e6efef); color: var(--color-text-default, #002921); }
 .editor-tool:focus-visible { outline: 2px solid var(--color-focus-ring, #059669); outline-offset: 2px; }

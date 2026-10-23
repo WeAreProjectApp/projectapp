@@ -10,6 +10,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DIAGNOSTIC_ATTACH_FROM_DOCUMENTS } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const DIAG_ID = 12;
 
@@ -211,7 +212,10 @@ test.describe('Admin Diagnostic — Adjuntar desde Documentos', () => {
     await page.getByRole('tab', { name: 'Correos' }).click();
 
     // Fill section text before opening modal to avoid reactivity race on close
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido del correo de prueba.');
+    await fillRichTextSource(
+      richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'),
+      'Contenido del correo de prueba.',
+    );
 
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();
     await page.getByLabel('Diagnóstico de Aplicación').check();

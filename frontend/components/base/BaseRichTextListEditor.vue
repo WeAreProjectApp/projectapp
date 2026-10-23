@@ -19,6 +19,7 @@ const currentFormats = ref({ ...props.formats });
 function entries(value) {
   return (value ? value.split('\n') : ['']).map((source, index) => ({
     id: nextId++, source, stored: source, format: props.formats[`${props.formatPath}/${index}`] || 'plain',
+    declared: Object.hasOwn(props.formats, `${props.formatPath}/${index}`),
   }));
 }
 const items = ref(entries(props.modelValue));
@@ -27,14 +28,17 @@ watch([() => props.modelValue, () => props.formats], ([value, formats]) => {
   // An echo of our normalized storage must not replace the active source or
   // reset the child's undo history. An external load does replace the draft.
   if (value !== publishedValue) items.value = entries(value);
-  else items.value.forEach((item, index) => { item.format = formats[`${props.formatPath}/${index}`] || 'plain'; });
+  else items.value.forEach((item, index) => {
+    item.format = formats[`${props.formatPath}/${index}`] || 'plain';
+    item.declared = Object.hasOwn(formats, `${props.formatPath}/${index}`);
+  });
   currentFormats.value = { ...formats };
   publishedValue = value;
   publishedFormats = JSON.stringify(formats);
 }, { deep: true });
 function publish() {
   const formats = Object.fromEntries(Object.entries(currentFormats.value).filter(([path]) => !path.startsWith(`${props.formatPath}/`)));
-  items.value.forEach((item, index) => { formats[`${props.formatPath}/${index}`] = item.format; });
+  items.value.forEach((item, index) => { if (item.declared) formats[`${props.formatPath}/${index}`] = item.format; });
   currentFormats.value = formats;
   publishedValue = items.value.map(item => item.stored).join('\n');
   publishedFormats = JSON.stringify(formats);
@@ -60,7 +64,7 @@ function remove(index) {
   publish();
 }
 function add() {
-  items.value.push({ id: nextId++, source: '', stored: '', format: 'plain' });
+  items.value.push({ id: nextId++, source: '', stored: '', format: 'plain', declared: false });
   publish();
 }
 </script>
@@ -68,7 +72,7 @@ function add() {
 <template>
   <div class="min-w-0 space-y-3">
     <div v-for="(item, index) in items" :key="item.id" class="min-w-0 space-y-1">
-      <BaseRichTextEditor :model-value="item.source" :format="item.format" :label="`${label} ${index + 1}`" :disabled="disabled" :error="error" @update:format="item.format = $event" @update:model-value="update(index, $event)" />
+      <BaseRichTextEditor :model-value="item.source" :format="item.format" :label="`${label} ${index + 1}`" :disabled="disabled" :error="error" @update:format="item.format = $event; item.declared = true" @update:model-value="update(index, $event)" />
       <button v-if="items.length > 1" type="button" class="text-xs text-danger-strong underline" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="remove(index)">{{ t('richText.removeItem') }}</button>
     </div>
     <button type="button" class="rounded-lg border border-border-default px-3 py-2 text-sm" :title="disabled ? t('richText.readOnly') : undefined" :disabled="disabled" @click="add">{{ t('richText.addItem') }}</button>

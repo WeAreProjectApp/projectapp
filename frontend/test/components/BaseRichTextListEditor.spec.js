@@ -42,6 +42,7 @@ describe('BaseRichTextListEditor', () => {
     await wrapper.findAll('[role="tab"]')[1].trigger('click');
     await wrapper.findAll('[data-testid="rich-text-source-input"]')[0].setValue(source);
 
+    // quality: allow-fragile-selector (Semantic HTML tags are the persisted formatting contract of this list entry.)
     const stored = lastPayload(wrapper, 'update:modelValue').split('\n');
     expect(stored).toHaveLength(2);
     expect(stored[1]).toBe('Second item');

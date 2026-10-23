@@ -311,12 +311,19 @@ test.describe('Additional modules admin catalog', () => {
     await setupApi(page, scenario)
     await openCatalog(page)
     const form = await fillCreateForm(page)
+    await form.getByRole('tab', { name: 'Español' }).click()
+    const problemsEditor = form.getByTestId('additional-module-problems-es')
+    await problemsEditor.getByRole('tab', { name: /^(Visual)$/ }).click()
+    await expect(problemsEditor.getByTestId('rich-text-visual-input')).toContainText('Solicitudes dispersas')
     const dialog = page.getByRole('dialog').filter({ has: form })
     await dialog.getByTestId('additional-module-save').click()
     await expect(form).not.toBeVisible()
     expect(scenario.modulePayload.name_es).toBe('Portal de clientes')
     expect(scenario.modulePayload.name_en).toBe('Customer portal')
-    expect(scenario.modulePayload.problems_solved_es).toEqual(['Solicitudes dispersas'])
+    expect(scenario.modulePayload.problems_solved_es).toEqual(['<p>Solicitudes dispersas</p>&#10;'])
+    expect(scenario.modulePayload.text_formats).toMatchObject({
+      '/problems_solved_es/0': 'markdown_html_v1',
+    })
   })
 
   test('keeps the edit form open when the server rejects the save', {

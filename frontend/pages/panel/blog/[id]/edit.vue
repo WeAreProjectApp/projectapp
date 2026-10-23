@@ -438,6 +438,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { reactive, ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import { useBlogStore } from '~/stores/blog';
 import { useLinkedInStore } from '~/stores/linkedin';
@@ -632,8 +633,8 @@ function populateForm(data) {
   form.excerpt_en = data.excerpt_en || '';
   form.content_es = data.content_es || '';
   form.content_en = data.content_en || '';
-  form.content_json_es_raw = jsonToStr(data.content_json_es);
-  form.content_json_en_raw = jsonToStr(data.content_json_en);
+  form.content_json_es_raw = jsonToStr(data.content_json_es && resolveEditorialContent(data.content_json_es, data.text_formats, '/content_json_es'));
+  form.content_json_en_raw = jsonToStr(data.content_json_en && resolveEditorialContent(data.content_json_en, data.text_formats, '/content_json_en'));
   form.cover_image = data.cover_image_display || data.cover_image || '';
   form.cover_image_url = data.cover_image_url || '';
   form.sources = Array.isArray(data.sources)
@@ -732,7 +733,7 @@ async function handleSubmit() {
   successMsg.value = '';
 
   const payload = {
-    text_formats: { ...form.text_formats },
+    text_formats: withoutEditorialPrefix(withoutEditorialPrefix(form.text_formats, '/content_json_es'), '/content_json_en'),
     title_es: form.title_es,
     title_en: form.title_en,
     slug: form.slug,

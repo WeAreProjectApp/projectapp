@@ -7,6 +7,7 @@ import BuildingWithUsOnboarding from '~/components/BuildingWithUs/Onboarding.vue
 import { useBuildingWithUsTheme } from '~/composables/useBuildingWithUsTheme'
 import { usePublicDocumentEntrance } from '~/composables/usePublicDocumentEntrance'
 import { isBuildingWithUsProgram, listOf, safeWhatsappUrl } from '~/utils/buildingWithUs'
+import { resolveEditorialContent } from '~/utils/editorialMetadata'
 
 const props = defineProps({
   program: { type: Object, required: true },
@@ -25,12 +26,13 @@ const expandedFaq = ref(new Set())
 const isDownloading = ref(false)
 const downloadError = ref(false)
 
+const program = computed(() => resolveEditorialContent(props.program, props.program?.text_formats))
 const hasSection = (section) => Boolean(section && Object.keys(section).length)
 const roles = computed(() => [
-  { id: 'contribution', section: props.program.contribution },
-  { id: 'expert', section: props.program.expert_profile },
+  { id: 'contribution', section: program.value.contribution },
+  { id: 'expert', section: program.value.expert_profile },
 ].filter(({ section }) => hasSection(section)))
-const models = computed(() => listOf(props.program.participation_models?.items))
+const models = computed(() => listOf(program.value.participation_models?.items))
 
 // Start after the public document and its targets have entered the DOM.
 // A panel preview has neither floating controls nor a tour instance.

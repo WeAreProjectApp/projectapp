@@ -25,7 +25,7 @@ def test_connector_catalog_requires_confirmation(api_client, building_with_us_mc
     assert tools['update_building_with_us_program']['requires_confirmation'] is True
     assert tools['restore_building_with_us_program_version']['requires_confirmation'] is True
     assert tools['render_building_with_us_program_pdf']['risk'] == 'read'
-    assert catalog['version'] == '3.0.0'
+    assert catalog['version'] == '3.1.0'
 
 
 def test_confirmation_publishes_a_new_version(api_client, building_with_us_program, building_with_us_mcp, monkeypatch, django_capture_on_commit_callbacks):

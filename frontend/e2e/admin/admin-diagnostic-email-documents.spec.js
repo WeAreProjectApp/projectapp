@@ -12,6 +12,7 @@ import {
   ADMIN_DIAGNOSTIC_EMAIL,
   ADMIN_DIAGNOSTIC_DOCUMENTS,
 } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const DIAG_ID = 11;
 
@@ -178,7 +179,10 @@ test.describe('Admin Diagnostic — Correos tab', () => {
     const ccInput = page.getByTestId('diagnostic-email-cc');
     await ccInput.fill('copy@example.com');
     await ccInput.press('Enter');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Este es el cuerpo del correo de seguimiento.');
+    await fillRichTextSource(
+      richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'),
+      'Este es el cuerpo del correo de seguimiento.',
+    );
     await page.getByRole('button', { name: /Enviar correo/i }).click();
 
     await expect(() => expect(sendCalled).toBe(true)).toPass({ timeout: 5000 });

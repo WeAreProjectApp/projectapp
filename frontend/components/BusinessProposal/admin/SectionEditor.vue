@@ -130,7 +130,7 @@
 </template>
 
 <script setup>
-import { resolveEditorialContent } from '~/utils/editorialMetadata';
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { reactive, ref, computed, watch } from 'vue';
 import SectionPreviewModal from '~/components/BusinessProposal/admin/SectionPreviewModal.vue';
 import TechnicalDocumentEditor from '~/components/BusinessProposal/admin/TechnicalDocumentEditor.vue';
@@ -304,6 +304,7 @@ function handleSave() {
         title: sectionTitle.value,
         is_wide_panel: props.section.is_wide_panel,
         content_json: contentJson,
+        ...(props.section.text_formats ? { text_formats: withoutEditorialPrefix(props.section.text_formats, '/content_json') } : {}),
       },
     });
     // Sync hostingPercent back to General tab when saving the investment section

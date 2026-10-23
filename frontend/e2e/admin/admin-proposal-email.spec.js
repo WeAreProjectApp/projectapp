@@ -231,7 +231,9 @@ test.describe('Admin Proposal Email — Proposal Mode', () => {
     await expect(correosTab).toBeVisible({ timeout: 15000 });
     await selectProposalDestination(page, 'communication', 'emails');
     await expect(page.getByTestId('proposal-email-intro-card')).toBeVisible();
-    await expect(page.getByTestId('proposal-email-intro')).toHaveValue(proposal.email_intro);
+    const introEditor = page.getByTestId('proposal-email-intro');
+    await introEditor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await expect(introEditor.getByTestId('rich-text-source-input')).toHaveValue(proposal.email_intro);
     await expect(page.getByText('El historial y los correos de seguimiento aparecerán después del primer envío.')).toBeVisible();
   });
 

@@ -191,16 +191,23 @@ test.describe('Editorial rich text in communications', () => {
   test('keeps rejected source visible after a communication error', {
     tag: [...ADMIN_CLIENT_COMMUNICATIONS, '@role:admin', '@outcome:error'],
   }, async ({ page }) => {
-    await setupEditorialCommunications(page, { rejectMessage: true });
+    let submitted = null;
+    await setupEditorialCommunications(page, {
+      rejectMessage: true,
+      onMessage: (payload) => { submitted = payload; },
+    });
     await openComposer(page);
 
     const editor = composerEditor(page);
     await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
     const source = editor.getByTestId('rich-text-source-input');
     await source.fill('**No debe perderse**');
+    await page.getByTestId('communication-message-subject').fill('Error editorial');
     await page.getByTestId('communication-register-sent').click();
 
-    await expect(page.getByText('La comunicación no se pudo registrar.', { exact: true })).toHaveText('La comunicación no se pudo registrar.');
+    await expect.poll(() => submitted).toMatchObject({ content: '**No debe perderse**' });
+    await expect(page.getByRole('alert').filter({ hasText: 'No se pudo guardar el mensaje' }))
+      .toContainText('No se pudo guardar el mensaje');
     await expect(source).toHaveValue('**No debe perderse**');
   });
 });

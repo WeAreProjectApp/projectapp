@@ -746,6 +746,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent, withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { computed, onMounted, ref, watch } from 'vue';
 import SectionEditor from '~/components/BusinessProposal/admin/SectionEditor.vue';
 import TechnicalDocumentEditor from '~/components/BusinessProposal/admin/TechnicalDocumentEditor.vue';
@@ -854,6 +855,7 @@ async function handleSaveGeneral() {
 const selectedLang = ref('es');
 const sections = ref([]);
 const configUpdatedAt = ref(null);
+const configFormats = ref(null);
 const isLoading = ref(false);
 const expandedSections = ref(new Set());
 const savedSections = ref(new Set());
@@ -970,6 +972,7 @@ function toVirtualSection(section, idx) {
     section_type: section.section_type,
     title: section.title,
     content_json: section.content_json || {},
+    ...(section.text_formats ? { text_formats: section.text_formats } : {}),
     is_wide_panel: section.is_wide_panel || false,
     is_enabled: true,
   };
@@ -992,6 +995,7 @@ function handleSaveSection({ sectionId, payload }) {
       ...sections.value[idx],
       title: payload.title,
       content_json: payload.content_json,
+      ...(payload.text_formats ? { text_formats: payload.text_formats } : {}),
     };
     savedSections.value = new Set([...savedSections.value, idx]);
     showFeedback('Sección actualizada localmente. Guarda todos los cambios para persistir.', 'success');
@@ -1007,6 +1011,7 @@ async function syncConfigVersion(result) {
   const updatedAt = result.data?.updated_at;
   if (updatedAt) {
     configUpdatedAt.value = updatedAt;
+    configFormats.value = result.data.text_formats || null;
     return;
   }
   await loadDefaults(selectedLang.value);
@@ -1019,7 +1024,8 @@ async function loadDefaults(lang) {
   try {
     const result = await proposalStore.fetchProposalDefaults(lang);
     if (result.success && result.data) {
-      sections.value = result.data.sections_json || [];
+      sections.value = resolveEditorialContent(result.data.sections_json || [], result.data.text_formats, '/sections_json');
+      configFormats.value = result.data.text_formats || null;
       configUpdatedAt.value = result.data.updated_at;
       const d = result.data;
       const num = (v, fallback) => {
@@ -1073,6 +1079,7 @@ async function handleSaveAll() {
   try {
     const result = await proposalStore.saveProposalDefaults(
       selectedLang.value, sections.value, null, configUpdatedAt.value,
+      ...(configFormats.value ? [withoutEditorialPrefix(configFormats.value, '/sections_json')] : []),
     );
     if (result.success) {
       savedSections.value = new Set();
@@ -1418,6 +1425,7 @@ async function saveEditJson() {
   try {
     const result = await proposalStore.saveProposalDefaults(
       lang, parsed.sections, null, configUpdatedAt.value,
+      ...(configFormats.value ? [withoutEditorialPrefix(configFormats.value, '/sections_json')] : []),
     );
     if (result.success) {
       sections.value = parsed.sections;

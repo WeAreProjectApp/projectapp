@@ -629,6 +629,7 @@
 </template>
 
 <script setup>
+import { withoutEditorialPrefix } from '~/utils/editorialMetadata';
 import { ref, reactive, computed, watch, onMounted, onBeforeUnmount, onUnmounted } from 'vue';
 import { useDiagnosticsStore } from '~/stores/diagnostics';
 import { DIAGNOSTIC_STATUS, DIAGNOSTIC_ANALYTICS_THRESHOLDS } from '~/stores/diagnostics_constants';
@@ -1068,7 +1069,10 @@ function retrySectionSave(section) {
 }
 
 function onSectionContentChange(section, contentJson) {
-  scheduleSectionUpdate(section.id, { content_json: contentJson });
+  scheduleSectionUpdate(section.id, {
+    content_json: contentJson,
+    ...(section.text_formats ? { text_formats: withoutEditorialPrefix(section.text_formats, '/content_json') } : {}),
+  });
 }
 function onSectionMetaChange(section, meta) {
   scheduleSectionUpdate(section.id, meta, 300);
@@ -1122,6 +1126,7 @@ function buildDiagnosticExport() {
       is_enabled: s.is_enabled,
       visibility: s.visibility,
       content_json: s.content_json,
+      ...(s.text_formats && Object.keys(s.text_formats).length ? { text_formats: s.text_formats } : {}),
     }));
   return { metadata, sections };
 }
@@ -1284,6 +1289,7 @@ async function _applyImportJson() {
     is_enabled: s.is_enabled,
     visibility: s.visibility,
     content_json: s.content_json,
+    ...(s.text_formats && Object.keys(s.text_formats).length ? { text_formats: s.text_formats } : {}),
   }));
   const secResult = await store.bulkUpdateSections(id.value, sectionsPayload);
   if (!secResult.success) {

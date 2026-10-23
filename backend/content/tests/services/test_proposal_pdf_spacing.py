@@ -52,6 +52,17 @@ def page_state():
     return {'num': 1, 'client': 'Spacing sample', '_pdf_lang': 'es'}
 
 
+def pdf_text_positions(buffer):
+    positions = []
+
+    def capture_position(value, cm, tm, _font, _size):
+        if value.strip():
+            positions.append((value.strip(), cm[5] + tm[5]))
+
+    PdfReader(buffer).pages[0].extract_text(visitor_text=capture_position)
+    return positions
+
+
 @pytest.mark.parametrize('title', [
     'Registro',
     'Registro e inicio de sesión con verificación de correo y recuperación de contraseña',
@@ -95,11 +106,12 @@ def test_missing_priority_has_no_empty_badge(drawing, page_state):
 def test_explicit_breaks_have_visible_spacing(drawing, text, distance):
     layout._draw_paragraphs(drawing, 700, [text])
 
-    first, second = drawing.text
+    drawing.save()
+    first, second = pdf_text_positions(drawing.buffer)
 
     assert first[0] == 'Primero'
     assert second[0] == 'Segundo'
-    assert first[6] - second[6] == distance
+    assert first[1] - second[1] == distance
 
 
 def test_paragraph_measurement_matches_rendered_height(drawing):

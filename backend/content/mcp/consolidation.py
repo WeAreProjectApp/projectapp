@@ -20,10 +20,10 @@ REPLACED_INCOME_NAMES = frozenset({
 })
 CATALOG_VERSIONS = {
     'commercial': '6.2.0', 'accounting': '2.1.0', 'accounting-ledger': '3.1.0',
-    'blog': '2.1.0', 'documents': '8.1.0', 'communications': '3.1.0',
+    'blog': '2.1.0', 'documents': '8.1.0', 'communications': '3.1.1',
     'diagnostics': '2.1.0', 'proposals': '6.1.0', 'content': '3.1.0',
     'building-with-us': '3.1.0', 'building-on-demand': '4.1.0',
-    'additional-modules': '4.1.0', 'offerings': '1.1.0', 'programs': '2.1.0',
+    'additional-modules': '4.1.1', 'offerings': '1.1.1', 'programs': '2.1.0',
 }
 
 

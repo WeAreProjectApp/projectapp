@@ -7,6 +7,7 @@ import ConsultingOnboarding from '~/components/Consulting/Onboarding.vue'
 import { useConsultingTheme } from '~/composables/useConsultingTheme'
 import { usePublicDocumentEntrance } from '~/composables/usePublicDocumentEntrance'
 import { isConsultingProgram, consultingListOf, safeConsultingWhatsappUrl } from '~/utils/consulting'
+import { resolveEditorialContent } from '~/utils/editorialMetadata'
 
 const props = defineProps({
   program: { type: Object, required: true },
@@ -25,9 +26,10 @@ const expandedFaq = ref(new Set())
 const isDownloading = ref(false)
 const downloadError = ref(false)
 
+const program = computed(() => resolveEditorialContent(props.program, props.program?.text_formats))
 const hasSection = (section) => Boolean(section && Object.keys(section).length)
 const sectionKeys = ['areas', 'impact', 'measurement', 'deliverable', 'process', 'implementation', 'diagnostic']
-const sections = computed(() => sectionKeys.filter((key) => hasSection(props.program[key])))
+const sections = computed(() => sectionKeys.filter((key) => hasSection(program.value[key])))
 const implementationLinks = computed(() => ({
   cells: `/${props.language === 'en' ? 'en-us' : 'es-co'}/building-on-demand`,
   'building-with-us': `/${props.language === 'en' ? 'en-us' : 'es-co'}/building-with-us`,

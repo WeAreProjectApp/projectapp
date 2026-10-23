@@ -95,7 +95,7 @@ def _flowables(root, width, font, size, color, indent=0):
     return result
 
 
-def draw_editorial_html(canvas, y, html, *, ps=None, width=None, x=None, font=None, size=10, color=None):
+def draw_editorial_html(canvas, y, html, *, ps=None, width=None, x=None, font=None, size=10, color=None, paragraph_gap=None):
     from content.services.pdf_utils import CONTENT_W, MARGIN_L, MARGIN_B, MARGIN_T, PAGE_H, _font, _new_page, ESMERALD_80
     from content.services.pdf_utils import _register_fonts
     _register_fonts()
@@ -119,7 +119,8 @@ def draw_editorial_html(canvas, y, html, *, ps=None, width=None, x=None, font=No
                 continue
             else: return y
         flow.drawOn(canvas, x, y - height)
-        y -= height + getattr(flow, 'spaceAfter', 0)
+        gap = paragraph_gap if paragraph_gap is not None and isinstance(flow, Paragraph) else flow.getSpaceAfter()
+        y -= height + gap
     return y
 
 

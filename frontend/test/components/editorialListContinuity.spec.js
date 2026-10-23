@@ -41,3 +41,15 @@ it('keeps undo available after the parent stores a formatted list entry', async 
 
   expect(editor.get('textarea').element.value).toBe('First');
 });
+
+// Legacy interpretations must not change merely because another item is edited.
+it('leaves the format of an untouched legacy entry undeclared', async () => {
+  mountList();
+  const second = wrapper.findAllComponents(BaseRichTextEditor)[1];
+  await second.findAll('[role="tab"]')[1].trigger('click');
+
+  await second.get('textarea').setValue('**Updated second**');
+
+  expect(wrapper.props('formats')).toEqual({ '/items/1': 'markdown_html_v1' });
+  expect(wrapper.props('modelValue').split('\n')[0]).toBe('First');
+});

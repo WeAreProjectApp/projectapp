@@ -9,6 +9,6 @@ export async function fillRichTextSource(editor, value) {
   return source;
 }
 
-export function richTextEditorByPlaceholder(page, placeholder) {
-  return page.getByPlaceholder(placeholder).locator('..');
+export function richTextEditorByPlaceholder(page, placeholder, index = 0) {
+  return page.getByPlaceholder(placeholder).nth(index).locator('..');
 }

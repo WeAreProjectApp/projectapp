@@ -1287,7 +1287,7 @@ def _draw_paragraphs(c, y, paragraphs, max_width=None, font_size=10,
         if isinstance(para, EditorialSource) or re.search(r'<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b', str(para), re.I):
             from content.services.editorial_pdf import draw_editorial_source
             y = draw_editorial_source(c, y, str(para), format=para.format if isinstance(para, EditorialSource) else 'markdown_html_v1', ps=ps, width=max_width,
-                                      x=x, font=fn, size=font_size, color=color)
+                                      x=x, font=fn, size=font_size, color=color, paragraph_gap=paragraph_gap)
             drawn = True
             continue
         source = _paragraph_breaks(str(para)) if preserve_breaks else str(para)

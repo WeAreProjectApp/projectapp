@@ -16,6 +16,7 @@ from content.models import (
     WebAppDiagnostic,
 )
 from content.services import diagnostic_service
+from content.services.editorial_format import validate_nested_formats
 from content.utils import validate_editable_slug
 
 # Whitelist of render_context keys that are safe to expose on the public
@@ -342,6 +343,7 @@ class DiagnosticDefaultConfigSerializer(EditorialModelSerializer):
             raise serializers.ValidationError(
                 'sections_json must be a JSON array (list).'
             )
+        validate_nested_formats(value)
         required_keys = {'section_type', 'title', 'order', 'content_json'}
         normalized = []
         for i, section in enumerate(value):

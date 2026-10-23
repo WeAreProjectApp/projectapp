@@ -19,6 +19,7 @@ import { useBuildingOnDemandTheme } from '~/composables/useBuildingOnDemandTheme
 import { usePublicDocumentEntrance } from '~/composables/usePublicDocumentEntrance'
 import { isBuildingOnDemandProgram } from '~/utils/buildingOnDemand'
 import { listOf, safeWhatsappUrl } from '~/utils/buildingWithUs'
+import { resolveEditorialContent } from '~/utils/editorialMetadata'
 
 const props = defineProps({
   program: { type: Object, required: true },
@@ -41,9 +42,10 @@ const expandedFaq = ref(new Set())
 const selectedTerm = ref('monthly')
 const isDownloading = ref(false)
 const downloadError = ref(false)
-const tiers = computed(() => listOf(props.program.tiers?.items))
-const term = computed(() => listOf(props.program.terms?.items).find((item) => item.id === selectedTerm.value)
-  || listOf(props.program.terms?.items)[0] || { id: 'monthly', months: 1 })
+const program = computed(() => resolveEditorialContent(props.program, props.program?.text_formats))
+const tiers = computed(() => listOf(program.value.tiers?.items))
+const term = computed(() => listOf(program.value.terms?.items).find((item) => item.id === selectedTerm.value)
+  || listOf(program.value.terms?.items)[0] || { id: 'monthly', months: 1 })
 const label = (key, params = {}) => t(`buildingOnDemand.${key}`, params, {
   locale: props.language === 'en' ? 'en-us' : 'es-co',
 })

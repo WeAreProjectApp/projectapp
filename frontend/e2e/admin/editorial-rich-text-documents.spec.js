@@ -85,6 +85,10 @@ async function turnSourceIntoFormattedDocument(page) {
   await visual.click();
   await visual.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
   await editor.getByLabel(/^(Color del texto|Text color)$/).fill('#ff0000');
+  // Collapse the styled selection before inserting the table. Tiptap correctly
+  // replaces an active selection with a table, which would test replacement
+  // rather than source/visual round-trip preservation.
+  await visual.press('End');
   await editor.getByRole('button', { name: /^(Insertar tabla|Insert table)$/ }).click();
 
   await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
@@ -108,8 +112,9 @@ test.describe('Editorial rich text in documents', () => {
 
     const source = await turnSourceIntoFormattedDocument(page);
     await expect(source).toHaveValue(/Texto para formato/);
-    await expect(source).toHaveValue(/\*\*Texto para formato\*\*/);
-    await expect(source).toHaveValue(/color:/);
+    await expect(source).toHaveValue(/<strong>Texto para formato<\/strong>/);
+    await expect(source).toHaveValue(/<ul>/);
+    await expect(source).toHaveValue(/color: rgb\(255, 0, 0\)/);
     await expect(source).toHaveValue(/\||<table/);
 
     const requestPromise = page.waitForRequest((request) => (
@@ -126,6 +131,47 @@ test.describe('Editorial rich text in documents', () => {
     await expect(reloaded.getByTestId('rich-text-source-input')).toHaveValue(payload.content_markdown);
     await reloaded.getByRole('tab', { name: /^Visual$/ }).click();
     await expect(reloaded.getByTestId('rich-text-visual-input')).toContainText('Texto para formato');
+  });
+
+  test('keeps a long visual document inside its scrollable editor pane', {
+    tag: [...ADMIN_DOCUMENT_EDIT, '@role:admin', '@outcome:success'],
+  }, async ({ page }) => {
+    const state = { document: { ...documentBase } };
+    await mockDocumentEditorApi(page, state);
+    await page.goto('/es-co/panel/documents/91/edit', { waitUntil: 'domcontentloaded' });
+
+    const editor = documentEditor(page);
+    await editor.getByRole('tab', { name: /^(Fuente|Source)$/ }).click();
+    await editor.getByTestId('rich-text-source-input').fill(
+      Array.from({ length: 60 }, (_, index) => `Línea editorial ${index + 1}`).join('\n'),
+    );
+    await editor.getByRole('tab', { name: /^Visual$/ }).click();
+
+    const scrollArea = editor.getByTestId('rich-text-scroll-area');
+    const metrics = await scrollArea.evaluate((node) => ({
+      clientHeight: node.clientHeight,
+      scrollHeight: node.scrollHeight,
+      bottom: node.getBoundingClientRect().bottom,
+      editorBottom: node.closest('[data-testid="doc-markdown-editor"]')?.getBoundingClientRect().bottom,
+    }));
+    expect(metrics.scrollHeight).toBeGreaterThan(metrics.clientHeight);
+    expect(metrics.bottom).toBeLessThanOrEqual((metrics.editorBottom || 0) + 1);
+
+    await scrollArea.evaluate((node) => { node.scrollTop = node.scrollHeight; });
+    const lastLineIsVisible = await scrollArea.evaluate((node) => {
+      const walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT);
+      let textNode = walker.nextNode();
+      while (textNode && !textNode.textContent?.includes('Línea editorial 60')) textNode = walker.nextNode();
+      if (!textNode) return false;
+      const start = textNode.textContent.indexOf('Línea editorial 60');
+      const range = document.createRange();
+      range.setStart(textNode, start);
+      range.setEnd(textNode, start + 'Línea editorial 60'.length);
+      const line = range.getBoundingClientRect();
+      const area = node.getBoundingClientRect();
+      return line.top >= area.top && line.bottom <= area.bottom;
+    });
+    expect(lastLineIsVisible).toBe(true);
   });
 
   test('creates a document with its source format declaration', {

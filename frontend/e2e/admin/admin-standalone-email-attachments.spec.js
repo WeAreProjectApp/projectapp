@@ -10,6 +10,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_STANDALONE_EMAIL_ATTACHMENTS } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -56,7 +57,7 @@ test.describe('Admin Standalone Email Attachments', () => {
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('cliente@acme.com');
     await page.getByPlaceholder('Asunto del correo').fill('Informe mensual');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').first().fill('Adjunto el informe.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Adjunto el informe.');
     await page.getByRole('button', { name: /Enviar/i }).click();
 
     await expect.poll(() => sendBody).not.toBeNull();
