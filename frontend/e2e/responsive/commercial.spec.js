@@ -13,6 +13,7 @@ import {
 import { financingProgramFixture } from '../helpers/financing-fixture.js';
 import { buildingWithUsApiFixture } from '../helpers/building-with-us-fixture.js';
 import { buildingOnDemandApiFixture } from '../helpers/building-on-demand-fixture.js';
+import { consultingApiFixture, consultingProgramFixture } from '../helpers/consulting-fixture.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -27,6 +28,8 @@ const proposalDefaults = { id: 1, language: 'es', sections_json: [], default_slu
 async function setupCommercial(page) {
   await setAuthLocalStorage(page, { token: 'commercial-responsive-token', userAuth: { id: 9001, role: 'admin', is_staff: true, is_superuser: true } });
   await mockApi(page, async ({ apiPath, method, route }) => {
+    const consulting = consultingApiFixture({ apiPath, method, route });
+    if (consulting) return consulting;
     const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route });
     if (buildingWithUs) return buildingWithUs;
     const buildingOnDemand = await buildingOnDemandApiFixture({ apiPath, method, route });
@@ -58,11 +61,13 @@ async function setupCommercial(page) {
 
 const visualKeys = [
   'frontend/pages/panel/building-with-us/index.vue',
+  'frontend/pages/panel/consulting/index.vue',
   'frontend/pages/panel/cells/index.vue',
   'frontend/pages/panel/additional-modules/index.vue', 'frontend/pages/panel/partnership-program/index.vue', 'frontend/pages/panel/partnership-program/new.vue', 'frontend/pages/panel/partnership-program/[id].vue', 'frontend/pages/panel/proposals/index.vue', 'frontend/pages/panel/proposals/create.vue', 'frontend/pages/panel/proposals/[id]/edit.vue', 'frontend/pages/panel/defaults.vue', 'frontend/pages/panel/hour-packages/index.vue', 'frontend/pages/panel/hour-packages/create.vue', 'frontend/pages/panel/hour-packages/[id]/edit.vue', 'frontend/pages/panel/diagnostics/index.vue', 'frontend/pages/panel/diagnostics/create.vue', 'frontend/pages/panel/diagnostics/[id]/edit.vue',
 ].map(getResponsiveScenario);
 const flowForScenario = {
   'frontend/pages/panel/building-with-us/index.vue': 'admin-building-with-us-contract',
+  'frontend/pages/panel/consulting/index.vue': 'admin-consulting-preview',
   'frontend/pages/panel/cells/index.vue': 'admin-building-on-demand-contract',
   'frontend/pages/panel/additional-modules/index.vue': 'admin-additional-modules-manage',
   'frontend/pages/panel/partnership-program/index.vue': 'admin-financing-distribution',
@@ -81,6 +86,7 @@ const flowForScenario = {
 };
 const resolvedRoutes = {
   'frontend/pages/panel/building-with-us/index.vue': '/es-co/panel/building-with-us',
+  'frontend/pages/panel/consulting/index.vue': '/es-co/panel/consulting',
   'frontend/pages/panel/cells/index.vue': '/es-co/panel/cells',
 };
 
@@ -91,6 +97,7 @@ async function exerciseCommercialView(page, scenario) {
   await page.goto(route, { waitUntil: 'domcontentloaded' });
   const entry = {
     'frontend/pages/panel/building-with-us/index.vue': { action: () => page.getByTestId('building-with-us-tab-contract').click(), value: 'Sincronizado' },
+    'frontend/pages/panel/consulting/index.vue': { action: () => page.getByTestId('consulting-preview-en').click(), value: consultingProgramFixture('en').hero.title },
     'frontend/pages/panel/cells/index.vue': { action: () => page.getByTestId('building-on-demand-panel-tab-contract').click(), value: 'Sincronizado' },
     'frontend/pages/panel/additional-modules/index.vue': { action: async () => { await expect(page.getByTestId('additional-admin-module-1')).toContainText('Commercial analytics'); await page.getByTestId('additional-module-new').click(); }, value: null },
     'frontend/pages/panel/partnership-program/index.vue': { action: async () => { await expect(page.getByTestId('financing-public-url')).toHaveValue(/^https:\/\/projectapp\.co\/(?:es-co|en-us)\/partnership-program$/); await page.getByTestId('financing-term-trigger-code-custody').click(); }, value: null },
@@ -112,6 +119,10 @@ async function exerciseCommercialView(page, scenario) {
   if (scenario.catalogKey === 'frontend/pages/panel/building-with-us/index.vue') {
     content = page.getByTestId('building-with-us-mirror-status');
     await expect(content).toHaveText('Sincronizado');
+  } else if (scenario.catalogKey === 'frontend/pages/panel/consulting/index.vue') {
+    content = page.getByTestId('consulting-preview');
+    await expect(content).toContainText(consultingProgramFixture('en').hero.title);
+    await expect(page.getByTestId('consulting-public-url-es')).toHaveText('https://projectapp.co/es-co/consulting');
   } else if (scenario.catalogKey === 'frontend/pages/panel/cells/index.vue') {
     content = page.getByTestId('building-on-demand-admin-contract-status');
     await expect(content).toHaveText('Sincronizado');

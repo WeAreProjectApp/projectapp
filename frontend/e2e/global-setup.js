@@ -3,11 +3,14 @@ import { chromium } from '@playwright/test';
 import { mockApi } from './helpers/api.js';
 import { waitForNuxtApp } from './helpers/navigation.js';
 import { buildingWithUsApiFixture } from './helpers/building-with-us-fixture.js';
+import { consultingApiFixture } from './helpers/consulting-fixture.js';
 import { BUILDING_ON_DEMAND_GUIDE_SEEN_KEY, buildingOnDemandApiFixture } from './helpers/building-on-demand-fixture.js';
 import { getResponsiveBatch, getResponsiveScenario } from './responsive/catalog-scenarios.js';
 
 const WARMUP_UUID = '11111111-1111-4111-8111-111111111111';
 const RESPONSIVE_WARMUP_ROUTES = Object.freeze({
+  'frontend/pages/consulting/index.vue': ['/es-co/consulting'],
+  'frontend/pages/panel/consulting/index.vue': ['/es-co/panel/consulting'],
   'frontend/pages/building-with-us/index.vue': ['/es-co/building-with-us'],
   'frontend/pages/building-on-demand/index.vue': ['/es-co/building-on-demand'],
   'frontend/pages/panel/building-with-us/index.vue': ['/es-co/panel/building-with-us', '/es-co/panel/building-with-us?tab=contract'],
@@ -124,6 +127,8 @@ const warmupProposalDefaults = { id: 1, language: 'es', sections_json: [], defau
 const warmupDocument = { id: 1, title: 'Warmup document', status: 'draft', content_markdown: '# Warmup', client: null, project: null, language: 'es', template_style: 'professional', created_at: '2026-01-01T00:00:00Z' };
 
 async function warmupApiFixture({ apiPath, method, route }) {
+  const consulting = consultingApiFixture({ apiPath, method, route });
+  if (consulting) return consulting;
   const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route });
   if (buildingWithUs) return buildingWithUs;
   const buildingOnDemand = await buildingOnDemandApiFixture({ apiPath, method, route });
@@ -297,6 +302,7 @@ export default async function globalSetup() {
     '/panel',                               // SPA — admin dashboard
     '/panel/admins',                        // SPA — admin management
     '/es-co/panel/additional-modules',      // SPA — reusable sales catalog
+    '/es-co/panel/consulting',
     '/es-co/panel/building-with-us',        // SPA — versioned program and contract
     '/es-co/panel/building-with-us?tab=contract',
     '/es-co/panel/cells',                   // SPA — read-only cell program, economics and contract
@@ -330,6 +336,7 @@ export default async function globalSetup() {
     '/proposal/warmup-prefetch',            // SPA — proposal viewer
     '/diagnostic/warmup-prefetch',          // SPA — diagnostic public viewer
     '/es-co/additional-modules',            // SSR — public additional modules catalog
+    '/es-co/consulting',
     '/es-co/building-with-us',               // SSR — public product incubation program
     '/es-co/building-on-demand',             // SSR — public monthly cell hour bags
     '/es-co/additional-modules/share/11111111-1111-4111-8111-111111111111', // SPA — shared catalog
@@ -392,6 +399,7 @@ export default async function globalSetup() {
       localStorage.setItem('platform_refresh_token', 'e2e-warmup-platform-refresh');
       localStorage.setItem('platform_user', JSON.stringify(admin));
       localStorage.setItem('preferred_locale', 'en-us');
+      localStorage.setItem('projectapp-consulting-guide-seen', 'true');
       localStorage.setItem('projectapp-building-with-us-guide-seen', 'true');
       localStorage.setItem(guideSeenKey, 'true');
     }, BUILDING_ON_DEMAND_GUIDE_SEEN_KEY);

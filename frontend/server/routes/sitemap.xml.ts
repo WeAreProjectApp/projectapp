@@ -21,6 +21,7 @@ const STATIC_BILINGUAL_PAGES: Array<{
   { path: '/landing-web-design', changefreq: 'weekly', priority: '0.9', comment: 'Landing Web Design' },
   { path: '/about-us', changefreq: 'monthly', priority: '0.9', comment: 'About Us' },
   { path: '/portfolio-works', changefreq: 'weekly', priority: '0.9', comment: 'Portfolio Works' },
+  { path: '/consulting', changefreq: 'monthly', priority: '0.8', comment: 'Consulting and advisory' },
   { path: '/contact', changefreq: 'monthly', priority: '0.6', comment: 'Contact' },
 ];
 
