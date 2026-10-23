@@ -13,6 +13,7 @@ from content.services.proposal_service import DEFAULT_SECTIONS, DEFAULT_SECTIONS
 
 pytestmark = pytest.mark.django_db
 migration = import_module('content.migrations.0262_align_proposal_scope_clause')
+requirement_migration = import_module('content.migrations.0302_seed_requirement_packages')
 schema_editor = SimpleNamespace(connection=connection)
 
 
@@ -23,7 +24,7 @@ def _scope(sections):
     )
 
 
-@pytest.mark.parametrize('sections,formalize,no_waiver', [
+@pytest.mark.parametrize(('sections', 'formalize', 'no_waiver'), [
     (DEFAULT_SECTIONS, 'otrosí al contrato', 'ni implica renuncia'),
     (DEFAULT_SECTIONS_EN, 'amendment to the contract', 'does not waive'),
 ])
@@ -43,7 +44,7 @@ def _config(language, paragraphs):
     return ProposalDefaultConfig.objects.create(language=language, sections_json=sections)
 
 
-@pytest.mark.parametrize('language,old,new', [
+@pytest.mark.parametrize(('language', 'old', 'new'), [
     ('es', migration.OLD_ES, migration.NEW_ES),
     ('en', migration.OLD_EN, migration.NEW_EN),
 ])
@@ -68,6 +69,28 @@ def test_hand_edited_defaults_are_left_alone():
     assert _scope(config.sections_json) == ['Cláusula negociada a mano.']
 
 
-def test_new_defaults_match_the_code():
-    assert migration.NEW_ES == _scope(DEFAULT_SECTIONS)
-    assert migration.NEW_EN == _scope(DEFAULT_SECTIONS_EN)
+@pytest.mark.parametrize(('paragraphs', 'expected'), [
+    (
+        migration.NEW_ES,
+        'En consecuencia, los tiempos, costos y garantías de esta propuesta aplican solamente '
+        'sobre el alcance descrito. Todo lo que lo exceda se gestionará mediante los paquetes de '
+        'horas anteriores (para esfuerzos bajos o medio-bajos) o como una cotización independiente '
+        '(para esfuerzos medios o superiores).',
+    ),
+    (
+        migration.NEW_EN,
+        'Consequently, the timelines, costs and warranties of this proposal apply only to the '
+        'described scope. Anything beyond it will be handled via the hour packages above (for low '
+        'or medium-low efforts) or as an independent quote (for medium or higher efforts).',
+    ),
+])
+def test_historical_defaults_preserve_hour_package_scope(paragraphs, expected):
+    assert paragraphs[2] == expected
+
+
+@pytest.mark.parametrize(('sections', 'language'), [
+    (DEFAULT_SECTIONS, 'es'),
+    (DEFAULT_SECTIONS_EN, 'en'),
+])
+def test_current_defaults_match_requirement_migration_scope(sections, language):
+    assert _scope(sections) == requirement_migration.REQUIREMENT_DEFAULTS[language]['scopeParagraphs']
