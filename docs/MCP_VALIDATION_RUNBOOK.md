@@ -2792,3 +2792,14 @@ Comercial; la reparación nunca lo incorpora retroactivamente.
 ### Integración de Programas, video y migraciones (2026-10-22)
 
 La migración vacía `0299_merge_programs_video_approvals` une las tres `0298` de video, segmentación y aprobación del servicio, sin modificar sus operaciones. El catálogo canónico de video de Células es Programas; el alias Building on Demand admite carga compartida. Las proyecciones de visibilidad de propuestas, módulos adicionales y Alianza siguen limitadas a su propio interruptor y recursos. La lista congelada `pre_split` conserva sus 247 nombres y no reabre `launch_proposal_to_platform` tras su retirada. Las revisiones fiscales y la evidencia de contratos de las otras sesiones se conservan.
+
+### Paquetes por talla — 2026-10-23
+
+Los contratos vigentes pasan a `commercial` 6.2.0, `offerings` 2.0.0 y
+`programs` 3.0.0. El catálogo recibe cupos XS/S/M y vigencia; la Alianza tiene
+cupos mensuales propios. Se conservan las herramientas y rutas existentes,
+pero las escrituras nuevas de paquetes ya no reciben horas ni tarifa.
+Consultar el [changelog de contratos](changelog/2026-10-23-requirement-package-mcp-contracts.md)
+y la [guía de configuración](REQUIREMENT_PACKAGES.md). Las huellas se regeneran
+únicamente para esos tres conectores con settings de test y se comprueban con
+sus casos de `test_connector_fingerprint_matches_versioned_lock`.

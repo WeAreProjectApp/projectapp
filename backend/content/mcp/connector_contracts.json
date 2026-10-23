@@ -36,8 +36,8 @@
     "version": "2.0.0"
   },
   "commercial": {
-    "sha256": "97f5276e2415427a767a54388d506f6fdbcf09ed556982bdbafeeafd23126d4e",
-    "version": "6.1.0"
+    "sha256": "69530ecac7cc42d312cc6a8b2f8d266f54d4eb454347f5aa9de24bdecf8d451f",
+    "version": "6.2.0"
   },
   "communications": {
     "sha256": "3aa598dcd1930132226521e35bb078718847c0d94d36e7d8c7c5bacbcbb575c7",
@@ -60,8 +60,8 @@
     "version": "2.0.0"
   },
   "offerings": {
-    "sha256": "93c942398f1d02e34c2f1552facb0a26e1aac6d016f53470bbd47914a257e275",
-    "version": "1.0.0"
+    "sha256": "a63ddec90f0273b077984da68f467aca7a0c7f47db7a06a1de40a26a07f0b31e",
+    "version": "2.0.0"
   },
   "operations": {
     "sha256": "68d4589f26eee8e6ec7943ad17502ccc4f60d6d29d802b21c067ba4528cb0b46",
@@ -72,8 +72,8 @@
     "version": "4.0.0"
   },
   "programs": {
-    "sha256": "b5689387b3fcb89df947e3bf54d5b5f11a3f528a7770f1b3dba6e2f4d9b9745f",
-    "version": "2.0.0"
+    "sha256": "4828b53df5cb3a431ca7e0a33e8cf5c54479fdb0e9c082673f425a7cd060ac60",
+    "version": "3.0.0"
   },
   "projects": {
     "sha256": "aa76fa38422e0ea4f64b011f5f00d679d3aa301bdd18fbd4c3549c6613184ff1",

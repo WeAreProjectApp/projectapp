@@ -60,6 +60,21 @@ def _ext_requirement_packages():
     )
 
 
+def _legacy_proposal_snapshot(*, title, language='es'):
+    """Create the unfrozen hours snapshot expected by legacy PDF re-seeding tests."""
+    content = seed_commercial_conditions_from_catalog(
+        BASE_CONTENT, nationality='EXT', language=language,
+    )
+    proposal, _ = build_proposal_from_json({
+        'title': title,
+        'client_name': 'Cliente',
+        'nationality': 'EXT',
+        'language': language,
+        'sections': {'commercialConditions': content},
+    })
+    return proposal
+
+
 class TestSeedService:
     def test_empty_catalog_returns_input_untouched(self):
         HourPackage.objects.all().delete()
@@ -221,11 +236,7 @@ class TestBaseRatePropagationReachesNewProposals:
             apply_base_rates_to_catalog,
         )
         _ext_packages()
-        proposal, _ = build_proposal_from_json({
-            'title': 'Snapshot MX', 'client_name': 'Cliente',
-            'nationality': 'EXT', 'language': 'es',
-            'sections': {},
-        })
+        proposal = _legacy_proposal_snapshot(title='Snapshot MX')
         section = proposal.sections.get(section_type='commercial_conditions')
         snapshot = section.content_json
         assert snapshot['hourlyRate'] == 40.0
@@ -254,13 +265,10 @@ class TestPdfLiveReseed:
         return captured
 
     def _proposal_with_snapshot(self, **overrides):
-        payload = {
-            'title': 'Live MX', 'client_name': 'Cliente',
-            'nationality': 'EXT', 'language': 'es', 'sections': {},
-        }
-        payload.update(overrides)
-        proposal, _ = build_proposal_from_json(payload)
-        return proposal
+        return _legacy_proposal_snapshot(
+            title=overrides.get('title', 'Live MX'),
+            language=overrides.get('language', 'es'),
+        )
 
     def test_pdf_uses_current_catalog_rate_not_snapshot(self, monkeypatch):
         from content.services.hour_package_service import (
