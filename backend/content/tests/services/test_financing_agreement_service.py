@@ -63,7 +63,9 @@ def _agreement_data(client, template, **overrides):
 
 def _current_policy(actor):
     from content.models import FinancingPolicyRevision
-    return FinancingPolicyRevision.objects.create(version=1, created_by=actor)
+    return FinancingPolicyRevision.get_current() or FinancingPolicyRevision.objects.create(
+        version=1, created_by=actor,
+    )
 
 
 def test_schedule_rounding_preserves_exact_financed_balance():
