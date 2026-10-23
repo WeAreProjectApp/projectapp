@@ -141,8 +141,13 @@ def resource_etags(arguments=None):
 def validate_markdown(markdown):
     if not isinstance(markdown, str) or not markdown.strip() or len(markdown) > 250000:
         raise BuildingOnDemandError('markdown debe ser texto no vacío de hasta 250000 caracteres.')
-    first = next(line for line in markdown.splitlines() if line.strip())
-    if not first.startswith('# '):
+    from content.services.editorial_format import render_source, parse_html
+    from rest_framework.exceptions import ValidationError
+    try:
+        root = parse_html(render_source(markdown), strict=True)
+    except ValidationError as exc:
+        raise BuildingOnDemandError('El contenido utiliza HTML o estilos no admitidos.') from exc
+    if not len(root) or root[0].tag != 'h1':
         raise BuildingOnDemandError('La primera línea no vacía debe ser un título de nivel uno (# ).')
     if re.search(r'\{[a-z_][a-z0-9_]*\}', markdown):
         raise BuildingOnDemandError('Usa XXX-XXX-XXX para los espacios por completar; no se admiten placeholders.',

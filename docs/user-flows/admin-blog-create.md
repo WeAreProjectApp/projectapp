@@ -17,3 +17,5 @@
   - [Branch A — Validation error] Form shows errors, admin corrects and resubmits.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-blog-create.spec.js`
+
+- **Formato editorial:** Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato acompañan el contenido y el JSON estructurado mantiene su editor de código.

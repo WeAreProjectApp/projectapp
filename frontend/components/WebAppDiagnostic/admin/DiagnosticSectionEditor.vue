@@ -97,6 +97,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 import { ref, reactive, computed, watch, shallowRef } from 'vue';
 import BaseCollapse from '~/components/base/BaseCollapse.vue';
 import BaseFormField from '~/components/base/BaseFormField.vue';
@@ -156,7 +157,7 @@ const localSection = reactive({
   is_enabled: props.section.is_enabled,
 });
 
-const form = ref(buildFormFromJson(props.section.section_type, props.section.content_json));
+const form = ref(buildFormFromJson(props.section.section_type, resolveEditorialContent(props.section.content_json, props.section.text_formats, '/content_json')));
 
 // Rehydrate only when the incoming section row swaps (different id/type) —
 // not on every inbound save merge, otherwise in-flight keystrokes are
@@ -168,7 +169,7 @@ watch(
     localSection.visibility = props.section.visibility;
     localSection.is_enabled = props.section.is_enabled;
     FormComponent.value = FORM_COMPONENTS[props.section.section_type] || null;
-    form.value = buildFormFromJson(props.section.section_type, props.section.content_json);
+    form.value = buildFormFromJson(props.section.section_type, resolveEditorialContent(props.section.content_json, props.section.text_formats, '/content_json'));
   },
 );
 

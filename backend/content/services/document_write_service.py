@@ -6,6 +6,7 @@ from functools import wraps
 from content.services.contract_mirror_service import is_contract_mirror, mirror_markdown
 from content.services.document_type_codes import COLLECTION_ACCOUNT
 from rest_framework import serializers
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 
 
 def document_etag(document):
@@ -54,6 +55,7 @@ def document_write_payload(document, *, include_content=False):
         **document_capabilities(document),
     }
     if include_content:
+        data["text_formats"] = document.text_formats
         data["markdown"] = (
             (mirror_markdown(document) or "")
             if is_contract_mirror(document)
@@ -108,6 +110,7 @@ DOCUMENT_WRITE_SCHEMA = {
         "movable": {"type": "boolean"},
         "move_blockers": {"type": "array", "items": {"type": "string"}},
         "markdown": {"type": "string", "description": "Sólo con include_content=true."},
+        "text_formats": TEXT_FORMATS_SCHEMA,
     },
     "required": [
         "id",

@@ -41,9 +41,7 @@
                     {{ priorityText(req.priority) }}
                   </span>
                 </div>
-                <p v-if="req.description" class="text-sm text-text-default/70 font-light">
-                  {{ req.description }}
-                </p>
+                <BaseRichTextContent v-if="req.description" class="text-sm text-text-default/70 font-light" :source="req.description" :format="req.text_formats?.['/description'] || 'plain'" />
               </li>
             </ul>
           </div>

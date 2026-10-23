@@ -1,5 +1,6 @@
 import io
 from xml.sax.saxutils import escape
+from content.services.editorial_projection import editorial_projection, editorial_paragraph
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -43,6 +44,7 @@ class AdditionalModulePdfService:
             language=language,
             module_ids=module_ids,
         )
+        payload = editorial_projection(payload)
         if payload['total_modules'] == 0:
             raise ValueError('No hay módulos activos para generar el PDF.')
 
@@ -213,10 +215,7 @@ class AdditionalModulePdfService:
                     'PREPARED FOR' if english else 'PREPARADO PARA',
                     styles['cover_eyebrow'],
                 ),
-                Paragraph(
-                    escape(recipient_label[:255]),
-                    styles['cover_recipient'],
-                ),
+                editorial_paragraph(recipient_label[:255], styles['cover_recipient']),
             ])
         story.extend([
             Spacer(1, 8 * mm if recipient_label else 12 * mm),
@@ -242,10 +241,10 @@ class AdditionalModulePdfService:
             Spacer(1, 2 * mm),
         ]
         for category in payload['categories']:
-            story.append(Paragraph(escape(category['name']), styles['module']))
+            story.append(editorial_paragraph(category['name'], styles['module']))
             bullets = [
                 ListItem(
-                    Paragraph(escape(module['name']), styles['index']),
+                    editorial_paragraph(module['name'], styles['index']),
                     leftIndent=8,
                 )
                 for module in category['modules']
@@ -278,12 +277,12 @@ class AdditionalModulePdfService:
         for category_index, category in enumerate(payload['categories']):
             if category_index:
                 story.append(PageBreak())
-            story.append(Paragraph(escape(category['name']), styles['section']))
+            story.append(editorial_paragraph(category['name'], styles['section']))
             for module in category['modules']:
                 heading = f'{escape(module["icon"])} {escape(module["name"])}'.strip()
                 story.append(KeepTogether([
                     Paragraph(heading, styles['module']),
-                    Paragraph(escape(module['summary']), styles['summary']),
+                    editorial_paragraph(module['summary'], styles['summary']),
                 ]))
                 for field in ('what_is', 'purpose'):
                     story.append(cls._text_card(
@@ -307,8 +306,8 @@ class AdditionalModulePdfService:
     @staticmethod
     def _text_card(title, text, styles):
         content = [
-            Paragraph(escape(title), styles['card_title']),
-            Paragraph(escape(text), styles['body']),
+            editorial_paragraph(title, styles['card_title']),
+            editorial_paragraph(text, styles['body']),
         ]
         table = Table([[content]], colWidths=[164 * mm])
         table.setStyle(TableStyle([
@@ -326,7 +325,7 @@ class AdditionalModulePdfService:
         bullets = ListFlowable(
             [
                 ListItem(
-                    Paragraph(escape(item), styles['body']),
+                    editorial_paragraph(item, styles['body']),
                     leftIndent=8,
                 )
                 for item in items
@@ -335,7 +334,7 @@ class AdditionalModulePdfService:
             leftIndent=13,
             bulletColor=GREEN_LIGHT,
         )
-        content = [Paragraph(escape(title), styles['card_title']), bullets]
+        content = [editorial_paragraph(title, styles['card_title']), bullets]
         table = Table([[content]], colWidths=[164 * mm])
         table.setStyle(TableStyle([
             ('BACKGROUND', (0, 0), (-1, -1), BONE),

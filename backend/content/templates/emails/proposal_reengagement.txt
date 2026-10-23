@@ -1,13 +1,13 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Entendemos que la propuesta original no encajó. Te proponemos 4 caminos alternativos — elige el que más te haga sentido." }}
+{% editorial_plain_value body|default:"Entendemos que la propuesta original no encajó. Te proponemos 4 caminos alternativos — elige el que más te haga sentido." "body" %}
 
 A. Ajustamos el alcance — quitamos lo que no es crítico, baja la inversión.
 B. Flexibilizamos los pagos — extendemos a 6 cuotas o ajustamos al ciclo de caja.
 {% if discount_percent %}C. Descuento del {{ discount_percent }}% si confirmas en 7 días.{% endif %}
 D. Solo conversemos — sin compromiso.
 
-{{ cta_text|default:"Conversemos por WhatsApp" }}: https://wa.me/573238122373?text=Hola%2C%20quiero%20retomar
+{% editorial_plain_value cta_text|default:"Conversemos por WhatsApp" "cta_text" %}: https://wa.me/573238122373?text=Hola%2C%20quiero%20retomar
 
 —
 {{ signature_name }}

@@ -44,8 +44,9 @@ SOURCE_FIELDS = (
     'total_investment', 'selected_modules', 'contract_params',
     'hosting_percent', 'email_signed_by',
 )
-# Fingerprint version 4 covers the closing modality and service discounts.
-SOURCE_VERSION = 4
+# Fingerprint version 5 covers versioned editorial metadata on the proposal
+# and its sections. Older prepared packages keep their original v1-v4 hashes.
+SOURCE_VERSION = 5
 DOCUMENT_VERSION = 6
 # A switch of modality leaves a prepared package pointing at documents that
 # are no longer the deal's contracts; that is a stale preparation.
@@ -141,6 +142,9 @@ def source_hash(proposal, payload):
         proposal_fields += ('contract_modality',)
     if payload.get('_source_version', 1) >= 4:
         proposal_fields += ('hosting_discount_nine_month', 'hosting_discount_semiannual', 'hosting_discount_quarterly')
+    if payload.get('_source_version', 1) >= 5:
+        section_fields += ('text_formats',)
+        proposal_fields += ('text_formats',)
     document_sources = []
     for key, doc in related_documents(proposal, payload):
         document_sources.append([key, doc.pk, doc.title, doc.file.name, hashlib.sha256(read_document(doc)).hexdigest()])

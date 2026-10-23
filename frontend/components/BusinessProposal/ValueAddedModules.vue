@@ -23,10 +23,10 @@
             <span>✨</span>
             <span>{{ noCostLabel }}</span>
           </span>
-          <p
+          <div
             v-if="content.intro"
             class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl"
-            v-html="linkify(content.intro)"
+            v-html="linkify(content.intro, content.text_formats?.['/intro'])"
           />
         </div>
 
@@ -57,9 +57,7 @@
                 <p class="text-sm text-text-default/75 font-light leading-relaxed mb-3">
                   {{ card.justification }}
                 </p>
-                <p v-if="card.description" class="text-xs text-text-default/60 italic leading-relaxed mb-3">
-                  {{ card.description }}
-                </p>
+                <BaseRichTextContent v-if="card.description" class="text-xs text-text-default/60 italic leading-relaxed mb-3" :source="card.description" :format="card.text_formats?.['/description'] || 'plain'" />
 
                 <!-- Condition badges (duration + minimum gate "condicionado") -->
                 <div v-if="card.durationLabel || card.minimumNote" class="flex flex-wrap gap-2 mb-2">
@@ -185,6 +183,7 @@ import FunctionalRequirementsModal from './FunctionalRequirementsModal.vue';
 import ModuleTermsModal from './ModuleTermsModal.vue';
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   section: {
     type: Object,
     default: () => ({ content_json: {} }),

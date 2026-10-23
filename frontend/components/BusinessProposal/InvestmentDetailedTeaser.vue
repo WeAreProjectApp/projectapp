@@ -6,9 +6,7 @@
     <h4 class="text-text-brand font-bold text-sm sm:text-base mb-2">
       {{ t.title }}
     </h4>
-    <p class="text-text-default/60 font-light text-xs sm:text-sm leading-relaxed max-w-md mx-auto mb-4">
-      {{ t.description }}
-    </p>
+    <BaseRichTextContent class="text-text-default/60 font-light text-xs sm:text-sm leading-relaxed max-w-md mx-auto mb-4" :source="t.description" :format="t.text_formats?.['/description'] || 'plain'" />
     <button
       type="button"
       class="switch-to-detailed-btn inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-accent rounded-xl

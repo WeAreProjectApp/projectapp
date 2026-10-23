@@ -1,6 +1,6 @@
-⚠️ ETAPA DE {{ stage_label|upper }} CERCA DE VENCER — {{ proposal_title }}
+{% load editorial %}⚠️ ETAPA DE {{ stage_label|upper }} CERCA DE VENCER — {{ proposal_title }}
 
-{{ intro }}
+{% editorial_plain_value intro "intro" %}
 
 Detalles:
 - Cliente: {{ client_name }}

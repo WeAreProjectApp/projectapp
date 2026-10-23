@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "The Correos tab is visible from draft onward. Its first card edits and previews the proposal's plain-text personalized send message; drafts may save it empty, although initial send is blocked until completed. After the first send, the same tab exposes a follow-up composer for multiple Para recipients and optional visible CC recipients through the hybrid client/manual picker (10 unique addresses total), plus immutable grouped history. Each delivery writes one ProposalChangeLog activity, updates last_activity_at and appears once while retaining one status row per address. The composer also supports Markdown sections, preview and attachments through the proposal-email endpoints.",
+  "description": "The Correos tab is visible from draft onward. Its first card edits and previews the proposal's personalized send message with an explicit text-format declaration; drafts may save it empty, although initial send is blocked until completed. After the first send, the same tab exposes a follow-up composer for multiple Para recipients and optional visible CC recipients through the hybrid client/manual picker (10 unique addresses total), plus immutable grouped history. Each delivery writes one ProposalChangeLog activity, updates last_activity_at and appears once while retaining one status row per address. The composer also supports Markdown sections, preview and attachments through the proposal-email endpoints. Las secciones, saludo y despedida comparten editor Visual/Fuente con la vista previa y el envío; las declaraciones de formato se conservan junto al contenido.",
   "expectedSpecs": 1,
   "outcomes": [
     "display",

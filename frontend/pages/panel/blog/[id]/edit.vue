@@ -95,11 +95,11 @@
           </div>
           <div>
             <label for="excerpt_es" class="block text-sm font-medium text-text-default mb-1">Resumen (ES)</label>
-            <textarea id="excerpt_es" v-model="form.excerpt_es" rows="2" required class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor id="excerpt_es" v-model="form.excerpt_es" rows="2" required class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/excerpt_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/excerpt_es': $event }" />
           </div>
           <div>
             <label for="content_es" class="block text-sm font-medium text-text-default mb-1">Contenido HTML (ES)</label>
-            <textarea id="content_es" v-model="form.content_es" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm font-mono focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor id="content_es" v-model="form.content_es" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm font-mono focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/content_es'] || 'markdown'" @update:format="form.text_formats = { ...form.text_formats, '/content_es': $event }" />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Contenido JSON (ES)</label>
@@ -117,11 +117,11 @@
           </div>
           <div>
             <label for="excerpt_en" class="block text-sm font-medium text-text-default mb-1">Excerpt (EN)</label>
-            <textarea id="excerpt_en" v-model="form.excerpt_en" rows="2" required class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor id="excerpt_en" v-model="form.excerpt_en" rows="2" required class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/excerpt_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/excerpt_en': $event }" />
           </div>
           <div>
             <label for="content_en" class="block text-sm font-medium text-text-default mb-1">Content HTML (EN)</label>
-            <textarea id="content_en" v-model="form.content_en" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm font-mono focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" />
+            <BaseRichTextEditor id="content_en" v-model="form.content_en" rows="6" class="w-full px-4 py-2.5 rounded-xl border border-input-border bg-input-bg text-input-text placeholder-input-placeholder text-sm font-mono focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y"  :format="form.text_formats?.['/content_en'] || 'markdown'" @update:format="form.text_formats = { ...form.text_formats, '/content_en': $event }" />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Content JSON (EN)</label>
@@ -624,6 +624,7 @@ function strToJson(str) {
 }
 
 function populateForm(data) {
+  form.text_formats = { ...data.text_formats };
   form.title_es = data.title_es || '';
   form.title_en = data.title_en || '';
   form.slug = data.slug || '';
@@ -731,6 +732,7 @@ async function handleSubmit() {
   successMsg.value = '';
 
   const payload = {
+    text_formats: { ...form.text_formats },
     title_es: form.title_es,
     title_en: form.title_en,
     slug: form.slug,

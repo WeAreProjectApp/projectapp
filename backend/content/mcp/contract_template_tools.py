@@ -21,7 +21,7 @@ PATCH = {
     'oneOf': [{'required': ['heading'], 'not': {'required': ['text']}}, {'required': ['text'], 'not': {'required': ['heading']}}],
 }
 EDIT_FIELDS = {
-    'variant': VARIANT, 'markdown': {'type': 'string', 'maxLength': 250000},
+    'variant': VARIANT, 'markdown': {'type': 'string', 'maxLength': 250000, 'description': 'Fuente markdown_html_v1: Markdown con listas/tablas y HTML limitado para color, resaltado y alineación; conserva placeholders.'},
     'patches': {'type': 'array', 'minItems': 1, 'maxItems': 50, 'items': PATCH},
     'if_match': {'type': 'string', 'minLength': 1},
 }

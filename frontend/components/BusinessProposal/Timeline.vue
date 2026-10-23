@@ -13,7 +13,7 @@
       </div>
 
       <div class="timeline-intro mb-12">
-        <p data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-6" v-html="linkify(introText)" />
+        <div data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-6" v-html="linkify(introText, text_formats?.['/introText'])" />
         <div data-animate="fade-up" class="duration-summary bg-primary-soft p-6 rounded-xl inline-block">
           <div class="flex items-center">
             <svg class="w-8 h-8 text-text-brand mr-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -29,7 +29,7 @@
 
       <div class="timeline-container relative">
         <div class="absolute left-8 top-0 bottom-0 w-1 bg-gradient-to-b from-esmerald via-esmerald/60 to-green-light/10 hidden md:block"></div>
-        
+
         <div data-animate="fade-up-stagger" class="space-y-8">
           <div v-for="(phase, index) in phases" :key="index"
                class="timeline-item relative">
@@ -39,7 +39,7 @@
                   <span class="text-xl sm:text-2xl font-bold text-accent">{{ index + 1 }}</span>
                 </div>
               </div>
-              
+
               <div class="flex-1 bg-surface p-5 sm:p-8 rounded-2xl border border-border-default shadow-card hover:shadow-raised transition-shadow">
                 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
                   <div>
@@ -57,9 +57,9 @@
                     </span>
                   </div>
                 </div>
-                
-                <p class="text-text-default/70 font-light leading-relaxed mb-6">{{ phase.description }}</p>
-                
+
+                <BaseRichTextContent class="text-text-default/70 font-light leading-relaxed mb-6" :source="phase.description" :format="phase.text_formats?.['/description'] || 'plain'" />
+
                 <div class="tasks-list space-y-3">
                   <div v-for="(task, idx) in phase.tasks" :key="idx"
                        class="task-item flex items-start p-3 bg-esmerald/5 rounded-lg hover:bg-primary-soft transition-colors">
@@ -97,6 +97,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   index: {
     type: String,
     default: '8'

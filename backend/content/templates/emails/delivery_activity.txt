@@ -1,8 +1,8 @@
-{{ title }}
+{% load editorial %}{{ title }}
 Proyecto: {{ project_name }}
 {% if stage_title %}Etapa: {{ stage_title }}{% endif %}
 
-{{ message }}
+{% editorial_plain_value message "message" %}
 {% for item in decisions %}
 {{ item.title }} — {{ item.result }}
 {{ item.message }}

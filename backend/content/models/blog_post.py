@@ -1,9 +1,10 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 from django.utils import timezone
 from django.utils.text import slugify
 
 
-class BlogPost(models.Model):
+class BlogPost(EditorialTextModel, models.Model):
     """
     Model for blog articles.
 

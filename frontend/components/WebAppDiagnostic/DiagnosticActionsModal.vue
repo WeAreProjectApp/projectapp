@@ -41,9 +41,7 @@
               Sugerido
             </span>
           </span>
-          <span class="block text-xs text-text-muted mt-0.5">
-            {{ action.description }}
-          </span>
+          <BaseRichTextContent class="block text-xs text-text-muted mt-0.5" :source="action.description" :format="action.text_formats?.['/description'] || 'plain'" />
         </span>
       </component>
 

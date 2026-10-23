@@ -1,9 +1,10 @@
+from content.serializers.editorial import EditorialModelSerializer
 from rest_framework import serializers
 
 from content.models import HourPackage, HourPackageSettings
 
 
-class HourPackageAdminListSerializer(serializers.ModelSerializer):
+class HourPackageAdminListSerializer(EditorialModelSerializer):
     """Admin list serializer — includes the currency derived from nationality."""
     currency = serializers.ReadOnlyField()
 
@@ -16,7 +17,7 @@ class HourPackageAdminListSerializer(serializers.ModelSerializer):
         )
 
 
-class HourPackageAdminDetailSerializer(serializers.ModelSerializer):
+class HourPackageAdminDetailSerializer(EditorialModelSerializer):
     """Admin detail serializer — all fields for the edit form."""
     currency = serializers.ReadOnlyField()
 
@@ -29,7 +30,7 @@ class HourPackageAdminDetailSerializer(serializers.ModelSerializer):
         )
 
 
-class HourPackageCreateUpdateSerializer(serializers.ModelSerializer):
+class HourPackageCreateUpdateSerializer(EditorialModelSerializer):
     """Serializer for creating and updating hour packages from the admin panel."""
 
     class Meta:
@@ -62,7 +63,7 @@ class HourPackageCreateUpdateSerializer(serializers.ModelSerializer):
         return value
 
 
-class HourPackageSettingsSerializer(serializers.ModelSerializer):
+class HourPackageSettingsSerializer(EditorialModelSerializer):
     """Singleton settings for the hour-packages panel."""
 
     class Meta:

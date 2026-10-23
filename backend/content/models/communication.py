@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 from accounts.retention import RetainedProjectModel
 from django.conf import settings
 from django.core.exceptions import ValidationError
@@ -149,7 +150,7 @@ class CommunicationThread(RetainedProjectModel, models.Model):
             raise ValidationError(errors)
 
 
-class CommunicationMessage(models.Model):
+class CommunicationMessage(EditorialTextModel, models.Model):
     """One immutable-after-delivery entry in a client conversation."""
 
     class Channel(models.TextChoices):

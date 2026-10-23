@@ -1,11 +1,11 @@
-Hola {{ client_name }},
+{% load editorial %}Hola {{ client_name }},
 
 Terminamos el diagnóstico de tu plataforma. Entregamos tres documentos: propuesta comercial, detalle técnico ampliado y radiografía del repositorio.
 
 {% if investment_amount %}Inversión: $ {{ investment_amount }} {{ currency|default:"COP" }}
 {% endif %}{% if duration_label %}Tiempo estimado: {{ duration_label }}{% endif %}
 
-{{ cta_text|default:"Revisar diagnóstico completo" }}: {{ diagnostic_url }}
+{% editorial_plain_value cta_text|default:"Revisar diagnóstico completo" "cta_text" %}: {{ diagnostic_url }}
 
 —
 {{ signature_name }}

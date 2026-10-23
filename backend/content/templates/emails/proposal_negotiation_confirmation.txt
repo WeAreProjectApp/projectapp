@@ -1,13 +1,13 @@
-{{ greeting|default:"Hola" }}{% if not greeting %} {{ client_name }} 🤝{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %} {{ client_name }} 🤝{% endif %},
 
-{{ body|default:"Recibimos tu solicitud de \"Aceptar con cambios\". Volvemos en menos de 48 horas con una propuesta ajustada." }}
+{% editorial_plain_value body|default:"Recibimos tu solicitud de \"Aceptar con cambios\". Volvemos en menos de 48 horas con una propuesta ajustada." "body" %}
 {% if body_secondary %}
 {{ body_secondary }}{% else %}
 Mientras tanto la propuesta original queda en pausa — no se vence.{% endif %}
 
 {% if total_investment %}Propuesta original: $ {{ total_investment }} {{ currency|default:"COP" }} (pausada){% endif %}
 
-{{ cta_text|default:"Ver propuesta actual" }}: {{ proposal_url }}
+{% editorial_plain_value cta_text|default:"Ver propuesta actual" "cta_text" %}: {{ proposal_url }}
 
 —
 {{ signature_name }}

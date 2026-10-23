@@ -1,10 +1,11 @@
+from content.models.editorial_text import EditorialTextModel
 from django.conf import settings
 from django.db import models
 
 from content.models.history_tracked import HistoryTrackedModel
 
 
-class DocumentNote(HistoryTrackedModel):
+class DocumentNote(EditorialTextModel, HistoryTrackedModel):
     """Private, actionable note that may explain a state episode."""
 
     class Status(models.TextChoices):

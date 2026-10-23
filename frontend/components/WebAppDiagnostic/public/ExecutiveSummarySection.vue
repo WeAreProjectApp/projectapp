@@ -1,7 +1,7 @@
 <template>
   <section>
     <SectionHeader :index="content.index" :title="content.title" fallback="Resumen Ejecutivo" />
-    <p v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 mb-6">{{ content.intro }}</p>
+    <BaseRichTextContent v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 mb-6" :source="content.intro" :format="content.text_formats?.['/intro'] || 'plain'" />
 
     <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
       <div
@@ -17,15 +17,16 @@
       </div>
     </div>
 
-    <p v-if="content.narrative" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed whitespace-pre-line">{{ content.narrative }}</p>
+    <BaseRichTextContent v-if="content.narrative" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed whitespace-pre-line" :source="content.narrative" :format="content.text_formats?.['/narrative'] || 'plain'" />
 
     <ul v-if="content.highlights?.length" class="mt-4 list-disc pl-5 space-y-1 text-text-brand/80 dark:text-text-brand/80">
-      <li v-for="(h, idx) in content.highlights" :key="idx">{{ h }}</li>
+      <li v-for="(h, idx) in content.highlights" :key="idx"><BaseRichTextContent :source="h" :format="content.text_formats?.['/highlights/' + idx] || 'plain'" /></li>
     </ul>
   </section>
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue';
 import SectionHeader from './SectionHeader.vue';
 

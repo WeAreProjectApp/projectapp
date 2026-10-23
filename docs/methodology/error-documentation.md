@@ -1,3 +1,5 @@
+> **Formato editorial — 2026-10-23:** compactar con `>\s+<` quitaba espacios entre marcas inline; devolver la versión HTML normalizada al editor de listas reiniciaba su historial. Las entradas conservan un borrador local y sólo codifican saltos físicos al almacenar; las pruebas de continuidad reproducen ambos fallos. Las familias de fuentes PDF registran variantes reales para que negrita/cursiva no se dibujen como regular. Ver `frontend/test/components/editorialListContinuity.spec.js` y `backend/content/tests/services/test_editorial_pdf_integration.py`.
+
 ## Propuesta con entregable conservado de un proyecto eliminado (2026-10-07)
 
 La eliminación forzada (#482) conserva el entregable de una propuesta con

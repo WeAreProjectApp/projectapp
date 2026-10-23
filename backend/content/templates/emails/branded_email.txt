@@ -1,11 +1,11 @@
-{% autoescape off %}{{ greeting|default:"Hola" }}
+{% load editorial %}{% autoescape off %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}
 
 {% for section in sections %}{{ section }}
 
 {% endfor %}{% if attachment_names %}Archivos adjuntos:
 {% for name in attachment_names %}- {{ name }}
 {% endfor %}{% endif %}{% if footer %}
-{{ footer }}{% endif %}
+{% editorial_plain_value footer "footer" %}{% endif %}
 
 —
 {{ signature_name }}

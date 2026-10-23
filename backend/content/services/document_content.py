@@ -33,7 +33,7 @@ def build_content_json(document, markdown_text=None):
             'include_subportada': document.include_subportada,
             'include_contraportada': document.include_contraportada,
         },
-        'blocks': markdown_to_blocks(text or ''),
+        'blocks': markdown_to_blocks(text or '', editorial=(getattr(document, 'text_formats', {}) or {}).get('/content_markdown') == 'markdown_html_v1'),
     }
 
 
@@ -49,6 +49,8 @@ def resolve_blocks(document):
     Returns:
         list: Block dicts, empty when the document has no content at all.
     """
+    if (getattr(document, 'text_formats', {}) or {}).get('/content_markdown') == 'markdown_html_v1':
+        return markdown_to_blocks(document.content_markdown or '', editorial=True)
     blocks = (document.content_json or {}).get('blocks')
     if blocks:
         return blocks

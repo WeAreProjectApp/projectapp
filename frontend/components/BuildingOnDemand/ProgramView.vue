@@ -1,4 +1,5 @@
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed, nextTick, ref, toRef, watch } from 'vue'
 import BaseAlert from '~/components/base/BaseAlert.vue'
 import BaseBadge from '~/components/base/BaseBadge.vue'
@@ -142,8 +143,8 @@ async function downloadPdf() {
           <div class="min-w-0">
             <p v-if="program.hero.eyebrow" class="text-sm font-medium uppercase tracking-[0.18em] text-text-brand">{{ program.hero.eyebrow }}</p>
             <h1 class="mt-4 max-w-4xl text-balance text-3xl font-light tracking-tight text-text-brand sm:text-5xl lg:text-6xl">{{ program.hero.title }}</h1>
-            <p v-if="program.hero.subtitle" class="mt-6 max-w-3xl text-base leading-8 text-text-muted sm:text-lg">{{ program.hero.subtitle }}</p>
-            <blockquote v-if="program.hero.positioning" class="mt-6 max-w-3xl rounded-2xl border-l-4 border-primary bg-primary-soft p-5 text-base font-medium leading-7 text-text-brand" data-testid="building-on-demand-positioning">{{ program.hero.positioning }}</blockquote>
+            <BaseRichTextContent v-if="program.hero.subtitle" class="mt-6 max-w-3xl text-base leading-8 text-text-muted sm:text-lg" :source="program.hero.subtitle" :format="program.hero.text_formats?.['/subtitle'] || 'plain'" />
+            <BaseRichTextContent v-if="program.hero.positioning" class="mt-6 max-w-3xl rounded-2xl border-l-4 border-primary bg-primary-soft p-5 text-base font-medium leading-7 text-text-brand" data-testid="building-on-demand-positioning" :source="program.hero.positioning" :format="program.hero.text_formats?.['/positioning'] || 'plain'" />
             <div class="mt-8 flex flex-wrap gap-3">
               <BaseButton as="a" to="#tiers" size="lg" data-testid="building-on-demand-view-tiers">{{ label('viewTiers') }}</BaseButton>
               <BaseButton as="a" to="#estimator" variant="secondary" size="lg" v-bind="{ textPolicy: 'wrap' }" data-testid="building-on-demand-view-estimator">{{ program.estimator?.title }}</BaseButton>
@@ -152,7 +153,7 @@ async function downloadPdf() {
           <aside v-if="program.hero.note" class="min-w-0 rounded-3xl border border-border-default bg-surface/90 p-6 shadow-raised backdrop-blur" data-testid="building-on-demand-hero-aside">
             <BaseBadge variant="success">{{ label('title') }}</BaseBadge>
             <h2 class="mt-4 text-xl font-medium text-text-brand">{{ label('tagline') }}</h2>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ program.hero.note }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="program.hero.note" :format="program.hero.text_formats?.['/note'] || 'plain'" />
           </aside>
         </div>
         <BaseAlert v-if="downloadError" class="mt-4 max-w-xl" variant="danger" data-testid="building-on-demand-pdf-error">{{ label('pdfError') }}</BaseAlert>
@@ -173,26 +174,26 @@ async function downloadPdf() {
     <main class="mx-auto w-full max-w-[1200px] space-y-20 px-4 py-14 sm:px-6 sm:py-20">
       <section v-if="program.cell" data-document-enter aria-labelledby="building-on-demand-cell-title" data-testid="building-on-demand-cell">
         <h2 id="building-on-demand-cell-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.cell.title }}</h2>
-        <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.cell.summary }}</p>
+        <BaseRichTextContent class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.cell.summary" :format="program.cell.text_formats?.['/summary'] || 'plain'" />
         <ul class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           <li v-for="role in listOf(program.cell.roles)" :key="role.id" class="min-w-0 rounded-3xl border border-border-default bg-surface p-6 shadow-card" :data-testid="`building-on-demand-role-${role.id}`">
             <h3 class="text-xl font-medium text-text-brand">{{ role.title }}</h3>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ role.summary }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="role.summary" :format="role.text_formats?.['/summary'] || 'plain'" />
           </li>
         </ul>
-        <p v-if="program.cell.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle">{{ program.cell.note }}</p>
+        <BaseRichTextContent v-if="program.cell.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle" :source="program.cell.note" :format="program.cell.text_formats?.['/note'] || 'plain'" />
       </section>
 
       <section v-if="program.fit" data-document-enter aria-labelledby="building-on-demand-fit-title" data-testid="building-on-demand-fit">
         <h2 id="building-on-demand-fit-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.fit.title }}</h2>
-        <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.fit.summary }}</p>
+        <BaseRichTextContent class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.fit.summary" :format="program.fit.text_formats?.['/summary'] || 'plain'" />
         <div class="mt-8 grid gap-5 md:grid-cols-2">
           <div class="min-w-0 rounded-3xl border border-border-default bg-surface p-6 shadow-card" data-testid="building-on-demand-good-for">
             <h3 class="text-xl font-medium text-success-strong">{{ label('goodFor') }}</h3>
             <ul class="mt-5 space-y-5">
               <li v-for="item in listOf(program.fit.good_for)" :key="item.id" class="flex gap-3">
                 <span aria-hidden="true" class="text-success-strong">✓</span>
-                <div class="min-w-0"><h4 class="font-medium text-text-brand">{{ item.title }}</h4><p class="mt-2 text-sm leading-7 text-text-muted">{{ item.summary }}</p></div>
+                <div class="min-w-0"><h4 class="font-medium text-text-brand">{{ item.title }}</h4><BaseRichTextContent class="mt-2 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" /></div>
               </li>
             </ul>
           </div>
@@ -201,7 +202,7 @@ async function downloadPdf() {
             <ul class="mt-5 space-y-5">
               <li v-for="item in listOf(program.fit.not_for)" :key="item.id" class="flex gap-3">
                 <span aria-hidden="true" class="text-danger-strong">✕</span>
-                <div class="min-w-0"><h4 class="font-medium text-text-brand">{{ item.title }}</h4><p class="mt-2 text-sm leading-7 text-text-muted">{{ item.summary }}</p></div>
+                <div class="min-w-0"><h4 class="font-medium text-text-brand">{{ item.title }}</h4><BaseRichTextContent class="mt-2 text-sm leading-7 text-text-muted" :source="item.summary" :format="item.text_formats?.['/summary'] || 'plain'" /></div>
               </li>
             </ul>
           </div>
@@ -210,7 +211,7 @@ async function downloadPdf() {
 
       <section id="tiers" v-if="program.tiers" data-document-enter class="scroll-mt-12" aria-labelledby="building-on-demand-tiers-title" data-testid="building-on-demand-tiers">
         <h2 id="building-on-demand-tiers-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.tiers.title }}</h2>
-        <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.tiers.summary }}</p>
+        <BaseRichTextContent class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.tiers.summary" :format="program.tiers.text_formats?.['/summary'] || 'plain'" />
         <TermSelector v-if="program.terms" v-model="selectedTerm" :terms="program.terms" class="mt-8" />
         <div class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           <TierCard v-for="tier in tiers" :key="tier.id" :tier="tier" :term="term" :offer="program.offer" :whatsapp-base-url="program.contact?.whatsapp_base_url" :language="language" />
@@ -219,28 +220,28 @@ async function downloadPdf() {
 
       <section v-if="program.bag" data-document-enter aria-labelledby="building-on-demand-bag-title" data-testid="building-on-demand-bag">
         <h2 id="building-on-demand-bag-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.bag.title }}</h2>
-        <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.bag.summary }}</p>
+        <BaseRichTextContent class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.bag.summary" :format="program.bag.text_formats?.['/summary'] || 'plain'" />
         <ul class="mt-8 grid gap-5 md:grid-cols-2">
           <li v-for="rule in listOf(program.bag.rules)" :key="rule.id" class="min-w-0 rounded-3xl border border-border-default bg-surface p-6 shadow-card" :data-testid="`building-on-demand-bag-rule-${rule.id}`">
             <h3 class="text-xl font-medium text-text-brand">{{ rule.title }}</h3>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ rule.summary }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="rule.summary" :format="rule.text_formats?.['/summary'] || 'plain'" />
           </li>
         </ul>
-        <p v-if="program.bag.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle">{{ program.bag.note }}</p>
+        <BaseRichTextContent v-if="program.bag.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle" :source="program.bag.note" :format="program.bag.text_formats?.['/note'] || 'plain'" />
       </section>
 
       <BagEstimator v-if="program.estimator" :program="program" :language="language" />
 
       <section v-if="program.hosting" data-document-enter aria-labelledby="building-on-demand-hosting-title" data-testid="building-on-demand-hosting">
         <h2 id="building-on-demand-hosting-title" class="text-3xl font-light text-text-brand sm:text-4xl">{{ program.hosting.title }}</h2>
-        <p class="mt-4 max-w-3xl text-base leading-7 text-text-muted">{{ program.hosting.summary }}</p>
+        <BaseRichTextContent class="mt-4 max-w-3xl text-base leading-7 text-text-muted" :source="program.hosting.summary" :format="program.hosting.text_formats?.['/summary'] || 'plain'" />
         <ul class="mt-8 grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           <li v-for="feature in listOf(program.hosting.features)" :key="feature.id" class="min-w-0 rounded-3xl border border-border-default bg-surface p-6 shadow-card" :data-testid="`building-on-demand-hosting-${feature.id}`">
             <h3 class="text-xl font-medium text-text-brand">{{ feature.title }}</h3>
-            <p class="mt-3 text-sm leading-7 text-text-muted">{{ feature.summary }}</p>
+            <BaseRichTextContent class="mt-3 text-sm leading-7 text-text-muted" :source="feature.summary" :format="feature.text_formats?.['/summary'] || 'plain'" />
           </li>
         </ul>
-        <p v-if="program.hosting.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle">{{ program.hosting.note }}</p>
+        <BaseRichTextContent v-if="program.hosting.note" class="mt-6 max-w-3xl rounded-2xl bg-primary-soft p-5 text-sm leading-7 text-text-subtle" :source="program.hosting.note" :format="program.hosting.text_formats?.['/note'] || 'plain'" />
       </section>
 
       <section v-if="program.faq" data-document-enter aria-labelledby="building-on-demand-faq-title" data-testid="building-on-demand-faq">
@@ -251,7 +252,7 @@ async function downloadPdf() {
               <span class="min-w-0 flex-1 text-lg font-medium text-text-brand">{{ item.question }}</span>
               <span class="shrink-0 text-xl text-text-brand" aria-hidden="true">{{ expandedFaq.has(item.id) ? '−' : '+' }}</span>
             </BaseButton>
-            <div v-show="expandedFaq.has(item.id)" :id="`building-on-demand-faq-panel-${item.id}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`building-on-demand-faq-panel-${item.id}`">{{ item.answer }}</div>
+            <BaseRichTextContent v-show="expandedFaq.has(item.id)" :id="`building-on-demand-faq-panel-${item.id}`" class="border-t border-border-default bg-surface-raised p-5 text-sm leading-7 text-text-subtle sm:px-7" :data-testid="`building-on-demand-faq-panel-${item.id}`" :source="item.answer" :format="item.text_formats?.['/answer'] || 'plain'" />
           </article>
         </div>
       </section>
@@ -259,11 +260,11 @@ async function downloadPdf() {
       <section v-if="program.cta" data-document-enter aria-labelledby="building-on-demand-cta-title">
         <div class="rounded-3xl bg-primary p-7 text-on-primary sm:p-12">
           <h2 id="building-on-demand-cta-title" class="max-w-3xl text-3xl font-light sm:text-5xl">{{ program.cta.title }}</h2>
-          <p class="mt-5 max-w-3xl text-base leading-7 opacity-85">{{ program.cta.body }}</p>
+          <BaseRichTextContent class="mt-5 max-w-3xl text-base leading-7 opacity-85" :source="program.cta.body" :format="program.cta.text_formats?.['/body'] || 'plain'" />
           <BaseButton as="a" :to="safeWhatsappUrl(program.cta.whatsapp_url)" target="_blank" rel="noopener noreferrer" variant="accent" size="lg" v-bind="{ textPolicy: 'wrap' }" class="mt-7" data-testid="building-on-demand-cta">{{ program.cta.button_label || label('whatsappCta') }}</BaseButton>
         </div>
       </section>
-      <p v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-sm leading-6 text-text-muted" data-testid="building-on-demand-disclaimer">{{ program.legal.disclaimer }}</p>
+      <BaseRichTextContent v-if="program.legal?.disclaimer" data-document-enter class="mx-auto max-w-4xl text-center text-sm leading-6 text-text-muted" data-testid="building-on-demand-disclaimer" :source="program.legal.disclaimer" :format="program.legal.text_formats?.['/disclaimer'] || 'plain'" />
     </main>
 
     <template v-if="floatingActions">

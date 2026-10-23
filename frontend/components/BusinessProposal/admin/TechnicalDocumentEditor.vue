@@ -73,13 +73,12 @@
         <span class="flex items-center gap-1 text-xs text-text-subtle">{{ sectionCounts.purpose }} <BaseActionIcon :action="openSections.has('purpose') ? 'collapse' : 'expand'" /></span>
       </button>
       <template v-if="openSections.has('purpose')">
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.purpose"
-        v-auto-resize
         data-testid="technical-purpose-textarea"
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 outline-none"
         placeholder="Una frase sobre qué cubre este documento..."
-      />
+       :format="doc.text_formats?.['/purpose'] || 'plain'" @update:format="doc.text_formats = { ...doc.text_formats, '/purpose': $event }" />
       </template>
     </section>
 
@@ -123,7 +122,7 @@
         <span class="flex items-center gap-1 text-xs text-text-subtle">{{ sectionCounts.architecture }} <BaseActionIcon :action="openSections.has('architecture') ? 'collapse' : 'expand'" /></span>
       </button>
       <template v-if="openSections.has('architecture')">
-      <textarea v-model="doc.architecture.summary" v-auto-resize class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm" placeholder="Resumen de capas y comunicación..." />
+      <BaseRichTextEditor v-model="doc.architecture.summary" class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm" placeholder="Resumen de capas y comunicación..."  :format="doc.architecture.text_formats?.['/summary'] || 'plain'" @update:format="doc.architecture.text_formats = { ...doc.architecture.text_formats, '/summary': $event }" />
       <div class="flex items-center justify-between">
         <span class="text-xs text-text-muted">Patrones por componente</span>
         <BaseButton variant="link" size="sm" @click="addPatternRow"><BaseActionIcon action="create" /> Fila</BaseButton>
@@ -137,12 +136,11 @@
         </div>
       </div>
       <p class="text-xs text-text-muted">Diagramas / anexo</p>
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.architecture.diagramNote"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm"
         placeholder="Nota breve si hay diagrama en anexo o URL externa..."
-      />
+       :format="doc.architecture.text_formats?.['/diagramNote'] || 'plain'" @update:format="doc.architecture.text_formats = { ...doc.architecture.text_formats, '/diagramNote': $event }" />
       </template>
     </section>
 
@@ -159,7 +157,7 @@
         <span class="flex items-center gap-1 text-xs text-text-subtle">{{ sectionCounts['data-model'] }} <BaseActionIcon :action="openSections.has('data-model') ? 'collapse' : 'expand'" /></span>
       </button>
       <template v-if="openSections.has('data-model')">
-      <textarea v-model="doc.dataModel.summary" v-auto-resize class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm" placeholder="Resumen..." />
+      <BaseRichTextEditor v-model="doc.dataModel.summary" class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm" placeholder="Resumen..."  :format="doc.dataModel.text_formats?.['/summary'] || 'plain'" @update:format="doc.dataModel.text_formats = { ...doc.dataModel.text_formats, '/summary': $event }" />
       <p class="text-xs text-text-muted">Relaciones entre entidades (texto)</p>
       <textarea
         v-model="doc.dataModel.relationships"
@@ -197,12 +195,11 @@
       <p class="text-xs text-text-muted">
         Cómo se prepara el sistema para crecer (tráfico, datos, equipos, integraciones). Complementa «Rendimiento»; aquí el foco es capacidad de evolución, no solo métricas puntuales.
       </p>
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.growthReadiness.summary"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm focus:ring-2 focus:ring-focus-ring/30 outline-none"
         placeholder="Resumen: enfoque de crecimiento sin rediseño completo, supuestos y límites..."
-      />
+       :format="doc.growthReadiness.text_formats?.['/summary'] || 'plain'" @update:format="doc.growthReadiness.text_formats = { ...doc.growthReadiness.text_formats, '/summary': $event }" />
       <div class="flex items-center justify-between">
         <span class="text-xs text-text-muted">Estrategias por dimensión (tabla)</span>
         <BaseButton variant="link" size="sm" @click="addGrowthStrategyRow"><BaseActionIcon action="create" /> Fila</BaseButton>
@@ -253,7 +250,7 @@
           </div>
           <BaseButton variant="danger-ghost" size="sm" @click="doc.epics.splice(ei, 1)">Eliminar módulo</BaseButton>
         </div>
-        <textarea v-model="epic.description" v-auto-resize data-testid="technical-epic-description-textarea" class="w-full px-2 py-1.5 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-lg text-sm" placeholder="Descripción del módulo" />
+        <BaseRichTextEditor v-model="epic.description" data-testid="technical-epic-description-textarea" class="w-full px-2 py-1.5 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-lg text-sm" placeholder="Descripción del módulo"  :format="epic.text_formats?.['/description'] || 'plain'" @update:format="epic.text_formats = { ...epic.text_formats, '/description': $event }" />
         <div v-if="moduleLinkOptions.length" class="space-y-1">
           <p class="text-[11px] text-text-muted">Vincular este módulo técnico con alcance comercial (modo técnico / PDF técnico):</p>
           <div class="flex flex-wrap gap-x-3 gap-y-1">
@@ -293,9 +290,9 @@
                 <option value="low">Baja</option>
               </select>
             </div>
-            <textarea v-model="req.description" v-auto-resize data-testid="technical-req-description-textarea" class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Descripción" />
-            <textarea v-model="req.configuration" v-auto-resize class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Configuración (roles, permisos...)" />
-            <textarea v-model="req.usageFlow" v-auto-resize class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Flujo de uso (ej. Login → Dashboard → ...)" />
+            <BaseRichTextEditor v-model="req.description" data-testid="technical-req-description-textarea" class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Descripción"  :format="req.text_formats?.['/description'] || 'plain'" @update:format="req.text_formats = { ...req.text_formats, '/description': $event }" />
+            <BaseRichTextEditor v-model="req.configuration" class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Configuración (roles, permisos...)"  :format="req.text_formats?.['/configuration'] || 'plain'" @update:format="req.text_formats = { ...req.text_formats, '/configuration': $event }" />
+            <BaseRichTextEditor v-model="req.usageFlow" class="w-full px-2 py-1 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded text-xs" placeholder="Flujo de uso (ej. Login → Dashboard → ...)"  :format="req.text_formats?.['/usageFlow'] || 'plain'" @update:format="req.text_formats = { ...req.text_formats, '/usageFlow': $event }" />
             <TechnicalRequirementLinks
               :req="req"
               :module-link-options="moduleLinkOptions"
@@ -378,12 +375,11 @@
         </div>
       </div>
       <p class="text-xs text-text-muted pt-2">Notas técnicas (viñetas, una por línea)</p>
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.integrations.notes"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm font-mono text-xs"
         placeholder="Línea por línea..."
-      />
+       :format="doc.integrations.text_formats?.['/notes'] || 'plain'" @update:format="doc.integrations.text_formats = { ...doc.integrations.text_formats, '/notes': $event }" />
       </template>
     </section>
 
@@ -400,12 +396,11 @@
         <span class="flex items-center gap-1 text-xs text-text-subtle">{{ sectionCounts.environments }} <BaseActionIcon :action="openSections.has('environments') ? 'collapse' : 'expand'" /></span>
       </button>
       <template v-if="openSections.has('environments')">
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.environmentsNote"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm"
         placeholder="Nota general sobre ambientes si no usas tabla..."
-      />
+       :format="doc.text_formats?.['/environmentsNote'] || 'plain'" @update:format="doc.text_formats = { ...doc.text_formats, '/environmentsNote': $event }" />
       <div class="flex items-center justify-between">
         <span class="text-xs text-text-muted">Tabla por ambiente</span>
         <BaseButton variant="link" size="sm" @click="addEnvironmentRow"><BaseActionIcon action="create" /> Fila</BaseButton>
@@ -493,12 +488,11 @@
         <span class="flex items-center gap-1 text-xs text-text-subtle">{{ sectionCounts.backups }} <BaseActionIcon :action="openSections.has('backups') ? 'collapse' : 'expand'" /></span>
       </button>
       <template v-if="openSections.has('backups')">
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.backupsNote"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm"
         placeholder="Hosting propio vs según proveedor del cliente..."
-      />
+       :format="doc.text_formats?.['/backupsNote'] || 'plain'" @update:format="doc.text_formats = { ...doc.text_formats, '/backupsNote': $event }" />
       </template>
     </section>
 
@@ -541,12 +535,11 @@
         </div>
       </div>
       <p class="text-xs text-text-muted">Flujos críticos de aceptación (texto; no duplicar módulos)</p>
-      <textarea
+      <BaseRichTextEditor
         v-model="doc.quality.criticalFlowsNote"
-        v-auto-resize
         class="w-full px-3 py-2 border border-input-border bg-input-bg text-input-text placeholder-input-placeholder rounded-xl text-sm"
         placeholder="Alineación con requerimientos priorizados..."
-      />
+       :format="doc.quality.text_formats?.['/criticalFlowsNote'] || 'plain'" @update:format="doc.quality.text_formats = { ...doc.quality.text_formats, '/criticalFlowsNote': $event }" />
       </template>
     </section>
 
@@ -588,6 +581,7 @@
 </template>
 
 <script setup>
+import { withEditorialFormats } from '~/utils/editorialMetadata';
 import { computed, reactive, ref, watch } from 'vue';
 import { createGenericTechnicalEpicStub } from '~/utils/technicalModuleStub';
 import {
@@ -660,7 +654,7 @@ function emptyDoc() {
 function mergeContent(src) {
   const e = emptyDoc();
   if (!src || typeof src !== 'object') return e;
-  return {
+  return withEditorialFormats(src, {
     purpose: typeof src.purpose === 'string' ? src.purpose : e.purpose,
     stack: Array.isArray(src.stack) ? src.stack.map((r) => ({
       layer: r.layer || '',
@@ -799,7 +793,7 @@ function mergeContent(src) {
         reason: r.reason || '',
       }))
       : [],
-  };
+  });
 }
 
 const doc = reactive(mergeContent(props.section.content_json));

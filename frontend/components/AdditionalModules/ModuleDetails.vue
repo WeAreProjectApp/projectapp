@@ -19,21 +19,21 @@ const label = (key) => props.language ? (props.language === 'en' ? en : es)[key]
       <h3 class="text-sm font-medium uppercase tracking-wide text-text-brand">
         {{ label('whatIs') }}
       </h3>
-      <p class="mt-3 break-words text-sm leading-6 text-text-muted">{{ module.what_is }}</p>
+      <BaseRichTextContent class="mt-3 break-words text-sm leading-6 text-text-muted" :source="module.what_is" :format="module.text_formats?.['/what_is'] || 'plain'" />
     </BaseCard>
     <BaseCard padding="md">
       <h3 class="text-sm font-medium uppercase tracking-wide text-text-brand">
         {{ label('purpose') }}
       </h3>
-      <p class="mt-3 break-words text-sm leading-6 text-text-muted">{{ module.purpose }}</p>
+      <BaseRichTextContent class="mt-3 break-words text-sm leading-6 text-text-muted" :source="module.purpose" :format="module.text_formats?.['/purpose'] || 'plain'" />
     </BaseCard>
     <BaseCard padding="md">
       <h3 class="text-sm font-medium uppercase tracking-wide text-text-brand">
         {{ label('problemsSolved') }}
       </h3>
       <ul class="mt-3 space-y-2 text-sm leading-6 text-text-muted">
-        <li v-for="item in module.problems_solved" :key="item" class="flex min-w-0 gap-2">
-          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><span class="min-w-0 break-words">{{ item }}</span>
+        <li v-for="(item, index) in module.problems_solved" :key="item" class="flex min-w-0 gap-2">
+          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><BaseRichTextContent class="min-w-0 break-words" :source="item" :format="module.text_formats?.['/problems_solved/' + index] || 'plain'" />
         </li>
       </ul>
     </BaseCard>
@@ -42,8 +42,8 @@ const label = (key) => props.language ? (props.language === 'en' ? en : es)[key]
         {{ label('integrations') }}
       </h3>
       <ul class="mt-3 space-y-2 text-sm leading-6 text-text-muted">
-        <li v-for="item in module.integrations" :key="item" class="flex min-w-0 gap-2">
-          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><span class="min-w-0 break-words">{{ item }}</span>
+        <li v-for="(item, index) in module.integrations" :key="item" class="flex min-w-0 gap-2">
+          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><BaseRichTextContent class="min-w-0 break-words" :source="item" :format="module.text_formats?.['/integrations/' + index] || 'plain'" />
         </li>
       </ul>
     </BaseCard>
@@ -52,8 +52,8 @@ const label = (key) => props.language ? (props.language === 'en' ? en : es)[key]
         {{ label('requirements') }}
       </h3>
       <ul class="mt-3 grid gap-2 text-sm leading-6 text-text-muted sm:grid-cols-2">
-        <li v-for="item in module.implementation_requirements" :key="item" class="flex min-w-0 gap-2">
-          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><span class="min-w-0 break-words">{{ item }}</span>
+        <li v-for="(item, index) in module.implementation_requirements" :key="item" class="flex min-w-0 gap-2">
+          <span aria-hidden="true" class="shrink-0 text-text-brand">•</span><BaseRichTextContent class="min-w-0 break-words" :source="item" :format="module.text_formats?.['/implementation_requirements/' + index] || 'plain'" />
         </li>
       </ul>
     </BaseCard>

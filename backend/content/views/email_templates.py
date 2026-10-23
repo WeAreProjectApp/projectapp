@@ -96,6 +96,7 @@ def email_template_detail(request, template_key):
             'is_customized': bool(overrides),
             'available_variables': entry.get('available_variables', []),
             'editable_fields': fields_with_values,
+            **({'text_formats': db_config.text_formats} if db_config and db_config.text_formats else {}),
         })
 
     # PUT — save overrides
@@ -121,15 +122,19 @@ def email_template_detail(request, template_key):
 
     # Strip empty values from overrides
     cleaned = {k: v for k, v in content_overrides.items() if v}
+    from content.services.editorial_format import validate_formats
+    text_formats = validate_formats('emailtemplateconfig', {'content_overrides': cleaned}, request.data.get('text_formats', getattr(db_config, 'text_formats', {})))
 
     if db_config:
         db_config.content_overrides = cleaned
+        db_config.text_formats = text_formats
         db_config.is_active = is_active
-        db_config.save(update_fields=['content_overrides', 'is_active', 'updated_at'])
+        db_config.save(update_fields=['content_overrides', 'text_formats', 'is_active', 'updated_at'])
     else:
         db_config = EmailTemplateConfig.objects.create(
             template_key=template_key,
             content_overrides=cleaned,
+            text_formats=text_formats,
             is_active=is_active,
         )
 
@@ -168,7 +173,8 @@ def email_template_preview(request, template_key):
         resolved[key] = substitute_variables(value, sample_ctx)
 
     # Build template context: sample data + resolved text fields
-    template_context = {**sample_ctx, **resolved}
+    from content.services.editorial_email import template_formats
+    template_context = {**sample_ctx, **resolved, 'editorial_formats': template_formats(db_config)}
 
     html_template = entry.get('html_template')
     if html_template:

@@ -252,6 +252,7 @@
 </template>
 
 <script setup>
+import { resolveEditorialContent } from '~/utils/editorialMetadata';
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import { useDiagnosticsStore } from '~/stores/diagnostics';
 import { DIAGNOSTIC_STATUS } from '~/stores/diagnostics_constants';
@@ -381,7 +382,7 @@ const { isDark, toggle: toggleDarkMode, hydrate: hydrateTheme } = useDiagnosticD
 const sections = computed(() => store.current?.sections || []);
 const activeSection = computed(() => sections.value[activeIndex.value] || null);
 const activeContent = computed(() => ({
-  ...(activeSection.value?.content_json || {}),
+  ...resolveEditorialContent(activeSection.value?.content_json, activeSection.value?.text_formats, '/content_json'),
   index: String(activeIndex.value + 1),
 }));
 

@@ -42,12 +42,14 @@ export function useClipboardFeedback({
     successLabel = 'Copiado',
     errorLabel = 'No se pudo copiar',
     onError,
+    write,
   }) {
     try {
       if (typeof navigator === 'undefined' || !navigator.clipboard?.writeText) {
         throw new Error('Clipboard API unavailable')
       }
-      await navigator.clipboard.writeText(String(text ?? ''))
+      if (write) await write()
+      else await navigator.clipboard.writeText(String(text ?? ''))
       setFeedback(key, successLabel, 'success', successDuration)
       return true
     } catch (error) {

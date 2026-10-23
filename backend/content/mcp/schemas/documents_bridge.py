@@ -5,6 +5,7 @@ These fragments describe only the payloads and query parameters the views read.
 """
 
 from copy import deepcopy
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 
 
 def _closed(properties=None, required=()):
@@ -350,6 +351,7 @@ DOCUMENTS_BRIDGE_SCHEMAS = {
     'list_document_state_history': {'query_schema': _closed()},
     'update_document_note': {
         'payload_schema': _closed({
+            'text_formats': TEXT_FORMATS_SCHEMA,
             'title': {
                 'type': 'string', 'maxLength': 120,
                 'description': 'Título de la observación, hasta 120 caracteres; vacío lo borra. Omitido conserva el título.',

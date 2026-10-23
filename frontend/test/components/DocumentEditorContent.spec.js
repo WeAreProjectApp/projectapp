@@ -39,24 +39,43 @@ function mountEditor(initialMarkdown = CONTRACT) {
   return wrapper;
 }
 
-const textarea = (wrapper) => wrapper.get('#edit-markdown');
+const sourceInput = (wrapper) => wrapper.get('#edit-markdown-source');
 const previewPane = (wrapper) => wrapper.find('[data-testid="doc-markdown-preview-pane"]');
 const viewTab = (wrapper, view) => wrapper.get(`[data-testid="doc-editor-view-${view}"]`);
+const sourceMode = (wrapper) => wrapper.findAll('[role="tab"]')
+  .find((tab) => tab.text() === 'richText.source');
+
+async function showSource(wrapper) {
+  await sourceMode(wrapper).trigger('click');
+  return sourceInput(wrapper);
+}
 
 // jsdom caches computed styles across v-show toggles, so the inline style is
 // the observable switch here; the real layout belongs to the E2E specs.
 const isHidden = (element) => element.style.display === 'none';
 
 describe('DocumentEditorContent', () => {
+  const originalUseI18n = global.useI18n;
+
+  beforeEach(() => {
+    global.useI18n = () => ({ t: (key) => key });
+  });
+
   afterEach(() => {
     mountedWrappers.splice(0).forEach((wrapper) => wrapper.unmount());
   });
 
-  it('opens on the editor with the markdown and its size', () => {
-    const wrapper = mountEditor();
+  afterAll(() => {
+    if (originalUseI18n) global.useI18n = originalUseI18n;
+    else delete global.useI18n;
+  });
 
-    expect(textarea(wrapper).element.value).toBe(CONTRACT);
-    expect(isHidden(textarea(wrapper).element)).toBe(false);
+  it('opens on the editor with the markdown source and its size', async () => {
+    const wrapper = mountEditor();
+    const field = await showSource(wrapper);
+
+    expect(field.element.value).toBe(CONTRACT);
+    expect(isHidden(field.element)).toBe(false);
     expect(wrapper.get('label[for="edit-markdown"]').text()).toBe('Contenido Markdown');
     expect(viewTab(wrapper, 'edit').attributes('aria-selected')).toBe('true');
     expect(wrapper.text()).toContain(`${CONTRACT.length} caracteres`);
@@ -81,11 +100,12 @@ describe('DocumentEditorContent', () => {
 
   it('shows the preview in the place of the editor', async () => {
     const wrapper = mountEditor();
+    const field = await showSource(wrapper);
 
     await viewTab(wrapper, 'preview').trigger('click');
     await flushPromises();
 
-    expect(isHidden(textarea(wrapper).element)).toBe(true);
+    expect(isHidden(field.element.parentElement)).toBe(true);
     expect(viewTab(wrapper, 'preview').attributes('aria-selected')).toBe('true');
     expect(previewPane(wrapper).get('.md-h1').text()).toBe('Contrato');
     expect(previewPane(wrapper).get('.markdown-preview').classes())
@@ -94,18 +114,19 @@ describe('DocumentEditorContent', () => {
 
   it('returns to the editor with the text intact', async () => {
     const wrapper = mountEditor();
+    const field = await showSource(wrapper);
     await viewTab(wrapper, 'preview').trigger('click');
 
     await viewTab(wrapper, 'edit').trigger('click');
 
-    expect(isHidden(textarea(wrapper).element)).toBe(false);
-    expect(textarea(wrapper).element.value).toBe(CONTRACT);
+    expect(isHidden(field.element.parentElement)).toBe(false);
+    expect(field.element.value).toBe(CONTRACT);
     expect(previewPane(wrapper).exists()).toBe(false);
   });
 
   it('previews the markdown that was just typed', async () => {
     const wrapper = mountEditor('');
-    await textarea(wrapper).setValue('# Propuesta');
+    await (await showSource(wrapper)).setValue('# Propuesta');
 
     await viewTab(wrapper, 'preview').trigger('click');
     await flushPromises();
@@ -124,13 +145,14 @@ describe('DocumentEditorContent', () => {
 
   it('pastes at the caret and brings the editor back from the preview', async () => {
     const wrapper = mountEditor('Hola mundo');
-    textarea(wrapper).element.setSelectionRange(4, 4);
+    const input = await showSource(wrapper);
+    input.element.setSelectionRange(4, 4);
     await viewTab(wrapper, 'preview').trigger('click');
 
     await wrapper.get('[data-testid="paste-tool"]').trigger('click');
     await flushPromises();
 
-    const field = textarea(wrapper).element;
+    const field = sourceInput(wrapper).element;
     expect(field.value).toBe('Hola querido mundo');
     expect(isHidden(field)).toBe(false);
     expect(viewTab(wrapper, 'edit').attributes('aria-selected')).toBe('true');

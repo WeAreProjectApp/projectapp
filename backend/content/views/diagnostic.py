@@ -1,3 +1,4 @@
+from content.services.editorial_email import email_formats
 """Admin + public DRF views for the WebAppDiagnostic feature.
 
 Admin endpoints use Django session auth + IsAdminUser. The 3 public endpoints
@@ -1220,9 +1221,13 @@ def _parse_diagnostic_email(request, diagnostic):
 
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
 
     from content.views.standalone_email import _parse_sections_field
-    sections, sections_error = _parse_sections_field(request.data.get('sections', '[]'))
+    sections, sections_error = _parse_sections_field(
+        request.data.get('sections', '[]'),
+        strict_editorial='text_formats' in request.data,
+    )
     if sections_error:
         return None, error_response(
             sections_error,
@@ -1287,6 +1292,7 @@ def _parse_diagnostic_email(request, diagnostic):
         'greeting': greeting,
         'sections': sections,
         'footer': footer,
+        'text_formats': text_formats,
         'attachments': attachments or None,
     }, None
 
@@ -1309,6 +1315,7 @@ def send_diagnostic_email(request, diagnostic_id):
         greeting=parsed['greeting'],
         sections=parsed['sections'],
         footer=parsed['footer'],
+        text_formats=parsed.get('text_formats'),
         attachments=parsed['attachments'],
     )
     if ok:

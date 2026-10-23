@@ -10,11 +10,11 @@
             {{ content.title }}
           </h2>
         </div>
-        <p
+        <div
           v-if="content.subtitle"
           data-animate="fade-up"
           class="text-text-default/70 font-light text-lg md:text-xl leading-relaxed"
-          v-html="linkify(content.subtitle)"
+          v-html="linkify(content.subtitle, content.text_formats?.['/subtitle'])"
         />
       </div>
 
@@ -48,9 +48,9 @@
         class="bg-primary-soft border border-border-default rounded-2xl p-5 md:p-6 mb-8 flex gap-3"
       >
         <span class="text-xl md:text-2xl shrink-0 leading-none mt-0.5">🧮</span>
-        <p
+        <div
           class="text-sm md:text-base text-text-default/80 font-light leading-relaxed"
-          v-html="linkify(content.methodology)"
+          v-html="linkify(content.methodology, content.text_formats?.['/methodology'])"
         />
       </div>
 
@@ -123,9 +123,9 @@
         data-animate="fade-up"
         class="bg-primary p-6 md:p-8 rounded-2xl"
       >
-        <p
+        <div
           class="text-on-primary font-light leading-relaxed text-base md:text-lg"
-          v-html="linkify(content.ctaNote)"
+          v-html="linkify(content.ctaNote, content.text_formats?.['/ctaNote'])"
         />
       </div>
     </div>
@@ -141,6 +141,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   content: { type: Object, default: () => ({}) },
 });
 

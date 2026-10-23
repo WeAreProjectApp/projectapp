@@ -1,3 +1,4 @@
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 """MCP tools for administering client communications.
 
 The handlers deliberately reuse the panel serializers and service layer so a
@@ -237,14 +238,14 @@ def unarchive_thread(arguments):
 
 def create_message(arguments):
     _reject_unknown_fields(arguments, {
-        'thread_id', 'channel', 'direction', 'subject', 'content',
+        'thread_id', 'channel', 'direction', 'subject', 'content', 'text_formats',
         'occurred_at', 'reply_to_id', 'document_ids',
     })
     thread = _thread_or_error(arguments.get('thread_id'))
     data = {
         field: arguments[field]
         for field in (
-            'channel', 'direction', 'subject', 'content', 'occurred_at',
+            'channel', 'direction', 'subject', 'content', 'text_formats', 'occurred_at',
             'document_ids',
         )
         if field in arguments
@@ -269,7 +270,7 @@ def create_message(arguments):
 
 
 _UPDATE_MESSAGE_FIELDS = frozenset({
-    'subject', 'content', 'document_ids', 'reply_to_id', 'occurred_at',
+    'subject', 'content', 'text_formats', 'document_ids', 'reply_to_id', 'occurred_at',
 })
 
 
@@ -287,7 +288,7 @@ def update_message(arguments):
     message = _message_or_error(arguments.get('message_id'))
     data = {
         field: arguments[field]
-        for field in ('subject', 'content', 'occurred_at', 'document_ids')
+        for field in ('subject', 'content', 'text_formats', 'occurred_at', 'document_ids')
         if field in arguments
     }
     if 'reply_to_id' in arguments:
@@ -574,7 +575,8 @@ COMMUNICATION_TOOLS = [
                 'channel': {'type': 'string', 'enum': ['email', 'whatsapp'], 'description': 'Canal en el que ocurrió u ocurrirá el mensaje.'},
                 'direction': {'type': 'string', 'enum': ['outgoing', 'incoming'], 'description': 'outgoing para ProjectApp→cliente; incoming para cliente→ProjectApp.'},
                 'subject': {'type': 'string', 'description': 'Asunto obligatorio en email y vacío en WhatsApp.'},
-                'content': {'type': 'string', 'description': 'Texto completo del mensaje.'},
+                'content': {'type': 'string', 'description': 'Texto completo; Markdown extendido en email o sintaxis WhatsApp declarada en text_formats.'},
+                'text_formats': TEXT_FORMATS_SCHEMA,
                 'occurred_at': {'type': 'string', 'description': 'Fecha-hora ISO; usa la fecha actual si se omite.'},
                 'reply_to_id': {'type': ['integer', 'null'], 'description': 'Mensaje previo del mismo hilo y dirección opuesta.'},
                 'document_ids': {'type': 'array', 'items': {'type': 'integer'}, 'description': 'Documentos existentes del mismo cliente para referenciar.'},
@@ -605,6 +607,7 @@ COMMUNICATION_TOOLS = [
                     'type': 'string',
                     'description': 'Asunto obligatorio y no vacío para correo; vacío para WhatsApp.',
                 },
+                'text_formats': TEXT_FORMATS_SCHEMA,
                 'content': {
                     'type': 'string',
                     'description': 'Texto completo corregido del mensaje.',

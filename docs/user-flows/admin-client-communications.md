@@ -42,3 +42,6 @@
 - **Backend Tests:** `accounts/tests/test_communication_panel_preferences.py`, `content/tests/views/test_communication_views.py`, `content/tests/views/test_communication_filters.py`
 
 - **Lectura e identificación (2026-09-25):** buscar `#ID` exacto o número junto al texto; IDs visibles en lista, hilo, mensajes y documentos vinculados. Ir al inicio/final desplaza sólo el histórico. La redacción empieza plegada con mensajes existentes; Responder/Editar borrador la abre. Detalles del mensaje y formulario conservan valores al plegarse. Copiar es un icono directo; Marcar enviado vive en Más.
+
+- **Formato editorial:** La redacción admite Visual y Fuente, con perfiles de correo y WhatsApp y copia adaptada al canal; conserva contenido y formato al guardar o ante un error. WhatsApp utiliza únicamente sus marcas nativas.
+- **E2E editorial:** `e2e/admin/editorial-rich-text-communications.spec.js` (correo, WhatsApp y conservación ante rechazo).

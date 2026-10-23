@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 import json
 import re
 
@@ -57,20 +58,21 @@ def _get_cover_image_display(obj):
     return obj.cover_image_url or ''
 
 
-class BlogPostListSerializer(serializers.ModelSerializer):
+class BlogPostListSerializer(EditorialModelSerializer):
     """
     Lightweight serializer for listing blog posts on public and admin views.
     Exposes language-resolved title and excerpt fields.
     """
     title = serializers.SerializerMethodField()
     excerpt = serializers.SerializerMethodField()
+    excerpt_plain = serializers.SerializerMethodField()
     cover_image = serializers.SerializerMethodField()
 
     class Meta:
         model = BlogPost
         fields = (
             'id', 'title', 'slug', 'cover_image',
-            'excerpt', 'category', 'read_time_minutes', 'is_featured',
+            'excerpt', 'excerpt_plain', 'category', 'read_time_minutes', 'is_featured',
             'author',
             'is_published', 'published_at', 'created_at',
         )
@@ -83,17 +85,23 @@ class BlogPostListSerializer(serializers.ModelSerializer):
         lang = _get_lang(self)
         return getattr(obj, f'excerpt_{lang}')
 
+    def get_excerpt_plain(self, obj):
+        from content.services.editorial_format import plain_text
+        key = 'excerpt_' + _get_lang(self)
+        return plain_text(getattr(obj, key), format=obj.text_formats.get('/' + key, 'plain'))
+
     def get_cover_image(self, obj):
         return _get_cover_image_display(obj)
 
 
-class BlogPostDetailSerializer(serializers.ModelSerializer):
+class BlogPostDetailSerializer(EditorialModelSerializer):
     """
     Full serializer for a single blog post, including content and sources.
     Exposes language-resolved title, excerpt, content and content_json fields.
     """
     title = serializers.SerializerMethodField()
     excerpt = serializers.SerializerMethodField()
+    excerpt_plain = serializers.SerializerMethodField()
     content = serializers.SerializerMethodField()
     content_json = serializers.SerializerMethodField()
     meta_title = serializers.SerializerMethodField()
@@ -107,7 +115,7 @@ class BlogPostDetailSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'slug', 'cover_image',
             'cover_image_credit', 'cover_image_credit_url',
-            'excerpt', 'content', 'content_json', 'sources',
+            'excerpt', 'excerpt_plain', 'content', 'content_json', 'sources',
             'category', 'read_time_minutes', 'is_featured',
             'author',
             'meta_title', 'meta_description', 'meta_keywords',
@@ -143,6 +151,11 @@ class BlogPostDetailSerializer(serializers.ModelSerializer):
         lang = _get_lang(self)
         return getattr(obj, f'meta_keywords_{lang}')
 
+    def get_excerpt_plain(self, obj):
+        from content.services.editorial_format import plain_text
+        key = 'excerpt_' + _get_lang(self)
+        return plain_text(getattr(obj, key), format=obj.text_formats.get('/' + key, 'plain'))
+
     def get_cover_image(self, obj):
         return _get_cover_image_display(obj)
 
@@ -151,7 +164,7 @@ class BlogPostDetailSerializer(serializers.ModelSerializer):
 # Admin serializers — expose all _es/_en fields
 # ---------------------------------------------------------------------------
 
-class BlogPostAdminListSerializer(serializers.ModelSerializer):
+class BlogPostAdminListSerializer(EditorialModelSerializer):
     """
     Admin list serializer — returns both language titles.
     """
@@ -171,7 +184,7 @@ class BlogPostAdminListSerializer(serializers.ModelSerializer):
         return _get_cover_image_display(obj)
 
 
-class BlogPostAdminDetailSerializer(serializers.ModelSerializer):
+class BlogPostAdminDetailSerializer(EditorialModelSerializer):
     """
     Admin detail serializer — returns all bilingual fields.
     """
@@ -201,7 +214,7 @@ class BlogPostAdminDetailSerializer(serializers.ModelSerializer):
         return _get_cover_image_display(obj)
 
 
-class BlogPostCreateUpdateSerializer(serializers.ModelSerializer):
+class BlogPostCreateUpdateSerializer(EditorialModelSerializer):
     """
     Serializer for creating and updating blog posts from the admin panel.
     """
@@ -279,7 +292,7 @@ class BlogPostCreateUpdateSerializer(serializers.ModelSerializer):
 
 ALLOWED_SECTION_KEYS = {
     'heading', 'content', 'list', 'subsections', 'timeline', 'examples',
-    'image', 'quote', 'callout', 'video', 'key_takeaways', 'faq',
+    'image', 'quote', 'callout', 'video', 'key_takeaways', 'faq', 'text_formats',
 }
 
 
@@ -416,6 +429,7 @@ class BlogPostFromJSONSerializer(serializers.Serializer):
     title_en = serializers.CharField(max_length=255)
     excerpt_es = serializers.CharField()
     excerpt_en = serializers.CharField()
+    text_formats = serializers.JSONField(required=False, default=dict)
     content_json_es = serializers.DictField(required=True)
     content_json_en = serializers.DictField(required=False, default=dict)
     cover_image_url = serializers.CharField(required=False, default='', allow_blank=True)
@@ -458,4 +472,6 @@ class BlogPostFromJSONSerializer(serializers.Serializer):
         return value
 
     def validate(self, attrs):
+        from content.services.editorial_format import validate_editorial_values
+        validate_editorial_values('blogpost', attrs)
         return decode_literal_unicode_escapes(attrs)

@@ -11,6 +11,7 @@ import { test, expect } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_DOCUMENT_SEND_EMAIL } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const authCheck = { status: 200, contentType: 'application/json', body: JSON.stringify({ user: { username: 'admin', is_staff: true } }) };
 
@@ -100,7 +101,7 @@ test.describe('Admin Document Send Email', () => {
     const ccInput = page.getByTestId('document-email-cc');
     await ccInput.fill('copia@acme.com');
     await ccInput.press('Enter');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Adjunto el contrato firmado.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Adjunto el contrato firmado.');
     await page.getByRole('button', { name: 'Enviar', exact: true }).click();
 
     await expect(page.getByText('Correo enviado a cliente@acme.com, socio@acme.com con CC a copia@acme.com.')).toBeVisible();
@@ -139,7 +140,7 @@ test.describe('Admin Document Send Email', () => {
     await openSendEmailModal(page);
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('cliente@acme.com');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Adjunto el documento.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Adjunto el documento.');
     await page.getByRole('button', { name: 'Enviar', exact: true }).click();
     await expect(page.getByTestId('document-email-post-send')).toContainText('Enviado');
     await page.getByTestId('document-email-confirm-sent-state').click();
@@ -161,7 +162,7 @@ test.describe('Admin Document Send Email', () => {
     await openSendEmailModal(page);
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('cliente@acme.com');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido');
     await page.getByRole('button', { name: 'Enviar', exact: true }).click();
 
     await expect(page.getByText('Demasiados envíos. Intenta de nuevo en unos minutos.')).toBeVisible();
@@ -179,7 +180,7 @@ test.describe('Admin Document Send Email', () => {
     await openSendEmailModal(page);
 
     await page.getByPlaceholder('correo@ejemplo.com').fill('cliente@acme.com');
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido');
     await page.getByRole('button', { name: 'Enviar', exact: true }).click();
 
     await expect(page.getByText('No se pudo enviar el correo.')).toBeVisible();

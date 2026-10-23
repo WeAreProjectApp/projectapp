@@ -422,16 +422,18 @@
                 v-model="emailEditFields[field.key]"
                 type="text"
                 :placeholder="field.default_value"
-                :ref="el => { if (el?.$el) emailFieldRefs[field.key] = el.$el; else if (el) emailFieldRefs[field.key] = el }"
-                @focus="emailLastFocusedField = field.key"
+                :ref="el => { if (el) emailFieldRefs[field.key] = el }"
+                @focusin="emailLastFocusedField = field.key"
               />
-              <BaseTextarea
+              <BaseRichTextEditor
                 v-else
                 v-model="emailEditFields[field.key]"
+                :format="emailEditFormats['/content_overrides/' + field.key] || 'plain'"
+                @update:format="emailEditFormats['/content_overrides/' + field.key] = $event"
                 :rows="3"
                 :placeholder="field.default_value"
-                :ref="el => { if (el?.$el) emailFieldRefs[field.key] = el.$el; else if (el) emailFieldRefs[field.key] = el }"
-                @focus="emailLastFocusedField = field.key"
+                :ref="el => { if (el) emailFieldRefs[field.key] = el }"
+                @focusin="emailLastFocusedField = field.key"
               />
               <p v-if="field.default_value" class="text-[11px] text-text-subtle">
                 Por defecto: {{ truncateText(field.default_value, 100) }}
@@ -1122,6 +1124,7 @@ const emailSelectedCategory = ref('all');
 const emailSelectedTemplate = ref(null);
 const emailTemplateDetail = ref(null);
 const emailEditFields = ref({});
+const emailEditFormats = ref({});
 const emailEditIsActive = ref(true);
 const emailIsLoading = ref(false);
 const emailLastFocusedField = ref('');
@@ -1147,7 +1150,9 @@ function countByCategory(cat) {
 function emailInsertVariable(name) {
   const varText = `{${name}}`;
   if (emailLastFocusedField.value && emailEditFields.value[emailLastFocusedField.value] !== undefined) {
-    emailEditFields.value[emailLastFocusedField.value] += varText;
+    const editor = emailFieldRefs.value[emailLastFocusedField.value];
+    if (editor?.insertAtCursor) editor.insertAtCursor(varText);
+    else emailEditFields.value[emailLastFocusedField.value] += varText;
     showFeedback(`Variable ${varText} insertada`, 'success');
   } else {
     navigator.clipboard?.writeText(varText);
@@ -1174,6 +1179,7 @@ async function loadEmailTemplateDetail(key) {
     if (result.success) {
       emailTemplateDetail.value = result.data;
       emailEditIsActive.value = result.data.is_active;
+      emailEditFormats.value = { ...result.data.text_formats };
       emailEditFields.value = {};
       for (const field of result.data.editable_fields) {
         emailEditFields.value[field.key] = field.current_value || '';
@@ -1196,6 +1202,7 @@ async function handleSaveEmailTemplate(templateKey) {
   try {
     const result = await proposalStore.saveEmailTemplate(templateKey, {
       content_overrides: emailEditFields.value,
+      text_formats: { ...emailEditFormats.value },
       is_active: emailEditIsActive.value,
     });
     if (result.success) {

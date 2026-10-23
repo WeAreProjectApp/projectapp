@@ -1,5 +1,7 @@
 import { mount } from '@vue/test-utils';
 import ProposalEmailsTab from '../../components/BusinessProposal/admin/ProposalEmailsTab.vue';
+import BaseRichTextEditor from '../../components/base/BaseRichTextEditor.vue';
+import BaseSegmented from '../../components/base/BaseSegmented.vue';
 import { usePanelNotify } from '../../composables/usePanelNotify';
 
 const notify = usePanelNotify();
@@ -24,12 +26,6 @@ const baseProposal = {
   client_email: 'carlos@example.com',
   email_intro: 'Esta propuesta centraliza las solicitudes para responder más rápido.',
   status: 'sent',
-};
-
-const BaseTextareaStub = {
-  props: ['modelValue'],
-  emits: ['update:modelValue'],
-  template: '<textarea :value="modelValue" @input="$emit(\'update:modelValue\', $event.target.value)" />',
 };
 
 const EmailRecipientFieldsStub = {
@@ -71,15 +67,22 @@ function mountTab(props = {}) {
     },
     global: {
       stubs: {
-        BaseTextarea: BaseTextareaStub,
         EmailRecipientFields: EmailRecipientFieldsStub,
+        NuxtLink: { template: '<a><slot /></a>' },
       },
+      components: { BaseRichTextEditor, BaseSegmented },
     },
   });
 }
 
+const richTextSource = (wrapper, testId) => wrapper.get(`[data-testid="${testId}"] [data-testid="rich-text-source-input"]`);
+const introSource = (wrapper) => richTextSource(wrapper, 'proposal-email-intro');
+
 describe('ProposalEmailsTab', () => {
+  const originalUseI18n = global.useI18n;
+
   beforeEach(() => {
+    global.useI18n = () => ({ t: (key) => key });
     jest.useFakeTimers();
     proposalStore.sendComposedEmail.mockReset();
     proposalStore.updateProposal.mockReset();
@@ -110,6 +113,11 @@ describe('ProposalEmailsTab', () => {
     notify.clearAll();
   });
 
+  afterAll(() => {
+    if (originalUseI18n) global.useI18n = originalUseI18n;
+    else delete global.useI18n;
+  });
+
   it('loads defaults and history on mount with the proposal-email base path', async () => {
     mountTab();
     await flushPromises();
@@ -128,11 +136,14 @@ describe('ProposalEmailsTab', () => {
     expect(proposalStore.fetchEmailHistory).not.toHaveBeenCalled();
     expect(wrapper.text()).toContain('Requerido para enviar');
 
-    await wrapper.get('[data-testid="proposal-email-intro"]').setValue('   ');
+    await introSource(wrapper).setValue('   ');
     await wrapper.get('[data-testid="proposal-email-intro-save"]').trigger('click');
     await flushPromises();
 
-    expect(proposalStore.updateProposal).toHaveBeenCalledWith(42, { email_intro: '' });
+    expect(proposalStore.updateProposal).toHaveBeenCalledWith(42, {
+      email_intro: '',
+      text_formats: { '/email_intro': 'markdown_html_v1' },
+    });
     expect(wrapper.emitted('email-intro-saved')[0]).toEqual(['']);
   });
 
@@ -144,7 +155,7 @@ describe('ProposalEmailsTab', () => {
     const wrapper = mountTab();
     await flushPromises();
 
-    const intro = wrapper.get('[data-testid="proposal-email-intro"]');
+    const intro = introSource(wrapper);
     await intro.setValue('Mensaje nuevo para el cliente.');
     await wrapper.get('[data-testid="proposal-email-intro-save"]').trigger('click');
     await flushPromises();
@@ -167,9 +178,8 @@ describe('ProposalEmailsTab', () => {
     });
     await flushPromises();
 
-    const inputs = wrapper.findAll('input');
-    expect(inputs[0].element.value).toBe('');
-    expect(inputs[2].element.value).toBe('Hola');
+    expect(wrapper.get('input[placeholder="correo@ejemplo.com"]').element.value).toBe('');
+    expect(wrapper.get('input[placeholder="Hola Carlos"]').element.value).toBe('Hola');
     expect(wrapper.findAll('button').find((button) => button.text().includes('Enviar correo')).attributes('disabled')).toBeDefined();
   });
 
@@ -198,9 +208,8 @@ describe('ProposalEmailsTab', () => {
     const sendButton = wrapper.findAll('button').find((button) => button.text().includes('Enviar correo'));
     expect(sendButton.attributes('disabled')).toBeDefined();
 
-    const inputs = wrapper.findAll('input');
-    await inputs[1].setValue('Asunto');
-    await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Contenido');
+    await wrapper.get('input[placeholder="Asunto del correo"]').setValue('Asunto');
+    await wrapper.get('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Contenido');
 
     expect(sendButton.attributes('disabled')).toBeUndefined();
   });
@@ -289,8 +298,7 @@ describe('ProposalEmailsTab', () => {
     const wrapper = mountTab();
     await flushPromises();
 
-    const inputs = wrapper.findAll('input');
-    await inputs[1].setValue('Seguimiento de propuesta');
+    await wrapper.get('input[placeholder="Asunto del correo"]').setValue('Seguimiento de propuesta');
     await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Primer bloque');
 
     await wrapper.findAll('button').find((button) => button.text().includes('Enviar correo')).trigger('click');
@@ -302,7 +310,7 @@ describe('ProposalEmailsTab', () => {
     expect(formData.get('cc_emails')).toBe('[]');
     expect(formData.get('subject')).toBe('Seguimiento de propuesta');
     expect(formData.get('greeting')).toBe('Hola Carlos');
-    expect(formData.get('sections')).toBe(JSON.stringify([{ text: 'Primer bloque', markdown: false }]));
+    expect(formData.get('sections')).toBe(JSON.stringify([{ text: 'Primer bloque', markdown: true }]));
     expect(notify.notifications.value[0]).toMatchObject({ type: 'success', title: 'Correo enviado correctamente.' });
 
     jest.advanceTimersByTime(5000);
@@ -321,8 +329,7 @@ describe('ProposalEmailsTab', () => {
     });
     await fileInput.trigger('change');
 
-    const inputs = wrapper.findAll('input');
-    await inputs[1].setValue('Seguimiento con adjunto');
+    await wrapper.get('input[placeholder="Asunto del correo"]').setValue('Seguimiento con adjunto');
     await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Primer bloque');
     await wrapper.findAll('button').find((button) => button.text().includes('Enviar correo')).trigger('click');
     await flushPromises();
@@ -337,8 +344,7 @@ describe('ProposalEmailsTab', () => {
     const wrapper = mountTab();
     await flushPromises();
 
-    const inputs = wrapper.findAll('input');
-    await inputs[1].setValue('Seguimiento de propuesta');
+    await wrapper.get('input[placeholder="Asunto del correo"]').setValue('Seguimiento de propuesta');
     await wrapper.find('textarea[placeholder="Escribe el contenido de esta sección..."]').setValue('Primer bloque');
 
     await wrapper.findAll('button').find((button) => button.text().includes('Enviar correo')).trigger('click');

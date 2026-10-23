@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 import uuid
 
 from django.conf import settings
@@ -30,7 +31,7 @@ class AdditionalModuleCategory(models.Model):
         return self.name_es
 
 
-class AdditionalModule(models.Model):
+class AdditionalModule(EditorialTextModel, models.Model):
     """Generic client-facing capability that can be sold with any project."""
 
     category = models.ForeignKey(
@@ -45,8 +46,8 @@ class AdditionalModule(models.Model):
 
     name_es = models.CharField(max_length=240)
     name_en = models.CharField(max_length=240)
-    summary_es = models.CharField(max_length=360)
-    summary_en = models.CharField(max_length=360)
+    summary_es = models.TextField()
+    summary_en = models.TextField()
     what_is_es = models.TextField()
     what_is_en = models.TextField()
     purpose_es = models.TextField()

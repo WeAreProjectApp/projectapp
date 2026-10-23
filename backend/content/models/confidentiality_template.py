@@ -1,7 +1,8 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 
 
-class ConfidentialityTemplate(models.Model):
+class ConfidentialityTemplate(EditorialTextModel, models.Model):
     """
     Stores a confidentiality agreement (NDA) template as markdown with optional
     {placeholders}.

@@ -1,7 +1,8 @@
+from content.models.editorial_text import EditorialTextModel
 from django.db import models
 
 
-class EmailTemplateConfig(models.Model):
+class EmailTemplateConfig(EditorialTextModel, models.Model):
     """
     Stores admin-editable overrides for email template text content.
 

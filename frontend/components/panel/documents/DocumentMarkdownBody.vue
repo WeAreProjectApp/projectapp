@@ -2,6 +2,7 @@
 import { computed, ref, onMounted } from 'vue'
 import { useMarkdownPreview } from '~/composables/useMarkdownPreview'
 import { oneOf } from '~/components/base/propValidators'
+import { sourceToHtml } from '~/utils/editorialFormat'
 
 /**
  * Renders document markdown as sanitized HTML. Single owner of the
@@ -24,6 +25,7 @@ const props = defineProps({
   variant: { type: String, default: 'default', validator: oneOf(['default', 'full', 'mini']) },
   theme: { type: String, default: 'friendly', validator: oneOf(['friendly', 'professional']) },
   standardMarkdown: { type: Boolean, default: false },
+  format: { type: String, default: 'markdown' },
 })
 
 const { parseMarkdown } = useMarkdownPreview()
@@ -41,12 +43,20 @@ onMounted(async () => {
 
 const safeHtml = computed(() => {
   if (!props.markdown?.trim() || !purify.value) return ''
-  const html = props.standardMarkdown
+  const extended = props.format === 'markdown_html_v1' || /<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b/i.test(props.markdown)
+  let html = extended ? sourceToHtml(props.markdown, 'document', { strict: false }) : props.standardMarkdown
     ? standardParser.value?.parse(props.markdown, { gfm: true }).replace(
       /<(h[1-6]|p|ul|ol|li|blockquote|table|thead|tr|th|td|a|hr|pre)(?=[\s>])/g,
       (_tag, name) => `<${name} class="${{ pre: 'md-code-block', a: 'md-link' }[name] || `md-${name}`}"`,
     ) || ''
     : parseMarkdown(props.markdown)
+  if (extended) {
+    const host = document.createElement('div'); host.innerHTML = html;
+    host.querySelectorAll('h1,h2,h3,h4,h5,h6,p,ul,ol,li,blockquote,table,thead,tr,th,td,a,hr,pre').forEach((el) => {
+      el.classList.add({ pre: 'md-code-block', a: 'md-link' }[el.localName] || `md-${el.localName}`);
+    });
+    html = host.innerHTML;
+  }
   return purify.value.sanitize(html, { ADD_ATTR: ['target'] })
 })
 </script>

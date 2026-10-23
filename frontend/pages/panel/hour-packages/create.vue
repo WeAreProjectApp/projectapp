@@ -53,11 +53,11 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Nota (ES)</label>
-            <textarea v-model="form.note_es" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" placeholder="Ideal para ajustes puntuales." />
+            <BaseRichTextEditor v-model="form.note_es" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" placeholder="Ideal para ajustes puntuales."  :format="form.text_formats?.['/note_es'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/note_es': $event }" />
           </div>
           <div>
             <label class="block text-sm font-medium text-text-default mb-1">Note (EN)</label>
-            <textarea v-model="form.note_en" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" placeholder="Ideal for one-off adjustments." />
+            <BaseRichTextEditor v-model="form.note_en" rows="2" class="bg-input-bg w-full px-4 py-2.5 rounded-xl border border-border-default text-input-text placeholder:text-input-placeholder text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring transition-all resize-y" placeholder="Ideal for one-off adjustments."  :format="form.text_formats?.['/note_en'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/note_en': $event }" />
           </div>
         </div>
       </fieldset>

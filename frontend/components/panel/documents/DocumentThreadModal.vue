@@ -200,7 +200,7 @@
             test-id-prefix="thread-document-pdf"
           />
           <div v-else-if="selectedDetail?.content_markdown" class="rounded-xl border border-border-muted bg-surface p-5">
-            <DocumentMarkdownBody :markdown="selectedDetail.content_markdown" variant="full" />
+            <DocumentMarkdownBody :markdown="selectedDetail.content_markdown" :format="selectedDetail.text_formats?.['/content_markdown'] || 'markdown'" variant="full" />
           </div>
           <BaseEmptyState v-else title="Sin contenido para mostrar" description="Selecciona PDF para intentar abrir el archivo generado." />
         </section>

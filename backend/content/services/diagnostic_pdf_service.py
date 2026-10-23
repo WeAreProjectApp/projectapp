@@ -6,6 +6,8 @@ Each section type has a small dedicated renderer that walks the
 ``content_json`` payload and re-uses the shared helpers in ``pdf_utils``.
 """
 
+from content.services.editorial_projection import editorial_projection
+
 import io
 import logging
 import textwrap
@@ -330,7 +332,7 @@ class DiagnosticPdfService:
             y = PAGE_H - MARGIN_T
 
             for idx, section in enumerate(sections, start=1):
-                data = section.content_json or {}
+                data = editorial_projection({'content_json': section.content_json or {}}, section.text_formats)['content_json']
                 title = section.title or _safe(data, 'title') or section.get_section_type_display()
                 index_str = _safe(data, 'index') or f'{idx:02d}'
 

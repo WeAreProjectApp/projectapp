@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="10" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.subtitle" label="Subtítulo" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.subtitle" :format="form.text_formats?.['/subtitle'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/subtitle': $event }" label="Subtítulo" :rows="2" :isSingle="true" />
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">KPIs personalizados</label>
     <p class="text-[10px] text-text-subtle mb-2">Métricas clave que aparecerán como tarjetas destacadas al inicio del resumen. Incluye fuentes verificables.</p>

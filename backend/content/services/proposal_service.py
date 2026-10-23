@@ -4397,6 +4397,7 @@ def build_proposal_from_json(validated_data):
         show_explainer_video=data.get('show_explainer_video', True),
         service_contract_approved=data.get('service_contract_approved', False),
         email_intro=data.get('email_intro', ''),
+        text_formats=data.get('text_formats', {}),
         client=client_profile,
     )
     proposal_client_service.sync_snapshot(proposal)
@@ -4591,7 +4592,7 @@ def apply_proposal_json_update(proposal, validated_data):
         'market_type_custom', 'language', 'total_investment', 'currency',
         'nationality',
         'reminder_days', 'urgency_reminder_days', 'discount_percent',
-        'show_contract_terms', 'show_explainer_video', 'email_intro', 'service_contract_approved',
+        'show_contract_terms', 'show_explainer_video', 'email_intro', 'service_contract_approved', 'text_formats',
     ]
     tracked_old = {}
     for field in metadata_fields:

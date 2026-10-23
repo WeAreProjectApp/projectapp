@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 from decimal import Decimal
 
 from django.db import models
@@ -25,7 +26,7 @@ BASE_RATE_FIELD_BY_NATIONALITY = {
 }
 
 
-class HourPackage(models.Model):
+class HourPackage(EditorialTextModel, models.Model):
     """
     Catalog entry for a post-delivery development hour package.
 

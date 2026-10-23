@@ -131,7 +131,7 @@ onBeforeUnmount(() => { generation += 1; videoCard.value?.pause() })
           <div class="grid gap-3 px-4 pb-4 sm:grid-cols-2">
             <article v-for="module in category.modules" :key="module.id" class="rounded-xl border border-border-default p-4">
               <h3 class="font-semibold text-text-brand">{{ module.icon }} {{ module.name }}</h3>
-              <p class="mt-2 text-sm leading-6 text-text-muted">{{ module.summary }}</p>
+              <BaseRichTextContent class="mt-2 text-sm leading-6 text-text-muted" :source="module.summary" :format="module.text_formats?.['/summary'] || 'plain'" />
               <label class="my-3 flex cursor-pointer items-center gap-2 text-sm font-medium text-text-brand">
                 <input v-model="selected" :value="module.id" type="checkbox" :aria-label="`${t.interested}: ${module.name}`" :disabled="saving" class="h-4 w-4 rounded border-input-border accent-primary" />
                 {{ t.interested }}

@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 """Serializers for the WebAppDiagnostic feature."""
 
 from rest_framework import serializers
@@ -54,7 +55,7 @@ def _render_context_for(serializer, diagnostic):
     return cached
 
 
-class _ClientSummarySerializer(serializers.ModelSerializer):
+class _ClientSummarySerializer(EditorialModelSerializer):
     name = serializers.SerializerMethodField()
     email = serializers.SerializerMethodField()
     company = serializers.CharField(source='company_name')
@@ -71,7 +72,7 @@ class _ClientSummarySerializer(serializers.ModelSerializer):
         return profile.user.email or ''
 
 
-class DiagnosticSectionSerializer(serializers.ModelSerializer):
+class DiagnosticSectionSerializer(EditorialModelSerializer):
     class Meta:
         model = DiagnosticSection
         fields = [
@@ -81,7 +82,7 @@ class DiagnosticSectionSerializer(serializers.ModelSerializer):
         read_only_fields = ['section_type']
 
 
-class DiagnosticSectionUpdateSerializer(serializers.ModelSerializer):
+class DiagnosticSectionUpdateSerializer(EditorialModelSerializer):
     class Meta:
         model = DiagnosticSection
         fields = ['title', 'order', 'is_enabled', 'visibility', 'content_json']
@@ -94,7 +95,7 @@ class DiagnosticSectionUpdateSerializer(serializers.ModelSerializer):
         }
 
 
-class DiagnosticChangeLogSerializer(serializers.ModelSerializer):
+class DiagnosticChangeLogSerializer(EditorialModelSerializer):
     class Meta:
         model = DiagnosticChangeLog
         fields = [
@@ -127,7 +128,7 @@ def serialize_diagnostic_attachment(att):
     }
 
 
-class DiagnosticListSerializer(serializers.ModelSerializer):
+class DiagnosticListSerializer(EditorialModelSerializer):
     client = _ClientSummarySerializer(read_only=True)
     public_url = serializers.CharField(read_only=True)
 
@@ -194,7 +195,7 @@ class DiagnosticDetailSerializer(DiagnosticListSerializer):
         )
 
 
-class DiagnosticUpdateSerializer(serializers.ModelSerializer):
+class DiagnosticUpdateSerializer(EditorialModelSerializer):
     """Admin update payload — pricing/radiography/client edits."""
 
     client_id = serializers.PrimaryKeyRelatedField(
@@ -248,7 +249,7 @@ class DiagnosticUpdateSerializer(serializers.ModelSerializer):
         return diagnostic
 
 
-class PublicDiagnosticSerializer(serializers.ModelSerializer):
+class PublicDiagnosticSerializer(EditorialModelSerializer):
     client_name = serializers.SerializerMethodField()
     sections = serializers.SerializerMethodField()
     render_context = serializers.SerializerMethodField()
@@ -313,7 +314,7 @@ class ConfidentialityParamsSerializer(serializers.Serializer):
         return data
 
 
-class DiagnosticDefaultConfigSerializer(serializers.ModelSerializer):
+class DiagnosticDefaultConfigSerializer(EditorialModelSerializer):
     """Serializer for the per-language diagnostic defaults singleton."""
 
     class Meta:

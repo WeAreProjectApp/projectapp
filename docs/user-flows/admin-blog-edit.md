@@ -15,3 +15,5 @@
   7. Success feedback displays.
 - **Coverage:** ✅ Covered
 - **E2E Spec:** `e2e/admin/admin-blog-edit.spec.js`
+
+- **Formato editorial:** Los extractos y cuerpos de artículo admiten Visual y Fuente Markdown; las anotaciones de formato se conservan al reabrir y en la lectura pública.

@@ -281,6 +281,7 @@ def create_document_from_markdown(request):
         client_name=data.get('client_name', ''),
         client_email_subject=data.get('client_email_subject', ''),
         client_email_body=data.get('client_email_body', ''),
+        text_formats=data.get('text_formats', {}),
         client_whatsapp_message=data.get('client_whatsapp_message', ''),
         client_custom_notes=data.get('client_custom_notes', []),
         client_user=data.get('client_user'),
@@ -350,6 +351,12 @@ def upload_document_markdown(request):
     # Multipart uploads do not pass through the regular create endpoint, but
     # their text metadata must follow the same validation contract. In
     # particular, this prevents an oversized subject from reaching the DB.
+    text_formats = request.data.get('text_formats', {})
+    if isinstance(text_formats, str):
+        try:
+            text_formats = json.loads(text_formats)
+        except (ValueError, TypeError):
+            return Response({'text_formats': 'Debe ser un objeto JSON válido.'}, status=status.HTTP_400_BAD_REQUEST)
     metadata_serializer = DocumentCreateUpdateSerializer(data={
         'title': title,
         'client_name': client_name,
@@ -357,6 +364,8 @@ def upload_document_markdown(request):
         'client_email_body': client_email_body,
         'client_whatsapp_message': client_whatsapp_message,
         'client_custom_notes': client_custom_notes,
+        'text_formats': text_formats,
+        'content_markdown': markdown_text,
         'language': language,
         'cover_type': cover_type,
         'template_style': template_style,
@@ -401,6 +410,7 @@ def upload_document_markdown(request):
         client_email_body=metadata.get('client_email_body', ''),
         client_whatsapp_message=metadata.get('client_whatsapp_message', ''),
         client_custom_notes=metadata.get('client_custom_notes', []),
+        text_formats=metadata.get('text_formats', {}),
         language=metadata.get('language', 'es'),
         cover_type=metadata.get('cover_type', 'generic'),
         template_style=metadata.get('template_style', 'professional'),
@@ -542,7 +552,7 @@ def update_document(request, document_id):
     serializer.save(updated_by=request.user)
 
     # Re-parse markdown if it changed
-    if 'content_markdown' in request.data and document.content_markdown:
+    if 'content_markdown' in request.data or 'text_formats' in request.data:
         document.content_json = build_content_json(document)
         document.save(update_fields=['content_json'])
 
@@ -779,6 +789,7 @@ def duplicate_document(request, document_id):
         status=Document.Status.DRAFT,
         content_markdown=document.content_markdown,
         content_json=copy.deepcopy(document.content_json),
+        text_formats={path: fmt for path, fmt in document.text_formats.items() if path == '/content_markdown'},
         # A communication draft belongs to one concrete delivery. Copying it
         # into another document risks sending stale client-facing text.
         client_email_subject='',

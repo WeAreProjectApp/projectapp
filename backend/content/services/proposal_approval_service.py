@@ -67,7 +67,8 @@ def source_hash(proposal):
     from content.services.hour_package_service import seed_commercial_conditions_from_catalog
     section_fields = ('id', 'section_type', 'title', 'content_json', 'is_enabled', 'order')
     sections = [
-        {key: getattr(section, key) for key in section_fields}
+        {**{key: getattr(section, key) for key in section_fields},
+         **({'text_formats': section.text_formats} if section.text_formats else {})}
         for section in proposal.sections.all()
     ]
     resolved_commercial_conditions = [
@@ -77,6 +78,8 @@ def source_hash(proposal):
         and (section['content_json'] or {}).get('hourPackagesMode') != 'manual'
     ]
     value = {'proposal': {key: getattr(proposal, key) for key in fields}, 'canonical_client': canonical_client, 'confirmed_selection': proposal.has_confirmed_module_selection, 'sections': sections, 'resolved_commercial_conditions': resolved_commercial_conditions, 'documents': documents, 'binary_drafts': list(proposal.document_bindings.exclude(draft_sha256='').order_by('pk').values('source_key', 'draft_sha256'))}
+    if proposal.text_formats:
+        value['text_formats'] = proposal.text_formats
     return hashlib.sha256(json.dumps(value, sort_keys=True, default=str).encode()).hexdigest()
 
 

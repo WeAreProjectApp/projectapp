@@ -22,8 +22,8 @@
             </div>
 
             <div class="message-text space-y-6 text-lg text-text-default leading-relaxed">
-              <p v-html="linkify(message)" />
-              <p v-if="personalNote" class="italic text-text-muted" v-html="linkify(personalNote)" />
+              <div v-html="linkify(message, text_formats?.['/message'])" />
+              <div v-if="personalNote" class="italic text-text-muted" v-html="linkify(personalNote, text_formats?.['/personalNote'])" />
             </div>
 
             <div class="signature mt-10 pt-7 border-t border-border-default">
@@ -43,7 +43,7 @@
                  class="badge-card bg-primary-soft p-4 rounded-xl border border-border-default text-center hover:shadow-md transition-shadow">
               <div class="text-2xl mb-2">{{ badge.icon }}</div>
               <h4 class="font-bold text-text-default text-sm mb-1">{{ badge.title }}</h4>
-              <p class="text-xs text-text-muted leading-relaxed">{{ badge.description }}</p>
+              <BaseRichTextContent class="text-xs text-text-muted leading-relaxed" :source="badge.description" :format="badge.text_formats?.['/description'] || 'plain'" />
             </div>
           </div>
         </div>
@@ -65,7 +65,7 @@
                 </div>
                 <div class="pt-1">
                   <h4 class="font-bold text-text-brand text-sm sm:text-base">{{ step.title }}</h4>
-                  <p class="text-xs sm:text-sm text-text-muted leading-relaxed mt-1">{{ step.description }}</p>
+                  <BaseRichTextContent class="text-xs sm:text-sm text-text-muted leading-relaxed mt-1" :source="step.description" :format="step.text_formats?.['/description'] || 'plain'" />
                 </div>
               </div>
             </div>
@@ -81,13 +81,13 @@
               <span aria-hidden="true" class="disclosure-icon text-lg">⌄</span>
             </summary>
             <div class="px-5 pb-5 border-t border-border-default">
-              <p v-if="nextStepsIntro" class="text-sm text-text-default/75 leading-relaxed py-4" v-html="linkify(nextStepsIntro)" />
+              <div v-if="nextStepsIntro" class="text-sm text-text-default/75 leading-relaxed py-4" v-html="linkify(nextStepsIntro, text_formats?.['/nextStepsIntro'])" />
               <ol class="space-y-3">
                 <li v-for="(step, sIdx) in nextSteps" :key="sIdx" class="flex items-start gap-3">
                   <span class="w-7 h-7 rounded-full bg-primary text-accent text-xs font-bold flex items-center justify-center shrink-0">{{ sIdx + 1 }}</span>
                   <div>
                     <h4 class="text-sm font-bold text-text-brand">{{ step.title }}</h4>
-                    <p class="text-xs text-text-muted leading-relaxed mt-0.5">{{ step.description }}</p>
+                    <BaseRichTextContent class="text-xs text-text-muted leading-relaxed mt-0.5" :source="step.description" :format="step.text_formats?.['/description'] || 'plain'" />
                   </div>
                 </li>
               </ol>
@@ -109,6 +109,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   index: {
     type: String,
     default: '10'

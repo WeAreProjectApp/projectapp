@@ -5,7 +5,7 @@
       <FieldInput v-model="form.index" label="Índice" placeholder="7" />
       <FieldInput v-model="form.title" label="Título" />
     </div>
-    <FieldTextarea v-model="form.intro" label="Introducción" :rows="3" :isSingle="true" />
+    <FieldTextarea v-model="form.intro" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" label="Introducción" :rows="3" :isSingle="true" />
   </div>
 
   <!-- Functional requirements groups: always visible regardless of paste mode -->
@@ -62,7 +62,7 @@
           <EmojiIconField v-model="group.icon" label="Icono" placeholder="🖥️" />
           <FieldInput v-model="group.title" label="Título del grupo" />
         </div>
-        <FieldTextarea v-model="group.description" label="Descripción" :rows="2" :isSingle="true" />
+        <FieldTextarea v-model="group.description" :format="group.text_formats?.['/description'] || 'plain'" @update:format="group.text_formats = { ...group.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
         <div>
           <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Elementos</label>
           <draggable v-model="group.items" item-key="_idx" handle=".drag-handle" ghost-class="opacity-30">
@@ -79,7 +79,7 @@
                   <EmojiIconField v-model="item.icon" label="Icono" placeholder="🏠" />
                   <FieldInput v-model="item.name" label="Nombre" />
                 </div>
-                <FieldTextarea v-model="item.description" label="Descripción" :rows="2" :isSingle="true" />
+                <FieldTextarea v-model="item.description" :format="item.text_formats?.['/description'] || 'plain'" @update:format="item.text_formats = { ...item.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
                 <div class="mt-1" title="Identificador estable usado para enlazar requerimientos técnicos. Se genera automáticamente al guardar; no lo cambies si ya tiene requerimientos enlazados.">
                   <FieldInput v-model="item.id" label="ID (enlace técnico)" placeholder="auto al guardar" />
                 </div>
@@ -140,7 +140,7 @@
             <EmojiIconField v-model="mod.icon" label="Icono" placeholder="🧩" />
             <FieldInput v-model="mod.title" label="Título del módulo" />
           </div>
-          <FieldTextarea v-model="mod.description" label="Descripción" :rows="2" :isSingle="true" />
+          <FieldTextarea v-model="mod.description" :format="mod.text_formats?.['/description'] || 'plain'" @update:format="mod.text_formats = { ...mod.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
           <div>
             <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Elementos</label>
             <draggable v-model="mod.items" item-key="_idx" handle=".drag-handle" ghost-class="opacity-30">
@@ -157,7 +157,7 @@
                     <EmojiIconField v-model="item.icon" label="Icono" />
                     <FieldInput v-model="item.name" label="Nombre" />
                   </div>
-                  <FieldTextarea v-model="item.description" label="Descripción" :rows="2" :isSingle="true" />
+                  <FieldTextarea v-model="item.description" :format="item.text_formats?.['/description'] || 'plain'" @update:format="item.text_formats = { ...item.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
                   <div class="mt-1" title="Identificador estable usado para enlazar requerimientos técnicos. Se genera automáticamente al guardar; no lo cambies si ya tiene requerimientos enlazados.">
                     <FieldInput v-model="item.id" label="ID (enlace técnico)" placeholder="auto al guardar" />
                   </div>

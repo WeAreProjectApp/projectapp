@@ -17,6 +17,7 @@ const props = defineProps({
   // [{ id, text, markdown }]
   sections: { type: Array, default: () => [] },
   footer: { type: String, default: '' },
+  textFormats: { type: Object, default: () => ({}) },
   // Plain names of files/documents to list in the attachments block.
   attachmentNames: { type: Array, default: () => [] },
   // Resolves the proposal's email signature; omit for standalone/diagnostic.
@@ -38,6 +39,7 @@ async function fetchPreview() {
       .filter(s => (s.text || '').trim())
       .map(s => ({ text: s.text, markdown: !!s.markdown })),
     footer: props.footer,
+    text_formats: props.textFormats,
     attachment_names: props.attachmentNames,
   };
   if (props.proposalId) payload.proposal_id = props.proposalId;

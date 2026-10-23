@@ -1,7 +1,7 @@
 <template>
   <section>
     <SectionHeader :index="content.index" :title="content.title" fallback="Costo y Formas de Pago" />
-    <p v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed">{{ content.intro }}</p>
+    <BaseRichTextContent v-if="content.intro" class="text-text-brand/80 dark:text-text-brand/80 leading-relaxed" :source="content.intro" :format="content.text_formats?.['/intro'] || 'plain'" />
 
     <div
       v-if="parsedBullets.length"
@@ -17,7 +17,7 @@
           <span class="mt-1 shrink-0 size-2 rounded-full bg-accent-soft" aria-hidden="true" />
           <div>
             <p class="font-semibold text-text-brand dark:text-text-brand leading-snug">{{ item.title }}</p>
-            <p v-if="item.body" class="text-sm text-text-brand/70 dark:text-text-brand/70 leading-relaxed mt-1">{{ item.body }}</p>
+            <BaseRichTextContent v-if="item.body" class="text-sm text-text-brand/70 dark:text-text-brand/70 leading-relaxed mt-1" :source="item.body" :format="item.format || 'plain'" />
           </div>
         </div>
       </div>
@@ -73,11 +73,11 @@
               class="text-sm font-medium tabular-nums opacity-90"
               :data-testid="`cost-segment-amount-${seg.key}`"
             >{{ seg.amountFormatted }} {{ currencyCode }}</div>
-            <p
+            <BaseRichTextContent
               v-if="seg.detail"
               class="text-xs leading-relaxed opacity-80"
               :data-testid="`cost-segment-detail-${seg.key}`"
-            >{{ seg.detail }}</p>
+             :source="seg.detail" :format="seg.text_formats?.['/detail'] || 'plain'" />
           </div>
         </div>
 
@@ -93,7 +93,7 @@
           >
             <span class="mt-2 shrink-0 size-1.5 rounded-full bg-accent-soft" aria-hidden="true" />
             <span class="font-semibold text-text-brand dark:text-text-brand">{{ item.label }}</span>
-            <span class="text-text-brand/70 dark:text-text-brand/70">{{ item.detail }}</span>
+            <BaseRichTextContent class="text-text-brand/70 dark:text-text-brand/70" :source="item.detail" :format="item.text_formats?.['/detail'] || 'plain'" />
           </li>
         </ul>
       </div>
@@ -104,12 +104,13 @@
       class="mt-6 flex gap-3 border-l-4 border-lemon/70 bg-primary/5 dark:bg-primary-soft text-text-brand/80 dark:text-text-brand/80 px-4 py-3 rounded-r-lg text-sm"
     >
       <span class="shrink-0 inline-flex items-center text-[10px] font-semibold uppercase tracking-wider text-text-brand dark:text-accent bg-accent-soft/30 dark:bg-accent-soft/15 rounded px-1.5 py-0.5 h-fit">Nota</span>
-      <span class="leading-relaxed">{{ content.note }}</span>
+      <BaseRichTextContent class="leading-relaxed" :source="content.note" :format="content.text_formats?.['/note'] || 'plain'" />
     </aside>
   </section>
 </template>
 
 <script setup>
+import BaseRichTextContent from '~/components/base/BaseRichTextContent.vue';
 import { computed } from 'vue';
 import SectionHeader from './SectionHeader.vue';
 
@@ -170,7 +171,9 @@ const valueBullets = computed(() => {
 });
 
 const parsedBullets = computed(() =>
-  valueBullets.value.map((s) => {
+  valueBullets.value.map((s, index) => {
+    const format = props.content.text_formats?.['/valueBullets/' + index];
+    if (format && format !== 'plain') return { title: '', body: s, format };
     const sep = s.indexOf(': ');
     if (sep === -1) return { title: s, body: '' };
     return { title: s.slice(0, sep), body: s.slice(sep + 2) };

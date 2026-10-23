@@ -1,3 +1,4 @@
+from content.models.editorial_text import EditorialTextModel
 from accounts.retention import RetainedProjectModel
 import uuid
 
@@ -9,7 +10,7 @@ from content.models.history_tracked import HistoryTrackedModel
 from content.utils import safe_slug
 
 
-class Document(RetainedProjectModel, HistoryTrackedModel):
+class Document(EditorialTextModel, RetainedProjectModel, HistoryTrackedModel):
     """Generic branded document: markdown content and/or commercial collection account."""
 
     class Status(models.TextChoices):

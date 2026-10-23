@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -50,9 +50,9 @@ a{text-decoration:none}
 </td></tr>
 
 <tr><td class="px-40" style="padding:32px 40px 8px 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %}</p>
-{% if body %}<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ body|linebreaksbr }}</p>{% endif %}
-{% if email_intro %}<p style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{{ email_intro|linebreaksbr }}</p>{% endif %}
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#001713;">{% editorial_email_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %}</div>
+{% if body %}<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value body "body" %}</div>{% endif %}
+{% if email_intro %}<div style="margin:14px 0 0 0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:16px;line-height:26px;color:#5a6b67;">{% editorial_email_value email_intro "email_intro" %}</div>{% endif %}
 </td></tr>
 
 {% if total_investment or total_duration or payment_summary %}
@@ -85,29 +85,29 @@ a{text-decoration:none}
 </table></td></tr>
 {% endif %}
 
-{% if email_features %}
+{% if email_feature_rows %}
 <tr><td class="px-40" style="padding:36px 40px 0 40px;">
 <div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;line-height:14px;letter-spacing:2px;color:#809490;text-transform:uppercase;margin-bottom:18px;">Qué incluye</div>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
-{% for feature in email_features %}<tr><td style="padding:14px 0;{% if not forloop.last %}border-bottom:1px solid #ece8db;{% endif %}">
+{% for feature in email_feature_rows %}<tr><td style="padding:14px 0;{% if not forloop.last %}border-bottom:1px solid #ece8db;{% endif %}">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
 <td valign="top" width="36" style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:12px;color:#809490;letter-spacing:1px;">{{ forloop.counter|stringformat:"02d" }}</td>
-<td valign="top" style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#001713;">{{ feature }}</td>
+<td valign="top" style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#001713;">{{ feature.html }}</td>
 </tr></table></td></tr>{% endfor %}
 </table></td></tr>
 {% endif %}
 
-{% if email_method_phases %}
+{% if email_method_phase_rows %}
 <tr><td class="px-40" style="padding:32px 40px 0 40px;"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#001713;border-radius:14px;">
 <tr><td style="padding:28px 28px 8px 28px;">
-<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;line-height:14px;letter-spacing:2px;color:#e6efef;text-transform:uppercase;margin-bottom:18px;">Método en {{ email_method_phases|length }} fases</div>
+<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;line-height:14px;letter-spacing:2px;color:#e6efef;text-transform:uppercase;margin-bottom:18px;">Método en {{ email_method_phase_rows|length }} fases</div>
 </td></tr>
 <tr><td style="padding:0 28px 24px 28px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
-{% for phase in email_method_phases %}<td class="stack{% if not forloop.first %} stack-pad{% endif %}" valign="top" width="33%" style="{% if forloop.first %}padding-right:12px;{% elif forloop.last %}padding-left:12px;{% else %}padding:0 12px;{% endif %}">
+{% for phase in email_method_phase_rows %}<td class="stack{% if not forloop.first %} stack-pad{% endif %}" valign="top" width="33%" style="{% if forloop.first %}padding-right:12px;{% elif forloop.last %}padding-left:12px;{% else %}padding:0 12px;{% endif %}">
 <div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:32px;line-height:32px;color:#F0FF3D;letter-spacing:-0.5px;margin-bottom:8px;">{{ phase.number|default_if_none:forloop.counter|stringformat:"s" }}</div>
 <div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:20px;color:#ffffff;margin-bottom:4px;">{{ phase.title }}</div>
-<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:13px;line-height:20px;color:#809490;">{% if phase.duration %}{{ phase.duration }} — {% endif %}{{ phase.description }}</div>
+<div style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:13px;line-height:20px;color:#809490;">{% if phase.duration %}{{ phase.duration }} — {% endif %}{{ phase.description_html }}</div>
 </td>{% endfor %}
 </tr></table>
 </td></tr></table></td></tr>
@@ -116,12 +116,12 @@ a{text-decoration:none}
 <tr><td class="px-40" align="center" style="padding:40px 40px 12px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0"><tr>
 <td align="center" bgcolor="#F0FF3D" style="border-radius:999px;mso-padding-alt:18px 32px;">
-<a href="{{ proposal_url }}" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{{ cta_text|default:"Ver propuesta completa" }} &nbsp;→</a>
+<a href="{{ proposal_url }}" style="display:inline-block;padding:18px 32px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:14px;line-height:14px;letter-spacing:0.5px;color:#001713;background:#F0FF3D;border-radius:999px;">{% editorial_email_value cta_text|default:"Ver propuesta completa" "cta_text" %} &nbsp;→</a>
 </td></tr></table>
 {% if days_remaining %}<div style="margin-top:14px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:12px;line-height:18px;color:#5a6b67;">Esta propuesta es válida por {{ days_remaining }} día{{ days_remaining|pluralize }} más.</div>{% endif %}
 </td></tr>
 
-{% if closing %}<tr><td class="px-40" style="padding:8px 40px 0 40px;"><p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#5a6b67;">{{ closing|linebreaksbr }}</p></td></tr>{% endif %}
+{% if closing %}<tr><td class="px-40" style="padding:8px 40px 0 40px;"><div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:15px;line-height:24px;color:#5a6b67;">{% editorial_email_value closing "closing" %}</div></td></tr>{% endif %}
 
 <tr><td class="px-40" style="padding:32px 40px 36px 40px;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #ece8db;">

@@ -1,12 +1,12 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Notamos que pasaste varios minutos en la sección de inversión. Podemos hablar opciones de pago." }}
+{% editorial_plain_value body|default:"Notamos que pasaste varios minutos en la sección de inversión. Podemos hablar opciones de pago." "body" %}
 {% if body_secondary %}
 {{ body_secondary }}{% endif %}
 
 {% if total_investment %}Inversión actual: $ {{ total_investment }} {{ currency|default:"COP" }}{% endif %}
 
-{{ cta_text|default:"Hablar opciones de pago" }}: https://wa.me/573238122373?text=Hola%2C%20me%20interesa%20la%20propuesta
+{% editorial_plain_value cta_text|default:"Hablar opciones de pago" "cta_text" %}: https://wa.me/573238122373?text=Hola%2C%20me%20interesa%20la%20propuesta
 
 —
 {{ signature_name }}

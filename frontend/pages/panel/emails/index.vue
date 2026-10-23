@@ -73,19 +73,14 @@
                 <div class="mb-2 flex flex-wrap items-center gap-2">
                   <span class="drag-handle cursor-grab text-text-subtle hover:text-text-muted select-none text-sm">⠿</span>
                   <span class="text-[10px] text-text-muted uppercase tracking-wide">Sección {{ idx + 1 }}</span>
-                  <span class="ml-auto flex items-center gap-1.5">
-                    <span class="text-[10px] font-medium text-text-muted uppercase tracking-wide">Markdown</span>
-                    <BaseToggle v-model="section.markdown" size="sm" aria-label="Activar Markdown en esta sección" />
-                  </span>
+
                   <BaseButton v-if="sections.length > 1" variant="danger-ghost" icon-only size="sm" aria-label="Eliminar" title="Eliminar" @click="removeSection(idx)">
                     <BaseActionIcon action="delete" />
                   </BaseButton>
                 </div>
-                <textarea v-model="section.text" v-auto-resize rows="3" placeholder="Escribe el contenido de esta sección..."
-                  class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface  focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-none" />
-                <p v-if="section.markdown" class="mt-1 text-[10px] text-text-subtle">
-                  Soporta **negrita**, *cursiva*, listas con -, [enlaces](https://...) y títulos con #.
-                </p>
+                <BaseRichTextEditor v-model="section.text" :format="section.markdown ? 'markdown_html_v1' : 'plain'" @update:format="section.markdown = true" rows="3" placeholder="Escribe el contenido de esta sección..."
+                  class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface  focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-none"  />
+
               </div>
             </template>
           </draggable>
@@ -98,8 +93,8 @@
         <!-- Footer -->
         <div>
           <label class="block text-xs text-text-muted mb-1">Pie de correo</label>
-          <textarea v-model="footer" v-auto-resize rows="2" placeholder="Texto de cierre..."
-            class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-none" />
+          <BaseRichTextEditor v-model="footer" :format="textFormats['/footer'] || 'plain'" @update:format="textFormats['/footer'] = $event" rows="2" placeholder="Texto de cierre..."
+            class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-none"  />
         </div>
 
         <!-- Attachments -->
@@ -149,6 +144,7 @@
           :greeting="greeting"
           :sections="sections"
           :footer="footer"
+          :textFormats="textFormats"
           :attachment-names="attachments.map(f => f.name)"
         />
       </div>
@@ -193,7 +189,7 @@
 
         <div>
           <label class="block text-xs text-text-muted mb-1">Pie de correo por defecto</label>
-          <BaseTextarea v-model="cfgFooter" :rows="3" placeholder="Texto de cierre..." />
+          <BaseRichTextEditor v-model="cfgFooter" profile="email" :format="cfgTextFormats['/footer'] || 'plain'" @update:format="cfgTextFormats['/footer'] = $event" :rows="3" placeholder="Texto de cierre..."  />
         </div>
 
         <div>
@@ -541,6 +537,7 @@ const subject = ref('');
 const greeting = ref(defaultGreeting.value);
 const sections = ref([{ id: nextSectionId(), text: '', markdown: false }]);
 const footer = ref(defaultFooter.value);
+const textFormats = ref({});
 const attachments = ref([]);
 const fileInput = ref(null);
 const sending = ref(false);
@@ -628,6 +625,7 @@ async function handleSend() {
     sections.value.filter(s => s.text.trim()).map(s => ({ text: s.text, markdown: !!s.markdown })),
   ));
   formData.append('footer', footer.value.trim());
+  formData.append('text_formats', JSON.stringify(textFormats.value));
   for (const file of attachments.value) {
     formData.append('attachments', file);
   }
@@ -659,6 +657,7 @@ function resetForm() {
 // ── Defaults config form ──
 const cfgGreeting = ref('');
 const cfgFooter = ref('');
+const cfgTextFormats = ref({});
 const cfgSigner = ref('');
 
 /**
@@ -684,6 +683,7 @@ const {
   snapshot: () => ({
     greeting: cfgGreeting.value,
     footer: cfgFooter.value,
+    text_formats: { ...cfgTextFormats.value },
     signer: cfgSigner.value,
   }),
   labels: { greeting: 'saludo', footer: 'cierre', signer: 'firmante' },
@@ -719,6 +719,8 @@ function applyDefaults(data) {
   const cfg = data.config || {};
   cfgGreeting.value = cfg.greeting || '';
   cfgFooter.value = cfg.footer || '';
+  cfgTextFormats.value = { ...cfg.text_formats };
+  if (footer.value === defaultFooter.value) textFormats.value = { ...cfgTextFormats.value };
   cfgSigner.value = cfg.signer || '';
   // Único punto de hidratación de los valores por defecto: sirve para la carga
   // y para el eco posterior a guardar.
@@ -736,6 +738,7 @@ async function handleSaveDefaults() {
   const result = await emailStore.saveDefaults({
     greeting: cfgGreeting.value.trim(),
     footer: cfgFooter.value.trim(),
+    text_formats: { ...cfgTextFormats.value },
     signer: cfgSigner.value,
   });
   if (result.success && result.data) {
@@ -756,6 +759,7 @@ async function handleRestoreDefaults() {
   const originals = emailStore.defaults?.defaults || {};
   cfgGreeting.value = originals.greeting || '';
   cfgFooter.value = originals.footer || '';
+  cfgTextFormats.value = {};
   cfgSigner.value = originals.signer || '';
   await handleSaveDefaults();
 }

@@ -8,12 +8,10 @@
         <h1 class="mb-4 text-3xl font-light leading-tight text-text-brand sm:text-5xl">
           {{ copy.title }}
         </h1>
-        <p
+        <BaseRichTextContent
           data-testid="contract-terms-description"
           class="text-base font-light leading-relaxed text-text-muted sm:text-lg"
-        >
-          {{ copy.description }}
-        </p>
+         :source="copy.description" :format="copy.text_formats?.['/description'] || 'plain'" />
       </div>
 
       <BaseAlert variant="warning" :title="copy.noticeTitle" class="mb-10">

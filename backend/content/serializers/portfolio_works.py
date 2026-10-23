@@ -1,3 +1,4 @@
+from content.serializers.editorial import EditorialModelSerializer
 import copy as _copy
 
 from rest_framework import serializers
@@ -25,7 +26,7 @@ def _get_cover_image_display(obj):
 # Public serializers
 # ---------------------------------------------------------------------------
 
-class PortfolioWorkListSerializer(serializers.ModelSerializer):
+class PortfolioWorkListSerializer(EditorialModelSerializer):
     """Lightweight serializer for listing portfolio works on public views."""
     title = serializers.SerializerMethodField()
     excerpt = serializers.SerializerMethodField()
@@ -48,7 +49,7 @@ class PortfolioWorkListSerializer(serializers.ModelSerializer):
         return _get_cover_image_display(obj)
 
 
-class PortfolioWorkDetailSerializer(serializers.ModelSerializer):
+class PortfolioWorkDetailSerializer(EditorialModelSerializer):
     """Full serializer for a single portfolio work (public)."""
     title = serializers.SerializerMethodField()
     excerpt = serializers.SerializerMethodField()
@@ -94,7 +95,7 @@ class PortfolioWorkDetailSerializer(serializers.ModelSerializer):
 # Admin serializers
 # ---------------------------------------------------------------------------
 
-class PortfolioWorkAdminListSerializer(serializers.ModelSerializer):
+class PortfolioWorkAdminListSerializer(EditorialModelSerializer):
     """Admin list serializer — returns both language titles."""
     cover_image_display = serializers.SerializerMethodField()
 
@@ -111,7 +112,7 @@ class PortfolioWorkAdminListSerializer(serializers.ModelSerializer):
         return _get_cover_image_display(obj)
 
 
-class PortfolioWorkAdminDetailSerializer(serializers.ModelSerializer):
+class PortfolioWorkAdminDetailSerializer(EditorialModelSerializer):
     """Admin detail serializer — returns all bilingual fields."""
     cover_image_display = serializers.SerializerMethodField()
 
@@ -135,7 +136,7 @@ class PortfolioWorkAdminDetailSerializer(serializers.ModelSerializer):
         return _get_cover_image_display(obj)
 
 
-class PortfolioWorkCreateUpdateSerializer(serializers.ModelSerializer):
+class PortfolioWorkCreateUpdateSerializer(EditorialModelSerializer):
     """Serializer for creating and updating portfolio works from the admin panel."""
 
     class Meta:

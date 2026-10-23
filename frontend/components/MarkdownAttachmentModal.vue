@@ -44,9 +44,9 @@
 
             <div>
               <label class="block text-xs font-medium text-text-default dark:text-green-light mb-1">Contenido (markdown)</label>
-              <textarea v-model="markdown" rows="14"
+              <BaseRichTextEditor v-model="markdown" rows="14"
                 placeholder="# Encabezado&#10;&#10;Párrafo de introducción…"
-                class="w-full px-3 py-2 text-sm font-mono border border-border-default dark:border-white/[0.08] dark:bg-surface/[0.03] dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-focus-ring/30 resize-y min-h-[280px]"></textarea>
+                class="w-full px-3 py-2 text-sm font-mono border border-border-default dark:border-white/[0.08] dark:bg-surface/[0.03] dark:text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-focus-ring/30 resize-y min-h-[280px]" />
             </div>
 
             <fieldset class="space-y-2">

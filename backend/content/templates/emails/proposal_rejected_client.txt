@@ -1,10 +1,10 @@
-{{ greeting|default:"Gracias por tu tiempo." }}
+{% load editorial %}{% editorial_plain_value greeting|default:"Gracias por tu tiempo." "greeting" %}
 
-{{ body|default:"Las decisiones de software a la medida cargan tiempo, presupuesto y futuro. Si esta no era la oportunidad, está bien. Queremos que cuando vuelvas a evaluar tengas toda la información para decidir." }}
+{% editorial_plain_value body|default:"Las decisiones de software a la medida cargan tiempo, presupuesto y futuro. Si esta no era la oportunidad, está bien. Queremos que cuando vuelvas a evaluar tengas toda la información para decidir." "body" %}
 
 {{ inspirational_text|default:"Las grandes oportunidades vienen a quienes se preparan para recibirlas — incluso cuando se trata de un 'todavía no'." }}
 
-{{ cta_text|default:"Conversemos cuando estés listo" }}: https://wa.me/573238122373
+{% editorial_plain_value cta_text|default:"Conversemos cuando estés listo" "cta_text" %}: https://wa.me/573238122373
 
 —
 {{ signature_name }}

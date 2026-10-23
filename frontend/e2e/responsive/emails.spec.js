@@ -3,6 +3,7 @@ import { test, expect, assertResponsiveScenario } from '../helpers/test.js';
 import { mockApi } from '../helpers/api.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { viewportUse } from '../helpers/viewports.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './catalog-scenarios.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -86,7 +87,7 @@ test.describe('emails responsive special', () => {
   test.use(viewportUse('portrait'));
   test('composer preserves its completed subject after preview dismissal', { tag: ['@flow:admin-standalone-email-composer', '@outcome:success', '@responsive-special:emails', '@viewport:portrait', '@responsive-batch:emails-special-1'] }, async ({ page }) => {
     const { subjectInput, previewRequest } = await openComposer(page);
-    await page.getByPlaceholder('Escribe el contenido de esta sección...').fill('Contenido fixture para el preview.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido fixture para el preview.');
     const previewResponse = page.waitForResponse((response) => response.url().includes('emails/preview/') && response.status() === 200);
     await page.getByRole('button', { name: 'Vista previa', exact: true }).click();
     await previewResponse;

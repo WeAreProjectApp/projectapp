@@ -1,3 +1,5 @@
+> **Una fuente para Visual y Markdown — 2026-10-23:** no mantener dos cuerpos editables. Declarar el formato por ruta, conservar la interpretación histórica sin anotaciones y rechazar conversiones con pérdida. La identidad de las entradas de lista y las anotaciones viajan juntas al eliminar o filtrar. Las salidas requieren pruebas sobre HTML final, alternativa de texto, bytes PDF y lecturas reales por MCP; comparar dos convertidores que comparten el mismo defecto no basta. Contrato y corpus: `docs/EDITORIAL_FORMAT.md` y `docs/fixtures/editorial-format.json`.
+
 > **Contabilidad — 2026-10-06:** la unidad se define por el campo: IVA es porcentaje, los importes son moneda. Los snapshots nuevos usan esa unidad y las lecturas del legado se proyectan sin reescribir el historial. La elegibilidad de liquidación debe coincidir en interfaz y escritor transaccional, incluyendo cliente y proyecto de la cuenta emitida.
 
 ---

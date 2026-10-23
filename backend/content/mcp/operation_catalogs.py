@@ -20,6 +20,8 @@ from content.mcp.project_idea_tools import PROJECT_IDEA_TOOLS
 from content.mcp.project_retention_tools import PROJECT_RETENTION_TOOLS
 from content.mcp.data_integrity_tools import DATA_INTEGRITY_TOOLS
 from content.mcp.proposal_schemas import writable_schema
+from content.serializers.additional_modules import AdditionalModuleAdminSerializer
+from content.serializers.hour_packages import HourPackageCreateUpdateSerializer
 from content.mcp.schema_policy import closed_object
 from content.views.project_administration import AddCommercialPhaseSerializer, ReorderCommercialPhasesSerializer
 from accounts.serializers import UpdateProjectPhaseSerializer
@@ -206,8 +208,8 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('create_additional_module_category', 'Crea una categoría de módulos.', 'create-additional-module-category', 'POST', risk='write'),
     _op('update_additional_module_category', 'Actualiza una categoría de módulos.', 'update-additional-module-category', 'PATCH', ('category_id',), 'write'),
     _op('set_additional_module_category_status', 'Activa, archiva o restaura una categoría.', 'set-additional-module-category-status', 'POST', ('category_id', 'action'), 'write'),
-    _op('create_additional_module', 'Crea un módulo adicional bilingüe.', 'create-additional-module', 'POST', risk='write'),
-    _op('update_additional_module', 'Actualiza un módulo adicional.', 'update-additional-module', 'PATCH', ('module_id',), 'write'),
+    _op('create_additional_module', 'Crea un módulo adicional bilingüe.', 'create-additional-module', 'POST', risk='write', payload_schema=writable_schema(AdditionalModuleAdminSerializer)),
+    _op('update_additional_module', 'Actualiza un módulo adicional.', 'update-additional-module', 'PATCH', ('module_id',), 'write', payload_schema=writable_schema(AdditionalModuleAdminSerializer, partial=True)),
     _op('set_additional_module_status', 'Activa, archiva o restaura un módulo.', 'set-additional-module-status', 'POST', ('module_id', 'action'), 'write'),
     _op('reorder_additional_modules', 'Reordena categorías y módulos.', 'reorder-additional-module-catalog', 'POST', risk='write'),
     _op('list_additional_module_shares', 'Lista enlaces compartidos del catálogo.', 'admin-additional-module-shares'),
@@ -219,8 +221,8 @@ COMMERCIAL_PARITY_TOOLS = [
     _op('render_additional_modules_pdf', 'Genera el catálogo de módulos como asset temporal.', 'admin-additional-module-catalog-pdf', 'POST'),
     _op('list_hour_packages', 'Lista paquetes de horas y sus precios.', 'list-admin-hour-packages'),
     _op('get_hour_package', 'Abre un paquete de horas.', 'retrieve-admin-hour-package', path=('package_id',)),
-    _op('create_hour_package', 'Crea un paquete de horas.', 'create-hour-package', 'POST', risk='write'),
-    _op('update_hour_package', 'Actualiza un paquete de horas.', 'update-hour-package', 'PATCH', ('package_id',), 'write'),
+    _op('create_hour_package', 'Crea un paquete de horas.', 'create-hour-package', 'POST', risk='write', payload_schema=writable_schema(HourPackageCreateUpdateSerializer)),
+    _op('update_hour_package', 'Actualiza un paquete de horas.', 'update-hour-package', 'PATCH', ('package_id',), 'write', payload_schema=writable_schema(HourPackageCreateUpdateSerializer, partial=True)),
     _op('delete_hour_package', 'Elimina un paquete de horas permitido.', 'delete-hour-package', 'DELETE', ('package_id',), 'sensitive', True),
     _op('get_hour_package_settings', 'Obtiene ajustes de paquetes de horas.', 'hour-package-settings'),
     _op('update_hour_package_settings', 'Actualiza ajustes de paquetes de horas.', 'update-hour-package-settings', 'PATCH', risk='write'),

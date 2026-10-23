@@ -1,4 +1,4 @@
-<!doctype html>
+{% load editorial %}<!doctype html>
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -46,7 +46,7 @@ a{text-decoration:none}
 
 <tr><td class="px-40" style="padding:40px 40px 8px 40px;">
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:24px;"><tr><td style="background:#F0FF3D;border-radius:999px;padding:8px 14px;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:500;font-size:11px;line-height:14px;letter-spacing:1.8px;color:#001713;text-transform:uppercase;">◆ &nbsp;Mensaje del equipo</td></tr></table>
-<div class="display-xl" style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:42px;line-height:48px;letter-spacing:-0.8px;color:#001713;">{{ greeting|default:"Hola" }}</div>
+<div class="display-xl" style="font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:42px;line-height:48px;letter-spacing:-0.8px;color:#001713;">{% editorial_email_value greeting|default:"Hola" "greeting" %}</div>
 </td></tr>
 
 <tr><td class="px-40" style="padding:24px 40px 0 40px;">
@@ -64,7 +64,7 @@ a{text-decoration:none}
 </table></td></tr></table></td></tr>{% endif %}
 
 {% if footer %}<tr><td class="px-40" style="padding:32px 40px 0 40px;">
-<p style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:13px;line-height:20px;color:#5a6b67;white-space:pre-wrap;">{{ footer }}</p>
+<div style="margin:0;font-family:Ubuntu,Helvetica,Arial,sans-serif;font-weight:300;font-size:13px;line-height:20px;color:#5a6b67;white-space:pre-wrap;">{% editorial_email_value footer "footer" %}</div>
 </td></tr>{% endif %}
 
 <tr><td class="px-40" align="center" style="padding:32px 40px 12px 40px;">

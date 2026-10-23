@@ -21,16 +21,19 @@
         <label for="proposal-email-intro" class="mb-1 block text-xs font-medium text-text-muted">
           Mensaje para {{ proposal.client_name || 'el cliente' }}
         </label>
-        <BaseTextarea
+        <BaseRichTextEditor
           id="proposal-email-intro"
           v-model="emailIntroDraft"
+          profile="email"
+          :format="emailIntroFormat"
+          @update:format="emailIntroFormat = $event"
           :rows="7"
           :error="Boolean(emailIntroError)"
           placeholder="Ej. Esta propuesta resuelve… mediante… para lograr…"
           data-testid="proposal-email-intro"
-        />
+         />
         <p class="mt-1 text-xs text-text-subtle">
-          Texto plano editable. Se permiten saltos de línea; no HTML ni Markdown. El borrador puede guardarse vacío, pero no podrá enviarse.
+          Usa Visual para dar formato o Fuente para editar Markdown. El borrador puede guardarse vacío; se requiere contenido para enviarlo.
         </p>
       </div>
 
@@ -150,19 +153,14 @@
                 <div class="flex items-center gap-2 mb-2">
                   <span class="drag-handle cursor-grab text-text-subtle dark:text-green-light/40 hover:text-text-muted select-none text-sm">⠿</span>
                   <span class="text-[10px] text-text-subtle dark:text-green-light/40 uppercase tracking-wide">Sección {{ idx + 1 }}</span>
-                  <span class="ml-auto flex items-center gap-1.5">
-                    <span class="text-[10px] text-text-subtle dark:text-green-light/40 uppercase tracking-wide">Markdown</span>
-                    <BaseToggle v-model="section.markdown" size="sm" aria-label="Activar Markdown en esta sección" />
-                  </span>
+
                   <BaseButton variant="danger-ghost" icon-only size="sm" aria-label="Eliminar" title="Eliminar" v-if="sections.length > 1" @click="removeSection(idx)">
                     <BaseActionIcon action="delete" />
                   </BaseButton>
                 </div>
-                <textarea v-model="section.text" rows="3" placeholder="Escribe el contenido de esta sección..."
-                  class="bg-input-bg w-full px-3 py-2 border border-border-default dark:border-white/[0.08]  dark:text-white dark:placeholder:text-green-light/40 rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-y" />
-                <p v-if="section.markdown" class="mt-1 text-[10px] text-text-subtle dark:text-green-light/40">
-                  Soporta **negrita**, *cursiva*, listas con -, [enlaces](https://...) y títulos con #.
-                </p>
+                <BaseRichTextEditor v-model="section.text" :format="section.markdown ? 'markdown_html_v1' : 'plain'" @update:format="section.markdown = true" rows="3" placeholder="Escribe el contenido de esta sección..."
+                  class="bg-input-bg w-full px-3 py-2 border border-border-default dark:border-white/[0.08]  dark:text-white dark:placeholder:text-green-light/40 rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-y"  />
+
               </div>
             </template>
           </draggable>
@@ -175,8 +173,8 @@
         <!-- Footer -->
         <div>
           <label class="block text-xs text-text-muted mb-1">Pie de correo</label>
-          <textarea v-model="footer" rows="2" placeholder="Texto de cierre..."
-            class="bg-input-bg w-full px-3 py-2 border border-border-default dark:border-white/[0.08]  dark:text-white dark:placeholder:text-green-light/40 rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-y" />
+          <BaseRichTextEditor v-model="footer" :format="textFormats['/footer'] || 'plain'" @update:format="textFormats['/footer'] = $event" rows="2" placeholder="Texto de cierre..."
+            class="bg-input-bg w-full px-3 py-2 border border-border-default dark:border-white/[0.08]  dark:text-white dark:placeholder:text-green-light/40 rounded-lg text-sm focus:ring-2 focus:ring-focus-ring/30 focus:border-focus-ring resize-y"  />
         </div>
 
         <!-- Attachments -->
@@ -248,6 +246,7 @@
           :greeting="greeting"
           :sections="sections"
           :footer="footer"
+          :textFormats="textFormats"
           :attachment-names="[...docRefs.map(r => r.label), ...attachments.map(f => f.name)]"
           :proposal-id="proposal.id"
         />
@@ -337,10 +336,12 @@ const proposalStore = useProposalStore();
 // ── Initial proposal email message ──
 const emailIntroDraft = ref(props.proposal.email_intro || '');
 const savedEmailIntro = ref(props.proposal.email_intro || '');
+const emailIntroFormat = ref(props.proposal.text_formats?.['/email_intro'] || 'plain');
+const savedEmailIntroFormat = ref(emailIntroFormat.value);
 const savingEmailIntro = ref(false);
 const emailIntroError = ref('');
 const normalizedEmailIntro = computed(() => emailIntroDraft.value.trim());
-const isEmailIntroDirty = computed(() => emailIntroDraft.value !== savedEmailIntro.value);
+const isEmailIntroDirty = computed(() => emailIntroDraft.value !== savedEmailIntro.value || emailIntroFormat.value !== savedEmailIntroFormat.value);
 const hasFollowupComposer = computed(() => [
   'sent', 'viewed', 'negotiating', 'accepted', 'rejected',
 ].includes(props.proposal.status));
@@ -353,6 +354,8 @@ watch(
     if (!isEmailIntroDirty.value || incoming === emailIntroDraft.value) {
       emailIntroDraft.value = incoming;
       savedEmailIntro.value = incoming;
+      emailIntroFormat.value = props.proposal.text_formats?.['/email_intro'] || 'plain';
+      savedEmailIntroFormat.value = emailIntroFormat.value;
     }
   },
 );
@@ -362,11 +365,12 @@ async function saveEmailIntro() {
   savingEmailIntro.value = true;
   emailIntroError.value = '';
   const value = normalizedEmailIntro.value;
-  const result = await proposalStore.updateProposal(props.proposal.id, { email_intro: value });
+  const result = await proposalStore.updateProposal(props.proposal.id, { email_intro: value, text_formats: { ...props.proposal.text_formats, '/email_intro': emailIntroFormat.value } });
   savingEmailIntro.value = false;
   if (result.success) {
     emailIntroDraft.value = value;
     savedEmailIntro.value = value;
+    savedEmailIntroFormat.value = emailIntroFormat.value;
     emit('email-intro-saved', value);
     notify.success({ title: 'Mensaje del correo guardado.' });
     return;
@@ -398,6 +402,7 @@ const defaultFooter = ref('Quedamos atentos a tus comentarios.\nUn abrazo, el eq
 const greeting = ref(defaultGreeting.value);
 const sections = ref([{ id: nextSectionId(), text: '', markdown: false }]);
 const footer = ref(defaultFooter.value);
+const textFormats = ref({});
 const attachments = ref([]);
 const { docRefs, removeDocRef, handleDocRefsAttach, appendDocRefsToFormData, resetDocRefs }
   = useDocRefsAttachment();
@@ -459,6 +464,7 @@ async function handleSend() {
     sections.value.filter(s => s.text.trim()).map(s => ({ text: s.text, markdown: !!s.markdown })),
   ));
   formData.append('footer', footer.value.trim());
+  formData.append('text_formats', JSON.stringify(textFormats.value));
   for (const file of attachments.value) {
     formData.append('attachments', file);
   }

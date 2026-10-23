@@ -3,9 +3,9 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="4" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.subtitle" label="Subtítulo" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.subtitle" :format="form.text_formats?.['/subtitle'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/subtitle': $event }" label="Subtítulo" :rows="2" :isSingle="true" />
   <FieldTextarea
-    v-model="form.methodology"
+    v-model="form.methodology" :format="form.text_formats?.['/methodology'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/methodology': $event }"
     label="Cómo calculamos esto (metodología)"
     :rows="3"
     :isSingle="true"
@@ -84,7 +84,7 @@
     <button type="button" class="inline-flex items-center gap-1 text-xs text-text-brand font-medium" @click="if (!form.scenarios) form.scenarios = []; form.scenarios.push({ name: '', label: '', icon: '', assumptions: [], metrics: [] })"><BaseActionIcon action="create" /> Agregar escenario</button>
   </div>
 
-  <FieldTextarea v-model="form.ctaNote" label="Nota de cierre" :rows="2" :isSingle="true" placeholder="En cualquier escenario, los ingresos cubren la inversión antes de…" />
+  <FieldTextarea v-model="form.ctaNote" :format="form.text_formats?.['/ctaNote'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/ctaNote': $event }" label="Nota de cierre" :rows="2" :isSingle="true" placeholder="En cualquier escenario, los ingresos cubren la inversión antes de…" />
 </template>
 
 <script setup>

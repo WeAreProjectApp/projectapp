@@ -2,6 +2,7 @@
 
 import io
 from xml.sax.saxutils import escape
+from content.services.editorial_projection import editorial_projection, editorial_paragraph
 
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
@@ -40,6 +41,7 @@ class FinancingPdfService:
     @classmethod
     def build(cls, *, language):
         payload = serialize_financing_program(language=language)
+        payload = editorial_projection(payload)
         _register_fonts()
         output = io.BytesIO()
         document = SimpleDocTemplate(
@@ -136,11 +138,9 @@ class FinancingPdfService:
                 hAlign='CENTER',
             ),
             Spacer(1, 8 * mm),
-            Paragraph(escape(payload['hero']['subtitle']), styles['cover_body']),
+            editorial_paragraph(payload['hero']['subtitle'], styles['cover_body']),
             Spacer(1, 9 * mm),
-            Paragraph(
-                escape(payload['hero']['trust_note']), styles['cover_body'],
-            ),
+            editorial_paragraph(payload['hero']['trust_note'], styles['cover_body']),
             Spacer(1, 13 * mm),
             Paragraph(
                 f'{payload["financing_months"]} months · 0% ordinary interest · '
@@ -178,9 +178,9 @@ class FinancingPdfService:
         option_cells = []
         for option in payload['options']:
             option_cells.append([
-                Paragraph(escape(option['badge']), styles['number']),
-                Paragraph(escape(option['name']), styles['heading']),
-                Paragraph(escape(option['summary']), styles['body']),
+                editorial_paragraph(option['badge'], styles['number']),
+                editorial_paragraph(option['name'], styles['heading']),
+                editorial_paragraph(option['summary'], styles['body']),
                 cls._bullet_list(option['highlights'], styles),
             ])
         table = Table([option_cells], colWidths=[80 * mm, 80 * mm])
@@ -215,12 +215,12 @@ class FinancingPdfService:
                     f'{escape(condition["number"])} · {escape(condition["title"])}',
                     styles['heading'],
                 ),
-                Paragraph(escape(condition['summary']), styles['body']),
+                editorial_paragraph(condition['summary'], styles['body']),
                 Paragraph(
                     'Why it makes sense' if english else 'Por qué tiene sentido',
                     styles['small_heading'],
                 ),
-                Paragraph(escape(condition['commercial_reason']), styles['body']),
+                editorial_paragraph(condition['commercial_reason'], styles['body']),
                 cls._bullet_list(condition['highlights'], styles),
             ]
             story.append(cls._content_table(content, BONE))
@@ -234,11 +234,11 @@ class FinancingPdfService:
         calculator = payload['calculator']
         package = payload['package']
         input_box = [
-            Paragraph(escape(calculator['input']['title']), styles['heading']),
+            editorial_paragraph(calculator['input']['title'], styles['heading']),
             cls._bullet_list(calculator['input']['items'], styles),
         ]
         output_box = [
-            Paragraph(escape(calculator['output']['title']), styles['heading']),
+            editorial_paragraph(calculator['output']['title'], styles['heading']),
             cls._bullet_list(calculator['output']['items'], styles),
         ]
         io_table = Table([[input_box, output_box]], colWidths=[80 * mm, 80 * mm])
@@ -254,14 +254,14 @@ class FinancingPdfService:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
         ]))
         return [
-            Paragraph(escape(calculator['title']), styles['section']),
-            Paragraph(escape(calculator['summary']), styles['body']),
+            editorial_paragraph(calculator['title'], styles['section']),
+            editorial_paragraph(calculator['summary'], styles['body']),
             Spacer(1, 3 * mm),
             io_table,
             Spacer(1, 3 * mm),
-            Paragraph(escape(calculator['disclaimer']), styles['muted']),
+            editorial_paragraph(calculator['disclaimer'], styles['muted']),
             Spacer(1, 8 * mm),
-            Paragraph(escape(package['title']), styles['section']),
+            editorial_paragraph(package['title'], styles['section']),
             cls._text_card(
                 f'{package["name"]} · {package["hours"]} h',
                 package['summary'],
@@ -304,8 +304,8 @@ class FinancingPdfService:
         ]
         for term in payload['legal_terms']:
             story.append(KeepTogether([
-                Paragraph(escape(term['title']), styles['heading']),
-                Paragraph(escape(term['summary']), styles['muted']),
+                editorial_paragraph(term['title'], styles['heading']),
+                editorial_paragraph(term['summary'], styles['muted']),
                 cls._bullet_list(term['items'], styles),
                 Spacer(1, 4 * mm),
             ]))
@@ -316,7 +316,7 @@ class FinancingPdfService:
                 background=ESMERALD_LIGHT,
             ),
             Spacer(1, 3 * mm),
-            Paragraph(escape(payload['disclaimer']), styles['muted']),
+            editorial_paragraph(payload['disclaimer'], styles['muted']),
         ])
         return story
 
@@ -324,7 +324,7 @@ class FinancingPdfService:
     def _bullet_list(items, styles):
         return ListFlowable(
             [
-                ListItem(Paragraph(escape(item), styles['body']), leftIndent=8)
+                ListItem(editorial_paragraph(item, styles['body']), leftIndent=8)
                 for item in items
             ],
             bulletType='bullet',
@@ -335,8 +335,8 @@ class FinancingPdfService:
     @classmethod
     def _text_card(cls, title, text, styles, *, background):
         return cls._content_table([
-            Paragraph(escape(title), styles['heading']),
-            Paragraph(escape(text), styles['body']),
+            editorial_paragraph(title, styles['heading']),
+            editorial_paragraph(text, styles['body']),
         ], background)
 
     @staticmethod

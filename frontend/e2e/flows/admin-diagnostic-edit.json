@@ -6,7 +6,7 @@
     "admin"
   ],
   "priority": "P2",
-  "description": "Admin edits top-level metadata of an existing WebAppDiagnostic from the General tab: title, client (via ClientAutocomplete) + client-snapshot fields (name/email/phone/company) + propagate-to-profile checkbox, language, investment amount + currency, payment terms (initial/final pct), duration label, and size category. Changes are saved via PATCH /api/diagnostics/:id/update/. Radiografía data is edited as a regular section from the Secciones tab. Section content is edited separately under admin-diagnostic-sections; full-JSON round-trip lives under admin-diagnostic-json-export / admin-diagnostic-json-import.",
+  "description": "Admin edits top-level metadata of an existing WebAppDiagnostic from the General tab: title, client (via ClientAutocomplete) + client-snapshot fields (name/email/phone/company) + propagate-to-profile checkbox, language, investment amount + currency, payment terms (initial/final pct), duration label, and size category. Changes are saved via PATCH /api/diagnostics/:id/update/. Radiografía data is edited as a regular section from the Secciones tab. Section content is edited separately under admin-diagnostic-sections; full-JSON round-trip lives under admin-diagnostic-json-export / admin-diagnostic-json-import. Las narrativas y listas admiten modos Visual y Fuente Markdown, con formato conservado en la presentación pública, el correo y el PDF.",
   "expectedSpecs": 1,
   "outcomes": [
     "success",

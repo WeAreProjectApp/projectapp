@@ -10,7 +10,7 @@
         </h2>
       </div>
 
-      <p data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-12" v-html="linkify(intro)" />
+      <div data-animate="fade-up" class="text-text-default/80 font-light leading-relaxed text-lg md:text-xl mb-12" v-html="linkify(intro, text_formats?.['/intro'])" />
 
       <!-- Vertical timeline -->
       <div class="relative">
@@ -41,9 +41,7 @@
                     {{ currentLabel }}
                   </span>
                 </div>
-                <p class="font-light leading-relaxed text-sm md:text-base" :class="stage.current ? 'text-white/90' : 'text-text-default/70'">
-                  {{ stage.description }}
-                </p>
+                <BaseRichTextContent class="font-light leading-relaxed text-sm md:text-base" :class="stage.current ? 'text-white/90' : 'text-text-default/70'" :source="stage.description" :format="stage.text_formats?.['/description'] || 'plain'" />
               </div>
               <div class="flex-shrink-0 font-light tracking-[0.25em] text-xs pt-1" :class="stage.current ? 'text-white' : 'text-green-light'">
                 {{ String(idx + 1).padStart(2, '0') }}
@@ -65,6 +63,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   index: {
     type: String,
     default: '06'

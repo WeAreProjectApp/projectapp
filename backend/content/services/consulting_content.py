@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
+from content.services.editorial_contract import editorial_object_schema, prepare_editorial_object, restore_editorial_object
 
 
 class ConsultingError(ValueError):
@@ -21,8 +22,7 @@ def _text(maximum):
 
 
 def _object(properties):
-    return {'type': 'object', 'additionalProperties': False,
-            'properties': properties, 'required': list(properties)}
+    return editorial_object_schema(properties)
 
 
 def _cards(minimum=1, maximum=8):
@@ -55,10 +55,12 @@ def _invalid(path, message):
 
 def _validate(value, spec, path):
     if spec['type'] == 'object':
-        if not isinstance(value, dict) or set(value) != set(spec['properties']):
+        value, editorial = prepare_editorial_object(value, spec, _invalid, path)
+        fields = {key: child for key, child in spec['properties'].items() if key != 'text_formats'}
+        if not isinstance(value, dict) or set(value) != set(fields):
             _invalid(path, 'Incluye los campos requeridos sin campos desconocidos.')
-        return {key: _validate(value[key], child, f'{path}.{key}')
-                for key, child in spec['properties'].items()}
+        return restore_editorial_object({key: _validate(value[key], child, f'{path}.{key}')
+                for key, child in fields.items()}, editorial)
     if spec['type'] == 'array':
         if not isinstance(value, list) or not spec['minItems'] <= len(value) <= spec['maxItems']:
             _invalid(path, f'Usa entre {spec["minItems"]} y {spec["maxItems"]} elementos.')
@@ -67,7 +69,7 @@ def _validate(value, spec, path):
         if len(set(ids)) != len(ids):
             _invalid(path, 'No repitas ids en la lista.')
         return result
-    if not isinstance(value, str) or not 1 <= len(value.strip()) <= spec['maxLength']:
+    if not isinstance(value, str) or not 1 <= len(value.strip()) <= spec.get('x-editorial-max-visible-length', spec['maxLength']):
         _invalid(path, 'El texto es obligatorio y debe respetar su longitud máxima.')
     value = value.strip()
     if re.search(r'<[^>]*>', value):
@@ -80,6 +82,8 @@ def _validate(value, spec, path):
 def _alignment(es, en, spec, path):
     if spec['type'] == 'object':
         for key, child in spec['properties'].items():
+            if key == 'text_formats':
+                continue
             if key == 'id' and es[key] != en[key]:
                 _invalid(path, 'Conserva los mismos ids y orden en ambos idiomas.')
             _alignment(es[key], en[key], child, f'{path}.{key}')

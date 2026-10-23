@@ -26,7 +26,7 @@
               {{ index + 1 }}
             </div>
             <h3 class="text-xl font-bold text-text-brand mb-3">{{ step.title }}</h3>
-            <p class="text-text-default/70 font-light leading-relaxed">{{ step.description }}</p>
+            <BaseRichTextContent class="text-text-default/70 font-light leading-relaxed" :source="step.description" :format="step.text_formats?.['/description'] || 'plain'" />
           </div>
         </div>
       </div>
@@ -36,7 +36,7 @@
         <p class="text-base sm:text-xl text-primary mb-6 sm:mb-8 max-w-2xl mx-auto">
           {{ ctaMessage }}
         </p>
-        
+
         <div class="cta-buttons flex flex-col md:flex-row gap-4 justify-center">
           <a :href="primaryCTA.link"
              target="_blank"
@@ -46,7 +46,7 @@
             </svg>
             {{ primaryCTA.text }}
           </a>
-          
+
           <button
              type="button"
              data-cal-link="projectapp/discovery-call-projectapp"

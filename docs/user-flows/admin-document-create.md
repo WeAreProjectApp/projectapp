@@ -30,3 +30,6 @@
   - [Failure — servidor] Un fallo 5xx conserva todas las notas en el formulario para reintentar sin volver a redactarlas.
 - **Coverage:** ✅ Covered (paste, carga de archivo, asociaciones, selector de carpeta y notas privadas en display/success/error/failure; las casillas de portada y el estilo viajan en el mismo payload, pero se auditan en sus flows específicos).
 - **E2E Spec:** `e2e/admin/admin-document-create.spec.js`
+
+- **Formato editorial:** El contenido admite modos Visual y Fuente Markdown, listas, tablas, colores y alineación; el guardado conserva la fuente única y su declaración de formato.
+- **E2E editorial:** `e2e/admin/editorial-rich-text-documents.spec.js` (crear y alternar Visual/Fuente antes de guardar y reabrir).

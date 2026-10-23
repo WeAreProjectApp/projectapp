@@ -10,6 +10,7 @@ import { mockApi } from '../helpers/api.js';
 import { selectProposalDestination } from '../helpers/proposal-navigation.js';
 import { setAuthLocalStorage } from '../helpers/auth.js';
 import { ADMIN_PROPOSAL_ATTACH_FROM_DOCUMENTS } from '../helpers/flow-tags.js';
+import { fillRichTextSource, richTextEditorByPlaceholder } from '../helpers/editorial.js';
 
 const PROPOSAL_ID = 9;
 
@@ -201,7 +202,7 @@ test.describe('Admin Proposal — Adjuntar desde Documentos', () => {
 
     // Fill required fields — subject is not auto-filled from defaults in proposal mode
     await page.getByPlaceholder('Asunto del correo').fill('Asunto de prueba');
-    await page.locator('textarea[placeholder="Escribe el contenido de esta sección..."]').fill('Contenido del correo de prueba.');
+    await fillRichTextSource(richTextEditorByPlaceholder(page, 'Escribe el contenido de esta sección...'), 'Contenido del correo de prueba.');
 
     // Attach a document
     await page.getByRole('button', { name: /Adjuntar desde Documentos/i }).click();

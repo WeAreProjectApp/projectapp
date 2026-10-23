@@ -27,14 +27,14 @@
         <p class="mb-2 text-xs leading-relaxed text-text-muted">
           Explica de forma puntual el problema del cliente, cómo lo resuelve esta propuesta y el resultado de negocio esperado.
         </p>
-        <BaseTextarea
+        <BaseRichTextEditor
           id="proposal-resend-email-intro"
           v-model="messageDraft"
           :rows="7"
           :error="Boolean(errorMessage)"
           placeholder="Ej. Esta propuesta resuelve… mediante… para lograr…"
           data-testid="proposal-resend-email-intro"
-        />
+         />
         <p class="mt-1 text-xs text-text-subtle">Texto plano. Se permiten saltos de línea; no HTML ni Markdown.</p>
       </div>
 

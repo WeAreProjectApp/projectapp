@@ -19,6 +19,7 @@ class PdfSection:
     title: str
     order: int
     content_json: dict
+    text_formats: dict
 
 
 class FormalContent:
@@ -27,7 +28,13 @@ class FormalContent:
     def __init__(self, proposal):
         self.proposal = proposal
         self.sections = [
-            PdfSection(sec.section_type, sec.title, sec.order, deepcopy(sec.content_json or {}))
+            PdfSection(
+                sec.section_type,
+                sec.title,
+                sec.order,
+                deepcopy(sec.content_json or {}),
+                deepcopy(sec.text_formats or {}),
+            )
             for sec in sorted(proposal.sections.all(), key=lambda section: section.order)
             if sec.is_enabled
         ]

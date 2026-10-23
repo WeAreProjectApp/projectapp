@@ -27,10 +27,10 @@
 
           <!-- Body -->
           <div class="overflow-y-auto px-6 py-6 flex-1">
-            <p
+            <div
               v-if="group.description"
               class="text-text-default/80 font-light leading-relaxed text-base mb-8"
-              v-html="linkify(group.description)"
+              v-html="linkify(group.description, group.text_formats?.['/description'])"
             />
 
             <div v-if="group.items && group.items.length" class="grid md:grid-cols-2 gap-4">
@@ -42,7 +42,7 @@
                   </div>
                   <div>
                     <h4 class="font-bold text-text-brand mb-1">{{ item.name }}</h4>
-                    <p class="text-sm text-text-default/70 font-light" v-html="linkify(item.description)" />
+                    <div class="text-sm text-text-default/70 font-light" v-html="linkify(item.description, item.text_formats?.['/description'])" />
                     <button
                       v-if="linkedRequirements(item).length"
                       type="button"
@@ -83,6 +83,7 @@ import LinkedRequirementsModal from '~/components/BusinessProposal/LinkedRequire
 const { isDark } = useProposalDarkMode();
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   visible: {
     type: Boolean,
     default: false,

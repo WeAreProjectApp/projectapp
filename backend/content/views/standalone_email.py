@@ -1,3 +1,4 @@
+from content.services.editorial_email import email_formats
 """
 Standalone branded email endpoints — send, defaults, history.
 
@@ -28,12 +29,14 @@ _MAX_FILE = 15 * 1024 * 1024  # 15 MB
 _TEMPLATE_KEY = 'branded_email'
 
 
-def _parse_sections_field(raw_sections):
+def _parse_sections_field(raw_sections, *, strict_editorial=False):
     """Parse a request ``sections`` field (JSON string or list).
 
     Returns ``(sections, error_message)`` where ``sections`` is the
-    normalized ``[{'text', 'markdown'}]`` list. Accepts the legacy
-    plain-string shape and the new ``{text, markdown}`` dicts.
+    normalized list. Accepts the legacy plain-string shape and the new
+    ``{text, markdown}`` dicts. ``strict_editorial`` identifies submissions
+    from the Visual/Source editor, validates their source without lossy
+    sanitizing, and records the versioned format for later rendering.
     """
     from content.services.email_markdown import normalize_sections
 
@@ -45,7 +48,10 @@ def _parse_sections_field(raw_sections):
         sections = []
     if not isinstance(sections, list):
         return None, 'Las secciones deben ser un JSON válido.'
-    return normalize_sections(sections), None
+    return normalize_sections(
+        sections,
+        strict_editorial=strict_editorial,
+    ), None
 
 
 def _parse_standalone_email(request):
@@ -88,9 +94,13 @@ def _parse_standalone_email(request):
 
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
 
     # ── Sections (JSON-encoded string in multipart) ──
-    sections, sections_error = _parse_sections_field(request.data.get('sections', '[]'))
+    sections, sections_error = _parse_sections_field(
+        request.data.get('sections', '[]'),
+        strict_editorial='text_formats' in request.data,
+    )
     if sections_error:
         return None, Response(
             {'error': sections_error},
@@ -179,6 +189,7 @@ def _parse_standalone_email(request):
         'greeting': greeting,
         'sections': sections,
         'footer': footer,
+        'text_formats': text_formats,
         'attachments': attachments or None,
         'attachment_sources': attachment_sources,
         'document_targets': document_targets,
@@ -201,6 +212,7 @@ def send_standalone_email(request):
         greeting=parsed['greeting'],
         sections=parsed['sections'],
         footer=parsed['footer'],
+        text_formats=parsed.get('text_formats'),
         attachments=parsed['attachments'],
         attachment_sources=parsed['attachment_sources'],
         targets=parsed['document_targets'],
@@ -244,8 +256,12 @@ def preview_composed_email(request):
     subject = (request.data.get('subject') or '').strip()
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
 
-    sections, sections_error = _parse_sections_field(request.data.get('sections', []))
+    sections, sections_error = _parse_sections_field(
+        request.data.get('sections', []),
+        strict_editorial='text_formats' in request.data,
+    )
     if sections_error:
         return Response(
             {'error': sections_error},
@@ -266,7 +282,7 @@ def preview_composed_email(request):
     from content.services.proposal_email_service import ProposalEmailService
     html_content, _ = ProposalEmailService.render_composed_email(
         _TEMPLATE_KEY, proposal, subject, greeting,
-        sections, footer, attachment_names,
+        sections, footer, attachment_names, text_formats=text_formats,
     )
     return Response(
         {'subject': subject, 'html_preview': html_content},
@@ -312,6 +328,7 @@ def _defaults_payload():
             'greeting': overrides.get('greeting') or defaults.get('greeting', ''),
             'footer': overrides.get('footer') or defaults.get('footer', ''),
             'signer': overrides.get('signer') or default_signer,
+            'text_formats': {path.removeprefix('/content_overrides'): fmt for path, fmt in (config.text_formats if config else {}).items()},
         },
         'defaults': {
             'greeting': defaults.get('greeting', ''),
@@ -342,6 +359,7 @@ def standalone_email_defaults(request):
 
     greeting = (request.data.get('greeting') or '').strip()
     footer = (request.data.get('footer') or '').strip()
+    text_formats = email_formats(request.data.get('text_formats'), {'greeting': greeting, 'footer': footer})
     signer = (request.data.get('signer') or '').strip()
 
     signatures = getattr(settings, 'EMAIL_SIGNATURES', {}) or {}
@@ -363,13 +381,16 @@ def standalone_email_defaults(request):
         overrides['signer'] = signer
 
     config = EmailTemplateConfig.objects.filter(template_key=_TEMPLATE_KEY).first()
+    stored_formats = {'/content_overrides' + path: fmt for path, fmt in text_formats.items() if path[1:] in overrides}
     if config:
         config.content_overrides = overrides
-        config.save(update_fields=['content_overrides', 'updated_at'])
+        config.text_formats = stored_formats
+        config.save(update_fields=['content_overrides', 'text_formats', 'updated_at'])
     elif overrides:
         EmailTemplateConfig.objects.create(
             template_key=_TEMPLATE_KEY,
             content_overrides=overrides,
+            text_formats=stored_formats,
         )
 
     return Response(_defaults_payload(), status=status.HTTP_200_OK)

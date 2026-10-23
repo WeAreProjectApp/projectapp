@@ -3,6 +3,7 @@ import hashlib
 import json
 import re
 from copy import deepcopy
+from content.services.editorial_contract import editorial_object_schema, prepare_editorial_object, restore_editorial_object
 from datetime import date
 from urllib.parse import urlsplit
 
@@ -57,8 +58,10 @@ def _boolean(description):
 
 
 def _object(fields, description, *, partial=False):
-    spec = {'type': 'object', 'additionalProperties': False, 'properties': fields, 'description': description}
+    spec = editorial_object_schema(fields)
+    spec['description'] = description
     if partial:
+        spec.pop('required', None)
         spec['minProperties'] = 1
     else:
         spec['required'] = list(fields)
@@ -283,7 +286,7 @@ def _validate_string(value, spec, path, public_text):
             'La presentación pública no admite porcentajes ni importes.',
             code='PUBLIC_FIGURE_NOT_ALLOWED', details={'path': path},
         )
-    if len(value) < spec.get('minLength', 0) or len(value) > spec.get('maxLength', float('inf')):
+    if len(value) < spec.get('minLength', 0) or len(value) > spec.get('x-editorial-max-visible-length', spec.get('maxLength', float('inf'))):
         _invalid(path, 'El texto es obligatorio y debe respetar la longitud máxima.')
     if 'pattern' in spec and not re.search(spec['pattern'], value):
         _invalid(path, 'id debe ser un slug en minúsculas.' if is_id else 'El texto no tiene el formato requerido.')
@@ -306,7 +309,8 @@ def _validate_string(value, spec, path, public_text):
 def _validate_object(value, spec, path, public_text):
     if not isinstance(value, dict):
         _invalid(path, 'Debe ser un objeto.')
-    fields = spec.get('properties', {})
+    value, editorial = prepare_editorial_object(value, spec, _invalid, path)
+    fields = {key: child for key, child in spec.get('properties', {}).items() if key != 'text_formats'}
     patterns = spec.get('patternProperties', {})
     if not set(spec.get('required', ())).issubset(value):
         _invalid(path, 'Incluye todos los campos requeridos y ningún campo desconocido.')
@@ -337,10 +341,10 @@ def _validate_object(value, spec, path, public_text):
             child, child_spec, _child_path(path, normalized_key),
             public_text=public_text or (normalized_key in fields and normalized_key in ('es', 'en')),
         )
-    return {
+    return restore_editorial_object({
         **{key: result[key] for key in fields if key in result},
         **{key: child for key, child in result.items() if key not in fields},
-    }
+    }, editorial)
 
 
 def validate_schema(value, schema, path='', public_text=False):
@@ -387,6 +391,8 @@ def validate_schema(value, schema, path='', public_text=False):
 def _validate_alignment(es, en, spec, path):
     if spec['type'] == 'object':
         for key, child in spec['properties'].items():
+            if key == 'text_formats':
+                continue
             if key == 'id' and es[key] != en[key]:
                 _invalid(_child_path(path, key), 'Los ids deben coincidir entre idiomas y conservar su orden.')
             _validate_alignment(es[key], en[key], child, _child_path(path, key))

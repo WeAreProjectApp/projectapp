@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="5" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.intro" label="Introducción" :rows="3" :isSingle="true" />
+  <FieldTextarea v-model="form.intro" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" label="Introducción" :rows="3" :isSingle="true" />
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Pasos del proceso</label>
     <draggable v-model="form.steps" item-key="_idx" handle=".drag-handle" ghost-class="opacity-30">

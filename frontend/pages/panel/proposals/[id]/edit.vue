@@ -462,6 +462,7 @@
 </template>
 
 <script setup>
+import { normalizeEditorialFeatures, remapEditorialArrayFormats } from '~/utils/editorialMetadata';
 import { computed, defineAsyncComponent, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
 // General is the default tab: keep it static so the first paint needs no
 // extra round-trip. Every other tab panel is only mounted once visited
@@ -799,6 +800,7 @@ const form = reactive({
   show_contract_terms: true,
   show_explainer_video: true,
   email_intro: '',
+  text_formats: {},
   email_features: [],
   email_method_phases: [],
   email_signed_by: 'gustavo',
@@ -1092,6 +1094,7 @@ function hydrateFormFromProposal() {
     show_contract_terms: proposal.value.show_contract_terms ?? true,
     show_explainer_video: proposal.value.show_explainer_video ?? true,
     email_intro: proposal.value.email_intro || '',
+    text_formats: { ...proposal.value.text_formats },
     email_features: Array.isArray(proposal.value.email_features) ? [...proposal.value.email_features] : [],
     email_method_phases: Array.isArray(proposal.value.email_method_phases) && proposal.value.email_method_phases.length
       ? proposal.value.email_method_phases.map((p) => ({ ...p }))
@@ -1226,9 +1229,7 @@ async function toggleContractTerms() {
 }
 
 function sanitizeEmailMetadata(payload) {
-  payload.email_features = (payload.email_features || [])
-    .map((f) => (typeof f === 'string' ? f.trim() : ''))
-    .filter(Boolean);
+  normalizeEditorialFeatures(payload);
   payload.email_method_phases = (payload.email_method_phases || []).map((p) => ({
     number: (p.number || '').trim(),
     title: (p.title || '').trim(),
@@ -1239,7 +1240,7 @@ function sanitizeEmailMetadata(payload) {
 }
 
 const CLIENT_FIELDS = ['client_id', 'client_name', 'client_email', 'client_phone', 'client_company'];
-const EMAIL_FIELDS = ['email_features', 'email_method_phases', 'email_signed_by'];
+const EMAIL_FIELDS = ['email_features', 'email_method_phases', 'email_signed_by', 'text_formats'];
 async function saveFormFields(fields, extra = {}) {
   if (proposalStore.isUpdating) return false;
   const submitted = JSON.parse(JSON.stringify(Object.fromEntries(fields.map(key => [key, form[key]]))));

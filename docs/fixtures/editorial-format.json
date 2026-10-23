@@ -1,0 +1,114 @@
+[
+  {
+    "name": "document-emphasis",
+    "profile": "document",
+    "source": "**Bold** and *italic* with ~~strike~~",
+    "expected_text": "Bold and italic with strike",
+    "expected_fragments": ["<strong>Bold</strong>", "<em>italic</em>"]
+  },
+  {
+    "name": "document-list-numbering",
+    "profile": "document",
+    "source": "7. First\n8. Second",
+    "expected_text": "First\nSecond",
+    "expected_fragments": ["start=\"7\""]
+  },
+  {
+    "name": "document-mixed-nested-lists",
+    "profile": "document",
+    "source": "- Parent\n  - Child\n    1. Nested",
+    "expected_text": "Parent\nChild\nNested",
+    "expected_fragments": ["<ul>", "<ol>"]
+  },
+  {
+    "name": "document-color-alignment",
+    "profile": "document",
+    "source": "<p style=\"text-align: justify\"><span style=\"color: #ff0000\"><strong>Red</strong></span> text</p>",
+    "expected_text": "Red text",
+    "expected_fragments": ["text-align: justify", "<strong>Red</strong>"]
+  },
+  {
+    "name": "document-highlight-underline",
+    "profile": "document",
+    "source": "<p><mark style=\"background-color: #ffff00\">Marked</mark> <u>line</u></p>",
+    "expected_text": "Marked line",
+    "expected_fragments": ["background-color:", "<u>line</u>"]
+  },
+  {
+    "name": "document-table",
+    "profile": "document",
+    "source": "| Name | Value |\n| --- | --- |\n| A | **B** |",
+    "expected_text": "Name\tValue\nA\tB",
+    "expected_fragments": ["<table>", "<strong>B</strong>"]
+  },
+  {
+    "name": "document-callout",
+    "profile": "document",
+    "source": "> [!WARNING]\n> Important **text**",
+    "expected_text": "Important text",
+    "expected_fragments": ["data-callout=\"WARNING\"", "<strong>text</strong>"]
+  },
+  {
+    "name": "document-table-column-alignment",
+    "profile": "document",
+    "source": "| Left | Center | Right |\n| :--- | :---: | ---: |\n| A | B | C |",
+    "expected_text": "Left\tCenter\tRight\nA\tB\tC",
+    "expected_fragments": ["text-align: left", "text-align: center", "text-align: right"]
+  },
+  {
+    "name": "document-toc",
+    "profile": "document",
+    "source": "[TOC]",
+    "expected_text": "[TOC]",
+    "expected_fragments": ["data-editor-block=\"toc\""]
+  },
+  {
+    "name": "document-code",
+    "profile": "document",
+    "source": "```js\nconst tag = \"<script>\";\n```",
+    "expected_text": "const tag = \"<script>\";",
+    "expected_fragments": ["language-js", "&lt;script&gt;"]
+  },
+  {
+    "name": "whatsapp-emphasis",
+    "profile": "whatsapp",
+    "source": "*Bold* _Italic_ ~Removed~",
+    "expected_text": "Bold Italic Removed",
+    "expected_fragments": ["<strong>Bold</strong>", "<em>Italic</em>"]
+  },
+  {
+    "name": "whatsapp-protected-code",
+    "profile": "whatsapp",
+    "source": "`*word* _value_ ~value~`",
+    "expected_text": "*word* _value_ ~value~",
+    "expected_fragments": ["<code>*word* _value_ ~value~</code>"]
+  },
+  {
+    "name": "whatsapp-single-line-break",
+    "profile": "whatsapp",
+    "source": "First\nSecond",
+    "expected_text": "First\nSecond",
+    "expected_fragments": ["<br>"]
+  },
+  {
+    "name": "whatsapp-plain-url",
+    "profile": "whatsapp",
+    "source": "https://example.com and hello@example.com",
+    "expected_text": "https://example.com and hello@example.com",
+    "expected_fragments": ["https://example.com", "hello@example.com"]
+  },
+  {
+    "name": "whatsapp-literal-html",
+    "profile": "whatsapp",
+    "source": "<b>Literal</b>",
+    "expected_text": "<b>Literal</b>",
+    "expected_fragments": ["&lt;b&gt;Literal&lt;/b&gt;"]
+  },
+  {
+    "name": "whatsapp-numbered-list",
+    "profile": "whatsapp",
+    "source": "7. First\n8. Second",
+    "expected_text": "First\nSecond",
+    "expected_fragments": ["start=\"7\""]
+  }
+]

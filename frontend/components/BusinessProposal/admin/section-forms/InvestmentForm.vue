@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="9" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.introText" label="Texto introductorio" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.introText" :format="form.text_formats?.['/introText'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/introText': $event }" label="Texto introductorio" :rows="2" :isSingle="true" />
   <div class="bg-info-soft border border-info-strong/30 rounded-xl px-4 py-3 text-sm text-info-strong">
     💰 <strong>Inversión total:</strong> ${{ Number(proposalData?.total_investment || 0).toLocaleString() }} {{ proposalData?.currency || 'COP' }}
     <span class="text-xs text-info-strong ml-2">(se edita en la pestaña "General")</span>
@@ -51,8 +51,8 @@
     </draggable>
     <button type="button" class="inline-flex items-center gap-1 text-xs text-text-brand font-medium" @click="form.paymentOptions.push({ label: '', description: '' })"><BaseActionIcon action="create" /> Agregar opción</button>
   </div>
-  <FieldTextarea v-model="form.paymentMethods" label="Métodos de pago" help="Uno por línea" :rows="3" />
-  <FieldTextarea v-model="form.valueReasons" label="Razones de valor" help="Una por línea" :rows="3" />
+  <FieldTextarea v-model="form.paymentMethods" :lines="true" format-path="/paymentMethods" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" label="Métodos de pago" help="Uno por línea" :rows="3" />
+  <FieldTextarea v-model="form.valueReasons" :lines="true" format-path="/valueReasons" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" label="Razones de valor" help="Una por línea" :rows="3" />
 
   <!-- Hosting Plan -->
   <div class="mt-4 border border-border-default dark:border-white/[0.08] rounded-xl overflow-hidden">
@@ -65,7 +65,7 @@
     </div>
     <div v-show="!hostingCollapsed" class="p-4 space-y-4">
       <FieldInput v-model="form.hostingPlan.title" label="Título" placeholder="Hosting, Mantenimiento y Soporte" />
-      <FieldTextarea v-model="form.hostingPlan.description" label="Descripción" :rows="2" :isSingle="true" />
+      <FieldTextarea v-model="form.hostingPlan.description" :format="form.hostingPlan.text_formats?.['/description'] || 'plain'" @update:format="form.hostingPlan.text_formats = { ...form.hostingPlan.text_formats, '/description': $event }" label="Descripción" :rows="2" :isSingle="true" />
       <div>
         <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Especificaciones</label>
         <draggable v-model="form.hostingPlan.specs" item-key="_idx" handle=".drag-handle" ghost-class="opacity-30">
@@ -113,8 +113,8 @@
           </div>
         </div>
       </div>
-      <FieldTextarea v-model="form.hostingPlan.renewalNote" label="Nota de renovación (visible al cliente)" help="Fórmula de incremento anual, SMLMV, etc." :rows="3" />
-      <FieldTextarea v-model="form.hostingPlan.coverageNote" label="Nota de cobertura (solo PDF)" help="Descripción de los 3 componentes del hosting (mantenimiento, soporte, recursos)" :rows="3" />
+      <FieldTextarea v-model="form.hostingPlan.renewalNote" :format="form.hostingPlan.text_formats?.['/renewalNote'] || 'plain'" @update:format="form.hostingPlan.text_formats = { ...form.hostingPlan.text_formats, '/renewalNote': $event }" label="Nota de renovación (visible al cliente)" help="Fórmula de incremento anual, SMLMV, etc." :rows="3" />
+      <FieldTextarea v-model="form.hostingPlan.coverageNote" :format="form.hostingPlan.text_formats?.['/coverageNote'] || 'plain'" @update:format="form.hostingPlan.text_formats = { ...form.hostingPlan.text_formats, '/coverageNote': $event }" label="Nota de cobertura (solo PDF)" help="Descripción de los 3 componentes del hosting (mantenimiento, soporte, recursos)" :rows="3" />
       <!-- Free months: count, visibility and copy travel together -->
       <div>
         <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Meses gratis de hosting</label>
@@ -125,7 +125,7 @@
         <p v-if="showFreeMonthsZeroHint" role="status" class="mt-2 text-xs text-warning-strong">
           ⚠️ Con 0 meses el bloque se muestra igual, pero el título va sin número. Revisa que el texto tenga sentido.
         </p>
-        <FieldTextarea v-model="form.hostingPlan.freeMonthNote" label="Texto del bloque (web y PDF)" help="Viene con el texto por defecto según el idioma. Edítalo para personalizarlo; para esconder el bloque usa la casilla." :rows="3" class="mt-4" />
+        <FieldTextarea v-model="form.hostingPlan.freeMonthNote" :format="form.hostingPlan.text_formats?.['/freeMonthNote'] || 'plain'" @update:format="form.hostingPlan.text_formats = { ...form.hostingPlan.text_formats, '/freeMonthNote': $event }" label="Texto del bloque (web y PDF)" help="Viene con el texto por defecto según el idioma. Edítalo para personalizarlo; para esconder el bloque usa la casilla." :rows="3" class="mt-4" />
       </div>
     </div>
   </div>

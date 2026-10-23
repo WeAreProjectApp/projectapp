@@ -1,3 +1,5 @@
+from content.services.editorial_format import validate_formats
+from content.mcp.editorial_schemas import TEXT_FORMATS_SCHEMA
 """
 Tool registry for the Documents MCP connector.
 
@@ -361,6 +363,7 @@ def _doc_detail(doc):
         'proposal_source': _shared_summary(doc),
         **mirror_metadata(doc),
         'markdown': markdown,
+        'text_formats': doc.text_formats,
         'client_email_subject': doc.client_email_subject,
         'client_email_body': doc.client_email_body,
         'client_whatsapp_message': doc.client_whatsapp_message,
@@ -372,6 +375,7 @@ def _doc_detail(doc):
                 'id': note.id,
                 'title': note.title,
                 'content': note.content,
+                'text_formats': note.text_formats,
                 'status': note.status,
                 'episode_id': note.episode_id,
                 'resolution_note': note.resolution_note,
@@ -420,6 +424,7 @@ _COVER_FLAG_PROPS = {
 }
 
 _CLIENT_NOTE_PROPS = {
+    'text_formats': TEXT_FORMATS_SCHEMA,
     'client_email_subject': {
         'type': 'string',
         'maxLength': 255,
@@ -441,6 +446,7 @@ _CLIENT_NOTE_PROPS = {
             'properties': {
                 'title': {'type': 'string', 'maxLength': 255},
                 'content': {'type': 'string'},
+                'text_formats': TEXT_FORMATS_SCHEMA,
             },
             'required': ['title', 'content'],
             'additionalProperties': False,
@@ -609,6 +615,7 @@ def create_document(arguments):
         updated_by=actor,
         **association_data,
     )
+    doc.text_formats = validate_formats('document', doc.__dict__, arguments.get('text_formats', {}))
     doc.content_json = build_content_json(doc, markdown_text)
     doc.save()
     return document_write_payload(doc, include_content=arguments.get('include_content', False))
@@ -725,6 +732,10 @@ def update_document(arguments):
             raise ToolError('markdown debe ser texto no vacío.')
         doc.content_markdown = markdown_text
         update_fields.add('content_markdown')
+
+    if 'text_formats' in arguments or doc.text_formats:
+        doc.text_formats = validate_formats('document', doc.__dict__, arguments.get('text_formats', doc.text_formats))
+        update_fields.add('text_formats')
 
     if not update_fields:
         raise ToolError(
@@ -889,6 +900,7 @@ def _note_payload(note):
         'episode_id': note.episode_id,
         'title': note.title,
         'content': note.content,
+        'text_formats': note.text_formats,
         'status': note.status,
         'resolution_note': note.resolution_note,
         'resolved_at': (
@@ -919,6 +931,7 @@ def add_document_note(arguments):
             content=content,
             actor=mcp_actor(),
             mark_needs_fix=mark_needs_fix,
+            text_formats=arguments.get('text_formats', {}),
         )
     except (DocumentNoteError, DocumentStateError) as exc:
         raise ToolError(str(exc)) from exc
@@ -1314,7 +1327,8 @@ DOCUMENT_TOOLS = [
             'properties': {
                 **_DOCUMENT_ID_PROP,
                 'title': {'type': 'string', 'maxLength': 120, 'description': 'Título de la observación, hasta 120 caracteres; por defecto vacío.'},
-                'content': {'type': 'string', 'description': 'Contenido privado de la observación; debe ser texto no vacío.'},
+                'content': {'type': 'string', 'description': 'Contenido privado; permite Markdown extendido con HTML limitado si /content declara markdown_html_v1.'},
+                'text_formats': TEXT_FORMATS_SCHEMA,
                 'mark_needs_fix': {'type': 'boolean', 'default': False, 'description': 'Abre o enlaza la señal Solucionar bug; por defecto false.'},
             },
             'required': ['document_id', 'content'],

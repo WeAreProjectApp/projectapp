@@ -59,6 +59,7 @@ LABELS = {
     'description': 'Descripción', 'document_type': 'Tipo de documento',
     'archived_pdf': 'PDF enviado', 'current_state': 'Estado actual',
     'contract_modality': 'Modalidad de cierre',
+    'text_formats': 'Formato de los textos',
 }
 
 
@@ -80,7 +81,10 @@ def entity_model(entity_type):
 
 def tracked_fields(kind):
     if kind in FIELDS:
-        return FIELDS[kind]
+        fields = FIELDS[kind]
+        if any(field.name == 'text_formats' for field in entity_model(kind)._meta.concrete_fields):
+            return [*fields, 'text_formats']
+        return fields
     # Financial snapshots include domain fields omitted by the old notification
     # diff (for example income service periods). Delivery telemetry is excluded.
     excluded = {'id', 'created_at', 'updated_at', 'created_by', 'source_ref',
@@ -148,6 +152,8 @@ def scalar(value):
 def record_values(instance, fields):
     values = {}
     available = {field.name: field for field in instance._meta.concrete_fields}
+    if 'text_formats' in available and 'text_formats' not in fields:
+        fields = [*fields, 'text_formats']
     for name in fields:
         field = available.get(name)
         if not field:

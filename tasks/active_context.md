@@ -1,3 +1,5 @@
+> **Formato editorial — implementación y validación, 2026-10-23:** Tiptap 3.32.0 y Fuente Markdown extendido comparten un único contenido e historial. Metadatos aditivos por texto permiten conservar estilos en panel, lectores, MCP, correos y PDF; los registros sin anotaciones mantienen su interpretación anterior. Contrato e inventario en `docs/EDITORIAL_FORMAT.md`; migraciones 0301–0302 sin aplicar desde la sesión. Corpus compartido, persistencia MCP, correo, PDF y formalización tienen pruebas específicas; el cierre de navegador y CI se verifica en el PR. No acredita despliegue.
+
 # Tablas contables y video de Células Scrum — 2026-10-22
 
 > **Consultoría y asesoría — 2026-10-23:** Consultoría y asesoría incorpora presentación pública bilingüe, PDF y panel informativo junto a Diagnósticos en Comercial. Cinco áreas elegibles y seis caminos medibles, sin gestión de casos ni datos privados de clientes. Publicación y restauración por MCP Comercial con historial inmutable. Migración content.0300 para el despliegue; no ejecutar migrate desde el worktree.

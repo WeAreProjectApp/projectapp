@@ -1,6 +1,7 @@
 import { test, expect } from '../helpers/test.js'
 import { mockApi } from '../helpers/api.js'
 import { setAuthLocalStorage } from '../helpers/auth.js'
+import { fillRichTextSource } from '../helpers/editorial.js'
 import { PANEL_BREAKPOINTS } from '../../config/responsive.js'
 import {
   ADMIN_ADDITIONAL_MODULES_CATALOG,
@@ -139,14 +140,22 @@ async function fillCreateForm(page) {
     'additional-module-what-es': 'Un portal seguro.', 'additional-module-purpose-es': 'Dar autoservicio.',
     'additional-module-problems-es': 'Solicitudes dispersas', 'additional-module-integrations-es': 'CRM',
     'additional-module-requirements-es': 'Accesos del cliente',
-  })) await form.locator(`#${id}`).fill(value)
+  })) {
+    const field = form.getByTestId(id)
+    if (id.includes('-name-')) await field.fill(value)
+    else await fillRichTextSource(field, value)
+  }
   await form.getByRole('tab', { name: 'English' }).click()
   for (const [id, value] of Object.entries({
     'additional-module-name-en': 'Customer portal', 'additional-module-summary-en': 'Centralizes requests.',
     'additional-module-what-en': 'A secure portal.', 'additional-module-purpose-en': 'Enable self-service.',
     'additional-module-problems-en': 'Scattered requests', 'additional-module-integrations-en': 'CRM',
     'additional-module-requirements-en': 'Customer access',
-  })) await form.locator(`#${id}`).fill(value)
+  })) {
+    const field = form.getByTestId(id)
+    if (id.includes('-name-')) await field.fill(value)
+    else await fillRichTextSource(field, value)
+  }
   return form
 }
 

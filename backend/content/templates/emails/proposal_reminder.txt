@@ -1,12 +1,12 @@
-{{ greeting|default:"Hola" }}{% if not greeting %}, {{ client_name }}{% endif %},
+{% load editorial %}{% editorial_plain_value greeting|default:"Hola" "greeting" %}{% if not greeting %}, {{ client_name }}{% endif %},
 
-{{ body|default:"Te recordamos que tu propuesta sigue disponible — sin cambios, sin presión." }}
+{% editorial_plain_value body|default:"Te recordamos que tu propuesta sigue disponible — sin cambios, sin presión." "body" %}
 
 {{ title }}
 {% if total_investment %}Inversión: $ {{ total_investment }} {{ currency|default:"COP" }}
 {% endif %}{% if days_remaining %}Vence en {{ days_remaining }} día{{ days_remaining|pluralize }}.{% endif %}
 
-{{ cta_text|default:"Ver propuesta" }}: {{ proposal_url }}
+{% editorial_plain_value cta_text|default:"Ver propuesta" "cta_text" %}: {{ proposal_url }}
 
 —
 {{ signature_name }}

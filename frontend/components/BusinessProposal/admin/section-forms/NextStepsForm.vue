@@ -3,7 +3,7 @@
     <FieldInput v-model="form.index" label="Índice" placeholder="11" />
     <FieldInput v-model="form.title" label="Título" />
   </div>
-  <FieldTextarea v-model="form.introMessage" label="Mensaje de introducción" :rows="3" :isSingle="true" />
+  <FieldTextarea v-model="form.introMessage" :format="form.text_formats?.['/introMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/introMessage': $event }" label="Mensaje de introducción" :rows="3" :isSingle="true" />
   <div>
     <label class="block text-xs font-medium text-text-muted uppercase tracking-wider mb-2">Pasos</label>
     <draggable v-model="form.steps" item-key="_idx" handle=".drag-handle" ghost-class="opacity-30">
@@ -23,7 +23,7 @@
     </draggable>
     <button type="button" class="inline-flex items-center gap-1 text-xs text-text-brand font-medium" @click="form.steps.push({ title: '', description: '' })"><BaseActionIcon action="create" /> Agregar paso</button>
   </div>
-  <FieldTextarea v-model="form.ctaMessage" label="Mensaje CTA" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.ctaMessage" :format="form.text_formats?.['/ctaMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/ctaMessage': $event }" label="Mensaje CTA" :rows="2" :isSingle="true" />
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
     <div class="bg-surface-raised rounded-xl p-3 border border-border-muted">
       <p class="text-xs text-text-subtle mb-2">CTA Primario</p>
@@ -59,8 +59,8 @@
     </draggable>
     <button type="button" class="inline-flex items-center gap-1 text-xs text-text-brand font-medium" @click="form.contactMethods.push({ icon: '', title: '', value: '', link: '' })"><BaseActionIcon action="create" /> Agregar método</button>
   </div>
-  <FieldTextarea v-model="form.validityMessage" label="Mensaje de vigencia" :rows="2" :isSingle="true" />
-  <FieldTextarea v-model="form.thankYouMessage" label="Mensaje de agradecimiento" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.validityMessage" :format="form.text_formats?.['/validityMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/validityMessage': $event }" label="Mensaje de vigencia" :rows="2" :isSingle="true" />
+  <FieldTextarea v-model="form.thankYouMessage" :format="form.text_formats?.['/thankYouMessage'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/thankYouMessage': $event }" label="Mensaje de agradecimiento" :rows="2" :isSingle="true" />
 </template>
 
 <script setup>

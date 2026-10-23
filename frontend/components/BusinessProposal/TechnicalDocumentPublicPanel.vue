@@ -18,11 +18,11 @@
             </h2>
           </div>
 
-          <p
+          <div
             v-if="purposeText"
             data-animate="fade-up"
             class="text-text-default/80 font-light text-lg md:text-xl leading-relaxed whitespace-pre-wrap mb-6"
-            v-html="linkify(purposeText)"
+            v-html="linkify(purposeText, contentJson.text_formats?.['/purpose'] || text_formats?.['/purpose'])"
           />
 
           <p
@@ -54,7 +54,7 @@
               </span>
               <span class="min-w-0 flex-1">
                 <span class="block text-text-brand font-medium text-base md:text-lg leading-snug">{{ entry.label }}</span>
-                <span v-if="entry.summary" class="block text-text-muted font-light text-xs mt-1">{{ entry.summary }}</span>
+                <BaseRichTextContent v-if="entry.summary" class="block text-text-muted font-light text-xs mt-1" :source="entry.summary" :format="entry.text_formats?.['/summary'] || 'plain'" />
               </span>
               <svg
                 class="shrink-0 w-4 h-4 mt-1 text-text-subtle transition-transform group-hover:translate-x-0.5"
@@ -86,7 +86,7 @@
                 <tr v-for="(row, i) in stackRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.layer }}</td>
                   <td class="px-4 py-3 text-text-default/90">{{ row.technology }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.rationale }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.rationale" :format="row.text_formats?.['/rationale'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -96,7 +96,7 @@
         <!-- Architecture -->
         <template v-else-if="fragment === 'architecture'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.architecture }}</h2>
-          <p v-if="arch.summary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap">{{ arch.summary }}</p>
+          <BaseRichTextContent v-if="arch.summary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap" :source="arch.summary" :format="arch.text_formats?.['/summary'] || 'plain'" />
           <div v-if="patternRows.length" class="overflow-x-auto rounded-xl border border-esmerald/10 mb-6">
             <table class="w-full text-sm">
               <thead class="bg-primary text-white">
@@ -110,18 +110,18 @@
                 <tr v-for="(row, i) in patternRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.component }}</td>
                   <td class="px-4 py-3 text-text-default/90">{{ row.pattern }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.description }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.description" :format="row.text_formats?.['/description'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p v-if="arch.diagramNote" class="text-sm text-text-default/60 font-light whitespace-pre-wrap">{{ arch.diagramNote }}</p>
+          <BaseRichTextContent v-if="arch.diagramNote" class="text-sm text-text-default/60 font-light whitespace-pre-wrap" :source="arch.diagramNote" :format="arch.text_formats?.['/diagramNote'] || 'plain'" />
         </template>
 
         <!-- Data model -->
         <template v-else-if="fragment === 'dataModel'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.dataModel }}</h2>
-          <p v-if="dm.summary" class="text-text-default/80 font-light leading-relaxed mb-4 whitespace-pre-wrap">{{ dm.summary }}</p>
+          <BaseRichTextContent v-if="dm.summary" class="text-text-default/80 font-light leading-relaxed mb-4 whitespace-pre-wrap" :source="dm.summary" :format="dm.text_formats?.['/summary'] || 'plain'" />
           <p v-if="dm.relationships" class="text-text-default/70 font-light text-sm mb-8 whitespace-pre-wrap">{{ dm.relationships }}</p>
           <div v-if="entityRows.length" class="overflow-x-auto rounded-xl border border-esmerald/10">
             <table class="w-full text-sm">
@@ -135,7 +135,7 @@
               <tbody>
                 <tr v-for="(row, i) in entityRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.name }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.description }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.description" :format="row.text_formats?.['/description'] || 'plain'" /></td>
                   <td class="px-4 py-3 text-text-default/70 font-light">{{ row.keyFields }}</td>
                 </tr>
               </tbody>
@@ -146,7 +146,7 @@
         <!-- Growth readiness -->
         <template v-else-if="fragment === 'growthReadiness'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.growthReadiness }}</h2>
-          <p v-if="growthSummary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap">{{ growthSummary }}</p>
+          <BaseRichTextContent v-if="growthSummary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap" :source="growthSummary" :format="gr.text_formats?.['/summary'] || 'plain'" />
           <div v-if="growthStrategyRows.length" class="overflow-x-auto rounded-xl border border-esmerald/10">
             <table class="w-full text-sm">
               <thead class="bg-primary text-white">
@@ -159,8 +159,8 @@
               <tbody>
                 <tr v-for="(row, i) in growthStrategyRows" :key="'gr-' + i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90 align-top">{{ row.dimension }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light align-top whitespace-pre-wrap">{{ row.preparation }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light align-top whitespace-pre-wrap">{{ row.evolution }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light align-top whitespace-pre-wrap"><BaseRichTextContent :source="row.preparation" :format="row.text_formats?.['/preparation'] || 'plain'" /></td>
+                  <td class="px-4 py-3 text-text-default/70 font-light align-top whitespace-pre-wrap"><BaseRichTextContent :source="row.evolution" :format="row.text_formats?.['/evolution'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -180,9 +180,7 @@
                 <h3 class="text-lg md:text-xl font-medium text-text-brand leading-snug">
                   {{ epic.title || epic.epicKey }}
                 </h3>
-                <p v-if="epic.description" class="text-sm text-text-default/65 font-light mt-2 whitespace-pre-wrap leading-relaxed">
-                  {{ epic.description }}
-                </p>
+                <BaseRichTextContent v-if="epic.description" class="text-sm text-text-default/65 font-light mt-2 whitespace-pre-wrap leading-relaxed" :source="epic.description" :format="epic.text_formats?.['/description'] || 'plain'" />
               </header>
               <div class="overflow-x-auto">
                 <table class="w-full text-sm text-left">
@@ -212,7 +210,7 @@
                         <span v-else class="text-text-default/35">—</span>
                       </td>
                       <td class="px-4 py-3 text-text-default/65 font-light align-top text-xs leading-relaxed">
-                        {{ snippetText(req.description) }}
+                        <BaseRichTextContent v-if="req.text_formats?.['/description']" :source="req.description" :format="req.text_formats['/description']" /><template v-else>{{ snippetText(req.description) }}</template>
                       </td>
                       <td class="px-4 py-3 align-top text-right">
                         <button
@@ -234,7 +232,7 @@
         <!-- API -->
         <template v-else-if="fragment === 'api'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.api }}</h2>
-          <p v-if="apiSummary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap">{{ apiSummary }}</p>
+          <BaseRichTextContent v-if="apiSummary" class="text-text-default/80 font-light leading-relaxed mb-8 whitespace-pre-wrap" :source="apiSummary" :format="contentJson.text_formats?.['/apiSummary'] || 'plain'" />
           <div v-if="apiDomainRows.length" class="overflow-x-auto rounded-xl border border-esmerald/10">
             <table class="w-full text-sm">
               <thead class="bg-primary text-white">
@@ -246,7 +244,7 @@
               <tbody>
                 <tr v-for="(row, i) in apiDomainRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.domain }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap">{{ row.summary }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap"><BaseRichTextContent :source="row.summary" :format="row.text_formats?.['/summary'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -273,8 +271,8 @@
                   <tr v-for="(row, i) in includedRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                     <td class="px-4 py-3 text-text-default/90">{{ row.service }}</td>
                     <td class="px-4 py-3 text-text-default/80">{{ row.provider }}</td>
-                    <td class="px-4 py-3 text-text-default/70 font-light">{{ row.connection }}</td>
-                    <td class="px-4 py-3 text-text-default/70 font-light">{{ row.dataExchange }}</td>
+                    <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.connection" :format="row.text_formats?.['/connection'] || 'plain'" /></td>
+                    <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.dataExchange" :format="row.text_formats?.['/dataExchange'] || 'plain'" /></td>
                     <td class="px-4 py-3 text-text-default/70 font-light">{{ row.accountOwner }}</td>
                   </tr>
                 </tbody>
@@ -295,8 +293,8 @@
                 <tbody>
                   <tr v-for="(row, i) in excludedRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                     <td class="px-4 py-3 text-text-default/90">{{ row.service }}</td>
-                    <td class="px-4 py-3 text-text-default/70 font-light">{{ row.reason }}</td>
-                    <td class="px-4 py-3 text-text-default/70 font-light">{{ row.availability }}</td>
+                    <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.reason" :format="row.text_formats?.['/reason'] || 'plain'" /></td>
+                    <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.availability" :format="row.text_formats?.['/availability'] || 'plain'" /></td>
                   </tr>
                 </tbody>
               </table>
@@ -329,7 +327,7 @@
                     class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft"
                   >
                     <td class="px-4 py-3 text-text-default/50 font-mono text-xs align-top">{{ i + 1 }}</td>
-                    <td class="px-4 py-3 text-text-default/80 font-light align-top">{{ line }}</td>
+                    <td class="px-4 py-3 text-text-default/80 font-light align-top"><BaseRichTextContent :source="line" :format="integ.text_formats?.['/notes'] || 'plain'" /></td>
                   </tr>
                 </tbody>
               </table>
@@ -340,7 +338,7 @@
         <!-- Environments -->
         <template v-else-if="fragment === 'environments'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.environments }}</h2>
-          <p v-if="environmentsNote" class="text-text-default/80 font-light mb-8 whitespace-pre-wrap">{{ environmentsNote }}</p>
+          <BaseRichTextContent v-if="environmentsNote" class="text-text-default/80 font-light mb-8 whitespace-pre-wrap" :source="environmentsNote" :format="contentJson.text_formats?.['/environmentsNote'] || 'plain'" />
           <div v-if="environmentRows.length" class="overflow-x-auto rounded-xl border border-esmerald/10 text-sm">
             <table class="w-full text-left">
               <thead class="bg-primary text-white">
@@ -355,7 +353,7 @@
               <tbody>
                 <tr v-for="(row, i) in environmentRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.name }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.purpose }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.purpose" :format="row.text_formats?.['/purpose'] || 'plain'" /></td>
                   <td class="px-4 py-3 text-text-default/70 font-light break-all">{{ row.url }}</td>
                   <td class="px-4 py-3 text-text-default/70 font-light">{{ row.database }}</td>
                   <td class="px-4 py-3 text-text-default/70 font-light">{{ row.whoAccesses }}</td>
@@ -379,7 +377,7 @@
               <tbody>
                 <tr v-for="(row, i) in securityRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.aspect }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap">{{ row.implementation }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap"><BaseRichTextContent :source="row.implementation" :format="row.text_formats?.['/implementation'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -402,7 +400,7 @@
                 <tr v-for="(row, i) in metricRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.metric }}</td>
                   <td class="px-4 py-3 text-text-default/80">{{ row.target }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.howMeasured }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.howMeasured" :format="row.text_formats?.['/howMeasured'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -418,7 +416,7 @@
               <tbody>
                 <tr v-for="(row, i) in practiceLines" :key="'pr-' + i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90 font-medium align-top whitespace-nowrap">{{ row.strategy }}</td>
-                  <td class="px-4 py-3 text-text-default/75 font-light align-top">{{ row.description }}</td>
+                  <td class="px-4 py-3 text-text-default/75 font-light align-top"><BaseRichTextContent :source="row.description" :format="row.text_formats?.['/description'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -428,7 +426,7 @@
         <!-- Backups -->
         <template v-else-if="fragment === 'backups'">
           <h2 class="text-text-brand font-light text-3xl md:text-4xl mb-6">{{ titles.backups }}</h2>
-          <p class="text-text-default/80 font-light leading-relaxed whitespace-pre-wrap">{{ backupsNote }}</p>
+          <BaseRichTextContent class="text-text-default/80 font-light leading-relaxed whitespace-pre-wrap" :source="backupsNote" :format="contentJson.text_formats?.['/backupsNote'] || 'plain'" />
         </template>
 
         <!-- Quality -->
@@ -446,8 +444,8 @@
               <tbody>
                 <tr v-for="(row, i) in qualityDimRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.dimension }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.evaluates }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.standard }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.evaluates" :format="row.text_formats?.['/evaluates'] || 'plain'" /></td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.standard" :format="row.text_formats?.['/standard'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -465,14 +463,14 @@
               <tbody>
                 <tr v-for="(row, i) in qualityTestRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/90">{{ row.type }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light">{{ row.validates }}</td>
+                  <td class="px-4 py-3 text-text-default/70 font-light"><BaseRichTextContent :source="row.validates" :format="row.text_formats?.['/validates'] || 'plain'" /></td>
                   <td class="px-4 py-3 text-text-default/70 font-light">{{ row.tool }}</td>
                   <td class="px-4 py-3 text-text-default/70 font-light">{{ row.whenRun }}</td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <p v-if="criticalFlowsNote" class="text-sm text-text-default/75 font-light whitespace-pre-wrap">{{ criticalFlowsNote }}</p>
+          <BaseRichTextContent v-if="criticalFlowsNote" class="text-sm text-text-default/75 font-light whitespace-pre-wrap" :source="criticalFlowsNote" :format="qual.text_formats?.['/criticalFlowsNote'] || 'plain'" />
         </template>
 
         <!-- Decisions -->
@@ -489,9 +487,9 @@
               </thead>
               <tbody>
                 <tr v-for="(row, i) in decisionRows" :key="i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
-                  <td class="px-4 py-3 text-text-default/90 whitespace-pre-wrap">{{ row.decision }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap">{{ row.alternative }}</td>
-                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap">{{ row.reason }}</td>
+                  <td class="px-4 py-3 text-text-default/90 whitespace-pre-wrap"><BaseRichTextContent :source="row.decision" :format="row.text_formats?.['/decision'] || 'plain'" /></td>
+                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap"><BaseRichTextContent :source="row.alternative" :format="row.text_formats?.['/alternative'] || 'plain'" /></td>
+                  <td class="px-4 py-3 text-text-default/70 font-light whitespace-pre-wrap"><BaseRichTextContent :source="row.reason" :format="row.text_formats?.['/reason'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -552,19 +550,19 @@
                   <th class="text-left py-2 pr-4 text-xs font-semibold text-text-default/60 align-top">
                     {{ language === 'en' ? 'Description' : 'Descripción' }}
                   </th>
-                  <td class="py-2 text-text-default/80 font-light whitespace-pre-wrap leading-relaxed">{{ requirementModal.req.description }}</td>
+                  <td class="py-2 text-text-default/80 font-light whitespace-pre-wrap leading-relaxed"><BaseRichTextContent :source="requirementModal.req.description" :format="requirementModal.req.text_formats?.['/description'] || 'plain'" /></td>
                 </tr>
                 <tr v-if="requirementModal.req.configuration" class="border-b border-esmerald/10">
                   <th class="text-left py-2 pr-4 text-xs font-semibold text-text-default/60 align-top">
                     {{ language === 'en' ? 'Configuration' : 'Configuración' }}
                   </th>
-                  <td class="py-2 text-text-default/75 font-light text-xs whitespace-pre-wrap leading-relaxed">{{ requirementModal.req.configuration }}</td>
+                  <td class="py-2 text-text-default/75 font-light text-xs whitespace-pre-wrap leading-relaxed"><BaseRichTextContent :source="requirementModal.req.configuration" :format="requirementModal.req.text_formats?.['/configuration'] || 'plain'" /></td>
                 </tr>
                 <tr v-if="requirementModal.req.usageFlow">
                   <th class="text-left py-2 pr-4 text-xs font-semibold text-text-default/60 align-top">
                     {{ language === 'en' ? 'Usage flow' : 'Flujo de uso' }}
                   </th>
-                  <td class="py-2 text-text-default/75 font-light text-xs whitespace-pre-wrap leading-relaxed">{{ requirementModal.req.usageFlow }}</td>
+                  <td class="py-2 text-text-default/75 font-light text-xs whitespace-pre-wrap leading-relaxed"><BaseRichTextContent :source="requirementModal.req.usageFlow" :format="requirementModal.req.text_formats?.['/usageFlow'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -609,7 +607,7 @@
               <tbody>
                 <tr v-for="(line, i) in integrationNoteLines" :key="'mod-note-' + i" class="border-t border-esmerald/10 odd:bg-surface even:bg-primary-soft">
                   <td class="px-4 py-3 text-text-default/50 font-mono text-xs align-top">{{ i + 1 }}</td>
-                  <td class="px-4 py-3 text-text-default/80 font-light align-top">{{ line }}</td>
+                  <td class="px-4 py-3 text-text-default/80 font-light align-top"><BaseRichTextContent :source="line" :format="integ.text_formats?.['/notes'] || 'plain'" /></td>
                 </tr>
               </tbody>
             </table>
@@ -637,6 +635,7 @@ const sectionRef = ref(null);
 useSectionAnimations(sectionRef);
 
 const props = defineProps({
+  text_formats: { type: Object, default: () => ({}) },
   fragment: { type: String, required: true },
   contentJson: { type: Object, default: () => ({}) },
   language: { type: String, default: 'es' },
@@ -735,6 +734,7 @@ const INTEGRATION_NOTES_INLINE_MAX = 5;
 const integrationNoteLines = computed(() => {
   const n = integ.value.notes;
   if (typeof n !== 'string' || !n.trim()) return [];
+  if (integ.value.text_formats?.['/notes'] && integ.value.text_formats['/notes'] !== 'plain') return [n];
   return n.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
 });
 

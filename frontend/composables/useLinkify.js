@@ -9,6 +9,7 @@
  */
 
 import { escapeHtml } from '~/utils/escapeHtml';
+import { sourceToHtml } from '~/utils/editorialFormat';
 
 // Full URLs: https://example.com/path
 const FULL_URL_RE = /https?:\/\/[^\s),]+/g;
@@ -24,8 +25,12 @@ const BARE_DOMAIN_RE = /(?<![\/\w@])([a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?\.(
  * @param {string} text - Plain text that may contain URLs and limited inline HTML.
  * @returns {string} HTML string with URLs wrapped in <a> tags.
  */
-export function linkify(text) {
+export function linkify(text, format = 'plain') {
   if (!text || typeof text !== 'string') return '';
+  if (format !== 'plain' && typeof document !== 'undefined') {
+    try { return `<div class="editorial-rendered">${sourceToHtml(text, format === 'whatsapp_v1' ? 'whatsapp' : 'document', { strict: false })}</div>`; }
+    catch { return escapeHtml(text); }
+  }
 
   // Escape all HTML first to prevent XSS, then re-allow a small whitelist
   // of inline tags that admin copy historically uses (<b>, <strong>, <i>,

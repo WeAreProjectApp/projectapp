@@ -12,11 +12,11 @@
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Intro</label>
-      <textarea v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.intro" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/intro'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/intro': $event }" />
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Beneficios (uno por línea)</label>
-      <textarea v-model="form.valueBulletsText" rows="4" placeholder="Ej: Claridad técnica accionable: ..." class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextListEditor v-model="form.valueBulletsText" rows="4" placeholder="Ej: Claridad técnica accionable: ..." class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" format-path="/valueBullets" :formats="form.text_formats || {}" @update:formats="form.text_formats = $event" />
     </div>
     <p class="text-xs text-text-subtle italic">
       El monto, la moneda y los porcentajes se toman del tab General.
@@ -33,14 +33,14 @@
           class="grid sm:grid-cols-[1fr,3fr,auto] gap-2 items-start"
         >
           <input v-model="p.label" type="text" placeholder="al inicio / al final" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" />
-          <textarea v-model="p.detail" rows="2" placeholder="Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+          <BaseRichTextEditor v-model="p.detail" rows="2" placeholder="Detalle" class="px-2 py-1.5 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="p.text_formats?.['/detail'] || 'plain'" @update:format="p.text_formats = { ...p.text_formats, '/detail': $event }" />
         <BaseActionButton action="delete" variant="danger-ghost" label="Eliminar descripción" size="sm" @click="form.paymentDescription.splice(idx,1)" />
         </div>
       </div>
     </div>
     <div>
       <label class="block text-xs font-medium text-text-muted mb-1">Nota</label>
-      <textarea v-model="form.note" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default"></textarea>
+      <BaseRichTextEditor v-model="form.note" rows="2" class="w-full px-3 py-2 border border-border-default rounded-lg text-sm bg-surface text-text-default" :format="form.text_formats?.['/note'] || 'plain'" @update:format="form.text_formats = { ...form.text_formats, '/note': $event }" />
     </div>
   </div>
 </template>

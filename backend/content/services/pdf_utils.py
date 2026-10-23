@@ -63,6 +63,16 @@ def _register_fonts():
                 pdfmetrics.registerFont(TTFont(name, str(path)))
             except Exception:
                 logger.debug('Could not register font %s', name)
+    registered = set(pdfmetrics.getRegisteredFontNames())
+    for family, normal, italic in (
+        ('Ubuntu', 'Ubuntu', 'Ubuntu-Italic'),
+        ('Ubuntu-Light', 'Ubuntu-Light', 'Ubuntu-LightItalic'),
+        ('Ubuntu-Medium', 'Ubuntu-Medium', 'Ubuntu-MediumItalic'),
+    ):
+        variants = (normal, 'Ubuntu-Bold', italic, 'Ubuntu-BoldItalic')
+        if set(variants).issubset(registered):
+            pdfmetrics.registerFontFamily(family, normal=normal, bold='Ubuntu-Bold', italic=italic, boldItalic='Ubuntu-BoldItalic')
+    _font.cache_clear()
     _fonts_registered = True
 
 
@@ -1272,6 +1282,13 @@ def _draw_paragraphs(c, y, paragraphs, max_width=None, font_size=10,
     drawn = False
     for para in (paragraphs or []):
         if not para:
+            continue
+        from content.services.editorial_projection import EditorialSource
+        if isinstance(para, EditorialSource) or re.search(r'<(?:p|h[1-6]|span|mark|u|table|ul|ol|blockquote)\b', str(para), re.I):
+            from content.services.editorial_pdf import draw_editorial_source
+            y = draw_editorial_source(c, y, str(para), format=para.format if isinstance(para, EditorialSource) else 'markdown_html_v1', ps=ps, width=max_width,
+                                      x=x, font=fn, size=font_size, color=color)
+            drawn = True
             continue
         source = _paragraph_breaks(str(para)) if preserve_breaks else str(para)
         clean, _links = _replace_urls_with_placeholders(_sanitize_pdf_text(source))
