@@ -1,0 +1,13 @@
+{
+  "id": "public-consulting-faq",
+  "name": "Public Consulting FAQ",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Expandir y contraer preguntas sobre alcance, confidencialidad y estimaciones.",
+  "outcomes": [
+    "success"
+  ]
+}

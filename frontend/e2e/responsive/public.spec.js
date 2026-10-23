@@ -6,6 +6,7 @@ import { RESPONSIVE_PROFILES, batchForScenario, getResponsiveScenario } from './
 import { financingProgramFixture } from '../helpers/financing-fixture.js';
 import { buildingWithUsApiFixture, buildingWithUsProgramFixture } from '../helpers/building-with-us-fixture.js';
 import { BUILDING_ON_DEMAND_GUIDE_SEEN_KEY, buildingOnDemandApiFixture, buildingOnDemandProgramFixture } from '../helpers/building-on-demand-fixture.js';
+import { consultingApiFixture, consultingProgramFixture } from '../helpers/consulting-fixture.js';
 import { SECURE_LINK_TOKEN, publicStatus, revealedContent, secureLinkTypes } from '../helpers/secure-links.js';
 
 const json = (body) => ({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -17,9 +18,11 @@ const moduleFixture = { slug: 'responsive-module', icon: '◫', name: 'Módulo r
 const tree = { handle: 'responsive-fixture', kind: 'personal', display_name: 'Perfil responsive', role: 'ProjectApp', vcard_first_name: 'Perfil', vcard_last_name: 'Responsive', buttons: [{ id: 1, tier: 'primary', action: 'vcard', label: 'Guardar contacto', href: '', kind: 'download-vcard', is_pending: false, is_active: true }], pwa_enabled: false, badge_text: 'FIXTURE' };
 const proposal = { id: 1, uuid, title: 'Propuesta responsive', client_name: 'Cliente fixture', status: 'sent', language: 'es', total_investment: '5000000', currency: 'COP', requirement_groups: [], sections: [{ id: 1, section_type: 'greeting', title: 'Bienvenida', order: 0, is_enabled: true, content_json: { proposalTitle: 'Propuesta responsive', clientName: 'Cliente fixture' } }, { id: 2, section_type: 'executive_summary', title: 'Resumen', order: 1, is_enabled: true, content_json: { title: 'Propuesta responsive', paragraphs: ['Resultado concreto'] } }] };
 const diagnostic = { uuid, title: 'Diagnóstico responsive', client_name: 'Cliente fixture', status: 'sent', language: 'es', sections: [{ id: 1, section_type: 'purpose', title: 'Propósito', order: 0, is_enabled: true, visibility: 'both', content_json: { title: 'Propósito', paragraphs: ['Resultado concreto'] } }], render_context: { client_name: 'Cliente fixture', currency: 'COP' } };
+const consultingProgram = consultingProgramFixture();
 const visualKeys = [
   'frontend/pages/building-with-us/index.vue',
   'frontend/pages/building-on-demand/index.vue',
+  'frontend/pages/consulting/index.vue',
   'frontend/pages/index.vue', 'frontend/pages/landing-apps.vue', 'frontend/pages/landing-software.vue', 'frontend/pages/landing-web-design.vue', 'frontend/pages/about-us.vue', 'frontend/pages/contact.vue', 'frontend/pages/contact-success.vue', 'frontend/pages/portfolio-works/index.vue', 'frontend/pages/portfolio-works/[slug].vue', 'frontend/pages/blog/index.vue', 'frontend/pages/blog/[slug].vue', 'frontend/pages/lk/[handle].vue', 'frontend/pages/privacy-policy.vue', 'frontend/pages/terms-and-conditions.vue', 'frontend/pages/waiter/index.vue', 'frontend/pages/waiter/privacy.vue', 'frontend/pages/waiter/terms.vue', 'frontend/pages/waiter/data-deletion.vue', 'frontend/pages/auth/linkedin/callback.vue', 'frontend/pages/[...slug].vue', 'frontend/pages/additional-modules/index.vue', 'frontend/pages/additional-modules/share/[uuid].vue', 'frontend/pages/partnership-program/index.vue', 'frontend/pages/proposal/[uuid]/index.vue', 'frontend/pages/diagnostic/[uuid]/index.vue', 'frontend/pages/secure-link/index.vue', 'frontend/pages/secure-link/view.vue',
 ].map(getResponsiveScenario);
 const linkedInCallbackScenario = getResponsiveScenario('frontend/pages/auth/linkedin/callback.vue');
@@ -31,6 +34,7 @@ const interactiveVisualKeys = visualKeys.filter((scenario) => (
 const flows = {
   'frontend/pages/building-with-us/index.vue': 'public-building-with-us-faq',
   'frontend/pages/building-on-demand/index.vue': 'public-building-on-demand-faq',
+  'frontend/pages/consulting/index.vue': 'public-consulting-overview',
   'frontend/pages/index.vue': 'public-home', 'frontend/pages/landing-apps.vue': 'public-landing-apps', 'frontend/pages/landing-software.vue': 'public-landing-software', 'frontend/pages/landing-web-design.vue': 'public-landing-web-design', 'frontend/pages/about-us.vue': 'public-about-us', 'frontend/pages/contact.vue': 'public-contact-submit', 'frontend/pages/contact-success.vue': 'public-contact-submit', 'frontend/pages/portfolio-works/index.vue': 'public-portfolio', 'frontend/pages/portfolio-works/[slug].vue': 'public-portfolio-detail', 'frontend/pages/blog/index.vue': 'blog-list', 'frontend/pages/blog/[slug].vue': 'blog-detail', 'frontend/pages/lk/[handle].vue': 'public-linktree-view', 'frontend/pages/privacy-policy.vue': 'public-privacy-policy', 'frontend/pages/terms-and-conditions.vue': 'public-terms-conditions', 'frontend/pages/waiter/index.vue': 'public-waiter-legal-pages', 'frontend/pages/waiter/privacy.vue': 'public-waiter-legal-pages', 'frontend/pages/waiter/terms.vue': 'public-waiter-legal-pages', 'frontend/pages/waiter/data-deletion.vue': 'public-waiter-legal-pages', 'frontend/pages/auth/linkedin/callback.vue': 'admin-blog-linkedin-connect', 'frontend/pages/[...slug].vue': 'public-route-not-found', 'frontend/pages/additional-modules/index.vue': 'public-additional-modules-detail', 'frontend/pages/additional-modules/share/[uuid].vue': 'public-additional-modules-share', 'frontend/pages/partnership-program/index.vue': 'public-financing-terms', 'frontend/pages/proposal/[uuid]/index.vue': 'proposal-view-navigation', 'frontend/pages/diagnostic/[uuid]/index.vue': 'diagnostic-public-view', 'frontend/pages/secure-link/index.vue': 'public-secure-link-create', 'frontend/pages/secure-link/view.vue': 'public-secure-link-reveal',
 };
 const outcomes = {
@@ -43,6 +47,7 @@ const outcomes = {
 const resolvedRoutes = {
   'frontend/pages/building-with-us/index.vue': '/es-co/building-with-us',
   'frontend/pages/building-on-demand/index.vue': '/es-co/building-on-demand',
+  'frontend/pages/consulting/index.vue': '/es-co/consulting',
   'frontend/pages/portfolio-works/index.vue': '/en-us/portfolio-works',
   'frontend/pages/portfolio-works/[slug].vue': '/en-us/portfolio-works/responsive-fixture',
   'frontend/pages/blog/index.vue': '/en-us/blog',
@@ -61,9 +66,12 @@ async function setupPublic(page) {
     localStorage.setItem('projectapp-additional-modules-guide-seen', 'true');
     localStorage.setItem('projectapp-financing-guide-seen', 'true');
     localStorage.setItem('projectapp-building-with-us-guide-seen', 'true');
+    localStorage.setItem('projectapp-consulting-guide-seen', 'true');
     localStorage.setItem(guideSeenKey, 'true');
   }, BUILDING_ON_DEMAND_GUIDE_SEEN_KEY);
   await mockApi(page, async ({ apiPath, method, route }) => {
+    const consulting = consultingApiFixture({ apiPath, method, route });
+    if (consulting) return consulting;
     const buildingWithUs = buildingWithUsApiFixture({ apiPath, method, route });
     if (buildingWithUs) return buildingWithUs;
     const buildingOnDemand = await buildingOnDemandApiFixture({ apiPath, method, route });
@@ -130,6 +138,7 @@ async function exercise(page, scenario) {
   const entries = {
     'frontend/pages/building-with-us/index.vue': { action: async () => { await page.getByTestId('building-with-us-faq-trigger-0').click(); return page.getByTestId('building-with-us-faq-panel-0'); }, assert: async (locator) => { await expect(locator).toBeVisible(); await expect(locator).toHaveText(buildingWithUsProgramFixture().faq.items[0].answer); } },
     'frontend/pages/building-on-demand/index.vue': { action: async () => { await page.getByTestId(`building-on-demand-faq-trigger-${buildingOnDemandFaq.id}`).click(); return page.getByTestId(`building-on-demand-faq-panel-${buildingOnDemandFaq.id}`); }, assert: async (locator) => { await expect(locator).toBeVisible(); await expect(locator).toHaveText(buildingOnDemandFaq.answer); } },
+    'frontend/pages/consulting/index.vue': { action: async () => { const privacyIndex = consultingProgram.faq.items.findIndex((item) => item.id === 'privacy'); await page.getByTestId(`consulting-faq-trigger-${privacyIndex}`).click(); return page.getByTestId(`consulting-faq-panel-${privacyIndex}`); }, assert: async (locator) => { const privacy = consultingProgram.faq.items.find((item) => item.id === 'privacy'); await expect(locator).toHaveText(privacy.answer); } },
     'frontend/pages/index.vue': { action: () => openLandingWhatsapp(page), assert: (locator) => expect(locator).toHaveAttribute('href', landingWhatsappUrl) },
     'frontend/pages/landing-apps.vue': { action: async () => { await switchToSpanish(page); return page.getByRole('heading', { level: 1, name: /Tu App Lista para Descargar\s+en 30 Días\./ }); }, assert: (locator) => expect(locator).toContainText('Tu App Lista para Descargar') },
     'frontend/pages/landing-software.vue': { action: async () => { await switchToSpanish(page); return page.getByRole('heading', { level: 1, name: /Desarrollamos el Software que tu empresa necesita\.\s+Listo en 30 Días\./ }); }, assert: (locator) => expect(locator).toContainText('Desarrollamos el Software que tu empresa necesita.') },

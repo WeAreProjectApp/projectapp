@@ -250,6 +250,18 @@ export const viewCatalogSections = [
     ],
   },
   {
+    id: 'public-consulting',
+    label: 'Consultoría y asesoría (público)',
+    description: 'Salud empresarial, automatización e impacto medible para el cliente.',
+    views: [{
+      label: 'Consultoría y asesoría', url: '/consulting', group: 'Consultoría y asesoría',
+      file: 'frontend/pages/consulting/index.vue',
+      reference: 'presentación bilingüe del análisis empresarial por áreas y seis caminos de impacto económico',
+      notes: 'Áreas elegibles, medición sin duplicaciones, informe priorizado y continuidad con proyectos, Células o Building with Us. FAQ, guía, tema, PDF, compartir y contacto; sin tarifas fijas ni datos privados.',
+      audience: 'public', viewType: 'readonly',
+    }],
+  },
+  {
     id: 'public-building-with-us',
     label: 'Building with Us (público)',
     description: 'Programa de incubación de productos con expertos de negocio.',
@@ -396,6 +408,13 @@ export const viewCatalogSections = [
         notes: 'Configuración incluye Recursos para cargar, sustituir, quitar y restaurar el video general por idioma.',
         audience: 'admin',
         viewType: 'list',
+      },
+      {
+        label: 'Consultoría y asesoría', url: '/panel/consulting', group: 'Consultoría y asesoría',
+        file: 'frontend/pages/panel/consulting/index.vue',
+        reference: 'distribución y vista previa de la presentación de consultoría empresarial versionada',
+        notes: 'Junto a Diagnósticos en Comercial. Copia URLs ES/EN, abre la vista cliente, descarga PDF y consulta versión e historial paginado. El contenido público se mantiene mediante MCP Comercial con vista previa y confirmación.',
+        audience: 'admin', viewType: 'readonly',
       },
       {
         label: 'Building with Us',

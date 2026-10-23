@@ -1,0 +1,15 @@
+{
+  "id": "admin-consulting-history",
+  "name": "Admin Consulting History",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P2",
+  "description": "Consultar revisiones y cargar la página siguiente; reintentar sin perder las versiones mostradas.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

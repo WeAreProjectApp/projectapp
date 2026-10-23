@@ -1,0 +1,15 @@
+{
+  "id": "admin-consulting-preview",
+  "name": "Admin Consulting Preview",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Consultar versión y previsualizar español o inglés; reintentar ante un fallo de carga.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

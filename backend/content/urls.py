@@ -393,7 +393,17 @@ from content.views.data_integrity import (
     data_integrity_operation_undo, data_integrity_operations, data_integrity_rules,
 )
 
+from content.views.consulting import (
+    public_consulting_program, public_consulting_program_pdf,
+    admin_consulting_overview, admin_consulting_program_versions,
+)
+
 urlpatterns = [
+    path('consulting/public/', public_consulting_program, name='public-consulting-program'),
+    path('consulting/public/pdf/', public_consulting_program_pdf, name='public-consulting-program-pdf'),
+    path('consulting/admin/', admin_consulting_overview, name='admin-consulting-overview'),
+    path('consulting/admin/program/versions/', admin_consulting_program_versions, name='admin-consulting-program-versions'),
+
     path('projects/retained-data/audit/', retained_project_data_audit, name='panel-projects-retained-data-audit'),
     path('projects/retained-operations/<int:operation_id>/undo/', retained_operation_undo, name='panel-projects-retained-operation-undo'),
     path('projects/retained-contexts/<int:context_id>/cleanup/', retained_context_cleanup, name='panel-projects-retained-context-cleanup'),

@@ -149,6 +149,7 @@ SEEDED_MODELS = {
 }
 
 DERIVED_MODELS = {
+    'content.ConsultingProgramRevision',
     'content.BuildingOnDemandProgramRevision',
     'content.BuildingOnDemandContractRevision', 'content.BuildingOnDemandContractMirror',
     'content.BuildingWithUsProgramRevision',
@@ -198,6 +199,7 @@ DERIVED_MODELS = {
 }
 
 CATALOG_MODELS = {
+    'content.ConsultingProgram',
     'content.BuildingOnDemandProgram',
     'content.BuildingOnDemandContract',
     'content.BuildingWithUsProgram',

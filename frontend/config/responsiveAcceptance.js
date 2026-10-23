@@ -81,6 +81,9 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/components/Financing/',
     'frontend/pages/panel/defaults.vue',
     'frontend/pages/panel/additional-modules/',
+    'frontend/pages/panel/consulting/',
+    'frontend/components/Consulting/admin/',
+    'frontend/stores/consulting.js',
     'frontend/pages/panel/building-with-us/',
     'frontend/pages/panel/cells/',
     'frontend/pages/panel/partnership-program/',
@@ -199,6 +202,10 @@ export const RESPONSIVE_MODULES = Object.freeze({
     'frontend/layouts/default.vue',
     'frontend/pages/about-us.vue',
     'frontend/pages/additional-modules/',
+    'frontend/pages/consulting/',
+    'frontend/components/Consulting/',
+    'frontend/composables/useConsultingTheme.js',
+    'frontend/utils/consulting.js',
     'frontend/pages/building-with-us/',
     'frontend/pages/building-on-demand/',
     'frontend/pages/blog/',
@@ -298,7 +305,7 @@ export function responsiveOwnerForView(sectionId, view) {
   if (url === '/panel/communications' || url === '/panel/secure-links') return 'communications';
   if (file === 'frontend/pages/panel/documents/create.vue' || file === 'frontend/pages/panel/documents/[id]/edit.vue') return 'canvas';
   if (url === '/panel/emails' || url.includes('/email-')) return 'emails';
-  if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url.startsWith('/panel/building-with-us') || url === '/panel/cells' || url === '/panel/defaults') return 'commercial';
+  if (url.startsWith('/panel/proposals') || url.startsWith('/panel/diagnostics') || url.startsWith('/panel/consulting') || url.startsWith('/panel/hour-packages') || url.startsWith('/panel/additional-modules') || url.startsWith('/panel/partnership-program') || url.startsWith('/panel/financing') || url.startsWith('/panel/building-with-us') || url === '/panel/cells' || url === '/panel/defaults') return 'commercial';
   if (url.startsWith('/panel/blog') || url.startsWith('/panel/linkedin') || url.startsWith('/panel/portfolio') || url.startsWith('/panel/qr-cards') || url.startsWith('/panel/linktrees')) return 'content';
   if (url === '/panel' || url.startsWith('/panel/tasks') || url.startsWith('/panel/admins') || url === '/panel/views') return 'dashboard';
   return null;

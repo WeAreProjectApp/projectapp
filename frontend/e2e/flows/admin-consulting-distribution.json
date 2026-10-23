@@ -1,0 +1,15 @@
+{
+  "id": "admin-consulting-distribution",
+  "name": "Admin Consulting Distribution",
+  "module": "commercial",
+  "roles": [
+    "admin"
+  ],
+  "priority": "P1",
+  "description": "Desde Comercial, consultar enlaces ES/EN, copiar, abrir como cliente y descargar PDF. Informar errores de portapapeles y descarga.",
+  "outcomes": [
+    "display",
+    "success",
+    "failure"
+  ]
+}

@@ -6017,6 +6017,9 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `admin-clients-filter-presets` | admin | P2 | display,success | 17 |
 | `admin-commercial-video-resources` | admin | P1 | display,success,error,failure | 4 |
 | `admin-communication-folders` | admin | P1 | display,success,error,failure | — |
+| `admin-consulting-distribution` | commercial | P1 | display,success,failure | — |
+| `admin-consulting-history` | commercial | P2 | display,success,failure | — |
+| `admin-consulting-preview` | commercial | P1 | display,success,failure | — |
 | `admin-daily-pipeline-digest` | admin | P2 | — | 0 |
 | `admin-dashboard` | admin | P2 | display | 1 |
 | `admin-dashboard-attention-radar` | admin | P1 | display | 2 |
@@ -6366,6 +6369,15 @@ Clientes y desde «Editar ficha del cliente» dentro de una cuenta nueva.
 | `public-building-with-us-pdf` | public | P2 | success,failure | — |
 | `public-building-with-us-share` | public | P2 | success,failure | — |
 | `public-building-with-us-theme` | public | P2 | success,failure | — |
+| `public-consulting-faq` | public | P2 | success | — |
+| `public-consulting-guide` | public | P2 | display,success | — |
+| `public-consulting-language` | public | P2 | success | — |
+| `public-consulting-load` | public | P1 | failure,success | — |
+| `public-consulting-next-step` | public | P2 | success | — |
+| `public-consulting-overview` | public | P1 | display | — |
+| `public-consulting-pdf` | public | P2 | success,failure | — |
+| `public-consulting-share` | public | P2 | success,failure | — |
+| `public-consulting-theme` | public | P2 | success | — |
 | `public-contact-submit` | public | P1 | success,error | 1 |
 | `public-financing-explainer` | public | P2 | display,success,failure | 4 |
 | `public-financing-guide` | public | P2 | success,display | 2 |
@@ -8087,6 +8099,39 @@ Administrador y cliente escriben un mensaje, seleccionan los requerimientos trat
 - **Invariants:** las comunicaciones madre permanecen en la raíz; un hilo conserva mensajes y adjuntos; los archivados impiden eliminar su carpeta; una búsqueda recorre todas las carpetas del contexto seleccionado.
 - **Specs:** `frontend/e2e/admin/admin-communication-filing.spec.js`.
 
+### FLOW: `admin-consulting-distribution`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/consulting`
+- **Interaction:** Desde Comercial, consultar enlaces ES/EN, copiar, abrir como cliente y descargar PDF. Informar errores de portapapeles y descarga.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** `frontend/pages/panel/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `admin-consulting-history`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P2
+- **Route:** `/:locale/panel/consulting`
+- **Interaction:** Consultar revisiones y cargar la página siguiente; reintentar sin perder las versiones mostradas.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** `frontend/pages/panel/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `admin-consulting-preview`
+
+- **Module:** commercial
+- **Role:** admin
+- **Priority:** P1
+- **Route:** `/:locale/panel/consulting`
+- **Interaction:** Consultar versión y previsualizar español o inglés; reintentar ante un fallo de carga.
+- **Outcomes:** `display`, `success`, `failure`
+- **Evidence:** `frontend/pages/panel/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
 ### FLOW: `admin-document-change-history`
 
 - **Module:** admin
@@ -9190,6 +9235,105 @@ consulta de la conversación pública que originó el prompt.
 - **Outcomes:** `display`, `success`, `failure`
 - **Evidence:** frontend/components/BuildingOnDemand/ProgramView.vue; frontend/components/ExplainerVideoCard.vue.
 - **Scope:** Sin formulario de datos; los permisos y parámetros HTTP se validan en backend.
+
+### FLOW: `public-consulting-faq`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Expandir y contraer preguntas sobre alcance, confidencialidad y estimaciones.
+- **Outcomes:** `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-guide`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Leer la guía de primera visita, avanzar, omitir y reiniciarla.
+- **Outcomes:** `display`, `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-language`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Cambiar a English para leer la presentación localizada y navegar a su URL inglesa.
+- **Outcomes:** `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-load`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/consulting`
+- **Interaction:** Leer el aviso de fallo de carga y reintentar para recuperar la presentación.
+- **Outcomes:** `failure`, `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-next-step`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Solicitar una cotización por WhatsApp sin enviar mensajes automáticamente, o visitar Células y Building with Us desde las tarjetas de implementación.
+- **Outcomes:** `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-overview`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P1
+- **Route:** `/:locale/consulting`
+- **Interaction:** Desde el sitio público, consultar cinco áreas, seis caminos, entregable, medición y diferencia con diagnóstico.
+- **Outcomes:** `display`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-pdf`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Descargar el PDF en el idioma actual o leer el error de descarga conservando la presentación.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-share`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Abrir Compartir, copiar la URL actual y leer confirmación o error de portapapeles.
+- **Outcomes:** `success`, `failure`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
+
+### FLOW: `public-consulting-theme`
+
+- **Module:** public
+- **Role:** guest
+- **Priority:** P2
+- **Route:** `/:locale/consulting`
+- **Interaction:** Cambiar el tema y conservar la preferencia al recargar.
+- **Outcomes:** `success`
+- **Evidence:** `frontend/pages/consulting/index.vue`; `frontend/components/Consulting/`; `frontend/stores/consulting.js`; `/api/consulting/`.
+- **Validación de entrada:** no se recibe información del cliente; los idiomas y la paginación inválidos se prueban en backend.
 
 ### FLOW: `public-financing-guide`
 

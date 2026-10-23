@@ -1,0 +1,448 @@
+"""Consulting brochure: immutable bilingual baseline and current revision."""
+import django.db.models.deletion
+from django.conf import settings
+from django.db import migrations, models
+
+PROGRAM_V1 = {'es': {'seo': {'title': 'Consultoría y asesoría empresarial | ProjectApp',
+                'description': 'Analizamos tu negocio para encontrar cuellos de botella y priorizar '
+                               'tecnología y automatización. Convierte tiempo y eficiencia en impacto '
+                               'económico medible.'},
+        'hero': {'eyebrow': 'Consultoría y asesoría',
+                 'title': 'Una empresa más saludable. Tiempo y dinero mejor aprovechados.',
+                 'subtitle': 'Antes de automatizar, entendemos tu negocio. Analizamos su salud económica, '
+                             'financiera, comercial, operativa y administrativa para encontrar qué frena el '
+                             'crecimiento y dónde la tecnología puede generar valor.',
+                 'note': 'Elige las áreas que necesitas o una revisión integral. Nuestro equipo convierte '
+                         'los hallazgos en un camino de implementación con prioridades claras.'},
+        'areas': {'title': 'La salud de tu empresa, área por área',
+                  'summary': 'Cinco perspectivas conectadas. Acordamos contigo cuáles revisar y hasta dónde '
+                             'llegar.',
+                  'items': [{'id': 'economic',
+                             'title': 'Económica',
+                             'summary': 'Revisamos costos, márgenes y rentabilidad para detectar actividades '
+                                        'que consumen recursos sin aportar suficiente valor.'},
+                            {'id': 'financial',
+                             'title': 'Financiera',
+                             'summary': 'Observamos caja, facturación, cobros, pagos y cartera para '
+                                        'identificar demoras y oportunidades de mejorar la liquidez.'},
+                            {'id': 'commercial',
+                             'title': 'Comercial: ventas y marketing',
+                             'summary': 'Seguimos el recorrido desde el primer contacto hasta la recompra: '
+                                        'campañas, seguimiento, cotizaciones y oportunidades que hoy se '
+                                        'pierden.'},
+                            {'id': 'operational',
+                             'title': 'Operativa',
+                             'summary': 'Mapeamos cómo se atienden clientes, pedidos y entregas. Buscamos '
+                                        'cuellos de botella, tareas manuales y capacidad desaprovechada.'},
+                            {'id': 'administrative',
+                             'title': 'Administrativa',
+                             'summary': 'Revisamos documentos, registros, aprobaciones y herramientas para '
+                                        'reducir duplicaciones, errores y trabajo repetitivo.'}]},
+        'impact': {'title': 'Seis caminos para convertir eficiencia en valor',
+                   'summary': 'Medimos cada camino por separado. No toda hora liberada es ahorro de caja ni '
+                              'cobrar antes significa vender más.',
+                   'items': [{'id': 'hours',
+                              'title': 'Horas recuperadas',
+                              'summary': 'Horas manuales evitadas al mes × costo de la hora del equipo. '
+                                         'Muestra capacidad liberada; solo cuenta como ahorro efectivo '
+                                         'cuando reduce un gasto real.'},
+                             {'id': 'errors',
+                              'title': 'Errores evitados',
+                              'summary': 'Frecuencia de errores × costo de corregirlos: digitación, '
+                                         'facturas, pedidos duplicados o reprocesos. Excluimos horas ya '
+                                         'contadas en el camino anterior.'},
+                             {'id': 'collections',
+                              'title': 'Cobrar antes',
+                              'summary': 'Medimos días entre facturar y cobrar y cartera vencida '
+                                         'recuperable. Separamos la caja que entra antes del beneficio '
+                                         'recurrente por menores costos de financiación.'},
+                             {'id': 'sales',
+                              'title': 'Ventas que hoy se pierden',
+                              'summary': 'Seguimiento oportuno, cotizaciones a tiempo y clientes que '
+                                         'regresan. Estimamos el margen adicional atribuible a la mejora, '
+                                         'usando tasas de conversión verificables.'},
+                             {'id': 'capacity',
+                              'title': 'Crecer sin contratar',
+                              'summary': 'Más clientes o pedidos con el mismo equipo. Valoramos capacidad '
+                                         'adicional o una contratación realmente evitable, sin volver a '
+                                         'sumar las horas recuperadas.'},
+                             {'id': 'costs',
+                              'title': 'Costos que sobran',
+                              'summary': 'Identificamos herramientas y suscripciones duplicadas o sin uso. '
+                                         'Estimamos el gasto que puede eliminarse, descontando los nuevos '
+                                         'costos de operación.'}]},
+        'measurement': {'title': 'El número que ayuda a decidir',
+                        'summary': 'El informe presenta rangos estimados en pesos y deja registrada la '
+                                   'situación de partida para comprobar después el resultado real.',
+                        'items': [{'id': 'baseline',
+                                   'title': 'Una situación de partida medible',
+                                   'summary': 'Acordamos indicadores, fuentes, período observado y '
+                                              'supuestos. Cuando faltan datos, señalamos la incertidumbre en '
+                                              'lugar de inventar precisión.'},
+                                  {'id': 'net',
+                                   'title': 'Impacto mensual sin duplicaciones',
+                                   'summary': 'Sumamos beneficios compatibles y monetizables, descontamos '
+                                              'costos recurrentes y mostramos por separado ahorro, capacidad '
+                                              'liberada y caja adelantada.'},
+                                  {'id': 'payback',
+                                   'title': 'Cuándo se recupera la inversión',
+                                   'summary': 'Comparamos el costo de implementar las mejoras con el rango '
+                                              'de beneficio mensual neto monetizable. Si no hay un beneficio '
+                                              'positivo sustentable, no afirmamos un plazo de '
+                                              'recuperación.'}]},
+        'deliverable': {'title': 'Un informe para pasar a la acción',
+                        'summary': 'Recibes un informe por cada área contratada y una visión conjunta de las '
+                                   'prioridades.',
+                        'items': [{'id': 'findings',
+                                   'title': 'Hallazgos con contexto',
+                                   'summary': 'Qué encontramos, qué falta y qué evidencia sostiene cada '
+                                              'conclusión, incluyendo los procesos y personas afectados.'},
+                                  {'id': 'priorities',
+                                   'title': 'Prioridades por impacto y esfuerzo',
+                                   'summary': 'Mejoras ordenadas según su beneficio esperado, esfuerzo, '
+                                              'dependencias y facilidad para comenzar.'},
+                                  {'id': 'roadmap',
+                                   'title': 'Tiempo, dinero y siguiente paso',
+                                   'summary': 'Recomendación, estimación, supuestos, indicador de partida y '
+                                              'camino de implementación para cada mejora.'}]},
+        'process': {'title': 'Cómo trabajamos contigo',
+                    'summary': 'Nuestro equipo propio realiza el análisis. Precio, duración, participantes e '
+                               'insumos se definen en una propuesta según el alcance.',
+                    'items': [{'id': 'scope',
+                               'title': 'Acordamos el alcance',
+                               'summary': 'Definimos las áreas, las preguntas que queremos responder y los '
+                                          'indicadores de éxito. Puedes empezar por un problema concreto.'},
+                              {'id': 'understand',
+                               'title': 'Escuchamos y revisamos',
+                               'summary': 'Entrevistamos a las personas clave y revisamos procesos, '
+                                          'documentos y datos previamente acordados, con los accesos '
+                                          'necesarios para ese alcance.'},
+                              {'id': 'prioritize',
+                               'title': 'Analizamos y priorizamos',
+                               'summary': 'Conectamos los hallazgos con oportunidades de mejora y '
+                                          'automatización. Contrastamos los supuestos contigo.'},
+                              {'id': 'present',
+                               'title': 'Presentamos el camino',
+                               'summary': 'Entregamos el informe y revisamos contigo qué conviene '
+                                          'implementar primero y cómo medir el resultado.'}]},
+        'implementation': {'title': 'Lo encontramos. Ahora podemos construirlo.',
+                           'summary': 'La consultoría abre un camino de implementación; cada mejora se '
+                                      'cotiza y acuerda según sus necesidades.',
+                           'items': [{'id': 'project',
+                                      'title': 'Un proyecto con alcance definido',
+                                      'summary': 'Para construir una solución concreta con entregables y '
+                                                 'criterios de aceptación acordados.'},
+                                     {'id': 'cells',
+                                      'title': 'Horas de una célula',
+                                      'summary': 'Para implementar mejoras de forma continua con capacidad '
+                                                 'técnica organizada y prioridades compartidas.'},
+                                     {'id': 'building-with-us',
+                                      'title': 'Building with Us',
+                                      'summary': 'Cuando el hallazgo abre una oportunidad de producto y '
+                                                 'encaja con una alianza de construcción conjunta.'}]},
+        'diagnostic': {'title': 'Consultoría del negocio y diagnóstico de software',
+                       'summary': 'Son servicios complementarios con alcances diferenciados. Se pueden '
+                                  'encadenar o cotizar juntos.',
+                       'items': [{'id': 'business',
+                                  'title': 'Primero, qué necesita el negocio',
+                                  'summary': 'La consultoría estudia la empresa completa o las áreas '
+                                             'elegidas y detecta oportunidades, incluso cuando la solución '
+                                             'no requiere software nuevo.'},
+                                 {'id': 'software',
+                                  'title': 'Después, cómo construir la solución',
+                                  'summary': 'El diagnóstico de software dimensiona la solución técnica: '
+                                             'alcance, complejidad y camino de desarrollo cuando el hallazgo '
+                                             'requiere construir tecnología.'}]},
+        'faq': {'title': 'Preguntas frecuentes',
+                'items': [{'id': 'areas',
+                           'question': '¿Tengo que contratar las cinco áreas?',
+                           'answer': 'Puedes elegir algunas o una revisión integral. Acordamos el alcance '
+                                     'antes de comenzar.'},
+                          {'id': 'price',
+                           'question': '¿Cuánto cuesta y cuánto dura?',
+                           'answer': 'Se cotiza según las áreas, la complejidad y la información disponible. '
+                                     'La propuesta define precio, duración y entregables; la vista pública '
+                                     'no publica tarifas fijas.'},
+                          {'id': 'inputs',
+                           'question': '¿Qué necesita el equipo de mi empresa?',
+                           'answer': 'Entrevistas y revisión de los procesos, documentos o datos que '
+                                     'acordemos. Solicitamos solo lo necesario para las áreas contratadas.'},
+                          {'id': 'team',
+                           'question': '¿Quién realiza el análisis?',
+                           'answer': 'El equipo propio de ProjectApp realiza la consultoría. Los '
+                                     'participantes y responsabilidades se precisan en la propuesta.'},
+                          {'id': 'privacy',
+                           'question': '¿Cómo se maneja la información confidencial?',
+                           'answer': 'Acordamos la información necesaria, los participantes autorizados y '
+                                     'las condiciones de confidencialidad antes de compartir datos. Usamos '
+                                     'canales privados; esta página y su PDF son una presentación general y '
+                                     'no reciben ni incluyen datos de tu empresa.'},
+                          {'id': 'discount',
+                           'question': '¿La consultoría se descuenta de la implementación?',
+                           'answer': 'No hay un descuento automático. Cualquier condición comercial especial '
+                                     'debe quedar expresamente acordada en la propuesta.'},
+                          {'id': 'estimates',
+                           'question': '¿El impacto estimado está garantizado?',
+                           'answer': 'No. Presentamos rangos con fuentes y supuestos, y medimos una línea '
+                                     'base para contrastarlos con resultados reales. El informe separa '
+                                     'ahorro, capacidad y caja, y evita contar un mismo beneficio dos '
+                                     'veces.'}]},
+        'cta': {'title': '¿Dónde está perdiendo tiempo y valor tu empresa?',
+                'body': 'Conversemos sobre tu negocio y las áreas que quieres revisar. Te proponemos un '
+                        'alcance para empezar con claridad.',
+                'button_label': 'Solicitar cotización',
+                'whatsapp_message': 'Hola, me interesa la Consultoría y asesoría de ProjectApp. Quiero '
+                                    'revisar oportunidades de mejora y automatización en mi empresa.'},
+        'legal': {'disclaimer': 'Los impactos son rangos estimados sujetos a la información disponible, los '
+                                'supuestos y la implementación efectiva. No constituyen una promesa de '
+                                'ahorro, ingresos ni rentabilidad. Alcance, precio, plazo y condiciones de '
+                                'confidencialidad se acuerdan en la propuesta.'}},
+ 'en': {'seo': {'title': 'Business consulting and advisory | ProjectApp',
+                'description': 'Understand your business, uncover bottlenecks and prioritize technology and '
+                               'automation. Turn time and efficiency into measurable economic impact.'},
+        'hero': {'eyebrow': 'Consulting and advisory',
+                 'title': 'A healthier business. Better use of time and money.',
+                 'subtitle': 'Before automating, we understand your business. We examine its economic, '
+                             'financial, commercial, operational and administrative health to find what '
+                             'holds growth back and where technology can create value.',
+                 'note': 'Choose the areas you need or a comprehensive review. Our team turns findings into '
+                         'a clear, prioritized implementation path.'},
+        'areas': {'title': 'Your business health, area by area',
+                  'summary': 'Five connected perspectives. We agree which areas to review and how far to go.',
+                  'items': [{'id': 'economic',
+                             'title': 'Economic',
+                             'summary': 'Review costs, margins and profitability to identify activities that '
+                                        'use resources without creating enough value.'},
+                            {'id': 'financial',
+                             'title': 'Financial',
+                             'summary': 'Examine cash flow, invoicing, collections, payments and receivables '
+                                        'to identify delays and opportunities to improve liquidity.'},
+                            {'id': 'commercial',
+                             'title': 'Commercial: sales and marketing',
+                             'summary': 'Follow the journey from first contact to repeat purchase: '
+                                        'campaigns, follow-up, quotes and opportunities currently being '
+                                        'lost.'},
+                            {'id': 'operational',
+                             'title': 'Operational',
+                             'summary': 'Map how customers, orders and deliveries are handled. Identify '
+                                        'bottlenecks, manual tasks and unused capacity.'},
+                            {'id': 'administrative',
+                             'title': 'Administrative',
+                             'summary': 'Review documents, records, approvals and tools to reduce '
+                                        'duplication, errors and repetitive work.'}]},
+        'impact': {'title': 'Six ways to turn efficiency into value',
+                   'summary': 'Measure each path separately. Freed time is not always cash savings, and '
+                              'collecting earlier does not mean selling more.',
+                   'items': [{'id': 'hours',
+                              'title': 'Recovered hours',
+                              'summary': 'Manual hours avoided per month × team hourly cost. This measures '
+                                         'freed capacity; count cash savings only when an actual expense '
+                                         'falls.'},
+                             {'id': 'errors',
+                              'title': 'Avoided errors',
+                              'summary': 'Error frequency × correction cost: data entry, invoices, duplicate '
+                                         'orders or rework. Exclude hours already counted under recovered '
+                                         'time.'},
+                             {'id': 'collections',
+                              'title': 'Collect earlier',
+                              'summary': 'Measure days from invoicing to payment and recoverable overdue '
+                                         'receivables. Separate earlier cash inflows from recurring '
+                                         'financing cost reductions.'},
+                             {'id': 'sales',
+                              'title': 'Recover lost sales',
+                              'summary': 'Timely follow-up, faster quotes and returning customers. Estimate '
+                                         'additional contribution margin attributable to the improvement '
+                                         'using verifiable conversion rates.'},
+                             {'id': 'capacity',
+                              'title': 'Grow without hiring',
+                              'summary': 'Serve more customers or orders with the same team. Value '
+                                         'additional capacity or a genuinely avoidable hire without counting '
+                                         'recovered hours twice.'},
+                             {'id': 'costs',
+                              'title': 'Remove unnecessary costs',
+                              'summary': 'Identify duplicate or unused tools and subscriptions. Estimate '
+                                         'removable spending after accounting for new operating costs.'}]},
+        'measurement': {'title': 'The numbers behind the decision',
+                        'summary': 'The report presents estimated ranges in Colombian pesos and records the '
+                                   'baseline so actual results can be checked later.',
+                        'items': [{'id': 'baseline',
+                                   'title': 'A measurable baseline',
+                                   'summary': 'Agree on indicators, sources, observation period and '
+                                              'assumptions. When data is missing, disclose uncertainty '
+                                              'instead of inventing precision.'},
+                                  {'id': 'net',
+                                   'title': 'Monthly impact without double counting',
+                                   'summary': 'Add compatible monetizable benefits, deduct recurring costs '
+                                              'and show savings, freed capacity and earlier cash '
+                                              'separately.'},
+                                  {'id': 'payback',
+                                   'title': 'When the investment pays back',
+                                   'summary': 'Compare implementation cost with the estimated range of '
+                                              'monetizable net monthly benefit. Without a supported positive '
+                                              'benefit, do not claim a payback period.'}]},
+        'deliverable': {'title': 'A report that leads to action',
+                        'summary': 'Receive a report for each selected area and a consolidated view of '
+                                   'priorities.',
+                        'items': [{'id': 'findings',
+                                   'title': 'Findings in context',
+                                   'summary': 'What we found, what is missing and the evidence behind each '
+                                              'conclusion, including affected processes and people.'},
+                                  {'id': 'priorities',
+                                   'title': 'Priorities by impact and effort',
+                                   'summary': 'Improvements ordered by expected benefit, effort, '
+                                              'dependencies and how easily work can begin.'},
+                                  {'id': 'roadmap',
+                                   'title': 'Time, money and the next step',
+                                   'summary': 'Recommendation, estimate, assumptions, baseline indicator and '
+                                              'implementation path for each improvement.'}]},
+        'process': {'title': 'How we work with you',
+                    'summary': 'Our in-house team performs the analysis. Price, duration, participants and '
+                               'inputs are defined in a scope-based proposal.',
+                    'items': [{'id': 'scope',
+                               'title': 'Agree the scope',
+                               'summary': 'Define the areas, questions and success indicators. You can start '
+                                          'with a specific problem.'},
+                              {'id': 'understand',
+                               'title': 'Listen and review',
+                               'summary': 'Interview key people and review agreed processes, documents and '
+                                          'data using only the access required for that scope.'},
+                              {'id': 'prioritize',
+                               'title': 'Analyze and prioritize',
+                               'summary': 'Connect findings with opportunities for improvement and '
+                                          'automation. Check the assumptions with you.'},
+                              {'id': 'present',
+                               'title': 'Present the path forward',
+                               'summary': 'Deliver the report and review which improvements to implement '
+                                          'first and how to measure results.'}]},
+        'implementation': {'title': 'Find it. Then build it.',
+                           'summary': 'Consulting opens an implementation path; each improvement is scoped '
+                                      'and quoted according to its needs.',
+                           'items': [{'id': 'project',
+                                      'title': 'A scoped project',
+                                      'summary': 'Build a specific solution with agreed deliverables and '
+                                                 'acceptance criteria.'},
+                                     {'id': 'cells',
+                                      'title': 'A delivery cell’s hours',
+                                      'summary': 'Implement improvements continuously with organized '
+                                                 'technical capacity and shared priorities.'},
+                                     {'id': 'building-with-us',
+                                      'title': 'Building with Us',
+                                      'summary': 'When a finding reveals a product opportunity that fits a '
+                                                 'joint-building partnership.'}]},
+        'diagnostic': {'title': 'Business consulting and software diagnosis',
+                       'summary': 'Complementary services with distinct scopes. They can be sequenced or '
+                                  'quoted together.',
+                       'items': [{'id': 'business',
+                                  'title': 'First, what the business needs',
+                                  'summary': 'Consulting examines the whole business or selected areas and '
+                                             'identifies opportunities, including those that need no new '
+                                             'software.'},
+                                 {'id': 'software',
+                                  'title': 'Then, how to build the solution',
+                                  'summary': 'Software diagnosis sizes the technical solution: scope, '
+                                             'complexity and development path when a finding requires '
+                                             'building technology.'}]},
+        'faq': {'title': 'Frequently asked questions',
+                'items': [{'id': 'areas',
+                           'question': 'Must I purchase all five areas?',
+                           'answer': 'Choose selected areas or a comprehensive review. We agree the scope '
+                                     'before work begins.'},
+                          {'id': 'price',
+                           'question': 'How much does it cost and how long does it take?',
+                           'answer': 'The quote depends on the areas, complexity and available information. '
+                                     'The proposal defines price, duration and deliverables; this public '
+                                     'presentation has no fixed rates.'},
+                          {'id': 'inputs',
+                           'question': 'What does the team need from my business?',
+                           'answer': 'Interviews and review of agreed processes, documents or data. We '
+                                     'request only what is necessary for the selected areas.'},
+                          {'id': 'team',
+                           'question': 'Who performs the analysis?',
+                           'answer': 'ProjectApp’s in-house team performs the consulting work. Participants '
+                                     'and responsibilities are defined in the proposal.'},
+                          {'id': 'privacy',
+                           'question': 'How is confidential information handled?',
+                           'answer': 'We agree the required information, authorized participants and '
+                                     'confidentiality terms before data is shared. We use private channels; '
+                                     'this page and its PDF are a general presentation and do not collect or '
+                                     'include your business data.'},
+                          {'id': 'discount',
+                           'question': 'Is consulting credited toward implementation?',
+                           'answer': 'There is no automatic credit. Any special commercial terms must be '
+                                     'expressly agreed in the proposal.'},
+                          {'id': 'estimates',
+                           'question': 'Is the estimated impact guaranteed?',
+                           'answer': 'No. We provide ranges with sources and assumptions and measure a '
+                                     'baseline for comparison with actual results. The report separates '
+                                     'savings, capacity and cash flow and avoids double counting.'}]},
+        'cta': {'title': 'Where is your business losing time and value?',
+                'body': 'Let’s discuss your business and the areas you want to review. We will propose a '
+                        'clear scope to get started.',
+                'button_label': 'Request a quote',
+                'whatsapp_message': 'Hi, I am interested in ProjectApp business consulting and advisory. I '
+                                    'would like to review improvement and automation opportunities in my '
+                                    'business.'},
+        'legal': {'disclaimer': 'Impacts are estimated ranges subject to available information, assumptions '
+                                'and effective implementation. They are not a promise of savings, revenue or '
+                                'profitability. Scope, price, timeline and confidentiality terms are agreed '
+                                'in the proposal.'}}}
+
+
+def seed_program(apps, schema_editor):
+    Program = apps.get_model('content', 'ConsultingProgram')
+    Revision = apps.get_model('content', 'ConsultingProgramRevision')
+    alias = schema_editor.connection.alias
+    if not Program.objects.using(alias).exists():
+        revision = Revision.objects.using(alias).create(version=1, content=PROGRAM_V1,
+            author_label='Sistema', change_note='Presentación inicial de Consultoría y asesoría.')
+        Program.objects.using(alias).create(pk=1, current_revision=revision)
+
+
+def reverse_seed(apps, schema_editor):
+    pass
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('content', '0299_merge_programs_video_approvals'),
+        migrations.swappable_dependency(settings.AUTH_USER_MODEL),
+    ]
+
+    operations = [
+        migrations.CreateModel(
+            name='ConsultingProgramRevision',
+            fields=[
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('version', models.PositiveIntegerField()),
+                ('author_label', models.CharField(default='Sistema', max_length=255)),
+                ('change_note', models.TextField()),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('content', models.JSONField()),
+                ('author', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to=settings.AUTH_USER_MODEL)),
+                ('credential', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='+', to='content.mcpcredential')),
+                ('restored_from', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, related_name='+', to='content.consultingprogramrevision')),
+            ],
+            options={
+                'ordering': ['-version'],
+                'abstract': False,
+            },
+        ),
+        migrations.CreateModel(
+            name='ConsultingProgram',
+            fields=[
+                ('id', models.PositiveSmallIntegerField(default=1, editable=False, primary_key=True, serialize=False)),
+                ('updated_at', models.DateTimeField(auto_now=True)),
+                ('current_revision', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='+', to='content.consultingprogramrevision')),
+            ],
+        ),
+        migrations.AddConstraint(
+            model_name='consultingprogramrevision',
+            constraint=models.UniqueConstraint(fields=('version',), name='content_consultingprogramrevision_unique_version'),
+        ),
+        migrations.AddConstraint(
+            model_name='consultingprogram',
+            constraint=models.CheckConstraint(condition=models.Q(('id', 1)), name='consulting_program_singleton'),
+        ),
+        migrations.RunPython(seed_program, reverse_seed),
+    ]

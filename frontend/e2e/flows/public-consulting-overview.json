@@ -1,0 +1,13 @@
+{
+  "id": "public-consulting-overview",
+  "name": "Public Consulting Overview",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Desde el sitio público, consultar cinco áreas, seis caminos, entregable, medición y diferencia con diagnóstico.",
+  "outcomes": [
+    "display"
+  ]
+}

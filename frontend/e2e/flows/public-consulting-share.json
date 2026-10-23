@@ -1,0 +1,14 @@
+{
+  "id": "public-consulting-share",
+  "name": "Public Consulting Share",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P2",
+  "description": "Abrir Compartir, copiar la URL actual y leer confirmación o error de portapapeles.",
+  "outcomes": [
+    "success",
+    "failure"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "public-consulting-load",
+  "name": "Public Consulting Load",
+  "module": "public",
+  "roles": [
+    "guest"
+  ],
+  "priority": "P1",
+  "description": "Leer el aviso de fallo de carga y reintentar para recuperar la presentación.",
+  "outcomes": [
+    "failure",
+    "success"
+  ]
+}

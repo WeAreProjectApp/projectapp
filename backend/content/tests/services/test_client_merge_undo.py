@@ -16,6 +16,7 @@ from content.models import (
     BusinessProposal,
     ClientDocumentNumberSequence,
     CommunicationThread,
+    ConsultingProgramRevision,
     DataIntegrityOperation,
     Document,
     DocumentCollectionAccount,
@@ -109,7 +110,8 @@ def test_undo_preserves_approval_package_author(superuser, approval_package_by_d
     (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
     (BuildingOnDemandProgramRevision, {'content': {}}),
     (BuildingOnDemandContractRevision, {'markdown': '# Célula compartida'}),
-], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract'])
+    (ConsultingProgramRevision, {'content': {}}),
+], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract', 'consulting-program'])
 def test_undo_preserves_module_revision_author(superuser, revision_model, content):
     """Fails if reversing a client merge rewrites the module's original revision author."""
     survivor, duplicate = client_pair()

@@ -17,6 +17,7 @@ from content.models import (
     ClientDocumentNumberSequence,
     CommunicationFolder,
     CommunicationThread,
+    ConsultingProgramRevision,
     DataIntegrityOperation,
     Document,
     DocumentCollectionAccount,
@@ -49,7 +50,8 @@ pytestmark = pytest.mark.django_db
     (BuildingWithUsContractRevision, {'markdown': '# Alianza'}),
     (BuildingOnDemandProgramRevision, {'content': {}}),
     (BuildingOnDemandContractRevision, {'markdown': '# Célula compartida'}),
-], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract'])
+    (ConsultingProgramRevision, {'content': {}}),
+], ids=['alliance-program', 'alliance-contract', 'cell-program', 'cell-contract', 'consulting-program'])
 def test_merge_preserves_module_revision_author(superuser, revision_model, content):
     """Fails if merging a duplicate client rewrites immutable module authorship."""
     survivor, duplicate = client_pair()
