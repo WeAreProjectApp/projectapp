@@ -1,3 +1,5 @@
+"""Behavior tests for financing agreements and frozen monthly allowances."""
+
 import hashlib
 from datetime import date
 from decimal import Decimal
@@ -7,6 +9,9 @@ import pytest
 from pypdf import PdfReader
 
 from content.models import FinancingAgreement, FinancingAgreementTemplate
+from content.services.financing_agreement_pdf_service import (
+    FinancingAgreementPdfService,
+)
 from content.services.financing_agreement_service import (
     DEFAULT_FINANCING_TEMPLATE_MARKDOWN,
     FinancingAgreementTransitionError,
@@ -22,8 +27,6 @@ from content.services.financing_agreement_service import (
     update_draft,
     validate_template_markdown,
 )
-from content.services.financing_agreement_pdf_service import FinancingAgreementPdfService
-
 
 pytestmark = pytest.mark.django_db
 
@@ -283,11 +286,11 @@ def test_three_year_agreement_does_not_offer_monthly_requirement_allowances(
 
 @pytest.mark.parametrize(
     ('total', 'initial', 'field'),
-    (
+    [
         ('-1.00', '0.00', 'total_value'),
         ('100.00', '-1.00', 'initial_payment'),
         ('100.00', '101.00', 'initial_payment'),
-    ),
+    ],
 )
 def test_financed_balance_rejects_invalid_values(total, initial, field):
     with pytest.raises(FinancingAgreementValidationError) as exc_info:
@@ -298,12 +301,12 @@ def test_financed_balance_rejects_invalid_values(total, initial, field):
 
 @pytest.mark.parametrize(
     ('invalid_item', 'message'),
-    (
+    [
         (None, 'formato inválido'),
         ({'due_date': 'invalid', 'amount': '100.00'}, 'fecha'),
         ({'due_date': '2026-03-05', 'amount': 'invalid'}, 'valor'),
         ({'due_date': '2026-03-05', 'amount': '0.00'}, 'valor positivo'),
-    ),
+    ],
 )
 def test_installment_schedule_rejects_malformed_item(invalid_item, message):
     schedule = build_installment_schedule(Decimal('1200.00'), date(2026, 3, 5))
@@ -337,12 +340,12 @@ def test_installment_schedule_rejects_inexact_total():
 
 @pytest.mark.parametrize(
     ('markdown', 'message'),
-    (
+    [
         ('', 'no puede estar vacío'),
         ('Texto con {unknown_placeholder}', 'no reconocidos'),
         ('Texto con una llave {', 'llaves inválidas'),
         ('Texto sin marcadores', 'marcadores obligatorios'),
-    ),
+    ],
 )
 def test_contract_template_rejects_invalid_markdown(markdown, message):
     with pytest.raises(FinancingAgreementValidationError) as exc_info:

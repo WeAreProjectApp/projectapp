@@ -1,3 +1,5 @@
+"""Public financing program API contracts for requirement allowances."""
+
 import re
 from decimal import Decimal
 from io import BytesIO
@@ -7,9 +9,12 @@ import pytest
 from pypdf import PdfReader
 from rest_framework.test import APIClient
 
-from content.models import ExplainerVideoSettings, FinancingPolicyRevision, HourPackageSettings
+from content.models import (
+    ExplainerVideoSettings,
+    FinancingPolicyRevision,
+    HourPackageSettings,
+)
 from content.services.financing_program_service import serialize_financing_program
-
 
 pytestmark = pytest.mark.django_db
 

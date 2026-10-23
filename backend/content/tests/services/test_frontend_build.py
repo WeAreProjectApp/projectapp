@@ -28,9 +28,9 @@ from content.models import (
     HourPackageSettings,
 )
 from content.services import frontend_build
-from content.tests.consulting_fixtures import consulting_program
 
 TWENTY_REASONS = [f'reason-{index:02d}' for index in range(20)]
+pytest_plugins = ('content.tests.consulting_fixtures',)
 
 
 @pytest.fixture
@@ -101,12 +101,15 @@ class TestRebuildNeeded:
         AdditionalModule.objects.all().delete()
         AdditionalModuleCategory.objects.all().delete()
         FinancingPolicyRevision.objects.all().delete()
-        HourPackage.objects.all().delete()
+        HourPackageSettings.objects.all().delete()
         assert frontend_build.rebuild_needed() is False
 
     def test_true_again_after_consulting_revision(self, consulting_program, admin_user, marker_path):
         """Fails if publishing consulting copy leaves the previous public page fresh."""
-        from content.services.consulting_program_service import apply_update, read_program
+        from content.services.consulting_program_service import (
+            apply_update,
+            read_program,
+        )
         from content.tests.consulting_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
@@ -118,7 +121,10 @@ class TestRebuildNeeded:
 
     def test_true_again_after_on_demand_revision(self, building_on_demand_program, admin_user, marker_path):
         """Fails if publishing cell program copy leaves the old prerendered page fresh."""
-        from content.services.building_on_demand_program_service import apply_operation, read_program
+        from content.services.building_on_demand_program_service import (
+            apply_operation,
+            read_program,
+        )
         from content.tests.building_on_demand_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
@@ -133,7 +139,10 @@ class TestRebuildNeeded:
 
     def test_true_again_after_program_revision(self, building_with_us_program, admin_user, marker_path):
         """Fails if publishing a presentation keeps the previous static page fresh."""
-        from content.services.building_with_us_program_service import apply_update, read_program
+        from content.services.building_with_us_program_service import (
+            apply_update,
+            read_program,
+        )
         from content.tests.building_with_us_fixtures import hero_update
 
         with freeze_time('2030-01-01T12:00:00Z'):
