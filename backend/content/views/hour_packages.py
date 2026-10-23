@@ -145,7 +145,11 @@ def restore_default_hour_packages(request):
             {'nationality': ['Nacionalidad inválida. Usa COL, EXT o USA.']},
             status=status.HTTP_400_BAD_REQUEST,
         )
-    restore_default_packages(nationality)
-    qs = HourPackage.objects.filter(nationality=nationality, pricing_model='requirements')
-    serializer = HourPackageAdminListSerializer(qs, many=True)
-    return Response(serializer.data, status=status.HTTP_200_OK)
+    from content.services.requirement_package_service import price_context
+
+    price_context(nationality)
+    with transaction.atomic():
+        restore_default_packages(nationality)
+        qs = HourPackage.objects.filter(nationality=nationality, pricing_model='requirements')
+        data = HourPackageAdminListSerializer(qs, many=True).data
+    return Response(data, status=status.HTTP_200_OK)

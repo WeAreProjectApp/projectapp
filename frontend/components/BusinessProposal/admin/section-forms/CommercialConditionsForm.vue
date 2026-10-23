@@ -11,15 +11,15 @@
 
     <p data-testid="hour-rate-tab-hint" class="text-[11px] text-text-subtle mt-3">
       Los paquetes, los cupos y los descuentos vienen del catálogo de Paquetes de requerimientos.
-      La tarifa de esta propuesta se configura en la pestaña
+      La composición y el precio de esta propuesta se configuran en la pestaña
       <span class="font-medium text-text-muted">«Paquetes de requerimientos»</span>, que además
       muestra la tabla tal como se imprime en el PDF.
     </p>
 
     <FieldTextarea
       v-model="form.effortBadge"
-      label="Badge de esfuerzo"
-      help="Aclara que requerimientos de esfuerzo medio o superior se cotizan como requerimiento independiente."
+      label="Tallas incluidas y condiciones"
+      help="Aclara el uso de cupos XS/S/M, la cotización independiente de L/XL y las correcciones cubiertas por garantía."
       :rows="2"
       :isSingle="true"
       class="mt-3"

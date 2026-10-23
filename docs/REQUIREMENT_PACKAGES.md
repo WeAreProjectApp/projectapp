@@ -77,6 +77,9 @@ actualización del catálogo no recotiza esa oferta. Actualizar desde el catálo
 prepara una revisión explícita. Los archivos enviados y aprobados permanecen
 inmutables en el historial.
 
+Las configuraciones comerciales guardadas también se actualizan para las propuestas
+nuevas; las demás secciones y las ofertas ya creadas se conservan.
+
 La transición incluye propuestas/PDF, detalle comercial, plantillas
 contractuales vigentes y sus espejos, MCP, defaults, fake data y guías de
 operación. Las migraciones se aplican mediante el despliegue, nunca desde el
@@ -92,3 +95,7 @@ Paquetes de requerimientos y cada acuerdo nuevo conserva su composición.
 La alianza de tres años no incluye ese beneficio. Los acuerdos históricos
 mantienen sus condiciones previas y un segundo ciclo conserva la composición
 del acuerdo de origen.
+
+El video predeterminado de Alianza presenta XS/S/M sin fijar cantidades que
+puedan cambiar en Configuración. Se regeneró la narración y el MP4 de 60 s
+(1920 × 1080, 30 fps); los videos personalizados mantienen su configuración.

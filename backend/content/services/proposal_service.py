@@ -59,6 +59,7 @@ def duplicate_proposal(source, *, via_mcp=False):
         language=source.language,
         total_investment=source.total_investment,
         legacy_pricing_snapshot=deepcopy(source.legacy_pricing_snapshot),
+        package_pricing_context=deepcopy(source.package_pricing_context),
         currency=source.currency,
         nationality=source.nationality,
         hosting_percent=source.hosting_percent,

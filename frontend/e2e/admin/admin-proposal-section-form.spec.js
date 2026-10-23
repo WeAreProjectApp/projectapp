@@ -374,7 +374,7 @@ test.describe('Proposal Section Edit — Form Mode', () => {
   }, async ({ page }) => {
     const proposalWithConditions = JSON.parse(JSON.stringify(mockProposal));
     proposalWithConditions.sections.push(_buildSection(113, 'commercial_conditions', '📋 Condiciones comerciales', 12, {
-      index: '12', title: 'Condiciones comerciales', packagesTitle: 'Paquetes de horas',
+      index: '12', title: 'Condiciones comerciales', packagesTitle: 'Paquetes de requerimientos',
       packagesIntro: '', hourlyRate: 30000, currency: 'COP',
       hourPackagesMode: 'manual', manualHourlyRate: 45000, manualCurrency: 'COP',
       manualPackageRates: [{ packageId: 7, hourlyRate: 52000 }],
@@ -408,9 +408,9 @@ test.describe('Proposal Section Edit — Form Mode', () => {
     // rendered yet, and the fill() that follows races the chunk.
     await expect(editor.getByLabel('Título de los paquetes')).toBeVisible();
 
-    // Rates and packages moved to the «Tarifa por hora» tab; this editor only
+    // Rates and packages moved to the «Paquetes de requerimientos» tab; this editor only
     // points at them.
-    await expect(editor.getByTestId('hour-rate-tab-hint')).toContainText('Tarifa por hora');
+    await expect(editor.getByTestId('hour-rate-tab-hint')).toContainText('Paquetes de requerimientos');
     await expect(editor.getByTestId('hour-packages-mode-manual')).toHaveCount(0);
     await expect(editor.getByTestId('apply-base-rate-all')).toHaveCount(0);
     await expect(editor.getByLabel('Tarifa base por hora')).toHaveCount(0);

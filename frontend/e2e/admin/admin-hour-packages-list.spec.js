@@ -12,7 +12,7 @@ test.describe('Admin requirement package catalog', () => {
     // Bug caught: foreign packages retain Colombia totals after market selection.
     // quality: allow-deep-link (the admin sidebar route is covered by navigation specs; this flow changes market through the UI)
     await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('hour-packages-tab-ext').click();
     await expect(page.getByRole('table')).toContainText('Ágil exterior');
     await expect(page.getByRole('table')).toContainText('$472.5 USD');
@@ -22,7 +22,7 @@ test.describe('Admin requirement package catalog', () => {
     // Bug caught: card mode hides requirement composition or the recommended saving.
     // quality: allow-deep-link (the admin sidebar route is covered by navigation specs; this flow changes display mode through the UI)
     await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('hour-packages-view-cards').click();
     const premium = page.getByTestId('hour-package-card-3');
     await expect(premium).toContainText('30 XS · 20 S · 10 M');
@@ -33,7 +33,7 @@ test.describe('Admin requirement package catalog', () => {
     // Bug caught: comparative mode recommends the wrong tier after discounts change.
     // quality: allow-deep-link (the admin sidebar route is covered by navigation specs; this flow changes display mode through the UI)
     await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await page.getByTestId('hour-packages-view-compare').click();
     await expect(page.getByTestId('hour-package-tier-3')).toContainText('Mayor descuento');
     await expect(page.getByTestId('hour-package-tier-3')).toContainText('Ahorra $1.900.000 COP');
@@ -48,10 +48,11 @@ test.describe('Admin requirement package catalog', () => {
       validity_months: 12, reference_price: '1500000', discount_percent: 10, savings: '150000', total_price: '1350000', is_active: true, order: index + 1,
     }));
     await mockRequirementPackages(page, { col: tiers });
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('hour-packages-view-table').click();
     await expect(page.getByRole('table')).toContainText('Tier 1');
     await page.getByRole('button', { name: 'Siguiente' }).click();
-    await expect(page.getByRole('table')).toContainText('Tier 11');
-    await expect(page.getByRole('table')).not.toContainText('Tier 1');
+    await expect(page.getByTestId('hour-package-row-110')).toContainText('Tier 11');
+    await expect(page.getByTestId('hour-package-row-100')).toHaveCount(0);
   });
 });

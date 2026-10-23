@@ -23,6 +23,7 @@ from content.serializers.proposal import (
     ProposalDetailSerializer,
     ProposalSectionUpdateSerializer,
 )
+from content.services.proposal_service import duplicate_proposal
 from content.services.proposal_snapshot_service import (
     ProposalSnapshotError,
     prepare_proposal_snapshots,
@@ -282,6 +283,33 @@ def test_freeze_keeps_auto_foreign_package_after_catalog_and_fx_changes(proposal
     assert proposal.package_pricing_context == {'exchange_rate': '3900', 'factor': '1.4'}
     assert '30 XS / 0 S / 0 M' in text
     assert '484.62' in text
+
+
+def test_duplicate_keeps_frozen_foreign_price_context_without_sharing_it(proposal, price_settings):
+    """Fails if duplicating an issued USD package reprices it or aliases its FX snapshot."""
+    proposal.nationality = 'EXT'
+    proposal.save(update_fields=['nationality'])
+    AccountingSettings.objects.update(usd_exchange_rate=Decimal('3900'))
+    _package('EXT', xs=30, small=0, medium=0, discount=10, name='Paquete Ágil')
+    ProposalSection.objects.create(
+        proposal=proposal,
+        section_type='commercial_conditions',
+        title='Condiciones',
+        order=1,
+        content_json={'pricingModel': 'requirements', 'hourPackagesMode': 'auto', 'hourPackagesEnabled': True},
+    )
+    freeze_proposal_packages(proposal)
+    proposal.refresh_from_db()
+
+    duplicate = duplicate_proposal(proposal)
+    cloned_section = duplicate.sections.get(section_type='commercial_conditions')
+    duplicate.package_pricing_context['factor'] = '99'
+
+    assert duplicate.status == duplicate.Status.DRAFT
+    assert cloned_section.content_json['packagesFrozen'] is True
+    assert cloned_section.content_json['packages'][0]['totalPrice'] == '484.62'
+    assert duplicate.package_pricing_context['exchange_rate'] == '3900'
+    assert proposal.package_pricing_context == {'exchange_rate': '3900', 'factor': '1.4'}
 
 
 def test_public_serializer_hides_private_requirement_pricing_context(proposal):

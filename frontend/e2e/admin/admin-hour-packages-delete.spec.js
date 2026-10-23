@@ -13,7 +13,7 @@ test.describe('Admin requirement package deletion', () => {
   test('cancelling deletion keeps Ágil in the catalog', { tag: [...ADMIN_HOUR_PACKAGES_DELETE, '@role:admin', '@outcome:success'] }, async ({ page }) => {
     // Bug caught: cancelling a destructive dialog still removes the package.
     const capture = await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await chooseRowAction(page, deleteAgile);
     await page.getByRole('button', { name: 'Cancelar' }).click();
     await expect(page.getByRole('table')).toContainText('Ágil');
@@ -23,7 +23,7 @@ test.describe('Admin requirement package deletion', () => {
   test('confirming deletion removes Ágil from the catalog', { tag: [...ADMIN_HOUR_PACKAGES_DELETE, '@role:admin', '@outcome:success'] }, async ({ page }) => {
     // Bug caught: confirmation sends delete but leaves a stale package row.
     const capture = await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await chooseRowAction(page, deleteAgile);
     await page.getByTestId('confirm-modal-confirm').click();
     expect(capture.deleted).toBe(true);
@@ -34,7 +34,7 @@ test.describe('Admin requirement package deletion', () => {
   test('delete failure retains Ágil with an error', { tag: [...ADMIN_HOUR_PACKAGES_DELETE, '@role:admin', '@outcome:failure'] }, async ({ page }) => {
     // Bug caught: a rejected delete removes the package from the visible catalog.
     await mockRequirementPackages(page, { deleteStatus: 500 });
-    await page.goto('/panel/hour-packages', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages', { waitUntil: 'domcontentloaded' });
     await chooseRowAction(page, deleteAgile);
     await page.getByTestId('confirm-modal-confirm').click();
     await expect(page.getByText('No se pudo eliminar el paquete.')).toBeVisible();

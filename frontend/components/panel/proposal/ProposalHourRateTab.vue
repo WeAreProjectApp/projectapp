@@ -8,7 +8,7 @@
       <p v-if="section.is_enabled === false" class="rounded-lg bg-warning-soft p-3 text-sm text-warning-strong" data-testid="hour-rate-disabled-warning">La sección está deshabilitada y no se imprime en el PDF.</p>
       <template v-if="legacy && !adopting">
         <p class="rounded-lg bg-surface-raised p-3 text-sm text-text-muted" data-testid="packages-legacy-notice">Esta propuesta conserva sus condiciones históricas de horas. No se convierten automáticamente en requerimientos.</p>
-        <ProposalHourPackagesTable :packages="content.packages || []" :currency="content.currency || 'COP'" :base-rate="Number(content.hourlyRate) || 0" :editable="false" :language="proposal.language" />
+        <ProposalHourPackagesTable :packages="legacyPreview.packages || []" :currency="legacyPreview.currency || 'COP'" :base-rate="Number(legacyPreview.hourlyRate) || 0" :editable="false" :language="proposal.language" />
         <BaseButton v-if="proposal.status === 'draft'" variant="secondary" size="sm" data-testid="packages-adopt" @click="adoptCatalog">Revisar nuevos paquetes</BaseButton>
       </template>
       <template v-else>
@@ -90,6 +90,20 @@ const notify = usePanelNotify();
 const section = computed(() => proposals.currentProposal?.sections?.find((s) => s.section_type === 'commercial_conditions'));
 const content = computed(() => section.value?.content_json || {});
 const legacy = computed(() => content.value.pricingModel !== 'requirements');
+const legacyPreview = computed(() => {
+  const data = content.value;
+  if (data.hourPackagesMode !== 'manual') return data;
+  const positive = (value) => Number.isFinite(Number(value)) && Number(value) > 0 ? Number(value) : null;
+  const base = positive(data.manualHourlyRate);
+  const overrides = new Map((data.manualPackageRates || [])
+    .filter((entry) => entry?.packageId != null && positive(entry.hourlyRate) != null)
+    .map((entry) => [String(entry.packageId), positive(entry.hourlyRate)]));
+  return { ...data, hourlyRate: base ?? data.hourlyRate,
+    packages: (data.packages || []).map((pkg) => ({ ...pkg,
+      hourlyRate: overrides.get(String(pkg.id)) ?? base ?? pkg.hourlyRate,
+    })),
+  };
+});
 const currency = computed(() => props.proposal.nationality === 'COL' ? 'COP' : 'USD');
 const mode = ref('auto');
 const enabled = ref(true);

@@ -1,15 +1,21 @@
 """Regression tests for preserving hour offers while seeding size packages."""
+from datetime import datetime
 from importlib import import_module
+from io import BytesIO
 from types import SimpleNamespace
 
 import pytest
 from django.apps import apps
 from django.db import connection
+from django.utils import timezone
+from pypdf import PdfReader
 
 from content.models import (
     BusinessProposal,
     ContractTemplate,
+    ContractTemplateMirror,
     ContractTemplateVersion,
+    Document,
     HourPackage,
     ProposalDefaultConfig,
     ProposalSection,
@@ -27,7 +33,7 @@ def _hour_package(name, hours, order):
     )
 
 
-def test_migration_freezes_effective_auto_hours_but_preserves_manual_offer():
+def test_migration_preserves_historical_offer_conditions():
     """Fails if the catalog migration invents sizes for old proposals or overwrites manual terms."""
     HourPackage.objects.all().delete()
     agile = _hour_package('Ágil histórico', 20, 1)
@@ -79,6 +85,33 @@ def test_migration_versions_only_contract_text_that_changes():
     assert versions.first().markdown == 'Incluye paquetes de horas para esfuerzos bajos o medio-bajos.'
     assert versions.last().markdown == 'Incluye paquetes de requerimientos XS, S y M para tallas XS, S o M.'
     assert ContractTemplateVersion.objects.filter(template=template, variant='product').count() == 0
+
+
+def test_migration_updates_only_the_current_contract_mirror():
+    """Fails if size wording mutates historical documents instead of refreshing the live mirror."""
+    template = ContractTemplate.objects.create(
+        name='Con espejo', content_markdown='Incluye paquetes de horas.',
+    )
+    original = ContractTemplateVersion.objects.create(
+        template=template, variant='combined', version=1, markdown='Incluye paquetes de horas.',
+        author_label='Sistema', change_note='Versión previa',
+    )
+    mirror_document = Document.objects.create(title='Espejo vigente')
+    historical_document = Document.objects.create(title='Contrato histórico', content_markdown='Paquetes de horas firmados.')
+    mirror = ContractTemplateMirror.objects.create(
+        template=template, variant='combined', document=mirror_document, revision=original,
+        pdf_content=b'%PDF-old', synced_at=timezone.make_aware(datetime(2026, 10, 23)),
+    )
+    migration.seed(apps, SimpleNamespace(connection=connection))
+
+    mirror.refresh_from_db()
+    original.refresh_from_db()
+    historical_document.refresh_from_db()
+    assert mirror.revision.version == 2
+    text = '\n'.join(page.extract_text() or '' for page in PdfReader(BytesIO(mirror.pdf_content)).pages)
+    assert 'paquetes de requerimientos XS, S y M' in text
+    assert original.markdown == 'Incluye paquetes de horas.'
+    assert historical_document.content_markdown == 'Paquetes de horas firmados.'
 
 
 @pytest.mark.parametrize('language', ['es', 'en'])

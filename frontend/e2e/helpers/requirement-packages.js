@@ -15,7 +15,7 @@ export const foreignPackages = [
   { ...colombiaPackages[0], id: 4, nationality: 'EXT', currency: 'USD', name_es: 'Ágil exterior', name_en: 'Foreign Agile', reference_price: '525.00', total_price: '472.50' },
 ];
 
-export async function mockRequirementPackages(page, { settings = pricingSettings, col = colombiaPackages, afterSettingsCol, ext = foreignPackages, usa = [], updateStatus = 200, updateBody, createStatus = 201, createBody, detail = colombiaPackages[0], deleteStatus = 204, restoreStatus = 200, capture = {} } = {}) {
+export async function mockRequirementPackages(page, { settings = pricingSettings, col = colombiaPackages, afterSettingsCol, ext = foreignPackages, usa = [], updateStatus = 200, updateBody, packageUpdateBody, createStatus = 201, createBody, detail = colombiaPackages[0], deleteStatus = 204, restoreStatus = 200, capture = {} } = {}) {
   let activeCol = col;
   await mockApi(page, async ({ apiPath, method, route }) => {
     if (apiPath === 'auth/check/') return adminAuth;
@@ -36,7 +36,7 @@ export async function mockRequirementPackages(page, { settings = pricingSettings
     if (apiPath === `hour-packages/admin/${detail.id}/detail/` && method === 'GET') return { status: 200, contentType: 'application/json', body: JSON.stringify(detail) };
     if (apiPath === `hour-packages/admin/${detail.id}/update/` && method === 'PATCH') {
       capture.update = route.request().postDataJSON();
-      return { status: updateStatus, contentType: 'application/json', body: JSON.stringify({ ...detail, ...capture.update }) };
+      return { status: updateStatus, contentType: 'application/json', body: JSON.stringify(packageUpdateBody || { ...detail, ...capture.update }) };
     }
     if (apiPath === 'hour-packages/admin/1/delete/' && method === 'DELETE') {
       capture.deleted = true;

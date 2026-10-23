@@ -16,8 +16,8 @@ const catalog = [
 const stored = catalog.map((item) => ({
   id: item.id, name: item.name_es, note: item.note_es, xsCount: item.xs_count,
   sCount: item.s_count, mCount: item.m_count, validityMonths: item.validity_months,
-  referencePrice: Number(item.reference_price), discountPercent: item.discount_percent,
-  totalPrice: Number(item.total_price),
+  referencePrice: item.reference_price, discountPercent: item.discount_percent,
+  totalPrice: item.total_price,
 }));
 
 function buildProposal(content = {}) {
@@ -115,7 +115,7 @@ test.describe('Admin proposal requirement packages', () => {
     await openTab(page, { proposal: buildProposal({ pricingModel: 'requirements', hourPackagesMode: 'manual' }) });
     await page.getByTestId('packages-mode').selectOption('manual');
     await page.getByTestId('packages-add').click();
-    await expect(page.getByTestId('requirement-package-2')).toContainText('Paquete nuevo');
+    await expect(page.getByTestId('requirement-package-2').getByLabel('Nombre del paquete 3')).toHaveValue('Paquete nuevo');
     await page.getByTestId('requirement-package-2').getByRole('button', { name: 'Quitar paquete' }).click();
     await page.getByTestId('requirement-package-1').getByRole('button', { name: 'Quitar paquete' }).click();
     await expect(page.getByTestId('requirement-package-1')).toHaveCount(0);

@@ -156,21 +156,21 @@ test.describe('Admin financing distribution', () => {
     expect(scenario.pdfLanguage).toBe('es')
   })
 
-  test('keeps the package fallback visible after changing language', {
+  test('keeps requirement allowances after changing language', {
     tag: [...ADMIN_FINANCING_DISTRIBUTION, '@role:admin', '@outcome:display'],
   }, async ({ page }) => {
-    await setupApi(page, { catalogSynced: false })
-    // quality: allow-deep-link (sidebar navigation is covered separately; this isolates catalog fallback visibility)
+    // Bug caught: changing locale replaces the fixed monthly requirement allowance.
+    // quality: allow-deep-link (sidebar navigation is covered separately; this isolates the localized allowance display)
+    await setupApi(page)
     await openFinancing(page)
 
-    await expect(page.getByTestId('financing-package-warning'))
-      .toContainText('Paquete de horas en modo de respaldo')
+    await expect(page.getByRole('heading', { name: '4 XS · 2 S · 1 M' })).toBeVisible()
 
     await page.getByTestId('financing-language-en').click()
 
     await expect(page).toHaveURL(/\/en-us\/panel\/partnership-program$/)
-    await expect(page.getByTestId('financing-package-warning'))
-      .toContainText('Hour package fallback is active')
+    await expect(page.getByRole('heading', { name: '4 XS · 2 S · 1 M' })).toBeVisible()
+    await expect(page.getByTestId('financing-package-facts')).toContainText('Requirements do not roll over')
   })
 
   test('retries after the financing program request fails', {

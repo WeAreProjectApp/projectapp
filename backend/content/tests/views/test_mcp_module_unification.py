@@ -1,14 +1,21 @@
 """HTTP contracts for the canonical one-connector-per-module MCP catalog."""
 import json
 from dataclasses import replace
-from datetime import datetime, timezone as datetime_timezone
+from datetime import datetime
+from datetime import timezone as datetime_timezone
 from decimal import Decimal
 
 import pytest
 
 from content.mcp.connectors import CONNECTORS, TOOLS_BY_SLUG
 from content.mcp.module_catalog import INFRASTRUCTURE_TOOLS, catalog_problems
-from content.models import IncomeRecord, McpActionIntent, McpConnector, McpCredential, McpUsageDaily
+from content.models import (
+    IncomeRecord,
+    McpActionIntent,
+    McpConnector,
+    McpCredential,
+    McpUsageDaily,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -108,7 +115,7 @@ def _panel_segmentation_connectors():
     [
         ('commercial', 'description', 'relación con clientes'),
         ('commercial', 'section_note', 'Defaults'),
-        ('offerings', 'description', 'paquetes de horas'),
+        ('offerings', 'description', 'paquetes de requerimientos'),
         ('offerings', 'section_note', 'Módulos adicionales'),
         ('programs', 'description', 'Building on Demand'),
         ('programs', 'section_note', 'contratos'),

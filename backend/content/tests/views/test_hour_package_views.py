@@ -186,6 +186,25 @@ class TestRequirementPackageSettings:
 
 
 class TestRestoreRequirementPackageDefaults:
+    def test_restore_with_missing_usd_rate_keeps_existing_catalog(self, admin_client):
+        """Fails if a rejected foreign restore deletes its current requirement tiers first."""
+        before = list(HourPackage.objects.filter(
+            nationality='EXT', pricing_model='requirements',
+        ).values_list('pk', flat=True))
+        from content.models import AccountingSettings
+        accounting = AccountingSettings.load()
+        accounting.usd_exchange_rate = 0
+        accounting.save(update_fields=['usd_exchange_rate'])
+
+        response = admin_client.post(
+            reverse('restore-default-hour-packages'), {'nationality': 'EXT'}, format='json',
+        )
+
+        assert response.status_code == 400
+        assert list(HourPackage.objects.filter(
+            nationality='EXT', pricing_model='requirements',
+        ).values_list('pk', flat=True)) == before
+
     def test_restore_rejects_unknown_market(self, admin_client):
         """Fails if default restoration can target a non-existent commercial market."""
         response = admin_client.post(

@@ -50,8 +50,8 @@ export function financingSettingsFixture(overrides = {}) {
     fixed_terms: {
       ordinary_interest_percent: 0,
       modalities: [
-        { key: 'five_year', years: 5, financing_cycles: 2, monthly_hours_package: true },
-        { key: 'three_year', years: 3, financing_cycles: 1, monthly_hours_package: false },
+        { key: 'five_year', years: 5, financing_cycles: 2, monthly_requirement_allowance: true },
+        { key: 'three_year', years: 3, financing_cycles: 1, monthly_requirement_allowance: false },
       ],
     },
   }

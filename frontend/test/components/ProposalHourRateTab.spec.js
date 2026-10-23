@@ -98,6 +98,40 @@ describe('ProposalHourRateTab', () => {
     expect(savedJson(proposalStore).pricingModel).toBe('requirements');
   });
 
+  // Falla si una propuesta histórica manual deja de aplicar su tarifa global sólo en la vista de lectura.
+  it('previews a legacy manual base rate without mutating the original stored hours', async () => {
+    const legacyContent = {
+      pricingModel: 'hours', hourPackagesMode: 'manual', currency: 'COP', hourlyRate: 30000,
+      manualHourlyRate: 33000,
+      packages: [{ name: 'Bolsa histórica', hours: 20, discountPercent: 10 }],
+    };
+    const original = JSON.parse(JSON.stringify(buildSection(legacyContent).content_json));
+    const { wrapper, proposalStore } = await mountTab({ content: legacyContent });
+
+    expect(wrapper.get('[data-testid="hour-rate-rate-row-0"]').text()).toBe('$29.700 COP/h');
+    expect(wrapper.get('[data-testid="hour-rate-total-row-0"]').text()).toBe('$594.000 COP');
+    expect(proposalStore.currentProposal.sections[0].content_json).toEqual(original);
+  });
+
+  // Falla si los overrides con id serializado pierden precedencia frente a la tarifa manual general.
+  it('uses a string-keyed legacy override before the manual base rate without changing stored packages', async () => {
+    const legacyContent = {
+      pricingModel: 'hours', hourPackagesMode: 'manual', currency: 'COP', hourlyRate: 30000,
+      manualHourlyRate: 33000, manualPackageRates: [{ packageId: 'primary', hourlyRate: 40000 }],
+      packages: [
+        { id: 'primary', name: 'Prioritario', hours: 20, discountPercent: 10 },
+        { id: 'fallback', name: 'General', hours: 20, discountPercent: 10 },
+      ],
+    };
+    const original = JSON.parse(JSON.stringify(buildSection(legacyContent).content_json));
+    const { wrapper, proposalStore } = await mountTab({ content: legacyContent });
+
+    expect(wrapper.get('[data-testid="hour-rate-rate-primary"]').text()).toBe('$36.000 COP/h');
+    expect(wrapper.get('[data-testid="hour-rate-total-primary"]').text()).toBe('$720.000 COP');
+    expect(wrapper.get('[data-testid="hour-rate-rate-fallback"]').text()).toBe('$29.700 COP/h');
+    expect(proposalStore.currentProposal.sections[0].content_json).toEqual(original);
+  });
+
   // Falla si una oferta emitida reemplaza sus precios históricos con los precios actuales del catálogo.
   it('shows frozen requirement prices until refresh is explicitly saved', async () => {
     const { wrapper, proposalStore } = await mountTab({ content: { packagesFrozen: true, packages: [{ id: 7, name: 'Ágil histórico', note: '', xsCount: 30, sCount: 0, mCount: 0, validityMonths: 12, referencePrice: 1400000, discountPercent: 10, totalPrice: 1260000 }] } });

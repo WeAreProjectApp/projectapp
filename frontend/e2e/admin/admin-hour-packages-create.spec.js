@@ -12,7 +12,7 @@ test.describe('Admin requirement package creation', () => {
     // Bug caught: the form computes a price from hours instead of sizes.
     // quality: allow-deep-link (the catalog owns navigation to the creation form; this flow exercises its composition inputs)
     await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Nombre (ES)').fill('Premium');
     await page.getByLabel('Name (EN)').fill('Premium');
     await page.getByTestId('package-xs-count').fill('30');
@@ -26,7 +26,7 @@ test.describe('Admin requirement package creation', () => {
     // Bug caught: opening the foreign creation route restores Colombia currency.
     // quality: allow-deep-link (the catalog owns creation navigation; this pins its market query contract)
     await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages/create?nationality=EXT', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages/create?nationality=EXT', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Nacionalidad').selectOption('EXT');
     await expect(page.getByLabel('Nacionalidad')).toHaveValue('EXT');
     await expect(page.getByText('USD (derivada de la nacionalidad)')).toBeVisible();
@@ -35,7 +35,7 @@ test.describe('Admin requirement package creation', () => {
   test('submit sends XS S M validity and discount', { tag: [...ADMIN_HOUR_PACKAGES_CREATE, '@role:admin', '@outcome:success'] }, async ({ page }) => {
     // Bug caught: creating a tier loses its validity or sends `hours`.
     const capture = await mockRequirementPackages(page);
-    await page.goto('/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Nombre (ES)').fill('Premium');
     await page.getByLabel('Name (EN)').fill('Premium');
     await page.getByTestId('package-xs-count').fill('30');
@@ -52,7 +52,7 @@ test.describe('Admin requirement package creation', () => {
   test('server composition error keeps entered values', { tag: [...ADMIN_HOUR_PACKAGES_CREATE, '@role:admin', '@outcome:error'] }, async ({ page }) => {
     // Bug caught: a server validation response erases a new package draft.
     await mockRequirementPackages(page, { createStatus: 400, createBody: { xs_count: ['Usa al menos un cupo.'] } });
-    await page.goto('/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
+    await page.goto('/es-co/panel/hour-packages/create', { waitUntil: 'domcontentloaded' });
     await page.getByLabel('Nombre (ES)').fill('Sin cupos');
     await page.getByLabel('Name (EN)').fill('No slots');
     await page.getByTestId('package-xs-count').fill('0');
